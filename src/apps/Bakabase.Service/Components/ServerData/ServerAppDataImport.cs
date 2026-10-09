@@ -72,6 +72,9 @@ public static class ServerAppDataImport
         var result = new Validation { SourcePath = sourcePath, CurrentPath = currentPath, OriginalDataPath = originalDataPath };
         try
         {
+            var storage = new Bakabase.Abstractions.Components.FileSystem.UserStoragePolicy(() => currentPath);
+            storage.EnsurePathAllowed(sourcePath, Bakabase.Abstractions.Components.FileSystem.UserStoragePurpose.Setup);
+            storage.EnsurePathAllowed(currentPath, Bakabase.Abstractions.Components.FileSystem.UserStoragePurpose.Setup);
             if (!string.IsNullOrWhiteSpace(originalDataPath))
             {
                 var normalized = originalDataPath.Replace('\\', '/');
@@ -84,6 +87,7 @@ public static class ServerAppDataImport
             // An anchor may contain only a redirect. Do not mutate the old layout to resolve it.
             var redirect = AnchorRedirect.TryRead(source);
             if (redirect != null) source = CanonicalDirectory(redirect);
+            storage.EnsurePathAllowed(source, Bakabase.Abstractions.Components.FileSystem.UserStoragePurpose.Setup);
             if (!Directory.Exists(source)) throw new IOException("The source directory does not exist on the server.");
             if (Contains(source, current) || Contains(current, source))
                 throw new IOException("Source and destination must be separate directories, without containment.");
@@ -232,6 +236,12 @@ public static class ServerAppDataImport
     {
         var journal = ReadPending(currentPath);
         if (journal == null) return;
+        var storage = new Bakabase.Abstractions.Components.FileSystem.UserStoragePolicy(() => currentPath);
+        storage.EnsurePathAllowed(currentPath, Bakabase.Abstractions.Components.FileSystem.UserStoragePurpose.Setup);
+        if (journal.Phase == "queued")
+            storage.EnsurePathAllowed(journal.SourcePath, Bakabase.Abstractions.Components.FileSystem.UserStoragePurpose.Setup);
+        foreach (var rule in journal.PathPlan?.Rules ?? [])
+            storage.EnsurePathAllowed(rule.TargetPrefix, Bakabase.Abstractions.Components.FileSystem.UserStoragePurpose.Setup);
         cancellationToken.ThrowIfCancellationRequested();
         var work = Path.Combine(currentPath, WorkName);
         var backups = Path.Combine(currentPath, BackupsName);

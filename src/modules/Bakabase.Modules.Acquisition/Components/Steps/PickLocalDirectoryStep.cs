@@ -1,3 +1,5 @@
+using Bakabase.Abstractions.Components.FileSystem;
+using Microsoft.Extensions.DependencyInjection;
 using System.Text.Json;
 using Bakabase.Modules.Acquisition.Abstractions.Components;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
@@ -36,6 +38,7 @@ public class PickLocalDirectoryStep : IAcquisitionStep
         if (!string.IsNullOrWhiteSpace(item.ExtractedDirectory) &&
             Directory.Exists(item.ExtractedDirectory))
         {
+            ctx.ServiceProvider.GetRequiredService<IUserStoragePolicy>().EnsurePathAllowed(item.ExtractedDirectory);
             // Already answered — a re-run at the cursor after a restart finds its own answer.
             return Task.FromResult<AcquisitionStepOutcome>(new AcquisitionStepOutcome.Continue(item));
         }
@@ -69,6 +72,7 @@ public class PickLocalDirectoryStep : IAcquisitionStep
                 new AcquisitionStepOutcome.Fail($"\"{directory}\" is not a folder that exists."));
         }
 
+        ctx.ServiceProvider.GetRequiredService<IUserStoragePolicy>().EnsurePathAllowed(directory);
         return Task.FromResult<AcquisitionStepOutcome>(new AcquisitionStepOutcome.Continue(
             item with {ExtractedDirectory = Path.GetFullPath(directory)}));
     }

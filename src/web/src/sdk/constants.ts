@@ -1,6 +1,279 @@
 // AUTO-GENERATED FROM server enums. Do not edit manually.
 /* eslint-disable */
 
+export enum CloseBehavior {
+  Prompt = 0,
+  Exit = 1,
+  Minimize = 2,
+  Cancel = 1000
+}
+
+export const closeBehaviors = [
+  { label: 'Prompt', value: CloseBehavior.Prompt },
+  { label: 'Exit', value: CloseBehavior.Exit },
+  { label: 'Minimize', value: CloseBehavior.Minimize },
+  { label: 'Cancel', value: CloseBehavior.Cancel }
+] as const;
+
+export const CloseBehaviorLabel: Record<CloseBehavior, string> = {
+  [CloseBehavior.Prompt]: 'Prompt',
+  [CloseBehavior.Exit]: 'Exit',
+  [CloseBehavior.Minimize]: 'Minimize',
+  [CloseBehavior.Cancel]: 'Cancel'
+};
+
+export enum IconType {
+  UnknownFile = 1,
+  Directory = 2,
+  Dynamic = 3
+}
+
+export const iconTypes = [
+  { label: 'UnknownFile', value: IconType.UnknownFile },
+  { label: 'Directory', value: IconType.Directory },
+  { label: 'Dynamic', value: IconType.Dynamic }
+] as const;
+
+export const IconTypeLabel: Record<IconType, string> = {
+  [IconType.UnknownFile]: 'UnknownFile',
+  [IconType.Directory]: 'Directory',
+  [IconType.Dynamic]: 'Dynamic'
+};
+
+export enum UiTheme {
+  FollowSystem = 0,
+  Light = 1,
+  Dark = 2
+}
+
+export const uiThemes = [
+  { label: 'FollowSystem', value: UiTheme.FollowSystem },
+  { label: 'Light', value: UiTheme.Light },
+  { label: 'Dark', value: UiTheme.Dark }
+] as const;
+
+export const UiThemeLabel: Record<UiTheme, string> = {
+  [UiTheme.FollowSystem]: 'FollowSystem',
+  [UiTheme.Light]: 'Light',
+  [UiTheme.Dark]: 'Dark'
+};
+
+export enum UpdaterStatus {
+  Idle = 1,
+  Running = 2,
+  PendingRestart = 3,
+  UpToDate = 4,
+  Failed = 5,
+  Unavailable = 6
+}
+
+export const updaterStatuses = [
+  { label: 'Idle', value: UpdaterStatus.Idle },
+  { label: 'Running', value: UpdaterStatus.Running },
+  { label: 'PendingRestart', value: UpdaterStatus.PendingRestart },
+  { label: 'UpToDate', value: UpdaterStatus.UpToDate },
+  { label: 'Failed', value: UpdaterStatus.Failed },
+  { label: 'Unavailable', value: UpdaterStatus.Unavailable }
+] as const;
+
+export const UpdaterStatusLabel: Record<UpdaterStatus, string> = {
+  [UpdaterStatus.Idle]: 'Idle',
+  [UpdaterStatus.Running]: 'Running',
+  [UpdaterStatus.PendingRestart]: 'PendingRestart',
+  [UpdaterStatus.UpToDate]: 'UpToDate',
+  [UpdaterStatus.Failed]: 'Failed',
+  [UpdaterStatus.Unavailable]: 'Unavailable'
+};
+
+export enum DataDirectoryLockStatus {
+  Acquired = 1,
+  HeldByAnotherProcess = 2,
+  Unavailable = 3
+}
+
+export const dataDirectoryLockStatuses = [
+  { label: 'Acquired', value: DataDirectoryLockStatus.Acquired },
+  { label: 'HeldByAnotherProcess', value: DataDirectoryLockStatus.HeldByAnotherProcess },
+  { label: 'Unavailable', value: DataDirectoryLockStatus.Unavailable }
+] as const;
+
+export const DataDirectoryLockStatusLabel: Record<DataDirectoryLockStatus, string> = {
+  [DataDirectoryLockStatus.Acquired]: 'Acquired',
+  [DataDirectoryLockStatus.HeldByAnotherProcess]: 'HeldByAnotherProcess',
+  [DataDirectoryLockStatus.Unavailable]: 'Unavailable'
+};
+
+export enum SingleInstanceEntry {
+  Entered = 1,
+  Refused = 2,
+  Unguarded = 3,
+  NotApplicable = 4
+}
+
+export const singleInstanceEntries = [
+  { label: 'Entered', value: SingleInstanceEntry.Entered },
+  { label: 'Refused', value: SingleInstanceEntry.Refused },
+  { label: 'Unguarded', value: SingleInstanceEntry.Unguarded },
+  { label: 'NotApplicable', value: SingleInstanceEntry.NotApplicable }
+] as const;
+
+export const SingleInstanceEntryLabel: Record<SingleInstanceEntry, string> = {
+  [SingleInstanceEntry.Entered]: 'Entered',
+  [SingleInstanceEntry.Refused]: 'Refused',
+  [SingleInstanceEntry.Unguarded]: 'Unguarded',
+  [SingleInstanceEntry.NotApplicable]: 'NotApplicable'
+};
+
+export enum RelocationMode {
+  UseTarget = 1,
+  MergeOverwrite = 3
+}
+
+export const relocationModes = [
+  { label: 'UseTarget', value: RelocationMode.UseTarget },
+  { label: 'MergeOverwrite', value: RelocationMode.MergeOverwrite }
+] as const;
+
+export const RelocationModeLabel: Record<RelocationMode, string> = {
+  [RelocationMode.UseTarget]: 'UseTarget',
+  [RelocationMode.MergeOverwrite]: 'MergeOverwrite'
+};
+
+export enum RelocationOutcomeKind {
+  NoOp = 0,
+  Success = 1,
+  Error = 2,
+  UnknownSchemaVersion = 3
+}
+
+export const relocationOutcomeKinds = [
+  { label: 'NoOp', value: RelocationOutcomeKind.NoOp },
+  { label: 'Success', value: RelocationOutcomeKind.Success },
+  { label: 'Error', value: RelocationOutcomeKind.Error },
+  { label: 'UnknownSchemaVersion', value: RelocationOutcomeKind.UnknownSchemaVersion }
+] as const;
+
+export const RelocationOutcomeKindLabel: Record<RelocationOutcomeKind, string> = {
+  [RelocationOutcomeKind.NoOp]: 'NoOp',
+  [RelocationOutcomeKind.Success]: 'Success',
+  [RelocationOutcomeKind.Error]: 'Error',
+  [RelocationOutcomeKind.UnknownSchemaVersion]: 'UnknownSchemaVersion'
+};
+
+export enum RelocationPhase {
+  Starting = 0,
+  Copying = 1,
+  Validating = 2,
+  Replacing = 3,
+  Finalizing = 4,
+  Done = 5
+}
+
+export const relocationPhases = [
+  { label: 'Starting', value: RelocationPhase.Starting },
+  { label: 'Copying', value: RelocationPhase.Copying },
+  { label: 'Validating', value: RelocationPhase.Validating },
+  { label: 'Replacing', value: RelocationPhase.Replacing },
+  { label: 'Finalizing', value: RelocationPhase.Finalizing },
+  { label: 'Done', value: RelocationPhase.Done }
+] as const;
+
+export const RelocationPhaseLabel: Record<RelocationPhase, string> = {
+  [RelocationPhase.Starting]: 'Starting',
+  [RelocationPhase.Copying]: 'Copying',
+  [RelocationPhase.Validating]: 'Validating',
+  [RelocationPhase.Replacing]: 'Replacing',
+  [RelocationPhase.Finalizing]: 'Finalizing',
+  [RelocationPhase.Done]: 'Done'
+};
+
+export enum AppDistributionType {
+  WindowsApp = 0,
+  MacOsApp = 1,
+  LinuxApp = 2,
+  Android = 3,
+  Ios = 4,
+  WindowsServer = 5,
+  LinuxServer = 6
+}
+
+export const appDistributionTypes = [
+  { label: 'WindowsApp', value: AppDistributionType.WindowsApp },
+  { label: 'MacOsApp', value: AppDistributionType.MacOsApp },
+  { label: 'LinuxApp', value: AppDistributionType.LinuxApp },
+  { label: 'Android', value: AppDistributionType.Android },
+  { label: 'Ios', value: AppDistributionType.Ios },
+  { label: 'WindowsServer', value: AppDistributionType.WindowsServer },
+  { label: 'LinuxServer', value: AppDistributionType.LinuxServer }
+] as const;
+
+export const AppDistributionTypeLabel: Record<AppDistributionType, string> = {
+  [AppDistributionType.WindowsApp]: 'WindowsApp',
+  [AppDistributionType.MacOsApp]: 'MacOsApp',
+  [AppDistributionType.LinuxApp]: 'LinuxApp',
+  [AppDistributionType.Android]: 'Android',
+  [AppDistributionType.Ios]: 'Ios',
+  [AppDistributionType.WindowsServer]: 'WindowsServer',
+  [AppDistributionType.LinuxServer]: 'LinuxServer'
+};
+
+export enum DataPathSource {
+  Default = 0,
+  UserConfigured = 1,
+  Environment = 2
+}
+
+export const dataPathSources = [
+  { label: 'Default', value: DataPathSource.Default },
+  { label: 'UserConfigured', value: DataPathSource.UserConfigured },
+  { label: 'Environment', value: DataPathSource.Environment }
+] as const;
+
+export const DataPathSourceLabel: Record<DataPathSource, string> = {
+  [DataPathSource.Default]: 'Default',
+  [DataPathSource.UserConfigured]: 'UserConfigured',
+  [DataPathSource.Environment]: 'Environment'
+};
+
+export enum MigrationTiming {
+  BeforeDbMigration = 1,
+  AfterDbMigration = 2
+}
+
+export const migrationTimings = [
+  { label: 'BeforeDbMigration', value: MigrationTiming.BeforeDbMigration },
+  { label: 'AfterDbMigration', value: MigrationTiming.AfterDbMigration }
+] as const;
+
+export const MigrationTimingLabel: Record<MigrationTiming, string> = {
+  [MigrationTiming.BeforeDbMigration]: 'BeforeDbMigration',
+  [MigrationTiming.AfterDbMigration]: 'AfterDbMigration'
+};
+
+export enum OsPlatform {
+  Unknown = 0,
+  Windows = 1,
+  Osx = 2,
+  Linux = 3,
+  FreeBsd = 4
+}
+
+export const osPlatforms = [
+  { label: 'Unknown', value: OsPlatform.Unknown },
+  { label: 'Windows', value: OsPlatform.Windows },
+  { label: 'Osx', value: OsPlatform.Osx },
+  { label: 'Linux', value: OsPlatform.Linux },
+  { label: 'FreeBsd', value: OsPlatform.FreeBsd }
+] as const;
+
+export const OsPlatformLabel: Record<OsPlatform, string> = {
+  [OsPlatform.Unknown]: 'Unknown',
+  [OsPlatform.Windows]: 'Windows',
+  [OsPlatform.Osx]: 'Osx',
+  [OsPlatform.Linux]: 'Linux',
+  [OsPlatform.FreeBsd]: 'FreeBsd'
+};
+
 export enum BackgroundTaskName {
   SyncMediaLibrary = 1,
   PrepareCache = 2,
@@ -821,279 +1094,6 @@ export const DependentComponentStatusLabel: Record<DependentComponentStatus, str
   [DependentComponentStatus.NotInstalled]: 'NotInstalled',
   [DependentComponentStatus.Installed]: 'Installed',
   [DependentComponentStatus.Installing]: 'Installing'
-};
-
-export enum CloseBehavior {
-  Prompt = 0,
-  Exit = 1,
-  Minimize = 2,
-  Cancel = 1000
-}
-
-export const closeBehaviors = [
-  { label: 'Prompt', value: CloseBehavior.Prompt },
-  { label: 'Exit', value: CloseBehavior.Exit },
-  { label: 'Minimize', value: CloseBehavior.Minimize },
-  { label: 'Cancel', value: CloseBehavior.Cancel }
-] as const;
-
-export const CloseBehaviorLabel: Record<CloseBehavior, string> = {
-  [CloseBehavior.Prompt]: 'Prompt',
-  [CloseBehavior.Exit]: 'Exit',
-  [CloseBehavior.Minimize]: 'Minimize',
-  [CloseBehavior.Cancel]: 'Cancel'
-};
-
-export enum IconType {
-  UnknownFile = 1,
-  Directory = 2,
-  Dynamic = 3
-}
-
-export const iconTypes = [
-  { label: 'UnknownFile', value: IconType.UnknownFile },
-  { label: 'Directory', value: IconType.Directory },
-  { label: 'Dynamic', value: IconType.Dynamic }
-] as const;
-
-export const IconTypeLabel: Record<IconType, string> = {
-  [IconType.UnknownFile]: 'UnknownFile',
-  [IconType.Directory]: 'Directory',
-  [IconType.Dynamic]: 'Dynamic'
-};
-
-export enum UiTheme {
-  FollowSystem = 0,
-  Light = 1,
-  Dark = 2
-}
-
-export const uiThemes = [
-  { label: 'FollowSystem', value: UiTheme.FollowSystem },
-  { label: 'Light', value: UiTheme.Light },
-  { label: 'Dark', value: UiTheme.Dark }
-] as const;
-
-export const UiThemeLabel: Record<UiTheme, string> = {
-  [UiTheme.FollowSystem]: 'FollowSystem',
-  [UiTheme.Light]: 'Light',
-  [UiTheme.Dark]: 'Dark'
-};
-
-export enum UpdaterStatus {
-  Idle = 1,
-  Running = 2,
-  PendingRestart = 3,
-  UpToDate = 4,
-  Failed = 5,
-  Unavailable = 6
-}
-
-export const updaterStatuses = [
-  { label: 'Idle', value: UpdaterStatus.Idle },
-  { label: 'Running', value: UpdaterStatus.Running },
-  { label: 'PendingRestart', value: UpdaterStatus.PendingRestart },
-  { label: 'UpToDate', value: UpdaterStatus.UpToDate },
-  { label: 'Failed', value: UpdaterStatus.Failed },
-  { label: 'Unavailable', value: UpdaterStatus.Unavailable }
-] as const;
-
-export const UpdaterStatusLabel: Record<UpdaterStatus, string> = {
-  [UpdaterStatus.Idle]: 'Idle',
-  [UpdaterStatus.Running]: 'Running',
-  [UpdaterStatus.PendingRestart]: 'PendingRestart',
-  [UpdaterStatus.UpToDate]: 'UpToDate',
-  [UpdaterStatus.Failed]: 'Failed',
-  [UpdaterStatus.Unavailable]: 'Unavailable'
-};
-
-export enum DataDirectoryLockStatus {
-  Acquired = 1,
-  HeldByAnotherProcess = 2,
-  Unavailable = 3
-}
-
-export const dataDirectoryLockStatuses = [
-  { label: 'Acquired', value: DataDirectoryLockStatus.Acquired },
-  { label: 'HeldByAnotherProcess', value: DataDirectoryLockStatus.HeldByAnotherProcess },
-  { label: 'Unavailable', value: DataDirectoryLockStatus.Unavailable }
-] as const;
-
-export const DataDirectoryLockStatusLabel: Record<DataDirectoryLockStatus, string> = {
-  [DataDirectoryLockStatus.Acquired]: 'Acquired',
-  [DataDirectoryLockStatus.HeldByAnotherProcess]: 'HeldByAnotherProcess',
-  [DataDirectoryLockStatus.Unavailable]: 'Unavailable'
-};
-
-export enum SingleInstanceEntry {
-  Entered = 1,
-  Refused = 2,
-  Unguarded = 3,
-  NotApplicable = 4
-}
-
-export const singleInstanceEntries = [
-  { label: 'Entered', value: SingleInstanceEntry.Entered },
-  { label: 'Refused', value: SingleInstanceEntry.Refused },
-  { label: 'Unguarded', value: SingleInstanceEntry.Unguarded },
-  { label: 'NotApplicable', value: SingleInstanceEntry.NotApplicable }
-] as const;
-
-export const SingleInstanceEntryLabel: Record<SingleInstanceEntry, string> = {
-  [SingleInstanceEntry.Entered]: 'Entered',
-  [SingleInstanceEntry.Refused]: 'Refused',
-  [SingleInstanceEntry.Unguarded]: 'Unguarded',
-  [SingleInstanceEntry.NotApplicable]: 'NotApplicable'
-};
-
-export enum RelocationMode {
-  UseTarget = 1,
-  MergeOverwrite = 3
-}
-
-export const relocationModes = [
-  { label: 'UseTarget', value: RelocationMode.UseTarget },
-  { label: 'MergeOverwrite', value: RelocationMode.MergeOverwrite }
-] as const;
-
-export const RelocationModeLabel: Record<RelocationMode, string> = {
-  [RelocationMode.UseTarget]: 'UseTarget',
-  [RelocationMode.MergeOverwrite]: 'MergeOverwrite'
-};
-
-export enum RelocationOutcomeKind {
-  NoOp = 0,
-  Success = 1,
-  Error = 2,
-  UnknownSchemaVersion = 3
-}
-
-export const relocationOutcomeKinds = [
-  { label: 'NoOp', value: RelocationOutcomeKind.NoOp },
-  { label: 'Success', value: RelocationOutcomeKind.Success },
-  { label: 'Error', value: RelocationOutcomeKind.Error },
-  { label: 'UnknownSchemaVersion', value: RelocationOutcomeKind.UnknownSchemaVersion }
-] as const;
-
-export const RelocationOutcomeKindLabel: Record<RelocationOutcomeKind, string> = {
-  [RelocationOutcomeKind.NoOp]: 'NoOp',
-  [RelocationOutcomeKind.Success]: 'Success',
-  [RelocationOutcomeKind.Error]: 'Error',
-  [RelocationOutcomeKind.UnknownSchemaVersion]: 'UnknownSchemaVersion'
-};
-
-export enum RelocationPhase {
-  Starting = 0,
-  Copying = 1,
-  Validating = 2,
-  Replacing = 3,
-  Finalizing = 4,
-  Done = 5
-}
-
-export const relocationPhases = [
-  { label: 'Starting', value: RelocationPhase.Starting },
-  { label: 'Copying', value: RelocationPhase.Copying },
-  { label: 'Validating', value: RelocationPhase.Validating },
-  { label: 'Replacing', value: RelocationPhase.Replacing },
-  { label: 'Finalizing', value: RelocationPhase.Finalizing },
-  { label: 'Done', value: RelocationPhase.Done }
-] as const;
-
-export const RelocationPhaseLabel: Record<RelocationPhase, string> = {
-  [RelocationPhase.Starting]: 'Starting',
-  [RelocationPhase.Copying]: 'Copying',
-  [RelocationPhase.Validating]: 'Validating',
-  [RelocationPhase.Replacing]: 'Replacing',
-  [RelocationPhase.Finalizing]: 'Finalizing',
-  [RelocationPhase.Done]: 'Done'
-};
-
-export enum AppDistributionType {
-  WindowsApp = 0,
-  MacOsApp = 1,
-  LinuxApp = 2,
-  Android = 3,
-  Ios = 4,
-  WindowsServer = 5,
-  LinuxServer = 6
-}
-
-export const appDistributionTypes = [
-  { label: 'WindowsApp', value: AppDistributionType.WindowsApp },
-  { label: 'MacOsApp', value: AppDistributionType.MacOsApp },
-  { label: 'LinuxApp', value: AppDistributionType.LinuxApp },
-  { label: 'Android', value: AppDistributionType.Android },
-  { label: 'Ios', value: AppDistributionType.Ios },
-  { label: 'WindowsServer', value: AppDistributionType.WindowsServer },
-  { label: 'LinuxServer', value: AppDistributionType.LinuxServer }
-] as const;
-
-export const AppDistributionTypeLabel: Record<AppDistributionType, string> = {
-  [AppDistributionType.WindowsApp]: 'WindowsApp',
-  [AppDistributionType.MacOsApp]: 'MacOsApp',
-  [AppDistributionType.LinuxApp]: 'LinuxApp',
-  [AppDistributionType.Android]: 'Android',
-  [AppDistributionType.Ios]: 'Ios',
-  [AppDistributionType.WindowsServer]: 'WindowsServer',
-  [AppDistributionType.LinuxServer]: 'LinuxServer'
-};
-
-export enum DataPathSource {
-  Default = 0,
-  UserConfigured = 1,
-  Environment = 2
-}
-
-export const dataPathSources = [
-  { label: 'Default', value: DataPathSource.Default },
-  { label: 'UserConfigured', value: DataPathSource.UserConfigured },
-  { label: 'Environment', value: DataPathSource.Environment }
-] as const;
-
-export const DataPathSourceLabel: Record<DataPathSource, string> = {
-  [DataPathSource.Default]: 'Default',
-  [DataPathSource.UserConfigured]: 'UserConfigured',
-  [DataPathSource.Environment]: 'Environment'
-};
-
-export enum MigrationTiming {
-  BeforeDbMigration = 1,
-  AfterDbMigration = 2
-}
-
-export const migrationTimings = [
-  { label: 'BeforeDbMigration', value: MigrationTiming.BeforeDbMigration },
-  { label: 'AfterDbMigration', value: MigrationTiming.AfterDbMigration }
-] as const;
-
-export const MigrationTimingLabel: Record<MigrationTiming, string> = {
-  [MigrationTiming.BeforeDbMigration]: 'BeforeDbMigration',
-  [MigrationTiming.AfterDbMigration]: 'AfterDbMigration'
-};
-
-export enum OsPlatform {
-  Unknown = 0,
-  Windows = 1,
-  Osx = 2,
-  Linux = 3,
-  FreeBsd = 4
-}
-
-export const osPlatforms = [
-  { label: 'Unknown', value: OsPlatform.Unknown },
-  { label: 'Windows', value: OsPlatform.Windows },
-  { label: 'Osx', value: OsPlatform.Osx },
-  { label: 'Linux', value: OsPlatform.Linux },
-  { label: 'FreeBsd', value: OsPlatform.FreeBsd }
-] as const;
-
-export const OsPlatformLabel: Record<OsPlatform, string> = {
-  [OsPlatform.Unknown]: 'Unknown',
-  [OsPlatform.Windows]: 'Windows',
-  [OsPlatform.Osx]: 'Osx',
-  [OsPlatform.Linux]: 'Linux',
-  [OsPlatform.FreeBsd]: 'FreeBsd'
 };
 
 export enum SteamMetadataField {
@@ -2813,6 +2813,21 @@ export const BTaskTypeLabel: Record<BTaskType, string> = {
   [BTaskType.Download]: 'Download',
   [BTaskType.Acquisition]: 'Acquisition',
   [BTaskType.Any]: 'Any'
+};
+
+export enum UserStoragePurpose {
+  UserFiles = 0,
+  Setup = 1
+}
+
+export const userStoragePurposes = [
+  { label: 'UserFiles', value: UserStoragePurpose.UserFiles },
+  { label: 'Setup', value: UserStoragePurpose.Setup }
+] as const;
+
+export const UserStoragePurposeLabel: Record<UserStoragePurpose, string> = {
+  [UserStoragePurpose.UserFiles]: 'UserFiles',
+  [UserStoragePurpose.Setup]: 'Setup'
 };
 
 export enum AdditionalCoverDiscoveringSource {

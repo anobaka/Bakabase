@@ -109,6 +109,9 @@ namespace Bakabase.Service.Components
 
             services.AddSingleton<BakabaseOptionsManagerPool>();
             services.AddSingleton<DeploymentPathDisplay>();
+            services.TryAddSingleton<Bakabase.Abstractions.Components.FileSystem.IUserStoragePolicy>(sp =>
+                new Bakabase.Abstractions.Components.FileSystem.UserStoragePolicy(
+                    () => sp.GetRequiredService<AppService>().AppDataDirectory));
             services.AddSingleton(sp => new ResourceUsageService(
                 sp.GetRequiredService<AppService>().AppDataDirectory,
                 sp.GetRequiredService<IHostApplicationLifetime>().ApplicationStopping));
@@ -140,6 +143,7 @@ namespace Bakabase.Service.Components
                 o.Filters.Add<RemoteAccessAuthorizationFilter>();
                 o.Filters.Add<LoopbackCrossSiteUserMachineFilter>();
                 o.Filters.Add<RemoteAccessPathGuardFilter>();
+                o.Filters.Add<UserStoragePathExceptionFilter>();
                 FlagsEnumModelBinderProvider.Register(o.ModelBinderProviders);
             });
 

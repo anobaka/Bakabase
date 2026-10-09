@@ -1,3 +1,4 @@
+using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Components.Tasks;
 using System;
@@ -134,8 +135,11 @@ public class WaitForInboxStep : IAcquisitionStep
         await gate.WaitAsync(ct);
         try
         {
+            var storage = ctx.ServiceProvider.GetRequiredService<IUserStoragePolicy>();
             var inbox = Path.GetFullPath(options.InboxDirectory);
+            storage.EnsurePathAllowed(inbox);
             var root = claim.Directory == null ? inbox : FileProcessingFiles.Within(claim.Directory, inbox);
+            storage.EnsurePathAllowed(root);
             List<DeliveryEntry> entries;
             if (File.Exists(journalPath))
                 entries = JsonSerializer.Deserialize<List<DeliveryEntry>>(await File.ReadAllTextAsync(journalPath, ct), Json)!;
@@ -150,6 +154,7 @@ public class WaitForInboxStep : IAcquisitionStep
                 entries = [];
                 foreach (var file in files)
                 {
+                    storage.EnsurePathAllowed(file);
                     if (!AcquisitionInboxService.IsStable(file))
                         return new AcquisitionStepOutcome.Fail($"{Path.GetFileName(file)} is missing or still downloading.");
                     var target = FileProcessingFiles.Within(Path.Combine(ctx.WorkingDirectory,
@@ -165,6 +170,7 @@ public class WaitForInboxStep : IAcquisitionStep
             foreach (var entry in entries)
             {
                 ct.ThrowIfCancellationRequested();
+                storage.EnsurePathAllowed(entry.Source);
                 FileProcessingFiles.Within(entry.Source, inbox);
                 FileProcessingFiles.Within(entry.Target, ctx.WorkingDirectory);
                 if (File.Exists(entry.Target))

@@ -62,6 +62,7 @@ print(json.dumps({{"args": args, "metadata": os.environ.get({VARIABLE!r}), "serv
         for name in ("literal $UNEXPANDED data", "${UNEXPANDED} and $$ data"):
             with self.subTest(name=name):
                 self.env["BAKABASE_DATA_DIR"] = str(self.root / name)
+                self.env["BAKABASE_DOWNLOADS_DIR"] = str(self.root / (name + " downloads"))
                 image, source = self.start(), self.start("source")
                 self.assertEqual(image["metadata"], source["metadata"])
                 self.assertEqual(image["endpoints"], source["endpoints"])
@@ -71,7 +72,9 @@ print(json.dumps({{"args": args, "metadata": os.environ.get({VARIABLE!r}), "serv
                 self.assertEqual(image["metadata"], image["serviceMetadata"].replace("$$", "$"))
                 manifest = json.loads(image["metadata"])
                 self.assertEqual(manifest["mounts"], [{"type": "bind", "target": "/data", "readOnly": False,
-                                                      "source": self.env["BAKABASE_DATA_DIR"]}])
+                                                      "source": self.env["BAKABASE_DATA_DIR"]},
+                                                     {"type": "bind", "target": "/downloads", "readOnly": False,
+                                                      "source": self.env["BAKABASE_DOWNLOADS_DIR"]}])
 
     def test_cli_env_and_mount_overrides_feed_both_config_and_start(self):
         env_file = self.root / "other.env"

@@ -131,5 +131,14 @@
   "fileExplorer.selection.filtered": "{{visible}} / {{count}} 项",
   "fileExplorer.selection.selected": "已选 {{count}} 项",
   "fileExplorer.selection.actions": "操作",
-  "fileExplorer.selection.clear": "清除选择"
+  "fileExplorer.selection.clear": "清除选择",
+  "fileExplorer.storage.locations": "存储位置",
+  "fileExplorer.storage.readOnly": "只读",
+  "fileExplorer.storage.help": "请选择已挂载的存储位置。只读位置也可以选择，但写入时可能失败。",
+  "fileExplorer.storage.empty": "尚未挂载存储位置。请在 Docker Compose 中添加目录挂载，然后重启容器。",
+  "fileExplorer.storage.loading": "正在加载存储位置…",
+  "fileExplorer.storage.loadFailed": "无法加载存储位置，请重试。",
+  "fileExplorer.storage.retry": "重试",
+  "fileExplorer.storage.pathRejected": "请选择可用存储位置内的路径。",
+  "fileExplorer.storage.choosePath": "请先选择或填写路径。"
 }

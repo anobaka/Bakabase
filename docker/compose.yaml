@@ -21,6 +21,12 @@ services:
         target: /data
         bind:
           create_host_path: false
+      # User files stay separate from the application's database and caches.
+      - type: bind
+        source: ${BAKABASE_DOWNLOADS_DIR:-${HOME}/BakabaseServer/downloads}
+        target: /downloads
+        bind:
+          create_host_path: false
       # Existing desktop data can be exposed for the import screen:
       # - type: bind
       #   source: /absolute/path/to/desktop-appdata

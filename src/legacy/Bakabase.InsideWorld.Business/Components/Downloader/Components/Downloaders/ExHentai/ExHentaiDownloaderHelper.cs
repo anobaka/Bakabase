@@ -1,3 +1,5 @@
+using Bakabase.Infrastructures.Components.App;
+using Bakabase.Abstractions.Components.FileSystem;
 using System;
 using System.Net.Http;
 using System.Text.Json;
@@ -17,13 +19,25 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
 public class ExHentaiDownloaderHelper(
     IBOptionsManager<ExHentaiOptions> optionsManager,
     IDownloaderLocalizer localizer,
-    HttpClient httpClient) : AbstractDownloaderHelper<ExHentaiOptions>(optionsManager, localizer, httpClient)
+    HttpClient httpClient, IUserStoragePolicy storagePolicy, AppService appService) : AbstractDownloaderHelper<ExHentaiOptions>(optionsManager, localizer, httpClient, storagePolicy)
 {
     public override ThirdPartyId ThirdPartyId => ThirdPartyId.ExHentai;
 
     public override async Task<DownloadTask[]> BuildTasks(DownloadTaskAddInputModel model)
     {
         var tasks = await base.BuildTasks(model);
+        return ApplyDefaults(tasks);
+    }
+
+    public async Task<DownloadTask[]> BuildAcquisitionTasks(int acquisitionTaskId, DownloadTaskAddInputModel model)
+    {
+        if (storagePolicy.IsRestricted)
+            DownloadTaskStorage.EnsureAcquisitionDirectory(model.DownloadPath, appService.AppDataDirectory, acquisitionTaskId);
+        return ApplyDefaults(await BuildValidatedTasks(model));
+    }
+
+    private DownloadTask[] ApplyDefaults(DownloadTask[] tasks)
+    {
         var defaults = optionsManager.Value;
         var preferTorrentDefault = defaults.PreferTorrent;
         var resultWorkflowDefault = defaults.DownloadResultWorkflowId;

@@ -625,6 +625,40 @@ describe("standalone setup wizard", () => {
 });
 
 describe("setup wizard directory picker", () => {
+  it("uses a virtual storage-root view in Docker and keeps read-only sources selectable", async () => {
+    const roots = [{ name: "Imported data", path: "/import", readOnly: true }];
+    await mountPage({ ...firstRun, isDocker: true }, (url) =>
+      listing(url.searchParams.get("path") === "/import" ? "/import" : "", {
+        parentPath: null,
+        isRestricted: true,
+        roots,
+        directories: url.searchParams.get("path") === "/import" ? [] : roots,
+      }),
+    );
+    chooseImport(true);
+    click("browseSource");
+    await waitFor(() => expect(element("folderPath")).toHaveTextContent("Storage locations"));
+    expect(element("folderSelect")).toBeDisabled();
+    expect(element("folderUp")).toBeDisabled();
+    expect(element("folderRoots")).toHaveTextContent("Imported data · Read-only");
+    element("folderList").querySelector<HTMLButtonElement>("button")!.click();
+    await waitFor(() => expect(element("folderSelect")).toBeEnabled());
+    expect(element("folderUp")).toBeDisabled();
+    click("folderSelect");
+    await waitFor(() => expect(input("source")).toHaveValue("/import"));
+  });
+
+  it("explains missing mounts without allowing the virtual root to be selected", async () => {
+    await mountPage({ ...firstRun, isDocker: true }, () =>
+      listing("", { parentPath: null, isRestricted: true, roots: [] }),
+    );
+    chooseImport(true);
+    click("browseSource");
+    await waitFor(() => expect(element("folderMessage")).toHaveTextContent("No mounted storage directories were found"));
+    expect(element("folderSelect")).toBeDisabled();
+    expect(element("folderList").children).toHaveLength(0);
+  });
+
   it("starts relocation browsing in the current directory's parent", async () => {
     const fetchMock = await mountPage(existing, (url) =>
       url.searchParams.get("path") === existing.currentPath

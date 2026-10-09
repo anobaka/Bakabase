@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Infrastructures.Components.App.SingleInstance;
 using Bakabase.Service.Components.ServerData;
 using Bakabase.Tests.RemoteAccess;
@@ -285,8 +286,11 @@ public class ServerSetupHttpTests
     {
         Environment.SetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER", container ? "true" : null);
         _setup.Dispose();
-        _setup = existing ? ServerSetupSession.ForImport(_root, _monitoring)
-            : new ServerSetupSession(_root, _root, true, _dataLock, container);
+        var storage = new UserStoragePolicy(container, () =>
+            $"1 0 0:1 / / rw - overlay overlay rw\n2 1 8:1 /data {_root} rw - ext4 /dev/test rw\n",
+            () => _root);
+        _setup = existing ? ServerSetupSession.ForImport(_root, _monitoring, storage: storage)
+            : new ServerSetupSession(_root, _root, true, _dataLock, container, storage);
         ServerSetupSession.Current = _setup;
         var child = Path.Combine(_root, "existing library");
         Directory.CreateDirectory(child);
@@ -306,12 +310,19 @@ public class ServerSetupHttpTests
         Assert.IsFalse(content.Contains("private-file.txt", StringComparison.Ordinal));
         Assert.IsFalse(content.Contains("Never return", StringComparison.Ordinal));
         using var listing = JsonDocument.Parse(content);
-        Assert.AreEqual(_root, listing.RootElement.GetProperty("currentPath").GetString());
-        Assert.AreEqual(Directory.GetParent(_root)!.FullName, listing.RootElement.GetProperty("parentPath").GetString());
+        Assert.AreEqual(container ? "" : _root, listing.RootElement.GetProperty("currentPath").GetString());
+        Assert.AreEqual(container ? null : Directory.GetParent(_root)!.FullName, listing.RootElement.GetProperty("parentPath").GetString());
         Assert.IsFalse(listing.RootElement.TryGetProperty("candidatePath", out _));
-        CollectionAssert.AreEquivalent(new[] { "existing library", ".hidden-directory" },
+        CollectionAssert.AreEquivalent(container ? new[] { Path.GetFileName(_root) } : new[] { "existing library", ".hidden-directory" },
             listing.RootElement.GetProperty("directories").EnumerateArray().Select(p => p.GetProperty("name").GetString()).ToArray());
         Assert.IsTrue(listing.RootElement.GetProperty("roots").GetArrayLength() > 0);
+        using var mounted = await Send(client, "/setup/directories?path=" + Uri.EscapeDataString(_root), "GET", _setup.Token);
+        using var mountedListing = JsonDocument.Parse(await mounted.Content.ReadAsStringAsync());
+        Assert.AreEqual(_root, mountedListing.RootElement.GetProperty("currentPath").GetString());
+        Assert.AreEqual(container ? null : Directory.GetParent(_root)!.FullName,
+            mountedListing.RootElement.GetProperty("parentPath").GetString());
+        CollectionAssert.AreEquivalent(new[] { "existing library", ".hidden-directory" },
+            mountedListing.RootElement.GetProperty("directories").EnumerateArray().Select(p => p.GetProperty("name").GetString()).ToArray());
         using var candidate = await Send(client, "/setup/directories?path=" + Uri.EscapeDataString(child) + "&newFolderName=new%20library",
             "GET", _setup.Token);
         Assert.AreEqual(HttpStatusCode.OK, candidate.StatusCode);

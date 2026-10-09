@@ -21,6 +21,7 @@ import {
   EyeOutlined,
   FolderOpenOutlined,
   FolderOutlined,
+  HomeOutlined,
   MoreOutlined,
   SearchOutlined,
 } from "@ant-design/icons";
@@ -49,6 +50,12 @@ import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContext
 import FolderSelector from "@/components/FolderSelector";
 import { useIsRemoteClient } from "@/stores/remoteAccess";
 import { hasKeyboardModifier, matchesPrimaryShortcut } from "@/core/keyboard";
+import {
+  useUserStorageStore,
+  isInsideStorageRoots,
+  storageError,
+  validateUserStoragePaths,
+} from "@/stores/userStorage";
 
 export type FileExplorerProps = {
   /** Opt-in page layout; shared folder pickers retain their existing presentation. */
@@ -122,8 +129,11 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
     // Asks about files, not about actions: this explorer browses whichever machine
     // holds them, and in every flavour but the all-in-one that is not this one.
     const filesAreElsewhere = useIsRemoteClient();
+    const storage = useUserStorageStore((state) => state.settings);
+    const rootsError = useUserStorageStore((state) => state.error);
+    const [navigationError, setNavigationError] = useState<string>();
 
-    const initializedRootPathRef = useRef<string>();
+    const initializedRootPathRef = useRef<string | undefined | null>(null);
     const initializeSeqRef = useRef(0);
 
     const rootPathsRef = useRef(rootPaths);
@@ -134,7 +144,7 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
 
     const [root, setRoot] = useState<RootEntry>();
     const rootRef = useRef(root);
-    const [inputValue, setInputValue] = useState(rootPath);
+    const [inputValue, setInputValue] = useState(rootPath ?? "");
 
     const [selectedEntries, setSelectedEntries] = useState<Entry[]>([]);
     const selectedEntriesRef = useRef<Entry[]>(selectedEntries);
@@ -188,13 +198,112 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
     }, [selectedEntries]);
 
     const initialize = useCallback(async (path?: string, addToHistory: boolean = true) => {
+      clearTimeout(inputBlurHandlerRef.current);
       // Each call supersedes any still-awaiting predecessor; a stale one must never setRoot
       // over a newer navigation.
       const seq = ++initializeSeqRef.current;
       const superseded = () => seq != initializeSeqRef.current;
 
-      if (path == undefined && (rootPathsRef.current?.length ?? 0) > 0) {
+      try {
+        const policy = await useUserStorageStore.getState().load();
+
+        if (superseded()) return;
+        setNavigationError(undefined);
+        if (path && policy.isRestricted) await validateUserStoragePaths([path]);
+        if (superseded()) return;
+
+        if (path == undefined && (rootPathsRef.current?.length ?? 0) > 0) {
+          shiftSelectionStartRef.current = undefined;
+          if (addToHistory && rootRef.current) {
+            const history = historyRootPathsRef.current;
+
+            if (history.length == 0 || history[history.length - 1] != rootRef.current.path) {
+              setHistoryRootPaths([...history, rootRef.current.path]);
+            }
+          }
+
+          const virtualRoot = new RootEntry(undefined, showHiddenFilesRef.current);
+
+          virtualRoot.children = [];
+
+          const standardizedPaths = rootPathsRef
+            .current!.map((p) => standardizePath(p))
+            .filter((p): p is string => !!p);
+          // Missing roots are silently skipped — a mark can point at an unplugged drive.
+          const rsps = await Promise.all(
+            standardizedPaths.map((p) =>
+              BApi.file
+                .getIwFsEntry({ path: p }, { showErrorToast: () => false })
+                .catch(() => undefined),
+            ),
+          );
+
+          if (superseded()) return;
+
+          // Group the roots under passive parent-directory rows so same-named folders stay
+          // distinguishable; roots without a resolvable parent (drive roots) sit directly
+          // under the virtual root. `properties: []` suppresses the per-entry children-count
+          // probe, which enumerates the whole directory server-side — the dominant cost of
+          // opening this view on large libraries.
+          const groups = new Map<string, Entry>();
+
+          for (const rsp of rsps) {
+            if (!rsp?.data?.path) continue;
+            const parentPath = getStandardParentPath(rsp.data.path);
+            let parent: Entry = virtualRoot;
+
+            if (parentPath) {
+              let group = groups.get(parentPath);
+
+              if (!group) {
+                group = new Entry({
+                  path: parentPath,
+                  name: parentPath,
+                  type: IwFsType.Directory,
+                  parent: virtualRoot,
+                  children: [],
+                  expanded: true,
+                  passive: true,
+                  properties: [],
+                });
+                groups.set(parentPath, group);
+                virtualRoot.children.push(group);
+              }
+              parent = group;
+            }
+
+            const child = new Entry({ ...rsp.data, parent, properties: [] });
+
+            if (parent == virtualRoot) {
+              virtualRoot.children.push(child);
+            } else {
+              parent.children!.push(child);
+            }
+          }
+          virtualRoot.children.sort((a, b) => a.name.localeCompare(b.name));
+          for (const group of groups.values()) {
+            group.children!.sort((a, b) => a.name.localeCompare(b.name));
+            group.refreshFilteredChildren();
+          }
+          virtualRoot.refreshFilteredChildren();
+          setRoot(virtualRoot);
+
+          return;
+        }
+
+        let finalPath = standardizePath(path);
+
+        if (finalPath != undefined && finalPath.length > 0) {
+          const isFile = (await BApi.file.checkPathIsFile({ path: finalPath })).data;
+
+          if (superseded()) return;
+
+          if (isFile) {
+            finalPath = getStandardParentPath(finalPath)!;
+          }
+        }
         shiftSelectionStartRef.current = undefined;
+
         if (addToHistory && rootRef.current) {
           const history = historyRootPathsRef.current;
 
@@ -203,99 +312,15 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
           }
         }
 
-        const virtualRoot = new RootEntry(undefined, showHiddenFilesRef.current);
+        log("initialize", finalPath, historyRootPathsRef.current);
 
-        virtualRoot.children = [];
-
-        const standardizedPaths = rootPathsRef
-          .current!.map((p) => standardizePath(p))
-          .filter((p): p is string => !!p);
-        // Missing roots are silently skipped — a mark can point at an unplugged drive.
-        const rsps = await Promise.all(
-          standardizedPaths.map((p) =>
-            BApi.file
-              .getIwFsEntry({ path: p }, { showErrorToast: () => false })
-              .catch(() => undefined),
-          ),
-        );
-
+        setRoot(new RootEntry(finalPath || undefined, showHiddenFilesRef.current));
+      } catch (cause) {
         if (superseded()) return;
-
-        // Group the roots under passive parent-directory rows so same-named folders stay
-        // distinguishable; roots without a resolvable parent (drive roots) sit directly
-        // under the virtual root. `properties: []` suppresses the per-entry children-count
-        // probe, which enumerates the whole directory server-side — the dominant cost of
-        // opening this view on large libraries.
-        const groups = new Map<string, Entry>();
-
-        for (const rsp of rsps) {
-          if (!rsp?.data?.path) continue;
-          const parentPath = getStandardParentPath(rsp.data.path);
-          let parent: Entry = virtualRoot;
-
-          if (parentPath) {
-            let group = groups.get(parentPath);
-
-            if (!group) {
-              group = new Entry({
-                path: parentPath,
-                name: parentPath,
-                type: IwFsType.Directory,
-                parent: virtualRoot,
-                children: [],
-                expanded: true,
-                passive: true,
-                properties: [],
-              });
-              groups.set(parentPath, group);
-              virtualRoot.children.push(group);
-            }
-            parent = group;
-          }
-
-          const child = new Entry({ ...rsp.data, parent, properties: [] });
-
-          if (parent == virtualRoot) {
-            virtualRoot.children.push(child);
-          } else {
-            parent.children!.push(child);
-          }
-        }
-        virtualRoot.children.sort((a, b) => a.name.localeCompare(b.name));
-        for (const group of groups.values()) {
-          group.children!.sort((a, b) => a.name.localeCompare(b.name));
-          group.refreshFilteredChildren();
-        }
-        virtualRoot.refreshFilteredChildren();
-        setRoot(virtualRoot);
-
-        return;
+        setNavigationError(storageError(cause, t).message);
+        if (!rootRef.current && useUserStorageStore.getState().settings)
+          setRoot(new RootEntry(undefined, showHiddenFilesRef.current));
       }
-
-      let finalPath = standardizePath(path);
-
-      if (finalPath != undefined && finalPath.length > 0) {
-        const isFile = (await BApi.file.checkPathIsFile({ path: finalPath })).data;
-
-        if (superseded()) return;
-
-        if (isFile) {
-          finalPath = getStandardParentPath(finalPath)!;
-        }
-      }
-      shiftSelectionStartRef.current = undefined;
-
-      if (addToHistory && rootRef.current) {
-        const history = historyRootPathsRef.current;
-
-        if (history.length == 0 || history[history.length - 1] != rootRef.current.path) {
-          setHistoryRootPaths([...history, rootRef.current.path]);
-        }
-      }
-
-      log("initialize", finalPath, historyRootPathsRef.current);
-
-      setRoot(new RootEntry(finalPath, showHiddenFilesRef.current));
     }, []);
 
     useEffect(() => {
@@ -324,7 +349,18 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
     }, [showHiddenFiles]);
 
     useUpdateEffect(() => {
-      setInputValue(root?.path);
+      if (rootRef.current && rootRef.current !== root) {
+        // Entries belong to their root model. A navigation must not leave actions
+        // targeting rows from the previous directory; expanding a child keeps this root.
+        selectedEntriesRef.current.forEach((entry) => entry.select(false));
+        selectedEntriesRef.current = [];
+        shiftSelectionStartRef.current = undefined;
+        selectionModeRef.current = SelectionMode.Normal;
+        contextMenuEntryRef.current = undefined;
+        toggleMenu(false);
+        setSelectedEntries([]);
+      }
+      setInputValue(root?.path ?? "");
       rootRef.current = root;
       log("root changed", root);
     }, [root]);
@@ -475,9 +511,21 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
       [selectable],
     );
 
-    if (!root) {
-      return null;
+    if (!storage || !root) {
+      return (
+        <div className="space-y-2 p-3 text-sm" role={rootsError ? "alert" : "status"}>
+          {t(rootsError ? "fileExplorer.storage.loadFailed" : "fileExplorer.storage.loading")}
+          {rootsError && (
+            <Button size="sm" onPress={() => void initialize(rootPath)}>
+              {t("fileExplorer.storage.retry")}
+            </Button>
+          )}
+        </div>
+      );
     }
+    const parentPath = getStandardParentPath(root.path);
+    const canGoToParent = parentPath !== undefined && isInsideStorageRoots(parentPath, storage);
+    const storageOverview = storage.isRestricted && !root.path && !rootPaths?.length;
 
     const filteredChildrenCount = root.filteredChildren.length ?? 0;
     const childrenCount = root.childrenCount ?? 0;
@@ -789,7 +837,7 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
           <Button
             isIconOnly
             aria-label={t("fileExplorer.navigation.parent")}
-            isDisabled={getStandardParentPath(root?.path) === undefined}
+            isDisabled={!canGoToParent}
             radius={"none"}
             size={"sm"}
             title={t("fileExplorer.navigation.parent")}
@@ -798,7 +846,7 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
               if (root) {
                 const newRootPath = getStandardParentPath(root.path);
 
-                if (newRootPath !== undefined) {
+                if (newRootPath !== undefined && isInsideStorageRoots(newRootPath, storage)) {
                   initialize(newRootPath);
                 }
               }
@@ -806,6 +854,18 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
           >
             <ArrowUpOutlined className={"text-base"} />
           </Button>
+          {storage.isRestricted && !rootPaths?.length && (
+            <Button
+              isIconOnly
+              aria-label={t("fileExplorer.storage.locations")}
+              size="sm"
+              title={t("fileExplorer.storage.locations")}
+              variant="light"
+              onPress={() => void initialize()}
+            >
+              <HomeOutlined className="text-base" />
+            </Button>
+          )}
           <Button
             isIconOnly
             aria-label={t("fileExplorer.contextMenu.openInFileManager")}
@@ -840,7 +900,11 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
                 </Chip>
               )
             }
-            placeholder={t<string>("fileExplorer.navigation.pathPlaceholder")}
+            placeholder={t<string>(
+              storage.isRestricted
+                ? "fileExplorer.storage.locations"
+                : "fileExplorer.navigation.pathPlaceholder",
+            )}
             radius={"none"}
             size={"sm"}
             value={inputValue}
@@ -850,7 +914,7 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
             onValueChange={(v) => {
               const path = standardizePath(v)!;
 
-              setInputValue(path);
+              setInputValue(path ?? "");
               clearTimeout(inputBlurHandlerRef.current);
               inputBlurHandlerRef.current = setTimeout(() => {
                 initialize(path);
@@ -990,6 +1054,16 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
             </div>
           </div>
         )}
+        {navigationError !== undefined && (
+          <p className="px-2 text-xs text-danger" role="alert">
+            {navigationError || t("fileExplorer.storage.pathRejected")}
+          </p>
+        )}
+        {storageOverview && (
+          <p className="px-2 text-xs text-default-500">
+            {t(storage.roots.length ? "fileExplorer.storage.help" : "fileExplorer.storage.empty")}
+          </p>
+        )}
         <div className={`grow min-h-0 ${compact ? "file-explorer-list" : ""}`}>
           <FileExplorerEntry
             afterPlayedFirstFile={afterPlayedFirstFile}
@@ -997,7 +1071,17 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
             entry={root}
             expandable={expandable}
             filter={filterObj}
-            renderAfterName={renderAfterName}
+            renderAfterName={(entry) => (
+              <>
+                {renderAfterName?.(entry)}
+                {storage.isRestricted &&
+                  storage.roots.some((root) => root.path === entry.path && root.readOnly) && (
+                    <span className="shrink-0 text-xs text-default-400">
+                      {t("fileExplorer.storage.readOnly")}
+                    </span>
+                  )}
+              </>
+            )}
             renderBeforeRightOperations={renderBeforeRightOperations}
             switchSelective={switchSelective}
             onChildrenLoaded={(e) => {
@@ -1025,7 +1109,7 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
                   }
                 }
               }
-              if (initializedRootPathRef.current != e.path) {
+              if (initializedRootPathRef.current !== e.path) {
                 initializedRootPathRef.current = e.path;
                 onInitialized?.(e?.path);
               }

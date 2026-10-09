@@ -1,3 +1,4 @@
+using Bakabase.Abstractions.Components.FileSystem;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -39,7 +40,8 @@ public class AcquisitionInboxService(
     IWorkflowRunResumer resumer,
     IBOptions<AcquisitionOptions> options,
     Bakabase.Infrastructures.Components.App.AppService appService,
-    ILogger<AcquisitionInboxService> logger)
+    ILogger<AcquisitionInboxService> logger,
+    IUserStoragePolicy storagePolicy)
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
@@ -60,6 +62,7 @@ public class AcquisitionInboxService(
 
         if (string.IsNullOrWhiteSpace(inbox) || !Directory.Exists(inbox)) return [];
 
+        storagePolicy.EnsurePathAllowed(inbox);
         var waiting = await WaitingAsync(ct);
 
         // One level only: a download client's own subfolders are its business, and descending into
@@ -87,6 +90,7 @@ public class AcquisitionInboxService(
     /// </summary>
     public async Task OfferAsync(string filePath, CancellationToken ct = default)
     {
+        storagePolicy.EnsurePathAllowed(filePath);
         if (!IsStable(filePath) || !IsCompleteVolumeSet(filePath)) return;
         var files = FileProcessingFiles.ExpandVolumes([filePath]);
         // No filename reveals the final part count reliably. Wait for a human completion
@@ -156,6 +160,7 @@ public class AcquisitionInboxService(
         var task = await acquisitions.GetAsync(taskId, ct)
                    ?? throw new InvalidOperationException($"Acquisition #{taskId} does not exist.");
 
+        storagePolicy.EnsurePathAllowed(inbox);
         Directory.CreateDirectory(inbox);
 
         var workingDirectory = WorkingDirectoryOf(task);
@@ -166,6 +171,7 @@ public class AcquisitionInboxService(
             foreach (var path in Directory.EnumerateFiles(workingDirectory))
             {
                 var target = Path.Combine(inbox, Path.GetFileName(path));
+                storagePolicy.EnsurePathAllowed(target);
 
                 if (File.Exists(target)) continue;
 

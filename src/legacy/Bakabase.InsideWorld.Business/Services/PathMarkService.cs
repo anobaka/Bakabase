@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Extensions;
+using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
@@ -35,7 +36,8 @@ public class PathMarkService<TDbContext>(
     IServiceProvider serviceProvider,
     IBOptions<ResourceOptions> resourceOptions,
     IHubContext<WebGuiHub, IWebGuiClient> uiHub,
-    IExtensionGroupService extensionGroupService
+    IExtensionGroupService extensionGroupService,
+    IUserStoragePolicy storage
 ) : ScopedService(serviceProvider), IPathMarkService where TDbContext : DbContext
 {
     private async Task NotifyPathMarkStatusChange(PathMarkDbModel dbModel)
@@ -267,6 +269,7 @@ public class PathMarkService<TDbContext>(
 
     public async Task<PathMark> Add(PathMark mark)
     {
+        storage.EnsurePathAllowed(mark.Path);
         using (MiniProfiler.Current.Step("PathMarkService.Add"))
         {
             using (MiniProfiler.Current.Step("Prepare"))
@@ -303,6 +306,7 @@ public class PathMarkService<TDbContext>(
 
     public async Task<List<PathMark>> AddRange(List<PathMark> marks)
     {
+        foreach (var mark in marks) storage.EnsurePathAllowed(mark.Path);
         using (MiniProfiler.Current.Step($"PathMarkService.AddRange ({marks.Count} marks)"))
         {
             using (MiniProfiler.Current.Step("Prepare"))
@@ -335,6 +339,7 @@ public class PathMarkService<TDbContext>(
 
     public async Task Update(PathMark mark)
     {
+        storage.EnsurePathAllowed(mark.Path);
         mark.Path = mark.Path.StandardizePath()!;
         mark.UpdatedAt = DateTime.UtcNow;
 
@@ -656,6 +661,7 @@ public class PathMarkService<TDbContext>(
         CancellationToken ct,
         PathMarkApplyScope? applyScope = null, PathFilterFsType? fsTypeFilter = null, List<string>? extensions = null)
     {
+        storage.EnsurePathAllowed(rootPath);
         var matchedPaths = new List<string>();
 
         try
@@ -713,7 +719,7 @@ public class PathMarkService<TDbContext>(
             // Ignore access errors
         }
 
-        return matchedPaths;
+        return matchedPaths.Where(path => storage.IsPathAllowed(path)).ToList();
     }
 
     /// <summary>
@@ -919,13 +925,48 @@ public class PathMarkService<TDbContext>(
     }
 
 
+    private static bool MatchesEntry(bool directory, string path, PathFilterFsType? filter, List<string>? extensions) =>
+        directory ? filter is null or PathFilterFsType.Directory :
+        filter is null or PathFilterFsType.File &&
+        (extensions is not {Count: > 0} || extensions.Any(ext => path.EndsWith(ext, StringComparison.OrdinalIgnoreCase)));
+
+    private IEnumerable<(string Path, bool IsDirectory, int Depth)> EnumerateMountedEntries(string root, int maxDepth,
+        CancellationToken ct)
+    {
+        var pending = new Stack<(string Path, int Depth)>();
+        var visited = new HashSet<string>(StringComparer.Ordinal) {Path.GetFullPath(root)};
+        pending.Push((root, 0));
+        while (pending.TryPop(out var current))
+        {
+            ct.ThrowIfCancellationRequested();
+            if (!storage.IsPathAllowed(current.Path)) continue;
+            foreach (var entry in Directory.EnumerateFileSystemEntries(current.Path))
+            {
+                ct.ThrowIfCancellationRequested();
+                if (!storage.IsPathAllowed(entry)) continue;
+                var directory = Directory.Exists(entry);
+                var depth = current.Depth + 1;
+                yield return (entry, directory, depth);
+                if (!directory || depth >= maxDepth) continue;
+                var info = new DirectoryInfo(entry);
+                var resolved = info.LinkTarget == null ? info.FullName : info.ResolveLinkTarget(true)?.FullName;
+                if (resolved != null && visited.Add(resolved)) pending.Push((entry, depth));
+            }
+        }
+    }
+
     private List<string> GetAllEntries(string rootPath, PathFilterFsType? fsTypeFilter, List<string>? extensions,
         CancellationToken ct)
     {
+        storage.EnsurePathAllowed(rootPath);
         var entries = new List<string>();
 
         try
         {
+            if (storage.IsRestricted)
+                return EnumerateMountedEntries(rootPath, int.MaxValue, ct)
+                    .Where(entry => MatchesEntry(entry.IsDirectory, entry.Path, fsTypeFilter, extensions))
+                    .Select(entry => entry.Path.StandardizePath()!).ToList();
             // Enumerate lazily and check per entry rather than calling Get*: the walk itself is the
             // long part, so materialising it first would leave nothing for the check to shorten.
             if (fsTypeFilter == null || fsTypeFilter == PathFilterFsType.Directory)
@@ -967,10 +1008,15 @@ public class PathMarkService<TDbContext>(
     private List<string> GetEntriesAtLayer(string rootPath, int layer, PathFilterFsType? fsTypeFilter,
         List<string>? extensions, CancellationToken ct)
     {
+        storage.EnsurePathAllowed(rootPath);
         var entries = new List<string>();
 
         try
         {
+            if (storage.IsRestricted && layer > 0)
+                return EnumerateMountedEntries(rootPath, layer, ct)
+                    .Where(entry => entry.Depth == layer && MatchesEntry(entry.IsDirectory, entry.Path, fsTypeFilter, extensions))
+                    .Select(entry => entry.Path.StandardizePath()!).ToList();
             var currentPaths = new List<string> { rootPath };
 
             for (int i = 1; i <= layer; i++)
@@ -1030,6 +1076,7 @@ public class PathMarkService<TDbContext>(
 
     public async Task MigratePath(string oldPath, string newPath)
     {
+        storage.EnsurePathAllowed(newPath);
         var normalizedOldPath = oldPath.StandardizePath()!;
         var normalizedNewPath = newPath.StandardizePath()!;
 

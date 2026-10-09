@@ -187,15 +187,13 @@ const FileProcessorPage = () => {
                   return true;
                 }}
                 onInitialized={(v) => {
-                  if (v != undefined) {
-                    BApi.options.patchFileSystemOptions({
-                      fileProcessor: {
-                        ...(fpOptionsRef.current ?? { showOperationsAfterPlayingFirstFile: false }),
-                        workingDirectory: v,
-                      },
-                    });
-                    setRootPath(v);
-                  }
+                  BApi.options.patchFileSystemOptions({
+                    fileProcessor: {
+                      ...(fpOptionsRef.current ?? { showOperationsAfterPlayingFirstFile: false }),
+                      workingDirectory: v ?? "",
+                    },
+                  });
+                  setRootPath(v);
                 }}
               />
             )}

@@ -33,7 +33,9 @@ public sealed class ExHentaiAcquisitionQueue(ExHentaiDownloaderHelper helper, Do
         CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
-        var tasks = await helper.BuildTasks(new DownloadTaskAddInputModel
+        if (!int.TryParse(Path.GetFileName(Path.GetDirectoryName(directory)), out var acquisitionTaskId))
+            throw new InvalidOperationException("The acquisition working directory is invalid.");
+        var tasks = await helper.BuildAcquisitionTasks(acquisitionTaskId, new DownloadTaskAddInputModel
         {
             ThirdPartyId = ThirdPartyId.ExHentai,
             Type = (int) ExHentaiDownloadTaskType.SingleWork,

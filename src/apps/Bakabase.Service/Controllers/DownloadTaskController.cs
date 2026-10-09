@@ -231,7 +231,8 @@ public class DownloadTaskController : Controller
     [SwaggerOperation(OperationId = "AddExHentaiDownloadTask")]
     public async Task<BaseResponse> AddExHentaiTask([FromBody] ExHentaiDownloadTaskAddInputModel model)
     {
-        var downloadPath = _exhentaiOptions.Value.DefaultPath;
+        var downloadPath = (await _downloaderFactory.GetHelper(ThirdPartyId.ExHentai, (int) model.Type)
+            .GetOptionsAsync()).DefaultPath;
         if (downloadPath.IsNullOrEmpty())
         {
             throw new Exception("Download path for exhentai is not set");

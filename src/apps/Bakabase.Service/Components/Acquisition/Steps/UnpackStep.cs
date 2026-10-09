@@ -107,6 +107,7 @@ public class UnpackStep : IAcquisitionStep
         var extraction = ctx.ServiceProvider.GetRequiredService<IArchiveExtractionService>();
 
         var directory = item.ExtractedDirectory ?? ctx.WorkingDirectory;
+        Bakabase.Modules.Acquisition.Components.AcquisitionStoragePaths.EnsureSourceAllowed(ctx, item, directory);
 
         if (!Directory.Exists(directory))
         {
@@ -124,6 +125,8 @@ public class UnpackStep : IAcquisitionStep
             ct.ThrowIfCancellationRequested();
 
             var files = Directory.GetFiles(directory, "*", SearchOption.AllDirectories);
+            foreach (var file in files)
+                Bakabase.Modules.Acquisition.Components.AcquisitionStoragePaths.EnsureSourceAllowed(ctx, item, file);
             var groups = CompressedFileHelper.DetectCompressedFileGroups(files, true)
                 .Where(g => !alreadyUnpacked.Contains(g.Files[0]))
                 .ToList();
@@ -164,7 +167,10 @@ public class UnpackStep : IAcquisitionStep
             var plan = JsonSerializer.Deserialize<PostExtractionPlan>(planJson, Json)
                        ?? throw new InvalidOperationException("The extraction plan is empty.");
             var root = item.ExtractedDirectory ?? ctx.WorkingDirectory;
+            Bakabase.Modules.Acquisition.Components.AcquisitionStoragePaths.EnsureSourceAllowed(ctx, item, root);
             var files = item.Files.Count > 0 ? item.Files : FileProcessingFiles.Enumerate(root);
+            foreach (var file in files)
+                Bakabase.Modules.Acquisition.Components.AcquisitionStoragePaths.EnsureSourceAllowed(ctx, item, file);
             var app = ctx.ServiceProvider.GetService<AppService>();
             var stateDirectory = item.ProcessingStateDirectory ?? (app != null
                 ? Path.Combine(app.AppDataDirectory, "file-processing", ctx.WorkflowRunId?.ToString() ??

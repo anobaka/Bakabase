@@ -77,6 +77,7 @@ namespace Bakabase.Service.Controllers
         private readonly FfMpegService _ffMpegService;
         private readonly HardwareAccelerationService _hardwareAccelerationService;
 
+        private readonly IUserStoragePolicy _storagePolicy;
         private readonly IFileManager _fileManager;
         private readonly AppService _appService;
         private readonly Bakabase.Service.Services.FileSystemEntryGroupingService _groupingService;
@@ -88,7 +89,7 @@ namespace Bakabase.Service.Controllers
             BakabaseLocalizer localizer, BTaskManager taskManager, IGuiAdapter guiAdapter,
             FfMpegService ffMpegService, HardwareAccelerationService hardwareAccelerationService,
             IFileManager fileManager, AppService appService,
-            Bakabase.Service.Services.FileSystemEntryGroupingService groupingService)
+            Bakabase.Service.Services.FileSystemEntryGroupingService groupingService, IUserStoragePolicy storagePolicy)
         {
             _textOps = textOps;
             _env = env;
@@ -106,6 +107,74 @@ namespace Bakabase.Service.Controllers
             _fileManager = fileManager;
             _appService = appService;
             _groupingService = groupingService;
+            _storagePolicy = storagePolicy;
+        }
+
+        [HttpGet("storage-roots")]
+        [SwaggerOperation(OperationId = "GetUserStorageRoots")]
+        public SingletonResponse<UserStorageRootsViewModel> GetUserStorageRoots() => new(
+            new UserStorageRootsViewModel(_storagePolicy.IsRestricted, _storagePolicy.GetRoots()
+                .Select(root => new UserStorageRootViewModel(root.Path, root.Name, root.StorageKind, root.ReadOnly)).ToArray()));
+
+        [HttpPost("validate-storage-paths")]
+        [SwaggerOperation(OperationId = "ValidateUserStoragePaths")]
+        public BaseResponse ValidateUserStoragePaths([FromBody] UserStoragePathsInputModel model)
+        {
+            EnsureStoragePaths(model.Paths);
+            return BaseResponseBuilder.Ok;
+        }
+
+        private void EnsureStoragePaths(IEnumerable<string> paths)
+        {
+            foreach (var path in paths) _storagePolicy.EnsurePathAllowed(path);
+        }
+
+        // Walk once, checking each directory before descent. Read operations omit inaccessible
+        // storage branches; task preflight rejects them before any file mutation.
+        private IEnumerable<FileSystemInfo> EnumerateStorageEntries(string path, CancellationToken ct,
+            bool rejectOutside = false)
+        {
+            _storagePolicy.EnsurePathAllowed(path);
+            var pending = new Stack<DirectoryInfo>();
+            pending.Push(new DirectoryInfo(path));
+            var visited = new HashSet<string>(StringComparer.Ordinal);
+            while (pending.TryPop(out var directory))
+            {
+                ct.ThrowIfCancellationRequested();
+                var resolved = directory.ResolveLinkTarget(true)?.FullName ?? directory.FullName;
+                if (!visited.Add(resolved)) continue;
+                foreach (var child in directory.EnumerateFileSystemInfos())
+                {
+                    ct.ThrowIfCancellationRequested();
+                    if (!_storagePolicy.IsPathAllowed(child.FullName))
+                    {
+                        if (rejectOutside) _storagePolicy.EnsurePathAllowed(child.FullName);
+                        continue;
+                    }
+                    yield return child;
+                    if (child is DirectoryInfo subdirectory) pending.Push(subdirectory);
+                }
+            }
+        }
+
+        private async Task EnsureStorageTreesInTask(IEnumerable<string> paths, CancellationToken ct,
+            Func<string, Task> report)
+        {
+            if (!_storagePolicy.IsRestricted) return;
+            var watch = Stopwatch.StartNew();
+            foreach (var path in paths)
+            {
+                ct.ThrowIfCancellationRequested();
+                _storagePolicy.EnsurePathAllowed(path);
+                await report(path);
+                if (!Directory.Exists(path)) continue;
+                foreach (var entry in EnumerateStorageEntries(path, ct, rejectOutside: true))
+                {
+                    if (watch.ElapsedMilliseconds < 250) continue;
+                    await report(entry.FullName);
+                    watch.Restart();
+                }
+            }
         }
 
         private static bool IsHiddenEntry(string path)
@@ -136,6 +205,7 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "DetectCompressedFiles")]
         public async Task<IActionResult> DetectCompressedFiles([FromBody] CompressedFileDetectionInputModel model)
         {
+            EnsureStoragePaths(model.Paths);
             Response.Headers.ContentType = "application/x-ndjson";
             var ct = HttpContext.RequestAborted;
 
@@ -160,17 +230,30 @@ namespace Bakabase.Service.Controllers
                 var dir = new DirectoryInfo(path);
                 if (dir.Exists)
                 {
-                    var files = dir.GetFiles("*", SearchOption.AllDirectories)
-                        // .Where(f => f.Length >= thresholdBytes)
-                        .Select(f => f.FullName).ToArray();
-                    path += InternalOptions.DirSeparator;
-                    var groups = CompressedFileHelper.DetectCompressedFileGroups(files, !model.IncludeUnknownFiles);
-                    foreach (var group in groups.Where(g => g.FileSizes.Sum() >= thresholdBytes))
+                    // A group never spans directories. Detect each directory as it is reached,
+                    // so the NDJSON consumer sees results without waiting for a whole-tree scan.
+                    var directories = new Queue<DirectoryInfo>();
+                    var visited = new HashSet<string>(StringComparer.Ordinal);
+                    directories.Enqueue(dir);
+                    while (directories.TryDequeue(out var current))
                     {
-                        var vm = group.ToViewModel();
-                        groupViewModelMap[group] = vm;
-                        await YieldReturn(vm);
+                        ct.ThrowIfCancellationRequested();
+                        if (!_storagePolicy.IsPathAllowed(current.FullName)) continue;
+                        var resolved = current.ResolveLinkTarget(true)?.FullName ?? current.FullName;
+                        if (!visited.Add(resolved)) continue;
+                        var files = current.EnumerateFiles().Where(file => _storagePolicy.IsPathAllowed(file.FullName))
+                            .Select(file => file.FullName).ToArray();
+                        var groups = CompressedFileHelper.DetectCompressedFileGroups(files, !model.IncludeUnknownFiles);
+                        foreach (var group in groups.Where(g => g.FileSizes.Sum() >= thresholdBytes))
+                        {
+                            var vm = group.ToViewModel();
+                            groupViewModelMap[group] = vm;
+                            await YieldReturn(vm);
+                        }
+                        foreach (var child in current.EnumerateDirectories())
+                            if (_storagePolicy.IsPathAllowed(child.FullName)) directories.Enqueue(child);
                     }
+                    path += InternalOptions.DirSeparator;
                 }
                 else
                 {
@@ -316,6 +399,14 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "DecompressCompressedFiles")]
         public async Task<IActionResult> DecompressCompressedFiles([FromBody] DecompressionInputModel model)
         {
+            foreach (var item in model.Items)
+            {
+                EnsureStoragePaths(item.Files);
+                _storagePolicy.EnsurePathAllowed(item.Directory);
+                if (item.DecompressToNewFolder && item.Files.Length > 0)
+                    _storagePolicy.EnsurePathAllowed(Path.Combine(item.Directory, Path.GetFileNameWithoutExtension(item.Files[0])));
+                if (item.MoveToParent) _storagePolicy.EnsurePathAllowed(Path.GetDirectoryName(item.Directory)!);
+            }
             Response.Headers.ContentType = "application/x-ndjson";
             var ct = HttpContext.RequestAborted;
 
@@ -405,8 +496,9 @@ namespace Bakabase.Service.Controllers
         public async Task<ListResponse<FileSystemEntryNameViewModel>> GetTopLevelFileSystemEntryNames(
             string root, bool showHiddenFiles = false)
         {
-            var filePaths = Directory.GetFiles(root).AsEnumerable();
-            var dirPaths = Directory.GetDirectories(root).AsEnumerable();
+            _storagePolicy.EnsurePathAllowed(root);
+            var filePaths = Directory.GetFiles(root).Where(path => _storagePolicy.IsPathAllowed(path));
+            var dirPaths = Directory.GetDirectories(root).Where(path => _storagePolicy.IsPathAllowed(path));
 
             if (!showHiddenFiles)
             {
@@ -431,6 +523,13 @@ namespace Bakabase.Service.Controllers
             bool? isDirectory, string? prefix = null, int maxResults = 20)
         {
             prefix = prefix?.StandardizePath();
+            if (!string.IsNullOrEmpty(prefix) && _storagePolicy.IsRestricted && !_storagePolicy.IsPathAllowed(prefix))
+            {
+                var matches = _storagePolicy.GetRoots().Where(root => root.Path.StartsWith(prefix, StringComparison.Ordinal))
+                    .Select(root => new FileSystemEntryNameViewModel(root.Path, root.Name, true)).Take(maxResults).ToArray();
+                if (matches.Length > 0) return new ListResponse<FileSystemEntryNameViewModel>(matches);
+                _storagePolicy.EnsurePathAllowed(prefix);
+            }
             var results = new List<FileSystemEntryNameViewModel>();
             string? parent = null;
 
@@ -468,10 +567,8 @@ namespace Bakabase.Service.Controllers
 
             if (parent == null)
             {
-                var drives = DriveInfo.GetDrives()
-                    .Where(d => d.IsReady)
-                    .Select(d => new FileSystemEntryNameViewModel(
-                        d.Name.StandardizePath()!, d.Name.StandardizePath()!, true));
+                var drives = _storagePolicy.GetRoots()
+                    .Select(d => new FileSystemEntryNameViewModel(d.Path.StandardizePath()!, d.Name, true));
 
                 results.AddRange(drives
                     .Where(d =>
@@ -506,7 +603,7 @@ namespace Bakabase.Service.Controllers
                         {
                             if (token.IsCancellationRequested) break;
                             var stdPath = d.StandardizePath()!;
-                            if (pathSet.Add(stdPath))
+                            if (_storagePolicy.IsPathAllowed(stdPath) && pathSet.Add(stdPath))
                             {
                                 results.Add(new FileSystemEntryNameViewModel(stdPath, Path.GetFileName(stdPath), true));
                             }
@@ -529,7 +626,7 @@ namespace Bakabase.Service.Controllers
                         {
                             if (token.IsCancellationRequested) break;
                             var stdPath = f.StandardizePath()!;
-                            if (pathSet.Add(stdPath))
+                            if (_storagePolicy.IsPathAllowed(stdPath) && pathSet.Add(stdPath))
                             {
                                 results.Add(new FileSystemEntryNameViewModel(f.StandardizePath()!, Path.GetFileName(f),
                                     false));
@@ -553,6 +650,7 @@ namespace Bakabase.Service.Controllers
         public async Task<SingletonResponse<IwFsEntryLazyInfo>> GetIwFsInfo(string path, IwFsType type,
             bool showHiddenFiles = false)
         {
+            _storagePolicy.EnsurePathAllowed(path);
             // The frontend hands us whatever path the user typed / clicked,
             // including hidden Windows junction points (`Application Data`,
             // `My Documents`) that throw UnauthorizedAccessException, and
@@ -581,6 +679,7 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "GetIwFsEntry")]
         public async Task<SingletonResponse<IwFsEntry>> GetIwFsEntry(string path)
         {
+            _storagePolicy.EnsurePathAllowed(path);
             return new SingletonResponse<IwFsEntry>(new IwFsEntry(path));
         }
 
@@ -588,6 +687,7 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "CreateDirectory")]
         public async Task<BaseResponse> CreateDirectory(string parent)
         {
+            _storagePolicy.EnsurePathAllowed(parent);
             if (!Directory.Exists(parent))
             {
                 return BaseResponseBuilder.BuildBadRequest(_localizer.PathIsNotFound(parent));
@@ -623,11 +723,12 @@ namespace Bakabase.Service.Controllers
             var entries = new List<IwFsEntry>();
             if (string.IsNullOrEmpty(root))
             {
-                var drives = DriveInfo.GetDrives().Select(f => f.Name).ToArray();
-                entries.AddRange(drives.Select(d => new IwFsEntry(d, IwFsType.Drive)));
+                entries.AddRange(_storagePolicy.GetRoots().Select(storage =>
+                    new IwFsEntry(storage.Path, IwFsType.Drive) { Name = storage.Name }));
             }
             else
             {
+                _storagePolicy.EnsurePathAllowed(root);
                 if (Directory.Exists(root))
                 {
                     isDirectory = true;
@@ -670,8 +771,8 @@ namespace Bakabase.Service.Controllers
                     files = files.Where(f => !IsHiddenEntry(f)).ToArray();
                 }
 
-                entries.AddRange(dirs.Select(d => new IwFsEntry(d, IwFsType.Directory)));
-                entries.AddRange(files.Select(d => new IwFsEntry(d, IwFsType.Unknown)));
+                entries.AddRange(dirs.Where(path => _storagePolicy.IsPathAllowed(path)).Select(d => new IwFsEntry(d, IwFsType.Directory)));
+                entries.AddRange(files.Where(path => _storagePolicy.IsPathAllowed(path)).Select(d => new IwFsEntry(d, IwFsType.Unknown)));
             }
 
             entries = entries
@@ -689,6 +790,7 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "RemoveFiles")]
         public async Task<BaseResponse> Remove([FromBody] FileRemoveRequestModel model)
         {
+            foreach (var path in model.Paths) _storagePolicy.EnsureTreeMutationAllowed(path);
             var errors = new List<string>();
             foreach (var p in model.Paths.Where(e => !e.EndsWith('.')))
             {
@@ -725,6 +827,8 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "RenameFile")]
         public async Task<SingletonResponse<string>> Rename([FromBody] FileRenameRequestModel model)
         {
+            _storagePolicy.EnsureTreeMutationAllowed(model.Fullname);
+            _storagePolicy.EnsurePathAllowed(Path.Combine(Path.GetDirectoryName(model.Fullname)!, Path.GetFileName(model.NewName)));
             var invalidFilenameChars = Path.GetInvalidFileNameChars();
             if (invalidFilenameChars.Any(t => model.NewName.Contains(t)))
             {
@@ -811,7 +915,31 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "ExtractAndRemoveDirectory")]
         public async Task<BaseResponse> ExtractAndRemoveDirectory(string directory)
         {
-            DirectoryUtils.Merge(directory, Path.GetDirectoryName(directory), false);
+            _storagePolicy.EnsureTreeMutationAllowed(directory);
+            var parent = Path.GetDirectoryName(directory)!;
+            _storagePolicy.EnsurePathAllowed(parent);
+            if (!_storagePolicy.IsRestricted)
+            {
+                DirectoryUtils.Merge(directory, parent, false);
+                return BaseResponseBuilder.Ok;
+            }
+            _taskManager.Enqueue(BTaskBuilder.Create()
+                .Named(() => _localizer.MoveFiles())
+                .Describe(() => _localizer.MoveFile(directory, parent))
+                .InterruptionMessage(() => _localizer.MessageOnInterruption_MoveFiles())
+                .OfType(BTaskType.MoveFiles)
+                .OfResourceType(BTaskResourceType.FileSystemEntry)
+                .ForResources(directory)
+                .Run(async args =>
+                {
+                    var targets = Directory.EnumerateFileSystemEntries(directory)
+                        .Select(path => Path.Combine(parent, Path.GetFileName(path)));
+                    await EnsureStorageTreesInTask(new[] { directory }.Concat(targets), args.CancellationToken,
+                        checkedPath => args.UpdateTask(task => task.SetProcess(BTaskText.Localize(_localizer,
+                            "BTask_Process_CheckingStorage", checkedPath))));
+                    await args.UpdateTask(task => task.SetProcess(null));
+                    DirectoryUtils.Merge(directory, parent, false);
+                }));
             return BaseResponseBuilder.Ok;
         }
 
@@ -845,6 +973,9 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "MoveEntries")]
         public async Task<BaseResponse> MoveEntries([FromBody] FileMoveRequestModel model)
         {
+            foreach (var path in model.EntryPaths) _storagePolicy.EnsureTreeMutationAllowed(path);
+            _storagePolicy.EnsurePathAllowed(model.DestDir);
+            EnsureStoragePaths(model.EntryPaths.Select(path => Path.Combine(model.DestDir, Path.GetFileName(path))));
             var paths = model.EntryPaths.FindTopLevelPaths();
             // Directory.CreateDirectory(model.DestDir);
 
@@ -876,6 +1007,10 @@ namespace Bakabase.Service.Controllers
                     .ConflictsWith(taskId)
                     .Run(async args =>
                     {
+                        await EnsureStorageTreesInTask([path1, targetPath], args.CancellationToken, checkedPath =>
+                            args.UpdateTask(task => task.SetProcess(BTaskText.Localize(_localizer,
+                                "BTask_Process_CheckingStorage", checkedPath))));
+                        await args.UpdateTask(task => task.SetProcess(null));
                         var isDirectory = Directory.Exists(path1);
                         var isFile = System.IO.File.Exists(path1);
                         if (isDirectory || isFile)
@@ -907,6 +1042,9 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "CopyEntries")]
         public async Task<BaseResponse> CopyEntries([FromBody] FileMoveRequestModel model)
         {
+            EnsureStoragePaths(model.EntryPaths);
+            _storagePolicy.EnsurePathAllowed(model.DestDir);
+            EnsureStoragePaths(model.EntryPaths.Select(path => Path.Combine(model.DestDir, Path.GetFileName(path))));
             var paths = model.EntryPaths.FindTopLevelPaths();
 
             var nested = RejectNestedDestination(paths, model.DestDir, "copy");
@@ -936,6 +1074,10 @@ namespace Bakabase.Service.Controllers
                     .ConflictsWith(taskId)
                     .Run(async args =>
                     {
+                        await EnsureStorageTreesInTask([path1, targetPath], args.CancellationToken, checkedPath =>
+                            args.UpdateTask(task => task.SetProcess(BTaskText.Localize(_localizer,
+                                "BTask_Process_CheckingStorage", checkedPath))));
+                        await args.UpdateTask(task => task.SetProcess(null));
                         var isDirectory = Directory.Exists(path1);
                         var isFile = System.IO.File.Exists(path1);
                         if (isDirectory || isFile)
@@ -963,11 +1105,12 @@ namespace Bakabase.Service.Controllers
             return BaseResponseBuilder.Ok;
         }
 
-        private static async Task<(string[] Files, string[] Directories)> _getSameNameEntriesInWorkingDirectory(
+        private async Task<(string[] Files, string[] Directories)> _getSameNameEntriesInWorkingDirectory(
             RemoveSameEntryInWorkingDirectoryRequestModel model)
         {
-            var allFiles = Directory.GetFiles(model.WorkingDir, "*.*", SearchOption.AllDirectories);
-            var allDirectories = Directory.GetDirectories(model.WorkingDir, "*.*", SearchOption.AllDirectories);
+            var entries = EnumerateStorageEntries(model.WorkingDir, HttpContext.RequestAborted).ToArray();
+            var allFiles = entries.OfType<FileInfo>().Select(entry => entry.FullName).ToArray();
+            var allDirectories = entries.OfType<DirectoryInfo>().Select(entry => entry.FullName).ToArray();
 
             var files = new List<string>();
             var directories = new List<string>();
@@ -1006,6 +1149,8 @@ namespace Bakabase.Service.Controllers
         public async Task<ListResponse<FileSystemEntryNameViewModel>> GetSameNameEntriesInWorkingDirectory(
             [FromBody] RemoveSameEntryInWorkingDirectoryRequestModel model)
         {
+            _storagePolicy.EnsurePathAllowed(model.WorkingDir);
+            EnsureStoragePaths(model.EntryPaths);
             model.WorkingDir = model.WorkingDir.StandardizePath()!;
 
             var (files, directories) = await _getSameNameEntriesInWorkingDirectory(model);
@@ -1027,6 +1172,8 @@ namespace Bakabase.Service.Controllers
         public async Task<BaseResponse> RemoveSameNameEntryInWorkingDirectory(
             [FromBody] RemoveSameEntryInWorkingDirectoryRequestModel model)
         {
+            _storagePolicy.EnsurePathAllowed(model.WorkingDir);
+            EnsureStoragePaths(model.EntryPaths);
             var paths = await _getSameNameEntriesInWorkingDirectory(model);
             foreach (var be in paths.Files)
             {
@@ -1035,6 +1182,7 @@ namespace Bakabase.Service.Controllers
 
             foreach (var be in paths.Directories)
             {
+                _storagePolicy.EnsureTreeMutationAllowed(be);
                 DirectoryUtils.Delete(be, false, true);
             }
 
@@ -1046,6 +1194,7 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "StandardizeEntryName")]
         public async Task<BaseResponse> StandardizeEntryName(string path)
         {
+            _storagePolicy.EnsureTreeMutationAllowed(path);
             var filename = Path.GetFileName(path);
             var newName = await _textOps.Clean(filename);
             if (filename == newName)
@@ -1054,6 +1203,7 @@ namespace Bakabase.Service.Controllers
             }
 
             var newFullname = Path.Combine(Path.GetDirectoryName(path), newName);
+            _storagePolicy.EnsurePathAllowed(newFullname);
             if (System.IO.File.Exists(newFullname) || Directory.Exists(newFullname))
             {
                 return BaseResponseBuilder.BuildBadRequest($"New entry path {newFullname} exists");
@@ -1635,6 +1785,8 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "DecompressFiles")]
         public async Task<BaseResponse> DecompressFiles([FromBody] FileDecompressRequestModel model)
         {
+            EnsureStoragePaths(model.Paths);
+            EnsureStoragePaths(model.Paths.Select(path => Path.GetDirectoryName(path)!));
             var allPaths = model.Paths.ToHashSet();
             var parentsMappings = allPaths.GroupBy(Path.GetDirectoryName).ToDictionary(t => t.Key!, t => t.ToList())
                 .ToList();
@@ -1719,6 +1871,7 @@ namespace Bakabase.Service.Controllers
                                 var workingDir = Path.GetDirectoryName(entry);
                                 var targetDir = Path.Combine(workingDir,
                                     group.KeyName);
+                                _storagePolicy.EnsurePathAllowed(targetDir);
                                 var processRegex = new Regex(@$"\d+\%");
                                 var tryPSwitch = false;
 
@@ -1920,6 +2073,7 @@ namespace Bakabase.Service.Controllers
         [RemoteAccessible(PathParameters = [nameof(path)])]
         public async Task<ListResponse<string>> GetAllFiles(string path)
         {
+            _storagePolicy.EnsurePathAllowed(path);
             if (System.IO.File.Exists(path))
             {
                 return new ListResponse<string>(new[] { path });
@@ -1930,8 +2084,8 @@ namespace Bakabase.Service.Controllers
                 return new ListResponse<string>();
             }
 
-            return new ListResponse<string>(Directory.GetFiles(path, "*.*", SearchOption.AllDirectories)
-                .Select(a => a.StandardizePath()!)
+            return new ListResponse<string>(EnumerateStorageEntries(path, HttpContext.RequestAborted).OfType<FileInfo>()
+                .Select(a => a.FullName.StandardizePath()!)
                 .OrderByNatural());
         }
 
@@ -1940,6 +2094,7 @@ namespace Bakabase.Service.Controllers
         [RemoteAccessible(PathParameters = [nameof(compressedFilePath)])]
         public async Task<ListResponse<CompressedFileEntry>> GetCompressFileEntries(string compressedFilePath)
         {
+            _storagePolicy.EnsurePathAllowed(compressedFilePath);
             var sw = Stopwatch.StartNew();
             var rsp = await _compressedFileService.GetCompressFileEntries(compressedFilePath,
                 HttpContext.RequestAborted);
@@ -1959,8 +2114,27 @@ namespace Bakabase.Service.Controllers
         public async Task<SingletonResponse<Dictionary<string, int>>> GetFileExtensionCounts(string sampleFile,
             string rootPath)
         {
+            _storagePolicy.EnsurePathAllowed(rootPath);
+            _storagePolicy.EnsurePathAllowed(sampleFile);
             var startLayer = rootPath.StandardizePath()!.SplitPathIntoSegments().Length - 1;
-            var sameLayerFiles = FileUtils.GetSameLayerFiles(sampleFile, startLayer);
+            IEnumerable<string> sameLayerFiles;
+            if (!_storagePolicy.IsRestricted) sameLayerFiles = FileUtils.GetSameLayerFiles(sampleFile, startLayer);
+            else
+            {
+                var relative = Path.GetRelativePath(rootPath, Path.GetDirectoryName(sampleFile)!);
+                if (relative == ".." || relative.StartsWith("../", StringComparison.Ordinal))
+                    throw new IOException("The sample file must be inside the selected directory.");
+                var depth = relative == "." ? 0 : relative.Split(Path.DirectorySeparatorChar).Length;
+                IEnumerable<string> directories = [rootPath];
+                for (var level = 0; level < depth; level++)
+                {
+                    HttpContext.RequestAborted.ThrowIfCancellationRequested();
+                    directories = directories.SelectMany(Directory.EnumerateDirectories)
+                        .Where(path => _storagePolicy.IsPathAllowed(path)).ToArray();
+                }
+                sameLayerFiles = directories.SelectMany(Directory.EnumerateFiles)
+                    .Where(path => _storagePolicy.IsPathAllowed(path));
+            }
             var extensions = sameLayerFiles.Select(Path.GetExtension).Where(a => a.IsNotEmpty()).GroupBy(a => a)
                 .ToDictionary(a => a.Key, a => a.Count());
             return new SingletonResponse<Dictionary<string, int>>(extensions);
@@ -2016,6 +2190,7 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "StartWatchingChangesInFileProcessorWorkspace")]
         public async Task<BaseResponse> StartWatchingChangesInFileProcessorWorkspace(string path)
         {
+            _storagePolicy.EnsurePathAllowed(path);
             _fileProcessorWatcher.Start(path);
             return BaseResponseBuilder.Ok;
         }
@@ -2040,6 +2215,7 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "CheckPathIsFile")]
         public async Task<SingletonResponse<bool>> CheckPathIsFile(string path)
         {
+            _storagePolicy.EnsurePathAllowed(path);
             return new SingletonResponse<bool>(System.IO.File.Exists(path));
         }
 
@@ -2063,12 +2239,14 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "GetFirstFileByExtension")]
         public async Task<ListResponse<string>> GetFirstFileByExtension(string path)
         {
+            _storagePolicy.EnsurePathAllowed(path);
             if (System.IO.File.Exists(path))
             {
                 return new ListResponse<string>([path]);
             }
 
-            var files = Directory.GetFiles(path, "*.*", SearchOption.AllDirectories);
+            var files = EnumerateStorageEntries(path, HttpContext.RequestAborted).OfType<FileInfo>()
+                .Select(entry => entry.FullName);
             var fileGroup = files.GroupBy(Path.GetExtension).OrderByDescending(x => x.Count()).Select(a => a.First());
             return new ListResponse<string>(fileGroup);
         }

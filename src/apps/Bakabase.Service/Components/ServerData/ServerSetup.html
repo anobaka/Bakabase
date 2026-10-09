@@ -433,12 +433,18 @@
       const result = await api('/setup/directories' + (path ? '?' + new URLSearchParams({path}) : ''));
       if (requestId !== folderRequest || !el('folderDialog').open) return;
       if (openParent && result.parentPath) { await loadFolders(result.parentPath); return; }
-      folderState = result; set('folderPath',result.currentPath);
+      folderState = result; set('folderPath',result.currentPath || t('存储位置','Storage locations'));
       el('folderUp').disabled = !result.parentPath;
       el('folderRoots').replaceChildren();
+      if (result.isRestricted) {
+        const all = document.createElement('button'); all.type='button'; all.className='secondary';
+        all.textContent=t('存储位置','Storage locations'); all.addEventListener('click',()=>loadFolders());
+        el('folderRoots').append(all);
+      }
       for (const root of result.roots) {
         const button = document.createElement('button'); button.type='button'; button.className='secondary';
         button.textContent = root.path === '/' ? t('根目录','Root folder') : root.name;
+        if (root.readOnly) button.textContent += t(' · 只读',' · Read-only');
         button.addEventListener('click',() => loadFolders(root.path)); el('folderRoots').append(button);
       }
       for (const directory of result.directories) {
@@ -447,10 +453,13 @@
         item.append(button); el('folderList').append(item);
       }
       set('folderMessage',result.truncated ? t('文件夹较多，仅显示部分结果。找不到时可返回手动输入路径。','Only some folders are shown. If yours is missing, close this picker and enter the path manually.') : result.directories.length ? t('点击文件夹进入，或直接使用当前位置。','Open a folder below, or use the current location.') : t('此位置没有可显示的子文件夹。','No subfolders to show here.'));
-      el('folderSelect').disabled = false;
+      if (result.isRestricted && !result.roots.length)
+        set('folderMessage',t('尚未发现已挂载的存储目录。请在部署配置中挂载目录后重试。','No mounted storage directories were found. Mount a directory in your deployment configuration and try again.'));
+      el('folderSelect').disabled = !result.currentPath;
+      el('folderName').disabled = !result.currentPath;
     } catch (error) {
       if (requestId !== folderRequest || !el('folderDialog').open) return;
-      if (fallback && error.status === 404) { await loadFolders(); return; }
+      if (fallback && (error.status === 404 || state.isDocker && error.status === 400)) { await loadFolders(); return; }
       set('folderMessage',''); set('folderError',error.status === 403 ? t('无法读取此目录，请检查服务的访问权限。','The server cannot read this directory. Check its access permissions.') : error.message); el('folderError').hidden=false;
     }
   }
@@ -483,7 +492,7 @@
         return;
       }
       folderField = field; el('folderName').value=''; el('folderNew').hidden = field !== 'target';
-      set('folderContext',state.isDocker ? t('选择容器内的文件夹，宿主机目录需要先挂载。','Choose a folder inside the container. Host folders must be mounted first.') : t('这里显示运行 Bakabase 服务的设备上的文件夹。','These folders are on the device running Bakabase.'));
+      set('folderContext',state.isDocker ? t('这里仅显示已挂载的存储目录。只读权限由部署配置决定。','Only mounted storage directories are shown. Read-only permissions follow your deployment configuration.') : t('这里显示运行 Bakabase 服务的设备上的文件夹。','These folders are on the device running Bakabase.'));
       el('folderDialog').showModal();
       const initialPath = el(field).value.trim();
       await loadFolders(initialPath,true,field === 'target' && !state.firstRun && initialPath === state.currentPath);

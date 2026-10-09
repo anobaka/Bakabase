@@ -4730,6 +4730,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/file/storage-roots": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetUserStorageRoots"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/file/validate-storage-paths": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ValidateUserStoragePaths"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/file/decompression/detect": {
         parameters: {
             query?: never;
@@ -15431,6 +15463,9 @@ export interface components {
         "Bakabase.Service.Models.Input.TextTypePatchInputModel": {
             name: string;
         };
+        "Bakabase.Service.Models.Input.UserStoragePathsInputModel": {
+            paths: string[];
+        };
         "Bakabase.Service.Models.View.AcquisitionCandidateLeadViewModel": {
             /** Format: int32 */
             id: number;
@@ -16129,6 +16164,16 @@ export interface components {
             enabledEnhancers: string[];
             aiEnabled: boolean;
             hasMediaLibrary: boolean;
+        };
+        "Bakabase.Service.Models.View.UserStorageRootViewModel": {
+            path: string;
+            name: string;
+            storageKind: string;
+            readOnly?: boolean;
+        };
+        "Bakabase.Service.Models.View.UserStorageRootsViewModel": {
+            isRestricted: boolean;
+            roots: components["schemas"]["Bakabase.Service.Models.View.UserStorageRootViewModel"][];
         };
         "Bootstrap.Components.Logging.LogService.Models.Entities.Log": {
             /** Format: int32 */
@@ -17795,6 +17840,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Models.View.TelemetrySnapshotViewModel"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.UserStorageRootsViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Models.View.UserStorageRootsViewModel"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Boolean]": {
             /** Format: int32 */
@@ -27336,6 +27387,57 @@ export interface operations {
                     "text/plain": components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerOpenView"];
                     "application/json": components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerOpenView"];
                     "text/json": components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerOpenView"];
+                };
+            };
+        };
+    };
+    GetUserStorageRoots: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.UserStorageRootsViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.UserStorageRootsViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.UserStorageRootsViewModel]"];
+                };
+            };
+        };
+    };
+    ValidateUserStoragePaths: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.UserStoragePathsInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.UserStoragePathsInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.UserStoragePathsInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.UserStoragePathsInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                 };
             };
         };

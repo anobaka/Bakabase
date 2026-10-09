@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Network;
+using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Components;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants;
@@ -25,7 +26,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
     public abstract class AbstractDownloaderHelper<TOptions>(
         IBOptionsManager<TOptions> optionsManager,
         IDownloaderLocalizer localizer,
-        HttpClient httpClient)
+        HttpClient httpClient,
+        IUserStoragePolicy storagePolicy)
         : IDownloaderHelper
         where TOptions : class, ISimpleDownloaderOptionsHolder
     {
@@ -147,6 +149,16 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
         /// <param name="model">The input model</param>
         /// <returns>Array of download tasks</returns>
         public virtual async Task<DownloadTask[]> BuildTasks(DownloadTaskAddInputModel model)
+        {
+            if (string.IsNullOrWhiteSpace(model.DownloadPath))
+                model.DownloadPath = ContainerDownloadDefault(storagePolicy, model.DownloadPath);
+            storagePolicy.EnsurePathAllowed(model.DownloadPath);
+            return await BuildValidatedTasks(model);
+        }
+
+        // Only derived factories for server-owned work may call this after checking their own
+        // deterministic internal destination. Public/manual task creation always uses BuildTasks.
+        protected async Task<DownloadTask[]> BuildValidatedTasks(DownloadTaskAddInputModel model)
         {
             // Validate the model before building tasks
             await ValidateTaskCreationAsync(model);
@@ -273,7 +285,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
                 Cookie = options.Cookie,
                 MaxConcurrency = options.MaxConcurrency,
                 RequestInterval = options.RequestInterval,
-                DefaultPath = options.DefaultPath,
+                DefaultPath = ContainerDownloadDefault(storagePolicy, options.DefaultPath),
                 NamingConvention = options.NamingConvention,
                 SkipExisting = options.SkipExisting,
                 MaxRetries = options.MaxRetries,
@@ -282,8 +294,16 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
             return Task.FromResult(downloaderOptions);
         }
 
+        internal static string? ContainerDownloadDefault(IUserStoragePolicy policy, string? configured) =>
+            string.IsNullOrWhiteSpace(configured) && policy.IsRestricted &&
+            Directory.Exists("/downloads") && policy.IsPathAllowed("/downloads")
+                ? "/downloads"
+                : configured;
+
         public async Task PutOptionsAsync(DownloaderOptions options)
         {
+            if (!string.IsNullOrWhiteSpace(options.DefaultPath))
+                storagePolicy.EnsurePathAllowed(options.DefaultPath);
             await optionsManager.SaveAsync(x =>
             {
                 x.Cookie = options.Cookie;

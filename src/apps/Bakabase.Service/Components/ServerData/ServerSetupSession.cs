@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Infrastructures.Components.App;
 using Bakabase.Infrastructures.Components.App.SingleInstance;
 using Semver;
@@ -49,6 +50,7 @@ public sealed class ServerSetupSession : IDisposable
     private readonly string _currentPath;
     private readonly bool _pathFixed;
     private readonly bool _isDocker;
+    private readonly IUserStoragePolicy _storage;
     private readonly DataDirectoryLock? _originalLock;
     private readonly ImportProgressStore? _monitoring;
     private ImportProgressStore? _selectedMonitoring;
@@ -70,10 +72,11 @@ public sealed class ServerSetupSession : IDisposable
     public Task<SetupSelection> Completion => _completion.Task;
 
     public ServerSetupSession(string anchorPath, string currentPath, bool pathFixed, DataDirectoryLock currentLock,
-        bool isDocker = false)
+        bool isDocker = false, IUserStoragePolicy? storage = null)
     {
         _anchor = Canonical(anchorPath);
         _currentPath = Canonical(currentPath);
+        _storage = storage ?? new UserStoragePolicy(() => _currentPath);
         _pathFixed = pathFixed || isDocker;
         _isDocker = isDocker;
         _originalLock = currentLock;
@@ -86,9 +89,11 @@ public sealed class ServerSetupSession : IDisposable
         Persist(_anchor, _saved);
     }
 
-    private ServerSetupSession(string currentPath, ImportProgressStore monitoring, string mode, string? anchorPath = null)
+    private ServerSetupSession(string currentPath, ImportProgressStore monitoring, string mode, string? anchorPath = null,
+        IUserStoragePolicy? storage = null)
     {
         _currentPath = Canonical(currentPath);
+        _storage = storage ?? new UserStoragePolicy(() => _currentPath);
         _anchor = Canonical(anchorPath ?? currentPath);
         _pathFixed = InContainer || AppDataLocator.IsEnvironmentOverride;
         _isDocker = InContainer;
@@ -97,8 +102,8 @@ public sealed class ServerSetupSession : IDisposable
         Mode = mode;
     }
 
-    public static ServerSetupSession ForImport(string currentPath, ImportProgressStore monitoring, string? anchorPath = null) =>
-        new(currentPath, monitoring, "import", anchorPath);
+    public static ServerSetupSession ForImport(string currentPath, ImportProgressStore monitoring, string? anchorPath = null,
+        IUserStoragePolicy? storage = null) => new(currentPath, monitoring, "import", anchorPath, storage);
 
     public static ServerSetupSession ForRelocation(string anchorPath, string currentPath, ImportProgressStore monitoring)
     {
@@ -179,14 +184,23 @@ public sealed class ServerSetupSession : IDisposable
         {
             RequireAuthorization(token);
             preflight = _preflight ?? throw new IOException("Start the import preflight first.");
+            ValidateMappingTargets(request.Rules);
         }
         var result = preflight.Preview(request);
         lock (_gate) RequireAuthorization(token);
         return result;
     }
 
+    private void ValidateMappingTargets(PathMappingRule[]? rules)
+    {
+        foreach (var rule in rules ?? [])
+            if (!string.IsNullOrWhiteSpace(rule?.TargetPrefix))
+                _storage.EnsurePathAllowed(rule.TargetPrefix, UserStoragePurpose.Setup);
+    }
+
     private ImportPathPlan? PathPlan(SetupRequest request, Validation validation)
     {
+        ValidateMappingTargets(request.PathMappings);
         if (request.PathPreflightId == null && request.PathPreviewId == null && (request.PathMappings?.Length ?? 0) == 0) return null;
         if (Operation(request) != "import") throw new IOException("Path mappings are available for imports only.");
         var normalized = new SetupRequest { Operation = "import", SourcePath = validation.SourcePath,
@@ -201,7 +215,7 @@ public sealed class ServerSetupSession : IDisposable
         lock (_gate) RequireAuthorization(token);
         // A single network filesystem call can exceed the listing's scan budget. Do
         // not hold up commit/disposal, and never return a result after revocation.
-        var result = ServerSetupDirectoryBrowser.Read(_currentPath, path, newFolderName, cancellationToken);
+        var result = ServerSetupDirectoryBrowser.Read(_currentPath, path, newFolderName, cancellationToken, _storage);
         lock (_gate) RequireAuthorization(token);
         return result;
     }
@@ -250,6 +264,9 @@ public sealed class ServerSetupSession : IDisposable
         {
             var operation = Operation(request);
             target = string.IsNullOrWhiteSpace(request.TargetPath) ? _currentPath : Canonical(request.TargetPath);
+            _storage.EnsurePathAllowed(target, UserStoragePurpose.Setup);
+            if (!string.IsNullOrWhiteSpace(request.SourcePath))
+                _storage.EnsurePathAllowed(request.SourcePath, UserStoragePurpose.Setup);
             if (_pathFixed && !Same(target, _currentPath))
                 throw new IOException("This server's data path is fixed by its deployment. Change the deployment configuration to choose another path.");
             if (operation == "relocate")

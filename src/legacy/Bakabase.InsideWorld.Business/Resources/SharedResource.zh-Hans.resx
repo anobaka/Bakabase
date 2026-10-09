@@ -1176,4 +1176,7 @@
   <data name="RemoteAccess_AdvertisedAddressInvalid" xml:space="preserve">
     <value>请输入可供其他设备访问的 HTTP(S) 地址，仅包含主机和可选端口，不包含路径、账号、查询或片段。本机回环、链路本地、代理虚拟 IP 和 Docker 内部地址不能使用。</value>
   </data>
+  <data name="BTask_Process_CheckingStorage" xml:space="preserve">
+    <value>正在检查存储位置：{0}</value>
+  </data>
 </root>

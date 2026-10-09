@@ -7291,6 +7291,10 @@ export interface BakabaseServiceModelsInputTextTypePatchInputModel {
   name: string;
 }
 
+export interface BakabaseServiceModelsInputUserStoragePathsInputModel {
+  paths: string[];
+}
+
 export interface BakabaseServiceModelsViewAcquisitionCandidateLeadViewModel {
   /** @format int32 */
   id: number;
@@ -8095,6 +8099,18 @@ export interface BakabaseServiceModelsViewTelemetrySnapshotViewModel {
   enabledEnhancers: string[];
   aiEnabled: boolean;
   hasMediaLibrary: boolean;
+}
+
+export interface BakabaseServiceModelsViewUserStorageRootViewModel {
+  path: string;
+  name: string;
+  storageKind: string;
+  readOnly?: boolean;
+}
+
+export interface BakabaseServiceModelsViewUserStorageRootsViewModel {
+  isRestricted: boolean;
+  roots: BakabaseServiceModelsViewUserStorageRootViewModel[];
 }
 
 export interface BootstrapComponentsLoggingLogServiceModelsEntitiesLog {
@@ -10028,6 +10044,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceM
   code: number;
   message?: string;
   data?: BakabaseServiceModelsViewTelemetrySnapshotViewModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewUserStorageRootsViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewUserStorageRootsViewModel;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1SystemBoolean {
@@ -22311,6 +22334,66 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }),
   };
   file = {
+    /**
+     * No description
+     *
+     * @tags File
+     * @name GetUserStorageRoots
+     * @request GET:/file/storage-roots
+     */
+    getUserStorageRoots: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewUserStorageRootsViewModel,
+        any
+      >({
+        path: `/file/storage-roots`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getUserStorageRoots
+     * @name getUserStorageRootsUrl
+     */
+    getUserStorageRootsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/file/storage-roots`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags File
+     * @name ValidateUserStoragePaths
+     * @request POST:/file/validate-storage-paths
+     */
+    validateUserStoragePaths: (
+      data: BakabaseServiceModelsInputUserStoragePathsInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/file/validate-storage-paths`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for validateUserStoragePaths
+     * @name validateUserStoragePathsUrl
+     */
+    validateUserStoragePathsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/file/validate-storage-paths`;
+
+      return baseUrl + path;
+    },
+
     /**
      * No description
      *

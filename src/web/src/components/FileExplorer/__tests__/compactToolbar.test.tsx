@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import type { FileExplorerProps } from "../FileExplorer";
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -6,13 +7,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import FileExplorer from "../FileExplorer";
 
 import { useFileExplorerClipboardStore } from "@/stores/fileExplorerClipboard";
+import { useUserStorageStore } from "@/stores/userStorage";
 
-const { checkPath, select, createPortal, moveEntries } = vi.hoisted(() => ({
-  checkPath: vi.fn().mockResolvedValue({ data: false }),
-  select: vi.fn(),
-  createPortal: vi.fn(),
-  moveEntries: vi.fn().mockResolvedValue({}),
-}));
+const { checkPath, select, createPortal, moveEntries, getRoots, validatePaths } = vi.hoisted(
+  () => ({
+    checkPath: vi.fn().mockResolvedValue({ data: false }),
+    select: vi.fn(),
+    createPortal: vi.fn(),
+    moveEntries: vi.fn().mockResolvedValue({}),
+    getRoots: vi.fn(),
+    validatePaths: vi.fn(),
+  }),
+);
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
@@ -25,7 +31,16 @@ vi.mock("react-i18next", () => ({
     },
   }),
 }));
-vi.mock("@/sdk/BApi", () => ({ default: { file: { checkPathIsFile: checkPath, moveEntries } } }));
+vi.mock("@/sdk/BApi", () => ({
+  default: {
+    file: {
+      checkPathIsFile: checkPath,
+      moveEntries,
+      getUserStorageRoots: getRoots,
+      validateUserStoragePaths: validatePaths,
+    },
+  },
+}));
 vi.mock("@/components/utils", () => ({
   buildLogger: () => () => {},
   standardizePath: (path?: string) => path,
@@ -57,6 +72,8 @@ vi.mock("@/core/models/FileExplorer/RootEntry", () => ({
     childrenCount = this.children.length;
     constructor(path?: string) {
       this.path = path;
+      if (path === "/empty") this.children = [];
+      this.childrenCount = this.children.length;
     }
     patchFilter(filter: { keyword?: string }) {
       this.filter = { ...this.filter, ...filter };
@@ -161,6 +178,9 @@ vi.mock("@/components/bakaui", async () => {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  getRoots.mockResolvedValue({ data: { isRestricted: false, roots: [] } });
+  validatePaths.mockResolvedValue({ code: 0 });
+  useUserStorageStore.setState({ settings: undefined, error: undefined });
   useFileExplorerClipboardStore.getState().clear();
 });
 afterEach(() => {
@@ -169,6 +189,49 @@ afterEach(() => {
 });
 
 describe("compact file processor toolbar", () => {
+  it("keeps Docker navigation inside a storage root and returns to storage locations without injecting slash", async () => {
+    getRoots.mockResolvedValue({
+      data: {
+        isRestricted: true,
+        roots: [{ path: "/media", name: "media", storageKind: "bind", readOnly: true }],
+      },
+    });
+    const onInitialized = vi.fn();
+
+    render(
+      <FileExplorer
+        appearance="compact"
+        rootPath="/media"
+        selectable="multiple"
+        onInitialized={onInitialized}
+      />,
+    );
+    await screen.findByRole("button", { name: "alpha" });
+    expect(screen.getByRole("button", { name: "fileExplorer.navigation.parent" })).toBeDisabled();
+    expect(validatePaths).toHaveBeenCalledWith({ paths: ["/media"] }, { showErrorToast: false });
+    fireEvent.click(screen.getByRole("button", { name: "fileExplorer.storage.locations" }));
+    await screen.findByText("fileExplorer.storage.help");
+    expect(onInitialized).toHaveBeenLastCalledWith(undefined);
+    expect(screen.getByRole("textbox", { name: "fileExplorer.navigation.path" })).toHaveValue("");
+    expect(checkPath).not.toHaveBeenCalledWith({ path: "/" });
+    // Read-only is informational: ordinary selection is still available.
+    fireEvent.click(screen.getByRole("button", { name: "alpha" }));
+    expect(screen.getByRole("button", { name: "fileExplorer.selection.clear" })).toBeEnabled();
+  });
+
+  it("shows a failed roots load and lets the user retry without exposing a filesystem fallback", async () => {
+    getRoots.mockRejectedValueOnce(new Error("offline"));
+    const onInitialized = vi.fn();
+
+    render(<FileExplorer selectable="multiple" onInitialized={onInitialized} />);
+    expect(await screen.findByRole("alert")).toHaveTextContent("fileExplorer.storage.loadFailed");
+    expect(screen.queryByTestId("entries")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "fileExplorer.storage.retry" }));
+    await screen.findByRole("button", { name: "alpha" });
+    expect(getRoots).toHaveBeenCalledTimes(2);
+    expect(onInitialized).toHaveBeenCalledWith(undefined);
+  });
+
   it("keeps compact controls opt-in for shared folder pickers", async () => {
     const view = render(<FileExplorer keyboard={false} rootPath="/media" selectable="multiple" />);
 
@@ -176,6 +239,31 @@ describe("compact file processor toolbar", () => {
     expect(view.container.querySelector(".file-processor-explorer")).toBeNull();
     expect(screen.queryByRole("button", { name: "fileExplorer.selection.actions" })).toBeNull();
     expect(screen.getByText("fileExplorer.tip.pathsAreOnTheServer")).toBeInTheDocument();
+  });
+
+  it("clears the previous selection and action target when entering another directory", async () => {
+    const onSelected = vi.fn();
+    const props: FileExplorerProps = {
+      appearance: "compact",
+      capabilities: ["select", "create-directory"],
+      selectable: "multiple",
+      onSelected,
+    };
+    const view = render(<FileExplorer {...props} rootPath="/media" />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "alpha" }));
+    expect(onSelected).toHaveBeenLastCalledWith([expect.objectContaining({ name: "alpha" })]);
+    // A same-directory host render does not discard the current selection.
+    view.rerender(<FileExplorer {...props} rootPath="/media" />);
+    expect(screen.getByRole("button", { name: "fileExplorer.selection.clear" })).toBeEnabled();
+    view.rerender(<FileExplorer {...props} rootPath="/empty" />);
+    await screen.findByText("0 items");
+    expect(screen.queryByRole("button", { name: "fileExplorer.selection.clear" })).toBeNull();
+    expect(onSelected).toHaveBeenLastCalledWith([]);
+    expect(select).toHaveBeenCalledWith(false);
+    fireEvent.click(screen.getByRole("button", { name: "fileExplorer.selection.actions" }));
+    expect(await screen.findByRole("menuitem", { name: "working-directory" })).toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: "alpha" })).toBeNull();
   });
 
   it("uses the host's compact notice and tools without duplicating the remote-path hint", async () => {

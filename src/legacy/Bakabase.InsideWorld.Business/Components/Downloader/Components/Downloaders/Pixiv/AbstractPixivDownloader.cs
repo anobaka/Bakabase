@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
@@ -104,6 +104,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
 
             foreach (var (fullname, pageUrl) in filePathAndUrls)
             {
+                EnsureUserPathAllowed(fullname);
                 var dir = Path.GetDirectoryName(fullname)!;
                 Directory.CreateDirectory(dir);
                 await sm.WaitAsync(ct);
@@ -142,6 +143,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                             }
                         }
 
+                        EnsureUserPathAllowed(fullname);
                         await File.WriteAllBytesAsync(fullname, data, ct);
                         await OnFileDownloadedInternal(fullname);
                     }

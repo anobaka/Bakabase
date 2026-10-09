@@ -14,6 +14,7 @@ import { buildLogger } from "@/components/utils";
 import { IwFsType } from "@/sdk/constants";
 import { Button, Chip } from "@/components/bakaui";
 import { FileExplorer } from "@/components/FileExplorer";
+import { storageError, validateUserStoragePaths } from "@/stores/userStorage";
 
 const log = buildLogger("FileSystemSelector");
 const Panel = (props: FileSystemSelectorProps) => {
@@ -35,6 +36,9 @@ const Panel = (props: FileSystemSelectorProps) => {
   const [selectedMany, setSelectedMany] = useState<Entry[]>([]);
   const [currentDirPath, setCurrentDirPath] = useState<string>();
   const rootRef = useRef<FileExplorerRef | null>(null);
+  const validating = useRef(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string>();
 
   useEffect(() => {
     // return () => {
@@ -103,6 +107,24 @@ const Panel = (props: FileSystemSelectorProps) => {
   };
 
   const hasSelection = multiple ? selectedMany.length > 0 : !!selected;
+  const confirmSelection = async () => {
+    if (!hasSelection || validating.current) return;
+    validating.current = true;
+    setBusy(true);
+    setError(undefined);
+    const entries = multiple ? selectedMany : [selected!];
+
+    try {
+      await validateUserStoragePaths(entries.map((entry) => entry.path));
+      if (multiple) onMultipleSelected?.(entries);
+      else onSelected?.(entries[0]);
+    } catch (cause) {
+      setError(storageError(cause, t).message || t("fileExplorer.storage.pathRejected"));
+    } finally {
+      validating.current = false;
+      setBusy(false);
+    }
+  };
 
   return (
     <div className={"flex flex-col gap-2 grow max-h-full"}>
@@ -124,7 +146,7 @@ const Panel = (props: FileSystemSelectorProps) => {
             trySelectRootOrClearSelection();
             if (rootRef.current.root.isDirectory) {
               setCurrentDirPath(rootRef.current.root.path);
-            }
+            } else setCurrentDirPath(undefined);
           }
         }}
         onSelected={(es) => {
@@ -184,6 +206,11 @@ const Panel = (props: FileSystemSelectorProps) => {
           ))}
         </div>
       )}
+      {error && (
+        <p className="text-sm text-danger" role="alert">
+          {error}
+        </p>
+      )}
       <div className="flex items-center justify-between mb-2">
         <Button
           // size={'small'}
@@ -199,14 +226,8 @@ const Panel = (props: FileSystemSelectorProps) => {
           <Button
             color={"primary"}
             // size={'small'}
-            disabled={!hasSelection}
-            onClick={() => {
-              if (multiple) {
-                onMultipleSelected?.(selectedMany);
-              } else {
-                onSelected?.(selected!);
-              }
-            }}
+            disabled={!hasSelection || busy}
+            onClick={() => void confirmSelection()}
           >
             {t<string>("OK")}
           </Button>

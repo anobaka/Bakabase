@@ -12,13 +12,14 @@ using Bakabase.Service.Models.View;
 using System.IO;
 using System.Linq;
 using Bakabase.Abstractions.Extensions;
+using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.InsideWorld.Business.Components.FileNameModifier.Abstractions;
 
 namespace Bakabase.Service.Controllers;
 
 [ApiController]
 [Route("~/file-name-modifier")]
-public class FileNameModifierController(IFileNameModifier modifier) : Controller
+public class FileNameModifierController(IFileNameModifier modifier, IUserStoragePolicy storage) : Controller
 {
     [HttpPost("preview")]
     [SwaggerOperation(OperationId = "PreviewFileNameModification")]
@@ -39,6 +40,8 @@ public class FileNameModifierController(IFileNameModifier modifier) : Controller
             var dir = Path.GetDirectoryName(oldPath) ?? "";
             var newFileName = newFileNames[i];
             var newPath = Path.Combine(dir, newFileName).StandardizePath()!;
+            storage.EnsureTreeMutationAllowed(oldPath);
+            storage.EnsurePathAllowed(newPath);
             newPaths.Add(newPath);
         }
 
@@ -66,6 +69,8 @@ public class FileNameModifierController(IFileNameModifier modifier) : Controller
             var newPath = Path.Combine(dir, newFileName).StandardizePath()!;
             try
             {
+                storage.EnsureTreeMutationAllowed(oldPath);
+                storage.EnsurePathAllowed(newPath);
                 if (!string.Equals(oldPath, newPath, StringComparison.OrdinalIgnoreCase))
                 {
                     // Check if target path already exists (for both files and directories)

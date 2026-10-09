@@ -1,3 +1,4 @@
+using Bakabase.Abstractions.Components.FileSystem;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -280,8 +281,11 @@ public class AcquisitionController(
     [HttpPut("options")]
     [SwaggerOperation(OperationId = "PutAcquisitionOptions")]
     public async Task<BaseResponse> PutOptions(
-        [FromBody] Bakabase.Modules.Acquisition.Models.Domain.AcquisitionOptions model)
+        [FromBody] Bakabase.Modules.Acquisition.Models.Domain.AcquisitionOptions model,
+        [FromServices] IUserStoragePolicy storagePolicy)
     {
+        foreach (var path in new[] {model.InboxDirectory, model.LibraryRootDirectory})
+            if (!string.IsNullOrWhiteSpace(path)) storagePolicy.EnsurePathAllowed(path);
         await options.SaveAsync(model);
 
         return BaseResponseBuilder.Ok;

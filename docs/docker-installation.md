@@ -21,7 +21,7 @@ docker buildx imagetools inspect "anobaka/bakabase:<VERSION>"
 创建独立的服务端数据目录；不要直接把仍在运行的一体版目录交给第二个实例：
 
 ```sh
-mkdir -p "$HOME/BakabaseServer/appdata"
+mkdir -p "$HOME/BakabaseServer/appdata" "$HOME/BakabaseServer/downloads"
 ```
 
 将以下内容保存为 `compose.yaml`，替换镜像版本：
@@ -43,6 +43,11 @@ services:
       - type: bind
         source: ${HOME}/BakabaseServer/appdata
         target: /data
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${HOME}/BakabaseServer/downloads
+        target: /downloads
         bind:
           create_host_path: false
 ```
@@ -74,6 +79,7 @@ docker run -d \
   -e API_LISTENING_PORTS=34567 \
   -e BAKABASE_DATA_DIR=/data \
   --mount "type=bind,source=$HOME/BakabaseServer/appdata,target=/data" \
+  --mount "type=bind,source=$HOME/BakabaseServer/downloads,target=/downloads" \
   "anobaka/bakabase:<VERSION>"
 ```
 
@@ -129,11 +135,13 @@ docker run -d \
 ```sh
 git submodule update --init --recursive
 cp docker/.env.example docker/.env
-mkdir -p "$HOME/BakabaseServer/appdata"
+mkdir -p "$HOME/BakabaseServer/appdata" "$HOME/BakabaseServer/downloads"
 ./docker/source.sh
 ```
 
-`docker/.env` 可修改镜像名、本机 AppData、监听地址、端口和节点名。默认镜像名为 `bakabase:local`；Apple Silicon 默认构建 Linux ARM64，不必启用 amd64 模拟。需要导入或挂载媒体时，复制 `docker/compose.local.example.yaml` 为 `docker/compose.local.yaml` 并调整路径。两个文件均属于本机配置，不进入 Git；源码和镜像模式都会加载相同配置。
+`docker/.env` 可修改镜像名、本机 AppData、下载目录、监听地址、端口和节点名。`BAKABASE_DOWNLOADS_DIR` 默认是 `${HOME}/BakabaseServer/downloads`，统一挂载到 `/downloads`，与 `/data` 内的数据库、配置和缓存分开。升级已有部署时也需先创建这个宿主机目录，或把变量改为已有目录。默认镜像名为 `bakabase:local`；Apple Silicon 默认构建 Linux ARM64，不必启用 amd64 模拟。需要导入或挂载媒体时，复制 `docker/compose.local.example.yaml` 为 `docker/compose.local.yaml` 并调整路径。两个文件均属于本机配置，不进入 Git；源码和镜像模式都会加载相同配置。
+
+Docker 模式的文件选择、文件处理和下载路径只使用已挂载的持久目录；不显示容器内部目录，应用数据目录由 Setup 和对应系统功能管理。手动输入路径和执行历史任务也会检查这一边界，不自动改写旧路径。目录标注只读仍可选择，实际写入由挂载权限和文件系统决定。Setup 使用相同的存储位置列表，并允许选择应用数据挂载作为导入来源或目标。直接运行的原生 server 和一体版保持操作系统目录行为，不要求挂载。
 
 容器固定使用官方 .NET SDK `10.0.401-noble` 和 ASP.NET Runtime `10.0.11-noble`。项目仍以 `net9.0` 编译，容器通过 `DOTNET_ROLL_FORWARD=Major` 使用新运行时；本机原生部署的 SDK 配置不变。本机 Apple M5 / OrbStack 上实测 .NET 9 容器偶发 `SIGILL`；选择 .NET 10 是为了包含官方的 [ARM64 SME/SVE 信号处理修复](https://github.com/dotnet/runtime/pull/127518)，本机退出的具体崩溃栈尚未确认。发布流程为容器生成框架依赖产物，避免内嵌旧运行时；`docker/Dockerfile` 会拒绝携带 `libcoreclr.so` 的旧自包含产物。
 

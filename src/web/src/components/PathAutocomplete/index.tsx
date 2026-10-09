@@ -5,9 +5,11 @@ import type { AutocompleteProps } from "@heroui/react";
 import React, { useCallback, useRef, useState } from "react";
 import { useDebounce, useUpdateEffect } from "react-use";
 import { FolderOutlined, FileOutlined } from "@ant-design/icons";
+import { useTranslation } from "react-i18next";
 
 import { Autocomplete, AutocompleteItem } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
+import { storageError, validateUserStoragePaths } from "@/stores/userStorage";
 
 export type PathType = "file" | "folder" | "both";
 
@@ -50,24 +52,35 @@ export default function PathAutocomplete({
   debounceDelay = 300,
   ...autocompleteProps
 }: PathAutocompleteProps) {
+  const { t } = useTranslation();
   const [autocompleteItems, setAutocompleteItems] = useState<PathItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [value, setValue] = useState(propsValue ?? defaultValue);
   const valueRef = useRef(value);
   const isFirstRender = useRef(true);
+  const searchGeneration = useRef(0);
+  const [error, setError] = useState<string>();
 
   const searchPaths = useCallback(
     (prefix?: string) => {
+      const generation = ++searchGeneration.current;
+
       setIsLoading(true);
+      setError(undefined);
 
       const reqPrefix = prefix && prefix.length >= 1 ? prefix : undefined;
 
       BApi.file
-        .searchFileSystemEntries({
-          prefix: reqPrefix,
-          maxResults: maxResults,
-        })
+        .searchFileSystemEntries(
+          {
+            prefix: reqPrefix,
+            maxResults: maxResults,
+          },
+          { showErrorToast: false },
+        )
         .then((response) => {
+          if (generation !== searchGeneration.current) return;
+          if (response.code) throw storageError(response);
           if (response.data) {
             // Filter based on pathType
             let filteredItems = response.data;
@@ -78,11 +91,16 @@ export default function PathAutocomplete({
             setAutocompleteItems(filteredItems);
           }
         })
+        .catch((cause) => {
+          if (generation !== searchGeneration.current) return;
+          setAutocompleteItems([]);
+          setError(storageError(cause, t).message || t("fileExplorer.storage.loadFailed"));
+        })
         .finally(() => {
-          setIsLoading(false);
+          if (generation === searchGeneration.current) setIsLoading(false);
         });
     },
-    [pathType, maxResults],
+    [pathType, maxResults, t],
   );
 
   // Use react-use's useDebounce (skip on first render)
@@ -121,16 +139,23 @@ export default function PathAutocomplete({
     onChange?.(inputValue, item ? (item.isDirectory ? "folder" : "file") : undefined);
   };
 
-  const handleSelectionChange = (key: React.Key | null) => {
+  const handleSelectionChange = async (key: React.Key | null) => {
     if (key) {
       const selectedPath = key as string;
 
-      const item = autocompleteItems.find((it) => it.path === selectedPath)!;
+      const item = autocompleteItems.find((it) => it.path === selectedPath);
+
+      if (!item) return;
       const type = item.isDirectory ? "folder" : "file";
 
-      setValue(selectedPath);
-      onChange?.(selectedPath, type);
-      onSelectionChange?.(selectedPath, type);
+      try {
+        await validateUserStoragePaths([selectedPath]);
+        setValue(selectedPath);
+        onChange?.(selectedPath, type);
+        onSelectionChange?.(selectedPath, type);
+      } catch (cause) {
+        setError(storageError(cause, t).message || t("fileExplorer.storage.pathRejected"));
+      }
     }
   };
 
@@ -138,7 +163,9 @@ export default function PathAutocomplete({
     <Autocomplete
       {...autocompleteProps}
       allowsCustomValue={true}
+      errorMessage={error || autocompleteProps.errorMessage}
       inputValue={value}
+      isInvalid={!!error || autocompleteProps.isInvalid}
       isLoading={isLoading}
       items={autocompleteItems}
       onInputChange={handleInputChange}

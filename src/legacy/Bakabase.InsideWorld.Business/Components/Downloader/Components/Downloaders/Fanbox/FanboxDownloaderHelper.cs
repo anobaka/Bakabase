@@ -1,3 +1,4 @@
+using Bakabase.Abstractions.Components.FileSystem;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
@@ -12,7 +13,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
 public class FanboxDownloaderHelper(
     IBOptionsManager<FanboxOptions> optionsManager,
     IDownloaderLocalizer localizer,
-    HttpClient httpClient) : AbstractDownloaderHelper<FanboxOptions>(optionsManager, localizer, httpClient)
+    HttpClient httpClient, IUserStoragePolicy storagePolicy) : AbstractDownloaderHelper<FanboxOptions>(optionsManager, localizer, httpClient, storagePolicy)
 {
     public override ThirdPartyId ThirdPartyId => ThirdPartyId.Fanbox;
     

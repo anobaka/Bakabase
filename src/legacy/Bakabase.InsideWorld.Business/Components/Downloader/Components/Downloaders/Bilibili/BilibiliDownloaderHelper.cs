@@ -1,3 +1,4 @@
+using Bakabase.Abstractions.Components.FileSystem;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -20,7 +21,7 @@ public class BilibiliDownloaderHelper(
     IDownloaderLocalizer localizer,
     BilibiliClient bilibiliClient,
     HttpClient httpClient,
-    FfMpegService ffMpegService) : AbstractDownloaderHelper<BilibiliOptions>(optionsManager, localizer, httpClient)
+    FfMpegService ffMpegService, IUserStoragePolicy storagePolicy) : AbstractDownloaderHelper<BilibiliOptions>(optionsManager, localizer, httpClient, storagePolicy)
 {
     private readonly IDownloaderLocalizer _localizer = localizer;
     public override ThirdPartyId ThirdPartyId => ThirdPartyId.Bilibili;

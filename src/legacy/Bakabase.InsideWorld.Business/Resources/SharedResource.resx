@@ -1176,4 +1176,7 @@ Downloads: https://www.ffmpeg.org/</value>
   <data name="RemoteAccess_AdvertisedAddressInvalid" xml:space="preserve">
     <value>Enter a shareable HTTP(S) address with only a host and optional port. Localhost, link-local, proxy fake-IP and Docker-internal addresses cannot be used.</value>
   </data>
+  <data name="BTask_Process_CheckingStorage" xml:space="preserve">
+    <value>Checking storage locations: {0}</value>
+  </data>
 </root>

@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json.Serialization;
 using System.Threading;
+using Bakabase.Abstractions.Components.FileSystem;
 
 namespace Bakabase.Service.Components.ServerData;
 
@@ -15,19 +16,27 @@ public static class ServerSetupDirectoryBrowser
     public const int MaxScannedEntries = 4000;
     private static readonly TimeSpan ScanBudget = TimeSpan.FromMilliseconds(250);
 
-    public sealed record Folder(string Name, string Path);
+    public sealed record Folder(string Name, string Path, bool? ReadOnly = null);
     public sealed record Result(string CurrentPath, string? ParentPath, Folder[] Roots, Folder[] Directories,
-        bool Truncated, [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? CandidatePath = null);
+        bool Truncated, [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? CandidatePath = null,
+        bool IsRestricted = false);
     public sealed class AccessDeniedException(string message, Exception inner) : IOException(message, inner);
 
     internal static Result Read(string currentPath, string? requestedPath, string? newFolderName,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken, IUserStoragePolicy? storage = null)
     {
         if (requestedPath?.Length > 4096) throw new ArgumentException("The directory path is too long (maximum 4096 characters).");
         ValidateFolderName(newFolderName);
+        storage ??= new UserStoragePolicy(() => currentPath);
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
+            var roots = storage.GetRoots(UserStoragePurpose.Setup)
+                .Select(root => new Folder(root.Name, root.Path, root.ReadOnly)).ToArray();
+            if (storage.IsRestricted && string.IsNullOrWhiteSpace(requestedPath))
+                return new Result("", null, roots, roots, false, IsRestricted: true);
+            storage.EnsurePathAllowed(string.IsNullOrWhiteSpace(requestedPath) ? currentPath : requestedPath,
+                UserStoragePurpose.Setup);
             var path = ServerSetupSession.Canonical(string.IsNullOrWhiteSpace(requestedPath) ? currentPath : requestedPath);
             var folders = new List<Folder>();
             var scanned = 0;
@@ -43,7 +52,8 @@ public static class ServerSetupDirectoryBrowser
                 scanned++;
                 try
                 {
-                    if ((File.GetAttributes(entry) & FileAttributes.Directory) != 0)
+                    if ((File.GetAttributes(entry) & FileAttributes.Directory) != 0 &&
+                        storage.IsPathAllowed(entry, UserStoragePurpose.Setup))
                         folders.Add(new Folder(Path.GetFileName(entry), ServerSetupSession.Canonical(entry)));
                 }
                 catch (Exception e) when (e is IOException or UnauthorizedAccessException)
@@ -54,11 +64,13 @@ public static class ServerSetupDirectoryBrowser
                     break;
                 }
             }
-            var roots = OperatingSystem.IsWindows() ? Directory.GetLogicalDrives() : ["/"];
-            return new Result(path, Directory.GetParent(path)?.FullName,
-                roots.Select(root => new Folder(root, root)).ToArray(),
+            var parent = Directory.GetParent(path)?.FullName;
+            if (parent != null && !storage.IsPathAllowed(parent, UserStoragePurpose.Setup)) parent = null;
+            var candidate = newFolderName == null ? null : ServerSetupSession.Canonical(Path.Combine(path, newFolderName));
+            if (candidate != null) storage.EnsurePathAllowed(candidate, UserStoragePurpose.Setup);
+            return new Result(path, parent, roots,
                 folders.OrderBy(folder => folder.Name, StringComparer.OrdinalIgnoreCase).ToArray(), truncated,
-                newFolderName == null ? null : ServerSetupSession.Canonical(Path.Combine(path, newFolderName)));
+                candidate, storage.IsRestricted);
         }
         catch (UnauthorizedAccessException error)
         {
