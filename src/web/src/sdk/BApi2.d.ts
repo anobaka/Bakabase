@@ -3210,6 +3210,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/app/deployment-paths": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetDeploymentPaths"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/dlsite-work": {
         parameters: {
             query?: never;
@@ -15672,6 +15688,16 @@ export interface components {
             percentage?: number;
             message?: string;
         };
+        "Bakabase.Service.Models.View.DeploymentPathViewModel": {
+            serverPath: string;
+            hostPath?: string;
+            storageKind: string;
+            readOnly?: boolean;
+        };
+        "Bakabase.Service.Models.View.DeploymentPathsViewModel": {
+            isContainer: boolean;
+            paths: components["schemas"]["Bakabase.Service.Models.View.DeploymentPathViewModel"][];
+        };
         "Bakabase.Service.Models.View.DownloadResultViewModel": {
             /** Format: int32 */
             id: number;
@@ -17615,6 +17641,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Models.View.DashboardOverviewViewModel"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.DeploymentPathsViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Models.View.DeploymentPathsViewModel"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.FilePlayabilityViewModel]": {
             /** Format: int32 */
@@ -24452,6 +24484,28 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    GetDeploymentPaths: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.DeploymentPathsViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.DeploymentPathsViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.DeploymentPathsViewModel]"];
+                };
             };
         };
     };

@@ -7613,6 +7613,18 @@ export interface BakabaseServiceModelsViewDecompressionResultViewModel {
   message?: string;
 }
 
+export interface BakabaseServiceModelsViewDeploymentPathViewModel {
+  serverPath: string;
+  hostPath?: string;
+  storageKind: string;
+  readOnly?: boolean;
+}
+
+export interface BakabaseServiceModelsViewDeploymentPathsViewModel {
+  isContainer: boolean;
+  paths: BakabaseServiceModelsViewDeploymentPathViewModel[];
+}
+
 export interface BakabaseServiceModelsViewDownloadResultViewModel {
   /** @format int32 */
   id: number;
@@ -9873,6 +9885,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceM
   code: number;
   message?: string;
   data?: BakabaseServiceModelsViewDashboardOverviewViewModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewDeploymentPathsViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewDeploymentPathsViewModel;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewFilePlayabilityViewModel {
@@ -15601,6 +15620,35 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     dataPathRelocationSetupSessionCreateUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/app/data-path/relocation/setup-session`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags DeploymentPaths
+     * @name GetDeploymentPaths
+     * @request GET:/app/deployment-paths
+     */
+    getDeploymentPaths: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewDeploymentPathsViewModel,
+        any
+      >({
+        path: `/app/deployment-paths`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getDeploymentPaths
+     * @name getDeploymentPathsUrl
+     */
+    getDeploymentPathsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/app/deployment-paths`;
 
       return baseUrl + path;
     },

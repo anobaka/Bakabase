@@ -56,9 +56,7 @@ def main():
                 else:
                     # Run solely from the exported package's Compose file, with
                     # no build definition or checkout dependency in this mode.
-                    run(["docker", "compose", "--project-directory", package, "--env-file", env_file,
-                         "-f", package / "compose.yaml", "-f", override,
-                         "up", "-d", "--no-build", "--force-recreate"], env)
+                    run([package / "image.sh", "up", "-d", "--no-build", "--force-recreate"], env)
                 container = subprocess.check_output([*map(str, base), "ps", "-q", "server"], env=env, text=True).strip()
                 inspect = json.loads(docker("inspect", container))[0]
                 if previous_id == inspect["Id"]:

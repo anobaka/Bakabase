@@ -154,6 +154,10 @@ python3 docker/smoke-test.py --image bakabase:local --architecture arm64 --runti
 
 两种方式都使用项目 **`bakabase`**、服务 **`server`**，默认容器名为 **`bakabase-server-1`**。源码模式只在基础配置上增加构建步骤，镜像模式直接使用已有镜像。二者读取同一 `.env`、本机挂载配置和 AppData；不要另外指定项目名称，也不需要先 `down`。
 
+通过 `source.sh` 或 `image.sh` 创建容器时，需要宿主机提供 Python 3（仅使用标准库）。脚本从最终合并并展开变量的 Compose 配置自动读取挂载关系，供系统信息显示宿主机目录和容器内目录，无需再填一份路径映射，也不向容器开放 Docker socket。源码、镜像和独立导出包使用同一机制；挂载修改后重建容器，显示信息随部署更新。`build`、`pull`、`down`、`ps`、`logs`、`config` 等命令不需要 Python。
+
+直接使用 `docker compose` 仍可正常运行；没有自动生成的挂载信息时，界面显示容器路径，不推测宿主机位置。命名卷不会被显示成宿主机普通目录。`compose run -v ...` 的临时挂载和 `volumes_from` 的继承挂载不属于完整可解析的本服务挂载配置，该次运行同样回退为容器路径。所有文件操作始终使用容器路径，宿主机路径仅用于显示和复制。
+
 若已有部署使用旧默认项目 `bakabase-server` 和服务 `bakabase`，需一次性修改项目名与所有 Compose 文件（包括本机 override）中的服务键。先停止旧容器 `bakabase-server-bakabase-1`，再使用同一镜像和挂载启动新项目；确认可访问、数据正常后再删除旧容器。项目改名不会自动接管旧容器，不能让两个实例同时写同一数据目录。使用命名卷时，还需以 `external: true` 和 `name` 指向原有卷的实际名称，避免新项目创建空卷；本文使用的本机目录挂载不受项目名影响。
 
 源码升级：

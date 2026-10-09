@@ -10,6 +10,9 @@ services:
       API_LISTENING_PORTS: "34567"
       BAKABASE_DATA_DIR: /data
       BAKABASE_NODE_NAME: ${BAKABASE_NODE_NAME:-Bakabase Server}
+      # Filled automatically by compose.sh from this deployment's resolved mounts.
+      # A direct docker compose invocation leaves it empty and shows container paths.
+      BAKABASE_DEPLOYMENT_MOUNTS: ${BAKABASE_DEPLOYMENT_MOUNTS:-}
     volumes:
       - type: bind
         source: ${BAKABASE_DATA_DIR:-${HOME}/BakabaseServer/appdata}

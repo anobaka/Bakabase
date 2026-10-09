@@ -108,6 +108,7 @@ namespace Bakabase.Service.Components
             services.TryAddSingleton<BangumiCookieValidator>();
 
             services.AddSingleton<BakabaseOptionsManagerPool>();
+            services.AddSingleton<DeploymentPathDisplay>();
             services.AddSingleton(sp => new ResourceUsageService(
                 sp.GetRequiredService<AppService>().AppDataDirectory,
                 sp.GetRequiredService<IHostApplicationLifetime>().ApplicationStopping));

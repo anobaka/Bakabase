@@ -4,6 +4,7 @@ using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.RemoteAccess.Abstractions.Components;
 using Bakabase.Modules.RemoteAccess.Abstractions.Models;
 using Bakabase.Service.Components.RemoteAccess;
+using Bakabase.Service.Controllers;
 using Bootstrap.Models.ResponseModels;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -95,6 +96,33 @@ public class RemoteAccessAuthorizationFilterTests
 
         Assert.IsNull(context.Result);
         Assert.IsNull(DenialReason(context));
+    }
+
+    [DataTestMethod]
+    [DataRow(RemoteAccessMode.Enabled, false, false, false)]
+    [DataRow(RemoteAccessMode.Enabled, false, true, true)]
+    [DataRow(RemoteAccessMode.Unrestricted, false, false, true)]
+    [DataRow(RemoteAccessMode.Disabled, true, false, true)]
+    public void Deployment_paths_keep_the_same_operator_boundary_as_app_info(RemoteAccessMode mode,
+        bool loopback, bool paired, bool allowed)
+    {
+        var remote = new RemoteAccessContext
+        {
+            IsLoopback = loopback, Mode = mode,
+            Device = paired ? new RemoteDevice { Id = "paired-test-device" } : null
+        };
+        foreach (var (controller, action) in new[]
+                 {
+                     (typeof(DeploymentPathsController), nameof(DeploymentPathsController.Get)),
+                     (typeof(AppController), nameof(AppController.Info))
+                 })
+        {
+            var context = Build(action, remote, controller);
+            new RemoteAccessAuthorizationFilter(new ServerSelfDescription(() => ServerKind.Headless))
+                .OnAuthorization(context);
+            Assert.AreEqual(allowed, context.Result == null, controller.Name);
+            if (!allowed) Assert.AreEqual(nameof(RemoteAccessDenialReason.HostOnly), DenialReason(context));
+        }
     }
 
     [DataTestMethod]

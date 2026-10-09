@@ -10,6 +10,7 @@ mkdir -p "$(dirname "$output")"
 mkdir "$output" # Refuse to replace any existing package or user directory.
 cp "$script_dir/compose.yaml" "$output/compose.yaml"
 cp "$script_dir/compose.local.example.yaml" "$output/compose.local.example.yaml"
+cp "$script_dir/compose.sh" "$script_dir/image.sh" "$script_dir/compose-metadata.py" "$output/"
 { printf 'BAKABASE_IMAGE=%s\n' "$image"; tail -n +3 "$script_dir/.env.example"; } > "$output/.env.example"
 docker image inspect "$image" --format '{{json .}}' > "$output/image.json"
 docker image save --output "$output/bakabase-image.tar" "$image"
@@ -22,14 +23,18 @@ Load once:
   mkdir -p "$HOME/BakabaseServer/appdata"
 
 Review .env and any media/import mounts before starting:
-  docker compose up -d --no-build --force-recreate
-  docker compose logs -f server
+  ./image.sh up -d --no-build --force-recreate
+  ./image.sh logs -f server
+
+The start helper requires Python 3 (standard library only) to derive host-path
+display information from the final Compose mounts. It does not access docker.sock
+from the container. Direct `docker compose up -d` also works and displays container
+paths; non-start helper commands do not require Python.
 
 The project is bakabase and its service is server (container bakabase-server-1). Keep the same .env,
 AppData mount, and optional local override when replacing a source-built server.
 For the optional Apple Silicon/NAS mounts, copy compose.local.example.yaml to
-compose.local.yaml, then use:
-  docker compose -f compose.yaml -f compose.local.yaml up -d --no-build --force-recreate
+compose.local.yaml; image.sh reads it automatically.
 
 An image upgrade preserves AppData. Downgrading the image does not downgrade its
 database; restore a matching backup when returning to an older data version.
