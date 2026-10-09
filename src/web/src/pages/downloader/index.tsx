@@ -56,6 +56,7 @@ import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContext
 import { useDownloadTasksStore } from "@/stores/downloadTasks";
 import RequestStatistics from "@/pages/downloader/components/RequestStatistics";
 import { toAbsoluteBackendUrl } from "@/config/env.ts";
+import { openExternalUrl } from "@/utils/openExternalUrl";
 
 /** Row height handed to the listbox virtualizer; also how "locate" computes a scroll offset. */
 const TASK_ITEM_HEIGHT = DOWNLOAD_TASK_ITEM_HEIGHT;
@@ -872,9 +873,7 @@ const DownloaderPage = () => {
                   onAction={(key) => {
                     switch (key as string) {
                       case "export":
-                        BApi.gui.openUrlInDefaultBrowser({
-                          url: toAbsoluteBackendUrl("/download-task/xlsx"),
-                        });
+                        openExternalUrl(toAbsoluteBackendUrl("/download-task/xlsx"));
                         break;
                       case "delete_completed": {
                         const ids = tasks

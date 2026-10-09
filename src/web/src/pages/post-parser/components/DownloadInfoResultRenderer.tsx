@@ -23,7 +23,7 @@ import Tooltip from "./PostParserTooltip";
 import DownloadGroupHeader from "./DownloadGroupHeader";
 
 import { Button, toast } from "@/components/bakaui";
-import BApi from "@/sdk/BApi";
+import { openExternalUrl } from "@/utils/openExternalUrl";
 
 interface Props {
   data: DownloadInfoData;
@@ -304,7 +304,7 @@ const DownloadInfoResultRenderer: FC<Props> = ({
                             <AiOutlineLink aria-hidden className="shrink-0 text-base" />
                           }
                           variant="light"
-                          onPress={() => BApi.gui.openUrlInDefaultBrowser({ url })}
+                          onPress={() => openExternalUrl(url)}
                         >
                           <span className="min-w-0 truncate text-left">{url}</span>
                         </Button>

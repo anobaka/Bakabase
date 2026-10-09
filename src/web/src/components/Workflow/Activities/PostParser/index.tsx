@@ -7,7 +7,7 @@ import { AiOutlineLink, AiOutlineReload } from "react-icons/ai";
 import { Button, Switch } from "@/components/bakaui";
 import { AvailabilityDetails } from "@/pages/post-parser/components/PostDetails";
 import { WorkflowActivityCategory } from "@/sdk/constants";
-import BApi from "@/sdk/BApi";
+import { openExternalUrl } from "@/utils/openExternalUrl";
 
 type ReadConfig = { useConfiguredSoulPlusPurchaseLimit: boolean };
 
@@ -115,7 +115,7 @@ const UnlockResumeForm: NonNullable<WorkflowActivityUI["ResumeForm"]> = ({
             size="sm"
             startContent={<AiOutlineLink aria-hidden />}
             variant="flat"
-            onPress={() => BApi.gui.openUrlInDefaultBrowser({ url: sourceUrl })}
+            onPress={() => openExternalUrl(sourceUrl)}
           >
             {t(locks.length ? "postParser.action.openPostToUnlock" : "postParser.action.openPost")}
           </Button>

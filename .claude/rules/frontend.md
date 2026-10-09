@@ -40,3 +40,13 @@ server-side static value, add it there — see `api-conventions.md`.
   - `BangumiSubjectType.Anime`
 - **DO NOT** use full text as translation keys
 - Translation files location: `Bakabase/src/web/src/locales/{en,cn}/`
+
+## External links
+
+Use `ExternalLink` for web links, or `openExternalUrl` directly in a button/menu
+handler. They follow the reported `ClientMode`: `RemoteBrowser` opens an HTTP(S)
+link in a new browser tab with `noopener noreferrer`; `AllInOne` and `PureClient`
+keep the GUI endpoint so the desktop app or its local relay opens the OS browser.
+Do not use `isLocal` to choose: a headless server reports `RemoteBrowser` on
+loopback too. Browser navigation stays synchronous with the user action; do not
+await a backend request before opening the tab.

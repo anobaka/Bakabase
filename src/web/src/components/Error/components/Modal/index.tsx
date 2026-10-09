@@ -9,6 +9,7 @@ import { Accordion, AccordionItem, Button, Chip, Link, Modal, Snippet } from "@/
 import BApi from "@/sdk/BApi";
 import Urls from "@/cons/Urls";
 import { useIsPureClient } from "@/stores/remoteAccess";
+import { openExternalUrl } from "@/utils/openExternalUrl";
 
 interface IProps {
   error?: Error;
@@ -227,11 +228,7 @@ const ErrorModal = ({ error, errorInfo }: IProps) => {
                   </div>
                 )}
                 <div className="flex items-center gap-2">
-                  <Button
-                    color="default"
-                    size="sm"
-                    onClick={() => BApi.gui.openUrlInDefaultBrowser({ url: Urls.Github })}
-                  >
+                  <Button color="default" size="sm" onClick={() => openExternalUrl(Urls.Github)}>
                     <GithubOutlined />
                     GitHub
                   </Button>
