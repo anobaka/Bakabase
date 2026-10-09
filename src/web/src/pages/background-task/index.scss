@@ -1,7 +1,22 @@
 .background-task-page {
-  .opt {
-    display: flex;
-    justify-content: flex-start;
-    margin-bottom: 10px;
+  .background-task-table-scroll {
+    overflow-x: auto;
+    border: 1px solid hsl(var(--heroui-default-200) / 0.65);
+    border-radius: 0.75rem;
+  }
+
+  table {
+    min-width: 780px;
+  }
+
+  th {
+    height: 2.25rem;
+    font-size: 0.7rem;
+    font-weight: 500;
+  }
+
+  td {
+    padding-top: 0.45rem;
+    padding-bottom: 0.45rem;
   }
 }

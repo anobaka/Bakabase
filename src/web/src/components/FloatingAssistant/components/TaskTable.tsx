@@ -46,6 +46,9 @@ import { openMovePanel, refreshMovePanel } from "@/stores/resourceMovePanel";
 
 interface TaskTableProps {
   tasks: BTask[];
+  /** The settings page keeps scheduling beside each task; the floating view stays compact. */
+  renderSchedule?: (task: BTask) => React.ReactNode;
+  presentation?: "default" | "page";
 }
 
 type TaskFilter = "all" | "running" | "pending" | "completed" | "failed";
@@ -133,7 +136,8 @@ const TaskStatusIcon = ({ task, onShowError }: { task: BTask; onShowError: () =>
   }
 };
 
-export function TaskTable({ tasks }: TaskTableProps) {
+export function TaskTable({ tasks, renderSchedule, presentation = "default" }: TaskTableProps) {
+  const page = presentation === "page";
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { createPortal } = useBakabaseContext();
@@ -243,19 +247,49 @@ export function TaskTable({ tasks }: TaskTableProps) {
       });
     }
 
-    return [...result].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
-  }, [tasks, filter, typeFilter]);
+    const rank = (task: BTask) => {
+      if (
+        [
+          BTaskStatus.Running,
+          BTaskStatus.Cancelling,
+          BTaskStatus.Pausing,
+          BTaskStatus.Resuming,
+        ].includes(task.status)
+      )
+        return 0;
+      if (
+        [BTaskStatus.Paused, BTaskStatus.WaitingForInput, BTaskStatus.NotStarted].includes(
+          task.status,
+        )
+      )
+        return 1;
+      if (task.status === BTaskStatus.Error) return 2;
+
+      return 3;
+    };
+
+    return [...result].sort(
+      (a, b) => (page ? rank(a) - rank(b) : 0) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
+    );
+  }, [tasks, filter, typeFilter, page]);
 
   const columns = useMemo(
     () => [
-      { key: "name", label: t("floatingAssistant.label.taskList") },
-      { key: "status", label: t("common.label.status") },
+      {
+        key: "name",
+        label: t(page ? "backgroundTask.column.name" : "floatingAssistant.label.taskList"),
+      },
+      {
+        key: "status",
+        label: t(page ? "backgroundTask.column.latestStatus" : "common.label.status"),
+      },
       { key: "progress", label: t("common.label.progress") },
       { key: "time", label: t("common.label.time") },
       { key: "remaining", label: t("common.label.remaining") },
+      ...(renderSchedule ? [{ key: "schedule", label: t("backgroundTask.label.schedule") }] : []),
       { key: "operations", label: t("common.label.operations") },
     ],
-    [t],
+    [t, page, renderSchedule],
   );
 
   const handleCopyError = (errorText: string) => {
@@ -428,6 +462,7 @@ export function TaskTable({ tasks }: TaskTableProps) {
                 onPress={() => {
                   if (task.type === BTaskType.MoveResources) {
                     void handleTaskAction(task, TaskAction.Stop);
+
                     return;
                   }
                   createPortal(Modal, {
@@ -463,6 +498,7 @@ export function TaskTable({ tasks }: TaskTableProps) {
           );
           break;
         case TaskAction.Config:
+          if (renderSchedule) break;
           actions.push(
             <Tooltip
               key={`config-${task.id}`}
@@ -498,6 +534,7 @@ export function TaskTable({ tasks }: TaskTableProps) {
         </Button>,
       );
     }
+
     return actions;
   };
 
@@ -571,152 +608,211 @@ export function TaskTable({ tasks }: TaskTableProps) {
         })}
       </div>
 
-      <Table isCompact isStriped removeWrapper aria-label="Background tasks">
-        <TableHeader columns={columns}>
-          {(column) => <TableColumn key={column.key}>{column.label}</TableColumn>}
-        </TableHeader>
-        <TableBody emptyContent={t("floatingAssistant.empty.noTasksMatchFilter")}>
-          {filteredTasks.map((task) => (
-            <TableRow
-              key={task.id}
-              className={`transition-opacity ${task.id === cleaningTaskId ? "opacity-0" : ""} ${task.status === BTaskStatus.Error ? "task-row-error" : ""}`}
-              onTransitionEnd={(evt) => {
-                if (evt.propertyName === "opacity" && task.id === cleaningTaskId) {
-                  BApi.backgroundTask.cleanBackgroundTask(task.id);
-                }
-              }}
-            >
-              {/* Name */}
-              <TableCell>
-                <div className="flex items-center gap-1">
-                  <span className="truncate max-w-[200px]">{task.name}</span>
-                  {task.isPersistent && (
-                    <Tooltip
-                      color="secondary"
-                      content={t("floatingAssistant.tip.persistentScheduledTask")}
-                    >
-                      <PushpinOutlined className="text-base opacity-40" />
-                    </Tooltip>
-                  )}
-                  {task.description && (
-                    <Tooltip color="secondary" content={task.description}>
-                      <QuestionCircleOutlined className="text-base opacity-60" />
-                    </Tooltip>
-                  )}
-                  {task.process && (
-                    <Chip color="success" size="sm" variant="light">
-                      {task.process}
-                    </Chip>
-                  )}
-                </div>
-              </TableCell>
-              {/* Status */}
-              <TableCell>
-                <div className="flex items-center gap-1">
-                  <TaskStatusIcon task={task} onShowError={() => handleShowError(task)} />
-                  {task.status === BTaskStatus.Error && task.briefError && (
-                    <span
-                      className="text-xs text-danger truncate max-w-[100px]"
-                      title={task.briefError}
-                    >
-                      {task.briefError}
-                    </span>
-                  )}
-                </div>
-              </TableCell>
-              {/* Progress */}
-              <TableCell>
-                <div className="relative min-w-[60px]">
-                  <Progress
-                    className={task.status === BTaskStatus.Running ? "task-progress-animated" : ""}
-                    classNames={{
-                      indicator:
-                        task.status === BTaskStatus.Running ? "progress-bar-indicator" : "",
-                    }}
-                    color="primary"
-                    size="sm"
-                    value={task.percentage}
-                  />
-                  <div className="absolute top-0 left-0 flex items-center justify-center w-full h-full text-xs">
-                    {task.percentage}%
-                  </div>
-                </div>
-              </TableCell>
-              {/* Time - combined started + elapsed */}
-              <TableCell>
-                <div className="flex flex-col text-xs whitespace-nowrap h-[2lh]">
-                  <span className="text-default-500">
-                    {task.startedAt ? dayjs(task.startedAt).format("HH:mm:ss") : "--:--:--"}
-                  </span>
-                  <span className="font-medium">
-                    {(() => {
-                      const ms = computeDisplayElapsedMs(task);
-
-                      return ms != null ? dayjs.duration(ms).format("HH:mm:ss") : "--:--:--";
-                    })()}
-                  </span>
-                </div>
-              </TableCell>
-              {/* Remaining */}
-              <TableCell>
-                {(() => {
-                  // Show nothing for completed/cancelled tasks
-                  if (
-                    task.status === BTaskStatus.Completed ||
-                    task.status === BTaskStatus.Cancelled ||
-                    task.percentage === 100
-                  ) {
-                    return null;
+      <div className={page ? "background-task-table-scroll" : undefined}>
+        <Table
+          isCompact
+          removeWrapper
+          aria-label={t("backgroundTask.page.title")}
+          isStriped={!page}
+        >
+          <TableHeader columns={columns}>
+            {(column) => <TableColumn key={column.key}>{column.label}</TableColumn>}
+          </TableHeader>
+          <TableBody emptyContent={t("floatingAssistant.empty.noTasksMatchFilter")}>
+            {filteredTasks.map((task) => (
+              <TableRow
+                key={task.id}
+                className={`transition-opacity ${task.id === cleaningTaskId ? "opacity-0" : ""} ${task.status === BTaskStatus.Error ? "task-row-error" : ""}`}
+                onTransitionEnd={(evt) => {
+                  if (evt.propertyName === "opacity" && task.id === cleaningTaskId) {
+                    BApi.backgroundTask.cleanBackgroundTask(task.id);
                   }
-                  const ms = computeDisplayRemainingMs(task);
+                }}
+              >
+                {[
+                  <TableCell key="name">
+                    <div className="flex items-center gap-1">
+                      <span
+                        className={
+                          page ? "max-w-[260px] truncate text-sm" : "truncate max-w-[200px]"
+                        }
+                        title={task.name}
+                      >
+                        {task.name}
+                      </span>
+                      {task.isPersistent && !page && (
+                        <Tooltip
+                          color="secondary"
+                          content={t("floatingAssistant.tip.persistentScheduledTask")}
+                        >
+                          <PushpinOutlined className="text-base opacity-40" />
+                        </Tooltip>
+                      )}
+                      {task.description && (
+                        <Tooltip color="secondary" content={task.description}>
+                          <QuestionCircleOutlined className="text-base opacity-60" />
+                        </Tooltip>
+                      )}
+                      {task.process && !page && (
+                        <Chip color="success" size="sm" variant="light">
+                          {task.process}
+                        </Chip>
+                      )}
+                    </div>
+                    {page && task.process && (
+                      <p
+                        className="mt-0.5 max-w-[290px] truncate text-xs text-default-500"
+                        title={task.process}
+                      >
+                        {task.process}
+                      </p>
+                    )}
+                    {page && task.reasonForUnableToStart && (
+                      <p
+                        className="mt-0.5 max-w-[290px] truncate text-xs text-warning"
+                        title={task.reasonForUnableToStart}
+                      >
+                        {task.reasonForUnableToStart}
+                      </p>
+                    )}
+                  </TableCell>,
+                  <TableCell key="status">
+                    <div className="flex items-center gap-1">
+                      <TaskStatusIcon task={task} onShowError={() => handleShowError(task)} />
+                      {page && task.status !== BTaskStatus.WaitingForInput && (
+                        <span
+                          className={`whitespace-nowrap text-xs ${task.status === BTaskStatus.Error ? "text-danger" : "text-default-600"}`}
+                        >
+                          {t(
+                            `backgroundTask.status.${
+                              {
+                                [BTaskStatus.NotStarted]: "notStarted",
+                                [BTaskStatus.Running]: "running",
+                                [BTaskStatus.Paused]: "paused",
+                                [BTaskStatus.Error]: "error",
+                                [BTaskStatus.Completed]: "completed",
+                                [BTaskStatus.Cancelled]: "cancelled",
+                                [BTaskStatus.Cancelling]: "cancelling",
+                                [BTaskStatus.Pausing]: "pausing",
+                                [BTaskStatus.Resuming]: "resuming",
+                              }[task.status]
+                            }`,
+                          )}
+                        </span>
+                      )}
+                      {task.status === BTaskStatus.Error && task.briefError && (
+                        <span
+                          className="text-xs text-danger truncate max-w-[100px]"
+                          title={task.briefError}
+                        >
+                          {task.briefError}
+                        </span>
+                      )}
+                    </div>
+                  </TableCell>,
+                  <TableCell key="progress">
+                    {page &&
+                    [BTaskStatus.Completed, BTaskStatus.Cancelled, BTaskStatus.Error].includes(
+                      task.status,
+                    ) ? (
+                      <span className="text-default-300">—</span>
+                    ) : (
+                      <div className="relative min-w-[60px]">
+                        <Progress
+                          className={
+                            task.status === BTaskStatus.Running ? "task-progress-animated" : ""
+                          }
+                          classNames={{
+                            indicator:
+                              task.status === BTaskStatus.Running ? "progress-bar-indicator" : "",
+                          }}
+                          color="primary"
+                          size="sm"
+                          value={task.percentage}
+                        />
+                        <div className="absolute top-0 left-0 flex items-center justify-center w-full h-full text-xs">
+                          {task.percentage ?? 0}%
+                        </div>
+                      </div>
+                    )}
+                  </TableCell>,
+                  <TableCell key="time">
+                    <div className="flex flex-col text-xs whitespace-nowrap h-[2lh]">
+                      <span className="text-default-500">
+                        {task.startedAt ? dayjs(task.startedAt).format("HH:mm:ss") : "--:--:--"}
+                      </span>
+                      <span className="font-medium">
+                        {(() => {
+                          const ms = computeDisplayElapsedMs(task);
 
-                  if (ms == null) {
-                    // Show next run time for persistent tasks
-                    if (task.nextTimeStartAt) {
+                          return ms != null ? dayjs.duration(ms).format("HH:mm:ss") : "--:--:--";
+                        })()}
+                      </span>
+                    </div>
+                  </TableCell>,
+                  <TableCell key="remaining">
+                    {(() => {
+                      // Show nothing for completed/cancelled tasks
+                      if (
+                        task.status === BTaskStatus.Completed ||
+                        task.status === BTaskStatus.Cancelled ||
+                        task.percentage === 100
+                      ) {
+                        return null;
+                      }
+                      const ms = computeDisplayRemainingMs(task);
+
+                      if (ms == null) {
+                        // Show next run time for persistent tasks
+                        if (task.nextTimeStartAt && !renderSchedule) {
+                          return (
+                            <Tooltip content={t("floatingAssistant.label.nextRun")} placement="top">
+                              <span className="text-xs text-default-500">
+                                {dayjs(task.nextTimeStartAt).format("HH:mm")}
+                              </span>
+                            </Tooltip>
+                          );
+                        }
+
+                        return null;
+                      }
+                      const totalSeconds = Math.floor(ms / 1000);
+                      const hours = Math.floor(totalSeconds / 3600);
+                      const minutes = Math.floor((totalSeconds % 3600) / 60);
+                      const seconds = totalSeconds % 60;
+                      let remaining: string;
+
+                      if (totalSeconds < 60) {
+                        remaining = "< 1m";
+                      } else if (hours > 0) {
+                        remaining = `${hours}h ${minutes}m`;
+                      } else {
+                        remaining = `${minutes}m ${seconds}s`;
+                      }
+                      const estimatedEndTime = dayjs().add(ms, "millisecond").format("HH:mm");
+
                       return (
-                        <Tooltip content={t("floatingAssistant.label.nextRun")} placement="top">
-                          <span className="text-xs text-default-500">
-                            {dayjs(task.nextTimeStartAt).format("HH:mm")}
-                          </span>
+                        <Tooltip
+                          content={`${t("floatingAssistant.tip.estimatedCompletion")}: ${estimatedEndTime}`}
+                          placement="top"
+                        >
+                          <span className="cursor-help text-xs">{remaining}</span>
                         </Tooltip>
                       );
-                    }
-
-                    return null;
-                  }
-                  const totalSeconds = Math.floor(ms / 1000);
-                  const hours = Math.floor(totalSeconds / 3600);
-                  const minutes = Math.floor((totalSeconds % 3600) / 60);
-                  const seconds = totalSeconds % 60;
-                  let remaining: string;
-
-                  if (totalSeconds < 60) {
-                    remaining = "< 1m";
-                  } else if (hours > 0) {
-                    remaining = `${hours}h ${minutes}m`;
-                  } else {
-                    remaining = `${minutes}m ${seconds}s`;
-                  }
-                  const estimatedEndTime = dayjs().add(ms, "millisecond").format("HH:mm");
-
-                  return (
-                    <Tooltip
-                      content={`${t("floatingAssistant.tip.estimatedCompletion")}: ${estimatedEndTime}`}
-                      placement="top"
-                    >
-                      <span className="cursor-help text-xs">{remaining}</span>
-                    </Tooltip>
-                  );
-                })()}
-              </TableCell>
-              {/* Operations */}
-              <TableCell>
-                <div className="flex items-center gap-1">{renderTaskActions(task)}</div>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+                    })()}
+                  </TableCell>,
+                  ...(renderSchedule
+                    ? [<TableCell key="schedule">{renderSchedule(task)}</TableCell>]
+                    : []),
+                  <TableCell key="operations">
+                    <div className="flex items-center gap-1">{renderTaskActions(task)}</div>
+                  </TableCell>,
+                ]}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 }

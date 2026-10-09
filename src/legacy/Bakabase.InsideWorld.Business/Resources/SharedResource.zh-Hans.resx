@@ -1005,4 +1005,10 @@
   <data name="DataSync_Notify_PauseReason_PeerIdentityDuplicated" xml:space="preserve">
     <value>对方重复使用了已发布过的版本（数据目录被复制或还原过）</value>
   </data>
+  <data name="BTask_Name_PlatformFetchWatch" xml:space="preserve">
+    <value>检查平台下载状态</value>
+  </data>
+  <data name="BTask_Description_PlatformFetchWatch" xml:space="preserve">
+    <value>检查平台下载或安装是否完成，并继续等待中的获取任务。</value>
+  </data>
 </root>
