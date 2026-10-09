@@ -31,6 +31,7 @@ import i18n from "@/i18n";
 import BApi from "@/sdk/BApi";
 import Window from "@/components/Window";
 import { ErrorBoundary } from "@/components/Error";
+import { toastPresentation } from "@/components/bakaui/components/Toast/configuration";
 import { initAnalytics } from "@/services/Analytics";
 
 dayjs.extend(duration);
@@ -298,17 +299,7 @@ const BakabaseContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
             algorithm: isDarkMode ? theme.darkAlgorithm : theme.defaultAlgorithm,
           }}
         >
-          <ToastProvider
-            placement={"top-center"}
-            toastProps={{
-              classNames: {
-                content: "bakabase-toast-content",
-                wrapper: "bakabase-toast-wrapper",
-                title: "bakabase-toast-text",
-                description: "bakabase-toast-text",
-              },
-            }}
-          />
+          <ToastProvider placement={"top-center"} toastProps={toastPresentation} />
           <BakabaseContext.Provider value={contextValue}>
             {portals.map(({ key, component }) => (
               <ErrorBoundary key={key}>

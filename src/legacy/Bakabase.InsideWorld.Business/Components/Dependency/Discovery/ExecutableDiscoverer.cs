@@ -42,7 +42,7 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Discovery
             return null;
         }
 
-        private async Task<(string Location, string? Version)?> TryDiscoverAt(string location, CancellationToken ct)
+        internal async Task<(string Location, string? Version)?> TryDiscoverAt(string location, CancellationToken ct)
         {
             try
             {

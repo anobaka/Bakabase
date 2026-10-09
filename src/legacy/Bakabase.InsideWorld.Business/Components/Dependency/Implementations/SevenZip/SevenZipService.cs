@@ -45,15 +45,15 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Se
 
         protected override async Task PostDownloading(List<string> filePaths, CancellationToken ct)
         {
+            if (AppService.OsPlatform != OsPlatform.Windows)
+            {
+                await SevenZipUnixInstaller.InstallAsync(filePaths.Single(), DefaultLocation, loggerFactory, ct);
+                return;
+            }
+
             foreach (var fullFilename in filePaths)
             {
-                if (fullFilename.EndsWith(".tar.xz"))
-                {
-                    // Linux/Mac tarball - extract using system tar command
-                    await ExtractUsingSystemTar(fullFilename, ct);
-                    FileUtils.Delete(fullFilename, true, true);
-                }
-                else if (fullFilename.EndsWith(".exe"))
+                if (fullFilename.EndsWith(".exe"))
                 {
                     // Windows .exe files are standalone executables, no extraction needed
                     // Just keep the file as-is
@@ -61,30 +61,6 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Se
             }
 
             await DirectoryUtils.MoveAsync(TempDirectory, DefaultLocation, true, null, PauseToken.None, ct);
-        }
-
-        private async Task ExtractUsingSystemTar(string archivePath, CancellationToken ct)
-        {
-            var outputDir = Path.GetDirectoryName(archivePath)!;
-            var output = new System.Text.StringBuilder();
-            var error = new System.Text.StringBuilder();
-
-            // tar -xf archive.tar.xz -C outputDir
-            var cmd = CliWrap.Cli.Wrap("tar")
-                .WithArguments(new[] { "-xf", archivePath, "-C", outputDir })
-                .WithValidation(CliWrap.CommandResultValidation.None)
-                .WithStandardOutputPipe(CliWrap.PipeTarget.ToStringBuilder(output))
-                .WithStandardErrorPipe(CliWrap.PipeTarget.ToStringBuilder(error));
-
-            var result = await cmd.ExecuteAsync(ct);
-
-            if (result.ExitCode != 0)
-            {
-                Logger.LogError($"Failed to extract {archivePath} using system tar. Exit code: {result.ExitCode}, Error: {error}");
-                throw new Exception($"Failed to extract {archivePath} using system tar: {error}");
-            }
-
-            Logger.LogInformation($"Successfully extracted {archivePath} using system tar");
         }
 
         public override async Task<DependentComponentVersion> GetLatestVersion(CancellationToken ct)
@@ -95,69 +71,7 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Se
             // Extract version from tag name (e.g., "24.08" from "v24.08" or "24.08")
             var version = release.TagName.TrimStart('v');
 
-            // Determine the target asset name pattern based on OS and architecture
-            var (osPart, archPart, extension) = AppService.OsPlatform switch
-            {
-                OsPlatform.Windows => RuntimeInformation.OSArchitecture switch
-                {
-                    Architecture.X64 => ("x64", "", ".exe"),
-                    Architecture.X86 => ("", "", ".exe"),
-                    Architecture.Arm64 => ("arm64", "", ".exe"),
-                    _ => throw new NotSupportedException(
-                        $"Architecture {RuntimeInformation.OSArchitecture} is not supported on Windows")
-                },
-                OsPlatform.Osx => ("mac", "", ".tar.xz"),
-                OsPlatform.Linux => RuntimeInformation.OSArchitecture switch
-                {
-                    Architecture.X64 => ("linux-x64", "", ".tar.xz"),
-                    Architecture.Arm64 => ("linux-arm64", "", ".tar.xz"),
-                    Architecture.Arm => ("linux-arm", "", ".tar.xz"),
-                    _ => throw new NotSupportedException(
-                        $"Architecture {RuntimeInformation.OSArchitecture} is not supported on Linux")
-                },
-                _ => throw new NotSupportedException($"OS Platform {AppService.OsPlatform} is not supported")
-            };
-
-            // Find the matching asset
-            // Asset naming pattern examples:
-            // - Windows x64: 7z2408-x64.exe
-            // - Windows x86: 7z2408.exe
-            // - Windows ARM64: 7z2408-arm64.exe
-            // - Linux x64: 7z2408-linux-x64.tar.xz
-            // - Mac: 7z2408-mac.tar.xz
-            var targetAsset = release.Assets.FirstOrDefault(asset =>
-            {
-                var name = asset.Name.ToLower();
-
-                // Check if it's a 7z release file and has the correct extension
-                if (!name.StartsWith("7z") || !name.EndsWith(extension))
-                {
-                    return false;
-                }
-
-                // For Windows x86 (no arch suffix)
-                if (AppService.OsPlatform == OsPlatform.Windows &&
-                    RuntimeInformation.OSArchitecture == Architecture.X86)
-                {
-                    // Match pattern: 7z<version>.exe (no arch suffix)
-                    return !name.Contains("-") && name.EndsWith(".exe");
-                }
-
-                // For other platforms, match the OS and arch parts
-                if (!string.IsNullOrEmpty(osPart))
-                {
-                    return name.Contains(osPart.ToLower());
-                }
-
-                return true;
-            });
-
-            if (targetAsset == null)
-            {
-                throw new Exception(
-                    $"Cannot find a suitable 7-Zip build for {AppService.OsPlatform} {RuntimeInformation.OSArchitecture}. " +
-                    $"Available assets: {string.Join(", ", release.Assets.Select(a => a.Name))}");
-            }
+            var targetAsset = SelectReleaseAsset(release, AppService.OsPlatform, RuntimeInformation.OSArchitecture);
 
             return new SevenZipVersion
             {
@@ -165,6 +79,38 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Se
                 Version = version,
                 DownloadUrl = targetAsset.BrowserDownloadUrl
             };
+        }
+
+        internal static GithubAsset SelectReleaseAsset(GithubRelease release, OsPlatform platform, Architecture architecture)
+        {
+            var suffix = platform switch
+            {
+                OsPlatform.Windows => architecture switch
+                {
+                    Architecture.X64 => "-x64.exe",
+                    Architecture.X86 => ".exe",
+                    Architecture.Arm64 => "-arm64.exe",
+                    _ => throw new NotSupportedException(
+                        $"Architecture {architecture} is not supported on Windows")
+                },
+                OsPlatform.Osx => "-mac.tar.xz",
+                OsPlatform.Linux => architecture switch
+                {
+                    Architecture.X64 => "-linux-x64.tar.xz",
+                    Architecture.Arm64 => "-linux-arm64.tar.xz",
+                    Architecture.Arm => "-linux-arm.tar.xz",
+                    _ => throw new NotSupportedException(
+                        $"Architecture {architecture} is not supported on Linux")
+                },
+                _ => throw new NotSupportedException($"OS Platform {platform} is not supported")
+            };
+
+            // Exact names avoid confusing ARM with ARM64, or the Windows x86 installer with 7zr.exe.
+            var name = "7z" + release.TagName.TrimStart('v').Replace(".", "") + suffix;
+            return release.Assets.FirstOrDefault(asset => asset.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+                   ?? throw new NotSupportedException(
+                       $"Cannot find a suitable 7-Zip build for {platform} {architecture}. " +
+                       $"Available assets: {string.Join(", ", release.Assets.Select(a => a.Name))}");
         }
 
         // On macOS and Linux, the executable is named "7zz", on Windows it's "7z.exe"

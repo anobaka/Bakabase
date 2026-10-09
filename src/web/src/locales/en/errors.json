@@ -32,5 +32,9 @@
   "error.modal.continueBrowsing": "Continue browsing",
   "error.modal.returnHome": "Return to homepage",
   "error.modal.restartThisComputer": "Restart Bakabase on this computer",
-  "error.modal.restartThisComputerDesc": "Close the app and open it again. The server shown in this window keeps running — nothing it is doing is interrupted."
+  "error.modal.restartThisComputerDesc": "Close the app and open it again. The server shown in this window keeps running — nothing it is doing is interrupted.",
+  "error.details.title": "Error details",
+  "error.details.copy": "Copy details",
+  "error.details.copied": "Copied",
+  "error.details.copyFailed": "Could not copy. Select the text and copy it manually."
 }
