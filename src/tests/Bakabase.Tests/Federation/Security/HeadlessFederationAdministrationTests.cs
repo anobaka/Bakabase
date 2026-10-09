@@ -50,6 +50,48 @@ public sealed class HeadlessFederationAdministrationTests
         Assert.AreEqual(expected, response.StatusCode, await response.Content.ReadAsStringAsync());
     }
 
+    [DataTestMethod]
+    [DataRow(RemoteAccessMode.Disabled)]
+    [DataRow(RemoteAccessMode.Enabled)]
+    [DataRow(RemoteAccessMode.Unrestricted)]
+    public async Task Headless_loopback_cannot_bypass_a_rejected_host_or_port(RemoteAccessMode mode)
+    {
+        await using var host = await Host();
+        host.Remote.Mode = mode;
+        foreach (var (authority, origin) in new (string, string?)[]
+                 {
+                     ($"evil.example:{host.Port}", null),
+                     ($"evil.example:{host.Port}", $"http://evil.example:{host.Port}"),
+                     ($"127.0.0.1:{host.Port + 1}", null)
+                 })
+        {
+            using var request = host.Request(HttpMethod.Get, "/federation/local/peers", origin: origin);
+            request.Headers.Host = authority;
+            using var response = await host.SendAsync(request);
+            Assert.AreEqual(HttpStatusCode.Forbidden, response.StatusCode,
+                $"{mode}, Host={authority}, Origin={origin}: {await response.Content.ReadAsStringAsync()}");
+            using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+            Assert.AreEqual("LocalInterfaceOnly", body.RootElement.GetProperty("code").GetString());
+        }
+    }
+
+    [DataTestMethod]
+    [DataRow("127.0.0.1")]
+    [DataRow("localhost")]
+    [DataRow("[::1]")]
+    public async Task Headless_local_browser_and_cli_keep_their_loopback_access(string hostname)
+    {
+        await using var host = await Host();
+        host.Remote.Mode = RemoteAccessMode.Disabled;
+        foreach (var origin in new string?[] { null, $"http://{hostname}:{host.Port}" })
+        {
+            using var request = host.Request(HttpMethod.Get, "/federation/local/peers", origin: origin);
+            request.Headers.Host = $"{hostname}:{host.Port}";
+            using var response = await host.SendAsync(request);
+            Assert.AreEqual(HttpStatusCode.OK, response.StatusCode, await response.Content.ReadAsStringAsync());
+        }
+    }
+
     [TestMethod]
     public async Task Paired_headless_administrator_passes_but_invalid_and_node_credentials_do_not()
     {
@@ -59,9 +101,14 @@ public sealed class HeadlessFederationAdministrationTests
         var code = await devices.IssuePairingCodeAsync();
         var paired = await devices.PairWithCodeAsync(code.Code, "Desktop", RemoteDevicePlatform.MacOS);
         var credentials = paired.Credentials!;
-        foreach (var valid in new[] { true, false })
+        foreach (var (valid, native) in new[] { (true, false), (false, false), (true, true), (false, true) })
         {
             using var request = LanRequest(host);
+            if (native)
+            {
+                request.Headers.Remove("Origin");
+                request.Headers.Remove("Sec-Fetch-Site");
+            }
             var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
             var nonce = Guid.NewGuid().ToString("N");
             var canonical = RemoteRequestSignature.BuildCanonicalString(credentials.DeviceId, "GET",

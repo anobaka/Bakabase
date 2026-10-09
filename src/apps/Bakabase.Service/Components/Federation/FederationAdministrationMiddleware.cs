@@ -35,10 +35,16 @@ public sealed class FederationAdministrationMiddleware(RequestDelegate next)
     internal static bool IsHeadless(HttpContext context) =>
         context.RequestServices?.GetService<IServerSelfDescription>()?.Kind == ServerKind.Headless;
 
-    public static bool CanAdminister(HttpContext context) =>
-        IsHeadless(context) && IsOwnOrigin(context) &&
-        context.GetRemoteAccessContext() is { IsLoopback: true } or
-            { Mode: not RemoteAccessMode.Disabled, IsPaired: true } or { IsUnrestricted: true };
+    public static bool CanAdminister(HttpContext context)
+    {
+        if (!IsHeadless(context) || !IsOwnOrigin(context)) return false;
+        var remote = context.GetRemoteAccessContext();
+        // The legacy gate trusts loopback sockets before authenticating credentials.
+        // That trust cannot undo the federation gate's Host/port/origin rejection,
+        // even when this server also permits unrestricted remote administration.
+        if (remote is { IsLoopback: true }) return FederationAccessMiddleware.IsLocalCaller(context);
+        return remote is { Mode: not RemoteAccessMode.Disabled, IsPaired: true } or { IsUnrestricted: true };
+    }
 
     internal static bool IsOwnOrigin(HttpContext context)
     {
