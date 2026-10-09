@@ -5,8 +5,9 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CopyOutlined, CheckOutlined, GithubOutlined } from "@ant-design/icons";
 
-import { Accordion, AccordionItem, Button, Chip, Link, Modal, Snippet } from "@/components/bakaui";
+import { Accordion, AccordionItem, Button, Chip, Link, Modal } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
+import FilePathValue from "@/components/FilePathValue";
 import Urls from "@/cons/Urls";
 import { useIsPureClient } from "@/stores/remoteAccess";
 import { openExternalUrl } from "@/utils/openExternalUrl";
@@ -215,16 +216,7 @@ const ErrorModal = ({ error, errorInfo }: IProps) => {
                 {appInfo?.logPath && (
                   <div className="text-xs text-default-500">
                     {t<string>("error.modal.logFile")}
-                    <Snippet
-                      hideSymbol
-                      className="cursor-pointer ml-1"
-                      size="sm"
-                      onClick={() => BApi.tool.openFileOrDirectory({ path: appInfo.logPath })}
-                    >
-                      <span className="break-all whitespace-break-spaces text-primary">
-                        {appInfo.logPath}
-                      </span>
-                    </Snippet>
+                    <FilePathValue className="mt-1" path={appInfo.logPath} />
                   </div>
                 )}
                 <div className="flex items-center gap-2">
