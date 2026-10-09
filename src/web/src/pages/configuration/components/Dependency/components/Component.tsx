@@ -212,7 +212,7 @@ const Component = ({ id }: { id: string }) => {
 
   return (
     <div aria-busy={busy} className="flex min-w-0 flex-col gap-3 py-1">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           <Chip
             color={installing ? "primary" : installed ? "success" : "default"}
