@@ -172,13 +172,15 @@ export const useIsRemoteClient = () =>
  *
  * Two flavours qualify and they qualify for different reasons: the all-in-one,
  * because the server is this machine; the desktop app showing a server it manages,
- * because its relay intercepts those endpoints and runs them here. An ordinary browser pointed at a server
- * qualifies for neither, and there the action would land on a screen nobody is
- * watching.
+ * because its relay intercepts those endpoints and runs them here. An ordinary browser
+ * pointed at a server qualifies for neither. A headless server reports RemoteBrowser
+ * even for a local connection: being on loopback does not give it a desktop.
  */
 export const useUserSideActionsRunHere = () =>
   useRemoteAccessStore(
-    (state) => state.initialized && (state.isLocal || state.clientMode === ClientMode.PureClient),
+    (state) =>
+      state.initialized &&
+      (state.clientMode === ClientMode.AllInOne || state.clientMode === ClientMode.PureClient),
   );
 
 /**

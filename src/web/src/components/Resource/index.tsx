@@ -141,6 +141,7 @@ const PlayButton: React.FC<PlayControlPortalProps> = ({
   fsDiscoveryStatus,
   onPlaySource,
   onOpenFolder,
+  openFolderLabel,
   onNotFound,
   triggerFsDiscovery,
 }) => {
@@ -198,7 +199,7 @@ const PlayButton: React.FC<PlayControlPortalProps> = ({
         key: "openFolder",
         type: "openFolder",
         icon: <FolderOpenOutlined className="text-base" />,
-        label: t("common.action.openFolder"),
+        label: openFolderLabel,
         onClick: onOpenFolder,
       });
     }
@@ -214,7 +215,17 @@ const PlayButton: React.FC<PlayControlPortalProps> = ({
     }
 
     return result;
-  }, [status, sources, fsDiscoveryStatus, hasPath, t, onPlaySource, onOpenFolder, onNotFound]);
+  }, [
+    status,
+    sources,
+    fsDiscoveryStatus,
+    hasPath,
+    t,
+    onPlaySource,
+    onOpenFolder,
+    openFolderLabel,
+    onNotFound,
+  ]);
 
   // Trigger FS discovery when FS button is visible
   const fsIsVisible = entries.some((e) => e.source === DataOrigin.FileSystem);

@@ -79,7 +79,10 @@ public sealed class OpenResourceDirectoryHandler(
 
         try
         {
-            shell.Reveal(localPath, inParentDirectory: false);
+            // Files must be selected in their containing folder, never handed to
+            // their associated app. Judge the final local path after any fallback:
+            // a surviving parent directory should itself open in the file manager.
+            shell.Reveal(localPath, inParentDirectory: File.Exists(localPath));
             await WriteAsync(context, HttpStatusCode.OK, null);
         }
         catch (Exception e)

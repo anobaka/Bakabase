@@ -16,9 +16,8 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Bakabase.Tests.RemoteAccess;
 
 /// <summary>
-/// The gate's ordering, which is load-bearing in two directions: the all-in-one must
-/// never reach a new branch, and an action that only means something on the user's own
-/// machine must be refused even where everything else is allowed.
+/// The gate's ordering: the all-in-one keeps its own desktop actions, and a headless
+/// server cannot launch them even where everything else is allowed.
 /// </summary>
 [TestClass]
 public class RemoteAccessAuthorizationFilterTests
@@ -88,14 +87,64 @@ public class RemoteAccessAuthorizationFilterTests
     [TestMethod]
     public void Loopback_passes_even_for_a_user_machine_action()
     {
-        // This is the all-in-one's entire traffic. If the user-machine check ran before
-        // the loopback bypass, the desktop app would lose its own play button.
+        // Compositions predating the host descriptor retain the all-in-one's local
+        // behavior. An explicit headless descriptor is tested separately below.
         var context = Build(nameof(Actions.LaunchesAPlayer), Loopback);
 
         new RemoteAccessAuthorizationFilter().OnAuthorization(context);
 
         Assert.IsNull(context.Result);
         Assert.IsNull(DenialReason(context));
+    }
+
+    [DataTestMethod]
+    [DataRow(ServerKind.Desktop, true, true)]
+    [DataRow(ServerKind.Desktop, false, false)]
+    [DataRow(ServerKind.Headless, true, false)]
+    [DataRow(ServerKind.Headless, false, false)]
+    public void User_machine_actions_need_a_local_desktop(ServerKind kind, bool loopback, bool allowed)
+    {
+        var context = Build(nameof(Actions.LaunchesAPlayer),
+            new RemoteAccessContext {IsLoopback = loopback, Mode = RemoteAccessMode.Unrestricted});
+
+        new RemoteAccessAuthorizationFilter(new ServerSelfDescription(() => kind)).OnAuthorization(context);
+
+        if (allowed)
+        {
+            Assert.IsNull(context.Result);
+            Assert.IsNull(DenialReason(context));
+        }
+        else
+        {
+            Assert.IsInstanceOfType<ObjectResult>(context.Result);
+            Assert.AreEqual(403, ((ObjectResult) context.Result!).StatusCode);
+            Assert.AreEqual(nameof(RemoteAccessDenialReason.RunsOnUserMachine), DenialReason(context));
+        }
+    }
+
+    [DataTestMethod]
+    [DataRow(nameof(Actions.PlainData))]
+    [DataRow(nameof(Actions.Unmarked))]
+    public void Headless_loopback_still_passes_ordinary_actions(string action)
+    {
+        var context = Build(action, Loopback);
+
+        new RemoteAccessAuthorizationFilter(new ServerSelfDescription(() => ServerKind.Headless))
+            .OnAuthorization(context);
+
+        Assert.IsNull(context.Result);
+        Assert.IsNull(DenialReason(context));
+    }
+
+    [TestMethod]
+    public void Headless_loopback_also_refuses_a_controller_level_user_machine_marker()
+    {
+        var context = Build(nameof(UserMachineController.Inherited), Loopback, typeof(UserMachineController));
+
+        new RemoteAccessAuthorizationFilter(new ServerSelfDescription(() => ServerKind.Headless))
+            .OnAuthorization(context);
+
+        Assert.AreEqual(nameof(RemoteAccessDenialReason.RunsOnUserMachine), DenialReason(context));
     }
 
     [TestMethod]

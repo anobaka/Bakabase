@@ -115,6 +115,20 @@ describe("filesystem icons", () => {
     expect(getIconData).toHaveBeenCalledTimes(1);
   });
 
+  it.each([RuntimeMode.Docker, RuntimeMode.Dev])(
+    "does not request native icons from a local headless server (runtime=%s)",
+    async (runtimeMode) => {
+      useRemoteAccessStore.setState({ isLocal: true, clientMode: ClientMode.RemoteBrowser });
+      useAppContextStore.setState({ bApi2: BApi, runtimeMode });
+      const { container } = await render(
+        <FileSystemEntryIcon size={20} type={IconType.Directory} />,
+      );
+
+      expect(getIconData).not.toHaveBeenCalled();
+      expect(container.querySelector("svg")).not.toBeNull();
+    },
+  );
+
   it("shares concurrent extension lookups, including StrictMode effect replays", async () => {
     let resolveIcon!: (value: { data: string }) => void;
 

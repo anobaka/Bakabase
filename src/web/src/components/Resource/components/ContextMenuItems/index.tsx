@@ -41,6 +41,7 @@ import BApi from "@/sdk/BApi";
 import BulkPropertyEditor from "@/components/Resource/components/BulkPropertyEditor";
 import DeleteResourceConfirmContent from "@/components/Resource/components/DeleteResourceConfirmContent";
 import { useUiOptionsStore } from "@/stores/options";
+import { useOpenResourceDirectory } from "@/hooks/useOpenResourceDirectory";
 
 const log = buildLogger("ResourceContextMenuItems");
 
@@ -156,6 +157,7 @@ const ContextMenuItems = ({
     .map(moveReasonText)
     .join(" ");
   const { createPortal } = useBakabaseContext();
+  const folderAction = useOpenResourceDirectory();
   const uiOptionsStore = useUiOptionsStore();
   const customContextMenuItems = uiOptionsStore.data?.resource?.customContextMenuItems ?? [];
 
@@ -247,14 +249,10 @@ const ContextMenuItems = ({
 
       {/* Open folder — always uses the right-clicked resource, independent of selection. */}
       {contextResource?.path && (
-        <MenuItem
-          onClick={() => {
-            BApi.resource.openResourceDirectory({ id: contextResource.id });
-          }}
-        >
+        <MenuItem onClick={() => folderAction.open(contextResource)}>
           <div className="flex items-center gap-2">
             <FolderOpenOutlined className="text-base" />
-            {t<string>("common.action.openFolder")}
+            {folderAction.label}
           </div>
         </MenuItem>
       )}

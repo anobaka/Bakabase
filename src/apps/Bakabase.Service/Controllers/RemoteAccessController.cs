@@ -71,6 +71,11 @@ namespace Bakabase.Service.Controllers
             var context = HttpContext.GetRemoteAccessContext();
             var isLocal = context?.IsLoopback ?? true;
             var descriptor = await remoteAccessService.GetServerDescriptorAsync();
+            // Loopback says where the connection came from, not whether this process
+            // has a desktop. A browser reaching a headless server locally still needs
+            // browser playback and cannot launch a file manager on the user's machine.
+            var hasLocalDesktop = isLocal && descriptor.Kind != ServerKind.Headless &&
+                                  AppRuntime.Mode != RuntimeMode.Docker;
 
             return new SingletonResponse<RemoteAccessClientContextViewModel>(
                 new RemoteAccessClientContextViewModel
@@ -80,15 +85,14 @@ namespace Bakabase.Service.Controllers
                     Paired = context?.IsPaired ?? false,
                     DeviceId = context?.Device?.Id,
                     DeviceName = context?.Device?.Name,
-                    // A caller reaching a server directly is either sitting at it or
-                    // browsing it. The third answer only ever comes from a client that
-                    // answers this endpoint itself.
-                    ClientMode = isLocal ? ClientMode.AllInOne : ClientMode.RemoteBrowser,
+                    // The third answer only ever comes from the desktop relay that
+                    // answers this endpoint itself and runs user-side actions there.
+                    ClientMode = hasLocalDesktop ? ClientMode.AllInOne : ClientMode.RemoteBrowser,
                     ServerId = descriptor.Id,
                     ServerName = descriptor.Name,
                     // Needs a desktop, and needs it to be this person's. A container has
                     // no screen, and a browser on another device is not sitting here.
-                    CookieCaptureAvailable = isLocal && AppService.RuntimeMode != RuntimeMode.Docker
+                    CookieCaptureAvailable = hasLocalDesktop
                 });
         }
 

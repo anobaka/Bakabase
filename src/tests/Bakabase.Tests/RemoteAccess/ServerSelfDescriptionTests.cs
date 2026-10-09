@@ -141,6 +141,37 @@ public class ServerSelfDescriptionTests
         Assert.IsNull(info.Platform);
     }
 
+    [DataTestMethod]
+    [DataRow(ServerKind.Desktop, true, ClientMode.AllInOne, true)]
+    [DataRow(ServerKind.Desktop, false, ClientMode.RemoteBrowser, false)]
+    [DataRow(ServerKind.Headless, true, ClientMode.RemoteBrowser, false)]
+    [DataRow(ServerKind.Headless, false, ClientMode.RemoteBrowser, false)]
+    public async Task Client_context_only_offers_native_actions_on_a_local_desktop(
+        ServerKind kind, bool loopback, ClientMode clientMode, bool cookieCapture)
+    {
+        var access = new FakeRemoteAccessService
+        {
+            Descriptor = new RemoteAccessServerDescriptor("this-server", "Server", 5000, "2.4.0", 1, kind)
+        };
+        var root = Path.Combine(Path.GetTempPath(), "bakabase-client-context", Guid.NewGuid().ToString("N"));
+        var devices = new RemoteDeviceService(new RemoteDeviceStore(new TempDirectory(root)), () => DateTime.UtcNow);
+        var http = new DefaultHttpContext();
+        http.SetRemoteAccessContext(new RemoteAccessContext
+            {IsLoopback = loopback, Mode = RemoteAccessMode.Unrestricted});
+        var controller = new RemoteAccessController(access, devices, new RemoteConnectionRegistry(),
+            new RecordingNotificationService(), new PairingRequestRateLimiter(() => DateTime.UtcNow))
+        {
+            ControllerContext = new ControllerContext {HttpContext = http}
+        };
+
+        var result = (await controller.GetContext()).Data!;
+
+        Assert.AreEqual(loopback, result.IsLocal, "Network locality stays independent of desktop availability.");
+        Assert.AreEqual(clientMode, result.ClientMode);
+        Assert.AreEqual(cookieCapture, result.CookieCaptureAvailable);
+        Assert.IsTrue(result.ServerReachable);
+    }
+
     private sealed class TempDirectory(string path) : IRemoteAccessDataDirectory
     {
         public string Path => path;

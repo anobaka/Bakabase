@@ -41,6 +41,7 @@ import {
 } from "@/components/bakaui";
 import { useUiOptionsStore } from "@/stores/options";
 import MediaPlayer from "@/components/MediaPlayer";
+import { useOpenResourceDirectory } from "@/hooks/useOpenResourceDirectory";
 
 interface IProps {
   resource: Resource;
@@ -64,6 +65,7 @@ const Operations = ({
   const moveBlockReason = getKnownMoveBlockReason(resource);
   const moveDisabledReason = moveBlockReason ? moveReasonText(moveBlockReason) : undefined;
   const { createPortal, createWindow } = useBakabaseContext();
+  const folderAction = useOpenResourceDirectory();
   const uiOptions = useUiOptionsStore((state) => state.data);
   const [refreshingCache, setRefreshingCache] = useState(false);
 
@@ -201,7 +203,7 @@ const Operations = ({
   const showDelete = displayOperations.includes("delete");
 
   const openFolder = () => {
-    BApi.resource.openResourceDirectory({ id: resource.id });
+    folderAction.open(resource);
   };
 
   // Aggregate mode: dropdown with icon + label items
@@ -233,7 +235,7 @@ const Operations = ({
       items.push({
         key: "openFolder",
         icon: <FolderOpenOutlined />,
-        label: t<string>("common.action.openFolder"),
+        label: folderAction.label,
         onAction: openFolder,
       });
     }
@@ -449,8 +451,9 @@ const Operations = ({
       <Button
         key="openFolder"
         isIconOnly
+        aria-label={folderAction.label}
         className={buttonClassName}
-        title={t<string>("common.action.openFolder")}
+        title={folderAction.label}
         onPress={openFolder}
       >
         <FolderOpenOutlined className={iconClassName} />

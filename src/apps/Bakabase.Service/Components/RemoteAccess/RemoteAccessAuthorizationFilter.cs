@@ -21,7 +21,7 @@ namespace Bakabase.Service.Components.RemoteAccess
     /// added later.
     /// </para>
     /// </summary>
-    public class RemoteAccessAuthorizationFilter : IAuthorizationFilter
+    public class RemoteAccessAuthorizationFilter(IServerSelfDescription? self = null) : IAuthorizationFilter
     {
         public void OnAuthorization(AuthorizationFilterContext context)
         {
@@ -32,9 +32,21 @@ namespace Bakabase.Service.Components.RemoteAccess
             }
 
             var remoteContext = context.HttpContext.GetRemoteAccessContext();
+            var userMachine = FindUserMachineAttribute(context);
 
-            // (1) The host itself. Everything the all-in-one does arrives here, so this
-            // has to stay the first branch — it is what keeps the all-in-one untouched.
+            // A container or source-only Service has no user's desktop even when the
+            // caller is loopback. Refuse before the host bypass so direct API calls
+            // cannot attempt to launch a file manager or player inside the server.
+            if (self?.Kind == ServerKind.Headless && userMachine != null)
+            {
+                Deny(context, HttpStatusCode.Forbidden, ResponseCode.Unauthorized,
+                    RemoteAccessDenialReason.RunsOnUserMachine,
+                    "This server has no desktop. Use the Bakabase desktop app to run this action on your machine.");
+                return;
+            }
+
+            // (1) The host itself. Everything the all-in-one does arrives here, and a
+            // desktop host still bypasses every remote permission check below.
             // No context means the middleware did not run; that is not loopback, and the
             // checks below fail closed.
             if (remoteContext is {IsLoopback: true})
@@ -47,7 +59,7 @@ namespace Bakabase.Service.Components.RemoteAccess
             // check: that is the container default, and until now a remote browser could
             // call "play this" there, start a player on a screen nobody is watching, and
             // be told it worked.
-            if (FindUserMachineAttribute(context) is { } userMachine)
+            if (userMachine != null)
             {
                 Deny(context, HttpStatusCode.Forbidden, ResponseCode.Unauthorized,
                     RemoteAccessDenialReason.RunsOnUserMachine,

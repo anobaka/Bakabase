@@ -27,6 +27,7 @@ import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContext
 import { useUserSideActionsRunHere } from "@/stores/remoteAccess";
 import { useResourceBrowserPlayer } from "@/hooks/useResourceBrowserPlayer";
 import PlayOnThisDevice from "@/components/Resource/components/PlayOnThisDevice";
+import { useOpenResourceDirectory } from "@/hooks/useOpenResourceDirectory";
 
 // Play control status for UI rendering
 export type PlayControlStatus = "idle" | "loading" | "ready" | "not-found";
@@ -53,6 +54,7 @@ export type PlayControlPortalProps = {
   onPlaySource: (source: DataOrigin) => void;
   /** Open the resource's folder */
   onOpenFolder: () => void;
+  openFolderLabel: string;
   /** Handle click when no playable items found */
   onNotFound: () => void;
   /** Trigger FileSystem SSE discovery (call when FS button becomes visible) */
@@ -147,6 +149,7 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
   const uiOptionsStore = useUiOptionsStore();
   const userSideActionsRunHere = useUserSideActionsRunHere();
   const openInBrowserPlayer = useResourceBrowserPlayer();
+  const folderAction = useOpenResourceDirectory();
   const resourceUiOptions = uiOptionsStore.data?.resource;
 
   // Use the playable item resolution hook which handles SSE discovery internally
@@ -322,20 +325,8 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
 
   /** Open the resource's folder */
   const handleOpenFolder = useCallback(() => {
-    // Opening a folder happens in a file manager, and only the app (showing its own
-    // library or a server it manages) has one that belongs to the person clicking. From a plain browser
-    // it would pop a window on someone else's screen.
-    if (!userSideActionsRunHere) {
-      toast.error(t<string>("resource.play.hostOnly"));
-
-      return;
-    }
-
-    BApi.tool.openFileOrDirectory({
-      path: resource.path,
-      openInDirectory: resource.isFile,
-    });
-  }, [resource.path, resource.isFile, userSideActionsRunHere, t]);
+    folderAction.open(resource);
+  }, [resource, folderAction.open]);
 
   /** Handle click when no playable files found */
   const handleNotFound = useCallback(() => {
@@ -356,6 +347,7 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
         fsDiscoveryStatus={fsDiscoveryStatus}
         hasPath={!!resource.path}
         isFile={resource.isFile}
+        openFolderLabel={folderAction.label}
         sources={sources}
         status={status}
         triggerFsDiscovery={() => resolution.triggerDiscovery(DataOrigin.FileSystem)}
