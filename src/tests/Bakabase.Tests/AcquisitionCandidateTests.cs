@@ -81,6 +81,59 @@ public sealed class AcquisitionCandidateTests
             new AcquisitionLeadAddInputModel {Kind = kind, Value = value});
 
     [TestMethod]
+    public async Task OverviewAndDetailQueryResolvedLeadsAndLatestLiveTasksInSqlite()
+    {
+        Assert.AreEqual("Microsoft.EntityFrameworkCore.Sqlite", Db.Database.ProviderName);
+        var outside = await Missing("Outside the visible page");
+        var target = await Missing("Visible candidate with a cached source");
+        await _sp.GetRequiredService<IAcquisitionLeadService>().Add(target,
+            new AcquisitionLeadAddInputModel
+            {
+                Kind = AcquisitionLeadKind.DirectUrl, Value = "https://example.invalid/cached.zip",
+                IsResolved = true, AccessCode = "fixture-code"
+            });
+        var recipeId = (await _sp.GetRequiredService<IAcquisitionService>().GetRecipesAsync())
+            .First().DefinitionId;
+
+        async Task<AcquisitionTaskDbModel> AddTask(int resourceId, AcquisitionStatus status)
+        {
+            var task = new AcquisitionTaskDbModel
+            {
+                ResourceId = resourceId, Status = status, RecipeDefinitionId = recipeId,
+                LeadKind = AcquisitionLeadKind.DirectUrl, CreatedAt = DateTime.Now, UpdatedAt = DateTime.Now
+            };
+            Db.Set<AcquisitionTaskDbModel>().Add(task);
+            await Db.SaveChangesAsync();
+            return task;
+        }
+
+        await AddTask(target, AcquisitionStatus.Pending);
+        var latestLive = await AddTask(target, AcquisitionStatus.Waiting);
+        await AddTask(target, AcquisitionStatus.Completed);
+        await AddTask(target, AcquisitionStatus.Failed);
+        var otherLive = await AddTask(outside, AcquisitionStatus.Running);
+
+        // These entry points execute the resolved-lead, name and live-status membership queries.
+        // Under the Docker SDK's newer C# compiler, array.Contains used to bind to ReadOnlySpan
+        // and EF's query evaluator failed before SQLite could execute the first query.
+        var firstPage = await Candidates.SearchAsync(page: 1, pageSize: 1, filter: "all");
+        var secondPage = await Candidates.SearchAsync(page: 2, pageSize: 1, filter: "all");
+        var detail = await Candidates.GetAsync(target);
+
+        Assert.AreEqual(2, firstPage.TotalCount);
+        var visible = firstPage.Items.Single();
+        Assert.AreEqual(target, visible.ResourceId);
+        Assert.AreEqual("Visible candidate with a cached source", visible.ResourceName);
+        Assert.AreEqual("https://example.invalid/cached.zip", visible.Leads.Single().Value);
+        Assert.AreEqual(latestLive.Id, visible.ActiveTaskId);
+        Assert.AreEqual(AcquisitionStatus.Waiting, visible.ActiveTaskStatus);
+        Assert.AreEqual(otherLive.Id, secondPage.Items.Single().ActiveTaskId);
+        Assert.AreEqual(JsonSerializer.Serialize(visible), JsonSerializer.Serialize(detail.Items.Single()));
+        Assert.AreEqual(5, await Db.Set<AcquisitionTaskDbModel>().CountAsync(),
+            "Reading candidates must not enqueue or change acquisition tasks.");
+    }
+
+    [TestMethod]
     public async Task PlatformIdentityIsAnUnknownRoute_AndUnsupportedPlatformsCannotBeStarted()
     {
         var dlsite = await Missing("An unpurchased catalog work");
