@@ -61,9 +61,9 @@ public static class CrashHandler
         try
         {
             // Silently discarded until AppService's static constructor has built the file sink
-            // (Serilog's default logger is a no-op). Program.Main forces that to happen before
-            // Avalonia starts, so in practice this lands in {AppData}/logs/AppLog_*.log right
-            // after the startup trace that shows how far the launch got.
+            // (Serilog's default logger is a no-op). The desktop's first-run setup deliberately
+            // postpones it until the data directory has been confirmed. After that this lands
+            // in {AppData}/logs/AppLog_*.log alongside the normal startup trace.
             Serilog.Log.Fatal(exception, "{What} (terminating: {Terminating}) {Detail}", what,
                 terminating, exception == null ? detail : null);
 

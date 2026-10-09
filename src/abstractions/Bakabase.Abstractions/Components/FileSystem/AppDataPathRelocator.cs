@@ -9,11 +9,13 @@ public class AppDataPathRelocator : IAppDataPathRelocator
 {
     private readonly AppService _appService;
     private readonly IBOptionsManager<AppOptions> _options;
+    private readonly string[] _importedRoots;
 
     public AppDataPathRelocator(AppService appService, IBOptionsManager<AppOptions> options)
     {
         _appService = appService;
         _options = options;
+        _importedRoots = ImportedAppDataRoots.Read(appService.AppDataDirectory);
         // Self-install into the ambient accessor used by static DB ↔ domain extension methods.
         // The DI container is the single source of truth for the live instance; eagerly
         // resolving this service at startup (e.g. before DB migrations) is enough to
@@ -31,5 +33,6 @@ public class AppDataPathRelocator : IAppDataPathRelocator
     [
         _options.Value.PrevDataPath,
         AppDataPathRelocation.TryStripCurrentSegment(_appService.AppDataDirectory),
+        .._importedRoots,
     ];
 }

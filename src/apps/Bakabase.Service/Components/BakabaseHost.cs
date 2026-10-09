@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Configuration;
@@ -22,6 +23,7 @@ using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions;
 using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Service.Components.Tasks;
+using Bakabase.Service.Components.ServerData;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Extensions;
 using DotNetEnv;
@@ -31,11 +33,44 @@ using Microsoft.Extensions.Logging;
 
 namespace Bakabase.Service.Components
 {
-    public class BakabaseHost(IGuiAdapter guiAdapter, ISystemService systemService) : AppHost(guiAdapter, systemService)
+    public class BakabaseHost(IGuiAdapter guiAdapter, ISystemService systemService,
+        Func<CancellationToken, Task>? beforeServerStart = null) : AppHost(guiAdapter, systemService)
     {
         protected override string? SingleInstanceId => "Bakabase";
 
         protected override int DefaultAutoListeningPortCount => 3;
+
+        protected override IReadOnlyList<int>? OverrideListeningPorts() => guiAdapter is NullGuiAdapter
+            ? ParseServerListeningPorts(Environment.GetEnvironmentVariable("API_LISTENING_PORTS"))
+            : base.OverrideListeningPorts();
+
+        internal static IReadOnlyList<int> ParseServerListeningPorts(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return [34567];
+            var parts = value.Split([',', ';'], StringSplitOptions.TrimEntries);
+            if (parts.Any(p => !int.TryParse(p, out var port) || port is < 1 or > 65535))
+                throw new ArgumentException("API_LISTENING_PORTS must contain ports from 1 to 65535 separated by commas or semicolons.");
+            return parts.Select(int.Parse).Distinct().ToArray();
+        }
+
+        protected override string ListeningInterface
+        {
+            get
+            {
+                if (guiAdapter is not NullGuiAdapter) return base.ListeningInterface;
+                return ServerListeningInterface();
+            }
+        }
+
+        internal static string ServerListeningInterface()
+        {
+            var configured = Environment.GetEnvironmentVariable("BAKABASE_BIND_ADDRESS");
+            if (string.IsNullOrWhiteSpace(configured))
+                return Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true" ? "0.0.0.0" : "127.0.0.1";
+            if (!IPAddress.TryParse(configured, out var address))
+                throw new ArgumentException("BAKABASE_BIND_ADDRESS must be an IP address.");
+            return address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6 ? $"[{address}]" : address.ToString();
+        }
 
         protected override Assembly[] AssembliesForGlobalConfigurationRegistrationsScanning =>
             [
@@ -86,8 +121,15 @@ namespace Bakabase.Service.Components
             base.Initialize();
         }
 
-        protected override IHostBuilder CreateHostBuilder(params string[] args) =>
-            AppUtils.CreateAppHostBuilder<BakabaseStartup>(args);
+        protected override IHostBuilder CreateHostBuilder(params string[] args)
+        {
+            var builder = AppUtils.CreateAppHostBuilder<BakabaseStartup>(args);
+            Func<CancellationToken, Task>? handoff = SetupChildConnection.Current is { Role: "business" } child
+                ? child.BeforeListenAsync : beforeServerStart;
+            if (handoff != null)
+                builder.ConfigureServices(services => services.AddSingleton<IHostedService>(new ImportProgressHandoff(handoff)));
+            return builder;
+        }
 
         protected override string DisplayName => "Bakabase";
 

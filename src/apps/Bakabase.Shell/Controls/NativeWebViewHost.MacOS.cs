@@ -109,7 +109,7 @@ public partial class NativeWebViewHost
     {
         if (_macWebView == IntPtr.Zero) return;
 
-        System.Diagnostics.Debug.WriteLine($"NativeWebViewHost: Navigating to {url}");
+        System.Diagnostics.Debug.WriteLine($"NativeWebViewHost: Navigating to {DiagnosticUrl(url)}");
 
         // Create NSURL from string
         var nsUrlString = ObjC.CreateNSString(url);
@@ -118,7 +118,7 @@ public partial class NativeWebViewHost
 
         if (nsUrl == IntPtr.Zero)
         {
-            System.Diagnostics.Debug.WriteLine($"NativeWebViewHost: NSURL creation failed for '{url}'");
+            System.Diagnostics.Debug.WriteLine($"NativeWebViewHost: NSURL creation failed for '{DiagnosticUrl(url)}'");
             ObjC.SendVoid(nsUrlString, ObjC.Sel("release"));
             return;
         }

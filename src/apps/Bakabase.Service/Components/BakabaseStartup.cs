@@ -1,5 +1,6 @@
 ﻿using System;
 using Bakabase.Abstractions.Components.Configuration;
+using Bakabase.Service.Components.ServerData;
 using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Components.Network;
 using Bakabase.Abstractions.Components.Tasks;
@@ -373,6 +374,12 @@ namespace Bakabase.Service.Components
 
         public override void Configure(IApplicationBuilder app, IHostApplicationLifetime lifetime)
         {
+            app.Use(async (context, next) =>
+            {
+                if (SetupChildConnection.Current is { Role: "business" } child && await child.TryProxyAsync(context)) return;
+                if (ImportProgressStore.Current is not { } monitoring ||
+                    !await ImportProgressServer.TryHandleAsync(context, monitoring)) await next();
+            });
             var logger = app.ApplicationServices.GetRequiredService<ILogger<BakabaseStartup>>();
             var appService = app.ApplicationServices.GetRequiredService<AppService>();
             logger.LogInformation(

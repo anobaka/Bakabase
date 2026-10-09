@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import AppInfo from "..";
 
-import { UpdaterStatus } from "@/sdk/constants";
+import { DataPathSource, UpdaterStatus } from "@/sdk/constants";
 import { useAppUpdaterStateStore } from "@/stores/appUpdaterState";
 import { normalizeQuery } from "@/pages/configuration/components/SettingsSection";
 
@@ -58,8 +58,9 @@ vi.mock("@/components/UpdateRestart", () => ({
   }),
 }));
 vi.mock("../IdentityRecoveryLink", () => ({ default: () => null }));
+vi.mock("../Import", () => ({ default: () => null }));
 vi.mock("../Relocation", () => ({
-  RelocationButton: () => null,
+  RelocationButton: () => <button>relocate data</button>,
   RelocationRestartGate: () => null,
 }));
 vi.mock("../LegacyNotice", () => ({ LegacyAppDataNoticeBanner: () => null }));
@@ -202,6 +203,53 @@ beforeEach(() => {
   useAppUpdaterStateStore.setState({ status: undefined, percentage: undefined, error: undefined });
 });
 afterEach(cleanup);
+
+describe("configuration data path relocation", () => {
+  it.each([false, true])(
+    "hides relocation for an environment path while preserving system-path warnings (system=%s)",
+    async (dataInSystemPath) => {
+      render(
+        <MemoryRouter>
+          <AppInfo
+            appInfo={{
+              appDataPath: "/app/data",
+              dataPathSource: DataPathSource.Environment,
+              dataInSystemPath,
+            }}
+            applyPatches={mocks.applyPatches}
+          />
+        </MemoryRouter>,
+      );
+
+      expect(screen.queryByRole("button", { name: "relocate data" })).not.toBeInTheDocument();
+      if (dataInSystemPath) {
+        expect(screen.getByText(key("tip.appDataPath.systemPathRiskNotice"))).toBeVisible();
+      }
+      await act(async () => {});
+    },
+  );
+
+  it.each([false, true])(
+    "keeps relocation available for a user-configured path (system=%s)",
+    async (dataInSystemPath) => {
+      render(
+        <MemoryRouter>
+          <AppInfo
+            appInfo={{
+              appDataPath: "/Users/me/Bakabase",
+              dataPathSource: DataPathSource.UserConfigured,
+              dataInSystemPath,
+            }}
+            applyPatches={mocks.applyPatches}
+          />
+        </MemoryRouter>,
+      );
+
+      expect(screen.getByRole("button", { name: "relocate data" })).toBeVisible();
+      await act(async () => {});
+    },
+  );
+});
 
 describe("configuration app versions", () => {
   it("combines current and target versions with accessible icon actions and secondary tools", async () => {

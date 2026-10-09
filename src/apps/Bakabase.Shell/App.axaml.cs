@@ -20,6 +20,10 @@ namespace Bakabase.Shell;
 public partial class App : Application
 {
     private readonly Func<IGuiAdapter, ISystemService, IShellHost> _hostFactory;
+    private readonly Func<System.Threading.Tasks.Task<bool>>? _beforeHostStart;
+    private readonly Action<string>? _onReady;
+    private readonly Action<string>? _onFatalError;
+    private bool _maintenanceStopRequested;
 
     private AvaloniaGuiAdapter _guiAdapter = null!;
     private ISystemService _systemService = null!;
@@ -31,9 +35,14 @@ public partial class App : Application
     /// <c>AppBuilder.Configure(Func&lt;TApp&gt;)</c>, which is what lets this take a
     /// constructor argument at all.
     /// </summary>
-    public App(Func<IGuiAdapter, ISystemService, IShellHost> hostFactory)
+    public App(Func<IGuiAdapter, ISystemService, IShellHost> hostFactory,
+        Func<System.Threading.Tasks.Task<bool>>? beforeHostStart = null,
+        Action<string>? onReady = null, Action<string>? onFatalError = null)
     {
         _hostFactory = hostFactory;
+        _beforeHostStart = beforeHostStart;
+        _onReady = onReady;
+        _onFatalError = onFatalError;
     }
 
     /// <summary>
@@ -43,6 +52,13 @@ public partial class App : Application
     public ExitCoordinator ExitCoordinator { get; private set; } = null!;
 
     public TrayIcon AppTrayIcon { get; private set; } = null!;
+
+    /// <summary>Called on the UI thread after the independent setup process requests a safe stop.</summary>
+    public void RequestMaintenanceStop()
+    {
+        _maintenanceStopRequested = true;
+        if (ExitCoordinator != null) _ = ExitCoordinator.RequestMaintenanceExitAsync();
+    }
 
     /// <summary>
     /// Whether the desktop shows the tray icon right now, i.e. whether "minimize to tray" is a
@@ -69,12 +85,35 @@ public partial class App : Application
         {
             desktop.ShutdownMode = Avalonia.Controls.ShutdownMode.OnExplicitShutdown;
 
+            // The all-in-one can choose its data directory in a native setup window here.
+            // XAML and the hidden tray above use only bundled resources; AppService, options
+            // and the host must remain untouched until the entry point permits startup.
+            if (_beforeHostStart != null && !await _beforeHostStart())
+            {
+                desktop.Shutdown();
+                return;
+            }
+
+            if (_maintenanceStopRequested)
+            {
+                desktop.Shutdown();
+                return;
+            }
+
             // Run any pending data-path relocation BEFORE AppOptionsManager is read — the runner
             // mutates app.json (the same file AppOptionsManager loads) when committing the new
             // DataPath. Splash window provides progress for multi-GB copies.
             await RunPendingRelocationIfAnyAsync();
 
+            if (_maintenanceStopRequested)
+            {
+                desktop.Shutdown();
+                return;
+            }
+
             _guiAdapter = GuiAdapterCreator.Create<AvaloniaGuiAdapter>(this);
+            _guiAdapter.MainWindowShown += address => _onReady?.Invoke(address);
+            _guiAdapter.FatalErrorShown += message => _onFatalError?.Invoke(message);
             _systemService = new CrossPlatformSystemService();
 
             var options = AppOptionsManager.Default.Value;

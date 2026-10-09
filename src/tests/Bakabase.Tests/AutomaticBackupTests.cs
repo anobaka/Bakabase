@@ -2,6 +2,7 @@ using Bakabase.Infrastructures.Components.App;
 using Bakabase.Infrastructures.Components.App.Models.Constants;
 using Bakabase.Infrastructures.Components.App.SingleInstance;
 using Bakabase.Infrastructures.Components.Configurations.App;
+using Bakabase.Service.Components.ServerData;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json;
@@ -101,6 +102,45 @@ public class AutomaticBackupTests
             Assert.IsFalse(Directory.Exists(Path.Combine(snapshot, directory)));
         Assert.IsFalse(File.Exists(Path.Combine(snapshot, DataDirectoryLock.FileName)));
         CollectionAssert.AreEquivalent(new[] { "1.0.0" }, h.Versions);
+    }
+
+    [TestMethod]
+    public void VersionUpgrade_WithLiveCoordinatorLock_DoesNotCopyRuntimePlansOrCapabilities()
+    {
+        using var h = new BackupHarness();
+        h.WithFile("app.json", "old version configuration");
+        h.WithFile("database.db", "database snapshot");
+        h.WithFile("configs/.bakabase-server-setup.json", "ordinary nested user configuration");
+        var controlFiles = new[] { ServerSetupSession.FileName, ImportProgressStore.FileName,
+            ServerAppDataImport.MarkerName, ServerAppDataRelocation.MarkerName,
+            AnchorRedirect.FileName, ".pending_relocate", ".bakabase-setup-draft.json" };
+        foreach (var name in controlFiles)
+        {
+            h.WithFile(name, "runtime plan or capability");
+            h.WithFile(name + ".tmp", "uncommitted runtime record");
+        }
+        foreach (var name in new[] { ServerAppDataImport.WorkName, ServerAppDataRelocation.WorkName, ".bakabase_relocate_staging" })
+            h.WithFile(name + "/partial.db", "incomplete operation");
+        using var instanceLock = DataDirectoryLock.TryAcquire(h.Root).Lock!;
+        using var coordinatorLock = new FileStream(Path.Combine(h.Root, SetupProcessCoordinator.LockFileName),
+            FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+
+        // Exercise the real default File.Copy path, with the coordinator still alive.
+        h.Run(previousVersion: "2.4.0-beta509", currentVersion: "2.4.0-beta510");
+
+        var snapshot = Path.Combine(h.Backups, "2.4.0-beta509");
+        Assert.AreEqual("database snapshot", File.ReadAllText(Path.Combine(snapshot, "database.db")));
+        Assert.AreEqual("old version configuration", File.ReadAllText(Path.Combine(snapshot, "app.json")));
+        Assert.AreEqual("ordinary nested user configuration", File.ReadAllText(Path.Combine(snapshot, "configs/.bakabase-server-setup.json")));
+        Assert.IsFalse(File.Exists(Path.Combine(snapshot, SetupProcessCoordinator.LockFileName)));
+        Assert.IsFalse(File.Exists(Path.Combine(snapshot, DataDirectoryLock.FileName)));
+        foreach (var name in controlFiles)
+        {
+            Assert.IsFalse(File.Exists(Path.Combine(snapshot, name)), name);
+            Assert.IsFalse(File.Exists(Path.Combine(snapshot, name + ".tmp")), name + ".tmp");
+        }
+        foreach (var name in new[] { ServerAppDataImport.WorkName, ServerAppDataRelocation.WorkName, ".bakabase_relocate_staging" })
+            Assert.IsFalse(Directory.Exists(Path.Combine(snapshot, name)), name);
     }
 
     [TestMethod]

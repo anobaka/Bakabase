@@ -6699,6 +6699,20 @@ export interface BakabaseServiceComponentsAcquisitionSharedListPreviewRow {
   alreadyKnown: boolean;
 }
 
+export interface BakabaseServiceComponentsServerDataServerAppDataImportValidation {
+  valid: boolean;
+  error?: string;
+  sourcePath: string;
+  currentPath: string;
+  sourceVersion?: string;
+  originalDataPath?: string;
+}
+
+export interface BakabaseServiceControllersAppDataImportControllerImportRequest {
+  sourcePath: string;
+  originalDataPath?: string;
+}
+
 export interface BakabaseServiceControllersAppDataPathControllerRelocateRequest {
   targetPath: string;
   /** [1: UseTarget, 3: MergeOverwrite] */
@@ -9739,6 +9753,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceC
   data?: BakabaseServiceComponentsAcquisitionSharedListImportResult;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsServerDataServerAppDataImportValidation {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsServerDataServerAppDataImportValidation;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceControllersAppDataPathControllerValidateResponse {
   /** @format int32 */
   code: number;
@@ -10031,6 +10052,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1SystemInt32 {
   message?: string;
   /** @format int32 */
   data: number;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1SystemObject {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: any;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1SystemString {
@@ -15218,6 +15246,149 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     /**
      * No description
      *
+     * @tags AppDataImport
+     * @name DataPathImportList
+     * @request GET:/app/data-path/import
+     */
+    dataPathImportList: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemObject, any>({
+        path: `/app/data-path/import`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for dataPathImportList
+     * @name dataPathImportListUrl
+     */
+    dataPathImportListUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/app/data-path/import`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AppDataImport
+     * @name DataPathImportCreate
+     * @request POST:/app/data-path/import
+     */
+    dataPathImportCreate: (
+      data: BakabaseServiceControllersAppDataImportControllerImportRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/app/data-path/import`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for dataPathImportCreate
+     * @name dataPathImportCreateUrl
+     */
+    dataPathImportCreateUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/app/data-path/import`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AppDataImport
+     * @name DataPathImportDelete
+     * @request DELETE:/app/data-path/import
+     */
+    dataPathImportDelete: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/app/data-path/import`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for dataPathImportDelete
+     * @name dataPathImportDeleteUrl
+     */
+    dataPathImportDeleteUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/app/data-path/import`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AppDataImport
+     * @name DataPathImportSetupSessionCreate
+     * @request POST:/app/data-path/import/setup-session
+     */
+    dataPathImportSetupSessionCreate: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/app/data-path/import/setup-session`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for dataPathImportSetupSessionCreate
+     * @name dataPathImportSetupSessionCreateUrl
+     */
+    dataPathImportSetupSessionCreateUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/app/data-path/import/setup-session`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AppDataImport
+     * @name DataPathImportValidateCreate
+     * @request POST:/app/data-path/import/validate
+     */
+    dataPathImportValidateCreate: (
+      data: BakabaseServiceControllersAppDataImportControllerImportRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsServerDataServerAppDataImportValidation,
+        any
+      >({
+        path: `/app/data-path/import/validate`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for dataPathImportValidateCreate
+     * @name dataPathImportValidateCreateUrl
+     */
+    dataPathImportValidateCreateUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/app/data-path/import/validate`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
      * @tags AppDataPath
      * @name ValidateAppDataPath
      * @request POST:/app/data-path/validate
@@ -15328,6 +15499,84 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     dismissLegacyInstallNoticeUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/app/data-path/legacy-notice/dismiss`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AppDataRelocation
+     * @name DataPathRelocationList
+     * @request GET:/app/data-path/relocation
+     */
+    dataPathRelocationList: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemObject, any>({
+        path: `/app/data-path/relocation`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for dataPathRelocationList
+     * @name dataPathRelocationListUrl
+     */
+    dataPathRelocationListUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/app/data-path/relocation`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AppDataRelocation
+     * @name DataPathRelocationDelete
+     * @request DELETE:/app/data-path/relocation
+     */
+    dataPathRelocationDelete: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/app/data-path/relocation`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for dataPathRelocationDelete
+     * @name dataPathRelocationDeleteUrl
+     */
+    dataPathRelocationDeleteUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/app/data-path/relocation`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AppDataRelocation
+     * @name DataPathRelocationSetupSessionCreate
+     * @request POST:/app/data-path/relocation/setup-session
+     */
+    dataPathRelocationSetupSessionCreate: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/app/data-path/relocation/setup-session`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for dataPathRelocationSetupSessionCreate
+     * @name dataPathRelocationSetupSessionCreateUrl
+     */
+    dataPathRelocationSetupSessionCreateUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/app/data-path/relocation/setup-session`;
 
       return baseUrl + path;
     },

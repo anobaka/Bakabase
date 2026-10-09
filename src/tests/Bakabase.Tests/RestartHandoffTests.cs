@@ -13,6 +13,28 @@ namespace Bakabase.Tests;
 public class RestartHandoffTests
 {
     [TestMethod]
+    public void DotnetRestartPreservesTheEntryAssemblyAndWaitsForTheCoordinator()
+    {
+        var root = System.IO.Path.GetTempPath();
+        var exe = System.IO.Path.Combine(root, "dotnet");
+        var assembly = System.IO.Path.Combine(root, "application with spaces", "Bakabase.dll");
+        var start = RestartHandoff.CreateStartInfo(exe, assembly, 4242);
+        Assert.AreEqual(exe, start.FileName);
+        Assert.IsFalse(start.UseShellExecute);
+        CollectionAssert.AreEqual(new[] { assembly, "--restart-after-pid=4242" }, start.ArgumentList.ToArray());
+        Assert.AreEqual(System.IO.Path.GetDirectoryName(assembly), start.WorkingDirectory);
+    }
+
+    [TestMethod]
+    public void PublishedRestartDoesNotCarryInternalBusinessRoleOrDllArguments()
+    {
+        var exe = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "Bakabase.exe");
+        var start = RestartHandoff.CreateStartInfo(exe, "Bakabase.dll", 17);
+        CollectionAssert.AreEqual(new[] { "--restart-after-pid=17" }, start.ArgumentList.ToArray());
+        Assert.ThrowsExactly<InvalidOperationException>(() => RestartHandoff.CreateStartInfo("dotnet", null, 17));
+    }
+
+    [TestMethod]
     public void Argument_RoundTrips()
     {
         Assert.AreEqual(4242, RestartHandoff.TryReadPredecessorPid([RestartHandoff.FormatArgument(4242)]));

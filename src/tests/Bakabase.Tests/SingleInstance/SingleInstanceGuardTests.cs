@@ -61,6 +61,56 @@ public class SingleInstanceGuardTests
     }
 
     [TestMethod]
+    public void A_borrowed_lock_is_the_existing_handle_and_does_not_take_ownership()
+    {
+        var dir = Dir("borrowed");
+        Assert.IsNull(SingleInstanceGuard.GetHeldLock(dir));
+        SingleInstanceGuard.Enter(dir);
+        var held = SingleInstanceGuard.GetHeldLock(dir)!;
+        Assert.IsTrue(held.IsHeld);
+        Assert.AreSame(held, SingleInstanceGuard.GetHeldLock(Path.Combine(dir, ".")));
+        SingleInstanceGuard.AdoptHeldLock(held);
+        Assert.AreSame(held, SingleInstanceGuard.GetHeldLock(dir), "adopting an existing lease is a no-op");
+        SingleInstanceGuard.ReleaseAll();
+        Assert.IsFalse(held.IsHeld, "the guard, not the borrower, releases it");
+    }
+
+    [TestMethod]
+    public async Task Adopting_a_setup_selection_preserves_both_locks_and_activation_channels()
+    {
+        var anchor = Dir("setup-anchor");
+        var target = Dir("setup-target");
+        SingleInstanceGuard.Enter(anchor);
+        var targetLock = DataDirectoryLock.TryAcquire(target).Lock!;
+        SingleInstanceGuard.AdoptHeldLock(targetLock);
+        Assert.AreEqual(target, SingleInstanceGuard.PrimaryDirectory);
+        Assert.AreSame(targetLock, SingleInstanceGuard.GetHeldLock(target));
+        Assert.IsTrue(SingleInstanceGuard.GetHeldLock(anchor)!.IsHeld, "the anchor must remain owned after redirect");
+        Assert.AreEqual(SingleInstanceEntry.Entered, SingleInstanceGuard.Enter(target), "the host backstop must not relock");
+
+        foreach (var directory in new[] {anchor, target})
+        {
+            var activated = ActivationProbe();
+            using var second = await InstanceProbe.StartAsync("enter", directory);
+            Assert.AreEqual("ENTRY Refused", second.FirstLine);
+            await activated.Task.WaitAsync(Wait);
+        }
+        SingleInstanceGuard.ReleaseAll();
+        Assert.IsFalse(targetLock.IsHeld);
+        using var available = DataDirectoryLock.TryAcquire(target).Lock;
+        Assert.IsNotNull(available, "shutdown returns the transferred handle too");
+    }
+
+    [TestMethod]
+    public void A_released_setup_lock_cannot_be_adopted()
+    {
+        var held = DataDirectoryLock.TryAcquire(Dir("released")).Lock!;
+        held.Dispose();
+        Assert.ThrowsExactly<InvalidOperationException>(() => SingleInstanceGuard.AdoptHeldLock(held));
+        Assert.IsNull(SingleInstanceGuard.PrimaryDirectory);
+    }
+
+    [TestMethod]
     public async Task A_second_launch_is_refused_and_brings_the_owner_forward()
     {
         var dir = Dir("data");

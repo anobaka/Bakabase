@@ -24,6 +24,8 @@
     <Compile Include="..\Bakabase.Modules.ThirdParty.Tests\Bilibili\Shared\*.cs" LinkBase="Bilibili\Shared" />
     <!-- The data sync engine's generic test kind, so the apply runner's tests merge through the same kind. -->
     <Compile Include="..\Bakabase.Modules.DataSync.Tests\TestKinds\TestItemCodec.cs;..\Bakabase.Modules.DataSync.Tests\TestKinds\TestItemContent.cs" LinkBase="DataSync\TestKinds" />
+    <!-- Exercise desktop startup teardown without launching Avalonia or referencing the entry executable. -->
+    <Compile Include="..\..\apps\Bakabase.App\DesktopSetupBootstrap.cs" Link="Desktop\DesktopSetupBootstrap.cs" />
   </ItemGroup>
 
 </Project>

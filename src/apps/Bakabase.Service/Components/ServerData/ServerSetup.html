@@ -1,0 +1,570 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bakabase · 数据设置</title>
+<style nonce="__NONCE__">
+:root{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#252a37;background:#f5f6fa;color-scheme:light dark}*{box-sizing:border-box}body{margin:0;padding:40px 20px}main{max-width:740px;margin:auto;background:#fff;border:1px solid #e2e5eb;border-radius:20px;padding:32px}.brand{font-size:13px;letter-spacing:.08em;font-weight:650;color:#6366f1}h1{font-size:27px;line-height:1.3;margin:18px 0 10px}h2{font-size:16px;margin:26px 0 14px}p{color:#626a78;font-size:14px;line-height:1.75}label{display:block;font-size:13px;font-weight:600;margin:16px 0 8px}input[type=text]{display:block;width:100%;border:1px solid #d8dce6;border-radius:8px;padding:12px;background:#fff;color:inherit;font-size:14px}input[readonly]{background:#f3f4f8;color:#686e7a}.hint{font-size:12px;margin-top:8px}.choices{display:flex;gap:14px;flex-wrap:wrap}.choices label{font-size:14px;background:#f7f8fb;border:1px solid #e0e3ed;border-radius:9px;padding:13px;margin:0;flex:1;min-width:180px}.choices input{accent-color:#6366f1;margin-right:8px}.notice,.success,.error{padding:14px 16px;border-radius:10px;line-height:1.7;font-size:13px;white-space:pre-wrap;overflow-wrap:anywhere}.notice{background:#fff6e3;color:#80612a}.success{background:#eef8f1;color:#286540}.error{background:#fff0f0;color:#9c2727}.actions{display:flex;gap:16px;align-items:center;margin-top:24px;flex-wrap:wrap}button{border:0;background:#6366f1;color:#fff;padding:12px 19px;border-radius:9px;font-size:14px;font-weight:600;cursor:pointer}button.browse{background:transparent;color:#6366f1;border:1px solid #d8dce6;margin-top:8px;padding:8px 12px;font-size:13px}button:disabled{opacity:.55;cursor:not-allowed}button[data-confirm=true]{background:#ba4b39}a{color:#565bdd;text-decoration:none;font-size:14px}footer{margin-top:26px;color:#8a919f;font-size:12px;line-height:1.6}[hidden]{display:none!important}
+.finish-button{display:inline-block;background:#6366f1;color:#fff;padding:12px 19px;border-radius:9px;font-size:14px;font-weight:600}.path-actions{display:flex;gap:12px;align-items:center;margin-top:10px}.path-actions button{font-size:13px;padding:9px 14px}.text-button{background:transparent;color:#6366f1;padding:8px 10px}.secondary{background:#eef0fa;color:#494dc3}details{margin-top:20px}summary{cursor:pointer;color:#626a78;font-size:13px}dialog{width:min(620px,calc(100% - 32px));max-height:85vh;overflow:auto;border:1px solid #e2e5eb;border-radius:16px;background:#fff;color:inherit;padding:24px}dialog::backdrop{background:#0008}.dialog-header{display:flex;align-items:center;justify-content:space-between;gap:16px}.dialog-header h2{margin:0;font-size:20px}.folder-toolbar,.folder-roots{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.folder-toolbar button{font-size:12px;padding:8px 12px}.folder-path{font-size:13px;font-family:ui-monospace,monospace;overflow-wrap:anywhere;background:#f5f6fa;padding:12px;border-radius:8px;color:inherit}.folder-list{list-style:none;padding:0;margin:0;max-height:280px;overflow:auto;min-height:40px;border-block:1px solid #e2e5eb}.folder-list button{display:block;text-align:left;width:100%;border-radius:0;color:inherit;background:transparent;font-weight:400;overflow-wrap:anywhere}.folder-list button:hover,.folder-list button:focus-visible{background:#eef0fa}.folder-list li+li{border-top:1px solid #f1f2f6}.folder-list button::before{content:'▸';margin-right:12px;color:#777bdf}
+@media(prefers-color-scheme:dark){dialog{background:#20232b;border-color:#444b5a}.folder-path,.secondary{background:#292d37}.folder-list{border-color:#444b5a}.folder-list li+li{border-color:#343945}.folder-list button:hover,.folder-list button:focus-visible{background:#343945}.text-button,.secondary{color:#b9bbff}summary{color:#adb5c3}}
+@media(max-width:500px){body{padding:20px 12px}main{padding:22px}h1{font-size:23px}}
+@media(prefers-color-scheme:dark){:root{background:#15171d;color:#eceef5}main{background:#20232b;border-color:#343945}p,.hint{color:#adb5c3}input[type=text]{background:#292d37;border-color:#444b5a}input[readonly],.choices label{background:#292d37;color:#c4c9d4;border-color:#444b5a}.notice{background:#443822;color:#eed194}.success{background:#253f30;color:#a4e1b8}.error{background:#42292c;color:#ffb5b5}a{color:#b9bbff}}
+.steps{display:flex;gap:8px;margin:22px 0 28px;padding:0;list-style:none}.steps li{flex:1}.steps button{width:100%;padding:12px 8px;border-bottom:3px solid #e1e4ec;border-radius:0;background:transparent;color:#737b8c;font-size:13px}.steps button[aria-current=step]{border-color:#6366f1;color:#4f46e5;font-weight:750}.steps button:disabled{opacity:1;color:#a0a5b1}.step-number{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:#eceefa;margin-right:6px}.review{margin:20px 0}.review dt{font-size:12px;color:#737b8c;margin-top:20px}.review dd{margin:6px 0 0;line-height:1.7;font-size:14px;overflow-wrap:anywhere;white-space:pre-wrap}.review-path{font-family:ui-monospace,monospace}.step-heading:focus{outline:none}@media(prefers-color-scheme:dark){.steps button{border-color:#424959;color:#b4bacc}.steps button[aria-current=step]{border-color:#9395ff;color:#c3c5ff}.steps button:disabled{color:#858c9c}.step-number{background:#33394d}.review dt{color:#adb5c3}}
+@media(max-width:500px){.steps button{display:flex;flex-direction:column;align-items:center;gap:6px;min-height:84px;padding:10px 3px;font-size:12px}.step-number{margin:0}}
+.draft-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:12px 0;font-size:12px;color:#737b8c}.draft-bar button{font-size:12px;padding:6px 9px}.mapping-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;margin-top:20px}.path-tree,.path-tree ul{list-style:none;padding-left:12px}.path-tree{padding:0;max-height:430px;overflow:auto;border:1px solid #e2e5eb;border-radius:8px}.tree-row{display:flex;align-items:center}.tree-toggle{background:transparent;color:inherit;padding:8px;min-width:30px}.tree-node{background:transparent;color:inherit;text-align:left;padding:8px 4px;font-size:12px;font-weight:400;overflow-wrap:anywhere}.tree-node:hover{background:#eef0fa}.mapping-rule{border:1px solid #e2e5eb;border-radius:9px;padding:12px;margin-bottom:12px}.mapping-rule label{margin-top:8px}.mapping-rule input{padding:9px;font-size:12px}.mapping-rule code{display:block;overflow-wrap:anywhere;font-size:12px}.mapping-rule button{font-size:12px;padding:7px 9px}.preview-samples{font-size:12px;overflow-wrap:anywhere;padding-left:20px}.preview-samples li{margin:9px 0}.mapping-grid h3{font-size:14px;margin:0 0 10px}.scan-progress{width:100%}.mapping-help{white-space:pre-wrap}.preflight-warning{margin-top:10px}@media(max-width:700px){.mapping-grid{grid-template-columns:1fr}.path-tree{max-height:300px}.steps button{font-size:11px}}@media(prefers-color-scheme:dark){.path-tree,.mapping-rule{border-color:#444b5a}.tree-node:hover{background:#343945}}
+</style></head><body><main>
+<div class="brand">BAKABASE</div><h1 id="title">数据设置</h1>
+<p id="intro">先决定是否从已有数据导入，再选择数据保存目录。</p>
+<div id="loading" class="notice" role="status">正在读取配置状态…</div>
+<div id="form" hidden>
+<div class="draft-bar"><span id="draftStatus" role="status"></span><button id="saveDraft" class="text-button" type="button" hidden>重试保存</button><button id="clearDraft" class="text-button" type="button">清空已保存草稿</button></div>
+<nav id="steps" aria-label="设置步骤"><ol class="steps"><li><button id="step1" type="button"><span class="step-number">1</span><span id="step1Label">从已有数据导入</span></button></li><li><button id="step2" type="button" disabled><span class="step-number">2</span><span id="step2Label">保存位置</span></button></li><li><button id="step3" type="button" disabled><span class="step-number">3</span><span id="step3Label">确认结果</span></button></li><li id="step4Item" hidden><button id="step4" type="button" disabled><span class="step-number">4</span><span id="step4Label">确认结果</span></button></li></ol></nav>
+<section id="dataSection">
+<h2 id="sourceTitle" class="step-heading" tabindex="-1">是否导入已有数据？</h2>
+<div class="choices" id="choices"><label><input type="radio" name="mode" id="empty" value="empty" checked><span id="emptyLabel">不导入</span></label><label><input type="radio" name="mode" id="import" value="import"><span id="importLabel">从已有数据导入</span></label></div>
+<p id="relocationInfo" class="hint"></p>
+<div id="importFields" hidden>
+<label for="source" id="sourceLabel">原数据保存目录</label><input type="text" id="source" autocomplete="off" spellcheck="false" placeholder="请选择原数据保存目录">
+<div class="path-actions"><button id="browseSource" type="button">选择文件夹…</button><button id="manualSource" class="text-button" type="button" aria-pressed="false">手动输入</button></div><p class="hint" id="sourceHint">选择服务端能访问的绝对路径。Docker 需先只读挂载旧目录，例如 /import。</p>
+<details><summary id="advancedLabel">更多选项：跨设备迁移</summary><label for="original" id="originalLabel">原设备上的数据保存路径（可选）</label><input type="text" id="original" autocomplete="off" spellcheck="false">
+<p class="hint" id="originalHint">Docker 挂载改变了路径时填写，用于修正数据目录内部的封面等路径；不会修改媒体原文件路径。</p>
+</details>
+<p class="notice" id="warning">请先关闭使用来源目录的 Bakabase 实例。导入会备份目标现有数据，再整体替换，不会合并两个库。来源保持不变；数据目录外的媒体文件需要另行挂载。</p>
+</div>
+</section>
+<section id="targetSection" hidden>
+<h2 id="targetTitle" class="step-heading" tabindex="-1">数据保存在哪里？</h2>
+<div class="choices" id="pathChoices"><label><input type="radio" name="pathMode" id="keepPath" checked><span id="keepPathLabel">使用当前数据目录</span></label><label><input type="radio" name="pathMode" id="changePath"><span id="changePathLabel">更换数据保存目录</span></label></div><label for="target" id="targetLabel">数据保存目录</label>
+<input type="text" id="target" autocomplete="off" spellcheck="false" readonly><div class="path-actions"><button id="browseTarget" type="button">选择文件夹…</button><button id="manualTarget" class="text-button" type="button" aria-pressed="false">手动输入</button></div><p class="hint" id="targetHint"></p>
+</section>
+<section id="preflightSection" hidden><h2 id="preflightTitle" class="step-heading" tabindex="-1">检查导入数据中的路径</h2>
+<p id="preflightHelp"></p><div id="scanStatus" class="notice" role="status"></div><progress id="scanProgress" class="scan-progress" hidden></progress><p id="scanError" class="error" role="alert" hidden></p><button id="scanRetry" class="secondary" type="button" hidden>重新扫描</button>
+<div id="mappingEditor" hidden><div class="mapping-grid"><div><h3 id="treeTitle"></h3><p id="treeHelp" class="hint"></p><ul id="pathTree" class="path-tree"></ul><p id="treeError" class="error" role="alert" hidden></p></div><div><h3 id="rulesTitle"></h3><p id="rulePriority" class="hint"></p><div id="ruleList"></div><p id="noRules" class="notice"></p><p id="mappingHint" class="hint"></p><button id="previewMappings" class="secondary" type="button"></button></div></div>
+<div id="mappingPreview" hidden><h3 id="previewTitle"></h3><p id="previewCounts" role="status"></p><ul id="previewSamples" class="preview-samples"></ul><div id="previewWarnings" class="notice preflight-warning" hidden></div></div></div></section>
+<section id="reviewSection" hidden><h2 id="confirmTitle" class="step-heading" tabindex="-1">确认这些设置</h2>
+<dl class="review"><dt id="reviewSourceLabel">使用的数据</dt><dd id="reviewSource" class="review-path"></dd><dt id="reviewTargetLabel">数据保存目录</dt><dd id="reviewTarget" class="review-path"></dd><dt id="reviewEffectLabel">数据如何处理</dt><dd id="reviewEffect"></dd><dt id="reviewMappingsLabel" hidden></dt><dd id="reviewMappings" hidden></dd><dt id="reviewExecutionLabel">何时执行</dt><dd id="executionHint"></dd></dl>
+<p id="validation" class="success" role="status" hidden></p></section>
+<p id="noChangesHint" class="hint" hidden>数据和保存目录都不变，可以直接返回应用。</p><p id="error" class="error" role="alert" hidden></p>
+<div class="actions"><button id="previous" class="secondary" type="button" hidden>上一步</button><button id="next" type="button">下一步</button><button id="submit" type="button" hidden>开始使用</button><a id="finish" class="finish-button" href="/#/configuration" hidden>完成并返回应用</a><a id="back" href="/#/configuration">返回应用</a></div>
+</div>
+<footer id="footer">确认前不会移动或替换数据。执行后可查看进度。</footer>
+</main>
+<dialog id="folderDialog" aria-labelledby="folderTitle"><div class="dialog-header"><h2 id="folderTitle">选择文件夹</h2><button id="folderClose" class="text-button" type="button">取消</button></div>
+<p id="folderContext" class="hint"></p><div class="folder-toolbar"><button id="folderUp" class="secondary" type="button">上一级</button><div id="folderRoots" class="folder-roots"></div></div>
+<p id="folderPath" class="folder-path"></p><p id="folderMessage" role="status" class="hint"></p><ul id="folderList" class="folder-list"></ul>
+<div id="folderNew"><label for="folderName" id="folderNameLabel">新文件夹名称（可选）</label><input type="text" id="folderName" autocomplete="off" spellcheck="false"><p id="folderNameHint" class="hint">只需填写一个名称。确认配置后才会在所选位置创建文件夹。</p></div>
+<p id="folderError" class="error" role="alert" hidden></p><div class="actions"><button id="folderSelect" type="button">使用此文件夹</button></div></dialog>
+<script nonce="__NONCE__">
+(() => {
+  const prefix = location.pathname.endsWith('/setup') ? location.pathname.slice(0,-6) : '';
+  const hash = new URLSearchParams(location.hash.slice(1));
+  const english = (hash.get('lang') || navigator.language).toLowerCase().startsWith('en');
+  const lang = english ? 'en' : 'cn';
+  const t = (cn,en) => english ? en : cn;
+  const el = id => document.getElementById(id);
+  const set = (id,text) => { el(id).textContent = text; };
+  let token = hash.get('setupToken') || '', state, validated, validatedSignature, busy = false, chosenTarget = '', choosingNewPath = false;
+  let step = 1, furthestStep = 1;
+  let rules = [], preflight, preview, checkedSelection, scanGeneration = 0, scanTimer, previewGeneration = 0;
+  let draftReady = false, draftTimer, draftChain = Promise.resolve(), draftRevision = 0, draftSaved = '', draftError = false;
+  let folderRule;
+  const manual = {target:false,source:false};
+  let folderField, folderState, folderRequest = 0;
+  document.documentElement.lang = english ? 'en' : 'zh-CN';
+  document.title = t('Bakabase · 数据设置', 'Bakabase · Data settings');
+  set('title',t('数据设置','Data settings'));
+  set('intro',t('首次使用前，请确认数据保存目录。封面、缓存和数据库会随使用增长，建议现在选择容量充足、长期可用的目录。','Choose where to keep your data before first use. Covers, caches and databases grow over time; choose a durable location with enough space now.'));
+  set('loading',t('正在读取配置状态…','Loading setup…'));
+  set('targetTitle',t('数据保存在哪里？','Where should your data be stored?')); set('targetLabel',t('数据保存目录','Data storage directory'));
+  set('sourceTitle',t('从已有数据导入（可选）','Import existing data (optional)')); set('importLabel',t('从已有数据导入','Import existing data'));
+  set('changePathLabel',t('更换数据保存目录','Change the data storage directory'));
+  set('finish',t('完成并返回应用','Finish and return to the app')); el('finish').href = prefix + '/#/configuration';
+  set('sourceLabel',t('原数据保存目录','Existing data directory'));
+  el('source').placeholder = t('请选择原数据保存目录','Choose the existing data directory');
+  set('advancedLabel',t('更多选项：跨设备迁移','More options: moving between devices'));
+  set('sourceHint',t('填写服务端能访问的绝对路径。Docker 需先只读挂载旧目录，例如 /import。','Enter an absolute path visible to the server. In Docker, first mount the old directory read-only, for example at /import.'));
+  set('originalLabel',t('原设备上的数据保存路径（可选）','Data path on the original device (optional)'));
+  set('originalHint',t('Docker 挂载改变了路径时填写，用于修正数据目录内部的封面等路径；不会修改媒体原文件路径。','Use this if a Docker mount changed the path, to relocate files such as covers inside the data directory. Media file paths are not changed.'));
+  set('warning',t('请先关闭使用来源目录的 Bakabase 实例。导入会备份目标现有数据，再整体替换，不会合并两个库。来源保持不变；数据目录外的媒体文件需要另行挂载。','Stop the Bakabase instance using the source directory first. Import backs up current target data and replaces it; libraries are not merged. The source is unchanged. Mount media files outside the data directory separately.'));
+  set('confirmTitle',t('确认这些设置','Review your choices'));
+  set('step4Label',t('确认结果','Review'));
+  set('step1Label',t('从已有数据导入','Import existing data')); set('step2Label',t('保存位置','Storage')); set('step3Label',t('确认结果','Review'));
+  el('steps').setAttribute('aria-label',t('设置步骤','Setup steps'));
+  set('previous',t('上一步','Back')); set('next',t('下一步','Next'));
+  set('reviewSourceLabel',t('使用的数据','Data to use')); set('reviewTargetLabel',t('数据保存目录','Data storage directory'));
+  set('reviewEffectLabel',t('数据如何处理','What happens to your data')); set('reviewExecutionLabel',t('何时执行','When it runs'));
+  set('noChangesHint',t('数据和保存目录都不变，可以直接返回应用。','Your data and its location will stay the same. You can return to the app.'));
+  set('back',t('返回应用','Back to the app')); el('back').href = prefix + '/#/configuration';
+  set('footer',t('确认前不会移动或替换数据。执行后可查看进度。','Nothing is moved or replaced before you confirm. Progress is available once the operation starts.'));
+  async function api(path, body) {
+    const controller = new AbortController(); const timeout = setTimeout(() => controller.abort(),path === '/setup/browse' ? 600000 : 15000);
+    try {
+      const response = await fetch(prefix + path, {method:body === undefined ? 'GET':'POST', credentials:'omit',cache:'no-store',signal:controller.signal,
+        headers:{'X-Bakabase-Setup-Token':token,...(body === undefined ? {} : {'Content-Type':'application/json'})}, ...(body === undefined ? {} : {body:JSON.stringify(body)})});
+      const result = await response.json();
+      if (!response.ok) { const error = new Error(response.status === 401 ? t('配置链接已失效或没有权限。请从启动日志中的链接，或应用配置中的数据路径入口重新进入。','This setup link is expired or unauthorized. Reopen it from the startup log or the data path entry in app settings.') : result.message || 'Request failed'); error.status = response.status; throw error; }
+      return result;
+    } finally { clearTimeout(timeout); }
+  }
+  function wantsImport() { return el('import').checked; }
+  function wantsNewPath() { return !!state?.canChooseTargetPath && el('changePath').checked; }
+  function noChanges() { return !!state && !state.firstRun && !wantsImport() && !wantsNewPath(); }
+  function reviewStep() { return wantsImport() ? 4 : 3; }
+  function selectedOperation() { return wantsImport() ? 'import' : state.firstRun ? 'initialize' : 'relocate'; }
+  function selection() {
+    return {operation:selectedOperation(),targetPath:wantsNewPath() ? el('target').value.trim() : state.currentPath,
+      ...(wantsImport() ? {sourcePath:el('source').value.trim(),originalDataPath:el('original').value.trim() || undefined} : {})};
+  }
+  function renderMode() {
+    if (!state) return;
+    const change = wantsNewPath();
+    if (change !== choosingNewPath) {
+      if (choosingNewPath) chosenTarget = el('target').value;
+      el('target').value = change ? chosenTarget : state.currentPath;
+      choosingNewPath = change;
+    }
+    state.mode = state.firstRun ? 'first-run' : selectedOperation();
+    el('target').readOnly = !change || !manual.target;
+    el('source').readOnly = !manual.source;
+    el('browseTarget').hidden = !change;
+    el('manualTarget').hidden = !change;
+    el('pathChoices').hidden = !state.canChooseTargetPath;
+    for (const [button,field] of [['manualTarget','target'],['manualSource','source']]) {
+      set(button,manual[field] ? t('完成输入','Done editing') : t('手动输入','Enter path manually'));
+      el(button).setAttribute('aria-pressed',String(manual[field]));
+    }
+    el('importFields').hidden = !wantsImport();
+    el('relocationInfo').hidden = wantsImport();
+    set('title',state.firstRun ? t('欢迎使用 Bakabase','Welcome to Bakabase') : t('数据设置','Data settings'));
+    set('intro',step === 1 ? t('可以导入之前的数据，也可以直接继续。','You can bring in existing data or continue without an import.')
+      : step === 2 ? state.canChooseTargetPath ? t('选择一个容量充足、长期可用的位置。','Choose a durable location with enough space for your data.') : t('数据将保存在以下位置。','Your data will be stored at the location below.')
+      : step === 3 && wantsImport() ? t('查看导入数据中的路径，按需要修正后再确认。','Review stored paths and adjust them if needed before confirming.')
+      : t('检查下面的结果，确认后才会执行。','Check the details below. Nothing runs until you confirm.'));
+    set('emptyLabel',state.firstRun ? t('创建新数据','Create new data') : t('继续使用当前数据','Keep current data'));
+    set('keepPathLabel',state.firstRun ? t('使用默认数据目录','Use the default data directory') : t('使用当前数据目录','Use the current data directory'));
+    let hint;
+    if (!state.canChooseTargetPath) hint = t('保存位置由部署设置决定，无需在这里选择。要更换位置，请调整 Docker 挂载或启动设置。','Your deployment sets this location. To change it, update the Docker mount or launch settings.');
+    else if (!change) hint = state.firstRun
+      ? t('封面、缓存和数据库会保存在这里，以后升级也会保留。','Covers, caches and databases will be saved here and kept through upgrades.')
+      : t('继续保存在当前目录。','Continue storing data in the current directory.');
+    else hint = el('target').value.trim() === state.currentPath
+      ? t('请选择一个新的空文件夹。','Choose a new empty folder.')
+      : t('确认后会使用这个目录。','This directory will be used after you confirm.');
+    set('targetHint',hint);
+    set('sourceHint',state.isDocker ? t('这里显示容器内的文件夹。请先将原数据只读挂载到容器，例如 /import。','These folders are inside the container. Mount your existing data read-only first, for example at /import.') : t('选择存有原 Bakabase 数据的文件夹。','Choose the folder containing your existing Bakabase data.'));
+    set('relocationInfo',state.firstRun ? t('从空白开始，稍后可以添加资源。','Start fresh and add resources later.') : t('保留当前媒体库、设置、封面和缓存。','Keep your current library, settings, covers and caches.'));
+    set('warning',t('请先关闭使用来源目录的 Bakabase。来源数据会保留，媒体原文件不会随数据目录一起搬移。','Close the Bakabase instance using the source first. Its data stays intact; original media files are not moved with the data directory.'));
+    updateSubmit();
+  }
+  function reset(field) {
+    invalidatePreflight();
+    validated = undefined; validatedSignature = undefined;
+    furthestStep = Math.min(furthestStep, ['target','keepPath','changePath'].includes(field) ? 2 : 1);
+    if (step > furthestStep) step = furthestStep;
+    el('validation').hidden = true; el('error').hidden = true;
+    renderMode();
+    if (field) scheduleDraft();
+  }
+  function showStep(value) {
+    step = value; el('error').hidden = true; renderMode();
+    el(step === 1 ? 'sourceTitle' : step === 2 ? 'targetTitle' : step === 3 && wantsImport() ? 'preflightTitle' : 'confirmTitle').focus();
+  }
+  function setBusy(value) {
+    busy = value; el('form').setAttribute('aria-busy',String(value));
+    for (const id of ['target','source','original','empty','import','keepPath','changePath','browseTarget','browseSource','manualTarget','manualSource']) el(id).disabled = value;
+    el('changePath').disabled = value || !state?.canChooseTargetPath;
+    for (const item of el('ruleList').querySelectorAll('button,input')) item.disabled = value;
+    el('clearDraft').disabled = value; el('saveDraft').disabled = value;
+    updateSubmit();
+  }
+  function updateSubmit() {
+    if (!state) return;
+    const unchangedNewPath = wantsNewPath() && el('target').value.trim() === state.currentPath;
+    const finish = step === 2 && noChanges();
+    el('dataSection').hidden = step !== 1; el('targetSection').hidden = step !== 2;
+    el('preflightSection').hidden = !wantsImport() || step !== 3; el('reviewSection').hidden = step !== reviewStep();
+    el('step4Item').hidden = !wantsImport(); set('step3Label',wantsImport() ? t('路径预检','Check paths') : t('确认结果','Review'));
+    for (let value = 1; value <= 4; value++) {
+      const button = el('step' + value);
+      button.disabled = busy || value > furthestStep;
+      button.title = value > furthestStep ? t('完成前面的步骤后继续','Complete the earlier steps to continue') : '';
+      if (value === step) button.setAttribute('aria-current','step'); else button.removeAttribute('aria-current');
+    }
+    el('previous').hidden = step === 1; el('previous').disabled = busy;
+    el('next').hidden = step === reviewStep() || finish;
+    el('next').disabled = busy || step === 2 && unchangedNewPath || wantsImport() && step === 3 && (preflight?.phase !== 'ready' || rules.some(rule => !rule.targetPrefix.trim()));
+    el('previewMappings').disabled = busy || preflight?.phase !== 'ready' || rules.some(rule => !rule.targetPrefix.trim()); el('scanRetry').disabled = busy;
+    set('next',busy ? t('正在检查…','Checking…') : t('下一步','Next'));
+    el('submit').hidden = step !== reviewStep(); el('submit').disabled = busy || !validated;
+    if (step === reviewStep()) set('submit',busy ? t('正在提交…','Submitting…') : wantsImport() ? t('确认并导入','Confirm and import') : state.firstRun ? t('开始使用','Start using Bakabase') : t('确认并迁移','Confirm and move'));
+    el('finish').hidden = !finish; el('noChangesHint').hidden = !finish;
+    el('back').hidden = state.firstRun || finish;
+  }
+  function renderReview(result) {
+    set('reviewSourceLabel',wantsImport() ? t('导入来源','Import source') : t('使用的数据','Data to use'));
+    set('reviewSource',wantsImport() ? result.sourcePath : state.firstRun ? t('创建新数据','Create new data') : state.currentPath);
+    set('reviewTarget',result.targetPath);
+    const effect = wantsImport()
+      ? state.firstRun ? t('复制来源数据，来源目录保持不变。','Copy the imported data and keep the source directory unchanged.')
+        : wantsNewPath() ? t('导入到新目录，校验成功后切换。当前目录和来源目录都会保留。','Import into the new directory and switch after verification. Both the current and source directories are retained.')
+          : t('先备份当前数据，再整体替换。不会合并两个库，来源目录保持不变。','Back up current data, then replace it. Libraries are not merged; the source directory stays unchanged.')
+      : state.firstRun ? t('在所选目录创建新数据。','Create new data in the selected directory.')
+        : t('复制当前数据到新目录并校验，原目录保留。确认新位置正常后，再自行清理旧副本。','Copy and verify current data in the new directory. The original is retained; clean it up only after checking the new location.');
+    set('reviewEffect',effect);
+    el('reviewMappingsLabel').hidden = !wantsImport(); el('reviewMappings').hidden = !wantsImport();
+    set('reviewMappingsLabel',t('路径修正','Path changes'));
+    set('reviewMappings',rules.length ? rules.map(rule => rule.sourcePrefix + ' → ' + rule.targetPrefix).join('\n') + '\n' + previewSummary() : t('不修改路径，保留来源中的原路径。','Keep the original paths unchanged.'));
+    set('executionHint',state.firstRun
+      ? t('确认后立即执行，完成后即可进入应用，无需手动重启。','Start after confirmation. You can enter the app when it finishes; no manual restart is needed.')
+      : state.automaticMaintenance
+        ? t('确认后，Bakabase 会保存并关闭当前应用，完成操作后自动重新打开。设置页面会继续显示进度。','Bakabase will save and close the current app, apply the change, and reopen it. This setup page stays available to show progress.')
+        : t('确认后先排队。请重新启动 Bakabase 应用或服务，才会开始执行；下一页可查看进度。','Confirmation queues this change. Restart the Bakabase app or server to begin; the next page shows progress.'));
+    set('submit',wantsImport() ? t('确认并导入','Confirm and import') : state.firstRun ? t('开始使用','Start using Bakabase') : t('确认并迁移','Confirm and move'));
+    el('submit').dataset.confirm = wantsImport() ? 'true' : 'false';
+    el('validation').hidden = !result.sourceVersion;
+    if (result.sourceVersion) set('validation',t('来源版本：','Source version: ') + result.sourceVersion);
+  }
+  const pageRoot = el('form');
+  const cleanRules = () => rules.map(rule => ({sourcePrefix:rule.sourcePrefix,targetPrefix:rule.targetPrefix.trim()}));
+  const confirmationSignature = () => JSON.stringify({request:selection(),rules:cleanRules(),scanId:preflight?.id,previewId:preview?.previewId});
+  const draftValue = () => ({request:selection(),rules:cleanRules()});
+  function draftMessage(message, failed = false) { set('draftStatus',message); el('saveDraft').hidden = !failed; draftError = failed; }
+  set('clearDraft',t('清空已保存草稿','Clear saved draft')); set('saveDraft',t('重试保存','Retry saving'));
+  function scheduleDraft() {
+    if (!draftReady) return;
+    clearTimeout(draftTimer); const revision = ++draftRevision;
+    draftMessage(t('有未保存的更改…','Changes are not saved yet…'));
+    draftTimer = setTimeout(() => saveDraft(revision),500);
+  }
+  function saveDraft(revision = ++draftRevision) {
+    clearTimeout(draftTimer);
+    const value = draftValue(), signature = JSON.stringify(value);
+    draftChain = draftChain.then(async () => {
+      if (!pageRoot.isConnected || revision !== draftRevision || !draftReady) return;
+      if (signature === draftSaved && !draftError) { draftMessage(t('草稿已保存','Draft saved')); return; }
+      draftMessage(t('正在保存草稿…','Saving draft…'));
+      try {
+        const result = await api('/setup/draft',value);
+        if (!result.draft || result.error) throw new Error(result.error || t('未能保存草稿。','The draft could not be saved.'));
+        if (revision === draftRevision && pageRoot.isConnected) { draftSaved = signature; draftMessage(t('草稿已保存，可稍后继续','Draft saved. You can continue later.')); }
+      } catch (error) {
+        if (revision === draftRevision && pageRoot.isConnected) draftMessage(t('草稿尚未保存：','Draft not saved: ') + error.message,true);
+      }
+    });
+    return draftChain;
+  }
+  el('saveDraft').addEventListener('click',() => { if (!busy) void saveDraft(); });
+  async function restoreDraft() {
+    try {
+      const result = await api('/setup/draft');
+      if (result.error) throw new Error(result.error);
+      const draft = result.draft;
+      if (!draft?.request) { draftMessage(t('更改会自动保存为本机草稿','Changes are saved automatically on the server')); return; }
+      const request = draft.request;
+      el('source').value = request.sourcePath || ''; el('original').value = request.originalDataPath || '';
+      el('import').checked = request.operation === 'import'; el('empty').checked = !el('import').checked;
+      chosenTarget = request.targetPath || state.currentPath;
+      const change = state.canChooseTargetPath && chosenTarget !== state.currentPath;
+      el('changePath').checked = change; el('keepPath').checked = !change; choosingNewPath = false;
+      rules = (draft.rules || []).filter(rule => typeof rule.sourcePrefix === 'string' && typeof rule.targetPrefix === 'string').map(rule => ({...rule}));
+      draftMessage(t('已恢复草稿。请继续检查，导入仍需最后确认。','Draft restored. Continue checking your choices; importing still requires final confirmation.'));
+    } catch (error) { draftMessage(t('未能读取草稿：','Could not read the draft: ') + error.message,true); }
+  }
+  el('clearDraft').addEventListener('click',async () => {
+    if (busy) return;
+    setBusy(true); clearTimeout(draftTimer); ++draftRevision; draftReady = false; invalidatePreflight();
+    try {
+      await draftChain;
+      await api('/setup/draft/clear',{});
+      rules = []; chosenTarget = state.currentPath; choosingNewPath = false;
+      el('source').value = ''; el('original').value = ''; el('target').value = state.currentPath;
+      el('import').checked = state.initialMode === 'import'; el('empty').checked = !el('import').checked;
+      el('keepPath').checked = true; el('changePath').checked = false;
+      step = 1; furthestStep = 1; reset(); draftSaved = JSON.stringify(draftValue());
+      draftMessage(t('已清空草稿；尚未改动任何数据','Saved draft cleared. No data has been changed.'));
+    } catch (error) { draftMessage(t('未能清空草稿：','Could not clear the draft: ') + error.message,true); }
+    finally { draftReady = true; setBusy(false); }
+  });
+  set('preflightTitle',t('检查导入数据中的路径','Check paths in the imported data'));
+  set('preflightHelp',t('扫描数据库中的路径引用，按目录逐层查看。需要换位置时，点击任一层目录添加替换规则；媒体文件本身不会被搬移。','Scan stored path references and browse them by directory. Select any directory level to add a replacement rule. Media files themselves are not moved.'));
+  set('treeTitle',t('来源中的路径','Paths in the source')); set('treeHelp',t('展开目录查看下一级；点击目录名称添加规则。数字表示引用次数。','Expand to browse children; select a directory name to add a rule. Counts are stored references.'));
+  set('rulesTitle',t('路径替换规则','Path replacement rules'));
+  set('rulePriority',t('只替换匹配的目录前缀，较长前缀优先。目标路径必须是服务端可访问的路径；Docker 中填写容器内挂载路径。','Only matching directory prefixes are replaced, with the longest prefix taking priority. Use paths visible to the server; in Docker, use mounted container paths.'));
+  set('noRules',t('不添加规则将保留原路径。确认这些路径在新环境可用后，可直接下一步。','Without rules, original paths are kept. Continue if those paths are available in the new environment.'));
+  set('previewMappings',t('预览路径修改','Preview path changes')); set('previewTitle',t('修改预览','Change preview')); set('scanRetry',t('重新扫描','Scan again'));
+  function invalidatePreflight() {
+    ++scanGeneration; ++previewGeneration; clearTimeout(scanTimer);
+    preflight = undefined; preview = undefined; checkedSelection = undefined;
+    el('pathTree').replaceChildren(); el('mappingPreview').hidden = true; el('scanError').hidden = true;
+  }
+  function mappingsChanged() {
+    preview = undefined; ++previewGeneration; validated = undefined; validatedSignature = undefined;
+    furthestStep = Math.min(furthestStep,3); if (step > 3) showStep(3);
+    el('mappingPreview').hidden = true;
+    set('mappingHint',rules.some(rule => !rule.targetPrefix.trim()) ? t('请为每条规则选择或填写目标目录。','Choose or enter a destination for every rule.') : t('可以先预览；下一步会再次检查这些规则。','Preview the changes, or continue to check these rules.'));
+    scheduleDraft(); updateSubmit();
+  }
+  function addRule(path) {
+    if (busy) return;
+    if (!rules.some(rule => rule.sourcePrefix === path)) { rules.push({sourcePrefix:path,targetPrefix:''}); renderRules(); mappingsChanged(); }
+    const input = [...el('ruleList').querySelectorAll('input')].find(input => input.dataset.source === path); input?.focus();
+  }
+  function renderRules() {
+    el('ruleList').replaceChildren(); el('noRules').hidden = rules.length > 0;
+    for (const rule of rules) {
+      const box = document.createElement('div'); box.className = 'mapping-rule';
+      const from = document.createElement('code'); from.textContent = rule.sourcePrefix;
+      const label = document.createElement('label'); label.textContent = t('替换为','Replace with');
+      const input = document.createElement('input'); input.type = 'text'; input.value = rule.targetPrefix; input.dataset.source = rule.sourcePrefix;
+      input.setAttribute('aria-label',t('替换目标：','Replacement for: ') + rule.sourcePrefix); input.autocomplete = 'off'; input.spellcheck = false;
+      input.addEventListener('input',() => { rule.targetPrefix = input.value; mappingsChanged(); }); label.append(input);
+      const actions = document.createElement('div'); actions.className = 'path-actions';
+      const browse = document.createElement('button'); browse.type='button'; browse.className='secondary'; browse.textContent=t('选择文件夹…','Choose folder…');
+      browse.setAttribute('aria-label',t('选择替换目标：','Choose replacement for: ') + rule.sourcePrefix);
+      browse.addEventListener('click',() => browseMapping(rule));
+      const remove = document.createElement('button'); remove.type='button'; remove.className='text-button'; remove.textContent=t('移除','Remove');
+      remove.setAttribute('aria-label',t('移除规则：','Remove rule: ') + rule.sourcePrefix);
+      remove.addEventListener('click',() => { rules=rules.filter(item => item !== rule); renderRules(); mappingsChanged(); });
+      actions.append(browse,remove); box.append(from,label,actions); el('ruleList').append(box);
+    }
+  }
+  async function browseMapping(rule) {
+    if (busy) return; setBusy(true);
+    if (state.canBrowse) {
+      try { const result=await api('/setup/browse',{}); if(result.path && rules.includes(rule)) {rule.targetPrefix=result.path;renderRules();mappingsChanged();} }
+      catch(error) {set('error',error.message);el('error').hidden=false;} finally {setBusy(false);} return;
+    }
+    folderField='mapping'; folderRule=rule.sourcePrefix; el('folderName').value=''; el('folderNew').hidden=true;
+    set('folderContext',state.isDocker ? t('选择容器内已挂载的媒体文件夹；此操作不会创建或搬移媒体。','Choose an existing mounted media folder inside the container. This does not create or move media.') : t('选择运行 Bakabase 的设备上已有的媒体文件夹。','Choose an existing media folder on the device running Bakabase.'));
+    el('folderDialog').showModal(); await loadFolders(rule.targetPrefix.trim(),true);
+  }
+  async function loadTree(parent, container, offset=0, generation=scanGeneration) {
+    const scanId=preflight?.id; if(!scanId) return;
+    const pending=document.createElement('li'); pending.textContent=t('正在读取…','Loading…'); container.append(pending);
+    try {
+      const result=await api('/setup/preflight/tree?' + new URLSearchParams({scanId,offset:String(offset),...(parent ? {parent}: {})}));
+      if(generation!==scanGeneration || !container.isConnected || preflight?.id!==scanId) return;
+      pending.remove();
+      for(const node of result.nodes) {
+        const item=document.createElement('li'), row=document.createElement('div'); row.className='tree-row';
+        const toggle=document.createElement('button'); toggle.type='button'; toggle.className='tree-toggle'; toggle.textContent=node.hasChildren?'▸':'·'; toggle.disabled=!node.hasChildren;
+        toggle.setAttribute('aria-label',t('展开：','Expand: ')+node.path); toggle.setAttribute('aria-expanded','false');
+        const select=document.createElement('button'); select.type='button'; select.className='tree-node'; select.textContent=node.name+' ('+node.referenceCount+')'; select.title=node.path; select.dataset.path=node.path;
+        select.addEventListener('click',()=>addRule(node.path));
+        const children=document.createElement('ul'); children.hidden=true; let loaded=false;
+        toggle.addEventListener('click',()=>{ children.hidden=!children.hidden; toggle.textContent=children.hidden?'▸':'▾';toggle.setAttribute('aria-expanded',String(!children.hidden));if(!children.hidden&&!loaded){loaded=true;void loadTree(node.path,children,0,generation);} });
+        row.append(toggle,select);item.append(row,children);container.append(item);
+      }
+      const nextOffset=result.offset+result.nodes.length;
+      if(nextOffset<result.total) {const item=document.createElement('li'),button=document.createElement('button');button.type='button';button.className='text-button';button.textContent=t('显示更多目录','Load more directories');button.addEventListener('click',()=>{item.remove();void loadTree(parent,container,nextOffset,generation);});item.append(button);container.append(item);}
+      if(result.total===0) {const item=document.createElement('li');item.textContent=t('没有发现可显示的路径','No paths to show');container.append(item);}
+    } catch(error) {if(generation!==scanGeneration||!container.isConnected)return;pending.textContent=error.message;const retry=document.createElement('button');retry.type='button';retry.className='text-button';retry.textContent=t('重试','Retry');retry.addEventListener('click',()=>{pending.remove();void loadTree(parent,container,offset,generation);});pending.append(retry);}
+  }
+  function renderPreflight() {
+    const phase=preflight?.phase || 'idle', progress=preflight?.progress;
+    el('mappingEditor').hidden=phase!=='ready';el('scanProgress').hidden=phase!=='scanning';el('scanRetry').hidden=phase==='scanning';
+    el('scanError').hidden=!preflight?.error; if(preflight?.error)set('scanError',preflight.error);
+    set('scanStatus',phase==='ready' ? t('扫描完成：','Scan complete: ')+preflight.uniquePaths+t(' 个不同路径，',' unique paths, ')+preflight.referenceCount+t(' 处引用。',' references.')
+      :phase==='failed'?t('扫描未完成，可以重试。','The scan did not finish. You can retry.')
+      :phase==='scanning'?t('正在扫描数据库中的路径…','Scanning stored paths…')+(progress ? '\n'+t('已检查文本值：','Text values checked: ')+(progress.scannedTextValues||0)+t('；发现路径引用：','; path references: ')+(progress.pathReferences||0)+(progress.file?'\n'+t('正在读取：','Reading: ')+progress.file:'')+(progress.table?'\n'+t('当前表：','Current table: ')+progress.table:''): '')
+      :t('准备扫描路径…','Preparing to scan paths…'));
+    updateSubmit();
+  }
+  async function startPreflight(force=false) {
+    const generation=++scanGeneration; ++previewGeneration;clearTimeout(scanTimer);preview=undefined;el('mappingPreview').hidden=true;el('pathTree').replaceChildren();
+    validated=undefined;validatedSignature=undefined;furthestStep=Math.min(furthestStep,3);el('error').hidden=true;
+    preflight={phase:'scanning'};renderPreflight();renderRules();
+    try {const result=await api('/setup/preflight'+(force?'?force=true':''),checkedSelection || selection()); if(generation!==scanGeneration||!pageRoot.isConnected)return;receivePreflight(result,generation);}
+    catch(error) {if(generation===scanGeneration){preflight={phase:'failed',error:error.message};renderPreflight();}}
+  }
+  function receivePreflight(result,generation) {
+    const becameReady=result.phase==='ready' && (preflight?.phase!=='ready'||preflight?.id!==result.id);
+    preflight=result;renderPreflight();
+    if(becameReady) {el('pathTree').replaceChildren();void loadTree(undefined,el('pathTree'),0,generation);}
+    if(result.phase==='scanning') scanTimer=setTimeout(()=>pollPreflight(generation),1200);
+  }
+  async function pollPreflight(generation) {
+    if(generation!==scanGeneration||!pageRoot.isConnected)return;
+    try {const result=await api('/setup/preflight');if(generation!==scanGeneration||!pageRoot.isConnected)return;receivePreflight(result,generation);}
+    catch(error) {if(generation!==scanGeneration||!pageRoot.isConnected)return;set('scanError',t('连接暂时中断，正在重连。最后一次扫描状态仍保留。','Connection interrupted; reconnecting. The last scan state is retained.'));el('scanError').hidden=false;scanTimer=setTimeout(()=>pollPreflight(generation),1500);}
+  }
+  function previewSummary() {return preview ? t('将修正 ','Will change ')+preview.matchedPaths+t(' 个路径、',' paths and ')+preview.matchedReferences+t(' 处引用；保留 ',' references; keep ')+preview.unmappedPaths+t(' 个路径、',' paths and ')+preview.unmappedReferences+t(' 处引用。',' references unchanged.') : '';}
+  function previewWarning(message) {
+    if (message === 'Unmapped references will keep their original paths. Their files may be unavailable on this device.') return t('未匹配替换规则的引用会保留原路径，这些文件在当前设备上可能无法访问。',message);
+    if (message === 'Destination availability is not checked here. Confirm the server/container mounts using the folder browser; no media files will be moved or folders created.') return t('这里不会检查目标目录是否可用。请通过文件夹浏览器确认服务端或容器中的挂载位置；不会搬移媒体文件或创建文件夹。',message);
+    return message;
+  }
+  async function checkMappings() {
+    if(preflight?.phase!=='ready')throw new Error(t('请等待扫描完成。','Wait for the scan to finish.'));
+    if(rules.some(rule=>!rule.targetPrefix.trim()))throw new Error(t('请填写所有规则的目标目录。','Enter a destination for each rule.'));
+    if(preview)return;
+    const generation=++previewGeneration, scanId=preflight.id, signature=JSON.stringify(cleanRules());
+    const result=await api('/setup/preflight/preview',{scanId,rules:cleanRules()});
+    if(generation!==previewGeneration||preflight?.id!==scanId||signature!==JSON.stringify(cleanRules()))throw new Error(t('规则已变化，请重新预览。','Rules changed. Preview them again.'));
+    if(!result.previewId)throw new Error(result.error||t('无法生成预览。','Unable to create the preview.'));
+    preview=result;el('mappingPreview').hidden=false;set('previewCounts',previewSummary());el('previewSamples').replaceChildren();
+    for(const example of (result.examples||[]).slice(0,20)){const item=document.createElement('li');item.textContent=example.sourcePath+' → '+example.targetPath+' ('+example.referenceCount+')';el('previewSamples').append(item);}
+    el('previewWarnings').hidden=!result.warnings?.length;set('previewWarnings',(result.warnings||[]).map(previewWarning).join('\n'));
+  }
+  el('scanRetry').addEventListener('click',async()=>{if(busy)return;setBusy(true);try{await startPreflight(true);}finally{setBusy(false);}});
+  el('previewMappings').addEventListener('click',async()=>{if(busy)return;setBusy(true);el('error').hidden=true;try{await checkMappings();}catch(error){set('error',error.message);el('error').hidden=false;}finally{setBusy(false);}});
+
+  for (const [button,field] of [['manualTarget','target'],['manualSource','source']]) {
+    el(button).addEventListener('click',() => {
+      manual[field] = !manual[field]; renderMode();
+      if (manual[field]) { el(field).focus(); el(field).select(); }
+    });
+  }
+  el('previous').addEventListener('click',() => { if (!busy && step > 1) showStep(step - 1); });
+  for (let value = 1; value <= 4; value++) el('step' + value).addEventListener('click',() => {
+    if (!busy && value <= furthestStep) showStep(value);
+  });
+  set('folderTitle',t('选择文件夹','Choose a folder')); set('folderClose',t('取消','Cancel'));
+  set('folderUp',t('上一级','Parent folder')); set('folderNameLabel',t('新文件夹名称（可选）','New folder name (optional)'));
+  set('folderNameHint',t('只需填写一个名称。确认配置后才会在所选位置创建文件夹。','Enter one folder name. It will only be created here after you confirm the configuration.'));
+  set('folderSelect',t('使用此文件夹','Use this folder'));
+  function closeFolders() { folderRequest++; el('folderDialog').close(); setBusy(false); }
+  el('folderClose').addEventListener('click',closeFolders);
+  el('folderDialog').addEventListener('cancel',event => { event.preventDefault(); closeFolders(); });
+  async function loadFolders(path, fallback = false, openParent = false) {
+    const requestId = ++folderRequest;
+    folderState = undefined; el('folderSelect').disabled = true; el('folderUp').disabled = true; el('folderName').disabled = false;
+    el('folderList').replaceChildren(); el('folderError').hidden = true;
+    set('folderPath',path || state.currentPath); set('folderMessage',t('正在读取文件夹…','Loading folders…'));
+    try {
+      const result = await api('/setup/directories' + (path ? '?' + new URLSearchParams({path}) : ''));
+      if (requestId !== folderRequest || !el('folderDialog').open) return;
+      if (openParent && result.parentPath) { await loadFolders(result.parentPath); return; }
+      folderState = result; set('folderPath',result.currentPath);
+      el('folderUp').disabled = !result.parentPath;
+      el('folderRoots').replaceChildren();
+      for (const root of result.roots) {
+        const button = document.createElement('button'); button.type='button'; button.className='secondary';
+        button.textContent = root.path === '/' ? t('根目录','Root folder') : root.name;
+        button.addEventListener('click',() => loadFolders(root.path)); el('folderRoots').append(button);
+      }
+      for (const directory of result.directories) {
+        const item = document.createElement('li'), button = document.createElement('button'); button.type='button';
+        button.textContent = directory.name; button.addEventListener('click',() => loadFolders(directory.path));
+        item.append(button); el('folderList').append(item);
+      }
+      set('folderMessage',result.truncated ? t('文件夹较多，仅显示部分结果。找不到时可返回手动输入路径。','Only some folders are shown. If yours is missing, close this picker and enter the path manually.') : result.directories.length ? t('点击文件夹进入，或直接使用当前位置。','Open a folder below, or use the current location.') : t('此位置没有可显示的子文件夹。','No subfolders to show here.'));
+      el('folderSelect').disabled = false;
+    } catch (error) {
+      if (requestId !== folderRequest || !el('folderDialog').open) return;
+      if (fallback && error.status === 404) { await loadFolders(); return; }
+      set('folderMessage',''); set('folderError',error.status === 403 ? t('无法读取此目录，请检查服务的访问权限。','The server cannot read this directory. Check its access permissions.') : error.message); el('folderError').hidden=false;
+    }
+  }
+  el('folderUp').addEventListener('click',() => { if (folderState?.parentPath) loadFolders(folderState.parentPath); });
+  el('folderSelect').addEventListener('click',async () => {
+    if (!folderState) return;
+    const requestId = folderRequest, directory = folderState;
+    el('folderSelect').disabled = true; el('folderName').disabled = true; el('folderError').hidden = true;
+    try {
+      const name = folderField === 'target' ? el('folderName').value.trim() : '';
+      const result = await api('/setup/directories?' + new URLSearchParams({path:directory.currentPath,...(name ? {newFolderName:name} : {})}));
+      if (requestId !== folderRequest || !el('folderDialog').open) return;
+      const chosen = result.candidatePath || result.currentPath;
+      if (folderField === 'mapping') { const rule = rules.find(rule => rule.sourcePrefix === folderRule); if (rule) rule.targetPrefix = chosen; closeFolders(); renderRules(); mappingsChanged(); }
+      else { el(folderField).value = chosen; manual[folderField] = false; closeFolders(); reset(folderField); }
+    } catch (error) {
+      if (requestId !== folderRequest || !el('folderDialog').open) return;
+      set('folderError',error.message); el('folderError').hidden=false; el('folderSelect').disabled=false; el('folderName').disabled=false;
+    }
+  });
+  for (const [button,field] of [['browseTarget','target'],['browseSource','source']]) {
+    set(button,t('选择文件夹…','Choose folder…'));
+    el(button).setAttribute('aria-label',field === 'target' ? t('选择数据保存目录','Choose data storage folder') : t('选择原数据保存目录','Choose existing data folder'));
+    el(button).addEventListener('click',async () => {
+      if (busy) return; setBusy(true);
+      if (state.canBrowse) {
+        try { const result = await api('/setup/browse',{}); if (result.path) { el(field).value = result.path; manual[field]=false; reset(field); } }
+        catch (error) { set('error',error.message); el('error').hidden=false; }
+        finally { setBusy(false); }
+        return;
+      }
+      folderField = field; el('folderName').value=''; el('folderNew').hidden = field !== 'target';
+      set('folderContext',state.isDocker ? t('选择容器内的文件夹，宿主机目录需要先挂载。','Choose a folder inside the container. Host folders must be mounted first.') : t('这里显示运行 Bakabase 服务的设备上的文件夹。','These folders are on the device running Bakabase.'));
+      el('folderDialog').showModal();
+      const initialPath = el(field).value.trim();
+      await loadFolders(initialPath,true,field === 'target' && !state.firstRun && initialPath === state.currentPath);
+    });
+  }
+  for (const id of ['target','source','original','empty','import','keepPath','changePath']) el(id).addEventListener('input',() => reset(id));
+  el('next').addEventListener('click',async () => {
+    if (busy || step === reviewStep() || step === 2 && noChanges()) return;
+    setBusy(true); el('error').hidden = true;
+    try {
+      const request = selection();
+      if (wantsImport() && !request.sourcePath) throw new Error(t('请选择原数据保存目录。','Choose the existing data directory.'));
+      if (step === 1) {
+        // Existing instances have a known valid current target. A first-run default
+        // may itself need changing, so validate source and destination together in step 2.
+        if (wantsImport() && !state.firstRun) {
+          const result = await api('/setup/validate',{...request,targetPath:state.currentPath});
+          if (!result.valid) throw new Error(result.error || t('无法读取来源数据，请检查所选目录。','Unable to read the source data. Check the selected folder.'));
+        }
+        furthestStep = Math.max(furthestStep,2); showStep(2);
+      } else if (step === 3 && wantsImport()) {
+        await checkMappings();
+        const fullRequest = {...checkedSelection,pathPreflightId:preflight.id,pathPreviewId:preview.previewId,pathMappings:cleanRules()};
+        const signature = confirmationSignature();
+        const result = await api('/setup/validate',fullRequest);
+        if (!result.valid) throw new Error(result.error || t('路径检查已失效，请重新扫描。','The path check is no longer valid. Scan again.'));
+        if (signature !== confirmationSignature()) throw new Error(t('选择已变化，请重新检查。','Your choices changed. Please check them again.'));
+        validated = {...fullRequest,targetPath:result.targetPath,sourcePath:result.sourcePath,originalDataPath:result.originalDataPath}; validatedSignature = signature; renderReview(result);
+        furthestStep = 4; showStep(4);
+      } else {
+        if (!request.targetPath) throw new Error(t('请选择数据保存目录。','Choose a data storage directory.'));
+        const signature = JSON.stringify(request);
+        const result = await api('/setup/validate',request);
+        if (!result.valid) throw new Error(result.error || t('请检查所选目录。','Check the selected directories.'));
+        if (signature !== JSON.stringify(selection())) throw new Error(t('选择已变化，请重新检查。','Your choices changed. Please check them again.'));
+        checkedSelection = {operation:request.operation,targetPath:result.targetPath,sourcePath:result.sourcePath,originalDataPath:result.originalDataPath};
+        furthestStep = 3; showStep(3);
+        if (wantsImport()) await startPreflight();
+        else { validated = checkedSelection; validatedSignature = confirmationSignature(); renderReview(result); }
+      }
+    } catch (error) { set('error',error.message || t('连接失败，请稍后重试。','Connection failed. Please try again.')); el('error').hidden = false; }
+    finally { setBusy(false); }
+  });
+  el('submit').addEventListener('click',async () => {
+    if (busy || step !== reviewStep() || noChanges() || !validated) return;
+    if (validatedSignature !== confirmationSignature()) { reset('target'); showStep(2); return; }
+    setBusy(true); el('error').hidden = true;
+    try {
+      clearTimeout(draftTimer); ++draftRevision; draftReady = false; await draftChain;
+      const result = await api('/setup/apply',validated);
+      if (!result.monitorToken) throw new Error(t('设置已提交，请返回应用查看结果。','Your choices were submitted. Return to the app to check the result.'));
+      try { sessionStorage.setItem('bakabase.import.monitorToken',result.monitorToken); sessionStorage.setItem('bakabase.import.monitorLanguage',lang); } catch {}
+      // Desktop supervision may live on a separate loopback port from the closing app.
+      const page = result.monitorUrl || '/app/data-path/import/progress';
+      const monitorPage = /^https?:\/\//i.test(page) ? page : prefix + (page.startsWith('/') ? page : '/' + page);
+      location.replace(monitorPage.split('#')[0] + '#token=' + encodeURIComponent(result.monitorToken) + '&lang=' + lang);
+    } catch (error) { set('error',error.message || t('连接失败，请稍后重试。','Connection failed. Please try again.')); el('error').hidden = false; }
+    finally { draftReady = true; setBusy(false); }
+  });
+  async function load() {
+    try {
+      if (!token) {
+        try { token = (await api('/setup/local-session',{})).setupToken; } catch {}
+      }
+      if (!token) throw new Error(t('首次配置需要启动日志中的配置链接。Docker 请运行 docker compose logs bakabase，打开包含 setupToken 的链接；该链接只用于本次配置。','For first setup, use the setup link in the startup log. In Docker, run docker compose logs bakabase and open the link containing setupToken. It authorizes this setup only.'));
+      state = await api('/setup/status');
+      state.firstRun = state.mode === 'first-run'; state.initialMode = state.mode;
+      const allowed = state.allowedOperations || (state.firstRun ? ['initialize','import'] : [state.mode]);
+      el('empty').parentElement.hidden = false;
+      el('import').parentElement.hidden = !allowed.includes('import');
+      el('choices').hidden = false;
+      el('changePath').parentElement.hidden = !state.canChooseTargetPath; el('changePath').disabled = !state.canChooseTargetPath;
+      el('keepPath').checked = true; el('changePath').checked = false;
+      el('import').checked = state.mode === 'import'; el('empty').checked = !el('import').checked;
+      chosenTarget = state.currentPath; el('target').value = state.currentPath;
+      el('back').hidden = state.mode === 'first-run';
+      await restoreDraft();
+      el('loading').hidden = true; el('form').hidden = false; reset();
+      draftReady = true; draftSaved = JSON.stringify(draftValue());
+    } catch (error) { el('loading').className='error'; set('loading',error.message); }
+  }
+  load();
+})();
+</script></body></html>

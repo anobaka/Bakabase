@@ -996,6 +996,173 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/app/data-path/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Object]"];
+                        "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Object]"];
+                        "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Object]"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.AppDataImportController+ImportRequest"];
+                    "application/json": components["schemas"]["Bakabase.Service.Controllers.AppDataImportController+ImportRequest"];
+                    "text/json": components["schemas"]["Bakabase.Service.Controllers.AppDataImportController+ImportRequest"];
+                    "application/*+json": components["schemas"]["Bakabase.Service.Controllers.AppDataImportController+ImportRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                        "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                        "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    };
+                };
+            };
+        };
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                        "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                        "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/app/data-path/import/setup-session": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                        "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                        "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/app/data-path/import/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.AppDataImportController+ImportRequest"];
+                    "application/json": components["schemas"]["Bakabase.Service.Controllers.AppDataImportController+ImportRequest"];
+                    "text/json": components["schemas"]["Bakabase.Service.Controllers.AppDataImportController+ImportRequest"];
+                    "application/*+json": components["schemas"]["Bakabase.Service.Controllers.AppDataImportController+ImportRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.ServerData.ServerAppDataImport+Validation]"];
+                        "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.ServerData.ServerAppDataImport+Validation]"];
+                        "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.ServerData.ServerAppDataImport+Validation]"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/app/data-path/validate": {
         parameters: {
             query?: never;
@@ -1038,6 +1205,101 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["DismissLegacyInstallNotice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/app/data-path/relocation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Object]"];
+                        "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Object]"];
+                        "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Object]"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                        "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                        "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/app/data-path/relocation/setup-session": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                        "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                        "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -14652,6 +14914,18 @@ export interface components {
             lineNumber: number;
             alreadyKnown: boolean;
         };
+        "Bakabase.Service.Components.ServerData.ServerAppDataImport+Validation": {
+            valid: boolean;
+            error?: string;
+            sourcePath: string;
+            currentPath: string;
+            sourceVersion?: string;
+            originalDataPath?: string;
+        };
+        "Bakabase.Service.Controllers.AppDataImportController+ImportRequest": {
+            sourcePath: string;
+            originalDataPath?: string;
+        };
         "Bakabase.Service.Controllers.AppDataPathController+RelocateRequest": {
             targetPath: string;
             mode: components["schemas"]["Bakabase.Infrastructures.Components.App.Relocation.RelocationMode"];
@@ -17220,6 +17494,12 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Components.Acquisition.SharedListImportResult"];
         };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.ServerData.ServerAppDataImport+Validation]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Components.ServerData.ServerAppDataImport+Validation"];
+        };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Controllers.AppDataPathController+ValidateResponse]": {
             /** Format: int32 */
             code: number;
@@ -17484,6 +17764,12 @@ export interface components {
             message?: string;
             /** Format: int32 */
             data: number;
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Object]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: unknown;
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[System.String]": {
             /** Format: int32 */

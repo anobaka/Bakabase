@@ -22,6 +22,8 @@ public partial class AvaloniaGuiAdapter : GuiAdapter, ITrayIconController, IUpda
     private InitializationWindow? _initializationWindow;
     private ErrorWindow? _errorWindow;
     private MainWindow? _mainWindow;
+    public event Action<string>? MainWindowShown;
+    public event Action<string>? FatalErrorShown;
 
     /// <summary>
     /// Set when the app is exiting via <see cref="Shutdown"/> — i.e. programmatic exit
@@ -135,6 +137,7 @@ public partial class AvaloniaGuiAdapter : GuiAdapter, ITrayIconController, IUpda
     [GuiContextInterceptor]
     public override void ShowFatalErrorWindow(string message, string title = "Fatal Error")
     {
+        FatalErrorShown?.Invoke(message);
         _errorWindow ??= new ErrorWindow();
         _errorWindow.Title = title;
         _errorWindow.FindControl<TextBlock>("ErrorTitle")!.Text = title;
@@ -175,6 +178,7 @@ public partial class AvaloniaGuiAdapter : GuiAdapter, ITrayIconController, IUpda
 
             var webView = _mainWindow.FindControl<NativeWebViewHost>("WebView")!;
             webView.Navigate(url);
+            MainWindowShown?.Invoke(url);
 
             _mainWindow.Closing += (_, args) =>
             {

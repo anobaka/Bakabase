@@ -6,6 +6,8 @@ using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Models.ResponseModels;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Hosting;
+using Bakabase.Service.Components;
+using Bakabase.Service.Components.ServerData;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace Bakabase.Service.Controllers
@@ -28,6 +30,12 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "GetNewAppVersion")]
         public async Task<SingletonResponse<AppVersionInfo>> CheckNewAppVersion()
         {
+            if (_guiAdapter is NullGuiAdapter)
+                return new SingletonResponse<AppVersionInfo>(new AppVersionInfo
+                {
+                    RunningVersion = ServerAppDataImport.RunningVersion.ToString(),
+                    UpdateCheckUnavailable = true
+                });
             return new SingletonResponse<AppVersionInfo>(await _appUpdater.CheckNewVersion());
         }
 
@@ -35,6 +43,7 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "StartUpdatingApp")]
         public async Task<BaseResponse> StartUpdatingApp()
         {
+            if (_guiAdapter is NullGuiAdapter) return ServerUpdateResponse();
             return await _appUpdater.StartUpdating();
         }
 
@@ -50,10 +59,11 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "RestartAndUpdateApp")]
         public BaseResponse RestartAndUpdateApp()
         {
+            if (_guiAdapter is NullGuiAdapter) return ServerUpdateResponse();
             // Validate the downloaded package before acknowledging the request. The response
             // must finish before stopping the web host; the shell then keeps a native progress
             // window visible while it releases tasks, database connections and the host.
-            var launchUpdater = _appUpdater.PrepareUpdateRestart();
+            var launchUpdater = _appUpdater.PrepareUpdateRestart(SetupChildConnection.Current?.ParentProcessId);
             if (_guiAdapter is IUpdateRestartCoordinator coordinator)
             {
                 if (!coordinator.TryReserveUpdateRestart(launchUpdater))
@@ -90,5 +100,8 @@ namespace Bakabase.Service.Controllers
 
             return BaseResponseBuilder.Ok;
         }
+
+        private static BaseResponse ServerUpdateResponse() => BaseResponseBuilder.BuildBadRequest(
+            "Update the standalone server by replacing its Docker image or server release, then restart with the same appdata directory.");
     }
 }

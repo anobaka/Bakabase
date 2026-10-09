@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Reflection;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.App;
 using Bakabase.Abstractions.Models.Domain.Constants;
@@ -7,6 +8,7 @@ using Bakabase.Infrastructures.Components.App;
 using Bakabase.Infrastructures.Components.App.Models.ResponseModels;
 using Bakabase.Infrastructures.Components.Configurations.App;
 using Bakabase.Service.Components;
+using Bakabase.Service.Components.ServerData;
 using Bakabase.Service.Models.View;
 using Bakabase.Service.Services;
 using Bootstrap.Components.Configuration.Abstractions;
@@ -145,6 +147,8 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "RestartApp")]
         public BaseResponse Restart()
         {
+            if (HttpContext.RequestServices.GetService(typeof(Bakabase.Infrastructures.Components.Gui.IGuiAdapter)) is NullGuiAdapter)
+                return BaseResponseBuilder.BuildBadRequest("Restart the standalone server using its process manager (for Docker: docker compose restart).");
             var exePath = Environment.ProcessPath;
             if (string.IsNullOrWhiteSpace(exePath))
             {
@@ -162,21 +166,15 @@ namespace Bakabase.Service.Controllers
                     await Task.Delay(500);
                     _logger.LogInformation("Restarting via spawn-then-stop. exe={Exe}", exePath);
 
-                    var psi = new ProcessStartInfo(exePath)
-                    {
-                        UseShellExecute = true,
-                        WorkingDirectory = System.IO.Path.GetDirectoryName(exePath) ?? string.Empty,
-                    };
-                    psi.ArgumentList.Add(RestartHandoff.FormatArgument(Environment.ProcessId));
-                    Process.Start(psi);
+                    var psi = RestartHandoff.CreateStartInfo(exePath, Assembly.GetEntryAssembly()?.Location,
+                        SetupChildConnection.Current?.ParentProcessId ?? Environment.ProcessId);
+                    using var replacement = Process.Start(psi)
+                        ?? throw new InvalidOperationException("The replacement process did not start.");
+                    _lifetime.StopApplication();
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Failed to spawn replacement process; will still stop the host.");
-                }
-                finally
-                {
-                    _lifetime.StopApplication();
+                    _logger.LogError(ex, "Failed to spawn replacement process; keeping the current application running.");
                 }
             });
 

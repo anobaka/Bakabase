@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bakabase · Setup progress</title>
+<style nonce="__NONCE__">
+:root{color-scheme:light dark;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#242938;background:#f5f6fa}
+*{box-sizing:border-box}body{margin:0;padding:48px 20px}main{max-width:760px;margin:auto;background:#fff;border:1px solid #e2e5eb;border-radius:20px;padding:32px;box-shadow:0 8px 40px #20283c08}
+.brand{font-size:14px;font-weight:650;color:#6366f1;letter-spacing:.08em}h1{font-size:28px;line-height:1.3;margin:18px 0 10px}p{line-height:1.7;margin:10px 0;color:#5c6270}
+.connection{font-size:13px;margin-top:20px;padding:10px 14px;border-radius:8px;background:#f0f2ff;color:#4b50a4}.connection[data-state=offline]{background:#fff4df;color:#886321}
+.stage{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:26px;font-weight:650}progress{width:100%;height:14px;margin:14px 0 4px;accent-color:#6366f1}
+.metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:20px 0}.metric{background:#f7f8fb;border-radius:10px;padding:15px}.label{font-size:12px;color:#747b89}.value{font-size:19px;margin-top:6px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.detail{font-size:13px;color:#737986;overflow-wrap:anywhere}.file{padding:12px;background:#f7f8fb;border-radius:8px;font-family:ui-monospace,monospace;overflow-wrap:anywhere;white-space:pre-wrap;font-size:12px}
+.failure{background:#fff0f0;color:#9c2727;border:1px solid #f3cdcd;padding:16px;border-radius:10px;overflow-wrap:anywhere}.actions{display:flex;gap:12px;align-items:center;margin-top:26px}a{color:#565bdd;text-decoration:none;font-weight:600}.button{display:inline-block;background:#6366f1;color:white;padding:11px 18px;border-radius:9px;font-size:14px}footer{font-size:12px;color:#8b919d;line-height:1.6;margin-top:28px} [hidden]{display:none!important}
+.timeline{display:grid;grid-template-columns:repeat(auto-fit,minmax(76px,1fr));gap:10px;list-style:none;margin:14px 0 24px;padding:0}.timeline li{font-size:12px;line-height:1.5;color:#7a8291;display:flex;flex-direction:column;align-items:center;text-align:center;gap:7px}.stepNumber{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:#eef0f5;font-weight:700}.timeline li[data-state=done]{color:#387756}.timeline li[data-state=done] .stepNumber{background:#e4f2e9}.timeline li[data-state=current]{color:#565bdd;font-weight:700}.timeline li[data-state=current] .stepNumber{background:#e7e8ff;outline:2px solid currentColor;outline-offset:2px}.timeline li[data-state=failed]{color:#9c2727;font-weight:700}.timeline li[data-state=failed] .stepNumber{background:#fad9d9}.timelineHeading{font-size:13px;font-weight:600;color:#737986;margin-top:26px}.failure h2{font-size:16px;margin:0 0 8px}.failure p{color:inherit;font-size:14px;margin:8px 0}.failure summary{cursor:pointer;font-size:13px;font-weight:600;padding:8px 0}.failure pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;max-height:240px;overflow:auto;margin:8px 0 0}.locations{white-space:pre-line}.srOnly{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+@media(max-width:500px){body{padding:20px 12px}main{padding:22px}h1{font-size:24px}.value{font-size:16px}}
+@media(prefers-color-scheme:dark){:root{background:#15171d;color:#eceef5}main{background:#20232b;border-color:#343945}p,.detail{color:#b0b6c2}.metric,.file{background:#292d37}.label{color:#adb3c2}.connection{background:#2b2e4b;color:#c0c1ff}.connection[data-state=offline]{background:#423622;color:#edcb8d}.failure{background:#42292c;color:#ffb5b5;border-color:#704044}a{color:#b9bbff}.timeline li[data-state=done]{color:#9ed3b5}.timeline li[data-state=current]{color:#c0c1ff}.timeline li[data-state=failed]{color:#ffb5b5}.stepNumber{background:#343945}.timeline li[data-state=done] .stepNumber{background:#294336}.timeline li[data-state=current] .stepNumber{background:#41457b}.timeline li[data-state=failed] .stepNumber{background:#704044}}
+</style>
+</head>
+<body><main>
+<div class="brand">BAKABASE</div><h1 id="title">初始化与维护进度</h1>
+<p id="intro">正在读取服务保存的进度…</p>
+<div class="connection" id="connection" role="status" aria-live="polite">正在连接…</div>
+<p class="detail" id="lastKnown" hidden></p><p class="detail" id="reconnectAdvice" hidden></p>
+<section id="timelineSection" aria-labelledby="timelineLabel"><h2 class="timelineHeading" id="timelineLabel">执行步骤</h2><ol class="timeline" id="timeline"></ol></section>
+<div class="stage"><span id="phase">正在读取状态</span><span id="percent"></span></div>
+<progress id="bar" max="100" aria-label="Copy progress"></progress>
+<p class="detail" id="explanation"></p><p class="detail" id="activity" hidden></p>
+<div class="metrics" id="metrics">
+<div class="metric"><div class="label" id="sizeLabel">已复制 / 总大小</div><div class="value" id="size">—</div></div>
+<div class="metric"><div class="label" id="filesLabel">已复制 / 总文件数</div><div class="value" id="files">—</div></div>
+<div class="metric"><div class="label" id="speedLabel">平均复制速度</div><div class="value" id="speed">—</div></div>
+<div class="metric"><div class="label" id="elapsedLabel">本次执行耗时</div><div class="value" id="elapsed">—</div></div>
+</div>
+<p class="detail" id="eta"></p><div id="fileInfo" hidden><p class="detail" id="fileLabel">当前文件或目录</p><p class="file" id="file"></p></div>
+<section class="failure" id="failure" role="alert" hidden><h2 id="failureTitle"></h2><p id="failureAdvice"></p><details id="errorDetails"><summary id="errorSummary">查看技术详情</summary><pre id="error"></pre></details></section>
+<p class="detail" id="backup" hidden></p><p class="detail locations" id="locations" hidden></p>
+<div class="actions"><a class="button" id="return" href="/#/configuration" hidden>返回配置</a></div>
+<footer id="footer">来源数据保持不变。请保持来源实例关闭，不要移动来源目录或卸载磁盘。复制阶段中断后会重新复制。</footer>
+</main>
+<script nonce="__NONCE__">
+(() => {
+  const pagePath = '/app/data-path/import/progress';
+  const prefix = location.pathname.endsWith(pagePath) ? location.pathname.slice(0, -pagePath.length) : '';
+  const endpoint = prefix + pagePath + '/status';
+  const hash = new URLSearchParams(location.hash.slice(1));
+  let storedToken, storedLanguage;
+  try { storedToken = sessionStorage.getItem('bakabase.import.monitorToken'); storedLanguage = sessionStorage.getItem('bakabase.import.monitorLanguage'); } catch {}
+  const token = hash.get('token') || storedToken || '';
+  const english = (hash.get('lang') || storedLanguage || navigator.language).toLowerCase().startsWith('en');
+  const lang = english ? 'en' : 'cn';
+  try { if (/^[a-f0-9]{64}$/i.test(token)) sessionStorage.setItem('bakabase.import.monitorToken', token); sessionStorage.setItem('bakabase.import.monitorLanguage', lang); } catch {}
+  const t = (cn, en) => english ? en : cn;
+  const el = id => document.getElementById(id);
+  const set = (id, value) => { el(id).textContent = value; };
+  document.documentElement.lang = english ? 'en' : 'zh-CN';
+  document.title = t('Bakabase · 初始化与维护进度', 'Bakabase · Setup progress');
+  set('title', t('初始化与维护进度', 'Setup and maintenance progress'));
+  set('intro', t('正在读取服务保存的进度。重启期间若连接中断，本页会自动重连。', 'Reading the progress saved by the server. This page reconnects if the connection drops during a restart.'));
+  set('timelineLabel', t('执行步骤', 'Execution steps'));
+  set('sizeLabel', t('已复制 / 总大小', 'Copied / total size')); set('filesLabel', t('已复制 / 总文件数', 'Copied / total files'));
+  set('speedLabel', t('平均复制速度', 'Average copy speed')); set('elapsedLabel', t('本次执行耗时', 'Elapsed this attempt'));
+  set('fileLabel', t('当前文件或目录', 'Current file or directory'));
+  set('errorSummary', t('查看技术详情', 'View technical details'));
+  set('return', t('返回配置', 'Back to settings')); el('return').href = prefix + '/#/configuration';
+  el('bar').setAttribute('aria-label', t('文件复制进度', 'File copy progress'));
+  const stages = {
+    queued: t('等待重新启动', 'Waiting for a restart'), stopping: t('正在保存并关闭应用', 'Saving and closing the app'), scanning: t('正在扫描来源文件', 'Scanning source files'),
+    copying: t('正在复制文件', 'Copying files'), verifying: t('正在检查数据完整性', 'Checking data integrity'),
+    mapping: t('正在修正导入数据中的路径', 'Updating imported path references'),
+    'backing-up': t('正在备份当前数据', 'Backing up current data'), installing: t('正在安装导入数据', 'Installing imported data'),
+    starting: t('正在准备数据库并启动服务', 'Preparing databases and starting the server'),
+    completed: t('服务已就绪', 'The server is ready'), failed: t('操作或服务启动失败', 'The operation or startup failed'),
+    cancelled: t('操作已取消', 'Operation cancelled')
+  };
+  const stepIndex = {queued:0, stopping:0, scanning:1, copying:2, verifying:3, mapping:3, 'backing-up':4, installing:4, starting:5, completed:6};
+  const bytes = n => { if (!Number.isFinite(n) || n < 0) return '—'; const units = ['B', 'KiB', 'MiB', 'GiB', 'TiB']; let i = 0; while (n >= 1024 && i < 4) { n /= 1024; i++; } return n.toFixed(i ? 1 : 0) + ' ' + units[i]; };
+  const duration = n => { n = Math.max(0, Math.floor(n || 0)); return Math.floor(n / 3600) + ':' + String(Math.floor(n / 60) % 60).padStart(2,'0') + ':' + String(n % 60).padStart(2,'0'); };
+  const count = n => Number.isFinite(n) ? n.toLocaleString() : '—';
+  const timestamp = value => { const date = new Date(value); return Number.isFinite(date.getTime()) ? date.toLocaleTimeString() : t('时间未知', 'time unavailable'); };
+  let stopped = false, lastStatus = null, lastConfirmedAt = null, offlineSince = null;
+  let attempt = '', highestStep = -1, lastActivePhase = null;
+  function phaseLabel(p, phase = p.phase) {
+    if (phase === 'queued' && p.automaticMaintenance) return t('正在准备执行','Preparing to begin');
+    if (phase === 'installing' && p.operation === 'relocate') return t('正在完成目录切换', 'Completing the directory move');
+    if (phase === 'starting' && p.operation === 'initialize') return t('正在创建媒体库并启动服务', 'Creating the library and starting the server');
+    if (phase === 'cancelled') return p.operation === 'relocate' ? t('目录变更已取消', 'Directory move cancelled') : t('导入已取消', 'Import cancelled');
+    if (phase === 'completed') return p.operation === 'initialize' ? t('媒体库创建完成，服务已就绪', 'Library created — the server is ready')
+      : p.operation === 'relocate' ? t('目录变更完成，服务已就绪', 'Directory move complete — the server is ready')
+      : t('导入完成，服务已就绪', 'Import complete — the server is ready');
+    return stages[phase] || t('正在读取执行阶段', 'Reading the execution stage');
+  }
+  function renderTimeline(p) {
+    const initializing = p.operation === 'initialize';
+    const relocating = p.operation === 'relocate';
+    const combined = p.operation === 'import' && !!p.targetPath;
+    const labels = initializing ? [t('创建与启动', 'Create and start'), t('完成', 'Ready')] : [
+      t('准备', 'Prepare'), t('扫描', 'Scan'), t('复制', 'Copy'), t('校验', 'Verify'),
+      relocating ? t('切换位置', 'Switch location') : combined ? t('安装与切换', 'Install and switch') : t('备份与安装', 'Back up and install'),
+      t('启动', 'Start'), t('完成', 'Ready')
+    ];
+    const knownPhase = p.phase === 'failed' ? p.failedPhase || lastActivePhase : p.phase;
+    let current = initializing ? (knownPhase === 'completed' ? 1 : knownPhase === 'starting' ? 0 : -1) : stepIndex[knownPhase] ?? -1;
+    // Verification can run again after installation. Keep the already reached steps visible.
+    if (!initializing && current >= 0) highestStep = Math.max(highestStep, current);
+    if (!initializing && knownPhase === 'verifying' && highestStep === 4) current = 4;
+    const highest = initializing ? current : highestStep;
+    el('timeline').replaceChildren(...labels.map((label, index) => {
+      const item = document.createElement('li');
+      const state = p.phase === 'completed' ? 'done' : index === current ? (p.phase === 'failed' ? 'failed' : 'current') : index < highest ? 'done' : 'pending';
+      item.dataset.state = state;
+      if (state === 'current' || state === 'failed') item.setAttribute('aria-current', 'step');
+      const number = document.createElement('span'); number.className = 'stepNumber'; number.textContent = state === 'done' ? '✓' : String(index + 1); number.setAttribute('aria-hidden', 'true');
+      const name = document.createElement('span'); name.textContent = label;
+      const description = document.createElement('span'); description.className = 'srOnly';
+      description.textContent = state === 'done' ? t('，已通过', ', passed') : state === 'current' ? t('，当前阶段', ', current stage') : state === 'failed' ? t('，此阶段失败', ', failed at this stage') : t('，尚未确认此阶段', ', not yet confirmed');
+      item.append(number, name, description); return item;
+    }));
+  }
+  function failureAdvice(p) {
+    if (p.automaticMaintenance) {
+      const preserved = p.operation === 'initialize' ? '' : p.operation === 'relocate'
+        ? t('原数据目录仍保留，请保留新旧目录，不要同时启动旧副本。','The original data directory is retained. Keep both directories and do not run the old copy simultaneously. ')
+        : p.targetPath ? t('导入来源和原数据目录均保留，请保持来源实例关闭。','The import source and original data directory are retained. Keep the source instance stopped. ')
+          : t('请保持来源实例关闭，保留来源目录和下方备份位置。','Keep the source instance stopped and preserve its directory and the backup location below. ');
+      return preserved + t('设置页面仍可查看状态，但不会自动重复执行。请查看技术详情和日志，处理错误后重新启动 Bakabase（Docker 可重新启动容器），系统会按保存记录恢复，不会自动回滚。','This setup page remains available, but does not retry the operation automatically. Check the technical details and logs, fix the cause, then restart Bakabase (or its Docker container). Recovery follows the saved record; there is no automatic rollback.');
+    }
+    if (p.operation === 'initialize') return t('请检查所选保存目录的写入权限和剩余空间，并展开技术详情或查看服务日志。修复后手动重新启动应用或服务，本页会重连并读取保存的进度。', 'Check write access and free space in the selected folder, then inspect the technical details or server logs. After fixing the cause, restart the app or server manually. This page reconnects and reads the saved progress.');
+    if (p.operation === 'relocate') return t('原保存目录仍保留。请保留新旧两个目录，不要同时启动旧副本。检查新位置是否可用、权限和空间是否足够；根据技术详情处理后手动重启，系统会按保存的记录恢复。', 'The previous data folder is retained. Keep both folders and do not run the old copy simultaneously. Check that the new location is available, writable and has enough space. Resolve the cause shown in the technical details, then restart manually to recover from the saved record.');
+    if (p.targetPath) return t('导入来源和原保存目录均保留。请保持来源实例关闭，保留新旧目录，检查磁盘连接、权限和剩余空间。根据技术详情处理后手动重启；系统会按保存的记录恢复，不会自动回滚。', 'The import source and previous data folder are retained. Keep the source instance stopped, preserve both destination folders, and check disk access, permissions and free space. Resolve the cause shown in the technical details, then restart manually. Recovery follows the saved record; there is no automatic rollback.');
+    return t('请保持来源实例关闭，保留来源目录及下方备份位置。检查磁盘连接、权限和剩余空间，再根据技术详情处理后手动重启。复制中断会重新复制，备份和安装按记录恢复；系统不会自动回滚。', 'Keep the source instance stopped and preserve the source folder and backup location below. Check disk access, permissions and free space, then resolve the cause shown in the technical details and restart manually. Interrupted copying starts again; backup and installation recover from the saved record. There is no automatic rollback.');
+  }
+  function render(p) {
+    if (!p || typeof p.phase !== 'string') throw new Error('Invalid progress response');
+    const newAttempt = (p.id || '') + ':' + (p.startedAtUtc || '');
+    if (newAttempt !== attempt) { attempt = newAttempt; highestStep = -1; lastActivePhase = null; }
+    const terminal = ['completed','cancelled'].includes(p.phase);
+    const initializing = p.operation === 'initialize';
+    const relocating = p.operation === 'relocate';
+    const importingToNewPath = p.operation === 'import' && !!p.targetPath;
+    const retainingDirectory = relocating || importingToNewPath;
+    if (stepIndex[p.phase] != null && !terminal) lastActivePhase = p.phase;
+    renderTimeline(p);
+    set('title', initializing ? t('创建媒体库', 'Create your library') : relocating ? t('变更数据保存位置', 'Move your data folder') : importingToNewPath ? t('导入数据并变更保存位置', 'Import data into a new location') : t('导入数据', 'Import your data'));
+    set('intro', terminal ? t('已读取服务保存的最终状态。', 'The final state saved by the server is shown below.') : p.phase === 'queued'
+      ? p.automaticMaintenance
+        ? t('设置已保存。Bakabase 正在准备执行，无需手动重启；复制尚未开始。','Your choices are saved. Bakabase is preparing to apply them automatically; copying has not started.')
+        : t('设置已保存，尚未开始复制。请手动重新启动应用或服务，本页会等待并自动重连。', 'Your choices are saved; copying has not started. Restart the app or server manually. This page waits and reconnects automatically.')
+      : initializing ? t('服务正在所选目录准备媒体库。只有服务确认就绪后，本页才显示完成。', 'The server is preparing your library in the selected folder. Completion is shown only after the server confirms it is ready.')
+      : t('下方显示服务确认的执行状态。复制完成后还会校验数据并启动服务，请保留此页查看结果。', 'The steps below show progress confirmed by the server. Data checks and startup follow copying; keep this page open for the result.'));
+    el('locations').hidden = !retainingDirectory;
+    if (retainingDirectory) set('locations', (importingToNewPath ? t('导入来源：', 'Import source: ') : t('当前数据来源：', 'Current data source: ')) + (p.sourcePath || '—') + '\n' + t('新保存位置：', 'New data location: ') + p.targetPath);
+    set('footer', importingToNewPath
+      ? t('导入来源和原来的数据目录均保留。校验成功后才切换到新位置，数据目录外的媒体原文件不会复制。', 'The import source and previous data directory are retained. The location switches only after verification. Media files outside the data directory are not copied.')
+      : relocating ? t('旧目录暂时保留，验证新位置正常后再自行清理。不要同时启动旧副本。数据目录外的媒体原文件不会搬移。', 'The old directory is retained. Verify the new location before cleaning it up; do not run the old copy simultaneously. Media files outside the data directory are not moved.')
+      : t('来源数据保持不变。请保持来源实例关闭，不要移动来源目录或卸载磁盘。复制阶段中断后会重新复制。', 'The source data is unchanged. Keep the source instance stopped and its directory and disk available. An interrupted copy starts again on restart.'));
+    el('footer').hidden = initializing;
+    for (const id of ['sizeLabel','filesLabel','speedLabel']) el(id).parentElement.hidden = initializing;
+    const finalVerification = p.phase === 'verifying' && highestStep === 4;
+    set('phase', finalVerification ? t('正在校验安装后的数据', 'Checking the installed data') : phaseLabel(p));
+    set('connection', t('已连接 · 状态更新于 ', 'Connected · status updated at ') + timestamp(p.updatedAtUtc));
+    el('connection').dataset.state = 'online';
+    el('lastKnown').hidden = true;
+    el('reconnectAdvice').hidden = true;
+    const activityAge = Date.now() - Date.parse(p.lastActivityAtUtc);
+    el('activity').hidden = terminal || ['queued','failed'].includes(p.phase) || !Number.isFinite(activityAge) || activityAge < 30000;
+    if (!el('activity').hidden && p.phase === 'stopping') set('activity',t('设置页面仍在运行，正在等待应用保存并释放数据文件。后台任务收尾可能需要较长时间。','Setup is still running and waiting for the app to save and release its data files. Finishing background tasks may take time.'));
+    else if (!el('activity').hidden) set('activity', t('服务有响应；最近一次工作进度更新于 ', 'The server is responding; the last work update was at ') + timestamp(p.lastActivityAtUtc) + t('。大文件、完整性校验或数据库升级可能需要较长时间；暂时没有新进度不代表失败。', '. Large files, integrity checks or database upgrades can take time. No new work update does not mean failure.'));
+    const copying = p.phase === 'copying';
+    const percent = p.totalBytes > 0 ? Math.max(0, Math.min(100, p.completedBytes / p.totalBytes * 100)) : 0;
+    set('percent', copying ? percent.toFixed(1) + '%' : '');
+    el('bar').hidden = terminal || ['queued','failed'].includes(p.phase);
+    if (copying) el('bar').value = percent; else el('bar').removeAttribute('value');
+    set('size', bytes(p.completedBytes) + ' / ' + bytes(p.totalBytes));
+    set('files', count(p.completedFiles) + ' / ' + count(p.totalFiles));
+    set('speed', copying && p.bytesPerSecond > 0 ? bytes(p.bytesPerSecond) + '/s' : '—');
+    set('elapsed', duration(p.elapsedSeconds));
+    set('eta', copying && p.remainingSeconds != null ? t('预计复制剩余约 ', 'Estimated copy time remaining: ') + duration(p.remainingSeconds) + t('；不包含后续检查和数据库升级。', '; excludes checks and database upgrades.') : '');
+    let explanation = t('此阶段正在执行，暂时无法准确估算剩余时间。', 'This stage is running; remaining time cannot yet be estimated.');
+    if (p.phase === 'queued') explanation = p.automaticMaintenance
+      ? t('设置程序会协调应用停止、执行和重新启动。请等待状态更新，无需重复确认或手动重启。','Setup coordinates stopping the app, applying the change and starting it again. Wait for the next status update; no second confirmation or manual restart is needed.')
+      : t('此操作不会自动停止或重启服务。请先正常退出应用或停止服务，再重新启动；Docker 可运行 docker compose restart。重启前可返回配置取消。', 'This operation does not stop or restart the server automatically. Quit the app or stop the service, then start it again; for Docker, use docker compose restart. You can cancel from settings before restarting.');
+    if (p.phase === 'stopping') explanation = t('正在等待当前应用安全停止并释放数据文件。只有应用退出后才会开始修改数据；设置页面会保持可用。','Waiting for the current app to stop safely and release its data files. Data changes begin only after it exits; this setup page stays available.');
+    if (p.phase === 'scanning') explanation = t('已发现 ', 'Discovered ') + count(p.totalFiles) + t(' 个文件，合计 ', ' files, ') + bytes(p.totalBytes) + t('；扫描完成后确定总量。', '; totals are final after scanning.');
+    if (copying) explanation = t('百分比仅表示文件复制。大文件复制时也会更新字节数，达到 100% 后仍需校验与启动。', 'The percentage covers file copying only. Bytes update during large files; 100% still requires checks and startup.');
+    if (p.phase === 'verifying') explanation = finalVerification
+      ? t('正在检查安装后的数据库，确认可用后才会启动主应用。', 'Checking the installed databases before starting the main app.')
+      : t('正在检查数据完整性；大型数据库校验时可能暂时没有新的文件或字节进度。', 'Checking data integrity. A large database may take time without new file or byte updates.');
+    if (p.phase === 'backing-up') explanation = t('正在保留当前数据的备份，请勿移动或清理数据目录。', 'Preserving a backup of the current data. Do not move or clean up the data folders.');
+    if (p.phase === 'installing') explanation = retainingDirectory
+      ? t('正在准备新保存位置并记录切换结果，原目录会保留。', 'Preparing the new location and recording the switch. The previous directory is retained.')
+      : t('正在安装已复制的数据。若中断，重新启动后会按保存的记录恢复。', 'Installing the copied data. If interrupted, restarting recovers from the saved record.');
+    if (p.totalEntries > 0 && !copying && !terminal && p.phase !== 'failed') explanation += ' ' + p.completedEntries + ' / ' + p.totalEntries;
+    if (p.phase === 'starting') explanation = initializing
+      ? t('正在创建媒体库并启动应用，请保持进程运行。服务确认就绪后将显示完成。', 'Creating the library and starting the app. Keep the process running; completion appears when the server confirms it is ready.')
+      : t('数据文件已准备好，正在升级数据库并启动主应用。文件复制完成不代表服务已就绪，请继续等待。', 'The data files are prepared. Database upgrades and main app startup are in progress. Finished copying does not mean the server is ready; please wait.');
+    if (p.phase === 'completed') explanation = initializing
+      ? t('现在可以打开应用，开始添加媒体。', 'You can now open the app and add your media.')
+      : t('现在可以打开应用，检查资源、封面与媒体路径。', 'You can now open the app and check resources, covers and media paths.');
+    if (p.phase === 'cancelled') explanation = relocating
+      ? t('待执行的目录变更已取消，仍使用当前目录。', 'The pending directory move was cancelled; the current folder is still in use.')
+      : t('待执行的导入已取消，未替换当前数据。', 'The pending import was cancelled. Current data was not replaced.');
+    if (p.phase === 'failed') explanation = p.automaticMaintenance
+      ? t('执行已停止。设置页面仍可查看失败原因；不会把进程退出或断连当作完成，也不会自动重试。','The operation has stopped. Setup remains available to show the cause. A process exit or disconnect is not completion, and no automatic retry is running.')
+      : t('服务已报告失败。请按下方建议处理后手动重启；本页会继续等待恢复。', 'The server reported a failure. Follow the steps below, then restart manually. This page will keep waiting for recovery.');
+    set('explanation', explanation);
+    el('fileInfo').hidden = !p.currentFile; set('file', p.currentFile || '');
+    el('failure').hidden = p.phase !== 'failed';
+    if (p.phase === 'failed') {
+      const failedPhase = p.failedPhase || lastActivePhase;
+      set('failureTitle', failedPhase && failedPhase !== 'failed' ? t('失败阶段：', 'Failed during: ') + phaseLabel(p, failedPhase) : t('执行未完成', 'The operation did not finish'));
+      set('failureAdvice', failureAdvice(p));
+    }
+    el('errorDetails').hidden = !p.error; set('error', p.error || '');
+    el('backup').hidden = !p.backupPath || (!retainingDirectory && !['completed','failed','backing-up','installing','starting'].includes(p.phase));
+    set('backup', (retainingDirectory ? t('保留的原数据目录：', 'Retained previous data directory: ') : t('备份位置（备份阶段开始后创建）：', 'Backup location (created when backup begins): ')) + (p.backupPath || ''));
+    el('return').hidden = !['completed','cancelled'].includes(p.phase) && !(p.phase === 'queued' && !p.automaticMaintenance);
+    set('return', p.phase === 'completed' ? t('打开应用', 'Open the app') : t('返回配置', 'Back to settings'));
+    lastStatus = p; lastConfirmedAt = Date.now(); offlineSince = null;
+    if (terminal) stopped = true;
+  }
+  function showLastKnown() {
+    el('lastKnown').hidden = false;
+    set('lastKnown', lastStatus
+      ? t('最后确认：', 'Last confirmed: ') + phaseLabel(lastStatus) + t('（', ' (') + timestamp(lastConfirmedAt) + t('）。以下内容是上次收到的状态。', '). The information below is the last received status.')
+      : t('尚未收到服务状态，无法确认任务是否开始或完成。', 'No server status has been received yet. Whether the operation has started or finished is unknown.'));
+  }
+  function disconnected() {
+    if (offlineSince == null) offlineSince = Date.now();
+    const longDisconnect = Date.now() - offlineSince >= 30000;
+    set('connection', longDisconnect
+      ? t('仍未能确认服务状态 · 已断连 ', 'Service status is still unconfirmed · disconnected for ') + duration((Date.now() - offlineSince) / 1000) + t('，继续自动重连。', '; retrying automatically.')
+      : t('连接暂时中断，正在自动重连。断连不代表任务成功或失败。', 'Connection interrupted. Reconnecting automatically; a disconnect does not mean success or failure.'));
+    el('connection').dataset.state = 'offline';
+    showLastKnown();
+    el('activity').hidden = true;
+    // Keep the reported values, but do not show a live activity animation while disconnected.
+    el('bar').hidden = true;
+    el('reconnectAdvice').hidden = !longDisconnect;
+    set('reconnectAdvice', lastStatus?.automaticMaintenance
+      ? t('暂时无法联系设置程序，请检查网络和日志。如果 Bakabase 已退出，重新启动后可按保存记录恢复；本页会持续重连。不要因为断连而删除或移动数据目录。','Setup cannot be reached right now. Check the network and logs. If Bakabase has exited, restart it to recover from the saved record; this page keeps reconnecting. Do not delete or move data folders because of a disconnect.')
+      : t('请检查应用或服务进程、网络及服务日志。如果进程已退出，手动重新启动即可按保存的记录恢复；本页会继续重连，也可刷新读取保存状态。不要因为断连而删除或移动数据目录。', 'Check the app or server process, network and server logs. If the process has exited, restart it manually to recover from the saved record. This page keeps reconnecting; refreshing also reads the saved state. Do not delete or move data folders because of a disconnect.'));
+  }
+  async function poll() {
+    const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), 5000);
+    try {
+      const response = await fetch(endpoint, {headers:{'X-Bakabase-Import-Token':token}, credentials:'omit', cache:'no-store', signal:controller.signal});
+      if (response.status === 401) {
+        stopped = true; el('bar').hidden = true; el('activity').hidden = true;
+        set('connection', t('进度链接无效或没有查看权限，已停止重连。这不代表任务失败。', 'The progress link is invalid or unauthorized. Reconnecting has stopped; this does not mean the operation failed.'));
+        el('connection').dataset.state = 'offline'; showLastKnown();
+        el('reconnectAdvice').hidden = false;
+        set('reconnectAdvice', t('请从应用配置重新打开进度，或使用最近一次服务启动日志中的进度链接。获取有效链接前，无法确认当前执行状态。', 'Reopen progress from the app settings, or use the progress link in the latest server startup logs. The current execution state cannot be confirmed without a valid link.'));
+      } else {
+        if (!response.ok) throw new Error('unavailable');
+        render(await response.json());
+      }
+    } catch { disconnected(); }
+    finally { clearTimeout(timer); if (!stopped) setTimeout(poll, 1500); }
+  }
+  if (/^[a-f0-9]{64}$/i.test(token)) poll();
+  else {
+    el('bar').hidden = true; el('metrics').hidden = true; el('timelineSection').hidden = true;
+    set('phase', t('需要有效的进度链接', 'A valid progress link is required'));
+    set('connection', t('请从应用配置或最近一次服务启动日志中打开进度链接。', 'Open the progress link from the app settings or the latest server startup logs.'));
+  }
+})();
+</script>
+</body></html>
