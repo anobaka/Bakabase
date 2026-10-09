@@ -1,4 +1,5 @@
 using Bakabase.InsideWorld.Business.Components.Dependency.Discovery;
+using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -54,6 +55,41 @@ public class ExecutableDiscovererTests
         Assert.AreEqual(Native, result!.Value.Location);
         Assert.AreEqual("native", result.Value.Version);
         Assert.AreEqual("Windows executable remains untouched", File.ReadAllText(imported));
+    }
+
+    [DataTestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task ImportedFfMpegPairUsesNativePathWhenItsProbeIsForWindows(bool hasNativeFfMpeg)
+    {
+        RequireUnix();
+        var importedProbe = Path.Combine(Default, "ffprobe.exe");
+        File.WriteAllText(importedProbe, "Imported Windows ffprobe stays intact");
+        if (hasNativeFfMpeg)
+            Script(Path.Combine(Default, "ffmpeg"), "ffmpeg version 7.0-imported Copyright FFmpeg");
+        else
+            File.WriteAllText(Path.Combine(Default, "ffmpeg.exe"), "Imported Windows ffmpeg");
+        Script(Path.Combine(Native, "ffmpeg"), "ffmpeg version 6.1.1-native Copyright FFmpeg");
+        Script(Path.Combine(Native, "ffprobe"), "ffprobe version 6.1.1-native Copyright FFmpeg");
+
+        var result = await new FfMpegDiscoverer(NullLoggerFactory.Instance).Discover(Default, default);
+
+        Assert.IsNotNull(result);
+        Assert.AreEqual(Native, result.Value.Location);
+        Assert.AreEqual("6.1.1-native", result.Value.Version);
+        Assert.AreEqual("Imported Windows ffprobe stays intact", File.ReadAllText(importedProbe));
+    }
+
+    [TestMethod]
+    public async Task FfMpegWithoutANativeFfProbeIsNotReportedAsInstalled()
+    {
+        RequireUnix();
+        Script(Path.Combine(Native, "ffmpeg"), "ffmpeg version 6.1.1-native Copyright FFmpeg");
+        File.WriteAllText(Path.Combine(Native, "ffprobe.exe"), "Windows ffprobe is not a Unix executable");
+
+        var result = await new FfMpegDiscoverer(NullLoggerFactory.Instance).Discover(Default, default);
+
+        Assert.IsNull(result);
     }
 
     [TestMethod]
