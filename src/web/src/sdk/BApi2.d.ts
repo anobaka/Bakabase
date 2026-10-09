@@ -996,6 +996,173 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/app/data-path/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Object]"];
+                        "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Object]"];
+                        "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Object]"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.AppDataImportController+ImportRequest"];
+                    "application/json": components["schemas"]["Bakabase.Service.Controllers.AppDataImportController+ImportRequest"];
+                    "text/json": components["schemas"]["Bakabase.Service.Controllers.AppDataImportController+ImportRequest"];
+                    "application/*+json": components["schemas"]["Bakabase.Service.Controllers.AppDataImportController+ImportRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                        "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                        "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    };
+                };
+            };
+        };
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                        "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                        "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/app/data-path/import/setup-session": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                        "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                        "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/app/data-path/import/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.AppDataImportController+ImportRequest"];
+                    "application/json": components["schemas"]["Bakabase.Service.Controllers.AppDataImportController+ImportRequest"];
+                    "text/json": components["schemas"]["Bakabase.Service.Controllers.AppDataImportController+ImportRequest"];
+                    "application/*+json": components["schemas"]["Bakabase.Service.Controllers.AppDataImportController+ImportRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.ServerData.ServerAppDataImport+Validation]"];
+                        "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.ServerData.ServerAppDataImport+Validation]"];
+                        "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.ServerData.ServerAppDataImport+Validation]"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/app/data-path/validate": {
         parameters: {
             query?: never;
@@ -1038,6 +1205,101 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["DismissLegacyInstallNotice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/app/data-path/relocation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Object]"];
+                        "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Object]"];
+                        "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Object]"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                        "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                        "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/app/data-path/relocation/setup-session": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                        "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                        "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -2948,6 +3210,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/app/deployment-paths": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetDeploymentPaths"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/dlsite-work": {
         parameters: {
             query?: never;
@@ -4446,6 +4724,38 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["OpenManagedServer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/file/storage-roots": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetUserStorageRoots"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/file/validate-storage-paths": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ValidateUserStoragePaths"];
         delete?: never;
         options?: never;
         head?: never;
@@ -7136,6 +7446,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/remote-access/advertised-address": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["SetRemoteAccessAdvertisedAddress"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/remote-access/address-candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ObserveRemoteAccessAddress"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/remote-access/live-transcode": {
         parameters: {
             query?: never;
@@ -8346,6 +8688,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["BindPropertyToMatchingProfiles"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/app/resource-usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetResourceUsage"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -11000,6 +11358,7 @@ export interface components {
             resource?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIOptions+UIResourceOptions"];
             startupPage?: components["schemas"]["Bakabase.InsideWorld.Models.Constants.StartupPage"];
             isMenuCollapsed?: boolean;
+            showResourceUsage?: boolean;
             hideResourceCovers?: boolean;
             resourceDetailLayout?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIOptions+ResourceDetailLayoutConfig"];
             latestUsedProperties?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIOptions+PropertyKey"][];
@@ -11476,6 +11835,7 @@ export interface components {
             resource: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIOptions+UIResourceOptions"];
             startupPage: components["schemas"]["Bakabase.InsideWorld.Models.Constants.StartupPage"];
             isMenuCollapsed: boolean;
+            showResourceUsage: boolean;
             hideResourceCovers: boolean;
             resourceDetailLayout?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIOptions+ResourceDetailLayoutConfig"];
             latestUsedProperties: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIOptions+PropertyKey"][];
@@ -14652,6 +15012,18 @@ export interface components {
             lineNumber: number;
             alreadyKnown: boolean;
         };
+        "Bakabase.Service.Components.ServerData.ServerAppDataImport+Validation": {
+            valid: boolean;
+            error?: string;
+            sourcePath: string;
+            currentPath: string;
+            sourceVersion?: string;
+            originalDataPath?: string;
+        };
+        "Bakabase.Service.Controllers.AppDataImportController+ImportRequest": {
+            sourcePath: string;
+            originalDataPath?: string;
+        };
         "Bakabase.Service.Controllers.AppDataPathController+RelocateRequest": {
             targetPath: string;
             mode: components["schemas"]["Bakabase.Infrastructures.Components.App.Relocation.RelocationMode"];
@@ -14962,6 +15334,12 @@ export interface components {
             presetSiteIds?: string[];
             customSites?: string[];
         };
+        "Bakabase.Service.Models.Input.RemoteAccessAddressCandidateInputModel": {
+            address: string;
+        };
+        "Bakabase.Service.Models.Input.RemoteAccessAdvertisedAddressInputModel": {
+            address?: string;
+        };
         "Bakabase.Service.Models.Input.RemoteAccessDeviceNameInputModel": {
             name?: string;
         };
@@ -15084,6 +15462,9 @@ export interface components {
         };
         "Bakabase.Service.Models.Input.TextTypePatchInputModel": {
             name: string;
+        };
+        "Bakabase.Service.Models.Input.UserStoragePathsInputModel": {
+            paths: string[];
         };
         "Bakabase.Service.Models.View.AcquisitionCandidateLeadViewModel": {
             /** Format: int32 */
@@ -15380,6 +15761,16 @@ export interface components {
             percentage?: number;
             message?: string;
         };
+        "Bakabase.Service.Models.View.DeploymentPathViewModel": {
+            serverPath: string;
+            hostPath?: string;
+            storageKind: string;
+            readOnly?: boolean;
+        };
+        "Bakabase.Service.Models.View.DeploymentPathsViewModel": {
+            isContainer: boolean;
+            paths: components["schemas"]["Bakabase.Service.Models.View.DeploymentPathViewModel"][];
+        };
         "Bakabase.Service.Models.View.DownloadResultViewModel": {
             /** Format: int32 */
             id: number;
@@ -15528,6 +15919,7 @@ export interface components {
             error?: string;
         };
         "Bakabase.Service.Models.View.RemoteAccessAddressViewModel": {
+            source?: string;
             url: string;
             interfaceName: string;
             kind?: components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.RemoteAccessAddressKind"];
@@ -15545,6 +15937,7 @@ export interface components {
             serverId?: string;
             serverName?: string;
             cookieCaptureAvailable: boolean;
+            federationAvailable: boolean;
         };
         "Bakabase.Service.Models.View.RemoteAccessDeviceViewModel": {
             id: string;
@@ -15609,6 +16002,7 @@ export interface components {
             platform?: components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.RemoteDevicePlatform"];
         };
         "Bakabase.Service.Models.View.RemoteAccessSettingsViewModel": {
+            advertisedAddress?: string;
             mode: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.RemoteAccessMode"];
             addresses: components["schemas"]["Bakabase.Service.Models.View.RemoteAccessAddressViewModel"][];
             allowLiveTranscode: boolean;
@@ -15739,6 +16133,19 @@ export interface components {
             pageSize: number;
             tags?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceTag"][];
         };
+        "Bakabase.Service.Models.View.ResourceUsageViewModel": {
+            /** Format: double */
+            cpuPercent?: number;
+            /** Format: int64 */
+            memoryBytes: number;
+            /** Format: int64 */
+            dataDirectoryBytes?: number;
+            /** Format: date-time */
+            dataDirectoryUpdatedAt?: string;
+            dataDirectoryScanning: boolean;
+            dataDirectoryPartial: boolean;
+            dataDirectoryUnavailable: boolean;
+        };
         "Bakabase.Service.Models.View.SavedSearchViewModel": {
             id: string;
             search: components["schemas"]["Bakabase.Service.Models.View.ResourceSearchViewModel"];
@@ -15757,6 +16164,16 @@ export interface components {
             enabledEnhancers: string[];
             aiEnabled: boolean;
             hasMediaLibrary: boolean;
+        };
+        "Bakabase.Service.Models.View.UserStorageRootViewModel": {
+            path: string;
+            name: string;
+            storageKind: string;
+            readOnly?: boolean;
+        };
+        "Bakabase.Service.Models.View.UserStorageRootsViewModel": {
+            isRestricted: boolean;
+            roots: components["schemas"]["Bakabase.Service.Models.View.UserStorageRootViewModel"][];
         };
         "Bootstrap.Components.Logging.LogService.Models.Entities.Log": {
             /** Format: int32 */
@@ -17220,6 +17637,12 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Components.Acquisition.SharedListImportResult"];
         };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.ServerData.ServerAppDataImport+Validation]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Components.ServerData.ServerAppDataImport+Validation"];
+        };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Controllers.AppDataPathController+ValidateResponse]": {
             /** Format: int32 */
             code: number;
@@ -17303,6 +17726,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Models.View.DashboardOverviewViewModel"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.DeploymentPathsViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Models.View.DeploymentPathsViewModel"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.FilePlayabilityViewModel]": {
             /** Format: int32 */
@@ -17394,6 +17823,12 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Models.View.ResourceSearchViewModel"];
         };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceUsageViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Models.View.ResourceUsageViewModel"];
+        };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.SavedSearchViewModel]": {
             /** Format: int32 */
             code: number;
@@ -17405,6 +17840,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Models.View.TelemetrySnapshotViewModel"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.UserStorageRootsViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Models.View.UserStorageRootsViewModel"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Boolean]": {
             /** Format: int32 */
@@ -17484,6 +17925,12 @@ export interface components {
             message?: string;
             /** Format: int32 */
             data: number;
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Object]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: unknown;
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[System.String]": {
             /** Format: int32 */
@@ -24131,6 +24578,28 @@ export interface operations {
             };
         };
     };
+    GetDeploymentPaths: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.DeploymentPathsViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.DeploymentPathsViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.DeploymentPathsViewModel]"];
+                };
+            };
+        };
+    };
     GetAllDLsiteWorks: {
         parameters: {
             query?: {
@@ -26918,6 +27387,57 @@ export interface operations {
                     "text/plain": components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerOpenView"];
                     "application/json": components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerOpenView"];
                     "text/json": components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerOpenView"];
+                };
+            };
+        };
+    };
+    GetUserStorageRoots: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.UserStorageRootsViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.UserStorageRootsViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.UserStorageRootsViewModel]"];
+                };
+            };
+        };
+    };
+    ValidateUserStoragePaths: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.UserStoragePathsInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.UserStoragePathsInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.UserStoragePathsInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.UserStoragePathsInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                 };
             };
         };
@@ -32622,6 +33142,64 @@ export interface operations {
             };
         };
     };
+    SetRemoteAccessAdvertisedAddress: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.RemoteAccessAdvertisedAddressInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.RemoteAccessAdvertisedAddressInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.RemoteAccessAdvertisedAddressInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.RemoteAccessAdvertisedAddressInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    ObserveRemoteAccessAddress: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.RemoteAccessAddressCandidateInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.RemoteAccessAddressCandidateInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.RemoteAccessAddressCandidateInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.RemoteAccessAddressCandidateInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
     SetRemoteAccessLiveTranscode: {
         parameters: {
             query?: never;
@@ -34934,6 +35512,28 @@ export interface operations {
             };
         };
     };
+    GetResourceUsage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceUsageViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceUsageViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceUsageViewModel]"];
+                };
+            };
+        };
+    };
     GetSourceMetadataMappings: {
         parameters: {
             query?: never;
@@ -35395,7 +35995,9 @@ export interface operations {
     };
     GetTampermonkeyScript: {
         parameters: {
-            query?: never;
+            query?: {
+                apiEndpoint?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;

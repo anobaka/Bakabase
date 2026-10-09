@@ -32,6 +32,12 @@ def require(condition, message):
         raise AssertionError(message)
 
 
+def check_desktop_url_scheme(info):
+    handlers = info.get("CFBundleURLTypes", [])
+    require(any("bakabase" in handler.get("CFBundleURLSchemes", []) for handler in handlers),
+            "macOS bundle is missing the bakabase desktop URL scheme")
+
+
 def workflow_job(text, name):
     match = re.search(r"^  " + re.escape(name) + r":\s*\n(.*?)(?=^  [\w-]+:\s*\n|\Z)", text, re.M | re.S)
     require(match is not None, f"Missing workflow job {name}")
@@ -65,6 +71,7 @@ def check_sources(root):
             info = plistlib.load(stream)
             require(info["CFBundleIdentifier"] == product["bundle"], f"{role}: macOS bundle identity changed")
             require(info.get("CFBundleExecutable") == product["assembly"], f"{role}: macOS executable missing or incorrect")
+            check_desktop_url_scheme(info)
         host = (root / product["host"]).read_text(encoding="utf-8")
         require(re.search(r'SingleInstanceId\s*=>\s*"' + re.escape(product["assembly"]) + r'"', host),
                 f"{role}: single-instance identity changed")
@@ -157,6 +164,7 @@ def check_macos_portable(archive, role, version):
         require(info.get("CFBundleIdentifier") == product["bundle"], "Packaged macOS identity changed")
         require(info.get("CFBundleExecutable") == product["assembly"], "Packaged macOS executable missing or incorrect")
         require(info.get("CFBundlePackageType") == "APPL", "Portable bundle is not an application")
+        check_desktop_url_scheme(info)
         core = version.split("-", 1)[0].split("+", 1)[0]
         require(info.get("CFBundleVersion") == core and info.get("CFBundleShortVersionString") == core,
                 "Packaged macOS version differs from the release")

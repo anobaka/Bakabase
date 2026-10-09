@@ -3,35 +3,64 @@ import type { BTask } from "@/core/models/BTask";
 import { create } from "zustand";
 import _ from "lodash";
 
+import i18n from "@/i18n";
+import { localizeBTask } from "@/core/bTaskLocalization";
 import { BTaskResourceType, BTaskStatus, BTaskType } from "@/sdk/constants";
 
 interface BTasksState {
   tasks: BTask[];
+  sourceTasks: BTask[];
   setTasks: (tasks: BTask[]) => void;
   removeTask: (id: string) => void;
   updateTask: (task: BTask) => void;
 }
 
+const projectTasks = (tasks: BTask[]) => tasks.map((task) => localizeBTask(task, i18n.language));
+
 export const useBTasksStore = create<BTasksState>((set) => ({
   tasks: [],
-  setTasks: (tasks) => set({ tasks: _.sortBy(tasks, (x) => x.createdAt) }),
-  removeTask: (id) => set((state) => ({ tasks: state.tasks.filter((t) => t.id !== id) })),
+  sourceTasks: [],
+  setTasks: (tasks) => {
+    const sourceTasks = _.sortBy(tasks, (task) => task.createdAt);
+
+    set({ sourceTasks, tasks: projectTasks(sourceTasks) });
+  },
+  removeTask: (id) =>
+    set((state) => ({
+      sourceTasks: state.sourceTasks.filter((task) => task.id !== id),
+      tasks: state.tasks.filter((task) => task.id !== id),
+    })),
   updateTask: (task) =>
     set((state) => {
-      const idx = state.tasks.findIndex((t) => t.id === task.id);
-      const newState = state.tasks.slice();
+      const sourceTasks = state.sourceTasks.slice();
+      const index = sourceTasks.findIndex((item) => item.id === task.id);
 
-      if (idx > -1) {
-        newState[idx] = task;
-      } else {
-        newState.push(task);
+      if (index >= 0) sourceTasks[index] = task;
+      else sourceTasks.push(task);
+      const sorted = index >= 0 ? sourceTasks : _.sortBy(sourceTasks, (item) => item.createdAt);
 
-        return { tasks: _.sortBy(newState, (x) => x.createdAt) };
-      }
+      const tasks = state.tasks.slice();
+      const projected = localizeBTask(task, i18n.language);
+      const visibleIndex = tasks.findIndex((item) => item.id === task.id);
 
-      return { tasks: newState };
+      if (visibleIndex >= 0) tasks[visibleIndex] = projected;
+      else tasks.push(projected);
+
+      return {
+        sourceTasks: sorted,
+        tasks: visibleIndex >= 0 ? tasks : _.sortBy(tasks, (item) => item.createdAt),
+      };
     }),
 }));
+
+const updateTaskLanguage = () =>
+  useBTasksStore.setState((state) => ({
+    tasks: projectTasks(state.sourceTasks),
+  }));
+
+i18n.on("languageChanged", updateTaskLanguage);
+// Avoid retaining subscriptions when this module is replaced during development.
+if (import.meta.hot) import.meta.hot.dispose(() => i18n.off("languageChanged", updateTaskLanguage));
 
 // Memoized selectors
 export const selectTasks = (state: BTasksState) => state.tasks;

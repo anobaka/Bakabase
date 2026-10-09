@@ -9,7 +9,7 @@ import { useTranslation } from "react-i18next";
 import Urls from "@/cons/Urls";
 import qqGroupImg from "@/assets/qq-group.png";
 import { Button } from "@/components/bakaui";
-import BApi from "@/sdk/BApi";
+import { openExternalUrl } from "@/utils/openExternalUrl";
 import SettingsSection from "@/pages/configuration/components/SettingsSection";
 
 const contacts: SettingItem[] = [
@@ -22,7 +22,7 @@ const contacts: SettingItem[] = [
         color={"default"}
         size={"sm"}
         onClick={() => {
-          BApi.gui.openUrlInDefaultBrowser({ url: Urls.Github });
+          openExternalUrl(Urls.Github);
         }}
       >
         <GithubOutlined className={"text-lg"} />

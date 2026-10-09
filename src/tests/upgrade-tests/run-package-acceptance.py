@@ -14,9 +14,9 @@ import json
 import os
 from pathlib import Path, PurePosixPath
 import platform
+import re
 import shutil
 import signal
-import socket
 import sqlite3
 import stat
 import subprocess
@@ -24,6 +24,7 @@ import tempfile
 import threading
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
 import zipfile
@@ -33,6 +34,9 @@ contract = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(contract)
 ROOT = Path(__file__).resolve().parents[3]
 MAX_ARCHIVE_BYTES = 2 * 1024 ** 3
+SETUP_HEADER = "X-Bakabase-Setup-Token"
+MONITOR_HEADER = "X-Bakabase-Import-Token"
+MONITOR_PATH = "/app/data-path/import/progress/status"
 
 
 def require(condition, message):
@@ -233,34 +237,118 @@ def remove_owned_tree(path):
             time.sleep(0.25)
 
 
-def free_port():
-    with socket.socket() as sock:
-        sock.bind(("127.0.0.1", 0))
-        return sock.getsockname()[1]
-
-
 def prepare_data(directory):
     directory.mkdir(parents=True)
-    port = free_port()
-    (directory / "app.json").write_text(json.dumps({"App": {"language": "en-US", "enableAnonymousDataTracking": False,
-        "listeningPorts": [port], "autoListeningPortCount": 0, "maxParallelism": 1}}))
-    (directory / "acceptance-sentinel.txt").write_text("installer acceptance owned external AppData\n")
-    return port
+    # The real first-run wizard requires an empty target. Configs and sentinel
+    # files may only be created after the user-equivalent setup confirmation.
 
 
-def api(port, path, payload=None):
+def api(port, path, payload=None, headers=None):
     body = None if payload is None else json.dumps(payload).encode()
     request = urllib.request.Request(f"http://127.0.0.1:{port}{path}", data=body,
-                                     headers={"Content-Type": "application/json"})
+                                     headers={"Content-Type": "application/json", **(headers or {})})
     opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
     with opener.open(request, timeout=3) as response:
         return response.read(8 * 1024 * 1024)
 
 
-def inspect_running(executable, data, port):
+def expect_http(status, port, path, payload=None, headers=None):
+    try:
+        api(port, path, payload, headers)
+    except urllib.error.HTTPError as error:
+        require(error.code == status, f"Expected HTTP {status} from {path}, got {error.code}")
+    else:
+        raise AssertionError(f"Expected HTTP {status} from {path}")
+
+
+def setup_connection(log, data):
+    text = log.read_text(encoding="utf-8", errors="replace")
+    links = re.findall(r"Server setup: (http://127\.0\.0\.1:[0-9]+/setup#setupToken=[A-Fa-f0-9]{64})(?![A-Fa-f0-9])", text)
+    require(links, "The captured portable process has not announced first-run Setup")
+    url = urllib.parse.urlsplit(links[-1])
+    token = urllib.parse.parse_qs(url.fragment)["setupToken"][0]
+    saved = json.loads((data / ".bakabase-server-setup.json").read_text(encoding="utf-8-sig"))
+    require(saved.get("token") == token, "Setup capability does not belong to the owned data fixture")
+    require(url.port and 0 < url.port < 65536, "Invalid local Setup port")
+    return url.port, token
+
+
+def initialize_empty(data, log, timeout=120):
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            port, token = setup_connection(log, data)
+            status = json.loads(api(port, "/setup/status", headers={SETUP_HEADER: token}))
+            break
+        except (OSError, ValueError, KeyError, AssertionError, urllib.error.URLError):
+            time.sleep(0.2)
+    else:
+        raise TimeoutError("The owned portable process did not expose authenticated first-run Setup")
+    require(status.get("mode") == "first-run" and not status.get("isDocker") and
+            not status.get("submitted") and status.get("canBrowse"), "Native first-run Setup was not available")
+    require(Path(status["currentPath"]).resolve() == data.resolve(), "Setup target escaped the owned data fixture")
+    require(not status.get("canChooseTargetPath"), "The explicit portable data override must stay fixed")
+    require(not (data / "app.json").exists() and not list(data.glob("*.db")),
+            "Application configuration or databases were created before setup confirmation")
+    expect_http(401, port, "/setup/status")
+    expect_http(401, port, "/setup/apply", {"operation": "initialize"})
+    selection = {"operation": "initialize"}
+    validation = json.loads(api(port, "/setup/validate", selection, {SETUP_HEADER: token}))
+    require(validation.get("valid"), "The genuine empty setup target was rejected")
+    result = json.loads(api(port, "/setup/apply", selection, {SETUP_HEADER: token}))
+    require(result.get("requiresRestart") is False, "First-run Setup requested an external restart")
+    monitor = result.get("monitorToken")
+    require(isinstance(monitor, str) and len(monitor) == 64 and monitor != token,
+            "Setup did not issue a separate monitoring capability")
+    operation = result["progress"]["id"]
+    phases = []
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            progress = json.loads(api(port, MONITOR_PATH, headers={MONITOR_HEADER: monitor}))
+        except (OSError, ValueError, urllib.error.URLError):
+            time.sleep(0.2)
+            continue
+        require(progress.get("id") == operation, "Setup monitoring returned a different operation")
+        phase = progress.get("phase")
+        if not phases or phases[-1] != phase:
+            phases.append(phase)
+        require(phase != "failed", "First-run Setup reported failure; see sanitized application logs")
+        if phase == "completed":
+            break
+        time.sleep(0.2)
+    else:
+        raise TimeoutError("Native first-run Setup did not complete")
+    expect_http(401, port, "/setup/apply", selection, {SETUP_HEADER: token})
+    expect_http(401, port, "/setup/apply", selection, {SETUP_HEADER: monitor})
+    return {"authenticatedInitialization": True, "noDatabaseBeforeConfirmation": True,
+            "setupCapabilityRevoked": True, "phases": phases, "passed": True}
+
+
+def remembered_ports(data):
+    value = json.loads((data / "listening-ports.json").read_text(encoding="utf-8-sig"))
+    ports = value.get("lastUsed", [])
+    require(isinstance(ports, list) and ports and all(type(port) is int and 0 < port < 65536 for port in ports),
+            "The owned data directory has no valid listening-port memory")
+    return ports
+
+
+def copy_initialized_data(source, target):
+    require((source / "bakabase_insideworld.db").is_file(), "Install continuity requires a genuinely initialized library")
+    require(not target.exists(), "Install continuity target must be a new owned directory")
+    shutil.copytree(source, target, ignore=shutil.ignore_patterns(".bakabase.lock", ".bakabase-setup-process.lock"))
+
+
+def redact_setup_tokens(text):
+    return re.sub(r'((?:setupToken|monitorToken|token|X-Bakabase-(?:Setup|Import)-Token)[\s"\'=:]+)[A-Fa-f0-9]{64}',
+                  r'\1[REDACTED]', text, flags=re.IGNORECASE)
+
+
+def inspect_running(executable, data, create_resource=True):
     deadline, last = time.monotonic() + 120, None
     while time.monotonic() < deadline:
         try:
+            port = remembered_ports(data)[0]
             response = json.loads(api(port, "/app/info"))
             require(response["code"] == 0, "Application info failed")
             info = response["data"]
@@ -278,12 +366,14 @@ def inspect_running(executable, data, port):
     page = api(port, "/")
     require(b"<html" in page.lower() and b"<script" in page.lower(), "Application did not serve its actual UI")
     api(port, "/app/terms", {})
-    created = json.loads(api(port, "/resource/placeholder", {"items": [{"title": "Native package acceptance"}],
-                                                          "acquireImmediately": False}))["data"]
-    require(len(created) == 1 and created[0].get("resourceId") and not created[0].get("error"),
-            "Installed authoritative library could not persist a resource")
+    if create_resource:
+        created = json.loads(api(port, "/resource/placeholder", {"items": [{"title": "Native package acceptance"}],
+                                                              "acquireImmediately": False}))["data"]
+        require(len(created) == 1 and created[0].get("resourceId") and not created[0].get("error"),
+                "Installed authoritative library could not persist a resource")
+    identity = json.loads(api(port, "/app/analytics-info"))["data"]["deviceId"]
     return {"executable": str(executable), "processIds": pids, "effectiveDataDirectory": str(data),
-            "appInfo": info, "uiBytes": len(page), "passed": True}
+            "appInfo": info, "deviceId": identity, "uiBytes": len(page), "passed": True}
 
 
 def main():
@@ -305,7 +395,9 @@ def main():
               "headSHA": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
               "scope": "archive-audit-only" if args.audit_only else "native-portable-and-original-installer",
               "limitations": ["No production signing identity, notarization, Gatekeeper or SmartScreen trust is validated.",
-                              "Synthetic acceptance package version; no production feed or published Release is changed."]}
+                              "Synthetic acceptance package version; no production feed or published Release is changed.",
+                              "Portable first-run Setup uses authenticated HTTP; wizard visuals and native folder-picker interactions are not automated.",
+                              "The original installer starts a copy of that genuinely initialized library; it covers existing-data continuity."]}
     try:
         report["packages"] = audit_packages(args.packages, args.role, args.rid, args.version)
         if not args.audit_only:
@@ -402,13 +494,22 @@ def execute(args, results, report):
         content = portable_root / package["portableContent"]
         report["portableContentAudit"] = validate_content(content)
         portable_exe = content / package["manifest"]["mainExe"]
-        port = prepare_data(portable_data)
+        prepare_data(portable_data)
         start_direct(portable_exe, portable_data, "portable")
-        report["portableStartup"] = inspect_running(portable_exe, portable_data, port)
+        report["portableFirstRunSetup"] = initialize_empty(portable_data, results / "portable-app.log")
+        report["portableStartup"] = inspect_running(portable_exe, portable_data)
+        (portable_data / "acceptance-sentinel.txt").write_text("installer acceptance owned external AppData\n")
         report["portableProcessesStopped"] = stop_native(portable_exe)
+        start_direct(portable_exe, portable_data, "portable-restart")
+        report["portableRestart"] = inspect_running(portable_exe, portable_data, create_resource=False)
+        require(report["portableRestart"]["deviceId"] == report["portableStartup"]["deviceId"],
+                "Restart changed the initialized library identity")
+        report["portableRestartProcessesStopped"] = stop_native(portable_exe)
 
         installer = (args.packages / package["artifacts"]["installer"]["file"]).resolve()
-        port = prepare_data(install_data)
+        # Exercise the real installer's existing-library startup with data produced
+        # by Setup above, never a fabricated version that bypasses the wizard.
+        copy_initialized_data(portable_data, install_data)
         if mac:
             expanded = work / "expanded-installer"
             command(["pkgutil", "--expand-full", installer, expanded], results / "pkg-expand.log")
@@ -450,7 +551,9 @@ def execute(args, results, report):
                                       "automaticStartupSuppressedByInstaller": True, "target": str(installed_root)}
             report["installedContentAudit"] = validate_content(installed_exe.parent)
             start_direct(installed_exe, install_data, "installed")
-        report["installedStartup"] = inspect_running(installed_exe, install_data, port)
+        report["installedStartup"] = inspect_running(installed_exe, install_data, create_resource=False)
+        require(report["installedStartup"]["deviceId"] == report["portableStartup"]["deviceId"],
+                "Original installer did not retain the initialized library identity")
         report["installedProcessesStopped"] = stop_native(installed_exe)
         databases = {}
         for label, data in (("portable", portable_data), ("installed", install_data)):
@@ -491,6 +594,12 @@ def execute(args, results, report):
                         stream.seek(max(0, path.stat().st_size - 1024 * 1024))
                         (logs / f"{index}-{path.name}").write_bytes(stream.read())
             cleanup_step(f"Preserve {label} logs", copy_logs)
+
+        def sanitize_logs():
+            for log in results.rglob("*.log"):
+                text = log.read_text(encoding="utf-8", errors="replace")
+                log.write_text(redact_setup_tokens(text), encoding="utf-8")
+        cleanup_step("Redact setup capabilities from captured logs", sanitize_logs)
 
         def uninstall_windows():
             if not mac and updater.exists():

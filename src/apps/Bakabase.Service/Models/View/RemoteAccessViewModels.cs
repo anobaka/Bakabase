@@ -55,10 +55,15 @@ namespace Bakabase.Service.Models.View
         /// device, nor for a container.
         /// </summary>
         public bool CookieCaptureAvailable { get; set; }
+
+        /// <summary>Whether this caller can use this server's multi-device library and sharing interface.</summary>
+        public bool FederationAvailable { get; set; }
     }
 
     public record RemoteAccessAddressViewModel
     {
+        /// <summary>configured, browser, deployment, or interface; absent on older servers.</summary>
+        public string? Source { get; set; }
         public string Url { get; set; } = null!;
 
         public string InterfaceName { get; set; } = null!;
@@ -75,6 +80,7 @@ namespace Bakabase.Service.Models.View
 
     public record RemoteAccessSettingsViewModel
     {
+        public string? AdvertisedAddress { get; set; }
         public RemoteAccessMode Mode { get; set; }
 
         /// <summary>

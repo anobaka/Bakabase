@@ -10,6 +10,7 @@ import ServerSwitcher from "./components/ServerSwitcher";
 import styles from "./index.module.scss";
 
 import AppUpdateBanner from "@/layouts/BasicLayout/components/AppUpdateBanner";
+import ResourceUsage from "@/layouts/BasicLayout/components/ResourceUsage";
 import { Button, Divider, Tooltip } from "@/components/bakaui";
 import { HelpCenterModal } from "@/components/HelpCenter";
 import BApi from "@/sdk/BApi";
@@ -40,6 +41,7 @@ const Navigation = () => {
       <div className={styles.menu}>
         <AntdMenu collapsed={isCollapsed} />
       </div>
+      <ResourceUsage collapsed={isCollapsed} />
       <AppUpdateBanner collapsed={isCollapsed} />
       <div className={"px-2"}>
         <Divider orientation={"horizontal"} />

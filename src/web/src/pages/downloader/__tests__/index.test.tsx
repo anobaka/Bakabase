@@ -229,6 +229,58 @@ afterEach(async () => {
 });
 
 describe("downloader page task selection", () => {
+  it.each([
+    ["MacIntel", "metaKey", "ctrlKey"],
+    ["Win32", "ctrlKey", "metaKey"],
+    ["Linux x86_64", "ctrlKey", "metaKey"],
+  ])("uses %s select-all without taking it from an editor", async (platform, primary, other) => {
+    vi.stubGlobal("navigator", { platform });
+    await act(async () => root.render(<DownloaderPage />));
+    button("Alpha")!.focus();
+    await act(async () => {
+      button("Alpha")!.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "a", [other]: true, bubbles: true }),
+      );
+    });
+    expect(button("downloader.action.stopSelected")).toBeUndefined();
+    await act(async () => {
+      button("Alpha")!.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "a", [primary]: true, bubbles: true }),
+      );
+    });
+    await choose("downloader.action.stopSelected");
+    expect(stopTasks).toHaveBeenLastCalledWith([11, 22, 33]);
+
+    await choose("Alpha");
+    const input = document.createElement("input");
+
+    button("Alpha")!.parentElement!.appendChild(input);
+    input.focus();
+    await act(async () => {
+      input.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "a", [primary]: true, bubbles: true }),
+      );
+    });
+    await choose("downloader.action.stopSelected");
+    expect(stopTasks).toHaveBeenLastCalledWith([11]);
+  });
+
+  it("uses Command-click for Mac multi-selection and leaves Control-click distinct", async () => {
+    vi.stubGlobal("navigator", { platform: "MacIntel" });
+    await act(async () => root.render(<DownloaderPage />));
+    await choose("Alpha");
+    await act(async () => {
+      button("Bravo")!.dispatchEvent(new MouseEvent("click", { metaKey: true, bubbles: true }));
+    });
+    await choose("downloader.action.stopSelected");
+    expect(stopTasks).toHaveBeenLastCalledWith([11, 22]);
+    await act(async () => {
+      button("Charlie")!.dispatchEvent(new MouseEvent("click", { ctrlKey: true, bubbles: true }));
+    });
+    await choose("downloader.action.stopSelected");
+    expect(stopTasks).toHaveBeenLastCalledWith([33]);
+  });
+
   it("starts a direct download with one atomic task action and no extra normal start", async () => {
     await act(async () => root.render(<DownloaderPage />));
     await choose("direct-22");

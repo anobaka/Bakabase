@@ -5,6 +5,8 @@
         <Nullable>enable</Nullable>
     </PropertyGroup>
     <ItemGroup>
+        <EmbeddedResource Include="Components/ServerData/ImportProgress.html" LogicalName="Bakabase.Service.ImportProgress.html" />
+        <EmbeddedResource Include="Components/ServerData/ServerSetup.html" LogicalName="Bakabase.Service.ServerSetup.html" />
         <!-- So a helper can stay internal and still be tested, rather than being made public to
              suit the tests. -->
         <InternalsVisibleTo Include="Bakabase.Tests" />

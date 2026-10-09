@@ -80,5 +80,6 @@
   "thirdPartyConfig.downloadResultWorkflow.loadFailed": "Could not load workflows. Refresh to retry. Your current setting has not changed.",
   "thirdPartyConfig.downloadResultWorkflow.unavailable": "The configured workflow is disabled, deleted, or no longer handles download results. Choose another workflow.",
   "thirdPartyConfig.downloadResultWorkflow.unavailableSelection": "Current workflow #{{id}}",
-  "thirdPartyConfig.downloadResultWorkflow.saveFailed": "Could not save this setting. Try again; the current selection has not changed."
+  "thirdPartyConfig.downloadResultWorkflow.saveFailed": "Could not save this setting. Try again; the current selection has not changed.",
+  "thirdPartyConfig.navigation.source.label": "Third-party source"
 }

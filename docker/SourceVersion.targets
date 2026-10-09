@@ -1,0 +1,11 @@
+<Project>
+  <!-- Docker excludes .git. NBGV computes an incomplete version in that context,
+       so apply the value resolved from the real checkout after its version task. -->
+  <Target Name="UseBakabaseSourceVersion" AfterTargets="GetBuildVersion"
+          BeforeTargets="GenerateAssemblyNBGVVersionInfo"
+          Condition="'$(BakabaseResolvedVersion)' != ''">
+    <PropertyGroup>
+      <AssemblyInformationalVersion>$(BakabaseResolvedVersion)</AssemblyInformationalVersion>
+    </PropertyGroup>
+  </Target>
+</Project>

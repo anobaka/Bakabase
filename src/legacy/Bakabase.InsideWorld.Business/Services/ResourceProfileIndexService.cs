@@ -785,9 +785,7 @@ public class ResourceProfileIndexService : IResourceProfileIndexService
         await args.UpdateTask(t =>
         {
             t.Percentage = Math.Max(t.Percentage, percentage);
-            t.Process = processArguments.Length == 0
-                ? _localizer[processKey]
-                : _localizer[processKey, processArguments];
+            t.SetProcess(BTaskText.Localize(_localizer, processKey, processArguments));
         });
     }
 

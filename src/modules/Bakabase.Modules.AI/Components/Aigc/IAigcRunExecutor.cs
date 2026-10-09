@@ -1,3 +1,4 @@
+using Bakabase.Abstractions.Components.Tasks;
 namespace Bakabase.Modules.AI.Components.Aigc;
 
 /// <summary>
@@ -9,6 +10,6 @@ public interface IAigcRunExecutor
 {
     Task ExecuteAsync(
         int runId,
-        Func<int, string?, CancellationToken, Task>? onProgress,
+        Func<int, BTaskText?, CancellationToken, Task>? onProgress,
         CancellationToken ct);
 }

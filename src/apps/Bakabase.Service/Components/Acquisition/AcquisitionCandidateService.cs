@@ -134,8 +134,10 @@ public class AcquisitionCandidateService(
 
         // Every visible input needs its own validation: platform identities share a lead kind
         // without sharing supported workflows. Already parsed inputs also carry their cached links.
+        // Bind LINQ explicitly: newer compilers prefer the array-to-span Contains overload,
+        // which EF cannot evaluate inside a query expression. Keep these filters in SQLite.
         var resolved = await db.Set<AcquisitionLeadDbModel>().AsNoTracking()
-            .Where(l => pageIds.Contains(l.ResourceId) && l.IsResolved).ToDictionaryAsync(l => l.Id, ct);
+            .Where(l => Enumerable.Contains(pageIds, l.ResourceId) && l.IsResolved).ToDictionaryAsync(l => l.Id, ct);
         if (pageIds.Any(id => routes[id].Count > 0))
         {
             var definitions = (await workflowDefinitions.SearchAsync(new()
@@ -159,12 +161,12 @@ public class AcquisitionCandidateService(
             }
         }
 
-        var titles = (await names.GetAll(v => pageIds.Contains(v.ResourceId)))
+        var titles = (await names.GetAll(v => Enumerable.Contains(pageIds, v.ResourceId)))
             .Where(v => !string.IsNullOrWhiteSpace(v.Name))
             .GroupBy(v => v.ResourceId)
             .ToDictionary(g => g.Key, g => g.First().Name!);
         var active = (await db.Set<AcquisitionTaskDbModel>().AsNoTracking()
-                .Where(t => pageIds.Contains(t.ResourceId) && Live.Contains(t.Status))
+                .Where(t => Enumerable.Contains(pageIds, t.ResourceId) && Enumerable.Contains(Live, t.Status))
                 .OrderByDescending(t => t.Id).ToListAsync(ct))
             .GroupBy(t => t.ResourceId)
             .ToDictionary(g => g.Key, g => g.First());

@@ -150,6 +150,8 @@ public class PairingEndpointExposureTests
             "PUT /remote-access/mode",
             "PUT /remote-access/live-transcode",
             "PUT /remote-access/require-pairing",
+            "PUT /remote-access/advertised-address",
+            "POST /remote-access/address-candidates",
             "POST /remote-access/pairing/code"
         ];
 

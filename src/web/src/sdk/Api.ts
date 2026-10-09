@@ -2160,6 +2160,7 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputU
   /** [0: Default, 1: Resource] */
   startupPage?: BakabaseInsideWorldModelsConstantsStartupPage;
   isMenuCollapsed?: boolean;
+  showResourceUsage?: boolean;
   hideResourceCovers?: boolean;
   resourceDetailLayout?: BakabaseInsideWorldModelsConfigsUIOptionsResourceDetailLayoutConfig;
   latestUsedProperties?: BakabaseInsideWorldModelsConfigsUIOptionsPropertyKey[];
@@ -2742,6 +2743,7 @@ export interface BakabaseInsideWorldModelsConfigsUIOptions {
   /** [0: Default, 1: Resource] */
   startupPage: BakabaseInsideWorldModelsConstantsStartupPage;
   isMenuCollapsed: boolean;
+  showResourceUsage: boolean;
   hideResourceCovers: boolean;
   resourceDetailLayout?: BakabaseInsideWorldModelsConfigsUIOptionsResourceDetailLayoutConfig;
   latestUsedProperties: BakabaseInsideWorldModelsConfigsUIOptionsPropertyKey[];
@@ -6699,6 +6701,20 @@ export interface BakabaseServiceComponentsAcquisitionSharedListPreviewRow {
   alreadyKnown: boolean;
 }
 
+export interface BakabaseServiceComponentsServerDataServerAppDataImportValidation {
+  valid: boolean;
+  error?: string;
+  sourcePath: string;
+  currentPath: string;
+  sourceVersion?: string;
+  originalDataPath?: string;
+}
+
+export interface BakabaseServiceControllersAppDataImportControllerImportRequest {
+  sourcePath: string;
+  originalDataPath?: string;
+}
+
 export interface BakabaseServiceControllersAppDataPathControllerRelocateRequest {
   targetPath: string;
   /** [1: UseTarget, 3: MergeOverwrite] */
@@ -7093,6 +7109,14 @@ export interface BakabaseServiceModelsInputProxyTestInputModel {
   customSites?: string[];
 }
 
+export interface BakabaseServiceModelsInputRemoteAccessAddressCandidateInputModel {
+  address: string;
+}
+
+export interface BakabaseServiceModelsInputRemoteAccessAdvertisedAddressInputModel {
+  address?: string;
+}
+
 export interface BakabaseServiceModelsInputRemoteAccessDeviceNameInputModel {
   name?: string;
 }
@@ -7265,6 +7289,10 @@ export interface BakabaseServiceModelsInputTextTypePatchInputModel {
    * @maxLength 64
    */
   name: string;
+}
+
+export interface BakabaseServiceModelsInputUserStoragePathsInputModel {
+  paths: string[];
 }
 
 export interface BakabaseServiceModelsViewAcquisitionCandidateLeadViewModel {
@@ -7597,6 +7625,18 @@ export interface BakabaseServiceModelsViewDecompressionResultViewModel {
   message?: string;
 }
 
+export interface BakabaseServiceModelsViewDeploymentPathViewModel {
+  serverPath: string;
+  hostPath?: string;
+  storageKind: string;
+  readOnly?: boolean;
+}
+
+export interface BakabaseServiceModelsViewDeploymentPathsViewModel {
+  isContainer: boolean;
+  paths: BakabaseServiceModelsViewDeploymentPathViewModel[];
+}
+
 export interface BakabaseServiceModelsViewDownloadResultViewModel {
   /** @format int32 */
   id: number;
@@ -7769,6 +7809,7 @@ export interface BakabaseServiceModelsViewProxyTestResultViewModel {
 }
 
 export interface BakabaseServiceModelsViewRemoteAccessAddressViewModel {
+  source?: string;
   url: string;
   interfaceName: string;
   /** [0: Unknown, 1: Lan, 2: Vpn, 3: Virtual, 4: LinkLocal] */
@@ -7790,6 +7831,7 @@ export interface BakabaseServiceModelsViewRemoteAccessClientContextViewModel {
   serverId?: string;
   serverName?: string;
   cookieCaptureAvailable: boolean;
+  federationAvailable: boolean;
 }
 
 export interface BakabaseServiceModelsViewRemoteAccessDeviceViewModel {
@@ -7871,6 +7913,7 @@ export interface BakabaseServiceModelsViewRemoteAccessServerInfoViewModel {
 }
 
 export interface BakabaseServiceModelsViewRemoteAccessSettingsViewModel {
+  advertisedAddress?: string;
   /** [0: Disabled, 1: Enabled, 2: Unrestricted] */
   mode: BakabaseAbstractionsModelsDomainConstantsRemoteAccessMode;
   addresses: BakabaseServiceModelsViewRemoteAccessAddressViewModel[];
@@ -8022,6 +8065,20 @@ export interface BakabaseServiceModelsViewResourceSearchViewModel {
   tags?: BakabaseAbstractionsModelsDomainConstantsResourceTag[];
 }
 
+export interface BakabaseServiceModelsViewResourceUsageViewModel {
+  /** @format double */
+  cpuPercent?: number;
+  /** @format int64 */
+  memoryBytes: number;
+  /** @format int64 */
+  dataDirectoryBytes?: number;
+  /** @format date-time */
+  dataDirectoryUpdatedAt?: string;
+  dataDirectoryScanning: boolean;
+  dataDirectoryPartial: boolean;
+  dataDirectoryUnavailable: boolean;
+}
+
 export interface BakabaseServiceModelsViewSavedSearchViewModel {
   id: string;
   search: BakabaseServiceModelsViewResourceSearchViewModel;
@@ -8042,6 +8099,18 @@ export interface BakabaseServiceModelsViewTelemetrySnapshotViewModel {
   enabledEnhancers: string[];
   aiEnabled: boolean;
   hasMediaLibrary: boolean;
+}
+
+export interface BakabaseServiceModelsViewUserStorageRootViewModel {
+  path: string;
+  name: string;
+  storageKind: string;
+  readOnly?: boolean;
+}
+
+export interface BakabaseServiceModelsViewUserStorageRootsViewModel {
+  isRestricted: boolean;
+  roots: BakabaseServiceModelsViewUserStorageRootViewModel[];
 }
 
 export interface BootstrapComponentsLoggingLogServiceModelsEntitiesLog {
@@ -9739,6 +9808,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceC
   data?: BakabaseServiceComponentsAcquisitionSharedListImportResult;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsServerDataServerAppDataImportValidation {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsServerDataServerAppDataImportValidation;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceControllersAppDataPathControllerValidateResponse {
   /** @format int32 */
   code: number;
@@ -9835,6 +9911,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceM
   code: number;
   message?: string;
   data?: BakabaseServiceModelsViewDashboardOverviewViewModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewDeploymentPathsViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewDeploymentPathsViewModel;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewFilePlayabilityViewModel {
@@ -9942,6 +10025,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceM
   data?: BakabaseServiceModelsViewResourceSearchViewModel;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewResourceUsageViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewResourceUsageViewModel;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewSavedSearchViewModel {
   /** @format int32 */
   code: number;
@@ -9954,6 +10044,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceM
   code: number;
   message?: string;
   data?: BakabaseServiceModelsViewTelemetrySnapshotViewModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewUserStorageRootsViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewUserStorageRootsViewModel;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1SystemBoolean {
@@ -10031,6 +10128,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1SystemInt32 {
   message?: string;
   /** @format int32 */
   data: number;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1SystemObject {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: any;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1SystemString {
@@ -15218,6 +15322,149 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     /**
      * No description
      *
+     * @tags AppDataImport
+     * @name DataPathImportList
+     * @request GET:/app/data-path/import
+     */
+    dataPathImportList: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemObject, any>({
+        path: `/app/data-path/import`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for dataPathImportList
+     * @name dataPathImportListUrl
+     */
+    dataPathImportListUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/app/data-path/import`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AppDataImport
+     * @name DataPathImportCreate
+     * @request POST:/app/data-path/import
+     */
+    dataPathImportCreate: (
+      data: BakabaseServiceControllersAppDataImportControllerImportRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/app/data-path/import`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for dataPathImportCreate
+     * @name dataPathImportCreateUrl
+     */
+    dataPathImportCreateUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/app/data-path/import`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AppDataImport
+     * @name DataPathImportDelete
+     * @request DELETE:/app/data-path/import
+     */
+    dataPathImportDelete: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/app/data-path/import`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for dataPathImportDelete
+     * @name dataPathImportDeleteUrl
+     */
+    dataPathImportDeleteUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/app/data-path/import`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AppDataImport
+     * @name DataPathImportSetupSessionCreate
+     * @request POST:/app/data-path/import/setup-session
+     */
+    dataPathImportSetupSessionCreate: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/app/data-path/import/setup-session`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for dataPathImportSetupSessionCreate
+     * @name dataPathImportSetupSessionCreateUrl
+     */
+    dataPathImportSetupSessionCreateUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/app/data-path/import/setup-session`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AppDataImport
+     * @name DataPathImportValidateCreate
+     * @request POST:/app/data-path/import/validate
+     */
+    dataPathImportValidateCreate: (
+      data: BakabaseServiceControllersAppDataImportControllerImportRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsServerDataServerAppDataImportValidation,
+        any
+      >({
+        path: `/app/data-path/import/validate`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for dataPathImportValidateCreate
+     * @name dataPathImportValidateCreateUrl
+     */
+    dataPathImportValidateCreateUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/app/data-path/import/validate`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
      * @tags AppDataPath
      * @name ValidateAppDataPath
      * @request POST:/app/data-path/validate
@@ -15328,6 +15575,142 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     dismissLegacyInstallNoticeUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/app/data-path/legacy-notice/dismiss`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AppDataRelocation
+     * @name DataPathRelocationList
+     * @request GET:/app/data-path/relocation
+     */
+    dataPathRelocationList: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemObject, any>({
+        path: `/app/data-path/relocation`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for dataPathRelocationList
+     * @name dataPathRelocationListUrl
+     */
+    dataPathRelocationListUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/app/data-path/relocation`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AppDataRelocation
+     * @name DataPathRelocationDelete
+     * @request DELETE:/app/data-path/relocation
+     */
+    dataPathRelocationDelete: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/app/data-path/relocation`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for dataPathRelocationDelete
+     * @name dataPathRelocationDeleteUrl
+     */
+    dataPathRelocationDeleteUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/app/data-path/relocation`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AppDataRelocation
+     * @name DataPathRelocationSetupSessionCreate
+     * @request POST:/app/data-path/relocation/setup-session
+     */
+    dataPathRelocationSetupSessionCreate: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/app/data-path/relocation/setup-session`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for dataPathRelocationSetupSessionCreate
+     * @name dataPathRelocationSetupSessionCreateUrl
+     */
+    dataPathRelocationSetupSessionCreateUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/app/data-path/relocation/setup-session`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags DeploymentPaths
+     * @name GetDeploymentPaths
+     * @request GET:/app/deployment-paths
+     */
+    getDeploymentPaths: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewDeploymentPathsViewModel,
+        any
+      >({
+        path: `/app/deployment-paths`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getDeploymentPaths
+     * @name getDeploymentPathsUrl
+     */
+    getDeploymentPathsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/app/deployment-paths`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ResourceUsage
+     * @name GetResourceUsage
+     * @request GET:/app/resource-usage
+     */
+    getResourceUsage: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewResourceUsageViewModel,
+        any
+      >({
+        path: `/app/resource-usage`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getResourceUsage
+     * @name getResourceUsageUrl
+     */
+    getResourceUsageUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/app/resource-usage`;
 
       return baseUrl + path;
     },
@@ -21951,6 +22334,66 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }),
   };
   file = {
+    /**
+     * No description
+     *
+     * @tags File
+     * @name GetUserStorageRoots
+     * @request GET:/file/storage-roots
+     */
+    getUserStorageRoots: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewUserStorageRootsViewModel,
+        any
+      >({
+        path: `/file/storage-roots`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getUserStorageRoots
+     * @name getUserStorageRootsUrl
+     */
+    getUserStorageRootsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/file/storage-roots`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags File
+     * @name ValidateUserStoragePaths
+     * @request POST:/file/validate-storage-paths
+     */
+    validateUserStoragePaths: (
+      data: BakabaseServiceModelsInputUserStoragePathsInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/file/validate-storage-paths`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for validateUserStoragePaths
+     * @name validateUserStoragePathsUrl
+     */
+    validateUserStoragePathsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/file/validate-storage-paths`;
+
+      return baseUrl + path;
+    },
+
     /**
      * No description
      *
@@ -28764,6 +29207,68 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags RemoteAccess
+     * @name SetRemoteAccessAdvertisedAddress
+     * @request PUT:/remote-access/advertised-address
+     */
+    setRemoteAccessAdvertisedAddress: (
+      data: BakabaseServiceModelsInputRemoteAccessAdvertisedAddressInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/remote-access/advertised-address`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for setRemoteAccessAdvertisedAddress
+     * @name setRemoteAccessAdvertisedAddressUrl
+     */
+    setRemoteAccessAdvertisedAddressUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/remote-access/advertised-address`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags RemoteAccess
+     * @name ObserveRemoteAccessAddress
+     * @request POST:/remote-access/address-candidates
+     */
+    observeRemoteAccessAddress: (
+      data: BakabaseServiceModelsInputRemoteAccessAddressCandidateInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/remote-access/address-candidates`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for observeRemoteAccessAddress
+     * @name observeRemoteAccessAddressUrl
+     */
+    observeRemoteAccessAddressUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/remote-access/address-candidates`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags RemoteAccess
      * @name SetRemoteAccessLiveTranscode
      * @request PUT:/remote-access/live-transcode
      */
@@ -29998,10 +30503,16 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name GetTampermonkeyScript
      * @request GET:/Tampermonkey/script/bakabase.user.js
      */
-    getTampermonkeyScript: (params: RequestParams = {}) =>
+    getTampermonkeyScript: (
+      query?: {
+        apiEndpoint?: string;
+      },
+      params: RequestParams = {},
+    ) =>
       this.request<void, any>({
         path: `/Tampermonkey/script/bakabase.user.js`,
         method: "GET",
+        query: query,
         ...params,
       }),
 
@@ -30009,9 +30520,23 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @description Build URL for getTampermonkeyScript
      * @name getTampermonkeyScriptUrl
      */
-    getTampermonkeyScriptUrl: () => {
+    getTampermonkeyScriptUrl: (query?: {
+        apiEndpoint?: string;
+      }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/Tampermonkey/script/bakabase.user.js`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
 
       return baseUrl + path;
     },

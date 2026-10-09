@@ -1,0 +1,16 @@
+{
+  "resourceUsage.title": "资源占用",
+  "resourceUsage.memory": "内存",
+  "resourceUsage.data": "数据目录",
+  "resourceUsage.cpuHint": "当前 Bakabase 服务进程的 CPU 使用率，按可用逻辑处理器总容量计算；不含 FFmpeg 等子进程。",
+  "resourceUsage.memoryHint": "当前 Bakabase 服务进程使用的物理内存。",
+  "resourceUsage.directoryHint": "数据目录内的文件总大小，每 5 分钟更新。包括数据库、封面和缓存；不跟随符号链接。",
+  "resourceUsage.calculating": "正在后台计算目录大小…",
+  "resourceUsage.directoryPartial": "部分文件无法读取，显示已统计的大小。",
+  "resourceUsage.directoryUnavailable": "目录大小暂时无法更新；如有数值，显示上次结果。",
+  "resourceUsage.unavailable": "用量暂不可用",
+  "resourceUsage.hide.label": "隐藏资源占用",
+  "resourceUsage.hidden.title": "已隐藏资源占用",
+  "resourceUsage.hidden.description": "如需再次显示，可前往「系统 → 配置 → 功能配置」，开启「显示资源占用」。",
+  "resourceUsage.hidden.dismiss": "知道了"
+}

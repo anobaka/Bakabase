@@ -762,7 +762,7 @@ describe("this device's address", () => {
   });
   afterEach(() => Reflect.deleteProperty(navigator, "clipboard"));
 
-  it("recommends one address, lists one row per host, and folds away what cannot be reached", async () => {
+  it("recommends one address, preserves mapped ports, and folds away what cannot be reached", async () => {
     withSettings(1);
     renderPage("/federation/devices");
     const list = await screen.findByTestId("device-addresses");
@@ -772,10 +772,10 @@ describe("this device's address", () => {
 
     expect(recommended).toHaveTextContent("http://192.168.1.5:34567");
     expect(recommended).toHaveTextContent("federation.devices.addresses.recommended");
-    // A VPN address is shown, and says what it is; other ports of the same host are not.
+    // A VPN address is labelled, and other ports on the same host remain available.
     expect(within(list).getByText("http://100.101.1.2:34567")).toBeInTheDocument();
     expect(within(list).getByText(/federation\.devices\.addresses\.vpn/)).toBeInTheDocument();
-    expect(within(list).queryByText(/:5000$/)).not.toBeInTheDocument();
+    expect(within(list).getByText("http://192.168.1.5:5000")).toBeInTheDocument();
     // Adapters another device cannot reach wait behind a disclosure, labelled.
     expect(within(list).queryByText("http://198.18.0.1:34567")).not.toBeInTheDocument();
     const more = within(within(list).getByTestId("device-address-more")).getByRole("button", {
@@ -785,9 +785,10 @@ describe("this device's address", () => {
     expect(more).toHaveAttribute("aria-expanded", "false");
     fireEvent.click(more);
     expect(within(list).getByText("http://198.18.0.1:34567")).toBeInTheDocument();
+    expect(within(list).getByText("http://198.18.0.1:5000")).toBeInTheDocument();
     expect(within(list).getByText("http://192.168.128.1:34567")).toBeInTheDocument();
     expect(within(list).getByText("http://169.254.3.4:34567")).toBeInTheDocument();
-    expect(within(list).getAllByText(/federation\.devices\.addresses\.virtual/)).toHaveLength(2);
+    expect(within(list).getAllByText(/federation\.devices\.addresses\.virtual/)).toHaveLength(3);
     expect(within(list).getByText(/federation\.devices\.addresses\.linkLocal/)).toBeInTheDocument();
   });
   it("copies an address and says whether it could", async () => {

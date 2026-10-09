@@ -83,11 +83,14 @@ public class DataSyncServiceComponentsTests
         Assert.IsTrue(provider.GetRequiredService<IDataSyncHostKind>().IsHeadless);
         Assert.IsInstanceOfType<ServiceDataSyncHostAddresses>(provider.GetRequiredService<IDataSyncHostAddresses>());
 
-        // One address per host, as the library shows next to its code.
+        // A mapped port and HTTPS on the same host remain separate candidates; exact duplicates do not.
         var remote = AddressesOnly.Create([new RemoteAccessAddress("http://192.168.1.2:5000", "en0"),
             new RemoteAccessAddress("http://192.168.1.2:5001", "en0"),
+            new RemoteAccessAddress("https://192.168.1.2:5001", "en0"),
+            new RemoteAccessAddress("http://192.168.1.2:5000", "en0"),
             new RemoteAccessAddress("http://10.0.0.2:5000", "en1")]);
-        CollectionAssert.AreEqual(new[] {"http://192.168.1.2:5000", "http://10.0.0.2:5000"},
+        CollectionAssert.AreEqual(new[] {"http://192.168.1.2:5000", "http://192.168.1.2:5001",
+                "https://192.168.1.2:5001", "http://10.0.0.2:5000"},
             new ServiceDataSyncHostAddresses(remote).GetReachableAddresses().ToArray());
     }
 

@@ -9,6 +9,7 @@ using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Components.Tasks;
 using Bootstrap.Models.Constants;
 using Bakabase.Abstractions.Extensions;
+using Bakabase.Abstractions.Helpers;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.Input;
@@ -348,8 +349,11 @@ public class ResourceController(
         }
 
         var rawAttributes = System.IO.File.GetAttributes(rawFileOrDirectoryName);
-        OsShell.Open(rawFileOrDirectoryName,
-            (rawAttributes & FileAttributes.Directory) != FileAttributes.Directory);
+        var openInDirectory = (rawAttributes & FileAttributes.Directory) != FileAttributes.Directory;
+        if (OperatingSystem.IsLinux() && openInDirectory)
+            LinuxFileManager.RevealInParentDirectory(rawFileOrDirectoryName);
+        else
+            OsShell.Open(rawFileOrDirectoryName, openInDirectory);
         return BaseResponseBuilder.Ok;
     }
 

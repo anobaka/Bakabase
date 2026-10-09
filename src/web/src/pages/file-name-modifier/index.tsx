@@ -1,9 +1,10 @@
-import WorkflowIntegrationHint from "@/components/Workflow/WorkflowIntegrationHint";
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { AiOutlineEdit } from "react-icons/ai";
 
+import WorkflowIntegrationHint from "@/components/Workflow/WorkflowIntegrationHint";
 import FileNameModifier from "@/components/FileNameModifier";
+import ToolExecutionNotice from "@/components/ToolExecutionNotice";
 
 const FileNameModifierPage: React.FC = () => {
   const { t } = useTranslation();
@@ -20,7 +21,10 @@ const FileNameModifierPage: React.FC = () => {
             {t<string>("fileNameModifier.page.description")}
           </p>
         </div>
-        <WorkflowIntegrationHint surface="fileAutomation" />
+        <div className="flex flex-wrap items-center gap-2">
+          <ToolExecutionNotice tool="file-name-modifier" />
+          <WorkflowIntegrationHint surface="fileAutomation" />
+        </div>
       </header>
       <div className="min-h-0 flex-1">
         <FileNameModifier initialFilePaths={[]} />

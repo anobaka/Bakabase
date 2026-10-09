@@ -35,6 +35,7 @@ import {
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { FileSystemSelectorModal } from "@/components/FileSystemSelector";
 import { toAbsoluteBackendUrl } from "@/config/env.ts";
+import { openExternalUrl } from "@/utils/openExternalUrl";
 
 type Form = {
   pageSize: 20;
@@ -208,9 +209,7 @@ const AliasPage = () => {
           <Button
             size={"sm"}
             onPress={() => {
-              BApi.gui.openUrlInDefaultBrowser({
-                url: toAbsoluteBackendUrl("/alias/xlsx"),
-              });
+              openExternalUrl(toAbsoluteBackendUrl("/alias/xlsx"));
             }}
           >
             <DownloadOutlined className={"text-base"} />

@@ -1,5 +1,6 @@
 ﻿using System;
 using Bakabase.Abstractions.Components.Configuration;
+using Bakabase.Service.Components.ServerData;
 using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Components.Network;
 using Bakabase.Abstractions.Components.Tasks;
@@ -107,6 +108,13 @@ namespace Bakabase.Service.Components
             services.TryAddSingleton<BangumiCookieValidator>();
 
             services.AddSingleton<BakabaseOptionsManagerPool>();
+            services.AddSingleton<DeploymentPathDisplay>();
+            services.TryAddSingleton<Bakabase.Abstractions.Components.FileSystem.IUserStoragePolicy>(sp =>
+                new Bakabase.Abstractions.Components.FileSystem.UserStoragePolicy(
+                    () => sp.GetRequiredService<AppService>().AppDataDirectory));
+            services.AddSingleton(sp => new ResourceUsageService(
+                sp.GetRequiredService<AppService>().AppDataDirectory,
+                sp.GetRequiredService<IHostApplicationLifetime>().ApplicationStopping));
 
             // What this install tells other devices it is. Before AddRemoteAccess, whose
             // default knows the platform but not the kind.
@@ -135,6 +143,7 @@ namespace Bakabase.Service.Components
                 o.Filters.Add<RemoteAccessAuthorizationFilter>();
                 o.Filters.Add<LoopbackCrossSiteUserMachineFilter>();
                 o.Filters.Add<RemoteAccessPathGuardFilter>();
+                o.Filters.Add<UserStoragePathExceptionFilter>();
                 FlagsEnumModelBinderProvider.Register(o.ModelBinderProviders);
             });
 
@@ -364,8 +373,9 @@ namespace Bakabase.Service.Components
             app.UseMiddleware<FrameAncestorsPolicy>();
             app.UseMiddleware<FederationExceptionMiddleware>();
             app.UseMiddleware<FederationAccessMiddleware>();
-            app.UseMiddleware<FederationBrowsingMiddleware>();
             app.UseMiddleware<RemoteAccessMiddleware>();
+            app.UseMiddleware<FederationAdministrationMiddleware>();
+            app.UseMiddleware<FederationBrowsingMiddleware>();
             // After the loopback bypass above: narrows what a page on another site can
             // make this computer's browser do here, showing this UI in a frame included.
             app.UseMiddleware<LoopbackCrossSiteGuard>();
@@ -373,6 +383,12 @@ namespace Bakabase.Service.Components
 
         public override void Configure(IApplicationBuilder app, IHostApplicationLifetime lifetime)
         {
+            app.Use(async (context, next) =>
+            {
+                if (SetupChildConnection.Current is { Role: "business" } child && await child.TryProxyAsync(context)) return;
+                if (ImportProgressStore.Current is not { } monitoring ||
+                    !await ImportProgressServer.TryHandleAsync(context, monitoring)) await next();
+            });
             var logger = app.ApplicationServices.GetRequiredService<ILogger<BakabaseStartup>>();
             var appService = app.ApplicationServices.GetRequiredService<AppService>();
             logger.LogInformation(

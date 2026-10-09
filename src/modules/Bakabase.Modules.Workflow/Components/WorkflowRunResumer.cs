@@ -1,3 +1,4 @@
+using Bakabase.Abstractions.Components.Localization;
 using System.Text.Json;
 using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Modules.Workflow.Abstractions.Components;
@@ -18,7 +19,8 @@ public class WorkflowRunResumer<TDbContext>(
     IWorkflowTriggerRegistry triggers,
     BTaskManager taskManager,
     WorkflowRunSchedulingPolicyResolver scheduling,
-    ILogger<WorkflowRunResumer<TDbContext>> logger) : IWorkflowRunResumer
+    ILogger<WorkflowRunResumer<TDbContext>> logger,
+    IBakabaseLocalizer localizer) : IWorkflowRunResumer
     where TDbContext : DbContext
 {
     public async Task ResumeAsync(int runId, string signalJson, CancellationToken ct = default)
@@ -113,7 +115,7 @@ public class WorkflowRunResumer<TDbContext>(
         var triggerKind = await db.Set<WorkflowDefinitionDbModel>().Where(d => d.Id == defId)
             .Select(d => d.TriggerKind).SingleAsync();
         await taskManager.Enqueue(scheduling.Configure(BTaskBuilder.Create($"workflow.run.{runId}")
-            .Named($"Workflow #{defId} run #{runId}")
+            .Named(() => localizer["BTask_Name_WorkflowRun", defId, runId])
             .ReplaceIfExists()
             .Run(async args =>
             {

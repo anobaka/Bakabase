@@ -1,3 +1,5 @@
+using Bakabase.Abstractions.Components.Localization;
+using Bakabase.Abstractions.Components.Tasks;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
@@ -36,7 +38,8 @@ namespace Bakabase.Modules.AI.Components.Aigc.Invokers;
 /// Templates support the following tokens (placed inside <c>{...}</c>):
 ///   prompt, negativePrompt, apiKey, seed, plus arbitrary keys from generator parameters.
 /// </summary>
-public class HttpCustomInvoker(IHttpClientFactory httpClientFactory, ILogger<HttpCustomInvoker> logger)
+public class HttpCustomInvoker(IHttpClientFactory httpClientFactory, ILogger<HttpCustomInvoker> logger,
+    IBakabaseLocalizer localizer)
     : IAigcProviderInvoker
 {
     public AiProviderKind Kind => AiProviderKind.HttpCustom;
@@ -58,15 +61,15 @@ public class HttpCustomInvoker(IHttpClientFactory httpClientFactory, ILogger<Htt
         AigcInvocationRequest request, CancellationToken ct)
     {
         if (string.IsNullOrEmpty(config.AigcConfigJson))
-            throw new InvalidOperationException("HttpCustom provider has no ConfigJson.");
+            throw TaskError("BTask_Error_AigcHttpConfigMissing", "HttpCustom provider has no ConfigJson.");
 
         var cfg = AigcInvokerHelpers.ParseLenient(config.AigcConfigJson)
-                  ?? throw new InvalidOperationException("HttpCustom ConfigJson is not valid JSON.");
+                  ?? throw TaskError("BTask_Error_AigcHttpConfigInvalid", "HttpCustom ConfigJson is not valid JSON.");
 
         var tokens = BuildTokens(config, request);
         var method = cfg["method"]?.GetValue<string>() ?? "POST";
         var urlTemplate = cfg["urlTemplate"]?.GetValue<string>()
-                          ?? throw new InvalidOperationException("HttpCustom config missing urlTemplate.");
+                          ?? throw TaskError("BTask_Error_AigcHttpUrlMissing", "HttpCustom config missing urlTemplate.");
         var bodyTemplate = cfg["bodyTemplate"]?.GetValue<string>();
 
         using var client = httpClientFactory.CreateClient("aigc-http-custom");
@@ -164,11 +167,11 @@ public class HttpCustomInvoker(IHttpClientFactory httpClientFactory, ILogger<Htt
 
     private async Task<JsonNode?> PollAsync(HttpClient client, JsonObject pcfg, JsonNode? submitResponse,
         Dictionary<string, string?> tokens,
-        Func<int, string?, CancellationToken, Task>? onProgress, CancellationToken ct)
+        Func<int, BTaskText?, CancellationToken, Task>? onProgress, CancellationToken ct)
     {
         var idPath = pcfg["submitIdPath"]?.GetValue<string>() ?? "$.id";
         var statusUrlTemplate = pcfg["statusUrlTemplate"]?.GetValue<string>()
-                                ?? throw new InvalidOperationException("polling.statusUrlTemplate is required");
+                                ?? throw TaskError("BTask_Error_AigcPollingUrlMissing", "polling.statusUrlTemplate is required");
         var donePath = pcfg["donePath"]?.GetValue<string>() ?? "$.status";
         var doneEquals = pcfg["doneEquals"]?.GetValue<string>() ?? "succeeded";
         var interval = pcfg["intervalMs"]?.GetValue<int?>() ?? 2000;
@@ -176,7 +179,7 @@ public class HttpCustomInvoker(IHttpClientFactory httpClientFactory, ILogger<Htt
         var idNodes = AigcInvokerHelpers.SelectNodes(submitResponse, idPath);
         var taskId = idNodes.FirstOrDefault()?.ToString();
         if (string.IsNullOrEmpty(taskId))
-            throw new InvalidOperationException("Polling configured but submit response did not contain id.");
+            throw TaskError("BTask_Error_AigcPollingIdMissing", "Polling configured but submit response did not contain id.");
         tokens["task_id"] = taskId;
 
         var statusUrl = AigcInvokerHelpers.ResolveTemplate(statusUrlTemplate, tokens);
@@ -197,7 +200,8 @@ public class HttpCustomInvoker(IHttpClientFactory httpClientFactory, ILogger<Htt
             }
             if (onProgress is not null)
             {
-                await onProgress(0, $"Polling ({attempts}, status={status})", ct);
+                await onProgress(0, BTaskText.Localize(localizer,
+                    "BTask_Process_AigcPolling", attempts, status), ct);
             }
         }
         ct.ThrowIfCancellationRequested();
@@ -228,4 +232,7 @@ public class HttpCustomInvoker(IHttpClientFactory httpClientFactory, ILogger<Htt
     }
 
     private static string JsonEscape(string s) => JsonEncodedText.Encode(s).Value;
+    private BTaskException TaskError(string key, string detail, params object?[] arguments) =>
+        new(detail, detail) {BriefText = BTaskText.Localize(localizer, key, arguments)};
+
 }

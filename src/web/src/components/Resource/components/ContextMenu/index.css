@@ -1,0 +1,173 @@
+.resource-context-menu-trigger:focus-visible {
+  border-radius: 8px;
+  outline: 2px solid hsl(var(--heroui-primary));
+  outline-offset: 3px;
+}
+
+.szh-menu.resource-context-menu {
+  box-sizing: border-box;
+  width: 288px;
+  min-width: min(264px, calc(100vw - 16px));
+  max-width: calc(100vw - 16px);
+  max-height: calc(100dvh - 16px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 6px;
+  border-radius: 14px;
+  background-color: #fff;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  /* Positioning measures the menu's bounding rect. Scaling the entrance makes
+     it measure a smaller height and place the final menu beyond the viewport. */
+  animation: resource-context-menu-appear 100ms ease-out;
+  transform: none;
+  box-shadow:
+    0 16px 48px rgb(0 0 0 / 24%),
+    0 2px 8px rgb(0 0 0 / 12%);
+}
+
+.iw-theme-dark .szh-menu.resource-context-menu {
+  background-color: #202024;
+}
+
+.iw-theme-light .szh-menu.resource-context-menu {
+  background-color: #fff;
+}
+
+@keyframes resource-context-menu-appear {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.resource-context-menu .szh-menu__item {
+  min-height: 34px;
+  margin: 1px 0;
+  padding: 7px 10px;
+  border-radius: 7px;
+  font-size: 13px;
+  line-height: 20px;
+  white-space: normal;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
+}
+
+.resource-context-menu .szh-menu__item > div {
+  width: 100%;
+  min-width: 0;
+  gap: 10px;
+}
+
+.resource-context-menu .szh-menu__item svg {
+  flex-shrink: 0;
+  font-size: 16px;
+}
+
+.resource-context-menu .szh-menu__item .anticon {
+  flex-shrink: 0;
+  width: 18px;
+}
+
+.resource-context-menu .szh-menu__item:active {
+  transform: none;
+}
+
+.resource-context-menu .szh-menu__item:focus-visible {
+  outline: 2px solid hsl(var(--heroui-primary) / 65%);
+  outline-offset: -2px;
+}
+
+.resource-context-menu .szh-menu__item--disabled {
+  opacity: 0.55;
+  /* Keep the reason available to pointer users without enabling activation. */
+  pointer-events: auto;
+}
+
+.resource-context-menu .szh-menu__divider {
+  margin: 5px 8px;
+}
+
+.resource-context-menu .resource-context-menu__summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px 7px;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.resource-context-menu__name {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--theme-text);
+  font-size: 12px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.resource-context-menu__count,
+.resource-context-menu__annotation {
+  flex-shrink: 0;
+  margin-left: auto;
+  color: var(--theme-text-subtle);
+  font-size: 10px;
+  font-weight: 400;
+}
+
+.resource-context-menu__count {
+  padding: 1px 6px;
+  border: 1px solid var(--theme-border-color);
+  border-radius: 5px;
+}
+
+.resource-context-menu .resource-context-menu__section {
+  padding: 7px 10px 3px;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+
+.resource-context-menu__label {
+  min-width: 0;
+  flex: 1;
+}
+
+.resource-context-menu .resource-context-menu__chevron {
+  width: 12px;
+  margin-left: auto;
+  color: var(--theme-text-subtle);
+}
+
+.resource-context-menu .resource-context-menu__chevron svg {
+  font-size: 10px;
+}
+
+.szh-menu.resource-context-menu .szh-menu__item.resource-context-menu__danger {
+  color: hsl(var(--heroui-danger));
+}
+
+.szh-menu.resource-context-menu .resource-context-menu__danger:hover,
+.szh-menu.resource-context-menu .resource-context-menu__danger.szh-menu__item--hover {
+  color: hsl(var(--heroui-danger));
+  background: hsl(var(--heroui-danger) / 12%);
+}
+
+@media (pointer: coarse) {
+  .resource-context-menu .szh-menu__item {
+    min-height: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .szh-menu.resource-context-menu,
+  .resource-context-menu .szh-menu__item {
+    animation: none;
+    transition: none;
+  }
+}

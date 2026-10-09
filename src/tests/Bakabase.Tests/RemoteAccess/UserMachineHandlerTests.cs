@@ -221,18 +221,56 @@ public class UserMachineHandlerTests
     }
 
     [TestMethod]
-    public async Task A_resource_whose_folder_is_gone_here_falls_back_to_its_parent()
+    public async Task A_file_resource_is_revealed_in_its_parent_without_launching_it()
+    {
+        var local = await WithLibraryAt("/data/media");
+        var file = Path.Combine(local, "program.exe");
+        await File.WriteAllTextAsync(file, "test file; never executed");
+        _upstream.Resource = new UpstreamResource(42, "/data/media/program.exe", "/data/media", "Program");
+        var context = Request("?id=42");
+
+        await ResourceHandler().HandleAsync(context, new Dictionary<string, string>());
+
+        Assert.AreEqual((int) HttpStatusCode.OK, Read(context).Status);
+        Assert.AreEqual(1, _shell.Revealed.Count);
+        Assert.AreEqual((file, true), _shell.Revealed[0]);
+        Assert.AreEqual(0, _shell.Launched.Count);
+    }
+
+    [TestMethod]
+    public async Task A_directory_resource_opens_the_directory_itself()
+    {
+        var local = await WithLibraryAt("/data/media");
+        // A file-looking name is still a directory: use the actual local filesystem.
+        var directory = Directory.CreateDirectory(Path.Combine(local, "show.mkv")).FullName;
+        _upstream.Resource = new UpstreamResource(42, "/data/media/show.mkv", "/data/media", "Show");
+        var context = Request("?id=42");
+
+        await ResourceHandler().HandleAsync(context, new Dictionary<string, string>());
+
+        Assert.AreEqual((int) HttpStatusCode.OK, Read(context).Status);
+        Assert.AreEqual(1, _shell.Revealed.Count);
+        Assert.AreEqual((directory, false), _shell.Revealed[0]);
+        Assert.AreEqual(0, _shell.Launched.Count);
+    }
+
+    [DataTestMethod]
+    [DataRow("gone")]
+    [DataRow("missing.exe")]
+    public async Task A_resource_whose_path_is_gone_here_opens_its_surviving_parent(string entry)
     {
         // The server's own fallback, but judged against this filesystem — a mount that
         // has gone stale on this machine looks perfectly healthy from the server.
         var local = await WithLibraryAt("/data/media");
-        _upstream.Resource = new UpstreamResource(42, "/data/media/gone", "/data/media", "Show");
+        _upstream.Resource = new UpstreamResource(42, $"/data/media/{entry}", "/data/media", "Show");
 
         var context = Request("?id=42");
         await ResourceHandler().HandleAsync(context, new Dictionary<string, string>());
 
         Assert.AreEqual((int) HttpStatusCode.OK, Read(context).Status);
-        Assert.AreEqual(local, _shell.Revealed[0].Path);
+        Assert.AreEqual(1, _shell.Revealed.Count);
+        Assert.AreEqual((local, false), _shell.Revealed[0]);
+        Assert.AreEqual(0, _shell.Launched.Count);
     }
 
     [TestMethod]

@@ -1,3 +1,4 @@
+using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Modules.Workflow.Abstractions.Models.Db;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
@@ -31,19 +32,22 @@ public class WorkflowRunRehydrator<TDbContext> where TDbContext : DbContext
     private readonly WorkflowRunner<TDbContext> _runner;
     private readonly ILogger<WorkflowRunRehydrator<TDbContext>> _logger;
     private readonly WorkflowRunSchedulingPolicyResolver _scheduling;
+    private readonly IBakabaseLocalizer _localizer;
 
     public WorkflowRunRehydrator(
         TDbContext db,
         BTaskManager taskManager,
         WorkflowRunner<TDbContext> runner,
         ILogger<WorkflowRunRehydrator<TDbContext>> logger,
-        WorkflowRunSchedulingPolicyResolver scheduling)
+        WorkflowRunSchedulingPolicyResolver scheduling,
+        IBakabaseLocalizer localizer)
     {
         _db = db;
         _taskManager = taskManager;
         _runner = runner;
         _logger = logger;
         _scheduling = scheduling;
+        _localizer = localizer;
     }
 
     public async Task MarkInterruptedRunsAsync(CancellationToken ct = default)
@@ -114,7 +118,7 @@ public class WorkflowRunRehydrator<TDbContext> where TDbContext : DbContext
             var runId = run.Id;
             var defId = run.WorkflowDefinitionId;
             await _taskManager.Enqueue(_scheduling.Configure(BTaskBuilder.Create($"workflow.run.{runId}")
-                .Named($"Workflow #{defId} run #{runId}")
+                .Named(() => _localizer["BTask_Name_WorkflowRun", defId, runId])
                 .Run(args => _runner.ExecuteAsync(runId, args)), defId, entry.TriggerKind));
         }
         _logger.LogInformation("Re-enqueued {Count} pending workflow runs on startup", rows.Count);

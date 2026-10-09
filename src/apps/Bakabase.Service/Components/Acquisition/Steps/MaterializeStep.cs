@@ -1,3 +1,4 @@
+using Bakabase.Abstractions.Components.FileSystem;
 using System;
 using System.IO;
 using System.Linq;
@@ -60,6 +61,7 @@ public class MaterializeStep : IAcquisitionStep
 
         try
         {
+            ctx.ServiceProvider.GetRequiredService<IUserStoragePolicy>().EnsurePathAllowed(target);
             var materialization = ctx.ServiceProvider.GetRequiredService<IResourceMaterializationService>();
             var result = await materialization.MaterializeAsync(item.ResourceId, target,
                 MaterializationOptions.Default, ct);

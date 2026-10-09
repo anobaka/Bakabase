@@ -119,7 +119,7 @@ public class FetchMagnetStep : IAcquisitionStep
         {
             var downloaded = await ctx.ServiceProvider.GetRequiredService<ITorrentDownloader>()
                 .DownloadMagnetAsync(magnet, ctx.WorkingDirectory, TimeSpan.FromMinutes(config.TimeoutMinutes),
-                    ctx.ReportProgress, ct);
+                    (percentage, process) => ctx.ReportProgress(percentage, process), ct);
             return new AcquisitionStepOutcome.Continue(item with
             {
                 Files = item.Files.Concat(downloaded.Files).Distinct().ToList(),
@@ -169,7 +169,7 @@ public class FetchMagnetStep : IAcquisitionStep
                     Secret = cfg.Secret,
                     Timeout = TimeSpan.FromMinutes(Math.Clamp(cfg.TimeoutMinutes, 1, 43200)),
                     PollInterval = TimeSpan.FromSeconds(Math.Clamp(cfg.PollSeconds, 1, 60))
-                }, ctx.ReportProgress, ct);
+                }, (percentage, process) => ctx.ReportProgress(percentage, process), ct);
             return new AcquisitionStepOutcome.Continue(item with
             {
                 Files = item.Files.Concat(downloaded.Files).Distinct().ToList(),

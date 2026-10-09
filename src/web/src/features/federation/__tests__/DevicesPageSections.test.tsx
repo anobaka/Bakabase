@@ -448,6 +448,37 @@ describe("the devices page's nav", () => {
 });
 
 describe("the devices page where the rest of it is not available", () => {
+  it("shows library sharing for an authorized headless browser without desktop management", async () => {
+    setStore({
+      initialized: true,
+      isLocal: false,
+      clientMode: ClientMode.RemoteBrowser,
+      mode: RemoteAccessMode.Unrestricted,
+      federationAvailable: true,
+    });
+    vi.mocked(managedServerApi.list).mockResolvedValue({
+      available: false,
+      servers: [],
+      requests: [],
+    });
+    renderPage("/federation/devices?section=sharing");
+    expect(screen.queryByText("federation.localOnly")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("navigation", { name: "federation.devices.nav.label" }),
+    ).toBeInTheDocument();
+    expect(useFederationStatus).toHaveBeenCalled();
+    fireEvent.click(
+      within(screen.getByRole("navigation", { name: "federation.devices.nav.label" })).getByRole(
+        "link",
+        { name: "federation.devices.tab.manage" },
+      ),
+    );
+    expect(await screen.findByTestId("management-access")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.queryByText("federation.servers.title")).not.toBeInTheDocument(),
+    );
+  });
+
   it("in the desktop app showing a managed server: answers for that server, and offers the way back", async () => {
     setStore({
       initialized: true,

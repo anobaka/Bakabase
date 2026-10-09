@@ -9,8 +9,8 @@ import { useRemoteAccessStore } from "@/stores/remoteAccess";
  * mode is Unrestricted: nobody approved it, and a credential it minted would outlive a later
  * switch to requiring pairing.
  *
- * The same predicate as `useUserSideActionsRunHere`, deliberately not
- * `useCanAdministerShownServer`, which also admits Unrestricted browsers. The server's
+ * Local administration does not require a desktop: headless loopback callers also qualify.
+ * This deliberately differs from `useCanAdministerShownServer`, which admits Unrestricted browsers. The server's
  * `DataSyncOverview.canManageSharing` is what counts; this only hides the controls early.
  */
 export const useCanManageDefinitionSharing = () =>

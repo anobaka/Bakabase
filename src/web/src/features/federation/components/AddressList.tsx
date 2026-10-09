@@ -10,11 +10,20 @@ import { devicesRoute } from "../switching";
 
 import { buttonClass, ErrorNotice } from "./common";
 
+import { copyTextToClipboard } from "@/core/clipboard";
+
 /** What a row says about where it leads, beside the interface's own name. */
 const kindLabel: Partial<Record<DeviceAddress["kind"], string>> = {
   vpn: "federation.devices.addresses.vpn",
   virtual: "federation.devices.addresses.virtual",
   linkLocal: "federation.devices.addresses.linkLocal",
+};
+
+const sourceLabel: Record<string, string> = {
+  configured: "federation.devices.addresses.source.configured",
+  browser: "federation.devices.addresses.source.browser",
+  deployment: "federation.devices.addresses.source.deployment",
+  interface: "federation.devices.addresses.source.interface",
 };
 
 function useCopy() {
@@ -27,7 +36,7 @@ function useCopy() {
     let ok = true;
 
     try {
-      await navigator.clipboard.writeText(value);
+      await copyTextToClipboard(value);
     } catch {
       ok = false;
     }
@@ -121,13 +130,14 @@ export default function AddressList({
   );
   const note = (row: DeviceAddress) => {
     const key = kindLabel[row.kind];
+    const source = row.source ? sourceLabel[row.source] : undefined;
+    const notes = [
+      source ? t(source) : undefined,
+      row.interfaceName,
+      key ? t(key) : undefined,
+    ].filter(Boolean);
 
-    return (
-      <span className="text-xs text-default-400">
-        {row.interfaceName}
-        {key ? ` · ${t(key)}` : ""}
-      </span>
-    );
+    return <span className="text-xs text-default-400">{notes.join(" · ")}</span>;
   };
   const row = (item: DeviceAddress) => (
     <li key={item.url} className="flex flex-wrap items-center gap-2">

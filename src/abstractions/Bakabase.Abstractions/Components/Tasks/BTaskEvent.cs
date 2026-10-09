@@ -10,4 +10,5 @@ public record BTaskEvent<TEvent>
 
     public DateTime DateTime { get; set; }
     public TEvent Event { get; set; }
+    public Dictionary<string, string?>? LocalizedTexts { get; init; }
 }

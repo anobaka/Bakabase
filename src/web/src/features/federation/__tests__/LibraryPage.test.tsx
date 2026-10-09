@@ -15,6 +15,7 @@ vi.mock("@/stores/remoteAccess", () => ({
   useRemoteAccessStore: (selector: (state: unknown) => unknown) =>
     selector({ initialized: true, isLocal: true }),
   useIsPureClient: () => false,
+  useUserSideActionsRunHere: vi.fn(() => true),
 }));
 vi.mock("../peerApi", () => ({ federationPeerApi: { browsing: vi.fn() } }));
 vi.mock("../components/ResourceDetail", () => ({

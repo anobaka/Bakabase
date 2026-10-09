@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Bakabase.Abstractions.Extensions;
+using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Modules.ThirdParty.ThirdParties.Av;
 using Bakabase.Service.Models.Input;
 using Bakabase.Service.Models.View;
@@ -13,7 +14,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Bakabase.Service.Services;
 
-public class FileSystemEntryGroupingService(ILogger<FileSystemEntryGroupingService> logger)
+public class FileSystemEntryGroupingService(ILogger<FileSystemEntryGroupingService> logger, IUserStoragePolicy storage)
 {
     private record Candidate(string FullPath, string Name, bool IsDirectory)
     {
@@ -85,15 +86,18 @@ public class FileSystemEntryGroupingService(ILogger<FileSystemEntryGroupingServi
         {
             foreach (var rootPath in model.Paths)
             {
+                storage.EnsurePathAllowed(rootPath);
                 if (File.Exists(rootPath) || !Directory.Exists(rootPath)) continue;
 
                 var list = new List<Candidate>();
                 foreach (var file in Directory.GetFiles(rootPath))
                 {
+                    if (!storage.IsPathAllowed(file)) continue;
                     list.Add(new Candidate(file, Path.GetFileName(file)!, false));
                 }
                 foreach (var dir in Directory.GetDirectories(rootPath))
                 {
+                    if (!storage.IsPathAllowed(dir)) continue;
                     list.Add(new Candidate(dir, new DirectoryInfo(dir).Name, true));
                 }
                 batches[rootPath] = list;
@@ -107,6 +111,7 @@ public class FileSystemEntryGroupingService(ILogger<FileSystemEntryGroupingServi
 
                 foreach (var path in pg)
                 {
+                    storage.EnsurePathAllowed(path);
                     if (File.Exists(path))
                     {
                         batches.GetOrAdd(pg.Key, _ => []).Add(new Candidate(path, Path.GetFileName(path)!, false));
@@ -483,6 +488,7 @@ public class FileSystemEntryGroupingService(ILogger<FileSystemEntryGroupingServi
     {
         foreach (var batch in previews)
         {
+            storage.EnsurePathAllowed(batch.RootPath);
             foreach (var group in batch.Groups)
             {
                 string targetDir;
@@ -495,8 +501,11 @@ public class FileSystemEntryGroupingService(ILogger<FileSystemEntryGroupingServi
                 {
                     var oldPath = Path.Combine(batch.RootPath, group.RenamedSourceName);
                     var newPath = Path.Combine(batch.RootPath, group.DirectoryName);
+                    storage.EnsurePathAllowed(oldPath);
+                    storage.EnsurePathAllowed(newPath);
                     if (Directory.Exists(oldPath) && !Directory.Exists(newPath))
                     {
+                        storage.EnsureTreeMutationAllowed(oldPath);
                         Directory.Move(oldPath, newPath);
                     }
                     targetDir = newPath;
@@ -504,15 +513,20 @@ public class FileSystemEntryGroupingService(ILogger<FileSystemEntryGroupingServi
                 else
                 {
                     targetDir = Path.Combine(batch.RootPath, group.DirectoryName);
+                    storage.EnsurePathAllowed(targetDir);
                     Directory.CreateDirectory(targetDir);
                 }
 
+                storage.EnsurePathAllowed(targetDir);
                 foreach (var entry in group.Entries)
                 {
                     var sourcePath = Path.Combine(batch.RootPath, entry.Name);
                     var destPath = Path.Combine(targetDir, entry.Name);
+                    storage.EnsurePathAllowed(sourcePath);
+                    storage.EnsurePathAllowed(destPath);
                     if (entry.IsDirectory)
                     {
+                        storage.EnsureTreeMutationAllowed(sourcePath);
                         Directory.Move(sourcePath, destPath);
                     }
                     else

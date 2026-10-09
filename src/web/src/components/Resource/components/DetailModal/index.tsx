@@ -76,6 +76,7 @@ import {
   type SectionId,
 } from "@/components/ResourceDetailLayoutEditor";
 import { useUiOptionsStore } from "@/stores/options";
+import { useOpenResourceDirectory } from "@/hooks/useOpenResourceDirectory";
 
 type ColumnCount = 1 | 2 | 3;
 const PROPERTIES_COLUMNS_KEY = "bakabase:properties:columns";
@@ -124,6 +125,7 @@ interface Props extends DestroyableProps {
 const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
+  const folderAction = useOpenResourceDirectory();
   const [resource, setResource] = useState<ResourceModel | undefined>(initialResource);
   const [loading, setLoading] = useState(!initialResource);
   const uiOptions = useUiOptionsStore((state) => state.data);
@@ -222,14 +224,13 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
               <ButtonGroup size={"sm"}>
                 <PlayControl PortalComponent={PlayControlPortal} resource={resource} />
                 {resource.hasLocalPath && (
-                  <Tooltip content={t("common.action.openFolder")}>
+                  <Tooltip content={folderAction.label}>
                     <Button
                       isIconOnly
+                      aria-label={folderAction.label}
                       color="default"
                       variant="light"
-                      onPress={() => {
-                        BApi.resource.openResourceDirectory({ id: resource.id });
-                      }}
+                      onPress={() => folderAction.open(resource)}
                     >
                       <FolderOpenOutlined className="text-lg" />
                     </Button>
@@ -426,6 +427,8 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
       uiOptions,
       refreshingCache,
       createPortal,
+      folderAction.open,
+      folderAction.label,
       t,
       props.onDestroyed,
     ],

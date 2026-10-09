@@ -1,3 +1,4 @@
+using Bakabase.Abstractions.Components.Tasks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -57,7 +58,7 @@ public class DLsiteConnector(IDLsiteWorkService works, ILogger<DLsiteConnector> 
             return new PlatformFetchOutcome.Done(work.LocalPath);
         }
 
-        async Task Progress(int percentage, string process)
+        async Task Progress(int percentage, BTaskText? process)
         {
             if (onProgress != null) await onProgress(percentage, process);
         }

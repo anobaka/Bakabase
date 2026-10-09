@@ -1,3 +1,5 @@
+using Bakabase.Abstractions.Components.Localization;
+using Bakabase.Abstractions.Components.Tasks;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -105,6 +107,7 @@ public class UnpackStep : IAcquisitionStep
         var extraction = ctx.ServiceProvider.GetRequiredService<IArchiveExtractionService>();
 
         var directory = item.ExtractedDirectory ?? ctx.WorkingDirectory;
+        Bakabase.Modules.Acquisition.Components.AcquisitionStoragePaths.EnsureSourceAllowed(ctx, item, directory);
 
         if (!Directory.Exists(directory))
         {
@@ -122,6 +125,8 @@ public class UnpackStep : IAcquisitionStep
             ct.ThrowIfCancellationRequested();
 
             var files = Directory.GetFiles(directory, "*", SearchOption.AllDirectories);
+            foreach (var file in files)
+                Bakabase.Modules.Acquisition.Components.AcquisitionStoragePaths.EnsureSourceAllowed(ctx, item, file);
             var groups = CompressedFileHelper.DetectCompressedFileGroups(files, true)
                 .Where(g => !alreadyUnpacked.Contains(g.Files[0]))
                 .ToList();
@@ -162,7 +167,10 @@ public class UnpackStep : IAcquisitionStep
             var plan = JsonSerializer.Deserialize<PostExtractionPlan>(planJson, Json)
                        ?? throw new InvalidOperationException("The extraction plan is empty.");
             var root = item.ExtractedDirectory ?? ctx.WorkingDirectory;
+            Bakabase.Modules.Acquisition.Components.AcquisitionStoragePaths.EnsureSourceAllowed(ctx, item, root);
             var files = item.Files.Count > 0 ? item.Files : FileProcessingFiles.Enumerate(root);
+            foreach (var file in files)
+                Bakabase.Modules.Acquisition.Components.AcquisitionStoragePaths.EnsureSourceAllowed(ctx, item, file);
             var app = ctx.ServiceProvider.GetService<AppService>();
             var stateDirectory = item.ProcessingStateDirectory ?? (app != null
                 ? Path.Combine(app.AppDataDirectory, "file-processing", ctx.WorkflowRunId?.ToString() ??
@@ -171,8 +179,10 @@ public class UnpackStep : IAcquisitionStep
             item = item with {ExtractionPlanJson = planJson, ProcessingStateDirectory = stateDirectory};
             var executor = ctx.ServiceProvider.GetService<FileProcessingPlanExecutor>() ??
                            new FileProcessingPlanExecutor(ctx.ServiceProvider.GetRequiredService<IArchiveExtractionService>());
+            var localizer = ctx.ServiceProvider.GetRequiredService<IBakabaseLocalizer>();
             var result = await executor.ExecuteAsync(plan, root, files, stateDirectory, password,
-                p => ctx.ReportProgress(p, "Processing extraction instructions").GetAwaiter().GetResult(), ct);
+                p => ctx.ReportProgress(p, BTaskText.Localize(localizer,
+                    "BTask_Process_ExtractionInstructions")).GetAwaiter().GetResult(), ct);
             if (!result.Completed)
             {
                 var reason = result.NeedsPassword ? AcquisitionWaitReason.PasswordUnknown : AcquisitionWaitReason.ExtractionPlanUnknown;
@@ -200,7 +210,9 @@ public class UnpackStep : IAcquisitionStep
         var directory = Path.GetDirectoryName(entry)!;
         var candidates = await BuildCandidatesAsync(ctx, options, config, item, entry, suppliedPassword);
 
-        await ctx.ReportProgress(0, $"Opening {Path.GetFileName(entry)}");
+        var localizer = ctx.ServiceProvider.GetRequiredService<IBakabaseLocalizer>();
+        var entryName = Path.GetFileName(entry);
+        await ctx.ReportProgress(0, BTaskText.Localize(localizer, "BTask_Process_OpeningArchive", entryName));
 
         var probe = await extraction.ProbePasswordAsync(entry, candidates, null, ct);
 
@@ -226,7 +238,8 @@ public class UnpackStep : IAcquisitionStep
                 // Lifted up a level: an archive holding one folder would otherwise nest that folder
                 // inside a folder named after the archive, which is never what anyone wanted.
                 MoveToParent: true),
-            percentage => ctx.ReportProgress(percentage, $"Unpacking {Path.GetFileName(entry)}")
+            percentage => ctx.ReportProgress(percentage,
+                    BTaskText.Localize(localizer, "BTask_Process_UnpackingArchive", entryName))
                 .GetAwaiter().GetResult(),
             ct);
 

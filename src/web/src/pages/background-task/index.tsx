@@ -2,174 +2,90 @@
 
 import type { BTask } from "@/core/models/BTask";
 
-import React, { useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ClockCircleOutlined, QuestionCircleOutlined } from "@ant-design/icons";
+import { SettingOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import moment from "moment";
-import toast from "react-hot-toast";
 
-import { Button, Card, CardBody, DateInput, TimeInput, Tooltip } from "@/components/bakaui";
+import ScheduleModal from "./ScheduleModal";
+import "./index.scss";
+
+import { Button } from "@/components/bakaui";
+import { formatDuration } from "@/components/bakaui/components/DurationInput";
 import { TaskTable } from "@/components/FloatingAssistant/components/TaskTable";
-import BApi from "@/sdk/BApi";
 import { useBTasksStore } from "@/stores/bTasks";
 
-type EditingValue = { interval?: string; enableAfter?: string };
-
-const BackgroundTaskPage = () => {
+export default function BackgroundTaskPage() {
   const { t } = useTranslation();
-  const bTasks = useBTasksStore((state) => state.tasks);
-  const [editingOptions, setEditingOptions] = useState<Record<string, EditingValue>>({});
-
-  // Only persistent tasks have a schedule. Surface them in a dedicated panel
-  // beneath the live TaskTable so users can tweak the cadence without losing
-  // sight of what the daemon is doing right now.
-  const persistentTasks = bTasks.filter((t) => t.isPersistent);
-
-  const patchOptions = async () => {
-    await BApi.options.patchTaskOptions({
-      tasks: persistentTasks.map((task) => ({
-        id: task.id,
-        interval: editingOptions[task.id]?.interval ?? task.interval!,
-        enableAfter: editingOptions[task.id]?.enableAfter ?? task.enableAfter,
-      })),
-    });
-    toast.success(t<string>("common.state.saved"));
-    setEditingOptions({});
-  };
-
-  const editTask = (taskId: string, patch: EditingValue) => {
-    setEditingOptions((prev) => ({ ...prev, [taskId]: { ...prev[taskId], ...patch } }));
-  };
-
-  const renderInterval = (task: BTask) => {
-    const editingInterval = editingOptions[task.id]?.interval;
-
-    if (editingInterval !== undefined) {
-      return (
-        <TimeInput
-          granularity={"second"}
-          size={"sm"}
-          value={dayjs.duration(moment.duration(editingInterval).asMilliseconds())}
-          onBlur={() => patchOptions()}
-          onChange={(v) => {
-            if (v) editTask(task.id, { interval: v.format("HH:mm:ss") });
-          }}
-        />
-      );
-    }
-
-    return (
-      <div className={"flex items-center gap-1"}>
-        <Button
-          size={"sm"}
-          variant={"light"}
-          onPress={() => editTask(task.id, { interval: task.interval ?? "00:05:00" })}
-        >
-          {task.interval
-            ? dayjs.duration(moment.duration(task.interval).asMilliseconds()).format("HH:mm:ss")
-            : t<string>("backgroundTask.label.notSet")}
-        </Button>
-        {task.interval && task.nextTimeStartAt && (
-          <Tooltip
-            content={
-              <div>
-                {t<string>("backgroundTask.label.willStartAt")}
-                &nbsp;
-                {dayjs(task.nextTimeStartAt).format("YYYY-MM-DD HH:mm:ss")}
-              </div>
-            }
-          >
-            <ClockCircleOutlined className={"text-base"} />
-          </Tooltip>
-        )}
-      </div>
-    );
-  };
-
-  const renderEnableAfter = (task: BTask) => {
-    const format = "YYYY-MM-DD HH:mm:ss";
-    const editingEnableAfter = editingOptions[task.id]?.enableAfter;
-
-    if (editingEnableAfter !== undefined) {
-      return (
-        <DateInput
-          granularity={"second"}
-          size={"sm"}
-          value={dayjs(editingEnableAfter)}
-          onBlur={() => patchOptions()}
-          onChange={(v) => editTask(task.id, { enableAfter: v?.format(format) })}
-        />
-      );
-    }
-
-    return (
-      <Button
-        size={"sm"}
-        variant={task.enableAfter ? "light" : "flat"}
-        onPress={() => {
-          const initValue = task.enableAfter ? dayjs(task.enableAfter) : dayjs().add(1, "h");
-
-          editTask(task.id, { enableAfter: initValue.format(format) });
-        }}
-      >
-        {task.enableAfter
-          ? dayjs(task.enableAfter).format(format)
-          : t<string>("backgroundTask.label.notSet")}
-      </Button>
-    );
-  };
+  const tasks = useBTasksStore((state) => state.tasks);
+  const [editing, setEditing] = useState<BTask>();
 
   return (
-    <div className={"flex flex-col gap-4"}>
-      <TaskTable tasks={bTasks} />
+    <div className="background-task-page flex min-w-0 flex-col gap-3">
+      <header>
+        <h1 className="text-lg font-semibold">{t("backgroundTask.page.title")}</h1>
+        <p className="mt-1 text-xs leading-relaxed text-default-500">
+          {t("backgroundTask.page.description")}
+        </p>
+      </header>
+      <TaskTable
+        presentation="page"
+        renderSchedule={(task) => {
+          if (!task.isPersistent)
+            return (
+              <span className="text-xs text-default-400">
+                {t("backgroundTask.schedule.oneOff")}
+              </span>
+            );
+          const next = task.nextTimeStartAt;
+          const at =
+            next && task.enableAfter && dayjs(task.enableAfter).isAfter(next)
+              ? task.enableAfter
+              : next;
 
-      {persistentTasks.length > 0 && (
-        <Card>
-          <CardBody>
-            <div className={"flex items-center gap-2 mb-3"}>
-              <h3 className={"text-base font-medium"}>
-                {t<string>("backgroundTask.label.schedule")}
-              </h3>
-              <Tooltip color={"secondary"} content={t<string>("backgroundTask.label.scheduleHint")}>
-                <QuestionCircleOutlined className={"text-base opacity-60"} />
-              </Tooltip>
-            </div>
-
-            <div
-              className={"grid grid-cols-[minmax(0,1fr)_auto_auto] gap-x-4 gap-y-2 items-center"}
+          return (
+            <Button
+              aria-label={t("backgroundTask.label.scheduleFor", { taskName: task.name })}
+              className="h-auto min-h-8 min-w-0 justify-start gap-2 px-1.5 py-1 text-left"
+              size="sm"
+              variant="light"
+              onPress={() => setEditing(task)}
             >
-              <div className={"text-xs text-default-500"}>
-                {t<string>("backgroundTask.column.name")}
-              </div>
-              <div className={"text-xs text-default-500"}>
-                {t<string>("backgroundTask.column.interval")}
-              </div>
-              <div className={"text-xs text-default-500"}>
-                {t<string>("backgroundTask.column.enableAfter")}
-              </div>
-              {persistentTasks.map((task) => (
-                <React.Fragment key={task.id}>
-                  <div className={"flex items-center gap-1 min-w-0"}>
-                    <span className={"truncate"}>{task.name}</span>
-                    {task.description && (
-                      <Tooltip color={"secondary"} content={task.description}>
-                        <QuestionCircleOutlined className={"text-base opacity-60"} />
-                      </Tooltip>
-                    )}
-                  </div>
-                  <div>{renderInterval(task)}</div>
-                  <div>{renderEnableAfter(task)}</div>
-                </React.Fragment>
-              ))}
-            </div>
-          </CardBody>
-        </Card>
+              <span className="min-w-0 text-xs">
+                <span className="block text-default-600">
+                  {task.interval
+                    ? t("backgroundTask.schedule.every", {
+                        interval: formatDuration(moment.duration(task.interval).asSeconds(), t),
+                      })
+                    : t("backgroundTask.schedule.notRecurring")}
+                </span>
+                {at ? (
+                  <span
+                    className="block tabular-nums text-default-400"
+                    title={dayjs(at).format("YYYY-MM-DD HH:mm:ss")}
+                  >
+                    {t("backgroundTask.schedule.next", {
+                      time: dayjs(at).format("MM-DD HH:mm:ss"),
+                    })}
+                  </span>
+                ) : task.enableAfter ? (
+                  <span className="block tabular-nums text-default-400">
+                    {t("backgroundTask.schedule.after", {
+                      time: dayjs(task.enableAfter).format("MM-DD HH:mm"),
+                    })}
+                  </span>
+                ) : null}
+              </span>
+              <SettingOutlined aria-hidden className="shrink-0 text-default-400" />
+            </Button>
+          );
+        }}
+        tasks={tasks}
+      />
+      {editing && (
+        <ScheduleModal key={editing.id} task={editing} onClose={() => setEditing(undefined)} />
       )}
     </div>
   );
-};
-
-BackgroundTaskPage.displayName = "BackgroundTaskPage";
-
-export default BackgroundTaskPage;
+}

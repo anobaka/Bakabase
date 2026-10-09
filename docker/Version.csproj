@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Match Bakabase.Service: both source and official builds use NBGV. -->
+    <PackageReference Include="Nerdbank.GitVersioning" Version="3.7.115" PrivateAssets="all" />
+  </ItemGroup>
+  <Target Name="RequireGitCheckout" AfterTargets="GetBuildVersion">
+    <Error Condition="'$(GitCommitId)' == ''"
+           Text="The version helper cannot read the checkout's Git metadata. Refusing to build an incorrectly versioned image." />
+  </Target>
+</Project>

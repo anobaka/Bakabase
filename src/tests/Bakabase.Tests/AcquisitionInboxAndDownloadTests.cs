@@ -310,7 +310,8 @@ public sealed class AcquisitionInboxAndDownloadTests
     private AcquisitionInboxWatcher Watcher() =>
         new(_sp.GetRequiredService<IServiceScopeFactory>(),
             _sp.GetRequiredService<IBOptions<AcquisitionOptions>>(),
-            NullLogger<AcquisitionInboxWatcher>.Instance);
+            NullLogger<AcquisitionInboxWatcher>.Instance,
+            new Bakabase.Abstractions.Components.FileSystem.UserStoragePolicy(isContainer: false));
 
     [TestMethod]
     public async Task AFileStillGrowingIsNotOfferedToAnything()

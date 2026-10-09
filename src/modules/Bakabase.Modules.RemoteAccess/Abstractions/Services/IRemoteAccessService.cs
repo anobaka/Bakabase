@@ -17,10 +17,17 @@ public interface IRemoteAccessService
     Task SetModeAsync(RemoteAccessMode? mode);
 
     /// <summary>
-    /// Addresses another device on the same network can open, one per non-loopback
-    /// interface and listening port. Used to tell the user what to type into a phone.
+    /// Candidate origins another device can open, ordered by explicit choice, browser,
+    /// deployment and native interface. Container interfaces are never advertised.
     /// </summary>
     IReadOnlyList<RemoteAccessAddress> GetReachableAddresses();
+
+    string? GetAdvertisedAddress();
+    /// <summary>Persists an explicit origin; null restores automatic selection. Invalid input is refused.</summary>
+    Task SetAdvertisedAddressAsync(string? address);
+    /// <summary>Remembers an operator's actual browser origin briefly, without writing settings.</summary>
+    void ObserveAddress(string address);
+
 
     /// <summary>
     /// This install's stable identity, generated and persisted on first use.

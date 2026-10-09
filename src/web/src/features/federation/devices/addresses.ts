@@ -11,8 +11,8 @@ import { RemoteAccessAddressKind } from "@/sdk/constants";
  * one: the recommended address first, the other networks after it, and the adapters another
  * device cannot reach folded away and labelled.
  *
- * Every port reaches the same instance, so one row per host is enough, on the main port —
- * the first one the server lists, which is the port its discovery beacon advertises.
+ * Addresses are deduplicated by their full normalized URL. A mapped port or HTTPS
+ * reverse proxy on the same host remains a distinct way to reach this instance.
  *
  * The server says which kind of network each address is on and which one to recommend: only
  * it can see which interface has a default gateway, the mark of the network a router serves
@@ -28,6 +28,7 @@ export interface DeviceAddress {
   interfaceName: string;
   kind: AddressKind;
   recommended: boolean;
+  source?: string;
 }
 
 /** Interface names of overlay networks and VPN clients (the server's list, by name only). */
@@ -95,70 +96,56 @@ const kindOrder: Record<AddressKind, number> = {
   linkLocal: 4,
 };
 
-const hostAndPort = (url: string) => {
-  try {
-    const parsed = new URL(url);
-
-    return { host: parsed.hostname, port: parsed.port };
-  } catch {
-    return { host: url, port: "" };
-  }
+const sourceOrder: Record<string, number> = {
+  configured: 0,
+  browser: 1,
+  deployment: 2,
+  interface: 3,
 };
 
-/**
- * One row per host on the main port, the recommended one first, then LAN, VPN, unknown,
- * virtual and link-local. The server's recommendation stands when it gives one (nothing
- * recommended included); from an older server, the first LAN address is, and nothing is when
- * there is none.
- */
+/** Keep distinct schemes and ports; a recommendation belongs to a URL, not an entire host. */
 export function deviceAddresses(addresses: readonly RemoteAccessAddress[]): DeviceAddress[] {
-  if (!addresses.length) return [];
   const serverRecommends = addresses.some((address) => address.recommended != null);
-  const recommendedHosts = new Set(
-    addresses
-      .filter((address) => address.recommended === true)
-      .map((address) => hostAndPort(address.url).host),
-  );
-  const mainPort = hostAndPort(addresses[0].url).port;
-  const byHost = new Map<string, DeviceAddress>();
+  const byUrl = new Map<string, DeviceAddress>();
 
   for (const address of addresses) {
-    const { host, port } = hostAndPort(address.url);
+    let url: URL;
 
-    if (byHost.has(host) || port !== mainPort) continue;
-    byHost.set(host, {
-      url: address.url,
-      host,
+    try {
+      url = new URL(address.url);
+    } catch {
+      continue;
+    }
+    const normalized = url.href.replace(/\/$/, "");
+    const existing = byUrl.get(normalized);
+
+    if (existing) {
+      existing.recommended ||= address.recommended === true;
+      continue;
+    }
+    byUrl.set(normalized, {
+      url: normalized,
+      host: url.hostname,
       interfaceName: address.interfaceName,
-      kind: kindOf(address, host),
-      recommended: false,
+      kind: kindOf(address, url.hostname),
+      recommended: address.recommended === true,
+      source: address.source,
     });
   }
-  // A host listed only on another port still gets a row, rather than vanishing.
-  for (const address of addresses) {
-    const { host } = hostAndPort(address.url);
-
-    if (!byHost.has(host))
-      byHost.set(host, {
-        url: address.url,
-        host,
-        interfaceName: address.interfaceName,
-        kind: kindOf(address, host),
-        recommended: false,
-      });
-  }
-  const rows = [...byHost.values()];
+  const rows = [...byUrl.values()];
   const recommended = serverRecommends
-    ? rows.find((row) => recommendedHosts.has(row.host))
+    ? rows.find((row) => row.recommended)
     : rows.find((row) => row.kind === "lan");
 
-  if (recommended) recommended.recommended = true;
+  for (const row of rows) row.recommended = row === recommended;
 
   return rows
     .map((row, index) => ({ row, index }))
     .sort(
       (x, y) =>
         Number(y.row.recommended) - Number(x.row.recommended) ||
+        (sourceOrder[x.row.source ?? "interface"] ?? 3) -
+          (sourceOrder[y.row.source ?? "interface"] ?? 3) ||
         kindOrder[x.row.kind] - kindOrder[y.row.kind] ||
         x.index - y.index,
     )

@@ -1,0 +1,25 @@
+name: bakabase
+services:
+  server:
+    image: ${BAKABASE_IMAGE:-bakabase:local}
+    restart: unless-stopped
+    stop_grace_period: 60s
+    ports:
+      - "${BAKABASE_BIND_ADDRESS:-127.0.0.1}:${BAKABASE_PORT:-34567}:34567"
+    environment:
+      API_LISTENING_PORTS: "34567"
+      BAKABASE_DATA_DIR: /data
+      BAKABASE_NODE_NAME: ${BAKABASE_NODE_NAME:-Bakabase Server}
+      # Filled automatically by compose.sh from this deployment's resolved mounts.
+      # A direct docker compose invocation leaves it empty and shows container paths.
+      BAKABASE_DEPLOYMENT_MOUNTS: ${BAKABASE_DEPLOYMENT_MOUNTS:-}
+      # Host LAN addresses paired with the published HTTP ports from the same config.
+      BAKABASE_DEPLOYMENT_ENDPOINTS: ${BAKABASE_DEPLOYMENT_ENDPOINTS:-}
+    volumes:
+      - type: bind
+        source: ${BAKABASE_DATA_DIR:?Set BAKABASE_DATA_DIR to an existing absolute host data directory in .env}
+        target: /data
+        bind:
+          create_host_path: false
+      # Add optional media, download or import mounts in compose.local.yaml.
+      # See compose.local.example.yaml; only the chosen data directory is required.

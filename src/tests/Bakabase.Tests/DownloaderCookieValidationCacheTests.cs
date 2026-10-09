@@ -1,3 +1,4 @@
+using Bakabase.Abstractions.Components.FileSystem;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -89,7 +90,7 @@ public class DownloaderCookieValidationCacheTests
     }
 
     private sealed class TestHelper(StubOptionsManager optionsManager, bool cookieIsValid)
-        : AbstractDownloaderHelper<TestOptions>(optionsManager, new StubLocalizer(), new HttpClient())
+        : AbstractDownloaderHelper<TestOptions>(optionsManager, new StubLocalizer(), new HttpClient(), new UserStoragePolicy(isContainer: false))
     {
         public int Validations;
 
@@ -109,7 +110,7 @@ public class DownloaderCookieValidationCacheTests
         StubOptionsManager optionsManager,
         ScriptedTransport transport,
         TimeSpan? fastFailure = null)
-        : AbstractDownloaderHelper<TestOptions>(optionsManager, new StubLocalizer(), new HttpClient(transport))
+        : AbstractDownloaderHelper<TestOptions>(optionsManager, new StubLocalizer(), new HttpClient(transport), new UserStoragePolicy(isContainer: false))
     {
         public override ThirdPartyId ThirdPartyId => ThirdPartyId.ExHentai;
 

@@ -105,9 +105,14 @@ div[data-react-aria-top-layer][role="region"] > div[data-placement] {
   pointer-events: none !important;
 }
 
-div[data-react-aria-top-layer][role="region"] [data-toast="true"]:not([data-toast-exiting="true"]),
-div[data-react-aria-top-layer][role="region"] [data-toast="true"]:not([data-toast-exiting="true"]) * {
+div[data-react-aria-top-layer][role="region"] [data-toast="true"]:not([data-toast-exiting="true"]) {
   pointer-events: auto !important;
+}
+
+/* HeroUI's full-size progress decoration must never cover the scrollable message.
+ * Do not override pointer-events on every descendant: that also activates invisible overlays. */
+.bakabase-toast-progress {
+  pointer-events: none !important;
 }
 
 /* HeroUI fixes its toast width to 356px on larger screens. Let longer messages
@@ -129,6 +134,9 @@ div[data-toast="true"] {
   max-height: min(70dvh, 30rem);
   overflow-y: auto;
   overflow-x: hidden;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  user-select: text;
 }
 
 .bakabase-toast-text {

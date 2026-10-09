@@ -97,7 +97,7 @@ public class FetchFromPlatformStep : IAcquisitionStep
             return Arrived(item, existing);
         }
 
-        var outcome = await connector.FetchAsync(sourceKey, ctx.WorkingDirectory, ctx.ReportProgress, ct);
+        var outcome = await connector.FetchAsync(sourceKey, ctx.WorkingDirectory, (percentage, process) => ctx.ReportProgress(percentage, process), ct);
 
         return outcome switch
         {

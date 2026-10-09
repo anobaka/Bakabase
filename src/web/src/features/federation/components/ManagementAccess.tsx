@@ -108,6 +108,7 @@ function useOwnRemoteAccessSettings({
   const generation = useRef(0);
   const inFlight = useRef(0);
   const settled = useRef(false);
+  const addressRevision = useRemoteAccessStore((state) => state.addressCandidatesRevision);
   /** Whether a quiet read that fails has anything better to leave on screen. */
   const hasSettings = useRef(false);
   const latest = useRef({ onSettled, failedText });
@@ -158,7 +159,7 @@ function useOwnRemoteAccessSettings({
 
   useEffect(() => {
     void load();
-  }, [load]);
+  }, [load, addressRevision]);
 
   // Something outside this section says the settings may have moved — e.g. the sharing
   // panel turned remote access on, or a notification led here again. The first value is

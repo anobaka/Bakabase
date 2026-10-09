@@ -36,7 +36,10 @@ namespace Bakabase.Abstractions.Components.Network
                 case NetworkOptions.ProxyMode.DoNotUse:
                     return null;
                 case NetworkOptions.ProxyMode.UseSystem:
-                    return WebRequest.GetSystemWebProxy().GetProxy(destination);
+                    var system = HttpClient.DefaultProxy;
+                    // Environment proxies apply NO_PROXY only through IsBypassed;
+                    // GetProxy alone still returns their configured proxy endpoint.
+                    return system.IsBypassed(destination) ? null : system.GetProxy(destination);
                 case NetworkOptions.ProxyMode.UseCustom:
                     var p = options.Value.CustomProxies?.FirstOrDefault(x => x.Id == model.CustomProxyId);
                     return !string.IsNullOrEmpty(p?.Address) ? new Uri(p.Address) : null;
@@ -52,7 +55,7 @@ namespace Bakabase.Abstractions.Components.Network
                 case NetworkOptions.ProxyMode.DoNotUse:
                     return null;
                 case NetworkOptions.ProxyMode.UseSystem:
-                    return WebRequest.GetSystemWebProxy().Credentials;
+                    return HttpClient.DefaultProxy.Credentials;
                 case NetworkOptions.ProxyMode.UseCustom:
                     var c = options.Value.CustomProxies?.FirstOrDefault(x => x.Id == model.CustomProxyId)
                         ?.Credentials;

@@ -1,7 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
-import { useTranslation } from "react-i18next";
+
+import {
+  isDeleteShortcut,
+  isPrimaryModifierPressed,
+  shouldIgnoreGlobalShortcut,
+} from "@/core/keyboard";
 
 export enum SelectionMode {
   Normal = 1,
@@ -16,10 +21,8 @@ type Props = {
   onKeyDown?: (key: string, evt: KeyboardEvent) => any;
 };
 const EventListener = (props: Props) => {
-  const { t } = useTranslation();
   const propsRef = useRef(props);
   const selectionModeRef = useRef<SelectionMode>(SelectionMode.Normal);
-  const shiftHoldingRef = useRef(false);
 
   // Keep propsRef in sync with latest props
   useEffect(() => {
@@ -35,11 +38,17 @@ const EventListener = (props: Props) => {
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("keyup", onKeyUp);
     window.addEventListener("click", onClick);
+    window.addEventListener("mousedown", updateSelectionMode, true);
+    window.addEventListener("blur", resetSelectionMode);
+    document.addEventListener("visibilitychange", resetSelectionMode);
 
     return () => {
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
       window.removeEventListener("click", onClick);
+      window.removeEventListener("mousedown", updateSelectionMode, true);
+      window.removeEventListener("blur", resetSelectionMode);
+      document.removeEventListener("visibilitychange", resetSelectionMode);
     };
   }, []);
 
@@ -54,55 +63,33 @@ const EventListener = (props: Props) => {
     propsRef.current.onClick?.(evt);
   }, []);
 
-  const isInsideDialog = useCallback((target: EventTarget | null): boolean => {
-    let el = target as HTMLElement | null;
-
-    while (el) {
-      if (el.role === "dialog") {
-        return true;
-      }
-      el = el.parentElement;
-    }
-
-    return false;
+  const updateSelectionMode = useCallback((event: KeyboardEvent | MouseEvent) => {
+    changeSelectionMode(
+      event.shiftKey
+        ? SelectionMode.Shift
+        : isPrimaryModifierPressed(event)
+          ? SelectionMode.Ctrl
+          : SelectionMode.Normal,
+    );
   }, []);
 
+  const resetSelectionMode = useCallback(() => changeSelectionMode(SelectionMode.Normal), []);
+
   const onKeyDown = useCallback((e: KeyboardEvent) => {
-    // Modifier keys should always be tracked for selection mode,
-    // but action keys should be suppressed when a dialog is open.
-    switch (e.key) {
-      case "Control":
-      case "Meta": // Support Command key on Mac
-        changeSelectionMode(SelectionMode.Ctrl);
-        break;
-      case "Shift":
-        changeSelectionMode(SelectionMode.Shift);
-        shiftHoldingRef.current = true;
-        break;
-      default:
-        if (isInsideDialog(e.target)) {
-          return;
-        }
-        if (e.key === "Delete") {
-          propsRef.current.onDelete?.();
-        } else {
-          propsRef.current.onKeyDown?.(e.key, e);
-        }
-        break;
+    updateSelectionMode(e);
+    if (shouldIgnoreGlobalShortcut(e)) return;
+    if (["Control", "Meta", "Shift", "Alt"].includes(e.key)) return;
+    // Holding a key may navigate, but must not open repeated dialogs or start jobs twice.
+    if (e.repeat && e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
+    if (isDeleteShortcut(e)) {
+      if (propsRef.current.onDelete?.()) e.preventDefault();
+    } else {
+      propsRef.current.onKeyDown?.(e.key, e);
     }
   }, []);
 
   const onKeyUp = useCallback((e: KeyboardEvent) => {
-    switch (e.key) {
-      case "Control":
-      case "Meta": // Support Command key on Mac
-        changeSelectionMode(SelectionMode.Normal);
-        break;
-      case "Shift":
-        changeSelectionMode(SelectionMode.Normal);
-        shiftHoldingRef.current = false;
-        break;
-    }
+    updateSelectionMode(e);
   }, []);
 
   return null;

@@ -72,10 +72,9 @@ public sealed class FederationPeerController(FederationPeerService peers, NodePa
                 peer with { ConnectionState = peer.Enabled ? sessions.GetConnectionState(peer.NodeId) : "Disabled" }).ToArray(),
             status.Requests, await browsing.IsEnabledAsync(ct),
             status.SharingEnabled && mode != RemoteAccessMode.Disabled
-                // Every listening port reaches the same instance; show one address per host.
+                // Published ports and HTTPS proxies can have different reachability on the same host.
                 ? remoteAccess.GetReachableAddresses().Select(a => a.Url)
-                    .GroupBy(url => Uri.TryCreate(url, UriKind.Absolute, out var uri) ? uri.Host : url)
-                    .Select(g => g.First()).ToArray()
+                    .Distinct(StringComparer.OrdinalIgnoreCase).ToArray()
                 : []));
     }
 
@@ -117,6 +116,7 @@ public sealed class FederationPeerController(FederationPeerService peers, NodePa
                 // different NodeId; never replace the existing legacy server identity with it.
                 ServerId = legacyServerId,
                 AllowLiveTranscode = allowLiveTranscode,
+                AdvertisedAddress = configured.AdvertisedAddress,
                 RequirePairing = true,
                 Mode = RemoteAccessMode.Enabled
             });

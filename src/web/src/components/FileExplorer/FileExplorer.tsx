@@ -16,10 +16,13 @@ import { useDebounce, useUpdate, useUpdateEffect } from "react-use";
 import {
   ArrowLeftOutlined,
   ArrowUpOutlined,
+  CloseOutlined,
   EyeInvisibleOutlined,
   EyeOutlined,
   FolderOpenOutlined,
   FolderOutlined,
+  HomeOutlined,
+  MoreOutlined,
   SearchOutlined,
 } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
@@ -46,8 +49,19 @@ import { Button, Chip, Input, Tooltip, toast } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import FolderSelector from "@/components/FolderSelector";
 import { useIsRemoteClient } from "@/stores/remoteAccess";
+import { hasKeyboardModifier, matchesPrimaryShortcut } from "@/core/keyboard";
+import {
+  useUserStorageStore,
+  isInsideStorageRoots,
+  storageError,
+  validateUserStoragePaths,
+} from "@/stores/userStorage";
 
 export type FileExplorerProps = {
+  /** Opt-in page layout; shared folder pickers retain their existing presentation. */
+  appearance?: "default" | "compact";
+  toolbarContent?: React.ReactNode;
+  locationNotice?: React.ReactNode;
   rootPath?: string;
   /**
    * Multi-root mode: render these paths as the top-level entries of a virtual, pathless root,
@@ -87,6 +101,9 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
   (
     {
       rootPath,
+      appearance = "default",
+      toolbarContent,
+      locationNotice,
       rootPaths,
       keyboard = true,
       onDoubleClick,
@@ -105,14 +122,18 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
     ref,
   ) => {
     const { t } = useTranslation();
+    const compact = appearance === "compact";
     const forceUpdate = useUpdate();
     const { createPortal } = useBakabaseContext();
 
     // Asks about files, not about actions: this explorer browses whichever machine
     // holds them, and in every flavour but the all-in-one that is not this one.
     const filesAreElsewhere = useIsRemoteClient();
+    const storage = useUserStorageStore((state) => state.settings);
+    const rootsError = useUserStorageStore((state) => state.error);
+    const [navigationError, setNavigationError] = useState<string>();
 
-    const initializedRootPathRef = useRef<string>();
+    const initializedRootPathRef = useRef<string | undefined | null>(null);
     const initializeSeqRef = useRef(0);
 
     const rootPathsRef = useRef(rootPaths);
@@ -123,7 +144,7 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
 
     const [root, setRoot] = useState<RootEntry>();
     const rootRef = useRef(root);
-    const [inputValue, setInputValue] = useState(rootPath);
+    const [inputValue, setInputValue] = useState(rootPath ?? "");
 
     const [selectedEntries, setSelectedEntries] = useState<Entry[]>([]);
     const selectedEntriesRef = useRef<Entry[]>(selectedEntries);
@@ -177,13 +198,112 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
     }, [selectedEntries]);
 
     const initialize = useCallback(async (path?: string, addToHistory: boolean = true) => {
+      clearTimeout(inputBlurHandlerRef.current);
       // Each call supersedes any still-awaiting predecessor; a stale one must never setRoot
       // over a newer navigation.
       const seq = ++initializeSeqRef.current;
       const superseded = () => seq != initializeSeqRef.current;
 
-      if (path == undefined && (rootPathsRef.current?.length ?? 0) > 0) {
+      try {
+        const policy = await useUserStorageStore.getState().load();
+
+        if (superseded()) return;
+        setNavigationError(undefined);
+        if (path && policy.isRestricted) await validateUserStoragePaths([path]);
+        if (superseded()) return;
+
+        if (path == undefined && (rootPathsRef.current?.length ?? 0) > 0) {
+          shiftSelectionStartRef.current = undefined;
+          if (addToHistory && rootRef.current) {
+            const history = historyRootPathsRef.current;
+
+            if (history.length == 0 || history[history.length - 1] != rootRef.current.path) {
+              setHistoryRootPaths([...history, rootRef.current.path]);
+            }
+          }
+
+          const virtualRoot = new RootEntry(undefined, showHiddenFilesRef.current);
+
+          virtualRoot.children = [];
+
+          const standardizedPaths = rootPathsRef
+            .current!.map((p) => standardizePath(p))
+            .filter((p): p is string => !!p);
+          // Missing roots are silently skipped — a mark can point at an unplugged drive.
+          const rsps = await Promise.all(
+            standardizedPaths.map((p) =>
+              BApi.file
+                .getIwFsEntry({ path: p }, { showErrorToast: () => false })
+                .catch(() => undefined),
+            ),
+          );
+
+          if (superseded()) return;
+
+          // Group the roots under passive parent-directory rows so same-named folders stay
+          // distinguishable; roots without a resolvable parent (drive roots) sit directly
+          // under the virtual root. `properties: []` suppresses the per-entry children-count
+          // probe, which enumerates the whole directory server-side — the dominant cost of
+          // opening this view on large libraries.
+          const groups = new Map<string, Entry>();
+
+          for (const rsp of rsps) {
+            if (!rsp?.data?.path) continue;
+            const parentPath = getStandardParentPath(rsp.data.path);
+            let parent: Entry = virtualRoot;
+
+            if (parentPath) {
+              let group = groups.get(parentPath);
+
+              if (!group) {
+                group = new Entry({
+                  path: parentPath,
+                  name: parentPath,
+                  type: IwFsType.Directory,
+                  parent: virtualRoot,
+                  children: [],
+                  expanded: true,
+                  passive: true,
+                  properties: [],
+                });
+                groups.set(parentPath, group);
+                virtualRoot.children.push(group);
+              }
+              parent = group;
+            }
+
+            const child = new Entry({ ...rsp.data, parent, properties: [] });
+
+            if (parent == virtualRoot) {
+              virtualRoot.children.push(child);
+            } else {
+              parent.children!.push(child);
+            }
+          }
+          virtualRoot.children.sort((a, b) => a.name.localeCompare(b.name));
+          for (const group of groups.values()) {
+            group.children!.sort((a, b) => a.name.localeCompare(b.name));
+            group.refreshFilteredChildren();
+          }
+          virtualRoot.refreshFilteredChildren();
+          setRoot(virtualRoot);
+
+          return;
+        }
+
+        let finalPath = standardizePath(path);
+
+        if (finalPath != undefined && finalPath.length > 0) {
+          const isFile = (await BApi.file.checkPathIsFile({ path: finalPath })).data;
+
+          if (superseded()) return;
+
+          if (isFile) {
+            finalPath = getStandardParentPath(finalPath)!;
+          }
+        }
         shiftSelectionStartRef.current = undefined;
+
         if (addToHistory && rootRef.current) {
           const history = historyRootPathsRef.current;
 
@@ -192,99 +312,15 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
           }
         }
 
-        const virtualRoot = new RootEntry(undefined, showHiddenFilesRef.current);
+        log("initialize", finalPath, historyRootPathsRef.current);
 
-        virtualRoot.children = [];
-
-        const standardizedPaths = rootPathsRef
-          .current!.map((p) => standardizePath(p))
-          .filter((p): p is string => !!p);
-        // Missing roots are silently skipped — a mark can point at an unplugged drive.
-        const rsps = await Promise.all(
-          standardizedPaths.map((p) =>
-            BApi.file
-              .getIwFsEntry({ path: p }, { showErrorToast: () => false })
-              .catch(() => undefined),
-          ),
-        );
-
+        setRoot(new RootEntry(finalPath || undefined, showHiddenFilesRef.current));
+      } catch (cause) {
         if (superseded()) return;
-
-        // Group the roots under passive parent-directory rows so same-named folders stay
-        // distinguishable; roots without a resolvable parent (drive roots) sit directly
-        // under the virtual root. `properties: []` suppresses the per-entry children-count
-        // probe, which enumerates the whole directory server-side — the dominant cost of
-        // opening this view on large libraries.
-        const groups = new Map<string, Entry>();
-
-        for (const rsp of rsps) {
-          if (!rsp?.data?.path) continue;
-          const parentPath = getStandardParentPath(rsp.data.path);
-          let parent: Entry = virtualRoot;
-
-          if (parentPath) {
-            let group = groups.get(parentPath);
-
-            if (!group) {
-              group = new Entry({
-                path: parentPath,
-                name: parentPath,
-                type: IwFsType.Directory,
-                parent: virtualRoot,
-                children: [],
-                expanded: true,
-                passive: true,
-                properties: [],
-              });
-              groups.set(parentPath, group);
-              virtualRoot.children.push(group);
-            }
-            parent = group;
-          }
-
-          const child = new Entry({ ...rsp.data, parent, properties: [] });
-
-          if (parent == virtualRoot) {
-            virtualRoot.children.push(child);
-          } else {
-            parent.children!.push(child);
-          }
-        }
-        virtualRoot.children.sort((a, b) => a.name.localeCompare(b.name));
-        for (const group of groups.values()) {
-          group.children!.sort((a, b) => a.name.localeCompare(b.name));
-          group.refreshFilteredChildren();
-        }
-        virtualRoot.refreshFilteredChildren();
-        setRoot(virtualRoot);
-
-        return;
+        setNavigationError(storageError(cause, t).message);
+        if (!rootRef.current && useUserStorageStore.getState().settings)
+          setRoot(new RootEntry(undefined, showHiddenFilesRef.current));
       }
-
-      let finalPath = standardizePath(path);
-
-      if (finalPath != undefined && finalPath.length > 0) {
-        const isFile = (await BApi.file.checkPathIsFile({ path: finalPath })).data;
-
-        if (superseded()) return;
-
-        if (isFile) {
-          finalPath = getStandardParentPath(finalPath)!;
-        }
-      }
-      shiftSelectionStartRef.current = undefined;
-
-      if (addToHistory && rootRef.current) {
-        const history = historyRootPathsRef.current;
-
-        if (history.length == 0 || history[history.length - 1] != rootRef.current.path) {
-          setHistoryRootPaths([...history, rootRef.current.path]);
-        }
-      }
-
-      log("initialize", finalPath, historyRootPathsRef.current);
-
-      setRoot(new RootEntry(finalPath, showHiddenFilesRef.current));
     }, []);
 
     useEffect(() => {
@@ -313,13 +349,19 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
     }, [showHiddenFiles]);
 
     useUpdateEffect(() => {
-      rootRef.current?.patchFilter(filter);
-    }, [filter]);
-
-    useUpdateEffect(() => {
-      setInputValue(root?.path);
+      if (rootRef.current && rootRef.current !== root) {
+        // Entries belong to their root model. A navigation must not leave actions
+        // targeting rows from the previous directory; expanding a child keeps this root.
+        selectedEntriesRef.current.forEach((entry) => entry.select(false));
+        selectedEntriesRef.current = [];
+        shiftSelectionStartRef.current = undefined;
+        selectionModeRef.current = SelectionMode.Normal;
+        contextMenuEntryRef.current = undefined;
+        toggleMenu(false);
+        setSelectedEntries([]);
+      }
+      setInputValue(root?.path ?? "");
       rootRef.current = root;
-      rootRef.current?.patchFilter(filter);
       log("root changed", root);
     }, [root]);
 
@@ -354,7 +396,18 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
 
     // Memoize filter object to prevent unnecessary re-renders
     // Must be before early return to maintain hooks order
-    const filterObj = useMemo(() => ({ keyword: debouncedFilterValue }), [debouncedFilterValue]);
+    const filterObj = useMemo(
+      () => ({ ...filter, keyword: debouncedFilterValue ?? filter?.keyword }),
+      [filter, debouncedFilterValue],
+    );
+
+    useEffect(() => {
+      if (!root) return;
+      root.patchFilter(filterObj);
+      // The model is mutable: applying a filter in the child only refreshes its rows.
+      // Refresh this owner too so the toolbar reads the same filtered children.
+      forceUpdate();
+    }, [root, filterObj]);
 
     // Memoize switchSelective to prevent unnecessary re-renders
     // Must be before early return to maintain hooks order
@@ -458,19 +511,35 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
       [selectable],
     );
 
-    if (!root) {
-      return null;
+    if (!storage || !root) {
+      return (
+        <div className="space-y-2 p-3 text-sm" role={rootsError ? "alert" : "status"}>
+          {t(rootsError ? "fileExplorer.storage.loadFailed" : "fileExplorer.storage.loading")}
+          {rootsError && (
+            <Button size="sm" onPress={() => void initialize(rootPath)}>
+              {t("fileExplorer.storage.retry")}
+            </Button>
+          )}
+        </div>
+      );
     }
+    const parentPath = getStandardParentPath(root.path);
+    const canGoToParent = parentPath !== undefined && isInsideStorageRoots(parentPath, storage);
+    const storageOverview = storage.isRestricted && !root.path && !rootPaths?.length;
 
     const filteredChildrenCount = root.filteredChildren.length ?? 0;
     const childrenCount = root.childrenCount ?? 0;
 
     return (
-      <div className={"flex flex-col gap-1 max-h-full min-h-0 grow"}>
+      <div
+        className={`flex flex-col gap-1 max-h-full min-h-0 grow ${compact ? "file-processor-explorer" : ""}`}
+      >
         <ControlledMenu
           {...menuProps}
           anchorPoint={anchorPoint}
-          className={"file-explorer-context-menu"}
+          boundingBoxPadding={compact ? "8" : undefined}
+          className={`file-explorer-context-menu ${compact ? "file-processor-context-menu" : ""}`}
+          portal={compact}
           onClose={() => {
             contextMenuEntryRef.current = undefined;
             toggleMenu(false);
@@ -505,18 +574,25 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
                   entries: selectedEntriesRef.current,
                   rootPath: rootRef.current?.path,
                 });
+
+                return true;
               }
+
+              return false;
             }}
             onKeyDown={(key, evt) => {
               log("event listener", "key down", key, evt);
-              const c = _.keys(FileSystemTreeEntryCapabilityMap).find(
-                (k) => FileSystemTreeEntryCapabilityMap[k as Capability].shortcut?.key == key,
-              ) as Capability | undefined;
+              key = key.length === 1 ? key.toLowerCase() : key;
+              const c = !hasKeyboardModifier(evt)
+                ? (_.keys(FileSystemTreeEntryCapabilityMap).find(
+                    (k) => FileSystemTreeEntryCapabilityMap[k as Capability].shortcut?.key == key,
+                  ) as Capability | undefined)
+                : undefined;
 
               if (c) {
-                evt.stopPropagation();
-                evt.preventDefault();
                 if (capabilities?.includes(c)) {
+                  evt.stopPropagation();
+                  evt.preventDefault();
                   switch (c) {
                     case "wrap":
                       if (selectedEntriesRef.current.length > 0) {
@@ -572,7 +648,8 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
               } else {
                 switch (key) {
                   case "a": {
-                    if (evt.ctrlKey) {
+                    if (matchesPrimaryShortcut(evt, "a") && selectable !== "disabled") {
+                      evt.preventDefault();
                       let parent: Entry | undefined;
 
                       for (const se of selectedEntriesRef.current) {
@@ -607,6 +684,7 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
                   }
                   case "ArrowUp":
                   case "ArrowDown": {
+                    if (hasKeyboardModifier(evt)) break;
                     evt.preventDefault();
                     const lastSelected =
                       selectedEntriesRef.current[selectedEntriesRef.current.length - 1];
@@ -641,6 +719,7 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
                     break;
                   }
                   case "Enter": {
+                    if (hasKeyboardModifier(evt)) break;
                     if (selectedEntriesRef.current.length === 1) {
                       const entry = selectedEntriesRef.current[0];
 
@@ -651,8 +730,7 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
                     break;
                   }
                   case "c": {
-                    // Support both Ctrl (Windows/Linux) and Command (Mac)
-                    if ((evt.ctrlKey || evt.metaKey) && selectedEntriesRef.current.length > 0) {
+                    if (matchesPrimaryShortcut(evt, "c") && selectedEntriesRef.current.length > 0) {
                       evt.preventDefault();
                       const paths = selectedEntriesRef.current.map((e) => e.path);
 
@@ -662,8 +740,7 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
                     break;
                   }
                   case "x": {
-                    // Support both Ctrl (Windows/Linux) and Command (Mac)
-                    if ((evt.ctrlKey || evt.metaKey) && selectedEntriesRef.current.length > 0) {
+                    if (matchesPrimaryShortcut(evt, "x") && selectedEntriesRef.current.length > 0) {
                       evt.preventDefault();
                       const paths = selectedEntriesRef.current.map((e) => e.path);
 
@@ -673,8 +750,7 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
                     break;
                   }
                   case "v": {
-                    // Support both Ctrl (Windows/Linux) and Command (Mac)
-                    if ((evt.ctrlKey || evt.metaKey) && clipboardStore.paths.length > 0) {
+                    if (matchesPrimaryShortcut(evt, "v") && clipboardStore.paths.length > 0) {
                       evt.preventDefault();
                       const { paths, mode } = clipboardStore;
 
@@ -734,12 +810,20 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
             }}
           />
         )}
-        <div className="flex items-center bg-default-100 dark:bg-default-50">
+        <div
+          className={
+            compact
+              ? "file-explorer-toolbar flex items-center gap-0.5"
+              : "flex items-center bg-default-100 dark:bg-default-50"
+          }
+        >
           <Button
             isIconOnly
+            aria-label={t("fileExplorer.navigation.back")}
             isDisabled={historyRootPaths.length == 0}
             radius={"none"}
             size={"sm"}
+            title={t("fileExplorer.navigation.back")}
             variant={"light"}
             onClick={() => {
               const newRoot = historyRootPathsRef.current.pop();
@@ -752,15 +836,17 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
           </Button>
           <Button
             isIconOnly
-            isDisabled={getStandardParentPath(root?.path) === undefined}
+            aria-label={t("fileExplorer.navigation.parent")}
+            isDisabled={!canGoToParent}
             radius={"none"}
             size={"sm"}
+            title={t("fileExplorer.navigation.parent")}
             variant={"light"}
             onPress={() => {
               if (root) {
                 const newRootPath = getStandardParentPath(root.path);
 
-                if (newRootPath !== undefined) {
+                if (newRootPath !== undefined && isInsideStorageRoots(newRootPath, storage)) {
                   initialize(newRootPath);
                 }
               }
@@ -768,11 +854,25 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
           >
             <ArrowUpOutlined className={"text-base"} />
           </Button>
+          {storage.isRestricted && !rootPaths?.length && (
+            <Button
+              isIconOnly
+              aria-label={t("fileExplorer.storage.locations")}
+              size="sm"
+              title={t("fileExplorer.storage.locations")}
+              variant="light"
+              onPress={() => void initialize()}
+            >
+              <HomeOutlined className="text-base" />
+            </Button>
+          )}
           <Button
             isIconOnly
+            aria-label={t("fileExplorer.contextMenu.openInFileManager")}
             isDisabled={!root?.path}
             radius={"none"}
             size={"sm"}
+            title={t("fileExplorer.contextMenu.openInFileManager")}
             variant={"light"}
             onPress={() => {
               BApi.tool.openFileOrDirectory({ path: root?.path });
@@ -784,20 +884,27 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
           <div className="w-px h-5 bg-default-300 mx-1" />
 
           <Input
-            className={"grow"}
+            aria-label={t("fileExplorer.navigation.path")}
+            className={compact ? "file-explorer-path min-w-0 flex-1" : "grow"}
             classNames={{
               inputWrapper:
                 "bg-transparent shadow-none data-[hover=true]:bg-default-200 group-data-[focus=true]:bg-default-200",
             }}
             endContent={
-              <Chip size={"sm"} variant={"light"}>
-                {selectedEntries.length} /{" "}
-                {filteredChildrenCount == childrenCount
-                  ? childrenCount
-                  : `${filteredChildrenCount} / ${childrenCount}`}
-              </Chip>
+              !compact && (
+                <Chip size={"sm"} variant={"light"}>
+                  {selectedEntries.length} /{" "}
+                  {filteredChildrenCount == childrenCount
+                    ? childrenCount
+                    : `${filteredChildrenCount} / ${childrenCount}`}
+                </Chip>
+              )
             }
-            placeholder={t<string>("You can type a path here")}
+            placeholder={t<string>(
+              storage.isRestricted
+                ? "fileExplorer.storage.locations"
+                : "fileExplorer.navigation.pathPlaceholder",
+            )}
             radius={"none"}
             size={"sm"}
             value={inputValue}
@@ -807,7 +914,7 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
             onValueChange={(v) => {
               const path = standardizePath(v)!;
 
-              setInputValue(path);
+              setInputValue(path ?? "");
               clearTimeout(inputBlurHandlerRef.current);
               inputBlurHandlerRef.current = setTimeout(() => {
                 initialize(path);
@@ -815,16 +922,18 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
             }}
           />
           <Input
-            className={"w-1/4"}
+            aria-label={t("fileExplorer.navigation.filter")}
+            className={compact ? "file-explorer-filter" : "w-1/4"}
             classNames={{
               inputWrapper:
                 "bg-transparent shadow-none data-[hover=true]:bg-default-200 group-data-[focus=true]:bg-default-200",
             }}
-            placeholder={t<string>("Filter")}
+            placeholder={t<string>("fileExplorer.navigation.filter")}
             radius={"none"}
             size={"sm"}
             startContent={<SearchOutlined className={"text-base text-default-500"} />}
             value={filterInputValue}
+            onKeyDown={compact ? (event) => event.stopPropagation() : undefined}
             onValueChange={(v) => setFilterInputValue(v)}
           />
 
@@ -833,6 +942,8 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
           <Tooltip content={t<string>("fileExplorer.label.showHiddenFiles")}>
             <Button
               isIconOnly
+              aria-label={t("fileExplorer.label.showHiddenFiles")}
+              aria-pressed={showHiddenFiles}
               color={showHiddenFiles ? "primary" : "default"}
               radius={"none"}
               size={"sm"}
@@ -875,20 +986,102 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
             box above finds nothing — which looks like a broken explorer rather than a
             question about which disk is being browsed.
           */}
-          {filesAreElsewhere && (
-            <span className="shrink-0 text-xs text-foreground-400 px-2">
-              {t<string>("fileExplorer.tip.pathsAreOnTheServer")}
-            </span>
-          )}
+          {locationNotice ??
+            (filesAreElsewhere && (
+              <span className="shrink-0 text-xs text-foreground-400 px-2">
+                {t<string>("fileExplorer.tip.pathsAreOnTheServer")}
+              </span>
+            ))}
         </div>
-        <div className={"grow min-h-0"}>
+        {compact && (
+          <div className="file-explorer-commandbar flex min-h-7 shrink-0 flex-wrap items-center gap-x-3 gap-y-1">
+            <div className="flex shrink-0 items-center gap-2 text-xs text-foreground-400">
+              <span className="tabular-nums">
+                {t(
+                  filteredChildrenCount === childrenCount
+                    ? "fileExplorer.selection.total"
+                    : "fileExplorer.selection.filtered",
+                  { count: childrenCount, visible: filteredChildrenCount },
+                )}
+              </span>
+              {selectedEntries.length > 0 && (
+                <span className="text-primary tabular-nums">
+                  {t("fileExplorer.selection.selected", { count: selectedEntries.length })}
+                </span>
+              )}
+              <Button
+                aria-expanded={menuProps.state === "open"}
+                aria-haspopup="menu"
+                aria-label={t("fileExplorer.selection.actions")}
+                className="h-7 min-h-7 min-w-0 gap-1 px-2 text-xs"
+                isDisabled={
+                  selectedEntries.length === 0 &&
+                  (!root.path || !capabilities?.includes("create-directory"))
+                }
+                size="sm"
+                startContent={<MoreOutlined aria-hidden />}
+                variant="light"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  const rect = event.currentTarget.getBoundingClientRect();
+
+                  setAnchorPoint({ x: rect.left, y: rect.bottom });
+                  toggleMenu(true);
+                }}
+              >
+                {t("fileExplorer.selection.actions")}
+              </Button>
+              {selectedEntries.length > 0 && (
+                <Button
+                  isIconOnly
+                  aria-label={t("fileExplorer.selection.clear")}
+                  className="h-6 min-h-6 w-6 min-w-6"
+                  size="sm"
+                  title={t("fileExplorer.selection.clear")}
+                  variant="light"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    selectedEntriesRef.current.forEach((entry) => entry.select(false));
+                    setSelectedEntries([]);
+                  }}
+                >
+                  <CloseOutlined aria-hidden />
+                </Button>
+              )}
+            </div>
+            <div className="file-explorer-extra-tools ml-auto flex flex-wrap items-center gap-1.5">
+              {toolbarContent}
+            </div>
+          </div>
+        )}
+        {navigationError !== undefined && (
+          <p className="px-2 text-xs text-danger" role="alert">
+            {navigationError || t("fileExplorer.storage.pathRejected")}
+          </p>
+        )}
+        {storageOverview && (
+          <p className="px-2 text-xs text-default-500">
+            {t(storage.roots.length ? "fileExplorer.storage.help" : "fileExplorer.storage.empty")}
+          </p>
+        )}
+        <div className={`grow min-h-0 ${compact ? "file-explorer-list" : ""}`}>
           <FileExplorerEntry
             afterPlayedFirstFile={afterPlayedFirstFile}
             capabilities={capabilities}
             entry={root}
             expandable={expandable}
             filter={filterObj}
-            renderAfterName={renderAfterName}
+            renderAfterName={(entry) => (
+              <>
+                {renderAfterName?.(entry)}
+                {storage.isRestricted &&
+                  storage.roots.some((root) => root.path === entry.path && root.readOnly) && (
+                    <span className="shrink-0 text-xs text-default-400">
+                      {t("fileExplorer.storage.readOnly")}
+                    </span>
+                  )}
+              </>
+            )}
             renderBeforeRightOperations={renderBeforeRightOperations}
             switchSelective={switchSelective}
             onChildrenLoaded={(e) => {
@@ -916,7 +1109,7 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
                   }
                 }
               }
-              if (initializedRootPathRef.current != e.path) {
+              if (initializedRootPathRef.current !== e.path) {
                 initializedRootPathRef.current = e.path;
                 onInitialized?.(e?.path);
               }

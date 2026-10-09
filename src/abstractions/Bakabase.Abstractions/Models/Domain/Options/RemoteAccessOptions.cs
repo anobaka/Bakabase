@@ -33,6 +33,9 @@ public class RemoteAccessOptions
     /// </summary>
     public RemoteAccessMode? Mode { get; set; }
 
+    /// <summary>User-selected HTTP(S) origin to share with other devices. Null uses discovered candidates.</summary>
+    public string? AdvertisedAddress { get; set; }
+
     /// <summary>
     /// Whether remote clients may trigger the live ffmpeg transcode path. Off by
     /// default: remote playback of an incompatible video is meant to be handed to a

@@ -1,3 +1,5 @@
+using Bakabase.Abstractions.Components.Localization;
+using Bakabase.Abstractions.Components.Tasks;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -13,7 +15,8 @@ namespace Bakabase.Modules.AI.Components.Aigc.Invokers;
 /// provider-default <c>config.AigcConfigJson["defaultWorkflow"]</c>. Tokens "{prompt}", "{negativePrompt}",
 /// "{seed}" inside the workflow string are substituted before submission.
 /// </summary>
-public class ComfyUIInvoker(IHttpClientFactory httpClientFactory, ILogger<ComfyUIInvoker> logger)
+public class ComfyUIInvoker(IHttpClientFactory httpClientFactory, ILogger<ComfyUIInvoker> logger,
+    IBakabaseLocalizer localizer)
     : IAigcProviderInvoker
 {
     public AiProviderKind Kind => AiProviderKind.ComfyUI;
@@ -39,7 +42,7 @@ public class ComfyUIInvoker(IHttpClientFactory httpClientFactory, ILogger<ComfyU
         AigcInvocationRequest request, CancellationToken ct)
     {
         if (string.IsNullOrEmpty(config.Endpoint))
-            throw new InvalidOperationException("ComfyUI endpoint is not configured.");
+            throw TaskError("BTask_Error_AigcComfyEndpointMissing", "ComfyUI endpoint is not configured.");
 
         var workflowText = ReadGeneratorWorkflow(request);
         if (string.IsNullOrEmpty(workflowText))
@@ -47,7 +50,7 @@ public class ComfyUIInvoker(IHttpClientFactory httpClientFactory, ILogger<ComfyU
             workflowText = ReadDefaultWorkflow(config);
         }
         if (string.IsNullOrEmpty(workflowText))
-            throw new InvalidOperationException("ComfyUI requires a workflow JSON either on the generator or as provider default.");
+            throw TaskError("BTask_Error_AigcComfyWorkflowMissing", "ComfyUI requires a workflow JSON either on the generator or as provider default.");
 
         var seed = request.Parameters.GetParam<long?>("seed") ?? Random.Shared.NextInt64(0, int.MaxValue);
         var resolved = AigcInvokerHelpers.ResolveTemplate(workflowText, new Dictionary<string, string?>
@@ -106,7 +109,8 @@ public class ComfyUIInvoker(IHttpClientFactory httpClientFactory, ILogger<ComfyU
 
             if (request.OnProgress is not null)
             {
-                await request.OnProgress(0, $"Polling ComfyUI ({pollCount})", ct);
+                await request.OnProgress(0, BTaskText.Localize(localizer,
+                    "BTask_Process_AigcPollingComfyUI", pollCount), ct);
             }
         }
 
@@ -266,4 +270,7 @@ public class ComfyUIInvoker(IHttpClientFactory httpClientFactory, ILogger<ComfyU
         client.Timeout = TimeSpan.FromMinutes(15);
         return client;
     }
+    private BTaskException TaskError(string key, string detail, params object?[] arguments) =>
+        new(detail, detail) {BriefText = BTaskText.Localize(localizer, key, arguments)};
+
 }

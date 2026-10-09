@@ -46,7 +46,17 @@ public sealed class FederationAccessMiddleware(RequestDelegate next)
             if (kind == FederationEndpointKind.Local)
             {
                 if (!IsLocalCaller(context))
-                    throw new FederationAccessException("LocalInterfaceOnly", 403, "This interface is only available on the computer you are using.");
+                {
+                    if (!FederationAdministrationMiddleware.IsHeadless(context) ||
+                        !FederationAdministrationMiddleware.IsOwnOrigin(context))
+                        throw new FederationAccessException("LocalInterfaceOnly", 403, "This interface is only available on the computer you are using.");
+                    // Do not mark this request handled yet: the remote-access middleware
+                    // must authenticate it and enforce Disabled/RequirePairing first.
+                    await BoundBodyAsync(context, hash: false);
+                    FederationAdministrationMiddleware.RequireAuthorization(context);
+                    await next(context);
+                    return;
+                }
                 await BoundBodyAsync(context, hash: false);
             }
             else

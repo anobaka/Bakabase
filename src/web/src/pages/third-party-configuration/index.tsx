@@ -1,11 +1,18 @@
 "use client";
 
+import type { AriaTabListProps } from "@react-aria/tabs";
+
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Tab, Tabs } from "@heroui/react";
+import { Select, SelectItem, Tab, Tabs } from "@heroui/react";
 import { AiOutlineVideoCamera } from "react-icons/ai";
 
 const SELECTED_TAB_STORAGE_KEY = "thirdPartyConfig.selectedTab";
+// HeroUI 2.8 styles isVertical but does not forward it to React Aria, while its
+// public props omit orientation. Pass the typed Aria option through for arrow keys.
+const verticalTabListProps: Pick<AriaTabListProps<object>, "orientation"> = {
+  orientation: "vertical",
+};
 
 import ThirdPartyIcon from "@/components/ThirdPartyIcon";
 import {
@@ -45,6 +52,18 @@ const CUSTOM_TAB_ICONS: Record<string, React.ReactNode> = {
   avSources: <AiOutlineVideoCamera className="text-base" />,
 };
 
+function SourceIcon({ sourceKey }: { sourceKey: string }) {
+  return (
+    <span aria-hidden className="flex h-5 w-5 shrink-0 items-center justify-center">
+      {THIRD_PARTY_TAB_KEY_TO_ID[sourceKey] !== undefined ? (
+        <ThirdPartyIcon size="sm" thirdPartyId={THIRD_PARTY_TAB_KEY_TO_ID[sourceKey]} />
+      ) : (
+        (CUSTOM_TAB_ICONS[sourceKey] ?? null)
+      )}
+    </span>
+  );
+}
+
 function ThirdPartyTabTip({ tipKey }: { tipKey?: string }) {
   const { t } = useTranslation();
 
@@ -65,7 +84,11 @@ export default function ThirdPartyConfigurationPage() {
   const [selectedTab, setSelectedTab] = useState<string>(() => {
     if (typeof window === "undefined") return "bilibili";
 
-    return localStorage.getItem(SELECTED_TAB_STORAGE_KEY) || "bilibili";
+    try {
+      return localStorage.getItem(SELECTED_TAB_STORAGE_KEY) || "bilibili";
+    } catch {
+      return "bilibili";
+    }
   });
   const thirdPartySettings = useMemo(
     () => [
@@ -144,39 +167,85 @@ export default function ThirdPartyConfigurationPage() {
     ],
     [t],
   );
+  const activeSetting =
+    thirdPartySettings.find((s) => s.key === selectedTab) ?? thirdPartySettings[0];
+  const selectSource = (key: string) => {
+    if (!thirdPartySettings.some((s) => s.key === key)) return;
+    setSelectedTab(key);
+    try {
+      localStorage.setItem(SELECTED_TAB_STORAGE_KEY, key);
+    } catch {
+      // The selection still works when browser storage is unavailable.
+    }
+  };
 
   return (
-    <Tabs
-      isVertical
-      classNames={{ panel: "flex-1 w-0" }}
-      selectedKey={selectedTab}
-      onSelectionChange={(key) => {
-        const next = String(key);
-
-        setSelectedTab(next);
-        localStorage.setItem(SELECTED_TAB_STORAGE_KEY, next);
-      }}
-    >
-      {thirdPartySettings.map((s) => (
-        <Tab
-          key={s.key}
-          title={
-            <div className="flex items-center gap-2">
-              {THIRD_PARTY_TAB_KEY_TO_ID[s.key] !== undefined ? (
-                <ThirdPartyIcon size="sm" thirdPartyId={THIRD_PARTY_TAB_KEY_TO_ID[s.key]} />
-              ) : (
-                (CUSTOM_TAB_ICONS[s.key] ?? null)
-              )}
-              <span>{s.label}</span>
-            </div>
-          }
-        >
-          <div className="space-y-4">
-            <ThirdPartyTabTip tipKey={(s as { tip?: string }).tip} />
-            {s.content}
+    <div className="flex min-w-0 flex-col gap-5">
+      <Select
+        disallowEmptySelection
+        aria-label={t("thirdPartyConfig.navigation.source.label")}
+        className="md:hidden"
+        classNames={{ trigger: "min-h-11 bg-default-100/60 shadow-none" }}
+        label={t("thirdPartyConfig.navigation.source.label")}
+        labelPlacement="outside"
+        renderValue={() => (
+          <div className="flex items-center gap-2.5">
+            <SourceIcon sourceKey={activeSetting.key} />
+            <span>{activeSetting.label}</span>
           </div>
-        </Tab>
-      ))}
-    </Tabs>
+        )}
+        selectedKeys={[activeSetting.key]}
+        onSelectionChange={(keys) => {
+          const key = Array.from(keys)[0];
+
+          if (key !== undefined) selectSource(String(key));
+        }}
+      >
+        {thirdPartySettings.map((s) => (
+          <SelectItem
+            key={s.key}
+            startContent={<SourceIcon sourceKey={s.key} />}
+            textValue={s.label}
+          >
+            {s.label}
+          </SelectItem>
+        ))}
+      </Select>
+      <Tabs
+        {...verticalTabListProps}
+        disableCursorAnimation
+        isVertical
+        aria-label={t("thirdPartyConfig.navigation.source.label")}
+        classNames={{
+          base: "hidden w-40 shrink-0 md:flex",
+          tabList: "w-full gap-1 rounded-none bg-transparent p-0",
+          tab: "h-10 justify-start rounded-lg px-3 data-[selected=true]:bg-primary/10 dark:data-[selected=true]:bg-primary/20 data-[hover-unselected=true]:bg-default-100/60 data-[hover-unselected=true]:opacity-100",
+          tabContent:
+            "w-full text-left text-foreground-500 group-data-[selected=true]:font-medium group-data-[selected=true]:text-primary",
+          tabWrapper: "w-full min-w-0 items-start gap-6",
+          panel: "min-w-0 flex-1 px-0 py-0",
+        }}
+        selectedKey={activeSetting.key}
+        variant="light"
+        onSelectionChange={(key) => selectSource(String(key))}
+      >
+        {thirdPartySettings.map((s) => (
+          <Tab
+            key={s.key}
+            title={
+              <div className="flex w-full items-center gap-2.5">
+                <SourceIcon sourceKey={s.key} />
+                <span className="truncate">{s.label}</span>
+              </div>
+            }
+          >
+            <div className="space-y-4">
+              <ThirdPartyTabTip tipKey={(s as { tip?: string }).tip} />
+              {s.content}
+            </div>
+          </Tab>
+        ))}
+      </Tabs>
+    </div>
   );
 }

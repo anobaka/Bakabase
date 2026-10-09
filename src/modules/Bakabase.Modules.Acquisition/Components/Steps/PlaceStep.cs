@@ -1,3 +1,4 @@
+using Bakabase.Abstractions.Components.FileSystem;
 using System.Text.Json;
 using Bakabase.Abstractions.Services;
 using Bakabase.Modules.Acquisition.Abstractions.Components;
@@ -108,6 +109,11 @@ public class PlaceStep : IAcquisitionStep
                 "No library folder is set, so there is nowhere to put this.");
         }
 
+        var storage = ctx.ServiceProvider.GetRequiredService<IUserStoragePolicy>();
+        storage.EnsurePathAllowed(libraryRoot);
+        if (!string.IsNullOrWhiteSpace(item.ExtractedDirectory))
+            AcquisitionStoragePaths.EnsureSourceAllowed(ctx, item, item.ExtractedDirectory);
+        if (!string.IsNullOrWhiteSpace(item.TargetDirectory)) storage.EnsurePathAllowed(item.TargetDirectory);
         var source = ResolveSource(item, ctx.WorkingDirectory);
 
         if (source == null)
@@ -125,6 +131,7 @@ public class PlaceStep : IAcquisitionStep
                 : AcquisitionDirectoryNamer.Render(item.WorkingName, item);
             libraryRoot = Path.GetFullPath(libraryRoot);
             target = AcquisitionDirectoryNamer.ResolveTargetDirectory(libraryRoot, name);
+            storage.EnsurePathAllowed(target);
         }
         catch (ArgumentException ex)
         {
@@ -177,12 +184,18 @@ public class PlaceStep : IAcquisitionStep
                 }
             }
 
+            var effectiveSource = item.PreserveDirectoryStructure ? source : Collapse(source);
+            AcquisitionStoragePaths.EnsureSourceAllowed(ctx, item, effectiveSource);
+            if (storage.IsPathAllowed(effectiveSource)) storage.EnsureTreeMutationAllowed(effectiveSource);
+
             // Boundaries must be persisted before categories appear. Resource discovery rechecks
             // fresh boundaries before using its candidates, including scans already in progress.
             await AcquisitionLibraryMarks.PrepareAsync(
                 ctx.ServiceProvider.GetRequiredService<IPathMarkService>(), libraryRoot, target, ct);
+            storage.EnsurePathAllowed(target);
             Directory.CreateDirectory(libraryRoot);
-            MoveInto(item.PreserveDirectoryStructure ? source : Collapse(source), target, movedFiles);
+            MoveInto(effectiveSource, target, movedFiles, storage,
+                path => AcquisitionStoragePaths.EnsureSourceAllowed(ctx, item, path));
         }
         catch (IOException ex)
         {
@@ -228,13 +241,18 @@ public class PlaceStep : IAcquisitionStep
         return entries.Length == 1 && Directory.Exists(entries[0]) ? entries[0] : source;
     }
 
-    private static void MoveInto(string source, string target, List<string> movedFiles)
+    private static void MoveInto(string source, string target, List<string> movedFiles, IUserStoragePolicy storage,
+        Action<string> validateSource)
     {
+        validateSource(source);
+        storage.EnsurePathAllowed(target);
         Directory.CreateDirectory(target);
 
         foreach (var entry in Directory.GetFileSystemEntries(source))
         {
+            validateSource(entry);
             var destination = Path.Combine(target, Path.GetFileName(entry));
+            storage.EnsurePathAllowed(destination);
 
             if (Directory.Exists(entry))
             {
@@ -247,7 +265,7 @@ public class PlaceStep : IAcquisitionStep
                 {
                     // File.Move also supports different volumes; Directory.Move does not. Recurse
                     // for both new and merged folders, and remove only a successfully emptied source.
-                    MoveInto(entry, destination, movedFiles);
+                    MoveInto(entry, destination, movedFiles, storage, validateSource);
                     Directory.Delete(entry);
                 }
             }

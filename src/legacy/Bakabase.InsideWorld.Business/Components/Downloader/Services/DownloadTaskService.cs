@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
@@ -32,6 +32,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
+using Bakabase.Abstractions.Components.FileSystem;
 using DownloadTask = Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.DownloadTask;
 
 namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
@@ -407,6 +408,25 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
                     };
                 }).ToArray();
 
+            // Imported and previously queued tasks keep their chosen paths. Validate them before
+            // source prechecks can inspect or mark files, and persist a visible failure when rejected.
+            BaseResponse? firstFailure = null;
+            var allowedTasks = new List<DownloadTask>();
+            foreach (var task in targetTasks)
+            {
+                try
+                {
+                    await DownloadTaskStorage.EnsureAllowedAsync(GetRequiredService<IServiceProvider>(), task);
+                    allowedTasks.Add(task);
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    await MarkAsFailedToStart(tasks[task], ex.Message, taskActionLockHeld);
+                    firstFailure ??= BaseResponseBuilder.BuildBadRequest(ex.Message);
+                }
+            }
+            targetTasks = allowedTasks.ToArray();
+
             // One bulk pass answers the source-specific questions for the whole queue. Doing it per
             // task meant paying a start/stop lifecycle — and usually a network round-trip — just to
             // discover a task had nothing to do, which is the entire cost of re-running a large,
@@ -439,7 +459,6 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
                         .First())
                 .ToArray();
             var startedTasks = new List<DownloadTask>();
-            BaseResponse? firstFailure = null;
 
             foreach (var tt in filteredTasks)
             {
@@ -907,6 +926,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
         public async Task<ListResponse<DownloadTask>> AddRange(IEnumerable<DownloadTask> resources)
         {
             var arr = resources.ToArray();
+            var storage = GetRequiredService<IUserStoragePolicy>();
+            foreach (var task in arr) storage.EnsurePathAllowed(task.DownloadPath);
             var dbModels = arr.Select(r => r.ToDbModel()!).ToArray();
             var rsp = await base.AddRange(dbModels);
             for (var i = 0; i < arr.Length; i++)

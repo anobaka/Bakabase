@@ -465,5 +465,17 @@
   "WaitingForInput": "Waiting for input",
   "WaitingForConflict": "Waiting for conflict resolution",
   "NeedsRecovery": "Recovery required",
-  "Skipped": "Skipped"
+  "Skipped": "Skipped",
+  "filePath.hostPath": "Host path",
+  "filePath.containerPath": "Container path",
+  "filePath.serverPath": "Server path",
+  "filePath.path": "path",
+  "filePath.copy": "Copy {{label}}",
+  "filePath.copied": "Copied {{label}}",
+  "filePath.openFolder": "Open folder",
+  "filePath.readOnlyMount": "Read-only mount",
+  "filePath.dockerVolume": "Stored in a Docker volume.",
+  "filePath.containerStorage": "Stored inside the container; no host folder is mapped.",
+  "filePath.hostPathUnavailable": "Host path mapping is unavailable. Showing the container path.",
+  "filePath.copyFailed": "Could not copy. Select the path and copy it manually."
 }

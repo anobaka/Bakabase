@@ -70,17 +70,23 @@ neither library sharing list.
   link, the nav or the focus keeper brings into view: the page keeps its height (plus a gap)
   in `--devices-scroll-offset`, which every such place and heading uses as its scroll margin
   (`scrollOffsetClass`). A notice (not an error) is left behind by the next navigation.
-- **Addresses.** Every host stays in the API (`ownHostsOf`/`sameMachine` need them all); the
-  UI shows one row per host on the main port and folds virtual and link-local adapters away,
-  labelled (`devices/addresses.ts`). The server says each address's `kind` and which one is
-  `recommended` (`RemoteAccessAddressClassifier`: the first LAN address whose interface has a
-  default gateway, which a VM host-only or overlay adapter lacks) and lists them in the
-  order they are offered in — recommended first, then LAN, VPN, unknown, virtual, link-local
-  (`RemoteAccessAddressClassifier.Order`) — which is also the order a device reading this one
-  back tries them in and keeps the first few of; the page guesses from the
-  address and interface name only for a server too old to say. Until remote access's settings
-  are read the list says it is loading, or why it could not read them — "no address found"
-  is only for a list that came back empty.
+- **Addresses.** Remote access supplies one candidate list for the devices page, invitations,
+  reciprocal pairing and data sync: the optional saved external address, browser-observed API
+  endpoints, Compose host endpoints, then native network interfaces. The browser reports its
+  effective API endpoint only with management access; a desktop relay uses its upstream server
+  address, never the relay's loopback origin. Observations are bounded, expire in memory and
+  never overwrite the saved external address. Container interfaces are not host endpoints.
+  Compose derives the published port from the same resolved configuration used to start the
+  service; remote Docker contexts do not borrow the CLI machine's LAN address.
+  Keep distinct schemes and ports on the same host in both UI and reciprocal offers: only
+  the connecting device can tell which is reachable. Each peer validates the expected identity
+  before exchanging a code and keeps its own successful address. A candidate is not a global
+  reachability verdict. The API reports `source`, `kind` and `recommended`; older servers retain
+  client-side classification, and virtual/link-local adapters stay folded away. Native interface
+  ordering still prefers a LAN gateway (`RemoteAccessAddressClassifier`); reciprocal offers
+  keep explicit/browser/deployment sources first and prefer matching subnets within each source.
+  Until settings arrive the list says loading or why it failed; "no address found" is only
+  for an empty successful response.
 - **Words.** 配对/配对码 only for management, 分享码 only for library sharing, 浏览 for what
   sharing allows, 允许 (never 批准) for letting a device in, 添加 (never 连接) for putting a
   device in a list, 多设备资源库 for the merged library. Never shown: 节点, 代际, 设备身份, 旧接口,
@@ -88,9 +94,8 @@ neither library sharing list.
   unavailable page and refusals, notifications, the CLI) name its current places:
   设备与分享 → 管理 → 谁可以管理本机, → 资源库分享, → 高级 → 复制或恢复数据后 → 设为新设备.
   A text that sends the reader to **another** device, or that another device shows, names
-  both places, since a NAS or Docker server has no devices page: a computer's page, and a
-  NAS or Docker's 配置 → 远程访问 (management: codes, requests, remote access) or
-  `BAKABASE_FEDERATION_SHARING` / the `federation` CLI (library sharing). A management
+  the Devices page and its tab. A NAS or Docker administrator can now use the same page;
+  配置 → 远程访问 and the `federation` CLI remain alternative management surfaces. A management
   request's notification names only 配置 → 远程访问 besides its link. A requester's name is
   its own claim wherever it is shown (一台自称 {{name}} 的设备…), and a decided incoming
   request says what this device did (`federation.requests.incoming*`), never the
@@ -259,10 +264,16 @@ request, and acts through the same endpoints and confirmations.
   protocol, and never let an admin device key travel on `/federation/v1`.
 
 - **Two interfaces, never mixed.** `/federation/local/*` is for this device's own UI: real
-  loopback socket + loopback `Host` + matching `Origin` (`FederationAccessMiddleware.IsLocalCaller`).
+  loopback socket + loopback `Host` + matching `Origin` (`FederationAccessMiddleware.IsLocalCaller`)
+  on desktop hosts. **Headless administration** additionally admits the server's own browser
+  origin after the ordinary remote-access gate accepts a paired administrator or Unrestricted
+  mode (`FederationAdministrationMiddleware`). Disabled mode, pairing requirements, foreign
+  Origin/fetch metadata and node credentials remain enforced. A headless server never
+  composes desktop relays or launches a native player/file manager; its library previews
+  stream to the browser. The context API reports `federationAvailable` for menu/page access.
   `/federation/v1/*` is node-to-node: `export/*` always needs a `Bakabase-Node` signature, even
   from loopback or in `Unrestricted` mode.
-  **The one recorded exception:** data sync's ordinary API, `/data-sync/*`, may create or widen
+  **Data sync's separate permission:** its ordinary API, `/data-sync/*`, may create or widen
   `datasync.read` access — turn definitions sharing on, approve a definitions request, create a
   definitions code, send a request or mint a reciprocal code — for a **paired** caller
   (`RemoteAccessContext.Device != null`: the desktop app's switching window or another paired
@@ -273,7 +284,7 @@ request, and acts through the same endpoints and confirmations.
   any LAN caller can do (it may approve pairing requests there), so the rule refuses only
   callers that have not paired; on an Enabled server an unpaired caller cannot pair itself
   (see `data-sync.md`, "Who may create or widen access"). Library grants stay on
-  `/federation/local/*` and the CLI; `/data-sync` has no path to them
+  the authorized `/federation/local/*` interface and the CLI; `/data-sync` has no path to them
   (`DataSyncGrantBoundaryTests`).
 - **A node credential is never a legacy principal.** It must not reach options, resource
   writes, `/hub/ui`, file APIs or legacy pairing. Never map it to `IsPaired`.
@@ -394,8 +405,10 @@ after any DTO/endpoint change.
 node; `--federation-invite-on-start` prints a one-time code. The running instance is managed with
 `docker exec <c> dotnet Bakabase.Service.dll federation <status|share on|off|invite|approve|reject|revoke|new-identity>`,
 which only calls its loopback API. `new-identity` is the devices page's "Make this a new device"
-(Advanced → After copying or restoring data), for a copied data directory: a headless server's own UI is only ever reached from
-another device, and never reaches `/federation/local/*`. Data sync's counterparts —
+(Advanced → After copying or restoring data), for a copied data directory. The headless
+server's browser UI also offers Multi-device → Devices and sharing and the read-only merged
+library/map to administrators. Data sync is a child of Multi-device in every window, including
+a desktop relay; relay windows still direct library/map access back to their local device. Data sync's counterparts —
 `BAKABASE_DATASYNC_SHARING=true` (definitions sharing on at every start) and
 `federation datasync <command>` — are in `data-sync.md` ("Headless").
 

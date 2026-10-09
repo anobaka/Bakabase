@@ -204,6 +204,11 @@ namespace Bakabase.Service.Controllers
                     options.HideResourceCovers = model.HideResourceCovers.Value;
                 }
 
+                if (model.ShowResourceUsage.HasValue)
+                {
+                    options.ShowResourceUsage = model.ShowResourceUsage.Value;
+                }
+
                 if (model.LatestUsedProperties != null)
                 {
                     options.LatestUsedProperties = model.LatestUsedProperties;

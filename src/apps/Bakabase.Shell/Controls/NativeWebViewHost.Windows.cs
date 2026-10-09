@@ -81,8 +81,8 @@ public partial class NativeWebViewHost
     /// and a cache that routinely runs to hundreds of megabytes is not something the relocation
     /// runner should be copying.
     /// </remarks>
-    private static string WindowsUserDataFolder =>
-        Path.Combine(AppService.DefaultAppDataDirectory, "WebView2");
+    private string WindowsUserDataFolder =>
+        WindowsUserDataDirectory ?? Path.Combine(AppService.DefaultAppDataDirectory, "WebView2");
 
     private IPlatformHandle CreateWindows(IPlatformHandle parent)
     {

@@ -165,21 +165,27 @@ public class SimpleUserMachineHandlerTests
 
     // ---- tampermonkey ----
 
-    [TestMethod]
-    public async Task The_userscript_link_points_at_this_client_not_at_the_server()
+    [DataTestMethod]
+    [DataRow("http://127.0.0.1:34568")]
+    [DataRow("http://[::1]:34568")]
+    public async Task The_userscript_link_points_at_this_client_not_at_the_server(string origin)
     {
         // A userscript installed from the server's own address would run in a tab with no
         // device key and be refused on every call. Through the client, the forwarding
         // layer signs for it.
-        var handler = new TampermonkeyInstallHandler(new StubLoopback("http://127.0.0.1:34568"), _shell,
+        var handler = new TampermonkeyInstallHandler(new StubLoopback(origin), _shell,
             NullLogger<TampermonkeyInstallHandler>.Instance);
 
         var context = Request();
         await handler.HandleAsync(context, new Dictionary<string, string>());
 
         Assert.AreEqual((int) HttpStatusCode.OK, Read(context).Status);
-        CollectionAssert.AreEqual(
-            new[] {"http://127.0.0.1:34568/tampermonkey/script/bakabase.user.js"}, _shell.Launched);
+        Assert.AreEqual(1, _shell.Launched.Count);
+        var launched = new Uri(_shell.Launched[0]);
+        Assert.AreEqual(origin, launched.GetLeftPart(UriPartial.Authority));
+        Assert.AreEqual("/tampermonkey/script/bakabase.user.js", launched.AbsolutePath);
+        Assert.AreEqual($"?apiEndpoint={Uri.EscapeDataString(origin)}", launched.Query);
+        Assert.AreEqual(origin, Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(launched.Query)["apiEndpoint"].ToString());
     }
 
     [TestMethod]

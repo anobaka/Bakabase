@@ -1,0 +1,25 @@
+# Optional local settings, shared by source and image deployments.
+# This file is a valid empty override when copied unchanged.
+# To add mounts, change `server: {}` to `server:` and uncomment the desired
+# entries below. Replace each source with an existing absolute host directory.
+# Docker selects the host architecture automatically; no platform is forced.
+services:
+  server: {}
+    # volumes:
+    #   - type: bind
+    #     source: /absolute/path/to/media
+    #     target: /media
+    #     read_only: true
+    #     bind:
+    #       create_host_path: false
+    #   - type: bind
+    #     source: /absolute/path/to/downloads
+    #     target: /downloads
+    #     bind:
+    #       create_host_path: false
+    #   - type: bind
+    #     source: /absolute/path/to/import-copy
+    #     target: /import
+    #     read_only: true
+    #     bind:
+    #       create_host_path: false

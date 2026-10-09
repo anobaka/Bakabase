@@ -1,3 +1,4 @@
+using Bakabase.Abstractions.Components.Tasks;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 
@@ -48,7 +49,7 @@ public sealed class WorkflowExecutionContext
     /// reporting 0-100 never fights the runner's own accounting.
     /// <para>Defaults to doing nothing, so no activity has to check whether it is set.</para>
     /// </summary>
-    public Func<int, string?, Task> ReportProgress { get; init; } = (_, _) => Task.CompletedTask;
+    public Func<int, BTaskText?, Task> ReportProgress { get; init; } = (_, _) => Task.CompletedTask;
 
     /// <summary>Transient, machine-readable activity phase; never persisted as a completed result.</summary>
     public Func<string, Task> ReportStage { get; init; } = _ => Task.CompletedTask;

@@ -89,7 +89,7 @@
   "federation.devices.addresses.vpn": "VPN (such as Tailscale)",
   "federation.devices.addresses.virtual": "Virtual adapter — other devices usually can't reach it",
   "federation.devices.addresses.linkLocal": "No network address assigned — other devices can't reach it",
-  "federation.devices.addresses.tip": "Enter the recommended address on the other device; if it's on another network, pick one it can reach.",
+  "federation.devices.addresses.tip": "Use an address on a network both devices can reach. Other devices verify connectivity and identity when connecting; an address shown here is not a guarantee that every device can reach it.",
   "federation.devices.addresses.remoteOff": "Remote access is off, so no other device can reach {{target}} right now.",
   "federation.devices.addresses.none": "No local network address was found for {{target}}, so other devices can't reach it yet. Check the network, then refresh.",
   "federation.devices.openManagementAccess": "Go to Who may manage this device",
@@ -529,5 +529,17 @@
   "federation.map.panel.self.managementSettings": "Who may manage this device",
   "federation.map.panel.ghost.sharing": "It shares its library on this network: you can ask to browse it.",
   "federation.map.panel.ghost.management": "It answers management discovery: you can ask to manage it.",
-  "federation.map.panel.ghost.nothing": "This window can't add it. Use the Devices and sharing page in the desktop app on a computer."
+  "federation.map.panel.ghost.nothing": "This window can't add it. Use the Devices and sharing page in the desktop app on a computer.",
+  "federation.devices.advertisedAddress.label": "External address (optional)",
+  "federation.devices.advertisedAddress.automatic": "Automatic",
+  "federation.devices.advertisedAddress.tip": "Leave blank to use automatically collected addresses. To prefer a domain or mapped port, enter its full http:// or https:// address without a path. Other devices will verify the connection and device identity themselves.",
+  "federation.devices.advertisedAddress.invalid": "Enter an HTTP(S) address that other devices can use, without a path, query, fragment or credentials. Local-only addresses cannot be shared.",
+  "federation.devices.advertisedAddress.failed": "Could not save the address. Please try again.",
+  "federation.devices.advertisedAddress.saving": "Saving…",
+  "federation.devices.advertisedAddress.saved": "Address preference saved.",
+  "federation.devices.advertisedAddress.reset": "Use automatic addresses",
+  "federation.devices.addresses.source.configured": "Manually set",
+  "federation.devices.addresses.source.browser": "Browser access",
+  "federation.devices.addresses.source.deployment": "Deployment configuration",
+  "federation.devices.addresses.source.interface": "Network interface"
 }

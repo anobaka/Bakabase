@@ -52,6 +52,7 @@ import TampermonkeyInstallButton from "@/components/ThirdPartyConfig/base/Tamper
 import WorkflowRunsDrawer from "@/components/Workflow/WorkflowRunsDrawer";
 import WorkflowIntegrationHint from "@/components/Workflow/WorkflowIntegrationHint";
 import BApi from "@/sdk/BApi";
+import { openExternalUrl } from "@/utils/openExternalUrl";
 import {
   BTaskStatus,
   PostParserSource,
@@ -493,7 +494,7 @@ const PostParserPage = () => {
                   color="primary"
                   size="sm"
                   variant="light"
-                  onPress={() => BApi.gui.openUrlInDefaultBrowser({ url: task.link })}
+                  onPress={() => openExternalUrl(task.link)}
                 >
                   <span className="truncate text-left text-xs" title={task.link}>
                     {task.link}

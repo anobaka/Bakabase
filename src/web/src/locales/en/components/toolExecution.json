@@ -1,0 +1,17 @@
+{
+  "toolExecution.serverFiles": "Files on the server",
+  "toolExecution.currentService": "Files in this service",
+  "toolExecution.title": "Where files are processed",
+  "toolExecution.description": "Renaming, moving, deleting and extracting affect files in the current Bakabase service. In Docker, only container folders and mounted folders are available.",
+  "toolExecution.useHere": "Want to organize files on this computer? Open this tool in your local Bakabase.",
+  "toolExecution.switchLocal": "Use on this computer",
+  "toolExecution.openApp": "Open desktop app",
+  "toolExecution.switchFailed": "Could not switch back. Try again, or open this computer from the tray menu.",
+  "toolExecution.appFallback": "Nothing opened? Install or update Bakabase on this computer, then try again. Your browser cannot confirm whether the app started.",
+  "toolExecution.localServer": "Use a local server instead",
+  "toolExecution.localServerDescription": "Enter the address of a service running on this computer to open the same tool in a new tab. A local Docker service still needs its folders mounted.",
+  "toolExecution.address": "Local server address",
+  "toolExecution.invalidAddress": "Enter an http:// or https:// address using localhost, 127.0.0.1 or [::1], with an optional port and no additional path.",
+  "toolExecution.openServer": "Open local server",
+  "toolExecution.deviceMenu": "You can also switch to this computer from the device menu below the logo in the sidebar. The shortcut above opens the same tool for you."
+}

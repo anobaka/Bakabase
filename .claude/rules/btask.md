@@ -415,6 +415,23 @@ public override async Task RunAsync(BTaskArgs args)
 }
 ```
 
+## Localized task text
+
+One task snapshot is broadcast to clients using different UI languages. Keep
+application messages as templates until projection: use
+`task.SetProcess(BTaskText.Localize(localizer, "ResourceKey", count, filename))`.
+Capture argument values at each progress update; do not close over changing loop
+counters. Nested `BTaskText` arguments preserve localization of composed steps.
+Use deferred localizer delegates for task names and descriptions. Literal paths,
+user names and third-party diagnostic text remain plain strings.
+
+`BTaskViewModel.LocalizedTexts` provides `en` and `cn` field maps alongside legacy
+string fields; the browser selects its current language. Do not change global
+server culture to match one browser. For known application errors, set
+`BTaskException.BriefText` and preserve the original technical detail. Add both
+resource translations, including keys assembled from task IDs, and run
+`BTaskLocalizationTests` when changing task text.
+
 ## UI Integration
 
 Tasks are pushed to the frontend via SignalR:

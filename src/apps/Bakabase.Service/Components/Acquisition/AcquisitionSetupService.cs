@@ -1,3 +1,4 @@
+using Bakabase.Abstractions.Components.FileSystem;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -47,7 +48,8 @@ public record AcquisitionSetupResult(bool CreatedInbox, bool CreatedLibrary, int
 public class AcquisitionSetupService(
     IBOptionsManager<AcquisitionOptions> options,
     IPathMarkService pathMarks,
-    ILogger<AcquisitionSetupService> logger)
+    ILogger<AcquisitionSetupService> logger,
+    IUserStoragePolicy storagePolicy)
 {
     public async Task<AcquisitionSetupResult> ApplyAsync(AcquisitionSetupInputModel input,
         CancellationToken ct = default)
@@ -56,6 +58,9 @@ public class AcquisitionSetupService(
             ? input.DirectoryTemplate : options.Value.DirectoryTemplate;
         AcquisitionDirectoryNamer.ValidateTemplate(template);
 
+        // Check the whole request before creating either directory or saving options.
+        foreach (var path in new[] {input.InboxDirectory, input.LibraryRootDirectory})
+            if (!string.IsNullOrWhiteSpace(path)) storagePolicy.EnsurePathAllowed(path);
         var createdInbox = EnsureDirectory(input.InboxDirectory);
         var createdLibrary = EnsureDirectory(input.LibraryRootDirectory);
 

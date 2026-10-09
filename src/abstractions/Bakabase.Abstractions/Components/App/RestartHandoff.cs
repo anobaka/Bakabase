@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 
 namespace Bakabase.Abstractions.Components.App;
 
@@ -32,6 +33,23 @@ public static class RestartHandoff
 
     public static string FormatArgument(int pid) =>
         $"{PredecessorPidSwitch}={pid.ToString(CultureInfo.InvariantCulture)}";
+
+    public static ProcessStartInfo CreateStartInfo(string executable, string? entryAssembly, int predecessorPid)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(executable);
+        if (predecessorPid <= 0) throw new ArgumentOutOfRangeException(nameof(predecessorPid));
+        var isDotnet = Path.GetFileNameWithoutExtension(executable).Equals("dotnet", StringComparison.OrdinalIgnoreCase);
+        if (isDotnet && string.IsNullOrWhiteSpace(entryAssembly))
+            throw new InvalidOperationException("Cannot restart a dotnet-hosted application without its entry assembly.");
+        var info = new ProcessStartInfo(executable)
+        {
+            UseShellExecute = false,
+            WorkingDirectory = Path.GetDirectoryName(isDotnet ? entryAssembly! : executable) ?? AppContext.BaseDirectory
+        };
+        if (isDotnet) info.ArgumentList.Add(entryAssembly!);
+        info.ArgumentList.Add(FormatArgument(predecessorPid));
+        return info;
+    }
 
     public static int? TryReadPredecessorPid(string[]? args)
     {

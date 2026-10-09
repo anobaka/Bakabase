@@ -142,6 +142,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                 : Path.Combine(task.DownloadPath, "temp");
             if (tempRoot != null)
             {
+                EnsureUserPathAllowed(tempRoot);
                 PruneWorkDirectories(tempRoot, DateTime.UtcNow, WorkDirectoryMaxAge, Logger);
             }
 
@@ -159,6 +160,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
             // Page work folders stay between runs (partial streams are resumed); PruneWorkDirectories removes
             // abandoned ones.
             var workRoot = Path.Combine(tempRoot ?? "temp", target.Id.ToString());
+            EnsureUserPathAllowed(workRoot);
 
             var checkpoint = new RangeCheckpointContext(task.Checkpoint);
             var mediaCount = target.MediaCount;
@@ -317,8 +319,10 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
             {
                 ct.ThrowIfCancellationRequested();
                 var currentWritten = false;
+                var pageWorkRoot = Path.Combine(workRoot, page.Cid.ToString());
+                EnsureUserPathAllowed(pageWorkRoot);
                 var job = new BilibiliPageJob(archive.Aid, page.Cid, archive.IsPgcRedirect, archive.AccessSkip,
-                    Path.Combine(workRoot, page.Cid.ToString()),
+                    pageWorkRoot,
                     ResolveTarget: async (qualityName, _) =>
                     {
                         // Byte-identical to the previous (external-tool) downloader: existing libraries are
@@ -348,6 +352,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                         }
 
                         var fullname = Path.Combine(task.DownloadPath, await BuildDownloadFilename(values));
+                        EnsureUserPathAllowed(fullname);
                         return new BilibiliPageTarget(fullname, File.Exists(fullname));
                     },
                     OnProgress: async pageProgress =>

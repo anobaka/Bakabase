@@ -37,6 +37,7 @@ import { buildLogger, humanFileSize, standardizePath, uuidv4 } from "@/component
 import FileSystemEntryIcon from "@/components/FileSystemEntryIcon";
 import MediaPlayer from "@/components/MediaPlayer";
 import BApi from "@/sdk/BApi";
+import { localizeBTask } from "@/core/bTaskLocalization";
 import "./FileExplorerEntry.scss";
 import { Button, Chip, Modal, Spinner } from "@/components/bakaui";
 
@@ -93,7 +94,7 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
     renderBeforeRightOperations,
     onEnterDirectory,
   } = props;
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const forceUpdate = useUpdate();
 
   // Use global clipboard store for visual indicators
@@ -502,13 +503,15 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
   const { actions } = entryRef.current;
 
   const renderTaskError = useCallback(() => {
-    if (entryRef.current.task && entryRef.current.task.error) {
-      const text = `${entryRef.current.task.name}:${entryRef.current.task.error}`;
+    const task = entryRef.current.task && localizeBTask(entryRef.current.task, i18n.language);
+
+    if (task?.error) {
+      const text = `${task.name}:${task.error}`;
 
       return (
         <Button
           color={"danger"}
-          isIconOnly={!entryRef.current.task.briefError}
+          isIconOnly={!task.briefError}
           size={"sm"}
           variant={"light"}
           onPress={() => {
@@ -521,13 +524,13 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
           }}
         >
           <CloseCircleOutlined className={"text-base"} />
-          {entryRef.current.task.briefError}
+          {task.briefError}
         </Button>
       );
     }
 
     return;
-  }, [createPortal, t]);
+  }, [createPortal, t, i18n.language]);
 
   const play = useCallback((entry: Entry) => {
     // MediaPlayer now handles directories and compressed files internally
@@ -774,7 +777,7 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
                 name={entry.name}
                 path={entry.path}
               />
-              <div className="flex items-center [&>*]:whitespace-nowrap [&>*]:flex [&>*]:items-center [&>*]:ml-1.5">
+              <div className="entry-inline-operations flex items-center [&>*]:whitespace-nowrap [&>*]:flex [&>*]:items-center [&>*]:ml-1.5">
                 {actions.includes(IwFsEntryAction.Play) && capabilities?.includes("play") && (
                   <OperationButton
                     isIconOnly
@@ -837,7 +840,7 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
                 )}
               </div>
             </div>
-            <div className="flex items-center justify-end ml-3 gap-1">
+            <div className="entry-right-operations flex items-center justify-end ml-3 gap-1">
               {renderBeforeRightOperations && (
                 <div
                   role="button"

@@ -68,7 +68,7 @@ public class WorkflowRunCleanupTask : AbstractPredefinedBTaskBuilder
             await args.UpdateTask(t =>
             {
                 t.Percentage = (i + 1) * 100 / Math.Max(1, definitionIds.Count);
-                t.Process = $"{i + 1}/{definitionIds.Count} · deleted {totalDeleted}";
+                t.SetProcess(BTaskText.Localize(Localizer, "BTask_Process_WorkflowCleanup", i + 1, definitionIds.Count, totalDeleted));
             });
         }
     }

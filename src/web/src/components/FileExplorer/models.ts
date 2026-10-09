@@ -32,9 +32,9 @@ export const FileSystemTreeEntryCapabilityMap: Record<Capability, CapabilityDefi
   },
   "multi-select": {
     shortcut: {
-      nameI18nKey: "fileExplorer.shortcutKey.ctrlClick",
+      nameI18nKey: "fileExplorer.shortcutKey.primaryClick",
       mouseButton: 0,
-      modifiers: ["Control"],
+      modifiers: ["Primary"],
     },
     nameI18NKey: "fileExplorer.capability.multiSelect",
   },

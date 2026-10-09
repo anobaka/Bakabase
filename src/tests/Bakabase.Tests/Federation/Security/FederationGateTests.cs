@@ -482,6 +482,11 @@ public sealed partial class FederationGateTests
     }
     private sealed class RemoteService : IRemoteAccessService
     {
+    private string? _advertisedAddress;
+    public string? GetAdvertisedAddress() => _advertisedAddress;
+    public Task SetAdvertisedAddressAsync(string? address) { _advertisedAddress = address; return Task.CompletedTask; }
+    public void ObserveAddress(string address) { }
+
         public RemoteAccessMode Mode { get; set; } = RemoteAccessMode.Enabled;
         public RemoteAccessMode GetEffectiveMode() => Mode;
         public Task SetModeAsync(RemoteAccessMode? mode) { Mode = mode ?? RemoteAccessMode.Enabled; return Task.CompletedTask; }

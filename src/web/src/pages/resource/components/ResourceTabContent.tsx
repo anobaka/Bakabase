@@ -40,6 +40,12 @@ import { resourceChangedChannel } from "@/services/ResourceChangedChannel";
 import { selectResourceMovingTask, useBTasksStore } from "@/stores/bTasks";
 import { BTaskStatus, BTaskType } from "@/sdk/constants";
 import {
+  isPrimaryModifierPressed,
+  matchesPrimaryShortcut,
+  primaryModifierKey,
+  shouldIgnoreGlobalShortcut,
+} from "@/core/keyboard";
+import {
   bindMovePayload,
   clearMovePanelContext,
   RESOURCE_MOVE_MIME,
@@ -193,10 +199,7 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
     }
   }, [resourceOptions.initialized]);
 
-  // Use Meta (Command) on Mac, Control on Windows/Linux
-  const isMac =
-    typeof navigator !== "undefined" && navigator.platform.toUpperCase().indexOf("MAC") >= 0;
-  const selectionKey = isMac ? "Meta" : "Control";
+  const selectionKey = primaryModifierKey();
 
   // Use refs for event handlers to avoid stale closures in event listeners
   const onKeyDownRef = useRef<(e: KeyboardEvent) => void>(() => {});
@@ -206,13 +209,12 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
 
   onKeyDownRef.current = (e: KeyboardEvent) => {
     if (
-      (e.target as HTMLElement)?.closest?.(
-        "input, textarea, [contenteditable='true'], [data-resource-move-panel], [role='dialog']",
-      )
+      shouldIgnoreGlobalShortcut(e) ||
+      (e.target as HTMLElement)?.closest?.("[data-resource-move-panel]")
     )
       return;
     // Ctrl+A / Cmd+A: Select all loaded resources
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "a") {
+    if (matchesPrimaryShortcut(e, "a")) {
       e.preventDefault();
       setSelectedIds(resourcesRef.current.map((r) => r.id));
 
@@ -246,6 +248,8 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
 
       return;
     }
+    // Read the click too: the modifier may already be held when focus enters this page.
+    multiSelectionRef.current = isPrimaryModifierPressed(e);
     if (!multiSelectionRef.current && !e.shiftKey) {
       // Don't clear selection if clicking on menu items, modals, or other overlay elements
       const target = e.target as HTMLElement;

@@ -36,8 +36,8 @@ export class MessageError extends Error {
 }
 
 /**
- * Multi-device pages are this device's own: they run on its local API, which only its own
- * window can reach. Anywhere else the page explains where to go instead.
+ * Desktop multi-device pages belong to the local window. A headless server additionally
+ * offers them to its administrators, using the capability returned by its access context.
  *
  * `elsewhere` is what a page can still offer there — content about the server the window
  * shows rather than about this device. It is rendered under the explanation, wherever the
@@ -52,7 +52,7 @@ export function FederationAccess({
 }) {
   const { t } = useTranslation();
   const initialized = useRemoteAccessStore((state) => state.initialized);
-  const local = useRemoteAccessStore((state) => state.isLocal);
+  const available = useRemoteAccessStore((state) => state.federationAvailable ?? state.isLocal);
   const pureClient = useIsPureClient();
 
   if (!initialized)
@@ -63,7 +63,7 @@ export function FederationAccess({
     );
   // The desktop app showing a server it manages: the pages are this computer's.
   if (pureClient) return <ConsoleLocalOnly elsewhere={elsewhere} />;
-  if (!local) {
+  if (!available) {
     return (
       <div className="mx-auto flex max-w-2xl flex-col gap-4 p-6">
         <h1 className="text-xl font-semibold">{t("federation.mode")}</h1>

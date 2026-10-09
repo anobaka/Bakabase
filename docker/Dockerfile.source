@@ -1,0 +1,60 @@
+# syntax=docker/dockerfile:1
+
+# Resolve NBGV from the original read-only checkout before building a source
+# image. docker/source.sh mounts Git metadata too, including linked worktrees.
+# Keep container build/runtime hosts on the ARM64 signal-context fix while
+# retaining the application's net9.0 target and dependency versions.
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0.401-noble AS version-tools
+ENV DOTNET_ROLL_FORWARD=Major
+WORKDIR /version
+COPY docker/Version.csproj ./
+RUN dotnet restore
+ENTRYPOINT ["dotnet", "msbuild", "/version/Version.csproj", "-target:GetBuildVersion", "-getProperty:AssemblyInformationalVersion", "-nologo"]
+
+# Compile on the builder's native CPU; only the final runtime targets TARGETARCH.
+FROM --platform=$BUILDPLATFORM node:22-bookworm-slim AS frontend
+WORKDIR /src/web
+RUN corepack enable
+COPY src/web/package.json src/web/yarn.lock src/web/.yarnrc.yml ./
+COPY src/web/patches ./patches
+RUN --mount=type=cache,target=/root/.yarn/berry/cache yarn install --immutable
+COPY src/web/ ./
+RUN yarn build
+
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0.401-noble AS backend
+ENV DOTNET_ROLL_FORWARD=Major
+WORKDIR /src
+COPY docker/global.json ./
+COPY version.json ./
+COPY docker/SourceVersion.targets ./
+COPY src/abstractions/ ./src/abstractions/
+COPY src/modules/ ./src/modules/
+COPY src/legacy/ ./src/legacy/
+COPY src/libs/ ./src/libs/
+COPY src/apps/Bakabase.Service/ ./src/apps/Bakabase.Service/
+ARG TARGETARCH
+ARG BAKABASE_VERSION
+RUN --mount=type=cache,target=/root/.nuget/packages \
+    test -n "$BAKABASE_VERSION" || { echo "Use docker/source.sh to preserve the checkout's NBGV version." >&2; exit 1; }; \
+    case "$TARGETARCH" in amd64) rid=linux-x64 ;; arm64) rid=linux-arm64 ;; *) exit 1 ;; esac && \
+    dotnet publish src/apps/Bakabase.Service/Bakabase.Service.csproj \
+      --configuration Release -p:RuntimeMode=DOCKER --self-contained false \
+      -p:CustomAfterMicrosoftCommonTargets=/src/SourceVersion.targets \
+      -p:BakabaseResolvedVersion="$BAKABASE_VERSION" \
+      -r "$rid" -o /publish
+
+FROM mcr.microsoft.com/dotnet/aspnet:10.0.11-noble
+# Noble supplies the required 7zz executable in 7zip-standalone, not 7zip.
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    rm -f /etc/apt/apt.conf.d/docker-clean && \
+    apt-get update && apt-get install -y --no-install-recommends ffmpeg 7zip-standalone && \
+    command -v ffmpeg && command -v ffprobe && command -v 7zz && command -v which && \
+    rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+COPY --from=backend /publish/ ./
+COPY --from=frontend /src/web/dist/ ./web/
+ENV BAKABASE_DATA_DIR=/data \
+    API_LISTENING_PORTS=34567 \
+    DOTNET_ROLL_FORWARD=Major
+EXPOSE 34567
+ENTRYPOINT ["dotnet", "Bakabase.Service.dll"]

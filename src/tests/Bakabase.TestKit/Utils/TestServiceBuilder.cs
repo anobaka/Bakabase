@@ -120,6 +120,8 @@ public static class TestServiceBuilder
         // === Basic Services ===
         services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
         services.AddLocalization();
+        services.AddSingleton<Bakabase.Abstractions.Components.FileSystem.IUserStoragePolicy>(
+            new Bakabase.Abstractions.Components.FileSystem.UserStoragePolicy(isContainer: false));
         services.AddSignalR(x => { });
 
         // === Database ===

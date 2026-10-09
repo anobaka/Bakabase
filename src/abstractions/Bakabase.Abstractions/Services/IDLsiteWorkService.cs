@@ -1,3 +1,4 @@
+using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Models.Domain;
 using Bootstrap.Models.ResponseModels;
@@ -14,8 +15,8 @@ public interface IDLsiteWorkService
     Task AddOrUpdateRange(IEnumerable<DLsiteWorkDbModel> works);
     Task DeleteByWorkId(string workId);
     Task SyncFromApi(Func<int, int, Task>? onProgress = null, CancellationToken ct = default);
-    Task DownloadWork(string workId, Func<int, string, Task>? onProgress = null, CancellationToken ct = default);
-    Task ExtractWork(string workId, Func<int, string, Task>? onProgress = null, CancellationToken ct = default);
+    Task DownloadWork(string workId, Func<int, BTaskText?, Task>? onProgress = null, CancellationToken ct = default);
+    Task ExtractWork(string workId, Func<int, BTaskText?, Task>? onProgress = null, CancellationToken ct = default);
     Task<string> PrepareDownloadDirectory(string workId);
     Task LaunchWork(string workId, CancellationToken ct = default);
 

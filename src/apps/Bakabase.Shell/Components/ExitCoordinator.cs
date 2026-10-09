@@ -124,6 +124,24 @@ public sealed class ExitCoordinator(App app, AvaloniaGuiAdapter gui)
     }
 
     /// <summary>
+    /// Setup confirmation already authorizes this stop. Skip another exit-choice dialog,
+    /// but keep the same task drain, database flush and host disposal used by a normal exit.
+    /// The supervising process waits for actual process exit before touching the data.
+    /// </summary>
+    public async Task RequestMaintenanceExitAsync()
+    {
+        if (_shuttingDown) return;
+        // A close-choice dialog may already own the gate. This is a durable maintenance
+        // request, so wait for that dialog instead of silently dropping the only stop signal.
+        await _gate.WaitAsync();
+        try
+        {
+            if (!_shuttingDown && _reservedUpdateLaunch == null) await ShutdownAsync();
+        }
+        finally { _gate.Release(); }
+    }
+
+    /// <summary>
     /// Updates are an explicit request to quit. Keep the progress window up while tasks and
     /// the host stop, then start Velopack after the graceful wind-down.
     /// </summary>

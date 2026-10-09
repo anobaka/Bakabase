@@ -11,7 +11,9 @@ using Bakabase.Modules.RemoteAccess.Abstractions.Services;
 using Bakabase.Modules.Notification.Abstractions.Models.Input;
 using Bakabase.Modules.Notification.Abstractions.Services;
 using Bakabase.Modules.RemoteAccess.Components.Pairing;
+using Bakabase.Modules.RemoteAccess.Components;
 using Bakabase.Service.Components.RemoteAccess;
+using Bakabase.Service.Components.Federation;
 using Bakabase.Service.Models.Input;
 using Bakabase.Service.Models.View;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
@@ -71,6 +73,11 @@ namespace Bakabase.Service.Controllers
             var context = HttpContext.GetRemoteAccessContext();
             var isLocal = context?.IsLoopback ?? true;
             var descriptor = await remoteAccessService.GetServerDescriptorAsync();
+            // Loopback says where the connection came from, not whether this process
+            // has a desktop. A browser reaching a headless server locally still needs
+            // browser playback and cannot launch a file manager on the user's machine.
+            var hasLocalDesktop = isLocal && descriptor.Kind != ServerKind.Headless &&
+                                  AppRuntime.Mode != RuntimeMode.Docker;
 
             return new SingletonResponse<RemoteAccessClientContextViewModel>(
                 new RemoteAccessClientContextViewModel
@@ -80,15 +87,16 @@ namespace Bakabase.Service.Controllers
                     Paired = context?.IsPaired ?? false,
                     DeviceId = context?.Device?.Id,
                     DeviceName = context?.Device?.Name,
-                    // A caller reaching a server directly is either sitting at it or
-                    // browsing it. The third answer only ever comes from a client that
-                    // answers this endpoint itself.
-                    ClientMode = isLocal ? ClientMode.AllInOne : ClientMode.RemoteBrowser,
+                    // The third answer only ever comes from the desktop relay that
+                    // answers this endpoint itself and runs user-side actions there.
+                    ClientMode = hasLocalDesktop ? ClientMode.AllInOne : ClientMode.RemoteBrowser,
                     ServerId = descriptor.Id,
                     ServerName = descriptor.Name,
                     // Needs a desktop, and needs it to be this person's. A container has
                     // no screen, and a browser on another device is not sitting here.
-                    CookieCaptureAvailable = isLocal && AppService.RuntimeMode != RuntimeMode.Docker
+                    CookieCaptureAvailable = hasLocalDesktop,
+                    FederationAvailable = FederationAccessMiddleware.IsLocalCaller(HttpContext) ||
+                                          FederationAdministrationMiddleware.CanAdminister(HttpContext)
                 });
         }
 
@@ -131,10 +139,11 @@ namespace Bakabase.Service.Controllers
             return new SingletonResponse<RemoteAccessSettingsViewModel>(new RemoteAccessSettingsViewModel
             {
                 Mode = remoteAccessService.GetEffectiveMode(),
+                AdvertisedAddress = remoteAccessService.GetAdvertisedAddress(),
                 Addresses = remoteAccessService.GetReachableAddresses()
                     .Select(a => new RemoteAccessAddressViewModel
                     {
-                        Url = a.Url, InterfaceName = a.InterfaceName, Kind = a.Kind, Recommended = a.Recommended
+                        Url = a.Url, InterfaceName = a.InterfaceName, Kind = a.Kind, Recommended = a.Recommended, Source = a.Source
                     })
                     .ToList(),
                 AllowLiveTranscode = remoteAccessService.GetAllowLiveTranscode(),
@@ -161,6 +170,31 @@ namespace Bakabase.Service.Controllers
             await remoteAccessService.SetModeAsync(model.Mode);
             return BaseResponseBuilder.Ok;
         }
+
+        [HttpPut("advertised-address")]
+        [SwaggerOperation(OperationId = "SetRemoteAccessAdvertisedAddress")]
+        public async Task<ActionResult<BaseResponse>> SetAdvertisedAddress(
+            [FromBody] RemoteAccessAdvertisedAddressInputModel model, [FromServices] IBakabaseLocalizer localizer)
+        {
+            if (model.Address != null && !AdvertisedRemoteAddress.TryNormalize(model.Address, out _))
+                return InvalidAdvertisedAddress(localizer);
+            await remoteAccessService.SetAdvertisedAddressAsync(model.Address);
+            return BaseResponseBuilder.Ok;
+        }
+
+        [HttpPost("address-candidates")]
+        [SwaggerOperation(OperationId = "ObserveRemoteAccessAddress")]
+        public ActionResult<BaseResponse> ObserveAddress(
+            [FromBody] RemoteAccessAddressCandidateInputModel model, [FromServices] IBakabaseLocalizer localizer)
+        {
+            if (!AdvertisedRemoteAddress.TryNormalize(model.Address, out _)) return InvalidAdvertisedAddress(localizer);
+            remoteAccessService.ObserveAddress(model.Address);
+            return BaseResponseBuilder.Ok;
+        }
+
+        private BadRequestObjectResult InvalidAdvertisedAddress(IBakabaseLocalizer localizer) =>
+            BadRequest(BaseResponseBuilder.Build(ResponseCode.InvalidPayloadOrOperation,
+                localizer["RemoteAccess_AdvertisedAddressInvalid"]));
 
         [HttpPut("live-transcode")]
         [SwaggerOperation(OperationId = "SetRemoteAccessLiveTranscode")]

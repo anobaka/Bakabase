@@ -465,5 +465,17 @@
   "WaitingForInput": "等待处理",
   "WaitingForConflict": "等待处理冲突",
   "NeedsRecovery": "需要恢复",
-  "Skipped": "已跳过"
+  "Skipped": "已跳过",
+  "filePath.hostPath": "宿主机路径",
+  "filePath.containerPath": "容器内路径",
+  "filePath.serverPath": "服务端路径",
+  "filePath.path": "路径",
+  "filePath.copy": "复制{{label}}",
+  "filePath.copied": "已复制{{label}}",
+  "filePath.openFolder": "打开文件夹",
+  "filePath.readOnlyMount": "只读挂载",
+  "filePath.dockerVolume": "保存在 Docker 卷中。",
+  "filePath.containerStorage": "保存在容器内部，未映射宿主机文件夹。",
+  "filePath.hostPathUnavailable": "未提供宿主机路径映射，当前显示容器内路径。",
+  "filePath.copyFailed": "复制失败，请选中路径后手动复制。"
 }

@@ -124,6 +124,7 @@
   "comparison.scoring.threshold": "When Total Score ≥ Threshold, two resources are considered similar/duplicate",
   "comparison.scoring.example": "Example: Rule A (weight 2) scores 0.8, Rule B (weight 1) scores 0.6, Total = (0.8×2 + 0.6×1) / (2+1) × 100% = 73.3%",
   "comparison.networkGraph.title": "Resource Relationship Graph",
+  "comparison.networkGraph.controlsHint": "Scroll to zoom · {{modifier}}+drag to pan",
   "comparison.networkGraph.hint": "Only relationships with similarity above the plan threshold are shown. Hover over a connection to see detailed comparison.",
   "comparison.networkGraph.truncatedWarning": "Showing {{shown}}/{{total}} relationships (limited for performance)",
   "comparison.networkGraph.nodeCount": "{{count}} resources",

@@ -25,9 +25,14 @@ public partial class NativeWebViewHost : NativeControlHost
     /// </summary>
     public event Action<string>? Navigated;
 
+    /// <summary>Optional bootstrap profile: avoids initializing AppService before setup.</summary>
+    public string? WindowsUserDataDirectory { get; init; }
+
+    private static string? DiagnosticUrl(string? url) => url?.Split('#')[0];
+
     public void Navigate(string url)
     {
-        Console.WriteLine($"[NativeWebViewHost] Navigate called: url={url}, initialized={_initialized}");
+        Console.WriteLine($"[NativeWebViewHost] Navigate called: url={DiagnosticUrl(url)}, initialized={_initialized}");
         _pendingUrl = url;
         if (_initialized)
             PlatformNavigate(url);
@@ -132,7 +137,7 @@ public partial class NativeWebViewHost : NativeControlHost
 
     protected override IPlatformHandle CreateNativeControlCore(IPlatformHandle parent)
     {
-        Console.WriteLine($"[NativeWebViewHost] CreateNativeControlCore called, pendingUrl={_pendingUrl}");
+        Console.WriteLine($"[NativeWebViewHost] CreateNativeControlCore called, pendingUrl={DiagnosticUrl(_pendingUrl)}");
 
         if (OperatingSystem.IsMacOS())
             return CreateMacOS(parent);

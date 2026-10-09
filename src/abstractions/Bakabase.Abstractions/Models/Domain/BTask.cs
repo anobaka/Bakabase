@@ -20,14 +20,23 @@ public record BTask
     public HashSet<string>? DependsOn { get; }
     public BTaskLevel Level { get; }
     public string? Error { get; set; }
-    public string? BriefError { get; set; }
+    private string? _briefError;
+    private BTaskText? _briefErrorText;
+    public string? BriefError { get => _briefErrorText?.ToString() ?? _briefError; set { _briefErrorText = null; _briefError = value; } }
     public TimeSpan? Interval { get; set; }
     public DateTime? EnableAfter { get; set; }
     public BTaskStatus Status { get; set; } = BTaskStatus.NotStarted;
     public DateTime? StartedAt { get; set; }
     public int Percentage { get; set; }
-    public string? Message { get; set; }
-    public string? Process { get; set; }
+    private string? _message;
+    private BTaskText? _messageText;
+    public string? Message { get => _messageText?.ToString() ?? _message; set { _messageText = null; _message = value; } }
+    public void SetMessage(BTaskText? text) { _messageText = text; _message = null; }
+    private string? _process;
+    private BTaskText? _processText;
+    public string? Process { get => _processText?.ToString() ?? _process; set { _processText = null; _process = value; } }
+    public void SetProcess(BTaskText? text) { _processText = text; _process = null; }
+    public Dictionary<string, string?>? GetProcessTranslations() => _processText?.Translations();
     public DateTime? LastFinishedAt { get; set; }
     public bool IsPersistent { get; }
     public TimeSpan? Elapsed { get; set; }
@@ -49,6 +58,13 @@ public record BTask
     public void SetError(string? briefError, string? error)
     {
         BriefError = briefError;
+        Error = error;
+    }
+
+    public void SetLocalizedError(BTaskText? briefError, string? error)
+    {
+        _briefErrorText = briefError;
+        _briefError = null;
         Error = error;
     }
 

@@ -4,11 +4,12 @@ using System;
 
 namespace Bakabase.Service.Components;
 
-public class NullGuiAdapter : IGuiAdapter
+public class NullGuiAdapter(Action? onReady = null, Action<string>? onFatalError = null) : IGuiAdapter
 {
     public void ShowFatalErrorWindow(string message, string title = "Fatal Error")
     {
-
+        Console.Error.WriteLine($"{title}: {message}");
+        onFatalError?.Invoke("The server could not finish starting. See the server log for details.");
     }
 
     public void ShowInitializationWindow(string processName, string? detail = null, double? fraction = null)
@@ -23,7 +24,8 @@ public class NullGuiAdapter : IGuiAdapter
 
     public void ShowMainWebView(string url, string title, Func<Task> onClosing)
     {
-
+        Console.WriteLine($"Server ready: {url}");
+        onReady?.Invoke();
     }
 
     public void SetMainWindowTitle(string title)

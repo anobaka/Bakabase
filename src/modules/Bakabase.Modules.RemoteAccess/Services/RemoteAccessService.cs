@@ -1,3 +1,5 @@
+using System.Net;
+using System.Text.Json;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.Domain.Options;
 using Bakabase.Modules.RemoteAccess.Abstractions.Components;
@@ -15,9 +17,47 @@ public class RemoteAccessService(
     RemoteAccessHostInfo hostInfo,
     IListeningAddressProvider listeningAddressProvider,
     ILogger<RemoteAccessService> logger,
-    IServerSelfDescription? self = null) : IRemoteAccessService
+    IServerSelfDescription? self = null,
+    RemoteAccessAddressEnvironment? addressEnvironment = null) : IRemoteAccessService
 {
     private readonly SemaphoreSlim _serverIdLock = new(1, 1);
+    private readonly RemoteAccessAddressEnvironment _addressEnvironment = addressEnvironment ?? new();
+    private readonly object _addressLock = new();
+    private readonly Dictionary<string, DateTimeOffset> _observedAddresses = new(StringComparer.Ordinal);
+    private static readonly TimeSpan ObservedAddressLifetime = TimeSpan.FromHours(24);
+    private const int MaximumObservedAddresses = 8;
+
+    public string? GetAdvertisedAddress() => optionsManager.Value.AdvertisedAddress;
+
+    public async Task SetAdvertisedAddressAsync(string? address)
+    {
+        string? normalized = null;
+        if (address != null && !AdvertisedRemoteAddress.TryNormalize(address, out normalized))
+            throw new ArgumentException("A shareable HTTP(S) origin is required.", nameof(address));
+        await optionsManager.SaveAsync(o => o.AdvertisedAddress = normalized);
+    }
+
+    public void ObserveAddress(string address)
+    {
+        if (!AdvertisedRemoteAddress.TryNormalize(address, out var normalized))
+            throw new ArgumentException("A shareable HTTP(S) origin is required.", nameof(address));
+        lock (_addressLock)
+        {
+            var now = _addressEnvironment.Clock.GetUtcNow();
+            PruneObservedAddresses(now);
+            _observedAddresses[normalized!] = now;
+            while (_observedAddresses.Count > MaximumObservedAddresses)
+                _observedAddresses.Remove(_observedAddresses.MinBy(pair => pair.Value).Key);
+        }
+    }
+
+    private void PruneObservedAddresses(DateTimeOffset now)
+    {
+        foreach (var address in _observedAddresses.Where(pair => now - pair.Value >= ObservedAddressLifetime)
+                     .Select(pair => pair.Key).ToArray())
+            _observedAddresses.Remove(address);
+    }
+
 
     public RemoteAccessMode GetEffectiveMode() => optionsManager.Value.Mode ?? defaults.Mode;
 
@@ -28,6 +68,57 @@ public class RemoteAccessService(
     }
 
     public IReadOnlyList<RemoteAccessAddress> GetReachableAddresses()
+    {
+        var result = new List<RemoteAccessAddress>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        void Add(string? address, string source)
+        {
+            if (!AdvertisedRemoteAddress.TryNormalize(address, out var normalized) || !seen.Add(normalized!)) return;
+            var uri = new Uri(normalized!);
+            var kind = IPAddress.TryParse(uri.IdnHost.Trim('[', ']'), out var ip)
+                ? RemoteAccessAddressClassifier.Classify(ip, "", null, null) : RemoteAccessAddressKind.Unknown;
+            result.Add(new(normalized!, "", kind, result.Count == 0, source));
+        }
+        Add(GetAdvertisedAddress(), "configured");
+        lock (_addressLock)
+        {
+            PruneObservedAddresses(_addressEnvironment.Clock.GetUtcNow());
+            foreach (var address in _observedAddresses.OrderByDescending(pair => pair.Value)) Add(address.Key, "browser");
+        }
+        if (_addressEnvironment.IsContainer)
+        {
+            foreach (var address in ReadDeploymentEndpoints()) Add(address, "deployment");
+            return result;
+        }
+        var hasRecommendation = result.Count > 0;
+        foreach (var address in _addressEnvironment.ReadInterfaceAddresses?.Invoke() ?? GetInterfaceAddresses())
+        {
+            // Keep native interface inventory/classification intact: other consumers use it to
+            // recognize this machine, even when an interface is not a good sharing choice.
+            if (!Uri.TryCreate(address.Url, UriKind.Absolute, out var uri)) continue;
+            var normalized = uri.GetLeftPart(UriPartial.Authority);
+            if (!seen.Add(normalized)) continue;
+            var recommend = !hasRecommendation && address.Recommended;
+            result.Add(address with {Url = normalized, Source = "interface", Recommended = recommend});
+            hasRecommendation |= recommend;
+        }
+        return result;
+    }
+
+    private IEnumerable<string> ReadDeploymentEndpoints()
+    {
+        if (_addressEnvironment.EndpointMetadata is not {Length: > 0 and <= 65536} metadata) return [];
+        try
+        {
+            var manifest = JsonSerializer.Deserialize<EndpointManifest>(metadata, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+            return manifest is {SchemaVersion: 1, Addresses.Length: <= 64} ? manifest.Addresses : [];
+        }
+        catch (JsonException) { return []; }
+    }
+
+    private sealed record EndpointManifest(int SchemaVersion, string[]? Addresses);
+
+    private IReadOnlyList<RemoteAccessAddress> GetInterfaceAddresses()
     {
         var ports = GetListeningPorts();
         if (ports.Count == 0)

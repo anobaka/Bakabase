@@ -1,3 +1,4 @@
+using Bakabase.Abstractions.Components.Localization;
 using System.Text.Json;
 using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Modules.Workflow.Abstractions.Components;
@@ -55,6 +56,7 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
         var ct = btaskArgs.CancellationToken;
         await using var scope = _scopeFactory.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<TDbContext>();
+        var localizer = scope.ServiceProvider.GetRequiredService<IBakabaseLocalizer>();
 
         var run = await db.Set<WorkflowRunDbModel>().FirstOrDefaultAsync(r => r.Id == runId, ct);
         if (run is null)
@@ -233,9 +235,10 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
                             var within = Math.Clamp(percentage, 0, 100);
 
                             t.Percentage = (stepIndex * 100 + within) / totalSteps;
-                            t.Process = process is null
-                                ? $"{stepIndex + 1}/{activityRows.Count}"
-                                : $"{stepIndex + 1}/{activityRows.Count} · {process}";
+                            t.SetProcess(process is null
+                                ? BTaskText.Localize(localizer, "BTask_Process_WorkflowStep", stepIndex + 1, activityRows.Count)
+                                : BTaskText.Localize(localizer, "BTask_Process_WorkflowStepDetail",
+                                    stepIndex + 1, activityRows.Count, process));
                         }),
                     };
 
@@ -367,7 +370,8 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
                 await btaskArgs.UpdateTask(t =>
                 {
                     t.Percentage = (stepIndex + 1) * 100 / totalSteps;
-                    t.Process = $"{stepIndex + 1}/{activityRows.Count} · {items.Count} items";
+                    t.SetProcess(BTaskText.Localize(localizer, "BTask_Process_WorkflowStepItems",
+                        stepIndex + 1, activityRows.Count, items.Count));
                 });
             }
 

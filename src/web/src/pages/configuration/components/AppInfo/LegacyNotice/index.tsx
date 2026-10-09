@@ -3,7 +3,8 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
 
-import { Button, Snippet } from "@/components/bakaui";
+import { Button } from "@/components/bakaui";
+import FilePathValue from "@/components/FilePathValue";
 import BApi from "@/sdk/BApi";
 import { useLegacyInstallNoticeStore } from "@/stores/legacyInstallNotice";
 
@@ -19,8 +20,6 @@ export const LegacyAppDataNoticeBanner: React.FC = () => {
 
   if (!notice) return null;
 
-  const open = () => BApi.tool.openFileOrDirectory({ path: notice.path });
-
   const dismiss = async () => {
     try {
       await BApi.app.dismissLegacyInstallNotice();
@@ -33,13 +32,8 @@ export const LegacyAppDataNoticeBanner: React.FC = () => {
     <div className="rounded-md border border-warning-200 bg-warning-50 p-3 mb-3 flex flex-col gap-2">
       <div className="font-semibold">{t("configuration.legacyNotice.title")}</div>
       <div className="text-sm">{t("configuration.legacyNotice.description")}</div>
-      <Snippet hideSymbol size="sm" variant="bordered">
-        {notice.path}
-      </Snippet>
+      <FilePathValue path={notice.path} />
       <div className="flex gap-2">
-        <Button color="primary" size="sm" variant="flat" onPress={open}>
-          {t("configuration.legacyNotice.openButton")}
-        </Button>
         <Button size="sm" variant="light" onPress={dismiss}>
           {t("configuration.legacyNotice.dismissButton")}
         </Button>

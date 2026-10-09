@@ -19,7 +19,8 @@ namespace Bakabase.Modules.RemoteAccess.Abstractions.Components;
 /// is read by two sides that never talk to each other at runtime:
 /// </para>
 /// <list type="bullet">
-/// <item>the server refuses these for any non-loopback caller, paired or not;</item>
+/// <item>the server refuses these for any non-loopback caller, paired or not,
+/// unless the action explicitly provides a browser fallback;</item>
 /// <item>the client's local forwarding layer keeps them instead of forwarding.</item>
 /// </list>
 /// <para>
@@ -42,4 +43,11 @@ public sealed class RunsOnUserMachineAttribute : Attribute
     /// Written for a user reading an error, not for a developer reading a log.
     /// </summary>
     public string? Reason { get; init; }
+
+    /// <summary>
+    /// The action can answer in the caller's browser instead of launching a native
+    /// process. Normal remote authorization still applies; the action must only
+    /// launch natively for a loopback caller on an explicitly identified desktop.
+    /// </summary>
+    public bool HasBrowserFallback { get; init; }
 }

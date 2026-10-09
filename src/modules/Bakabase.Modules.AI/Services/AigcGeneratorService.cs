@@ -133,7 +133,7 @@ public class AigcGeneratorService<TDbContext>(
         var taskId = $"AigcGenerationRun:{runId}";
 
         var builder = BTaskBuilder.Create(taskId)
-            .Named(() => $"{localizer.BTask_Name("AigcGeneration")} #{runId}")
+            .Named(() => localizer["BTask_Name_AigcGeneration", runId])
             .Describe(() => generator.Name)
             .ConflictsWith($"AigcProvider:{generator.ProviderId}")
             .Persistent()
@@ -149,7 +149,7 @@ public class AigcGeneratorService<TDbContext>(
                         await args.UpdateTask(t =>
                         {
                             t.Percentage = pct;
-                            t.Process = msg;
+                            t.SetProcess(msg);
                         });
                     },
                     args.CancellationToken);

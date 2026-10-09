@@ -1,0 +1,16 @@
+{
+  "resourceUsage.title": "Resource usage",
+  "resourceUsage.memory": "Memory",
+  "resourceUsage.data": "Data directory",
+  "resourceUsage.cpuHint": "CPU used by the current Bakabase service process, relative to all available logical processors. Excludes child processes such as FFmpeg.",
+  "resourceUsage.memoryHint": "Physical memory used by the current Bakabase service process.",
+  "resourceUsage.directoryHint": "Total file size in the data directory, refreshed every 5 minutes. Includes databases, covers and caches; symbolic links are excluded.",
+  "resourceUsage.calculating": "Calculating directory size in the background…",
+  "resourceUsage.directoryPartial": "Some files could not be read; showing the measured total.",
+  "resourceUsage.directoryUnavailable": "Directory size could not be refreshed; any displayed value is from the last measurement.",
+  "resourceUsage.unavailable": "Usage unavailable",
+  "resourceUsage.hide.label": "Hide resource usage",
+  "resourceUsage.hidden.title": "Resource usage hidden",
+  "resourceUsage.hidden.description": "To show it again, go to System → Configuration → Functional configurations and turn on “Show resource usage”.",
+  "resourceUsage.hidden.dismiss": "Got it"
+}

@@ -73,7 +73,11 @@ public sealed class TampermonkeyInstallHandler(
 
     public async Task HandleAsync(HttpContext context, IReadOnlyDictionary<string, string> routeValues)
     {
-        var url = loopback.BuildUrl("/tampermonkey/script/bakabase.user.js");
+        var scriptUrl = loopback.BuildUrl("/tampermonkey/script/bakabase.user.js");
+        // The upstream sees its own Host, not this relay's. Keep the userscript on
+        // the loopback origin whose requests this process can sign for the browser.
+        var endpoint = new Uri(scriptUrl).GetLeftPart(UriPartial.Authority);
+        var url = $"{scriptUrl}?apiEndpoint={Uri.EscapeDataString(endpoint)}";
 
         context.Response.ContentType = "application/json";
 

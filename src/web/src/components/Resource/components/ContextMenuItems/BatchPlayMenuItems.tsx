@@ -3,7 +3,7 @@
 import type { BakabaseModulesPlayerAbstractionsModelsDomainBatchPlayCandidate as BatchPlayCandidate } from "@/sdk/Api";
 
 import { MenuDivider, MenuItem, SubMenu } from "@szhsin/react-menu";
-import { PlayCircleOutlined } from "@ant-design/icons";
+import { PlayCircleOutlined, RightOutlined } from "@ant-design/icons";
 import React, { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -103,13 +103,15 @@ const BatchPlayMenuItems = ({ selectedResourceIds }: Props) => {
     <SubMenu
       label={
         <div className="flex items-center gap-2">
-          <PlayCircleOutlined className="text-base" />
-          {t<string>("resource.contextMenu.batchPlay.label", {
-            count: selectedResourceIds.length,
-          })}
+          <PlayCircleOutlined aria-hidden className="text-base" />
+          <span className="resource-context-menu__label">
+            {t<string>("resource.contextMenu.batchPlay.shortLabel")}
+          </span>
+          <RightOutlined aria-hidden className="resource-context-menu__chevron" />
         </div>
       }
-      menuStyle={{ minWidth: "220px" }}
+      menuClassName="resource-context-menu resource-context-menu--submenu"
+      overflow="auto"
       onMenuChange={(e) => {
         if (e.open && candidates === undefined && !loading) {
           loadCandidates();

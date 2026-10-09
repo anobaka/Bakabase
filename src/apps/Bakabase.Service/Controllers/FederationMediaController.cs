@@ -8,6 +8,8 @@ using Bakabase.Modules.Federation.Contracts;
 using Bakabase.Modules.Federation.Media;
 using Bakabase.Modules.Federation.Security;
 using Bakabase.Modules.Federation.Transport;
+using Bakabase.Modules.RemoteAccess.Abstractions.Models;
+using Bakabase.Modules.RemoteAccess.Abstractions.Services;
 using Bakabase.Service.Components.Federation;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -19,7 +21,7 @@ namespace Bakabase.Service.Controllers;
 [Route("federation/local")]
 [FederationEndpoint(FederationEndpointKind.Local)]
 public sealed class FederationMediaController(FederationMediaService media, FederationMediaSessions sessions,
-    INodeTransport transport, GrantLeaseRegistry leases) : FederationControllerBase
+    INodeTransport transport, GrantLeaseRegistry leases, IServerSelfDescription? self = null) : FederationControllerBase
 {
     [HttpPost("resources/resolve")]
     [SwaggerOperation(OperationId = "ResolveFederatedResources")]
@@ -31,17 +33,23 @@ public sealed class FederationMediaController(FederationMediaService media, Fede
     [SwaggerOperation(OperationId = "OpenFederatedResourceDirectory")]
     [ProducesResponseType(typeof(OpenResourceDirectoryResponse), 200)]
     public async Task<IActionResult> OpenDirectory([FromBody] OpenResourceDirectoryRequest request,
-        [FromServices] FederationDirectoryService directories, CancellationToken ct) =>
-        FederationResult(await directories.OpenAsync(request.ResourceRef, ct));
+        [FromServices] FederationDirectoryService directories, CancellationToken ct)
+    {
+        if (self?.Kind == ServerKind.Headless)
+            throw new FederationQueryException("OpenDirectoryUnavailable", 501);
+        return FederationResult(await directories.OpenAsync(request.ResourceRef, ct));
+    }
 
     [HttpPost("playback-sessions")]
     [SwaggerOperation(OperationId = "CreateFederatedPlaybackSession")]
     [ProducesResponseType(typeof(PlaybackSessionResponse), 200)]
-    public async Task<IActionResult> Prepare([FromBody] PlaybackSessionRequest request, CancellationToken ct) =>
-        FederationResult(await media.PrepareAsync(request,
-            // The local gate has already validated this loopback Host and port.
-            // Preserve localhost/IPv6 spelling so browser previews remain same-origin.
-            $"{Request.Scheme}://{Request.Host}", ct));
+    public async Task<IActionResult> Prepare([FromBody] PlaybackSessionRequest request, CancellationToken ct)
+    {
+        if (self?.Kind == ServerKind.Headless && request.Mode == "player")
+            throw new FederationQueryException("PlayerUnavailable", 409);
+        // Keep preview media on the same browser origin, including a NAS address or mapped Docker port.
+        return FederationResult(await media.PrepareAsync(request, $"{Request.Scheme}://{Request.Host}", ct));
+    }
 
     [HttpGet("media/{ticketId}")]
     [SwaggerOperation(OperationId = "ReadFederatedMediaSession")]

@@ -1,3 +1,4 @@
+using Bakabase.Abstractions.Components.FileSystem;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -29,7 +30,8 @@ namespace Bakabase.Service.Components.Acquisition;
 public class AcquisitionInboxWatcher(
     IServiceScopeFactory scopeFactory,
     IBOptions<AcquisitionOptions> options,
-    ILogger<AcquisitionInboxWatcher> logger) : BackgroundService
+    ILogger<AcquisitionInboxWatcher> logger,
+    IUserStoragePolicy storagePolicy) : BackgroundService
 {
     private static readonly TimeSpan TickEvery = TimeSpan.FromSeconds(5);
 
@@ -54,6 +56,8 @@ public class AcquisitionInboxWatcher(
         {
             try
             {
+                if (!string.IsNullOrWhiteSpace(options.Value.InboxDirectory))
+                    storagePolicy.EnsurePathAllowed(options.Value.InboxDirectory);
                 Rewatch(options.Value.InboxDirectory);
                 await TickAsync(stoppingToken);
             }
@@ -87,11 +91,13 @@ public class AcquisitionInboxWatcher(
 
         if (string.IsNullOrWhiteSpace(inbox) || !Directory.Exists(inbox)) return;
 
+        storagePolicy.EnsurePathAllowed(inbox);
         var present = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var settled = new List<string>();
 
         foreach (var file in new DirectoryInfo(inbox).EnumerateFiles())
         {
+            if (!storagePolicy.IsPathAllowed(file.FullName)) continue;
             present.Add(file.FullName);
 
             var seen = _seen.GetOrAdd(file.FullName, _ => new Seen {Length = -1});

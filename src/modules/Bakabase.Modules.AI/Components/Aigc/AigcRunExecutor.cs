@@ -1,3 +1,5 @@
+using Bakabase.Abstractions.Components.Localization;
+using Bakabase.Abstractions.Components.Tasks;
 using System.Globalization;
 using System.Text.Json;
 using Bakabase.Abstractions.Components.FileSystem;
@@ -17,25 +19,26 @@ public class AigcRunExecutor<TDbContext>(
     AigcArtifactPipeline<TDbContext> pipeline,
     IFileManager fileManager,
     IEnumerable<IAigcProviderInvoker> invokers,
-    ILogger<AigcRunExecutor<TDbContext>> logger
+    ILogger<AigcRunExecutor<TDbContext>> logger,
+    IBakabaseLocalizer localizer
 ) : IAigcRunExecutor where TDbContext : DbContext
 {
     private readonly Dictionary<AiProviderKind, IAigcProviderInvoker> _invokerMap =
         invokers.ToDictionary(i => i.Kind);
 
-    public async Task ExecuteAsync(int runId, Func<int, string?, CancellationToken, Task>? onProgress,
+    public async Task ExecuteAsync(int runId, Func<int, BTaskText?, CancellationToken, Task>? onProgress,
         CancellationToken ct)
     {
         var run = await runOrm.GetByKey(runId)
-                  ?? throw new InvalidOperationException($"Aigc run {runId} not found");
+                  ?? throw TaskError("BTask_Error_AigcRunMissing", $"Aigc run {runId} not found", runId);
         var generator = await generatorOrm.GetByKey(run.GeneratorId)
-                        ?? throw new InvalidOperationException($"Aigc generator {run.GeneratorId} not found");
+                        ?? throw TaskError("BTask_Error_AigcGeneratorMissing", $"Aigc generator {run.GeneratorId} not found", run.GeneratorId);
         var provider = await providerOrm.GetByKey(generator.ProviderId)
-                       ?? throw new InvalidOperationException($"Aigc provider {generator.ProviderId} not found");
+                       ?? throw TaskError("BTask_Error_AigcProviderMissing", $"Aigc provider {generator.ProviderId} not found", generator.ProviderId);
         if (!provider.IsEnabled || !provider.AigcEnabled)
-            throw new InvalidOperationException($"Provider {provider.Id} ({provider.Name}) does not have AIGC capability enabled.");
+            throw TaskError("BTask_Error_AigcProviderDisabled", $"Provider {provider.Id} ({provider.Name}) does not have AIGC capability enabled.", provider.Id, provider.Name);
         if (!_invokerMap.TryGetValue(provider.Kind, out var invoker))
-            throw new InvalidOperationException($"No AIGC invoker registered for {provider.Kind}");
+            throw TaskError("BTask_Error_AigcProviderUnsupported", $"No AIGC invoker registered for {provider.Kind}", provider.Kind);
 
         run.Status = AigcGenerationStatus.Running;
         await runOrm.Update(run);
@@ -53,7 +56,7 @@ public class AigcRunExecutor<TDbContext>(
                 OnProgress = onProgress
             };
 
-            if (onProgress is not null) await onProgress(5, "Calling provider", ct);
+            if (onProgress is not null) await onProgress(5, BTaskText.Localize(localizer, "BTask_Process_AigcCallingProvider"), ct);
 
             var result = await invoker.InvokeAsync(provider, request, ct);
 
@@ -62,11 +65,11 @@ public class AigcRunExecutor<TDbContext>(
 
             if (result.Outputs.Count == 0)
             {
-                throw new InvalidOperationException("Provider returned no outputs.");
+                throw TaskError("BTask_Error_AigcNoOutputs", "Provider returned no outputs.");
             }
 
             // Land outputs to disk
-            if (onProgress is not null) await onProgress(70, $"Saving {result.Outputs.Count} files", ct);
+            if (onProgress is not null) await onProgress(70, BTaskText.Localize(localizer, "BTask_Process_AigcSavingFiles", result.Outputs.Count), ct);
 
             var runDir = fileManager.GetAigcRunDir(generator.Id, run.Id);
             Directory.CreateDirectory(runDir);
@@ -86,14 +89,14 @@ public class AigcRunExecutor<TDbContext>(
                 });
             }
 
-            if (onProgress is not null) await onProgress(85, "Registering artifacts", ct);
+            if (onProgress is not null) await onProgress(85, BTaskText.Localize(localizer, "BTask_Process_AigcRegisteringArtifacts"), ct);
             await pipeline.RegisterAsync(generator, run, landed, ct);
 
             run.Status = AigcGenerationStatus.Succeeded;
             run.CompletedAt = DateTime.Now;
             await runOrm.Update(run);
 
-            if (onProgress is not null) await onProgress(100, "Done", ct);
+            if (onProgress is not null) await onProgress(100, BTaskText.Localize(localizer, "BTask_Process_AigcDone"), ct);
         }
         catch (OperationCanceledException)
         {
@@ -110,7 +113,7 @@ public class AigcRunExecutor<TDbContext>(
             // the input, ...). We record run.ErrorMessage so the UI can
             // surface them, but they don't belong in the error dashboard.
             // Anything else is a real bug — keep LogError so we hear about it.
-            if (ex is InvalidOperationException)
+            if (ex is InvalidOperationException or BTaskException)
             {
                 logger.LogWarning(ex, "Aigc run {RunId} failed", run.Id);
             }
@@ -159,4 +162,7 @@ public class AigcRunExecutor<TDbContext>(
         }
         return name + "." + extension;
     }
+    private BTaskException TaskError(string key, string detail, params object?[] arguments) =>
+        new(detail, detail) {BriefText = BTaskText.Localize(localizer, key, arguments)};
+
 }

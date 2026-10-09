@@ -12,7 +12,7 @@ using Microsoft.Extensions.Logging;
 namespace Bakabase.Service.Components.Federation;
 
 /// <summary>
-/// Headless setup for a NAS or container, where nobody can open the loopback-only Devices page:
+/// Startup sharing controls for a NAS or container; an alternative to its browser's Devices page:
 /// <c>BAKABASE_FEDERATION_SHARING=true</c> turns read-only sharing on at startup, and
 /// <c>--federation-invite-on-start</c> prints a one-time code for the next device to pair.
 /// </summary>

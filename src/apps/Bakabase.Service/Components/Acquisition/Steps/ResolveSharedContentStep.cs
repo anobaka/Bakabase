@@ -1,3 +1,5 @@
+using Bakabase.Abstractions.Components.Localization;
+using Bakabase.Abstractions.Components.Tasks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -107,7 +109,8 @@ public class ResolveSharedContentStep : IAcquisitionStep
         PostContent content;
         try
         {
-            await ctx.ReportProgress(10, "Reading the shared content");
+            await ctx.ReportProgress(10, BTaskText.Localize(
+                ctx.ServiceProvider.GetRequiredService<IBakabaseLocalizer>(), "BTask_Process_ReadingSharedContent"));
             content = await reader.ReadAsync(reference, ct: ct);
         }
         catch (OperationCanceledException)
@@ -242,7 +245,8 @@ public class ResolveSharedContentStep : IAcquisitionStep
         AcquisitionWorkItem item, IPostContentService reader, string reference, PostContent content,
         CancellationToken ct)
     {
-        await ctx.ReportProgress(50, "Looking for download links");
+        var localizer = ctx.ServiceProvider.GetRequiredService<IBakabaseLocalizer>();
+        await ctx.ReportProgress(50, BTaskText.Localize(localizer, "BTask_Process_FindingDownloadLinks"));
 
         var extractor = ctx.ServiceProvider.GetRequiredService<IPostDownloadInfoExtractor>();
         PostDownloadInfo result;
@@ -270,7 +274,8 @@ public class ResolveSharedContentStep : IAcquisitionStep
 
         await AttachIdentitiesAsync(ctx, item.ResourceId, content, reference);
 
-        await ctx.ReportProgress(100, links.Count == 0 ? "No links found" : $"{links.Count} links found");
+        await ctx.ReportProgress(100, BTaskText.Localize(localizer,
+            "BTask_Process_DownloadLinksFound", links.Count));
 
         return new AcquisitionStepOutcome.Continue(item with
         {

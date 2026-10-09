@@ -66,7 +66,7 @@ export default function DevicesPage() {
 
 /**
  * Where the rest of this page is not available — the desktop app showing a server it
- * manages, a browser — the one part that still applies is whether other
+ * manages, a browser without this server's federation capability — the part that still applies is whether other
  * devices may manage the server the window shows. A headless server's management requests
  * are answered exactly there, and its notification links here.
  *

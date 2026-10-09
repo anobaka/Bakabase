@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -76,6 +76,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
         public string? NextCheckpoint { get; protected set; }
 
         protected T GetRequiredService<T>() => ServiceProvider.GetRequiredService<T>();
+        protected void EnsureUserPathAllowed(string path) =>
+            GetRequiredService<IUserStoragePolicy>().EnsurePathAllowed(path);
         protected DownloaderManager DownloaderManager => GetRequiredService<DownloaderManager>();
         protected CancellationTokenSource? Cts;
         private readonly SemaphoreSlim _lifecycleGate = new(1, 1);
@@ -787,6 +789,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                 {
                     try
                     {
+                        // Re-check every attempt, including restored tasks and transient retries.
+                        await DownloadTaskStorage.EnsureAllowedAsync(ServiceProvider, task);
                         await StartCore(task, runCts.Token);
                         return;
                     }

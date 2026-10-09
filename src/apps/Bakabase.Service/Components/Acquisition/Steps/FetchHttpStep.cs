@@ -94,7 +94,7 @@ public class FetchHttpStep : IAcquisitionStep
                     ParallelConnections = config.ParallelConnections,
                     MaxRetries = config.MaxRetries,
                     MaximumBytesPerSecond = config.SpeedLimitKiB * 1024L
-                }, ctx.ReportProgress, ct);
+                }, (percentage, process) => ctx.ReportProgress(percentage, process), ct);
 
             return new AcquisitionStepOutcome.Continue(item with
             {

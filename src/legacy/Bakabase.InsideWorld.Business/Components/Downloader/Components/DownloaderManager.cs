@@ -1,4 +1,5 @@
-﻿using System;
+using System;
+using Bakabase.Abstractions.Components.FileSystem;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -341,6 +342,14 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
                     if (startAutomatically && !task.AvailableActions.Contains(DownloadTaskAction.StartAutomatically))
                         return BaseResponseBuilder.Build(ResponseCode.Conflict, "This task is no longer eligible for automatic start.");
                 }
+            }
+            try
+            {
+                await DownloadTaskStorage.EnsureAllowedAsync(_serviceProvider, task);
+            }
+            catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException)
+            {
+                return BaseResponseBuilder.BuildBadRequest(ex.Message);
             }
             var helper = _downloaderFactory.GetHelper(task.ThirdPartyId, task.Type);
             var validation = await helper.ValidateOptionsAsync();

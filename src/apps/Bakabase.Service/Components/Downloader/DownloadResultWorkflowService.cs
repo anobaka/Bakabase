@@ -1,3 +1,4 @@
+using Bakabase.Abstractions.Components.Localization;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -43,7 +44,8 @@ public sealed class DownloadResultWorkflowService(BakabaseDbContext db,
     BTaskManager tasks, WorkflowRunner<BakabaseDbContext> runner, IWorkflowRunResumer resumer,
     ITorrentDownloader torrents, IPlaceholderResourceService placeholders, AppService app,
     FullMemoryCacheResourceService<BakabaseDbContext, ExHentaiGalleryDbModel, int> galleryCache,
-    ILogger<DownloadResultWorkflowService> logger) : IAcquisitionContentsObserver
+    ILogger<DownloadResultWorkflowService> logger,
+    IBakabaseLocalizer localizer) : IAcquisitionContentsObserver
 {
     // Serializes dispatch/retry inside one host; database transactions additionally protect restart boundaries.
     private static readonly SemaphoreSlim DispatchGate = new(1, 1);
@@ -152,7 +154,7 @@ public sealed class DownloadResultWorkflowService(BakabaseDbContext db,
     }
 
     private Task EnqueueAsync(WorkflowRunDbModel run) => tasks.Enqueue(BTaskBuilder.Create($"workflow.run.{run.Id}")
-        .Named($"Workflow #{run.WorkflowDefinitionId} run #{run.Id}")
+        .Named(() => localizer["BTask_Name_WorkflowRun", run.WorkflowDefinitionId, run.Id])
         .IgnoreIfExists().ConflictsWith($"workflow.definition.{run.WorkflowDefinitionId}")
         .Run(args => runner.ExecuteAsync(run.Id, args)));
 

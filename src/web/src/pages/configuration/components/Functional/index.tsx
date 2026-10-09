@@ -8,6 +8,7 @@ import { Radio, RadioGroup } from "@heroui/react";
 import { CloseBehavior, startupPages } from "@/sdk/constants";
 import { useAppOptionsStore, useUiOptionsStore } from "@/stores/options";
 import BApi from "@/sdk/BApi";
+import { Switch } from "@/components/bakaui";
 import SettingsSection from "@/pages/configuration/components/SettingsSection";
 
 interface FunctionalProps {
@@ -22,6 +23,22 @@ const Functional: React.FC<FunctionalProps> = ({ applyPatches, query }) => {
   const uiOptions = useUiOptionsStore((state) => state.data);
 
   const functionSettings: SettingItem[] = [
+    {
+      id: "showResourceUsage",
+      label: t("configuration.functional.showResourceUsage"),
+      tip: t<string>("configuration.functional.showResourceUsage.tip"),
+      keywords: ["cpu", "memory", "storage", "内存", "空间", "资源占用"],
+      render: () => (
+        <Switch
+          aria-label={t<string>("configuration.functional.showResourceUsage")}
+          isSelected={uiOptions.showResourceUsage ?? true}
+          size="sm"
+          onValueChange={(showResourceUsage) =>
+            applyPatches(BApi.options.patchUiOptions, { showResourceUsage })
+          }
+        />
+      ),
+    },
     {
       id: "startupPage",
       label: t("configuration.functional.startupPage"),

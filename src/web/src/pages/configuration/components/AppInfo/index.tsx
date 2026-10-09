@@ -8,17 +8,18 @@ import type { SettingItem } from "@/pages/configuration/components/SettingsSecti
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { FolderOpenOutlined, WarningOutlined } from "@ant-design/icons";
+import { WarningOutlined } from "@ant-design/icons";
 
 import IdentityRecoveryLink from "./IdentityRecoveryLink";
 import AppVersionPanel from "./AppVersionPanel";
+import AppDataImportButton from "./Import";
 
-import { Divider, Snippet } from "@/components/bakaui";
+import { Divider } from "@/components/bakaui";
 import { DataPathSource } from "@/sdk/constants";
 import { useAppUpdaterStateStore } from "@/stores/appUpdaterState";
 import { useIsPureClient, useIsRemoteClient } from "@/stores/remoteAccess";
 import { useAppOptionsStore } from "@/stores/options";
-import { Button, Chip } from "@/components/bakaui";
+import { Chip } from "@/components/bakaui";
 import FilePathValue from "@/components/FilePathValue";
 import SettingsSection from "@/pages/configuration/components/SettingsSection";
 import BApi from "@/sdk/BApi";
@@ -103,7 +104,7 @@ const AppInfo: React.FC<AppInfoProps> = ({ appInfo, applyPatches, query }) => {
     };
   }, [checkNewAppVersion]);
 
-  const renderPathValue = (path: string, description?: string) => (
+  const renderPathValue = (path?: string, description?: string) => (
     <FilePathValue description={description} path={path} />
   );
 
@@ -145,29 +146,32 @@ const AppInfo: React.FC<AppInfoProps> = ({ appInfo, applyPatches, query }) => {
       {
         id: "appDataPath",
         label: "configuration.appInfo.appDataPath",
-        keywords: ["path", "directory", "folder", "数据", "目录"],
+        keywords: [
+          "path",
+          "directory",
+          "folder",
+          "import",
+          "数据",
+          "目录",
+          "导入",
+          "已有数据",
+          "服务器",
+          "一体版",
+        ],
         value: (
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-1 flex-wrap">
-              <Snippet hideSymbol size="sm" variant="bordered">
-                {appInfo.appDataPath}
-              </Snippet>
-              <Button
-                isIconOnly
-                color="primary"
-                size="sm"
-                variant="light"
-                onPress={() => BApi.tool.openFileOrDirectory({ path: appInfo.appDataPath })}
-              >
-                <FolderOpenOutlined className="text-base" />
-              </Button>
+              <FilePathValue path={appInfo.appDataPath} />
               {renderDataPathSource()}
-              {appInfo.appDataPath && !appInfo.dataInSystemPath && (
-                <>
-                  <Divider className="mx-1" orientation="vertical" />
-                  <RelocationButton currentDataPath={appInfo.appDataPath} />
-                </>
-              )}
+              <AppDataImportButton />
+              {appInfo.appDataPath &&
+                !appInfo.dataInSystemPath &&
+                appInfo.dataPathSource !== DataPathSource.Environment && (
+                  <>
+                    <Divider className="mx-1" orientation="vertical" />
+                    <RelocationButton />
+                  </>
+                )}
             </div>
             <span className="text-xs text-foreground-400">
               {t("configuration.appInfo.tip.appDataPath")}
@@ -187,7 +191,7 @@ const AppInfo: React.FC<AppInfoProps> = ({ appInfo, applyPatches, query }) => {
                 <span className="text-xs">
                   {t("configuration.appInfo.tip.appDataPath.systemPathRiskNotice")}
                 </span>
-                <RelocationButton currentDataPath={appInfo.appDataPath} />
+                {appInfo.dataPathSource !== DataPathSource.Environment && <RelocationButton />}
               </div>
             )}
           </div>

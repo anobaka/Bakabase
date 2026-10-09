@@ -1,3 +1,4 @@
+using Bakabase.Abstractions.Components.Tasks;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -964,7 +965,7 @@ public class ResourceSearchIndexService : IResourceSearchIndexService
     /// </summary>
     /// <param name="progressCallback">进度回调：(percentage, message) => Task</param>
     /// <param name="ct">取消令牌</param>
-    public async Task RebuildAllAsync(Func<int, string?, Task>? progressCallback, CancellationToken ct = default)
+    public async Task RebuildAllAsync(Func<int, BTaskText?, Task>? progressCallback, CancellationToken ct = default)
     {
         await _mutationGate.WaitAsync(ct);
         try
@@ -976,7 +977,7 @@ public class ResourceSearchIndexService : IResourceSearchIndexService
             // Clear existing index
             _index.Clear();
 
-            await ReportProgress(progressCallback, 0, _localizer.SearchIndex_LoadingResources());
+            await ReportProgress(progressCallback, 0, BTaskText.Localize(_localizer, "SearchIndex_LoadingResources"));
 
             // Load all data
             var resourceOrm = scope.ServiceProvider
@@ -995,7 +996,7 @@ public class ResourceSearchIndexService : IResourceSearchIndexService
             var allResources = await resourceOrm.GetAll(null, false);
             _logger.LogInformation("Loaded {Count} resources in {Ms}ms", allResources.Count, sw.ElapsedMilliseconds);
 
-            await ReportProgress(progressCallback, 5, _localizer.SearchIndex_LoadedResources(allResources.Count));
+            await ReportProgress(progressCallback, 5, BTaskText.Localize(_localizer, "SearchIndex_LoadedResources", allResources.Count));
 
             sw.Restart();
             var customPropertyValues = await customPropertyValueService.GetAll(null,
@@ -1008,14 +1009,14 @@ public class ResourceSearchIndexService : IResourceSearchIndexService
             var propertyMap = customProperties.ToDictionary(p => p.Id, p => p.ToProperty());
             _logger.LogInformation("Loaded {Count} custom properties", customProperties.Count);
 
-            await ReportProgress(progressCallback, 10, _localizer.SearchIndex_LoadedCustomPropertyValues(customPropertyValues.Count));
+            await ReportProgress(progressCallback, 10, BTaskText.Localize(_localizer, "SearchIndex_LoadedCustomPropertyValues", customPropertyValues.Count));
 
             sw.Restart();
             var reservedPropertyValues = await reservedPropertyValueService.GetAll();
             _logger.LogInformation("Loaded {Count} reserved property values in {Ms}ms",
                 reservedPropertyValues.Count, sw.ElapsedMilliseconds);
 
-            await ReportProgress(progressCallback, 15, _localizer.SearchIndex_LoadedReservedPropertyValues(reservedPropertyValues.Count));
+            await ReportProgress(progressCallback, 15, BTaskText.Localize(_localizer, "SearchIndex_LoadedReservedPropertyValues", reservedPropertyValues.Count));
 
             sw.Restart();
             var allResourceIds = allResources.Select(r => r.Id).ToArray();
@@ -1031,7 +1032,7 @@ public class ResourceSearchIndexService : IResourceSearchIndexService
                 .ToDictionary(g => g.Key, g => g.Select(l => l.Source).ToHashSet());
             _logger.LogInformation("Loaded {Count} source links in {Ms}ms", allSourceLinks.Count, sw.ElapsedMilliseconds);
 
-            await ReportProgress(progressCallback, 20, _localizer.SearchIndex_BuildingIndex());
+            await ReportProgress(progressCallback, 20, BTaskText.Localize(_localizer, "SearchIndex_BuildingIndex"));
 
             // Group property values by resource ID
             var customValuesByResource = customPropertyValues
@@ -1086,14 +1087,14 @@ public class ResourceSearchIndexService : IResourceSearchIndexService
                     if (currentPercentage >= lastReportedPercentage + 5)
                     {
                         lastReportedPercentage = currentPercentage;
-                        await ReportProgress(progressCallback, currentPercentage, _localizer.SearchIndex_IndexingProgress(indexedCount, totalCount));
+                        await ReportProgress(progressCallback, currentPercentage, BTaskText.Localize(_localizer, "SearchIndex_IndexingProgress", indexedCount, totalCount));
                     }
                 }
             }
 
             _logger.LogInformation("Indexed {Count} resources in {Ms}ms", indexedCount, sw.ElapsedMilliseconds);
 
-            await ReportProgress(progressCallback, 100, _localizer.SearchIndex_Completed(indexedCount));
+            await ReportProgress(progressCallback, 100, BTaskText.Localize(_localizer, "SearchIndex_Completed", indexedCount));
 
             _logger.LogInformation(
                 "Index rebuild complete: {ResourceCount} resources, {ValueEntries} value entries, {RangeEntries} range entries",
@@ -1116,7 +1117,7 @@ public class ResourceSearchIndexService : IResourceSearchIndexService
         }
     }
 
-    private static async Task ReportProgress(Func<int, string?, Task>? callback, int percentage, string? message)
+    private static async Task ReportProgress(Func<int, BTaskText?, Task>? callback, int percentage, BTaskText? message)
     {
         if (callback != null)
         {

@@ -110,7 +110,7 @@ public class DLsiteWorkController(IDLsiteWorkService service, BTaskManager btm, 
                         await args.UpdateTask(t =>
                         {
                             t.Percentage = percentage;
-                            t.Process = process;
+                            t.SetProcess(process);
                         });
                     },
                     args.CancellationToken);
@@ -221,7 +221,7 @@ public class DLsiteWorkController(IDLsiteWorkService service, BTaskManager btm, 
                         await args.UpdateTask(t =>
                         {
                             t.Percentage = percentage;
-                            t.Process = process;
+                            t.SetProcess(process);
                         });
                     },
                     args.CancellationToken);

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Net;
 using Bakabase.Abstractions.Components.Network;
 using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.InsideWorld.Models.Constants;
@@ -9,6 +10,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Bakabase.Tests;
 
 [TestClass]
+[DoNotParallelize] // System-proxy tests temporarily replace HttpClient.DefaultProxy.
 public class BakabaseWebProxyTests
 {
     private static readonly Uri Destination = new("https://example.com/x");
@@ -39,6 +41,46 @@ public class BakabaseWebProxyTests
     };
 
     private static NetworkOptions.ProxyModel None => new() {Mode = NetworkOptions.ProxyMode.DoNotUse};
+
+    [TestMethod]
+    public void SystemProxy_HonorsBypassRulesInsteadOfCallingGetProxyUnconditionally()
+    {
+        var previous = HttpClient.DefaultProxy;
+        try
+        {
+            HttpClient.DefaultProxy = new BypassAwareSystemProxy();
+            var proxy = Build(BuildOptions(new NetworkOptions.ProxyModel { Mode = NetworkOptions.ProxyMode.UseSystem }));
+            Assert.IsNull(proxy.GetProxy(new Uri("http://nas.internal/path")));
+            Assert.AreEqual(BypassAwareSystemProxy.Endpoint, proxy.GetProxy(Destination));
+        }
+        finally { HttpClient.DefaultProxy = previous; }
+    }
+
+    [TestMethod]
+    public void PerSourceSystemProxy_HonorsTheSameBypassRules()
+    {
+        var previous = HttpClient.DefaultProxy;
+        try
+        {
+            HttpClient.DefaultProxy = new BypassAwareSystemProxy();
+            var proxy = Build(BuildOptions(None, new Dictionary<int, NetworkOptions.ProxyModel>
+            { [(int)ThirdPartyId.ExHentai] = new() { Mode = NetworkOptions.ProxyMode.UseSystem } }));
+            var scoped = proxy.ForThirdParty(ThirdPartyId.ExHentai);
+            Assert.IsNull(scoped.GetProxy(new Uri("http://nas.internal/path")));
+            Assert.AreEqual(BypassAwareSystemProxy.Endpoint, scoped.GetProxy(Destination));
+            Assert.IsNull(proxy.GetProxy(Destination), "A source override must not alter the global direct setting.");
+        }
+        finally { HttpClient.DefaultProxy = previous; }
+    }
+
+    private sealed class BypassAwareSystemProxy : IWebProxy
+    {
+        public static readonly Uri Endpoint = new("http://127.0.0.1:1082");
+        // Models HttpEnvironmentProxy: GetProxy does not itself inspect NO_PROXY.
+        public Uri GetProxy(Uri destination) => Endpoint;
+        public bool IsBypassed(Uri host) => host.Host == "nas.internal";
+        public ICredentials? Credentials { get; set; }
+    }
 
     [TestMethod]
     public void GlobalProxy_IsUsedWhenSourceHasNoOverride()
