@@ -158,8 +158,8 @@ push to `release/v*`. A `main` push publishes a beta; a `release/v*` push
 publishes the corresponding stable. The version is never decided by the
 workflow — `version.json` owns it and the pipeline reads it through nbgv, so
 each `main` commit gets its own beta number. `debug-actions` is **not**
-auto-deployed; deploy it via manual `workflow_dispatch`. `ci.yml` runs only on
-PRs and is enforced as a required status check via branch protection, so the
+auto-deployed; deploy it via manual `workflow_dispatch`. `ci.yml` runs automatically
+only on PRs and is enforced as a required status check via branch protection, so the
 merge commit is never re-tested and deploy is not gated on CI.
 
 Because `main` auto-deploys, add **`[skip ci]`** to a commit that touches
@@ -171,8 +171,8 @@ Do **not** skip CI for `.github/**` changes — CI/CD config edits should run
 the pipeline so the change itself gets validated.
 
 The skip directive also suppresses automatic PR CI. If a documentation PR
-needs required checks to merge, manually dispatch `ci.yml` on its branch and
-wait for those checks on its current head. Keep the skip directive in the
+needs required checks to merge, manually dispatch `ci.yml` with `suite=full`
+on its branch and wait for those checks on its current head. Keep the skip directive in the
 merge commit too, so merging the documentation does not trigger a beta release.
 
 ```
