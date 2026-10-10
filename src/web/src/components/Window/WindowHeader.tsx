@@ -1,12 +1,10 @@
-import type { WindowState } from "./types.ts";
-
+import type { WindowState } from "./types";
 import React, { useCallback } from "react";
 import { IoMdClose, IoMdRemove } from "react-icons/io";
 import { MdFullscreenExit } from "react-icons/md";
 import { FiMaximize2 } from "react-icons/fi";
 import { RiKeyboardLine } from "react-icons/ri";
 import { useTranslation } from "react-i18next";
-
 import { Button, Kbd, Modal, Tooltip } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 
@@ -19,138 +17,88 @@ interface WindowHeaderProps {
   title?: string;
   renderActions?: () => React.ReactNode;
 }
-
-export const WindowHeader: React.FC<WindowHeaderProps> = ({
+export const WindowHeader = ({
   windowState,
   onMinimize,
   onMaximize,
   onClose,
   isMinimized = false,
-  title = "Media Player",
+  title,
   renderActions,
-}) => {
+}: WindowHeaderProps) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
-
-  const headerClasses = isMinimized
-    ? "window-header flex items-center justify-between px-3 py-2 min-h-[40px] bg-[rgba(30,30,30,0.9)] border-b border-white/10 cursor-move select-none flex-shrink-0 hover:bg-[rgba(40,40,40,0.9)] transition-colors"
-    : "window-header flex items-center justify-between px-4 py-2.5 min-h-[44px] bg-[rgba(30,30,30,0.9)] border-b border-white/10 cursor-move select-none flex-shrink-0 hover:bg-[rgba(40,40,40,0.9)] transition-colors";
-
-  const showShortcuts = useCallback(() => {
-    createPortal(Modal, {
-      defaultVisible: true,
-      size: "sm",
-      title: t<string>("Shortcuts"),
-      footer: { actions: ["cancel"] },
-      classNames: {
-        wrapper: "z-[9999]",
-      },
-      children: (
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center justify-between">
-            <div className="text-sm">{t<string>("Previous")}</div>
-            <div className="flex items-center gap-2">
-              <Kbd keys={["left"]} />
-              <span className="text-xs text-white/50">{t<string>("or scroll up")}</span>
-            </div>
+  const showShortcuts = useCallback(
+    () =>
+      createPortal(Modal, {
+        defaultVisible: true,
+        size: "md",
+        title: t("mediaPlayer.window.shortcuts"),
+        footer: { actions: ["cancel"], cancelProps: { children: t("mediaPlayer.window.dismiss") } },
+        classNames: { wrapper: "z-[9999]" },
+        children: (
+          <div className="flex flex-col gap-4 py-2">
+            <p className="text-sm text-default-500">{t("mediaPlayer.window.shortcutsHint")}</p>
+            {[
+              ["mediaPlayer.previous", "left"],
+              ["mediaPlayer.next", "right"],
+              ["mediaPlayer.window.playPause", "space"],
+              ["mediaPlayer.window.close", "escape"],
+            ].map(([label, key]) => (
+              <div key={key} className="flex items-center justify-between gap-8">
+                <span className="text-sm">{t(label)}</span>
+                <Kbd keys={[key as any]} />
+              </div>
+            ))}
+            <p className="text-xs text-default-400 border-t border-default-200 pt-3">
+              {t("mediaPlayer.window.scrollHint")}
+            </p>
           </div>
-          <div className="flex items-center justify-between">
-            <div className="text-sm">{t<string>("Next")}</div>
-            <div className="flex items-center gap-2">
-              <Kbd keys={["right"]} />
-              <span className="text-xs text-white/50">{t<string>("or scroll down")}</span>
-            </div>
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="text-sm">{t<string>("Close")}</div>
-            <Kbd keys={["escape"]} />
-          </div>
-        </div>
-      ),
-    });
-  }, [createPortal, t]);
-
+        ),
+      }),
+    [createPortal, t],
+  );
+  const control = (label: string, icon: React.ReactNode, action: () => void, danger = false) => (
+    <Tooltip content={t(label)}>
+      <Button
+        isIconOnly
+        className={`min-w-8 w-8 h-8 ${danger ? "text-white/60 hover:text-red-300 hover:bg-red-500/20" : "text-white/60 hover:text-white hover:bg-white/10"}`}
+        size="sm"
+        aria-label={t(label)}
+        title={t(label)}
+        variant="light"
+        onMouseDown={(event) => {
+          event.stopPropagation();
+        }}
+        onDoubleClick={(event) => event.stopPropagation()}
+        onPress={() => action()}
+      >
+        {icon}
+      </Button>
+    </Tooltip>
+  );
   return (
-    <div className={headerClasses} onDoubleClick={isMinimized ? onMinimize : onMaximize}>
-      <div className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-white/90 text-sm font-medium">
-        {title}
+    <div
+      className="window-header flex items-center justify-between gap-3 px-3 py-2 min-h-[44px] bg-[#182131] border-b border-white/10 cursor-move select-none flex-shrink-0"
+      onDoubleClick={isMinimized ? onMinimize : onMaximize}
+    >
+      <div className="flex-1 truncate text-white/85 text-sm font-medium" title={title}>
+        {title || t("mediaPlayer.window.title")}
       </div>
-      <div className="flex items-center gap-1 ml-3">
-        {!isMinimized && (
-          <Tooltip content={t<string>("Shortcuts")}>
-            <Button
-              isIconOnly
-              className="text-white/70 hover:text-white/90 min-w-8 w-8 h-8"
-              size="sm"
-              title="Shortcuts"
-              variant="light"
-              onMouseDown={(e) => {
-                e.stopPropagation();
-                e.preventDefault();
-              }}
-              onPress={() => {
-                showShortcuts();
-              }}
-            >
-              <RiKeyboardLine size={18} />
-            </Button>
-          </Tooltip>
+      <div className="flex items-center gap-1">
+        {!isMinimized &&
+          control("mediaPlayer.window.shortcuts", <RiKeyboardLine size={18} />, showShortcuts)}
+        {!isMinimized && renderActions?.()}
+        {!isMinimized &&
+          control("mediaPlayer.window.minimize", <IoMdRemove size={18} />, onMinimize)}
+        {control(
+          windowState.isMaximized || isMinimized
+            ? "mediaPlayer.window.restore"
+            : "mediaPlayer.window.maximize",
+          windowState.isMaximized ? <MdFullscreenExit size={17} /> : <FiMaximize2 size={15} />,
+          isMinimized ? onMinimize : onMaximize,
         )}
-        {!isMinimized && renderActions && renderActions()}
-        {!isMinimized && (
-          <Button
-            isIconOnly
-            className="text-white/70 hover:text-white/90 min-w-8 w-8 h-8"
-            size="sm"
-            title="Minimize"
-            variant="light"
-            onMouseDown={(e) => {
-              e.stopPropagation();
-              e.preventDefault();
-            }}
-            onPress={(e) => {
-              onMinimize();
-            }}
-          >
-            <IoMdRemove size={18} />
-          </Button>
-        )}
-        <Button
-          isIconOnly
-          className="text-white/70 hover:text-white/90 min-w-8 w-8 h-8"
-          size="sm"
-          title={windowState.isMaximized ? "Restore" : isMinimized ? "Restore" : "Maximize"}
-          variant="light"
-          onMouseDown={(e) => {
-            e.stopPropagation();
-            e.preventDefault();
-          }}
-          onPress={(e) => {
-            if (isMinimized) {
-              onMinimize();
-            } else {
-              onMaximize();
-            }
-          }}
-        >
-          {windowState.isMaximized ? <MdFullscreenExit size={16} /> : <FiMaximize2 size={16} />}
-        </Button>
-        <Button
-          isIconOnly
-          className="text-white/70 hover:text-red-500 hover:bg-red-500/20 min-w-8 w-8 h-8"
-          size="sm"
-          title="Close"
-          variant="light"
-          onMouseDown={(e) => {
-            e.stopPropagation();
-            e.preventDefault();
-          }}
-          onPress={(e) => {
-            onClose();
-          }}
-        >
-          <IoMdClose size={isMinimized ? 16 : 18} />
-        </Button>
+        {control("mediaPlayer.window.close", <IoMdClose size={18} />, onClose, true)}
       </div>
     </div>
   );

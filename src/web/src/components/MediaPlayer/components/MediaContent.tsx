@@ -1,14 +1,9 @@
 "use client";
-
 import type { MediaPlayerEntry } from "../types";
 import type { MediaType } from "@/sdk/constants";
-
 import React, { useRef } from "react";
-
 import MediaRenderer, { type MediaRendererRef } from "./MediaRenderer";
 import MediaFooter from "./MediaFooter";
-
-import { IwFsType } from "@/sdk/constants";
 
 interface MediaContentProps {
   activeEntry: MediaPlayerEntry;
@@ -42,142 +37,51 @@ interface MediaContentProps {
   onPrevEntry: () => void;
   onNextEntry: () => void;
 }
-
-const MediaContent: React.FC<MediaContentProps> = ({
-  activeEntry,
-  activeIndex,
-  playableEntries,
-  mediaType,
-  playing,
-  currentInitialized,
-  autoPlay,
-  progress,
-  renderOperations,
-  onLoad,
-  onVideoReady,
-  onVideoPlay,
-  onVideoPause,
-  onVideoEnded,
-  onVideoSeek,
-  onVideoStart,
-  onVideoProgress,
-  onPrevEntry,
-  onNextEntry,
-}) => {
-  const mediaRendererRef = useRef<MediaRendererRef>(null);
-  const mediaContainerRef = useRef<HTMLDivElement | null>(null);
-
-  const handlePrevClick = (e?: { stopPropagation: () => void }) => {
-    e?.stopPropagation();
-    // Find previous playable entry
-    let prevIndex = activeIndex - 1;
-
-    while (prevIndex >= 0) {
-      const entry = playableEntries[prevIndex];
-
-      if (
-        entry &&
-        entry.type !== IwFsType.Directory &&
-        entry.type !== IwFsType.CompressedFileEntry
-      ) {
-        onPrevEntry();
-        break;
-      }
-      prevIndex--;
-    }
-  };
-
-  const handleNextClick = (e?: { stopPropagation: () => void }) => {
-    e?.stopPropagation();
-    // Find next playable entry
-    let nextIndex = activeIndex + 1;
-
-    while (nextIndex < playableEntries.length) {
-      const entry = playableEntries[nextIndex];
-
-      if (
-        entry &&
-        entry.type !== IwFsType.Directory &&
-        entry.type !== IwFsType.CompressedFileEntry
-      ) {
-        onNextEntry();
-        break;
-      }
-      nextIndex++;
-    }
-  };
-
+const MediaContent = (props: MediaContentProps) => {
+  const renderer = useRef<MediaRendererRef>(null);
+  const {
+    activeEntry,
+    activeIndex,
+    playableEntries,
+    mediaType,
+    playing,
+    currentInitialized,
+    autoPlay,
+    progress,
+    renderOperations,
+    onPrevEntry,
+    onNextEntry,
+    ...events
+  } = props;
   return (
-    <div className="flex-1 flex flex-col min-w-0 relative">
-      <div
-        ref={mediaContainerRef}
-        className="flex-1 flex items-center justify-center relative min-h-0 overflow-y-auto overflow-x-hidden media-container"
-      >
-        {/* Left clickable area for previous */}
-        {activeIndex > 0 && (
-          <div
-            aria-label="Previous"
-            className="absolute left-0 top-0 bottom-0 w-1/3 z-[1] cursor-pointer"
-            role="button"
-            tabIndex={0}
-            onClick={handlePrevClick}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                handlePrevClick();
-              }
-            }}
-          />
-        )}
-        {/* Right clickable area for next */}
-        {activeIndex < playableEntries.length - 1 && (
-          <div
-            aria-label="Next"
-            className="absolute right-0 top-0 bottom-0 w-1/3 z-[1] cursor-pointer"
-            role="button"
-            tabIndex={0}
-            onClick={handleNextClick}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                handleNextClick();
-              }
-            }}
-          />
-        )}
+    <main className="media-player-main">
+      <div className="media-player-stage">
         <MediaRenderer
-          ref={mediaRendererRef}
-          currentInitialized={currentInitialized}
+          key={activeEntry.playPath || activeEntry.path}
+          ref={renderer}
           entry={activeEntry}
           mediaType={mediaType}
           playing={playing}
-          onLoad={onLoad}
-          onVideoEnded={onVideoEnded}
-          onVideoPause={onVideoPause}
-          onVideoPlay={onVideoPlay}
-          onVideoProgress={onVideoProgress}
-          onVideoReady={onVideoReady}
-          onVideoSeek={onVideoSeek}
-          onVideoStart={onVideoStart}
+          currentInitialized={currentInitialized}
+          {...events}
         />
       </div>
-      {activeEntry && (
-        <MediaFooter
-          activeIndex={activeIndex}
-          autoPlay={autoPlay}
-          currentInitialized={currentInitialized}
-          entry={activeEntry}
-          image={mediaRendererRef.current?.getImageRef() || null}
-          mediaType={mediaType}
-          playing={playing}
-          progress={progress}
-          reactPlayer={mediaRendererRef.current?.getPlayerRef()}
-          renderOperations={renderOperations}
-          totalEntries={playableEntries.length}
-        />
-      )}
-    </div>
+      <MediaFooter
+        entry={activeEntry}
+        activeIndex={activeIndex}
+        totalEntries={playableEntries.length}
+        currentInitialized={currentInitialized}
+        autoPlay={autoPlay}
+        progress={progress}
+        mediaType={mediaType}
+        playing={playing}
+        renderOperations={renderOperations}
+        reactPlayer={renderer.current?.getPlayerRef()}
+        image={renderer.current?.getImageRef() || null}
+        onPrevEntry={onPrevEntry}
+        onNextEntry={onNextEntry}
+      />
+    </main>
   );
 };
-
 export default MediaContent;

@@ -65,7 +65,7 @@ namespace Bakabase.Abstractions.Components.Configuration
 
         public static readonly ImmutableHashSet<string> TextExtensions = ImmutableHashSet.Create(
             StringComparer.OrdinalIgnoreCase,
-            ".txt"
+            ".txt", ".nfo", ".ass", ".ssa", ".srt", ".vtt"
         );
 
         public static readonly Dictionary<MediaType, ImmutableHashSet<string>> MediaTypeExtensions = new()

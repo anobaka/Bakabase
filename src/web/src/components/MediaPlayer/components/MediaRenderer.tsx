@@ -1,24 +1,17 @@
 "use client";
 
 import type { MediaPlayerEntry } from "../types";
-import type { BakabaseServiceModelsViewFilePlayabilityViewModel } from "@/sdk/Api";
-
-import React, { useRef, useImperativeHandle, forwardRef, useState, useEffect } from "react";
-import ReactPlayer from "react-player";
+import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-
 import { MediaType } from "@/sdk/constants";
-import { buildLogger } from "@/components/utils";
 import { Spinner } from "@/components/bakaui";
 import TextReader from "@/components/TextReader";
 import envConfig from "@/config/env";
-import BApi from "@/sdk/BApi";
 
 export interface MediaRendererRef {
   getImageRef: () => HTMLImageElement | null;
-  getPlayerRef: () => any;
+  getPlayerRef: () => HTMLMediaElement | null;
 }
-
 interface MediaRendererProps {
   entry: MediaPlayerEntry;
   mediaType: MediaType;
@@ -39,13 +32,15 @@ interface MediaRendererProps {
   }) => void;
   onPlayabilityError?: (error: string) => void;
 }
+export const MEDIA_LOAD_TIMEOUT = 20_000;
 
+/** /file/play already chooses direct play, remux or transcode. The browser judges
+ * the delivered bytes; a probe of the original codec must not reject that stream. */
 const MediaRenderer = forwardRef<MediaRendererRef, MediaRendererProps>((props, ref) => {
   const {
     entry,
     mediaType,
     playing,
-    currentInitialized,
     onLoad,
     onVideoReady,
     onVideoPlay,
@@ -56,232 +51,189 @@ const MediaRenderer = forwardRef<MediaRendererRef, MediaRendererProps>((props, r
     onVideoProgress,
     onPlayabilityError,
   } = props;
-
   const { t } = useTranslation();
-  const log = buildLogger("MediaRenderer");
-  const imageRef = useRef<HTMLImageElement | null>(null);
-  const playerRef = useRef<any>(null);
-  const videoSizeRef = useRef<{ width: number; height: number }>();
-  const mediaContainerRef = useRef<HTMLDivElement | null>(null);
-
-  // Playability check state
-  const [playabilityInfo, setPlayabilityInfo] =
-    useState<BakabaseServiceModelsViewFilePlayabilityViewModel | null>(null);
-  const [isCheckingPlayability, setIsCheckingPlayability] = useState(false);
-  const [playabilityChecked, setPlayabilityChecked] = useState(false);
-
+  const image = useRef<HTMLImageElement>(null);
+  const media = useRef<HTMLVideoElement | HTMLAudioElement>(null);
+  const [status, setStatus] = useState<"loading" | "ready" | "buffering" | "error">("loading");
+  const [errorKey, setErrorKey] = useState("mediaPlayer.media.failed");
+  const [attempt, setAttempt] = useState(0);
+  const path = entry.playPath || entry.path;
+  const isMedia = mediaType === MediaType.Video || mediaType === MediaType.Audio;
+  const needsLoad = isMedia || mediaType === MediaType.Image;
+  const source = `${envConfig.apiEndpoint}/file/play?fullname=${encodeURIComponent(path)}`;
   useImperativeHandle(ref, () => ({
-    getImageRef: () => imageRef.current,
-    getPlayerRef: () => playerRef.current,
+    getImageRef: () => image.current,
+    getPlayerRef: () => media.current,
   }));
 
-  // Use playPath for compressed file entries, otherwise use path
-  const playPath = entry.playPath || entry.path;
-
-  // Check playability when entry changes (only for video/audio)
   useEffect(() => {
-    const checkPlayability = async () => {
-      // Only check for video and audio files
-      if (mediaType !== MediaType.Video && mediaType !== MediaType.Audio) {
-        setPlayabilityChecked(true);
-        setPlayabilityInfo({ playable: true, mediaType });
+    setStatus("loading");
+  }, [path, mediaType, attempt]);
+  useEffect(() => {
+    if (!needsLoad || (status !== "loading" && status !== "buffering")) return;
+    const timer = setTimeout(() => {
+      setErrorKey("mediaPlayer.media.timeout");
+      setStatus("error");
+      onPlayabilityError?.(t("mediaPlayer.media.timeout"));
+    }, MEDIA_LOAD_TIMEOUT);
+    return () => clearTimeout(timer);
+  }, [path, mediaType, attempt, status, needsLoad, t]);
 
-        return;
-      }
-
-      setIsCheckingPlayability(true);
-      setPlayabilityChecked(false);
-      setPlayabilityInfo(null);
-
-      try {
-        const response = await BApi.file.checkFilePlayability({ fullname: playPath });
-
-        if (response.data) {
-          setPlayabilityInfo(response.data);
-          if (!response.data.playable && response.data.error) {
-            log("File not playable:", response.data.error);
-            onPlayabilityError?.(response.data.error);
-          }
+  useEffect(() => {
+    const element = media.current;
+    if (!element || !isMedia || status === "error") return;
+    let cancelled = false;
+    if (playing && element.paused) {
+      void element.play()?.catch((error: DOMException) => {
+        if (cancelled || media.current !== element) return;
+        // Autoplay rejection leaves native controls available for a user gesture.
+        if (error.name === "NotAllowedError" || error.name === "AbortError") onVideoPause?.();
+        else {
+          setErrorKey("mediaPlayer.media.unsupported");
+          setStatus("error");
         }
-      } catch (err) {
-        log("Playability check failed:", err);
-        // On error, assume playable and let the player handle it
-        setPlayabilityInfo({ playable: true, mediaType });
-      } finally {
-        setIsCheckingPlayability(false);
-        setPlayabilityChecked(true);
-      }
+      });
+    } else if (!playing && !element.paused) element.pause();
+    return () => {
+      cancelled = true;
     };
+  }, [playing, isMedia, status, path]);
 
-    checkPlayability();
-  }, [playPath, mediaType]);
-
-  const renderMediaContent = () => {
-    // Show checking state for video/audio
-    if ((mediaType === MediaType.Video || mediaType === MediaType.Audio) && isCheckingPlayability) {
-      return (
-        <div className="flex flex-col items-center justify-center text-white/70">
-          <Spinner size="lg" />
-          <div className="mt-2">{t("Checking playability...")}</div>
-        </div>
-      );
-    }
-
-    // Show error if not playable
-    if (playabilityChecked && playabilityInfo && !playabilityInfo.playable) {
-      return (
-        <div className="flex flex-col items-center justify-center text-white/70 text-center p-4">
-          <div className="text-red-400 text-xl mb-2">⚠️ {t("Cannot play this file")}</div>
-          <div className="text-sm opacity-80">{playabilityInfo.error || t("Unknown error")}</div>
-        </div>
-      );
-    }
-
-    switch (mediaType) {
-      case MediaType.Audio:
-      case MediaType.Video:
-        return (
-          <ReactPlayer
-            {...({
-              ref: (player: any) => {
-                playerRef.current = player;
-              },
-              controls: true,
-              className: "max-w-full max-h-full object-contain",
-              config: {
-                file: {
-                  attributes: {
-                    crossOrigin: "anonymous",
-                  },
-                },
-              },
-              height: videoSizeRef.current?.height,
-              playing: playing,
-              url: `${envConfig.apiEndpoint}/file/play?fullname=${encodeURIComponent(playPath)}`,
-              width: videoSizeRef.current?.width,
-            } as any)}
-            {...({
-              onDuration: (d: number) => {
-                // alert(d);
-              },
-              onEnded: () => {
-                onVideoEnded?.();
-              },
-              onError: (err: any) => {
-                // AbortError happens when the element is removed mid-play()
-                // or when pause() interrupts play() — both are browser-normal
-                // and not actionable. NotSupportedError surfaces here when the
-                // codec/container is unsupported; we surface it to the user via
-                // onPlayabilityError instead of bubbling up to Sentry.
-                const name = err?.name || err?.error?.name;
-
-                if (name === "AbortError") {
-                  log("Video play aborted (normal)", err);
-
-                  return;
-                }
-                const message =
-                  err?.message ||
-                  err?.error?.message ||
-                  (typeof err === "string" ? err : t("Cannot play this file"));
-
-                log("Video error", err);
-                onPlayabilityError?.(message);
-              },
-              onPause: () => {
-                log("Video pause");
-                onVideoPause?.();
-              },
-              onPlay: () => {
-                log("Video play");
-                onVideoPlay?.();
-              },
-              onProgress: (state: {
-                played: number;
-                playedSeconds: number;
-                loaded: number;
-                loadedSeconds: number;
-              }) => {
-                onVideoProgress?.(state);
-              },
-              onReady: () => {
-                if (playerRef.current) {
-                  const internalPlayer = playerRef.current.getInternalPlayer() as HTMLVideoElement;
-
-                  const width = internalPlayer.videoWidth;
-                  const height = internalPlayer.videoHeight;
-
-                  if (width > 0 && height > 0) {
-                    videoSizeRef.current = {
-                      width: Math.min(width, mediaContainerRef.current!.clientWidth),
-                      height: Math.min(height, mediaContainerRef.current!.clientHeight),
-                    };
-                  }
-                  log("Video ready", `${width}x${height}`);
-                  onVideoReady?.(width, height);
-                  onLoad();
-                }
-              },
-              onSeek: () => {
-                log("Video seek");
-                onVideoSeek?.();
-              },
-              onStart: () => {
-                log("Video start");
-                onVideoStart?.();
-              },
-            } as any)}
-          />
-        );
-      case MediaType.Image:
-        return (
-          <img
-            ref={imageRef}
-            alt=""
-            className="max-w-full max-h-full object-contain"
-            crossOrigin={"anonymous"}
-            src={`${envConfig.apiEndpoint}/file/play?fullname=${encodeURIComponent(playPath)}`}
-            onLoad={() => {
-              onLoad();
-            }}
-          />
-        );
-      case MediaType.Text:
-        return (
-          <TextReader
-            className="max-w-full max-h-full object-contain"
-            file={playPath}
-            style={{ padding: "20px" }}
-            onLoad={() => {
-              onLoad();
-            }}
-          />
-        );
-      default:
-        return (
-          <div
-            className="max-w-full max-h-full object-contain text-white text-2xl"
-          >
-            {t<string>("Unsupported")}
-          </div>
-        );
-    }
+  const ready = () => {
+    setStatus("ready");
+    onLoad();
+    const element = media.current;
+    if (element instanceof HTMLVideoElement)
+      onVideoReady?.(element.videoWidth, element.videoHeight);
+  };
+  const failed = () => {
+    const code = media.current?.error?.code;
+    const key =
+      code === 2
+        ? "mediaPlayer.media.network"
+        : code === 3
+          ? "mediaPlayer.media.decode"
+          : code === 4
+            ? "mediaPlayer.media.unsupported"
+            : "mediaPlayer.media.failed";
+    setErrorKey(key);
+    setStatus("error");
+    onPlayabilityError?.(t(key));
+  };
+  const events = {
+    onLoadedMetadata: ready,
+    onCanPlay: ready,
+    onError: failed,
+    onWaiting: () => {
+      if (!media.current?.paused || media.current.readyState < 1) setStatus("buffering");
+    },
+    onStalled: () => {
+      if (!media.current?.paused || media.current.readyState < 1) setStatus("buffering");
+    },
+    onPlaying: () => {
+      setStatus("ready");
+      onVideoStart?.();
+    },
+    onPlay: () => onVideoPlay?.(),
+    onPause: () => onVideoPause?.(),
+    onEnded: () => onVideoEnded?.(),
+    onSeeked: () => onVideoSeek?.(),
+    onTimeUpdate: () => {
+      const element = media.current;
+      if (!element) return;
+      const duration = Number.isFinite(element.duration) ? element.duration : 0;
+      const loaded = element.buffered.length
+        ? element.buffered.end(element.buffered.length - 1)
+        : 0;
+      onVideoProgress?.({
+        played: duration ? element.currentTime / duration : 0,
+        playedSeconds: element.currentTime,
+        loaded: duration ? loaded / duration : 0,
+        loadedSeconds: loaded,
+      });
+    },
   };
 
+  if (mediaType === MediaType.Text)
+    return <TextReader key={path} file={path} onLoad={onLoad} onError={onPlayabilityError} />;
+  if (!needsLoad)
+    return (
+      <div className="media-player-empty">
+        <span className="media-player-state-icon">◇</span>
+        <strong>{t("mediaPlayer.unsupported")}</strong>
+        <span className="media-player-hint">{t("mediaPlayer.unsupportedDescription")}</span>
+        <code>{entry.ext || entry.name}</code>
+      </div>
+    );
+  if (status === "error")
+    return (
+      <div className="media-player-empty" role="alert">
+        <span className="media-player-state-icon">!</span>
+        <strong>{t(errorKey)}</strong>
+        <p className="media-player-hint">
+          {t(isMedia ? "mediaPlayer.media.failureHint" : "mediaPlayer.image.failureHint")}
+        </p>
+        <button
+          className="media-player-button"
+          onClick={() => {
+            setStatus("loading");
+            setAttempt((value) => value + 1);
+          }}
+        >
+          {t("mediaPlayer.retry")}
+        </button>
+      </div>
+    );
+
+  /* eslint-disable jsx-a11y/media-has-caption -- User-selected local media has no supplied caption track. Subtitle files remain available as separate text previews; do not attach a fictitious caption URL. */
   return (
-    <div
-      ref={mediaContainerRef}
-      className="relative w-full h-full flex flex-col items-center justify-center p-5 z-[1]"
-    >
-      {!currentInitialized && (
-        <div className="absolute inset-0 flex items-center justify-center z-[2] bg-black/30">
-          <Spinner size="lg" />
+    <div className="media-renderer">
+      {mediaType === MediaType.Image ? (
+        <img
+          key={`${path}:${attempt}`}
+          ref={image}
+          alt={entry.name}
+          src={source}
+          onLoad={ready}
+          onError={failed}
+        />
+      ) : mediaType === MediaType.Video ? (
+        <video
+          key={`${path}:${attempt}`}
+          ref={media as React.RefObject<HTMLVideoElement>}
+          src={source}
+          controls
+          playsInline
+          preload="metadata"
+          {...events}
+          aria-label={entry.name}
+        />
+      ) : (
+        <div className="media-player-audio">
+          <span className="media-player-audio-symbol">♫</span>
+          <h2>{entry.name}</h2>
+          <audio
+            key={`${path}:${attempt}`}
+            ref={media as React.RefObject<HTMLAudioElement>}
+            src={source}
+            controls
+            preload="metadata"
+            {...events}
+            aria-label={entry.name}
+          />
         </div>
       )}
-      {renderMediaContent()}
+      {(status === "loading" || status === "buffering") && (
+        <div className="media-player-loading" role="status">
+          <Spinner size="lg" />
+          <span>
+            {t(status === "buffering" ? "mediaPlayer.buffering" : "mediaPlayer.loadingMedia")}
+          </span>
+        </div>
+      )}
     </div>
   );
+  /* eslint-enable jsx-a11y/media-has-caption */
 });
-
 MediaRenderer.displayName = "MediaRenderer";
 export default MediaRenderer;

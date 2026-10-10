@@ -1096,522 +1096,6 @@ export const DependentComponentStatusLabel: Record<DependentComponentStatus, str
   [DependentComponentStatus.Installing]: 'Installing'
 };
 
-export enum SteamMetadataField {
-  Name = 1,
-  Type = 2,
-  ShortDescription = 3,
-  DetailedDescription = 4,
-  HeaderImage = 5,
-  CapsuleImage = 6,
-  Developers = 7,
-  Publishers = 8,
-  Genres = 9,
-  Categories = 10,
-  MetacriticScore = 11,
-  ReleaseDate = 12
-}
-
-export const steamMetadataFields = [
-  { label: 'Name', value: SteamMetadataField.Name },
-  { label: 'Type', value: SteamMetadataField.Type },
-  { label: 'ShortDescription', value: SteamMetadataField.ShortDescription },
-  { label: 'DetailedDescription', value: SteamMetadataField.DetailedDescription },
-  { label: 'HeaderImage', value: SteamMetadataField.HeaderImage },
-  { label: 'CapsuleImage', value: SteamMetadataField.CapsuleImage },
-  { label: 'Developers', value: SteamMetadataField.Developers },
-  { label: 'Publishers', value: SteamMetadataField.Publishers },
-  { label: 'Genres', value: SteamMetadataField.Genres },
-  { label: 'Categories', value: SteamMetadataField.Categories },
-  { label: 'MetacriticScore', value: SteamMetadataField.MetacriticScore },
-  { label: 'ReleaseDate', value: SteamMetadataField.ReleaseDate }
-] as const;
-
-export const SteamMetadataFieldLabel: Record<SteamMetadataField, string> = {
-  [SteamMetadataField.Name]: 'Name',
-  [SteamMetadataField.Type]: 'Type',
-  [SteamMetadataField.ShortDescription]: 'ShortDescription',
-  [SteamMetadataField.DetailedDescription]: 'DetailedDescription',
-  [SteamMetadataField.HeaderImage]: 'HeaderImage',
-  [SteamMetadataField.CapsuleImage]: 'CapsuleImage',
-  [SteamMetadataField.Developers]: 'Developers',
-  [SteamMetadataField.Publishers]: 'Publishers',
-  [SteamMetadataField.Genres]: 'Genres',
-  [SteamMetadataField.Categories]: 'Categories',
-  [SteamMetadataField.MetacriticScore]: 'MetacriticScore',
-  [SteamMetadataField.ReleaseDate]: 'ReleaseDate'
-};
-
-export enum ExHentaiMetadataField {
-  Name = 1,
-  RawName = 2,
-  Introduction = 3,
-  Rate = 4,
-  Category = 5,
-  CoverUrl = 6,
-  FileCount = 7,
-  PageCount = 8
-}
-
-export const exHentaiMetadataFields = [
-  { label: 'Name', value: ExHentaiMetadataField.Name },
-  { label: 'RawName', value: ExHentaiMetadataField.RawName },
-  { label: 'Introduction', value: ExHentaiMetadataField.Introduction },
-  { label: 'Rate', value: ExHentaiMetadataField.Rate },
-  { label: 'Category', value: ExHentaiMetadataField.Category },
-  { label: 'CoverUrl', value: ExHentaiMetadataField.CoverUrl },
-  { label: 'FileCount', value: ExHentaiMetadataField.FileCount },
-  { label: 'PageCount', value: ExHentaiMetadataField.PageCount }
-] as const;
-
-export const ExHentaiMetadataFieldLabel: Record<ExHentaiMetadataField, string> = {
-  [ExHentaiMetadataField.Name]: 'Name',
-  [ExHentaiMetadataField.RawName]: 'RawName',
-  [ExHentaiMetadataField.Introduction]: 'Introduction',
-  [ExHentaiMetadataField.Rate]: 'Rate',
-  [ExHentaiMetadataField.Category]: 'Category',
-  [ExHentaiMetadataField.CoverUrl]: 'CoverUrl',
-  [ExHentaiMetadataField.FileCount]: 'FileCount',
-  [ExHentaiMetadataField.PageCount]: 'PageCount'
-};
-
-export enum ExHentaiCategory {
-  Unknown = 0,
-  Misc = 1,
-  Doushijin = 2,
-  Manga = 4,
-  ArtistCG = 8,
-  GameCG = 16,
-  ImageSet = 32,
-  Cosplay = 64,
-  AsianPorn = 128,
-  NonH = 256,
-  Western = 512
-}
-
-export const exHentaiCategories = [
-  { label: 'Unknown', value: ExHentaiCategory.Unknown },
-  { label: 'Misc', value: ExHentaiCategory.Misc },
-  { label: 'Doushijin', value: ExHentaiCategory.Doushijin },
-  { label: 'Manga', value: ExHentaiCategory.Manga },
-  { label: 'ArtistCG', value: ExHentaiCategory.ArtistCG },
-  { label: 'GameCG', value: ExHentaiCategory.GameCG },
-  { label: 'ImageSet', value: ExHentaiCategory.ImageSet },
-  { label: 'Cosplay', value: ExHentaiCategory.Cosplay },
-  { label: 'AsianPorn', value: ExHentaiCategory.AsianPorn },
-  { label: 'NonH', value: ExHentaiCategory.NonH },
-  { label: 'Western', value: ExHentaiCategory.Western }
-] as const;
-
-export const ExHentaiCategoryLabel: Record<ExHentaiCategory, string> = {
-  [ExHentaiCategory.Unknown]: 'Unknown',
-  [ExHentaiCategory.Misc]: 'Misc',
-  [ExHentaiCategory.Doushijin]: 'Doushijin',
-  [ExHentaiCategory.Manga]: 'Manga',
-  [ExHentaiCategory.ArtistCG]: 'ArtistCG',
-  [ExHentaiCategory.GameCG]: 'GameCG',
-  [ExHentaiCategory.ImageSet]: 'ImageSet',
-  [ExHentaiCategory.Cosplay]: 'Cosplay',
-  [ExHentaiCategory.AsianPorn]: 'AsianPorn',
-  [ExHentaiCategory.NonH]: 'NonH',
-  [ExHentaiCategory.Western]: 'Western'
-};
-
-export enum ExHentaiConnectionStatus {
-  Ok = 1,
-  InvalidCookie = 2,
-  IpBanned = 3,
-  UnknownError = 4
-}
-
-export const exHentaiConnectionStatuses = [
-  { label: 'Ok', value: ExHentaiConnectionStatus.Ok },
-  { label: 'InvalidCookie', value: ExHentaiConnectionStatus.InvalidCookie },
-  { label: 'IpBanned', value: ExHentaiConnectionStatus.IpBanned },
-  { label: 'UnknownError', value: ExHentaiConnectionStatus.UnknownError }
-] as const;
-
-export const ExHentaiConnectionStatusLabel: Record<ExHentaiConnectionStatus, string> = {
-  [ExHentaiConnectionStatus.Ok]: 'Ok',
-  [ExHentaiConnectionStatus.InvalidCookie]: 'InvalidCookie',
-  [ExHentaiConnectionStatus.IpBanned]: 'IpBanned',
-  [ExHentaiConnectionStatus.UnknownError]: 'UnknownError'
-};
-
-export enum DLsiteMetadataField {
-  Name = 1,
-  Introduction = 2,
-  Rating = 3,
-  CoverUrls = 4
-}
-
-export const dLsiteMetadataFields = [
-  { label: 'Name', value: DLsiteMetadataField.Name },
-  { label: 'Introduction', value: DLsiteMetadataField.Introduction },
-  { label: 'Rating', value: DLsiteMetadataField.Rating },
-  { label: 'CoverUrls', value: DLsiteMetadataField.CoverUrls }
-] as const;
-
-export const DLsiteMetadataFieldLabel: Record<DLsiteMetadataField, string> = {
-  [DLsiteMetadataField.Name]: 'Name',
-  [DLsiteMetadataField.Introduction]: 'Introduction',
-  [DLsiteMetadataField.Rating]: 'Rating',
-  [DLsiteMetadataField.CoverUrls]: 'CoverUrls'
-};
-
-export enum BilibiliApiCodeClass {
-  Ok = 0,
-  RiskControl = 1,
-  ServiceBusy = 2,
-  NotLoggedIn = 3,
-  ContentState = 4,
-  Unknown = 5
-}
-
-export const bilibiliApiCodeClasses = [
-  { label: 'Ok', value: BilibiliApiCodeClass.Ok },
-  { label: 'RiskControl', value: BilibiliApiCodeClass.RiskControl },
-  { label: 'ServiceBusy', value: BilibiliApiCodeClass.ServiceBusy },
-  { label: 'NotLoggedIn', value: BilibiliApiCodeClass.NotLoggedIn },
-  { label: 'ContentState', value: BilibiliApiCodeClass.ContentState },
-  { label: 'Unknown', value: BilibiliApiCodeClass.Unknown }
-] as const;
-
-export const BilibiliApiCodeClassLabel: Record<BilibiliApiCodeClass, string> = {
-  [BilibiliApiCodeClass.Ok]: 'Ok',
-  [BilibiliApiCodeClass.RiskControl]: 'RiskControl',
-  [BilibiliApiCodeClass.ServiceBusy]: 'ServiceBusy',
-  [BilibiliApiCodeClass.NotLoggedIn]: 'NotLoggedIn',
-  [BilibiliApiCodeClass.ContentState]: 'ContentState',
-  [BilibiliApiCodeClass.Unknown]: 'Unknown'
-};
-
-export enum BilibiliViewOutcomeKind {
-  Proceed = 1,
-  FollowForward = 2,
-  CheckExistence = 3,
-  PageListFallback = 4,
-  Skip = 5
-}
-
-export const bilibiliViewOutcomeKinds = [
-  { label: 'Proceed', value: BilibiliViewOutcomeKind.Proceed },
-  { label: 'FollowForward', value: BilibiliViewOutcomeKind.FollowForward },
-  { label: 'CheckExistence', value: BilibiliViewOutcomeKind.CheckExistence },
-  { label: 'PageListFallback', value: BilibiliViewOutcomeKind.PageListFallback },
-  { label: 'Skip', value: BilibiliViewOutcomeKind.Skip }
-] as const;
-
-export const BilibiliViewOutcomeKindLabel: Record<BilibiliViewOutcomeKind, string> = {
-  [BilibiliViewOutcomeKind.Proceed]: 'Proceed',
-  [BilibiliViewOutcomeKind.FollowForward]: 'FollowForward',
-  [BilibiliViewOutcomeKind.CheckExistence]: 'CheckExistence',
-  [BilibiliViewOutcomeKind.PageListFallback]: 'PageListFallback',
-  [BilibiliViewOutcomeKind.Skip]: 'Skip'
-};
-
-export enum BilibiliTemporaryFailureKind {
-  RiskControl = 1,
-  ServiceBusy = 2,
-  CdnUnavailable = 3
-}
-
-export const bilibiliTemporaryFailureKinds = [
-  { label: 'RiskControl', value: BilibiliTemporaryFailureKind.RiskControl },
-  { label: 'ServiceBusy', value: BilibiliTemporaryFailureKind.ServiceBusy },
-  { label: 'CdnUnavailable', value: BilibiliTemporaryFailureKind.CdnUnavailable }
-] as const;
-
-export const BilibiliTemporaryFailureKindLabel: Record<BilibiliTemporaryFailureKind, string> = {
-  [BilibiliTemporaryFailureKind.RiskControl]: 'RiskControl',
-  [BilibiliTemporaryFailureKind.ServiceBusy]: 'ServiceBusy',
-  [BilibiliTemporaryFailureKind.CdnUnavailable]: 'CdnUnavailable'
-};
-
-export enum BilibiliFavoriteItemKind {
-  Video = 1,
-  OgvEpisode = 2,
-  Audio = 3,
-  UgcSeason = 4,
-  Unknown = 5
-}
-
-export const bilibiliFavoriteItemKinds = [
-  { label: 'Video', value: BilibiliFavoriteItemKind.Video },
-  { label: 'OgvEpisode', value: BilibiliFavoriteItemKind.OgvEpisode },
-  { label: 'Audio', value: BilibiliFavoriteItemKind.Audio },
-  { label: 'UgcSeason', value: BilibiliFavoriteItemKind.UgcSeason },
-  { label: 'Unknown', value: BilibiliFavoriteItemKind.Unknown }
-] as const;
-
-export const BilibiliFavoriteItemKindLabel: Record<BilibiliFavoriteItemKind, string> = {
-  [BilibiliFavoriteItemKind.Video]: 'Video',
-  [BilibiliFavoriteItemKind.OgvEpisode]: 'OgvEpisode',
-  [BilibiliFavoriteItemKind.Audio]: 'Audio',
-  [BilibiliFavoriteItemKind.UgcSeason]: 'UgcSeason',
-  [BilibiliFavoriteItemKind.Unknown]: 'Unknown'
-};
-
-export enum BilibiliPlayUrlOutcomeKind {
-  Dash = 1,
-  Durl = 2,
-  Skip = 3,
-  NoStreams = 4
-}
-
-export const bilibiliPlayUrlOutcomeKinds = [
-  { label: 'Dash', value: BilibiliPlayUrlOutcomeKind.Dash },
-  { label: 'Durl', value: BilibiliPlayUrlOutcomeKind.Durl },
-  { label: 'Skip', value: BilibiliPlayUrlOutcomeKind.Skip },
-  { label: 'NoStreams', value: BilibiliPlayUrlOutcomeKind.NoStreams }
-] as const;
-
-export const BilibiliPlayUrlOutcomeKindLabel: Record<BilibiliPlayUrlOutcomeKind, string> = {
-  [BilibiliPlayUrlOutcomeKind.Dash]: 'Dash',
-  [BilibiliPlayUrlOutcomeKind.Durl]: 'Durl',
-  [BilibiliPlayUrlOutcomeKind.Skip]: 'Skip',
-  [BilibiliPlayUrlOutcomeKind.NoStreams]: 'NoStreams'
-};
-
-export enum BilibiliSkipReason {
-  InvalidItem = 1,
-  UnsupportedOgvEpisode = 2,
-  UnsupportedAudio = 3,
-  UnsupportedCollection = 4,
-  UnsupportedItemType = 5,
-  InteractiveVideo = 6,
-  Deleted = 7,
-  PrivateToUploader = 8,
-  UnderReview = 9,
-  RegionRestrictedOrHidden = 10,
-  AccessDenied = 11,
-  SupporterOnly = 12,
-  SupporterOnlyPreview = 13,
-  PgcMemberOrPaid = 14,
-  PreviewOnly = 15,
-  Unavailable = 16,
-  PgcEpisodeNotSupported = 17,
-  MergeFailed = 18,
-  CdnUnavailable = 19
-}
-
-export const bilibiliSkipReasons = [
-  { label: 'InvalidItem', value: BilibiliSkipReason.InvalidItem },
-  { label: 'UnsupportedOgvEpisode', value: BilibiliSkipReason.UnsupportedOgvEpisode },
-  { label: 'UnsupportedAudio', value: BilibiliSkipReason.UnsupportedAudio },
-  { label: 'UnsupportedCollection', value: BilibiliSkipReason.UnsupportedCollection },
-  { label: 'UnsupportedItemType', value: BilibiliSkipReason.UnsupportedItemType },
-  { label: 'InteractiveVideo', value: BilibiliSkipReason.InteractiveVideo },
-  { label: 'Deleted', value: BilibiliSkipReason.Deleted },
-  { label: 'PrivateToUploader', value: BilibiliSkipReason.PrivateToUploader },
-  { label: 'UnderReview', value: BilibiliSkipReason.UnderReview },
-  { label: 'RegionRestrictedOrHidden', value: BilibiliSkipReason.RegionRestrictedOrHidden },
-  { label: 'AccessDenied', value: BilibiliSkipReason.AccessDenied },
-  { label: 'SupporterOnly', value: BilibiliSkipReason.SupporterOnly },
-  { label: 'SupporterOnlyPreview', value: BilibiliSkipReason.SupporterOnlyPreview },
-  { label: 'PgcMemberOrPaid', value: BilibiliSkipReason.PgcMemberOrPaid },
-  { label: 'PreviewOnly', value: BilibiliSkipReason.PreviewOnly },
-  { label: 'Unavailable', value: BilibiliSkipReason.Unavailable },
-  { label: 'PgcEpisodeNotSupported', value: BilibiliSkipReason.PgcEpisodeNotSupported },
-  { label: 'MergeFailed', value: BilibiliSkipReason.MergeFailed },
-  { label: 'CdnUnavailable', value: BilibiliSkipReason.CdnUnavailable }
-] as const;
-
-export const BilibiliSkipReasonLabel: Record<BilibiliSkipReason, string> = {
-  [BilibiliSkipReason.InvalidItem]: 'InvalidItem',
-  [BilibiliSkipReason.UnsupportedOgvEpisode]: 'UnsupportedOgvEpisode',
-  [BilibiliSkipReason.UnsupportedAudio]: 'UnsupportedAudio',
-  [BilibiliSkipReason.UnsupportedCollection]: 'UnsupportedCollection',
-  [BilibiliSkipReason.UnsupportedItemType]: 'UnsupportedItemType',
-  [BilibiliSkipReason.InteractiveVideo]: 'InteractiveVideo',
-  [BilibiliSkipReason.Deleted]: 'Deleted',
-  [BilibiliSkipReason.PrivateToUploader]: 'PrivateToUploader',
-  [BilibiliSkipReason.UnderReview]: 'UnderReview',
-  [BilibiliSkipReason.RegionRestrictedOrHidden]: 'RegionRestrictedOrHidden',
-  [BilibiliSkipReason.AccessDenied]: 'AccessDenied',
-  [BilibiliSkipReason.SupporterOnly]: 'SupporterOnly',
-  [BilibiliSkipReason.SupporterOnlyPreview]: 'SupporterOnlyPreview',
-  [BilibiliSkipReason.PgcMemberOrPaid]: 'PgcMemberOrPaid',
-  [BilibiliSkipReason.PreviewOnly]: 'PreviewOnly',
-  [BilibiliSkipReason.Unavailable]: 'Unavailable',
-  [BilibiliSkipReason.PgcEpisodeNotSupported]: 'PgcEpisodeNotSupported',
-  [BilibiliSkipReason.MergeFailed]: 'MergeFailed',
-  [BilibiliSkipReason.CdnUnavailable]: 'CdnUnavailable'
-};
-
-export enum BilibiliAudioKind {
-  None = 0,
-  Aac = 1,
-  Flac = 2,
-  DolbyEac3 = 3
-}
-
-export const bilibiliAudioKinds = [
-  { label: 'None', value: BilibiliAudioKind.None },
-  { label: 'Aac', value: BilibiliAudioKind.Aac },
-  { label: 'Flac', value: BilibiliAudioKind.Flac },
-  { label: 'DolbyEac3', value: BilibiliAudioKind.DolbyEac3 }
-] as const;
-
-export const BilibiliAudioKindLabel: Record<BilibiliAudioKind, string> = {
-  [BilibiliAudioKind.None]: 'None',
-  [BilibiliAudioKind.Aac]: 'Aac',
-  [BilibiliAudioKind.Flac]: 'Flac',
-  [BilibiliAudioKind.DolbyEac3]: 'DolbyEac3'
-};
-
-export enum BilibiliPageStatus {
-  Downloaded = 1,
-  AlreadyExists = 2,
-  Skipped = 3
-}
-
-export const bilibiliPageStatuses = [
-  { label: 'Downloaded', value: BilibiliPageStatus.Downloaded },
-  { label: 'AlreadyExists', value: BilibiliPageStatus.AlreadyExists },
-  { label: 'Skipped', value: BilibiliPageStatus.Skipped }
-] as const;
-
-export const BilibiliPageStatusLabel: Record<BilibiliPageStatus, string> = {
-  [BilibiliPageStatus.Downloaded]: 'Downloaded',
-  [BilibiliPageStatus.AlreadyExists]: 'AlreadyExists',
-  [BilibiliPageStatus.Skipped]: 'Skipped'
-};
-
-export enum BangumiSubjectType {
-  All = 0,
-  Anime = 1,
-  Book = 2,
-  Music = 3,
-  Game = 4,
-  Real = 5
-}
-
-export const bangumiSubjectTypes = [
-  { label: 'All', value: BangumiSubjectType.All },
-  { label: 'Anime', value: BangumiSubjectType.Anime },
-  { label: 'Book', value: BangumiSubjectType.Book },
-  { label: 'Music', value: BangumiSubjectType.Music },
-  { label: 'Game', value: BangumiSubjectType.Game },
-  { label: 'Real', value: BangumiSubjectType.Real }
-] as const;
-
-export const BangumiSubjectTypeLabel: Record<BangumiSubjectType, string> = {
-  [BangumiSubjectType.All]: 'All',
-  [BangumiSubjectType.Anime]: 'Anime',
-  [BangumiSubjectType.Book]: 'Book',
-  [BangumiSubjectType.Music]: 'Music',
-  [BangumiSubjectType.Game]: 'Game',
-  [BangumiSubjectType.Real]: 'Real'
-};
-
-export enum ThirdPartyRequestResultType {
-  Succeed = 1,
-  TimedOut = 2,
-  Banned = 3,
-  Canceled = 4,
-  Failed = 1000
-}
-
-export const thirdPartyRequestResultTypes = [
-  { label: 'Succeed', value: ThirdPartyRequestResultType.Succeed },
-  { label: 'TimedOut', value: ThirdPartyRequestResultType.TimedOut },
-  { label: 'Banned', value: ThirdPartyRequestResultType.Banned },
-  { label: 'Canceled', value: ThirdPartyRequestResultType.Canceled },
-  { label: 'Failed', value: ThirdPartyRequestResultType.Failed }
-] as const;
-
-export const ThirdPartyRequestResultTypeLabel: Record<ThirdPartyRequestResultType, string> = {
-  [ThirdPartyRequestResultType.Succeed]: 'Succeed',
-  [ThirdPartyRequestResultType.TimedOut]: 'TimedOut',
-  [ThirdPartyRequestResultType.Banned]: 'Banned',
-  [ThirdPartyRequestResultType.Canceled]: 'Canceled',
-  [ThirdPartyRequestResultType.Failed]: 'Failed'
-};
-
-export enum BatchPlaySkipReason {
-  NoPlayableFiles = 1,
-  AllFilesMissing = 2,
-  ResourceNotFound = 3,
-  NoFilesMatchingPlayer = 4
-}
-
-export const batchPlaySkipReasons = [
-  { label: 'NoPlayableFiles', value: BatchPlaySkipReason.NoPlayableFiles },
-  { label: 'AllFilesMissing', value: BatchPlaySkipReason.AllFilesMissing },
-  { label: 'ResourceNotFound', value: BatchPlaySkipReason.ResourceNotFound },
-  { label: 'NoFilesMatchingPlayer', value: BatchPlaySkipReason.NoFilesMatchingPlayer }
-] as const;
-
-export const BatchPlaySkipReasonLabel: Record<BatchPlaySkipReason, string> = {
-  [BatchPlaySkipReason.NoPlayableFiles]: 'NoPlayableFiles',
-  [BatchPlaySkipReason.AllFilesMissing]: 'AllFilesMissing',
-  [BatchPlaySkipReason.ResourceNotFound]: 'ResourceNotFound',
-  [BatchPlaySkipReason.NoFilesMatchingPlayer]: 'NoFilesMatchingPlayer'
-};
-
-export enum BatchPlayCandidateType {
-  ProfilePlayer = 1,
-  KnownPlayer = 2
-}
-
-export const batchPlayCandidateTypes = [
-  { label: 'ProfilePlayer', value: BatchPlayCandidateType.ProfilePlayer },
-  { label: 'KnownPlayer', value: BatchPlayCandidateType.KnownPlayer }
-] as const;
-
-export const BatchPlayCandidateTypeLabel: Record<BatchPlayCandidateType, string> = {
-  [BatchPlayCandidateType.ProfilePlayer]: 'ProfilePlayer',
-  [BatchPlayCandidateType.KnownPlayer]: 'KnownPlayer'
-};
-
-export enum BatchPlayCapability {
-  None = 0,
-  PlaylistFile = 1,
-  MultiFileArguments = 2
-}
-
-export const batchPlayCapabilities = [
-  { label: 'None', value: BatchPlayCapability.None },
-  { label: 'PlaylistFile', value: BatchPlayCapability.PlaylistFile },
-  { label: 'MultiFileArguments', value: BatchPlayCapability.MultiFileArguments }
-] as const;
-
-export const BatchPlayCapabilityLabel: Record<BatchPlayCapability, string> = {
-  [BatchPlayCapability.None]: 'None',
-  [BatchPlayCapability.PlaylistFile]: 'PlaylistFile',
-  [BatchPlayCapability.MultiFileArguments]: 'MultiFileArguments'
-};
-
-export enum BatchPlayFileSelectionMode {
-  FirstFilePerResource = 1,
-  AllFiles = 2
-}
-
-export const batchPlayFileSelectionModes = [
-  { label: 'FirstFilePerResource', value: BatchPlayFileSelectionMode.FirstFilePerResource },
-  { label: 'AllFiles', value: BatchPlayFileSelectionMode.AllFiles }
-] as const;
-
-export const BatchPlayFileSelectionModeLabel: Record<BatchPlayFileSelectionMode, string> = {
-  [BatchPlayFileSelectionMode.FirstFilePerResource]: 'FirstFilePerResource',
-  [BatchPlayFileSelectionMode.AllFiles]: 'AllFiles'
-};
-
-export enum BatchPlayLaunchMethod {
-  PlaylistFile = 1,
-  MultiFileArguments = 2
-}
-
-export const batchPlayLaunchMethods = [
-  { label: 'PlaylistFile', value: BatchPlayLaunchMethod.PlaylistFile },
-  { label: 'MultiFileArguments', value: BatchPlayLaunchMethod.MultiFileArguments }
-] as const;
-
-export const BatchPlayLaunchMethodLabel: Record<BatchPlayLaunchMethod, string> = {
-  [BatchPlayLaunchMethod.PlaylistFile]: 'PlaylistFile',
-  [BatchPlayLaunchMethod.MultiFileArguments]: 'MultiFileArguments'
-};
-
 export enum CategoryResourceDisplayNameSegmentType {
   StaticText = 1,
   Property = 2,
@@ -2828,6 +2312,522 @@ export const userStoragePurposes = [
 export const UserStoragePurposeLabel: Record<UserStoragePurpose, string> = {
   [UserStoragePurpose.UserFiles]: 'UserFiles',
   [UserStoragePurpose.Setup]: 'Setup'
+};
+
+export enum SteamMetadataField {
+  Name = 1,
+  Type = 2,
+  ShortDescription = 3,
+  DetailedDescription = 4,
+  HeaderImage = 5,
+  CapsuleImage = 6,
+  Developers = 7,
+  Publishers = 8,
+  Genres = 9,
+  Categories = 10,
+  MetacriticScore = 11,
+  ReleaseDate = 12
+}
+
+export const steamMetadataFields = [
+  { label: 'Name', value: SteamMetadataField.Name },
+  { label: 'Type', value: SteamMetadataField.Type },
+  { label: 'ShortDescription', value: SteamMetadataField.ShortDescription },
+  { label: 'DetailedDescription', value: SteamMetadataField.DetailedDescription },
+  { label: 'HeaderImage', value: SteamMetadataField.HeaderImage },
+  { label: 'CapsuleImage', value: SteamMetadataField.CapsuleImage },
+  { label: 'Developers', value: SteamMetadataField.Developers },
+  { label: 'Publishers', value: SteamMetadataField.Publishers },
+  { label: 'Genres', value: SteamMetadataField.Genres },
+  { label: 'Categories', value: SteamMetadataField.Categories },
+  { label: 'MetacriticScore', value: SteamMetadataField.MetacriticScore },
+  { label: 'ReleaseDate', value: SteamMetadataField.ReleaseDate }
+] as const;
+
+export const SteamMetadataFieldLabel: Record<SteamMetadataField, string> = {
+  [SteamMetadataField.Name]: 'Name',
+  [SteamMetadataField.Type]: 'Type',
+  [SteamMetadataField.ShortDescription]: 'ShortDescription',
+  [SteamMetadataField.DetailedDescription]: 'DetailedDescription',
+  [SteamMetadataField.HeaderImage]: 'HeaderImage',
+  [SteamMetadataField.CapsuleImage]: 'CapsuleImage',
+  [SteamMetadataField.Developers]: 'Developers',
+  [SteamMetadataField.Publishers]: 'Publishers',
+  [SteamMetadataField.Genres]: 'Genres',
+  [SteamMetadataField.Categories]: 'Categories',
+  [SteamMetadataField.MetacriticScore]: 'MetacriticScore',
+  [SteamMetadataField.ReleaseDate]: 'ReleaseDate'
+};
+
+export enum ExHentaiMetadataField {
+  Name = 1,
+  RawName = 2,
+  Introduction = 3,
+  Rate = 4,
+  Category = 5,
+  CoverUrl = 6,
+  FileCount = 7,
+  PageCount = 8
+}
+
+export const exHentaiMetadataFields = [
+  { label: 'Name', value: ExHentaiMetadataField.Name },
+  { label: 'RawName', value: ExHentaiMetadataField.RawName },
+  { label: 'Introduction', value: ExHentaiMetadataField.Introduction },
+  { label: 'Rate', value: ExHentaiMetadataField.Rate },
+  { label: 'Category', value: ExHentaiMetadataField.Category },
+  { label: 'CoverUrl', value: ExHentaiMetadataField.CoverUrl },
+  { label: 'FileCount', value: ExHentaiMetadataField.FileCount },
+  { label: 'PageCount', value: ExHentaiMetadataField.PageCount }
+] as const;
+
+export const ExHentaiMetadataFieldLabel: Record<ExHentaiMetadataField, string> = {
+  [ExHentaiMetadataField.Name]: 'Name',
+  [ExHentaiMetadataField.RawName]: 'RawName',
+  [ExHentaiMetadataField.Introduction]: 'Introduction',
+  [ExHentaiMetadataField.Rate]: 'Rate',
+  [ExHentaiMetadataField.Category]: 'Category',
+  [ExHentaiMetadataField.CoverUrl]: 'CoverUrl',
+  [ExHentaiMetadataField.FileCount]: 'FileCount',
+  [ExHentaiMetadataField.PageCount]: 'PageCount'
+};
+
+export enum ExHentaiCategory {
+  Unknown = 0,
+  Misc = 1,
+  Doushijin = 2,
+  Manga = 4,
+  ArtistCG = 8,
+  GameCG = 16,
+  ImageSet = 32,
+  Cosplay = 64,
+  AsianPorn = 128,
+  NonH = 256,
+  Western = 512
+}
+
+export const exHentaiCategories = [
+  { label: 'Unknown', value: ExHentaiCategory.Unknown },
+  { label: 'Misc', value: ExHentaiCategory.Misc },
+  { label: 'Doushijin', value: ExHentaiCategory.Doushijin },
+  { label: 'Manga', value: ExHentaiCategory.Manga },
+  { label: 'ArtistCG', value: ExHentaiCategory.ArtistCG },
+  { label: 'GameCG', value: ExHentaiCategory.GameCG },
+  { label: 'ImageSet', value: ExHentaiCategory.ImageSet },
+  { label: 'Cosplay', value: ExHentaiCategory.Cosplay },
+  { label: 'AsianPorn', value: ExHentaiCategory.AsianPorn },
+  { label: 'NonH', value: ExHentaiCategory.NonH },
+  { label: 'Western', value: ExHentaiCategory.Western }
+] as const;
+
+export const ExHentaiCategoryLabel: Record<ExHentaiCategory, string> = {
+  [ExHentaiCategory.Unknown]: 'Unknown',
+  [ExHentaiCategory.Misc]: 'Misc',
+  [ExHentaiCategory.Doushijin]: 'Doushijin',
+  [ExHentaiCategory.Manga]: 'Manga',
+  [ExHentaiCategory.ArtistCG]: 'ArtistCG',
+  [ExHentaiCategory.GameCG]: 'GameCG',
+  [ExHentaiCategory.ImageSet]: 'ImageSet',
+  [ExHentaiCategory.Cosplay]: 'Cosplay',
+  [ExHentaiCategory.AsianPorn]: 'AsianPorn',
+  [ExHentaiCategory.NonH]: 'NonH',
+  [ExHentaiCategory.Western]: 'Western'
+};
+
+export enum ExHentaiConnectionStatus {
+  Ok = 1,
+  InvalidCookie = 2,
+  IpBanned = 3,
+  UnknownError = 4
+}
+
+export const exHentaiConnectionStatuses = [
+  { label: 'Ok', value: ExHentaiConnectionStatus.Ok },
+  { label: 'InvalidCookie', value: ExHentaiConnectionStatus.InvalidCookie },
+  { label: 'IpBanned', value: ExHentaiConnectionStatus.IpBanned },
+  { label: 'UnknownError', value: ExHentaiConnectionStatus.UnknownError }
+] as const;
+
+export const ExHentaiConnectionStatusLabel: Record<ExHentaiConnectionStatus, string> = {
+  [ExHentaiConnectionStatus.Ok]: 'Ok',
+  [ExHentaiConnectionStatus.InvalidCookie]: 'InvalidCookie',
+  [ExHentaiConnectionStatus.IpBanned]: 'IpBanned',
+  [ExHentaiConnectionStatus.UnknownError]: 'UnknownError'
+};
+
+export enum DLsiteMetadataField {
+  Name = 1,
+  Introduction = 2,
+  Rating = 3,
+  CoverUrls = 4
+}
+
+export const dLsiteMetadataFields = [
+  { label: 'Name', value: DLsiteMetadataField.Name },
+  { label: 'Introduction', value: DLsiteMetadataField.Introduction },
+  { label: 'Rating', value: DLsiteMetadataField.Rating },
+  { label: 'CoverUrls', value: DLsiteMetadataField.CoverUrls }
+] as const;
+
+export const DLsiteMetadataFieldLabel: Record<DLsiteMetadataField, string> = {
+  [DLsiteMetadataField.Name]: 'Name',
+  [DLsiteMetadataField.Introduction]: 'Introduction',
+  [DLsiteMetadataField.Rating]: 'Rating',
+  [DLsiteMetadataField.CoverUrls]: 'CoverUrls'
+};
+
+export enum BilibiliApiCodeClass {
+  Ok = 0,
+  RiskControl = 1,
+  ServiceBusy = 2,
+  NotLoggedIn = 3,
+  ContentState = 4,
+  Unknown = 5
+}
+
+export const bilibiliApiCodeClasses = [
+  { label: 'Ok', value: BilibiliApiCodeClass.Ok },
+  { label: 'RiskControl', value: BilibiliApiCodeClass.RiskControl },
+  { label: 'ServiceBusy', value: BilibiliApiCodeClass.ServiceBusy },
+  { label: 'NotLoggedIn', value: BilibiliApiCodeClass.NotLoggedIn },
+  { label: 'ContentState', value: BilibiliApiCodeClass.ContentState },
+  { label: 'Unknown', value: BilibiliApiCodeClass.Unknown }
+] as const;
+
+export const BilibiliApiCodeClassLabel: Record<BilibiliApiCodeClass, string> = {
+  [BilibiliApiCodeClass.Ok]: 'Ok',
+  [BilibiliApiCodeClass.RiskControl]: 'RiskControl',
+  [BilibiliApiCodeClass.ServiceBusy]: 'ServiceBusy',
+  [BilibiliApiCodeClass.NotLoggedIn]: 'NotLoggedIn',
+  [BilibiliApiCodeClass.ContentState]: 'ContentState',
+  [BilibiliApiCodeClass.Unknown]: 'Unknown'
+};
+
+export enum BilibiliViewOutcomeKind {
+  Proceed = 1,
+  FollowForward = 2,
+  CheckExistence = 3,
+  PageListFallback = 4,
+  Skip = 5
+}
+
+export const bilibiliViewOutcomeKinds = [
+  { label: 'Proceed', value: BilibiliViewOutcomeKind.Proceed },
+  { label: 'FollowForward', value: BilibiliViewOutcomeKind.FollowForward },
+  { label: 'CheckExistence', value: BilibiliViewOutcomeKind.CheckExistence },
+  { label: 'PageListFallback', value: BilibiliViewOutcomeKind.PageListFallback },
+  { label: 'Skip', value: BilibiliViewOutcomeKind.Skip }
+] as const;
+
+export const BilibiliViewOutcomeKindLabel: Record<BilibiliViewOutcomeKind, string> = {
+  [BilibiliViewOutcomeKind.Proceed]: 'Proceed',
+  [BilibiliViewOutcomeKind.FollowForward]: 'FollowForward',
+  [BilibiliViewOutcomeKind.CheckExistence]: 'CheckExistence',
+  [BilibiliViewOutcomeKind.PageListFallback]: 'PageListFallback',
+  [BilibiliViewOutcomeKind.Skip]: 'Skip'
+};
+
+export enum BilibiliTemporaryFailureKind {
+  RiskControl = 1,
+  ServiceBusy = 2,
+  CdnUnavailable = 3
+}
+
+export const bilibiliTemporaryFailureKinds = [
+  { label: 'RiskControl', value: BilibiliTemporaryFailureKind.RiskControl },
+  { label: 'ServiceBusy', value: BilibiliTemporaryFailureKind.ServiceBusy },
+  { label: 'CdnUnavailable', value: BilibiliTemporaryFailureKind.CdnUnavailable }
+] as const;
+
+export const BilibiliTemporaryFailureKindLabel: Record<BilibiliTemporaryFailureKind, string> = {
+  [BilibiliTemporaryFailureKind.RiskControl]: 'RiskControl',
+  [BilibiliTemporaryFailureKind.ServiceBusy]: 'ServiceBusy',
+  [BilibiliTemporaryFailureKind.CdnUnavailable]: 'CdnUnavailable'
+};
+
+export enum BilibiliFavoriteItemKind {
+  Video = 1,
+  OgvEpisode = 2,
+  Audio = 3,
+  UgcSeason = 4,
+  Unknown = 5
+}
+
+export const bilibiliFavoriteItemKinds = [
+  { label: 'Video', value: BilibiliFavoriteItemKind.Video },
+  { label: 'OgvEpisode', value: BilibiliFavoriteItemKind.OgvEpisode },
+  { label: 'Audio', value: BilibiliFavoriteItemKind.Audio },
+  { label: 'UgcSeason', value: BilibiliFavoriteItemKind.UgcSeason },
+  { label: 'Unknown', value: BilibiliFavoriteItemKind.Unknown }
+] as const;
+
+export const BilibiliFavoriteItemKindLabel: Record<BilibiliFavoriteItemKind, string> = {
+  [BilibiliFavoriteItemKind.Video]: 'Video',
+  [BilibiliFavoriteItemKind.OgvEpisode]: 'OgvEpisode',
+  [BilibiliFavoriteItemKind.Audio]: 'Audio',
+  [BilibiliFavoriteItemKind.UgcSeason]: 'UgcSeason',
+  [BilibiliFavoriteItemKind.Unknown]: 'Unknown'
+};
+
+export enum BilibiliPlayUrlOutcomeKind {
+  Dash = 1,
+  Durl = 2,
+  Skip = 3,
+  NoStreams = 4
+}
+
+export const bilibiliPlayUrlOutcomeKinds = [
+  { label: 'Dash', value: BilibiliPlayUrlOutcomeKind.Dash },
+  { label: 'Durl', value: BilibiliPlayUrlOutcomeKind.Durl },
+  { label: 'Skip', value: BilibiliPlayUrlOutcomeKind.Skip },
+  { label: 'NoStreams', value: BilibiliPlayUrlOutcomeKind.NoStreams }
+] as const;
+
+export const BilibiliPlayUrlOutcomeKindLabel: Record<BilibiliPlayUrlOutcomeKind, string> = {
+  [BilibiliPlayUrlOutcomeKind.Dash]: 'Dash',
+  [BilibiliPlayUrlOutcomeKind.Durl]: 'Durl',
+  [BilibiliPlayUrlOutcomeKind.Skip]: 'Skip',
+  [BilibiliPlayUrlOutcomeKind.NoStreams]: 'NoStreams'
+};
+
+export enum BilibiliSkipReason {
+  InvalidItem = 1,
+  UnsupportedOgvEpisode = 2,
+  UnsupportedAudio = 3,
+  UnsupportedCollection = 4,
+  UnsupportedItemType = 5,
+  InteractiveVideo = 6,
+  Deleted = 7,
+  PrivateToUploader = 8,
+  UnderReview = 9,
+  RegionRestrictedOrHidden = 10,
+  AccessDenied = 11,
+  SupporterOnly = 12,
+  SupporterOnlyPreview = 13,
+  PgcMemberOrPaid = 14,
+  PreviewOnly = 15,
+  Unavailable = 16,
+  PgcEpisodeNotSupported = 17,
+  MergeFailed = 18,
+  CdnUnavailable = 19
+}
+
+export const bilibiliSkipReasons = [
+  { label: 'InvalidItem', value: BilibiliSkipReason.InvalidItem },
+  { label: 'UnsupportedOgvEpisode', value: BilibiliSkipReason.UnsupportedOgvEpisode },
+  { label: 'UnsupportedAudio', value: BilibiliSkipReason.UnsupportedAudio },
+  { label: 'UnsupportedCollection', value: BilibiliSkipReason.UnsupportedCollection },
+  { label: 'UnsupportedItemType', value: BilibiliSkipReason.UnsupportedItemType },
+  { label: 'InteractiveVideo', value: BilibiliSkipReason.InteractiveVideo },
+  { label: 'Deleted', value: BilibiliSkipReason.Deleted },
+  { label: 'PrivateToUploader', value: BilibiliSkipReason.PrivateToUploader },
+  { label: 'UnderReview', value: BilibiliSkipReason.UnderReview },
+  { label: 'RegionRestrictedOrHidden', value: BilibiliSkipReason.RegionRestrictedOrHidden },
+  { label: 'AccessDenied', value: BilibiliSkipReason.AccessDenied },
+  { label: 'SupporterOnly', value: BilibiliSkipReason.SupporterOnly },
+  { label: 'SupporterOnlyPreview', value: BilibiliSkipReason.SupporterOnlyPreview },
+  { label: 'PgcMemberOrPaid', value: BilibiliSkipReason.PgcMemberOrPaid },
+  { label: 'PreviewOnly', value: BilibiliSkipReason.PreviewOnly },
+  { label: 'Unavailable', value: BilibiliSkipReason.Unavailable },
+  { label: 'PgcEpisodeNotSupported', value: BilibiliSkipReason.PgcEpisodeNotSupported },
+  { label: 'MergeFailed', value: BilibiliSkipReason.MergeFailed },
+  { label: 'CdnUnavailable', value: BilibiliSkipReason.CdnUnavailable }
+] as const;
+
+export const BilibiliSkipReasonLabel: Record<BilibiliSkipReason, string> = {
+  [BilibiliSkipReason.InvalidItem]: 'InvalidItem',
+  [BilibiliSkipReason.UnsupportedOgvEpisode]: 'UnsupportedOgvEpisode',
+  [BilibiliSkipReason.UnsupportedAudio]: 'UnsupportedAudio',
+  [BilibiliSkipReason.UnsupportedCollection]: 'UnsupportedCollection',
+  [BilibiliSkipReason.UnsupportedItemType]: 'UnsupportedItemType',
+  [BilibiliSkipReason.InteractiveVideo]: 'InteractiveVideo',
+  [BilibiliSkipReason.Deleted]: 'Deleted',
+  [BilibiliSkipReason.PrivateToUploader]: 'PrivateToUploader',
+  [BilibiliSkipReason.UnderReview]: 'UnderReview',
+  [BilibiliSkipReason.RegionRestrictedOrHidden]: 'RegionRestrictedOrHidden',
+  [BilibiliSkipReason.AccessDenied]: 'AccessDenied',
+  [BilibiliSkipReason.SupporterOnly]: 'SupporterOnly',
+  [BilibiliSkipReason.SupporterOnlyPreview]: 'SupporterOnlyPreview',
+  [BilibiliSkipReason.PgcMemberOrPaid]: 'PgcMemberOrPaid',
+  [BilibiliSkipReason.PreviewOnly]: 'PreviewOnly',
+  [BilibiliSkipReason.Unavailable]: 'Unavailable',
+  [BilibiliSkipReason.PgcEpisodeNotSupported]: 'PgcEpisodeNotSupported',
+  [BilibiliSkipReason.MergeFailed]: 'MergeFailed',
+  [BilibiliSkipReason.CdnUnavailable]: 'CdnUnavailable'
+};
+
+export enum BilibiliAudioKind {
+  None = 0,
+  Aac = 1,
+  Flac = 2,
+  DolbyEac3 = 3
+}
+
+export const bilibiliAudioKinds = [
+  { label: 'None', value: BilibiliAudioKind.None },
+  { label: 'Aac', value: BilibiliAudioKind.Aac },
+  { label: 'Flac', value: BilibiliAudioKind.Flac },
+  { label: 'DolbyEac3', value: BilibiliAudioKind.DolbyEac3 }
+] as const;
+
+export const BilibiliAudioKindLabel: Record<BilibiliAudioKind, string> = {
+  [BilibiliAudioKind.None]: 'None',
+  [BilibiliAudioKind.Aac]: 'Aac',
+  [BilibiliAudioKind.Flac]: 'Flac',
+  [BilibiliAudioKind.DolbyEac3]: 'DolbyEac3'
+};
+
+export enum BilibiliPageStatus {
+  Downloaded = 1,
+  AlreadyExists = 2,
+  Skipped = 3
+}
+
+export const bilibiliPageStatuses = [
+  { label: 'Downloaded', value: BilibiliPageStatus.Downloaded },
+  { label: 'AlreadyExists', value: BilibiliPageStatus.AlreadyExists },
+  { label: 'Skipped', value: BilibiliPageStatus.Skipped }
+] as const;
+
+export const BilibiliPageStatusLabel: Record<BilibiliPageStatus, string> = {
+  [BilibiliPageStatus.Downloaded]: 'Downloaded',
+  [BilibiliPageStatus.AlreadyExists]: 'AlreadyExists',
+  [BilibiliPageStatus.Skipped]: 'Skipped'
+};
+
+export enum BangumiSubjectType {
+  All = 0,
+  Anime = 1,
+  Book = 2,
+  Music = 3,
+  Game = 4,
+  Real = 5
+}
+
+export const bangumiSubjectTypes = [
+  { label: 'All', value: BangumiSubjectType.All },
+  { label: 'Anime', value: BangumiSubjectType.Anime },
+  { label: 'Book', value: BangumiSubjectType.Book },
+  { label: 'Music', value: BangumiSubjectType.Music },
+  { label: 'Game', value: BangumiSubjectType.Game },
+  { label: 'Real', value: BangumiSubjectType.Real }
+] as const;
+
+export const BangumiSubjectTypeLabel: Record<BangumiSubjectType, string> = {
+  [BangumiSubjectType.All]: 'All',
+  [BangumiSubjectType.Anime]: 'Anime',
+  [BangumiSubjectType.Book]: 'Book',
+  [BangumiSubjectType.Music]: 'Music',
+  [BangumiSubjectType.Game]: 'Game',
+  [BangumiSubjectType.Real]: 'Real'
+};
+
+export enum ThirdPartyRequestResultType {
+  Succeed = 1,
+  TimedOut = 2,
+  Banned = 3,
+  Canceled = 4,
+  Failed = 1000
+}
+
+export const thirdPartyRequestResultTypes = [
+  { label: 'Succeed', value: ThirdPartyRequestResultType.Succeed },
+  { label: 'TimedOut', value: ThirdPartyRequestResultType.TimedOut },
+  { label: 'Banned', value: ThirdPartyRequestResultType.Banned },
+  { label: 'Canceled', value: ThirdPartyRequestResultType.Canceled },
+  { label: 'Failed', value: ThirdPartyRequestResultType.Failed }
+] as const;
+
+export const ThirdPartyRequestResultTypeLabel: Record<ThirdPartyRequestResultType, string> = {
+  [ThirdPartyRequestResultType.Succeed]: 'Succeed',
+  [ThirdPartyRequestResultType.TimedOut]: 'TimedOut',
+  [ThirdPartyRequestResultType.Banned]: 'Banned',
+  [ThirdPartyRequestResultType.Canceled]: 'Canceled',
+  [ThirdPartyRequestResultType.Failed]: 'Failed'
+};
+
+export enum BatchPlaySkipReason {
+  NoPlayableFiles = 1,
+  AllFilesMissing = 2,
+  ResourceNotFound = 3,
+  NoFilesMatchingPlayer = 4
+}
+
+export const batchPlaySkipReasons = [
+  { label: 'NoPlayableFiles', value: BatchPlaySkipReason.NoPlayableFiles },
+  { label: 'AllFilesMissing', value: BatchPlaySkipReason.AllFilesMissing },
+  { label: 'ResourceNotFound', value: BatchPlaySkipReason.ResourceNotFound },
+  { label: 'NoFilesMatchingPlayer', value: BatchPlaySkipReason.NoFilesMatchingPlayer }
+] as const;
+
+export const BatchPlaySkipReasonLabel: Record<BatchPlaySkipReason, string> = {
+  [BatchPlaySkipReason.NoPlayableFiles]: 'NoPlayableFiles',
+  [BatchPlaySkipReason.AllFilesMissing]: 'AllFilesMissing',
+  [BatchPlaySkipReason.ResourceNotFound]: 'ResourceNotFound',
+  [BatchPlaySkipReason.NoFilesMatchingPlayer]: 'NoFilesMatchingPlayer'
+};
+
+export enum BatchPlayCandidateType {
+  ProfilePlayer = 1,
+  KnownPlayer = 2
+}
+
+export const batchPlayCandidateTypes = [
+  { label: 'ProfilePlayer', value: BatchPlayCandidateType.ProfilePlayer },
+  { label: 'KnownPlayer', value: BatchPlayCandidateType.KnownPlayer }
+] as const;
+
+export const BatchPlayCandidateTypeLabel: Record<BatchPlayCandidateType, string> = {
+  [BatchPlayCandidateType.ProfilePlayer]: 'ProfilePlayer',
+  [BatchPlayCandidateType.KnownPlayer]: 'KnownPlayer'
+};
+
+export enum BatchPlayCapability {
+  None = 0,
+  PlaylistFile = 1,
+  MultiFileArguments = 2
+}
+
+export const batchPlayCapabilities = [
+  { label: 'None', value: BatchPlayCapability.None },
+  { label: 'PlaylistFile', value: BatchPlayCapability.PlaylistFile },
+  { label: 'MultiFileArguments', value: BatchPlayCapability.MultiFileArguments }
+] as const;
+
+export const BatchPlayCapabilityLabel: Record<BatchPlayCapability, string> = {
+  [BatchPlayCapability.None]: 'None',
+  [BatchPlayCapability.PlaylistFile]: 'PlaylistFile',
+  [BatchPlayCapability.MultiFileArguments]: 'MultiFileArguments'
+};
+
+export enum BatchPlayFileSelectionMode {
+  FirstFilePerResource = 1,
+  AllFiles = 2
+}
+
+export const batchPlayFileSelectionModes = [
+  { label: 'FirstFilePerResource', value: BatchPlayFileSelectionMode.FirstFilePerResource },
+  { label: 'AllFiles', value: BatchPlayFileSelectionMode.AllFiles }
+] as const;
+
+export const BatchPlayFileSelectionModeLabel: Record<BatchPlayFileSelectionMode, string> = {
+  [BatchPlayFileSelectionMode.FirstFilePerResource]: 'FirstFilePerResource',
+  [BatchPlayFileSelectionMode.AllFiles]: 'AllFiles'
+};
+
+export enum BatchPlayLaunchMethod {
+  PlaylistFile = 1,
+  MultiFileArguments = 2
+}
+
+export const batchPlayLaunchMethods = [
+  { label: 'PlaylistFile', value: BatchPlayLaunchMethod.PlaylistFile },
+  { label: 'MultiFileArguments', value: BatchPlayLaunchMethod.MultiFileArguments }
+] as const;
+
+export const BatchPlayLaunchMethodLabel: Record<BatchPlayLaunchMethod, string> = {
+  [BatchPlayLaunchMethod.PlaylistFile]: 'PlaylistFile',
+  [BatchPlayLaunchMethod.MultiFileArguments]: 'MultiFileArguments'
 };
 
 export enum AdditionalCoverDiscoveringSource {
@@ -7134,6 +7134,7 @@ export const ClientForwardingFailureLabel: Record<ClientForwardingFailure, strin
 
 export const ExtensionMediaTypes: Record<string, MediaType> = {
   ".3gp": MediaType.Video,
+  ".ass": MediaType.Text,
   ".avi": MediaType.Video,
   ".bmp": MediaType.Image,
   ".exe": MediaType.Application,
@@ -7151,13 +7152,17 @@ export const ExtensionMediaTypes: Record<string, MediaType> = {
   ".mp3": MediaType.Audio,
   ".mp4": MediaType.Video,
   ".mpeg": MediaType.Video,
+  ".nfo": MediaType.Text,
   ".ogg": MediaType.Audio,
   ".png": MediaType.Image,
   ".rmvb": MediaType.Video,
+  ".srt": MediaType.Text,
+  ".ssa": MediaType.Text,
   ".svg": MediaType.Image,
   ".tiff": MediaType.Image,
   ".ts": MediaType.Video,
   ".txt": MediaType.Text,
+  ".vtt": MediaType.Text,
   ".wav": MediaType.Audio,
   ".weba": MediaType.Audio,
   ".webm": MediaType.Video,

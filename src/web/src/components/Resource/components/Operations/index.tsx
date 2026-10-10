@@ -2,8 +2,6 @@
 
 import type { IResourceCoverRef } from "@/components/Resource/components/ResourceCover";
 import type { Resource } from "@/core/models/Resource";
-import type { BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntry } from "@/sdk/Api";
-import type { MediaType } from "@/sdk/constants";
 
 import { useTranslation } from "react-i18next";
 import React, { useMemo, useState } from "react";
@@ -26,7 +24,7 @@ import { openMovePanel } from "@/stores/resourceMovePanel";
 import { getKnownMoveBlockReason } from "@/components/Resource/resourceMoveEligibility";
 import { useMoveReasonText } from "@/components/ResourceMovePanel/messages";
 import DeleteResourceConfirmContent from "@/components/Resource/components/DeleteResourceConfirmContent";
-import { EnhancementAdditionalItem, IwFsType } from "@/sdk/constants";
+import { EnhancementAdditionalItem } from "@/sdk/constants";
 import { PlaylistCollection } from "@/components/Playlist";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import {
@@ -40,7 +38,7 @@ import {
   toast,
 } from "@/components/bakaui";
 import { useUiOptionsStore } from "@/stores/options";
-import MediaPlayer from "@/components/MediaPlayer";
+import { useResourceBrowserPlayer } from "@/hooks/useResourceBrowserPlayer";
 import { useOpenResourceDirectory } from "@/hooks/useOpenResourceDirectory";
 
 interface IProps {
@@ -64,7 +62,7 @@ const Operations = ({
   const moveReasonText = useMoveReasonText();
   const moveBlockReason = getKnownMoveBlockReason(resource);
   const moveDisabledReason = moveBlockReason ? moveReasonText(moveBlockReason) : undefined;
-  const { createPortal, createWindow } = useBakabaseContext();
+  const { createPortal } = useBakabaseContext();
   const folderAction = useOpenResourceDirectory();
   const uiOptions = useUiOptionsStore((state) => state.data);
   const [refreshingCache, setRefreshingCache] = useState(false);
@@ -98,55 +96,8 @@ const Operations = ({
     return ops;
   }, [uiOptions?.resource?.displayOperations]);
 
-  const showResourceMediaPlayer = () => {
-    BApi.file
-      .getAllFiles({
-        path: resource.path,
-      })
-      .then((a) => {
-        if (!a.code && a.data) {
-          if (a.data.length == 0) {
-            return toast.default(t<string>("No files to preview"));
-          }
-          const files = a.data;
-
-          const entries: BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntry[] = files.map(
-            (path) => {
-              const name = path.split(/[/\\]/).pop() || path;
-              const ext = name.includes(".") ? name.split(".").pop() : undefined;
-
-              return {
-                path: path,
-                name: name,
-                meaningfulName: name,
-                ext: ext,
-                type: IwFsType.Unknown,
-                passwordsForDecompressing: [],
-              };
-            },
-          );
-
-          createWindow(
-            MediaPlayer,
-            {
-              entries: entries,
-              defaultActiveIndex: 0,
-              renderOperations: (
-                filePath: string,
-                mediaType: MediaType,
-                playing: boolean,
-                reactPlayer: any,
-                image: HTMLImageElement | null,
-              ): any => {},
-            },
-            {
-              title: resource.displayName,
-              persistent: true,
-            },
-          );
-        }
-      });
-  };
+  const openBrowserPlayer = useResourceBrowserPlayer();
+  const showResourceMediaPlayer = () => openBrowserPlayer(resource);
 
   const handleDelete = () => {
     let deleteFiles = false;

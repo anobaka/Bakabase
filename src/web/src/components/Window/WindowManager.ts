@@ -26,8 +26,20 @@ export class WindowManager {
     const offsetStep = 40; // Offset each new window by 40px diagonally
 
     // Always apply offset to avoid overlapping with existing windows
-    const x = baseX + existingWindows.length * offsetStep;
-    const y = baseY + existingWindows.length * offsetStep;
+    const x = Math.max(
+      0,
+      Math.min(
+        baseX + existingWindows.length * offsetStep,
+        (initialState.innerWidth ?? window.innerWidth) - (initialState.width ?? 800),
+      ),
+    );
+    const y = Math.max(
+      0,
+      Math.min(
+        baseY + existingWindows.length * offsetStep,
+        (initialState.innerHeight ?? window.innerHeight) - (initialState.height ?? 600),
+      ),
+    );
 
     const state: WindowState = {
       id,

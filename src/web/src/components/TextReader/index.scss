@@ -1,34 +1,75 @@
 .text-reader {
-  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  max-height: 100dvh;
+  min-height: 0;
+  min-width: 0;
+  color: #d4dce9;
+  background: #10151f;
+}
+.text-reader-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 16px;
+  border-bottom: 1px solid #ffffff12;
+  flex-wrap: wrap;
+  font-size: 12px;
+}
+.text-reader-toolbar label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.text-reader-toolbar select,
+.text-reader-toolbar input {
+  color: #d4dce9;
+  background: #1a2230;
+  border: 1px solid #ffffff20;
+  border-radius: 6px;
+  padding: 4px 6px;
+}
+.text-reader-toolbar input {
+  width: 56px;
+}
+.text-reader-count {
+  margin-right: auto;
+  color: #94a3b8;
+}
+.text-reader-notice {
+  padding: 8px 16px;
+  font-size: 12px;
+  color: #e6c980;
+  background: #47391750;
+}
+.text-reader-viewport {
+  flex: 1;
+  min-height: 0;
+  max-height: calc(100dvh - 112px);
   overflow: auto;
+  scrollbar-width: thin;
+}
+.text-reader-lines {
   position: relative;
-  min-width: 1000px;
-  min-height: 600px;
-
-  .configurations {
-    width: 100%;
-    padding: 0 20px;
-    //position: fixed;
-    background: white;
-    display: flex;
-    align-items: center;
-    height: 40px;
-    //top: 0;
-    //left: 0;
-    gap: 10px;
-    .label {
-      color: black;
-    }
-    .value {
-      margin-right: 20px;
-    }
-    margin-bottom: 5px;
-  }
-  .content {
-    padding: 5px;
-
-    .no-content {
-      color: #999;
-    }
-  }
+}
+.text-reader-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  white-space: pre;
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+}
+.text-reader-number {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 52px;
+  padding-right: 12px;
+  margin-right: 12px;
+  text-align: right;
+  color: #61718b;
+  border-right: 1px solid #ffffff0b;
+  user-select: none;
 }
