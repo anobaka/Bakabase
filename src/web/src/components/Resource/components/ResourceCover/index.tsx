@@ -226,6 +226,10 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
   }, []);
 
   const hideCovers = useUiOptionsStore((state) => state.data?.hideResourceCovers ?? false);
+  const fallbackName =
+    resource.displayName?.trim() ||
+    resource.fileName?.trim() ||
+    resource.path?.split(/[\\/]/).filter(Boolean).at(-1);
 
   const renderCover = useCallback(() => {
     // Hide covers mode: show eye-invisible icon to indicate intentional hiding
@@ -252,7 +256,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
     if (coverResolution.status === "not-found") {
       return (
         <div className="w-full h-full flex items-center justify-center">
-          <FallbackCover afterClearingCache={reload} id={resource.id} />
+          <FallbackCover afterClearingCache={reload} id={resource.id} name={fallbackName} />
         </div>
       );
     }
@@ -290,7 +294,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
                 }}
               >
                 {failureUrls.has(url) ? (
-                  <FallbackCover afterClearingCache={reload} id={resource.id} />
+                  <FallbackCover afterClearingCache={reload} id={resource.id} name={fallbackName} />
                 ) : (
                   <Image
                     key={url}
@@ -319,6 +323,8 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
     handleImageLoad,
     handleImageError,
     hideCovers,
+    fallbackName,
+    resource.id,
   ]);
 
   const renderContainer = () => {
@@ -408,10 +414,17 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
                     style={{
                       maxWidth: tooltipWidth,
                       maxHeight: tooltipHeight,
+                      ...(failureUrls.has(url)
+                        ? { width: tooltipWidth, height: tooltipHeight }
+                        : {}),
                     }}
                   >
                     {failureUrls.has(url) ? (
-                      <FallbackCover afterClearingCache={reload} id={resource.id} />
+                      <FallbackCover
+                        afterClearingCache={reload}
+                        id={resource.id}
+                        name={fallbackName}
+                      />
                     ) : (
                       <Image
                         key={url}

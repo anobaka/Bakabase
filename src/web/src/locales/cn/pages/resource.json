@@ -41,6 +41,8 @@
   "ResourceSearchSortableProperty.HealthScore": "健康分",
   "resource.display.title": "显示选项",
   "resource.display.columnCount": "列数",
+  "resource.display.useNameAsCover": "无封面时使用资源名称",
+  "resource.display.useNameAsCoverDescription": "为没有封面的资源显示带有名称和配色的文字封面；已有封面不受影响。",
   "resource.display.fillCover": "填充封面",
   "resource.display.hoverLargeCover": "鼠标悬停时显示大封面",
   "resource.display.previewFiles": "鼠标悬停时预览资源文件",

@@ -8,9 +8,12 @@ import toast from "../../../../bakaui/components/Toast";
 import { Button, Modal, Tooltip } from "@/components/bakaui";
 import BApi from "@/sdk/BApi.tsx";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider.tsx";
+import { useUiOptionsStore } from "@/stores/options";
+import NameCover from "./NameCover";
 
 type Props = {
   id: number;
+  name?: string;
   afterClearingCache?: () => any;
 };
 
@@ -21,9 +24,13 @@ const priorities = [
   { icon: FiSearch, key: "discovery" },
 ] as const;
 
-const FallbackCover = ({ id, afterClearingCache }: Props) => {
+const FallbackCover = ({ id, name, afterClearingCache }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
+  const useNameAsCover = useUiOptionsStore(
+    (state) => state.data?.resource?.useNameAsCover ?? false,
+  );
+  const coverName = name?.trim() || t("resource.cover.unnamed", { id });
 
   const showModal = () => {
     createPortal(Modal, {
@@ -110,8 +117,12 @@ const FallbackCover = ({ id, afterClearingCache }: Props) => {
       }
       delay={2000}
     >
-      <div className="inline-flex">
-        <MdBrokenImage className={"text-2xl opacity-50"} />
+      <div className={useNameAsCover ? "w-full h-full" : "inline-flex"}>
+        {useNameAsCover ? (
+          <NameCover name={coverName} />
+        ) : (
+          <MdBrokenImage className={"text-2xl opacity-50"} />
+        )}
       </div>
     </Tooltip>
   );
