@@ -169,5 +169,10 @@
   "pathMarkConfig.markByExample.layer": "level {{layer}} below this folder",
   "pathMarkConfig.markByExample.alreadyMarked": "already marked",
   "pathMarkConfig.markByExample.noAncestors": "That folder has nothing above it, so there is nowhere to put the rule.",
-  "pathMarkConfig.markByExample.confirm": "Create the mark"
+  "pathMarkConfig.markByExample.confirm": "Create the mark",
+  "pathMarkConfig.pathCheck.failed": "The server could not check this path.",
+  "pathMarkConfig.pathCheck.title": "Could not check {{count}} paths",
+  "pathMarkConfig.pathCheck.description": "These marks are preserved. Paths belong to the server; a path from another computer may need a mounted storage location in Docker. Review the reason below, retry, or manage the marks to choose an accessible path.",
+  "pathMarkConfig.pathCheck.retry": "Check paths again",
+  "pathMarkConfig.pathCheck.managePaths": "Manage path marks"
 }

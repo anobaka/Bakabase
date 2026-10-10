@@ -182,5 +182,7 @@
   "downloader.tip.clickToCopyError": "Click to copy the full error",
   "downloader.action.viewNotices": "View notes",
   "downloader.label.notices": "Notes from the last run",
-  "downloader.tip.clickToCopyNotices": "Click to copy all notes"
+  "downloader.tip.clickToCopyNotices": "Click to copy all notes",
+  "downloader.error.noFolderAvailable": "No downloaded file or output folder is available for this task.",
+  "downloader.error.openFolderFailed": "Could not open the download folder"
 }

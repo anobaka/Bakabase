@@ -12,6 +12,7 @@ using Bakabase.Service.Models.Input;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Bakabase.InsideWorld.Business.Components.FileExplorer;
 
 namespace Bakabase.Tests.RemoteAccess;
 
@@ -50,6 +51,17 @@ public sealed class FileStorageBoundaryTests
         {
             Paths = [Storage, Path.Combine(Storage, "future", "download")]
         }).Code);
+    }
+
+    [TestMethod]
+    public async Task EntryAvailabilityDistinguishesRealFilesAndMissingPathsWithoutBypassingStoragePolicy()
+    {
+        var controller = Controller();
+        Assert.AreEqual(IwFsType.Directory, (await controller.GetIwFsEntry(Storage)).Data!.Type);
+        Assert.AreNotEqual(IwFsType.Invalid, (await controller.GetIwFsEntry(Path.Combine(Storage, "book.txt"))).Data!.Type);
+        Assert.AreEqual(IwFsType.Invalid, (await controller.GetIwFsEntry(Path.Combine(Storage, "missing.jpg"))).Data!.Type);
+        Assert.AreEqual(IwFsType.Invalid, (await controller.GetIwFsEntry(Path.Combine(Storage, "missing-folder"))).Data!.Type);
+        await Assert.ThrowsExactlyAsync<IOException>(() => controller.GetIwFsEntry(Path.Combine(Outside, "missing-folder")));
     }
 
     [TestMethod]

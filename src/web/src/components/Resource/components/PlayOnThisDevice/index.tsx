@@ -6,12 +6,12 @@ import type { Resource as ResourceModel } from "@/core/models/Resource";
 
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import toast from "react-hot-toast";
 import { AiOutlineCopy, AiOutlinePlayCircle } from "react-icons/ai";
 
 import { detectPlatform, schemesForPlatform } from "./playerSchemes";
 
-import { Button, Chip, Modal, Select } from "@/components/bakaui";
+import { Button, Chip, Modal, Select, toast } from "@/components/bakaui";
+import { copyTextToClipboard } from "@/core/clipboard";
 import BApi from "@/sdk/BApi";
 
 const PlatformPreferenceKey = "bakabase-remote-platform";
@@ -28,6 +28,7 @@ const platformOptions: DevicePlatform[] = ["android", "ios", "windows", "macos",
 
 const PlayOnThisDevice = ({ resource, filePath, onPlayInBrowser, onDestroyed }: Props) => {
   const { t } = useTranslation();
+  const [copyFeedback, setCopyFeedback] = useState<string>();
 
   const [platform, setPlatform] = useState<DevicePlatform>(() => {
     const stored = localStorage.getItem(PlatformPreferenceKey) as DevicePlatform | null;
@@ -46,7 +47,7 @@ const PlayOnThisDevice = ({ resource, filePath, onPlayInBrowser, onDestroyed }: 
    * resolve a relative URL against.
    */
   const streamUrl = useMemo(
-    () => `${window.location.origin}${BApi.file.getRawFileUrl({ fullname: filePath })}`,
+    () => new URL(BApi.file.getRawFileUrl({ fullname: filePath }), window.location.origin).href,
     [filePath],
   );
 
@@ -67,11 +68,14 @@ const PlayOnThisDevice = ({ resource, filePath, onPlayInBrowser, onDestroyed }: 
   };
 
   const copyStreamUrl = async () => {
+    setCopyFeedback(undefined);
     try {
-      await navigator.clipboard.writeText(streamUrl);
+      await copyTextToClipboard(streamUrl);
+      setCopyFeedback(t("resource.playOnThisDevice.copied"));
       toast.success(t("resource.playOnThisDevice.copied"));
     } catch {
-      toast.error(t("resource.playOnThisDevice.copyFailed"));
+      setCopyFeedback(t("resource.playOnThisDevice.copyFailed"));
+      toast.danger(t("resource.playOnThisDevice.copyFailed"));
     }
   };
 
@@ -156,6 +160,16 @@ const PlayOnThisDevice = ({ resource, filePath, onPlayInBrowser, onDestroyed }: 
         </div>
 
         <div className="flex flex-col gap-2">
+          <label className="flex flex-col gap-1 text-sm">
+            <span>{t("resource.playOnThisDevice.streamUrl")}</span>
+            <textarea
+              readOnly
+              className="w-full resize-none rounded-lg border border-default-200 bg-default-100 p-2 font-mono text-xs"
+              rows={3}
+              value={streamUrl}
+              onFocus={(event) => event.currentTarget.select()}
+            />
+          </label>
           <Button
             fullWidth
             size="sm"
@@ -165,6 +179,9 @@ const PlayOnThisDevice = ({ resource, filePath, onPlayInBrowser, onDestroyed }: 
           >
             {t("resource.playOnThisDevice.copyStreamUrl")}
           </Button>
+          <div aria-live="polite" className="text-xs">
+            {copyFeedback}
+          </div>
           <div className="text-xs text-foreground-400">
             {t("resource.playOnThisDevice.copyStreamUrlHint")}
           </div>

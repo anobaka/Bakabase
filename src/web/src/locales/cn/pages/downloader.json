@@ -182,5 +182,7 @@
   "downloader.tip.clickToCopyError": "点击复制完整错误信息",
   "downloader.action.viewNotices": "查看提示",
   "downloader.label.notices": "上次运行的提示",
-  "downloader.tip.clickToCopyNotices": "点击复制全部提示"
+  "downloader.tip.clickToCopyNotices": "点击复制全部提示",
+  "downloader.error.noFolderAvailable": "此任务尚无可用的下载文件或输出目录。",
+  "downloader.error.openFolderFailed": "无法打开下载目录"
 }

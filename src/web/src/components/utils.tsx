@@ -976,6 +976,27 @@ export function extractErrorMessage(error: unknown): string {
       return error.message;
     }
 
+    // The generated SDK rejects HTTP failures with the Response object and
+    // keeps the already parsed API/problem body in `error` (or `data`).
+    for (const key of ["error", "data"] as const) {
+      const body = (error as Record<string, unknown>)[key];
+
+      if (body && typeof body === "object") {
+        for (const field of ["message", "detail", "title"] as const) {
+          const message = (body as Record<string, unknown>)[field];
+
+          if (typeof message === "string" && message) return message;
+        }
+      }
+    }
+
+    if ("status" in error && typeof error.status === "number") {
+      const statusText =
+        "statusText" in error && typeof error.statusText === "string" ? error.statusText : "";
+
+      return `HTTP ${error.status}${statusText ? ` ${statusText}` : ""}`;
+    }
+
     // 检查是否有toString方法
     if (typeof error.toString === "function") {
       return error.toString();

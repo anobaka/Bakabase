@@ -3,6 +3,7 @@
 import type { DestroyableProps } from "@/components/bakaui/types";
 
 import { CopyOutlined } from "@ant-design/icons";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Button, Modal, toast } from "@/components/bakaui";
@@ -12,13 +13,17 @@ type Props = DestroyableProps & { path: string };
 
 const FolderLocationModal = ({ path, onDestroyed }: Props) => {
   const { t } = useTranslation();
+  const [copyFeedback, setCopyFeedback] = useState<string>();
 
   const copyPath = async () => {
+    setCopyFeedback(undefined);
     try {
       await copyTextToClipboard(path);
+      setCopyFeedback(t("resource.folderLocation.copied"));
       toast.success(t("resource.folderLocation.copied"));
     } catch {
-      toast.error(t("resource.folderLocation.copyFailed"));
+      setCopyFeedback(t("resource.folderLocation.copyFailed"));
+      toast.danger(t("resource.folderLocation.copyFailed"));
     }
   };
 
@@ -46,6 +51,9 @@ const FolderLocationModal = ({ path, onDestroyed }: Props) => {
           <Button color="primary" startContent={<CopyOutlined />} onPress={copyPath}>
             {t("resource.folderLocation.copyPath")}
           </Button>
+          <div aria-live="polite" className="text-xs">
+            {copyFeedback}
+          </div>
           <p className="text-xs text-foreground-500">
             {t("resource.folderLocation.serverPathHint")}
           </p>

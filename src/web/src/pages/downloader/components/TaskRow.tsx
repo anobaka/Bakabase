@@ -60,6 +60,7 @@ export type TaskRowProps = {
   onStop: (id: number) => void;
   onEdit: (id: number) => void;
   onOpenFolder: (task: DownloadTask) => void;
+  openFolderLabel?: string;
   onDelete: (id: number) => void;
   onShowError: (task: DownloadTask) => void;
   onClick: (id: number, e: any) => void;
@@ -85,6 +86,7 @@ const TaskRow = memo(function TaskRow({
   onStop,
   onEdit,
   onOpenFolder,
+  openFolderLabel,
   onDelete,
   onShowError,
   onClick,
@@ -352,10 +354,10 @@ const TaskRow = memo(function TaskRow({
               <AiOutlineEdit aria-hidden className="text-lg" />
             </Button>
           </Tooltip>
-          <Tooltip content={t<string>("common.action.openFolder")}>
+          <Tooltip content={openFolderLabel ?? t<string>("common.action.openFolder")}>
             <Button
               isIconOnly
-              aria-label={t<string>("common.action.openFolder")}
+              aria-label={openFolderLabel ?? t<string>("common.action.openFolder")}
               isDisabled={task.thirdPartyId !== ThirdPartyId.ExHentai && !task.downloadPath}
               size="sm"
               variant="light"

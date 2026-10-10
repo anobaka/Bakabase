@@ -169,5 +169,10 @@
   "pathMarkConfig.markByExample.layer": "该目录下第 {{layer}} 层",
   "pathMarkConfig.markByExample.alreadyMarked": "已有标记",
   "pathMarkConfig.markByExample.noAncestors": "该目录没有上级目录，规则无处安放。",
-  "pathMarkConfig.markByExample.confirm": "创建标记"
+  "pathMarkConfig.markByExample.confirm": "创建标记",
+  "pathMarkConfig.pathCheck.failed": "服务器无法检查此路径。",
+  "pathMarkConfig.pathCheck.title": "有 {{count}} 个路径无法检查",
+  "pathMarkConfig.pathCheck.description": "这些标记会保留。路径属于服务端，其他电脑上的旧路径可能需要改为 Docker 中挂载的目录。请查看下方原因，重新检查，或管理标记并选择当前服务器可访问的路径。",
+  "pathMarkConfig.pathCheck.retry": "重新检查路径",
+  "pathMarkConfig.pathCheck.managePaths": "管理路径标记"
 }

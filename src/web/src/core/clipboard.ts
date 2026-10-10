@@ -9,17 +9,24 @@ export async function copyTextToClipboard(text: string): Promise<void> {
   try {
     await navigator.clipboard.writeText(text);
   } catch {
+    const activeElement =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const textarea = document.createElement("textarea");
 
     textarea.value = text;
+    textarea.readOnly = true;
     textarea.style.position = "fixed";
     textarea.style.opacity = "0";
-    document.body.appendChild(textarea);
+    // Keep the selection inside the current modal's focus scope. A textarea
+    // appended outside it can be made inert or immediately lose focus.
+    (activeElement?.closest('[role="dialog"]') ?? document.body).appendChild(textarea);
+    textarea.focus({ preventScroll: true });
     textarea.select();
     try {
       if (!document.execCommand("copy")) throw new Error("Copy failed");
     } finally {
       textarea.remove();
+      activeElement?.focus({ preventScroll: true });
     }
   }
 }

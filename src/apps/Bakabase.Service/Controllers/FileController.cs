@@ -680,7 +680,21 @@ namespace Bakabase.Service.Controllers
         public async Task<SingletonResponse<IwFsEntry>> GetIwFsEntry(string path)
         {
             _storagePolicy.EnsurePathAllowed(path);
-            return new SingletonResponse<IwFsEntry>(new IwFsEntry(path));
+            try
+            {
+                // IwFsEntry infers a display type from the extension, even for a
+                // missing path. Availability checks need the filesystem's answer.
+                System.IO.File.GetAttributes(path);
+                return new SingletonResponse<IwFsEntry>(new IwFsEntry(path));
+            }
+            catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
+            {
+                return new SingletonResponse<IwFsEntry>(new IwFsEntry(path, IwFsType.Invalid));
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return SingletonResponseBuilder<IwFsEntry>.BuildBadRequest(ex.Message);
+            }
         }
 
         [HttpPost("directory")]
