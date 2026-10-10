@@ -77,6 +77,26 @@ public sealed class DownloadTaskServiceTests
         => Assert.AreEqual(0, (await _service.GetAllDto()).Length);
 
     [TestMethod]
+    public async Task SummaryFiltersBySourceAndCountsCurrentRows()
+    {
+        _db.DownloadTasks.AddRange(
+            new DownloadTaskDbModel {Key = "eh-complete", ThirdPartyId = ThirdPartyId.ExHentai, Status = DownloadTaskDbModelStatus.Complete},
+            new DownloadTaskDbModel {Key = "eh-failed", ThirdPartyId = ThirdPartyId.ExHentai, Status = DownloadTaskDbModelStatus.Failed},
+            new DownloadTaskDbModel {Key = "eh-disabled", ThirdPartyId = ThirdPartyId.ExHentai, Status = DownloadTaskDbModelStatus.Disabled},
+            new DownloadTaskDbModel {Key = "pixiv-complete", ThirdPartyId = ThirdPartyId.Pixiv, Status = DownloadTaskDbModelStatus.Complete});
+        await _db.SaveChangesAsync();
+
+        var selected = await _service.GetSummary(ThirdPartyId.ExHentai);
+        Assert.AreEqual(3, selected.Total);
+        Assert.AreEqual(1, selected.Completed);
+        Assert.AreEqual(1, selected.Failed);
+        var all = await _service.GetSummary();
+        Assert.AreEqual(4, all.Total);
+        Assert.AreEqual(2, all.Completed);
+        Assert.AreEqual(0, (await _service.GetSummary(ThirdPartyId.Patreon)).Total);
+    }
+
+    [TestMethod]
     public async Task AddRange_PersistsTasks()
     {
         await _service.AddRange([NewTask("k1"), NewTask("k2")]);

@@ -1,12 +1,12 @@
 {
   "name": "baka-monkey",
   "private": true,
-  "version": "2.1.1",
+  "version": "2.1.2",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "test": "vite build && node --experimental-strip-types --test tests/*.test.ts tests/*.test.mjs",
+    "test": "pnpm build && node --experimental-strip-types --test tests/*.test.ts tests/*.test.mjs",
     "preview": "vite preview"
   },
   "devDependencies": {
