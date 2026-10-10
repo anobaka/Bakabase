@@ -999,6 +999,15 @@ export interface BakabaseAbstractionsModelsDomainSourceMetadataMapping {
   targetPropertyId: number;
 }
 
+export interface BakabaseAbstractionsModelsDomainTaskSummary {
+  /** @format int32 */
+  completed: number;
+  /** @format int32 */
+  failed: number;
+  /** @format int32 */
+  total: number;
+}
+
 export interface BakabaseAbstractionsModelsDomainTextEntryValue {
   /** @format int32 */
   id: number;
@@ -9058,6 +9067,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstract
   code: number;
   message?: string;
   data?: BakabaseAbstractionsModelsDomainResourceProfilePlayerOptions;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainTaskSummary {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseAbstractionsModelsDomainTaskSummary;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainTextEntryValue {
@@ -21361,6 +21377,57 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags DownloadTask
+     * @name GetDownloadTaskSummary
+     * @request GET:/download-task/summary
+     */
+    getDownloadTaskSummary: (
+      query?: {
+        /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb] */
+        thirdPartyId?: BakabaseInsideWorldModelsConstantsThirdPartyId;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainTaskSummary,
+        any
+      >({
+        path: `/download-task/summary`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getDownloadTaskSummary
+     * @name getDownloadTaskSummaryUrl
+     */
+    getDownloadTaskSummaryUrl: (query?: {
+        /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb] */
+        thirdPartyId?: BakabaseInsideWorldModelsConstantsThirdPartyId;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/download-task/summary`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags DownloadTask
      * @name GetDownloadTask
      * @request GET:/download-task/{id}
      */
@@ -28837,6 +28904,57 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         format: "json",
         ...params,
       }),
+
+    /**
+     * No description
+     *
+     * @tags PostParserTaskSummary
+     * @name GetPostParserTaskSummary
+     * @request GET:/post-parser/task/summary
+     */
+    getPostParserTaskSummary: (
+      query?: {
+        /** [5: SoulPlus] */
+        source?: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainConstantsPostParserSource;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainTaskSummary,
+        any
+      >({
+        path: `/post-parser/task/summary`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getPostParserTaskSummary
+     * @name getPostParserTaskSummaryUrl
+     */
+    getPostParserTaskSummaryUrl: (query?: {
+        /** [5: SoulPlus] */
+        source?: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainConstantsPostParserSource;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/post-parser/task/summary`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
 
     /**
      * No description

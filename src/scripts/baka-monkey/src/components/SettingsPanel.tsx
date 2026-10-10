@@ -7,8 +7,15 @@ import { IoSettingsSharp, IoWarning } from 'react-icons/io5';
 import { getApiBaseUrl, setApiBaseUrl, getStoredValue, setStoredValue, httpRequest } from '../api';
 import { pingNow, type ConnectionState } from '../heartbeat';
 import { getOverlayRoot } from '../overlay';
-import { isCoverOverlayEnabled, setCoverOverlayEnabled } from '../settings';
+import {
+  isCoverOverlayEnabled,
+  setCoverOverlayEnabled,
+  isTaskSummaryVisible,
+  setTaskSummaryVisible,
+  onSettingsChange,
+} from '../settings';
 import type { CoverOverlayConfig } from '../types';
+import type { TaskSummaryTarget } from '../taskSummary';
 import {
   AUTO_TIMEZONE,
   getBrowserTimeZone,
@@ -17,6 +24,7 @@ import {
   setTimeZonePreference,
 } from '../timezone';
 import { showToast } from './Toast';
+import { TaskSummaryPanel } from './TaskSummaryPanel';
 import { t, getLocale, setLocale, onLocaleChange, describeRequestError, type Locale } from '../i18n';
 
 const localeOptions: { key: Locale; label: string }[] = [
@@ -37,16 +45,19 @@ const MARKERS_VISIBLE_KEY = 'markers_visible_v2';
 export function SettingsPanel({
   siteKey,
   coverOverlay,
+  taskSummaryTarget,
   connection,
 }: {
   siteKey?: string;
   /** Present when the current site can turn its covers into one big action button. */
   coverOverlay?: CoverOverlayConfig;
+  taskSummaryTarget?: TaskSummaryTarget;
   connection: ConnectionState;
 }) {
   const { connected, error: connectionError } = connection;
   const [markersVisible, setMarkersVisible] = useState(() => getStoredValue(MARKERS_VISIBLE_KEY, true));
   const [coverOverlayOn, setCoverOverlayOn] = useState(() => (siteKey ? isCoverOverlayEnabled(siteKey) : false));
+  const [taskSummaryVisible, setTaskSummaryVisibleState] = useState(() => (siteKey ? isTaskSummaryVisible(siteKey) : true));
   const [apiUrl, setApiUrl] = useState(() => getApiBaseUrl());
   const [apiUrlError, setApiUrlError] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
@@ -60,6 +71,12 @@ export function SettingsPanel({
   const timeZoneOptions = useMemo(() => getSupportedTimeZones(), []);
 
   useEffect(() => onLocaleChange(() => forceUpdate((n) => n + 1)), []);
+
+  useEffect(() => {
+    const sync = () => setTaskSummaryVisibleState(siteKey ? isTaskSummaryVisible(siteKey) : true);
+    sync();
+    return onSettingsChange(sync);
+  }, [siteKey]);
 
   // Reflect the persisted markers-visible preference onto <body> on mount.
   useEffect(() => {
@@ -96,6 +113,10 @@ export function SettingsPanel({
     // App.tsx listens for this and re-scans, so the overlay appears/disappears
     // without a reload.
     setCoverOverlayEnabled(siteKey, next);
+  };
+
+  const updateTaskSummaryVisibility = (visible: boolean) => {
+    if (siteKey) setTaskSummaryVisible(siteKey, visible);
   };
 
   const handleSaveApiUrl = () => {
@@ -141,6 +162,14 @@ export function SettingsPanel({
 
   return (
     <div style={{ position: 'fixed', bottom: 20, right: 20, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, zIndex: 10000 }}>
+      {siteKey && taskSummaryTarget && taskSummaryVisible && (
+        <TaskSummaryPanel
+          siteKey={siteKey}
+          target={taskSummaryTarget}
+          connection={connection}
+          onClose={() => updateTaskSummaryVisibility(false)}
+        />
+      )}
       {!connected && (
         <div style={{
           display: 'flex',
@@ -195,6 +224,17 @@ export function SettingsPanel({
             >
               {markersVisible ? t('hideMarkers') : t('showMarkers')}
             </Button>
+            {siteKey && taskSummaryTarget && (
+              <Button
+                size="sm"
+                color={taskSummaryVisible ? 'warning' : 'success'}
+                variant="flat"
+                onPress={() => updateTaskSummaryVisibility(!taskSummaryVisible)}
+                style={{ width: '100%' }}
+              >
+                {taskSummaryVisible ? t('taskSummary.hide') : t('taskSummary.show')}
+              </Button>
+            )}
             {coverOverlay && siteKey && (
               <div className="flex flex-col gap-1">
                 <Button

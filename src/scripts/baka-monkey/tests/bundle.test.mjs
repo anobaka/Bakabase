@@ -6,11 +6,11 @@ import vm from 'node:vm';
 const source = readFileSync(new URL('../dist/bakabase.user.js', import.meta.url), 'utf8');
 // Expose the real production functions inside the single userscript scope. Keep
 // DOMContentLoaded pending so no fabricated third-party page or React tree is needed.
-const instrumented = source.replace(/\}\)\(\);\s*$/, 'globalThis.testApi = { getApiAddressGeneration, getApiBaseUrl, setApiBaseUrl, httpRequest, pingNow, getConnectionState, t, describeRequestError }; })();');
+const instrumented = source.replace(/\}\)\(\);\s*$/, 'globalThis.testApi = { getApiAddressGeneration, getApiBaseUrl, setApiBaseUrl, httpRequest, pingNow, getConnectionState, t, describeRequestError, startTaskSummaryPolling, getTaskPageUrl, isTaskSummaryVisible, setTaskSummaryVisible, onSettingsChange }; })();');
 const baseUrl = 'http://192.168.3.23:34567';
 
-function sandbox({ endpoint = baseUrl, locale = 'zh', transport } = {}) {
-  const storage = new Map([['api_base_url', endpoint], ['locale', locale]]);
+function sandbox({ endpoint = baseUrl, locale = 'zh', transport, timers, storedValues = [] } = {}) {
+  const storage = new Map([['api_base_url', endpoint], ['locale', locale], ...storedValues]);
   const requests = [];
   const context = {
     console: { debug() {}, error() {}, log() {}, warn() {} },
@@ -26,6 +26,7 @@ function sandbox({ endpoint = baseUrl, locale = 'zh', transport } = {}) {
       transport?.(details);
       return { abort() {} };
     },
+    ...timers,
   };
   vm.runInNewContext(instrumented, context);
   return { api: context.testApi, storage, requests };
@@ -114,4 +115,143 @@ test('health rejects non-Bakabase success bodies and honors explicitly stored UI
     assert.equal(api.getConnectionState().error.kind, 'invalid-response');
   }
   assert.equal(sandbox({ locale: 'en' }).api.t('disconnected'), 'Cannot connect to Bakabase');
+});
+
+function fakeClock() {
+  let now = 0;
+  let id = 0;
+  const pending = new Map();
+  return {
+    timers: {
+      setTimeout(callback, delay) {
+        pending.set(++id, { callback, at: now + delay });
+        return id;
+      },
+      clearTimeout(timer) { pending.delete(timer); },
+    },
+    advance(duration) {
+      const end = now + duration;
+      while (true) {
+        const next = [...pending].sort((a, b) => a[1].at - b[1].at)[0];
+        if (!next || next[1].at > end) break;
+        now = next[1].at;
+        pending.delete(next[0]);
+        next[1].callback();
+      }
+      now = end;
+    },
+    get size() { return pending.size; },
+  };
+}
+
+const summaryResponse = (data, code = 0) => ({ status: 200, responseText: JSON.stringify({ code, data }) });
+
+test('task summary close persists per site and settings can restore it after reload', () => {
+  const { api, storage } = sandbox();
+  let notifications = 0;
+  const unsubscribe = api.onSettingsChange(() => notifications++);
+  assert.equal(api.isTaskSummaryVisible('exhentai'), true);
+  assert.equal(api.isTaskSummaryVisible('soulplus'), true);
+  api.setTaskSummaryVisible('exhentai', false);
+  assert.equal(api.isTaskSummaryVisible('exhentai'), false);
+  assert.equal(api.isTaskSummaryVisible('soulplus'), true);
+  assert.equal(notifications, 1);
+  const reloaded = sandbox({ storedValues: [...storage] });
+  assert.equal(reloaded.api.isTaskSummaryVisible('exhentai'), false);
+  reloaded.api.setTaskSummaryVisible('exhentai', true);
+  assert.equal(reloaded.api.isTaskSummaryVisible('exhentai'), true);
+  unsubscribe();
+});
+
+test('task summary uses site-specific compact endpoints and opens unfiltered task pages', () => {
+  for (const [target, path, page] of [
+    [{ kind: 'download', source: 2 }, '/download-task/summary?thirdPartyId=2', 'downloader'],
+    [{ kind: 'parse', source: 5 }, '/post-parser/task/summary?source=5', 'post-parser'],
+  ]) {
+    const clock = fakeClock();
+    const updates = [];
+    const { api, requests } = sandbox({ timers: clock.timers });
+    const stop = api.startTaskSummaryPolling({ target, onUpdate: (value) => updates.push(value) });
+    assert.equal(requests[0].url, `${baseUrl}${path}`);
+    assert.equal(requests[0].timeout, 8000);
+    requests[0].onload(summaryResponse({ completed: 3, failed: 2, total: 9 }));
+    assert.equal(JSON.stringify(updates), '[null,{"completed":3,"failed":2,"total":9}]');
+    assert.equal(api.getTaskPageUrl(baseUrl, target), `${baseUrl}/#/${page}`);
+    stop();
+    assert.equal(clock.size, 0);
+  }
+});
+
+test('task summary serializes polling and cleanup ignores an in-flight response', () => {
+  const clock = fakeClock();
+  const updates = [];
+  const { api, requests } = sandbox({ timers: clock.timers });
+  const stop = api.startTaskSummaryPolling({ target: { kind: 'download', source: 2 }, onUpdate: (value) => updates.push(value) });
+  clock.advance(4000);
+  assert.equal(requests.length, 1, 'the pending request has no competing poll');
+  requests[0].onload(summaryResponse({ completed: 0, failed: 0, total: 0 }));
+  clock.advance(9999);
+  assert.equal(requests.length, 1);
+  clock.advance(1);
+  assert.equal(requests.length, 2);
+  stop();
+  const before = JSON.stringify(updates);
+  requests[1].onload(summaryResponse({ completed: 1, failed: 0, total: 1 }));
+  clock.advance(30000);
+  assert.equal(JSON.stringify(updates), before);
+  assert.equal(requests.length, 2, 'a hidden or closed summary must not resume polling');
+  assert.equal(clock.size, 0);
+});
+
+test('task summary clears stale numbers on error, validates responses and recovers', () => {
+  const clock = fakeClock();
+  const updates = [];
+  const { api, requests } = sandbox({ timers: clock.timers });
+  const stop = api.startTaskSummaryPolling({ target: { kind: 'parse', source: 5 }, onUpdate: (value) => updates.push(value) });
+  requests[0].onload(summaryResponse({ completed: 7, failed: 1, total: 10 }));
+  clock.advance(10000);
+  requests.at(-1).onerror();
+  assert.equal(updates.at(-1), null);
+  for (const invalid of [undefined, { completed: -1, failed: 0, total: 1 }, { completed: 2, failed: 1, total: 2 }, { completed: '1', failed: 0, total: 2 }]) {
+    clock.advance(10000);
+    requests.at(-1).onload(summaryResponse(invalid));
+    assert.equal(updates.at(-1), null);
+  }
+  clock.advance(10000);
+  requests.at(-1).onload(summaryResponse({ completed: 0, failed: 0, total: 0 }));
+  assert.equal(JSON.stringify(updates.at(-1)), '{"completed":0,"failed":0,"total":0}');
+  stop();
+});
+
+test('task summary timeout permits a later retry and rejects a late answer', () => {
+  const clock = fakeClock();
+  const updates = [];
+  const { api, requests } = sandbox({ timers: clock.timers });
+  const stop = api.startTaskSummaryPolling({ target: { kind: 'parse', source: 5 }, onUpdate: (value) => updates.push(value) });
+  clock.advance(8000);
+  requests[0].onload(summaryResponse({ completed: 3, failed: 0, total: 3 }));
+  assert.equal(updates.at(-1), null);
+  clock.advance(10000);
+  assert.equal(requests.length, 2);
+  requests[1].onload(summaryResponse({ completed: 4, failed: 0, total: 4 }));
+  assert.equal(updates.at(-1).completed, 4);
+  stop();
+});
+
+test('task summary never publishes counts from an old server, including A to B to A', () => {
+  const clock = fakeClock();
+  const updates = [];
+  const { api, requests } = sandbox({ timers: clock.timers });
+  const oldStop = api.startTaskSummaryPolling({ target: { kind: 'download', source: 2 }, onUpdate: (value) => updates.push(value) });
+  api.setApiBaseUrl('http://192.168.3.24:34567');
+  api.setApiBaseUrl(baseUrl);
+  const stop = api.startTaskSummaryPolling({ target: { kind: 'download', source: 2 }, onUpdate: (value) => updates.push(value) });
+  requests[1].onload(summaryResponse({ completed: 5, failed: 0, total: 5 }));
+  requests[0].onload(summaryResponse({ completed: 99, failed: 0, total: 99 }));
+  assert.equal(updates.at(-1).completed, 5);
+  clock.advance(10000);
+  assert.equal(requests.length, 3, 'only the current server poll continues');
+  requests[2].onerror();
+  oldStop();
+  stop();
 });

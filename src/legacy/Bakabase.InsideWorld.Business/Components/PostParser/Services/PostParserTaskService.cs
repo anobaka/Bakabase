@@ -4,6 +4,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Tasks;
+using Bakabase.Abstractions.Models.Domain;
+using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Business.Components.Gui;
 using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.PostParser.Extensions;
@@ -45,6 +47,15 @@ public class PostParserTaskService<TDbContext>(TDbContext db,
             task.MinimumRemainingCoins = purchaseOptions.Value.MinimumRemainingCoins;
         }
         return result;
+    }
+
+    public async Task<TaskSummary> GetSummary(PostParserSource? source = null)
+    {
+        var all = await GetAll();
+        var activeTasks = tasks.Tasks.Where(t => t.Task.Status is BTaskStatus.NotStarted or BTaskStatus.Running
+                or BTaskStatus.Paused or BTaskStatus.Pausing or BTaskStatus.Resuming or BTaskStatus.Cancelling)
+            .Select(t => t.Id).ToHashSet();
+        return PostParserTaskSummary.Create(all, source, activeTasks);
     }
 
     public Task AddRange(Dictionary<PostParserSource, List<string>> sourceLinksMap, List<PostParseTarget> targets) =>

@@ -6,6 +6,7 @@ using System.IO;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Models.Domain;
 using Bakabase.InsideWorld.Business;
 using Bakabase.Infrastructures.Components.Gui;
 using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
@@ -711,6 +712,22 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
         {
             var tasks = await GetAll();
             return await ToDto(tasks);
+        }
+
+        public async Task<TaskSummary> GetSummary(ThirdPartyId? thirdPartyId = null)
+        {
+            var tasks = await GetAll(thirdPartyId.HasValue ? t => t.ThirdPartyId == thirdPartyId.Value : null);
+            var summary = new TaskSummary {Total = tasks.Count};
+            foreach (var task in tasks)
+            {
+                // Project the same live status as the list, without loading downloaded-file sizes.
+                switch (task.ToDomainModel(DownloaderManager)!.Status)
+                {
+                    case DownloadTaskStatus.Complete: summary.Completed++; break;
+                    case DownloadTaskStatus.Failed: summary.Failed++; break;
+                }
+            }
+            return summary;
         }
 
         /// <summary>

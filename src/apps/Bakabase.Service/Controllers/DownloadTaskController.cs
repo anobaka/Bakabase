@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Infrastructures.Components.Gui;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
@@ -64,6 +65,14 @@ public class DownloadTaskController : Controller
     public async Task<ListResponse<DownloadTask>> GetAll()
     {
         return new ListResponse<DownloadTask>(await _service.GetAllDto());
+    }
+
+    [HttpGet("summary")]
+    [RemoteAccessible]
+    [SwaggerOperation(OperationId = "GetDownloadTaskSummary")]
+    public async Task<SingletonResponse<TaskSummary>> GetSummary([FromQuery] ThirdPartyId? thirdPartyId = null)
+    {
+        return new SingletonResponse<TaskSummary>(await _service.GetSummary(thirdPartyId));
     }
 
     [SwaggerOperation(OperationId = "GetDownloadTask")]

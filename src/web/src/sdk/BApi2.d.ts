@@ -3498,6 +3498,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/download-task/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetDownloadTaskSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/download-task/{id}": {
         parameters: {
             query?: never;
@@ -7270,6 +7286,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/post-parser/task/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetPostParserTaskSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/post-parser/workflow-runs": {
         parameters: {
             query?: never;
@@ -10344,6 +10376,14 @@ export interface components {
             targetPool: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyPool"];
             /** Format: int32 */
             targetPropertyId: number;
+        };
+        "Bakabase.Abstractions.Models.Domain.TaskSummary": {
+            /** Format: int32 */
+            completed: number;
+            /** Format: int32 */
+            failed: number;
+            /** Format: int32 */
+            total: number;
         };
         "Bakabase.Abstractions.Models.Domain.TextEntryValue": {
             /** Format: int32 */
@@ -16995,6 +17035,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfilePlayerOptions"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.TaskSummary]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.TaskSummary"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.TextEntryValue]": {
             /** Format: int32 */
@@ -25102,6 +25148,31 @@ export interface operations {
             };
         };
     };
+    GetDownloadTaskSummary: {
+        parameters: {
+            query?: {
+                /** @description [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb] */
+                thirdPartyId?: components["schemas"]["Bakabase.InsideWorld.Models.Constants.ThirdPartyId"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.TaskSummary]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.TaskSummary]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.TaskSummary]"];
+                };
+            };
+        };
+    };
     GetDownloadTask: {
         parameters: {
             query?: never;
@@ -32854,6 +32925,31 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.PostParserAcquisitionResult]"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.PostParserAcquisitionResult]"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.PostParserAcquisitionResult]"];
+                };
+            };
+        };
+    };
+    GetPostParserTaskSummary: {
+        parameters: {
+            query?: {
+                /** @description [5: SoulPlus] */
+                source?: components["schemas"]["Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants.PostParserSource"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.TaskSummary]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.TaskSummary]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.TaskSummary]"];
                 };
             };
         };

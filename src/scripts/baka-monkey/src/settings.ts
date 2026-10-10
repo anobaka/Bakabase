@@ -29,3 +29,14 @@ export function setCoverOverlayEnabled(siteKey: string, enabled: boolean): void 
   setStoredValue(coverOverlayKey(siteKey), enabled);
   notify();
 }
+
+const taskSummaryKey = (siteKey: string) => `task_summary_visible.${siteKey}`;
+
+export function isTaskSummaryVisible(siteKey: string): boolean {
+  return getStoredValue(taskSummaryKey(siteKey), true);
+}
+
+export function setTaskSummaryVisible(siteKey: string, visible: boolean): void {
+  setStoredValue(taskSummaryKey(siteKey), visible);
+  notify();
+}

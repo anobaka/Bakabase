@@ -92,7 +92,6 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
     resources,
     setResources,
     loading: searching,
-    loadingDetails,
     response: searchResponse,
     search: progressiveSearch,
     reloadResources,
@@ -408,18 +407,11 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
     return () => window.removeEventListener(RESOURCE_MOVE_SUBMITTED_EVENT, onSubmitted);
   }, [props.searchId]);
 
-  // When Phase 2 finishes (loadingDetails transitions true → false), the new
-  // displayName / properties / mediaLibrary chips have just been committed to
-  // the DOM. CellMeasurer's cached heights from the Phase-1 layout are now
-  // stale; re-measure once so the virtualized grid uses the real heights.
-  // This is the replacement for the per-image `onLoad={measure}` cascade.
-  const prevLoadingDetails = usePrevious(loadingDetails);
-
+  // Measure after the deferred list is committed, which can be later than
+  // Phase 2 finishing. Display options can change the natural card height too.
   useEffect(() => {
-    if (prevLoadingDetails === true && loadingDetails === false) {
-      resourcesComponentRef.current?.measure();
-    }
-  }, [loadingDetails, prevLoadingDetails]);
+    resourcesComponentRef.current?.measure();
+  }, [displayResources, uiOptions.resource]);
 
   // Update pageable when search response changes
   useEffect(() => {
@@ -863,8 +855,8 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
   // No `onLoad={measure}` here on purpose: cover height is CSS-driven via
   // `pb-[100%]`, so image loads don't actually change cell height. The
   // height-affecting content (displayName / properties / mediaLibrary chips)
-  // arrives in Phase 2, and we re-measure once when that lands (see the
-  // loadingDetails-transition effect below). Per-image `onLoad` cascading
+  // is measured after the deferred list commits and when display options change.
+  // Per-image `onLoad` cascading
   // measure() calls would otherwise fire dozens of times per second during
   // scroll-triggered loads.
   const renderCell = useCallback(

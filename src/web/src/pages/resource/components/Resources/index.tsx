@@ -17,8 +17,6 @@ import { useUpdate, useUpdateEffect } from "react-use";
 
 import { useRectSelection } from "./useRectSelection";
 
-const Gap = 10;
-
 type ScrollEvent = {
   clientHeight: number;
   clientWidth: number;
@@ -86,8 +84,9 @@ const Resources = forwardRef<ResourcesRef, Props>(
     },
     ref,
   ) => {
-    const loadingRef = useRef<boolean>(false);
     const gridRef = useRef<any>();
+    const cellMeasurementsRef = useRef(new Map<string, () => void>());
+    const measurementFrameRef = useRef(0);
     const cacheRef = useRef(
       new CellMeasurerCache({
         defaultHeight: 180,
@@ -99,6 +98,27 @@ const Resources = forwardRef<ResourcesRef, Props>(
     const prevContainerWidthRef = useRef<number | undefined>(undefined);
 
     const scrollTopRef = useRef(0);
+
+    const measureVisibleCells = useCallback(() => {
+      if (measurementFrameRef.current) return;
+      measurementFrameRef.current = requestAnimationFrame(() => {
+        measurementFrameRef.current = 0;
+        // Hidden tabs have no usable dimensions. The container resize observer will
+        // measure them when they become visible again.
+        if (!containerRef.current?.clientWidth) return;
+        for (const measure of [...cellMeasurementsRef.current.values()]) {
+          measure();
+        }
+      });
+    }, []);
+
+    useEffect(
+      () => () => {
+        cancelAnimationFrame(measurementFrameRef.current);
+        measurementFrameRef.current = 0;
+      },
+      [],
+    );
 
     useEffect(() => {
       if (!containerRef.current) return;
@@ -135,7 +155,7 @@ const Resources = forwardRef<ResourcesRef, Props>(
         rowIndex={rowIndex}
       >
         {({ measure }) => {
-          return renderCell({
+          const cell = renderCell({
             columnIndex,
             key,
             parent,
@@ -144,6 +164,18 @@ const Resources = forwardRef<ResourcesRef, Props>(
             measure,
             isScrolling,
             isVisible,
+          });
+
+          if (!cell) return null;
+
+          return React.cloneElement(cell, {
+            ref: (node: HTMLElement | null) => {
+              if (node) {
+                cellMeasurementsRef.current.set(key, measure);
+              } else {
+                cellMeasurementsRef.current.delete(key);
+              }
+            },
           });
         }}
       </CellMeasurer>
@@ -154,21 +186,17 @@ const Resources = forwardRef<ResourcesRef, Props>(
     }, [columnCount]);
 
     const onResize = (clearCache: boolean = false) => {
+      if (!containerRef.current?.clientWidth) return;
       if (clearCache) {
         // todo: clear cache will cause the grid scrolls to bottom when height downsized which may trigger load more behavior.
         cacheRef.current.clearAll();
-        forceUpdate();
-        // After React re-renders with default heights, re-measure once the
-        // new DOM is laid out. Without this, cells stay at defaultHeight
-        // until something else triggers a measurement (used to be the
-        // per-image `onLoad={measure}` cascade in ResourceTabContent).
-        requestAnimationFrame(() => {
-          gridRef.current?.measureAllCells();
-        });
-      } else {
-        gridRef.current?.measureAllCells();
+        // Reset Grid's row offsets as well as CellMeasurer's DOM-size cache.
+        gridRef.current?.recomputeGridSize();
         forceUpdate();
       }
+      // Grid.measureAllCells() only reads cached row sizes; CellMeasurer's
+      // measure callbacks are what actually read the mounted DOM again.
+      measureVisibleCells();
     };
 
     useImperativeHandle(ref, () => ({
@@ -176,11 +204,7 @@ const Resources = forwardRef<ResourcesRef, Props>(
         onResize(true);
       },
       measure: () => {
-        // rAF so the caller can fire this immediately after a setState
-        // without worrying about commit timing.
-        requestAnimationFrame(() => {
-          gridRef.current?.measureAllCells();
-        });
+        measureVisibleCells();
       },
     }));
 
@@ -272,7 +296,11 @@ const Resources = forwardRef<ResourcesRef, Props>(
                     const newWidth = e.vertical ? e.size : 0;
                     if (newWidth != verScrollbarWidthRef.current) {
                       verScrollbarWidthRef.current = newWidth;
-                      onResize(true);
+                      // Keep measured row heights while the scrollbar changes.
+                      // Resetting them to estimates can toggle the scrollbar
+                      // repeatedly before the real card heights are measured.
+                      forceUpdate();
+                      onResize();
                     }
                   }}
                 />

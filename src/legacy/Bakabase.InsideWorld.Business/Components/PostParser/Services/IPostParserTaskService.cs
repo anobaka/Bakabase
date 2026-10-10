@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants;
 using Bootstrap.Components.Tasks;
@@ -11,6 +12,7 @@ namespace Bakabase.InsideWorld.Business.Components.PostParser.Services;
 public interface IPostParserTaskService
 {
     Task<List<PostParserTask>> GetAll();
+    Task<TaskSummary> GetSummary(PostParserSource? source = null);
     Task AddRange(Dictionary<PostParserSource, List<string>> sourceLinksMap, List<PostParseTarget> targets);
     Task AddInputs(Dictionary<PostParserSource, List<string>> sourceLinksMap, List<PostParseTarget> targets,
         List<string> links, string? text, string? title);

@@ -68,6 +68,23 @@ public sealed class DownloadTaskDirectDownloadTests
         return response.Data!.Single().Id;
     }
 
+    [TestMethod]
+    public async Task SummaryUsesTheLiveDownloadStatusInsteadOfPreviousPersistedResults()
+    {
+        var id = await AddTask();
+        await _manager.Start(await _service.GetDto(id), false);
+        // A previous completed/failed row can coexist briefly with the next active run.
+        foreach (var persisted in new[] {DownloadTaskDbModelStatus.Complete, DownloadTaskDbModelStatus.Failed})
+        {
+            await _service.UpdateByKey(id, task => task.Status = persisted);
+            Assert.AreEqual(DownloadTaskStatus.Downloading, (await _service.GetDto(id)).Status);
+            var summary = await _service.GetSummary(ThirdPartyId.ExHentai);
+            Assert.AreEqual(1, summary.Total);
+            Assert.AreEqual(0, summary.Completed);
+            Assert.AreEqual(0, summary.Failed);
+        }
+    }
+
     [DataTestMethod]
     [DataRow(ExHentaiDownloadTaskType.SingleWork)]
     [DataRow(ExHentaiDownloadTaskType.List)]

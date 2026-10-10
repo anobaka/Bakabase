@@ -30,6 +30,26 @@ permissions:
   contents: read
 
 jobs:
+  userscript:
+    if: inputs.suite != 'packages'
+    name: Userscript build & tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/scripts/baka-monkey
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: src/scripts/baka-monkey/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+          cache-dependency-path: src/scripts/baka-monkey/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test
+
   backend-main-shards:
     if: inputs.suite != 'platforms' && inputs.suite != 'packages'
     name: Backend main tests (${{ matrix.group }})
@@ -274,16 +294,17 @@ jobs:
   frontend:
     if: ${{ always() && inputs.suite != 'packages' }}
     name: Frontend lint & tests
-    needs: [frontend-quality, frontend-build]
+    needs: [frontend-quality, frontend-build, userscript]
     runs-on: ubuntu-latest
     steps:
       - name: Confirm frontend checks passed
         env:
           QUALITY_RESULT: ${{ needs.frontend-quality.result }}
           BUILD_RESULT: ${{ needs.frontend-build.result }}
+          USERSCRIPT_RESULT: ${{ needs.userscript.result }}
         run: |
-          if [[ "$QUALITY_RESULT" != success || "$BUILD_RESULT" != success ]]; then
-            echo "::error::Frontend lint & unit tests: $QUALITY_RESULT; frontend build: $BUILD_RESULT"
+          if [[ "$QUALITY_RESULT" != success || "$BUILD_RESULT" != success || "$USERSCRIPT_RESULT" != success ]]; then
+            echo "::error::Frontend lint & unit tests: $QUALITY_RESULT; frontend build: $BUILD_RESULT; userscript: $USERSCRIPT_RESULT"
             exit 1
           fi
 

@@ -9,6 +9,7 @@ import { ContentTrackerBadge } from './actions/ContentTrackerBadge';
 import { startHeartbeat, isConnected, getConnectionState, onConnectionChange } from './heartbeat';
 import { isCoverOverlayEnabled, onSettingsChange } from './settings';
 import { t } from './i18n';
+import type { TaskSummaryTarget } from './taskSummary';
 
 interface MarkerEntry {
   id: string;
@@ -94,6 +95,11 @@ export function App({ siteConfigs }: { siteConfigs: SiteConfig[] }) {
     const hostname = window.location.hostname;
     return siteConfigs.find((c) => c.domains.some((d) => hostname.includes(d))) ?? null;
   }, [siteConfigs]);
+  const taskSummaryTarget = useMemo<TaskSummaryTarget | undefined>(() => {
+    if (siteConfig?.downloadTask) return { kind: 'download', source: siteConfig.downloadTask.thirdPartyId };
+    if (siteConfig?.parseTask) return { kind: 'parse', source: siteConfig.parseTask.source };
+    return undefined;
+  }, [siteConfig]);
 
   // Start heartbeat and track connection state
   useEffect(() => {
@@ -407,6 +413,7 @@ export function App({ siteConfigs }: { siteConfigs: SiteConfig[] }) {
       <SettingsPanel
         siteKey={siteConfig?.key}
         coverOverlay={siteConfig?.coverOverlay}
+        taskSummaryTarget={taskSummaryTarget}
         connection={connection}
       />
       {(connected || __DEV__) && siteConfig && markers.flatMap((m) => {
