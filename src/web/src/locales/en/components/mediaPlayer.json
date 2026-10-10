@@ -36,6 +36,7 @@
   "mediaPlayer.text.lines": "{{count}} lines",
   "mediaPlayer.text.encoding": "Encoding",
   "mediaPlayer.text.fontSize": "Font size",
+  "mediaPlayer.text.wrap": "Wrap lines",
   "mediaPlayer.text.preview": "Text preview",
   "mediaPlayer.text.empty": "This text file is empty",
   "mediaPlayer.text.timeout": "Reading the text preview timed out.",

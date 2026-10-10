@@ -36,6 +36,7 @@
   "mediaPlayer.text.lines": "{{count}} 行",
   "mediaPlayer.text.encoding": "编码",
   "mediaPlayer.text.fontSize": "字号",
+  "mediaPlayer.text.wrap": "自动换行",
   "mediaPlayer.text.preview": "文本预览",
   "mediaPlayer.text.empty": "此文本文件为空",
   "mediaPlayer.text.timeout": "读取文本预览超时。",
