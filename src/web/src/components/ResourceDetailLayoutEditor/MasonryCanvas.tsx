@@ -3,11 +3,13 @@ import type { BlockPlacement, DetailLayoutConfig, SectionId } from "./types";
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { AiOutlineClose, AiOutlinePlus } from "react-icons/ai";
 import { TbWaveSine } from "react-icons/tb";
-import { Popover, Tooltip, PopoverTrigger, PopoverContent } from "@heroui/react";
+import { Popover, PopoverTrigger, PopoverContent } from "@heroui/react";
 import { useTranslation } from "react-i18next";
 
 import { ALL_SECTIONS, SECTION_HEIGHT_BEHAVIOR } from "./defaultLayout";
 import { anchorToCell, clampSpan, colUnitFor, packDesigner, settleLayout } from "./masonry";
+
+import Tooltip from "@/components/bakaui/components/Tooltip";
 
 // Square designer grid: row height = column width. Keeps colSpan and
 // rowSpan visually comparable at a glance.
@@ -530,7 +532,7 @@ function DesignerBlock({
       <Tooltip content={t<string>("resource.detailLayout.hideSection")}>
         <button
           aria-label={t<string>("resource.detailLayout.hideSection")}
-          className="absolute top-1 right-1 z-10 w-6 h-6 flex items-center justify-center rounded-small bg-default-200/90 hover:bg-danger-300 text-default-700 hover:text-white cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
+          className="absolute top-1 right-1 z-10 w-6 h-6 flex items-center justify-center rounded-small bg-default-200/90 hover:bg-danger-300 text-default-700 hover:text-white cursor-pointer opacity-0 group-hover:opacity-100 data-[bakabase-tooltip-open=true]:opacity-100 focus-visible:opacity-100 transition-opacity"
           onClick={(e) => {
             e.stopPropagation();
             onHide();

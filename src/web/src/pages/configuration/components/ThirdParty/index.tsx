@@ -10,7 +10,6 @@ import {
   TableColumn,
   TableHeader,
   TableRow,
-  Tooltip,
   Input,
   Accordion,
   AccordionItem,
@@ -19,6 +18,7 @@ import {
 import { AiOutlineQuestionCircle, AiOutlineCheck, AiOutlineClose } from "react-icons/ai";
 
 import { toast } from "@/components/bakaui";
+import Tooltip from "@/components/bakaui/components/Tooltip";
 import { CookieValidatorTarget } from "@/sdk/constants";
 import {
   useBilibiliOptionsStore,

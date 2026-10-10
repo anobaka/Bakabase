@@ -12,7 +12,6 @@ import {
   Chip,
   Button,
   Image,
-  Tooltip,
   Dropdown,
   DropdownTrigger,
   DropdownMenu,
@@ -31,6 +30,8 @@ import { GoPackage } from "react-icons/go";
 import { DrmKeyCell } from "./DrmKeyCell";
 import { DownloadButton } from "./DownloadButton";
 import { LaunchButton } from "./LaunchButton";
+
+import Tooltip from "@/components/bakaui/components/Tooltip";
 
 interface DLsiteTableColumn {
   key: string;

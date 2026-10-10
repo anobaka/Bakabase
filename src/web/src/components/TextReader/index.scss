@@ -31,8 +31,14 @@
   border-radius: 6px;
   padding: 4px 6px;
 }
-.text-reader-toolbar input {
+.text-reader-toolbar input[type="number"] {
   width: 56px;
+}
+.text-reader-toolbar input[type="checkbox"] {
+  accent-color: #60a5fa;
+}
+.text-reader-wrap {
+  cursor: pointer;
 }
 .text-reader-count {
   margin-right: auto;
@@ -49,7 +55,11 @@
   min-height: 0;
   max-height: calc(100dvh - 112px);
   overflow: auto;
+  overflow-anchor: none;
   scrollbar-width: thin;
+}
+.text-reader-viewport-wrap {
+  overflow-x: hidden;
 }
 .text-reader-lines {
   position: relative;
@@ -61,6 +71,16 @@
   display: flex;
   white-space: pre;
   font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  tab-size: 4;
+}
+.text-reader-content {
+  padding-right: 16px;
+}
+.text-reader-viewport-wrap .text-reader-content {
+  flex: 1;
+  min-width: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 .text-reader-number {
   display: inline-block;

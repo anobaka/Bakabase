@@ -12,9 +12,10 @@ import {
   Chip,
   Button,
   Image,
-  Tooltip,
 } from "@heroui/react";
 import { AiOutlineFolderOpen, AiOutlinePlayCircle } from "react-icons/ai";
+
+import Tooltip from "@/components/bakaui/components/Tooltip";
 
 const getSteamHeaderImage = (appId: number) =>
   `https://cdn.akamai.steamstatic.com/steam/apps/${appId}/header.jpg`;

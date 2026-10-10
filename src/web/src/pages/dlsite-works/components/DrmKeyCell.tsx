@@ -2,11 +2,12 @@ import type { DLsiteWork } from "../types";
 
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, Tooltip } from "@heroui/react";
+import { Button } from "@heroui/react";
 import { AiOutlineEye, AiOutlineEyeInvisible, AiOutlineCopy, AiOutlineKey } from "react-icons/ai";
 
 import BApi from "@/sdk/BApi";
 import { toast } from "@/components/bakaui";
+import Tooltip from "@/components/bakaui/components/Tooltip";
 
 /** Standalone DRM key cell - manages its own fetch/reveal state to bypass Table memoization */
 export function DrmKeyCell({

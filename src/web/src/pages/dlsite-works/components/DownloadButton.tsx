@@ -2,12 +2,13 @@ import type { DLsiteWork } from "../types";
 
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, CircularProgress, Tooltip } from "@heroui/react";
+import { Button, CircularProgress } from "@heroui/react";
 import { AiOutlineDownload, AiOutlineStop } from "react-icons/ai";
 
 import { DOWNLOAD_TASK_ID_PREFIX } from "../types";
 
 import BApi from "@/sdk/BApi";
+import Tooltip from "@/components/bakaui/components/Tooltip";
 import { useBTasksStore } from "@/stores/bTasks";
 import { useDLsiteOptionsStore } from "@/stores/options";
 import { BTaskStatus } from "@/sdk/constants";

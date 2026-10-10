@@ -10,7 +10,6 @@ import {
   Button,
   Spinner,
   CircularProgress,
-  Tooltip,
   Switch,
   Pagination,
   Select,
@@ -42,6 +41,7 @@ import { DLsiteTable } from "./components/DLsiteTable";
 
 import BApi from "@/sdk/BApi";
 import { toast } from "@/components/bakaui";
+import Tooltip from "@/components/bakaui/components/Tooltip";
 import { useDLsiteOptionsStore } from "@/stores/options";
 import { DLsiteConfig } from "@/components/ThirdPartyConfig";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
