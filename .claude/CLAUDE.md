@@ -170,6 +170,11 @@ burn a full build + OSS deploy + GitHub release. It does **not** affect
 Do **not** skip CI for `.github/**` changes — CI/CD config edits should run
 the pipeline so the change itself gets validated.
 
+The skip directive also suppresses automatic PR CI. If a documentation PR
+needs required checks to merge, manually dispatch `ci.yml` on its branch and
+wait for those checks on its current head. Keep the skip directive in the
+merge commit too, so merging the documentation does not trigger a beta release.
+
 ```
 docs: 更新 GitHub issue 管理工作流程 [skip ci]
 
