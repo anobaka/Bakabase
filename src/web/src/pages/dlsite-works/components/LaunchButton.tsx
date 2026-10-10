@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Button, Chip, Spinner, Switch, Tooltip } from "@heroui/react";
+import { Button, Chip, Spinner, Switch } from "@heroui/react";
 import { AiOutlineDownload, AiOutlinePlayCircle } from "react-icons/ai";
 import { MdOutlineRocketLaunch } from "react-icons/md";
 import { CheckCircleOutlined } from "@ant-design/icons";
@@ -8,6 +8,7 @@ import { useDependentComponentContextsStore } from "@/stores/dependentComponentC
 import dependentComponentIds from "@/core/models/Constants/DependentComponentIds";
 import { DependentComponentStatus } from "@/sdk/constants";
 import BApi from "@/sdk/BApi";
+import Tooltip from "@/components/bakaui/components/Tooltip";
 
 /** Launch button with integrated LE configuration tooltip. */
 export function LaunchButton({

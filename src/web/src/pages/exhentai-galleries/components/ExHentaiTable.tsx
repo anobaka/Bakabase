@@ -12,9 +12,10 @@ import {
   Chip,
   Button,
   Image,
-  Tooltip,
 } from "@heroui/react";
 import { AiOutlineDelete, AiOutlineFolderOpen } from "react-icons/ai";
+
+import Tooltip from "@/components/bakaui/components/Tooltip";
 
 interface ExHentaiTableColumn {
   key: string;

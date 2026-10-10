@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Button, Chip, Spinner, Tooltip } from "@heroui/react";
+import { Button, Chip, Spinner } from "@heroui/react";
 import { AiOutlineDownload } from "react-icons/ai";
 import { CheckCircleOutlined } from "@ant-design/icons";
 
@@ -7,6 +7,7 @@ import { useDependentComponentContextsStore } from "@/stores/dependentComponentC
 import dependentComponentIds from "@/core/models/Constants/DependentComponentIds";
 import { DependentComponentStatus } from "@/sdk/constants";
 import BApi from "@/sdk/BApi";
+import Tooltip from "@/components/bakaui/components/Tooltip";
 
 /** Header-level LE status indicator: shows install button, installing progress, or ready chip. */
 export function LeStatusIndicator() {

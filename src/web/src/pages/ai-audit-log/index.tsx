@@ -19,11 +19,11 @@ import {
   TableColumn,
   TableHeader,
   TableRow,
-  Tooltip,
 } from "@heroui/react";
 import { AiOutlineEye } from "react-icons/ai";
 
 import BApi from "@/sdk/BApi";
+import Tooltip from "@/components/bakaui/components/Tooltip";
 import { LlmCallStatus } from "@/sdk/constants";
 import LlmProviderSelector, { useLlmProviders } from "@/components/LlmProviderSelector";
 

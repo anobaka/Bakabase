@@ -254,7 +254,7 @@ const PlayButton: React.FC<PlayControlPortalProps> = ({
   const dropdownEntries = entries.slice(1).filter((e) => !e.isDisabled);
 
   return (
-    <div className="hidden group-hover/cover:flex absolute left-0 bottom-0 z-[1] group/play">
+    <div className="hidden group-hover/cover:flex group-focus-within/cover:flex has-[[data-bakabase-tooltip-open]]:flex absolute left-0 bottom-0 z-[1] group/play">
       <Tooltip content={mainEntry.label}>
         <Button
           isIconOnly
@@ -273,7 +273,7 @@ const PlayButton: React.FC<PlayControlPortalProps> = ({
       </Tooltip>
 
       {dropdownEntries.length > 0 && (
-        <div className="hidden group-hover/play:block absolute left-full top-0 pl-1 z-10">
+        <div className="hidden group-hover/play:block group-focus-within/play:block absolute left-full top-0 pl-1 z-10">
           <div className="flex flex-col gap-0.5 bg-content1 rounded-lg shadow-medium p-1 min-w-max">
             {dropdownEntries.map((entry) => (
               <Button
@@ -797,7 +797,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
         ) : (
           // There is nothing to play. What the user wants here is the way to get the files, so
           // the play button's place is taken by the acquisition entry point.
-          <div className="hidden group-hover/cover:flex absolute left-0 bottom-0 z-[1]">
+          <div className="hidden group-hover/cover:flex group-focus-within/cover:flex has-[[data-bakabase-tooltip-open]]:flex absolute left-0 bottom-0 z-[1]">
             <Tooltip
               content={t<string>(
                 resource.sourceLinks?.length
