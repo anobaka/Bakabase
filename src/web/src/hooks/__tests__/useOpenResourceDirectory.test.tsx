@@ -12,7 +12,7 @@ const mocks = vi.hoisted(() => ({
   openResourceDirectory: vi.fn(),
   createPortal: vi.fn(),
   success: vi.fn(),
-  error: vi.fn(),
+  danger: vi.fn(),
 }));
 
 vi.mock("@/sdk/BApi", () => ({
@@ -29,7 +29,7 @@ vi.mock("@/components/bakaui", () => ({
     </div>
   ),
   Button: ({ children, onPress }: any) => <button onClick={onPress}>{children}</button>,
-  toast: { success: mocks.success, error: mocks.error },
+  toast: { success: mocks.success, danger: mocks.danger },
 }));
 
 const initialRemote = useRemoteAccessStore.getState();
@@ -173,7 +173,7 @@ describe("copying a server folder location", () => {
 
     await act(async () => fireEvent.click(screen.getByText("resource.folderLocation.copyPath")));
 
-    expect(mocks.error).toHaveBeenCalledWith("resource.folderLocation.copyFailed");
+    expect(mocks.danger).toHaveBeenCalledWith("resource.folderLocation.copyFailed");
     expect(mocks.success).not.toHaveBeenCalled();
     expect(screen.getByLabelText("resource.folderLocation.serverPath")).toHaveValue(
       "/nas/media/title",
