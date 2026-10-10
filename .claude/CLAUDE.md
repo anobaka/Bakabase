@@ -84,6 +84,22 @@ endpoint, see `.claude/rules/api-conventions.md`.
 - Keep the conventional-commit prefixes already used in `git log`
   (`feat`, `fix`, `chore`, `ci`, `docs`, `refactor`, …).
 
+## Workflow: Development Completion
+
+After implementing an application change and passing the relevant checks,
+**update the existing local Docker server and verify the deployed change**.
+This is part of completing development; proceed without waiting for the user
+to request deployment again. Follow
+[the local Docker deployment rule](rules/local-docker-deployment.md).
+
+Apply the issue workflow below and the user's instructions for commits, PRs
+and merging. When merging is authorized, wait for the required checks on the
+PR's current head to pass; then update the local deployment to the merged
+revision when its application contents or version differ. Honor the user's
+requested order, including local testing before opening a PR. Changes with no
+effect on the running server do not require a restart; documentation-only and
+rule-only changes also use the skip-CI convention below.
+
 ## Workflow: GitHub Issue Management
 
 After completing **any self-contained change** (a feature, fix, or refactor —
@@ -142,17 +158,27 @@ push to `release/v*`. A `main` push publishes a beta; a `release/v*` push
 publishes the corresponding stable. The version is never decided by the
 workflow — `version.json` owns it and the pipeline reads it through nbgv, so
 each `main` commit gets its own beta number. `debug-actions` is **not**
-auto-deployed; deploy it via manual `workflow_dispatch`. `ci.yml` runs only on
-PRs and is enforced as a required status check via branch protection, so the
+auto-deployed; deploy it via manual `workflow_dispatch`. `ci.yml` runs automatically
+only on PRs and is enforced as a required status check via branch protection, so the
 merge commit is never re-tested and deploy is not gated on CI.
 
-Because `main` auto-deploys, add **`[skip ci]`** to a commit that touches
-**only** documentation, `.claude/**`, or other non-code files, so it doesn't
-burn a full build + OSS deploy + GitHub release. It does **not** affect
-`Closes #N` issue auto-closing.
+Because `main` auto-deploys, add **`[skip ci]`** to the **merge commit** for a
+PR that touches **only** documentation, `.claude/**`, or other non-code files,
+so it doesn't trigger a build + OSS deploy + GitHub release. The same applies
+to documentation commits made directly on a deployment branch. It does **not**
+affect `Closes #N` issue auto-closing.
 
 Do **not** skip CI for `.github/**` changes — CI/CD config edits should run
 the pipeline so the change itself gets validated.
+
+**Do not put a skip directive in documentation PR branch commits.** Run the
+normal PR checks and wait for the current head to pass before merging. Skipped
+required PR workflows leave pending checks that block merging; a successful
+manual run does not clear those skipped checks in this repository. Push a
+commit without a skip directive to resume PR CI, as described in the
+[GitHub documentation](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/skip-workflow-runs).
+When merging, explicitly include the skip directive in the merge commit
+message so the documentation update does not publish a beta.
 
 ```
 docs: 更新 GitHub issue 管理工作流程 [skip ci]
