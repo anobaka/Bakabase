@@ -23,6 +23,21 @@
     overflow-wrap: anywhere;
   }
 
+  .property-reference-tree {
+    .ant-tree-treenode {
+      padding-bottom: 2px;
+    }
+
+    .ant-tree-node-content-wrapper {
+      padding: 0;
+    }
+
+    .ant-tree-switcher {
+      width: 20px;
+      line-height: 36px;
+    }
+  }
+
   @container (max-width: 640px) {
     .property-editor-workspace {
       grid-template-columns: minmax(0, 1fr);

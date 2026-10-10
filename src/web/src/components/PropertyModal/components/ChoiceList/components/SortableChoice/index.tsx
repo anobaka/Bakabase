@@ -7,9 +7,12 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useTranslation } from "react-i18next";
 
-import { ReferenceColor, ReferenceItemActions } from "../../ReferenceItemTools";
+import {
+  ReferenceColor,
+  ReferenceDragHandle,
+  ReferenceItemActions,
+} from "../../ReferenceItemTools";
 
-import DragHandle from "@/components/DragHandle";
 import { Input } from "@/components/bakaui";
 
 interface Props {
@@ -41,7 +44,7 @@ export function SortableChoice({
   return (
     <div
       ref={setNodeRef}
-      className="pb-1.5"
+      className="pb-1"
       style={{
         ...style,
         transform: CSS.Transform.toString(transform),
@@ -50,17 +53,16 @@ export function SortableChoice({
       }}
     >
       <div
-        className={`flex h-full items-center gap-1.5 rounded-xl bg-default-50 px-2 py-2 ${isDragging ? "shadow-md" : ""}`}
+        className={`flex h-full items-center gap-0.5 rounded-lg bg-default-50 px-1 py-0.5 ${isDragging ? "shadow-md" : ""}`}
       >
-        <DragHandle
+        <ReferenceDragHandle
           {...listeners}
           {...attributes}
           aria-label={t("property.referenceEditor.drag")}
-          className="shrink-0"
           title={t("property.referenceEditor.drag")}
         />
-        <div className={`flex min-w-0 flex-1 gap-1.5 ${compact ? "flex-col" : "items-center"}`}>
-          <div className="flex min-w-0 flex-1 items-center gap-1.5">
+        <div className={`flex min-w-0 flex-1 gap-0.5 ${compact ? "flex-col" : "items-center"}`}>
+          <div className="flex min-w-0 flex-1 items-center gap-0.5">
             <ReferenceColor
               color={choice.color}
               onChange={(color) => onChange?.({ ...choice, color })}
@@ -68,7 +70,9 @@ export function SortableChoice({
             <Input
               aria-label={t("property.referenceEditor.choices.name")}
               className="min-w-0 flex-1"
-              classNames={{ inputWrapper: "bg-default-100 shadow-none" }}
+              classNames={{
+                inputWrapper: "h-8 min-h-8 rounded-md bg-default-100 px-2 shadow-none",
+              }}
               placeholder={t("property.referenceEditor.choices.name")}
               size="sm"
               value={choice.label ?? ""}

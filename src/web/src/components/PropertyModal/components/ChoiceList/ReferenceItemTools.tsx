@@ -1,5 +1,8 @@
+import type { ButtonHTMLAttributes } from "react";
+
 import { useTranslation } from "react-i18next";
 import { DeleteOutlined, EyeInvisibleOutlined, EyeOutlined } from "@ant-design/icons";
+import { MdOutlineDragIndicator } from "react-icons/md";
 
 import ReferenceValueUsage from "../ReferenceValueUsage";
 
@@ -7,6 +10,23 @@ import { Button, ColorPicker, Modal, toast } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { buildColorValueString } from "@/components/bakaui/components/ColorPicker";
 import colors from "@/components/bakaui/colors";
+
+export function ReferenceDragHandle(props: ButtonHTMLAttributes<HTMLButtonElement>) {
+  const { t } = useTranslation();
+
+  return (
+    <button
+      aria-label={t("property.referenceEditor.drag")}
+      title={t("property.referenceEditor.drag")}
+      {...props}
+      className="flex h-8 w-7 shrink-0 touch-none items-center justify-center rounded-md text-default-400 transition-colors hover:bg-default-200 hover:text-default-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus active:cursor-grabbing"
+      style={{ cursor: "grab", ...props.style }}
+      type="button"
+    >
+      <MdOutlineDragIndicator aria-hidden className="text-lg" />
+    </button>
+  );
+}
 
 export function ReferenceColor({
   color,
@@ -23,7 +43,7 @@ export function ReferenceColor({
       trigger={
         <button
           aria-label={t("property.referenceEditor.color")}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-default-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
+          className="flex h-8 w-7 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-default-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
           title={t("property.referenceEditor.color")}
           type="button"
         >
