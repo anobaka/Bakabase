@@ -84,6 +84,22 @@ endpoint, see `.claude/rules/api-conventions.md`.
 - Keep the conventional-commit prefixes already used in `git log`
   (`feat`, `fix`, `chore`, `ci`, `docs`, `refactor`, …).
 
+## Workflow: Development Completion
+
+After implementing an application change and passing the relevant checks,
+**update the existing local Docker server and verify the deployed change**.
+This is part of completing development; proceed without waiting for the user
+to request deployment again. Follow
+[the local Docker deployment rule](rules/local-docker-deployment.md).
+
+Apply the issue workflow below and the user's instructions for commits, PRs
+and merging. When merging is authorized, wait for the required checks on the
+PR's current head to pass; then update the local deployment to the merged
+revision when its application contents or version differ. Honor the user's
+requested order, including local testing before opening a PR. Changes with no
+effect on the running server do not require a restart; documentation-only and
+rule-only changes also use the skip-CI convention below.
+
 ## Workflow: GitHub Issue Management
 
 After completing **any self-contained change** (a feature, fix, or refactor —
