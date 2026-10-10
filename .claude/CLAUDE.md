@@ -162,18 +162,23 @@ auto-deployed; deploy it via manual `workflow_dispatch`. `ci.yml` runs automatic
 only on PRs and is enforced as a required status check via branch protection, so the
 merge commit is never re-tested and deploy is not gated on CI.
 
-Because `main` auto-deploys, add **`[skip ci]`** to a commit that touches
-**only** documentation, `.claude/**`, or other non-code files, so it doesn't
-burn a full build + OSS deploy + GitHub release. It does **not** affect
-`Closes #N` issue auto-closing.
+Because `main` auto-deploys, add **`[skip ci]`** to the **merge commit** for a
+PR that touches **only** documentation, `.claude/**`, or other non-code files,
+so it doesn't trigger a build + OSS deploy + GitHub release. The same applies
+to documentation commits made directly on a deployment branch. It does **not**
+affect `Closes #N` issue auto-closing.
 
 Do **not** skip CI for `.github/**` changes — CI/CD config edits should run
 the pipeline so the change itself gets validated.
 
-The skip directive also suppresses automatic PR CI. If a documentation PR
-needs required checks to merge, manually dispatch `ci.yml` with `suite=full`
-on its branch and wait for those checks on its current head. Keep the skip directive in the
-merge commit too, so merging the documentation does not trigger a beta release.
+**Do not put a skip directive in documentation PR branch commits.** Run the
+normal PR checks and wait for the current head to pass before merging. Skipped
+required PR workflows leave pending checks that block merging; a successful
+manual run does not clear those skipped checks in this repository. Push a
+commit without a skip directive to resume PR CI, as described in the
+[GitHub documentation](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/skip-workflow-runs).
+When merging, explicitly include the skip directive in the merge commit
+message so the documentation update does not publish a beta.
 
 ```
 docs: 更新 GitHub issue 管理工作流程 [skip ci]
