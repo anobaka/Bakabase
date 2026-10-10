@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Text.Json;
@@ -53,7 +54,7 @@ public sealed class TampermonkeyServiceTests
         using var source = new SourceHandler(CompiledScript);
         var service = Service(source);
 
-        var script = await service.GetScript(requestedEndpoint);
+        var script = await service.GetScript(requestedEndpoint, scriptFile: null);
 
         Assert.IsNotNull(script);
         Assert.IsFalse(CompiledScript.Contains("DEFAULT_API_URL", StringComparison.Ordinal));
@@ -83,7 +84,7 @@ public sealed class TampermonkeyServiceTests
     {
         using var source = new SourceHandler(CompiledScript);
 
-        var script = await Service(source, language).GetScript("http://192.168.3.23:34567/");
+        var script = await Service(source, language).GetScript("http://192.168.3.23:34567/", scriptFile: null);
 
         Assert.IsNotNull(script);
         var bootstrap = script[..^Bundle.Length];
@@ -101,7 +102,7 @@ public sealed class TampermonkeyServiceTests
         var template = CompiledScript.Replace("// ==/UserScript==", "// @connect *\n// ==/UserScript==");
         using var source = new SourceHandler(template);
 
-        var script = await Service(source).GetScript(endpoint);
+        var script = await Service(source).GetScript(endpoint, scriptFile: null);
 
         Assert.IsNotNull(script);
         var metadata = script[..script.IndexOf("// ==/UserScript==", StringComparison.Ordinal)];
@@ -117,7 +118,7 @@ public sealed class TampermonkeyServiceTests
         var template = CompiledScript.Replace("// ==/UserScript==", "// @connect 192.168.3.23\n// ==/UserScript==");
         using var source = new SourceHandler(template);
 
-        var script = await Service(source).GetScript("http://192.168.3.23:34567");
+        var script = await Service(source).GetScript("http://192.168.3.23:34567", scriptFile: null);
 
         Assert.IsNotNull(script);
         Assert.IsTrue(script.StartsWith(template[..template.IndexOf(Bundle, StringComparison.Ordinal)], StringComparison.Ordinal));
@@ -133,7 +134,7 @@ public sealed class TampermonkeyServiceTests
     {
         using var source = new SourceHandler(template);
 
-        Assert.IsNull(await Service(source).GetScript("http://localhost:34567"));
+        Assert.IsNull(await Service(source).GetScript("http://localhost:34567", scriptFile: null));
     }
 
     [TestMethod]
@@ -141,7 +142,7 @@ public sealed class TampermonkeyServiceTests
     {
         using var source = new SourceHandler(CompiledScript) {Failure = new HttpRequestException("CDN unavailable")};
 
-        Assert.IsNull(await Service(source).GetScript("https://bakabase.example:8443"));
+        Assert.IsNull(await Service(source).GetScript("https://bakabase.example:8443", scriptFile: null));
         CollectionAssert.AreEqual(new[] {TampermonkeyService.ScriptCdnUrl}, source.Requests);
     }
 
@@ -150,7 +151,7 @@ public sealed class TampermonkeyServiceTests
     {
         using var source = new SourceHandler(CompiledScript) {Status = HttpStatusCode.ServiceUnavailable};
 
-        Assert.IsNull(await Service(source).GetScript("https://bakabase.example"));
+        Assert.IsNull(await Service(source).GetScript("https://bakabase.example", scriptFile: null));
     }
 
     [TestMethod]
@@ -197,8 +198,92 @@ public sealed class TampermonkeyServiceTests
     {
         using var source = new SourceHandler(CompiledScript);
 
-        await Assert.ThrowsExactlyAsync<ArgumentException>(() => Service(source).GetScript("https://user:secret@other.example"));
+        await Assert.ThrowsExactlyAsync<ArgumentException>(() => Service(source).GetScript("https://user:secret@other.example", scriptFile: null));
         Assert.AreEqual(0, source.Requests.Count);
+    }
+
+    [TestMethod]
+    public async Task ScriptFileOverrideServesTheLocalBuildWithInstallConfigurationWithoutChangingTheAsset()
+    {
+        var localBuild = CompiledScript.Replace("// @version      2.1.0", "// @version      2.1.1");
+        var path = Path.GetTempFileName();
+        using var source = new SourceHandler(CompiledScript) {Failure = new HttpRequestException("CDN unavailable")};
+        try
+        {
+            await File.WriteAllTextAsync(path, localBuild);
+
+            var script = await Service(source).GetScript("http://192.168.3.23:34567/", path);
+
+            Assert.IsNotNull(script);
+            StringAssert.Contains(script, "// @version      2.1.1");
+            StringAssert.Contains(script, "// @connect      192.168.3.23\n");
+            StringAssert.Contains(script, "GM_setValue('api_base_url', \"http://192.168.3.23:34567\");");
+            StringAssert.Contains(script, "if (!GM_getValue('api_base_url', ''))");
+            StringAssert.Contains(script, "if (!GM_getValue('locale', ''))");
+            StringAssert.Contains(script, "GM_setValue('locale', \"zh\");");
+            StringAssert.Contains(script, $"// @updateURL    {TampermonkeyService.ScriptCdnUrl}");
+            StringAssert.Contains(script, $"// @downloadURL  {TampermonkeyService.ScriptCdnUrl}");
+            Assert.IsTrue(script.EndsWith("\n" + Bundle, StringComparison.Ordinal));
+            Assert.AreEqual(localBuild, await File.ReadAllTextAsync(path), "Configuration is injected in memory; the asset stays read-only.");
+            Assert.AreEqual(0, source.Requests.Count);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [TestMethod]
+    [DataRow(null)]
+    [DataRow("")]
+    public async Task NoScriptFileOverrideKeepsTheCdnSource(string? scriptFile)
+    {
+        using var source = new SourceHandler(CompiledScript);
+
+        Assert.IsNotNull(await Service(source).GetScript("http://localhost:34567", scriptFile));
+
+        CollectionAssert.AreEqual(new[] {TampermonkeyService.ScriptCdnUrl}, source.Requests);
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task UnreadableScriptFileOverrideReturnsNullWithoutFallingBackToTheCdn(bool directoryInsteadOfFile)
+    {
+        var directory = Path.Combine(Path.GetTempPath(), $"BakabaseUserscript_{Guid.NewGuid():N}");
+        var path = Path.Combine(directory, "bakabase.user.js");
+        Directory.CreateDirectory(directory);
+        if (directoryInsteadOfFile) Directory.CreateDirectory(path);
+        using var source = new SourceHandler(CompiledScript);
+        try
+        {
+            Assert.IsNull(await Service(source).GetScript("http://localhost:34567", path));
+            Assert.AreEqual(0, source.Requests.Count);
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [TestMethod]
+    [DataRow("<html>Invalid local asset</html>")]
+    [DataRow("// ==UserScript==\n// @name incomplete")]
+    public async Task InvalidLocalScriptMetadataIsRejectedWithoutCdnFallback(string template)
+    {
+        var path = Path.GetTempFileName();
+        using var source = new SourceHandler(CompiledScript);
+        try
+        {
+            await File.WriteAllTextAsync(path, template);
+
+            Assert.IsNull(await Service(source).GetScript("http://localhost:34567", path));
+            Assert.AreEqual(0, source.Requests.Count);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
     }
 
     private static TampermonkeyService Service(SourceHandler source, string language = "zh-CN") => new(null!,

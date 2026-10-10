@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.IO;
 using System.Net.Http;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -17,6 +18,7 @@ public class TampermonkeyService(IGuiAdapter guiAdapter, AppContext appContext, 
 {
     private const string InstallScriptUrlTemplate = "https://www.tampermonkey.net/script_installation.php#url={jsUrl}";
     public const string ScriptCdnUrl = "https://cdn-public.anobaka.com/app/bakabase/scripts/bakabase.user.js";
+    public const string ScriptFileEnvironmentVariable = "BAKABASE_TAMPERMONKEY_SCRIPT_FILE";
 
     /// <summary>
     /// Opens the Tampermonkey install dialog pointing to the local API endpoint,
@@ -31,23 +33,38 @@ public class TampermonkeyService(IGuiAdapter guiAdapter, AppContext appContext, 
     }
 
     /// <summary>
-    /// Fetches the script from CDN and seeds its stored API URL before it runs.
+    /// Reads an explicitly configured local script asset, or fetches the script
+    /// from CDN, and seeds its stored API URL before it runs.
     /// The script's @updateURL/@downloadURL still point to CDN,
     /// so Tampermonkey auto-updates will work. The injected endpoint is auto-persisted
     /// via GM_setValue on first use, surviving future CDN updates.
     /// </summary>
-    public async Task<string?> GetScript(string apiEndpoint)
+    public Task<string?> GetScript(string apiEndpoint) =>
+        GetScript(apiEndpoint, Environment.GetEnvironmentVariable(ScriptFileEnvironmentVariable));
+
+    // Taking the selected source explicitly keeps tests independent of process-wide
+    // environment changes while exercising the same installation pipeline.
+    internal async Task<string?> GetScript(string apiEndpoint, string? scriptFile)
     {
         if (!TryNormalizeOrigin(apiEndpoint, out var origin))
         {
             throw new ArgumentException("An HTTP(S) origin is required.", nameof(apiEndpoint));
         }
 
-        using var client = httpClientFactory.CreateClient();
         string template;
         try
         {
-            template = await client.GetStringAsync(ScriptCdnUrl);
+            if (!string.IsNullOrEmpty(scriptFile))
+            {
+                // Deployment administrators may mount a test build as a read-only
+                // asset. A failed override must not silently serve the older CDN build.
+                template = await File.ReadAllTextAsync(scriptFile);
+            }
+            else
+            {
+                using var client = httpClientFactory.CreateClient();
+                template = await client.GetStringAsync(ScriptCdnUrl);
+            }
         }
         catch
         {
