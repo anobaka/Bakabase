@@ -27,7 +27,7 @@ export const exhentaiDownloadTask: DownloadTaskAdapter = {
             resolve();
           }
         },
-        onError: () => reject(new Error('Network error')),
+        onError: reject,
       });
     }),
 };

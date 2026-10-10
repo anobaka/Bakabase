@@ -3,12 +3,14 @@ import type { Resource as ResourceModel } from "@/core/models/Resource";
 
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import toast from "react-hot-toast";
+import { toast } from "@/components/bakaui";
 
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import MediaPlayer from "@/components/MediaPlayer";
 import BApi from "@/sdk/BApi";
-import { IwFsType } from "@/sdk/constants";
+import { DataOrigin, IwFsType } from "@/sdk/constants";
+import { selectInitialMediaIndex } from "@/components/MediaPlayer/media";
+import { initialWindowBounds } from "@/components/Window/bounds";
 
 const toEntry = (path: string): BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntry => {
   const name = path.split(/[/\\]/).pop() || path;
@@ -38,30 +40,68 @@ export const useResourceBrowserPlayer = () => {
 
   return useCallback(
     async (resource: ResourceModel, initialPath?: string) => {
-      const rsp = await BApi.file.getAllFiles({ path: resource.path });
+      let rsp;
+      try {
+        rsp = resource.isFile
+          ? { code: 0, data: [resource.path] }
+          : await BApi.file.getAllFiles(
+              { path: resource.path },
+              { signal: AbortSignal.timeout(15_000) },
+            );
+      } catch {
+        toast.danger(t("mediaPlayer.filesFailed"));
+        return;
+      }
 
       if (rsp.code || !rsp.data) {
+        toast.danger(t("mediaPlayer.filesFailed"));
         return;
       }
 
       if (rsp.data.length === 0) {
-        toast(t<string>("resource.play.noFilesToPreview"));
+        toast.default(t<string>("resource.play.noFilesToPreview"));
 
         return;
       }
 
       const entries = rsp.data.map(toEntry);
-      const defaultActiveIndex = initialPath
-        ? Math.max(
-            0,
-            entries.findIndex((e) => e.path === initialPath),
-          )
-        : 0;
+      let locatedPaths =
+        resource.playableItems
+          ?.filter((item) => item.origin === DataOrigin.FileSystem)
+          .map((item) => item.key) ?? [];
+      if (!initialPath) {
+        try {
+          const located = await BApi.resource.getResourcePlayableItems(resource.id, {
+            signal: AbortSignal.timeout(10_000),
+          });
+          if (!located.code && located.data)
+            locatedPaths = located.data
+              .filter((item) => item.origin === DataOrigin.FileSystem)
+              .map((item) => item.key)
+              .filter((path): path is string => !!path);
+        } catch {
+          // Cached located files or the first useful media file still open if discovery fails.
+        }
+      }
+      const defaultActiveIndex = selectInitialMediaIndex(
+        entries,
+        initialPath ? [initialPath] : locatedPaths,
+      );
+      const { x, y, width, height } = initialWindowBounds(
+        { initialSize: { width: 1120, height: 760 } },
+        window.innerWidth,
+        window.innerHeight,
+      );
 
       createWindow(
         MediaPlayer,
         { entries, defaultActiveIndex, renderOperations: (): any => {} },
-        { title: resource.displayName, persistent: true },
+        {
+          title: resource.displayName,
+          persistent: true,
+          initialSize: { width, height },
+          initialPosition: { x, y },
+        },
       );
 
       // Playing through the API records history as a side effect; playing in the

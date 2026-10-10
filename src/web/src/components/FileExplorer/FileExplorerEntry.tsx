@@ -2,6 +2,7 @@
 import type { IEntryFilter } from "@/core/models/FileExplorer/Entry";
 import type { Capability } from "./models";
 import type { BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntry } from "@/sdk/Api";
+import type { EditableFileNameRef } from "./components/EditableFileName";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -130,6 +131,7 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
 
   // Functions
   const currentEntryDomRef = useRef<any>();
+  const editableFileNameRef = useRef<EditableFileNameRef>(null);
 
   const initialize = useCallback(async (e: Entry) => {
     // console.trace();
@@ -173,6 +175,7 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
       },
       setLoading,
       playFirstFile,
+      beginRename: () => editableFileNameRef.current?.beginRename(),
     };
 
     log(
@@ -767,6 +770,7 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
                 )}
               </div>
               <EditableFileName
+                ref={editableFileNameRef}
                 disabled={
                   entry.isDrive ||
                   entry.passive ||

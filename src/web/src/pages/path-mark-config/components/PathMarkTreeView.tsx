@@ -33,7 +33,9 @@ const PathMarkTreeView = ({ rootPath, onMarksChanged, onInitialized }: PathMarkT
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
-  const { loadAllMarks, getMarksForPath } = usePathMarks();
+  // The page owns availability checks and their recovery UI; this hook instance
+  // only supplies mark decorations, avoiding duplicate background requests.
+  const { loadAllMarks, getMarksForPath } = usePathMarks({ checkExistence: false });
 
   // Copy marks store
   const { enterCopyMode, selectAllMarks } = useCopyMarksStore();

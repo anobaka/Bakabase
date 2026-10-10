@@ -192,6 +192,22 @@ const FilterPanel = (props: IProps) => {
             {t("resource.search.panelTitle")}
           </h2>
           <div className="flex items-center gap-1">
+            <Tooltip content={t<string>("resource.unmaterialized.tip")}>
+              <Button
+                isIconOnly
+                aria-label={t("resource.unmaterialized.action.open")}
+                color="default"
+                size="sm"
+                variant="light"
+                onPress={() =>
+                  createPortal(CreatePlaceholderResourcesModal, {
+                    onCreated: () => onSearch?.({}, false),
+                  })
+                }
+              >
+                <AiOutlinePlus aria-hidden className="text-lg" />
+              </Button>
+            </Tooltip>
             <ShortcutsButton />
             <Popover
               className="min-w-[160px]"
@@ -224,26 +240,6 @@ const FilterPanel = (props: IProps) => {
             <MiscellaneousOptions rearrangeResources={rearrangeResources} />
           </div>
         </div>
-        <Tooltip content={t<string>("resource.unmaterialized.tip")}>
-          <Button
-            className="w-full justify-start"
-            color={"default"}
-            size={"sm"}
-            startContent={<AiOutlinePlus className={"text-base"} />}
-            variant={"flat"}
-            onPress={() =>
-              createPortal(CreatePlaceholderResourcesModal, {
-                // Re-run the current search so the new resources appear where the user is looking.
-                onCreated: () => onSearch?.({}, false),
-              })
-            }
-          >
-            {t<string>("resource.unmaterialized.action.open")}
-            <span className="ml-auto text-xs font-normal text-default-500">
-              {t("resource.unmaterialized.later")}
-            </span>
-          </Button>
-        </Tooltip>
       </header>
 
       {/* Scrollable Filters Area */}

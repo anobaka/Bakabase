@@ -41,6 +41,8 @@
   "ResourceSearchSortableProperty.HealthScore": "Health Score",
   "resource.display.title": "Display options",
   "resource.display.columnCount": "Column count",
+  "resource.display.useNameAsCover": "Use resource names when covers are missing",
+  "resource.display.useNameAsCoverDescription": "Show a typographic cover with the resource name and a matching color palette when no cover is available.",
   "resource.display.fillCover": "Fill cover",
   "resource.display.hoverLargeCover": "Show larger cover on mouse hover",
   "resource.display.previewFiles": "Preview files of a resource on mouse hover",

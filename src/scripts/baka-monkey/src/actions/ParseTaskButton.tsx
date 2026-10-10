@@ -11,7 +11,7 @@ import { getApiBaseUrl, httpRequest } from '../api';
 import { showToast } from '../components/Toast';
 import { getOverlayRoot } from '../overlay';
 import { CoverActionOverlay, type CoverActionTone } from './CoverActionOverlay';
-import { t, onLocaleChange } from '../i18n';
+import { t, onLocaleChange, describeRequestError } from '../i18n';
 import { createBatcher } from '../utils/batcher';
 
 const enum TaskStatus {
@@ -134,8 +134,8 @@ export function ParseTaskButton({
         setStatus(TaskStatus.Pending);
         setLoading(false);
       },
-      onError: () => {
-        alert(t('requestFailed'));
+      onError: (error) => {
+        alert(`${t('requestFailed')}\n${describeRequestError(error)}`);
         setLoading(false);
       },
     });
@@ -152,8 +152,8 @@ export function ParseTaskButton({
         setStatus(TaskStatus.Deleted);
         setLoading(false);
       },
-      onError: () => {
-        alert(t('requestFailed'));
+      onError: (error) => {
+        alert(`${t('requestFailed')}\n${describeRequestError(error)}`);
         setLoading(false);
       },
     });

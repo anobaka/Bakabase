@@ -29,6 +29,7 @@
   "fileExplorer.contextMenu.copied": "Copied",
   "fileExplorer.contextMenu.failedToCopy": "Failed to copy",
   "fileExplorer.contextMenu.batchRename": "Batch rename {{count}} items",
+  "fileExplorer.contextMenu.rename": "Rename",
   "fileExplorer.createDirectoryModal.title": "Create new folder",
   "fileExplorer.createDirectoryModal.okButton": "Create",
   "fileExplorer.createDirectoryModal.description": "Create a new folder in",

@@ -1,6 +1,14 @@
 "use client";
 
-import React, { memo, useCallback, useEffect, useRef, useState } from "react";
+import React, {
+  forwardRef,
+  memo,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from "react";
 import { useUpdateEffect } from "react-use";
 import { AutoTextSize } from "auto-text-size";
 
@@ -21,15 +29,22 @@ interface Props {
   disabled?: boolean;
 }
 
+export type EditableFileNameRef = {
+  beginRename: () => void;
+};
+
 const log = buildLogger("EditableText");
 
-const EditableText = memo((props: Props) => {
+const EditableText = forwardRef<EditableFileNameRef, Props>((props, ref) => {
   const { path, name, isDirectory, disabled = false } = props;
 
   const propsRef = useRef(props);
 
+  propsRef.current = props;
+
   const [editing, setEditing] = useState(false);
   const editingRef = useRef(editing);
+  const submittingRef = useRef(false);
   const nodeRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
@@ -62,6 +77,7 @@ const EditableText = memo((props: Props) => {
 
   const cancel = useCallback(() => {
     if (editingRef.current) {
+      editingRef.current = false;
       setEditing(false);
       forceFocus(nodeRef.current);
       setValue(propsRef.current.name);
@@ -69,16 +85,24 @@ const EditableText = memo((props: Props) => {
   }, []);
 
   const submit = useCallback(async () => {
+    if (!editingRef.current || submittingRef.current) return;
     if (valueRef.current && valueRef.current != propsRef.current.name) {
-      const rsp = await BApi.file.renameFile({
-        fullname: path,
-        newName: valueRef.current,
-      });
+      submittingRef.current = true;
+      try {
+        const rsp = await BApi.file.renameFile({
+          fullname: path,
+          newName: valueRef.current,
+        });
 
-      if (!rsp.code) {
-        setValue(valueRef.current);
+        setValue(rsp.code ? propsRef.current.name : valueRef.current);
+      } catch (cause) {
+        log("Rename failed", cause);
+        setValue(propsRef.current.name);
+      } finally {
+        editingRef.current = false;
+        submittingRef.current = false;
+        setEditing(false);
       }
-      setEditing(false);
     } else {
       cancel();
     }
@@ -94,6 +118,16 @@ const EditableText = memo((props: Props) => {
         e.stopPropagation();
       }
     },
+    [disabled],
+  );
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      beginRename: () => {
+        if (!disabled && !editingRef.current) setEditing(true);
+      },
+    }),
     [disabled],
   );
 
@@ -180,25 +214,25 @@ const EditableText = memo((props: Props) => {
         <Input
           // can't remove outline by outline-none or ring-0
           ref={inputRef}
-          className={'w-full'}
+          className={"w-full"}
           data-focus={false}
-          radius={'none'}
-          onDoubleClick={e => {
-            log('onDoubleClick', e);
+          radius={"none"}
+          onDoubleClick={(e) => {
+            log("onDoubleClick", e);
             e.stopPropagation();
             e.preventDefault();
           }}
           // autoFocus
-          size={'sm'}
+          size={"sm"}
           value={value}
           onBlur={submit}
-          onClick={e => {
-            log('onClick', e);
+          onClick={(e) => {
+            log("onClick", e);
             e.stopPropagation();
             e.preventDefault();
           }}
           onKeyDown={inputKeyDownHandler}
-          onValueChange={v => {
+          onValueChange={(v) => {
             setValue(v);
           }}
         />
@@ -209,4 +243,4 @@ const EditableText = memo((props: Props) => {
   );
 });
 
-export default EditableText;
+export default memo(EditableText);

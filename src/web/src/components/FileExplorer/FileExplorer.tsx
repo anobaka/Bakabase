@@ -32,6 +32,7 @@ import _ from "lodash";
 import EventListener, { SelectionMode } from "./components/EventListener";
 import ContextMenu from "./components/ContextMenu";
 import { FileSystemTreeEntryCapabilityMap } from "./models";
+import { canDeleteEntry } from "./utils";
 import Shortcuts from "./components/Shortcuts";
 import FileExplorerEntry from "./FileExplorerEntry";
 import DeleteConfirmationModal from "./components/DeleteConfirmationModal";
@@ -529,6 +530,11 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
 
     const filteredChildrenCount = root.filteredChildren.length ?? 0;
     const childrenCount = root.childrenCount ?? 0;
+    const clearDeletedSelection = () => {
+      selectedEntriesRef.current.forEach((entry) => entry.select(false));
+      selectedEntriesRef.current = [];
+      setSelectedEntries([]);
+    };
 
     return (
       <div
@@ -555,6 +561,7 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
             root={root}
             selectedEntries={selectedEntries}
             onChangeWorkingDirectory={initialize}
+            onEntriesDeleted={clearDeletedSelection}
           />
         </ControlledMenu>
         {keyboard && (
@@ -569,10 +576,13 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
               setSelectedEntries([]);
             }}
             onDelete={() => {
-              if (selectedEntriesRef.current.length > 0 && capabilities?.includes("delete")) {
+              const entries = selectedEntriesRef.current.filter(canDeleteEntry);
+
+              if (entries.length > 0 && capabilities?.includes("delete")) {
                 createPortal(DeleteConfirmationModal, {
-                  entries: selectedEntriesRef.current,
+                  entries,
                   rootPath: rootRef.current?.path,
+                  onDeleted: clearDeletedSelection,
                 });
 
                 return true;

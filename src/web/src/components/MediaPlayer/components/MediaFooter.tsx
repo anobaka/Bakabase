@@ -1,13 +1,10 @@
 "use client";
-
 import type { MediaPlayerEntry } from "../types";
 import type { MediaType } from "@/sdk/constants";
-
 import React from "react";
-
-import FileSystemEntryIcon from "@/components/FileSystemEntryIcon";
-import { IconType } from "@/sdk/constants";
-import { Progress } from "@/components/bakaui";
+import { useTranslation } from "react-i18next";
+import { TbChevronLeft, TbChevronRight } from "react-icons/tb";
+import { mediaTypeKey } from "../media";
 
 interface MediaFooterProps {
   entry: MediaPlayerEntry;
@@ -27,42 +24,58 @@ interface MediaFooterProps {
   ) => any;
   reactPlayer?: any;
   image?: HTMLImageElement | null;
+  onPrevEntry: () => void;
+  onNextEntry: () => void;
 }
-
-const MediaFooter: React.FC<MediaFooterProps> = ({
+const MediaFooter = ({
   entry,
   activeIndex,
   totalEntries,
   currentInitialized,
-  autoPlay,
-  progress,
   mediaType,
   playing,
   renderOperations,
   reactPlayer,
   image,
-}) => {
+  onPrevEntry,
+  onNextEntry,
+}: MediaFooterProps) => {
+  const { t } = useTranslation();
   return (
-    <>
-      <div className="h-[40px] min-h-[40px] text-center flex gap-2.5 items-center justify-center text-white/90 bg-black/50 border-t border-white/10 px-5">
-        <div className="flex items-center gap-1.5">
-          <div className="max-w-4 max-h-4">
-            <FileSystemEntryIcon path={entry.path} size={16} type={IconType.Dynamic} />
-          </div>
-          <div className="flex items-center flex-wrap gap-0.5">{entry.name}</div>
-        </div>
-        <span>
-          ({activeIndex + 1} / {totalEntries})
-        </span>
-        {renderOperations &&
-          currentInitialized &&
-          renderOperations(entry.playPath || entry.path, mediaType, playing, reactPlayer, image)}
+    <footer className="media-player-footer">
+      <div className="media-player-current">
+        <span className="media-player-current-type">{t(mediaTypeKey(mediaType))}</span>
+        <span title={entry.path}>{entry.name || entry.path}</span>
       </div>
-      {autoPlay && progress && (
-        <Progress {...({ percent: progress, size: "sm", textRender: () => "" } as any)} />
-      )}
-    </>
+      {renderOperations &&
+        currentInitialized &&
+        renderOperations(entry.playPath || entry.path, mediaType, playing, reactPlayer, image)}
+      <nav className="media-player-navigation" aria-label={t("mediaPlayer.navigation")}>
+        <button
+          className="media-player-icon-button"
+          aria-label={t("mediaPlayer.previous")}
+          title={t("mediaPlayer.previous")}
+          disabled={activeIndex <= 0}
+          onClick={onPrevEntry}
+        >
+          <TbChevronLeft size={20} />
+        </button>
+        <span>
+          {activeIndex + 1}
+          <span className="media-player-count-divider">/</span>
+          {totalEntries}
+        </span>
+        <button
+          className="media-player-icon-button"
+          aria-label={t("mediaPlayer.next")}
+          title={t("mediaPlayer.next")}
+          disabled={activeIndex >= totalEntries - 1}
+          onClick={onNextEntry}
+        >
+          <TbChevronRight size={20} />
+        </button>
+      </nav>
+    </footer>
   );
 };
-
 export default MediaFooter;

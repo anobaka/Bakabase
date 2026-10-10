@@ -10,6 +10,7 @@ import { AiOutlineTags } from "react-icons/ai";
 import PathMarkTreeView from "./components/PathMarkTreeView";
 import PathMarkSettingsButton from "./components/PathMarkSettingsButton";
 import PendingSyncButton from "./components/PendingSyncButton";
+import PathCheckWarnings from "./components/PathCheckWarnings";
 import usePathMarks from "./hooks/usePathMarks";
 
 import { Button } from "@/components/bakaui";
@@ -28,7 +29,7 @@ const PathRuleConfigPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-  const { loadAllMarks } = usePathMarks();
+  const { loadAllMarks, pathErrorsMap, checkingPaths, retryPathChecks } = usePathMarks();
   const { showFirstRun, completeFirstRun } = useFirstRunHelp(PATH_MARK_FIRST_RUN_KEY);
 
   const [rootPath, setRootPath] = useState<string>();
@@ -98,6 +99,12 @@ const PathRuleConfigPage = () => {
 
         <div className="text-sm text-default-500">{t("pathMarkConfig.tip.description")}</div>
         <div className="text-sm text-default-400">{t("pathMarkConfig.tip.pathMemory")}</div>
+        <PathCheckWarnings
+          checking={checkingPaths}
+          errors={pathErrorsMap}
+          onManage={() => navigate("/path-marks")}
+          onRetry={retryPathChecks}
+        />
 
         <div className="overflow-hidden flex-1 min-h-0 flex">
           {/* Tree container with sidebar */}

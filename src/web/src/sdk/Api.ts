@@ -2801,6 +2801,7 @@ export interface BakabaseInsideWorldModelsConfigsUIOptionsUIResourceOptions {
   disablePlayableFileCache: boolean;
   /** [1: Contain, 2: Cover] */
   coverFit: BakabaseInsideWorldModelsConstantsCoverFit;
+  useNameAsCover: boolean;
   disableCoverCarousel: boolean;
   displayResourceId: boolean;
   hideResourceTimeInfo: boolean;

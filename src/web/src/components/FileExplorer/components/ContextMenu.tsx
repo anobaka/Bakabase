@@ -4,6 +4,8 @@
 import type { Entry } from "@/core/models/FileExplorer/Entry";
 import type { FileExplorerEntryProps } from "../FileExplorerEntry";
 
+import { canDeleteEntry } from "../utils";
+
 import { MenuItem } from "@szhsin/react-menu";
 import React from "react";
 import {
@@ -31,7 +33,7 @@ import DeleteItemsWithSameNamesModal from "./DeleteItemsWithSameNamesModal";
 import GroupModal from "./GroupModal";
 import CreateDirectoryModal from "./CreateDirectoryModal";
 
-import { IwFsEntryAction } from "@/core/models/FileExplorer/Entry";
+import { EntryStatus, IwFsEntryAction } from "@/core/models/FileExplorer/Entry";
 import BApi from "@/sdk/BApi";
 import { IwFsType } from "@/sdk/constants";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
@@ -45,6 +47,7 @@ type Props = {
   root?: Entry;
   renderExtraContextMenuItems?: (entries: Entry[]) => React.ReactNode;
   onChangeWorkingDirectory?: (path: string) => void | Promise<void>;
+  onEntriesDeleted?: () => void;
 } & Pick<FileExplorerEntryProps, "capabilities">;
 
 type Item = {
@@ -59,6 +62,7 @@ const ContextMenu = ({
   root,
   renderExtraContextMenuItems,
   onChangeWorkingDirectory,
+  onEntriesDeleted,
 }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
@@ -72,6 +76,21 @@ const ContextMenu = ({
     const expandableEntries = selectedEntries.filter((x) => x.expandable && !x.expanded);
     const collapsableEntries = selectedEntries.filter((x) => x.expandable && x.expanded);
     const directoryEntries = selectedEntries.filter((e) => e.type == IwFsType.Directory);
+    const deletableEntries = selectedEntries.filter(canDeleteEntry);
+
+    if (
+      capabilities?.includes("rename") &&
+      selectedEntries.length === 1 &&
+      !selectedEntries[0].isDrive &&
+      !selectedEntries[0].passive &&
+      selectedEntries[0].status !== EntryStatus.Error
+    ) {
+      items.push({
+        icon: <MdDriveFileRenameOutline className={"text-base"} />,
+        label: t<string>("fileExplorer.contextMenu.rename"),
+        onClick: () => selectedEntries[0].ref?.beginRename(),
+      });
+    }
 
     // Open in system file manager (single entry only)
     if (selectedEntries.length === 1) {
@@ -192,17 +211,18 @@ const ContextMenu = ({
       });
     }
 
-    if (capabilities?.includes("delete")) {
+    if (capabilities?.includes("delete") && deletableEntries.length > 0) {
       items.push({
         icon: <DeleteOutlined className={"text-base"} />,
         danger: true,
         label: t<string>("fileExplorer.contextMenu.deleteItems", {
-          count: selectedEntries.length,
+          count: deletableEntries.length,
         }),
         onClick: () => {
           createPortal(DeleteConfirmationModal, {
-            entries: selectedEntries,
+            entries: deletableEntries,
             rootPath: root?.path,
+            onDeleted: onEntriesDeleted,
           });
         },
       });
@@ -360,7 +380,7 @@ const ContextMenu = ({
             onClick={i.onClick}
           >
             <div className={"flex items-center gap-2"}>
-              {i.icon}
+              <span aria-hidden>{i.icon}</span>
               {i.label}
             </div>
           </MenuItem>

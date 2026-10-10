@@ -80,6 +80,8 @@ src/
 
 - 构建产物为 `dist/bakabase.user.js`
 - CI 构建后上传到 OSS（`oss://anobaka-public/app/bakabase/scripts/bakabase.user.js`），通过 CDN 分发
-- 脚本不依赖后端注入，API 地址由用户在 SettingsPanel 中配置（通过 GM_setValue 持久化）
-- 后端 `TampermonkeyService.Install()` 打开 CDN URL 触发 Tampermonkey 安装
-- 后端 `GET /tampermonkey/script/bakabase.user.js` 重定向到 CDN URL（兼容旧链接）
+- 直接安装 CDN 脚本时，API 地址由用户在 SettingsPanel 中配置；地址规范化为 HTTP(S) origin，通过 GM_setValue 持久化
+- 后端 `TampermonkeyService.Install()` 打开本机脚本安装接口；远程浏览器使用其可访问的 API origin 下载脚本
+- 后端 `GET /tampermonkey/script/bakabase.user.js` 获取 CDN 脚本，在元数据中声明安装目标的 `@connect` 主机，并在 bundle 执行前初始化 API 地址和应用语言；已有的用户地址和语言选择不被覆盖
+- 本地部署测试时，管理员可通过 `BAKABASE_TAMPERMONKEY_SCRIPT_FILE` 指定只读脚本构建文件；安装接口优先读取该文件，继续使用同一元数据校验和连接配置初始化流程。未配置时仍使用 CDN；指定文件读取失败或元数据无效时返回失败，不回退到旧 CDN 脚本
+- `@updateURL` / `@downloadURL` 保留 CDN 地址；连接偏好存储于 GM storage，后续更新仍可保留。连接失败显示翻译后的原因并输出 `[Bakabase]` 诊断；扩展请求可能不会出现在网页的 Network 面板中

@@ -1,40 +1,71 @@
 import { getApiBaseUrl, httpRequest } from './api';
+import { normalizeApiBaseUrl, RequestError } from './requests';
 
-type Listener = (connected: boolean) => void;
+export interface ConnectionState {
+  connected: boolean;
+  baseUrl: string;
+  error: RequestError | null;
+}
 
-let connected = false;
+type Listener = (state: ConnectionState) => void;
+
+let state: ConnectionState = { connected: false, baseUrl: '', error: null };
 let started = false;
+let generation = 0;
 const listeners = new Set<Listener>();
 
 const INTERVAL = 10_000; // 10s
 
 function ping() {
   const base = getApiBaseUrl();
+  const attempt = ++generation;
+  // An in-flight answer from a previous address must not restore its connection.
+  const update = (connected: boolean, error: RequestError | null) => {
+    if (attempt === generation && base === getApiBaseUrl()) setState({ connected, baseUrl: base, error });
+  };
+  if (state.baseUrl !== base) update(false, null);
   if (!base) {
-    setConnected(false);
+    update(false, new RequestError('invalid-url'));
     return;
   }
-  httpRequest({
+  try {
+    normalizeApiBaseUrl(base);
+  } catch {
+    update(false, new RequestError('invalid-url'));
+    return;
+  }
+  httpRequest<{ code?: number }>({
     method: 'GET',
     url: `${base}/tampermonkey/health`,
-    onSuccess: () => setConnected(true),
-    onError: () => setConnected(false),
+    timeout: 8_000,
+    onSuccess: (response) => {
+      if (response?.code === 0) update(true, null);
+      else update(false, new RequestError('invalid-response'));
+    },
+    onError: (error) => update(false, error),
   });
 }
 
-function setConnected(value: boolean) {
-  if (connected !== value) {
-    connected = value;
-    listeners.forEach((fn) => fn(value));
+function setState(value: ConnectionState) {
+  if (state.connected !== value.connected || state.baseUrl !== value.baseUrl ||
+    state.error?.kind !== value.error?.kind || state.error?.status !== value.error?.status ||
+    state.error?.reason !== value.error?.reason) {
+    state = value;
+    listeners.forEach((fn) => fn(state));
   }
 }
 
 export function isConnected(): boolean {
-  return connected;
+  return state.connected;
+}
+
+export function getConnectionState(): ConnectionState {
+  return state;
 }
 
 export function onConnectionChange(fn: Listener): () => void {
   listeners.add(fn);
+  fn(state);
   return () => listeners.delete(fn);
 }
 

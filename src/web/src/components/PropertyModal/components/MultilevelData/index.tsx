@@ -66,7 +66,7 @@ const MultilevelData = ({ options: propOptions, onChange }: Props) => {
       selectable: false,
       children: node.children?.length ? buildTreeData(node.children) : undefined,
       title: (
-        <div className="my-0.5 flex min-w-0 flex-wrap items-center gap-1.5 rounded-lg bg-default-50 px-2 py-1.5">
+        <div className="flex min-w-0 flex-wrap items-center gap-0.5 rounded-lg bg-default-50 px-1 py-0.5">
           <ReferenceColor
             color={node.color}
             onChange={(color) => {
@@ -79,7 +79,9 @@ const MultilevelData = ({ options: propOptions, onChange }: Props) => {
               ref={editingInputRef}
               aria-label={t("property.referenceEditor.tree.name")}
               className="min-w-[6rem] flex-1"
-              classNames={{ inputWrapper: "bg-default-100 shadow-none" }}
+              classNames={{
+                inputWrapper: "h-8 min-h-8 rounded-md bg-default-100 px-2 shadow-none",
+              }}
               size="sm"
               value={node.label ?? ""}
               onBlur={() => setEditingKey(undefined)}
@@ -203,7 +205,7 @@ const MultilevelData = ({ options: propOptions, onChange }: Props) => {
           <Tree
             blockNode
             checkable={false}
-            className="!bg-transparent [&_.ant-tree-treenode]:w-full [&_.ant-tree-node-content-wrapper]:min-w-0 [&_.ant-tree-title]:block [&_.ant-tree-indent-unit]:!w-4"
+            className="property-reference-tree !bg-transparent [&_.ant-tree-treenode]:w-full [&_.ant-tree-node-content-wrapper]:min-w-0 [&_.ant-tree-title]:block [&_.ant-tree-indent-unit]:!w-4"
             expandedKeys={expandedKeys}
             selectable={false}
             treeData={buildTreeData(options.data ?? [])}

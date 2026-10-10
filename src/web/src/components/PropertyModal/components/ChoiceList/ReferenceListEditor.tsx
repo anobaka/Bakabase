@@ -81,7 +81,7 @@ export default function ReferenceListEditor<T extends Item>({
   };
 
   return (
-    <div className={`flex min-w-0 flex-col gap-3 ${className ?? ""}`}>
+    <div className={`flex min-w-0 flex-col gap-2 ${className ?? ""}`}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="text-sm font-medium">
@@ -185,8 +185,8 @@ export default function ReferenceListEditor<T extends Item>({
             </div>
             <AutoSizer disableHeight>
               {({ width }) => {
-                const compact = width < 560;
-                const rowHeight = compact ? (kind === "tags" ? 120 : 86) : 58;
+                const compact = width < (kind === "tags" ? 480 : 360);
+                const rowHeight = compact ? 76 : 40;
 
                 return (
                   <List

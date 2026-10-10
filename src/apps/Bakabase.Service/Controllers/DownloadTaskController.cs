@@ -174,7 +174,7 @@ public class DownloadTaskController : Controller
     [SwaggerOperation(OperationId = "StartDownloadTasks")]
     public async Task<BaseResponse> StartAll([FromBody] DownloadTaskStartRequestModel model)
     {
-        return await _service.Start(model.Ids.Any() ? t => model.Ids.Contains(t.Id) : null, model.ActionOnConflict,
+        return await _service.Start(model.Ids.Any() ? t => Enumerable.Contains(model.Ids, t.Id) : null, model.ActionOnConflict,
             targeted: model.Ids.Any());
     }
 
@@ -187,7 +187,7 @@ public class DownloadTaskController : Controller
     [SwaggerOperation(OperationId = "StopDownloadTasks")]
     public async Task<BaseResponse> StopAll([FromBody] int[] ids)
     {
-        await _service.Stop(ids.Any() ? t => ids.Contains(t.Id) : null);
+        await _service.Stop(ids.Any() ? t => Enumerable.Contains(ids, t.Id) : null);
         return BaseResponseBuilder.Ok;
     }
 
@@ -195,7 +195,7 @@ public class DownloadTaskController : Controller
     [SwaggerOperation(OperationId = "ClearDownloadTaskCheckpoints")]
     public async Task<BaseResponse> ClearCheckpoints([FromBody] int[] ids)
     {
-        return await _service.ClearCheckpoints(ids.Any() ? t => ids.Contains(t.Id) : null);
+        return await _service.ClearCheckpoints(ids.Any() ? t => Enumerable.Contains(ids, t.Id) : null);
     }
 
     [HttpGet("xlsx")]

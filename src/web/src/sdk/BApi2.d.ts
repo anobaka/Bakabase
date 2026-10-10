@@ -11886,6 +11886,7 @@ export interface components {
             disableCoverCache: boolean;
             disablePlayableFileCache: boolean;
             coverFit: components["schemas"]["Bakabase.InsideWorld.Models.Constants.CoverFit"];
+            useNameAsCover: boolean;
             disableCoverCarousel: boolean;
             displayResourceId: boolean;
             hideResourceTimeInfo: boolean;

@@ -25,7 +25,7 @@ public partial class ResourceMoveService
         var ids = sourcePaths.Keys.ToArray();
         // Do not use the public source-link service here: it intentionally filters unknown
         // source enums, which would turn an unsupported source into an unrestricted resource.
-        var links = await db.ResourceSourceLinks.AsNoTracking().Where(l => ids.Contains(l.ResourceId))
+        var links = await db.ResourceSourceLinks.AsNoTracking().Where(l => Enumerable.Contains(ids, l.ResourceId))
             .OrderBy(l => l.ResourceId).ThenBy(l => l.Id).ToListAsync(cancellation);
         if (!restoring)
             denied.AddRange((await EvaluateProtectedBoundaries(rootId, sourcePath, destPath, ids, cancellation))
@@ -91,7 +91,7 @@ public partial class ResourceMoveService
                 (sourcePath.IsPathEqualOrUnder(r.Path) || destPath.IsPathEqualOrUnder(r.Path))).ToDictionary(r => r.Id, r => r.Path!);
             var ancestorIds = ancestors.Keys.ToArray();
             var ancestorLinks = await db.ResourceSourceLinks.AsNoTracking().Where(l =>
-                ancestorIds.Contains(l.ResourceId) && protectedSources.Contains(l.Source)).ToListAsync(cancellation);
+                Enumerable.Contains(ancestorIds, l.ResourceId) && protectedSources.Contains(l.Source)).ToListAsync(cancellation);
             foreach (var link in ancestorLinks)
             {
                 var evaluation = await _sourceHandlers[link.Source].EvaluateAsync(new(rootId, link.ResourceId,
@@ -126,7 +126,7 @@ public partial class ResourceMoveService
             // Old journaled moves had one known local executor, but no durable platform
             // location plan. Never infer an external platform's prior state after moving.
             var ids = snapshot.Keys.ToArray();
-            if (await db.ResourceSourceLinks.AnyAsync(l => ids.Contains(l.ResourceId) && l.Source != ResourceSource.PathMark))
+            if (await db.ResourceSourceLinks.AnyAsync(l => Enumerable.Contains(ids, l.ResourceId) && l.Source != ResourceSource.PathMark))
             {
                 if (record.ConflictKind != "legacySourcePlanMissing") record.ConflictVersion++;
                 record.ConflictKind = "legacySourcePlanMissing";
@@ -166,7 +166,7 @@ public partial class ResourceMoveService
     private async Task ValidateRecordedSourceState(ResourceMoveRecordDbModel record, ResourceMoveExecutionPlan plan)
     {
         var ids = (await GetSourceSnapshot(record)).Keys.ToArray();
-        var currentLinks = await db.ResourceSourceLinks.AsNoTracking().Where(l => ids.Contains(l.ResourceId)).ToListAsync();
+        var currentLinks = await db.ResourceSourceLinks.AsNoTracking().Where(l => Enumerable.Contains(ids, l.ResourceId)).ToListAsync();
         if (currentLinks.Count != plan.Sources.Count || plan.Sources.Any(step =>
                 !currentLinks.Any(link => link.Id == step.LinkId && link.ResourceId == step.ResourceId &&
                     link.Source == step.Source && (link.SourceKey == step.SourceKey ||

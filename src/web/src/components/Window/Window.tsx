@@ -7,6 +7,7 @@ import { Rnd } from "react-rnd";
 
 import { WindowManager } from "./WindowManager";
 import { WindowHeader } from "./WindowHeader";
+import { initialWindowBounds } from "./bounds";
 import "./styles.css";
 
 const Window: React.FC<WindowProps> = (props) => {
@@ -18,11 +19,14 @@ const Window: React.FC<WindowProps> = (props) => {
   const rndRef = useRef<any>(null);
 
   const [windowState, setWindowState] = useState<WindowState>(() => {
+    const bounds = initialWindowBounds(windowOptions, window.innerWidth, window.innerHeight);
     const initialState = windowManager.registerWindow(windowIdRef.current, {
-      x: windowOptions?.initialPosition?.x ?? 100,
-      y: windowOptions?.initialPosition?.y ?? 100,
-      width: windowOptions?.initialSize?.width ?? 1000,
-      height: windowOptions?.initialSize?.height ?? 700,
+      x: bounds.x,
+      y: bounds.y,
+      width: bounds.width,
+      height: bounds.height,
+      innerWidth: window.innerWidth,
+      innerHeight: window.innerHeight,
       isMinimized: false,
       isMaximized: false,
     });
@@ -367,7 +371,7 @@ const Window: React.FC<WindowProps> = (props) => {
         return;
       }
 
-      if (e.key === "Escape") {
+      if (e.key === "Escape" && !document.querySelector('[role="dialog"][aria-modal="true"]')) {
         handleClose();
         e.preventDefault();
         e.stopPropagation();
@@ -428,8 +432,8 @@ const Window: React.FC<WindowProps> = (props) => {
       className={windowClasses}
       disableResizing={windowState.isMaximized}
       dragHandleClassName="window-header"
-      minHeight={windowOptions?.minHeight ?? 300}
-      minWidth={windowOptions?.minWidth ?? 400}
+      minHeight={Math.min(windowOptions?.minHeight ?? 300, Math.max(1, window.innerHeight - 32))}
+      minWidth={Math.min(windowOptions?.minWidth ?? 400, Math.max(1, window.innerWidth - 32))}
       position={{ x: windowState.x, y: windowState.y }}
       size={{
         width: windowState.width,

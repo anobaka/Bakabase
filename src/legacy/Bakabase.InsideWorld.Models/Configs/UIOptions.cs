@@ -151,6 +151,7 @@ namespace Bakabase.InsideWorld.Models.Configs
             public bool DisableCoverCache { get; set; }
             public bool DisablePlayableFileCache { get; set; }
             public CoverFit CoverFit { get; set; } = CoverFit.Contain;
+            public bool UseNameAsCover { get; set; }
             public bool DisableCoverCarousel { get; set; }
             public bool DisplayResourceId { get; set; }
             public bool HideResourceTimeInfo { get; set; }

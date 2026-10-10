@@ -272,6 +272,18 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
 
   const renderCoverTab = () => (
     <div className={"flex flex-col gap-1"}>
+      <div className="mb-2 rounded-lg bg-default-50 p-3">
+        <Checkbox
+          isSelected={resourceUiOptions?.useNameAsCover ?? false}
+          size="sm"
+          onValueChange={(checked) => patchOptions({ useNameAsCover: checked })}
+        >
+          {t("resource.display.useNameAsCover")}
+        </Checkbox>
+        <p className="mt-1 pl-6 text-xs text-default-500">
+          {t("resource.display.useNameAsCoverDescription")}
+        </p>
+      </div>
       <div>
         <Checkbox
           isSelected={resourceUiOptions?.coverFit === CoverFit.Cover}
@@ -561,7 +573,13 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
 
   return (
     <>
-      <Button isIconOnly aria-label={t("resource.display.title")} size={"sm"} variant={"light"} onPress={() => setVisible(true)}>
+      <Button
+        isIconOnly
+        aria-label={t("resource.display.title")}
+        size={"sm"}
+        variant={"light"}
+        onPress={() => setVisible(true)}
+      >
         <AiOutlineSetting className={"text-xl"} />
       </Button>
       {visible && (

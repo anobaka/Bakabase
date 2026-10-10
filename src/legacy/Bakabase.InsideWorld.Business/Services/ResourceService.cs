@@ -2476,7 +2476,7 @@ namespace Bakabase.InsideWorld.Business.Services
             await using var transaction = await db.Database.BeginTransactionAsync();
             // Read the database, not the full-memory cache: another operation may have changed
             // a resource while this move was suspended. All descendants must pass together.
-            var current = await db.ResourcesV2.AsNoTracking().Where(r => uniqueIds.Contains(r.Id)).ToListAsync();
+            var current = await db.ResourcesV2.AsNoTracking().Where(r => Enumerable.Contains(uniqueIds, r.Id)).ToListAsync();
             if (current.Count != uniqueIds.Length || current.Any(r =>
                     r.Path != expectedPaths[r.Id] && r.Path != destinations[r.Id]))
                 return BaseResponseBuilder.Build(ResponseCode.Conflict, "sourceLocationChanged");

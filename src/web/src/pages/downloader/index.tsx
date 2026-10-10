@@ -31,8 +31,11 @@ import DownloadOrderPrompt from "./components/DownloadOrderPrompt";
 import TaskRow, { DOWNLOAD_TASK_ITEM_HEIGHT } from "./components/TaskRow";
 import DownloadTaskFilters, { type DownloadTaskFilter } from "./components/DownloadTaskFilters";
 import { downloadTaskDirectly } from "./directDownload";
-import { openDownloadTaskFolder } from "./openDownloadTaskFolder";
+import { DownloadFolderUnavailableError, openDownloadTaskFolder } from "./openDownloadTaskFolder";
 
+import FolderLocationModal from "@/components/Resource/components/FolderLocationModal";
+import { useUserSideActionsRunHere } from "@/stores/remoteAccess";
+import { extractErrorMessage } from "@/components/utils";
 import WorkflowIntegrationHint from "@/components/Workflow/WorkflowIntegrationHint";
 import { ThirdPartyId } from "@/sdk/constants";
 import {
@@ -539,9 +542,22 @@ const DownloaderPage = () => {
    * handlers themselves can be created once. Without this each render hands every row a fresh set
    * of callbacks, which defeats the row memoization entirely.
    */
-  const rowEnvRef = useRef({ startTasksManually, withOptimisticStatus, createPortal, t });
+  const userSideActionsRunHere = useUserSideActionsRunHere();
+  const rowEnvRef = useRef({
+    startTasksManually,
+    withOptimisticStatus,
+    createPortal,
+    t,
+    userSideActionsRunHere,
+  });
 
-  rowEnvRef.current = { startTasksManually, withOptimisticStatus, createPortal, t };
+  rowEnvRef.current = {
+    startTasksManually,
+    withOptimisticStatus,
+    createPortal,
+    t,
+    userSideActionsRunHere,
+  };
 
   const handleRowStart = useCallback((id: number) => {
     rowEnvRef.current.startTasksManually([id]);
@@ -606,8 +622,25 @@ const DownloaderPage = () => {
   }, []);
 
   const handleRowOpenFolder = useCallback((task: Parameters<typeof openDownloadTaskFolder>[0]) => {
-    // BApi reports server and transport failures; avoid an unhandled event promise.
-    void openDownloadTaskFolder(task).catch(() => {});
+    const {
+      createPortal: portal,
+      t: translate,
+      userSideActionsRunHere: runHere,
+    } = rowEnvRef.current;
+
+    void openDownloadTaskFolder(task, {
+      userSideActionsRunHere: runHere,
+      showLocation: (path) => portal(FolderLocationModal, { path }),
+    }).catch((error) => {
+      toast.danger(
+        error instanceof DownloadFolderUnavailableError
+          ? translate<string>("downloader.error.noFolderAvailable")
+          : {
+              title: translate<string>("downloader.error.openFolderFailed"),
+              description: extractErrorMessage(error),
+            },
+      );
+    });
   }, []);
 
   const handleRowDelete = useCallback((id: number) => {
@@ -1019,6 +1052,11 @@ const DownloaderPage = () => {
                   >
                     <TaskRow
                       formatDateTime={formatTaskDateTime}
+                      openFolderLabel={t<string>(
+                        userSideActionsRunHere
+                          ? "common.action.openFolder"
+                          : "resource.folderLocation.title",
+                      )}
                       progressColor={DownloadTaskStatusProgressBarColorMap[task.status]}
                       statusColor={DownloadTaskStatusIceLabelStatusMap[task.status]}
                       task={task}

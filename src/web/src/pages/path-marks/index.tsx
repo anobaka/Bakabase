@@ -14,6 +14,7 @@ import PathConfigModal from "./components/PathConfigModal";
 import DeleteMarksConfirmationModal from "./components/DeleteMarksConfirmationModal";
 
 import usePathMarks from "@/pages/path-mark-config/hooks/usePathMarks";
+import PathCheckWarnings from "@/pages/path-mark-config/components/PathCheckWarnings";
 import PathMarkSettingsButton from "@/pages/path-mark-config/components/PathMarkSettingsButton";
 import PendingSyncButton from "@/pages/path-mark-config/components/PendingSyncButton";
 import CopyMarksSidebar from "@/pages/path-mark-config/components/CopyMarksSidebar";
@@ -43,6 +44,8 @@ const PathMarksPage = () => {
     getGroupedMarksFiltered,
     getGroupedMarks,
     getInvalidPathsCount,
+    pathErrorsMap,
+    retryPathChecks,
   } = usePathMarks();
   const pendingSyncButtonRef = useRef<PendingSyncButtonRef>(null);
 
@@ -288,6 +291,11 @@ const PathMarksPage = () => {
 
         {/* Description */}
         <div className="text-sm text-default-500">{t("pathMarks.tip.description")}</div>
+        <PathCheckWarnings
+          checking={checkingPaths}
+          errors={pathErrorsMap}
+          onRetry={retryPathChecks}
+        />
 
         {/* Invalid paths warning */}
         {!checkingPaths && invalidPathsCount > 0 && (

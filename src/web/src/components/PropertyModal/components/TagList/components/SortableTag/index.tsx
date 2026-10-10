@@ -7,10 +7,13 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useTranslation } from "react-i18next";
 
-import { ReferenceColor, ReferenceItemActions } from "../../../ChoiceList/ReferenceItemTools";
+import {
+  ReferenceColor,
+  ReferenceDragHandle,
+  ReferenceItemActions,
+} from "../../../ChoiceList/ReferenceItemTools";
 import { tagText } from "../../../ChoiceList/helpers";
 
-import DragHandle from "@/components/DragHandle";
 import { Input } from "@/components/bakaui";
 
 interface Props {
@@ -32,7 +35,7 @@ export function SortableTag({ id, tag, compact, onRemove, onChange, style, check
   return (
     <div
       ref={setNodeRef}
-      className="pb-1.5"
+      className="pb-1"
       style={{
         ...style,
         transform: CSS.Transform.toString(transform),
@@ -41,25 +44,24 @@ export function SortableTag({ id, tag, compact, onRemove, onChange, style, check
       }}
     >
       <div
-        className={`flex h-full items-center gap-1.5 rounded-xl bg-default-50 px-2 py-2 ${isDragging ? "shadow-md" : ""}`}
+        className={`flex h-full items-center gap-0.5 rounded-lg bg-default-50 px-1 py-0.5 ${isDragging ? "shadow-md" : ""}`}
       >
-        <DragHandle
+        <ReferenceDragHandle
           {...listeners}
           {...attributes}
           aria-label={t("property.referenceEditor.drag")}
-          className="shrink-0"
           title={t("property.referenceEditor.drag")}
         />
-        <div className={`flex min-w-0 flex-1 gap-1.5 ${compact ? "flex-col" : "items-center"}`}>
-          <div className="flex min-w-0 flex-1 items-center gap-1.5">
+        <div className={`flex min-w-0 flex-1 gap-0.5 ${compact ? "flex-col" : "items-center"}`}>
+          <div className="flex min-w-0 flex-1 items-center gap-0.5">
             <ReferenceColor color={tag.color} onChange={(color) => onChange?.({ ...tag, color })} />
-            <div
-              className={`grid min-w-0 flex-1 gap-1.5 ${compact ? "grid-cols-1" : "grid-cols-2"}`}
-            >
+            <div className="grid min-w-0 flex-1 grid-cols-2 gap-1">
               <Input
                 aria-label={t("property.referenceEditor.tags.group")}
                 className="min-w-0"
-                classNames={{ inputWrapper: "bg-default-100 shadow-none" }}
+                classNames={{
+                  inputWrapper: "h-8 min-h-8 rounded-md bg-default-100 px-2 shadow-none",
+                }}
                 placeholder={t("property.referenceEditor.tags.group")}
                 size="sm"
                 value={tag.group ?? ""}
@@ -68,7 +70,9 @@ export function SortableTag({ id, tag, compact, onRemove, onChange, style, check
               <Input
                 aria-label={t("property.referenceEditor.tags.name")}
                 className="min-w-0"
-                classNames={{ inputWrapper: "bg-default-100 shadow-none" }}
+                classNames={{
+                  inputWrapper: "h-8 min-h-8 rounded-md bg-default-100 px-2 shadow-none",
+                }}
                 placeholder={t("property.referenceEditor.tags.name")}
                 size="sm"
                 value={tag.name ?? ""}
