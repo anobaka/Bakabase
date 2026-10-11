@@ -55,6 +55,7 @@ public sealed class ExHentaiImageRecoveryTests
     [DataRow("404")]
     [DataRow("503")]
     [DataRow("transport")]
+    [DataRow("tls")]
     [DataRow("bodyTransport")]
     [DataRow("headerTimeout")]
     [DataRow("bodyTimeout")]
@@ -90,6 +91,24 @@ public sealed class ExHentaiImageRecoveryTests
             Assert.IsFalse(external.LogKey!.Contains("secret", StringComparison.OrdinalIgnoreCase));
         }
         Assert.IsFalse(result.IsOriginal);
+    }
+
+    [DataTestMethod]
+    [DataRow("kfwtkas.afmqousouech.hath.network")]
+    [DataRow("FIRST.HATH.NETWORK")]
+    public async Task AHathNodeTlsFailureCanReplaceNestedAndMixedCaseHosts(string firstHost)
+    {
+        var bytes = EncodedImage("PNG");
+        var firstImage = new UriBuilder(ImageUrl) {Host = firstHost}.Uri.AbsoluteUri;
+        var handler = new Handler(request => request.Uri.LocalPath.StartsWith("/s/")
+            ? Html(Page(request.Uri.Query.Contains("nl=") ? SecondImageUrl : firstImage))
+            : request.Uri.Host == "second.hath.network" ? Image(bytes) : FailedResponse("tls"));
+        var result = await Client(handler).DownloadImage(PageUrl);
+        CollectionAssert.AreEqual(bytes, result.Data);
+        Assert.AreEqual(4, handler.Requests.Count);
+        Assert.AreEqual(1, handler.Requests.Count(r => r.Uri.Query.Contains("nl=")));
+        Assert.AreEqual(new Uri(firstImage).Host, handler.Requests[1].Uri.Host);
+        Assert.AreEqual("second.hath.network", handler.Requests[3].Uri.Host);
     }
 
     [TestMethod]
@@ -148,17 +167,25 @@ public sealed class ExHentaiImageRecoveryTests
             ExtractLength(error.Message));
     }
 
-    [TestMethod]
-    public async Task AnExhaustedNodeTransportFailureKeepsItsClassificationButCannotTriggerAnotherNl()
+    [DataTestMethod]
+    [DataRow("transport", true)]
+    [DataRow("tls", false)]
+    public async Task AnExhaustedNodeTransportFailureKeepsItsClassificationButCannotTriggerAnotherNl(string failure,
+        bool transient)
     {
         var handler = new Handler(request => request.Uri.LocalPath.StartsWith("/s/")
-            ? Html(Page()) : throw new HttpRequestException(HttpRequestError.ConnectionError, "wire " + ImageUrl));
+            ? Html(Page(request.Uri.Query.Contains("nl=") ? SecondImageUrl : ImageUrl)) : FailedResponse(failure));
         var error = await Assert.ThrowsExceptionAsync<HttpRequestException>(() => Client(handler).DownloadImage(PageUrl));
         Assert.AreEqual(4, handler.Requests.Count);
-        Assert.IsTrue(TransientNetworkError.IsTransient(error));
+        Assert.AreEqual(1, handler.Requests.Count(r => r.Uri.Query.Contains("nl=")));
+        Assert.AreEqual(transient, TransientNetworkError.IsTransient(error));
         Assert.IsTrue(ExHentaiClient.IsImageNodeRecoveryExhausted(error));
-        Assert.IsNull(error.InnerException);
-        AssertSafeDiagnostic(error, "first.hath.network", "unknown", "unknown");
+        if (transient) Assert.IsNull(error.InnerException);
+        else Assert.IsInstanceOfType<AuthenticationException>(error.InnerException);
+        AssertSafeDiagnostic(error, "second.hath.network", "unknown", "unknown");
+        Assert.IsTrue(handler.Requests.All(r => !r.LogKey!.Contains(ReloadToken)));
+        Assert.IsTrue(handler.Requests.Where(r => r.Uri.Host.EndsWith(".hath.network"))
+            .All(r => r.Cookie == null && r.SuppressSensitiveHeaders));
     }
 
     [TestMethod]
@@ -262,8 +289,10 @@ public sealed class ExHentaiImageRecoveryTests
         Assert.AreEqual(64L, ExtractLength(error.Message));
     }
 
-    [TestMethod]
-    public async Task AConfirmedFreeOriginalWithZeroLeadingBytesCanReplaceItsNodeOnceWithoutReloadingTheViewingPage()
+    [DataTestMethod]
+    [DataRow("zero")]
+    [DataRow("tls")]
+    public async Task AConfirmedFreeOriginalCanReplaceItsNodeOnceWithoutReloadingTheViewingPage(string failure)
     {
         var preflight = new List<ExHentaiOriginalImageInfo>();
         var final = new List<ExHentaiOriginalImageInfo>();
@@ -274,7 +303,9 @@ public sealed class ExHentaiImageRecoveryTests
             if (request.Uri.LocalPath.StartsWith("/s/")) return DatedHtml(Page(original: original));
             if (request.Uri.Host == "exhentai.org")
                 return Redirect(request.Uri.Query.Contains(ReloadToken) ? SecondImageUrl : ImageUrl);
-            return request.Uri.Host == "first.hath.network" ? Image(new byte[64], "image/jpeg") : Image(bytes, "image/jpeg");
+            return request.Uri.Host == "first.hath.network"
+                ? failure == "zero" ? Image(new byte[64], "image/jpeg") : FailedResponse(failure)
+                : Image(bytes, "image/jpeg");
         });
         var result = await Client(handler).DownloadImage(PageUrl, new ExHentaiImageDownloadOptions
         {
@@ -298,6 +329,8 @@ public sealed class ExHentaiImageRecoveryTests
         Assert.IsFalse(replacement.LogKey!.Contains(ReloadToken));
         Assert.AreEqual(replacement.Uri.AbsoluteUri, preflight[1].OriginalUrl);
         Assert.AreEqual(replacement.Uri.AbsoluteUri, final[1].OriginalUrl);
+        Assert.IsTrue(handler.Requests.Where(r => r.Uri.Host.EndsWith(".hath.network"))
+            .All(r => r.Cookie == null && r.SuppressSensitiveHeaders));
     }
 
     [DataTestMethod]
@@ -489,17 +522,82 @@ public sealed class ExHentaiImageRecoveryTests
         AssertSafeDiagnostic(error, "second.hath.network", "200", "text/html");
     }
 
-    [TestMethod]
-    public async Task RejectedTlsAuthenticationIsStillPermanentAfterDiagnosticSanitizing()
+    [DataTestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task ARejectedTlsCertificateCannotReplayAPaidOriginalEntry(bool absentFreeCallback)
     {
-        var handler = new Handler(request => request.Uri.LocalPath.StartsWith("/s/") ? Html(Page()) :
-            throw new HttpRequestException(HttpRequestError.SecureConnectionError, "secret " + ImageUrl,
-                new AuthenticationException("private-auth-error-secret")));
+        var spendingChecks = 0;
+        var handler = new Handler(request => request.Uri.LocalPath.StartsWith("/s/")
+            ? Html(Page(original: "/fullimg.php?private=signed-original-secret"))
+            : request.Uri.Host == "exhentai.org" ? Redirect(ImageUrl) : FailedResponse("tls"));
         var error = await Assert.ThrowsExceptionAsync<HttpRequestException>(() => Client(handler).DownloadImage(PageUrl,
-            OriginalOptions(() => { }, () => { })));
+            new ExHentaiImageDownloadOptions
+            {
+                PreferOriginal = true, RequestContext = new ExHentaiRequestContext(Cookie),
+                BeforeOriginalDownload = (_, _) => { spendingChecks++; return Task.CompletedTask; },
+                BeforeOriginalSend = (_, _) => { spendingChecks++; return Task.CompletedTask; },
+                CanRecoverOriginalWithoutGp = absentFreeCallback ? null : _ => false
+            }));
         Assert.IsFalse(TransientNetworkError.IsTransient(error));
+        Assert.IsFalse(ExHentaiClient.IsImageNodeRecoveryExhausted(error));
+        Assert.AreEqual(3, handler.Requests.Count);
+        Assert.AreEqual(2, spendingChecks);
+        Assert.AreEqual(1, handler.Requests.Count(r => r.Uri.LocalPath.StartsWith("/fullimg")));
+        Assert.IsFalse(handler.Requests.Any(r => r.Uri.Query.Contains("nl=")));
+        AssertSafeDiagnostic(error, "first.hath.network", "unknown", "unknown");
+    }
+
+    [DataTestMethod]
+    [DataRow("exhentai.org")]
+    [DataRow("e-hentai.org")]
+    public async Task AViewingPageTlsAuthenticationFailureNeverRetriesOrReplacesANode(string accountHost)
+    {
+        var handler = new Handler(_ => FailedResponse("tls"));
+        var page = new UriBuilder(PageUrl) {Host = accountHost}.Uri.AbsoluteUri;
+        var error = await Assert.ThrowsExceptionAsync<HttpRequestException>(() => Client(handler).DownloadImage(page));
+        Assert.AreEqual(1, handler.Requests.Count);
+        Assert.IsFalse(TransientNetworkError.IsTransient(error));
+        Assert.IsFalse(ExHentaiClient.IsImageNodeRecoveryExhausted(error));
         Assert.IsFalse(error.ToString().Contains("secret", StringComparison.OrdinalIgnoreCase));
+        Assert.IsFalse(handler.Requests.Any(r => r.Uri.Query.Contains("nl=")));
+    }
+
+    [DataTestMethod]
+    [DataRow("image.example", "https")]
+    [DataRow("hath.network", "https")]
+    [DataRow("evilhath.network", "https")]
+    [DataRow("first.hath.network.evil.example", "https")]
+    [DataRow("exhentai.org", "https")]
+    [DataRow("e-hentai.org", "https")]
+    [DataRow("first.hath.network", "http")]
+    public async Task ATlsAuthenticationFailureOutsideAnHttpsHathNodeCannotSpendANodeReload(string imageHost,
+        string scheme)
+    {
+        var image = new UriBuilder(ImageUrl) {Host = imageHost, Scheme = scheme, Port = -1}.Uri.AbsoluteUri;
+        var handler = new Handler(request => request.Uri.LocalPath.StartsWith("/s/")
+            ? Html(Page(image)) : FailedResponse("tls"));
+        var error = await Assert.ThrowsExceptionAsync<HttpRequestException>(() => Client(handler).DownloadImage(PageUrl));
         Assert.AreEqual(2, handler.Requests.Count);
+        Assert.IsFalse(TransientNetworkError.IsTransient(error));
+        Assert.IsFalse(ExHentaiClient.IsImageNodeRecoveryExhausted(error));
+        Assert.IsFalse(handler.Requests.Any(r => r.Uri.Query.Contains("nl=")));
+        AssertSafeDiagnostic(error, imageHost, "unknown", "unknown");
+    }
+
+    [TestMethod]
+    public async Task ADirectHathImageTlsFailureHasNoPageTokenAndCannotRecover()
+    {
+        var handler = new Handler(_ => FailedResponse("tls"));
+        var error = await Assert.ThrowsExceptionAsync<HttpRequestException>(() => Client(handler).DownloadImageByUrl(ImageUrl));
+        Assert.AreEqual(1, handler.Requests.Count);
+        Assert.IsFalse(TransientNetworkError.IsTransient(error));
+        Assert.IsFalse(ExHentaiClient.IsImageNodeRecoveryExhausted(error));
+        Assert.IsInstanceOfType<AuthenticationException>(error.InnerException);
+        StringAssert.Contains(error.Message, "page=direct image");
+        Assert.IsFalse(error.ToString().Contains("secret", StringComparison.OrdinalIgnoreCase));
+        Assert.IsNull(handler.Requests.Single().Cookie);
+        Assert.IsTrue(handler.Requests.Single().SuppressSensitiveHeaders);
     }
 
     [TestMethod]
@@ -716,6 +814,9 @@ public sealed class ExHentaiImageRecoveryTests
         "404" => new HttpResponseMessage(HttpStatusCode.NotFound) {Content = new StringContent("node unavailable")},
         "503" => new HttpResponseMessage(HttpStatusCode.ServiceUnavailable) {Content = new StringContent("node unavailable")},
         "transport" => throw new HttpRequestException(HttpRequestError.ConnectionError, "failed " + ImageUrl),
+        "tls" => throw new HttpRequestException(HttpRequestError.SecureConnectionError,
+            "private-tls-error-secret " + ImageUrl + Cookie + ReloadToken,
+            new AuthenticationException("private-auth-error-secret")),
         "bodyTransport" => new HttpResponseMessage(HttpStatusCode.OK) {Content = new BrokenContent()},
         "headerTimeout" => throw new TaskCanceledException("private-timeout-secret " + ImageUrl,
             new TimeoutException("private-inner-secret " + ImageUrl)),
