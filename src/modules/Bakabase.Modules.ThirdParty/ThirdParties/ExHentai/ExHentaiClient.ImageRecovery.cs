@@ -84,6 +84,11 @@ public partial class ExHentaiClient
         error.HttpRequestError == HttpRequestError.Unknown && error.InnerException is IOException or SocketException
             ? HttpRequestError.ConnectionError : error.HttpRequestError;
 
+    private static bool IsHathNodeTlsFailure(Uri uri, HttpRequestException error) =>
+        uri.Scheme == "https" && uri.Host.EndsWith(".hath.network", StringComparison.OrdinalIgnoreCase) &&
+        error.HttpRequestError == HttpRequestError.SecureConnectionError &&
+        error.InnerException is AuthenticationException;
+
     private static bool RecoverableNodeStatus(HttpStatusCode? status) => status is
         HttpStatusCode.Forbidden or HttpStatusCode.NotFound || status.HasValue &&
         (int)status.Value >= 500 && (int)status.Value != 509;

@@ -340,9 +340,12 @@ public partial class ExHentaiClient
             }
             catch (HttpRequestException error)
             {
+                // A rejected H@H node remains a permanent TLS failure for ordinary retries.
+                // A viewing page can replace it once instead, with certificate validation intact.
                 throw ImageHttpError(diagnosticPage, new ImageResponseDetails(uri, error.StatusCode),
                     "image transport failed", SafeImageRequestError(error), recoverable: !pageOnly && !accountHost &&
-                        (TransientNetworkError.IsTransient(error, ct) || RecoverableNodeStatus(error.StatusCode)),
+                        (TransientNetworkError.IsTransient(error, ct) || RecoverableNodeStatus(error.StatusCode) ||
+                         diagnosticPage != null && IsHathNodeTlsFailure(uri, error)),
                     rejectedAuthentication: error.InnerException is System.Security.Authentication.AuthenticationException);
             }
             catch (HttpIOException error)
