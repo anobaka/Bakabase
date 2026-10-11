@@ -24,6 +24,7 @@ import {
 import Resource from "@/components/Resource";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import PropertyValueRenderer from "@/components/Property/components/PropertyValueRenderer";
+import { isReferenceValueType } from "@/components/Property/PropertySystem";
 import { serializeStandardValue, convertFromApiValue } from "@/components/StandardValue/helpers";
 import BriefProperty from "@/components/Chips/Property/BriefProperty";
 
@@ -467,14 +468,11 @@ const BulkPropertyEditor: React.FC<Props> = ({
     const aggValue = aggregatedValues.get(key);
     const isUpdating = updatingProperty === key;
     const isEditing = editingProperty === key;
+    const isReference = isReferenceValueType(property.type);
 
     if (!aggValue) return null;
 
     const renderValue = () => {
-      if (isUpdating) {
-        return <Spinner size="sm" />;
-      }
-
       switch (aggValue.state) {
         case "consistent":
         case "empty":
@@ -499,10 +497,13 @@ const BulkPropertyEditor: React.FC<Props> = ({
                 defaultEditing
                 bizValue={undefined}
                 dbValue={undefined}
+                isEditing={isReference ? true : undefined}
                 property={property}
                 size="sm"
                 onValueChange={(newDbValue, newBizValue) => {
-                  setEditingProperty(null);
+                  if (!isReference) {
+                    setEditingProperty(null);
+                  }
                   handleValueChange(property, newDbValue, newBizValue);
                 }}
               />
@@ -538,7 +539,11 @@ const BulkPropertyEditor: React.FC<Props> = ({
         </div>
 
         {/* Value display/editor */}
-        <div className="flex items-center gap-1 min-w-0">{renderValue()}</div>
+        <div className="flex items-center gap-1 min-w-0">
+          {/* Keep the editor mounted so immediate saves retain its editing state. */}
+          {renderValue()}
+          {isUpdating && <Spinner size="sm" />}
+        </div>
       </div>
     );
   };
