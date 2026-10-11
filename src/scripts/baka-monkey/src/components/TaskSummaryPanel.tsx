@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { IoClose, IoOpenOutline } from 'react-icons/io5';
+import { IoClose } from 'react-icons/io5';
 import { getApiBaseUrl } from '../api';
 import type { ConnectionState } from '../heartbeat';
 import { onLocaleChange, t } from '../i18n';
@@ -59,15 +59,19 @@ export function TaskSummaryPanel({
     { label: t('taskSummary.failed'), value: summary?.failed, color: '#e11d48' },
     { label: t('taskSummary.total'), value: summary?.total, color: '#27272a' },
   ];
+  const description = summary === null
+    ? t('taskSummary.unavailable')
+    : items.map(({ label, value }) => `${label}: ${value?.toLocaleString()}`).join(', ');
 
   return (
     <div
       data-task-summary={siteKey}
       style={{
-        position: 'relative',
-        width: 240,
+        display: 'flex',
+        alignItems: 'center',
+        width: 'fit-content',
         maxWidth: 'calc(100vw - 40px)',
-        borderRadius: 12,
+        borderRadius: 10,
         background: '#fff',
         border: '1px solid #e4e4e7',
         boxShadow: '0 4px 20px rgba(0,0,0,0.12)',
@@ -79,29 +83,26 @@ export function TaskSummaryPanel({
         href={taskPageUrl}
         target="_blank"
         rel="noopener noreferrer"
-        title={t('taskSummary.openTasks')}
+        aria-label={`${title}: ${description}`}
         aria-disabled={!taskPageUrl}
-        style={{ display: 'block', padding: 14, cursor: taskPageUrl ? 'pointer' : 'default' }}
+        style={{
+          display: 'flex',
+          gap: 12,
+          minWidth: 0,
+          padding: '8px 10px',
+          textDecoration: 'none',
+          cursor: taskPageUrl ? 'pointer' : 'default',
+        }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, paddingRight: 24, fontSize: 13, fontWeight: 600 }}>
-          <span>{title}</span>
-          <IoOpenOutline aria-hidden="true" size={14} />
-        </div>
-        <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
-          {items.map(({ label, value, color }) => (
-            <div key={label} style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 20, lineHeight: 1.2, fontWeight: 700, fontVariantNumeric: 'tabular-nums', overflowWrap: 'anywhere', color }}>
-                {value === undefined ? '—' : value.toLocaleString()}
-              </div>
-              <div style={{ marginTop: 4, fontSize: 11, color: '#71717a' }}>{label}</div>
-            </div>
-          ))}
-        </div>
-        {summary === null && (
-          <div role="status" style={{ marginTop: 10, fontSize: 11, color: '#71717a' }}>
-            {t('taskSummary.unavailable')}
-          </div>
-        )}
+        {items.map(({ label, value, color }) => (
+          <span
+            key={label}
+            title={value === undefined ? `${label}: ${t('taskSummary.unavailable')}` : label}
+            style={{ minWidth: 0, fontSize: 14, lineHeight: '20px', fontWeight: 700, fontVariantNumeric: 'tabular-nums', overflowWrap: 'anywhere', color }}
+          >
+            {value === undefined ? '—' : value.toLocaleString()}
+          </span>
+        ))}
       </a>
       <button
         type="button"
@@ -109,15 +110,17 @@ export function TaskSummaryPanel({
         title={t('taskSummary.close')}
         onClick={onClose}
         style={{
-          position: 'absolute',
-          top: 8,
-          right: 8,
           display: 'flex',
+          flexShrink: 0,
           alignItems: 'center',
           justifyContent: 'center',
           width: 24,
           height: 24,
+          marginRight: 4,
+          padding: 0,
+          border: 0,
           borderRadius: 6,
+          background: 'transparent',
           color: '#71717a',
           cursor: 'pointer',
         }}
