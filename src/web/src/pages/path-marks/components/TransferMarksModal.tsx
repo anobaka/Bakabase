@@ -285,7 +285,7 @@ const TransferConfirmationModal = ({
       defaultVisible
       classNames={{
         base: "max-w-2xl max-h-[85vh]",
-        body: "overflow-y-auto",
+        body: "min-w-0 overflow-y-auto",
       }}
       footer={{
         actions: ["cancel", "ok"],
@@ -298,7 +298,7 @@ const TransferConfirmationModal = ({
       onDestroyed={onDestroyed}
       onOk={handleConfirm}
     >
-      <div className="flex flex-col gap-4">
+      <div className="flex min-w-0 flex-col gap-4">
         {/* Summary */}
         <div className="flex items-start gap-3 p-3 bg-primary-50 border border-primary-200 rounded-lg">
           <div className="flex-1">
@@ -309,19 +309,23 @@ const TransferConfirmationModal = ({
         </div>
 
         {/* Main path transfer */}
-        <div className="border border-default-200 rounded-lg p-3">
+        <div className="min-w-0 border border-default-200 rounded-lg p-3">
           <div className="font-medium text-sm mb-2">{t("pathMarks.label.mainPath")}</div>
-          <div className="flex items-start gap-2 text-sm">
-            <div className="flex-1 min-w-0">
-              <div className="text-danger line-through font-mono text-xs break-all">{fromPath}</div>
-              <div className="flex items-center gap-1 mt-1">
+          <div className="flex min-w-0 flex-col gap-2 text-sm">
+            <div className="min-w-0">
+              <div className="text-danger line-through font-mono text-xs leading-relaxed [overflow-wrap:anywhere]">
+                {fromPath}
+              </div>
+              <div className="flex min-w-0 items-start gap-1 mt-1">
                 <AiOutlineArrowRight className="text-default-400 flex-shrink-0" />
-                <div className="text-success font-mono text-xs break-all">{toPath}</div>
+                <div className="min-w-0 text-success font-mono text-xs leading-relaxed [overflow-wrap:anywhere]">
+                  {toPath}
+                </div>
               </div>
             </div>
-            <div className="flex flex-wrap gap-1 flex-shrink-0">
+            <div className="flex min-w-0 max-w-full flex-wrap items-start gap-1">
               {marks.map((mark) => (
-                <PathMarkChip key={mark.id} mark={mark} />
+                <PathMarkChip key={mark.id} wrapContent mark={mark} />
               ))}
             </div>
           </div>
@@ -329,7 +333,7 @@ const TransferConfirmationModal = ({
 
         {/* Child paths */}
         {childPathMappings.length > 0 && (
-          <div className="border border-warning-200 rounded-lg p-3 bg-warning-50/50">
+          <div className="min-w-0 border border-warning-200 rounded-lg p-3 bg-warning-50/50">
             <div className="flex items-start gap-2 mb-2">
               <Checkbox isSelected={includeChildPaths} onValueChange={setIncludeChildPaths}>
                 <span className="text-sm font-medium">
@@ -339,32 +343,26 @@ const TransferConfirmationModal = ({
             </div>
 
             {includeChildPaths && (
-              <div className="flex flex-col gap-2 max-h-48 overflow-y-auto ml-6">
+              <div className="flex min-w-0 flex-col gap-2 max-h-48 overflow-y-auto ml-6">
                 {childPathMappings.map((child) => (
                   <div
                     key={child.path}
-                    className="flex items-start gap-2 text-sm bg-white/50 p-2 rounded"
+                    className="flex min-w-0 flex-col gap-2 text-sm bg-default-100/50 p-2 rounded"
                   >
-                    <div className="flex-1 min-w-0">
-                      <div
-                        className="text-danger line-through font-mono text-xs truncate"
-                        title={child.path}
-                      >
+                    <div className="min-w-0">
+                      <div className="text-danger line-through font-mono text-xs leading-relaxed [overflow-wrap:anywhere]">
                         {child.path}
                       </div>
-                      <div className="flex items-center gap-1 mt-1">
+                      <div className="flex min-w-0 items-start gap-1 mt-1">
                         <AiOutlineArrowRight className="text-default-400 flex-shrink-0" />
-                        <div
-                          className="text-success font-mono text-xs truncate"
-                          title={child.newPath}
-                        >
+                        <div className="min-w-0 text-success font-mono text-xs leading-relaxed [overflow-wrap:anywhere]">
                           {child.newPath}
                         </div>
                       </div>
                     </div>
-                    <div className="flex flex-wrap gap-1 flex-shrink-0">
+                    <div className="flex min-w-0 max-w-full flex-wrap items-start gap-1">
                       {child.marks.map((mark) => (
-                        <PathMarkChip key={mark.id} mark={mark} />
+                        <PathMarkChip key={mark.id} wrapContent mark={mark} />
                       ))}
                     </div>
                   </div>

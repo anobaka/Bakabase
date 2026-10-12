@@ -41,6 +41,8 @@ export interface PathMarkChipProps {
   selectable?: boolean;
   selected?: boolean;
   onSelectionChange?: (selected: boolean) => void;
+  /** Allow long descriptions to wrap in bounded confirmation cards. */
+  wrapContent?: boolean;
 }
 
 const getSyncStatusIcon = (status?: number, isTaskRunning?: boolean, taskProgress?: number) => {
@@ -138,6 +140,7 @@ const PathMarkChip = ({
   selectable,
   selected,
   onSelectionChange,
+  wrapContent = false,
 }: PathMarkChipProps) => {
   const { t } = useTranslation();
   const [syncing, setSyncing] = useState(false);
@@ -179,7 +182,8 @@ const PathMarkChip = ({
 
   const chipContent = (
     <Chip
-      className={`cursor-pointer hover:opacity-80 ${isPendingDelete ? "line-through opacity-50" : ""}`}
+      className={`cursor-pointer hover:opacity-80 ${isPendingDelete ? "line-through opacity-50" : ""} ${wrapContent ? "h-auto min-h-6 min-w-0 max-w-full whitespace-normal py-1" : ""}`}
+      classNames={wrapContent ? { content: "min-w-0 whitespace-normal" } : undefined}
       color={color as any}
       size="sm"
       variant="flat"
@@ -197,9 +201,16 @@ const PathMarkChip = ({
         }
       }}
     >
-      <div className="flex items-center gap-1 text-xs">
+      <div
+        className={`flex gap-1 text-xs ${wrapContent ? "min-w-0 max-w-full items-start [&>svg]:mt-0.5 [&>svg]:shrink-0" : "items-center"}`}
+      >
         {getSyncStatusIcon(mark.syncStatus, isTaskRunning, taskProgress)}
-        <MarkDescription label={label} mark={mark} priority={mark.priority} />
+        <MarkDescription
+          className={wrapContent ? "min-w-0 whitespace-normal [overflow-wrap:anywhere]" : undefined}
+          label={label}
+          mark={mark}
+          priority={mark.priority}
+        />
       </div>
     </Chip>
   );
