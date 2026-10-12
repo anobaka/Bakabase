@@ -8,9 +8,11 @@ import { localizeBTask } from "@/core/bTaskLocalization";
 import { BTaskResourceType, BTaskStatus, BTaskType } from "@/sdk/constants";
 
 interface BTasksState {
+  initialized: boolean;
   tasks: BTask[];
   sourceTasks: BTask[];
   setTasks: (tasks: BTask[]) => void;
+  resetTasks: () => void;
   removeTask: (id: string) => void;
   updateTask: (task: BTask) => void;
 }
@@ -18,13 +20,15 @@ interface BTasksState {
 const projectTasks = (tasks: BTask[]) => tasks.map((task) => localizeBTask(task, i18n.language));
 
 export const useBTasksStore = create<BTasksState>((set) => ({
+  initialized: false,
   tasks: [],
   sourceTasks: [],
   setTasks: (tasks) => {
     const sourceTasks = _.sortBy(tasks, (task) => task.createdAt);
 
-    set({ sourceTasks, tasks: projectTasks(sourceTasks) });
+    set({ sourceTasks, tasks: projectTasks(sourceTasks), initialized: true });
   },
+  resetTasks: () => set({ sourceTasks: [], tasks: [], initialized: false }),
   removeTask: (id) =>
     set((state) => ({
       sourceTasks: state.sourceTasks.filter((task) => task.id !== id),

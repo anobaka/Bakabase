@@ -51,6 +51,7 @@ public class PathSyncManager : BackgroundService, IPathMarkSyncService
 
     private const string ResourceSyncTaskId = "SyncResources";
     private const string PathMarkSyncTaskId = "SyncPathMarks";
+    private const string PathMarkDatabaseConflictKey = "PathMarkDatabaseSync";
 
     public PathSyncManager(
         ILogger<PathSyncManager> logger,
@@ -71,23 +72,15 @@ public class PathSyncManager : BackgroundService, IPathMarkSyncService
     /// </summary>
     public async Task EnqueueSync(params int[] markIds)
     {
-        if (markIds.Length == 0)
-        {
-            // All pending marks - just trigger path mark sync
-            _pathMarkSyncRequested = true;
-            _logger.LogDebug("Requested path mark sync for all pending marks");
-            return;
-        }
-
-        // Mark specific marks as pending
         await using var scope = _serviceProvider.CreateAsyncScope();
         var pathMarkService = scope.ServiceProvider.GetRequiredService<IPathMarkService>();
-        await pathMarkService.MarkAsPendingBatch(markIds);
+        if (markIds.Length > 0) await pathMarkService.MarkAsPendingBatch(markIds);
 
         // Check if any of these are resource marks - if so, also enqueue FileSystem resource sync
-        var marks = await pathMarkService.GetAll();
+        var marks = markIds.Length == 0
+            ? await pathMarkService.GetPendingMarks()
+            : (await pathMarkService.GetAll()).Where(m => markIds.Contains(m.Id)).ToList();
         var hasResourceMarks = marks
-            .Where(m => markIds.Contains(m.Id))
             .Any(m => m.Type == PathMarkType.Resource);
 
         if (hasResourceMarks)
@@ -96,8 +89,8 @@ public class PathSyncManager : BackgroundService, IPathMarkSyncService
             _logger.LogDebug("Enqueued FileSystem resource sync for resource marks");
         }
 
-        // Always request path mark sync for property/media library marks
-        _pathMarkSyncRequested = true;
+        if (marks.Any(m => m.Type is PathMarkType.Property or PathMarkType.MediaLibrary))
+            _pathMarkSyncRequested = true;
         _logger.LogDebug("Enqueued {Count} mark IDs for synchronization", markIds.Length);
     }
 
@@ -210,7 +203,8 @@ public class PathSyncManager : BackgroundService, IPathMarkSyncService
             .Named(() => _localizer.BTask_Name("SyncResources"))
             .Describe(() => _localizer.BTask_Description("SyncResources"))
             .InterruptionMessage(() => _localizer.BTask_MessageOnInterruption("SyncResources"))
-            .ConflictsWith(ResourceSyncTaskId)
+            .ConflictsWith(ResourceSyncTaskId,
+                capturedSources.Contains(ResourceSource.PathMark) ? PathMarkDatabaseConflictKey : ResourceSyncTaskId)
             .StartImmediately()
             .IgnoreIfExists()
             .Run(async args => await RunResourceSync(args, capturedSources)));
@@ -239,7 +233,7 @@ public class PathSyncManager : BackgroundService, IPathMarkSyncService
             .Named(() => _localizer.BTask_Name("SyncPathMarks"))
             .Describe(() => _localizer.BTask_Description("SyncPathMarks"))
             .InterruptionMessage(() => _localizer.BTask_MessageOnInterruption("SyncPathMarks"))
-            .ConflictsWith(PathMarkSyncTaskId)
+            .ConflictsWith(PathMarkSyncTaskId, PathMarkDatabaseConflictKey)
             .StartImmediately()
             .IgnoreIfExists()
             .Run(RunPathMarkSync));

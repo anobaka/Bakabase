@@ -3,19 +3,18 @@
 import type { Entry } from "@/core/models/FileExplorer/Entry";
 import type { BakabaseAbstractionsModelsDomainPathMark } from "@/sdk/Api";
 
-import React, { useCallback, useEffect, useRef } from "react";
+import React, { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { AiOutlineCopy } from "react-icons/ai";
 
 import MarkConfigModal from "./MarkConfigModal";
 import PathMarkChip from "./PathMarkChip";
 import AddMarkDropdown from "./AddMarkDropdown";
-import { didPathMarkSyncTaskComplete, getPathMarkSyncTask } from "./pathMarkSyncTask";
+import { usePathMarkSyncCompletion } from "./pathMarkSyncTask";
 
 import { Button } from "@/components/bakaui";
-import { PathMarkType, type BTaskStatus } from "@/sdk/constants";
+import { PathMarkType } from "@/sdk/constants";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-import { useBTasksStore } from "@/stores/bTasks";
 import { useCopyMarksStore } from "@/stores/copyMarks";
 
 type Props = {
@@ -34,9 +33,7 @@ const PathMarks = ({ entry, marks = [], onSaveMark, onDeleteMark, onTaskComplete
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
-  // Path-mark synchronization is represented by one global BTask.
-  const bTasks = useBTasksStore((state) => state.tasks);
-  const pathMarkSyncTask = getPathMarkSyncTask(bTasks);
+  usePathMarkSyncCompletion(onTaskComplete);
 
   // Copy marks store
   const {
@@ -50,21 +47,6 @@ const PathMarks = ({ entry, marks = [], onSaveMark, onDeleteMark, onTaskComplete
   } = useCopyMarksStore();
 
   const isInCopyMode = copyModeEntryPath === entry.path;
-
-  // Track previous task statuses to detect completion
-  const prevTaskStatusRef = useRef<BTaskStatus>();
-
-  // Detect task completion and trigger refresh
-  useEffect(() => {
-    const previousStatus = prevTaskStatusRef.current;
-    const currentStatus = pathMarkSyncTask?.status;
-
-    if (didPathMarkSyncTaskComplete(previousStatus, currentStatus)) {
-      onTaskComplete?.();
-    }
-
-    prevTaskStatusRef.current = currentStatus;
-  }, [pathMarkSyncTask?.status, onTaskComplete]);
 
   const resourceMarks = marks.filter((m) => m.type === PathMarkType.Resource);
   const propertyMarks = marks.filter((m) => m.type === PathMarkType.Property);

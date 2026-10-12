@@ -5,6 +5,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { UIHubConnection } from "../UIHubConnection";
 
 import { useDownloadTasksStore } from "@/stores/downloadTasks";
+import { usePathMarksStore } from "@/stores/pathMarks";
+import { useBTasksStore } from "@/stores/bTasks";
 
 const { handlers, connection, closed } = vi.hoisted(() => {
   const handlers = new Map<string, (...args: any[]) => void>();
@@ -59,6 +61,7 @@ beforeEach(() => {
   document.body.appendChild(container);
   root = createRoot(container);
   useDownloadTasksStore.getState().setTasks([]);
+  usePathMarksStore.setState({ marks: new Map(), deletedMarkIds: new Set() });
 });
 
 afterEach(() => {
@@ -69,11 +72,35 @@ afterEach(() => {
 });
 
 describe("download task snapshot lifetime", () => {
+  it("removes a deleted path mark and ignores late updates until an authoritative snapshot introduces it again", async () => {
+    await act(async () => root.render(<UIHubConnection />));
+    const mark = { id: 7, path: "/data/library", syncStatus: 1 } as any;
+
+    act(() => handlers.get("GetIncrementalData")!("PathMark", mark));
+    expect(usePathMarksStore.getState().marks.get(7)).toEqual(mark);
+    act(() => handlers.get("DeleteData")!("Other", 7));
+    expect(usePathMarksStore.getState().marks.has(7)).toBe(true);
+    act(() => handlers.get("DeleteData")!("PathMark", 7));
+    expect(usePathMarksStore.getState().marks.has(7)).toBe(false);
+    expect(usePathMarksStore.getState().deletedMarkIds.has(7)).toBe(true);
+    act(() => handlers.get("GetIncrementalData")!("PathMark", { ...mark, syncStatus: 3 }));
+    expect(usePathMarksStore.getState().marks.has(7)).toBe(false);
+    expect(usePathMarksStore.getState().deletedMarkIds.has(7)).toBe(true);
+    usePathMarksStore.getState().setMarks([{ ...mark, syncStatus: 3 }]);
+    expect(usePathMarksStore.getState().marks.get(7)?.syncStatus).toBe(3);
+    expect(usePathMarksStore.getState().deletedMarkIds.has(7)).toBe(false);
+  });
+
   it("invalidates old snapshots on connecting, disconnecting and unmounting, then accepts a new full snapshot", async () => {
     await act(async () => {
       root.render(<UIHubConnection />);
     });
     expect(connection.send).toHaveBeenCalledWith("GetInitialData");
+    expect(useBTasksStore.getState().initialized).toBe(false);
+    act(() => handlers.get("GetIncrementalData")!("BTask", { id: "SyncResources", status: 1 }));
+    expect(useBTasksStore.getState().initialized).toBe(false);
+    act(() => handlers.get("GetData")!("BTask", []));
+    expect(useBTasksStore.getState().initialized).toBe(true);
     expect(useDownloadTasksStore.getState().initialized).toBe(false);
 
     act(() => handlers.get("GetData")!("DownloadTask", []));
@@ -83,6 +110,7 @@ describe("download task snapshot lifetime", () => {
       await closed.callback!();
     });
     expect(useDownloadTasksStore.getState().initialized).toBe(false);
+    expect(useBTasksStore.getState().initialized).toBe(false);
     act(() => handlers.get("GetIncrementalData")!("DownloadTask", { id: 1 }));
     await act(async () => {
       await vi.advanceTimersByTimeAsync(160);
@@ -91,7 +119,10 @@ describe("download task snapshot lifetime", () => {
 
     act(() => handlers.get("GetData")!("DownloadTask", []));
     expect(useDownloadTasksStore.getState().initialized).toBe(true);
+    act(() => handlers.get("GetData")!("BTask", []));
+    expect(useBTasksStore.getState().initialized).toBe(true);
     act(() => root.render(<></>));
     expect(useDownloadTasksStore.getState().initialized).toBe(false);
+    expect(useBTasksStore.getState().initialized).toBe(false);
   });
 });

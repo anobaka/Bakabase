@@ -91,10 +91,17 @@ public class ResourceSyncService : ScopedService
 
         // ===== Step 1: Discover resources (0-50%) =====
         await ReportProgress(onProgressChange, onProcessChange, 0, BTaskText.Localize(_localizer, "BTask_Process_DiscoveringResources", BTaskText.Deferred(() => _propertyLocalizer.ResourceSourceName(source))));
+        ct.ThrowIfCancellationRequested();
+        var deletionSnapshots = source == ResourceSource.PathMark
+            ? (await _pathMarkService.GetPendingMarks()).Where(m => m.Type == PathMarkType.Resource &&
+                m.SyncStatus == PathMarkSyncStatus.PendingDelete && m.IsDeleted).ToList()
+            : new List<PathMark>();
 
         var resolver = _resourceResolvers.FirstOrDefault(r => r.Source == source);
         if (resolver == null)
         {
+            if (deletionSnapshots.Count > 0)
+                throw new InvalidOperationException("The filesystem resolver is unavailable; pending resource mark deletions were retained.");
             _logger.LogWarning("[ResourceSync] No resolver found for source {Source}", source);
             await ReportProgress(onProgressChange, onProcessChange, 100, BTaskText.Localize(_localizer, "BTask_Process_ResolverNotFound"));
             return result;
@@ -210,7 +217,7 @@ public class ResourceSyncService : ScopedService
 
         // ===== Step 4: Delete orphaned resources (80-85%) =====
         await ReportProgress(onProgressChange, onProcessChange, 80, BTaskText.Localize(_localizer, "BTask_Process_CheckingOrphanedResources"));
-        var deleted = await DeleteOrphanedResources(source, discoveredEntries, ctx, ct);
+        var deleted = await DeleteOrphanedResources(source, deletionSnapshots, ct);
         result.ResourcesDeleted = deleted;
 
         // ===== Step 5: Rebuild parent-child relationships if new resources (85-92%) =====
@@ -229,6 +236,14 @@ public class ResourceSyncService : ScopedService
             result.PathMarksMarkedPending = true;
         }
 
+        if (deletionSnapshots.Count > 0)
+        {
+            await ReportProgress(onProgressChange, onProcessChange, 98,
+                BTaskText.Localize(_localizer, "SyncPathMark_UpdatingSearchIndex"));
+            await GetRequiredService<IResourceSearchIndexService>().WaitForPendingUpdatesAsync(ct);
+            ct.ThrowIfCancellationRequested();
+            await _pathMarkService.FinalizeResourceDeletions(deletionSnapshots, ct);
+        }
         await ReportProgress(onProgressChange, onProcessChange, 100, BTaskText.Localize(_localizer, "ResourceSync_Complete"));
 
         sw.Stop();
@@ -661,80 +676,107 @@ public class ResourceSyncService : ScopedService
     ///   so the user can later merge it into a new resource (intentional UX).
     /// - Resource's file disappears from disk but mark still active → not handled here at all.
     ///
-    /// Shared-resource protection: a path that's also covered by some other active resource mark
-    /// is kept. Multi-source resources (also linked to Steam / DLsite / …) are kept too.
+    /// Ownership is determined from the persisted mark ledger and current resource paths,
+    /// never by requiring a deleted mark's directory to still exist on this machine.
+    /// Shared-resource protection retains other active ledger/rule owners and other sources.
     ///
     /// Returns 0 for non-PathMark sources — resolvers mark missing items Absent and the user
     /// can decide what to do.
     /// </summary>
     private async Task<int> DeleteOrphanedResources(
-        ResourceSource source,
-        List<DiscoveredResourceEntry> discoveredEntries,
-        ResourceSyncContext ctx,
-        CancellationToken ct)
+        ResourceSource source, List<PathMark> snapshots, CancellationToken ct)
     {
-        if (source != ResourceSource.PathMark)
-        {
-            return 0;
-        }
-
-        var resolver = _resourceResolvers.FirstOrDefault(r => r.Source == ResourceSource.PathMark) as FileSystemResolver;
-        if (resolver == null) return 0;
-
+        if (source != ResourceSource.PathMark || snapshots.Count == 0) return 0;
         var allMarks = await _pathMarkService.GetAll();
-        var pendingDeleteMarks = allMarks
-            .Where(m => m.Type == PathMarkType.Resource &&
-                        m.SyncStatus == PathMarkSyncStatus.PendingDelete)
-            .ToList();
-        if (pendingDeleteMarks.Count == 0) return 0;
-
-        // Paths the user just asked us to clean up.
-        var pendingDeletePaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var d in await resolver.DiscoverFromMarks(pendingDeleteMarks, ct))
-        {
-            pendingDeletePaths.Add(d.Path);
-        }
-        if (pendingDeletePaths.Count == 0) return 0;
-
-        // Paths still covered by some other active mark — protect them from deletion.
-        var activeResourceMarks = allMarks
-            .Where(m => m.Type == PathMarkType.Resource &&
-                        m.SyncStatus != PathMarkSyncStatus.PendingDelete)
-            .ToList();
-        var stillCoveredPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        if (activeResourceMarks.Count > 0)
-        {
-            foreach (var d in await resolver.DiscoverFromMarks(activeResourceMarks, ct))
-            {
-                stillCoveredPaths.Add(d.Path);
-            }
-        }
-
-        var orphanIds = new List<int>();
-        foreach (var resource in ctx.IdToResource.Values)
+        var currentMarks = allMarks.ToDictionary(m => m.Id);
+        var deleting = snapshots.Where(snapshot => currentMarks.TryGetValue(snapshot.Id, out var current) &&
+            PathMarkService<BakabaseDbContext>.MatchesResourceDeletionSnapshot(current, snapshot)).ToList();
+        if (deleting.Count == 0) return 0;
+        var active = allMarks.Where(m => m.Type == PathMarkType.Resource && !m.IsDeleted &&
+            m.SyncStatus != PathMarkSyncStatus.PendingDelete).ToList();
+        var groups = (await GetRequiredService<IExtensionGroupService>().GetAll()).ToDictionary(g => g.Id);
+        var configs = new Dictionary<int, ResourceMarkConfig>();
+        foreach (var mark in deleting.Concat(active))
         {
             ct.ThrowIfCancellationRequested();
-
-            if (!resource.HasLocalPath) continue;
-            if (!pendingDeletePaths.Contains(resource.Path!)) continue;
-            if (stillCoveredPaths.Contains(resource.Path)) continue;
-
-            if (resource.SourceLinks == null || resource.SourceLinks.Count == 0) continue;
-            if (!resource.SourceLinks.Any(l => l.Source == ResourceSource.PathMark)) continue;
-            // Multi-source resource → keep; the resolver still owns part of its identity.
-            if (resource.SourceLinks.Any(l => l.Source != ResourceSource.PathMark)) continue;
-
-            orphanIds.Add(resource.Id);
+            var config = JsonConvert.DeserializeObject<ResourceMarkConfig>(mark.ConfigJson)
+                         ?? throw new InvalidOperationException($"Resource mark {mark.Id} has no matching configuration.");
+            if (config.MatchMode is not (PathMatchMode.Layer or PathMatchMode.Regex) ||
+                config.MatchMode == PathMatchMode.Layer && !config.Layer.HasValue ||
+                config.MatchMode == PathMatchMode.Regex && string.IsNullOrWhiteSpace(config.Regex) ||
+                config.ApplyScope is not (PathMarkApplyScope.MatchedOnly or PathMarkApplyScope.MatchedAndSubdirectories) ||
+                config.FsTypeFilter is not (null or PathFilterFsType.File or PathFilterFsType.Directory))
+                throw new InvalidOperationException($"Resource mark {mark.Id} has an invalid matching configuration.");
+            if (config.ExtensionGroupIds is {Count: > 0})
+            {
+                var extensions = new List<string>(config.Extensions ?? []);
+                foreach (var groupId in config.ExtensionGroupIds)
+                {
+                    if (!groups.TryGetValue(groupId, out var group))
+                        throw new InvalidOperationException($"Resource mark {mark.Id} refers to missing extension group {groupId}.");
+                    extensions.AddRange(group.Extensions ?? []);
+                }
+                config.Extensions = extensions.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            }
+            configs[mark.Id] = config;
         }
-
+        var boundaryPaths = active.Where(m => configs[m.Id].IsResourceBoundary).Select(m => m.Path).ToArray();
+        // Prepare every rule before touching resource rows, including empty/missing directories.
+        // Invalid expressions must leave the deletion pending rather than report success.
+        var deletedRules = deleting.ToDictionary(m => m.Id,
+            m => ResourceMarkPathMatcher.Create(m.Path, configs[m.Id], boundaryPaths));
+        var activeRules = active.Select(m => ResourceMarkPathMatcher.Create(m.Path, configs[m.Id], boundaryPaths)).ToArray();
+        var effectService = GetRequiredService<IPathMarkEffectService>();
+        var deletedEffects = await effectService.GetResourceEffectsByMarkIds(deleting.Select(m => m.Id));
+        var activeEffects = await effectService.GetResourceEffectsByMarkIds(active.Select(m => m.Id));
+        var deletedLedgerPaths = deletedEffects.GroupBy(e => e.MarkId).ToDictionary(group => group.Key,
+            group => group.Select(e => e.Path.StandardizePath()!).ToHashSet(StringComparer.OrdinalIgnoreCase));
+        var activeLedgerPaths = activeEffects.Select(e => e.Path.StandardizePath()!)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        // Discovery can take a long time on network storage. Re-read current paths and
+        // source ownership before cleanup so a move performed during discovery is kept.
+        var currentResources = new ResourceSyncContext();
+        currentResources.BuildIndexes(await _resourceService.GetAll(), await _sourceLinkService.GetAll());
+        var orphanIds = new List<int>();
+        var retirementEffects = new List<ResourceMarkEffect>();
+        foreach (var resource in currentResources.IdToResource.Values)
+        {
+            ct.ThrowIfCancellationRequested();
+            if (!resource.HasLocalPath) continue;
+            var links = currentResources.ResourceIdToSourceLinks.GetValueOrDefault(resource.Id);
+            if (links?.Any(l => l.Source != ResourceSource.PathMark) == true) continue;
+            var path = resource.Path!.StandardizePath()!;
+            // Historical source keys may name a file the user has moved. Only current path
+            // ownership or a current-path ledger entry is evidence for deleting metadata.
+            // Imported resources predate source links. A mark-id/current-path ledger join
+            // remains positive ownership evidence, including a retry after partial cleanup.
+            var hasPathMarkSource = links?.Any(l => l.Source == ResourceSource.PathMark) == true;
+            var owners = deleting.Where(mark =>
+                (deletedLedgerPaths.GetValueOrDefault(mark.Id)?.Contains(path) == true ||
+                 hasPathMarkSource && deletedRules[mark.Id](path, resource.IsFile)) &&
+                // Boundaries exclude an ancestor mark's claim. A boundary equal to or
+                // above this deleted mark does not veto this mark's explicit child rule.
+                !boundaryPaths.Any(boundary => boundary.StandardizePath()!.IsPathUnder(mark.Path.StandardizePath()!) &&
+                    path.IsPathEqualOrUnder(boundary.StandardizePath()!))).ToArray();
+            if (owners.Length == 0 || activeLedgerPaths.Contains(path) || activeRules.Any(matches => matches(path, resource.IsFile))) continue;
+            orphanIds.Add(resource.Id);
+            foreach (var owner in owners)
+            {
+                if (deletedLedgerPaths.GetValueOrDefault(owner.Id)?.Contains(path) == true) continue;
+                retirementEffects.Add(new ResourceMarkEffect {MarkId = owner.Id, Path = path});
+            }
+        }
         if (orphanIds.Count > 0)
         {
-            await _resourceService.DeleteByKeys(orphanIds.ToArray());
-            _logger.LogInformation(
-                "[ResourceSync] Deleted {Count} resources whose owning path mark was soft-deleted with cleanup",
-                orphanIds.Count);
+            ct.ThrowIfCancellationRequested();
+            // Resource deletion removes source links before the resource row. Preserve the
+            // verified ownership first so a failed partial cleanup remains safe to retry.
+            // These effects are retired with the captured tombstone only after index drain.
+            await effectService.AddResourceEffects(retirementEffects);
+            ct.ThrowIfCancellationRequested();
+            await _resourceService.DeleteByKeys(orphanIds.ToArray(), deleteFiles: false);
+            _logger.LogInformation("[ResourceSync] Removed {Count} resource records owned by deleted marks; media files retained", orphanIds.Count);
         }
-
         return orphanIds.Count;
     }
 

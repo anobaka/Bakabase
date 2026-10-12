@@ -1,15 +1,13 @@
-import type { BTaskStatus } from "@/sdk/constants";
-
 import { useState, useEffect, useCallback, useImperativeHandle, forwardRef, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { AiOutlineSync } from "react-icons/ai";
 
 import PendingSyncListModal from "./PendingSyncListModal";
-import { didPathMarkSyncTaskComplete, getPathMarkSyncTask } from "./pathMarkSyncTask";
+import { usePathMarkSyncCompletion } from "./pathMarkSyncTask";
 
 import { Button, Badge } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
-import { useBTasksStore } from "@/stores/bTasks";
+import { usePathMarksStore } from "@/stores/pathMarks";
 
 export interface PendingSyncButtonRef {
   refresh: () => void;
@@ -28,19 +26,19 @@ const PendingSyncButton = forwardRef<PendingSyncButtonRef, PendingSyncButtonProp
     const [pendingSyncCount, setPendingSyncCount] = useState(0);
     const [showPendingSyncModal, setShowPendingSyncModal] = useState(false);
 
-    // Track previous task statuses to detect completion
-    const prevTaskStatusRef = useRef<BTaskStatus>();
-
-    // Watch BTask store for PathMark sync tasks
-    const bTasks = useBTasksStore((state) => state.tasks);
-    const pathMarkSyncTask = getPathMarkSyncTask(bTasks);
+    const requestSequence = useRef(0);
+    const deletedMarkIds = usePathMarksStore((state) => state.deletedMarkIds);
 
     // Load pending sync count
     const loadPendingSyncCount = useCallback(async () => {
+      const request = ++requestSequence.current;
+
       try {
         const response = await BApi.pathMark.getPendingPathMarksCount();
 
-        setPendingSyncCount(response?.data ?? 0);
+        if (request === requestSequence.current && !response?.code) {
+          setPendingSyncCount(response?.data ?? 0);
+        }
       } catch (error) {
         console.error("Failed to load pending sync count", error);
       }
@@ -48,20 +46,16 @@ const PendingSyncButton = forwardRef<PendingSyncButtonRef, PendingSyncButtonProp
 
     useEffect(() => {
       loadPendingSyncCount();
-    }, [loadPendingSyncCount]);
 
-    // Auto-refresh when PathMark sync tasks complete
-    useEffect(() => {
-      const previousStatus = prevTaskStatusRef.current;
-      const currentStatus = pathMarkSyncTask?.status;
+      return () => {
+        ++requestSequence.current;
+      };
+    }, [loadPendingSyncCount, deletedMarkIds]);
 
-      if (didPathMarkSyncTaskComplete(previousStatus, currentStatus)) {
-        loadPendingSyncCount();
-        onSyncComplete?.();
-      }
-
-      prevTaskStatusRef.current = currentStatus;
-    }, [pathMarkSyncTask?.status, loadPendingSyncCount, onSyncComplete]);
+    usePathMarkSyncCompletion(() => {
+      loadPendingSyncCount();
+      onSyncComplete?.();
+    });
 
     // Expose refresh method via ref
     useImperativeHandle(

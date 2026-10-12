@@ -16,7 +16,7 @@ import { AiOutlineFieldTime } from "react-icons/ai";
 import MarkDescription from "./MarkDescription";
 import {
   getPathMarkSyncProgress,
-  getPathMarkSyncTask,
+  getSyncTaskForMark,
   isPathMarkSyncTaskActive,
 } from "./pathMarkSyncTask";
 
@@ -145,7 +145,7 @@ const PathMarkChip = ({
   const { t } = useTranslation();
   const [syncing, setSyncing] = useState(false);
 
-  // Path-mark synchronization is represented by one global BTask.
+  // Resource marks use resource indexing; property/library marks use the effects pipeline.
   const bTasks = useBTasksStore((state) => state.tasks);
 
   // Get the latest mark state from store (updated via SignalR)
@@ -160,7 +160,7 @@ const PathMarkChip = ({
   const label = getMarkTypeLabel(mark.type, t);
   const isPendingDelete = mark.syncStatus === PathMarkSyncStatus.PendingDelete;
 
-  const pathMarkSyncTask = getPathMarkSyncTask(bTasks);
+  const pathMarkSyncTask = getSyncTaskForMark(bTasks, mark.type);
   const isMarkSyncing = mark.syncStatus === PathMarkSyncStatus.Syncing;
   const isTaskRunning = isMarkSyncing && isPathMarkSyncTaskActive(pathMarkSyncTask);
   const taskProgress = getPathMarkSyncProgress(pathMarkSyncTask);

@@ -4,6 +4,7 @@ import { create } from "zustand";
 
 interface PathMarksState {
   marks: Map<number, BakabaseAbstractionsModelsDomainPathMark>;
+  deletedMarkIds: Set<number>;
   updateMark: (mark: BakabaseAbstractionsModelsDomainPathMark) => void;
   setMarks: (marks: BakabaseAbstractionsModelsDomainPathMark[]) => void;
   getMark: (id: number) => BakabaseAbstractionsModelsDomainPathMark | undefined;
@@ -12,9 +13,12 @@ interface PathMarksState {
 
 export const usePathMarksStore = create<PathMarksState>((set, get) => ({
   marks: new Map(),
+  deletedMarkIds: new Set(),
   updateMark: (mark) =>
     set((state) => {
-      if (mark.id == null) return state;
+      // A delayed push cannot recreate a row after its physical-delete notification.
+      // A fresh full snapshot can introduce a new/restored row with the same id.
+      if (mark.id == null || state.deletedMarkIds.has(mark.id)) return state;
       const newMarks = new Map(state.marks);
 
       newMarks.set(mark.id, mark);
@@ -22,7 +26,7 @@ export const usePathMarksStore = create<PathMarksState>((set, get) => ({
       return { marks: newMarks };
     }),
   setMarks: (marks) =>
-    set(() => {
+    set((state) => {
       const newMarks = new Map<number, BakabaseAbstractionsModelsDomainPathMark>();
 
       for (const mark of marks) {
@@ -31,7 +35,9 @@ export const usePathMarksStore = create<PathMarksState>((set, get) => ({
         }
       }
 
-      return { marks: newMarks };
+      const deletedMarkIds = new Set([...state.deletedMarkIds].filter((id) => !newMarks.has(id)));
+
+      return { marks: newMarks, deletedMarkIds };
     }),
   getMark: (id) => get().marks.get(id),
   removeMark: (id) =>
@@ -39,8 +45,11 @@ export const usePathMarksStore = create<PathMarksState>((set, get) => ({
       const newMarks = new Map(state.marks);
 
       newMarks.delete(id);
+      const deletedMarkIds = new Set(state.deletedMarkIds);
 
-      return { marks: newMarks };
+      deletedMarkIds.add(id);
+
+      return { marks: newMarks, deletedMarkIds };
     }),
 }));
 

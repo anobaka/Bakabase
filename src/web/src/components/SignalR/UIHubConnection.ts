@@ -83,6 +83,7 @@ export const UIHubConnection = () => {
 
   useEffect(() => {
     useDownloadTasksStore.getState().resetInitialization();
+    useBTasksStore.getState().resetTasks();
     const conn = new HubConnectionBuilder()
       .withUrl(hubEndpoint)
       .configureLogging(LogLevel.Information)
@@ -159,6 +160,9 @@ export const UIHubConnection = () => {
     });
 
     conn.on("DeleteData", (key, id) => {
+      if (key === "PathMark") {
+        usePathMarksStore.getState().removeMark(id as number);
+      }
       if (key === "PostParserTask") {
         usePostParserTasksStore.getState().deleteTask(id);
       }
@@ -309,7 +313,7 @@ export const UIHubConnection = () => {
       // is running — and the last thing we heard is almost always "Running". Keeping it
       // left the assistant animating its working overlay forever behind a client that
       // had lost its server; the reconnect below asks for the full set again anyway.
-      useBTasksStore.getState().setTasks([]);
+      useBTasksStore.getState().resetTasks();
       log("connection closed, attempting to reconnect...");
     });
 
@@ -341,6 +345,7 @@ export const UIHubConnection = () => {
 
     return () => {
       useDownloadTasksStore.getState().resetInitialization();
+      useBTasksStore.getState().resetTasks();
       isRunningRef.current = false;
       if (downloadTaskFlushTimer != null) {
         clearTimeout(downloadTaskFlushTimer);
