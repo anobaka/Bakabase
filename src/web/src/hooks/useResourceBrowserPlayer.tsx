@@ -11,6 +11,7 @@ import BApi from "@/sdk/BApi";
 import { DataOrigin, IwFsType } from "@/sdk/constants";
 import { selectInitialMediaIndex } from "@/components/MediaPlayer/media";
 import { initialWindowBounds } from "@/components/Window/bounds";
+import { MEDIA_PLAYER_WINDOW_PERSISTENCE_KEY } from "@/components/Window/persistence";
 
 const toEntry = (path: string): BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntry => {
   const name = path.split(/[/\\]/).pop() || path;
@@ -98,6 +99,7 @@ export const useResourceBrowserPlayer = () => {
         { entries, defaultActiveIndex, renderOperations: (): any => {} },
         {
           title: resource.displayName,
+          persistenceKey: MEDIA_PLAYER_WINDOW_PERSISTENCE_KEY,
           persistent: true,
           initialSize: { width, height },
           initialPosition: { x, y },

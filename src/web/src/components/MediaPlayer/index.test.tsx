@@ -1,9 +1,12 @@
 import React from "react";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+
 import MediaPlayer from "./index";
+
 import { IwFsType } from "@/sdk/constants";
 const mocks = vi.hoisted(() => ({ files: vi.fn(), archive: vi.fn() }));
+
 vi.mock("@/sdk/BApi", () => ({
   default: { file: { getAllFiles: mocks.files, getCompressedFileEntries: mocks.archive } },
 }));
@@ -23,15 +26,18 @@ const entry = (path: string, type = IwFsType.Unknown) => ({
   type,
   passwordsForDecompressing: [],
 });
+
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
   vi.clearAllMocks();
+  vi.restoreAllMocks();
 });
 describe("media player initialization", () => {
   it("keeps a supplied initial index instead of resetting it after initialization", async () => {
     const entries = [entry("/a.ass"), entry("/movie.mkv")];
-    render(<MediaPlayer entries={entries} defaultActiveIndex={1} />);
+
+    render(<MediaPlayer defaultActiveIndex={1} entries={entries} />);
     await waitFor(() => expect(screen.getByText("/movie.mkv")).toBeInTheDocument());
     expect(screen.queryByText("/a.ass")).not.toBeInTheDocument();
   });
@@ -41,6 +47,25 @@ describe("media player initialization", () => {
     expect(screen.getByText("/a.mp4")).toBeInTheDocument();
     fireEvent.keyDown(screen.getByRole("region"), { key: "ArrowRight" });
     expect(screen.getByText("/b.mp4")).toBeInTheDocument();
+  });
+  it("switches images with wheel and stops using wheel when the next entry is video", () => {
+    let now = 1000;
+
+    vi.spyOn(performance, "now").mockImplementation(() => now);
+    render(
+      <MediaPlayer
+        defaultActiveIndex={0}
+        entries={[entry("/a.jpg"), entry("/b.jpg"), entry("/c.mp4"), entry("/d.jpg")]}
+      />,
+    );
+    fireEvent.wheel(screen.getByRole("region"), { deltaY: 100 });
+    expect(screen.getByText("/b.jpg")).toBeInTheDocument();
+    now += 300;
+    fireEvent.wheel(screen.getByRole("region"), { deltaY: 100 });
+    expect(screen.getByText("/c.mp4")).toBeInTheDocument();
+    now += 300;
+    fireEvent.wheel(screen.getByRole("region"), { deltaY: 100 });
+    expect(screen.getByText("/c.mp4")).toBeInTheDocument();
   });
   it("bounds directory expansion and allows retry after the aborted request", async () => {
     vi.useFakeTimers();

@@ -39,6 +39,7 @@ describe("resource browser player", () => {
     const { result } = renderHook(() => useResourceBrowserPlayer());
     await act(() => result.current(resource));
     expect(mocks.createWindow.mock.calls[0][1].defaultActiveIndex).toBe(3);
+    expect(mocks.createWindow.mock.calls[0][2].persistenceKey).toBe("media-player");
     expect(mocks.history).toHaveBeenCalledWith(13, { item: "/film/main.mkv" });
   });
   it("preserves an explicit selected subtitle without re-running discovery", async () => {

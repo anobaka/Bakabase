@@ -10,6 +10,7 @@ import React, {
   useState,
 } from "react";
 import { useTranslation } from "react-i18next";
+
 import "./index.scss";
 import MediaPlayerLayout from "./components/MediaPlayerLayout";
 import {
@@ -19,6 +20,8 @@ import {
   type MediaPlayerRef,
 } from "./types";
 import { getEntryMediaType, isPreviewEntry, selectInitialMediaIndex } from "./media";
+import { usePlayerInput } from "./usePlayerInput";
+
 import { IwFsType, MediaType } from "@/sdk/constants";
 import { Spinner } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
@@ -69,6 +72,7 @@ const MediaPlayer = forwardRef<MediaPlayerRef, MediaPlayerProps>(
           playPath: entry.path,
         }));
         const single = propEntries.length === 1 ? propEntries[0] : undefined;
+
         setError(false);
         if (single && [IwFsType.Directory, IwFsType.CompressedFileEntry].includes(single.type)) {
           setLoading(true);
@@ -78,6 +82,7 @@ const MediaPlayer = forwardRef<MediaPlayerRef, MediaPlayerProps>(
                 { path: single.path },
                 { signal: controller.signal },
               );
+
               if (rsp.code || !rsp.data) throw new Error();
               next = rsp.data.map((path) => ({
                 path,
@@ -91,6 +96,7 @@ const MediaPlayer = forwardRef<MediaPlayerRef, MediaPlayerProps>(
                 { compressedFilePath: single.path },
                 { signal: controller.signal },
               );
+
               if (rsp.code || !rsp.data) throw new Error();
               next = rsp.data.map((entry) => ({
                 path: entry.path || "",
@@ -108,6 +114,7 @@ const MediaPlayer = forwardRef<MediaPlayerRef, MediaPlayerProps>(
         clearTimeout(timeout);
         setEntries(next);
         const files = next.filter(isPreviewEntry);
+
         setActiveIndex(
           defaultActiveIndex === undefined
             ? selectInitialMediaIndex(files)
@@ -115,7 +122,9 @@ const MediaPlayer = forwardRef<MediaPlayerRef, MediaPlayerProps>(
         );
         setLoading(false);
       };
+
       void initialize();
+
       return () => {
         cancelled = true;
         clearTimeout(timeout);
@@ -125,9 +134,18 @@ const MediaPlayer = forwardRef<MediaPlayerRef, MediaPlayerProps>(
 
     const previous = useCallback(() => setActiveIndex((index) => Math.max(0, index - 1)), []);
     const next = useCallback(
-      () => setActiveIndex((index) => Math.min(playableEntries.length - 1, index + 1)),
+      () => setActiveIndex((index) => Math.max(0, Math.min(playableEntries.length - 1, index + 1))),
       [playableEntries.length],
     );
+
+    usePlayerInput(root, {
+      mediaType: activeEntry ? getEntryMediaType(activeEntry) : undefined,
+      canGoPrevious: activeIndex > 0,
+      canGoNext: activeIndex < playableEntries.length - 1,
+      previous,
+      next,
+      togglePlaying: () => setPlaying((value) => !value),
+    });
     useImperativeHandle(ref, () => ({ gotoPrevEntry: previous, gotoNextEntry: next }), [
       previous,
       next,
@@ -137,6 +155,7 @@ const MediaPlayer = forwardRef<MediaPlayerRef, MediaPlayerProps>(
       setPlaying(autoPlay);
       setInitialized(false);
       clearTimeout(timer.current);
+
       return () => clearTimeout(timer.current);
     }, [activeEntry?.playPath, autoPlay]);
 
@@ -150,43 +169,15 @@ const MediaPlayer = forwardRef<MediaPlayerRef, MediaPlayerProps>(
         timer.current = setTimeout(next, Math.max(interval, 1000));
     };
 
-    /* eslint-disable jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/no-noninteractive-tabindex -- This named player region intentionally receives focus for file-navigation shortcuts, while its native controls keep their own keys. */
+    /* eslint-disable jsx-a11y/no-noninteractive-tabindex -- This named player region intentionally receives focus for file-navigation shortcuts, while its native controls keep their own keys. */
     return (
       <div
         {...otherProps}
         ref={root}
+        aria-label={t("mediaPlayer.title")}
         className={`media-player w-full h-full ${otherProps.className || ""}`}
         role="region"
-        aria-label={t("mediaPlayer.title")}
         tabIndex={0}
-        onKeyDown={(event) => {
-          const target = event.target as HTMLElement;
-          if (
-            target.closest(
-              "input, textarea, select, button, video, audio, [contenteditable=true]",
-            ) ||
-            event.altKey ||
-            event.ctrlKey ||
-            event.metaKey
-          )
-            return;
-          if (event.key === "ArrowLeft") {
-            event.preventDefault();
-            previous();
-          }
-          if (event.key === "ArrowRight") {
-            event.preventDefault();
-            next();
-          }
-          if (
-            event.key === " " &&
-            activeEntry &&
-            [MediaType.Video, MediaType.Audio].includes(getEntryMediaType(activeEntry))
-          ) {
-            event.preventDefault();
-            setPlaying((value) => !value);
-          }
-        }}
       >
         {loading ? (
           <div className="media-player-empty">
@@ -219,6 +210,7 @@ const MediaPlayer = forwardRef<MediaPlayerRef, MediaPlayerProps>(
             renderOperations={renderOperations}
             onEntryClick={(entry) => {
               const index = playableEntries.findIndex((item) => item.path === entry.path);
+
               if (index >= 0) setActiveIndex(index);
             }}
             onLoad={loaded}
@@ -234,8 +226,9 @@ const MediaPlayer = forwardRef<MediaPlayerRef, MediaPlayerProps>(
         )}
       </div>
     );
-    /* eslint-enable jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/no-noninteractive-tabindex */
+    /* eslint-enable jsx-a11y/no-noninteractive-tabindex */
   },
 );
+
 MediaPlayer.displayName = "MediaPlayer";
 export default MediaPlayer;

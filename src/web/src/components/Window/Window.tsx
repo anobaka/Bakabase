@@ -8,6 +8,7 @@ import { Rnd } from "react-rnd";
 import { WindowManager } from "./WindowManager";
 import { WindowHeader } from "./WindowHeader";
 import { initialWindowBounds } from "./bounds";
+import { restoredWindowBounds, writeWindowBounds, type WindowBounds } from "./persistence";
 import "./styles.css";
 
 const Window: React.FC<WindowProps> = (props) => {
@@ -17,9 +18,14 @@ const Window: React.FC<WindowProps> = (props) => {
   const windowIdRef = useRef<string>(`window-${Date.now()}-${Math.random()}`);
   const windowManager = WindowManager.getInstance();
   const rndRef = useRef<any>(null);
+  // The un-cascaded position is retained when only the size changes. Automatically
+  // offsetting a second window must not move the next reopening farther each time.
+  const normalBoundsRef = useRef<WindowBounds | null>(null);
 
   const [windowState, setWindowState] = useState<WindowState>(() => {
-    const bounds = initialWindowBounds(windowOptions, window.innerWidth, window.innerHeight);
+    const bounds = restoredWindowBounds(windowOptions, window.innerWidth, window.innerHeight);
+
+    normalBoundsRef.current = bounds;
     const initialState = windowManager.registerWindow(windowIdRef.current, {
       x: bounds.x,
       y: bounds.y,
@@ -53,9 +59,25 @@ const Window: React.FC<WindowProps> = (props) => {
   useEffect(() => {
     // Update window state with viewport dimensions
     const updateViewport = () => {
+      const current = windowManager.getWindow(windowIdRef.current);
+      const bounds =
+        current &&
+        (current.isMaximized
+          ? { x: 0, y: 0, width: window.innerWidth, height: window.innerHeight }
+          : initialWindowBounds(
+              {
+                ...windowOptions,
+                initialPosition: { x: current.x, y: current.y },
+                initialSize: { width: current.width, height: current.height },
+              },
+              window.innerWidth,
+              window.innerHeight,
+            ));
+
       windowManager.updateWindow(windowIdRef.current, {
         innerWidth: window.innerWidth,
         innerHeight: window.innerHeight,
+        ...bounds,
       });
     };
 
@@ -124,7 +146,7 @@ const Window: React.FC<WindowProps> = (props) => {
               return merged;
             });
           } else {
-            setWindowState(currentWindow);
+            setWindowState({ ...currentWindow });
           }
         }
       }
@@ -164,6 +186,7 @@ const Window: React.FC<WindowProps> = (props) => {
 
       // Store the final position in ref to prevent reset during subscription update
       dragPositionRef.current = { x: snapped.x, y: snapped.y };
+      const moved = snapped.x !== windowState.x || snapped.y !== windowState.y;
 
       // Update WindowManager (this will trigger subscription update)
       windowManager.updateWindow(windowIdRef.current, {
@@ -171,10 +194,22 @@ const Window: React.FC<WindowProps> = (props) => {
         y: snapped.y,
       });
 
+      if (!windowState.isMinimized && moved) {
+        const bounds = {
+          x: snapped.x,
+          y: snapped.y,
+          width: windowState.width,
+          height: windowState.height,
+        };
+
+        normalBoundsRef.current = bounds;
+        writeWindowBounds(windowOptions?.persistenceKey, bounds);
+      }
+
       // Clear dragging flag
       isDraggingRef.current = false;
     },
-    [windowState.isMaximized, windowState.width, windowState.height],
+    [windowState, windowOptions?.persistenceKey],
   );
 
   const handleResizeStart = useCallback(() => {
@@ -237,6 +272,19 @@ const Window: React.FC<WindowProps> = (props) => {
         height: snappedSize.height,
       };
 
+      const previous = normalBoundsRef.current ?? windowState;
+      const remembered = {
+        x: previous.x + snappedPos.x - windowState.x,
+        y: previous.y + snappedPos.y - windowState.y,
+        width: snappedSize.width,
+        height: snappedSize.height,
+      };
+      const resized =
+        snappedPos.x !== windowState.x ||
+        snappedPos.y !== windowState.y ||
+        snappedSize.width !== windowState.width ||
+        snappedSize.height !== windowState.height;
+
       // Update WindowManager (this will trigger subscription update)
       windowManager.updateWindow(windowIdRef.current, {
         x: snappedPos.x,
@@ -245,10 +293,15 @@ const Window: React.FC<WindowProps> = (props) => {
         height: snappedSize.height,
       });
 
+      if (!windowState.isMinimized && resized) {
+        normalBoundsRef.current = remembered;
+        writeWindowBounds(windowOptions?.persistenceKey, remembered);
+      }
+
       // Clear resizing flag
       isResizingRef.current = false;
     },
-    [windowState.isMaximized],
+    [windowState, windowOptions?.persistenceKey],
   );
 
   const handleMinimize = useCallback(() => {
@@ -271,29 +324,30 @@ const Window: React.FC<WindowProps> = (props) => {
     if (windowState.isMaximized) {
       // Restore
       if (restoreState) {
+        const restored = initialWindowBounds(
+          {
+            ...windowOptions,
+            initialPosition: { x: restoreState.x, y: restoreState.y },
+            initialSize: { width: restoreState.width, height: restoreState.height },
+          },
+          window.innerWidth,
+          window.innerHeight,
+        );
+
         // Track optimistic update
         optimisticUpdateRef.current = {
           isMaximized: false,
-          x: restoreState.x,
-          y: restoreState.y,
-          width: restoreState.width,
-          height: restoreState.height,
+          ...restored,
         };
         // Update local state immediately for instant UI feedback
         setWindowState((prev) => ({
           ...prev,
           isMaximized: false,
-          x: restoreState.x,
-          y: restoreState.y,
-          width: restoreState.width,
-          height: restoreState.height,
+          ...restored,
         }));
         windowManager.updateWindow(windowIdRef.current, {
           isMaximized: false,
-          x: restoreState.x,
-          y: restoreState.y,
-          width: restoreState.width,
-          height: restoreState.height,
+          ...restored,
         });
         setRestoreState(null);
       }
@@ -332,7 +386,7 @@ const Window: React.FC<WindowProps> = (props) => {
         height: window.innerHeight,
       });
     }
-  }, [windowState.isMaximized, windowState, restoreState]);
+  }, [windowState.isMaximized, windowState, restoreState, windowOptions]);
 
   const handleClose = useCallback(
     (e?: React.MouseEvent) => {
@@ -399,6 +453,7 @@ const Window: React.FC<WindowProps> = (props) => {
       <Rnd
         ref={rndRef}
         className={windowClasses}
+        data-bakabase-window-id={windowIdRef.current}
         dragHandleClassName="window-header"
         maxHeight={40}
         maxWidth={300}
@@ -430,6 +485,7 @@ const Window: React.FC<WindowProps> = (props) => {
       ref={rndRef}
       bounds="window"
       className={windowClasses}
+      data-bakabase-window-id={windowIdRef.current}
       disableResizing={windowState.isMaximized}
       dragHandleClassName="window-header"
       minHeight={Math.min(windowOptions?.minHeight ?? 300, Math.max(1, window.innerHeight - 32))}

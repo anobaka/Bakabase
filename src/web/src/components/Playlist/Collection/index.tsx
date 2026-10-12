@@ -15,6 +15,7 @@ import { Button, Modal, Input } from "@/components/bakaui";
 import { PlaylistItemType, IwFsType } from "@/sdk/constants";
 import BApi from "@/sdk/BApi";
 import MediaPlayer from "@/components/MediaPlayer";
+import { MEDIA_PLAYER_WINDOW_PERSISTENCE_KEY } from "@/components/Window/persistence";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 
 type PlayList =
@@ -161,6 +162,7 @@ const Collection = ({ addingResourceId }: Props) => {
                                   },
                                   {
                                     title: pl.name,
+                                    persistenceKey: MEDIA_PLAYER_WINDOW_PERSISTENCE_KEY,
                                     persistent: true,
                                   },
                                 );

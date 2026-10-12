@@ -20,26 +20,39 @@ export class WindowManager {
 
   registerWindow(id: string, initialState: Partial<WindowState>): WindowState {
     // Calculate offset position based on existing windows to avoid overlap
-    const existingWindows = this.getAllWindows();
+    const existingWindows = this.getOtherWindows(id);
     const baseX = initialState.x ?? 100;
     const baseY = initialState.y ?? 100;
     const offsetStep = 40; // Offset each new window by 40px diagonally
 
-    // Always apply offset to avoid overlapping with existing windows
-    const x = Math.max(
+    // Reflect the cascade at viewport edges. Clamping every offset at the edge
+    // would stack all subsequent windows over a remembered bottom-right position.
+    const maxX = Math.max(
       0,
-      Math.min(
-        baseX + existingWindows.length * offsetStep,
-        (initialState.innerWidth ?? window.innerWidth) - (initialState.width ?? 800),
-      ),
+      (initialState.innerWidth ?? window.innerWidth) - (initialState.width ?? 800),
     );
-    const y = Math.max(
+    const maxY = Math.max(
       0,
-      Math.min(
-        baseY + existingWindows.length * offsetStep,
-        (initialState.innerHeight ?? window.innerHeight) - (initialState.height ?? 600),
-      ),
+      (initialState.innerHeight ?? window.innerHeight) - (initialState.height ?? 600),
     );
+    const reflected = (base: number, offset: number, limit: number) => {
+      if (!limit) return 0;
+      const position = (Math.max(0, Math.min(base, limit)) + offset) % (2 * limit);
+
+      return position > limit ? 2 * limit - position : position;
+    };
+    let x = reflected(baseX, existingWindows.length * offsetStep, maxX);
+    let y = reflected(baseY, existingWindows.length * offsetStep, maxY);
+
+    // Reflection can revisit a position. Try further offsets without ever moving
+    // offscreen; a viewport with no spare room necessarily shares its position.
+    for (let attempt = 1; attempt <= existingWindows.length; attempt++) {
+      if (!existingWindows.some((other) => other.x === x && other.y === y)) break;
+      const offset = (existingWindows.length + attempt) * offsetStep;
+
+      x = reflected(baseX, offset, maxX);
+      y = reflected(baseY, offset, maxY);
+    }
 
     const state: WindowState = {
       id,
@@ -90,14 +103,23 @@ export class WindowManager {
     const window = this.windows.get(id);
 
     if (window) {
-      this.currentMaxZIndex = Math.min(this.currentMaxZIndex + 1, this.maxZIndex);
-      window.zIndex = this.currentMaxZIndex;
+      window.zIndex = this.getNextZIndex();
       this.notifyListeners();
     }
   }
 
   getNextZIndex(): number {
-    this.currentMaxZIndex = Math.min(this.currentMaxZIndex + 1, this.maxZIndex);
+    if (this.currentMaxZIndex >= this.maxZIndex) {
+      // Keep stacking unique after long sessions; capping every focused window at
+      // the same value would make more than one player believe it is active.
+      const ordered = this.getAllWindows().sort((left, right) => left.zIndex - right.zIndex);
+
+      ordered.forEach((state, index) => {
+        state.zIndex = this.minZIndex + index;
+      });
+      this.currentMaxZIndex = this.minZIndex + ordered.length - 1;
+    }
+    this.currentMaxZIndex += 1;
 
     return this.currentMaxZIndex;
   }

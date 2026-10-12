@@ -44,12 +44,12 @@
   "mediaPlayer.text.truncated": "正在显示有限预览（最多 512 KiB、20,000 行，每行最多 4,096 个字符）；超出的内容已截断。",
   "mediaPlayer.window.title": "媒体播放器",
   "mediaPlayer.window.shortcuts": "快捷键",
-  "mediaPlayer.window.shortcutsHint": "播放器获得焦点时：",
+  "mediaPlayer.window.shortcutsHint": "在当前播放器窗口中，拖动标题后也可使用：",
   "mediaPlayer.window.playPause": "播放 / 暂停视频或音频",
   "mediaPlayer.window.close": "关闭窗口",
   "mediaPlayer.window.dismiss": "知道了",
   "mediaPlayer.window.minimize": "最小化",
   "mediaPlayer.window.maximize": "最大化",
   "mediaPlayer.window.restore": "还原窗口",
-  "mediaPlayer.window.scrollHint": "滚轮用于浏览文件或阅读文本；视频控件和文本输入保留自己的键盘操作。"
+  "mediaPlayer.window.scrollHint": "查看图片时，向上或向下滚动可切换文件。文件列表和文本保留正常滚动；视频控件和文本输入保留自己的键盘操作。"
 }

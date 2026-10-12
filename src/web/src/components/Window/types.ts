@@ -13,6 +13,8 @@ export interface WindowState {
 
 export interface WindowOptions {
   title?: string;
+  /** Remember user-adjusted normal bounds on this browser/device. Separate from route persistence. */
+  persistenceKey?: string;
   initialPosition?: { x: number; y: number };
   initialSize?: { width: number; height: number };
   minWidth?: number;
