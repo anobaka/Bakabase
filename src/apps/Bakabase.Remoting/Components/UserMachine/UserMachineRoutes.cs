@@ -39,6 +39,7 @@ public static class UserMachineRoutes
         new("GET", "/file/icon"),
         new("GET", "/file/recycle-bin"),
         new("GET", "/gui/url"),
+        new("GET", "/player/device-playback/preferences"),
         new("GET", "/player/playlist/{playlistId:int}/batch-play/candidates"),
         new("GET", "/resource/directory"),
         new("GET", "/resource/play/random"),
@@ -52,7 +53,8 @@ public static class UserMachineRoutes
         new("POST", "/player/batch-play"),
         new("POST", "/player/batch-play/candidates"),
         new("POST", "/player/playlist/{playlistId:int}/batch-play"),
-        new("POST", "/tool/cookie-capture")
+        new("POST", "/tool/cookie-capture"),
+        new("PUT", "/player/device-playback/preferences")
     ];
 
     private static readonly ImmutableHashSet<string> Keys =

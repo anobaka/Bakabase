@@ -356,6 +356,9 @@ namespace Bakabase.Service.Extensions
                     if (appService != null)
                     {
                         o.TempPlaylistDirectory = appService.RequestAppDataDirectory("temp", "playlists");
+                        o.DevicePlaybackPreferencesFile = () => Path.Combine(
+                            appService.RequestAppDataDirectory("configs"),
+                            Bakabase.Modules.Player.Services.DevicePlaybackPreferencesStore.FileName);
                     }
                 }));
 

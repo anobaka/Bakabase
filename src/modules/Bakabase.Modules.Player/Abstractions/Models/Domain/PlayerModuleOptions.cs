@@ -3,6 +3,13 @@ namespace Bakabase.Modules.Player.Abstractions.Models.Domain;
 public class PlayerModuleOptions
 {
     /// <summary>
+    /// Resolves this installation's configs/device-playback.json under its effective
+    /// AppData. Kept lazy so relocation does not leave a store writing to an old root.
+    /// An unconfigured host reads defaults and cannot persist device preferences.
+    /// </summary>
+    public Func<string?>? DevicePlaybackPreferencesFile { get; set; }
+
+    /// <summary>
     /// Directory for generated temporary playlist files. Must live under the
     /// AppData directory (see appdata-paths rule); wired by the host. When
     /// null, falls back to a "bakabase/playlists" folder under the system

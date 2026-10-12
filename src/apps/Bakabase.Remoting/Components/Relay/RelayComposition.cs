@@ -33,10 +33,12 @@ namespace Bakabase.Remoting.Components.Relay;
 /// </param>
 /// <param name="AppVersion">This program's version, reported by the context endpoint.</param>
 /// <param name="TempPlaylistDirectory">Where batch play writes playlists for a local player.</param>
+/// <param name="DevicePlaybackPreferencesFile">This device's effective AppData preference file, resolved lazily.</param>
 public sealed record RelayEnvironment(
     Func<IServiceProvider, int> ResolvePort,
     string AppVersion,
-    Func<IServiceProvider, string> TempPlaylistDirectory);
+    Func<IServiceProvider, string> TempPlaylistDirectory,
+    Func<IServiceProvider, string?>? DevicePlaybackPreferencesFile = null);
 
 /// <summary>
 /// The relay: a loopback listener an embedded browser talks to, which signs and forwards
@@ -165,7 +167,13 @@ public static class RelayComposition
 
         services.AddSingleton<IConfigureOptions<PlayerModuleOptions>>(sp =>
             new ConfigureOptions<PlayerModuleOptions>(o =>
-                o.TempPlaylistDirectory = environment.TempPlaylistDirectory(sp)));
+            {
+                o.TempPlaylistDirectory = environment.TempPlaylistDirectory(sp);
+                o.DevicePlaybackPreferencesFile = () => environment.DevicePlaybackPreferencesFile?.Invoke(sp);
+            }));
+
+        services.AddSingleton<IUserMachineHandler, GetDevicePlaybackPreferencesHandler>();
+        services.AddSingleton<IUserMachineHandler, SetDevicePlaybackPreferencesHandler>();
 
         services.AddSingleton<IUserMachineHandler, BatchPlayCandidatesHandler>();
         services.AddSingleton<IUserMachineHandler, BatchPlayResourcesHandler>();

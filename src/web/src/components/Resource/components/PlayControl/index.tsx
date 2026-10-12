@@ -15,6 +15,14 @@ import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
 
 import NoPlayableFilesModal from "./NoPlayableFilesModal";
+import { usePlaybackPreferences } from "./usePlaybackPreferences";
+import {
+  pathMediaType,
+  playbackKindForPath,
+  playbackKindForPaths,
+  resolvePlaybackPreference,
+  type PlaybackPreference,
+} from "./playbackPreferences";
 
 import { Button, Chip, Modal } from "@/components/bakaui";
 import { splitPathIntoSegments, standardizePath } from "@/components/utils";
@@ -27,6 +35,7 @@ import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContext
 import { useUserSideActionsRunHere } from "@/stores/remoteAccess";
 import { useResourceBrowserPlayer } from "@/hooks/useResourceBrowserPlayer";
 import PlayOnThisDevice from "@/components/Resource/components/PlayOnThisDevice";
+import { preferredDevicePlatform } from "@/components/Resource/components/PlayOnThisDevice/playerSchemes";
 import { useOpenResourceDirectory } from "@/hooks/useOpenResourceDirectory";
 
 // Play control status for UI rendering
@@ -42,7 +51,7 @@ export type SourceEntry = {
 
 export type PlayControlPortalProps = {
   status: PlayControlStatus;
-  /** Ordered list of sources that have playable items (non-FileSystem first) */
+  /** Available sources, ordered for this device's preferred playback method. */
   sources: SourceEntry[];
   /** Whether the resource has a local file path */
   hasPath: boolean;
@@ -59,6 +68,12 @@ export type PlayControlPortalProps = {
   onNotFound: () => void;
   /** Trigger FileSystem SSE discovery (call when FS button becomes visible) */
   triggerFsDiscovery: () => void;
+  onPlayInBrowser?: () => void;
+  onChoosePlayback?: () => void;
+  browserPlaybackAvailable?: boolean;
+  browserPlaybackIsDefault?: boolean;
+  playbackCaption?: string;
+  playbackReady?: boolean;
 };
 
 type Props = {
@@ -151,6 +166,7 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
   const openInBrowserPlayer = useResourceBrowserPlayer();
   const folderAction = useOpenResourceDirectory();
   const resourceUiOptions = uiOptionsStore.data?.resource;
+  const playback = usePlaybackPreferences();
 
   // Use the playable item resolution hook which handles SSE discovery internally
   const resolution = usePlayableItemResolution(resource);
@@ -158,14 +174,21 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
   const [dirs, setDirs] = useState<Directory[]>();
   const [modalVisible, setModalVisible] = useState(false);
   const [modalSource, setModalSource] = useState<DataOrigin | null>(null);
+  const [modalPlaybackOverride, setModalPlaybackOverride] = useState<PlaybackPreference>();
 
   // Map resolution groups to SourceEntry[] for the PortalComponent
   const sources: SourceEntry[] = useMemo(
     () =>
       resolution.groups
         .filter((g) => g.items.length > 0)
-        .map((g) => ({ source: g.origin, items: g.items })),
-    [resolution.groups],
+        .map((g) => ({ source: g.origin, items: g.items }))
+        .sort((a, b) =>
+          !userSideActionsRunHere
+            ? Number(b.source === DataOrigin.FileSystem) -
+              Number(a.source === DataOrigin.FileSystem)
+            : 0,
+        ),
+    [resolution.groups, userSideActionsRunHere],
   );
 
   // Build sourceGroups map for handlePlaySource
@@ -185,6 +208,34 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
   const playableItems = useMemo(
     () => resolution.groups.flatMap((g) => g.items),
     [resolution.groups],
+  );
+  const fsItems = playableItems.filter((item) => item.origin === DataOrigin.FileSystem);
+  const resourceKind = resource.isFile
+    ? playbackKindForPath(resource.path)
+    : playbackKindForPaths(fsItems.map((item) => item.key));
+  const representativePath = fsItems[0]?.key ?? resource.path;
+  const preferredPlayback = resolvePlaybackPreference(
+    playback.preferences[resourceKind],
+    userSideActionsRunHere,
+    pathMediaType(representativePath),
+    preferredDevicePlatform(),
+  );
+  const playbackCaption =
+    preferredPlayback.mode === "browser"
+      ? t(
+          resourceKind === "audio" || resourceKind === "video"
+            ? "resource.playOnThisDevice.playInBrowser"
+            : "resource.playOnThisDevice.viewInBrowser",
+        )
+      : preferredPlayback.mode === "ask"
+        ? t("resource.playback.chooseMethod")
+        : preferredPlayback.scheme
+          ? t("resource.playback.usePlayer", { player: preferredPlayback.scheme.name })
+          : t("resource.playOnThisDevice.desktopPlayer");
+  const orderedSources = [...sources].sort((a, b) =>
+    preferredPlayback.mode === "browser" || preferredPlayback.mode === "ask"
+      ? Number(b.source === DataOrigin.FileSystem) - Number(a.source === DataOrigin.FileSystem)
+      : 0,
   );
 
   // FileSystem discovery status for the portal
@@ -234,6 +285,7 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
   useEffect(() => {
     setDirs(undefined);
     setModalSource(null);
+    setModalPlaybackOverride(undefined);
   }, [resource.id]);
 
   useImperativeHandle(
@@ -245,35 +297,7 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
   );
 
   // Play a PlayableItem via unified PlayItem API (all sources go through resolvers)
-  const playItem = async (item: PlayableItem) => {
-    // The question is where a player would start, not where the files are. In
-    // the app — its own library or a server it manages — it starts here, so the
-    // call goes through;
-    // in a plain browser pointed at a server it would start on the host's
-    // desktop and report success to someone who cannot see it. Local files
-    // stream into the page instead; the other origins (Steam, ExHentai, …) have
-    // nothing to show remotely and say so rather than pretending.
-    if (!userSideActionsRunHere) {
-      if (item.origin === DataOrigin.FileSystem) {
-        // Browser playback is one option among several: for anything the browser
-        // cannot demux, handing the file to a native player on this device is
-        // both better quality and free for the server.
-        createPortal(PlayOnThisDevice, {
-          resource,
-          filePath: item.key,
-          onPlayInBrowser: () => {
-            openInBrowserPlayer(resource, item.key)
-              .then(() => afterPlaying?.())
-              .catch((e) => toast.error(String(e)));
-          },
-        });
-      } else {
-        toast.error(t<string>("resource.play.hostOnly"));
-      }
-
-      return;
-    }
-
+  const playNativeItem = async (item: PlayableItem) => {
     try {
       const rsp = await playItemApi(resource.id, item.origin, item.key);
 
@@ -286,22 +310,122 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
     }
   };
 
+  const playInBrowser = (initialPath?: string) => {
+    void openInBrowserPlayer(resource, initialPath)
+      .then(() => afterPlaying?.())
+      .catch((e) => toast.error(String(e)));
+  };
+
+  const choosePlayback = (item?: PlayableItem) => {
+    const selectedPath = item?.key ?? representativePath;
+
+    if (!selectedPath) return;
+    createPortal(PlayOnThisDevice, {
+      resource,
+      filePath: selectedPath,
+      kind: item ? playbackKindForPath(selectedPath) : resourceKind,
+      onPlayInBrowser: () => playInBrowser(item?.key),
+      onPlayNative: userSideActionsRunHere
+        ? () =>
+            item
+              ? void playNativeItem(item)
+              : handlePlaySource(DataOrigin.FileSystem, { mode: "native" })
+        : undefined,
+      onRememberChoice: playback.save,
+    });
+  };
+
+  const playItem = async (item: PlayableItem, override?: PlaybackPreference) => {
+    if (item.origin === DataOrigin.FileSystem) {
+      const kind = playbackKindForPath(item.key);
+      const preference = override ?? playback.preferences[kind];
+      const method = resolvePlaybackPreference(
+        preference,
+        userSideActionsRunHere,
+        pathMediaType(item.key),
+        preferredDevicePlatform(),
+      );
+
+      if (method.mode === "browser") {
+        playInBrowser(item.key);
+
+        return;
+      }
+      if (method.mode === "ask") {
+        choosePlayback(item);
+
+        return;
+      }
+      if (method.scheme) {
+        const streamUrl = new URL(
+          BApi.file.getRawFileUrl({ fullname: item.key }),
+          window.location.origin,
+        ).href;
+
+        BApi.resource.markResourceAsPlayed(resource.id, { item: item.key }).catch(() => {});
+        window.location.href = method.scheme.build(
+          streamUrl,
+          resource.displayName ?? item.key,
+          pathMediaType(item.key),
+        );
+
+        return;
+      }
+    }
+    // The question is where a player would start, not where the files are. In
+    // the app — its own library or a server it manages — it starts here, so the
+    // call goes through;
+    // in a plain browser pointed at a server it would start on the host's
+    // desktop and report success to someone who cannot see it. Local files
+    // stream into the page instead; the other origins (Steam, ExHentai, …) have
+    // nothing to show remotely and say so rather than pretending.
+    if (!userSideActionsRunHere) {
+      if (item.origin === DataOrigin.FileSystem) {
+        // Browser playback is one option among several: for anything the browser
+        // cannot demux, handing the file to a native player on this device is
+        // both better quality and free for the server.
+        choosePlayback(item);
+      } else {
+        toast.error(t<string>("resource.play.hostOnly"));
+      }
+
+      return;
+    }
+
+    await playNativeItem(item);
+  };
+
   /** Play items from a specific source, handling single/multiple items */
   const handlePlaySource = useCallback(
-    (source: DataOrigin) => {
+    (source: DataOrigin, override?: PlaybackPreference) => {
+      if (!playback.ready) return;
       const items = sourceGroups.get(source) ?? [];
 
       if (items.length === 0) return;
+      if (source === DataOrigin.FileSystem && !override && preferredPlayback.mode === "browser") {
+        playInBrowser(items.length === 1 ? items[0]?.key : undefined);
+
+        return;
+      }
+      if (source === DataOrigin.FileSystem && !override && preferredPlayback.mode === "ask") {
+        choosePlayback();
+
+        return;
+      }
+      const selectedPreference =
+        source === DataOrigin.FileSystem
+          ? (override ?? playback.preferences[resourceKind])
+          : undefined;
 
       if (items.length === 1) {
-        playItem(items[0]!);
+        playItem(items[0]!, selectedPreference);
 
         return;
       }
 
       // Multiple items - check auto-select preference
       if (resourceUiOptions?.autoSelectFirstPlayableFile) {
-        playItem(items[0]!);
+        playItem(items[0]!, selectedPreference);
 
         return;
       }
@@ -318,9 +442,20 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
         }
       }
       setModalSource(source);
+      setModalPlaybackOverride(selectedPreference);
       setModalVisible(true);
     },
-    [sourceGroups, resourceUiOptions?.autoSelectFirstPlayableFile, resource.path, resource.isFile],
+    [
+      sourceGroups,
+      resourceUiOptions?.autoSelectFirstPlayableFile,
+      resource.path,
+      resource.isFile,
+      playback.ready,
+      preferredPlayback,
+      playback.preferences,
+      resourceKind,
+      userSideActionsRunHere,
+    ],
   );
 
   /** Open the resource's folder */
@@ -344,15 +479,21 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
   return (
     <>
       <PortalComponent
+        browserPlaybackAvailable={!!resource.path}
+        browserPlaybackIsDefault={preferredPlayback.mode === "browser"}
         fsDiscoveryStatus={fsDiscoveryStatus}
         hasPath={!!resource.path}
         isFile={resource.isFile}
         openFolderLabel={folderAction.label}
-        sources={sources}
+        playbackCaption={playbackCaption}
+        playbackReady={playback.ready}
+        sources={orderedSources}
         status={status}
         triggerFsDiscovery={() => resolution.triggerDiscovery(DataOrigin.FileSystem)}
+        onChoosePlayback={() => choosePlayback()}
         onNotFound={handleNotFound}
         onOpenFolder={handleOpenFolder}
+        onPlayInBrowser={() => playInBrowser()}
         onPlaySource={handlePlaySource}
       />
       <Modal
@@ -363,6 +504,7 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
         onClose={() => {
           setModalVisible(false);
           setModalSource(null);
+          setModalPlaybackOverride(undefined);
         }}
       >
         {/* FileSystem source: directory-grouped file list */}
@@ -400,7 +542,11 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
                                 radius={"sm"}
                                 size={"sm"}
                                 onPress={() => {
-                                  playItem({ origin: DataOrigin.FileSystem, key: file.path });
+                                  playItem(
+                                    { origin: DataOrigin.FileSystem, key: file.path },
+                                    modalPlaybackOverride,
+                                  );
+                                  setModalVisible(false);
                                 }}
                               >
                                 <PlayCircleOutlined className={"text-base"} />

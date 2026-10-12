@@ -18,8 +18,43 @@ namespace Bakabase.Service.Controllers
     public class PlayerController(
         IBatchPlayService batchPlayService,
         IBatchPlayResourceSource batchPlayResourceSource,
-        IBatchPlayPlaylistSource batchPlayPlaylistSource) : Controller
+        IBatchPlayPlaylistSource batchPlayPlaylistSource,
+        IDevicePlaybackPreferencesStore devicePlaybackPreferencesStore) : Controller
     {
+        [SwaggerOperation(OperationId = "GetDevicePlaybackPreferences")]
+        [RunsOnUserMachine(Reason = "Playback preferences belong to the device you are using.")]
+        [HttpGet("device-playback/preferences")]
+        public async Task<SingletonResponse<DevicePlaybackPreferences>> GetDevicePlaybackPreferences()
+        {
+            Response.Headers.CacheControl = "no-store";
+            return new(await devicePlaybackPreferencesStore.ReadAsync(HttpContext.RequestAborted));
+        }
+
+        [SwaggerOperation(OperationId = "SetDevicePlaybackPreferences")]
+        [RunsOnUserMachine(Reason = "Playback preferences belong to the device you are using.")]
+        [HttpPut("device-playback/preferences")]
+        [RequestSizeLimit(16 * 1024)]
+        public async Task<BaseResponse> SetDevicePlaybackPreferences([FromBody] DevicePlaybackPreferences model)
+        {
+            if (!ModelState.IsValid || model == null)
+            {
+                Response.StatusCode = 400;
+                return BaseResponseBuilder.BuildBadRequest("Choose valid device playback preferences.");
+            }
+
+            try
+            {
+                model.Validate();
+                await devicePlaybackPreferencesStore.WriteAsync(model, HttpContext.RequestAborted);
+                return BaseResponseBuilder.Ok;
+            }
+            catch (ArgumentException e)
+            {
+                Response.StatusCode = 400;
+                return BaseResponseBuilder.BuildBadRequest(e.Message);
+            }
+        }
+
         /// <summary>
         /// What a selection of resources holds: the playable files of each, and the
         /// players their profiles configure.

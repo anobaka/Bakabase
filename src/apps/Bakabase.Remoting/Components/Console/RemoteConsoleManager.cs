@@ -6,6 +6,7 @@ using Bakabase.Abstractions.Components.Gui;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Infrastructures.Components.App;
 using Bakabase.Infrastructures.Components.Gui;
+using Bakabase.Modules.Player.Abstractions.Services;
 using Bakabase.Modules.RemoteAccess.Abstractions.Models;
 using Bakabase.Modules.RemoteAccess.Abstractions.Services;
 using Bakabase.Modules.RemoteAccess.Components;
@@ -1732,7 +1733,8 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
         this,
         new UpstreamIdentityPolicy(_options.IdentityCheckInterval, _options.IdentityRetryInterval,
             _options.IdentityCheckTimeout, _options.IdentityConnectionWindow),
-        _options.Connector);
+        _options.Connector,
+        _services.GetService<IDevicePlaybackPreferencesStore>());
 
     /// <summary>This app's own server's ports, as it reports them.</summary>
     private IEnumerable<int> ServicePorts()

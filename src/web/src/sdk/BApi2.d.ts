@@ -6950,6 +6950,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/player/device-playback/preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetDevicePlaybackPreferences"];
+        put: operations["SetDevicePlaybackPreferences"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/player/batch-play/resource-snapshot": {
         parameters: {
             query?: never;
@@ -14447,6 +14463,19 @@ export interface components {
          * @enum {integer}
          */
         "Bakabase.Modules.Player.Abstractions.Models.Domain.Constants.BatchPlayLaunchMethod": 1 | 2;
+        "Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackChoice": {
+            mode: string;
+            nativeSchemeId?: string;
+        };
+        "Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackPreferences": {
+            /** Format: int32 */
+            version: number;
+            image: components["schemas"]["Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackChoice"];
+            text: components["schemas"]["Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackChoice"];
+            audio: components["schemas"]["Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackChoice"];
+            video: components["schemas"]["Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackChoice"];
+            other: components["schemas"]["Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackChoice"];
+        };
         "Bakabase.Modules.Player.Abstractions.Models.Input.BatchPlayCandidatesInputModel": {
             resourceIds: number[];
         };
@@ -17602,6 +17631,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Modules.Player.Abstractions.Models.Domain.BatchPlayResult"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackPreferences]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackPreferences"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Presets.Abstractions.Models.MediaLibraryTemplatePresetDataPool]": {
             /** Format: int32 */
@@ -32232,6 +32267,57 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    GetDevicePlaybackPreferences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackPreferences]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackPreferences]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackPreferences]"];
+                };
+            };
+        };
+    };
+    SetDevicePlaybackPreferences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackPreferences"];
+                "application/json": components["schemas"]["Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackPreferences"];
+                "text/json": components["schemas"]["Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackPreferences"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackPreferences"];
+            };
+        };
         responses: {
             /** @description OK */
             200: {

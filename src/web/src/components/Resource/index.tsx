@@ -71,6 +71,7 @@ import {
 } from "@/sdk/constants";
 import { useResourceOptionsStore, useUiOptionsStore } from "@/stores/options";
 import PlayControl from "@/components/Resource/components/PlayControl";
+import PlaybackQuickActions from "@/components/Resource/components/PlayControl/PlaybackQuickActions";
 import ResourceContextMenu from "@/components/Resource/components/ContextMenu";
 import ResourceSourceIcon from "@/components/Resource/components/ResourceSourceIcon";
 import { SteamIcon, DLsiteIcon, ExHentaiIcon } from "@/components/SourceIcons";
@@ -125,18 +126,21 @@ type MenuEntry = {
 };
 
 // PlayButton component defined outside Resource to maintain stable reference
-const PlayButton: React.FC<PlayControlPortalProps> = ({
-  status,
-  sources,
-  hasPath,
-  isFile,
-  fsDiscoveryStatus,
-  onPlaySource,
-  onOpenFolder,
-  openFolderLabel,
-  onNotFound,
-  triggerFsDiscovery,
-}) => {
+const PlayButton: React.FC<PlayControlPortalProps> = (props) => {
+  const {
+    status,
+    sources,
+    hasPath,
+    isFile,
+    fsDiscoveryStatus,
+    onPlaySource,
+    onOpenFolder,
+    openFolderLabel,
+    onNotFound,
+    triggerFsDiscovery,
+    playbackCaption,
+    playbackReady,
+  } = props;
   const { t } = useTranslation();
 
   const fsTriggeredRef = React.useRef(false);
@@ -144,7 +148,7 @@ const PlayButton: React.FC<PlayControlPortalProps> = ({
   const iconClass = "text-2xl";
   const buttonClass = "!p-0";
 
-  // Build menu entries. Sources are ordered: non-FileSystem first, FileSystem last.
+  // Keep source actions in the order chosen by the current device's playback preference.
   const entries: MenuEntry[] = React.useMemo(() => {
     if (status === "idle" || status === "loading") return [];
 
@@ -163,10 +167,14 @@ const PlayButton: React.FC<PlayControlPortalProps> = ({
           ) : (
             renderSourceIcon(source, "text-base")
           ),
-        label: t("resource.playControl.menu.openVia", {
-          source: t(`resource.source.${DataOrigin[source]}`),
-        }),
+        label:
+          isFs && playbackCaption
+            ? playbackCaption
+            : t("resource.playControl.menu.openVia", {
+                source: t(`resource.source.${DataOrigin[source]}`),
+              }),
         onClick: () => onPlaySource(source),
+        isDisabled: playbackReady === false,
       });
     }
 
@@ -217,6 +225,8 @@ const PlayButton: React.FC<PlayControlPortalProps> = ({
     onOpenFolder,
     openFolderLabel,
     onNotFound,
+    playbackCaption,
+    playbackReady,
   ]);
 
   // Trigger FS discovery when FS button is visible
@@ -271,6 +281,8 @@ const PlayButton: React.FC<PlayControlPortalProps> = ({
           )}
         </Button>
       </Tooltip>
+
+      <PlaybackQuickActions {...props} className="!p-0" />
 
       {dropdownEntries.length > 0 && (
         <div className="hidden group-hover/play:block group-focus-within/play:block absolute left-full top-0 pl-1 z-10">
@@ -525,9 +537,9 @@ const Resource = React.forwardRef((props: Props, ref) => {
           {movePanelEnabled && moveBlockReason && (
             <Tooltip content={moveReasonText(moveBlockReason)}>
               <span
+                aria-label={moveReasonText(moveBlockReason)}
                 className="inline-flex items-center justify-center w-6 h-6 rounded bg-default-100/90 text-warning"
                 title={moveReasonText(moveBlockReason)}
-                aria-label={moveReasonText(moveBlockReason)}
               >
                 <StopOutlined />
               </span>

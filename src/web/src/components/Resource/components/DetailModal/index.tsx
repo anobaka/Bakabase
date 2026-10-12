@@ -36,7 +36,6 @@ import CustomPropertiesEmptyState from "./CustomPropertiesEmptyState";
 import DetailTimestamp from "./DetailTimestamp";
 
 import AcquisitionPanel from "@/components/Resource/components/AcquisitionPanel";
-
 import ResourceCover from "@/components/Resource/components/ResourceCover";
 import DataCardAssociationPanel from "@/components/DataCardAssociationPanel";
 
@@ -57,11 +56,17 @@ import {
 import type { DestroyableProps } from "@/components/bakaui/types";
 
 import BApi from "@/sdk/BApi";
-import { PropertyPool, ReservedProperty, ResourceAdditionalItem } from "@/sdk/constants";
+import {
+  DataOrigin,
+  PropertyPool,
+  ReservedProperty,
+  ResourceAdditionalItem,
+} from "@/sdk/constants";
 import { convertFromApiValue } from "@/components/StandardValue/helpers";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import PropertyValueScopePicker from "@/components/Resource/components/DetailModal/PropertyValueScopePicker";
 import PlayControl from "@/components/Resource/components/PlayControl";
+import PlaybackQuickActions from "@/components/Resource/components/PlayControl/PlaybackQuickActions";
 
 import type { PlayControlPortalProps } from "@/components/Resource/components/PlayControl";
 
@@ -81,14 +86,17 @@ import { useOpenResourceDirectory } from "@/hooks/useOpenResourceDirectory";
 type ColumnCount = 1 | 2 | 3;
 const PROPERTIES_COLUMNS_KEY = "bakabase:properties:columns";
 
-const PlayControlPortal = ({
-  status,
-  sources,
-  onPlaySource,
-  onNotFound,
-  triggerFsDiscovery,
-  fsDiscoveryStatus,
-}: PlayControlPortalProps) => {
+const PlayControlPortal = (props: PlayControlPortalProps) => {
+  const {
+    status,
+    sources,
+    onPlaySource,
+    onNotFound,
+    triggerFsDiscovery,
+    fsDiscoveryStatus,
+    playbackCaption,
+    playbackReady,
+  } = props;
   const { t } = useTranslation();
 
   React.useEffect(() => {
@@ -98,22 +106,31 @@ const PlayControlPortal = ({
   const mainSource = sources[0];
 
   return (
-    <Tooltip content={t("common.action.play")}>
-      <Button
-        isIconOnly
-        color="primary"
-        isDisabled={status === "loading" || status === "idle"}
-        onPress={() => (mainSource ? onPlaySource(mainSource.source) : onNotFound())}
+    <div className="flex items-center gap-0.5">
+      <Tooltip
+        content={
+          mainSource?.source === DataOrigin.FileSystem && playbackCaption
+            ? playbackCaption
+            : t("common.action.play")
+        }
       >
-        {status === "loading" || status === "idle" ? (
-          <LoadingOutlined spin className="text-lg" />
-        ) : status === "not-found" ? (
-          <QuestionCircleOutlined className="text-lg text-warning" />
-        ) : (
-          <PlayCircleOutlined className="text-lg" />
-        )}
-      </Button>
-    </Tooltip>
+        <Button
+          isIconOnly
+          color="primary"
+          isDisabled={status === "loading" || status === "idle" || playbackReady === false}
+          onPress={() => (mainSource ? onPlaySource(mainSource.source) : onNotFound())}
+        >
+          {status === "loading" || status === "idle" ? (
+            <LoadingOutlined spin className="text-lg" />
+          ) : status === "not-found" ? (
+            <QuestionCircleOutlined className="text-lg text-warning" />
+          ) : (
+            <PlayCircleOutlined className="text-lg" />
+          )}
+        </Button>
+      </Tooltip>
+      <PlaybackQuickActions {...props} />
+    </div>
   );
 };
 

@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import { detectPlatform, playerSchemes, schemesForPlatform } from "../playerSchemes";
 
+import { MediaType } from "@/sdk/constants";
+
 const STREAM = "http://192.168.1.5:34567/file/raw?fullname=Z%3A%2Fanime%2Fep1.mkv";
 const TITLE = "Episode 1";
 
@@ -14,6 +16,10 @@ const scheme = (id: string) => {
 };
 
 describe("android intents", () => {
+  it("uses an audio MIME type for an audio stream without changing video intents", () => {
+    expect(scheme("vlc-android").build(STREAM, TITLE, MediaType.Audio)).toContain("type=audio/*");
+    expect(scheme("vlc-android").build(STREAM, TITLE, MediaType.Video)).toContain("type=video/*");
+  });
   it("uses Chrome's intent: form with the scheme moved into a parameter", () => {
     const link = scheme("vlc-android").build(STREAM, TITLE);
 
@@ -37,7 +43,12 @@ describe("android intents", () => {
 
     expect(link).toContain("S.title=A%20Movie%3A%20Part%202");
     // A literal ';' inside a value would terminate the intent parameter list.
-    expect(link.split("#Intent;")[1]!.split(";").filter((p) => p.startsWith("S.title="))).toHaveLength(1);
+    expect(
+      link
+        .split("#Intent;")[1]!
+        .split(";")
+        .filter((p) => p.startsWith("S.title=")),
+    ).toHaveLength(1);
   });
 
   it("omits package for the system chooser entry", () => {
@@ -98,6 +109,20 @@ describe("desktop schemes", () => {
 });
 
 describe("platform selection", () => {
+  it("never offers audio/video URI handlers for images, text or unknown files", () => {
+    for (const platform of ["android", "ios", "windows", "macos", "linux", "unknown"] as const) {
+      for (const mediaType of [MediaType.Image, MediaType.Text, MediaType.Unknown]) {
+        expect(schemesForPlatform(platform, mediaType)).toEqual([]);
+      }
+    }
+    expect(schemesForPlatform("windows", MediaType.Audio).map((scheme) => scheme.id)).toContain(
+      "potplayer-windows",
+    );
+    expect(schemesForPlatform("macos", MediaType.Video).map((scheme) => scheme.id)).toContain(
+      "iina-macos",
+    );
+    expect(schemesForPlatform("unknown", MediaType.Video)).toEqual([]);
+  });
   it("offers only players that exist on the platform", () => {
     for (const platform of ["android", "ios", "windows", "macos", "linux"] as const) {
       const schemes = schemesForPlatform(platform);
@@ -147,9 +172,7 @@ describe("every scheme", () => {
       const carriesTarget =
         link.includes("192.168.1.5:34567") ||
         link.includes(encodeURIComponent(STREAM)) ||
-        link.includes(
-          btoa(STREAM).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""),
-        );
+        link.includes(btoa(STREAM).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""));
 
       expect(carriesTarget, s.id).toBe(true);
     }

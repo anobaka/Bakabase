@@ -5853,6 +5853,21 @@ export type BakabaseModulesPlayerAbstractionsModelsDomainConstantsBatchPlayFileS
  */
 export type BakabaseModulesPlayerAbstractionsModelsDomainConstantsBatchPlayLaunchMethod = 1 | 2;
 
+export interface BakabaseModulesPlayerAbstractionsModelsDomainDevicePlaybackChoice {
+  mode: string;
+  nativeSchemeId?: string;
+}
+
+export interface BakabaseModulesPlayerAbstractionsModelsDomainDevicePlaybackPreferences {
+  /** @format int32 */
+  version: number;
+  image: BakabaseModulesPlayerAbstractionsModelsDomainDevicePlaybackChoice;
+  text: BakabaseModulesPlayerAbstractionsModelsDomainDevicePlaybackChoice;
+  audio: BakabaseModulesPlayerAbstractionsModelsDomainDevicePlaybackChoice;
+  video: BakabaseModulesPlayerAbstractionsModelsDomainDevicePlaybackChoice;
+  other: BakabaseModulesPlayerAbstractionsModelsDomainDevicePlaybackChoice;
+}
+
 export interface BakabaseModulesPlayerAbstractionsModelsInputBatchPlayCandidatesInputModel {
   resourceIds: number[];
 }
@@ -9727,6 +9742,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesP
   code: number;
   message?: string;
   data?: BakabaseModulesPlayerAbstractionsModelsDomainBatchPlayResult;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesPlayerAbstractionsModelsDomainDevicePlaybackPreferences {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesPlayerAbstractionsModelsDomainDevicePlaybackPreferences;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesPresetsAbstractionsModelsMediaLibraryTemplatePresetDataPool {
@@ -28229,6 +28251,66 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     },
   };
   player = {
+    /**
+     * No description
+     *
+     * @tags Player
+     * @name GetDevicePlaybackPreferences
+     * @request GET:/player/device-playback/preferences
+     */
+    getDevicePlaybackPreferences: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesPlayerAbstractionsModelsDomainDevicePlaybackPreferences,
+        any
+      >({
+        path: `/player/device-playback/preferences`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getDevicePlaybackPreferences
+     * @name getDevicePlaybackPreferencesUrl
+     */
+    getDevicePlaybackPreferencesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/player/device-playback/preferences`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Player
+     * @name SetDevicePlaybackPreferences
+     * @request PUT:/player/device-playback/preferences
+     */
+    setDevicePlaybackPreferences: (
+      data: BakabaseModulesPlayerAbstractionsModelsDomainDevicePlaybackPreferences,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/player/device-playback/preferences`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for setDevicePlaybackPreferences
+     * @name setDevicePlaybackPreferencesUrl
+     */
+    setDevicePlaybackPreferencesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/player/device-playback/preferences`;
+
+      return baseUrl + path;
+    },
+
     /**
      * No description
      *

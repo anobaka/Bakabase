@@ -14,7 +14,10 @@
  * works.
  */
 
+import { MediaType } from "@/sdk/constants";
+
 export type DevicePlatform = "android" | "ios" | "windows" | "macos" | "linux" | "unknown";
+export const PlatformPreferenceKey = "bakabase-remote-platform";
 
 export interface PlayerScheme {
   id: string;
@@ -28,7 +31,7 @@ export interface PlayerScheme {
   needsSetup?: boolean;
   /** Community-documented rather than published by the vendor. */
   unofficial?: boolean;
-  build: (streamUrl: string, title: string) => string;
+  build: (streamUrl: string, title: string, mediaType?: MediaType) => string;
 }
 
 /**
@@ -36,18 +39,20 @@ export interface PlayerScheme {
  * `intent:` form instead, with the real scheme moved into a parameter.
  * `S.browser_fallback_url` is consumed by Chrome when no app matches.
  */
-const androidIntent = (packageName?: string) => (streamUrl: string, title: string) => {
-  const withoutScheme = streamUrl.replace(/^https?:\/\//, "");
-  const scheme = streamUrl.startsWith("https") ? "https" : "http";
-  const parts = [
-    `scheme=${scheme}`,
-    "type=video/*",
-    packageName ? `package=${packageName}` : undefined,
-    `S.title=${encodeURIComponent(title)}`,
-  ].filter(Boolean);
+const androidIntent =
+  (packageName?: string) =>
+  (streamUrl: string, title: string, mediaType = MediaType.Video) => {
+    const withoutScheme = streamUrl.replace(/^https?:\/\//, "");
+    const scheme = streamUrl.startsWith("https") ? "https" : "http";
+    const parts = [
+      `scheme=${scheme}`,
+      mediaType === MediaType.Audio ? "type=audio/*" : "type=video/*",
+      packageName ? `package=${packageName}` : undefined,
+      `S.title=${encodeURIComponent(title)}`,
+    ].filter(Boolean);
 
-  return `intent://${withoutScheme}#Intent;${parts.join(";")};end`;
-};
+    return `intent://${withoutScheme}#Intent;${parts.join(";")};end`;
+  };
 
 export const playerSchemes: PlayerScheme[] = [
   // Android — the intent: form is documented by Chrome itself.
@@ -171,5 +176,30 @@ export const detectPlatform = (userAgent: string = navigator.userAgent): DeviceP
   return "unknown";
 };
 
-export const schemesForPlatform = (platform: DevicePlatform): PlayerScheme[] =>
-  playerSchemes.filter((s) => s.platforms.includes(platform));
+/** A known browser OS wins; a manual choice is a fallback for unrecognized browsers. */
+export const preferredDevicePlatform = (): DevicePlatform => {
+  const detected = detectPlatform();
+
+  if (detected !== "unknown") return detected;
+  try {
+    const stored = localStorage.getItem(PlatformPreferenceKey) as DevicePlatform | null;
+
+    if (stored && ["android", "ios", "windows", "macos", "linux"].includes(stored)) return stored;
+  } catch {
+    /* Player selection remains available without browser storage. */
+  }
+
+  return "unknown";
+};
+
+export const isNativePlayerMediaType = (mediaType: MediaType): boolean =>
+  mediaType === MediaType.Audio || mediaType === MediaType.Video;
+
+/** These URI handlers open audio/video streams; images, text and other files use their own viewers. */
+export const schemesForPlatform = (
+  platform: DevicePlatform,
+  mediaType = MediaType.Video,
+): PlayerScheme[] =>
+  isNativePlayerMediaType(mediaType)
+    ? playerSchemes.filter((s) => s.platforms.includes(platform))
+    : [];
