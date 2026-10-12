@@ -26,6 +26,12 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Model
         /// Default download path
         /// </summary>
         public string? DefaultPath { get; set; }
+
+        /// <summary>
+        /// Resolved source default, including the global root and source folder when needed.
+        /// Returned for display and task creation; ignored when saving source options.
+        /// </summary>
+        public string? EffectiveDefaultPath { get; init; }
         
         /// <summary>
         /// Default file naming convention

@@ -11,9 +11,9 @@ import AccountsPanel, { type AccountField } from "./AccountsPanel";
 import ConfigurableThirdPartyPanel, { type ConfigFieldTab } from "./ConfigurableThirdPartyPanel";
 import ProxyField from "./ProxyField";
 import { useAutoSaveToast } from "./useAutoSaveToast";
+import SourceDefaultDownloadPathField from "./SourceDefaultDownloadPathField";
 
 import { Chip, NumberInput, toast } from "@/components/bakaui";
-import { FileSystemSelectorButton } from "@/components/FileSystemSelector";
 import BApi from "@/sdk/BApi";
 
 export enum CookieDownloaderConfigField {
@@ -140,23 +140,11 @@ export default function CookieDownloaderConfigPanel({
           <div className="space-y-4">
             {/* Renders nothing for sources that cannot honour a per-source proxy. */}
             <ProxyField thirdPartyId={thirdPartyId} />
-            <div>
-              <span className="text-sm font-medium">
-                {t<string>("thirdPartyConfig.field.defaultPath.label")}
-              </span>
-              <div className="mt-1">
-                <FileSystemSelectorButton
-                  fileSystemSelectorProps={{
-                    targetType: "folder",
-                    onSelected: (e) => saveAuto({ defaultPath: e.path }),
-                    defaultSelectedPath: options?.defaultPath,
-                  }}
-                />
-              </div>
-              <span className="text-xs text-default-400 mt-1 block">
-                {t<string>("thirdPartyConfig.field.defaultPath.description")}
-              </span>
-            </div>
+            <SourceDefaultDownloadPathField
+              thirdPartyId={thirdPartyId}
+              value={options?.defaultPath}
+              onChange={(path) => saveAuto({ defaultPath: path })}
+            />
             <Textarea
               description={
                 namingDefinition?.namingFields?.length ? (

@@ -31,7 +31,7 @@ public sealed class PostParserConcurrencyOptionsTests
         using var services = new ServiceCollection().BuildServiceProvider();
         var pool = new BakabaseOptionsManagerPool(services);
         pool.AllOptionsManagers[typeof(ThirdPartyOptions)] = manager;
-        var controller = new OptionsController(null!, null!, pool, null!, null!, null!, null!);
+        var controller = new OptionsController(null!, null!, pool, null!, null!, null!, null!, null!);
 
         var response = await controller.PatchThirdPartyOptions(new() {PostParserMaxConcurrency = 3});
         Assert.AreEqual((int)ResponseCode.Success, response.Code);
@@ -54,7 +54,7 @@ public sealed class PostParserConcurrencyOptionsTests
     public async Task Nonpositive_limits_reject_patch_and_put_before_persisting(int total, int ai)
     {
         // No options manager is supplied: invalid requests must return before any save or mutation.
-        var controller = new OptionsController(null!, null!, null!, null!, null!, null!, null!);
+        var controller = new OptionsController(null!, null!, null!, null!, null!, null!, null!, null!);
         var patch = await controller.PatchThirdPartyOptions(new ThirdPartyOptionsPatchInput
         {
             PostParserMaxConcurrency = total, PostParserAiMaxConcurrency = ai, AutomaticallyParsingPosts = true

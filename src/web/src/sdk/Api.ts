@@ -1708,6 +1708,7 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomain
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainDownloaderGlobalOptions {
   autoStartAfterCreation: boolean;
+  defaultDownloadPath?: string;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainExHentaiAccount {
@@ -1985,6 +1986,7 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputD
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputDownloaderGlobalOptionsPatchInputModel {
   autoStartAfterCreation?: boolean;
+  defaultDownloadPath?: string;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputExHentaiOptionsPatchInputModel {
@@ -2327,6 +2329,7 @@ export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsMode
   /** @format int32 */
   requestInterval: number;
   defaultPath?: string;
+  effectiveDefaultPath?: string;
   namingConvention?: string;
   skipExisting: boolean;
   /** @format int32 */
@@ -2356,8 +2359,7 @@ export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsMode
   endPage?: number;
   checkpoint?: string;
   autoRetry: boolean;
-  /** @minLength 1 */
-  downloadPath: string;
+  downloadPath?: string;
   isDuplicateAllowed: boolean;
   options?: string;
 }
@@ -21707,7 +21709,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getDownloaderOptions: (
       thirdPartyId: BakabaseInsideWorldModelsConstantsThirdPartyId,
       query?: {
-        /** @format int32 */
+        /**
+         * @format int32
+         * @default 1
+         */
         taskType?: number;
       },
       params: RequestParams = {},

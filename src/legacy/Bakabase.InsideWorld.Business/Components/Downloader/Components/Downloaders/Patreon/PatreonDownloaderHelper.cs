@@ -13,7 +13,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
 public class PatreonDownloaderHelper(
     IBOptionsManager<PatreonOptions> optionsManager,
     IDownloaderLocalizer localizer,
-    HttpClient httpClient, IUserStoragePolicy storagePolicy) : AbstractDownloaderHelper<PatreonOptions>(optionsManager, localizer, httpClient, storagePolicy)
+    HttpClient httpClient, IUserStoragePolicy storagePolicy, IBOptions<DownloaderGlobalOptions> globalOptions) : AbstractDownloaderHelper<PatreonOptions>(optionsManager, localizer, httpClient, storagePolicy, globalOptions)
 {
     public override ThirdPartyId ThirdPartyId => ThirdPartyId.Patreon;
     

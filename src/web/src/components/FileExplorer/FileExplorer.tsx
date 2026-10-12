@@ -82,6 +82,7 @@ export type FileExplorerProps = {
   selectable: "disabled" | "single" | "multiple";
   defaultSelectedPath?: string;
   onInitialized?: (path?: string) => any;
+  onNavigationStart?: () => void;
   onDoubleClick?: (event: React.MouseEvent<any>, entry: Entry) => boolean;
   afterPlayedFirstFile?: (entry: Entry) => any;
   renderExtraContextMenuItems?: (entries: Entry[]) => React.ReactNode;
@@ -112,6 +113,7 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
       onSelected,
       selectable,
       onInitialized,
+      onNavigationStart,
       defaultSelectedPath,
       expandable = false,
       capabilities,
@@ -134,8 +136,12 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
     const rootsError = useUserStorageStore((state) => state.error);
     const [navigationError, setNavigationError] = useState<string>();
 
-    const initializedRootPathRef = useRef<string | undefined | null>(null);
+    const initializedRootRef = useRef<RootEntry>();
     const initializeSeqRef = useRef(0);
+    const acceptedRootRef = useRef<{ model: RootEntry; sequence: number }>();
+    const onNavigationStartRef = useRef(onNavigationStart);
+
+    onNavigationStartRef.current = onNavigationStart;
 
     const rootPathsRef = useRef(rootPaths);
 
@@ -145,6 +151,9 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
 
     const [root, setRoot] = useState<RootEntry>();
     const rootRef = useRef(root);
+    const renderedRootRef = useRef(root);
+
+    renderedRootRef.current = root;
     const [inputValue, setInputValue] = useState(rootPath ?? "");
 
     const [selectedEntries, setSelectedEntries] = useState<Entry[]>([]);
@@ -203,7 +212,12 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
       // Each call supersedes any still-awaiting predecessor; a stale one must never setRoot
       // over a newer navigation.
       const seq = ++initializeSeqRef.current;
+      onNavigationStartRef.current?.();
       const superseded = () => seq != initializeSeqRef.current;
+      const acceptRoot = (model: RootEntry) => {
+        acceptedRootRef.current = { model, sequence: seq };
+        setRoot(model);
+      };
 
       try {
         const policy = await useUserStorageStore.getState().load();
@@ -287,7 +301,7 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
             group.refreshFilteredChildren();
           }
           virtualRoot.refreshFilteredChildren();
-          setRoot(virtualRoot);
+          acceptRoot(virtualRoot);
 
           return;
         }
@@ -315,12 +329,12 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
 
         log("initialize", finalPath, historyRootPathsRef.current);
 
-        setRoot(new RootEntry(finalPath || undefined, showHiddenFilesRef.current));
+        acceptRoot(new RootEntry(finalPath || undefined, showHiddenFilesRef.current));
       } catch (cause) {
         if (superseded()) return;
         setNavigationError(storageError(cause, t).message);
         if (!rootRef.current && useUserStorageStore.getState().settings)
-          setRoot(new RootEntry(undefined, showHiddenFilesRef.current));
+          acceptRoot(new RootEntry(undefined, showHiddenFilesRef.current));
       }
     }, []);
 
@@ -1076,6 +1090,7 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
         )}
         <div className={`grow min-h-0 ${compact ? "file-explorer-list" : ""}`}>
           <FileExplorerEntry
+            key={root.id}
             afterPlayedFirstFile={afterPlayedFirstFile}
             capabilities={capabilities}
             entry={root}
@@ -1095,6 +1110,11 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
             renderBeforeRightOperations={renderBeforeRightOperations}
             switchSelective={switchSelective}
             onChildrenLoaded={(e) => {
+              if (root !== renderedRootRef.current || (e.root && e.root !== root)) return;
+              // The previous root remains visible while validation of a new path awaits.
+              // Its late listing must not mark that newer navigation ready or select rows.
+              const accepted = acceptedRootRef.current;
+              if (accepted?.model !== root || accepted.sequence !== initializeSeqRef.current) return;
               if (!defaultSelectedPathInitializedRef.current) {
                 defaultSelectedPathInitializedRef.current = true;
                 const standardDefaultSelectedPath = standardizePath(defaultSelectedPath);
@@ -1119,9 +1139,9 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
                   }
                 }
               }
-              if (initializedRootPathRef.current !== e.path) {
-                initializedRootPathRef.current = e.path;
-                onInitialized?.(e?.path);
+              if (initializedRootRef.current !== root) {
+                initializedRootRef.current = root;
+                onInitialized?.(root?.path);
               }
               forceUpdate();
             }}

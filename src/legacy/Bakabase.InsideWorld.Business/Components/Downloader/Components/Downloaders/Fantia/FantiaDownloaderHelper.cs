@@ -13,7 +13,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
 public class FantiaDownloaderHelper(
     IBOptionsManager<FantiaOptions> optionsManager,
     IDownloaderLocalizer localizer,
-    HttpClient httpClient, IUserStoragePolicy storagePolicy) : AbstractDownloaderHelper<FantiaOptions>(optionsManager, localizer, httpClient, storagePolicy)
+    HttpClient httpClient, IUserStoragePolicy storagePolicy, IBOptions<DownloaderGlobalOptions> globalOptions) : AbstractDownloaderHelper<FantiaOptions>(optionsManager, localizer, httpClient, storagePolicy, globalOptions)
 {
     public override ThirdPartyId ThirdPartyId => ThirdPartyId.Fantia;
     

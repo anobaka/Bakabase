@@ -25,6 +25,8 @@ import { Input } from "@/components/bakaui";
 interface Props {
   path: string;
   name: string;
+  /** A presentation label; editing and rename submission always use the actual basename. */
+  displayName?: string;
   isDirectory: boolean;
   disabled?: boolean;
 }
@@ -36,7 +38,7 @@ export type EditableFileNameRef = {
 const log = buildLogger("EditableText");
 
 const EditableText = forwardRef<EditableFileNameRef, Props>((props, ref) => {
-  const { path, name, isDirectory, disabled = false } = props;
+  const { path, name, displayName, isDirectory, disabled = false } = props;
 
   const propsRef = useRef(props);
 
@@ -237,7 +239,7 @@ const EditableText = forwardRef<EditableFileNameRef, Props>((props, ref) => {
           }}
         />
       ) : (
-        <AutoTextSize maxFontSizePx={14}>{value}</AutoTextSize>
+        <AutoTextSize maxFontSizePx={14}>{displayName ?? value}</AutoTextSize>
       )}
     </div>
   );

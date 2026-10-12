@@ -11,8 +11,8 @@ import { useTranslation } from "react-i18next";
 import { Textarea } from "@heroui/react";
 
 import CookieValidator from "@/components/CookieValidator";
-import { FileSystemSelectorButton } from "@/components/FileSystemSelector";
 import { Chip, NumberInput } from "@/components/bakaui";
+import SourceDefaultDownloadPathField from "@/components/ThirdPartyConfig/base/SourceDefaultDownloadPathField";
 
 type Props = {
   thirdPartyId: ThirdPartyId;
@@ -45,26 +45,11 @@ const DownloaderOptions = ({
         />
       )}
 
-      <div className={"flex flex-col gap-1"}>
-        <span className="text-sm font-medium">{t<string>("Default download path")}</span>
-        <div>
-          {options && (
-            <FileSystemSelectorButton
-              fileSystemSelectorProps={{
-                targetType: "folder",
-                onSelected: (e) =>
-                  onChange({
-                    defaultPath: e.path,
-                  }),
-                defaultSelectedPath: options?.defaultPath,
-              }}
-            />
-          )}
-        </div>
-        <span className="text-xs text-default-400">
-          {t<string>("Default path where downloads will be saved")}
-        </span>
-      </div>
+      <SourceDefaultDownloadPathField
+        thirdPartyId={thirdPartyId}
+        value={options?.defaultPath}
+        onChange={(path) => onChange({ defaultPath: path })}
+      />
 
       <NumberInput
         isRequired

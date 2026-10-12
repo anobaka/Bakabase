@@ -1,5 +1,4 @@
 using System;
-using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Services;
@@ -31,7 +30,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                 
                 // Get naming convention and download path
                 var namingConvention = GetEffectiveNamingConvention(options.NamingConvention);
-                var downloadPath = options.DefaultPath ?? Path.GetTempPath();
+                var downloadPath = task.DownloadPath;
                 EnsureUserPathAllowed(downloadPath);
 
                 // Handle different task types

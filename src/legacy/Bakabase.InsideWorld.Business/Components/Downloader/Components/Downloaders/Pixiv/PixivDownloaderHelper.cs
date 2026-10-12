@@ -14,7 +14,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
 public class PixivDownloaderHelper(
     IBOptionsManager<PixivOptions> optionsManager,
     IDownloaderLocalizer localizer,
-    HttpClient httpClient, IUserStoragePolicy storagePolicy) : AbstractDownloaderHelper<PixivOptions>(optionsManager, localizer, httpClient, storagePolicy)
+    HttpClient httpClient, IUserStoragePolicy storagePolicy, IBOptions<DownloaderGlobalOptions> globalOptions) : AbstractDownloaderHelper<PixivOptions>(optionsManager, localizer, httpClient, storagePolicy, globalOptions)
 {
     public override ThirdPartyId ThirdPartyId => ThirdPartyId.Pixiv;
     

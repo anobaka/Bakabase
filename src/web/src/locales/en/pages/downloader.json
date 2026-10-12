@@ -184,5 +184,13 @@
   "downloader.label.notices": "Notes from the last run",
   "downloader.tip.clickToCopyNotices": "Click to copy all notes",
   "downloader.error.noFolderAvailable": "No downloaded file or output folder is available for this task.",
-  "downloader.error.openFolderFailed": "Could not open the download folder"
+  "downloader.error.openFolderFailed": "Could not open the download folder",
+  "downloader.config.defaultDownloadPath.label": "Default download directory",
+  "downloader.config.defaultDownloadPath.description": "Sources without their own directory use a source subfolder here, for example Downloads/ExHentai. A source directory takes priority, and each task can override it. Applies to new tasks only.",
+  "downloader.config.defaultDownloadPath.clear": "Clear default download directory",
+  "downloader.config.sourceDefaultPath.reset": "Use downloader default directory",
+  "downloader.config.sourceDefaultPath.inherit": "Use downloader default",
+  "downloader.config.sourceDefaultPath.inheritDescription": "Leave unset to use a source subfolder under the downloader default directory. If no default is set, choose a directory when creating a task.",
+  "downloader.config.sourceDefaultPath.overrideDescription": "This source uses the selected directory. A task can still choose another directory.",
+  "downloader.config.sourceDefaultPath.inherited": "New tasks use:"
 }

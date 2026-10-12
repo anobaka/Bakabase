@@ -1,6 +1,6 @@
 "use client";
 
-import type { CookieValidatorTarget } from "@/sdk/constants";
+import type { CookieValidatorTarget, ThirdPartyId } from "@/sdk/constants";
 
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -8,12 +8,14 @@ import { Input, Button, Textarea } from "@heroui/react";
 import { AiOutlineCheck, AiOutlineClose } from "react-icons/ai";
 
 import { notifyCookieCaptureDismissal } from "./notifyCookieCaptureDismissal";
+import SourceDefaultDownloadPathField from "./SourceDefaultDownloadPathField";
 
 import BApi from "@/sdk/BApi";
 import { toast } from "@/components/bakaui";
 import { useCookieCaptureAvailable, useIsPureClient } from "@/stores/remoteAccess";
 
 interface DownloaderOptionsConfigProps {
+  thirdPartyId: ThirdPartyId;
   options: any;
   patchApi: (patches: any) => Promise<any>;
   cookieValidatorTarget?: CookieValidatorTarget;
@@ -22,6 +24,7 @@ interface DownloaderOptionsConfigProps {
 }
 
 export default function DownloaderOptionsConfig({
+  thirdPartyId,
   options: externalOptions,
   patchApi,
   cookieValidatorTarget,
@@ -145,14 +148,11 @@ export default function DownloaderOptionsConfig({
         <h3 className="text-small font-semibold text-default-700">
           {t<string>("thirdPartyConfig.group.download")}
         </h3>
-        <div>
-          <Input
-            label={t<string>("thirdPartyConfig.label.defaultPath")}
-            size="sm"
-            value={options.defaultPath || ""}
-            onValueChange={(v) => setOptions({ ...options, defaultPath: v })}
-          />
-        </div>
+        <SourceDefaultDownloadPathField
+          thirdPartyId={thirdPartyId}
+          value={options.defaultPath}
+          onChange={(path) => setOptions({ ...options, defaultPath: path })}
+        />
         <div>
           <Input
             label={t<string>("thirdPartyConfig.label.namingConvention")}

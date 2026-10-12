@@ -6,7 +6,7 @@
   "fileExplorer.error.failedToMoveItems": "Failed to move items",
   "fileExplorer.tip.quickPreviewUsingDefaultApp": "Quick preview using the default application",
   "fileExplorer.tip.openInMediaPlayer": "Open in media player",
-  "fileExplorer.empty.noContent": "No content",
+  "fileExplorer.empty.noContent": "No items yet",
   "fileExplorer.contextMenu.openInFileManager": "Open in system file manager",
   "fileExplorer.contextMenu.enterDirectory": "Enter directory",
   "fileExplorer.contextMenu.createNewFolder": "Create new folder",
@@ -141,5 +141,10 @@
   "fileExplorer.storage.loadFailed": "Could not load storage locations. Please try again.",
   "fileExplorer.storage.retry": "Retry",
   "fileExplorer.storage.pathRejected": "Choose a path inside an available storage location.",
-  "fileExplorer.storage.choosePath": "Choose or enter a path first."
+  "fileExplorer.storage.choosePath": "Choose or enter a path first.",
+  "fileExplorer.directory.loading": "Loading folder…",
+  "fileExplorer.directory.loadFailed": "Could not load this folder. Please try again.",
+  "fileExplorer.empty.description": "There are no files or folders to display here.",
+  "fileExplorer.empty.filteredTitle": "No matching items",
+  "fileExplorer.empty.filteredDescription": "Try clearing the name filter or opening another folder."
 }

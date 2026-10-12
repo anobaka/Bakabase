@@ -31,6 +31,7 @@ import {
   BangumiConfigPanel,
 } from "@/components/ThirdPartyConfig";
 import { useAutoSaveToast } from "@/components/ThirdPartyConfig/base/useAutoSaveToast";
+import DownloadDirectoryField from "@/components/ThirdPartyConfig/base/DownloadDirectoryField";
 
 type Props = {
   onSubmitted?: any;
@@ -88,6 +89,12 @@ const GeneralPanel = () => {
 
   return (
     <div className="flex flex-col gap-4">
+      <DownloadDirectoryField
+        description={t("downloader.config.defaultDownloadPath.description")}
+        label={t("downloader.config.defaultDownloadPath.label")}
+        value={options?.defaultDownloadPath}
+        onChange={(path) => saveOptions({ defaultDownloadPath: path })}
+      />
       <div className="flex items-start gap-3">
         <Switch
           isSelected={options?.autoStartAfterCreation ?? false}

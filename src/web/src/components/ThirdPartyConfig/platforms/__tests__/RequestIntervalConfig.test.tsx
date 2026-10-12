@@ -97,6 +97,7 @@ vi.mock("../../base/AutoSyncPanel", () => ({ default: () => null }));
 vi.mock("../../base/TampermonkeyInstallButton", () => ({ default: () => null }));
 vi.mock("../../base/ThirdPartyConfigModal", () => ({ default: () => null }));
 vi.mock("../../base/ProxyField", () => ({ default: () => null }));
+vi.mock("../../base/SourceDefaultDownloadPathField", () => ({ default: () => null }));
 vi.mock("../../base/DownloadResultWorkflowField", () => ({ default: () => null }));
 vi.mock("@/components/FileSystemSelector", () => ({ FileSystemSelectorButton: () => null }));
 vi.mock("@/pages/downloader/components/TaskDetailModal/components/PreferTorrentField", () => ({

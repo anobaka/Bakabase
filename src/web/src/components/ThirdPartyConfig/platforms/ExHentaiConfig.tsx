@@ -15,9 +15,9 @@ import ThirdPartyConfigModal from "../base/ThirdPartyConfigModal";
 import ProxyField from "../base/ProxyField";
 import DownloadResultWorkflowField from "../base/DownloadResultWorkflowField";
 import useAutoSaveToast from "../base/useAutoSaveToast";
+import SourceDefaultDownloadPathField from "../base/SourceDefaultDownloadPathField";
 
 import { Checkbox, Chip, NumberInput, toast } from "@/components/bakaui";
-import { FileSystemSelectorButton } from "@/components/FileSystemSelector";
 import BApi from "@/sdk/BApi";
 import { useExHentaiOptionsStore } from "@/stores/options";
 import { CookieValidatorTarget, ResourceSource, ThirdPartyId } from "@/sdk/constants";
@@ -155,23 +155,11 @@ export const ExHentaiConfigPanel: FC<ExHentaiConfigPanelProps> = ({ fields = "al
               value={options?.downloadResultWorkflowId}
               onChange={(workflowId) => patch({ downloadResultWorkflowId: workflowId ?? 0 })}
             />
-            <div>
-              <span className="text-sm font-medium">
-                {t<string>("thirdPartyConfig.field.defaultPath.label")}
-              </span>
-              <div className="mt-1">
-                <FileSystemSelectorButton
-                  fileSystemSelectorProps={{
-                    targetType: "folder",
-                    onSelected: (e) => patchWithToast({ defaultPath: e.path }),
-                    defaultSelectedPath: options?.defaultPath,
-                  }}
-                />
-              </div>
-              <span className="text-xs text-default-400 mt-1 block">
-                {t<string>("thirdPartyConfig.field.defaultPath.description")}
-              </span>
-            </div>
+            <SourceDefaultDownloadPathField
+              thirdPartyId={ThirdPartyId.ExHentai}
+              value={options?.defaultPath}
+              onChange={(path) => patchWithToast({ defaultPath: path })}
+            />
             <Textarea
               description={
                 namingDefinition?.namingFields?.length ? (

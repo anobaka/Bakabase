@@ -96,6 +96,7 @@ const DownloadTaskDetailModal = ({ onDestroyed, id }: Props) => {
 
   // Load downloader options when thirdPartyId and type change
   useEffect(() => {
+    let active = true;
     const loadDownloaderOptions = async () => {
       if (form.thirdPartyId && form.type) {
         try {
@@ -105,16 +106,17 @@ const DownloadTaskDetailModal = ({ onDestroyed, id }: Props) => {
 
           const options = optionsRes.data;
 
+          if (!active) return;
           setDownloaderOptions(options || null);
 
-          // If options has defaultPath and form doesn't have downloadPath, set it
-          if (options?.defaultPath && !form.downloadPath) {
-            setForm((prev) => ({
-              ...prev,
-              downloadPath: options.defaultPath,
-            }));
+          const defaultPath = options?.effectiveDefaultPath ?? options?.defaultPath;
+
+          if (isAdding && defaultPath) {
+            // Preserve a task override even if it was entered while this request was pending.
+            setForm((prev) => (prev.downloadPath ? prev : { ...prev, downloadPath: defaultPath }));
           }
         } catch (error) {
+          if (!active) return;
           console.error("Failed to load downloader options:", error);
           setDownloaderOptions(null);
         }
@@ -124,6 +126,10 @@ const DownloadTaskDetailModal = ({ onDestroyed, id }: Props) => {
     };
 
     loadDownloaderOptions();
+
+    return () => {
+      active = false;
+    };
   }, [form.thirdPartyId, form.type]);
 
   // Get unique third party IDs from task definitions

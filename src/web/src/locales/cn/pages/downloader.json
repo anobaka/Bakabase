@@ -184,5 +184,13 @@
   "downloader.label.notices": "上次运行的提示",
   "downloader.tip.clickToCopyNotices": "点击复制全部提示",
   "downloader.error.noFolderAvailable": "此任务尚无可用的下载文件或输出目录。",
-  "downloader.error.openFolderFailed": "无法打开下载目录"
+  "downloader.error.openFolderFailed": "无法打开下载目录",
+  "downloader.config.defaultDownloadPath.label": "默认下载目录",
+  "downloader.config.defaultDownloadPath.description": "来源未单独设置目录时，会在此目录下按来源分别保存，例如 Downloads/ExHentai。来源设置优先，创建任务时仍可另选目录。仅影响新任务。",
+  "downloader.config.defaultDownloadPath.clear": "清除默认下载目录",
+  "downloader.config.sourceDefaultPath.reset": "恢复使用下载器默认目录",
+  "downloader.config.sourceDefaultPath.inherit": "使用下载器默认目录",
+  "downloader.config.sourceDefaultPath.inheritDescription": "未单独设置时，使用下载器默认目录下的来源子目录。下载器也未设置时，需要在创建任务时选择目录。",
+  "downloader.config.sourceDefaultPath.overrideDescription": "此来源优先使用所选目录，创建任务时仍可另选目录。",
+  "downloader.config.sourceDefaultPath.inherited": "新任务将保存至："
 }

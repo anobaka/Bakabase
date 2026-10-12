@@ -10,6 +10,7 @@ using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Input;
+using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Extensions;
@@ -26,7 +27,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
         IBOptionsManager<TOptions> optionsManager,
         IDownloaderLocalizer localizer,
         HttpClient httpClient,
-        IUserStoragePolicy storagePolicy)
+        IUserStoragePolicy storagePolicy,
+        IBOptions<DownloaderGlobalOptions> globalOptions)
         : IDownloaderHelper
         where TOptions : class, ISimpleDownloaderOptionsHolder
     {
@@ -149,7 +151,11 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
         /// <returns>Array of download tasks</returns>
         public virtual async Task<DownloadTask[]> BuildTasks(DownloadTaskAddInputModel model)
         {
-            storagePolicy.EnsurePathAllowed(model.DownloadPath);
+            ArgumentNullException.ThrowIfNull(model);
+            var path = DownloadDirectoryResolver.Resolve(model.DownloadPath, optionsManager.Value.DefaultPath,
+                globalOptions.Value.DefaultDownloadPath, ThirdPartyId);
+            if (path != null) model.DownloadPath = path;
+            storagePolicy.EnsurePathAllowed(model.DownloadPath!);
             return await BuildValidatedTasks(model);
         }
 
@@ -283,6 +289,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
                 MaxConcurrency = options.MaxConcurrency,
                 RequestInterval = options.RequestInterval,
                 DefaultPath = options.DefaultPath,
+                EffectiveDefaultPath = DownloadDirectoryResolver.Resolve(null, options.DefaultPath,
+                    globalOptions.Value.DefaultDownloadPath, ThirdPartyId),
                 NamingConvention = options.NamingConvention,
                 SkipExisting = options.SkipExisting,
                 MaxRetries = options.MaxRetries,

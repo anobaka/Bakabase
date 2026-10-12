@@ -53,7 +53,21 @@ vi.mock("@/components/ThirdPartyIcon", () => ({ default: () => null }));
 vi.mock("../components/FfMpegRequired", () => ({ default: () => null }));
 vi.mock("../components/PageRange", () => ({ default: () => null }));
 vi.mock("../components/BilibiliFavoritesSelector", () => ({ default: () => null }));
-vi.mock("../components/DownloadPathSelectorField", () => ({ default: () => null }));
+vi.mock("../components/DownloadPathSelectorField", () => ({
+  default: ({
+    downloadPath,
+    onChange,
+  }: {
+    downloadPath?: string;
+    onChange: (path: string) => void;
+  }) => (
+    <input
+      aria-label="download-directory"
+      value={downloadPath || ""}
+      onChange={(event) => onChange(event.target.value)}
+    />
+  ),
+}));
 vi.mock("../components/IntervalField", () => ({ default: () => null }));
 vi.mock("../components/CheckpointField", () => ({ default: () => null }));
 vi.mock("../components/AutoRetryField", () => ({ default: () => null }));
@@ -66,11 +80,11 @@ let container: HTMLDivElement;
 let writeText: ReturnType<typeof vi.fn>;
 let originalClipboard: PropertyDescriptor | undefined;
 
-async function show() {
+async function show(id?: number) {
   await act(async () =>
     root.render(
       <HeroUIProvider disableAnimation>
-        <TaskDetailModal id={17} onDestroyed={vi.fn()} />
+        <TaskDetailModal id={id} onDestroyed={vi.fn()} />
       </HeroUIProvider>,
     ),
   );
@@ -119,7 +133,7 @@ afterEach(async () => {
 
 describe("download task details", () => {
   it("displays the server's last successful completion independently of the current status", async () => {
-    await show();
+    await show(17);
 
     expect(
       container.querySelector(`time[datetime="${mocks.tasks[0].completedAt}"]`),
@@ -130,13 +144,13 @@ describe("download task details", () => {
     expect(container).toHaveTextContent("downloader.label.completedAt");
 
     mocks.tasks = [{ ...mocks.tasks[0], completedAt: null, status: DownloadTaskStatus.Complete }];
-    await show();
+    await show(17);
     expect(container).not.toHaveTextContent("downloader.label.completedAt");
     expect(container.querySelectorAll("time")).toHaveLength(1);
   });
 
   it("copies the currently edited link from the existing textarea", async () => {
-    await show();
+    await show(17);
     const input = container.querySelector("textarea")!;
     const edited = "https://exhentai.org/g/4171375/abcdef0123/?p=2";
 
@@ -154,5 +168,70 @@ describe("download task details", () => {
     expect(container.querySelector('[aria-live="polite"]')).toHaveTextContent(
       "common.state.copied",
     );
+  });
+});
+
+describe("new download task defaults", () => {
+  const chooseTaskType = async () => {
+    mocks.getDefinitions.mockResolvedValue({
+      data: [
+        {
+          thirdPartyId: ThirdPartyId.ExHentai,
+          taskType: ExHentaiDownloadTaskType.SingleWork,
+          name: "Single gallery",
+        },
+      ],
+    });
+    await show(undefined);
+    const source = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent === "ExHentai",
+    )!;
+
+    await act(async () => source.click());
+    const type = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent === "Single gallery",
+    )!;
+
+    await act(async () => type.click());
+  };
+
+  it("prefills the effective inherited directory when the source has no configured directory", async () => {
+    mocks.getOptions.mockResolvedValue({
+      data: { defaultPath: null, effectiveDefaultPath: "/nas-bakabase/Downloads/ExHentai" },
+    });
+    await chooseTaskType();
+    expect(container.querySelector('[aria-label="download-directory"]')).toHaveValue(
+      "/nas-bakabase/Downloads/ExHentai",
+    );
+  });
+
+  it("keeps a task's manual directory when options finish loading", async () => {
+    let resolveOptions!: (response: unknown) => void;
+
+    mocks.getOptions.mockReturnValue(
+      new Promise((resolve) => {
+        resolveOptions = resolve;
+      }),
+    );
+    await chooseTaskType();
+    await act(async () =>
+      fireEvent.change(container.querySelector('[aria-label="download-directory"]')!, {
+        target: { value: "/task-override" },
+      }),
+    );
+    await act(async () =>
+      resolveOptions({
+        data: { defaultPath: null, effectiveDefaultPath: "/nas-bakabase/Downloads/ExHentai" },
+      }),
+    );
+    expect(container.querySelector('[aria-label="download-directory"]')).toHaveValue(
+      "/task-override",
+    );
+  });
+
+  it("preserves an existing task's saved directory", async () => {
+    mocks.getOptions.mockResolvedValue({ data: { effectiveDefaultPath: "/new-default/ExHentai" } });
+    await show(17);
+    expect(container.querySelector('[aria-label="download-directory"]')).toHaveValue("/downloads");
   });
 });

@@ -9,10 +9,11 @@ import ConfigurationsModal from "..";
 
 import { ThirdPartyId } from "@/sdk/constants";
 
-const { getDefinitions, patchOptions, successToast } = vi.hoisted(() => ({
+const { getDefinitions, patchOptions, successToast, globalOptions } = vi.hoisted(() => ({
   getDefinitions: vi.fn(),
   patchOptions: vi.fn(),
   successToast: vi.fn(),
+  globalOptions: { data: {} as { autoStartAfterCreation?: boolean; defaultDownloadPath?: string } },
 }));
 
 vi.mock("@/sdk/BApi", () => ({
@@ -23,7 +24,26 @@ vi.mock("@/sdk/BApi", () => ({
 }));
 vi.mock("@/stores/options", () => ({
   useDownloaderGlobalOptionsStore: (selector: (state: unknown) => unknown) =>
-    selector({ data: { autoStartAfterCreation: false } }),
+    selector(globalOptions),
+}));
+vi.mock("@/components/FileSystemSelector", () => ({
+  FileSystemSelectorButton: ({
+    fileSystemSelectorProps,
+    children,
+  }: {
+    fileSystemSelectorProps: {
+      defaultSelectedPath?: string;
+      onSelected: (entry: { path: string }) => void;
+    };
+    children?: ReactNode;
+  }) => (
+    <button
+      aria-label="choose-download-directory"
+      onClick={() => fileSystemSelectorProps.onSelected({ path: "/nas-bakabase/Downloads" })}
+    >
+      {fileSystemSelectorProps.defaultSelectedPath || children || "Choose folder"}
+    </button>
+  ),
 }));
 vi.mock("@/components/ThirdPartyIcon", () => ({ default: () => <span /> }));
 vi.mock("@/components/Chips/DevelopingChip", () => ({ default: () => null }));
@@ -84,9 +104,11 @@ vi.mock("@/components/bakaui", () => ({
     startContent?: ReactNode;
     "aria-pressed"?: boolean;
     "aria-controls"?: string;
+    "aria-label"?: string;
   }) => (
     <button
       aria-controls={props["aria-controls"]}
+      aria-label={props["aria-label"]}
       aria-pressed={props["aria-pressed"]}
       onClick={onPress}
     >
@@ -133,6 +155,7 @@ const choose = async (name: string) => {
 
 beforeEach(() => {
   vi.resetAllMocks();
+  globalOptions.data = { autoStartAfterCreation: false };
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   container = document.createElement("div");
   document.body.appendChild(container);
@@ -195,6 +218,39 @@ describe("downloader settings navigation", () => {
     expect(successToast).not.toHaveBeenCalled();
     await act(async () => vi.advanceTimersByTime(600));
     expect(successToast).toHaveBeenCalledWith("thirdPartyConfig.success.saved");
+  });
+
+  it("saves the shared download directory and clears it without changing source settings", async () => {
+    getDefinitions.mockResolvedValue({ data: [] });
+    patchOptions.mockResolvedValue({ code: 0 });
+    await act(async () => root.render(<ConfigurationsModal />));
+    await act(async () =>
+      container
+        .querySelector<HTMLButtonElement>('[aria-label="choose-download-directory"]')!
+        .click(),
+    );
+    expect(patchOptions).toHaveBeenCalledExactlyOnceWith({
+      defaultDownloadPath: "/nas-bakabase/Downloads",
+    });
+
+    globalOptions.data = { defaultDownloadPath: "/nas-bakabase/Downloads" };
+    await act(async () => root.render(<ConfigurationsModal />));
+    expect(container).toHaveTextContent("/nas-bakabase/Downloads");
+    await act(async () =>
+      container
+        .querySelector<HTMLButtonElement>(
+          '[aria-label="downloader.config.defaultDownloadPath.clear"]',
+        )!
+        .click(),
+    );
+    expect(patchOptions).toHaveBeenLastCalledWith({ defaultDownloadPath: "" });
+
+    globalOptions.data = {};
+    await act(async () => root.render(<ConfigurationsModal />));
+    expect(container).not.toHaveTextContent("/nas-bakabase/Downloads");
+    expect(
+      container.querySelector('[aria-label="downloader.config.defaultDownloadPath.clear"]'),
+    ).toBeNull();
   });
 
   it("keeps general settings usable after a platform-load error and supports retry", async () => {
