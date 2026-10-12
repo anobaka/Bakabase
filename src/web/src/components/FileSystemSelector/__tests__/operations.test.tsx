@@ -9,7 +9,7 @@ import { IwFsType } from "@/sdk/constants";
 
 const { createDirectory, explorer } = vi.hoisted(() => ({
   createDirectory: vi.fn(),
-  explorer: { capabilities: [] as string[] },
+  explorer: { capabilities: [] as string[], refresh: vi.fn() },
 }));
 
 vi.mock("@/sdk/BApi", () => ({
@@ -29,20 +29,40 @@ vi.mock("@/components/FileExplorer", async () => {
   const entry = (path: string, type = IwFsType.Directory) => ({
     path,
     type,
+    expand: explorer.refresh,
     isDirectoryOrDrive: [IwFsType.Directory, IwFsType.Drive].includes(type),
   });
 
   return {
     FileExplorer: forwardRef<any, any>(
-      ({ capabilities, rootPath, onSelected, onInitialized }, ref) => {
+      ({ capabilities, rootPath, onSelected, onInitialized, onNavigationStart }, ref) => {
         explorer.capabilities = capabilities;
         const [root, setRoot] = useState(entry(rootPath ?? ""));
+        const [navigating, setNavigating] = useState(false);
 
         useImperativeHandle(ref, () => ({ root }), [root]);
-        useEffect(() => onInitialized(), [root]);
+        useEffect(() => {
+          if (!navigating) onInitialized();
+        }, [root, navigating]);
 
         return (
           <>
+            <button
+              onClick={() => {
+                onNavigationStart();
+                setNavigating(true);
+              }}
+            >
+              Begin navigation
+            </button>
+            <button
+              onClick={() => {
+                setRoot(entry("/new"));
+                setNavigating(false);
+              }}
+            >
+              Finish navigation
+            </button>
             <button onClick={() => onSelected([entry("/parent/child")])}>Select folder</button>
             <button onClick={() => onSelected([entry("D:/", IwFsType.Drive)])}>Select drive</button>
             <button onClick={() => onSelected([entry("/parent/photo.jpg", IwFsType.Image)])}>
@@ -77,6 +97,20 @@ const newFolderButton = () =>
   screen.getByRole("button", { name: "fileSystemSelector.action.newFolder" });
 
 describe("filesystem picker operations", () => {
+  it("disables actions and clears the previous selection until the new directory finishes loading", async () => {
+    render(<Panel startPath="/parent" targetType="folder" />);
+    fireEvent.click(screen.getByRole("button", { name: "Select folder" }));
+    expect(newFolderButton()).toBeEnabled();
+    fireEvent.click(screen.getByRole("button", { name: "Begin navigation" }));
+    expect(newFolderButton()).toBeDisabled();
+    expect(screen.getByRole("button", { name: "OK" })).toBeDisabled();
+    expect(screen.queryByText("/parent/child")).toBeNull();
+    fireEvent.click(newFolderButton());
+    expect(createDirectory).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Finish navigation" }));
+    expect(newFolderButton()).toBeEnabled();
+    expect(newFolderButton()).toHaveAttribute("title", "/new");
+  });
   it.each([false, true])(
     "creates inside the selected folder from the root list (multiple=%s)",
     async (multiple) => {
@@ -92,6 +126,7 @@ describe("filesystem picker operations", () => {
           { showErrorToast: false },
         ),
       );
+      expect(explorer.refresh).toHaveBeenCalledExactlyOnceWith(true);
       expect(explorer.capabilities).toEqual(
         expect.arrayContaining(["rename", "delete", "create-directory"]),
       );
@@ -141,6 +176,7 @@ describe("filesystem picker operations", () => {
 
   it("does not arbitrarily choose one of several selected folders", () => {
     const view = render(<Panel multiple />);
+
     fireEvent.click(screen.getByRole("button", { name: "Select folders" }));
     expect(newFolderButton()).toBeDisabled();
     view.unmount();

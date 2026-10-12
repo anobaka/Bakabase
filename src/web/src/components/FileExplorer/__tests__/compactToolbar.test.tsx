@@ -60,6 +60,7 @@ vi.mock("@/core/models/FileExplorer/Entry", () => ({ Entry: class {} }));
 vi.mock("@/core/models/FileExplorer/RootEntry", () => ({
   default: class {
     path?: string;
+    id?: string;
     children = ["alpha", "nas-bakabase", "nas-anobaka"].map((name) => ({
       path: `/media/${name}`,
       name,
@@ -72,6 +73,7 @@ vi.mock("@/core/models/FileExplorer/RootEntry", () => ({
     childrenCount = this.children.length;
     constructor(path?: string) {
       this.path = path;
+      this.id = path ?? "locations";
       if (path === "/empty") this.children = [];
       this.childrenCount = this.children.length;
     }
@@ -82,11 +84,12 @@ vi.mock("@/core/models/FileExplorer/RootEntry", () => ({
   },
 }));
 vi.mock("../FileExplorerEntry", async () => {
-  const { useEffect, useReducer } = await import("react");
+  const { useEffect, useReducer, useState } = await import("react");
   const { default: EditableFileName } = await import("../components/EditableFileName");
 
   return {
     default: function MockEntry({ entry, onChildrenLoaded, switchSelective, filter }: any) {
+      const [initialRootPath] = useState(entry.path);
       const [, forceUpdate] = useReducer((value) => value + 1, 0);
 
       useEffect(() => onChildrenLoaded(entry), [entry]);
@@ -98,7 +101,7 @@ vi.mock("../FileExplorerEntry", async () => {
       }, [entry, filter]);
 
       return (
-        <div data-filter={filter.keyword} data-testid="entries">
+        <div data-filter={filter.keyword} data-initial-root={initialRootPath} data-testid="entries">
           {entry.filteredChildren.map((child: { path: string; name: string }) => (
             <div
               key={child.path}
@@ -239,6 +242,25 @@ describe("compact file processor toolbar", () => {
     expect(view.container.querySelector(".file-processor-explorer")).toBeNull();
     expect(screen.queryByRole("button", { name: "fileExplorer.selection.actions" })).toBeNull();
     expect(screen.getByText("fileExplorer.tip.pathsAreOnTheServer")).toBeInTheDocument();
+  });
+
+  it("replaces the previous root component when navigating, clearing its cached rows", async () => {
+    const props: FileExplorerProps = { keyboard: false, selectable: "single" };
+    const onNavigationStart = vi.fn();
+    const view = render(
+      <FileExplorer {...props} rootPath="/media" onNavigationStart={onNavigationStart} />,
+    );
+
+    await screen.findByRole("button", { name: "alpha" });
+    expect(screen.getByTestId("entries")).toHaveAttribute("data-initial-root", "/media");
+    view.rerender(
+      <FileExplorer {...props} rootPath="/empty" onNavigationStart={onNavigationStart} />,
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId("entries")).toHaveAttribute("data-initial-root", "/empty"),
+    );
+    expect(screen.queryByRole("button", { name: "alpha" })).toBeNull();
+    expect(onNavigationStart).toHaveBeenCalledTimes(2);
   });
 
   it("clears the previous selection and action target when entering another directory", async () => {

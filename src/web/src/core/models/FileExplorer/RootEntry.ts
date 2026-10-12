@@ -78,6 +78,7 @@ class RootEntry extends Entry {
   }
 
   private _initialized: boolean = false;
+  private _disposed = false;
 
   async _compareBTasks(renderingQueue: RenderingQueue) {
     const self = this;
@@ -272,9 +273,11 @@ class RootEntry extends Entry {
 
   async initialize() {
     if (!this._initialized) {
+      this._disposed = false;
       this._initialized = true;
       log("Initializing...", this);
       await this._stop();
+      if (this._disposed) return;
       // @ts-ignore
       if (this.path) {
         log("Start watching", this.path, this);
@@ -282,6 +285,7 @@ class RootEntry extends Entry {
           { path: this.path },
           { showErrorToast: () => false },
         );
+        if (this._disposed) return;
 
         // Start keep-alive interval
         this._keepAliveInterval = setInterval(() => {
@@ -383,6 +387,8 @@ class RootEntry extends Entry {
   }
 
   async dispose(): Promise<void> {
+    this._disposed = true;
+    this._resizeObserver?.disconnect();
     await this._stop();
   }
 

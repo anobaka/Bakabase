@@ -141,5 +141,7 @@
   "fileExplorer.storage.loadFailed": "无法加载存储位置，请重试。",
   "fileExplorer.storage.retry": "重试",
   "fileExplorer.storage.pathRejected": "请选择可用存储位置内的路径。",
-  "fileExplorer.storage.choosePath": "请先选择或填写路径。"
+  "fileExplorer.storage.choosePath": "请先选择或填写路径。",
+  "fileExplorer.directory.loading": "正在加载文件夹…",
+  "fileExplorer.directory.loadFailed": "无法加载文件夹，请重试。"
 }

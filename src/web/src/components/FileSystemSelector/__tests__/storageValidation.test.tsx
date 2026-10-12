@@ -42,24 +42,28 @@ vi.mock("@/components/FolderSelector/components/MediaLibraryPathSelectorInner", 
   default: () => null,
 }));
 vi.mock("@/components/FileExplorer", async () => {
-  const { forwardRef } = await import("react");
+  const { forwardRef, useEffect } = await import("react");
 
   return {
-    FileExplorer: forwardRef<unknown, any>(({ onSelected }, _ref) => (
-      <button
-        onClick={() =>
-          onSelected(
-            selection.paths.map((path) => ({
-              path,
-              type: IwFsType.Directory,
-              readOnly: true,
-            })),
-          )
-        }
-      >
-        Select readonly folders
-      </button>
-    )),
+    FileExplorer: forwardRef<unknown, any>(({ onSelected, onInitialized }, _ref) => {
+      useEffect(() => onInitialized?.(), []);
+
+      return (
+        <button
+          onClick={() =>
+            onSelected(
+              selection.paths.map((path) => ({
+                path,
+                type: IwFsType.Directory,
+                readOnly: true,
+              })),
+            )
+          }
+        >
+          Select readonly folders
+        </button>
+      );
+    }),
   };
 });
 

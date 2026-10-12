@@ -141,5 +141,7 @@
   "fileExplorer.storage.loadFailed": "Could not load storage locations. Please try again.",
   "fileExplorer.storage.retry": "Retry",
   "fileExplorer.storage.pathRejected": "Choose a path inside an available storage location.",
-  "fileExplorer.storage.choosePath": "Choose or enter a path first."
+  "fileExplorer.storage.choosePath": "Choose or enter a path first.",
+  "fileExplorer.directory.loading": "Loading folder…",
+  "fileExplorer.directory.loadFailed": "Could not load this folder. Please try again."
 }

@@ -34,6 +34,7 @@ const Panel = (props: FileSystemSelectorProps) => {
   const [selectedMany, setSelectedMany] = useState<Entry[]>([]);
   const [explorerSelection, setExplorerSelection] = useState<Entry[]>([]);
   const [currentDirPath, setCurrentDirPath] = useState<string>();
+  const [navigating, setNavigating] = useState(true);
   const rootRef = useRef<FileExplorerRef | null>(null);
   const validating = useRef(false);
   const [busy, setBusy] = useState(false);
@@ -108,7 +109,7 @@ const Panel = (props: FileSystemSelectorProps) => {
       : undefined;
   const newFolderParentPath = selectedDirectory?.path || currentDirPath;
   const createFolder = async () => {
-    if (!newFolderParentPath || creating.current) return;
+    if (!newFolderParentPath || navigating || creating.current) return;
     creating.current = true;
     setCreatingFolder(true);
     setError(undefined);
@@ -119,6 +120,7 @@ const Panel = (props: FileSystemSelectorProps) => {
       );
 
       if (response.code) throw storageError(response, t);
+      rootRef.current?.root?.expand(true);
     } catch (cause) {
       setError(storageError(cause, t).message || t("fileSystemSelector.error.createFolder"));
     } finally {
@@ -127,7 +129,7 @@ const Panel = (props: FileSystemSelectorProps) => {
     }
   };
   const confirmSelection = async () => {
-    if (!hasSelection || validating.current) return;
+    if (!hasSelection || navigating || validating.current) return;
     validating.current = true;
     setBusy(true);
     setError(undefined);
@@ -160,6 +162,7 @@ const Panel = (props: FileSystemSelectorProps) => {
         rootPath={startPath}
         selectable={multiple ? "multiple" : "single"}
         onInitialized={() => {
+          setNavigating(false);
           log("onInitialized", rootRef.current?.root);
           if (rootRef.current?.root) {
             trySelectRootOrClearSelection();
@@ -167,6 +170,13 @@ const Panel = (props: FileSystemSelectorProps) => {
               setCurrentDirPath(rootRef.current.root.path);
             } else setCurrentDirPath(undefined);
           }
+        }}
+        onNavigationStart={() => {
+          setNavigating(true);
+          setSelected(undefined);
+          setSelectedMany([]);
+          setExplorerSelection([]);
+          setCurrentDirPath(undefined);
         }}
         onSelected={(es) => {
           log(rootRef.current);
@@ -233,7 +243,7 @@ const Panel = (props: FileSystemSelectorProps) => {
       )}
       <div className="flex items-center justify-between mb-2">
         <Button
-          isDisabled={!newFolderParentPath || creatingFolder}
+          isDisabled={navigating || !newFolderParentPath || creatingFolder}
           isLoading={creatingFolder}
           title={newFolderParentPath}
           onClick={() => void createFolder()}
@@ -245,7 +255,7 @@ const Panel = (props: FileSystemSelectorProps) => {
           <Button
             color={"primary"}
             // size={'small'}
-            disabled={!hasSelection || busy}
+            disabled={navigating || !hasSelection || busy}
             onClick={() => void confirmSelection()}
           >
             {t<string>("OK")}

@@ -104,6 +104,7 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
 
   const [entry, setEntry] = useState(propsEntry);
   const entryRef = useRef(entry);
+  const mountedRef = useRef(true);
 
   // Memoize logger to avoid recreation on each render
   const log = useMemo(() => buildLogger(entryRef.current.path), [entry.path]);
@@ -117,6 +118,8 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
   const domRef = useRef<HTMLElement | null>(null);
   const hashRef = useRef(uuidv4());
   const [loading, setLoading] = useState(false);
+  const [initializing, setInitializing] = useState(true);
+  const [loadError, setLoadError] = useState<string>();
   const pendingRenderingRef = useRef(false);
   const resizeDebounceRef = useRef<ReturnType<typeof setTimeout>>();
   const [isDragOver, setIsDragOver] = useState(false);
@@ -125,15 +128,13 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
     setEntry(propsEntry);
   }, [propsEntry]);
 
-  useEffect(() => {
-    loadingChildrenRef.current = loading;
-  }, [loading]);
-
   // Functions
   const currentEntryDomRef = useRef<any>();
   const editableFileNameRef = useRef<EditableFileNameRef>(null);
 
   const initialize = useCallback(async (e: Entry) => {
+    setInitializing(true);
+    setLoadError(undefined);
     // console.trace();
 
     e.path = standardizePath(e.path)!;
@@ -143,6 +144,7 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
       log("Disposing previous entry", entryRef.current);
       await entryRef.current.dispose();
     }
+    if (!mountedRef.current) return;
 
     entryRef.current = e;
 
@@ -173,10 +175,13 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
         log("scrolling to", path, row, virtualListRef.current);
         virtualListRef.current?.scrollToRow(row);
       },
-      setLoading,
+      setLoading: (value) => {
+        if (mountedRef.current) setLoading(value);
+      },
       playFirstFile,
       beginRename: () => editableFileNameRef.current?.beginRename(),
     };
+    e.recalculateChildrenWidth();
 
     log(
       "initializing, status: ",
@@ -188,23 +193,41 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
       entryRef.current.filteredChildren,
     );
 
-    await entryRef.current.initialize();
+    try {
+      if (e.isRoot && e.expanded) {
+        // A NAS watcher can take much longer than listing one directory. Load the
+        // listing in parallel so it appears without waiting for watcher setup.
+        const watcherSetup = e
+          .initialize()
+          .catch((cause) => log("Failed to initialize watcher", cause));
 
-    if (entryRef.current.expanded) {
-      log("Expanding");
-      const rendered = await expand();
+        await expand();
+        if (mountedRef.current) setInitializing(false);
+        await watcherSetup;
+      } else {
+        await e.initialize();
+        if (e.expanded) {
+          const rendered = await expand();
 
-      if (!rendered) {
-        entryRef.current.renderChildren();
+          if (!rendered) e.renderChildren();
+        }
       }
-    }
-    if (!entryRef.current.recalculateChildrenWidth()) {
-      forceUpdate();
+      if (!e.recalculateChildrenWidth()) forceUpdate();
+    } catch (cause) {
+      if (mountedRef.current) {
+        setLoadError(
+          cause instanceof Error ? cause.message : t("fileExplorer.directory.loadFailed"),
+        );
+      }
+      log("Failed to initialize entry", cause);
+    } finally {
+      if (mountedRef.current) setInitializing(false);
     }
     log("Initialized");
   }, []);
 
   useEffect(() => {
+    mountedRef.current = true;
     // Floating promise — nothing awaits an effect body, so an unhandled rejection here is
     // reported as a crash. initialize() talks to the backend and touches the DOM after
     // awaiting, both of which can fail on unmount or while the service is going down.
@@ -226,6 +249,8 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
     resizeObserver.observe(domRef.current!);
 
     return () => {
+      mountedRef.current = false;
+      entryRef.current.dispose().catch((cause) => log("Failed to dispose entry", cause));
       clearTimeout(resizeDebounceRef.current);
       resizeObserver.disconnect();
     };
@@ -388,6 +413,7 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
    * Height of only one row will cause the full-re-rendering of the list, so we do not need to render a specific child.
    */
   const renderChildren = useCallback(() => {
+    if (!mountedRef.current) return;
     log("Rendering children", entryRef.current, entryRef.current.filteredChildren);
 
     pendingRenderingRef.current = true;
@@ -451,34 +477,50 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
           }
           loadingChildrenRef.current = true;
           setLoading(true);
-          // @ts-ignore
-          const rsp = await BApi.file.getChildrenIwFsInfo(
-            {
-              root: entryRef.current.path,
-              showHiddenFiles: entryRef.current.root?.showHiddenFiles,
-            },
-            { showErrorToast: () => false },
-          );
+          setLoadError(undefined);
+          try {
+            const requestedEntry = entryRef.current;
+            // @ts-ignore
+            const rsp = await BApi.file.getChildrenIwFsInfo(
+              {
+                root: entryRef.current.path,
+                showHiddenFiles: entryRef.current.root?.showHiddenFiles,
+              },
+              { showErrorToast: () => false },
+            );
 
-          log(`Loaded ${rsp.data?.entries?.length} children`);
-          setLoading(false);
-          if (rsp.code) {
-            onLoadFail(rsp, entryRef.current);
+            if (!mountedRef.current || entryRef.current !== requestedEntry) return false;
+
+            log(`Loaded ${rsp.data?.entries?.length} children`);
+            if (rsp.code) {
+              setLoadError(rsp.message || t("fileExplorer.directory.loadFailed"));
+              onLoadFail(rsp, entryRef.current);
+
+              return false;
+            }
+            if (rsp.data) {
+              const { entries = [] } = rsp.data || {};
+
+              // @ts-ignore
+              entryRef.current.children = entries!.map(
+                (e) =>
+                  new Entry({
+                    ...e,
+                    parent: entryRef.current,
+                    properties: entryRef.current.properties,
+                  }),
+              );
+            }
+          } catch (cause) {
+            if (mountedRef.current)
+              setLoadError(
+                cause instanceof Error ? cause.message : t("fileExplorer.directory.loadFailed"),
+              );
 
             return false;
-          }
-          if (rsp.data) {
-            const { entries = [] } = rsp.data || {};
-
-            // @ts-ignore
-            entryRef.current.children = entries!.map(
-              (e) =>
-                new Entry({
-                  ...e,
-                  parent: entryRef.current,
-                  properties: entryRef.current.properties,
-                }),
-            );
+          } finally {
+            loadingChildrenRef.current = false;
+            if (mountedRef.current) setLoading(false);
           }
         }
         entryRef.current.expanded = true;
@@ -494,6 +536,7 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
   );
 
   const triggerChildrenLoaded = useCallback(() => {
+    if (!mountedRef.current) return;
     log("Trigger onChildrenLoaded", entryRef.current);
     onChildrenLoaded?.(entryRef.current);
   }, []);
@@ -893,9 +936,18 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
               />
             )}
           </div>
-        ) : loading ? (
-          <div className="flex justify-center items-center py-2">
+        ) : loading || initializing ? (
+          <div className="flex justify-center items-center gap-2 py-2" role="status">
             <Spinner size={"sm"} />
+            <span className="text-sm text-default-500">{t("fileExplorer.directory.loading")}</span>
+          </div>
+        ) : loadError ? (
+          <div className="flex flex-col items-center gap-2 p-3 text-sm text-danger" role="alert">
+            <p>{t("fileExplorer.directory.loadFailed")}</p>
+            <p className="break-all text-xs">{loadError}</p>
+            <Button size="sm" variant="flat" onPress={() => void expand(true)}>
+              {t("fileExplorer.storage.retry")}
+            </Button>
           </div>
         ) : (
           <div className="flex justify-center items-center gap-2 opacity-70 py-2">
