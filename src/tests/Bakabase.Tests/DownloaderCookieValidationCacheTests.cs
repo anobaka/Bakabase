@@ -7,6 +7,7 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Components;
+using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
 using Bakabase.InsideWorld.Business.Components.Downloader.Components;
 using Bakabase.InsideWorld.Models.Constants;
@@ -89,8 +90,13 @@ public class DownloaderCookieValidationCacheTests
         public string BilibiliSkipFooter() => "";
     }
 
+    private sealed class DefaultGlobalOptions : IBOptions<DownloaderGlobalOptions>
+    {
+        public DownloaderGlobalOptions Value { get; } = new();
+    }
+
     private sealed class TestHelper(StubOptionsManager optionsManager, bool cookieIsValid)
-        : AbstractDownloaderHelper<TestOptions>(optionsManager, new StubLocalizer(), new HttpClient(), new UserStoragePolicy(isContainer: false))
+        : AbstractDownloaderHelper<TestOptions>(optionsManager, new StubLocalizer(), new HttpClient(), new UserStoragePolicy(isContainer: false), new DefaultGlobalOptions())
     {
         public int Validations;
 
@@ -110,7 +116,7 @@ public class DownloaderCookieValidationCacheTests
         StubOptionsManager optionsManager,
         ScriptedTransport transport,
         TimeSpan? fastFailure = null)
-        : AbstractDownloaderHelper<TestOptions>(optionsManager, new StubLocalizer(), new HttpClient(transport), new UserStoragePolicy(isContainer: false))
+        : AbstractDownloaderHelper<TestOptions>(optionsManager, new StubLocalizer(), new HttpClient(transport), new UserStoragePolicy(isContainer: false), new DefaultGlobalOptions())
     {
         public override ThirdPartyId ThirdPartyId => ThirdPartyId.ExHentai;
 

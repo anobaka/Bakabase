@@ -13,7 +13,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
 public class FanboxDownloaderHelper(
     IBOptionsManager<FanboxOptions> optionsManager,
     IDownloaderLocalizer localizer,
-    HttpClient httpClient, IUserStoragePolicy storagePolicy) : AbstractDownloaderHelper<FanboxOptions>(optionsManager, localizer, httpClient, storagePolicy)
+    HttpClient httpClient, IUserStoragePolicy storagePolicy, IBOptions<DownloaderGlobalOptions> globalOptions) : AbstractDownloaderHelper<FanboxOptions>(optionsManager, localizer, httpClient, storagePolicy, globalOptions)
 {
     public override ThirdPartyId ThirdPartyId => ThirdPartyId.Fanbox;
     

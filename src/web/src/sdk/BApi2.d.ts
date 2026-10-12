@@ -10970,6 +10970,7 @@ export interface components {
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.DownloaderGlobalOptions": {
             autoStartAfterCreation: boolean;
+            defaultDownloadPath?: string;
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ExHentaiAccount": {
             name?: string;
@@ -11235,6 +11236,7 @@ export interface components {
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.DownloaderGlobalOptionsPatchInputModel": {
             autoStartAfterCreation?: boolean;
+            defaultDownloadPath?: string;
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.ExHentaiOptionsPatchInputModel": {
             accounts?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ExHentaiAccount"][];
@@ -11537,6 +11539,7 @@ export interface components {
             /** Format: int32 */
             requestInterval: number;
             defaultPath?: string;
+            effectiveDefaultPath?: string;
             namingConvention?: string;
             skipExisting: boolean;
             /** Format: int32 */
@@ -11562,7 +11565,7 @@ export interface components {
             endPage?: number;
             checkpoint?: string;
             autoRetry: boolean;
-            downloadPath: string;
+            downloadPath?: string;
             isDuplicateAllowed: boolean;
             options?: string;
         };

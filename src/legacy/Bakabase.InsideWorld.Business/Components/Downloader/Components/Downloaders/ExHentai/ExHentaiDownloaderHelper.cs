@@ -19,7 +19,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
 public class ExHentaiDownloaderHelper(
     IBOptionsManager<ExHentaiOptions> optionsManager,
     IDownloaderLocalizer localizer,
-    HttpClient httpClient, IUserStoragePolicy storagePolicy, AppService appService) : AbstractDownloaderHelper<ExHentaiOptions>(optionsManager, localizer, httpClient, storagePolicy)
+    HttpClient httpClient, IUserStoragePolicy storagePolicy, AppService appService, IBOptions<DownloaderGlobalOptions> globalOptions) : AbstractDownloaderHelper<ExHentaiOptions>(optionsManager, localizer, httpClient, storagePolicy, globalOptions)
 {
     public override ThirdPartyId ThirdPartyId => ThirdPartyId.ExHentai;
 

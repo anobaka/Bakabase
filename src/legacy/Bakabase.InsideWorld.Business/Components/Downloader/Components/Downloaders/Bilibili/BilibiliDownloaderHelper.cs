@@ -21,7 +21,7 @@ public class BilibiliDownloaderHelper(
     IDownloaderLocalizer localizer,
     BilibiliClient bilibiliClient,
     HttpClient httpClient,
-    FfMpegService ffMpegService, IUserStoragePolicy storagePolicy) : AbstractDownloaderHelper<BilibiliOptions>(optionsManager, localizer, httpClient, storagePolicy)
+    FfMpegService ffMpegService, IUserStoragePolicy storagePolicy, IBOptions<DownloaderGlobalOptions> globalOptions) : AbstractDownloaderHelper<BilibiliOptions>(optionsManager, localizer, httpClient, storagePolicy, globalOptions)
 {
     private readonly IDownloaderLocalizer _localizer = localizer;
     public override ThirdPartyId ThirdPartyId => ThirdPartyId.Bilibili;

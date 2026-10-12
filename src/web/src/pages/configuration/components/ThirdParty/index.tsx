@@ -19,7 +19,8 @@ import { AiOutlineQuestionCircle, AiOutlineCheck, AiOutlineClose } from "react-i
 
 import { toast } from "@/components/bakaui";
 import Tooltip from "@/components/bakaui/components/Tooltip";
-import { CookieValidatorTarget } from "@/sdk/constants";
+import { CookieValidatorTarget, ThirdPartyId } from "@/sdk/constants";
+import SourceDefaultDownloadPathField from "@/components/ThirdPartyConfig/base/SourceDefaultDownloadPathField";
 import {
   useBilibiliOptionsStore,
   useExHentaiOptionsStore,
@@ -45,6 +46,15 @@ import {
 } from "@/components/ThirdPartyConfig";
 import { notifyCookieCaptureDismissal } from "@/components/ThirdPartyConfig/notifyCookieCaptureDismissal";
 import { useCookieCaptureAvailable } from "@/stores/remoteAccess";
+
+const downloaderThirdPartyIds: Record<string, ThirdPartyId> = {
+  bilibili: ThirdPartyId.Bilibili,
+  pixiv: ThirdPartyId.Pixiv,
+  cien: ThirdPartyId.Cien,
+  fanbox: ThirdPartyId.Fanbox,
+  fantia: ThirdPartyId.Fantia,
+  patreon: ThirdPartyId.Patreon,
+};
 
 const ThirdParty = ({
   applyPatches = () => {},
@@ -199,19 +209,11 @@ const ThirdParty = ({
           }}
         />
       </div>
-      <div>
-        <Input
-          label="Default Path"
-          size="sm"
-          value={options.defaultPath || ""}
-          onValueChange={(v) => {
-            setOptions({
-              ...options,
-              defaultPath: v,
-            });
-          }}
-        />
-      </div>
+      <SourceDefaultDownloadPathField
+        thirdPartyId={downloaderThirdPartyIds[thirdPartyName]}
+        value={options.defaultPath}
+        onChange={(path) => setOptions({ ...options, defaultPath: path })}
+      />
       <div>
         <Input
           label="Naming Convention"
@@ -377,6 +379,7 @@ const ThirdParty = ({
             cookieValidatorTarget={CookieValidatorTarget.ExHentai}
             options={exhentaiOptions}
             patchApi={BApi.options.patchExHentaiOptions}
+            thirdPartyId={ThirdPartyId.ExHentai}
           />
         </div>
       ),
@@ -578,6 +581,7 @@ const ThirdParty = ({
             hideCookie
             options={dlsiteOptions}
             patchApi={BApi.options.patchDLsiteOptions}
+            thirdPartyId={ThirdPartyId.DLsite}
           />
         </div>
       ),

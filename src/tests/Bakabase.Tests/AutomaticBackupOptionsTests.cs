@@ -177,5 +177,5 @@ public sealed class AutomaticBackupOptionsTests
     }
 
     private static OptionsController Controller(StubOptions<AppOptions> manager) =>
-        new(null!, manager, null!, null!, null!, null!, null!);
+        new(null!, manager, null!, null!, null!, null!, null!, null!);
 }

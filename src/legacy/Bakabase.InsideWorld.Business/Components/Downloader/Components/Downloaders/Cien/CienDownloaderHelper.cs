@@ -13,7 +13,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
 public class CienDownloaderHelper(
     IBOptionsManager<CienOptions> optionsManager,
     IDownloaderLocalizer localizer,
-    HttpClient httpClient, IUserStoragePolicy storagePolicy) : AbstractDownloaderHelper<CienOptions>(optionsManager, localizer, httpClient, storagePolicy)
+    HttpClient httpClient, IUserStoragePolicy storagePolicy, IBOptions<DownloaderGlobalOptions> globalOptions) : AbstractDownloaderHelper<CienOptions>(optionsManager, localizer, httpClient, storagePolicy, globalOptions)
 {
     public override ThirdPartyId ThirdPartyId => ThirdPartyId.Cien;
     

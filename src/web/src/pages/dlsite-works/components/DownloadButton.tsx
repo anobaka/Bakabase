@@ -10,7 +10,7 @@ import { DOWNLOAD_TASK_ID_PREFIX } from "../types";
 import BApi from "@/sdk/BApi";
 import Tooltip from "@/components/bakaui/components/Tooltip";
 import { useBTasksStore } from "@/stores/bTasks";
-import { useDLsiteOptionsStore } from "@/stores/options";
+import { useDLsiteOptionsStore, useDownloaderGlobalOptionsStore } from "@/stores/options";
 import { BTaskStatus } from "@/sdk/constants";
 
 /** Standalone download button - subscribes to stores directly to bypass Table memoization */
@@ -25,7 +25,9 @@ export function DownloadButton({
   const downloadTask = useBTasksStore((s) =>
     s.tasks.find((task) => task.id === `${DOWNLOAD_TASK_ID_PREFIX}${work.workId}`),
   );
-  const hasDownloadDir = !!useDLsiteOptionsStore((s) => s.data?.defaultPath);
+  const sourceDownloadDir = useDLsiteOptionsStore((s) => s.data?.defaultPath);
+  const globalDownloadDir = useDownloaderGlobalOptionsStore((s) => s.data?.defaultDownloadPath);
+  const hasDownloadDir = !!(sourceDownloadDir?.trim() || globalDownloadDir?.trim());
   const [isStarting, setIsStarting] = useState(false);
 
   // Clear optimistic state once BTask arrives
@@ -109,6 +111,7 @@ export function DownloadButton({
       <span>
         <Button
           isIconOnly
+          aria-label={t("resourceSource.dlsite.action.download")}
           color="warning"
           isDisabled={!hasDownloadDir}
           size="sm"

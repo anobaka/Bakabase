@@ -10,6 +10,7 @@ using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Component
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Input;
+using Bakabase.InsideWorld.Business.Components.Downloader.Components;
 using Bakabase.InsideWorld.Business.Components.Downloader.Extensions;
 using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
 using Bakabase.InsideWorld.Business.Components.Downloader.Services;
@@ -219,8 +220,28 @@ public class DownloadTaskController : Controller
     [SwaggerOperation(OperationId = "GetDownloaderOptions")]
     [HttpGet("downloader/options/{thirdPartyId}")]
     public async Task<SingletonResponse<DownloaderOptions>> GetDownloaderOptions(ThirdPartyId thirdPartyId,
-        int taskType)
+        [FromServices] IBOptions<DLsiteOptions> dlsiteOptions,
+        [FromServices] IBOptions<DownloaderGlobalOptions> globalOptions, int taskType = 1)
     {
+        // DLsite downloads run as background tasks rather than through IDownloaderHelper.
+        // Its settings still use the same source/global directory rule and preview.
+        if (thirdPartyId == ThirdPartyId.DLsite)
+        {
+            var options = dlsiteOptions.Value;
+            return new SingletonResponse<DownloaderOptions>(new DownloaderOptions
+            {
+                Cookie = options.Cookie,
+                DefaultPath = options.DefaultPath,
+                EffectiveDefaultPath = DownloadDirectoryResolver.Resolve(null, options.DefaultPath,
+                    globalOptions.Value.DefaultDownloadPath, ThirdPartyId.DLsite),
+                MaxConcurrency = options.MaxConcurrency,
+                RequestInterval = options.RequestInterval,
+                NamingConvention = options.NamingConvention,
+                SkipExisting = options.SkipExisting,
+                MaxRetries = options.MaxRetries,
+                RequestTimeout = options.RequestTimeout
+            });
+        }
         return new SingletonResponse<DownloaderOptions>(await _downloaderFactory.GetHelper(thirdPartyId, taskType)
             .GetOptionsAsync());
     }
@@ -240,19 +261,11 @@ public class DownloadTaskController : Controller
     [SwaggerOperation(OperationId = "AddExHentaiDownloadTask")]
     public async Task<BaseResponse> AddExHentaiTask([FromBody] ExHentaiDownloadTaskAddInputModel model)
     {
-        var downloadPath = (await _downloaderFactory.GetHelper(ThirdPartyId.ExHentai, (int) model.Type)
-            .GetOptionsAsync()).DefaultPath;
-        if (downloadPath.IsNullOrEmpty())
-        {
-            throw new Exception("Download path for exhentai is not set");
-        }
-
         var baseModel = new DownloadTaskAddInputModel
         {
             Type = (int)model.Type,
             ThirdPartyId = ThirdPartyId.ExHentai,
             Keys = [model.Link],
-            DownloadPath = downloadPath,
             AutoRetry = false
         };
 

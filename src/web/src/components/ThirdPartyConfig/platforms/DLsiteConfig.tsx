@@ -14,9 +14,10 @@ import ConfigurableThirdPartyPanel, {
 } from "../base/ConfigurableThirdPartyPanel";
 import ThirdPartyConfigModal from "../base/ThirdPartyConfigModal";
 import useAutoSaveToast from "../base/useAutoSaveToast";
+import SourceDefaultDownloadPathField from "../base/SourceDefaultDownloadPathField";
+import useEffectiveDownloadPath from "../base/useEffectiveDownloadPath";
 
 import { NumberInput, toast, Modal as BakaModal } from "@/components/bakaui";
-import { FileSystemSelectorButton } from "@/components/FileSystemSelector";
 import BApi from "@/sdk/BApi";
 import { useDLsiteOptionsStore } from "@/stores/options";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
@@ -39,6 +40,19 @@ export interface DLsiteConfigPanelProps {
   showFooter?: boolean;
   onCancel?: () => void;
 }
+
+const DLsiteInheritedDownloadDirectoryHint = () => {
+  const { t } = useTranslation();
+  const path = useEffectiveDownloadPath(ThirdPartyId.DLsite);
+
+  if (!path) return null;
+
+  return (
+    <p className="mt-1.5 text-xs leading-relaxed text-default-500">
+      {t("downloader.config.sourceDefaultPath.inherited")} <code className="break-all">{path}</code>
+    </p>
+  );
+};
 
 export const DLsiteConfigPanel: FC<DLsiteConfigPanelProps> = ({
   fields = "all",
@@ -260,23 +274,11 @@ export const DLsiteConfigPanel: FC<DLsiteConfigPanelProps> = ({
         content: (
           <div className="space-y-4">
             <ProxyField thirdPartyId={ThirdPartyId.DLsite} />
-            <div>
-              <span className="text-sm font-medium">
-                {t<string>("thirdPartyConfig.field.defaultPath.label")}
-              </span>
-              <div className="mt-1">
-                <FileSystemSelectorButton
-                  fileSystemSelectorProps={{
-                    targetType: "folder",
-                    onSelected: (e) => patchWithToast({ defaultPath: e.path }),
-                    defaultSelectedPath: options?.defaultPath,
-                  }}
-                />
-              </div>
-              <span className="text-xs text-default-400 mt-1 block">
-                {t<string>("thirdPartyConfig.field.defaultPath.description")}
-              </span>
-            </div>
+            <SourceDefaultDownloadPathField
+              thirdPartyId={ThirdPartyId.DLsite}
+              value={options?.defaultPath}
+              onChange={(path) => patchWithToast({ defaultPath: path })}
+            />
           </div>
         ),
       },
@@ -300,6 +302,7 @@ export const DLsiteConfigPanel: FC<DLsiteConfigPanelProps> = ({
               >
                 {downloadDir || t("resourceSource.dlsite.config.downloadDirPlaceholder")}
               </Button>
+              {!downloadDir?.trim() && <DLsiteInheritedDownloadDirectoryHint />}
             </div>
 
             <Divider />

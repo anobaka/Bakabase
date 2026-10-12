@@ -7,11 +7,14 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Abstractions.Components.Localization;
+using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components.Compression;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
+using Bakabase.InsideWorld.Business.Components.Downloader.Components;
+using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.LocaleEmulator;
 using Bakabase.Modules.ThirdParty.ThirdParties.DLsite;
 using Bakabase.Modules.ThirdParty.ThirdParties.DLsite.Models;
@@ -32,10 +35,15 @@ public class DLsiteWorkService(
     DLsiteArchiveExtractor archiveExtractor,
     LocaleEmulatorService localeEmulatorService,
     ILogger<DLsiteWorkService> logger,
-    IBakabaseLocalizer localizer)
+    IBakabaseLocalizer localizer,
+    IBOptions<DownloaderGlobalOptions> downloaderOptions,
+    IUserStoragePolicy storagePolicy)
     : IDLsiteWorkService
 {
     private DLsiteOptions DLsiteOptionsValue => dlsiteOptions.Value;
+
+    private string? DefaultDownloadDirectory => DownloadDirectoryResolver.Resolve(null,
+        DLsiteOptionsValue.DefaultPath, downloaderOptions.Value.DefaultDownloadPath, ThirdPartyId.DLsite);
 
     /// <summary>
     /// Finds the cookie for the account associated with a work.
@@ -390,13 +398,14 @@ public class DLsiteWorkService(
             throw new Exception($"Work {workId} not found");
         }
 
-        var defaultPath = DLsiteOptionsValue.DefaultPath;
+        var defaultPath = DefaultDownloadDirectory;
         if (string.IsNullOrEmpty(defaultPath))
         {
             throw new Exception("Download path not configured. Please set the default download path in DLsite settings.");
         }
 
         var workDir = Path.Combine(defaultPath, workId);
+        storagePolicy.EnsurePathAllowed(workDir);
         Directory.CreateDirectory(workDir);
 
         work.LocalPath = workDir;
@@ -424,13 +433,14 @@ public class DLsiteWorkService(
 
         var (cookie, accountKey) = GetCookieForWork(work);
 
-        var defaultPath = DLsiteOptionsValue.DefaultPath;
+        var defaultPath = DefaultDownloadDirectory;
         if (string.IsNullOrEmpty(defaultPath))
         {
             throw TaskError("BTask_Error_DLsiteDownloadPathMissing");
         }
 
         var workDir = Path.Combine(defaultPath, workId);
+        storagePolicy.EnsurePathAllowed(workDir);
         Directory.CreateDirectory(workDir);
 
         if (onProgress != null)
@@ -541,13 +551,14 @@ public class DLsiteWorkService(
             throw TaskError("BTask_Error_DLsiteWorkNotFound", workId);
         }
 
-        var defaultPath = DLsiteOptionsValue.DefaultPath;
+        var defaultPath = DefaultDownloadDirectory;
         if (string.IsNullOrEmpty(defaultPath))
         {
             throw TaskError("BTask_Error_DLsiteDownloadPathMissing");
         }
 
         var workDir = Path.Combine(defaultPath, workId);
+        storagePolicy.EnsurePathAllowed(workDir);
         if (!Directory.Exists(workDir))
         {
             throw TaskError("BTask_Error_DLsiteDirectoryMissing", workDir);

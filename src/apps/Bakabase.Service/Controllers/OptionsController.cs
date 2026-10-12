@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Configuration;
+using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Infrastructures.Components.App;
 using Bakabase.Infrastructures.Components.App.Models.RequestModels;
 using Bakabase.Infrastructures.Components.Configurations.App;
@@ -59,10 +60,12 @@ namespace Bakabase.Service.Controllers
         private readonly IPropertyService _propertyService;
         private readonly IPropertyLocalizer _propertyLocalizer;
         private readonly IResourceService _resourceService;
+        private readonly IUserStoragePolicy _storagePolicy;
 
         public OptionsController(IStringLocalizer<SharedResource> prevLocalizer,
             IBOptionsManager<AppOptions> appOptionsManager, BakabaseOptionsManagerPool bakabaseOptionsManager,
-            IGuiAdapter guiAdapter, IPropertyService propertyService, IPropertyLocalizer propertyLocalizer, IResourceService resourceService)
+            IGuiAdapter guiAdapter, IPropertyService propertyService, IPropertyLocalizer propertyLocalizer,
+            IResourceService resourceService, IUserStoragePolicy storagePolicy)
         {
             _prevLocalizer = prevLocalizer;
             _appOptionsManager = appOptionsManager;
@@ -71,6 +74,7 @@ namespace Bakabase.Service.Controllers
             _propertyService = propertyService;
             _propertyLocalizer = propertyLocalizer;
             this._resourceService = resourceService;
+            _storagePolicy = storagePolicy;
         }
 
         [HttpGet("app")]
@@ -334,12 +338,17 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "PatchDownloaderGlobalOptions")]
         public async Task<BaseResponse> PatchDownloaderGlobalOptions([FromBody] DownloaderGlobalOptionsPatchInputModel model)
         {
+            if (!string.IsNullOrWhiteSpace(model.DefaultDownloadPath))
+                _storagePolicy.EnsurePathAllowed(model.DefaultDownloadPath);
             await _bakabaseOptionsManager.Get<DownloaderGlobalOptions>().SaveAsync(options =>
             {
                 if (model.AutoStartAfterCreation.HasValue)
                 {
                     options.AutoStartAfterCreation = model.AutoStartAfterCreation.Value;
                 }
+                if (model.DefaultDownloadPath != null)
+                    options.DefaultDownloadPath = string.IsNullOrWhiteSpace(model.DefaultDownloadPath)
+                        ? null : model.DefaultDownloadPath;
             });
             return BaseResponseBuilder.Ok;
         }

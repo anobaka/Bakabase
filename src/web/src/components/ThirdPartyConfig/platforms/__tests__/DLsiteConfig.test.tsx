@@ -6,17 +6,23 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DLsiteConfigField, DLsiteConfigPanel } from "../DLsiteConfig";
 
-const { patchApi, storePatch, success } = vi.hoisted(() => ({
+const { patchApi, storePatch, success, getDownloaderOptions, globalOptions } = vi.hoisted(() => ({
   patchApi: vi.fn(),
   storePatch: vi.fn(),
   success: vi.fn(),
+  getDownloaderOptions: vi.fn(),
+  globalOptions: { data: {} as { defaultDownloadPath?: string } },
 }));
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 vi.mock("@/sdk/BApi", () => ({
-  default: { options: { patchDLsiteOptions: patchApi }, tool: {} },
+  default: {
+    options: { patchDLsiteOptions: patchApi },
+    downloadTask: { getDownloaderOptions },
+    tool: {},
+  },
 }));
 vi.mock("@/stores/options", () => {
   const state = {
@@ -24,7 +30,11 @@ vi.mock("@/stores/options", () => {
     patch: storePatch,
   };
 
-  return { useDLsiteOptionsStore: (selector: (state: typeof state) => unknown) => selector(state) };
+  return {
+    useDLsiteOptionsStore: (selector: (state: typeof state) => unknown) => selector(state),
+    useDownloaderGlobalOptionsStore: (selector: (state: typeof globalOptions) => unknown) =>
+      selector(globalOptions),
+  };
 });
 vi.mock("@/stores/remoteAccess", () => ({ useCookieCaptureAvailable: () => false }));
 vi.mock("@/components/ContextProvider/BakabaseContextProvider", () => ({
@@ -80,6 +90,7 @@ vi.mock("@heroui/react", () => ({
 vi.mock("../../base/MetadataMappingPanel", () => ({ default: () => null }));
 vi.mock("../../base/AutoSyncPanel", () => ({ default: () => null }));
 vi.mock("../../base/ProxyField", () => ({ default: () => null }));
+vi.mock("../../base/SourceDefaultDownloadPathField", () => ({ default: () => null }));
 vi.mock("../../base/ThirdPartyConfigModal", () => ({ default: () => null }));
 vi.mock("@/pages/dlsite-works/components/LeStatusIndicator", () => ({
   LeStatusIndicator: () => null,
@@ -90,6 +101,7 @@ let root: Root;
 
 beforeEach(() => {
   vi.resetAllMocks();
+  globalOptions.data = {};
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   container = document.createElement("div");
   document.body.appendChild(container);
@@ -103,6 +115,21 @@ afterEach(async () => {
 });
 
 describe("DLsiteConfigPanel accounts in downloader settings", () => {
+  it("shows the inherited directory in local-file settings without saving a source override", async () => {
+    globalOptions.data = { defaultDownloadPath: "/nas/Downloads" };
+    getDownloaderOptions.mockResolvedValue({
+      data: { effectiveDefaultPath: "/nas/Downloads/DLsite" },
+    });
+    await act(async () =>
+      root.render(<DLsiteConfigPanel fields={[DLsiteConfigField.LocalFiles]} showFooter={false} />),
+    );
+
+    expect(container).toHaveTextContent("/nas/Downloads/DLsite");
+    expect(container).toHaveTextContent("downloader.config.sourceDefaultPath.inherited");
+    expect(patchApi).not.toHaveBeenCalled();
+    expect(storePatch).not.toHaveBeenCalled();
+  });
+
   it.each([
     { code: 0, shouldToast: true },
     { code: 409, shouldToast: false },

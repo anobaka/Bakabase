@@ -10,8 +10,11 @@ import { DOWNLOAD_TASK_ID_PREFIX, EXTRACT_TASK_ID_PREFIX } from "../types";
 import { BTaskResourceType, BTaskStatus, BTaskType } from "@/sdk/constants";
 import { useBTasksStore } from "@/stores/bTasks";
 
-const { getWorks, options } = vi.hoisted(() => ({
+const { getWorks, options, getDownloaderOptions, globalOptions, openFolder } = vi.hoisted(() => ({
   getWorks: vi.fn(),
+  getDownloaderOptions: vi.fn(),
+  openFolder: vi.fn(),
+  globalOptions: { data: {} as { defaultDownloadPath?: string } },
   options: {
     data: { accounts: [{ account: "test" }], defaultPath: "/downloads", scanFolders: [] },
     initialized: true,
@@ -20,9 +23,15 @@ const { getWorks, options } = vi.hoisted(() => ({
 }));
 
 vi.mock("@/sdk/BApi", () => ({
-  default: { dlsiteWork: { getAllDLsiteWorks: getWorks } },
+  default: {
+    dlsiteWork: { getAllDLsiteWorks: getWorks },
+    downloadTask: { getDownloaderOptions },
+    tool: { openFileOrDirectory: openFolder },
+  },
 }));
 vi.mock("@/stores/options", () => ({
+  useDownloaderGlobalOptionsStore: (selector: (state: typeof globalOptions) => unknown) =>
+    selector(globalOptions),
   useDLsiteOptionsStore: (selector: (state: typeof options) => unknown) => selector(options),
 }));
 vi.mock("@/components/ContextProvider/BakabaseContextProvider", () => ({
@@ -32,7 +41,9 @@ vi.mock("@/components/ThirdPartyConfig", () => ({ DLsiteConfig: () => null }));
 vi.mock("@/components/ConfirmModal", () => ({ default: () => null }));
 vi.mock("@/components/bakaui", () => ({ toast: { success: vi.fn(), danger: vi.fn() } }));
 vi.mock("../components/DLsiteTable", () => ({
-  DLsiteTable: () => <div data-testid="dlsite-table" />,
+  DLsiteTable: ({ hasDownloadDir }: { hasDownloadDir: boolean }) => (
+    <div data-has-download-directory={String(hasDownloadDir)} data-testid="dlsite-table" />
+  ),
 }));
 
 const task = (id: string, status: BTaskStatus, patch: Partial<BTask> = {}): BTask => ({
@@ -63,6 +74,8 @@ const updateTask = async (nextTask: BTask) => {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  options.data.defaultPath = "/downloads";
+  globalOptions.data = {};
   useBTasksStore.getState().setTasks([]);
   getWorks.mockResolvedValue({ code: 0, data: [], totalCount: 60 });
 });
@@ -73,6 +86,30 @@ afterEach(() => {
 });
 
 describe("DLsite task completion refresh", () => {
+  it("uses the inherited server directory for download availability and opening the folder", async () => {
+    options.data.defaultPath = "";
+    globalOptions.data = { defaultDownloadPath: "/nas/Downloads" };
+    getDownloaderOptions.mockResolvedValue({
+      data: { effectiveDefaultPath: "/nas/Downloads/DLsite" },
+    });
+    await mountPage();
+
+    expect(screen.getByTestId("dlsite-table")).toHaveAttribute(
+      "data-has-download-directory",
+      "true",
+    );
+    const openButton = screen.getByRole("button", {
+      name: "resourceSource.dlsite.action.openDownloadDir",
+    });
+
+    expect(openButton).not.toBeDisabled();
+    await act(async () => fireEvent.click(openButton));
+    expect(openFolder).toHaveBeenCalledExactlyOnceWith({
+      path: "/nas/Downloads/DLsite",
+      openInDirectory: false,
+    });
+  });
+
   it("loads once on mount when historical downloads and extracts are already complete", async () => {
     useBTasksStore
       .getState()

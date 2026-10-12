@@ -168,6 +168,6 @@ public sealed class NoticeStateTests
         var services = new ServiceCollection().AddSingleton<IBOptionsManagerInternal>(ui).BuildServiceProvider();
 
         return new OptionsController(null!, null!, new BakabaseOptionsManagerPool(services), null!, null!, null!,
-            null!);
+            null!, null!);
     }
 }

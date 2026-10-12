@@ -6,5 +6,8 @@ namespace Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain
     public class DownloaderGlobalOptions
     {
         public bool AutoStartAfterCreation { get; set; }
+
+        /// <summary>Root directory for sources that have no download directory of their own.</summary>
+        public string? DefaultDownloadPath { get; set; }
     }
 }

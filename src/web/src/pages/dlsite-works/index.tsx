@@ -47,7 +47,8 @@ import { DLsiteConfig } from "@/components/ThirdPartyConfig";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import ConfirmModal from "@/components/ConfirmModal";
 import { useBTasksStore } from "@/stores/bTasks";
-import { BTaskStatus } from "@/sdk/constants";
+import { BTaskStatus, ThirdPartyId } from "@/sdk/constants";
+import useEffectiveDownloadPath from "@/components/ThirdPartyConfig/base/useEffectiveDownloadPath";
 
 const PAGE_SIZE_OPTIONS = [20, 50];
 
@@ -76,7 +77,7 @@ export default function DLsiteWorksPage() {
   const prevScanStatusRef = useRef(scanTask?.status);
 
   const isConfigured = !dlsiteOptionsInitialized || (dlsiteOptions?.accounts?.length ?? 0) > 0;
-  const downloadDir = dlsiteOptions?.defaultPath;
+  const downloadDir = useEffectiveDownloadPath(ThirdPartyId.DLsite, dlsiteOptions?.defaultPath);
   const hasDownloadDir = !dlsiteOptionsInitialized || !!downloadDir;
   const scanFolders = dlsiteOptions?.scanFolders || [];
   const hasScanFolders = scanFolders.length > 0;

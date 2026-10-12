@@ -87,7 +87,7 @@ public sealed class UserStorageConsumerTests
 
     private PixivDownloaderHelper Helper() => new(
         _services.GetRequiredService<IBOptionsManager<PixivOptions>>(),
-        _services.GetRequiredService<IDownloaderLocalizer>(), new HttpClient(), _policy);
+        _services.GetRequiredService<IDownloaderLocalizer>(), new HttpClient(), _policy, _services.GetRequiredService<IBOptions<DownloaderGlobalOptions>>());
 
     private DownloadTaskService Tasks() => new(_services,
         new BakabaseLocalizer(_services.GetRequiredService<IStringLocalizer<SharedResource>>()), new NoopBus());
@@ -223,7 +223,7 @@ public sealed class UserStorageConsumerTests
         var app = _services.GetRequiredService<AppService>();
         var directory = Path.Combine(Path.GetFullPath(app.AppDataDirectory), "acquisition", acquisitionId.ToString(), "platform");
         var helper = new ExHentaiDownloaderHelper(_services.GetRequiredService<IBOptionsManager<ExHentaiOptions>>(),
-            _services.GetRequiredService<IDownloaderLocalizer>(), new HttpClient(), _policy, app);
+            _services.GetRequiredService<IDownloaderLocalizer>(), new HttpClient(), _policy, app, _services.GetRequiredService<IBOptions<DownloaderGlobalOptions>>());
         var input = new DownloadTaskAddInputModel
         {
             ThirdPartyId = ThirdPartyId.ExHentai, Type = (int) ExHentaiDownloadTaskType.SingleWork,
