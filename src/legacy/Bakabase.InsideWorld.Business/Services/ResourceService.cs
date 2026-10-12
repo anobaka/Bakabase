@@ -184,7 +184,18 @@ namespace Bakabase.InsideWorld.Business.Services
             }
 
             await DeleteRelatedData(ids.ToList());
-            await _orm.RemoveByKeys(ids);
+            var response = await _orm.RemoveByKeys(ids);
+            if (!response.IsSuccess())
+            {
+                // The ORM evicts these keys even when its database operation fails.
+                // Reload them on retry and do not publish a successful removal event.
+                _orm.ClearCache();
+                // An already-absent row is an idempotent success. Verify absence in the
+                // database, rather than trust the just-evicted cache, for a no-op response.
+                if (response.Code != (int) ResponseCode.NotModified ||
+                    await DbContext.Set<ResourceDbModel>().AsNoTracking().AnyAsync(r => ids.Contains(r.Id)))
+                    throw new InvalidOperationException(response.Message);
+            }
 
             // Publish resource removed event (triggers index updates via event subscription)
             ResourceDataChangeEventPublisher.PublishResourcesRemoved(ids);

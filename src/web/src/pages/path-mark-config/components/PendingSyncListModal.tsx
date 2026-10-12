@@ -4,7 +4,7 @@ import type { BakabaseAbstractionsModelsDomainPathMark } from "@/sdk/Api";
 import type { DestroyableProps } from "@/components/bakaui/types";
 import type { PathMarkSyncStatus as PathMarkSyncStatusType } from "@/sdk/constants";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import {
   AiOutlineSync,
@@ -17,8 +17,9 @@ import {
 import SyncProgressModal from "./SyncProgressModal";
 import {
   getPathMarkSyncProgress,
-  getPathMarkSyncTask,
+  getSyncTaskForMark,
   isPathMarkSyncTaskActive,
+  usePathMarkSyncCompletion,
 } from "./pathMarkSyncTask";
 
 import { Modal, Button, Chip, Spinner, Tooltip, CircularProgress } from "@/components/bakaui";
@@ -116,26 +117,31 @@ const PendingSyncListModal = ({
   const [isOpen, setIsOpen] = useState(visible);
   const [loading, setLoading] = useState(false);
   const [pendingMarks, setPendingMarks] = useState<BakabaseAbstractionsModelsDomainPathMark[]>([]);
+  const requestSequence = useRef(0);
+  const storeAtLoad = useRef(usePathMarksStore.getState().marks);
 
-  // Path-mark synchronization is represented by one global BTask.
+  // Resource marks and property/library marks are handled by separate global tasks.
   const bTasks = useBTasksStore((state) => state.tasks);
-  const pathMarkSyncTask = getPathMarkSyncTask(bTasks);
-  const isPathMarkSyncTaskRunning = isPathMarkSyncTaskActive(pathMarkSyncTask);
-  const pathMarkSyncProgress = getPathMarkSyncProgress(pathMarkSyncTask);
 
   // Watch PathMarks store for real-time status updates via SignalR
   const pathMarksStore = usePathMarksStore((state) => state.marks);
+  const deletedMarkIds = usePathMarksStore((state) => state.deletedMarkIds);
 
   const loadPendingMarks = useCallback(async () => {
+    const request = ++requestSequence.current;
+    const snapshot = usePathMarksStore.getState().marks;
+
     setLoading(true);
     try {
       const response = await BApi.pathMark.getPendingPathMarks();
 
+      if (request !== requestSequence.current || response?.code) return;
+      storeAtLoad.current = snapshot;
       setPendingMarks(response?.data || []);
     } catch (error) {
       console.error("Failed to load pending marks", error);
     } finally {
-      setLoading(false);
+      if (request === requestSequence.current) setLoading(false);
     }
   }, []);
 
@@ -143,7 +149,15 @@ const PendingSyncListModal = ({
     if (visible) {
       loadPendingMarks();
     }
-  }, [visible, loadPendingMarks]);
+
+    return () => {
+      ++requestSequence.current;
+    };
+  }, [visible, loadPendingMarks, deletedMarkIds]);
+
+  usePathMarkSyncCompletion(() => {
+    if (visible) loadPendingMarks();
+  });
 
   useEffect(() => {
     setIsOpen(visible);
@@ -154,15 +168,25 @@ const PendingSyncListModal = ({
     onClose?.();
   }, [onClose]);
 
+  // API membership is authoritative; only pushes newer than that request override its status.
+  const currentPendingMarks = React.useMemo(
+    () =>
+      pendingMarks.flatMap((propMark) => {
+        if (propMark.id != null && deletedMarkIds.has(propMark.id)) return [];
+        const storeMark = propMark.id != null ? pathMarksStore.get(propMark.id) : undefined;
+        const baseline = propMark.id != null ? storeAtLoad.current.get(propMark.id) : undefined;
+        const mark = storeMark && storeMark !== baseline ? storeMark : propMark;
+
+        return mark.syncStatus === PathMarkSyncStatus.Synced ? [] : [mark];
+      }),
+    [pendingMarks, pathMarksStore, deletedMarkIds],
+  );
+
   // Group marks by path, using store marks for latest status
   const groupedMarks: PathGroup[] = React.useMemo(() => {
     const groups: Map<string, BakabaseAbstractionsModelsDomainPathMark[]> = new Map();
 
-    for (const propMark of pendingMarks) {
-      // Use store mark if available (has latest syncStatus from SignalR)
-      const storeMark = propMark.id != null ? pathMarksStore.get(propMark.id) : undefined;
-      const mark = storeMark ?? propMark;
-
+    for (const mark of currentPendingMarks) {
       const path = mark.path || "Unknown";
 
       if (!groups.has(path)) {
@@ -175,7 +199,7 @@ const PendingSyncListModal = ({
       path,
       marks: marks.sort((a, b) => (a.priority || 0) - (b.priority || 0)),
     }));
-  }, [pendingMarks, pathMarksStore]);
+  }, [currentPendingMarks]);
 
   // Sync a single mark using BTask
   const handleSyncMark = useCallback(async (mark: BakabaseAbstractionsModelsDomainPathMark) => {
@@ -230,16 +254,13 @@ const PendingSyncListModal = ({
 
   // Calculate total pending using store marks for latest status
   const totalPending = React.useMemo(() => {
-    return pendingMarks.filter((propMark) => {
-      const storeMark = propMark.id != null ? pathMarksStore.get(propMark.id) : undefined;
-      const mark = storeMark ?? propMark;
-
+    return currentPendingMarks.filter((mark) => {
       return (
         mark.syncStatus === PathMarkSyncStatus.Pending ||
         mark.syncStatus === PathMarkSyncStatus.PendingDelete
       );
     }).length;
-  }, [pendingMarks, pathMarksStore]);
+  }, [currentPendingMarks]);
 
   return (
     <Modal
@@ -291,7 +312,7 @@ const PendingSyncListModal = ({
           <div className="flex items-center justify-center py-8">
             <Spinner size="lg" />
           </div>
-        ) : pendingMarks.length === 0 ? (
+        ) : currentPendingMarks.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8 text-default-500">
             <AiOutlineCheck className="text-4xl text-success mb-2" />
             <span>{t("pathMarkConfig.status.allSynced")}</span>
@@ -312,6 +333,9 @@ const PendingSyncListModal = ({
               {/* Marks under this path */}
               <div className="flex flex-col gap-1 pl-4">
                 {group.marks.map((mark) => {
+                  const pathMarkSyncTask = getSyncTaskForMark(bTasks, mark.type);
+                  const isPathMarkSyncTaskRunning = isPathMarkSyncTaskActive(pathMarkSyncTask);
+                  const pathMarkSyncProgress = getPathMarkSyncProgress(pathMarkSyncTask);
                   const isMarkSyncing = mark.syncStatus === PathMarkSyncStatus.Syncing;
                   const showOverallProgress = isMarkSyncing && isPathMarkSyncTaskRunning;
                   const isPendingDelete = mark.syncStatus === PathMarkSyncStatus.PendingDelete;

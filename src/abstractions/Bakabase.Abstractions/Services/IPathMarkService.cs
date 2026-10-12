@@ -73,6 +73,9 @@ public interface IPathMarkService
     /// </summary>
     Task HardDeleteBatch(IEnumerable<int> ids);
 
+    /// <summary>Finalize only unchanged resource deletion snapshots, atomically removing their ownership effects.</summary>
+    Task FinalizeResourceDeletions(IReadOnlyCollection<PathMark> snapshots, CancellationToken ct = default);
+
     /// <summary>
     /// Mark a path mark as syncing
     /// </summary>

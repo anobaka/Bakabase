@@ -43,6 +43,8 @@
   "pathMarkConfig.status.paused": "同步已暂停",
   "pathMarkConfig.status.cancelled": "同步已取消",
   "pathMarkConfig.status.completed": "同步完成！",
+  "pathMarkConfig.status.progressUnavailable": "无法确认本次同步的结果。请关闭此窗口，查看待同步标记的最新状态。",
+  "pathMarkConfig.status.waitingForConnection": "正在连接服务器，获取当前任务状态。",
   "pathMarkConfig.label.resources": "资源",
   "pathMarkConfig.label.properties": "属性",
   "pathMarkConfig.action.pause": "暂停",

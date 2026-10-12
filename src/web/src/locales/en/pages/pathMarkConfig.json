@@ -43,6 +43,8 @@
   "pathMarkConfig.status.paused": "Synchronization paused",
   "pathMarkConfig.status.cancelled": "Synchronization cancelled",
   "pathMarkConfig.status.completed": "Synchronization completed!",
+  "pathMarkConfig.status.progressUnavailable": "The result of this sync could not be confirmed. Close this window to review the latest pending marks.",
+  "pathMarkConfig.status.waitingForConnection": "Connecting to the server to get the current task status.",
   "pathMarkConfig.label.resources": "Resources",
   "pathMarkConfig.label.properties": "Properties",
   "pathMarkConfig.action.pause": "Pause",

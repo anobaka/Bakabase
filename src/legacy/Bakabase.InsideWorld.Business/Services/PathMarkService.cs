@@ -23,6 +23,7 @@ using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.DependencyInjection;
 using Bootstrap.Components.Orm;
 using Bootstrap.Components.Orm.Extensions;
+using Bootstrap.Extensions;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -389,18 +390,53 @@ public class PathMarkService<TDbContext>(
 
     public async Task HardDelete(int id)
     {
-        await orm.RemoveByKey(id);
+        var response = await orm.RemoveByKey(id);
+        if (!response.IsSuccess()) throw new InvalidOperationException(response.Message);
+        await uiHub.Clients.All.DeleteData("PathMark", id);
     }
 
     public async Task HardDeleteBatch(IEnumerable<int> ids)
     {
-        await orm.RemoveByKeys(ids);
+        var keys = ids.Distinct().ToArray();
+        var response = await orm.RemoveByKeys(keys);
+        if (!response.IsSuccess()) throw new InvalidOperationException(response.Message);
+        foreach (var id in keys) await uiHub.Clients.All.DeleteData("PathMark", id);
+    }
+
+    public static bool MatchesResourceDeletionSnapshot(PathMark current, PathMark snapshot) =>
+        current.Id == snapshot.Id && current.Type == PathMarkType.Resource && current.IsDeleted &&
+        current.SyncStatus == PathMarkSyncStatus.PendingDelete && current.UpdatedAt == snapshot.UpdatedAt &&
+        current.Path == snapshot.Path && current.ConfigJson == snapshot.ConfigJson && current.Priority == snapshot.Priority;
+
+    public async Task FinalizeResourceDeletions(IReadOnlyCollection<PathMark> snapshots, CancellationToken ct = default)
+    {
+        if (snapshots.Count == 0) return;
+        var db = serviceProvider.GetRequiredService<TDbContext>();
+        var removed = new List<int>();
+        await using var transaction = await db.Database.BeginTransactionAsync(ct);
+        foreach (var snapshot in snapshots)
+        {
+            ct.ThrowIfCancellationRequested();
+            // Execute the revision/status guard in the database, not as a check followed by
+            // an unguarded delete: a concurrent edit must keep both the mark and its ledger.
+            var affected = await db.Set<PathMarkDbModel>().Where(m => m.Id == snapshot.Id &&
+                m.Type == PathMarkType.Resource && m.IsDeleted && m.SyncStatus == PathMarkSyncStatus.PendingDelete &&
+                m.UpdatedAt == snapshot.UpdatedAt && m.Path == snapshot.Path && m.ConfigJson == snapshot.ConfigJson &&
+                m.Priority == snapshot.Priority).ExecuteDeleteAsync(ct);
+            if (affected == 0) continue;
+            await db.Set<ResourceMarkEffectDbModel>().Where(e => e.MarkId == snapshot.Id).ExecuteDeleteAsync(ct);
+            removed.Add(snapshot.Id);
+        }
+        await transaction.CommitAsync(ct);
+        orm.ClearCache();
+        serviceProvider.GetRequiredService<FullMemoryCacheResourceService<TDbContext, ResourceMarkEffectDbModel, int>>().ClearCache();
+        foreach (var id in removed) await uiHub.Clients.All.DeleteData("PathMark", id);
     }
 
     public async Task MarkAsSyncing(int id)
     {
         var dbModel = await orm.GetByKey(id);
-        if (dbModel != null)
+        if (dbModel != null && !dbModel.IsDeleted && dbModel.SyncStatus != PathMarkSyncStatus.PendingDelete)
         {
             dbModel.SyncStatus = PathMarkSyncStatus.Syncing;
             dbModel.UpdatedAt = DateTime.UtcNow;
@@ -412,7 +448,7 @@ public class PathMarkService<TDbContext>(
     public async Task MarkAsSynced(int id)
     {
         var dbModel = await orm.GetByKey(id);
-        if (dbModel != null)
+        if (dbModel != null && !dbModel.IsDeleted && dbModel.SyncStatus != PathMarkSyncStatus.PendingDelete)
         {
             dbModel.SyncStatus = PathMarkSyncStatus.Synced;
             dbModel.SyncedAt = DateTime.UtcNow;
@@ -428,7 +464,7 @@ public class PathMarkService<TDbContext>(
         var idSet = ids.ToHashSet();
         if (idSet.Count == 0) return;
 
-        var dbModels = await orm.GetAll(m => idSet.Contains(m.Id));
+        var dbModels = await orm.GetAll(m => idSet.Contains(m.Id) && !m.IsDeleted && m.SyncStatus != PathMarkSyncStatus.PendingDelete);
         var now = DateTime.UtcNow;
 
         foreach (var dbModel in dbModels)
@@ -446,7 +482,7 @@ public class PathMarkService<TDbContext>(
     public async Task MarkAsFailed(int id, string? error)
     {
         var dbModel = await orm.GetByKey(id);
-        if (dbModel != null)
+        if (dbModel != null && !dbModel.IsDeleted && dbModel.SyncStatus != PathMarkSyncStatus.PendingDelete)
         {
             dbModel.SyncStatus = PathMarkSyncStatus.Failed;
             dbModel.SyncError = error;
@@ -459,7 +495,7 @@ public class PathMarkService<TDbContext>(
     public async Task MarkAsPending(int id)
     {
         var dbModel = await orm.GetByKey(id);
-        if (dbModel != null)
+        if (dbModel != null && !dbModel.IsDeleted && dbModel.SyncStatus != PathMarkSyncStatus.PendingDelete)
         {
             dbModel.SyncStatus = PathMarkSyncStatus.Pending;
             dbModel.SyncError = null;
@@ -482,7 +518,7 @@ public class PathMarkService<TDbContext>(
         var modelsToUpdate = new List<PathMarkDbModel>();
         foreach (var dbModel in dbModels)
         {
-            if (dbModel.SyncStatus == PathMarkSyncStatus.PendingDelete) continue;
+            if (dbModel.IsDeleted || dbModel.SyncStatus == PathMarkSyncStatus.PendingDelete) continue;
             dbModel.SyncStatus = PathMarkSyncStatus.Pending;
             dbModel.SyncError = null;
             dbModel.UpdatedAt = now;

@@ -9,6 +9,7 @@ using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
 using Bootstrap.Components.DependencyInjection;
 using Bootstrap.Components.Orm;
+using Bootstrap.Extensions;
 using Microsoft.EntityFrameworkCore;
 
 namespace Bakabase.InsideWorld.Business.Services;
@@ -65,7 +66,8 @@ public class PathMarkEffectService<TDbContext>(
 
         if (dbModels.Count > 0)
         {
-            await resourceEffectOrm.AddRange(dbModels);
+            var response = await resourceEffectOrm.AddRange(dbModels);
+            if (!response.IsSuccess()) throw new InvalidOperationException(response.Message);
         }
     }
 
