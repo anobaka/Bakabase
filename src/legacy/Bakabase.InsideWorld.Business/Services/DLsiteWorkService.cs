@@ -533,7 +533,9 @@ public class DLsiteWorkService(
             await onProgress(96, BTaskText.Localize(localizer, "BTask_Process_Extracting"));
         }
 
-        await ExtractWork(workId, onProgress, ct);
+        // Configuration changes affect future downloads. Keep extraction on the directory
+        // selected when this download started, including when its global default is cleared.
+        await ExtractWorkInDirectory(work, workDir, onProgress, ct);
 
         if (onProgress != null)
         {
@@ -558,6 +560,13 @@ public class DLsiteWorkService(
         }
 
         var workDir = Path.Combine(defaultPath, workId);
+        await ExtractWorkInDirectory(work, workDir, onProgress, ct);
+    }
+
+    private async Task ExtractWorkInDirectory(DLsiteWorkDbModel work, string workDir,
+        Func<int, BTaskText?, Task>? onProgress, CancellationToken ct)
+    {
+        var workId = work.WorkId;
         storagePolicy.EnsurePathAllowed(workDir);
         if (!Directory.Exists(workDir))
         {

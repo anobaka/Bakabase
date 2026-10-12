@@ -2,6 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
+using System.Net;
+using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Abstractions.Components.Tasks;
@@ -26,6 +29,52 @@ public sealed class DLsiteDefaultDirectoryTests
     private IDLsiteWorkService _works = null!;
     private DLsiteOptions _source = null!;
     private DownloaderGlobalOptions _global = null!;
+    private FixtureHttpFactory _http = null!;
+
+    // Exercise the real redirect, file download and ZIP extraction pipeline without
+    // contacting DLsite. Any unexpected HTTP request fails instead of reaching a network.
+    private sealed class FixtureHttpFactory : IHttpClientFactory
+    {
+        public List<string> RequestedPaths { get; } = [];
+        private readonly byte[] _archive;
+
+        public FixtureHttpFactory()
+        {
+            using var stream = new MemoryStream();
+            using (var zip = new ZipArchive(stream, ZipArchiveMode.Create, leaveOpen: true))
+            {
+                using var writer = new StreamWriter(zip.CreateEntry("readme.txt").Open());
+                writer.Write("downloaded content");
+            }
+            _archive = stream.ToArray();
+        }
+
+        private sealed class Handler(FixtureHttpFactory fixture) : HttpMessageHandler
+        {
+            protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+            {
+                var uri = request.RequestUri!;
+                fixture.RequestedPaths.Add(uri.AbsolutePath);
+                if (uri.Host == "play.dlsite.com" && uri.AbsolutePath == "/api/v3/download")
+                    return Task.FromResult(Redirect("https://dlsite-fixture.invalid/redirect"));
+                if (uri.Host == "dlsite-fixture.invalid" && uri.AbsolutePath == "/redirect")
+                    return Task.FromResult(Redirect("https://dlsite-fixture.invalid/fixture.zip"));
+                if (uri.Host == "dlsite-fixture.invalid" && uri.AbsolutePath == "/fixture.zip")
+                    return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                    {
+                        Content = new ByteArrayContent(fixture._archive)
+                    });
+                throw new InvalidOperationException("Unexpected fixture HTTP request.");
+            }
+
+            private static HttpResponseMessage Redirect(string location) => new(HttpStatusCode.Redirect)
+            {
+                Headers = {Location = new Uri(location)}
+            };
+        }
+
+        public HttpClient CreateClient(string name) => new(new Handler(this));
+    }
 
     private sealed class Storage(string root) : IUserStoragePolicy
     {
@@ -46,7 +95,12 @@ public sealed class DLsiteDefaultDirectoryTests
     {
         _root = Path.Combine(Path.GetTempPath(), "bakabase-dlsite-defaults-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(_root);
-        _services = await TestServiceBuilder.BuildServiceProvider(s => s.AddSingleton<IUserStoragePolicy>(new Storage(_root)));
+        _http = new FixtureHttpFactory();
+        _services = await TestServiceBuilder.BuildServiceProvider(s =>
+        {
+            s.AddSingleton<IUserStoragePolicy>(new Storage(_root));
+            s.AddSingleton<IHttpClientFactory>(_http);
+        });
         _works = _services.GetRequiredService<IDLsiteWorkService>();
         _source = _services.GetRequiredService<IBOptions<DLsiteOptions>>().Value;
         _global = _services.GetRequiredService<IBOptions<DownloaderGlobalOptions>>().Value;
@@ -96,6 +150,44 @@ public sealed class DLsiteDefaultDirectoryTests
         Assert.IsTrue(work.IsDownloaded);
         Assert.AreEqual(path, work.LocalPath);
         Assert.IsNull(_source.DefaultPath);
+    }
+
+    [TestMethod]
+    [DataRow("change-global")]
+    [DataRow("clear-global")]
+    [DataRow("change-source")]
+    public async Task DownloadExtractionKeepsItsCapturedDirectoryWhenDefaultsChange(string change)
+    {
+        _source.Accounts = [new DLsiteAccount {Name = "fixture", Cookie = "session=fixture"}];
+        var originalDirectory = Path.Combine(_root, "Downloads", "DLsite", "RJ000001");
+        var otherRoot = Path.Combine(_root, "OtherDownloads");
+        var otherDirectory = Path.Combine(otherRoot, "DLsite", "RJ000001");
+        Directory.CreateDirectory(Path.Combine(otherDirectory, "content"));
+        var sentinel = Path.Combine(otherDirectory, "content", "keep.txt");
+        var otherFile = Path.Combine(otherDirectory, "existing.txt");
+        await File.WriteAllTextAsync(sentinel, "unrelated extracted content");
+        await File.WriteAllTextAsync(otherFile, "unrelated downloaded content");
+        var changed = false;
+
+        await _works.DownloadWork("RJ000001", (progress, _) =>
+        {
+            if (progress == 96)
+            {
+                changed = true;
+                if (change == "change-source") _source.DefaultPath = Path.Combine(otherRoot, "DLsite");
+                else _global.DefaultDownloadPath = change == "clear-global" ? null : otherRoot;
+            }
+            return Task.CompletedTask;
+        });
+
+        Assert.IsTrue(changed, "The configuration must change after the file downloads, before extraction.");
+        Assert.AreEqual("downloaded content", await File.ReadAllTextAsync(Path.Combine(originalDirectory, "content", "readme.txt")));
+        Assert.AreEqual("unrelated extracted content", await File.ReadAllTextAsync(sentinel));
+        Assert.AreEqual("unrelated downloaded content", await File.ReadAllTextAsync(otherFile));
+        var work = (await _works.GetByWorkId("RJ000001"))!;
+        Assert.IsTrue(work.IsDownloaded);
+        Assert.AreEqual(originalDirectory, work.LocalPath);
+        CollectionAssert.AreEqual(new[] {"/api/v3/download", "/redirect", "/fixture.zip"}, _http.RequestedPaths);
     }
 
     [TestMethod]
