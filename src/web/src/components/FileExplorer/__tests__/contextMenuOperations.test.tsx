@@ -161,6 +161,22 @@ describe("filesystem context menu operations", () => {
     expect(screen.queryByRole("textbox")).toBeNull();
   });
 
+  it("uses the actual basename when editing an entry with a full-path presentation label", () => {
+    render(
+      <EditableFileName
+        isDirectory
+        displayName="/Volumes/mounted"
+        name="mounted"
+        path="/Volumes/mounted"
+      />,
+    );
+    fireEvent.keyDown(screen.getByRole("button", { name: "/Volumes/mounted" }), { key: "F2" });
+    expect(screen.getByRole("textbox")).toHaveValue("mounted");
+    fireEvent.keyDown(screen.getByRole("textbox"), { key: "Escape" });
+    expect(screen.getByRole("button", { name: "/Volumes/mounted" })).toBeInTheDocument();
+    expect(renameFile).not.toHaveBeenCalled();
+  });
+
   it("cancels a changed filename without blur submitting it", () => {
     render(<EditableFileName isDirectory={false} name="photo.jpg" path="/parent/photo.jpg" />);
     fireEvent.keyDown(screen.getByRole("button"), { key: "F2" });

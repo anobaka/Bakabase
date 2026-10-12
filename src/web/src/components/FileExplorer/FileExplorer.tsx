@@ -138,6 +138,7 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
 
     const initializedRootRef = useRef<RootEntry>();
     const initializeSeqRef = useRef(0);
+    const acceptedRootRef = useRef<{ model: RootEntry; sequence: number }>();
     const onNavigationStartRef = useRef(onNavigationStart);
 
     onNavigationStartRef.current = onNavigationStart;
@@ -208,11 +209,15 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
 
     const initialize = useCallback(async (path?: string, addToHistory: boolean = true) => {
       clearTimeout(inputBlurHandlerRef.current);
-      onNavigationStartRef.current?.();
       // Each call supersedes any still-awaiting predecessor; a stale one must never setRoot
       // over a newer navigation.
       const seq = ++initializeSeqRef.current;
+      onNavigationStartRef.current?.();
       const superseded = () => seq != initializeSeqRef.current;
+      const acceptRoot = (model: RootEntry) => {
+        acceptedRootRef.current = { model, sequence: seq };
+        setRoot(model);
+      };
 
       try {
         const policy = await useUserStorageStore.getState().load();
@@ -296,7 +301,7 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
             group.refreshFilteredChildren();
           }
           virtualRoot.refreshFilteredChildren();
-          setRoot(virtualRoot);
+          acceptRoot(virtualRoot);
 
           return;
         }
@@ -324,12 +329,12 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
 
         log("initialize", finalPath, historyRootPathsRef.current);
 
-        setRoot(new RootEntry(finalPath || undefined, showHiddenFilesRef.current));
+        acceptRoot(new RootEntry(finalPath || undefined, showHiddenFilesRef.current));
       } catch (cause) {
         if (superseded()) return;
         setNavigationError(storageError(cause, t).message);
         if (!rootRef.current && useUserStorageStore.getState().settings)
-          setRoot(new RootEntry(undefined, showHiddenFilesRef.current));
+          acceptRoot(new RootEntry(undefined, showHiddenFilesRef.current));
       }
     }, []);
 
@@ -1106,6 +1111,10 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
             switchSelective={switchSelective}
             onChildrenLoaded={(e) => {
               if (root !== renderedRootRef.current || (e.root && e.root !== root)) return;
+              // The previous root remains visible while validation of a new path awaits.
+              // Its late listing must not mark that newer navigation ready or select rows.
+              const accepted = acceptedRootRef.current;
+              if (accepted?.model !== root || accepted.sequence !== initializeSeqRef.current) return;
               if (!defaultSelectedPathInitializedRef.current) {
                 defaultSelectedPathInitializedRef.current = true;
                 const standardDefaultSelectedPath = standardizePath(defaultSelectedPath);

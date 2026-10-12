@@ -6,7 +6,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import FileExplorerEntry from "../FileExplorerEntry";
 
 import RootEntry from "@/core/models/FileExplorer/RootEntry";
+import { Entry } from "@/core/models/FileExplorer/Entry";
 import { IwFsType } from "@/sdk/constants";
+import { useUserStorageStore } from "@/stores/userStorage";
 
 const mocks = vi.hoisted(() => ({
   children: vi.fn(),
@@ -43,9 +45,9 @@ vi.mock("../components/EditableFileName", async () => {
   const { forwardRef } = await import("react");
 
   return {
-    default: forwardRef<HTMLSpanElement, { name: string }>(({ name }, ref) => (
-      <span ref={ref}>{name}</span>
-    )),
+    default: forwardRef<HTMLSpanElement, { name: string; displayName?: string }>(
+      ({ name, displayName }, ref) => <span ref={ref}>{displayName ?? name}</span>,
+    ),
   };
 });
 vi.mock("../components/RightOperations", () => ({ default: () => null }));
@@ -96,6 +98,7 @@ const mount = (root: RootEntry) =>
 
 beforeEach(() => {
   vi.clearAllMocks();
+  useUserStorageStore.setState({ settings: undefined });
   vi.stubGlobal(
     "ResizeObserver",
     class {
@@ -110,11 +113,73 @@ beforeEach(() => {
 });
 afterEach(() => {
   cleanup();
+  useUserStorageStore.setState({ settings: undefined });
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
 
 describe("directory listing initialization", () => {
+  it("labels Docker storage roots with their exact paths while keeping child basenames and source names intact", async () => {
+    useUserStorageStore.setState({
+      settings: {
+        isRestricted: true,
+        roots: [{ path: "/Volumes/nas-bakabase" }, { path: "/Volumes/nas-anobaka" }],
+      } as NonNullable<ReturnType<typeof useUserStorageStore.getState>["settings"]>,
+    });
+    const root = new RootEntry();
+
+    root.children = [
+      new Entry({
+        ...directory("/Volumes/nas-bakabase", "nas-bakabase"),
+        type: IwFsType.Drive,
+        parent: root,
+        properties: [],
+      }),
+      new Entry({
+        ...directory("/Volumes/nas-anobaka", "nas-anobaka"),
+        type: IwFsType.Drive,
+        parent: root,
+        properties: [],
+      }),
+      new Entry({
+        ...directory("/Volumes/nas-bakabase/Downloads", "Downloads"),
+        parent: root,
+        properties: [],
+      }),
+    ];
+    mount(root);
+
+    expect(await screen.findByText("/Volumes/nas-bakabase")).toBeInTheDocument();
+    expect(screen.getByText("/Volumes/nas-anobaka")).toBeInTheDocument();
+    expect(screen.getByText("Downloads")).toBeInTheDocument();
+    expect(root.children[0].name).toBe("nas-bakabase");
+    await act(async () => {});
+  });
+
+  it("preserves standalone Windows drive labels", async () => {
+    useUserStorageStore.setState({
+      settings: { isRestricted: false, roots: [{ path: "C:/" }] } as NonNullable<
+        ReturnType<typeof useUserStorageStore.getState>["settings"]
+      >,
+    });
+    const root = new RootEntry();
+
+    root.children = [
+      new Entry({
+        path: "C:/",
+        name: "Windows (C:)",
+        type: IwFsType.Drive,
+        parent: root,
+        properties: [],
+      }),
+    ];
+    mount(root);
+
+    expect(await screen.findByText("Windows (C:)")).toBeInTheDocument();
+    expect(screen.queryByText("C:/")).toBeNull();
+    await act(async () => {});
+  });
+
   it("shows loading instead of empty, and lists NAS folders without waiting for watcher setup", async () => {
     let resolveChildren!: (response: unknown) => void;
     let resolveWatcher!: (response: unknown) => void;

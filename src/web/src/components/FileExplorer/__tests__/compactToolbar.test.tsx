@@ -9,7 +9,7 @@ import FileExplorer from "../FileExplorer";
 import { useFileExplorerClipboardStore } from "@/stores/fileExplorerClipboard";
 import { useUserStorageStore } from "@/stores/userStorage";
 
-const { checkPath, select, createPortal, moveEntries, getRoots, validatePaths } = vi.hoisted(
+const { checkPath, select, createPortal, moveEntries, getRoots, validatePaths, deferredListings } = vi.hoisted(
   () => ({
     checkPath: vi.fn().mockResolvedValue({ data: false }),
     select: vi.fn(),
@@ -17,6 +17,7 @@ const { checkPath, select, createPortal, moveEntries, getRoots, validatePaths } 
     moveEntries: vi.fn().mockResolvedValue({}),
     getRoots: vi.fn(),
     validatePaths: vi.fn(),
+    deferredListings: new Map<string, (() => void) | undefined>(),
   }),
 );
 
@@ -92,7 +93,11 @@ vi.mock("../FileExplorerEntry", async () => {
       const [initialRootPath] = useState(entry.path);
       const [, forceUpdate] = useReducer((value) => value + 1, 0);
 
-      useEffect(() => onChildrenLoaded(entry), [entry]);
+      useEffect(() => {
+        if (deferredListings.has(entry.path))
+          deferredListings.set(entry.path, () => onChildrenLoaded(entry));
+        else onChildrenLoaded(entry);
+      }, [entry]);
       // Match the real child's effect timing: filtering its mutable model refreshes
       // the rows without rerendering the parent toolbar by itself.
       useEffect(() => {
@@ -181,6 +186,7 @@ vi.mock("@/components/bakaui", async () => {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  deferredListings.clear();
   getRoots.mockResolvedValue({ data: { isRestricted: false, roots: [] } });
   validatePaths.mockResolvedValue({ code: 0 });
   useUserStorageStore.setState({ settings: undefined, error: undefined });
@@ -261,6 +267,40 @@ describe("compact file processor toolbar", () => {
     );
     expect(screen.queryByRole("button", { name: "alpha" })).toBeNull();
     expect(onNavigationStart).toHaveBeenCalledTimes(2);
+  });
+
+  it("ignores the previous root's late first listing while the next path is being validated", async () => {
+    const onInitialized = vi.fn();
+    const onNavigationStart = vi.fn();
+    deferredListings.set("/media", undefined);
+    const props: FileExplorerProps = {
+      keyboard: false, selectable: "single", onInitialized, onNavigationStart,
+    };
+    const view = render(<FileExplorer {...props} rootPath="/media" />);
+    await screen.findByTestId("entries");
+    expect(onInitialized).not.toHaveBeenCalled();
+    const previousListingReady = deferredListings.get("/media")!;
+
+    let finishPathValidation!: (response: unknown) => void;
+    checkPath.mockReturnValueOnce(new Promise((resolve) => {
+      finishPathValidation = resolve;
+    }));
+    view.rerender(<FileExplorer {...props} rootPath="/empty" />);
+    await waitFor(() => expect(checkPath).toHaveBeenLastCalledWith({ path: "/empty" }));
+    expect(onNavigationStart).toHaveBeenCalledTimes(2);
+    expect(screen.getByTestId("entries")).toHaveAttribute("data-initial-root", "/media");
+
+    // Old content still renders during the next path's request, but it cannot tell
+    // the picker the new navigation is ready or restore the previous directory.
+    await act(async () => previousListingReady());
+    expect(onInitialized).not.toHaveBeenCalled();
+    await act(async () => {
+      finishPathValidation({ data: false });
+      await Promise.resolve();
+      previousListingReady();
+    });
+    await waitFor(() => expect(onInitialized).toHaveBeenCalledExactlyOnceWith("/empty"));
+    expect(screen.getByTestId("entries")).toHaveAttribute("data-initial-root", "/empty");
   });
 
   it("clears the previous selection and action target when entering another directory", async () => {

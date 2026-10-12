@@ -9,7 +9,7 @@ import {
   CloseCircleOutlined,
   EyeOutlined,
   FileOutlined,
-  InfoCircleOutlined,
+  FolderOpenOutlined,
 } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
 import { useUpdate, useUpdateEffect } from "react-use";
@@ -48,6 +48,7 @@ import TaskOverlay from "./components/TaskOverlay";
 
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { useFileExplorerClipboardStore } from "@/stores/fileExplorerClipboard";
+import { useUserStorageStore } from "@/stores/userStorage";
 
 // Virtual list configuration
 const VIRTUAL_LIST_OVERSCAN_ROW_COUNT = 5;
@@ -103,6 +104,11 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
   const { createPortal, createWindow } = useBakabaseContext();
 
   const [entry, setEntry] = useState(propsEntry);
+  const storageRootLabel = useUserStorageStore((state) =>
+    state.settings?.isRestricted && state.settings.roots.some((root) => root.path === entry.path)
+      ? entry.path
+      : undefined,
+  );
   const entryRef = useRef(entry);
   const mountedRef = useRef(true);
 
@@ -820,6 +826,7 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
                   !capabilities?.includes("rename") ||
                   entry.status == EntryStatus.Error
                 }
+                displayName={storageRootLabel}
                 isDirectory={entry.isDirectoryOrDrive}
                 name={entry.name}
                 path={entry.path}
@@ -950,9 +957,45 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
             </Button>
           </div>
         ) : (
-          <div className="flex justify-center items-center gap-2 opacity-70 py-2">
-            <InfoCircleOutlined />
-            <div>{t<string>("fileExplorer.empty.noContent")}</div>
+          <div
+            className={
+              entryRef.current.isRoot
+                ? "flex min-h-0 flex-1 flex-col items-center justify-center gap-3 px-6 py-8 text-center"
+                : "flex items-center justify-center gap-2 py-2 text-sm text-default-500"
+            }
+          >
+            <div
+              aria-hidden
+              className={
+                entryRef.current.isRoot
+                  ? "flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-default-100 text-2xl text-default-400"
+                  : "text-base text-default-400"
+              }
+            >
+              <FolderOpenOutlined />
+            </div>
+            <div className={entryRef.current.isRoot ? "max-w-xs space-y-1.5" : undefined}>
+              <p
+                className={
+                  entryRef.current.isRoot ? "text-sm font-medium text-default-600" : undefined
+                }
+              >
+                {t<string>(
+                  entryRef.current.root.filter.keyword
+                    ? "fileExplorer.empty.filteredTitle"
+                    : "fileExplorer.empty.noContent",
+                )}
+              </p>
+              {entryRef.current.isRoot && (
+                <p className="text-xs leading-relaxed text-default-400">
+                  {t<string>(
+                    entryRef.current.root.filter.keyword
+                      ? "fileExplorer.empty.filteredDescription"
+                      : "fileExplorer.empty.description",
+                  )}
+                </p>
+              )}
+            </div>
           </div>
         ))}
     </div>
