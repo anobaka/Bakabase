@@ -1,5 +1,6 @@
 ﻿using System;
 using Bakabase.Abstractions.Models.Db;
+using Bakabase.Infrastructures.Components.Orm;
 using Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Db;
 using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
 using Bakabase.InsideWorld.Business.Components.PlayList.Models.Db;
@@ -165,9 +166,7 @@ namespace Bakabase.InsideWorld.Business
 
         public BakabaseDbContext(DbContextOptions<BakabaseDbContext> options) : base(options)
         {
-            Database.OpenConnection();
-            // cache_size is working with current connection only.
-            Database.ExecuteSqlRaw($"PRAGMA cache_size = {5_000_000}");
+            this.SetSqlitePageCacheBudget(SqliteExtensions.MainPageCacheBudgetKiB);
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
