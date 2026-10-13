@@ -27,7 +27,7 @@ namespace Bakabase.Tests;
 /// Earlier tests only exercised a full RebuildAllAsync.
 /// </summary>
 [TestClass]
-public sealed class ResourceSearchIndexIncrementalTests
+public sealed partial class ResourceSearchIndexIncrementalTests
 {
     private string _testRoot = null!;
     private IServiceProvider _sp = null!;

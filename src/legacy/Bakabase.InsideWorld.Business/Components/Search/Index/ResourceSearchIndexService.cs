@@ -642,32 +642,38 @@ public class ResourceSearchIndexService : IResourceSearchIndexService
             return;
         }
 
-        // Remove from value index
+        // Writers share the mutation gate. Readers may retain a bucket while
+        // snapshotting it, so keep the existing bucket lock during removal.
         foreach (var key in indexKeys)
         {
-            if (_index.ValueIndex.TryGetValue(key.Pool, out var poolIndex) &&
+            if (key.RangeValue != null)
+            {
+                if (_index.RangeIndex.TryGetValue(key.Pool, out var rangePool) &&
+                    rangePool.TryGetValue(key.PropertyId, out var ranges))
+                {
+                    lock (ranges)
+                    {
+                        if (ranges.TryGetValue(key.RangeValue, out var ids))
+                        {
+                            ids.Remove(resourceId);
+                            if (ids.Count == 0) ranges.Remove(key.RangeValue);
+                        }
+                        if (ranges.Count == 0) rangePool.TryRemove(key.PropertyId, out _);
+                    }
+                    if (rangePool.IsEmpty) _index.RangeIndex.TryRemove(key.Pool, out _);
+                }
+            }
+            else if (_index.ValueIndex.TryGetValue(key.Pool, out var poolIndex) &&
                 poolIndex.TryGetValue(key.PropertyId, out var propIndex) &&
                 propIndex.TryGetValue(key.ValueKey, out var resourceIds))
             {
                 lock (resourceIds)
                 {
                     resourceIds.Remove(resourceId);
+                    if (resourceIds.Count == 0) propIndex.TryRemove(key.ValueKey, out _);
                 }
-            }
-        }
-
-        // Remove from range index (by checking all pools/properties - less efficient but necessary)
-        foreach (var (pool, poolIndex) in _index.RangeIndex)
-        {
-            foreach (var (propId, sortedList) in poolIndex)
-            {
-                lock (sortedList)
-                {
-                    foreach (var (_, resourceIds) in sortedList)
-                    {
-                        resourceIds.Remove(resourceId);
-                    }
-                }
+                if (propIndex.IsEmpty) poolIndex.TryRemove(key.PropertyId, out _);
+                if (poolIndex.IsEmpty) _index.ValueIndex.TryRemove(key.Pool, out _);
             }
         }
 
@@ -903,18 +909,19 @@ public class ResourceSearchIndexService : IResourceSearchIndexService
         if (string.IsNullOrEmpty(value)) return;
 
         var normalizedValue = NormalizeValue(value);
-        var key = new IndexKey(pool, propertyId, normalizedValue);
-
         var poolIndex = _index.ValueIndex.GetOrAdd(pool, _ => new());
         var propIndex = poolIndex.GetOrAdd(propertyId, _ => new());
-        var resourceIds = propIndex.GetOrAdd(normalizedValue, _ => new HashSet<int>());
+        var resourceIds = propIndex.GetOrAdd(normalizedValue, key => new ValueIndexBucket(key));
 
         lock (resourceIds)
         {
             resourceIds.Add(resourceId);
         }
 
-        indexKeys.Add(key);
+        // Share a canonical string only within this bucket's lifetime. User
+        // paths/text must not enter the process-global, non-collectible intern pool.
+        var canonicalValue = (resourceIds as ValueIndexBucket)?.ValueKey ?? normalizedValue;
+        indexKeys.Add(new IndexKey(pool, propertyId, canonicalValue));
     }
 
     private void AddToRangeIndex(
@@ -938,17 +945,19 @@ public class ResourceSearchIndexService : IResourceSearchIndexService
         }
 
         // Also create index key for range values (for cleanup)
-        var key = new IndexKey(pool, propertyId, $"range:{value}");
+        var key = new IndexKey(pool, propertyId, string.Empty, value);
         indexKeys.Add(key);
     }
 
     private static string NormalizeValue(string value)
     {
         // Trim and lowercase for case-insensitive matching
-        var normalized = value.Trim().ToLowerInvariant();
+        return value.Trim().ToLowerInvariant();
+    }
 
-        // Use string interning for common values to save memory
-        return string.IsInterned(normalized) ?? string.Intern(normalized);
+    private sealed class ValueIndexBucket(string valueKey) : HashSet<int>
+    {
+        public string ValueKey { get; } = valueKey;
     }
 
     #endregion
@@ -1291,10 +1300,12 @@ public class ResourceSearchIndexService : IResourceSearchIndexService
         // that enumerates them concurrently throws "Collection was modified
         // during enumeration". Snapshot under the same lock so the descriptor
         // works against a read-only copy.
-        Dictionary<string, HashSet<int>>? propValueIndexSnapshot = null;
+        // In a ready index, an absent bucket means no values, not an unsupported
+        // filter. In particular an AND range filter must not become unconstrained
+        // after its last indexed value is removed.
+        var propValueIndexSnapshot = new Dictionary<string, HashSet<int>>(propValueIndex?.Count ?? 0);
         if (propValueIndex != null)
         {
-            propValueIndexSnapshot = new Dictionary<string, HashSet<int>>(propValueIndex.Count);
             foreach (var kv in propValueIndex)
             {
                 HashSet<int> snapshot;
@@ -1310,7 +1321,7 @@ public class ResourceSearchIndexService : IResourceSearchIndexService
         var poolRangeIndex = _index.RangeIndex.GetValueOrDefault(filter.PropertyPool);
         var propRangeIndex = poolRangeIndex?.GetValueOrDefault(filter.PropertyId);
 
-        List<KeyValuePair<IComparable, HashSet<int>>>? rangeIndexList = null;
+        List<KeyValuePair<IComparable, HashSet<int>>> rangeIndexList = [];
         if (propRangeIndex != null)
         {
             lock (propRangeIndex)

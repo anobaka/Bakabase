@@ -1,3 +1,4 @@
+using System;
 using Bakabase.Abstractions.Models.Domain.Constants;
 
 namespace Bakabase.InsideWorld.Business.Components.Search.Index;
@@ -5,9 +6,12 @@ namespace Bakabase.InsideWorld.Business.Components.Search.Index;
 /// <summary>
 /// 索引键，用于追踪资源的索引条目
 /// </summary>
-public readonly record struct IndexKey(PropertyPool Pool, int PropertyId, string ValueKey)
+public readonly record struct IndexKey(PropertyPool Pool, int PropertyId, string ValueKey,
+    IComparable? RangeValue = null)
 {
-    public override string ToString() => $"{Pool}:{PropertyId}:{ValueKey}";
+    public override string ToString() => RangeValue == null
+        ? $"{Pool}:{PropertyId}:{ValueKey}"
+        : $"{Pool}:{PropertyId}:range:{RangeValue}";
 }
 
 /// <summary>
