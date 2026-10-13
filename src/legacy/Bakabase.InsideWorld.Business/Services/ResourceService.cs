@@ -1400,7 +1400,8 @@ namespace Bakabase.InsideWorld.Business.Services
                 x.Scope == (int) PropertyValueScope.Manual && x.ResourceId == id);
             var currentCovers = rpv?.CoverPaths ?? [];
             var index = currentCovers.Count;
-            var image = await Image.LoadAsync(new MemoryStream(imageBytes));
+            using var input = new MemoryStream(imageBytes, writable: false);
+            using var image = await Image.LoadAsync(input);
             var outputFilePath = _fileManager.GetManualCoverPath(id, index);
             Directory.CreateDirectory(Path.GetDirectoryName(outputFilePath)!);
             await image.SaveAsJpegAsync(outputFilePath);

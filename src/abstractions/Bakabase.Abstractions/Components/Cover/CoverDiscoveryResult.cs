@@ -53,7 +53,8 @@ public record CoverDiscoveryResult(bool IsVirtualPath, string Path, string Ext, 
             {
                 using (MiniProfiler.Current.Step($"Image.LoadAsync (from memory, {Data!.Length} bytes)"))
                 {
-                    return await Image.LoadAsync<Argb32>(new MemoryStream(Data!), ct);
+                    using var input = new MemoryStream(Data!, writable: false);
+                    return await Image.LoadAsync<Argb32>(input, ct);
                 }
             }
 

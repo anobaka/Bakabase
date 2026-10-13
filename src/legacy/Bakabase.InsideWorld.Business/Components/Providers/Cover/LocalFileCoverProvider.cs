@@ -91,7 +91,7 @@ public class LocalFileCoverProvider : ICoverProvider
             var coverDiscoverResult = await _coverDiscoverer.Discover(resource.Path, coverSelectOrder, false, ct);
             if (coverDiscoverResult != null)
             {
-                var image = await coverDiscoverResult.LoadByImageSharp(ct);
+                using var image = await coverDiscoverResult.LoadByImageSharp(ct);
                 var pathWithoutExt = _fileManager.GetLocalCoverPathWithoutExtension(resource.Id);
                 coverPath = await image.SaveAsThumbnail(pathWithoutExt, ct);
             }
