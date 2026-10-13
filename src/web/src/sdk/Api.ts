@@ -2171,6 +2171,7 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputU
   /** [0: Default, 1: Resource] */
   startupPage?: BakabaseInsideWorldModelsConstantsStartupPage;
   isMenuCollapsed?: boolean;
+  navigationLayout?: BakabaseInsideWorldModelsConfigsUINavigationLayout;
   showResourceUsage?: boolean;
   hideResourceCovers?: boolean;
   resourceDetailLayout?: BakabaseInsideWorldModelsConfigsUIOptionsResourceDetailLayoutConfig;
@@ -2749,11 +2750,28 @@ export interface BakabaseInsideWorldModelsConfigsThirdPartyOptionsSimpleSearchEn
   urlTemplate: string;
 }
 
+export interface BakabaseInsideWorldModelsConfigsUINavigationLayout {
+  /** @format int32 */
+  version: number;
+  items: BakabaseInsideWorldModelsConfigsUINavigationNode[];
+  knownCatalogIds: string[];
+  directoryAliases: Record<string, string>;
+}
+
+export interface BakabaseInsideWorldModelsConfigsUINavigationNode {
+  id: string;
+  kind: string;
+  name?: string;
+  hidden: boolean;
+  children?: BakabaseInsideWorldModelsConfigsUINavigationNode[];
+}
+
 export interface BakabaseInsideWorldModelsConfigsUIOptions {
   resource: BakabaseInsideWorldModelsConfigsUIOptionsUIResourceOptions;
   /** [0: Default, 1: Resource] */
   startupPage: BakabaseInsideWorldModelsConstantsStartupPage;
   isMenuCollapsed: boolean;
+  navigationLayout?: BakabaseInsideWorldModelsConfigsUINavigationLayout;
   showResourceUsage: boolean;
   hideResourceCovers: boolean;
   resourceDetailLayout?: BakabaseInsideWorldModelsConfigsUIOptionsResourceDetailLayoutConfig;

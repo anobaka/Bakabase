@@ -186,6 +186,9 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "PatchUIOptions")]
         public async Task<BaseResponse> PatchUIOptions([FromBody] UIOptionsPatchRequestModel model)
         {
+            if (model.NavigationLayout?.Validate() is { } navigationError)
+                return BaseResponseBuilder.BuildBadRequest(navigationError);
+
             await _bakabaseOptionsManager.Get<UIOptions>().SaveAsync(options =>
             {
                 if (model.Resource != null)
@@ -201,6 +204,11 @@ namespace Bakabase.Service.Controllers
                 if (model.IsMenuCollapsed.HasValue)
                 {
                     options.IsMenuCollapsed = model.IsMenuCollapsed.Value;
+                }
+
+                if (model.NavigationLayout != null)
+                {
+                    options.NavigationLayout = model.NavigationLayout;
                 }
 
                 if (model.HideResourceCovers.HasValue)

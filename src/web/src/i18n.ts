@@ -77,6 +77,7 @@ import enHelpAcquisition from "@/locales/en/components/helpAcquisition.json";
 import enHelpMultiDevice from "@/locales/en/components/helpMultiDevice.json";
 import enHelpDataSync from "@/locales/en/components/helpDataSync.json";
 import enNotices from "@/locales/en/components/notices.json";
+import enNavigationEditor from "@/locales/en/components/navigationEditor.json";
 
 // New modular imports - Chinese
 import cnCommon from "@/locales/cn/common.json";
@@ -154,6 +155,7 @@ import cnHelpAcquisition from "@/locales/cn/components/helpAcquisition.json";
 import cnHelpMultiDevice from "@/locales/cn/components/helpMultiDevice.json";
 import cnHelpDataSync from "@/locales/cn/components/helpDataSync.json";
 import cnNotices from "@/locales/cn/components/notices.json";
+import cnNavigationEditor from "@/locales/cn/components/navigationEditor.json";
 
 // Merge all English resources
 const enResources = {
@@ -230,6 +232,7 @@ const enResources = {
   ...enHelpMultiDevice,
   ...enHelpDataSync,
   ...enNotices,
+  ...enNavigationEditor,
 };
 
 // Merge all Chinese resources
@@ -307,6 +310,7 @@ const cnResources = {
   ...cnHelpMultiDevice,
   ...cnHelpDataSync,
   ...cnNotices,
+  ...cnNavigationEditor,
 };
 
 // 只初始化一次，防止热更新或多次 import 时重复初始化

@@ -17,6 +17,8 @@ namespace Bakabase.InsideWorld.Models.Configs
 
         public bool IsMenuCollapsed { get; set; }
 
+        public UINavigationLayout? NavigationLayout { get; set; }
+
         public bool ShowResourceUsage { get; set; } = true;
 
         public bool HideResourceCovers { get; set; }

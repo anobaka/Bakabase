@@ -11416,6 +11416,7 @@ export interface components {
             resource?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIOptions+UIResourceOptions"];
             startupPage?: components["schemas"]["Bakabase.InsideWorld.Models.Constants.StartupPage"];
             isMenuCollapsed?: boolean;
+            navigationLayout?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UINavigationLayout"];
             showResourceUsage?: boolean;
             hideResourceCovers?: boolean;
             resourceDetailLayout?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIOptions+ResourceDetailLayoutConfig"];
@@ -11890,10 +11891,27 @@ export interface components {
             name: string;
             urlTemplate: string;
         };
+        "Bakabase.InsideWorld.Models.Configs.UINavigationLayout": {
+            /** Format: int32 */
+            version: number;
+            items: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UINavigationNode"][];
+            knownCatalogIds: string[];
+            directoryAliases: {
+                [key: string]: string;
+            };
+        };
+        "Bakabase.InsideWorld.Models.Configs.UINavigationNode": {
+            id: string;
+            kind: string;
+            name?: string;
+            hidden: boolean;
+            children?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UINavigationNode"][];
+        };
         "Bakabase.InsideWorld.Models.Configs.UIOptions": {
             resource: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIOptions+UIResourceOptions"];
             startupPage: components["schemas"]["Bakabase.InsideWorld.Models.Constants.StartupPage"];
             isMenuCollapsed: boolean;
+            navigationLayout?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UINavigationLayout"];
             showResourceUsage: boolean;
             hideResourceCovers: boolean;
             resourceDetailLayout?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIOptions+ResourceDetailLayoutConfig"];
