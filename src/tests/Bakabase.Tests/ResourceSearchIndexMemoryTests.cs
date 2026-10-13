@@ -226,9 +226,9 @@ public sealed partial class ResourceSearchIndexIncrementalTests
             Assert.IsNotNull(andComparison, "an empty numeric index is data, not an unsupported query");
             Assert.AreEqual(0, andComparison.Count,
                 "the remaining filename match has no numeric value and must not pass the AND comparison");
-            Assert.AreEqual(0, (await MemorySearch(
-                MemoryPropertyFilter(number.ToProperty(), SearchOperation.NotEquals, 0m)))!.Count,
-                "missing range values must retain the established range-query semantics");
+            CollectionAssert.AreEquivalent(new[] { apple }, (await MemorySearch(
+                MemoryPropertyFilter(number.ToProperty(), SearchOperation.NotEquals, 0m)))!.ToArray(),
+                "an absent numeric property must keep the original fresh-index NotEquals complement");
             CollectionAssert.AreEquivalent(new[] { apple }, (await MemorySearch(
                 MemoryPropertyFilter(text.ToProperty(), SearchOperation.NotEquals, "held-value")))!.ToArray());
             CollectionAssert.AreEquivalent(new[] { apple }, (await MemorySearch(

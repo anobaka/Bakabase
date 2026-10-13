@@ -1321,7 +1321,7 @@ public class ResourceSearchIndexService : IResourceSearchIndexService
         var poolRangeIndex = _index.RangeIndex.GetValueOrDefault(filter.PropertyPool);
         var propRangeIndex = poolRangeIndex?.GetValueOrDefault(filter.PropertyId);
 
-        List<KeyValuePair<IComparable, HashSet<int>>> rangeIndexList = [];
+        List<KeyValuePair<IComparable, HashSet<int>>>? rangeIndexList = [];
         if (propRangeIndex != null)
         {
             lock (propRangeIndex)
@@ -1334,6 +1334,12 @@ public class ResourceSearchIndexService : IResourceSearchIndexService
                     .ToList();
             }
         }
+
+        // Without any range values, NotEquals uses the value index's complement,
+        // as a fresh index did before empty buckets were pruned. Comparisons must
+        // keep an empty range snapshot so they cannot become unconstrained.
+        if (filter.Operation == SearchOperation.NotEquals && rangeIndexList.Count == 0)
+            rangeIndexList = null;
 
         // Get all resource IDs
         HashSet<int> allResourceIds;
