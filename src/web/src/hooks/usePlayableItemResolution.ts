@@ -42,6 +42,13 @@ export function usePlayableItemResolution(
   resource: Resource,
   callbacks?: PlayableItemResolutionCallbacks,
 ): PlayableItemResolutionState {
+  const identity = useMemo(
+    () => ({ id: resource.id, reloadToken: resource.reloadToken, path: resource.path }),
+    [resource.id, resource.reloadToken, resource.path],
+  );
+  const latestIdentity = useRef(identity);
+
+  latestIdentity.current = identity;
   // Get playableItem-related dataStates
   const piStates = useMemo(
     () => resource.dataStates?.filter((s) => s.dataType === ResourceDataType.PlayableItem) ?? [],
@@ -49,7 +56,10 @@ export function usePlayableItemResolution(
   );
 
   // SSE-discovered items per origin
-  const [sseItems, setSseItems] = useState<Map<DataOrigin, { items: PlayableItem[] }>>(new Map());
+  const [sseItems, setSseItems] = useState(() => ({
+    owner: identity,
+    items: new Map<DataOrigin, { items: PlayableItem[] }>(),
+  }));
   const subscribedRef = useRef(new Set<DataOrigin>());
   const [manualTriggers, setManualTriggers] = useState<Set<DataOrigin>>(new Set());
 
@@ -78,6 +88,7 @@ export function usePlayableItemResolution(
   // SSE subscription
   useEffect(() => {
     const unsubscribes: (() => void)[] = [];
+    let active = true;
 
     for (const origin of originsToDiscover) {
       if (subscribedRef.current.has(origin)) continue;
@@ -87,37 +98,43 @@ export function usePlayableItemResolution(
 
       resourceDiscoveryChannel
         .subscribe(resource.id, origin, ResourceDataType.PlayableItem, (data, error) => {
+          if (!active || latestIdentity.current !== identity) return;
           callbacks?.onDiscoveryComplete?.(resource.id, origin, data, error);
           // Record completion even when the backend returns no items or an error,
           // otherwise folder-only resources would stay in NotStarted forever.
           setSseItems((prev) => {
-            const next = new Map(prev);
+            if (!active || latestIdentity.current !== identity) return prev;
+            const next = new Map(prev.owner === identity ? prev.items : []);
 
             next.set(origin, {
               items: data?.playableItems ?? [],
             });
 
-            return next;
+            return { owner: identity, items: next };
           });
         })
-        .then((unsub) => unsubscribes.push(unsub));
+        .then((unsub) => {
+          if (active && latestIdentity.current === identity) unsubscribes.push(unsub);
+          else unsub();
+        });
     }
 
     return () => {
+      active = false;
       unsubscribes.forEach((fn) => fn());
       subscribedRef.current = new Set();
     };
-  }, [resource.id, resource.reloadToken, originsToDiscover.join(",")]);
+  }, [identity, originsToDiscover.join(",")]);
 
   // Reset when the resource changes, or when it is force-refreshed (reloadToken bump).
   // A cache rebuild can change the playable files at the same path, so we must drop the
   // previously discovered SSE items — otherwise a stale (often empty) result keeps
   // overriding the freshly returned backend items and the control stays "open folder".
   useEffect(() => {
-    setSseItems(new Map());
+    setSseItems((prev) => (prev.owner === identity ? prev : { owner: identity, items: new Map() }));
     subscribedRef.current = new Set();
     setManualTriggers(new Set());
-  }, [resource.id, resource.reloadToken]);
+  }, [identity]);
 
   // Build groups
   const groups = useMemo((): OriginGroup[] => {
@@ -141,7 +158,7 @@ export function usePlayableItemResolution(
       if (!state) continue; // This origin doesn't apply
 
       // SSE items override backend items for this origin
-      const sseData = sseItems.get(origin);
+      const sseData = sseItems.owner === identity ? sseItems.items.get(origin) : undefined;
       const items = sseData?.items ?? backendItemsByOrigin.get(origin) ?? [];
 
       // Always include applicable origins. The consumer (PlayControl) filters
@@ -155,7 +172,7 @@ export function usePlayableItemResolution(
     }
 
     return result;
-  }, [piStates, resource.playableItems, sseItems]);
+  }, [piStates, resource.playableItems, sseItems, identity]);
 
   const overallStatus = useMemo((): "ready" | "loading" | "not-found" => {
     if (piStates.length === 0) return "not-found";

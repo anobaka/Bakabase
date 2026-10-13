@@ -2,7 +2,7 @@
 
 import type { PlayableItem, Resource as ResourceModel } from "@/core/models/Resource";
 
-import { FolderOutlined, PlayCircleOutlined } from "@ant-design/icons";
+import { FolderOutlined, PlayCircleOutlined, VideoCameraOutlined } from "@ant-design/icons";
 import React, {
   forwardRef,
   useCallback,
@@ -19,7 +19,7 @@ import { usePlaybackPreferences } from "./usePlaybackPreferences";
 import {
   pathMediaType,
   playbackKindForPath,
-  playbackKindForPaths,
+  summarizePlayablePaths,
   resolvePlaybackPreference,
   type PlaybackPreference,
 } from "./playbackPreferences";
@@ -70,6 +70,8 @@ export type PlayControlPortalProps = {
   triggerFsDiscovery: () => void;
   onPlayInBrowser?: () => void;
   onChoosePlayback?: () => void;
+  /** Select a concrete discovered video before choosing its playback method. */
+  onPlayVideos?: () => void;
   browserPlaybackAvailable?: boolean;
   browserPlaybackIsDefault?: boolean;
   playbackCaption?: string;
@@ -98,9 +100,9 @@ type File = {
   path: string;
 };
 
-const splitIntoDirs = (paths: string[], prefix: string): Directory[] => {
+const splitIntoDirs = (paths: string[], prefix?: string): Directory[] => {
   const groups: Directory[] = [];
-  const stdPrefix = standardizePath(prefix)!;
+  const stdPrefix = standardizePath(prefix) ?? "";
 
   for (const path of paths) {
     const stdPath = standardizePath(path)!;
@@ -138,6 +140,7 @@ const splitIntoDirs = (paths: string[], prefix: string): Directory[] => {
 };
 
 const DefaultVisibleFileCount = 5;
+const VideoSelectionPageSize = 50;
 
 /**
  * Ask whichever machine is meant to play this to play it.
@@ -175,11 +178,29 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
   const [modalVisible, setModalVisible] = useState(false);
   const [modalSource, setModalSource] = useState<DataOrigin | null>(null);
   const [modalPlaybackOverride, setModalPlaybackOverride] = useState<PlaybackPreference>();
+  const [videoSelectionVisible, setVideoSelectionVisible] = useState(false);
+  const [visibleVideoCount, setVisibleVideoCount] = useState(VideoSelectionPageSize);
+
+  const effectiveGroups = useMemo(
+    () =>
+      resolution.groups.map((group) => ({
+        ...group,
+        items:
+          group.origin === DataOrigin.FileSystem
+            ? group.status === DataStatus.Ready
+              ? group.items.filter(
+                  (item) => typeof item.key === "string" && item.key.trim().length > 0,
+                )
+              : []
+            : group.items,
+      })),
+    [resolution.groups],
+  );
 
   // Map resolution groups to SourceEntry[] for the PortalComponent
   const sources: SourceEntry[] = useMemo(
     () =>
-      resolution.groups
+      effectiveGroups
         .filter((g) => g.items.length > 0)
         .map((g) => ({ source: g.origin, items: g.items }))
         .sort((a, b) =>
@@ -188,37 +209,47 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
               Number(a.source === DataOrigin.FileSystem)
             : 0,
         ),
-    [resolution.groups, userSideActionsRunHere],
+    [effectiveGroups, userSideActionsRunHere],
   );
 
   // Build sourceGroups map for handlePlaySource
   const sourceGroups = useMemo(() => {
     const groups = new Map<DataOrigin, PlayableItem[]>();
 
-    for (const g of resolution.groups) {
+    for (const g of effectiveGroups) {
       if (g.items.length > 0) {
         groups.set(g.origin, g.items);
       }
     }
 
     return groups;
-  }, [resolution.groups]);
+  }, [effectiveGroups]);
 
   // All playable items from all groups
-  const playableItems = useMemo(
-    () => resolution.groups.flatMap((g) => g.items),
-    [resolution.groups],
+  const playableItems = useMemo(() => effectiveGroups.flatMap((g) => g.items), [effectiveGroups]);
+  const fsItems = useMemo(
+    () => playableItems.filter((item) => item.origin === DataOrigin.FileSystem),
+    [playableItems],
   );
-  const fsItems = playableItems.filter((item) => item.origin === DataOrigin.FileSystem);
-  const resourceKind = resource.isFile
-    ? playbackKindForPath(resource.path)
-    : playbackKindForPaths(fsItems.map((item) => item.key));
+  const collection = useMemo(
+    () =>
+      summarizePlayablePaths(
+        fsItems.length > 0
+          ? fsItems.map((item) => item.key)
+          : resource.isFile && resource.path
+            ? [resource.path]
+            : [],
+      ),
+    [fsItems, resource.isFile, resource.path],
+  );
+  const resourceKind = collection.kind;
   const representativePath = fsItems[0]?.key ?? resource.path;
   const preferredPlayback = resolvePlaybackPreference(
     playback.preferences[resourceKind],
     userSideActionsRunHere,
-    pathMediaType(representativePath),
+    collection.mediaType,
     preferredDevicePlatform(),
+    collection.isMixed,
   );
   const playbackCaption =
     preferredPlayback.mode === "browser"
@@ -260,15 +291,11 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
 
   // Map overall status
   const status: PlayControlStatus = useMemo(() => {
-    switch (resolution.overallStatus) {
-      case "ready":
-        return "ready";
-      case "loading":
-        return "loading";
-      case "not-found":
-        return fsDiscoveryStatus === "idle" ? "idle" : "not-found";
-    }
-  }, [resolution.overallStatus, fsDiscoveryStatus]);
+    if (effectiveGroups.some((group) => group.items.length > 0)) return "ready";
+    if (effectiveGroups.some((group) => group.status === DataStatus.NotStarted)) return "loading";
+
+    return fsDiscoveryStatus === "idle" ? "idle" : "not-found";
+  }, [effectiveGroups, fsDiscoveryStatus]);
 
   // Update dirs from filesystem playable files
   useEffect(() => {
@@ -286,6 +313,7 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
     setDirs(undefined);
     setModalSource(null);
     setModalPlaybackOverride(undefined);
+    setVideoSelectionVisible(false);
   }, [resource.id]);
 
   useImperativeHandle(
@@ -324,7 +352,12 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
       resource,
       filePath: selectedPath,
       kind: item ? playbackKindForPath(selectedPath) : resourceKind,
+      isMixed: !item && collection.isMixed,
       onPlayInBrowser: () => playInBrowser(item?.key),
+      onPlayVideos:
+        !item && videoItems.length > 0 && fsDiscoveryStatus === "ready"
+          ? handlePlayVideos
+          : undefined,
       onPlayNative: userSideActionsRunHere
         ? () =>
             item
@@ -333,6 +366,20 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
         : undefined,
       onRememberChoice: playback.save,
     });
+  };
+
+  const videoItems = useMemo(() => {
+    const fsItemsByPath = new Map(fsItems.map((item) => [item.key, item]));
+
+    return collection.videoPaths.map((path) => fsItemsByPath.get(path)!).filter(Boolean);
+  }, [fsItems, collection.videoPaths]);
+  const handlePlayVideos = () => {
+    if (!playback.ready || fsDiscoveryStatus !== "ready") return;
+    if (videoItems.length === 1) choosePlayback(videoItems[0]);
+    else if (videoItems.length > 1) {
+      setVisibleVideoCount(VideoSelectionPageSize);
+      setVideoSelectionVisible(true);
+    }
   };
 
   const playItem = async (item: PlayableItem, override?: PlaybackPreference) => {
@@ -455,6 +502,7 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
       playback.preferences,
       resourceKind,
       userSideActionsRunHere,
+      collection.isMixed,
     ],
   );
 
@@ -495,7 +543,50 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
         onOpenFolder={handleOpenFolder}
         onPlayInBrowser={() => playInBrowser()}
         onPlaySource={handlePlaySource}
+        onPlayVideos={
+          videoItems.length > 0 && fsDiscoveryStatus === "ready" ? handlePlayVideos : undefined
+        }
       />
+      <Modal
+        footer={false}
+        size="md"
+        title={t("resource.playback.selectVideo")}
+        visible={videoSelectionVisible}
+        onClose={() => setVideoSelectionVisible(false)}
+      >
+        <p className="pb-2 text-xs text-foreground-500">
+          {t("resource.playback.videoCount", { count: videoItems.length })}
+        </p>
+        <div className="flex max-h-[50vh] flex-col gap-1 overflow-y-auto">
+          {videoItems.slice(0, visibleVideoCount).map((item) => (
+            <Button
+              key={item.key}
+              fullWidth
+              className="h-auto justify-start gap-2 px-2 py-2 text-left"
+              size="sm"
+              variant="flat"
+              onPress={() => {
+                setVideoSelectionVisible(false);
+                choosePlayback(item);
+              }}
+            >
+              <VideoCameraOutlined className="shrink-0 text-base" />
+              <span className="min-w-0 break-all">
+                {item.displayName ?? item.key.split(/[/\\]/).pop()}
+              </span>
+            </Button>
+          ))}
+          {visibleVideoCount < videoItems.length && (
+            <Button
+              size="sm"
+              variant="light"
+              onPress={() => setVisibleVideoCount((count) => count + VideoSelectionPageSize)}
+            >
+              {t("resource.playback.loadMoreVideos")}
+            </Button>
+          )}
+        </div>
+      </Modal>
       <Modal
         footer={false}
         size={"lg"}

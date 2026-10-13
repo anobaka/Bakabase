@@ -9,6 +9,7 @@ import {
   PLAYBACK_PREFERENCE_KEY,
   readBrowserPlaybackPreferences,
   resolvePlaybackPreference,
+  summarizePlayablePaths,
 } from "./playbackPreferences";
 
 import { MediaType } from "@/sdk/constants";
@@ -16,6 +17,62 @@ import { MediaType } from "@/sdk/constants";
 beforeEach(() => localStorage.clear());
 
 describe("current-device playback preferences", () => {
+  it.each([
+    ["/folder/cover.jpg", "/folder/movie.mkv"],
+    ["/folder/movie.mkv", "/folder/cover.jpg"],
+    ["/folder/track.flac", "/folder/movie.mp4"],
+    ["/folder/unknown.bin", "/folder/movie.mp4"],
+  ])("summarizes differing media kinds from the full valid collection", (...paths) => {
+    const collection = summarizePlayablePaths(paths);
+
+    expect(collection).toMatchObject({
+      kind: "other",
+      mediaType: MediaType.Unknown,
+      isMixed: true,
+    });
+    expect(
+      resolvePlaybackPreference(
+        { mode: "automatic" },
+        true,
+        collection.mediaType,
+        "windows",
+        collection.isMixed,
+      ),
+    ).toEqual({ mode: "browser" });
+  });
+
+  it("deduplicates and ignores invalid keys without treating Application and Unknown as different playback kinds", () => {
+    expect(
+      summarizePlayablePaths(["/folder/movie.mkv", "", " ", "/folder/movie.mkv"]).videoPaths,
+    ).toEqual(["/folder/movie.mkv"]);
+    expect(summarizePlayablePaths(["/folder/game.exe", "/folder/unknown.bin"])).toMatchObject({
+      kind: "other",
+      isMixed: false,
+    });
+    expect(summarizePlayablePaths(["/folder/001.jpg", "/folder/002.png"])).toMatchObject({
+      kind: "image",
+      mediaType: MediaType.Image,
+      isMixed: false,
+    });
+  });
+
+  it("keeps explicit modes ahead of mixed automatic, requiring file choice for browser native", () => {
+    expect(
+      resolvePlaybackPreference({ mode: "native" }, true, MediaType.Unknown, "windows", true),
+    ).toEqual({ mode: "native" });
+    expect(
+      resolvePlaybackPreference({ mode: "ask" }, true, MediaType.Unknown, "windows", true),
+    ).toEqual({ mode: "ask" });
+    expect(
+      resolvePlaybackPreference(
+        { mode: "native", nativeSchemeId: "potplayer-windows" },
+        false,
+        MediaType.Unknown,
+        "windows",
+        true,
+      ),
+    ).toEqual({ mode: "ask" });
+  });
   it.each([MediaType.Image, MediaType.Text, MediaType.Audio, MediaType.Video, MediaType.Unknown])(
     "keeps browser automatic on the web and configured API automatic on desktop for %s",
     (type) => {

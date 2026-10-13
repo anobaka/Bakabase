@@ -337,5 +337,10 @@
   "resource.playback.resetDefault": "恢复默认方式",
   "resource.playback.chooseMethod": "选择打开方式",
   "resource.playback.usePlayer": "使用 {{player}} 打开",
-  "resource.playback.browserQuickAction": "在浏览器中打开"
+  "resource.playback.browserQuickAction": "在浏览器中打开",
+  "resource.playback.playVideos": "播放其中的视频",
+  "resource.playback.selectVideo": "选择要播放的视频",
+  "resource.playback.mixedHint": "此资源已发现不同类型的文件，默认在网页中浏览。要使用播放器打开视频，请先选择具体视频。",
+  "resource.playback.videoCount": "已发现 {{count}} 个视频",
+  "resource.playback.loadMoreVideos": "显示更多视频"
 }

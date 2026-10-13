@@ -54,6 +54,32 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("remembering the current device's opening method", () => {
+  it.each(["/album/cover.jpg", "/album/movie.mkv"])(
+    "shows collection browsing + video selection for mixed resources without first-file players or links: %s",
+    (filePath) => {
+      const videos = vi.fn();
+
+      render(
+        <PlayOnThisDevice
+          isMixed
+          filePath={filePath}
+          kind="other"
+          resource={{ id: 42 } as any}
+          onPlayInBrowser={mocks.browser}
+          onPlayNative={mocks.native}
+          onPlayVideos={videos}
+          onRememberChoice={mocks.save}
+        />,
+      );
+      expect(screen.queryByText("PotPlayer")).toBeNull();
+      expect(screen.queryByText("resource.playOnThisDevice.desktopPlayer")).toBeNull();
+      expect(screen.queryByRole("textbox")).toBeNull();
+      fireEvent.click(screen.getByText("resource.playback.playVideos"));
+      expect(videos).toHaveBeenCalledOnce();
+      expect(mocks.native).not.toHaveBeenCalled();
+      expect(mocks.browser).not.toHaveBeenCalled();
+    },
+  );
   it("uses a one-time browser choice unless remembering is selected", () => {
     show();
     fireEvent.click(screen.getByText("resource.playOnThisDevice.viewInBrowser"));

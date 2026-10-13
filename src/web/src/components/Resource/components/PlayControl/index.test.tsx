@@ -83,6 +83,7 @@ const Portal = (props: PlayControlPortalProps) => {
       <button onClick={() => props.onPlaySource(props.sources[0]!.source)}>main</button>
       <button onClick={props.onChoosePlayback}>choose</button>
       <button onClick={props.onPlayInBrowser}>browser</button>
+      {props.onPlayVideos && <button onClick={props.onPlayVideos}>videos</button>}
     </>
   );
 };
@@ -227,20 +228,34 @@ describe("playback routing on the current device", () => {
 });
 
 describe("compact playback alternatives", () => {
+  const props = (overrides: Partial<PlayControlPortalProps>): PlayControlPortalProps => ({
+    status: "ready",
+    sources: [],
+    hasPath: true,
+    isFile: true,
+    fsDiscoveryStatus: "ready",
+    onPlaySource: vi.fn(),
+    onOpenFolder: vi.fn(),
+    openFolderLabel: "Open folder",
+    onNotFound: vi.fn(),
+    triggerFsDiscovery: vi.fn(),
+    ...overrides,
+  });
+
   it("avoids duplicating a browser main action and keeps the chooser reachable", () => {
     const choose = vi.fn();
     const browser = vi.fn();
 
     render(
       <PlaybackQuickActions
-        {...({
+        {...props({
           browserPlaybackAvailable: true,
           browserPlaybackIsDefault: true,
           playbackReady: true,
           sources: [fs([resource.path])].map((g) => ({ source: g.origin, items: g.items })),
           onChoosePlayback: choose,
           onPlayInBrowser: browser,
-        } as PlayControlPortalProps)}
+        })}
       />,
     );
     expect(screen.queryByLabelText("resource.playback.browserQuickAction")).toBeNull();
@@ -254,16 +269,185 @@ describe("compact playback alternatives", () => {
 
     render(
       <PlaybackQuickActions
-        {...({
+        {...props({
           browserPlaybackAvailable: true,
           playbackReady: true,
           sources: [],
           onChoosePlayback: vi.fn(),
           onPlayInBrowser: browser,
-        } as unknown as PlayControlPortalProps)}
+        })}
       />,
     );
     fireEvent.click(screen.getByLabelText("resource.playback.browserQuickAction"));
     expect(browser).toHaveBeenCalledOnce();
+  });
+});
+
+describe("mixed media and selecting individual videos", () => {
+  const folder = { ...resource, isFile: false, path: "/album" };
+  const mixed = ["/album/001.jpg", "/album/movie.mkv"];
+
+  it("groups discovered files safely when their resource directory path is absent", async () => {
+    fixture.desktop = true;
+    fixture.groups = [fs(["/album/first.mp4", "/album/second.mp4"])];
+    show({ ...folder, path: undefined });
+    fireEvent.click(screen.getByText("main"));
+    expect(screen.getByText("first.mp4")).toBeInTheDocument();
+    await act(async () => fireEvent.click(screen.getByText("second.mp4")));
+    expect(fixture.native).toHaveBeenCalledWith(42, {
+      origin: DataOrigin.FileSystem,
+      key: "/album/second.mp4",
+    });
+  });
+
+  it.each([{ paths: mixed }, { paths: [...mixed].reverse() }])(
+    "defaults the full desktop mixed collection to web regardless of first file",
+    async ({ paths }) => {
+      fixture.desktop = true;
+      fixture.first = true;
+      fixture.groups = [steam, fs(paths)];
+      show(folder);
+      expect(portal.sources[0]!.source).toBe(DataOrigin.FileSystem);
+      expect(portal.browserPlaybackIsDefault).toBe(true);
+      await act(async () => fireEvent.click(screen.getByText("main")));
+      expect(fixture.browser).toHaveBeenCalledWith(folder, undefined);
+      expect(fixture.native).not.toHaveBeenCalled();
+      expect(fixture.portal).not.toHaveBeenCalled();
+    },
+  );
+
+  it("retains an explicit mixed native preference, passing only the chosen item to the desktop API", async () => {
+    fixture.desktop = true;
+    fixture.preferences.other = { mode: "native" };
+    fixture.groups = [fs(mixed)];
+    show(folder);
+    fireEvent.click(screen.getByText("main"));
+    expect(fixture.browser).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    await act(async () => fireEvent.click(screen.getByText("movie.mkv")));
+    expect(fixture.native).toHaveBeenCalledWith(42, {
+      origin: DataOrigin.FileSystem,
+      key: mixed[1],
+    });
+  });
+
+  it.each([true, false])(
+    "retains Ask for the entire mixed collection, and exposes video selection without guessing an AV scheme (desktop=%s)",
+    (desktop) => {
+      fixture.desktop = desktop;
+      fixture.preferences.other = { mode: "ask" };
+      fixture.groups = [fs(mixed)];
+      show(folder);
+      fireEvent.click(screen.getByText("main"));
+      expect(fixture.portal.mock.lastCall![1]).toMatchObject({
+        kind: "other",
+        isMixed: true,
+        onPlayVideos: expect.any(Function),
+      });
+      expect(fixture.browser).not.toHaveBeenCalled();
+      expect(fixture.native).not.toHaveBeenCalled();
+    },
+  );
+
+  it("asks for a concrete file for a browser-native mixed preference instead of applying a handler to the first file", () => {
+    fixture.preferences.other = { mode: "native", nativeSchemeId: "potplayer-windows" };
+    fixture.groups = [fs(mixed)];
+    show(folder);
+    fireEvent.click(screen.getByText("main"));
+    expect(fixture.portal.mock.lastCall![1]).toMatchObject({ isMixed: true });
+    expect(fixture.browser).not.toHaveBeenCalled();
+    expect(fixture.native).not.toHaveBeenCalled();
+  });
+
+  it.each([true, false])(
+    "directly selects a sole video, preserving original gallery for web and single filepath for native (desktop=%s)",
+    async (desktop) => {
+      fixture.desktop = desktop;
+      fixture.groups = [fs(mixed)];
+      show(folder);
+      fireEvent.click(screen.getByText("videos"));
+      const choice = fixture.portal.mock.lastCall![1];
+
+      expect(choice).toMatchObject({
+        resource: folder,
+        filePath: mixed[1],
+        kind: "video",
+        isMixed: false,
+      });
+      expect(screen.queryByRole("dialog")).toBeNull();
+      await act(async () => choice.onPlayInBrowser());
+      expect(fixture.browser).toHaveBeenCalledWith(folder, mixed[1]);
+      if (desktop) {
+        await act(async () => choice.onPlayNative());
+        expect(fixture.native).toHaveBeenCalledWith(42, {
+          origin: DataOrigin.FileSystem,
+          key: mixed[1],
+        });
+      } else expect(choice.onPlayNative).toBeUndefined();
+    },
+  );
+
+  it("lists only videos when multiple exist, even when auto-select-first is enabled", () => {
+    fixture.first = true;
+    fixture.groups = [fs([...mixed, "/album/second.MP4", "/album/readme.txt"])];
+    show(folder);
+    fireEvent.click(screen.getByText("videos"));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.queryByText("001.jpg")).toBeNull();
+    expect(screen.queryByText("readme.txt")).toBeNull();
+    expect(screen.getByText("movie.mkv")).toBeInTheDocument();
+    expect(fixture.portal).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByText("second.MP4"));
+    expect(fixture.portal.mock.lastCall![1]).toMatchObject({
+      filePath: "/album/second.MP4",
+      kind: "video",
+      isMixed: false,
+    });
+    expect(fixture.native).not.toHaveBeenCalled();
+    expect(fixture.browser).not.toHaveBeenCalled();
+  });
+
+  it("bounds a large video selector to 50 initial files and adds another page on request", () => {
+    fixture.groups = [
+      fs([
+        "/album/cover.jpg",
+        ...Array.from({ length: 1000 }, (_, index) => `/album/video-${index}.mp4`),
+      ]),
+    ];
+    show(folder);
+    fireEvent.click(screen.getByText("videos"));
+    const rows = () => screen.queryAllByText(/^video-\d+\.mp4$/);
+
+    expect(rows()).toHaveLength(50);
+    expect(screen.queryByText("video-50.mp4")).toBeNull();
+    expect(screen.getByText("resource.playback.videoCount")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("resource.playback.loadMoreVideos"));
+    expect(rows()).toHaveLength(100);
+    fireEvent.click(screen.getByText("video-99.mp4"));
+    expect(fixture.portal.mock.lastCall![1]).toMatchObject({
+      filePath: "/album/video-99.mp4",
+      kind: "video",
+    });
+  });
+
+  it("hides video actions during discovery and updates from completed effective sources, dropping absent/invalid video paths", () => {
+    fixture.groups = [steam, { ...fs(mixed), status: DataStatus.NotStarted }];
+    const view = show(folder);
+
+    expect(portal.onPlayVideos).toBeUndefined();
+    expect(portal.sources.some((source) => source.source === DataOrigin.FileSystem)).toBe(false);
+    fixture.groups = [{ ...fs(mixed), status: DataStatus.Failed }];
+    view.rerender(<PlayControl PortalComponent={Portal} resource={folder} />);
+    expect(portal.onPlayVideos).toBeUndefined();
+    fixture.groups = [fs([])];
+    view.rerender(<PlayControl PortalComponent={Portal} resource={folder} />);
+    expect(portal.onPlayVideos).toBeUndefined();
+    fixture.groups = [fs([...mixed, "", "  ", undefined as unknown as string])];
+    view.rerender(<PlayControl PortalComponent={Portal} resource={folder} />);
+    expect(portal.onPlayVideos).toBeTypeOf("function");
+    expect(portal.sources[0]!.items).toHaveLength(2);
+    fixture.groups = [fs([mixed[0]!])];
+    view.rerender(<PlayControl PortalComponent={Portal} resource={folder} />);
+    expect(portal.onPlayVideos).toBeUndefined();
   });
 });

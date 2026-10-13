@@ -21,7 +21,7 @@ import {
 import { Button, Checkbox, Chip, Modal, Select, toast } from "@/components/bakaui";
 import { copyTextToClipboard } from "@/core/clipboard";
 import BApi from "@/sdk/BApi";
-import { type MediaType } from "@/sdk/constants";
+import { MediaType } from "@/sdk/constants";
 
 const platformOptions: DevicePlatform[] = ["android", "ios", "windows", "macos", "linux"];
 
@@ -29,6 +29,8 @@ type Props = DestroyableProps & {
   resource: ResourceModel;
   filePath: string;
   kind?: PlaybackKind;
+  isMixed?: boolean;
+  onPlayVideos?: () => void;
   onPlayInBrowser: () => void;
   /** The desktop/relay's existing configured-player action, never a browser URI handler. */
   onPlayNative?: () => void;
@@ -39,6 +41,8 @@ const PlayOnThisDevice = ({
   resource,
   filePath,
   kind: kindOverride,
+  isMixed = false,
+  onPlayVideos,
   onPlayInBrowser,
   onPlayNative,
   onRememberChoice,
@@ -48,7 +52,10 @@ const PlayOnThisDevice = ({
   const [copyFeedback, setCopyFeedback] = useState<string>();
   const [rememberChoice, setRememberChoice] = useState(false);
   const [platform, setPlatform] = useState<DevicePlatform>(preferredDevicePlatform);
-  const mediaType = useMemo(() => pathMediaType(filePath), [filePath]);
+  const mediaType = useMemo(
+    () => (isMixed ? MediaType.Unknown : pathMediaType(filePath)),
+    [filePath, isMixed],
+  );
   const kind = kindOverride ?? playbackKindForPath(filePath);
   const nativePlaybackSupported = isNativePlayerMediaType(mediaType);
   const streamUrl = useMemo(
@@ -110,7 +117,19 @@ const PlayOnThisDevice = ({
               : "resource.playOnThisDevice.viewInBrowser",
           )}
         </Button>
-        {onPlayNative ? (
+        {onPlayVideos && (
+          <Button
+            fullWidth
+            variant="flat"
+            onPress={() => {
+              onPlayVideos();
+              onDestroyed?.();
+            }}
+          >
+            {t("resource.playback.playVideos")}
+          </Button>
+        )}
+        {!isMixed && onPlayNative ? (
           <Button
             fullWidth
             variant="flat"
@@ -123,6 +142,7 @@ const PlayOnThisDevice = ({
             {t("resource.playOnThisDevice.desktopPlayer")}
           </Button>
         ) : (
+          !isMixed &&
           nativePlaybackSupported && (
             <div className="flex flex-col gap-2">
               <div className="flex items-center justify-between gap-2">
@@ -196,39 +216,45 @@ const PlayOnThisDevice = ({
           <div className="flex flex-col gap-2 pt-3">
             <p className="text-xs text-foreground-400">
               {t(
-                nativePlaybackSupported
-                  ? "resource.playOnThisDevice.nativePlayersHint"
-                  : "resource.playOnThisDevice.fileBrowserHint",
+                isMixed
+                  ? "resource.playback.mixedHint"
+                  : nativePlaybackSupported
+                    ? "resource.playOnThisDevice.nativePlayersHint"
+                    : "resource.playOnThisDevice.fileBrowserHint",
               )}
             </p>
-            <label className="flex flex-col gap-1 text-sm">
-              <span>
-                {t(
-                  nativePlaybackSupported
-                    ? "resource.playOnThisDevice.streamUrl"
-                    : "resource.playOnThisDevice.fileUrl",
-                )}
-              </span>
-              <textarea
-                readOnly
-                className="w-full resize-none rounded-lg border border-default-200 bg-default-100 p-2 font-mono text-xs"
-                rows={2}
-                value={streamUrl}
-                onFocus={(event) => event.currentTarget.select()}
-              />
-            </label>
-            <Button
-              fullWidth
-              size="sm"
-              startContent={<AiOutlineCopy />}
-              variant="light"
-              onPress={copyStreamUrl}
-            >
-              {t("resource.playOnThisDevice.copyStreamUrl")}
-            </Button>
-            <div aria-live="polite" className="text-xs">
-              {copyFeedback}
-            </div>
+            {!isMixed && (
+              <>
+                <label className="flex flex-col gap-1 text-sm">
+                  <span>
+                    {t(
+                      nativePlaybackSupported
+                        ? "resource.playOnThisDevice.streamUrl"
+                        : "resource.playOnThisDevice.fileUrl",
+                    )}
+                  </span>
+                  <textarea
+                    readOnly
+                    className="w-full resize-none rounded-lg border border-default-200 bg-default-100 p-2 font-mono text-xs"
+                    rows={2}
+                    value={streamUrl}
+                    onFocus={(event) => event.currentTarget.select()}
+                  />
+                </label>
+                <Button
+                  fullWidth
+                  size="sm"
+                  startContent={<AiOutlineCopy />}
+                  variant="light"
+                  onPress={copyStreamUrl}
+                >
+                  {t("resource.playOnThisDevice.copyStreamUrl")}
+                </Button>
+                <div aria-live="polite" className="text-xs">
+                  {copyFeedback}
+                </div>
+              </>
+            )}
             {onRememberChoice && (
               <div className="flex flex-wrap gap-1">
                 <Button

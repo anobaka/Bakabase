@@ -1,5 +1,7 @@
+using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Remoting.Components.Connection;
 using Bakabase.Modules.Player.Abstractions.Components;
+using Bakabase.Modules.Player.Components;
 using Microsoft.Extensions.Logging;
 
 namespace Bakabase.Remoting.Components.BatchPlay;
@@ -14,14 +16,51 @@ namespace Bakabase.Remoting.Components.BatchPlay;
 /// </remarks>
 public sealed class UpstreamBatchPlayResourceSource(
     IUpstreamApi upstream,
+    IPlayerExecutableLocator players,
     ILogger<UpstreamBatchPlayResourceSource> logger) : IBatchPlayResourceSource
 {
     public async Task<BatchPlayResourceSnapshot> GetSnapshotAsync(int[] resourceIds, CancellationToken ct)
     {
-        return await upstream.GetBatchPlayResourceSnapshotAsync(resourceIds, ct) ??
-               throw new InvalidOperationException(
-                   "Could not ask the server what is playable in the selection. " +
-                   "Check that it is still reachable.");
+        var snapshot = await upstream.GetBatchPlayResourceSnapshotAsync(resourceIds, ct) ??
+                       throw new InvalidOperationException(
+                           "Could not ask the server what is playable in the selection. " +
+                           "Check that it is still reachable.");
+
+        // Profile paths name programs on the managed server, not this computer.
+        // Like single-file playback, only a known player found installed here
+        // can carry that choice across. The shared orchestration then builds
+        // its keys and deduplicates discovery against the actual local path.
+        var configuredPlayers = new List<MediaLibraryPlayer>();
+        foreach (var player in snapshot.ConfiguredPlayers)
+        {
+            ct.ThrowIfCancellationRequested();
+            var known = KnownPlayerDefinitions.MatchByExecutable(player.ExecutablePath);
+            if (known == null) continue;
+            var executable = players.Locate(known).FirstOrDefault();
+            if (executable == null) continue;
+
+            var extensions = player.Extensions?
+                .Where(e => !string.IsNullOrWhiteSpace(e))
+                .Select(e => e.Trim())
+                .Select(e => e.StartsWith('.') ? e : $".{e}")
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            if (extensions is {Count: > 0} && known.SupportedExtensions != null)
+            {
+                // A remote profile cannot turn an AV player into an image
+                // viewer. An empty intersection must be omitted, not passed
+                // as an empty set that the orchestration treats as a default.
+                extensions.IntersectWith(known.SupportedExtensions);
+                if (extensions.Count == 0) continue;
+            }
+            else if (extensions is not {Count: > 0} && known.SupportedExtensions != null)
+            {
+                extensions = known.SupportedExtensions.ToHashSet(StringComparer.OrdinalIgnoreCase);
+            }
+
+            configuredPlayers.Add(player with {ExecutablePath = executable, Extensions = extensions});
+        }
+
+        return snapshot with {ConfiguredPlayers = configuredPlayers};
     }
 
     public async Task MarkPlayedAsync(IReadOnlyDictionary<int, string> playedByResourceId, CancellationToken ct)

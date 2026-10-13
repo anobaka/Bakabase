@@ -1,6 +1,6 @@
 import type { PlayControlPortalProps } from ".";
 
-import { GlobalOutlined, MoreOutlined } from "@ant-design/icons";
+import { GlobalOutlined, MoreOutlined, VideoCameraOutlined } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
 
 import { Button, Tooltip } from "@/components/bakaui";
@@ -14,6 +14,7 @@ const PlaybackQuickActions = ({
   sources,
   onPlayInBrowser,
   onChoosePlayback,
+  onPlayVideos,
   className,
 }: PlayControlPortalProps & { className?: string }) => {
   const { t } = useTranslation();
@@ -36,6 +37,21 @@ const PlaybackQuickActions = ({
             onPress={onPlayInBrowser}
           >
             <GlobalOutlined className="text-lg" />
+          </Button>
+        </Tooltip>
+      )}
+      {onPlayVideos && (
+        <Tooltip content={t("resource.playback.playVideos")}>
+          <Button
+            isIconOnly
+            aria-label={t("resource.playback.playVideos")}
+            className={className}
+            isDisabled={playbackReady === false}
+            size="sm"
+            variant="light"
+            onPress={onPlayVideos}
+          >
+            <VideoCameraOutlined className="text-lg" />
           </Button>
         </Tooltip>
       )}

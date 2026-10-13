@@ -86,15 +86,36 @@ export const playbackKindForPaths = (paths: string[]): PlaybackKind => {
   return kinds.size === 1 ? [...kinds][0]! : "other";
 };
 
+/** Describe the effective collection, including unknown files, without guessing from its first item. */
+export const summarizePlayablePaths = (paths: string[]) => {
+  const validPaths = [
+    ...new Set(paths.filter((path) => typeof path === "string" && path.trim().length > 0)),
+  ];
+  const types = new Set(validPaths.map(pathMediaType));
+  const kinds = new Set(validPaths.map(playbackKindForPath));
+  const isMixed = kinds.size > 1;
+  const mediaType = types.size === 1 ? [...types][0]! : MediaType.Unknown;
+
+  return {
+    kind: playbackKindForPaths(validPaths),
+    mediaType,
+    isMixed,
+    videoPaths: validPaths.filter((path) => pathMediaType(path) === MediaType.Video),
+  };
+};
+
 export type EffectivePlayback = { mode: "browser" | "native" | "ask"; scheme?: PlayerScheme };
 export const resolvePlaybackPreference = (
   preference: PlaybackPreference,
   desktop: boolean,
   mediaType: MediaType,
   platform: DevicePlatform,
+  isMixed = false,
 ): EffectivePlayback => {
-  if (preference.mode === "automatic") return { mode: desktop ? "native" : "browser" };
+  if (preference.mode === "automatic") return { mode: desktop && !isMixed ? "native" : "browser" };
   if (preference.mode !== "native" || desktop) return { mode: preference.mode };
+  // A protocol handler must receive one selected media file, never a mixed collection.
+  if (isMixed) return { mode: "ask" };
   // URI handlers are AV-only. Images/text stay viewable even if an old preference names a video player.
   if (mediaType !== MediaType.Audio && mediaType !== MediaType.Video) return { mode: "browser" };
   const scheme = schemesForPlatform(platform, mediaType).find(

@@ -341,5 +341,10 @@
   "resource.playback.resetDefault": "Restore default",
   "resource.playback.chooseMethod": "Choose how to open",
   "resource.playback.usePlayer": "Open with {{player}}",
-  "resource.playback.browserQuickAction": "Open in browser"
+  "resource.playback.browserQuickAction": "Open in browser",
+  "resource.playback.playVideos": "Play videos in this resource",
+  "resource.playback.selectVideo": "Choose a video to play",
+  "resource.playback.mixedHint": "Different file types were discovered for this resource, which opens in the browser by default. Select a specific video to open it in a player.",
+  "resource.playback.videoCount": "{{count}} discovered videos",
+  "resource.playback.loadMoreVideos": "Show more videos"
 }

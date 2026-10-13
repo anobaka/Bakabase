@@ -10,6 +10,7 @@ using Bakabase.Remoting.Components.BatchPlay;
 using Bakabase.Remoting.Components.Connection;
 using Bakabase.Remoting.Components.UserMachine;
 using Bakabase.Modules.Player.Abstractions.Components;
+using Bakabase.Modules.Player.Abstractions.Models.Domain;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -119,7 +120,12 @@ public class ClientBatchPlayTests
     // ---- reading the library ----
 
     private UpstreamBatchPlayResourceSource ResourceSource() =>
-        new(_upstream, NullLogger<UpstreamBatchPlayResourceSource>.Instance);
+        new(_upstream, new NoInstalledPlayers(), NullLogger<UpstreamBatchPlayResourceSource>.Instance);
+
+    private sealed class NoInstalledPlayers : IPlayerExecutableLocator
+    {
+        public IReadOnlyList<string> Locate(KnownPlayerDefinition definition) => [];
+    }
 
     [TestMethod]
     public async Task A_server_that_cannot_be_asked_fails_the_batch_play_rather_than_emptying_it()

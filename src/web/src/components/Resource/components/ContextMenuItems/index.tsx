@@ -24,6 +24,7 @@ import React, { useCallback, useEffect, useState } from "react";
 
 import PropertyValuePanel from "./PropertyValuePanel";
 import BatchPlayMenuItems from "./BatchPlayMenuItems";
+import PlaybackMenuItems from "./PlaybackMenuItems";
 
 import MediaLibraryMultiSelector from "@/components/MediaLibraryMultiSelector";
 import CollectionMultiSelector from "@/components/CollectionMultiSelector";
@@ -265,6 +266,12 @@ const ContextMenuItems = ({
           </div>
         </MenuItem>
       )}
+
+      {selectedResourceIds.length === 1 &&
+        contextResource?.path &&
+        contextResource.id === selectedResourceIds[0] && (
+          <PlaybackMenuItems resource={contextResource} />
+        )}
 
       {/* Single-resource actions (mirrored from cover buttons) */}
       {selectedResourceIds.length === 1 &&
