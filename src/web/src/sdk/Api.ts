@@ -5380,6 +5380,8 @@ export interface BakabaseModulesFederationMediaFederatedAsset {
   relativePath?: string;
   /** @format date-time */
   expiresAt: string;
+  mappingLocations?: BakabaseModulesFederationMediaFederatedMappingLocation[];
+  canOpenLocally?: boolean;
 }
 
 export interface BakabaseModulesFederationMediaFederatedCollection {
@@ -5390,6 +5392,11 @@ export interface BakabaseModulesFederationMediaFederatedCollection {
 export interface BakabaseModulesFederationMediaFederatedExternalIdentity {
   provider: string;
   externalId: string;
+}
+
+export interface BakabaseModulesFederationMediaFederatedMappingLocation {
+  sourceRootId: string;
+  relativePath: string;
 }
 
 export interface BakabaseModulesFederationMediaFederatedProperty {
@@ -5420,6 +5427,7 @@ export interface BakabaseModulesFederationMediaFederatedResourceLocation {
   sourceRootId: string;
   relativePath: string;
   isDirectory: boolean;
+  mappingLocations?: BakabaseModulesFederationMediaFederatedMappingLocation[];
 }
 
 export interface BakabaseModulesFederationMediaFederatedSource {
@@ -5437,6 +5445,20 @@ export interface BakabaseModulesFederationMediaFederationDirectoryAccess {
 export interface BakabaseModulesFederationMediaMappingRoot {
   sourceRootId: string;
   name: string;
+}
+
+export interface BakabaseModulesFederationMediaMappingTreeNode {
+  sourceRootId: string;
+  name: string;
+  /** @format int64 */
+  resourceCount: number;
+  hasChildren: boolean;
+  browseToken: string;
+}
+
+export interface BakabaseModulesFederationMediaMappingTreePage {
+  nodes: BakabaseModulesFederationMediaMappingTreeNode[];
+  nextCursor?: string;
 }
 
 export interface BakabaseModulesFederationMediaOpenResourceDirectoryRequest {
@@ -19922,6 +19944,64 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags FederationExport
+     * @name GetFederationExportMappingTree
+     * @request GET:/federation/v1/export/mapping-tree
+     */
+    getFederationExportMappingTree: (
+      query?: {
+        parent?: string;
+        cursor?: string;
+        /**
+         * @format int32
+         * @default 200
+         */
+        limit?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseModulesFederationMediaMappingTreePage, any>({
+        path: `/federation/v1/export/mapping-tree`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getFederationExportMappingTree
+     * @name getFederationExportMappingTreeUrl
+     */
+    getFederationExportMappingTreeUrl: (query?: {
+        parent?: string;
+        cursor?: string;
+        /**
+         * @format int32
+         * @default 200
+         */
+        limit?: number;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/v1/export/mapping-tree`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationExport
      * @name ReadFederationExportAsset
      * @request GET:/federation/v1/export/assets/{assetId}
      */
@@ -20510,6 +20590,34 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       this.request<BakabaseModulesFederationMediaMappingRoot[], any>({
         path: `/federation/local/peers/${nodeId}/mapping-roots`,
         method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags FederationPeer
+     * @name GetFederationMappingTree
+     * @request GET:/federation/local/peers/{nodeId}/mapping-tree
+     */
+    getFederationMappingTree: (
+      nodeId: string,
+      query?: {
+        parent?: string;
+        cursor?: string;
+        /**
+         * @format int32
+         * @default 200
+         */
+        limit?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseModulesFederationMediaMappingTreePage, any>({
+        path: `/federation/local/peers/${nodeId}/mapping-tree`,
+        method: "GET",
+        query: query,
         format: "json",
         ...params,
       }),

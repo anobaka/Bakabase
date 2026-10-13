@@ -41,15 +41,30 @@ export type FederatedResourceSummary = BakabaseModulesFederationContractsFederat
 export type OmittedNode = BakabaseModulesFederationContractsQueryOmittedNode;
 export type FederatedQueryPage = BakabaseModulesFederationContractsFederatedQueryPage;
 export type PathMapping = BakabaseModulesFederationPeersNodePathMapping;
+/** Bounded own-library directory metadata; names never contain the source's absolute path. */
+export interface MappingTreeNode {
+  sourceRootId: string;
+  name: string;
+  resourceCount: number;
+  hasChildren: boolean;
+  browseToken: string;
+}
+export interface MappingTreePage {
+  nodes: MappingTreeNode[];
+  nextCursor?: string;
+}
 export type Peer = BakabaseModulesFederationPeersFederationPeerView;
 export type PairingRequest = BakabaseModulesFederationPeersNodePairingRequestView;
 export type FederationStatus = BakabaseServiceControllersFederationPeerStatusResponse;
 export type PairingResult = BakabaseModulesFederationPeersNodePairingOutcome;
-export type FederatedAsset = BakabaseModulesFederationMediaFederatedAsset;
+export type FederatedAsset = BakabaseModulesFederationMediaFederatedAsset & {
+  canOpenLocally?: boolean;
+};
 export type FederatedResourceDetail = Omit<
   BakabaseModulesFederationMediaFederatedResourceDetail,
-  "properties"
+  "properties" | "assets"
 > & {
+  assets: FederatedAsset[];
   properties: (Omit<BakabaseModulesFederationMediaFederatedProperty, "value"> & {
     value?: unknown;
   })[];

@@ -88,7 +88,7 @@ public static class FederationRoutePolicy
             if (segments.Length == 5 && Equal(segments[3], "datasync"))
                 return method == "GET" &&
                        (Equal(segments[4], "head") || Equal(segments[4], "manifest") || Equal(segments[4], "changes"));
-            if (segments.Length == 4 && Equal(segments[3], "mapping-roots")) return method == "GET";
+            if (segments.Length == 4 && (Equal(segments[3], "mapping-roots") || Equal(segments[3], "mapping-tree"))) return method == "GET";
             if (segments.Length == 5 && Equal(segments[3], "resources") &&
                 (Equal(segments[4], "resolve") || Equal(segments[4], "location")))
                 return method == "POST";
@@ -142,7 +142,7 @@ public static class FederationRoutePolicy
             if (!NodeRequestSignature.IsIdentifier(segments[3])) return false;
             return Equal(segments[4], "outbound") && method == "DELETE" ||
                    (Equal(segments[4], "enabled") || Equal(segments[4], "path-mappings")) && method == "PUT" ||
-                   Equal(segments[4], "mapping-roots") && method == "GET";
+                   (Equal(segments[4], "mapping-roots") || Equal(segments[4], "mapping-tree")) && method == "GET";
         }
         return segments.Length == 6 && Equal(segments[3], "requests") &&
                NodeRequestSignature.IsIdentifier(segments[4]) &&

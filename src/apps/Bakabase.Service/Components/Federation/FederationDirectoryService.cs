@@ -125,9 +125,7 @@ public sealed class FederationDirectoryService(INodeIdentityProvider identity, F
         if (!NodeRequestSignature.IsIdentifier(location.SourceRootId) || location.RelativePath is not { Length: > 0 and <= 4096 })
             throw new FederationQueryException("InvalidPeerResponse", 502);
         var mappings = await peers.GetPathMappingsAsync(nodeId, ct);
-        var mapping = mappings.FirstOrDefault(m => m.SourceRootId == location.SourceRootId);
-        if (mapping == null) return (null, "PathMappingRequired");
-        var mapped = MediaPathBoundary.MapLocation(mapping.LocalPath, location.RelativePath, location.IsDirectory);
-        return (mapped, mapped == null ? "MappedPathUnavailable" : null);
+        ct.ThrowIfCancellationRequested();
+        return FederationPathMappingResolver.MapLocation(location, mappings);
     }
 }

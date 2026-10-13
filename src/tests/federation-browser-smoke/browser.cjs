@@ -3,6 +3,7 @@ const { chromium } = require('playwright');
 const serverSwitching = require('./switching.cjs');
 const dataSync = require('./data-sync.cjs');
 const firstLaunch = require('./first-launch.cjs');
+const mappingSmoke = require('./mapping.cjs');
 const { LAUNCH_ARGS, confine, proveConfinement, assertStayedLocal, assertNoAnalytics } = require('./network.cjs');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -111,6 +112,7 @@ async function federation(browser) {
     assert.equal(new URL(playback.url, uiBase).origin, uiBase);
     await library.waitForFunction(() => document.querySelector('audio')?.readyState >= 1);
     await pane.screenshot({ path: artifacts('localhost-remote-detail.png') });
+    const mapping = await mappingSmoke({ context, devices, config, peer, uiBase, status, artifacts });
     const beforeDisable = await status();
     await devices.getByRole('button', { name: name('federation.browsing.disable'), exact: true }).click();
     await library.getByRole('heading', { name: name('federation.browsing.off'), exact: true }).waitFor();
@@ -167,6 +169,7 @@ async function federation(browser) {
       noAuthorizationOrMappingFromAnAddress: true, explicitNewNodeApproval: true, noReverseGrant: true,
       browsingOnAfterPairing: true, participants: query.participants.length, total: query.totalWithinParticipants,
       unmappedDirectoryDisabled: true, localhostAudioMetadataReady: true,
+      mapping,
       crossTabDisableClearsResultsAndMedia: true, peersAndSharingPreserved: true,
       explicitRestorePreservesNodeAndOutbound: true, explicitCloneCreatesFreshNode: true,
       explicitCloneReplacesInstallIdentity: true, pageErrors: errors,

@@ -294,6 +294,13 @@ public sealed class FederationPeerController(FederationPeerService peers, NodePa
         return FederationResult(await FederationHttpClient.ReadEnvelopeAsync<MappingRoot[]>(response, deadline.Token));
     }
 
+    [HttpGet("{nodeId}/mapping-tree")]
+    [SwaggerOperation(OperationId = "GetFederationMappingTree")]
+    [ProducesResponseType(typeof(MappingTreePage), 200)]
+    public async Task<IActionResult> MappingTree(string nodeId, [FromServices] FederationMappingTreeClient tree,
+        [FromQuery] string? parent = null, [FromQuery] string? cursor = null, [FromQuery] int limit = 200,
+        CancellationToken ct = default) => FederationResult(await tree.ReadAsync(nodeId, parent, cursor, limit, ct));
+
     [HttpPost("identity/reset")]
     [SwaggerOperation(OperationId = "ResetFederationIdentity")]
     [ProducesResponseType(typeof(NodeIdentity), 200)]

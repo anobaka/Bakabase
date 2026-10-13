@@ -50,6 +50,7 @@ export default function ResourceDetail({
   const [playing, setPlaying] = useState(false);
   const [playError, setPlayError] = useState<Error>();
   const [launched, setLaunched] = useState(false);
+  const [openedImage, setOpenedImage] = useState(false);
   const [openingDirectory, setOpeningDirectory] = useState(false);
   const [directoryOpened, setDirectoryOpened] = useState(false);
   const [directoryError, setDirectoryError] = useState<Error>();
@@ -164,6 +165,7 @@ export default function ResourceDetail({
       if (mode === "player") {
         if (!session.launched) throw new FederationError("PlayerUnavailable", "", 409);
         setLaunched(true);
+        setOpenedImage(asset.kind === "image");
       } else {
         if (!session.url) throw new FederationError("AssetGone", "", 404);
         setMedia({ asset, session, url: localMediaUrl(session.url) });
@@ -354,16 +356,21 @@ export default function ResourceDetail({
                     >
                       {t("federation.preview")}
                     </button>
-                    {nativeActionsAvailable && asset.kind !== "image" && (
-                      <button
-                        className={buttonClass}
-                        disabled={playing}
-                        type="button"
-                        onClick={() => void play(asset, "player")}
-                      >
-                        {t("federation.playHere")}
-                      </button>
-                    )}
+                    {nativeActionsAvailable &&
+                      (asset.kind !== "image" || asset.canOpenLocally === true) && (
+                        <button
+                          className={buttonClass}
+                          disabled={playing}
+                          type="button"
+                          onClick={() => void play(asset, "player")}
+                        >
+                          {t(
+                            asset.kind === "image"
+                              ? "federation.openImageHere"
+                              : "federation.playHere",
+                          )}
+                        </button>
+                      )}
                   </div>
                 </div>
               ))}
@@ -375,7 +382,7 @@ export default function ResourceDetail({
             )}
             {launched && (
               <p className="mt-3 text-sm text-success" role="status">
-                {t("federation.playerLaunched")}
+                {t(openedImage ? "federation.imageOpenedHere" : "federation.playerLaunched")}
               </p>
             )}
             <div className="mt-3">

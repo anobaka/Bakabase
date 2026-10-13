@@ -11,6 +11,27 @@ vi.mock("@/config/env", () => ({ default: { apiEndpoint: "http://localhost:5555"
 afterEach(() => vi.unstubAllGlobals());
 
 describe("local federation transport", () => {
+  it("requests a bounded mapping tree level with encoded opaque parent and cursor", async () => {
+    const fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify({ nodes: [] })));
+
+    vi.stubGlobal("fetch", fetch);
+    const controller = new AbortController();
+
+    await federationPeerApi.mappingTree(
+      "peer-a",
+      { parent: "opaque+/=", cursor: "cursor&?=" },
+      controller.signal,
+    );
+    const url = new URL(fetch.mock.calls[0][0]);
+
+    expect(url.pathname).toBe("/federation/local/peers/peer-a/mapping-tree");
+    expect([...url.searchParams.entries()]).toEqual([
+      ["limit", "200"],
+      ["parent", "opaque+/="],
+      ["cursor", "cursor&?="],
+    ]);
+    expect(fetch.mock.calls[0][1]).toMatchObject({ signal: controller.signal, cache: "no-store" });
+  });
   it.each([
     [false, false],
     [true, false],

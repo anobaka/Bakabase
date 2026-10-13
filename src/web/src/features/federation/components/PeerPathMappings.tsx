@@ -3,9 +3,17 @@ import type { PathMapping, Peer } from "../types";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { federationPeerApi } from "../peerApi";
-
 import { buttonClass, ErrorNotice, fieldClass, primaryClass } from "./common";
+import MappingTree from "./MappingTree";
+import {
+  readMappingDraft,
+  writeMappingDraft,
+  clearMappingDraft,
+  draftSharingChanged,
+} from "./mappingDrafts";
+
+import { FileSystemSelectorModal } from "@/components/FileSystemSelector";
+import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 
 /**
  * Where a device's shared storage roots are on this device, for playing and opening folders
@@ -15,48 +23,55 @@ import { buttonClass, ErrorNotice, fieldClass, primaryClass } from "./common";
  * Saving sends the mappings it started from as well, so a change made meanwhile elsewhere is
  * refused rather than overwritten; replacing an existing mapping is asked about first.
  */
-export default function PeerPathMappings({
-  peer,
-  busy,
-  onSave,
-  className = "border-t border-default-200 pt-3",
-}: {
+type Props = {
   peer: Peer;
   busy: boolean;
   onSave: (mappings: PathMapping[], expectedMappings: PathMapping[]) => Promise<boolean>;
   className?: string;
-}) {
+};
+export default function PeerPathMappings(props: Props) {
+  return <PeerPathMappingsEditor key={props.peer.nodeId} {...props} />;
+}
+
+function PeerPathMappingsEditor({
+  peer,
+  busy,
+  onSave,
+  className = "border-t border-default-200 pt-3",
+}: Props) {
   const { t } = useTranslation();
+  const { createPortal } = useBakabaseContext();
   const [mappings, setMappings] = useState(peer.pathMappings);
   const [dirty, setDirty] = useState(false);
+  const [storedDraft, setStoredDraft] = useState(() => readMappingDraft(peer.nodeId));
+  const [draftStorageFailed, setDraftStorageFailed] = useState(false);
+  const [saveError, setSaveError] = useState<Error>();
+  const [opened, setOpened] = useState(false);
+  const [selectionNotice, setSelectionNotice] = useState<string>();
+
+  useEffect(() => {
+    if (!dirty) return;
+    try {
+      writeMappingDraft(peer, mappings);
+      setDraftStorageFailed(false);
+    } catch {
+      setDraftStorageFailed(true);
+    }
+  }, [mappings, dirty, peer.nodeId, peer.outboundGrant?.grantId, peer.outboundGrant?.revision]);
   const [mappingReview, setMappingReview] = useState<{
     proposed: PathMapping[];
     baseline: string;
   }>();
   const [roots, setRoots] = useState<{ sourceRootId: string; name: string }[]>();
-  const [rootsError, setRootsError] = useState<Error>();
-  const [loadingRoots, setLoadingRoots] = useState(false);
-  const rootRequest = useRef<AbortController>();
+  const mounted = useRef(true);
 
-  useEffect(() => () => rootRequest.current?.abort(), []);
-  const loadRoots = async () => {
-    rootRequest.current?.abort();
-    const request = new AbortController();
+  useEffect(() => {
+    mounted.current = true;
 
-    rootRequest.current = request;
-    setLoadingRoots(true);
-    setRootsError(undefined);
-    try {
-      const result = await federationPeerApi.mappingRoots(peer.nodeId, request.signal);
-
-      if (!request.signal.aborted) setRoots(result);
-    } catch (cause) {
-      if (!request.signal.aborted)
-        setRootsError(cause instanceof Error ? cause : new Error(String(cause)));
-    } finally {
-      if (!request.signal.aborted) setLoadingRoots(false);
-    }
-  };
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!dirty) setMappings(peer.pathMappings);
@@ -76,10 +91,20 @@ export default function PeerPathMappings({
         existing.localPath,
     );
   const persistMappings = async (proposed: PathMapping[]) => {
-    if (await onSave(proposed, peer.pathMappings)) {
+    setSaveError(undefined);
+    try {
+      if (!(await onSave(proposed, peer.pathMappings)) || !mounted.current) return;
       setMappingReview(undefined);
       setMappings(proposed);
       setDirty(false);
+      setStoredDraft(undefined);
+      try {
+        clearMappingDraft(peer.nodeId);
+      } catch {
+        setDraftStorageFailed(true);
+      }
+    } catch (error) {
+      if (mounted.current) setSaveError(error instanceof Error ? error : new Error(String(error)));
     }
   };
   const reviewMappings = () => {
@@ -115,25 +140,128 @@ export default function PeerPathMappings({
     <details
       className={className}
       onToggle={(event) => {
-        if (event.currentTarget.open && !roots && !loadingRoots) void loadRoots();
+        setOpened(event.currentTarget.open);
       }}
     >
       <summary className="cursor-pointer text-sm font-medium">
         {t("federation.mappings.title")}
       </summary>
       <p className="mt-2 text-xs text-default-500">{t("federation.mappings.tip")}</p>
-      <ErrorNotice error={rootsError} onRetry={() => void loadRoots()} />
-      {loadingRoots && (
+      <ErrorNotice error={saveError} />
+      {storedDraft && !dirty && (
+        <div className="mt-2 rounded-lg bg-default-100 p-2 text-xs">
+          <p>
+            {t(
+              draftSharingChanged(storedDraft, peer)
+                ? "federation.mappings.draft.changed"
+                : "federation.mappings.draft.found",
+            )}
+          </p>
+          <div className="mt-1 flex gap-2">
+            <button
+              className={buttonClass}
+              disabled={busy}
+              type="button"
+              onClick={() => {
+                setMappings(storedDraft.mappings);
+                setDirty(true);
+              }}
+            >
+              {t("federation.mappings.draft.restore")}
+            </button>
+            <button
+              className={buttonClass}
+              disabled={busy}
+              type="button"
+              onClick={() => {
+                try {
+                  clearMappingDraft(peer.nodeId);
+                  setStoredDraft(undefined);
+                } catch {
+                  setDraftStorageFailed(true);
+                }
+              }}
+            >
+              {t("federation.mappings.draft.discard")}
+            </button>
+          </div>
+        </div>
+      )}
+      {dirty && (
+        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+          <p role="status">
+            {t(
+              draftStorageFailed
+                ? "federation.mappings.draft.unavailable"
+                : "federation.mappings.draft.saved",
+            )}
+          </p>
+          <button
+            className="text-primary"
+            disabled={busy}
+            type="button"
+            onClick={() => {
+              setMappingReview(undefined);
+              setMappings(peer.pathMappings);
+              setDirty(false);
+              setStoredDraft(undefined);
+              try {
+                clearMappingDraft(peer.nodeId);
+              } catch {
+                setDraftStorageFailed(true);
+              }
+            }}
+          >
+            {t("federation.mappings.draft.discard")}
+          </button>
+        </div>
+      )}
+      <MappingTree
+        active={opened}
+        busy={busy}
+        mappings={mappings}
+        nodeId={peer.nodeId}
+        onNodes={(nodes) =>
+          setRoots((previous) => [
+            ...new Map(
+              [...(previous ?? []), ...nodes].map((node) => [node.sourceRootId, node]),
+            ).values(),
+          ])
+        }
+        onSelect={(node, label) => {
+          setRoots((previous) => [
+            ...new Map(
+              [...(previous ?? []), { sourceRootId: node.sourceRootId, name: label }].map(
+                (item) => [item.sourceRootId, item],
+              ),
+            ).values(),
+          ]);
+          if (mappings.some((mapping) => mapping.sourceRootId === node.sourceRootId)) {
+            setSelectionNotice(t("federation.mappings.tree.alreadyMapped"));
+
+            return;
+          }
+          setMappingReview(undefined);
+          setDirty(true);
+          setMappings((previous) => [
+            ...previous,
+            { sourceRootId: node.sourceRootId, localPath: "" },
+          ]);
+          setSelectionNotice(t("federation.mappings.tree.added"));
+        }}
+      />
+      {selectionNotice && (
         <p className="mt-2 text-xs" role="status">
-          {t("federation.loading")}
+          {selectionNotice}
         </p>
       )}
       <div className="mt-3 space-y-2">
         {mappings.map((mapping, index) => (
           <div key={index} className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
-            <label className="space-y-1 text-xs">
+            <div className="space-y-1 text-xs">
               <span>{t("federation.mappings.root")}</span>
               <select
+                aria-label={t("federation.mappings.root")}
                 className={fieldClass}
                 disabled={busy}
                 value={mapping.sourceRootId}
@@ -152,17 +280,50 @@ export default function PeerPathMappings({
                   </option>
                 ))}
               </select>
-            </label>
-            <label className="space-y-1 text-xs">
+              <details>
+                <summary className="cursor-pointer text-default-500">
+                  {t("federation.mappings.manual")}
+                </summary>
+                <input
+                  aria-label={t("federation.mappings.rootId")}
+                  className={fieldClass}
+                  disabled={busy}
+                  value={mapping.sourceRootId}
+                  onChange={(event) => update(index, { sourceRootId: event.target.value })}
+                />
+              </details>
+            </div>
+            <div className="space-y-1 text-xs">
               <span>{t("federation.mappings.local")}</span>
-              <input
-                className={fieldClass}
-                disabled={busy}
-                placeholder="/Volumes/Media"
-                value={mapping.localPath}
-                onChange={(event) => update(index, { localPath: event.target.value })}
-              />
-            </label>
+              <div className="flex items-center gap-1">
+                <input
+                  aria-label={t("federation.mappings.local")}
+                  className={fieldClass}
+                  disabled={busy}
+                  placeholder="/Volumes/Media"
+                  value={mapping.localPath}
+                  onChange={(event) => update(index, { localPath: event.target.value })}
+                />
+                <button
+                  aria-label={t("federation.mappings.chooseLocal")}
+                  className={`${buttonClass} shrink-0 !px-2`}
+                  disabled={busy}
+                  type="button"
+                  onClick={() =>
+                    createPortal(FileSystemSelectorModal, {
+                      targetType: "folder",
+                      startPath: mapping.localPath || undefined,
+                      defaultSelectedPath: mapping.localPath || undefined,
+                      onSelected: (entry) => {
+                        if (mounted.current) update(index, { localPath: entry.path });
+                      },
+                    })
+                  }
+                >
+                  {t("federation.mappings.chooseLocal")}
+                </button>
+              </div>
+            </div>
             <button
               aria-label={t("federation.mappings.remove")}
               className={`${buttonClass} self-end`}

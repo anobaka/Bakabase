@@ -4122,6 +4122,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/federation/v1/export/mapping-tree": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetFederationExportMappingTree"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/federation/v1/export/assets/{assetId}": {
         parameters: {
             query?: never;
@@ -4514,6 +4530,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["GetFederationMappingRoots"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/federation/local/peers/{nodeId}/mapping-tree": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetFederationMappingTree"];
         put?: never;
         post?: never;
         delete?: never;
@@ -14065,6 +14097,8 @@ export interface components {
             relativePath?: string;
             /** Format: date-time */
             expiresAt: string;
+            mappingLocations?: components["schemas"]["Bakabase.Modules.Federation.Media.FederatedMappingLocation"][];
+            canOpenLocally?: boolean;
         };
         "Bakabase.Modules.Federation.Media.FederatedCollection": {
             name: string;
@@ -14073,6 +14107,10 @@ export interface components {
         "Bakabase.Modules.Federation.Media.FederatedExternalIdentity": {
             provider: string;
             externalId: string;
+        };
+        "Bakabase.Modules.Federation.Media.FederatedMappingLocation": {
+            sourceRootId: string;
+            relativePath: string;
         };
         "Bakabase.Modules.Federation.Media.FederatedProperty": {
             label: string;
@@ -14100,6 +14138,7 @@ export interface components {
             sourceRootId: string;
             relativePath: string;
             isDirectory: boolean;
+            mappingLocations?: components["schemas"]["Bakabase.Modules.Federation.Media.FederatedMappingLocation"][];
         };
         "Bakabase.Modules.Federation.Media.FederatedSource": {
             /** Format: int32 */
@@ -14114,6 +14153,18 @@ export interface components {
         "Bakabase.Modules.Federation.Media.MappingRoot": {
             sourceRootId: string;
             name: string;
+        };
+        "Bakabase.Modules.Federation.Media.MappingTreeNode": {
+            sourceRootId: string;
+            name: string;
+            /** Format: int64 */
+            resourceCount: number;
+            hasChildren: boolean;
+            browseToken: string;
+        };
+        "Bakabase.Modules.Federation.Media.MappingTreePage": {
+            nodes: components["schemas"]["Bakabase.Modules.Federation.Media.MappingTreeNode"][];
+            nextCursor?: string;
         };
         "Bakabase.Modules.Federation.Media.OpenResourceDirectoryRequest": {
             resourceRef: components["schemas"]["Bakabase.Modules.Federation.Contracts.ResourceRef"];
@@ -26455,6 +26506,32 @@ export interface operations {
             };
         };
     };
+    GetFederationExportMappingTree: {
+        parameters: {
+            query?: {
+                parent?: string;
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bakabase.Modules.Federation.Media.MappingTreePage"];
+                    "application/json": components["schemas"]["Bakabase.Modules.Federation.Media.MappingTreePage"];
+                    "text/json": components["schemas"]["Bakabase.Modules.Federation.Media.MappingTreePage"];
+                };
+            };
+        };
+    };
     ReadFederationExportAsset: {
         parameters: {
             query?: never;
@@ -27134,6 +27211,34 @@ export interface operations {
                     "text/plain": components["schemas"]["Bakabase.Modules.Federation.Media.MappingRoot"][];
                     "application/json": components["schemas"]["Bakabase.Modules.Federation.Media.MappingRoot"][];
                     "text/json": components["schemas"]["Bakabase.Modules.Federation.Media.MappingRoot"][];
+                };
+            };
+        };
+    };
+    GetFederationMappingTree: {
+        parameters: {
+            query?: {
+                parent?: string;
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                nodeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bakabase.Modules.Federation.Media.MappingTreePage"];
+                    "application/json": components["schemas"]["Bakabase.Modules.Federation.Media.MappingTreePage"];
+                    "text/json": components["schemas"]["Bakabase.Modules.Federation.Media.MappingTreePage"];
                 };
             };
         };

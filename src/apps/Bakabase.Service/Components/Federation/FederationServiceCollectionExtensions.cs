@@ -27,10 +27,14 @@ public static class FederationServiceCollectionExtensions
         services.AddSingleton<AssetLeaseStore>();
         services.AddSingleton<FederationMediaSessions>();
         services.AddSingleton<FederationBrowsingControl>();
+        services.AddSingleton<FederationMappingTreeTokens>();
+        services.AddScoped<FederationMappingTreeService>();
+        services.AddScoped<FederationMappingTreeClient>();
         services.AddScoped<FederationResourceService>();
         services.AddScoped<FederationMediaService>();
         services.AddScoped<FederationDirectoryService>();
         services.TryAddSingleton<IFederationDirectoryOpener, FederationDirectoryOpener>();
+        services.TryAddSingleton<IFederationImageOpener, FederationImageOpener>();
         services.TryAddSingleton<LocalPlayerResolver>();
         services.TryAddSingleton<IFederationPlayerProxyEnvironment, FederationPlayerProxyEnvironment>();
         services.TryAddSingleton<FederationPlayerPolicy>();

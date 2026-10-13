@@ -74,6 +74,28 @@ public sealed class FederationDirectoryTests
         Assert.AreEqual(0, (await fixture.Peers.GetPathMappingsAsync("remote")).Count);
     }
 
+    [TestMethod]
+    public async Task AncestorMappingOpensOnlyAfterSourceAuthorizationAndSpecificMissingOverrideWins()
+    {
+        await using var fixture = await Fixture.Create();
+        var work = Directory.CreateDirectory(Path.Combine(fixture.Directory.Path,"Movies","Work")).FullName;
+        var reference = new ResourceRef("remote","remote-epoch",1);
+        var specific = "g"+new string('a',64);
+        var share = "g"+new string('b',64);
+        fixture.Transport.Response = new(reference,new("legacy",".",true,
+            [new("legacy","."),new(specific,"."),new(share,"Movies/Work")]));
+        await fixture.Peers.SetPathMappingsAsync("remote",[new(share,fixture.Directory.Path)]);
+        await fixture.Service.OpenAsync(reference,default);
+        Assert.AreEqual(work,fixture.Opener.Opened.Single());
+        await fixture.Peers.SetPathMappingsAsync("remote",[new(specific,Path.Combine(fixture.Directory.Path,"missing")),new(share,fixture.Directory.Path)]);
+        Assert.AreEqual("MappedPathUnavailable",(await Assert.ThrowsExactlyAsync<FederationQueryException>(()=>
+            fixture.Service.OpenAsync(reference,default))).Code);
+        fixture.Transport.Status=HttpStatusCode.Forbidden;
+        Assert.AreEqual("GrantRevoked",(await Assert.ThrowsExactlyAsync<FederationQueryException>(()=>
+            fixture.Service.OpenAsync(reference,default))).Code);
+        Assert.AreEqual(1,fixture.Opener.Opened.Count);
+    }
+
     [DataTestMethod]
     [DataRow(false)]
     [DataRow(true)]

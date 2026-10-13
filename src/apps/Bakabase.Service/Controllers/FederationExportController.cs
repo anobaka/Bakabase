@@ -66,6 +66,13 @@ public sealed class FederationExportController(LocalSearchSnapshotService snapsh
     public async Task<IActionResult> MappingRoots(CancellationToken ct) =>
         FederationResult(await resources.GetMappingRootsAsync(ct));
 
+    [HttpGet("mapping-tree")]
+    [SwaggerOperation(OperationId = "GetFederationExportMappingTree")]
+    [ProducesResponseType(typeof(MappingTreePage), 200)]
+    public async Task<IActionResult> MappingTree([FromServices] FederationMappingTreeService tree,
+        [FromQuery] string? parent = null, [FromQuery] string? cursor = null, [FromQuery] int limit = 200,
+        CancellationToken ct = default) => FederationResult(await tree.ReadAsync(GrantId, parent, cursor, limit, ct));
+
     [HttpGet("assets/{assetId}")]
     [SwaggerOperation(OperationId = "ReadFederationExportAsset")]
     public async Task<IActionResult> Asset(string assetId, CancellationToken ct)

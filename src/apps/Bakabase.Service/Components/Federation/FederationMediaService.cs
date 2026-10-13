@@ -23,7 +23,7 @@ public sealed class FederationMediaService(INodeIdentityProvider identity, Feder
     IPeerSessionFactory sessions, INodeTransport transport, FederationPeerService peers,
     FederationMediaSessions mediaSessions, FederationPlayerPolicy players,
     IBatchPlayProcessLauncher launcher, IResourceService resources, GrantLeaseRegistry leases,
-    FederationDirectoryService directories)
+    FederationDirectoryService directories, IFederationImageOpener imageOpener)
 {
     public async Task<ResourceResolveResponse> ResolveAsync(ResourceResolveRequest request, CancellationToken ct)
     {
@@ -66,6 +66,39 @@ public sealed class FederationMediaService(INodeIdentityProvider identity, Feder
                         { ExpiresAt = asset.ExpiresAt - peer.ClockOffset }).ToArray()
                 };
                 detail = detail with { DirectoryAccess = await directories.GetAccessAsync(detail, peer, ct), Location = null };
+                // Advisory only: resolving a detail already read the source with
+                // current credentials. Do not make a HEAD request for every
+                // thumbnail; PrepareAsync re-authorizes the selected image.
+                IReadOnlyList<NodePathMapping> mappings = peer == null || !imageOpener.Available
+                    ? [] : await peers.GetPathMappingsAsync(detail.Ref.NodeId, ct);
+                var assets = new List<FederatedAsset>(detail.Assets.Length);
+                foreach (var asset in detail.Assets)
+                {
+                    ct.ThrowIfCancellationRequested();
+                    bool? canOpen = null;
+                    if (asset.Kind == "image")
+                    {
+                        canOpen = false;
+                        if (imageOpener.Available)
+                        {
+                            string? imagePath;
+                            if (peer == null)
+                            {
+                                try
+                                {
+                                    imagePath = (await local.OpenAsync(FederationQueryAccess.LocalGrantId,
+                                        asset.AssetId, ct)).Path;
+                                }
+                                catch (FederationQueryException) { imagePath = null; }
+                            }
+                            else imagePath = FederationPathMappingResolver.MapAsset(asset, mappings);
+                            canOpen = FederationImageOpener.TryGetImagePath(asset.FileName, imagePath, out _);
+                        }
+                    }
+                    // A peer never decides what can be opened on this device.
+                    assets.Add(asset with {CanOpenLocally = canOpen});
+                }
+                detail = detail with {Assets = assets.ToArray()};
                 mediaSessions.Remember(detail, peer, ct);
                 details.Add(detail.Ref, detail);
             }
@@ -81,16 +114,35 @@ public sealed class FederationMediaService(INodeIdentityProvider identity, Feder
         if (request.Mode is not ("preview" or "player"))
             throw new FederationQueryException("UnsupportedPlaybackMode", 422);
         var source = mediaSessions.GetAsset(request.AssetRef);
-        var localPath = await ValidateAndMapAsync(source, ct);
-        var ticket = mediaSessions.Issue(source, localPath, ct);
-        var url = loopbackOrigin.TrimEnd('/') + "/federation/local/media/" + ticket.Id;
-        if (request.Mode == "preview")
-            return new PlaybackSessionResponse(url, source.Asset.ContentType, false, source.Asset.ExpiresAt);
-        if (source.Asset.Kind == "image")
-            throw new FederationQueryException("UnsupportedPlaybackMode", 422, "Use the image preview for this asset.");
-        var player = players.Resolve(source.Asset.FileName, localPath);
-        await launcher.LaunchAsync(player.ExecutablePath!,
-            FederationPlayerArguments.Build(player, localPath, url), ct);
+        using var authorized = CancellationTokenSource.CreateLinkedTokenSource(ct,
+            source.Peer == null ? CancellationToken.None :
+                leases.GetCancellationToken(GrantLeaseRegistry.OutboundKey(source.Peer.GrantId)));
+        var localPath = await ValidateAndMapAsync(source, authorized.Token);
+        authorized.Token.ThrowIfCancellationRequested();
+        if (request.Mode == "player" && source.Asset.Kind == "image")
+        {
+            if (!imageOpener.Available)
+                throw new FederationQueryException("PlayerUnavailable", 501,
+                    "An image viewer cannot be opened on this device. Use the image preview instead.");
+            if (localPath == null || !File.Exists(localPath))
+                throw new FederationQueryException("MappedPathUnavailable", 409,
+                    "This image is not available on this computer. Configure its path mapping or use the image preview.");
+            if (!FederationImageOpener.TryGetImagePath(source.Asset.FileName, localPath, out var physicalImage))
+                throw new FederationQueryException("UnsupportedPlaybackMode", 422,
+                    "Only a matching local image can be opened. Use the image preview instead.");
+            authorized.Token.ThrowIfCancellationRequested();
+            imageOpener.Open(physicalImage!, authorized.Token);
+        }
+        else
+        {
+            var ticket = mediaSessions.Issue(source, localPath, authorized.Token);
+            var url = loopbackOrigin.TrimEnd('/') + "/federation/local/media/" + ticket.Id;
+            if (request.Mode == "preview")
+                return new PlaybackSessionResponse(url, source.Asset.ContentType, false, source.Asset.ExpiresAt);
+            var player = players.Resolve(source.Asset.FileName, localPath);
+            await launcher.LaunchAsync(player.ExecutablePath!,
+                FederationPlayerArguments.Build(player, localPath, url), authorized.Token);
+        }
         if (source.Peer == null)
             await resources.MarkPlayed(new Dictionary<int, string>
                 { [source.Ref.ResourceRef.ResourceId] = "FileSystem:" + localPath });
@@ -130,10 +182,9 @@ public sealed class FederationMediaService(INodeIdentityProvider identity, Feder
         deadline.CancelAfter(TimeSpan.FromSeconds(8));
         using var head = await transport.SendAsync(source.Peer, HttpMethod.Head, AssetPath(source), cancellationToken: deadline.Token);
         EnsureSuccess(head);
-        if (source.Asset.SourceRootId == null || source.Asset.RelativePath == null) return null;
-        var mappings = await peers.GetPathMappingsAsync(source.Ref.ResourceRef.NodeId, ct);
-        var mapping = mappings.FirstOrDefault(x => x.SourceRootId == source.Asset.SourceRootId);
-        return mapping == null ? null : MediaPathBoundary.Map(mapping.LocalPath, source.Asset.RelativePath);
+        var mappings = await peers.GetPathMappingsAsync(source.Ref.ResourceRef.NodeId, deadline.Token);
+        deadline.Token.ThrowIfCancellationRequested();
+        return FederationPathMappingResolver.MapAsset(source.Asset, mappings);
     }
 
     public static string AssetPath(AvailableFederationAsset source) =>

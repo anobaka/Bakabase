@@ -1,4 +1,10 @@
-import type { FederationStatus, PairingResult, PathMapping, SharingCandidate } from "./types";
+import type {
+  FederationStatus,
+  PairingResult,
+  PathMapping,
+  SharingCandidate,
+  MappingTreePage,
+} from "./types";
 
 import { federationRequest, jsonBody } from "./transport";
 import { notifyBrowsingChanged } from "./statusEvents";
@@ -87,4 +93,19 @@ export const federationPeerApi = {
       `${prefix}/${encodeURIComponent(nodeId)}/mapping-roots`,
       { signal },
     ),
+  mappingTree: (
+    nodeId: string,
+    options: { parent?: string; cursor?: string } = {},
+    signal?: AbortSignal,
+  ) => {
+    const query = new URLSearchParams({ limit: "200" });
+
+    if (options.parent) query.set("parent", options.parent);
+    if (options.cursor) query.set("cursor", options.cursor);
+
+    return federationRequest<MappingTreePage>(
+      `${prefix}/${encodeURIComponent(nodeId)}/mapping-tree?${query}`,
+      { signal },
+    );
+  },
 };

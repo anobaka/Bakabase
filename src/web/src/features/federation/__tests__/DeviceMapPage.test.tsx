@@ -31,6 +31,10 @@ import {
 } from "./deviceMapFixtures";
 
 import BApi from "@/sdk/BApi";
+vi.mock("@/components/ContextProvider/BakabaseContextProvider", () => ({
+  useBakabaseContext: () => ({ createPortal: vi.fn() }),
+}));
+vi.mock("@/components/FileSystemSelector", () => ({ FileSystemSelectorModal: () => null }));
 import {
   ClientMode,
   DataSyncLinkMode,
@@ -94,6 +98,7 @@ vi.mock("../peerApi", () => ({
     invite: vi.fn(),
     mappings: vi.fn(),
     mappingRoots: vi.fn(),
+    mappingTree: vi.fn().mockResolvedValue({ nodes: [] }),
   },
 }));
 vi.mock("../serverApi", () => ({

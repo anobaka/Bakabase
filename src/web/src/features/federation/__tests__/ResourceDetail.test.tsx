@@ -59,6 +59,75 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("read-only remote detail", () => {
+  it.each([undefined, false])(
+    "keeps images preview-only without confirmed local availability (%s)",
+    async (canOpenLocally) => {
+      const image = {
+        ...detail(),
+        assets: [
+          {
+            ...detail().assets[0]!,
+            kind: "image",
+            fileName: "picture.jpg",
+            contentType: "image/jpeg",
+            canOpenLocally,
+          },
+        ],
+      };
+
+      vi.mocked(federationResourceApi.detail).mockResolvedValue({ resources: [image] });
+      render(view());
+      await screen.findByText("picture.jpg");
+      expect(screen.getByText("federation.preview")).toBeInTheDocument();
+      expect(screen.queryByText("federation.openImageHere")).toBeNull();
+      expect(federationResourceApi.playback).not.toHaveBeenCalled();
+    },
+  );
+
+  it("opens a confirmed mapped image in the default app only after clicking and reports backend confirmation", async () => {
+    const image = {
+      ...detail(),
+      assets: [
+        {
+          ...detail().assets[0]!,
+          kind: "image",
+          fileName: "picture.jpg",
+          contentType: "image/jpeg",
+          canOpenLocally: true,
+        },
+      ],
+    };
+
+    vi.mocked(federationResourceApi.detail).mockResolvedValue({ resources: [image] });
+    vi.mocked(federationResourceApi.playback).mockResolvedValue({
+      launched: true,
+      contentType: "image/jpeg",
+      expiresAt: "2030-01-01T00:00:00Z",
+    });
+    render(view());
+    fireEvent.click(await screen.findByText("federation.openImageHere"));
+    expect(await screen.findByText("federation.imageOpenedHere")).toBeInTheDocument();
+    expect(federationResourceApi.playback).toHaveBeenCalledWith(
+      remote,
+      "opaque",
+      "player",
+      expect.any(AbortSignal),
+    );
+    expect(screen.queryByText("federation.playerLaunched")).toBeNull();
+  });
+
+  it("still hides image native actions in a server browser even if the DTO says the file is local", async () => {
+    vi.mocked(useUserSideActionsRunHere).mockReturnValue(false);
+    vi.mocked(federationResourceApi.detail).mockResolvedValue({
+      resources: [
+        { ...detail(), assets: [{ ...detail().assets[0]!, kind: "image", canOpenLocally: true }] },
+      ],
+    });
+    render(view());
+    await screen.findByText("Remote title");
+    expect(screen.queryByText("federation.openImageHere")).toBeNull();
+    expect(screen.getByText("federation.preview")).toBeInTheDocument();
+  });
   it("offers browser previews without native players or file managers on a headless server", async () => {
     vi.mocked(useUserSideActionsRunHere).mockReturnValue(false);
     vi.mocked(federationResourceApi.detail).mockResolvedValue({

@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Domain;
@@ -24,7 +25,8 @@ namespace Bakabase.Service.Components.Federation;
 
 /// <summary>Local resource projection only. It never calls acquisition, discovery, workflow, or a remote library.</summary>
 public sealed class FederationResourceService(IResourceService resources, IPropertyValueScopeResolver scopes,
-    INodeIdentityProvider identity, IFederationQueryAccess access, AssetLeaseStore leases, BakabaseDbContext db)
+    INodeIdentityProvider identity, IFederationQueryAccess access, AssetLeaseStore leases, BakabaseDbContext db,
+    FederationMappingTreeService? mappingTree = null)
 {
     public const int MaximumMappingRoots = 4096;
     public const int MaximumMappingResourceRows = 250_000;
@@ -40,6 +42,9 @@ public sealed class FederationResourceService(IResourceService resources, IPrope
             throw new FederationQueryException("InvalidResourceRefs", 422, "Provide between 1 and 32 resource references.");
         var node = await identity.GetAsync(ct);
         var results = new List<FederatedResourceDetail>();
+        // Ancestor hints are optional and must not multiply a 32-resource/256-asset response
+        // past the protocol envelope. Exhaustion preserves legacy mapping or source streaming.
+        var remainingMappingBytes = 2 * 1024 * 1024;
         foreach (var reference in request.Refs)
         {
             ct.ThrowIfCancellationRequested();
@@ -70,6 +75,18 @@ public sealed class FederationResourceService(IResourceService resources, IPrope
                     candidate.Root == null ? null : Path.GetRelativePath(candidate.Root, candidate.Path).Replace('\\', '/'),
                     lease.ExpiresAt);
             }).ToArray();
+            if (mappingTree != null)
+                for (var i = 0; i < candidates.Count; i++)
+                    if (candidates[i].Root is { } root)
+                    {
+                        var locations = remainingMappingBytes > 0
+                            ? await mappingTree.GetLocationsAsync(root, candidates[i].Path, ct,
+                                assets[i].SourceRootId, assets[i].RelativePath) : [];
+                        assets[i] = assets[i] with { MappingLocations = BoundedLocations(locations) };
+                    }
+            var location = await DescribeLocationAsync(resource.Path, resource.IsFile, ct, includeMappings: remainingMappingBytes > 0);
+            if (location?.MappingLocations is { } locationMappings)
+                location = location with { MappingLocations = BoundedLocations(locationMappings) };
             var name = scopes.Resolve(resource, PropertyPool.Reserved, (int)ReservedProperty.Name)
                 ?.AliasAppliedBizValue as string;
             results.Add(new FederatedResourceDetail(reference, node.Name,
@@ -78,9 +95,28 @@ public sealed class FederationResourceService(IResourceService resources, IPrope
                 resource.SourceLinks?.Select(x => new FederatedSource((int)x.Source, x.Source.ToString())).ToArray() ?? [],
                 resource.ExternalIdentities?.Select(x => new FederatedExternalIdentity(x.ThirdPartyId.ToString(), x.ExternalId)).ToArray() ?? [],
                 resource.Collections?.Select(x => new FederatedCollection(x.Name, x.Color)).ToArray() ?? [],
-                assets, unavailableReason, Location: DescribeLocation(resource.Path, resource.IsFile)));
+                assets, unavailableReason, Location: location));
         }
-        return new ResourceResolveResponse(results.ToArray());
+        var response = new ResourceResolveResponse(results.ToArray());
+        if (results.Any(x => x.Location?.MappingLocations != null ||
+                             x.Assets.Any(asset => asset.MappingLocations != null)) &&
+            !FederationMappingWireBudget.Fits(response, ct))
+            response = response with { Resources = response.Resources.Select(detail => detail with
+            {
+                Assets = detail.Assets.Select(asset => asset with { MappingLocations = null }).ToArray(),
+                Location = detail.Location == null ? null : detail.Location with { MappingLocations = null }
+            }).ToArray() };
+        ct.ThrowIfCancellationRequested();
+        return response;
+
+        FederatedMappingLocation[] BoundedLocations(FederatedMappingLocation[] locations)
+        {
+            if (locations.Length == 0) return locations;
+            var bytes = JsonSerializer.SerializeToUtf8Bytes(locations, FederationJson.Options).Length;
+            if (bytes > remainingMappingBytes) { remainingMappingBytes = 0; return []; }
+            remainingMappingBytes -= bytes;
+            return locations;
+        }
     }
 
     public async Task<AssetLease> OpenAsync(string grantId, string assetId, CancellationToken ct)
@@ -134,7 +170,7 @@ public sealed class FederationResourceService(IResourceService resources, IPrope
             .Select(r => new { Path = r.Path == null ? null : r.Path.Substring(0, MaximumMappingPathChars + 1), r.IsFile })
             .SingleOrDefaultAsync(ct);
         if (resource == null) throw new FederationQueryException("ResourceGone", 410);
-        var location = DescribeLocation(resource.Path, resource.IsFile);
+        var location = await DescribeLocationAsync(resource.Path, resource.IsFile, ct);
         return (new ResourceLocationResponse(reference, location), location == null ? null : Path.GetFullPath(resource.Path!));
     }
 
@@ -145,6 +181,18 @@ public sealed class FederationResourceService(IResourceService resources, IPrope
         var root = isFile ? Path.GetDirectoryName(path) : path;
         return root == null ? null : new FederatedResourceLocation(RootId(root),
             isFile ? Path.GetFileName(path) : ".", !isFile);
+    }
+
+    private async Task<FederatedResourceLocation?> DescribeLocationAsync(string? path, bool isFile, CancellationToken ct,
+        bool includeMappings = true)
+    {
+        var location = DescribeLocation(path, isFile);
+        if (location == null || mappingTree == null || !includeMappings) return location;
+        var full = Path.GetFullPath(path!);
+        var root = isFile ? Path.GetDirectoryName(full) : full;
+        return root == null ? location : location with
+        { MappingLocations = await mappingTree.GetLocationsAsync(root, full, ct, location.SourceRootId,
+            location.RelativePath, targetIsDirectory: !isFile) };
     }
 
     public async Task<MappingRoot[]> GetMappingRootsAsync(CancellationToken ct)

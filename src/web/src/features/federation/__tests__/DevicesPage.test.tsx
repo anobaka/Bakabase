@@ -11,6 +11,10 @@ import { managedServerApi } from "../serverApi";
 import { useFederationStatus } from "../hooks/useFederationStatus";
 
 import BApi from "@/sdk/BApi";
+vi.mock("@/components/ContextProvider/BakabaseContextProvider", () => ({
+  useBakabaseContext: () => ({ createPortal: vi.fn() }),
+}));
+vi.mock("@/components/FileSystemSelector", () => ({ FileSystemSelectorModal: () => null }));
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
@@ -40,6 +44,7 @@ vi.mock("../peerApi", () => ({
     enable: vi.fn(),
     mappings: vi.fn(),
     mappingRoots: vi.fn(),
+    mappingTree: vi.fn(),
     sharing: vi.fn(),
     invite: vi.fn(),
     decide: vi.fn(),
@@ -96,6 +101,9 @@ const status: FederationStatus = {
 beforeEach(() => {
   vi.clearAllMocks();
   localStorage.clear();
+  vi.mocked(federationPeerApi.mappingTree).mockRejectedValue(
+    new FederationError("EndpointNotFound", "", 404),
+  );
   vi.mocked(useFederationStatus).mockReturnValue({
     status,
     loading: false,

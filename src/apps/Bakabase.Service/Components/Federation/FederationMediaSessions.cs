@@ -65,6 +65,7 @@ public sealed class FederationMediaSessions(TimeProvider? timeProvider = null)
                     asset.RelativePath is { Length: > 4096 } ||
                     (asset.SourceRootId == null) != (asset.RelativePath == null))
                     throw new FederationQueryException("InvalidPeerResponse", 502);
+                FederationPathMappingResolver.ValidateLocations(asset.MappingLocations, asset.SourceRootId, asset.RelativePath);
                 var mediaType = MediaContentTypes.Get(asset.FileName);
                 var now = _time.GetUtcNow();
                 if (mediaType == null || mediaType.Value.Kind != asset.Kind ||
@@ -139,7 +140,10 @@ public sealed class FederationMediaSessions(TimeProvider? timeProvider = null)
                 throw new FederationQueryException("AssetExpired", 410, "This media session expired.");
             if (!ticket.Source.IsSameFileAs(renewed))
                 throw new FederationQueryException("AssetGone", 404, "The source no longer exposes this media file.");
-            _ticketBytes += Estimate(renewed) - Estimate(ticket.Source);
+            var delta = Estimate(renewed) - Estimate(ticket.Source);
+            if (_assetBytes + _ticketBytes + delta > ByteLimit)
+                throw new FederationQueryException("Busy", 503, "The local media budget is full.", true);
+            _ticketBytes += delta;
             ticket.Source = renewed;
         }
     }
@@ -172,5 +176,6 @@ public sealed class FederationMediaSessions(TimeProvider? timeProvider = null)
 
     private static long Estimate(AvailableFederationAsset asset) => 1024L + 2L *
         (asset.Ref.ResourceRef.NodeId.Length + asset.Ref.ResourceRef.LibraryEpoch.Length + asset.Ref.AssetId.Length +
-         asset.Asset.FileName.Length + (asset.Asset.RelativePath?.Length ?? 0) + (asset.Asset.SourceRootId?.Length ?? 0));
+         asset.Asset.FileName.Length + (asset.Asset.RelativePath?.Length ?? 0) + (asset.Asset.SourceRootId?.Length ?? 0) +
+         (asset.Asset.MappingLocations?.Sum(x => 32L + x.SourceRootId.Length + x.RelativePath.Length) ?? 0));
 }

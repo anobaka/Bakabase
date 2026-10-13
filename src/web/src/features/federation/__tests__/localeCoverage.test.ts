@@ -51,6 +51,8 @@ const sources = import.meta.glob<string>(
     "../../../layouts/BasicLayout/components/PageNav/components/ServerSwitcher/index.tsx",
     "../../../pages/client-path-mapping/index.tsx",
     "../components/PeerPathMappings.tsx",
+    "../components/MappingTree.tsx",
+    "../components/ResourceDetail.tsx",
     "../components/ManagedServerPathMappings.tsx",
     "../DeviceMapPage.tsx",
     "../map/DeviceMapCanvas.tsx",
@@ -172,7 +174,7 @@ describe("locales for the multi-device management screens", () => {
   ).sort();
 
   it("reads keys out of every listed component", () => {
-    expect(Object.keys(sources)).toHaveLength(22);
+    expect(Object.keys(sources)).toHaveLength(24);
     for (const [path, source] of Object.entries(sources)) {
       expect(staticKeys(source).length, path).toBeGreaterThan(0);
     }
