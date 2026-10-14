@@ -17,6 +17,7 @@ import toast from "react-hot-toast";
 import { isNativePlayerMediaType } from "../PlayOnThisDevice/playerSchemes";
 
 import NoPlayableFilesModal from "./NoPlayableFilesModal";
+import { DesktopPlaybackGuide, useDesktopPlaybackGuidanceAvailable } from "./DesktopPlaybackGuide";
 import { usePlaybackPreferences } from "./usePlaybackPreferences";
 import {
   pathMediaType,
@@ -89,6 +90,7 @@ export type PlayControlPortalProps = {
   triggerFsDiscovery: () => void;
   onPlayInBrowser?: () => void;
   onChoosePlayback?: () => void;
+  onDesktopPlaybackGuide?: () => void;
   /** Select a concrete discovered video before choosing its playback method. */
   onPlayVideos?: () => void;
   browserPlaybackAvailable?: boolean;
@@ -197,6 +199,8 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
   const uiOptionsStore = useUiOptionsStore();
   const userSideActionsRunHere = useUserSideActionsRunHere();
   const appWindow = isDesktopAppWindow();
+  const desktopGuidanceAvailable = useDesktopPlaybackGuidanceAvailable();
+  const [desktopGuidanceVisible, setDesktopGuidanceVisible] = useState(false);
   const openInBrowserPlayer = useResourceBrowserPlayer();
   const folderAction = useOpenResourceDirectory();
   const resourceUiOptions = uiOptionsStore.data?.resource;
@@ -430,6 +434,7 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
       kind: item ? playbackKindForPath(selectedPath) : resourceKind,
       isMixed: !item && collection.isMixed,
       unavailableReason,
+      offerDesktopGuidance: fsDiscoveryStatus === "ready" && (!!item || fsItems.length > 0),
       preferenceScope: appWindow && userSideActionsRunHere ? "device" : "browser",
       onPlayInBrowser: () => playInBrowser(item?.key),
       onPlayVideos:
@@ -674,6 +679,9 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
 
   return (
     <>
+      {desktopGuidanceVisible && (
+        <DesktopPlaybackGuide onClose={() => setDesktopGuidanceVisible(false)} />
+      )}
       <PortalComponent
         browserPlaybackAvailable={!!resource.path}
         browserPlaybackIsDefault={!opening.unavailable && preferredPlayback.mode === "browser"}
@@ -695,6 +703,11 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
         status={status}
         triggerFsDiscovery={() => resolution.triggerDiscovery(DataOrigin.FileSystem)}
         onChoosePlayback={() => choosePlayback()}
+        onDesktopPlaybackGuide={
+          desktopGuidanceAvailable && fsItems.length > 0 && fsDiscoveryStatus === "ready"
+            ? () => setDesktopGuidanceVisible(true)
+            : undefined
+        }
         onDiscoveryFailure={() => setDiscoveryFailureVisible(true)}
         onNotFound={handleNotFound}
         onOpenFolder={handleOpenFolder}

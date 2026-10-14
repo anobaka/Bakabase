@@ -8,7 +8,8 @@ import ResourceDetail from "../components/ResourceDetail";
 import { federationResourceApi } from "../resourceApi";
 import { FederationError } from "../transport";
 
-import { useUserSideActionsRunHere } from "@/stores/remoteAccess";
+import { ClientMode } from "@/sdk/constants";
+import { useRemoteAccessStore, useUserSideActionsRunHere } from "@/stores/remoteAccess";
 import { copyTextToClipboard } from "@/core/clipboard";
 
 const openingFixture = vi.hoisted(() => ({
@@ -93,6 +94,14 @@ const view = (ref = remote) => (
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(useUserSideActionsRunHere).mockReturnValue(true);
+  vi.mocked(useRemoteAccessStore).mockImplementation((selector: any) =>
+    selector({
+      context: "known",
+      clientMode: vi.mocked(useUserSideActionsRunHere)()
+        ? ClientMode.AllInOne
+        : ClientMode.RemoteBrowser,
+    }),
+  );
   openingFixture.choice = undefined;
   openingFixture.desktop = false;
   openingFixture.ready = true;
@@ -102,6 +111,25 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("read-only remote detail", () => {
+  it("offers a read-only desktop guide for shared media in a browser, without triggering playback", async () => {
+    vi.mocked(useUserSideActionsRunHere).mockReturnValue(false);
+    vi.mocked(federationResourceApi.detail).mockResolvedValue({ resources: [detail()] });
+    render(view());
+    fireEvent.click(await screen.findByText("resource.desktopPlayback.action"));
+    expect(screen.getByText("resource.desktopPlayback.connectShared")).toBeInTheDocument();
+    expect(screen.getByText("resource.desktopPlayback.sharedLimits")).toBeInTheDocument();
+    expect(screen.queryByText("resource.desktopPlayback.connect")).not.toBeInTheDocument();
+    expect(federationResourceApi.playback).not.toHaveBeenCalled();
+  });
+  it("does not offer desktop installation for a shared resource with no exposed assets", async () => {
+    vi.mocked(useUserSideActionsRunHere).mockReturnValue(false);
+    vi.mocked(federationResourceApi.detail).mockResolvedValue({
+      resources: [{ ...detail(), assets: [] }],
+    });
+    render(view());
+    await screen.findByText("Remote title");
+    expect(screen.queryByText("resource.desktopPlayback.action")).not.toBeInTheDocument();
+  });
   it("asks when shared rules cannot load, with retry and explicit preview still available", async () => {
     openingFixture.ready = false;
     openingFixture.unavailable = true;

@@ -9,6 +9,7 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AiOutlineCopy, AiOutlinePlayCircle } from "react-icons/ai";
 
+import { DesktopPlaybackGuideButton } from "../PlayControl/DesktopPlaybackGuide";
 import { pathMediaType, playbackKindForPath } from "../PlayControl/playbackPreferences";
 
 import {
@@ -37,6 +38,8 @@ type Props = DestroyableProps & {
   onRememberChoice?: (kind: PlaybackKind, preference: PlaybackPreference) => Promise<void>;
   unavailableReason?: string;
   preferenceScope?: "device" | "browser";
+  /** Only offer guidance after an actual file candidate has been discovered. */
+  offerDesktopGuidance?: boolean;
 };
 
 const PlayOnThisDevice = ({
@@ -51,6 +54,7 @@ const PlayOnThisDevice = ({
   onDestroyed,
   unavailableReason,
   preferenceScope,
+  offerDesktopGuidance = false,
 }: Props) => {
   const { t } = useTranslation();
   const [copyFeedback, setCopyFeedback] = useState<string>();
@@ -208,6 +212,7 @@ const PlayOnThisDevice = ({
             </div>
           )
         )}
+        {!onPlayNative && offerDesktopGuidance && <DesktopPlaybackGuideButton />}
         {onRememberChoice && (
           <Checkbox isSelected={rememberChoice} size="sm" onValueChange={setRememberChoice}>
             {t("resource.playOnThisDevice.rememberChoice", {

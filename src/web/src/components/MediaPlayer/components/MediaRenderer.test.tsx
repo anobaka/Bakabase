@@ -5,6 +5,9 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import MediaRenderer, { MEDIA_LOAD_TIMEOUT } from "./MediaRenderer";
 
 import { IwFsType, MediaType } from "@/sdk/constants";
+vi.mock("@/components/Resource/components/PlayControl/DesktopPlaybackGuide", () => ({
+  DesktopPlaybackGuideButton: () => <button>desktop playback guide</button>,
+}));
 vi.mock("@/components/bakaui", () => ({ Spinner: () => <span data-testid="spinner" /> }));
 vi.mock("@/components/TextReader", () => ({ default: () => <div>text-preview</div> }));
 vi.mock("react-i18next", () => {
@@ -75,6 +78,67 @@ describe("browser media delivery", () => {
       fireEvent.click(screen.getByText("mediaPlayer.preview.chooseAlternative")),
     );
     expect(screen.getByRole("alert")).toHaveTextContent("mediaPlayer.preview.alternativeFailed");
+  });
+  it("offers player compatibility guidance for decoding failures after receiving media metadata", () => {
+    const { container } = render(<MediaRenderer {...props} />);
+    const video = container.querySelector("video")!;
+
+    fireEvent.loadedMetadata(video);
+    Object.defineProperty(video, "error", { value: { code: 3 } });
+    fireEvent.error(video);
+    expect(screen.getByText("desktop playback guide")).toBeInTheDocument();
+  });
+  it.each([undefined, 1, 2, 3, 4])(
+    "does not recommend installing for an initial failure before any metadata (%s)",
+    (code) => {
+      const { container } = render(<MediaRenderer {...props} />);
+      const video = container.querySelector("video")!;
+
+      // HTTP failures can surface as code 4 too; this event alone does not prove
+      // that source bytes were accessible or that a desktop player would help.
+      Object.defineProperty(video, "error", { value: { code } });
+      fireEvent.error(video);
+      expect(screen.queryByText("desktop playback guide")).not.toBeInTheDocument();
+    },
+  );
+  it("does not interpret code 4 as confirmed format incompatibility even after metadata", () => {
+    const { container } = render(<MediaRenderer {...props} />);
+    const video = container.querySelector("video")!;
+
+    fireEvent.loadedMetadata(video);
+    Object.defineProperty(video, "error", { value: { code: 4 } });
+    fireEvent.error(video);
+    expect(screen.queryByText("desktop playback guide")).not.toBeInTheDocument();
+  });
+  it("forgets successful metadata on retry and when changing file or media type", () => {
+    const { container, rerender } = render(<MediaRenderer {...props} />);
+    const failDecoding = (element: HTMLMediaElement) => {
+      Object.defineProperty(element, "error", { value: { code: 3 }, configurable: true });
+      fireEvent.error(element);
+    };
+
+    fireEvent.loadedMetadata(container.querySelector("video")!);
+    failDecoding(container.querySelector("video")!);
+    expect(screen.getByText("desktop playback guide")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("mediaPlayer.retry"));
+    failDecoding(container.querySelector("video")!);
+    expect(screen.queryByText("desktop playback guide")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText("mediaPlayer.retry"));
+    fireEvent.loadedMetadata(container.querySelector("video")!);
+    rerender(<MediaRenderer {...props} entry={entry("/film/next.mp4")} />);
+    failDecoding(container.querySelector("video")!);
+    expect(screen.queryByText("desktop playback guide")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText("mediaPlayer.retry"));
+    fireEvent.loadedMetadata(container.querySelector("video")!);
+    rerender(
+      <MediaRenderer {...props} entry={entry("/film/next.mp4")} mediaType={MediaType.Audio} />,
+    );
+    failDecoding(container.querySelector("audio")!);
+    expect(screen.queryByText("desktop playback guide")).not.toBeInTheDocument();
+  });
+  it("offers guidance for a file format the browser cannot preview", () => {
+    render(<MediaRenderer {...props} mediaType={MediaType.Unknown} />);
+    expect(screen.getByText("desktop playback guide")).toBeInTheDocument();
   });
   it("attaches /file/play as an actual native video source instead of obsolete ReactPlayer url props", () => {
     const { container } = render(<MediaRenderer {...props} />);

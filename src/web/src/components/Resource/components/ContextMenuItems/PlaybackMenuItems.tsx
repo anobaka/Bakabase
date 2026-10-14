@@ -1,7 +1,7 @@
 import type { Resource } from "@/core/models/Resource";
 import type { PlayControlPortalProps } from "../PlayControl";
 
-import { ExportOutlined, VideoCameraOutlined } from "@ant-design/icons";
+import { DesktopOutlined, ExportOutlined, VideoCameraOutlined } from "@ant-design/icons";
 import { MenuItem } from "@szhsin/react-menu";
 import { useTranslation } from "react-i18next";
 
@@ -11,6 +11,7 @@ const VideoMenuItem = ({
   onPlayVideos,
   playbackReady,
   originalSourceActions,
+  onDesktopPlaybackGuide,
 }: PlayControlPortalProps) => {
   const { t } = useTranslation();
 
@@ -22,6 +23,16 @@ const VideoMenuItem = ({
             <VideoCameraOutlined aria-hidden className="text-base" />
             <span className="resource-context-menu__label">
               {t("resource.playback.playVideos")}
+            </span>
+          </div>
+        </MenuItem>
+      )}
+      {onDesktopPlaybackGuide && (
+        <MenuItem onClick={onDesktopPlaybackGuide}>
+          <div className="flex items-center gap-2">
+            <DesktopOutlined aria-hidden className="text-base" />
+            <span className="resource-context-menu__label">
+              {t("resource.desktopPlayback.action")}
             </span>
           </div>
         </MenuItem>

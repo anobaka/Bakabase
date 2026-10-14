@@ -23,6 +23,7 @@ import { browserExternalUrl } from "@/utils/openExternalUrl";
 import { copyTextToClipboard } from "@/core/clipboard";
 import { PlaybackOverridesButton, useTargetPlayback } from "@/features/playback/overrides";
 import { Button, Modal } from "@/components/bakaui";
+import { DesktopPlaybackGuideButton } from "@/components/Resource/components/PlayControl/DesktopPlaybackGuide";
 
 export function displayValue(value: unknown): string {
   if (value === null || value === undefined) return "—";
@@ -448,6 +449,9 @@ export default function ResourceDetail({
           <div className="border-t border-default-200 pt-4">
             <h3 className="font-medium">{t("federation.detail.media")}</h3>
             <p className="mt-1 text-xs text-default-500">{t("federation.detail.mediaTip")}</p>
+            {detail.assets.length > 0 && !nativeActionsAvailable && (
+              <DesktopPlaybackGuideButton shared />
+            )}
             {!detail.assets.length && (
               <p className="mt-3 text-sm text-default-500">{t("federation.detail.noMedia")}</p>
             )}

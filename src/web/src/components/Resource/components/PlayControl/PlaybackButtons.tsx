@@ -3,6 +3,7 @@ import type { PlayControlPortalProps } from ".";
 import React from "react";
 import { useTranslation } from "react-i18next";
 import {
+  DesktopOutlined,
   FolderOpenOutlined,
   LoadingOutlined,
   PlayCircleOutlined,
@@ -51,7 +52,7 @@ const renderPlayButtonMainIcon = (origin: DataOrigin, className: string): React.
 
 type MenuEntry = {
   key: string;
-  type: "source" | "openFolder" | "notFound";
+  type: "source" | "openFolder" | "notFound" | "desktopGuide";
   source?: DataOrigin;
   icon: React.ReactNode;
   label: string;
@@ -77,6 +78,7 @@ export const ResourceCardPlaybackButton: React.FC<PlayControlPortalProps> = (pro
     sourceActionLabel,
     discoveryFailed,
     onDiscoveryFailure,
+    onDesktopPlaybackGuide,
   } = props;
   const { t } = useTranslation();
 
@@ -152,6 +154,16 @@ export const ResourceCardPlaybackButton: React.FC<PlayControlPortalProps> = (pro
       });
     }
 
+    if (onDesktopPlaybackGuide) {
+      result.push({
+        key: "desktopGuide",
+        type: "desktopGuide",
+        icon: <DesktopOutlined className="text-base" />,
+        label: t("resource.desktopPlayback.action"),
+        onClick: onDesktopPlaybackGuide,
+      });
+    }
+
     if (hasPath) {
       result.push({
         key: "openFolder",
@@ -178,6 +190,7 @@ export const ResourceCardPlaybackButton: React.FC<PlayControlPortalProps> = (pro
     sourceActionLabel,
     discoveryFailed,
     onDiscoveryFailure,
+    onDesktopPlaybackGuide,
   ]);
 
   // Trigger FS discovery when FS button is visible

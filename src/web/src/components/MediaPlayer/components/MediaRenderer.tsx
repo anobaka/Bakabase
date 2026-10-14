@@ -9,6 +9,7 @@ import { MediaType } from "@/sdk/constants";
 import { Spinner } from "@/components/bakaui";
 import TextReader from "@/components/TextReader";
 import envConfig from "@/config/env";
+import { DesktopPlaybackGuideButton } from "@/components/Resource/components/PlayControl/DesktopPlaybackGuide";
 
 export interface MediaRendererRef {
   getImageRef: () => HTMLImageElement | null;
@@ -63,6 +64,7 @@ const MediaRenderer = forwardRef<MediaRendererRef, MediaRendererProps>((props, r
   const [status, setStatus] = useState<"loading" | "ready" | "buffering" | "error">("loading");
   const [errorKey, setErrorKey] = useState("mediaPlayer.media.failed");
   const [attempt, setAttempt] = useState(0);
+  const [mediaMetadataReceived, setMediaMetadataReceived] = useState(false);
   const [openingAlternative, setOpeningAlternative] = useState(false);
   const [alternativeFailed, setAlternativeFailed] = useState(false);
   const path = entry.playPath || entry.path;
@@ -79,6 +81,7 @@ const MediaRenderer = forwardRef<MediaRendererRef, MediaRendererProps>((props, r
   useEffect(() => {
     setStatus("loading");
     setAlternativeFailed(false);
+    setMediaMetadataReceived(false);
   }, [path, mediaType, attempt]);
   useEffect(() => {
     onPreviewStateChange?.(
@@ -129,6 +132,7 @@ const MediaRenderer = forwardRef<MediaRendererRef, MediaRendererProps>((props, r
 
   const ready = () => {
     setStatus("ready");
+    if (isMedia) setMediaMetadataReceived(true);
     onLoad();
     const element = media.current;
 
@@ -236,6 +240,7 @@ const MediaRenderer = forwardRef<MediaRendererRef, MediaRendererProps>((props, r
         <span className="media-player-hint">{t("mediaPlayer.unsupportedDescription")}</span>
         <code>{entry.ext || entry.name}</code>
         {alternative}
+        <DesktopPlaybackGuideButton />
       </div>
     );
   if (status === "error")
@@ -256,6 +261,11 @@ const MediaRenderer = forwardRef<MediaRendererRef, MediaRendererProps>((props, r
           {t("mediaPlayer.retry")}
         </button>
         {alternative}
+        {/* Code 4 can also mean an initial HTTP 403/404/500. Only suggest player
+            compatibility after this attempt delivered actual media metadata. */}
+        {mediaMetadataReceived && errorKey === "mediaPlayer.media.decode" && (
+          <DesktopPlaybackGuideButton />
+        )}
       </div>
     );
 

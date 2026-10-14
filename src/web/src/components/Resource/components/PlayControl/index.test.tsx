@@ -52,9 +52,14 @@ vi.mock("@/stores/remoteAccess", () => ({
   useUserSideActionsRunHere: () => fixture.desktop,
   useRemoteAccessStore: (selector: (value: unknown) => unknown) =>
     selector({
+      context: "known",
       serverId: fixture.serverId,
       serverName: "Library server",
-      clientMode: fixture.managing ? ClientMode.PureClient : ClientMode.RemoteBrowser,
+      clientMode: fixture.managing
+        ? ClientMode.PureClient
+        : fixture.desktop
+          ? ClientMode.AllInOne
+          : ClientMode.RemoteBrowser,
     }),
 }));
 vi.mock("@/features/playback/overrides", () => ({
@@ -183,6 +188,31 @@ afterEach(() => {
 });
 
 describe("playback routing on the current device", () => {
+  it("offers desktop guidance for discovered files without opening it automatically", () => {
+    render(<PlayControl PortalComponent={ResourceCardPlaybackButton} resource={resource} />);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.getByText("resource.desktopPlayback.action")).toBeInTheDocument();
+    expect(fixture.native).not.toHaveBeenCalled();
+    expect(fixture.browser).not.toHaveBeenCalled();
+  });
+  it.each([DataStatus.Ready, DataStatus.Failed, DataStatus.NotStarted])(
+    "does not offer desktop installation when file discovery has no candidates (%s)",
+    (status) => {
+      fixture.groups = [{ origin: DataOrigin.FileSystem, status, items: [] }];
+      render(<PlayControl PortalComponent={ResourceCardPlaybackButton} resource={resource} />);
+      expect(screen.queryByText("resource.desktopPlayback.action")).not.toBeInTheDocument();
+    },
+  );
+  it("allows guidance in the chooser only after file candidates have been found", () => {
+    show();
+    fireEvent.click(screen.getByText("choose"));
+    expect(fixture.portal.mock.calls.at(-1)![1].offerDesktopGuidance).toBe(true);
+    cleanup();
+    fixture.groups = [fs([])];
+    show();
+    fireEvent.click(screen.getByText("choose"));
+    expect(fixture.portal.mock.calls.at(-1)![1].offerDesktopGuidance).toBe(false);
+  });
   it("asks on an initial override read failure and still allows explicit browser/native choices", async () => {
     fixture.desktop = true;
     fixture.managing = true;
