@@ -55,7 +55,7 @@ afterEach(cleanup);
 
 describe("remembering the current device's opening method", () => {
   it.each(["/album/cover.jpg", "/album/movie.mkv"])(
-    "shows collection browsing + video selection for mixed resources without first-file players or links: %s",
+    "shows configured desktop playback and video selection for mixed resources without first-file URI handlers or links: %s",
     (filePath) => {
       const videos = vi.fn();
 
@@ -72,12 +72,56 @@ describe("remembering the current device's opening method", () => {
         />,
       );
       expect(screen.queryByText("PotPlayer")).toBeNull();
-      expect(screen.queryByText("resource.playOnThisDevice.desktopPlayer")).toBeNull();
+      expect(screen.getByText("resource.playOnThisDevice.desktopPlayer")).toBeInTheDocument();
       expect(screen.queryByRole("textbox")).toBeNull();
       fireEvent.click(screen.getByText("resource.playback.playVideos"));
       expect(videos).toHaveBeenCalledOnce();
       expect(mocks.native).not.toHaveBeenCalled();
       expect(mocks.browser).not.toHaveBeenCalled();
+    },
+  );
+
+  it("uses and remembers the mixed desktop configured-player action without guessing an AV URI handler", async () => {
+    render(
+      <PlayOnThisDevice
+        isMixed
+        filePath="/album/movie.mkv"
+        kind="other"
+        resource={{ id: 42 } as any}
+        onDestroyed={mocks.destroy}
+        onPlayInBrowser={mocks.browser}
+        onPlayNative={mocks.native}
+        onRememberChoice={mocks.save}
+      />,
+    );
+    expect(screen.queryByText("PotPlayer")).toBeNull();
+    expect(screen.queryByRole("textbox")).toBeNull();
+    fireEvent.click(screen.getByRole("checkbox"));
+    await act(async () =>
+      fireEvent.click(screen.getByText("resource.playOnThisDevice.desktopPlayer")),
+    );
+    expect(mocks.save).toHaveBeenCalledWith("other", { mode: "native" });
+    expect(mocks.native).toHaveBeenCalledOnce();
+    expect(mocks.destroy).toHaveBeenCalledOnce();
+    expect(mocks.browser).not.toHaveBeenCalled();
+  });
+
+  it.each(["/album/cover.jpg", "/album/movie.mkv"])(
+    "keeps mixed browser collections free of configured-player and first-file AV URI actions: %s",
+    (filePath) => {
+      render(
+        <PlayOnThisDevice
+          isMixed
+          filePath={filePath}
+          kind="other"
+          resource={{ id: 42 } as any}
+          onPlayInBrowser={mocks.browser}
+        />,
+      );
+      expect(screen.queryByText("resource.playOnThisDevice.desktopPlayer")).toBeNull();
+      expect(screen.queryByText("PotPlayer")).toBeNull();
+      expect(screen.queryByText("resource.playOnThisDevice.nativePlayers")).toBeNull();
+      expect(screen.queryByRole("textbox")).toBeNull();
     },
   );
   it("uses a one-time browser choice unless remembering is selected", () => {

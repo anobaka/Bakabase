@@ -38,6 +38,15 @@ describe("current-device playback preferences", () => {
         "windows",
         collection.isMixed,
       ),
+    ).toEqual({ mode: "native" });
+    expect(
+      resolvePlaybackPreference(
+        { mode: "automatic" },
+        false,
+        collection.mediaType,
+        "windows",
+        collection.isMixed,
+      ),
     ).toEqual({ mode: "browser" });
   });
 
@@ -56,7 +65,10 @@ describe("current-device playback preferences", () => {
     });
   });
 
-  it("keeps explicit modes ahead of mixed automatic, requiring file choice for browser native", () => {
+  it("keeps explicit modes ahead of automatic, requiring file choice for browser native mixed media", () => {
+    expect(
+      resolvePlaybackPreference({ mode: "browser" }, true, MediaType.Unknown, "windows", true),
+    ).toEqual({ mode: "browser" });
     expect(
       resolvePlaybackPreference({ mode: "native" }, true, MediaType.Unknown, "windows", true),
     ).toEqual({ mode: "native" });

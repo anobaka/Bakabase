@@ -129,7 +129,7 @@ const PlayOnThisDevice = ({
             {t("resource.playback.playVideos")}
           </Button>
         )}
-        {!isMixed && onPlayNative ? (
+        {onPlayNative ? (
           <Button
             fullWidth
             variant="flat"

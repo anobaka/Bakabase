@@ -344,7 +344,7 @@
   "resource.playback.browserQuickAction": "Open in browser",
   "resource.playback.playVideos": "Play videos in this resource",
   "resource.playback.selectVideo": "Choose a video to play",
-  "resource.playback.mixedHint": "Different file types were discovered for this resource, which opens in the browser by default. Select a specific video to open it in a player.",
+  "resource.playback.mixedHint": "This resource contains different types of playable files. Browse the whole resource in the browser, or select a video to open in a player on this device.",
   "resource.playback.videoCount": "{{count}} discovered videos",
   "resource.playback.loadMoreVideos": "Show more videos"
 }

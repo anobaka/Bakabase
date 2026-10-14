@@ -301,9 +301,8 @@ describe("mixed media and selecting individual videos", () => {
   });
 
   it.each([{ paths: mixed }, { paths: [...mixed].reverse() }])(
-    "defaults the full desktop mixed collection to web regardless of first file",
+    "defaults the full browser mixed collection to web regardless of first file",
     async ({ paths }) => {
-      fixture.desktop = true;
       fixture.first = true;
       fixture.groups = [steam, fs(paths)];
       show(folder);
@@ -315,6 +314,85 @@ describe("mixed media and selecting individual videos", () => {
       expect(fixture.portal).not.toHaveBeenCalled();
     },
   );
+
+  it.each([{ paths: mixed }, { paths: [...mixed].reverse() }])(
+    "uses the configured desktop playback API for the chosen mixed file regardless of first file",
+    async ({ paths }) => {
+      fixture.desktop = true;
+      fixture.groups = [fs(paths)];
+      show(folder);
+      expect(portal.browserPlaybackIsDefault).toBe(false);
+      expect(portal.playbackCaption).toBe("resource.playOnThisDevice.desktopPlayer");
+      fireEvent.click(screen.getByText("main"));
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+      expect(fixture.native).not.toHaveBeenCalled();
+      await act(async () => fireEvent.click(screen.getByText("movie.mkv")));
+      expect(fixture.native).toHaveBeenCalledWith(42, {
+        origin: DataOrigin.FileSystem,
+        key: mixed[1],
+      });
+      expect(fixture.browser).not.toHaveBeenCalled();
+      expect(fixture.portal).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([{ paths: mixed }, { paths: [...mixed].reverse() }])(
+    "retains desktop auto-select-first for the configured playable mixed items",
+    async ({ paths }) => {
+      fixture.desktop = true;
+      fixture.first = true;
+      fixture.groups = [fs(paths)];
+      show(folder);
+      await act(async () => fireEvent.click(screen.getByText("main")));
+      expect(fixture.native).toHaveBeenCalledWith(42, {
+        origin: DataOrigin.FileSystem,
+        key: paths[0],
+      });
+      expect(fixture.browser).not.toHaveBeenCalled();
+      expect(screen.queryByRole("dialog")).toBeNull();
+    },
+  );
+
+  it("retains configured source priority on desktop even when filesystem discovery contains mixed media", async () => {
+    fixture.desktop = true;
+    fixture.groups = [steam, fs(mixed)];
+    show(folder);
+    expect(portal.sources[0]!.source).toBe(DataOrigin.Steam);
+    await act(async () => fireEvent.click(screen.getByText("main")));
+    expect(fixture.native).toHaveBeenCalledWith(42, { origin: DataOrigin.Steam, key: "123" });
+    expect(fixture.browser).not.toHaveBeenCalled();
+  });
+
+  it("retains an explicit mixed web preference on desktop", async () => {
+    fixture.desktop = true;
+    fixture.preferences.other = { mode: "browser" };
+    fixture.groups = [fs(mixed)];
+    show(folder);
+    await act(async () => fireEvent.click(screen.getByText("main")));
+    expect(fixture.browser).toHaveBeenCalledWith(folder, undefined);
+    expect(fixture.native).not.toHaveBeenCalled();
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("offers the configured desktop mixed action from the chooser and resolves a concrete item before playing", async () => {
+    fixture.desktop = true;
+    fixture.preferences.other = { mode: "ask" };
+    fixture.groups = [fs(mixed)];
+    show(folder);
+    fireEvent.click(screen.getByText("main"));
+    const choice = fixture.portal.mock.lastCall![1];
+
+    expect(choice).toMatchObject({ isMixed: true, onPlayNative: expect.any(Function) });
+    await act(async () => choice.onPlayNative());
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(fixture.native).not.toHaveBeenCalled();
+    await act(async () => fireEvent.click(screen.getByText("001.jpg")));
+    expect(fixture.native).toHaveBeenCalledWith(42, {
+      origin: DataOrigin.FileSystem,
+      key: mixed[0],
+    });
+    expect(fixture.browser).not.toHaveBeenCalled();
+  });
 
   it("retains an explicit mixed native preference, passing only the chosen item to the desktop API", async () => {
     fixture.desktop = true;

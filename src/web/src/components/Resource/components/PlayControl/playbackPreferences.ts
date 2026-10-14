@@ -112,7 +112,9 @@ export const resolvePlaybackPreference = (
   platform: DevicePlatform,
   isMixed = false,
 ): EffectivePlayback => {
-  if (preference.mode === "automatic") return { mode: desktop && !isMixed ? "native" : "browser" };
+  // A desktop/relay already resolves the resource's configured playable files and
+  // player rules. Mixed discovery does not replace that configured native flow.
+  if (preference.mode === "automatic") return { mode: desktop ? "native" : "browser" };
   if (preference.mode !== "native" || desktop) return { mode: preference.mode };
   // A protocol handler must receive one selected media file, never a mixed collection.
   if (isMixed) return { mode: "ask" };
