@@ -12,7 +12,8 @@ import { PropertyPool, PropertyValueScope, propertyValueScopes } from "@/sdk/con
 import { useResourceOptionsStore, useUiOptionsStore } from "@/stores/options";
 import PropertyContainer from "@/components/Resource/components/DetailModal/Properties/PropertyContainer";
 import { buildEffectiveScopePriority } from "@/core/models/Resource";
-import BApi from "@/sdk/BApi";
+import { useResourceApi, useResourceOwner } from "@/features/management/resourceContext";
+import { useOwnerResourceDisplayOptions } from "@/features/management/useOwnerResourceDisplayOptions";
 import { buildLogger } from "@/components/utils";
 import { deserializeStandardValue } from "@/components/StandardValue/helpers";
 import { Divider, Masonry } from "@/components/bakaui";
@@ -46,6 +47,10 @@ export type RenderContext = PropertyRenderContext[];
 
 const log = buildLogger("Properties");
 const Properties = (props: Props) => {
+  const BApi = useResourceApi();
+  const owner = useResourceOwner();
+  const isRemoteOwner = !!owner && !owner.isLocal;
+  const ownerDisplayOptions = useOwnerResourceDisplayOptions();
   const {
     resource,
     className,
@@ -68,7 +73,9 @@ const Properties = (props: Props) => {
   const [customPropertyMap, setCustomPropertyMap] = useState<Record<number, IProperty>>({});
 
   useEffect(() => {
-    const c = resourceOptions.propertyValueScopePriority;
+    const c = isRemoteOwner
+      ? ownerDisplayOptions.data?.propertyValueScopePriority
+      : resourceOptions.propertyValueScopePriority;
     const vsp = c && c.length > 0 ? c.slice() : propertyValueScopes.map((s) => s.value);
 
     for (const scope of propertyValueScopes) {
@@ -82,7 +89,7 @@ const Properties = (props: Props) => {
     }
     // console.log(vsp);
     setValueScopePriority(vsp);
-  }, [resourceOptions.propertyValueScopePriority]);
+  }, [resourceOptions.propertyValueScopePriority, isRemoteOwner, ownerDisplayOptions.data]);
 
   useEffect(() => {
     // @ts-ignore
@@ -155,7 +162,7 @@ const Properties = (props: Props) => {
     // Auto-add to quick-set context menu config if enabled
     const resourceUiOptions = uiOptionsStore.data?.resource;
 
-    if (resourceUiOptions?.autoAddRecentPropertyValues && value) {
+    if (!isRemoteOwner && resourceUiOptions?.autoAddRecentPropertyValues && value) {
       const pool = isCustomProperty ? PropertyPool.Custom : PropertyPool.Reserved;
       const items = [...(resourceUiOptions.customContextMenuItems ?? [])];
       const itemKey = `${pool}-${propertyId}`;

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.Gui;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.Domain.Options;
 using Bakabase.Modules.RemoteAccess.Abstractions.Components;
@@ -97,12 +98,16 @@ public class ServerSelfDescriptionTests
     }
 
     [TestMethod]
-    public void A_development_run_is_the_desktop_app_only_when_composed_with_the_server_manager()
+    public void A_development_run_is_desktop_only_when_composed_with_its_window_switcher()
     {
-        using var headless = new ServiceCollection().BuildServiceProvider();
-        // Registered, and never to be resolved: the manager depends on remote access, which asks.
+        // Both hosts can manage devices. Never resolve the manager while identifying the host:
+        // its constructor depends on remote access, which is asking this question.
+        using var headless = new ServiceCollection()
+            .AddSingleton<IManagedServerService>(_ => throw new InvalidOperationException("resolved"))
+            .BuildServiceProvider();
         using var desktop = new ServiceCollection()
             .AddSingleton<IManagedServerService>(_ => throw new InvalidOperationException("resolved"))
+            .AddSingleton<IMainViewSwitcher>(_ => throw new InvalidOperationException("resolved"))
             .BuildServiceProvider();
 
         Assert.AreEqual(ServerKind.Headless, ServiceSelfDescription.Create(headless, RuntimeMode.Dev).Kind);

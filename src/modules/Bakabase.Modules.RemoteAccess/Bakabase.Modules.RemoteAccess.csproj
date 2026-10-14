@@ -8,4 +8,8 @@
 	<ItemGroup>
 		<ProjectReference Include="..\..\abstractions\Bakabase.Abstractions\Bakabase.Abstractions.csproj" />
 	</ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Bakabase.Tests" />
+    <InternalsVisibleTo Include="Bakabase.Remoting" />
+  </ItemGroup>
 </Project>

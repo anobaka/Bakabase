@@ -11,7 +11,7 @@ import { MdTranslate } from "react-icons/md";
 import { Checkbox, Modal, toast } from "@/components/bakaui";
 import LanguageDropdown from "@/components/LanguageDropdown";
 import AiFeatureButton from "@/components/AiFeatureButton";
-import BApi from "@/sdk/BApi";
+import { useResourceApi } from "@/features/management/resourceContext";
 import { AiFeature, PropertyPool, StandardValueType } from "@/sdk/constants";
 import { useAppOptionsStore } from "@/stores/options";
 import AiFeatureConfigShortcut from "@/components/AiFeatureConfigShortcut";
@@ -41,6 +41,7 @@ const buildProperty = (tr: BakabaseModulesAIModelsDomainPropertyTranslation): IP
 });
 
 const AiTranslateModal = ({ resourceId, onTranslationApplied, onDestroyed }: Props) => {
+  const BApi = useResourceApi();
   const { t } = useTranslation();
   const appLanguage = useAppOptionsStore((state) => state.data?.language);
 

@@ -25,12 +25,11 @@ public sealed record ManagedServerPathMappingsRequest(ManagedServerPathMapping[]
 public sealed record ManagedServerOpenRequest(string? Path = null);
 
 /// <summary>
-/// Servers this device manages in full, shown in its own window through a local relay.
+/// Servers this device manages through explicitly paired directional connections.
 /// </summary>
 /// <remarks>
-/// Local-only, like every <c>/federation/local</c> route. The work is done by whatever
-/// host composed the relays — the desktop app — so on a headless server the listing says
-/// management is unavailable and everything else refuses.
+/// Local-only, like every <c>/federation/local</c> route. Desktop and headless hosts share
+/// management connections; only the desktop additionally provides a local UI relay.
 /// </remarks>
 [ApiController]
 [Route("federation/local/servers")]
@@ -104,6 +103,11 @@ public sealed class FederationServerController : FederationControllerBase
         try
         {
             opened = await Required.OpenAsync(serverId, request?.Path, ct);
+        }
+        catch (NotSupportedException)
+        {
+            throw new FederationAccessException("RelayUnavailable", 409,
+                "This server manages resources in its own interface and has no desktop window relay.");
         }
         catch (IOException)
         {

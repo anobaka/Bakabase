@@ -1021,6 +1021,7 @@ function ManagementSection({ context, node }: { context: PanelContext; node: Map
             </div>
             <ManagedServerWarnings
               busy={busy}
+              canOpenDesktopView={context.graph.self.kind === "desktop"}
               name={name}
               server={server}
               where="map"
@@ -1043,14 +1044,19 @@ function ManagementSection({ context, node }: { context: PanelContext; node: Map
               />
             )}
             <div className="flex flex-wrap items-center gap-2">
-              <button
-                className={primaryClass}
-                disabled={busy}
-                type="button"
-                onClick={() => void run(() => openManagedServer(server.serverId), [])}
-              >
-                {t("federation.servers.open")}
-              </button>
+              <Link className={primaryClass} to="/resource">
+                {t("management.manageResources")}
+              </Link>
+              {context.graph.self.kind === "desktop" && (
+                <button
+                  className={buttonClass}
+                  disabled={busy}
+                  type="button"
+                  onClick={() => void run(() => openManagedServer(server.serverId), [])}
+                >
+                  {t("federation.servers.open")}
+                </button>
+              )}
               <button
                 className={`${buttonClass} text-danger`}
                 disabled={busy}

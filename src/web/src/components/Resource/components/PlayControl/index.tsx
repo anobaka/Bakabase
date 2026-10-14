@@ -28,7 +28,7 @@ import { originalSourceActions, sourceActionTarget } from "./sourceActions";
 
 import { Button, Chip, Modal } from "@/components/bakaui";
 import { splitPathIntoSegments, standardizePath } from "@/components/utils";
-import BApi from "@/sdk/BApi";
+import { useResourceApi, useResourceOwner } from "@/features/management/resourceContext";
 import BusinessConstants from "@/components/BusinessConstants";
 import {
   ClientMode,
@@ -168,12 +168,13 @@ const VideoSelectionPageSize = 50;
  * them into an opaque failure.
  */
 const playItemApi = async (
+  api: ReturnType<typeof useResourceApi>,
   resourceId: number,
   origin: DataOrigin,
   key: string,
   explicitChoice = false,
 ) =>
-  await BApi.resource.playResourceItem(resourceId, {
+  await api.resource.playResourceItem(resourceId, {
     origin,
     key,
     ...(explicitChoice ? { explicitChoice: true } : {}),
@@ -187,6 +188,8 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
   { resource, PortalComponent, afterPlaying },
   ref,
 ) {
+  const api = useResourceApi();
+  const source = useResourceOwner();
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const uiOptionsStore = useUiOptionsStore();
@@ -200,9 +203,11 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
   const currentServerId = useRemoteAccessStore((state) => state.serverId);
   const managing = useRemoteAccessStore((state) => state.clientMode === ClientMode.PureClient);
   const openingTarget =
-    currentServerId && (managing || !userSideActionsRunHere)
-      ? `server:${currentServerId}`
-      : undefined;
+    source && !source.isLocal
+      ? `node:${source.serverId}:${source.libraryEpoch}`
+      : currentServerId && (managing || !userSideActionsRunHere)
+        ? `server:${currentServerId}`
+        : undefined;
   const opening = useSourceResourceProfile(openingTarget, resource.id);
 
   // Use the playable item resolution hook which handles SSE discovery internally
@@ -364,7 +369,7 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
   // Play a PlayableItem via unified PlayItem API (all sources go through resolvers)
   const playNativeItem = async (item: PlayableItem, explicitChoice = false) => {
     try {
-      const rsp = await playItemApi(resource.id, item.origin, item.key, explicitChoice);
+      const rsp = await playItemApi(api, resource.id, item.origin, item.key, explicitChoice);
 
       if (!rsp.code) {
         if (item.origin === DataOrigin.Steam)

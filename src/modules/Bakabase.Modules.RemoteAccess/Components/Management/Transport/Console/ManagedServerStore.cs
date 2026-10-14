@@ -6,7 +6,7 @@ using Bakabase.Remoting.Components.Connection;
 namespace Bakabase.Remoting.Components.Console;
 
 /// <summary>
-/// Where the desktop app keeps the servers it manages: <c>{AppData}/remote-access/managed</c>.
+/// Where this host keeps the servers it manages: <c>{AppData}/remote-access/managed</c>.
 /// </summary>
 /// <remarks>
 /// Resolved on every use rather than once, because the data directory can be relocated
@@ -51,8 +51,7 @@ public sealed class ManagedServerDirectory(Func<string> resolve) : IClientDataDi
 /// A distinct type on purpose, and never registered in the app's own container as an
 /// <see cref="IClientConnectionStore"/>: nothing in the server should be able to ask for
 /// "the client's connection store" and get the keys to every server this device manages.
-/// Only the console and the relays it composes read it, each relay through a one-entry
-/// view of its own server (<see cref="SingleServerConnectionStore"/>).
+/// The shared management core reads it; desktop relays use a one-entry view of their own server.
 /// </para>
 /// <para>
 /// Reads come from an immutable snapshot of our own rather than the underlying store's

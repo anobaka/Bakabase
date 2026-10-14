@@ -10,7 +10,7 @@ import { Drawer, DrawerBody, DrawerContent, DrawerHeader } from "@heroui/react";
 import { isNonEmptyValue } from "@/core/models/Resource";
 import { PropertyPool, ReservedProperty } from "@/sdk/constants";
 import { Button, Card, CardBody, Textarea } from "@/components/bakaui";
-import BApi from "@/sdk/BApi";
+import { useResourceApi } from "@/features/management/resourceContext";
 import { serializeStandardValue } from "@/components/StandardValue";
 import { StandardValueType } from "@/sdk/constants";
 
@@ -24,6 +24,7 @@ const contentClassName =
   "whitespace-pre-line break-words text-sm leading-relaxed text-default-700 [&_a]:text-primary [&_a]:underline [&_img]:max-w-full [&_p]:my-2 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0";
 
 const IntroductionSummary = ({ resource, onReload }: Props) => {
+  const BApi = useResourceApi();
   const { t } = useTranslation();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);

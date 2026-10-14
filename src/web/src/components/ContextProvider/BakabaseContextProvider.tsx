@@ -33,6 +33,10 @@ import Window from "@/components/Window";
 import { ErrorBoundary } from "@/components/Error";
 import { toastPresentation } from "@/components/bakaui/components/Toast/configuration";
 import { initAnalytics } from "@/services/Analytics";
+import {
+  ResourceOwnerScopeProvider,
+  useResourceOwnerScope,
+} from "@/features/management/resourceContext";
 
 dayjs.extend(duration);
 
@@ -56,7 +60,7 @@ interface IContext {
   isDebugging?: boolean;
 }
 
-const BakabaseContext = createContext<IContext>({
+export const BakabaseContext = createContext<IContext>({
   createPortal: (C, props) => ({ key: "", destroy: () => {} }),
   createWindow: (C, props, options) => ({ key: "", destroy: () => {} }),
   closeAllModals: () => {},
@@ -65,7 +69,28 @@ const BakabaseContext = createContext<IContext>({
 });
 
 export const useBakabaseContext = (): IContext => {
-  return useContext(BakabaseContext);
+  const context = useContext(BakabaseContext);
+  const resourceScope = useResourceOwnerScope();
+
+  // These windows are mounted by the app root, not through a React portal from
+  // the caller. Capture the owner here so nested editors keep addressing the
+  // same device even after the resource list's device filter changes.
+  return useMemo(() => {
+    if (!resourceScope) return context;
+    const scoped = (Component: ComponentType<any>) => (props: any) => (
+      <ResourceOwnerScopeProvider scope={resourceScope}>
+        <Component {...props} />
+      </ResourceOwnerScopeProvider>
+    );
+
+    return {
+      ...context,
+      createPortal: ((Component, props) =>
+        context.createPortal(scoped(Component), props)) as CreatePortal,
+      createWindow: ((Component, props, options) =>
+        context.createWindow(scoped(Component), props, options)) as CreateWindow,
+    };
+  }, [context, resourceScope]);
 };
 
 // localStorage 工具函数
@@ -159,37 +184,34 @@ const BakabaseContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
     return { key, destroy };
   }, []);
 
-  const mountWindow = useCallback(
-    (C: ComponentType<any>, props: any, options?: WindowOptions) => {
-      console.log("[createWindow] mount", C, props, options);
+  const mountWindow = useCallback((C: ComponentType<any>, props: any, options?: WindowOptions) => {
+    console.log("[createWindow] mount", C, props, options);
 
-      const key = uuidv4();
-      const { title, persistent, renderHeaderActions, ...windowOptions } = options || {};
+    const key = uuidv4();
+    const { title, persistent, renderHeaderActions, ...windowOptions } = options || {};
 
-      const destroy = () => {
-        console.log("[createWindow] destroy", key);
-        setPortals((prev) => prev.filter((p) => p.key !== key));
-      };
+    const destroy = () => {
+      console.log("[createWindow] destroy", key);
+      setPortals((prev) => prev.filter((p) => p.key !== key));
+    };
 
-      const windowComponent = (
-        <Window
-          renderHeaderActions={renderHeaderActions}
-          title={title}
-          windowOptions={windowOptions}
-          onDestroyed={() => {
-            destroy();
-          }}
-        >
-          <C {...props} />
-        </Window>
-      );
+    const windowComponent = (
+      <Window
+        renderHeaderActions={renderHeaderActions}
+        title={title}
+        windowOptions={windowOptions}
+        onDestroyed={() => {
+          destroy();
+        }}
+      >
+        <C {...props} />
+      </Window>
+    );
 
-      setPortals((prev) => [...prev, { key, component: windowComponent, persistent }]);
+    setPortals((prev) => [...prev, { key, component: windowComponent, persistent }]);
 
-      return { key, destroy };
-    },
-    [],
-  );
+    return { key, destroy };
+  }, []);
 
   const closeAllModals = useCallback(() => {
     console.log("[closeAllModals] closing all non-persistent modals");

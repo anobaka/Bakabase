@@ -1,4 +1,5 @@
 ﻿using System;
+using Bakabase.Modules.RemoteAccess.Components.Management;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Service.Components.ServerData;
 using Bakabase.Abstractions.Components.Localization;
@@ -129,6 +130,7 @@ namespace Bakabase.Service.Components
                 AppService.CoreVersion.ToString());
             services.AddSingleton<IListeningAddressProvider, AppContextListeningAddressProvider>();
             services.AddSingleton<IRemoteAccessDataDirectory, AppServiceRemoteAccessDataDirectory>();
+            services.AddManagedServerConnections();
             services.AddFederatedLibrary();
             services.AddDataSyncServiceComponents();
 

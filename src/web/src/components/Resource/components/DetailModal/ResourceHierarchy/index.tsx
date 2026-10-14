@@ -11,7 +11,7 @@ import ChildrenModal from "../../ChildrenModal";
 
 import { Breadcrumbs, BreadcrumbItem, Spinner } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-import BApi from "@/sdk/BApi";
+import { useResourceApi } from "@/features/management/resourceContext";
 
 type Ancestor = {
   id: number;
@@ -25,6 +25,7 @@ type Props = {
 };
 
 const ResourceHierarchy: React.FC<Props> = ({ resource, onReload }) => {
+  const BApi = useResourceApi();
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const [ancestors, setAncestors] = useState<Ancestor[]>([]);

@@ -7,7 +7,7 @@ import React, { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { PlusCircleOutlined } from "@ant-design/icons";
 
-import BApi from "@/sdk/BApi";
+import { useResourceApi } from "@/features/management/resourceContext";
 import { Button, Checkbox, Chip, Input, Modal, Select, Textarea } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import PropertySelector from "@/components/PropertySelector";
@@ -35,6 +35,7 @@ const DataCardTypeEditor = ({
   onDestroyed,
 }: DataCardTypeEditorProps) => {
   const { t } = useTranslation();
+  const BApi = useResourceApi();
   const { createPortal } = useBakabaseContext();
   const isEditing = !!cardType;
 

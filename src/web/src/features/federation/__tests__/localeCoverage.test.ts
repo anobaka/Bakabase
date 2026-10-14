@@ -262,4 +262,34 @@ describe("locales for the multi-device management screens", () => {
       "setting",
     ]);
   });
+
+  it.each([
+    {
+      locale: en,
+      resources: "Resources → All devices",
+      browser: "browser",
+      desktop: "desktop app",
+    },
+    { locale: cn, resources: "资源 → 所有设备", browser: "浏览器", desktop: "一体版" },
+  ])(
+    "guides desktop and headless managers to the same resource workspace",
+    ({ locale, resources, browser, desktop }) => {
+      for (const key of [
+        "federation.devices.tabIntro.manage",
+        "federation.servers.paired",
+        "federation.servers.add.description",
+        "federation.map.panel.manageTip",
+      ]) {
+        expect(locale[key]).toContain(resources);
+      }
+      expect(locale["federation.devices.tabIntro.manage"]).toContain(desktop);
+      for (const key of [
+        "federation.servers.add.description",
+        "federation.error.ManagedServerRemoteAccessDisabled",
+        "federation.pair.description",
+      ]) {
+        expect(locale[key]).toContain(browser);
+      }
+    },
+  );
 });

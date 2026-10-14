@@ -8,7 +8,7 @@ import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
 import { HiOutlineCollection } from "react-icons/hi";
 import { useNavigate } from "react-router-dom";
 
-import BApi from "@/sdk/BApi";
+import { useResourceApi, useResourceOwner } from "@/features/management/resourceContext";
 import {
   Button,
   Chip,
@@ -19,7 +19,15 @@ import {
   Tooltip,
   toast,
 } from "@/components/bakaui";
-import { ResourceAdditionalItem } from "@/sdk/constants";
+import {
+  InternalProperty,
+  PropertyPool,
+  ResourceAdditionalItem,
+  SearchCombinator,
+  SearchOperation,
+} from "@/sdk/constants";
+import { usePendingSearchStore } from "@/stores/pendingSearch";
+import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 
 interface Props {
   resourceId: number;
@@ -36,6 +44,9 @@ interface Props {
  * chip's ✕.
  */
 const CollectionMemberships: React.FC<Props> = ({ resourceId, onChange, compact = false }) => {
+  const BApi = useResourceApi();
+  const owner = useResourceOwner();
+  const { closeAllModals } = useBakabaseContext();
   const { t } = useTranslation();
   const navigate = useNavigate();
 
@@ -147,7 +158,34 @@ const CollectionMemberships: React.FC<Props> = ({ resourceId, onChange, compact 
                   color: collection?.color ?? undefined,
                 }}
                 variant="flat"
-                onClick={() => navigate(`/collections/detail?id=${id}`)}
+                onClick={() => {
+                  if (!owner || owner.isLocal) {
+                    navigate(`/collections/detail?id=${id}`);
+
+                    return;
+                  }
+                  usePendingSearchStore.getState().setPendingSearch({
+                    owner,
+                    deviceIds: [owner.serverId],
+                    page: 1,
+                    pageSize: 50,
+                    group: {
+                      combinator: SearchCombinator.And,
+                      disabled: false,
+                      filters: [
+                        {
+                          propertyPool: PropertyPool.Internal,
+                          propertyId: InternalProperty.CollectionMulti,
+                          operation: SearchOperation.In,
+                          dbValue: JSON.stringify([String(id)]),
+                          disabled: false,
+                        },
+                      ],
+                    },
+                  });
+                  closeAllModals();
+                  navigate("/resource");
+                }}
               >
                 <span className="cursor-pointer">
                   {collection?.name ?? t<string>("common.state.unknown")}

@@ -225,6 +225,8 @@ export interface MapEdge {
 }
 
 export interface DeviceGraph {
+  /** Management does not imply a desktop or view-switching capability. */
+  canManageServers?: boolean;
   self: MapNode;
   /** Every other device, connected ones first, each group by name. */
   nodes: MapNode[];
@@ -398,13 +400,10 @@ const combinePresence = (values: MapPresence[]): MapPresence =>
 
 /**
  * Whether two devices of one name could be one install, by what each said of itself: one kind,
- * one system — a headless server never manages anything, a phone is not a desktop app, and
+ * one system — a phone is not a desktop app, and
  * another OS is another machine. What neither said leaves it open.
  */
 const couldBeOne = (a: MapNode, b: MapNode) => {
-  const manages = (node: MapNode) => node.sources.managers.length > 0;
-
-  if ((manages(a) && b.kind === "server") || (manages(b) && a.kind === "server")) return false;
   if (a.kind !== "unknown" && b.kind !== "unknown" && a.kind !== b.kind) return false;
 
   return a.platform === undefined || b.platform === undefined || a.platform === b.platform;
@@ -906,8 +905,12 @@ export function buildDeviceGraph(input: DeviceGraphInput, now = Date.now()): Dev
     name: status?.identity.name?.trim() || input.selfName?.trim() || "",
     self: true,
     ghost: false,
-    // The desktop app can manage other servers; a headless server cannot.
-    kind: servers ? (servers.available ? "desktop" : "server") : "unknown",
+    // Management is available headlessly too; desktop view relays are a separate capability.
+    kind: servers
+      ? (servers.canOpenDesktopView ?? servers.available)
+        ? "desktop"
+        : "server"
+      : "unknown",
     platform: input.selfPlatform,
     presence: "online",
     issues: [],
@@ -917,7 +920,7 @@ export function buildDeviceGraph(input: DeviceGraphInput, now = Date.now()): Dev
     sources: emptySources(),
   };
 
-  return { self, nodes, edges };
+  return { self, nodes, edges, canManageServers: servers?.available };
 }
 
 /** The relationships drawn to one device, in kind order. */
@@ -925,7 +928,8 @@ export const edgesOf = (graph: DeviceGraph, nodeId: string) =>
   graph.edges.filter((edge) => edge.nodeId === nodeId);
 
 /** Whether this device's own UI can offer to manage a device: only the desktop app manages. */
-export const canManageFromHere = (graph: DeviceGraph) => graph.self.kind === "desktop";
+export const canManageFromHere = (graph: DeviceGraph) =>
+  graph.canManageServers ?? graph.self.kind === "desktop";
 
 /**
  * The node that now stands for a device known by these keys — the same device after an

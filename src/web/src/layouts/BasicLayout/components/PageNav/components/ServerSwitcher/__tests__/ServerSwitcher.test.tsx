@@ -407,6 +407,23 @@ describe("this device's own window", () => {
     expect(await within(menu).findByRole("menuitem", { name: /NAS/ })).toBeInTheDocument();
   });
 
+  it("does not offer desktop view switching on a headless manager", async () => {
+    routes = [
+      on("GET", "/federation/local/servers", {
+        available: true,
+        canOpenDesktopView: false,
+        servers: [server()],
+        requests: [],
+      }),
+    ];
+    renderSwitcher();
+    await waitFor(() => expect(requestsTo("GET", "/federation/local/servers")).toHaveLength(1));
+    expect(screen.getByRole("link", { name: "Bakabase" })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "federation.switcher.label" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("keeps the plain brand link where nothing can be managed", async () => {
     routes = [
       on("GET", "/federation/local/servers", { available: false, servers: [], requests: [] }),

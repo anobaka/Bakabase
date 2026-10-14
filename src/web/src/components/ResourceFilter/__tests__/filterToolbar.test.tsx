@@ -113,7 +113,9 @@ function button(text: string, surface: ParentNode = document.body) {
   const result = Array.from(surface.querySelectorAll<HTMLButtonElement>("button")).find(
     (element) => element.textContent === text || element.getAttribute("aria-label") === text,
   );
+
   expect(result, `Button ${text}`).toBeDefined();
+
   return result!;
 }
 async function press(element: HTMLElement) {
@@ -133,20 +135,24 @@ function portalProps(overrides: Partial<FilterPortalProps> = {}): FilterPortalPr
 }
 function portalContainer() {
   const result = document.createElement("div");
+
   document.body.append(result);
   extraContainers.push(result);
+
   return result;
 }
 
 describe("resource filter toolbar", () => {
   it("shows both modes and preserves the two-filter range selection in Simple mode", async () => {
     const props = portalProps();
+
     await render(<FilterPortal {...props} />);
     expect(button("resourceFilter.toolbar.simple")).toHaveAttribute("aria-pressed", "true");
     expect(button("resourceFilter.toolbar.advanced")).toHaveAttribute("aria-pressed", "false");
     await press(button("resourceFilter.toolbar.addCondition"));
     expect(state.config!.renderers.openPropertySelector).toHaveBeenCalledTimes(1);
     const onSelect = vi.mocked(state.config!.renderers.openPropertySelector).mock.calls[0][1];
+
     await act(async () =>
       onSelect(numberProperty, [
         SearchOperation.GreaterThanOrEquals,
@@ -177,12 +183,14 @@ describe("resource filter toolbar", () => {
     "closes the Advanced popover after adding a condition or group (group=%s)",
     async (isGroup) => {
       const props = portalProps({ mode: FilterDisplayMode.Advanced });
+
       await render(<FilterPortal {...props} />);
       await press(button("resourceFilter.toolbar.addCondition"));
       const key = isGroup ? "resourceFilter.filterGroup" : "resourceFilter.filter";
       const target = Array.from(document.querySelectorAll<HTMLButtonElement>("button")).find(
         (element) => element.querySelector(".font-medium")?.textContent === key,
       )!;
+
       expect(target).toBeDefined();
       await press(target);
       if (isGroup) {
@@ -209,11 +217,20 @@ describe("resource filter toolbar", () => {
       keywordContainer: keyword,
       filterPortalContainer: actions,
       filterGroupsContainer: groups,
+      filterGroupsPrefix: <div data-scope-control>Device scope</div>,
     };
+
     await render(<ResourceFilterController {...props} />);
     expect(keyword.querySelector("input")).toHaveValue("book");
     expect(button("resourceFilter.toolbar.addCondition", actions)).toBeDefined();
     expect(groups.querySelector("[data-filter-group]")).toBeDefined();
+    const scope = groups.querySelector("[data-scope-control]")!;
+    const filterGroup = groups.querySelector("[data-filter-group]")!;
+
+    expect(scope.parentElement).toBe(filterGroup.parentElement);
+    expect(scope.nextElementSibling).toBe(filterGroup);
+    expect(keyword).not.toHaveTextContent("Device scope");
+    expect(actions).not.toHaveTextContent("Device scope");
     await act(async () => {
       keyword
         .querySelector("input")!
@@ -227,6 +244,51 @@ describe("resource filter toolbar", () => {
     expect(onGroupChange).not.toHaveBeenCalled();
   });
 
+  it.each([FilterDisplayMode.Simple, FilterDisplayMode.Advanced])(
+    "places a scope control below keyword/actions with the regular conditions (mode=%s)",
+    async (mode) => {
+      const group: SearchFilterGroup = {
+        combinator: GroupCombinator.Or,
+        disabled: false,
+        filters: [{ propertyId: 2, disabled: false, dbValue: "keep" }],
+      };
+      const onGroupChange = vi.fn();
+
+      await render(
+        <ResourceFilterController
+          filterDisplayMode={mode}
+          filterGroupsPrefix={<div data-scope-control>Device scope</div>}
+          group={group}
+          keyword="book"
+          onGroupChange={onGroupChange}
+        />,
+      );
+      const scope = container.querySelector<HTMLElement>("[data-scope-control]")!;
+      const filterGroup = container.querySelector("[data-filter-group]")!;
+      const keyword = container.querySelector("input")!;
+      const addCondition = button("resourceFilter.toolbar.addCondition");
+
+      expect(
+        keyword.compareDocumentPosition(scope) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      expect(
+        addCondition.compareDocumentPosition(scope) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      expect(scope.nextElementSibling).toBe(filterGroup);
+      expect(filterGroup.textContent).toBe(JSON.stringify(group));
+      expect(filterGroup).not.toContainElement(scope);
+      expect(onGroupChange).not.toHaveBeenCalled();
+    },
+  );
+
+  it("keeps the ordinary no-prefix condition structure unchanged", async () => {
+    await render(<ResourceFilterController onGroupChange={vi.fn()} />);
+    const filterGroup = container.querySelector("[data-filter-group]")!;
+
+    expect(filterGroup.parentElement).toBe(container.querySelector("[data-overlay-container]"));
+    expect(filterGroup.previousElementSibling).toContainElement(container.querySelector("input"));
+  });
+
   it("preserves the existing Advanced-to-Simple cleanup and informs the controlled parent", async () => {
     const active = { propertyId: 1, dbValue: "keep", disabled: false };
     const group: SearchFilterGroup = {
@@ -237,12 +299,13 @@ describe("resource filter toolbar", () => {
     };
     const onGroupChange = vi.fn();
     const onModeChange = vi.fn();
+
     await render(
       <ResourceFilterController
         filterDisplayMode={FilterDisplayMode.Advanced}
         group={group}
-        onGroupChange={onGroupChange}
         onFilterDisplayModeChange={onModeChange}
+        onGroupChange={onGroupChange}
       />,
     );
     await press(button("resourceFilter.toolbar.simple"));
@@ -263,10 +326,12 @@ describe("resource filter toolbar", () => {
       dbValue: "recent value",
       operation: SearchOperation.Contains,
     };
+
     vi.mocked(state.config!.api.getRecentFilters)
       .mockRejectedValueOnce(new Error("offline"))
       .mockResolvedValueOnce([filter]);
     const onSelect = vi.fn();
+
     await render(<RecentFilters onSelectFilter={onSelect} />);
     expect(container.querySelector('[role="alert"]')).toHaveTextContent(
       "resourceFilter.recent.failed",
@@ -284,6 +349,7 @@ describe("resource filter toolbar", () => {
 
   it("shows an empty recent state and ignores a replaced provider's late response", async () => {
     let resolveOld!: (filters: SearchFilter[]) => void;
+
     vi.mocked(state.config!.api.getRecentFilters).mockReturnValue(
       new Promise((resolve) => {
         resolveOld = resolve;
@@ -311,17 +377,19 @@ describe("resource filter toolbar", () => {
     };
     const criteria = { keyword: "book", group, tags: [ResourceTag.IsParent, ResourceTag.Pinned] };
     const onChange = vi.fn();
+
     await render(
       <ResourceSearchPanel
-        criteria={criteria}
-        onChange={onChange}
         showKeyword
+        criteria={criteria}
         showRecentFilters={false}
         showTags={false}
+        onChange={onChange}
       />,
     );
     expect(container.querySelector("input")).toHaveValue("book");
     const firstClose = container.querySelector<HTMLElement>('[aria-label="close chip"]')!;
+
     expect(firstClose).not.toBeNull();
     await press(firstClose);
     expect(onChange).toHaveBeenCalledExactlyOnceWith({ ...criteria, tags: [ResourceTag.Pinned] });

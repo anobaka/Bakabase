@@ -20,8 +20,9 @@ import {
 
 import { Button, Chip, Modal, Select, toast } from "@/components/bakaui";
 import { copyTextToClipboard } from "@/core/clipboard";
-import BApi from "@/sdk/BApi";
-import { MediaType } from "@/sdk/constants";
+import { useResourceApi, useResourceOwner } from "@/features/management/resourceContext";
+import { managedMediaUrl } from "@/features/management/playback";
+import { DataOrigin, MediaType } from "@/sdk/constants";
 
 const platformOptions: DevicePlatform[] = ["android", "ios", "windows", "macos", "linux"];
 
@@ -49,6 +50,8 @@ const PlayOnThisDevice = ({
   unavailableReason,
   offerDesktopGuidance = false,
 }: Props) => {
+  const BApi = useResourceApi();
+  const source = useResourceOwner();
   const { t } = useTranslation();
   const [copyFeedback, setCopyFeedback] = useState<string>();
   const [platform, setPlatform] = useState<DevicePlatform>(preferredDevicePlatform);
@@ -58,8 +61,14 @@ const PlayOnThisDevice = ({
   );
   const nativePlaybackSupported = isNativePlayerMediaType(mediaType);
   const streamUrl = useMemo(
-    () => new URL(BApi.file.getRawFileUrl({ fullname: filePath }), window.location.origin).href,
-    [filePath],
+    () =>
+      new URL(
+        source && !source.isLocal
+          ? managedMediaUrl(source, resource.id, { origin: DataOrigin.FileSystem, key: filePath })
+          : BApi.file.getRawFileUrl({ fullname: filePath }),
+        window.location.origin,
+      ).href,
+    [BApi, source, resource.id, filePath],
   );
   const schemes = useMemo(() => schemesForPlatform(platform, mediaType), [platform, mediaType]);
   const title = resource.displayName ?? filePath.split(/[/\\]/).pop() ?? "";

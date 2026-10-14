@@ -39,7 +39,7 @@ public sealed class OpenResourceDirectoryHandler(
             return;
         }
 
-        var resource = await upstream.GetResourceAsync(id, context.RequestAborted);
+        var resource = await upstream.GetResourceForEpochAsync(id, context.Request.Query["managedLibraryEpoch"].FirstOrDefault(), context.RequestAborted);
 
         if (resource == null)
         {

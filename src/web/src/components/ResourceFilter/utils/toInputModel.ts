@@ -3,6 +3,7 @@
  * DbValue is serialized string format
  */
 export type SearchFilterInputModel = {
+  owner?: { serverId: string; libraryEpoch: string };
   propertyPool?: number;
   propertyId?: number;
   operation?: number;
@@ -34,6 +35,7 @@ export type ResourceSearchInputModel = {
 
 // Generic filter type that accepts both frontend SearchFilter and backend response format
 type FilterLike = {
+  owner?: { serverId: string; libraryEpoch: string };
   propertyPool?: number;
   propertyId?: number;
   operation?: number;
@@ -55,6 +57,9 @@ type FilterGroupLike = {
  */
 export const toFilterInputModel = (filter: FilterLike): SearchFilterInputModel => {
   return {
+    ...(filter.owner
+      ? { owner: { serverId: filter.owner.serverId, libraryEpoch: filter.owner.libraryEpoch } }
+      : {}),
     propertyPool: filter.propertyPool,
     propertyId: filter.propertyId,
     operation: filter.operation,

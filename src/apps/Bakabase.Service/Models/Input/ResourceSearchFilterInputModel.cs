@@ -1,10 +1,11 @@
-﻿using Bakabase.Abstractions.Models.Domain;
+using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 
 namespace Bakabase.Service.Models.Input;
 
 public record ResourceSearchFilterInputModel
 {
+    public ResourceSearchOwner? Owner { get; set; }
     public PropertyPool? PropertyPool { get; set; }
     public int? PropertyId { get; set; }
     public SearchOperation? Operation { get; set; }

@@ -52,9 +52,11 @@ const ThumbnailPanel = ({
     entries.some((entry) => getMediaType(entry) === type),
   );
   const getThumbnailUrl = (entry: MediaPlayerEntry) =>
-    getMediaType(entry) === MediaType.Image
-      ? `${envConfig.apiEndpoint}/tool/thumbnail?path=${encodeURIComponent(entry.playPath || entry.path)}&w=96&h=96`
-      : null;
+    entry.thumbnailUrl !== undefined
+      ? entry.thumbnailUrl
+      : getMediaType(entry) === MediaType.Image
+        ? `${envConfig.apiEndpoint}/tool/thumbnail?path=${encodeURIComponent(entry.playPath || entry.path)}&w=96&h=96`
+        : null;
   const renderRow = ({ index, key, style }: ListRowProps) => {
     const entry = visible[index];
 

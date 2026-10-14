@@ -5,7 +5,7 @@ import { useAsyncList } from "@react-stately/data";
 import { ReloadOutlined } from "@ant-design/icons";
 
 import { Autocomplete, AutocompleteItem, Button, Chip } from "@/components/bakaui";
-import BApi from "@/sdk/BApi";
+import { useResourceApi } from "@/features/management/resourceContext";
 import { buildLogger } from "@/components/utils";
 
 type Props = {
@@ -22,6 +22,7 @@ type Item = {
 const log = buildLogger("ToResourceSelector");
 const ToResourceSelector = ({ onSelect, fromResourcePath }: Props) => {
   const { t } = useTranslation();
+  const BApi = useResourceApi();
 
   const targetResourceCandidates = useAsyncList<Item>({
     async load({ signal, filterText }) {

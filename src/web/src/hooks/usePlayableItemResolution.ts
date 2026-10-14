@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useMemo, useCallback } from "react";
 
 import { resourceDiscoveryChannel, type DiscoveryData } from "@/services/ResourceDiscoveryChannel";
 import { DataOrigin, DataStatus, ResourceDataType } from "@/sdk/constants";
+import { useResourceApi, useResourceOwner } from "@/features/management/resourceContext";
 
 export type OriginGroup = {
   origin: DataOrigin;
@@ -38,9 +39,12 @@ export function usePlayableItemResolution(
   resource: Resource,
   callbacks?: PlayableItemResolutionCallbacks,
 ): PlayableItemResolutionState {
+  const api = useResourceApi();
+  const source = useResourceOwner();
+  const remote = source && !source.isLocal ? source : undefined;
   const identity = useMemo(
-    () => ({ id: resource.id, reloadToken: resource.reloadToken, path: resource.path }),
-    [resource.id, resource.reloadToken, resource.path],
+    () => ({ id: resource.id, reloadToken: resource.reloadToken, path: resource.path, remote }),
+    [resource.id, resource.reloadToken, resource.path, remote],
   );
   const latestIdentity = useRef(identity);
 
@@ -67,6 +71,30 @@ export function usePlayableItemResolution(
     owner: identity,
     attempts: new Map<DataOrigin, number>(),
   }));
+  const [remoteResult, setRemoteResult] = useState<{
+    owner: typeof identity;
+    items: PlayableItem[];
+    error?: string;
+  }>();
+
+  useEffect(() => {
+    if (!remote) return;
+    let cancelled = false;
+
+    setRemoteResult(undefined);
+    void api.resource
+      .getResourcePlayableItems(resource.id)
+      .then((result) => {
+        if (!cancelled) setRemoteResult({ owner: identity, items: result.data ?? [] });
+      })
+      .catch((error) => {
+        if (!cancelled) setRemoteResult({ owner: identity, items: [], error: String(error) });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [api, remote, identity, manualTriggers]);
   const subscriptions = useRef(
     new Map<
       DataOrigin,
@@ -107,6 +135,7 @@ export function usePlayableItemResolution(
   );
 
   useEffect(() => {
+    if (remote) return;
     for (const state of piStates) {
       const origin = state.origin;
       const attempt =
@@ -155,10 +184,30 @@ export function usePlayableItemResolution(
         })
         .catch((error) => complete(null, error instanceof Error ? error.message : String(error)));
     }
-  }, [identity, piStates, manualTriggers]);
+  }, [identity, piStates, manualTriggers, remote]);
 
   // Build groups
   const groups = useMemo((): OriginGroup[] => {
+    if (remote) {
+      const result = remoteResult?.owner === identity ? remoteResult : undefined;
+      const origins = ORIGIN_ORDER.filter(
+        (origin) =>
+          piStates.some((state) => state.origin === origin) ||
+          result?.items.some((item) => item.origin === origin) ||
+          (origin === DataOrigin.FileSystem && resource.hasLocalPath),
+      );
+
+      return origins.map((origin) => ({
+        origin,
+        items: result?.items.filter((item) => item.origin === origin) ?? [],
+        status: !result
+          ? DataStatus.NotStarted
+          : result.error
+            ? DataStatus.Failed
+            : DataStatus.Ready,
+        error: result?.error,
+      }));
+    }
     if (piStates.length === 0) return [];
 
     // Backend items grouped by origin
@@ -201,10 +250,19 @@ export function usePlayableItemResolution(
     }
 
     return result;
-  }, [piStates, resource.playableItems, sseItems, identity, manualTriggers]);
+  }, [
+    piStates,
+    resource.playableItems,
+    sseItems,
+    identity,
+    manualTriggers,
+    remote,
+    remoteResult,
+    resource.hasLocalPath,
+  ]);
 
   const overallStatus = useMemo((): "ready" | "loading" | "not-found" | "failed" => {
-    if (piStates.length === 0) return "not-found";
+    if (groups.length === 0) return "not-found";
     if (groups.some((g) => g.items.length > 0)) return "ready";
     if (groups.some((g) => g.status === DataStatus.NotStarted)) return "loading";
     if (groups.some((g) => g.status === DataStatus.Failed)) return "failed";

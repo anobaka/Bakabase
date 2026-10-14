@@ -1,14 +1,30 @@
+import type { SearchForm as ManagedSearchForm } from "@/pages/resource/models";
 import type { Resource } from "@/core/models/Resource";
 import type { components } from "@/sdk/BApi2";
 
 import { useState, useCallback, useRef } from "react";
 
 import BApi from "@/sdk/BApi";
+import { useManagedResourceSearch } from "@/features/management/useManagedResourceSearch";
+import type { ResourceSelectionKey } from "@/features/management/resourceIdentity";
+import type { ManagementSource } from "@/features/management/api";
 import { ResourceAdditionalItem } from "@/sdk/constants";
 
 type SearchForm = components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
 
-type SearchOptions = {
+function hasOwnedFilter(group?: SearchForm["group"]): boolean {
+  return (
+    !!group &&
+    (!!group.filters?.some((filter) => filter.owner != null) ||
+      !!group.groups?.some(hasOwnedFilter))
+  );
+}
+
+function requiresManagedSearch(form: SearchForm) {
+  return !!form.owner || form.deviceIds != null || hasOwnedFilter(form.group);
+}
+
+export type SearchOptions = {
   saveSearch?: boolean;
   searchId?: string;
   /** How to combine new resources with existing ones */
@@ -24,6 +40,9 @@ type SearchResponse = {
 };
 
 type UseResourceSearchResult = {
+  sourceErrors?: { source: ManagementSource; error: Error }[];
+  searchAllResourceKeys: (form: SearchForm) => Promise<ResourceSelectionKey[]>;
+  cancelResourceSelection?: () => void;
   /** Current resources list */
   resources: Resource[];
   /** Whether the initial (basic) search is in progress */
@@ -38,9 +57,12 @@ type UseResourceSearchResult = {
   setResources: React.Dispatch<React.SetStateAction<Resource[]>>;
   /** Reload specific resources by their IDs. Pass `forceRefresh` after a backend cache
    * rebuild so cover/playable UI re-resolves from the fresh data instead of stale state. */
-  reloadResources: (ids: number[], options?: { forceRefresh?: boolean }) => Promise<void>;
+  reloadResources: (
+    ids: ResourceSelectionKey[],
+    options?: { forceRefresh?: boolean },
+  ) => Promise<void>;
   /** Remove resources from the list by their IDs (e.g. after deletion) */
-  removeResources: (ids: number[]) => void;
+  removeResources: (ids: ResourceSelectionKey[]) => void;
 };
 
 /**
@@ -68,6 +90,8 @@ type UseResourceSearchResult = {
  * });
  */
 export const useResourceSearch = (): UseResourceSearchResult => {
+  const managed = useManagedResourceSearch();
+  const [queryUsesManaged, setQueryUsesManaged] = useState(false);
   const [resources, setResources] = useState<Resource[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingDetails, setLoadingDetails] = useState(false);
@@ -80,7 +104,7 @@ export const useResourceSearch = (): UseResourceSearchResult => {
 
   resourcesRef.current = resources;
 
-  const search = useCallback(
+  const localSearch = useCallback(
     async (form: SearchForm, options?: SearchOptions): Promise<Resource[]> => {
       const currentSearchId = ++searchIdRef.current;
       const mode = options?.mode ?? "replace";
@@ -232,7 +256,8 @@ export const useResourceSearch = (): UseResourceSearchResult => {
   );
 
   const reloadResources = useCallback(
-    async (ids: number[], options?: { forceRefresh?: boolean }) => {
+    async (keys: ResourceSelectionKey[], options?: { forceRefresh?: boolean }) => {
+      const ids = keys.filter((key): key is number => typeof key === "number");
       if (ids.length === 0) {
         return;
       }
@@ -263,7 +288,7 @@ export const useResourceSearch = (): UseResourceSearchResult => {
   // Drop resources from the list immediately after they are deleted. reloadResources
   // can't do this: getResourcesByKeys returns nothing for deleted ids, and its
   // `updatedMap.get(r.id) ?? r` fallback would keep the stale row in the list.
-  const removeResources = useCallback((ids: number[]) => {
+  const removeResources = useCallback((ids: ResourceSelectionKey[]) => {
     if (ids.length === 0) {
       return;
     }
@@ -271,6 +296,50 @@ export const useResourceSearch = (): UseResourceSearchResult => {
 
     setResources((prev) => prev.filter((r) => !idSet.has(r.id)));
   }, []);
+
+  const localSearchAllResourceKeys = useCallback(async (form: SearchForm) => {
+    const response = await BApi.resource.searchAllResourceIds(form);
+    if (response.code) throw new Error(response.message || String(response.code));
+    return response.data ?? [];
+  }, []);
+
+  const managedSearch = useCallback(
+    (form: SearchForm, options?: SearchOptions) =>
+      managed.search(
+        {
+          ...form,
+          page: form.page ?? 1,
+          pageSize: form.pageSize ?? 50,
+        } as ManagedSearchForm,
+        options,
+      ),
+    [managed.search],
+  );
+  const managedSearchAll = useCallback(
+    (form: SearchForm) =>
+      managed.searchAllResourceKeys({
+        ...form,
+        page: form.page ?? 1,
+        pageSize: form.pageSize ?? 50,
+      } as ManagedSearchForm),
+    [managed.searchAllResourceKeys],
+  );
+  const search = useCallback(
+    (form: SearchForm, options?: SearchOptions) => {
+      const scoped = managed.enabled || requiresManagedSearch(form);
+      setQueryUsesManaged(scoped);
+      return scoped ? managedSearch(form, options) : localSearch(form, options);
+    },
+    [managed.enabled, managedSearch, localSearch],
+  );
+  const searchAllResourceKeys = useCallback(
+    (form: SearchForm) =>
+      managed.enabled || requiresManagedSearch(form)
+        ? managedSearchAll(form)
+        : localSearchAllResourceKeys(form),
+    [managed.enabled, managedSearchAll, localSearchAllResourceKeys],
+  );
+  if (managed.enabled || queryUsesManaged) return { ...managed, search, searchAllResourceKeys };
 
   return {
     resources,
@@ -281,6 +350,7 @@ export const useResourceSearch = (): UseResourceSearchResult => {
     setResources,
     reloadResources,
     removeResources,
+    searchAllResourceKeys,
   };
 };
 

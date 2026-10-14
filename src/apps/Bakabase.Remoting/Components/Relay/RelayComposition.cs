@@ -154,6 +154,10 @@ public static class RelayComposition
         services.AddSingleton<IUserMachineHandler, PlayItemHandler>();
         services.AddSingleton<IUserMachineHandler, PlayResourceHandler>();
         services.AddSingleton<IUserMachineHandler, PlayRandomResourceHandler>();
+        services.AddSingleton<IUserMachineHandler, NestedManagementPlayHandler>();
+        services.AddSingleton<IUserMachineHandler, NestedManagementDirectoryHandler>();
+        services.AddSingleton<IUserMachineHandler, NestedManagementBatchCandidatesHandler>();
+        services.AddSingleton<IUserMachineHandler, NestedManagementBatchPlayHandler>();
         services.AddSingleton<IUserMachineHandler, ResourceProfilePlaybackHandler>();
         services.AddSingleton<IUserMachineHandler, ResourceProfilesPlaybackHandler>();
 
@@ -163,8 +167,10 @@ public static class RelayComposition
         // fills in what nobody claimed.
         services.TryAddScoped<IBatchPlayResourceSource, UpstreamBatchPlayResourceSource>();
         services.TryAddScoped<IBatchPlayPlaylistSource, UpstreamBatchPlayPlaylistSource>();
-        services.TryAddSingleton<IBatchPlayFileResolver>(sp => new ClientBatchPlayFileResolver(
-            sp.GetRequiredService<ActiveConnection>(), sp.GetRequiredService<ILoopbackAddressProvider>()));
+        services.TryAddScoped<ManagedBatchPlayContext>();
+        services.TryAddScoped<IBatchPlayFileResolver>(sp => new ClientBatchPlayFileResolver(
+            sp.GetRequiredService<ActiveConnection>(), sp.GetRequiredService<ILoopbackAddressProvider>(),
+            sp.GetRequiredService<ManagedBatchPlayContext>()));
         services.AddPlayerModule();
 
         services.AddSingleton<IConfigureOptions<PlayerModuleOptions>>(sp =>

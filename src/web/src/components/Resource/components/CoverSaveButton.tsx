@@ -6,7 +6,7 @@ import toast from "react-hot-toast";
 import { useResourceOptionsStore } from "@/stores/options";
 import { CoverSaveMode, coverSaveModes } from "@/sdk/constants";
 import { Button, Tooltip } from "@/components/bakaui";
-import BApi from "@/sdk/BApi";
+import { useResourceApi } from "@/features/management/resourceContext";
 
 type Props = {
   resourceId: number;
@@ -19,6 +19,7 @@ const modeTips: Record<CoverSaveMode, string> = {
   [CoverSaveMode.Replace]: "Current covers will be discard",
 };
 const CoverSaveButton = (props: Props) => {
+  const BApi = useResourceApi();
   const { t } = useTranslation();
   const { disabledReason, getDataURL, resourceId } = props;
   const resourceOptions = useResourceOptionsStore((state) => state.data);

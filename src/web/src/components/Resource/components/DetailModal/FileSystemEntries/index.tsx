@@ -4,13 +4,13 @@ import type { Entry } from "@/core/models/FileExplorer/Entry";
 
 import PathLibrary from "path";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import FileSystemEntry from "./FileSystemEntry";
 
-import BApi from "@/sdk/BApi";
-import { Pagination, Spinner } from "@/components/bakaui";
+import { useResourceApi, useResourceOwner } from "@/features/management/resourceContext";
+import { Button, Pagination, Spinner } from "@/components/bakaui";
 
 type Props = {
   path: string;
@@ -19,35 +19,64 @@ type Props = {
 
 const PageSize = 36;
 const FileSystemEntries = ({ path, isFile }: Props) => {
+  const BApi = useResourceApi();
+  const owner = useResourceOwner();
+  const isRemoteOwner = !!owner && !owner.isLocal;
   const { t } = useTranslation();
   const [currentPath, setCurrentPath] = useState(path);
   const [fsEntries, setFsEntries] = useState<Entry[]>([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
+  const [nextCursor, setNextCursor] = useState<string>();
+  const [error, setError] = useState<string>();
+  const requestVersion = useRef(0);
 
-  const previewPath = (path: string) => {
-    setLoading(true);
-    BApi.file
-      .getChildrenIwFsInfo(
-        {
-          root: path,
-        },
-        {
+  const previewPath = useCallback(
+    async (path: string, cursor?: string) => {
+      const version = ++requestVersion.current;
+      setLoading(true);
+      setError(undefined);
+      if (!cursor) {
+        setFsEntries([]);
+        setPage(1);
+        setNextCursor(undefined);
+      }
+      const query = {
+        root: path,
+        ...(isRemoteOwner ? { pageSize: PageSize, cursor } : {}),
+      };
+      try {
+        const response = await BApi.file.getChildrenIwFsInfo(query, {
           showErrorToast: (r) => (r.code >= 404 || r.code < 200) && r.code != 404,
-        },
-      )
-      .then((a) => {
-        // @ts-ignore
-        setFsEntries(a.data?.entries ?? []);
-      })
-      .finally(() => {
-        setLoading(false);
-      });
-  };
+        });
+        if (version !== requestVersion.current) return;
+        if (response.code) throw new Error(response.message);
+        const result = response.data as
+          | { entries?: Entry[]; nextCursor?: string; hasMore?: boolean }
+          | undefined;
+
+        setFsEntries((previous) =>
+          cursor ? [...previous, ...(result?.entries ?? [])] : (result?.entries ?? []),
+        );
+        setNextCursor(isRemoteOwner && result?.hasMore ? result.nextCursor : undefined);
+        if (cursor) setPage((previous) => previous + 1);
+      } catch (failure) {
+        if (version === requestVersion.current) setError(String(failure));
+      } finally {
+        if (version === requestVersion.current) setLoading(false);
+      }
+    },
+    [BApi, isRemoteOwner],
+  );
 
   useEffect(() => {
-    previewPath(currentPath);
-  }, []);
+    setCurrentPath(path);
+    void previewPath(path);
+
+    return () => {
+      ++requestVersion.current;
+    };
+  }, [path, previewPath]);
 
   const skipCount = (page - 1) * PageSize;
   const pageCount = Math.ceil(fsEntries.length / PageSize);
@@ -66,10 +95,13 @@ const FileSystemEntries = ({ path, isFile }: Props) => {
     }
   }
 
-  const changePath = useCallback((path: string) => {
-    setCurrentPath(path);
-    previewPath(path);
-  }, []);
+  const changePath = useCallback(
+    (path: string) => {
+      setCurrentPath(path);
+      void previewPath(path);
+    },
+    [previewPath],
+  );
 
   return (
     <div>
@@ -133,13 +165,29 @@ const FileSystemEntries = ({ path, isFile }: Props) => {
         </div>
       </div>
       <div className={"grid grid-cols-7"}>
-        {fsEntries.slice(skipCount, PageSize).map((e) => (
+        {fsEntries.slice(skipCount, skipCount + PageSize).map((e) => (
           <FileSystemEntry key={e.path} entry={e} onEnterDirectory={changePath} />
         ))}
       </div>
-      <div className={"flex items-center justify-end"}>
+      {error && (
+        <p role="alert" className="text-xs text-danger">
+          {error}
+        </p>
+      )}
+      <div className={"flex items-center justify-end gap-2"}>
         {showPagination && (
           <Pagination boundaries={3} page={page} size={"sm"} total={pageCount} onChange={setPage} />
+        )}
+        {nextCursor && (
+          <Button
+            size="sm"
+            variant="light"
+            isLoading={loading}
+            isDisabled={loading}
+            onPress={() => void previewPath(currentPath, nextCursor)}
+          >
+            {t("management.loadMore")}
+          </Button>
         )}
       </div>
     </div>

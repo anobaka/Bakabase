@@ -14,7 +14,7 @@ import { makePropertyKey } from "./types";
 import PropertyChangeConfirmDialog from "./PropertyChangeConfirmDialog";
 
 import { Button, Divider, Modal, Radio, RadioGroup, Spinner, toast } from "@/components/bakaui";
-import BApi from "@/sdk/BApi";
+import { useResourceApi } from "@/features/management/resourceContext";
 import {
   PropertyPool,
   PropertyValueScope,
@@ -40,6 +40,7 @@ const BulkPropertyEditor: React.FC<Props> = ({
   onSubmitted,
   onDestroyed,
 }) => {
+  const BApi = useResourceApi();
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { createPortal } = useBakabaseContext();

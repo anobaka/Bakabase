@@ -327,7 +327,7 @@ public sealed class FederationPeerController(FederationPeerService peers, NodePa
             // tried again. Here only — each
             // key came with the copy and is the original's as well, so asking a server to revoke
             // it would cut the original off too (see server-switching.md, "Trust is explicit and
-            // pairwise"). Only the desktop app manages servers; a headless one has nothing to forget.
+            // pairwise"). Both desktop and headless hosts own this same connection store.
             if (HttpContext?.RequestServices.GetService<IManagedServerService>() is { } managedServers)
             {
                 try

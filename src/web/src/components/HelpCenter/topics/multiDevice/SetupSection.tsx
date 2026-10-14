@@ -8,6 +8,7 @@ import { mdk } from "./devices";
 import OpenPageButton, {
   ADD_SERVER_ROUTE,
   MANAGEMENT_ROUTE,
+  RESOURCE_ROUTE,
   SHARING_ROUTE,
 } from "./OpenPageButton";
 
@@ -31,6 +32,7 @@ const tracks = [
     links: [
       { route: MANAGEMENT_ROUTE, openKey: mdk("open.management") },
       { route: ADD_SERVER_ROUTE, openKey: mdk("open.addServer") },
+      { route: RESOURCE_ROUTE, openKey: mdk("open.resources") },
     ],
   },
 ];

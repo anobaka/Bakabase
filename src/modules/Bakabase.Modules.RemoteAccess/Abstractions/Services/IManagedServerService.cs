@@ -2,27 +2,39 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Modules.RemoteAccess.Abstractions.Models;
+using Bakabase.Abstractions.Models.Domain.Constants;
 
 namespace Bakabase.Modules.RemoteAccess.Abstractions.Services;
 
-/// <summary>
-/// Other servers this device manages in full, through a signed loopback relay per server
-/// that shows each server's own UI in this device's window.
-/// </summary>
-/// <remarks>
-/// <para>
-/// Implemented only by the desktop app, which composes the relays; a headless server
-/// registers nothing and its endpoints answer that management is unavailable. The
-/// Service therefore resolves this optionally and never references the implementation.
-/// </para>
-/// <para>
-/// Management is the legacy paired-device access: full control of the other server,
-/// except actions that run on the user's own machine — those run here, against this
-/// device's own player configuration and path mappings.
-/// </para>
-/// </remarks>
+/// <summary>Directional paired management connections, shared by desktop and headless hosts.</summary>
+/// <remarks>Read-only federation grants never enter this store or authorize these operations.
+/// Only desktop hosts additionally provide a loopback UI relay through OpenAsync.</remarks>
 public interface IManagedServerService
 {
+    /// <summary>Send a bounded owner-directed API request through the explicitly paired connection.
+    /// API controllers must allowlist operations; this transport never accepts a URL or caller headers.</summary>
+    Task<ManagedServerResponse> SendAsync(string serverId, HttpMethod method, string pathAndQuery, string? json,
+        CancellationToken ct = default) => throw new NotSupportedException("Managed requests are unavailable.");
+
+    /// <summary>Stream a selected owner file while keeping its authenticated exchange alive.
+    /// Only GET/HEAD and a single byte range are allowed; the caller owns the typed file allowlist.</summary>
+    Task SendMediaAsync(string serverId, HttpMethod method, string pathAndQuery, string? range,
+        Func<HttpResponseMessage, CancellationToken, Task> consume, CancellationToken ct = default) =>
+        throw new NotSupportedException("Managed media is unavailable.");
+
+    /// <summary>Desktop-only native opening using this device's resource profiles and path mappings.</summary>
+    Task<ManagedServerResponse> PlayManagedResourceAsync(string serverId, int resourceId, DataOrigin origin,
+        string key, string libraryEpoch, bool explicitChoice = false, CancellationToken ct = default) =>
+        throw new NotSupportedException("This host has no desktop player.");
+
+    Task<ManagedServerResponse> OpenManagedResourceDirectoryAsync(string serverId, int resourceId,
+        string libraryEpoch, CancellationToken ct = default) =>
+        throw new NotSupportedException("This host has no desktop file manager.");
+
+    Task<ManagedServerResponse> BatchPlayManagedResourcesAsync(string serverId, int[] resourceIds,
+        string libraryEpoch, string? playerKey, int fileSelectionMode, CancellationToken ct = default) =>
+        throw new NotSupportedException("This host has no desktop player.");
+
     /// <summary>Read-only, bounded resource-profile search operations on a managed source.
     /// The operation is a fixed name, never a caller-supplied URL. No local player configuration is sent.</summary>
     Task<string> ReadResourceProfileSourceAsync(string serverId, string operation, string? json, string? libraryEpoch = null,

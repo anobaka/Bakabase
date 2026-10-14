@@ -16,7 +16,7 @@ import { TopicCallout, TopicCards, TopicHeadline } from "../../components/TopicB
 
 import { mdk } from "./devices";
 import NetworkDiagram from "./NetworkDiagram";
-import OpenPageButton, { DEVICES_ROUTE, LIBRARY_ROUTE, MAP_ROUTE } from "./OpenPageButton";
+import OpenPageButton, { LIBRARY_ROUTE, MAP_ROUTE, RESOURCE_ROUTE } from "./OpenPageButton";
 
 import { Button } from "@/components/bakaui";
 
@@ -43,8 +43,8 @@ const ways = [
   {
     id: "switch" as const,
     icon: <AiOutlineSwap className="text-lg" />,
-    route: DEVICES_ROUTE,
-    openKey: mdk("open.devices"),
+    route: RESOURCE_ROUTE,
+    openKey: mdk("open.resources"),
     tone: "border-warning/30 bg-warning/5",
     chip: "bg-warning/15 text-warning-700 dark:text-warning",
   },

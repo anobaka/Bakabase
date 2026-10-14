@@ -20,11 +20,12 @@ public sealed class UpstreamBatchPlayResourceSource(
     IPlayerExecutableLocator players,
     ILogger<UpstreamBatchPlayResourceSource> logger,
     ActiveConnection? connection = null,
-    ISourceResourceProfilePlaybackService? profiles = null) : IBatchPlayResourceSource
+    ISourceResourceProfilePlaybackService? profiles = null,
+    ManagedBatchPlayContext? owner = null) : IBatchPlayResourceSource
 {
     public async Task<BatchPlayResourceSnapshot> GetSnapshotAsync(int[] resourceIds, CancellationToken ct)
     {
-        var snapshot = await upstream.GetBatchPlayResourceSnapshotAsync(resourceIds, ct) ??
+        var snapshot = await upstream.GetBatchPlayResourceSnapshotForEpochAsync(resourceIds, owner?.LibraryEpoch, ct) ??
                        throw new InvalidOperationException(
                            "Could not ask the server what is playable in the selection. " +
                            "Check that it is still reachable.");
@@ -39,7 +40,7 @@ public sealed class UpstreamBatchPlayResourceSource(
         {
             var local = new Dictionary<int, ResourceProfileOpeningOptions>();
             foreach (var chunk in snapshot.Resources.Select(r => r.ResourceId).Distinct().Chunk(256))
-                foreach (var match in await profiles.ResolveManyAsync(connection.Server.ServerId, null, chunk, ct))
+                foreach (var match in await profiles.ResolveManyAsync(connection.Server.ServerId, owner?.LibraryEpoch, chunk, ct))
                     local[match.Key] = match.Value;
             if (local.Values.Any(p => p.PlayerOptions != null))
             {
@@ -58,7 +59,9 @@ public sealed class UpstreamBatchPlayResourceSource(
                         var inherited = snapshot.PlayerOptionsByResourceId != null &&
                                         snapshot.PlayerOptionsByResourceId.TryGetValue(resource.ResourceId, out var captured)
                             ? captured
-                            : await upstream.GetEffectivePlayerOptionsAsync(resource.ResourceId, ct);
+                            : string.IsNullOrEmpty(owner?.LibraryEpoch)
+                                ? await upstream.GetEffectivePlayerOptionsAsync(resource.ResourceId, ct)
+                                : throw new InvalidOperationException("The source did not include the selected library's player options.");
                         upstreamPlayers.AddRange(inherited?.Players ?? []);
                     }
                 }
@@ -103,7 +106,9 @@ public sealed class UpstreamBatchPlayResourceSource(
     {
         try
         {
-            await upstream.MarkManyPlayedAsync(playedByResourceId, ct);
+            if (string.IsNullOrEmpty(owner?.LibraryEpoch)) await upstream.MarkManyPlayedAsync(playedByResourceId, ct);
+            else foreach (var (id, item) in playedByResourceId)
+                await upstream.MarkPlayedForEpochAsync(id, item, owner.LibraryEpoch, ct);
         }
         catch (Exception e)
         {

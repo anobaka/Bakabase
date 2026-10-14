@@ -1,6 +1,6 @@
 using System;
+using Bakabase.Abstractions.Components.Gui;
 using Bakabase.Modules.RemoteAccess.Abstractions.Models;
-using Bakabase.Modules.RemoteAccess.Abstractions.Services;
 using Bootstrap.Models.Constants;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -14,21 +14,22 @@ public static class ServiceSelfDescription
 {
     /// <summary>
     /// The desktop builds are the desktop app and the container a headless server. A development
-    /// run is whichever it was composed as: with the desktop app's server manager
-    /// (<see cref="IManagedServerService"/>), which only the desktop app registers, or without.
+    /// run is whichever it was composed as: with a desktop window switcher
+    /// (<see cref="IMainViewSwitcher"/>), or without. Management connections alone do not
+    /// imply a desktop, because direct Service hosts register them too.
     /// </summary>
-    public static ServerKind KindOf(RuntimeMode mode, bool managesServers) => mode switch
+    public static ServerKind KindOf(RuntimeMode mode, bool hasDesktopWindow) => mode switch
     {
         RuntimeMode.WinForms or RuntimeMode.MacOS => ServerKind.Desktop,
         RuntimeMode.Docker => ServerKind.Headless,
-        _ => managesServers ? ServerKind.Desktop : ServerKind.Headless
+        _ => hasDesktopWindow ? ServerKind.Desktop : ServerKind.Headless
     };
 
     /// <summary>
-    /// Asked when somebody wants it, from what is registered rather than resolved: the server
-    /// manager itself depends on remote access, which is what asks.
+    /// Asked from what is registered rather than resolved, without constructing the desktop
+    /// switcher or its connection manager while remote access itself is being composed.
     /// </summary>
     public static IServerSelfDescription Create(IServiceProvider services, RuntimeMode mode) =>
         new ServerSelfDescription(() => KindOf(mode,
-            services.GetService<IServiceProviderIsService>()?.IsService(typeof(IManagedServerService)) == true));
+            services.GetService<IServiceProviderIsService>()?.IsService(typeof(IMainViewSwitcher)) == true));
 }

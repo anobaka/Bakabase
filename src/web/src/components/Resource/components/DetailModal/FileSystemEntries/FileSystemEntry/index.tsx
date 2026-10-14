@@ -10,6 +10,8 @@ import { toast } from "@/components/bakaui";
 import { IwFsType } from "@/sdk/constants";
 import envConfig from "@/config/env";
 import FileSystemEntryIcon from "@/components/FileSystemEntryIcon";
+import { useResourceOwnerScope } from "@/features/management/resourceContext";
+import { managedResourceAssetUrl } from "@/features/management/resourceApi";
 
 type Props = {
   entry: Entry;
@@ -18,6 +20,11 @@ type Props = {
 
 // todo: hardcode url
 const FileSystemEntry = ({ entry, onEnterDirectory }: Props) => {
+  const scope = useResourceOwnerScope();
+  const imageUrl =
+    scope && !scope.source.isLocal && scope.resourceId
+      ? managedResourceAssetUrl(scope.source, scope.resourceId, entry.path)
+      : buildImageUrl(entry.path);
   let comp;
 
   switch (entry.type) {
@@ -29,7 +36,7 @@ const FileSystemEntry = ({ entry, onEnterDirectory }: Props) => {
       );
       break;
     case IwFsType.Image:
-      comp = <img alt={entry.name} src={buildImageUrl(entry.path)} />;
+      comp = <img alt={entry.name} src={imageUrl} />;
       break;
     case IwFsType.Invalid:
       comp = <MdInsertDriveFile />;

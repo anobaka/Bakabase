@@ -20,7 +20,7 @@ import { AiOutlinePicture } from "react-icons/ai";
 
 import { resolveCoverOperations } from "./coverOperations";
 
-import BApi from "@/sdk/BApi";
+import { useResourceApi, useResourceOwner } from "@/features/management/resourceContext";
 import ResourceEnhancementsModal from "@/components/Resource/components/ResourceEnhancementsModal.tsx";
 import { openMovePanel } from "@/stores/resourceMovePanel";
 import { getKnownMoveBlockReason } from "@/components/Resource/resourceMoveEligibility";
@@ -59,10 +59,17 @@ const Operations = ({
   sourceTabId,
   sourceTabName,
 }: IProps) => {
+  const BApi = useResourceApi();
+  const owner = useResourceOwner();
   const { t } = useTranslation();
   const moveReasonText = useMoveReasonText();
   const moveBlockReason = getKnownMoveBlockReason(resource);
-  const moveDisabledReason = moveBlockReason ? moveReasonText(moveBlockReason) : undefined;
+  const moveDisabledReason =
+    owner && !owner.isLocal
+      ? t<string>("management.resource.moveOnOwner")
+      : moveBlockReason
+        ? moveReasonText(moveBlockReason)
+        : undefined;
   const { createPortal } = useBakabaseContext();
   const folderAction = useOpenResourceDirectory();
   const uiOptions = useUiOptionsStore((state) => state.data);
@@ -124,7 +131,7 @@ const Operations = ({
   };
 
   const handleMove = () => {
-    if (moveBlockReason) return;
+    if (moveDisabledReason) return;
     openMovePanel({
       resources: [{ id: resource.id, path: resource.path, displayName: resource.displayName }],
       sourceTabId,

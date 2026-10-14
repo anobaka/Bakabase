@@ -5,10 +5,12 @@ import { AiOutlineAppstore, AiOutlineArrowRight } from "react-icons/ai";
 import { useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/bakaui";
+import { useResourceOwner } from "@/features/management/resourceContext";
 
 const CustomPropertiesEmptyState = ({ onNavigate }: { onNavigate?: () => void }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const owner = useResourceOwner();
 
   return (
     <div className="flex flex-wrap items-start gap-3 rounded-xl bg-default-50/60 p-3">
@@ -30,7 +32,11 @@ const CustomPropertiesEmptyState = ({ onNavigate }: { onNavigate?: () => void })
           variant="light"
           onPress={() => {
             onNavigate?.();
-            navigate("/resource-profile");
+            navigate(
+              owner && !owner.isLocal
+                ? `/resource-profile?sourceDeviceId=${encodeURIComponent(`node:${owner.serverId}:${owner.libraryEpoch}`)}`
+                : "/resource-profile",
+            );
           }}
         >
           {t<string>("resource.empty.configureResourceProfile")}

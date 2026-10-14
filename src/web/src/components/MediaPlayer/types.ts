@@ -8,6 +8,10 @@ export interface MediaPlayerEntry
   extends BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntry {
   // The full path to use for playing this file (includes compressed file path with separator if inside an archive)
   playPath?: string;
+  /** Owner-bound delivery URL. Omitted for ordinary files on the current server. */
+  mediaUrl?: string;
+  /** Null disables thumbnails when the owner does not expose a thumbnail route. */
+  thumbnailUrl?: string | null;
 }
 
 /** A result of rendering delivered bytes, not a codec prediction based on a suffix. */
@@ -16,7 +20,7 @@ export type MediaBrowseScope = "resource" | "configured";
 
 export interface MediaPlayerProps extends React.HTMLAttributes<HTMLElement> {
   defaultActiveIndex?: number;
-  entries: BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntry[];
+  entries: MediaPlayerEntry[];
   interval?: number;
   autoPlay?: boolean;
   /** Omitted for callers opening arbitrary selections rather than an entire resource. */

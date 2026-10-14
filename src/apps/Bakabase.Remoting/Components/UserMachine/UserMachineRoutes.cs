@@ -51,6 +51,12 @@ public static class UserMachineRoutes
         new("GET", "/tool/open-file"),
         new("POST", "/aigc/artifacts/{id:int}/open"),
         new("POST", "/dlsite-work/{workId}/launch"),
+        // Never forward a request to launch a player through another manager.
+        // Unified management is opened in this app's own UI, not a managed device's relay.
+        new("POST", "/federation/local/management/{serverId}/play"),
+        new("POST", "/federation/local/management/{serverId}/directory"),
+        new("POST", "/federation/local/management/{serverId}/batch-play/candidates"),
+        new("POST", "/federation/local/management/{serverId}/batch-play"),
         new("POST", "/player/batch-play"),
         new("POST", "/player/resource-profiles"),
         new("POST", "/player/batch-play/candidates"),

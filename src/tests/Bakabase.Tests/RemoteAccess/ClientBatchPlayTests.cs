@@ -82,6 +82,23 @@ public class ClientBatchPlayTests
 
     private ClientBatchPlayFileResolver Resolver() => new(_connection, new StubLoopback());
 
+    [TestMethod]
+    public void UnifiedBatchStreamingCarriesItsSelectedOwnerEpoch()
+    {
+        var resolver = new ClientBatchPlayFileResolver(_connection, new StubLoopback(), new() {LibraryEpoch = "source-epoch"});
+        StringAssert.Contains(resolver.Resolve("/movie.mkv")!, "managedLibraryEpoch=source-epoch");
+        Assert.IsFalse(Resolver().Resolve("/movie.mkv")!.Contains("managedLibraryEpoch"));
+    }
+
+    [TestMethod]
+    public async Task AnEpochBoundBatchCannotFallBackToAnUnverifiedLegacySnapshot()
+    {
+        _upstream.BatchPlayResources = new BatchPlayResourceSnapshot([], []);
+        var source = new UpstreamBatchPlayResourceSource(_upstream, new NoInstalledPlayers(),
+            NullLogger<UpstreamBatchPlayResourceSource>.Instance, owner: new() {LibraryEpoch = "source-epoch"});
+        await Assert.ThrowsExactlyAsync<InvalidOperationException>(() => source.GetSnapshotAsync([42], default));
+    }
+
     // ---- resolving files ----
 
     [TestMethod]

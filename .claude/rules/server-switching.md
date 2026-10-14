@@ -1,16 +1,42 @@
-# Server Switching (managing other servers from the desktop app)
+# Device Management and Desktop Server Switching
 
 Every PC install is the all-in-one desktop app. It always runs its own server, and its main
 window can switch to another server it manages — a NAS, or another PC's all-in-one — and
-control it fully, as the removed thin client did. Headless servers (Docker/NAS) never
-manage anything; they are only ever managed.
+control it fully, as the removed thin client did. Headless servers (Docker/NAS and directly
+hosted Service) can also manage explicitly paired devices through the unified management
+workspace. They have no desktop relay or native program launcher.
+
+## Unified management
+
+- Pairing, signed requests, verified server identity and persistent connections live in
+  `Bakabase.Modules.RemoteAccess/Components/Management`. `RemoteConsoleManager` is the
+  desktop adapter; existing connection files, keys, path mappings and relay ports are preserved.
+- `/federation/local/management` serves the local manager UI. It uses paired administrator
+  connections, never read-only federation grants. A manages B only after B authorizes it;
+  neither reciprocal management nor access to devices managed by B is implied.
+- Resource, property and media-library operations are named allowlisted operations, bound
+  to `(serverId, libraryEpoch, owner-local ID)`. Editing B writes B. Source-scoped resource
+  profiles configured on A stay on A. Never replace the global frontend SDK endpoint or
+  merge different owners' numeric IDs.
+- First-phase queries are online and independently paged per owner (at most 100 resources
+  per page), with bounded response sizes. There is no full resource database replication or
+  offline write queue. Unavailable sources remain visible; unknown write outcomes are not
+  retried automatically. An incompatible source needs an update. A changed library epoch
+  invalidates the selected IDs before dispatch and is checked again at the owner API.
+- `ManagedServersView.available` means management is available. Only
+  `canOpenDesktopView` permits desktop view switching. Native managed-resource playback
+  reuses the desktop's existing `LocalPlayback` and source-scoped ResourceProfiles; browser
+  media is streamed through the manager using owner-discovered candidates.
+
+The following relay rules describe the optional desktop full-view fallback. Daily library
+management does not require navigating to another device's SPA.
 
 ## How it works
 
-- **The other server's own UI, not ours.** The window shows the target's own SPA bundle, so
+- **Full-view switching uses the other server's own UI.** The window shows the target's own SPA bundle, so
   UI and API always match whatever version the target runs. This device's bundle could not
-  drive another server's API anyway: the SPA is same-origin by construction, and request
-  signing cannot happen in a page.
+  drive arbitrary versions of another server's API: unified management instead negotiates a
+  bounded contract and signs the owner's requests in the manager server, never in the page.
 - **One relay per managed server.** `Bakabase.Remoting` composes, for each server, a slim
   `WebApplication` with its own container, bound to `127.0.0.1` on a port that stays the same
   for that server across launches (browser storage is keyed by origin). It signs every
@@ -20,7 +46,7 @@ manage anything; they are only ever managed.
 - **Never in the Service.** The relays live next to the in-process server, not inside its
   container or pipeline — the user-machine dispatcher would otherwise intercept the local
   server's own play and open routes. The Service reaches them only through
-  `IManagedServerService` (resolved optionally), and headless builds register none.
+  `IManagedServerService`; headless builds register the shared connection core without relays.
 - **Switching is a navigation.** The SPA asks for a URL (`/federation/local/servers/{id}/open`
   locally, `/client/switcher/{id}/open` inside a relay) and assigns `location`. The tray menu
   (`IMainViewSwitcher`) is the way back when the target's UI is too old to have a switcher.
@@ -231,8 +257,8 @@ manage anything; they are only ever managed.
   and node as they were, and every server still managed, key and relay. The store edits a copy
   and holds it only once the file is in place (`ClientConnectionStore.MutateAsync`), so no later
   write — a path mapping, a relay noting an answer — saves a reset that was refused (only the
-  filed requests are already dropped). A headless server manages nothing and composes no
-  `IManagedServerService`, so `federation new-identity` has nothing to forget there. Until
+  filed requests are already dropped). Headless servers have the same outbound connection
+  store and must also forget its credentials locally when changing identity. Until
   the copy is made a new device, revoking that device on a server, or "stop managing" on
   either install (which asks the server to revoke it), ends management from both.
 - **Warn, never reconfigure.** A target in `RemoteAccessMode.Unrestricted` is flagged in the UI;

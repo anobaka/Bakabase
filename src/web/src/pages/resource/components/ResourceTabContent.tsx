@@ -28,6 +28,14 @@ import {
 } from "./Resources/resourceMoveSelection";
 
 import BApi from "@/sdk/BApi";
+import {
+  type ResourceSelectionKey,
+  resourceSelectionKey,
+  deviceColor,
+  sameResourceOwner,
+} from "@/features/management/resourceIdentity";
+import { groupResourceSelection } from "@/features/management/resourceSelection";
+import { useResourceSources } from "@/features/management/resourceSourcesContext";
 import ResizablePanelDivider from "@/components/ResizablePanelDivider";
 import ResourceCard from "@/components/Resource";
 import { getSelectionMoveBlockReasons } from "@/components/Resource/resourceMoveEligibility";
@@ -96,6 +104,9 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
     search: progressiveSearch,
     reloadResources,
     removeResources,
+    sourceErrors,
+    searchAllResourceKeys,
+    cancelResourceSelection,
   } = useResourceSearch();
   const resourcesRef = useRef(resources);
   // Deferred resources keep the heavy grid render low-priority so filter edits stay responsive.
@@ -115,17 +126,49 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
   const searchFormRef = useRef(searchForm);
 
   const searchingRef = useRef(false);
+  const searchAttemptRef = useRef(0);
 
-  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [selectedIds, updateSelectedIds] = useState<ResourceSelectionKey[]>([]);
+  const selectionVersionRef = useRef(0);
+  const cancelSelectionRef = useRef(cancelResourceSelection);
+  cancelSelectionRef.current = cancelResourceSelection;
+  const invalidatePendingSelection = useCallback(() => {
+    ++selectionVersionRef.current;
+    cancelSelectionRef.current?.();
+  }, []);
+  const setSelectedIds = useCallback(
+    (value: React.SetStateAction<ResourceSelectionKey[]>) => {
+      invalidatePendingSelection();
+      updateSelectedIds(value);
+    },
+    [invalidatePendingSelection],
+  );
+  useEffect(() => () => invalidatePendingSelection(), [invalidatePendingSelection]);
+  const sourcesContext = useResourceSources();
+  const sourcesRef = useRef(sourcesContext?.sources ?? []);
+  sourcesRef.current = sourcesContext?.sources ?? [];
+  const selectionGroups = useMemo(
+    () => groupResourceSelection(selectedIds, resources, sourcesContext?.sources),
+    [selectedIds, resources, sourcesContext?.sources],
+  );
+  const selectionGroupsRef = useRef(selectionGroups);
+  selectionGroupsRef.current = selectionGroups;
+  const localSelection = (keys: ResourceSelectionKey[]) =>
+    keys.filter((key): key is number => typeof key === "number");
+  const localResources = (items: typeof resources) =>
+    items.filter((item) => !item.owner || item.owner.isLocal);
   const allSelectedMovesKnownBlocked = useMemo(
-    () => getSelectionMoveBlockReasons(selectedIds, resources).length > 0,
+    () =>
+      selectedIds.some((key) => typeof key !== "number") ||
+      getSelectionMoveBlockReasons(localSelection(selectedIds), localResources(resources)).length >
+        0,
     [selectedIds, resources],
   );
   const movePanelEnabled = useResourceMovePanelStore(
     (state) => state.panelEnabled && !!state.sourceContext && !state.sourceContextInvalidated,
   );
   const selectedIdsRef = useRef(selectedIds);
-  const selectedIdSetRef = useRef<Set<number>>(new Set());
+  const selectedIdSetRef = useRef<Set<ResourceSelectionKey>>(new Set());
   // Mirror of selectedIds as a stable RefObject<Resource[]> so we can pass
   // a stable reference to each ResourceCard. The contents update on selection
   // change but the ref object itself never changes, which keeps React.memo
@@ -136,7 +179,7 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
   const containerRef = useRef<HTMLDivElement | null>(null);
   // Selection as it stood when a rectangle drag began, so Ctrl/Alt drags can extend or
   // shrink it, and so Escape can put it back.
-  const rectSelectionBaseRef = useRef<number[]>([]);
+  const rectSelectionBaseRef = useRef<ResourceSelectionKey[]>([]);
   // A rectangle drag ends with a click the browser still delivers. Eat it once, or it
   // clears the selection that was just made (see onClickRef below).
   const suppressNextClickRef = useRef(false);
@@ -146,11 +189,12 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
     resourcesComponentRef.current?.rearrange();
   }, []);
 
+  const searchActionRef = useRef<(...args: any[]) => Promise<any>>();
   const onSearch = useCallback(async (f: Partial<SearchForm>, newTab: boolean) => {
     if (newTab) {
       props.searchInNewTab?.({ page: 1, pageSize: 50, ...f });
     } else {
-      search(
+      return searchActionRef.current?.(
         {
           ...f,
           page: 1,
@@ -162,41 +206,74 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
     }
   }, []);
 
-  const onSelectAllChange = useCallback(async (selected: boolean, includeNotLoaded?: boolean) => {
-    if (selected) {
-      if (includeNotLoaded) {
-        const r = await BApi.resource.searchAllResourceIds(
-          searchFormRef.current ?? { page: 1, pageSize: 100000000 },
-        );
-        const ids = r.data || [];
-
-        setSelectedIds(ids);
+  const onSelectAllChange = useCallback(
+    async (selected: boolean, includeNotLoaded?: boolean) => {
+      if (selected) {
+        if (includeNotLoaded) {
+          invalidatePendingSelection();
+          const version = selectionVersionRef.current;
+          try {
+            const ids = await searchAllResourceKeys(
+              searchFormRef.current ?? { page: 1, pageSize: 100000000 },
+            );
+            if (version === selectionVersionRef.current) setSelectedIds(ids);
+          } catch (error) {
+            if (
+              version !== selectionVersionRef.current ||
+              (error instanceof Error && error.name === "AbortError")
+            )
+              return;
+            throw error;
+          }
+        } else {
+          setSelectedIds(resourcesRef.current.map(resourceSelectionKey));
+        }
       } else {
-        setSelectedIds(resourcesRef.current.map((r) => r.id));
+        setSelectedIds([]);
       }
-    } else {
-      setSelectedIds([]);
-    }
-  }, []);
+    },
+    [searchAllResourceKeys, invalidatePendingSelection, setSelectedIds],
+  );
 
   const { createPortal } = useBakabaseContext();
 
   const initStartPageRef = useRef(1);
+  const initializedSourcesRef = useRef<string>();
+  const sourcesSignature = JSON.stringify(
+    sourcesContext?.sources.map((source) => [
+      source.serverId,
+      source.libraryEpoch,
+      source.available,
+    ]) ?? [],
+  );
 
   useEffect(() => {
+    if (sourcesContext?.loading) return;
     if (resourceOptionsInitializedRef.current) {
+      if (initializedSourcesRef.current !== sourcesSignature) {
+        initializedSourcesRef.current = sourcesSignature;
+        void search({ ...searchFormRef.current, page: 1 }, "replace", false, false);
+      }
+
       return;
     }
+    let cancelled = false;
     if (resourceOptions.initialized) {
       BApi.resource.getSavedSearch({ id: props.searchId }).then((r) => {
+        if (cancelled) return;
         const sf = r.data!;
 
         resourceOptionsInitializedRef.current = true;
+        initializedSourcesRef.current = sourcesSignature;
         setSearchForm(sf.search);
         search(sf.search, "replace");
       });
     }
-  }, [resourceOptions.initialized]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [resourceOptions.initialized, sourcesContext?.loading, sourcesSignature]);
 
   const selectionKey = primaryModifierKey();
 
@@ -215,7 +292,7 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
     // Ctrl+A / Cmd+A: Select all loaded resources
     if (matchesPrimaryShortcut(e, "a")) {
       e.preventDefault();
-      setSelectedIds(resourcesRef.current.map((r) => r.id));
+      setSelectedIds(resourcesRef.current.map(resourceSelectionKey));
 
       return;
     }
@@ -379,7 +456,7 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
     }
     const set = new Set(selectedIds);
 
-    selectedResourcesRef.current = resources.filter((r) => set.has(r.id));
+    selectedResourcesRef.current = resources.filter((r) => set.has(resourceSelectionKey(r)));
   }, [resources, selectedIds]);
 
   useEffect(() => {
@@ -387,8 +464,15 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
     setMovePanelContext({
       tabId: props.searchId,
       tabName: props.searchName,
-      resources: resources.map(({ id, path, displayName }) => ({ id, path, displayName })),
-      selectedResources: snapshotMoveSelection(selectedIds, resources),
+      resources: localResources(resources).map(({ id, path, displayName }) => ({
+        id,
+        path,
+        displayName,
+      })),
+      selectedResources: snapshotMoveSelection(
+        localSelection(selectedIds),
+        localResources(resources),
+      ),
     });
   }, [props.activated, props.searchId, props.searchName, resources, selectedIds]);
 
@@ -399,7 +483,13 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
       const detail = (event as CustomEvent<{ resourceIds: number[]; sourceTabId?: string }>).detail;
 
       if (!detail) return;
-      setSelectedIds((current) => removeSubmittedSelection(current, props.searchId, detail));
+      setSelectedIds((current) =>
+        current.filter(
+          (key) =>
+            typeof key !== "number" ||
+            removeSubmittedSelection([key], props.searchId, detail).length > 0,
+        ),
+      );
     };
 
     window.addEventListener(RESOURCE_MOVE_SUBMITTED_EVENT, onSubmitted);
@@ -494,10 +584,12 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
       console.trace();
 
       // Prevent concurrent searches
-      if (searchingRef.current) {
+      if (searchingRef.current && renderMode !== "replace") {
         return;
       }
+      if (renderMode === "replace") invalidatePendingSelection();
 
+      const attempt = ++searchAttemptRef.current;
       searchingRef.current = true;
 
       const baseForm = replaceSearchCriteria ? {} : searchFormRef.current;
@@ -530,20 +622,22 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
         });
       } finally {
         // Always reset searching flag after search completes
-        searchingRef.current = false;
+        if (attempt === searchAttemptRef.current) searchingRef.current = false;
       }
     },
     [progressiveSearch, props.searchId],
   );
 
-  const onSelect = useCallback((id: number, shiftKey: boolean = false) => {
-    const currentIndex = resourcesRef.current.findIndex((r) => r.id === id);
+  searchActionRef.current = search;
+
+  const onSelect = useCallback((id: ResourceSelectionKey, shiftKey: boolean = false) => {
+    const currentIndex = resourcesRef.current.findIndex((r) => resourceSelectionKey(r) === id);
 
     // Shift+Click range selection
     if (shiftKey && lastSelectedIndexRef.current !== null && currentIndex !== -1) {
       const start = Math.min(lastSelectedIndexRef.current, currentIndex);
       const end = Math.max(lastSelectedIndexRef.current, currentIndex);
-      const rangeIds = resourcesRef.current.slice(start, end + 1).map((r) => r.id);
+      const rangeIds = resourcesRef.current.slice(start, end + 1).map(resourceSelectionKey);
 
       // Merge with existing selection
       const newSelectedIds = [...new Set([...selectedIdsRef.current, ...rangeIds])];
@@ -583,13 +677,13 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
   // `indices` are positions in the grid, which renders displayResources.
   const onRectSelectionChange = useCallback((indices: number[], mode: RectSelectionMode) => {
     const list = displayResourcesRef.current;
-    const boxedIds: number[] = [];
+    const boxedIds: ResourceSelectionKey[] = [];
 
     for (const index of indices) {
       const resource = list[index];
 
       if (resource) {
-        boxedIds.push(resource.id);
+        boxedIds.push(resourceSelectionKey(resource));
       }
     }
 
@@ -634,7 +728,11 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
       state.panelEnabled && !!state.sourceContext && !state.sourceContextInvalidated,
       !!card && selectedIdSetRef.current.has(Number(card.dataset.resourceMoveCard)),
       event,
-      getSelectionMoveBlockReasons(selectedIdsRef.current, resourcesRef.current).length > 0,
+      selectedIdsRef.current.some((key) => typeof key !== "number") ||
+        getSelectionMoveBlockReasons(
+          localSelection(selectedIdsRef.current),
+          localResources(resourcesRef.current),
+        ).length > 0,
     );
   }, []);
 
@@ -644,7 +742,10 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
       const selected = selectedIdSetRef.current.has(cardId);
       const state = useResourceMovePanelStore.getState();
       const taskState = useBTasksStore.getState();
-      const snapshot = snapshotMoveSelection(selectedIdsRef.current, resourcesRef.current);
+      const snapshot = snapshotMoveSelection(
+        localSelection(selectedIdsRef.current),
+        localResources(resourcesRef.current),
+      );
 
       if (
         !state.sourceContext ||
@@ -653,7 +754,11 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
           state.panelEnabled,
           selected,
           event,
-          getSelectionMoveBlockReasons(selectedIdsRef.current, resourcesRef.current).length > 0,
+          selectedIdsRef.current.some((key) => typeof key !== "number") ||
+            getSelectionMoveBlockReasons(
+              localSelection(selectedIdsRef.current),
+              localResources(resourcesRef.current),
+            ).length > 0,
         ) ||
         snapshot.some(
           (resource) =>
@@ -705,7 +810,9 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
   // unchanged (regenerated thumbnail, rediscovered playable files).
   useEffect(() => {
     const unsubscribe = resourceChangedChannel.subscribe((ids) => {
-      const currentIds = new Set(resourcesRef.current.map((r) => r.id));
+      const currentIds = new Set(
+        localResources(resourcesRef.current).map((resource) => resource.id),
+      );
       const relevant = ids.filter((id) => currentIds.has(id));
 
       if (relevant.length > 0) {
@@ -719,7 +826,7 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
   // Prune deleted resources from the grid immediately (and drop them from the
   // current selection) so the card disappears without waiting for a re-search.
   const onResourcesDeleted = useCallback(
-    (ids: number[]) => {
+    (ids: ResourceSelectionKey[]) => {
       if (ids.length === 0) {
         return;
       }
@@ -746,6 +853,7 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
         const timer = setTimeout(async () => {
           pruneTimersRef.current.delete(timer);
           const shownIds = resourcesRef.current
+            .filter((resource) => !resource.owner || resource.owner.isLocal)
             .map((resource) => resource.id)
             .filter((id) => pendingMoveIdsRef.current.has(id));
           const form = searchFormRef.current;
@@ -764,7 +872,9 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
             // using the previous search's matches.
             if (rsp.code || !rsp.data || form !== searchFormRef.current) return;
             const stillMatched = new Set(rsp.data);
-            const currentIds = new Set(resourcesRef.current.map((resource) => resource.id));
+            const currentIds = new Set(
+              localResources(resourcesRef.current).map((resource) => resource.id),
+            );
             const toRemove = shownIds.filter((id) => currentIds.has(id) && !stillMatched.has(id));
             const toReload = shownIds.filter((id) => currentIds.has(id) && stillMatched.has(id));
 
@@ -867,14 +977,27 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
         return null;
       }
       const resource = displayResources[index];
-      const selected = selectedIdSetRef.current.has(resource.id);
+      const selectionKey = resourceSelectionKey(resource);
+      const selected = selectedIdSetRef.current.has(selectionKey);
+      const selectionGroups = selectionGroupsRef.current;
+      const ownedSelection = selectionGroups.find((group) =>
+        sameResourceOwner(group.owner, resource.owner),
+      );
+      const ownedKeys = (ids: number[]) =>
+        ids.map((id) => resourceSelectionKey({ id, owner: resource.owner }));
 
       return (
         <div
-          key={resource.id}
+          key={selectionKey}
           className={"relative p-0.5"}
-          data-resource-move-card={resource.id}
-          draggable={movePanelEnabled && selected && !allSelectedMovesKnownBlocked}
+          data-resource-move-card={typeof selectionKey === "number" ? selectionKey : undefined}
+          data-resource-selection-key={String(selectionKey)}
+          draggable={
+            typeof selectionKey === "number" &&
+            movePanelEnabled &&
+            selected &&
+            !allSelectedMovesKnownBlocked
+          }
           style={{
             ...style,
           }}
@@ -883,11 +1006,10 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
           onMouseDownCapture={(event) => {
             event.currentTarget.draggable =
               shouldStartResourceMove(
-                movePanelEnabled,
+                typeof selectionKey === "number" && movePanelEnabled,
                 selected,
                 event,
-                getSelectionMoveBlockReasons(selectedIdsRef.current, resourcesRef.current).length >
-                  0,
+                allSelectedMovesKnownBlocked,
               ) &&
               !(event.target as HTMLElement).closest(
                 "button, a, input, textarea, select, .select-text, [data-moving-overlay]",
@@ -898,15 +1020,32 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
             biggerCoverPlacement={index % columnCount < columnCount / 2 ? "right" : "left"}
             resource={resource}
             selected={selected}
-            selectedResourceIdsRef={selectedIdsRef}
-            selectedResourcesRef={selectedResourcesRef}
+            selectedResourceIds={ownedSelection?.ids ?? []}
+            selectedResources={ownedSelection?.resources ?? []}
+            selectedResourceGroups={selectionGroups}
             selectionModeRef={multiSelectionRef}
             sourceTabId={props.searchId}
             sourceTabName={props.searchName}
-            onResourcesDeleted={onResourcesDeleted}
-            onSelected={onSelect}
-            onSelectedResourcesChanged={onSelectedResourcesChanged}
+            onResourcesDeleted={(ids) => onResourcesDeleted(ownedKeys(ids))}
+            onSelected={(id, shiftKey) =>
+              onSelect(resourceSelectionKey({ id, owner: resource.owner }), shiftKey)
+            }
+            onSelectedResourcesChanged={(ids) => reloadResources(ownedKeys(ids))}
+            onSelectedResourceGroupChanged={(owner, ids) =>
+              reloadResources(ids.map((id) => resourceSelectionKey({ id, owner })))
+            }
+            onResourceGroupDeleted={(owner, ids) =>
+              onResourcesDeleted(ids.map((id) => resourceSelectionKey({ id, owner })))
+            }
           />
+          {resource.owner && !resource.owner.isLocal && sourcesRef.current.length > 1 && (
+            <span
+              aria-label={resource.owner.name}
+              title={resource.owner.name}
+              className="absolute right-2 top-2 z-10 h-2.5 w-2.5 rounded-full ring-2 ring-black/35"
+              style={{ backgroundColor: deviceColor(resource.owner.serverId) }}
+            />
+          )}
         </div>
       );
     },
@@ -940,7 +1079,8 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
         reloadResources={reloadResources}
         resourceCount={resources.length}
         searchForm={searchForm}
-        selectedResourceIds={selectedIds}
+        selectedResourceIds={localSelection(selectedIds)}
+        selectedResourceCount={selectedIds.length}
         totalFilteredResourceCount={pageable?.totalCount}
         onOpenRecentlyPlayed={props.onOpenRecentlyPlayed}
         onSearch={onSearch}
@@ -952,6 +1092,33 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
 
   const rightPanelContent = (
     <div className="flex flex-col h-full overflow-hidden">
+      {(sourcesContext?.error || !!sourceErrors?.length) && (
+        <div
+          className="flex shrink-0 items-center gap-2 rounded-lg bg-warning-50 px-3 py-2 text-xs text-warning-700"
+          role="status"
+        >
+          <span className="min-w-0 flex-1">
+            {[
+              sourcesContext?.error?.message,
+              ...(sourceErrors ?? []).map(
+                ({ source, error }) => `${source.name}: ${error.message}`,
+              ),
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          </span>
+          <Button
+            size="sm"
+            variant="light"
+            onPress={() => {
+              if (sourcesContext?.error) sourcesContext.refresh();
+              else void search({}, "replace", false, false);
+            }}
+          >
+            {t("management.retry")}
+          </Button>
+        </div>
+      )}
       {columnCount > 0 && displayResources.length > 0 && (
         <>
           {pageable &&
@@ -1050,10 +1217,14 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
                       closest = item;
                     }
                   }
-                  const centerResourceId = parseInt(closest.getAttribute("data-id") ?? "0", 10);
+                  const centerResourceKey =
+                    closest.parentElement?.getAttribute("data-resource-selection-key") ??
+                    closest.getAttribute("data-id") ??
+                    "0";
                   const pageOffset = Math.floor(
-                    resourcesRef.current.findIndex((r) => r.id == centerResourceId) /
-                      (searchFormRef.current?.pageSize ?? BasePageSize),
+                    resourcesRef.current.findIndex(
+                      (r) => String(resourceSelectionKey(r)) === centerResourceKey,
+                    ) / (searchFormRef.current?.pageSize ?? BasePageSize),
                   );
                   const currentPage = pageOffset + initStartPageRef.current;
 

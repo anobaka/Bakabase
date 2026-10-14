@@ -1,10 +1,13 @@
-﻿using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.Abstractions.Models.Domain;
+using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.Input;
 
 namespace Bakabase.Modules.Search.Models.Db;
 
 public record ResourceSearchDbModel
 {
+    public ResourceSearchOwner? Owner { get; set; }
+    public string[]? DeviceIds { get; set; }
     public ResourceSearchFilterGroupDbModel? Group { get; set; }
     public ResourceSearchOrderInputModel[]? Orders { get; set; }
     public string? Keyword { get; set; }

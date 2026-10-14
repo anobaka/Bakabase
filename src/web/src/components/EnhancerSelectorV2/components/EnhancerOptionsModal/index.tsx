@@ -31,7 +31,7 @@ import {
   propertyValueScopes,
   RegexEnhancerTarget,
 } from "@/sdk/constants";
-import BApi from "@/sdk/BApi";
+import { useResourceApi } from "@/features/management/resourceContext";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import {
   ExHentaiConfigPanel,
@@ -87,6 +87,7 @@ export default function EnhancerOptionsModal({
   onDestroyed,
   hideBindingAndConfig,
 }: Props) {
+  const BApi = useResourceApi();
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const forceUpdate = useUpdate();

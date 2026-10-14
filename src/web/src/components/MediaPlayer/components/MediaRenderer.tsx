@@ -71,7 +71,8 @@ const MediaRenderer = forwardRef<MediaRendererRef, MediaRendererProps>((props, r
   const isMedia = mediaType === MediaType.Video || mediaType === MediaType.Audio;
   const needsLoad = isMedia || mediaType === MediaType.Image;
   const supportsPreview = needsLoad || mediaType === MediaType.Text;
-  const source = `${envConfig.apiEndpoint}/file/play?fullname=${encodeURIComponent(path)}`;
+  const source =
+    entry.mediaUrl ?? `${envConfig.apiEndpoint}/file/play?fullname=${encodeURIComponent(path)}`;
 
   useImperativeHandle(ref, () => ({
     getImageRef: () => image.current,
@@ -82,7 +83,7 @@ const MediaRenderer = forwardRef<MediaRendererRef, MediaRendererProps>((props, r
     setStatus("loading");
     setAlternativeFailed(false);
     setMediaMetadataReceived(false);
-  }, [path, mediaType, attempt]);
+  }, [path, source, mediaType, attempt]);
   useEffect(() => {
     onPreviewStateChange?.(
       path,
@@ -221,8 +222,9 @@ const MediaRenderer = forwardRef<MediaRendererRef, MediaRendererProps>((props, r
     return (
       <div className="media-player-text-preview">
         <TextReader
-          key={path}
+          key={source}
           file={path}
+          sourceUrl={entry.mediaUrl}
           onError={(error) => {
             setStatus("error");
             onPlayabilityError?.(error);

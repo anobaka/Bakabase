@@ -12,7 +12,7 @@ import React, { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { MdAdd, MdArrowDownward, MdArrowUpward, MdClose, MdTune } from "react-icons/md";
 
-import BApi from "@/sdk/BApi";
+import { useResourceApi } from "@/features/management/resourceContext";
 import { PropertyValueScopeLabel, propertyValueScopes } from "@/sdk/constants";
 import { Button, Popover, Switch } from "@/components/bakaui";
 import PropertyValueRenderer from "@/components/Property/components/PropertyValueRenderer";
@@ -66,6 +66,7 @@ const ScopePreferencePopover = ({
   onChanged,
   onOpenChange,
 }: Props) => {
+  const BApi = useResourceApi();
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [priorities, setPriorities] = useState<PropertyValueScopePriority[] | null>(null);

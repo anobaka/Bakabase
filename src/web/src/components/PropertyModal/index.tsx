@@ -10,13 +10,17 @@ import { useTranslation } from "react-i18next";
 import ModalContent from "./components/ModalContent";
 
 import "./index.scss";
-import BApi from "@/sdk/BApi";
+import { useResourceApi } from "@/features/management/resourceContext";
 import { Modal } from "@/components/bakaui";
 
 type Props = {
   value?: CustomPropertyForm;
   onSaved?: (property: IProperty) => any;
   validValueTypes?: PropertyType[];
+  /** Keep a foreign definition bound to its owner throughout editing. */
+  saveProperty?: (model: CustomPropertyForm & { options: string }) => Promise<IProperty>;
+  checkOptionUsage?: (propertyId: number, optionId: string) => Promise<number>;
+  ownerScoped?: boolean;
 } & DestroyableProps;
 
 type CustomPropertyForm = {
@@ -26,8 +30,17 @@ type CustomPropertyForm = {
   options?: any;
 };
 
-const PropertyModal = ({ value, onSaved, validValueTypes, ...props }: Props) => {
+const PropertyModal = ({
+  value,
+  onSaved,
+  validValueTypes,
+  saveProperty,
+  checkOptionUsage,
+  ownerScoped = false,
+  ...props
+}: Props) => {
   const { t } = useTranslation();
+  const BApi = useResourceApi();
   const [visible, setVisible] = useState(true);
   const [property, setProperty] = useState<CustomPropertyForm>();
 
@@ -61,6 +74,15 @@ const PropertyModal = ({ value, onSaved, validValueTypes, ...props }: Props) => 
           options: JSON.stringify(property.options),
         };
 
+        if (saveProperty) {
+          const saved = await saveProperty(model);
+
+          onSaved?.(saved);
+          close();
+
+          return;
+        }
+
         const isUpdate = property.id != undefined && property.id > 0;
 
         const rsp = isUpdate
@@ -76,6 +98,8 @@ const PropertyModal = ({ value, onSaved, validValueTypes, ...props }: Props) => 
       {...props}
     >
       <ModalContent
+        checkOptionUsage={checkOptionUsage}
+        ownerScoped={ownerScoped}
         validValueTypes={validValueTypes}
         value={value}
         onChange={(v) => setProperty(v)}

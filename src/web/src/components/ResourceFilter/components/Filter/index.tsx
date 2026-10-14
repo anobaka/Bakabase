@@ -81,15 +81,33 @@ const Filter = ({
   useEffect(() => {
     if (!filter.propertyPool || !filter.propertyId || !filter.operation) return;
     if (filter.property && filter.valueProperty) return;
-    config.api.getValueProperty(filter).then((p) => {
-      if (!p) return;
-      setFilter((prev) => ({
-        ...prev,
-        property: prev.property ?? p,
-        valueProperty: p,
-      }));
-    });
+    let cancelled = false;
+
+    // An operation may change only the editor's type (SingleChoice In uses a
+    // MultipleChoice editor). Keep that separate from the original property.
+    Promise.all([
+      filter.property ? Promise.resolve(filter.property) : config.api.getProperty?.(filter),
+      filter.valueProperty
+        ? Promise.resolve(filter.valueProperty)
+        : config.api.getValueProperty(filter),
+    ])
+      .then(([property, valueProperty]) => {
+        if (cancelled || !valueProperty || (!property && config.api.getProperty)) return;
+        setFilter((prev) => ({
+          ...prev,
+          property: property ?? valueProperty,
+          valueProperty,
+        }));
+      })
+      .catch((error) => log("Failed to restore filter property", error));
+
+    return () => {
+      cancelled = true;
+    };
   }, [
+    config.api,
+    filter.owner?.serverId,
+    filter.owner?.libraryEpoch,
     filter.propertyPool,
     filter.propertyId,
     filter.operation,
@@ -139,6 +157,7 @@ const Filter = ({
         : {
             id: filter.propertyId,
             pool: filter.propertyPool!,
+            ...(filter.owner ? { owner: filter.owner } : {}),
           },
       (property, availableOperations) => {
         handlePropertySelect(property, availableOperations);
@@ -161,6 +180,9 @@ const Filter = ({
       dbValue: undefined,
       bizValue: undefined,
       property,
+      owner: property.owner
+        ? { serverId: property.owner.serverId, libraryEpoch: property.owner.libraryEpoch }
+        : undefined,
       availableOperations,
       operation,
     };

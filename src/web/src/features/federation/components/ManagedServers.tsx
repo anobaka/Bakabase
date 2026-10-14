@@ -9,6 +9,7 @@ import type {
 } from "../types";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { AiOutlineCloudServer, AiOutlineLoading3Quarters, AiOutlinePlus } from "react-icons/ai";
 
@@ -449,6 +450,7 @@ export function ManagedServersPanel({
             <ManagedServerCard
               key={server.serverId}
               busy={busy}
+              canOpenDesktopView={view?.canOpenDesktopView !== false}
               headingLevel={SubHeading}
               server={server}
               onForget={() =>
@@ -692,6 +694,7 @@ function ManagedServerCard({
   server,
   busy,
   headingLevel: Title = "h3",
+  canOpenDesktopView = true,
   onOpen,
   onForget,
   onSaveMappings,
@@ -699,6 +702,7 @@ function ManagedServerCard({
   server: ManagedServer;
   busy: boolean;
   headingLevel?: "h3" | "h4";
+  canOpenDesktopView?: boolean;
   /** Shows the server in this window, on one of its own routes when given one. */
   onOpen: (route?: string) => void;
   onForget: () => void;
@@ -725,11 +729,22 @@ function ManagedServerCard({
           {t(`federation.servers.state.${server.state}`)}
         </span>
       </div>
-      <ManagedServerWarnings busy={busy} name={name} server={server} onOpen={onOpen} />
+      <ManagedServerWarnings
+        busy={busy}
+        canOpenDesktopView={canOpenDesktopView}
+        name={name}
+        server={server}
+        onOpen={onOpen}
+      />
       <div className="flex flex-wrap items-center gap-2">
-        <button className={primaryClass} disabled={busy} type="button" onClick={() => onOpen()}>
-          {t("federation.servers.open")}
-        </button>
+        <Link className={primaryClass} to="/resource">
+          {t("management.manageResources")}
+        </Link>
+        {canOpenDesktopView && (
+          <button className={buttonClass} disabled={busy} type="button" onClick={() => onOpen()}>
+            {t("federation.servers.open")}
+          </button>
+        )}
         <button
           className={`${buttonClass} text-danger`}
           disabled={busy}
@@ -770,6 +785,7 @@ export function ManagedServerWarnings({
   busy,
   onOpen,
   where = "devices",
+  canOpenDesktopView = true,
 }: {
   server: ManagedServer;
   name: string;
@@ -781,6 +797,7 @@ export function ManagedServerWarnings({
    * devices page's search below the card, or the map's at its top and its panel.
    */
   where?: "devices" | "map";
+  canOpenDesktopView?: boolean;
 }) {
   const { t } = useTranslation();
 
@@ -804,14 +821,16 @@ export function ManagedServerWarnings({
               pairing: t("configuration.remoteAccess.requirePairing.label"),
             })}
           </p>
-          <button
-            className={buttonClass}
-            disabled={busy}
-            type="button"
-            onClick={() => onOpen(CONFIGURATION_ROUTE)}
-          >
-            {t("federation.servers.openConfiguration", { page: t("menu.configuration") })}
-          </button>
+          {canOpenDesktopView && (
+            <button
+              className={buttonClass}
+              disabled={busy}
+              type="button"
+              onClick={() => onOpen(CONFIGURATION_ROUTE)}
+            >
+              {t("federation.servers.openConfiguration", { page: t("menu.configuration") })}
+            </button>
+          )}
         </div>
       )}
       {server.state === ManagedServerState.Revoked && (

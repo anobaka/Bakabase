@@ -234,6 +234,26 @@ public class RemoteBatchPlayPlayerTests
     }
 
     [TestMethod]
+    public async Task ResourcePlaylistKeepsRequestedOrderAndRepeatedResourcesInOneNativeLaunch()
+    {
+        _locator.Installed["PotPlayer"] = LocalPotPlayer;
+        _upstream.BatchPlayResources = new BatchPlayResourceSnapshot(
+            [new(42, ["/srv/a.mkv"]), new(43, ["/srv/b.mkv"])],
+            [new() {ExecutablePath = RemotePotPlayer}]);
+        var service = Service();
+        var selection = new[] {43, 42, 43};
+        var candidate = (await service.GetCandidatesAsync(selection, default)).Single();
+        var result = await service.PlayAsync(Input(candidate.Key) with {ResourceIds = selection}, default);
+        Assert.AreEqual(3, result.FileCount);
+        Assert.AreEqual(1, _launcher.Launches.Count);
+        var playlist = Directory.EnumerateFiles(Path.Combine(_root, "playlists"), "*.m3u8").Single();
+        var lines = (await File.ReadAllLinesAsync(playlist)).Where(line => !line.StartsWith('#')).ToArray();
+        var loopback = new Loopback();
+        CollectionAssert.AreEqual(new[] {loopback.BuildRawFileUrl("/srv/b.mkv"), loopback.BuildRawFileUrl("/srv/a.mkv"),
+            loopback.BuildRawFileUrl("/srv/b.mkv")}, lines);
+    }
+
+    [TestMethod]
     [DataRow(0)]
     [DataRow(1)]
     [DataRow(2)]

@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import {
   addressKey,
   buildDeviceGraph,
+  canManageFromHere,
   hostKey,
   ownHostsOf,
   sameMachine,
@@ -46,9 +47,15 @@ const node = (graph: DeviceGraph, id: string) => graph.nodes.find((item) => item
 const directions = (item?: MapEdge) => item && { out: item.out, in: item.in };
 
 describe("device map model: this device", () => {
-  it("is the desktop app where it can manage others, a headless server where it cannot", () => {
+  it("reads the desktop capability independently from management availability", () => {
     expect(buildDeviceGraph({ servers: servers({ available: true }) }).self.kind).toBe("desktop");
     expect(buildDeviceGraph({ servers: servers({ available: false }) }).self.kind).toBe("server");
+    const headlessManager = buildDeviceGraph({
+      servers: servers({ available: true, canOpenDesktopView: false }),
+    });
+
+    expect(headlessManager.self.kind).toBe("server");
+    expect(canManageFromHere(headlessManager)).toBe(true);
     // Not guessed when the listing could not be read.
     expect(buildDeviceGraph({}).self.kind).toBe("unknown");
   });
@@ -563,7 +570,7 @@ describe("device map model: one device, several records", () => {
       }),
     });
 
-    // A headless server never manages anything: two devices, and not a word that they are one.
+    // A reported desktop app and headless server remain different devices.
     expect(headless.nodes.map((item) => item.id).sort()).toEqual(["manager:c1", "peer:b"]);
     expect(headless.nodes.map((item) => item.namesakes)).toEqual([[], []]);
     expect(node(headless, "peer:b")!.sources.managers).toEqual([]);
@@ -587,7 +594,8 @@ describe("device map model: one device, several records", () => {
     });
 
     expect(managed.nodes.map((item) => item.id).sort()).toEqual(["manager:d1", "server:nas"]);
-    expect(managed.nodes.map((item) => item.namesakes)).toEqual([[], []]);
+    // An unknown-kind manager can now be headless; retain separate records and flag the name match.
+    expect(managed.nodes.map((item) => item.namesakes.length)).toEqual([1, 1]);
 
     // A desktop app on another system is not that desktop app, and a phone is not one at all.
     const laptop = (platform: RemoteDevicePlatform) =>

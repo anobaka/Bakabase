@@ -160,8 +160,10 @@ export interface ManagedServerPendingRequest {
 }
 
 export interface ManagedServersView {
-  /** False where nothing can be managed from here (a headless server). */
+  /** Whether this device can establish management relationships. */
   available: boolean;
+  /** Desktop relays are separate from headless management capability. Older desktop servers omit it. */
+  canOpenDesktopView?: boolean;
   servers: ManagedServer[];
   requests: ManagedServerPendingRequest[];
 }

@@ -9,6 +9,8 @@ import { useEffect, useMemo, useRef } from "react";
 import FilterGroup from "../FilterGroup";
 import { FilterProvider, useHasFilterContext } from "../../context/FilterContext";
 import { createDefaultFilterConfig } from "../../presets/DefaultFilterPreset";
+import { useResourceApi, useResourceOwner } from "@/features/management/resourceContext";
+import { useResourceSources } from "@/features/management/resourceSourcesContext";
 import { GroupCombinator } from "../../models";
 
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
@@ -61,23 +63,24 @@ const isGroupEmpty = (group?: SearchFilterGroup): boolean => {
 const createInternalPropertyFilter = async (
   propertyId: ResourceProperty,
   operation: SearchOperation = SearchOperation.In,
+  api: typeof BApi = BApi,
 ): Promise<SearchFilter | null> => {
   try {
     const pool = PropertyPool.Internal;
 
-    const propertyResponse = await BApi.property.getPropertiesByPool(pool);
+    const propertyResponse = await api.property.getPropertiesByPool(pool);
     const property = (propertyResponse.data || []).find((p) => p.id === propertyId);
 
     if (!property) return null;
 
-    const valuePropertyResponse = await BApi.resource.getFilterValueProperty({
+    const valuePropertyResponse = await api.resource.getFilterValueProperty({
       propertyPool: pool,
       propertyId,
       operation,
     });
     const valueProperty = valuePropertyResponse.data;
 
-    const operationsResponse = await BApi.resource.getSearchOperationsForProperty({
+    const operationsResponse = await api.resource.getSearchOperationsForProperty({
       propertyPool: pool,
       propertyId,
     });
@@ -112,6 +115,9 @@ const FilterGroupWithContextContent = ({
   isReadonly = false,
 }: Omit<FilterGroupWithContextProps, "config">) => {
   const autoCreateTriggeredRef = useRef(false);
+  const api = useResourceApi();
+  const owner = useResourceOwner();
+  const sources = useResourceSources()?.sources;
 
   // Auto-create default filters (MediaLibrary + Source) when group is empty
   useEffect(() => {
@@ -122,10 +128,29 @@ const FilterGroupWithContextContent = ({
     autoCreateTriggeredRef.current = true;
 
     Promise.all([
-      createInternalPropertyFilter(ResourceProperty.Source),
-      createInternalPropertyFilter(ResourceProperty.MediaLibraryV2Multi),
+      createInternalPropertyFilter(ResourceProperty.Source, SearchOperation.In, api),
+      createInternalPropertyFilter(ResourceProperty.MediaLibraryV2Multi, SearchOperation.In, api),
     ]).then((filters) => {
-      const validFilters = filters.filter((f): f is SearchFilter => f !== null);
+      const localOwner =
+        owner ??
+        (sources?.some((source) => !source.isLocal)
+          ? sources.find((source) => source.isLocal)
+          : undefined);
+      const validFilters = filters
+        .filter((f): f is SearchFilter => f !== null)
+        .map((filter) => {
+          if (!localOwner || (!owner && filter.propertyId !== ResourceProperty.MediaLibraryV2Multi))
+            return filter;
+
+          return {
+            ...filter,
+            owner: { serverId: localOwner.serverId, libraryEpoch: localOwner.libraryEpoch },
+            property: filter.property ? { ...filter.property, owner: localOwner } : undefined,
+            valueProperty: filter.valueProperty
+              ? { ...filter.valueProperty, owner: localOwner }
+              : undefined,
+          };
+        });
 
       if (validFilters.length > 0) {
         const newGroup: SearchFilterGroup = {
@@ -138,7 +163,7 @@ const FilterGroupWithContextContent = ({
         onChange(newGroup);
       }
     });
-  }, [autoCreateMediaLibraryFilter, group, onChange]);
+  }, [autoCreateMediaLibraryFilter, group, onChange, api, owner, sources]);
 
   const hasFilters =
     group &&
@@ -172,7 +197,13 @@ const FilterGroupWithContextContent = ({
 const FilterGroupWithContext = ({ config, ...props }: FilterGroupWithContextProps) => {
   const hasContext = useHasFilterContext();
   const { createPortal } = useBakabaseContext();
-  const defaultConfig = useMemo(() => createDefaultFilterConfig(createPortal), [createPortal]);
+  const api = useResourceApi();
+  const owner = useResourceOwner();
+  const sources = useResourceSources()?.sources;
+  const defaultConfig = useMemo(
+    () => createDefaultFilterConfig(createPortal, api, sources, owner),
+    [createPortal, api, sources, owner],
+  );
 
   // If already inside a FilterProvider, just render the content
   if (hasContext) {

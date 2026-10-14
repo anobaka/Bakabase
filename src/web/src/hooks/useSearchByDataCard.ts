@@ -10,6 +10,7 @@ import { Modal } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { usePendingSearchStore } from "@/stores/pendingSearch";
 import { PropertyPool, SearchCombinator, SearchOperation } from "@/sdk/constants";
+import { useResourceOwner } from "@/features/management/resourceContext";
 
 // DataCardMatchMode is not exported from constants — declared inline to keep
 // the mapping explicit. Backend enum: 1 = Any, 2 = All.
@@ -42,6 +43,7 @@ interface TriggerOptions {
 const PAGE_SIZE = 50;
 
 export function useSearchByDataCard() {
+  const owner = useResourceOwner();
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
@@ -114,7 +116,7 @@ export function useSearchByDataCard() {
         // @ts-ignore — store is typed against the DB shape, but pendingSearch
         // accepts the in-memory filter shape (dbValue/disabled), matching how
         // ChildrenModal already populates it.
-        setPendingSearch(form);
+        setPendingSearch({ ...form, ...(owner ? { owner } : {}) });
         if (location.pathname !== "/resource") {
           navigate("/resource");
         }
@@ -131,7 +133,7 @@ export function useSearchByDataCard() {
         doSearch();
       }
     },
-    [buildSearchForm, createPortal, location.pathname, navigate, setPendingSearch, t],
+    [buildSearchForm, createPortal, location.pathname, navigate, owner, setPendingSearch, t],
   );
 
   return useMemo(() => ({ canSearch, triggerSearch }), [canSearch, triggerSearch]);

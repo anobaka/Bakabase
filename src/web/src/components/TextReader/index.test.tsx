@@ -24,6 +24,17 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 describe("text reader UI", () => {
+  it("fetches only the owner-bound URL when the file belongs to another server", async () => {
+    const url =
+      "/federation/local/management/owner/media?libraryEpoch=epoch&resourceId=42&key=remote-file";
+    const fetch = vi.fn().mockResolvedValue(new Response("remote text"));
+
+    vi.stubGlobal("fetch", fetch);
+    render(<TextReader file="/remote/info.txt" sourceUrl={url} />);
+    await screen.findByText("remote text");
+    expect(fetch).toHaveBeenCalledOnce();
+    expect(fetch.mock.calls[0][0]).toBe(url);
+  });
   it("wraps by default and lets the user disable and reenable it without reloading the preview", async () => {
     const fetch = vi.fn().mockResolvedValue(new Response("a long source line"));
 

@@ -4585,6 +4585,99 @@ export const NullValueBehaviorLabel: Record<NullValueBehavior, string> = {
   [NullValueBehavior.Pass]: 'Pass'
 };
 
+export enum ServerHandshakeOutcome {
+  Ok = 0,
+  Unreachable = 1,
+  NotBakabase = 2,
+  ClientTooOld = 3,
+  ServerTooOld = 4,
+  RemoteAccessDisabled = 5,
+  SelfAddress = 6,
+  InvalidAddress = 7,
+  PortMissing = 8,
+  ProxyFakeAddress = 9
+}
+
+export const serverHandshakeOutcomes = [
+  { label: 'Ok', value: ServerHandshakeOutcome.Ok },
+  { label: 'Unreachable', value: ServerHandshakeOutcome.Unreachable },
+  { label: 'NotBakabase', value: ServerHandshakeOutcome.NotBakabase },
+  { label: 'ClientTooOld', value: ServerHandshakeOutcome.ClientTooOld },
+  { label: 'ServerTooOld', value: ServerHandshakeOutcome.ServerTooOld },
+  { label: 'RemoteAccessDisabled', value: ServerHandshakeOutcome.RemoteAccessDisabled },
+  { label: 'SelfAddress', value: ServerHandshakeOutcome.SelfAddress },
+  { label: 'InvalidAddress', value: ServerHandshakeOutcome.InvalidAddress },
+  { label: 'PortMissing', value: ServerHandshakeOutcome.PortMissing },
+  { label: 'ProxyFakeAddress', value: ServerHandshakeOutcome.ProxyFakeAddress }
+] as const;
+
+export const ServerHandshakeOutcomeLabel: Record<ServerHandshakeOutcome, string> = {
+  [ServerHandshakeOutcome.Ok]: 'Ok',
+  [ServerHandshakeOutcome.Unreachable]: 'Unreachable',
+  [ServerHandshakeOutcome.NotBakabase]: 'NotBakabase',
+  [ServerHandshakeOutcome.ClientTooOld]: 'ClientTooOld',
+  [ServerHandshakeOutcome.ServerTooOld]: 'ServerTooOld',
+  [ServerHandshakeOutcome.RemoteAccessDisabled]: 'RemoteAccessDisabled',
+  [ServerHandshakeOutcome.SelfAddress]: 'SelfAddress',
+  [ServerHandshakeOutcome.InvalidAddress]: 'InvalidAddress',
+  [ServerHandshakeOutcome.PortMissing]: 'PortMissing',
+  [ServerHandshakeOutcome.ProxyFakeAddress]: 'ProxyFakeAddress'
+};
+
+export enum UpstreamIdentityVerdict {
+  Confirmed = 1,
+  WrongServer = 2,
+  ThisDevice = 3,
+  Unconfirmed = 4,
+  SameIdentity = 5
+}
+
+export const upstreamIdentityVerdicts = [
+  { label: 'Confirmed', value: UpstreamIdentityVerdict.Confirmed },
+  { label: 'WrongServer', value: UpstreamIdentityVerdict.WrongServer },
+  { label: 'ThisDevice', value: UpstreamIdentityVerdict.ThisDevice },
+  { label: 'Unconfirmed', value: UpstreamIdentityVerdict.Unconfirmed },
+  { label: 'SameIdentity', value: UpstreamIdentityVerdict.SameIdentity }
+] as const;
+
+export const UpstreamIdentityVerdictLabel: Record<UpstreamIdentityVerdict, string> = {
+  [UpstreamIdentityVerdict.Confirmed]: 'Confirmed',
+  [UpstreamIdentityVerdict.WrongServer]: 'WrongServer',
+  [UpstreamIdentityVerdict.ThisDevice]: 'ThisDevice',
+  [UpstreamIdentityVerdict.Unconfirmed]: 'Unconfirmed',
+  [UpstreamIdentityVerdict.SameIdentity]: 'SameIdentity'
+};
+
+export enum ClientPairingOutcome {
+  Paired = 0,
+  Unreachable = 1,
+  CodeRejected = 2,
+  AwaitingApproval = 3,
+  RequestRejected = 4,
+  TooManyAttempts = 5,
+  PairingUnsupported = 6
+}
+
+export const clientPairingOutcomes = [
+  { label: 'Paired', value: ClientPairingOutcome.Paired },
+  { label: 'Unreachable', value: ClientPairingOutcome.Unreachable },
+  { label: 'CodeRejected', value: ClientPairingOutcome.CodeRejected },
+  { label: 'AwaitingApproval', value: ClientPairingOutcome.AwaitingApproval },
+  { label: 'RequestRejected', value: ClientPairingOutcome.RequestRejected },
+  { label: 'TooManyAttempts', value: ClientPairingOutcome.TooManyAttempts },
+  { label: 'PairingUnsupported', value: ClientPairingOutcome.PairingUnsupported }
+] as const;
+
+export const ClientPairingOutcomeLabel: Record<ClientPairingOutcome, string> = {
+  [ClientPairingOutcome.Paired]: 'Paired',
+  [ClientPairingOutcome.Unreachable]: 'Unreachable',
+  [ClientPairingOutcome.CodeRejected]: 'CodeRejected',
+  [ClientPairingOutcome.AwaitingApproval]: 'AwaitingApproval',
+  [ClientPairingOutcome.RequestRejected]: 'RequestRejected',
+  [ClientPairingOutcome.TooManyAttempts]: 'TooManyAttempts',
+  [ClientPairingOutcome.PairingUnsupported]: 'PairingUnsupported'
+};
+
 export enum RemoteAddressProblem {
   None = 0,
   Invalid = 1,

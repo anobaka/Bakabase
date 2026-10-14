@@ -192,6 +192,18 @@ public class UserMachineHandlerTests
 
     // ---- opening a resource's folder ----
 
+    [TestMethod]
+    public async Task An_epoch_bound_folder_request_cannot_use_an_unverified_legacy_resource_read()
+    {
+        var local = await WithLibraryAt("/data/media");
+        Directory.CreateDirectory(Path.Combine(local, "album"));
+        _upstream.Resource = new UpstreamResource(42, "/data/media/album", "/data/media", "album");
+        var context = Request("?id=42&managedLibraryEpoch=restored-library");
+        await ResourceHandler().HandleAsync(context, new Dictionary<string, string>());
+        Assert.AreEqual((int) HttpStatusCode.ServiceUnavailable, Read(context).Status);
+        Assert.AreEqual(0, _shell.Revealed.Count);
+    }
+
     private OpenResourceDirectoryHandler ResourceHandler() =>
         new(_connection, _upstream, _shell, NullLogger<OpenResourceDirectoryHandler>.Instance);
 

@@ -9,6 +9,7 @@ import { DEVICES_ROUTE, openLocalView } from "@/features/federation/switching";
 import { useIsConsole, useIsPureClient, useRemoteAccessStore } from "@/stores/remoteAccess";
 
 export const LIBRARY_ROUTE = "/federation";
+export const RESOURCE_ROUTE = "/resource";
 export { DEVICES_ROUTE };
 /** "Who may manage this device", in the Devices page's Management tab. */
 export const MANAGEMENT_ROUTE = `${DEVICES_ROUTE}?section=management`;
@@ -22,20 +23,20 @@ export const MAP_ROUTE = "/federation/map";
 /**
  * Where a link to the multi-device pages can take this window.
  *
- * Those pages belong to the desktop app's own window (their menu entries are
- * `localNodeOnly`): they talk to this device's loopback-only coordinator.
- * - `here` — this is that window: route to the page.
+ * - `here` — this device's own window or an authorized headless-server browser.
  * - `local` — the desktop app showing a device it manages: the pages are this
  *   computer's, so switch the window back to this computer at that page.
- * - `none` — a browser on another device: nothing to open.
+ * - `none` — this connection has no access to device administration.
  */
 export const useDevicePagesReach = (): "here" | "local" | "none" => {
   const isPureClient = useIsPureClient();
   const isConsole = useIsConsole();
-  const isLocalNode =
-    useRemoteAccessStore((state) => state.initialized && state.isLocal) && !isPureClient;
+  const canAdministerHere =
+    useRemoteAccessStore(
+      (state) => state.initialized && (state.isLocal || state.federationAvailable === true),
+    ) && !isPureClient;
 
-  if (isLocalNode) return "here";
+  if (canAdministerHere) return "here";
   if (isConsole) return "local";
 
   return "none";

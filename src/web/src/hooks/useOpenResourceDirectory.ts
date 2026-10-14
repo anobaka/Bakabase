@@ -4,13 +4,14 @@ import { useTranslation } from "react-i18next";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import FolderLocationModal from "@/components/Resource/components/FolderLocationModal";
 import { resourceFolderPath } from "@/components/Resource/resourceFolderPath";
-import BApi from "@/sdk/BApi";
+import { useResourceApi } from "@/features/management/resourceContext";
 import { useUserSideActionsRunHere } from "@/stores/remoteAccess";
 
 type FolderResource = { id: number; path?: string; directory?: string; isFile?: boolean };
 
 /** One action for every resource surface, with the same desktop/relay/browser behavior. */
 export const useOpenResourceDirectory = () => {
+  const BApi = useResourceApi();
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const userSideActionsRunHere = useUserSideActionsRunHere();
@@ -43,7 +44,7 @@ export const useOpenResourceDirectory = () => {
         path,
       });
     },
-    [createPortal, userSideActionsRunHere],
+    [BApi, createPortal, userSideActionsRunHere],
   );
 
   return {

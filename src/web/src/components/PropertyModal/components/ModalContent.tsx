@@ -42,7 +42,7 @@ import { deserializeStandardValue } from "@/components/StandardValue/helpers";
 import ChoiceList from "@/components/PropertyModal/components/ChoiceList";
 import TagList from "@/components/PropertyModal/components/TagList";
 import { optimizeOptions } from "@/components/PropertyModal/helpers";
-import BApi from "@/sdk/BApi";
+import { useResourceApi } from "@/features/management/resourceContext";
 import { getEnumKey } from "@/i18n";
 import PropertyTypeIcon from "@/components/Property/components/PropertyTypeIcon";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
@@ -62,6 +62,8 @@ type Props = {
   value?: Partial<CustomPropertyForm>;
   validValueTypes?: PropertyType[];
   onChange?: (value?: CustomPropertyForm) => void;
+  ownerScoped?: boolean;
+  checkOptionUsage?: (propertyId: number, optionId: string) => Promise<number>;
 };
 
 type CustomPropertyForm = {
@@ -93,8 +95,15 @@ const RatingMaxValueDataSource = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((x) => ({
   label: x,
 }));
 
-const ModalContent = ({ validValueTypes, value, onChange }: Props) => {
+const ModalContent = ({
+  validValueTypes,
+  value,
+  onChange,
+  ownerScoped = false,
+  checkOptionUsage,
+}: Props) => {
   const { t } = useTranslation();
+  const BApi = useResourceApi();
   const { createPortal } = useBakabaseContext();
   const precisionOptions = NumberPrecisions.map((value) => ({
     value,
@@ -114,6 +123,11 @@ const ModalContent = ({ validValueTypes, value, onChange }: Props) => {
 
   const checkValueUsage = property.id
     ? async (optionId: string) => {
+        if (ownerScoped) {
+          if (!checkOptionUsage) throw new Error(t("property.editor.usageUnavailable"));
+
+          return checkOptionUsage(property.id!, optionId);
+        }
         const rsp = await BApi.property.getPropertyValueResourceCounts(
           PropertyPool.Custom,
           property.id!,
@@ -413,6 +427,7 @@ const ModalContent = ({ validValueTypes, value, onChange }: Props) => {
   };
 
   const selectType = (type: PropertyType) => {
+    if (ownerScoped && property.id && type !== property.type) return;
     if (validValueTypes?.includes(type) === false || type === PropertyType.Formula) return;
     if (type === property.type) {
       settypeGroupsVisible(false);
@@ -621,7 +636,10 @@ const ModalContent = ({ validValueTypes, value, onChange }: Props) => {
                   <div className="property-editor-type-grid">
                     {types.map((type) => {
                       const developing = group === UnderDevelopmentGroupKey;
-                      const disabled = developing || validValueTypes?.includes(type) === false;
+                      const disabled =
+                        developing ||
+                        validValueTypes?.includes(type) === false ||
+                        (ownerScoped && !!property.id && type !== property.type);
 
                       return (
                         <Button
@@ -655,6 +673,9 @@ const ModalContent = ({ validValueTypes, value, onChange }: Props) => {
           </Popover>
         </div>
       </div>
+      {ownerScoped && property.id && (
+        <p className="text-xs text-default-500">{t("management.propertyTypeHelp")}</p>
+      )}
       {property.type == undefined ? (
         <p className="py-5 text-sm text-default-500">{t("property.editor.chooseTypeHint")}</p>
       ) : (
@@ -665,7 +686,7 @@ const ModalContent = ({ validValueTypes, value, onChange }: Props) => {
           <ReferenceValueUsageProvider
             options={property.options}
             property={
-              property.id && isReference
+              !ownerScoped && property.id && isReference
                 ? {
                     id: property.id,
                     type: property.type,

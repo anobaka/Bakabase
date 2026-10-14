@@ -8,7 +8,7 @@ import { ProfileOutlined, RightOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 
 import { Chip, Spinner, Tooltip } from "@/components/bakaui";
-import BApi from "@/sdk/BApi";
+import { useResourceApi, useResourceOwner } from "@/features/management/resourceContext";
 
 interface Props {
   resourceId: number;
@@ -18,6 +18,8 @@ interface Props {
 }
 
 const ResourceProfiles = ({ resourceId, onClose, compact = false }: Props) => {
+  const BApi = useResourceApi();
+  const owner = useResourceOwner();
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [profiles, setProfiles] = useState<BakabaseServiceModelsViewResourceProfileViewModel[]>([]);
@@ -44,6 +46,10 @@ const ResourceProfiles = ({ resourceId, onClose, compact = false }: Props) => {
 
   const handleNavigateToProfile = (profileId: number) => {
     onClose?.();
+    if (owner && !owner.isLocal) {
+      navigate(`/resource-profile?sourceDeviceId=${encodeURIComponent(`node:${owner.serverId}:${owner.libraryEpoch}`)}`);
+      return;
+    }
     navigate(`/resource-profile?highlight=${profileId}`);
   };
 
@@ -79,7 +85,7 @@ const ResourceProfiles = ({ resourceId, onClose, compact = false }: Props) => {
           <span className="text-sm text-default-400">{t("common.label.none")}</span>
         ) : (
           profiles.map((profile) => (
-            <Tooltip key={profile.id} content={t("resource.tip.clickToViewEditProfile")}>
+            <Tooltip key={profile.id} content={t(owner && !owner.isLocal ? "management.profileOnThisDevice" : "resource.tip.clickToViewEditProfile", { device: owner?.name })}>
               <Chip
                 className="cursor-pointer"
                 color="primary"

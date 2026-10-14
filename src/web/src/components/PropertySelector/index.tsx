@@ -15,19 +15,42 @@ import PropertyV2 from "@/components/Property/v2";
 import PropertyTypeIcon from "@/components/Property/components/PropertyTypeIcon";
 import { buildLogger } from "@/components/utils";
 import { PropertyPool, PropertyType, ResourceProperty, StandardValueType } from "@/sdk/constants";
-import BApi from "@/sdk/BApi";
+import { useResourceApi } from "@/features/management/resourceContext";
+import { ResourceOwnerProvider } from "@/features/management/resourceContext";
+import { deviceColor } from "@/features/management/resourceIdentity";
+import type { FilterOwner } from "@/components/ResourceFilter/models";
 import { Button, Chip, Divider, Input, Modal, Spacer } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 
 type Key = {
   id: number;
   pool: PropertyPool;
+  owner?: FilterOwner;
 };
+
+const sameProperty = (a: Key, b: Key) =>
+  a.id === b.id &&
+  a.pool === b.pool &&
+  a.owner?.serverId === b.owner?.serverId &&
+  a.owner?.libraryEpoch === b.owner?.libraryEpoch;
+const propertyKey = (property: Key) =>
+  JSON.stringify([
+    property.owner?.serverId,
+    property.owner?.libraryEpoch,
+    property.pool,
+    property.id,
+  ]);
+const selectionKey = (property: IProperty): Key => ({
+  id: property.id,
+  pool: property.pool,
+  ...(property.owner ? { owner: property.owner } : {}),
+});
 
 interface IProps extends DestroyableProps {
   selection?: Key[];
   /** Read-only catalog supplied by a different resource source; never persist its IDs locally. */
   properties?: IProperty[];
+  unavailableSources?: { name: string; message?: string }[];
   onSubmit?: (selectedProperties: IProperty[]) => Promise<any>;
   /** Called when modal is closed without making a selection */
   onCancel?: () => void;
@@ -57,6 +80,7 @@ const deprecatedInternalPropertyIds: number[] = [
 const PropertySelector = (props: IProps) => {
   log("props", props);
   const { t } = useTranslation();
+  const BApi = useResourceApi();
   const { createPortal } = useBakabaseContext();
   const {
     selection: propsSelection,
@@ -75,6 +99,7 @@ const PropertySelector = (props: IProps) => {
     v2,
     pinnedProperties,
     properties: providedProperties,
+    unavailableSources,
   } = props;
 
   const [properties, setProperties] = useState<IProperty[]>([]);
@@ -95,7 +120,7 @@ const PropertySelector = (props: IProps) => {
   }, []);
 
   const isSelected = (property: IProperty): boolean => {
-    return selection.some((s) => s.id === property.id && s.pool === property.pool);
+    return selection.some((s) => sameProperty(s, property));
   };
 
   const toggleProperty = async (property: IProperty) => {
@@ -111,15 +136,15 @@ const PropertySelector = (props: IProps) => {
 
     if (multiple) {
       if (selected) {
-        setSelection(selection.filter((s) => !(s.id === property.id && s.pool === property.pool)));
+        setSelection(selection.filter((s) => !sameProperty(s, property)));
       } else {
-        setSelection([...selection, { id: property.id, pool: property.pool }]);
+        setSelection([...selection, selectionKey(property)]);
       }
     } else {
       if (selected) {
         setSelection([]);
       } else {
-        const ns: Key[] = [{ id: property.id, pool: property.pool }];
+        const ns: Key[] = [selectionKey(property)];
 
         setSelection(ns);
         await onSubmit(ns);
@@ -135,7 +160,7 @@ const PropertySelector = (props: IProps) => {
     if (propsOnSubmit) {
       await propsOnSubmit(
         sel
-          .map((s) => properties.find((p) => p.id === s.id && p.pool === s.pool))
+          .map((s) => properties.find((p) => sameProperty(s, p)))
           .filter((x) => x != undefined) as IProperty[],
       );
     }
@@ -159,9 +184,18 @@ const PropertySelector = (props: IProps) => {
   });
 
   // Group properties by pool first, then by type
-  const reservedProperties = filteredProperties.filter((p) => p.pool === PropertyPool.Reserved);
-  const customProperties = filteredProperties.filter((p) => p.pool === PropertyPool.Custom);
-  const internalProperties = filteredProperties.filter((p) => p.pool === PropertyPool.Internal);
+  const commonProperties = filteredProperties.filter((property) => !property.owner);
+  const reservedProperties = commonProperties.filter((p) => p.pool === PropertyPool.Reserved);
+  const customProperties = commonProperties.filter((p) => p.pool === PropertyPool.Custom);
+  const internalProperties = commonProperties.filter((p) => p.pool === PropertyPool.Internal);
+  const ownerGroups = new Map<string, IProperty[]>();
+
+  for (const property of filteredProperties) {
+    if (!property.owner) continue;
+    const key = JSON.stringify([property.owner.serverId, property.owner.libraryEpoch]);
+
+    ownerGroups.set(key, [...(ownerGroups.get(key) ?? []), property]);
+  }
 
   // Group custom properties by type
   const groupedCustomProperties: { [key in PropertyType]?: IProperty[] } = customProperties.reduce<{
@@ -239,9 +273,9 @@ const PropertySelector = (props: IProps) => {
       deprecatedInternalPropertyIds.includes(property.id);
     const disabled = isDeprecatedInternal || isDisabled?.(property);
 
-    return (
+    const item = (
       <div
-        key={`${property.pool}-${property.id}`}
+        key={propertyKey(property)}
         className={`relative cursor-pointer rounded-md transition-all ${
           selected ? "ring-2 ring-success ring-offset-1" : ""
         } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
@@ -274,6 +308,14 @@ const PropertySelector = (props: IProps) => {
         )}
       </div>
     );
+
+    return property.owner ? (
+      <ResourceOwnerProvider key={propertyKey(property)} source={property.owner}>
+        {item}
+      </ResourceOwnerProvider>
+    ) : (
+      item
+    );
   };
 
   const renderPropertyGroup = (groupTitle: string, props: IProperty[], showTypeIcon?: boolean) => {
@@ -300,7 +342,7 @@ const PropertySelector = (props: IProps) => {
   // Resolve pinned properties from the loaded property list
   const resolvedPinnedProperties =
     pinnedProperties
-      ?.map((key) => filteredProperties.find((p) => p.id === key.id && p.pool === key.pool))
+      ?.map((key) => filteredProperties.find((p) => sameProperty(key, p)))
       .filter((p): p is IProperty => p != null) ?? [];
 
   const renderProperties = () => {
@@ -340,6 +382,28 @@ const PropertySelector = (props: IProps) => {
         )}
 
         <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
+          {[...ownerGroups.entries()].map(([key, properties]) => {
+            const owner = properties[0].owner!;
+
+            return (
+              <div
+                key={key}
+                className="rounded-lg border border-default-200 bg-content1 overflow-hidden"
+              >
+                <div className="flex items-center gap-2 px-4 py-3 bg-default-100 border-b border-default-200">
+                  <span
+                    className="h-2 w-2 shrink-0 rounded-full"
+                    style={{ backgroundColor: deviceColor(owner.serverId) }}
+                  />
+                  <span className="font-medium">{owner.name}</span>
+                  <span className="text-default-500 text-sm">({properties.length})</span>
+                </div>
+                <div className="p-4 flex flex-wrap gap-2">
+                  {properties.map((property) => renderPropertyItem(property, false))}
+                </div>
+              </div>
+            );
+          })}
           {/* Internal Properties */}
           {(pool & PropertyPool.Internal) !== 0 &&
             internalProperties.length > 0 &&
@@ -386,6 +450,19 @@ const PropertySelector = (props: IProps) => {
       }}
     >
       <div className="flex flex-col gap-4">
+        {!!unavailableSources?.length && (
+          <div
+            className="rounded-lg bg-warning-50 px-3 py-2 text-sm text-warning-700"
+            role="status"
+            title={unavailableSources
+              .map(({ name, message }) => `${name}: ${message ?? ""}`)
+              .join("\n")}
+          >
+            {t("management.catalogUnavailable", {
+              devices: unavailableSources.map(({ name }) => name).join(", "),
+            })}
+          </div>
+        )}
         {(() => {
           const filter = renderFilter();
 

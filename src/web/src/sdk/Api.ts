@@ -948,12 +948,15 @@ export interface BakabaseAbstractionsModelsDomainResourceSearch {
   pageSize: number;
   /** @format int32 */
   skipCount: number;
+  owner?: BakabaseAbstractionsModelsDomainResourceSearchOwner;
+  deviceIds?: string[];
   group?: BakabaseAbstractionsModelsDomainResourceSearchFilterGroup;
   orders?: BakabaseAbstractionsModelsInputResourceSearchOrderInputModel[];
   tags?: BakabaseAbstractionsModelsDomainConstantsResourceTag[];
 }
 
 export interface BakabaseAbstractionsModelsDomainResourceSearchFilter {
+  owner?: BakabaseAbstractionsModelsDomainResourceSearchOwner;
   /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
   propertyPool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
   /** @format int32 */
@@ -971,6 +974,11 @@ export interface BakabaseAbstractionsModelsDomainResourceSearchFilterGroup {
   groups?: BakabaseAbstractionsModelsDomainResourceSearchFilterGroup[];
   filters?: BakabaseAbstractionsModelsDomainResourceSearchFilter[];
   disabled: boolean;
+}
+
+export interface BakabaseAbstractionsModelsDomainResourceSearchOwner {
+  serverId: string;
+  libraryEpoch: string;
 }
 
 export interface BakabaseAbstractionsModelsDomainResourceSourceLink {
@@ -6311,6 +6319,7 @@ export interface BakabaseModulesRemoteAccessAbstractionsModelsManagedServersView
   available: boolean;
   servers: BakabaseModulesRemoteAccessAbstractionsModelsManagedServerView[];
   requests: BakabaseModulesRemoteAccessAbstractionsModelsManagedServerPendingRequestView[];
+  canOpenDesktopView: boolean;
 }
 
 /**
@@ -6349,6 +6358,8 @@ export type BakabaseModulesRemoteAccessAbstractionsModelsRemoteDevicePlatform =
 export type BakabaseModulesRemoteAccessAbstractionsModelsServerKind = 0 | 1 | 2;
 
 export interface BakabaseModulesSearchModelsDbResourceSearchDbModel {
+  owner?: BakabaseAbstractionsModelsDomainResourceSearchOwner;
+  deviceIds?: string[];
   group?: BakabaseModulesSearchModelsDbResourceSearchFilterGroupDbModel;
   orders?: BakabaseAbstractionsModelsInputResourceSearchOrderInputModel[];
   keyword?: string;
@@ -6360,6 +6371,7 @@ export interface BakabaseModulesSearchModelsDbResourceSearchDbModel {
 }
 
 export interface BakabaseModulesSearchModelsDbResourceSearchFilterDbModel {
+  owner?: BakabaseAbstractionsModelsDomainResourceSearchOwner;
   /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
   propertyPool?: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
   /** @format int32 */
@@ -6796,6 +6808,40 @@ export interface BakabaseServiceComponentsAcquisitionSharedListPreviewRow {
   alreadyKnown: boolean;
 }
 
+export interface BakabaseServiceComponentsFederationManagedLibraryInfo {
+  serverId: string;
+  name: string;
+  libraryEpoch: string;
+  /** @format int32 */
+  contractVersion: number;
+}
+
+export interface BakabaseServiceComponentsFederationManagedLibraryRequest {
+  libraryEpoch: string;
+  operation: string;
+  /** @format int32 */
+  id?: number;
+  ids?: number[];
+  body?: NewtonsoftJsonLinqJToken;
+  query?: Record<string, string[]>;
+}
+
+export interface BakabaseServiceComponentsFederationManagedLibrarySource {
+  serverId: string;
+  name?: string;
+  libraryEpoch?: string;
+  isLocal: boolean;
+  available: boolean;
+  errorCode?: string;
+  error?: string;
+  /** @format int32 */
+  contractVersion: number;
+}
+
+export interface BakabaseServiceComponentsFederationManagedLibrarySources {
+  sources: BakabaseServiceComponentsFederationManagedLibrarySource[];
+}
+
 export interface BakabaseServiceComponentsServerDataServerAppDataImportValidation {
   valid: boolean;
   error?: string;
@@ -6950,6 +6996,44 @@ export interface BakabaseServiceControllersFederationPeerStatusResponse {
 export interface BakabaseServiceControllersFederationSharingRequest {
   enabled: boolean;
   enablePairedRemoteAccess: boolean;
+}
+
+export interface BakabaseServiceControllersManagedFileUploadInputModel {
+  fileName: string;
+  base64: string;
+}
+
+export interface BakabaseServiceControllersManagedLibraryBatchRequest {
+  libraryEpoch: string;
+  resourceIds: number[];
+  playerKey?: string;
+  /** [1: FirstFilePerResource, 2: AllFiles] */
+  fileSelectionMode: BakabaseModulesPlayerAbstractionsModelsDomainConstantsBatchPlayFileSelectionMode;
+}
+
+export interface BakabaseServiceControllersManagedLibraryDirectoryRequest {
+  libraryEpoch: string;
+  /** @format int32 */
+  resourceId: number;
+}
+
+export interface BakabaseServiceControllersManagedLibraryPlayRequest {
+  libraryEpoch: string;
+  /** @format int32 */
+  resourceId: number;
+  /** [1: Manual, 2: FileSystem, 3: Steam, 4: DLsite, 5: ExHentai, 6: ExternalIdentity] */
+  origin: BakabaseAbstractionsModelsDomainConstantsDataOrigin;
+  key: string;
+  explicitChoice: boolean;
+}
+
+export interface BakabaseServiceControllersManagedResourceDisplayOptions {
+  uiResource: BakabaseInsideWorldModelsConfigsUIOptionsUIResourceOptions;
+  propertyValueScopePriority: BakabaseAbstractionsModelsDomainConstantsPropertyValueScope[];
+}
+
+export interface BakabaseServiceControllersManagedResourceDisplayOptionsPatch {
+  propertyValueScopePriority: BakabaseAbstractionsModelsDomainConstantsPropertyValueScope[];
 }
 
 export interface BakabaseServiceControllersManagedServerAddressRequest {
@@ -7331,6 +7415,7 @@ export interface BakabaseServiceModelsInputResourceSearchFilterGroupInputModel {
 }
 
 export interface BakabaseServiceModelsInputResourceSearchFilterInputModel {
+  owner?: BakabaseAbstractionsModelsDomainResourceSearchOwner;
   /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
   propertyPool?: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
   /** @format int32 */
@@ -7342,6 +7427,8 @@ export interface BakabaseServiceModelsInputResourceSearchFilterInputModel {
 }
 
 export interface BakabaseServiceModelsInputResourceSearchInputModel {
+  owner?: BakabaseAbstractionsModelsDomainResourceSearchOwner;
+  deviceIds?: string[];
   group?: BakabaseServiceModelsInputResourceSearchFilterGroupInputModel;
   orders?: BakabaseAbstractionsModelsInputResourceSearchOrderInputModel[];
   keyword?: string;
@@ -8180,6 +8267,7 @@ export interface BakabaseServiceModelsViewResourceSearchFilterGroupViewModel {
 }
 
 export interface BakabaseServiceModelsViewResourceSearchFilterViewModel {
+  owner?: BakabaseAbstractionsModelsDomainResourceSearchOwner;
   /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
   propertyPool?: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
   /** @format int32 */
@@ -8195,6 +8283,8 @@ export interface BakabaseServiceModelsViewResourceSearchFilterViewModel {
 }
 
 export interface BakabaseServiceModelsViewResourceSearchViewModel {
+  owner?: BakabaseAbstractionsModelsDomainResourceSearchOwner;
+  deviceIds?: string[];
   group?: BakabaseServiceModelsViewResourceSearchFilterGroupViewModel;
   orders?: BakabaseAbstractionsModelsInputResourceSearchOrderInputModel[];
   keyword?: string;
@@ -10024,6 +10114,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceC
   data?: BakabaseServiceControllersCollectionRulePreview;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceControllersManagedResourceDisplayOptions {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceControllersManagedResourceDisplayOptions;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceControllersMediaLibraryStatistics {
   /** @format int32 */
   code: number;
@@ -10351,6 +10448,8 @@ export interface BootstrapModelsResponseModelsSingletonResponse1SystemString {
  * @format int32
  */
 export type MicrosoftExtensionsLoggingLogLevel = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+
+export type NewtonsoftJsonLinqJToken = NewtonsoftJsonLinqJToken[];
 
 export type SystemEnum = object;
 
@@ -12533,6 +12632,55 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/resource/saved-search/display-mode`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name PutSavedSearchCriteria
+     * @request PUT:/resource/saved-search/criteria
+     */
+    putSavedSearchCriteria: (
+      data: BakabaseServiceModelsInputResourceSearchInputModel,
+      query?: {
+        id?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/saved-search/criteria`,
+        method: "PUT",
+        query: query,
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for putSavedSearchCriteria
+     * @name putSavedSearchCriteriaUrl
+     */
+    putSavedSearchCriteriaUrl: (query?: {
+        id?: string;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource/saved-search/criteria`;
 
       // Build query string
       if (query) {
@@ -21325,6 +21473,387 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         format: "json",
         ...params,
       }),
+
+    /**
+     * No description
+     *
+     * @tags ManagedLibrary
+     * @name GetManagedResourceDisplayOptions
+     * @request GET:/federation/local/management/resource-display-options
+     */
+    getManagedResourceDisplayOptions: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceControllersManagedResourceDisplayOptions,
+        any
+      >({
+        path: `/federation/local/management/resource-display-options`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getManagedResourceDisplayOptions
+     * @name getManagedResourceDisplayOptionsUrl
+     */
+    getManagedResourceDisplayOptionsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/local/management/resource-display-options`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ManagedLibrary
+     * @name PatchManagedResourceDisplayOptions
+     * @request PATCH:/federation/local/management/resource-display-options
+     */
+    patchManagedResourceDisplayOptions: (
+      data: BakabaseServiceControllersManagedResourceDisplayOptionsPatch,
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/federation/local/management/resource-display-options`,
+        method: "PATCH",
+        body: data,
+        type: ContentType.Json,
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for patchManagedResourceDisplayOptions
+     * @name patchManagedResourceDisplayOptionsUrl
+     */
+    patchManagedResourceDisplayOptionsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/local/management/resource-display-options`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ManagedLibrary
+     * @name GetManagedLibrarySources
+     * @request GET:/federation/local/management/sources
+     */
+    getManagedLibrarySources: (params: RequestParams = {}) =>
+      this.request<BakabaseServiceComponentsFederationManagedLibrarySources, any>({
+        path: `/federation/local/management/sources`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getManagedLibrarySources
+     * @name getManagedLibrarySourcesUrl
+     */
+    getManagedLibrarySourcesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/local/management/sources`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ManagedLibrary
+     * @name RequestManagedLibrary
+     * @request POST:/federation/local/management/{serverId}/request
+     */
+    requestManagedLibrary: (
+      serverId: string,
+      data: BakabaseServiceComponentsFederationManagedLibraryRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/federation/local/management/${serverId}/request`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ManagedLibrary
+     * @name UploadManagedLibraryFile
+     * @request POST:/federation/local/management/{serverId}/upload
+     */
+    uploadManagedLibraryFile: (
+      serverId: string,
+      data: BakabaseServiceComponentsFederationManagedLibraryRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/federation/local/management/${serverId}/upload`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ManagedLibraryCover
+     * @name GetManagedLibraryCover
+     * @request GET:/federation/local/management/{serverId}/cover
+     */
+    getManagedLibraryCover: (
+      serverId: string,
+      query?: {
+        libraryEpoch?: string;
+        /** @format int32 */
+        resourceId?: number;
+        /**
+         * @format int32
+         * @default 0
+         */
+        index?: number;
+        /** @format int32 */
+        w?: number;
+        /** @format int32 */
+        h?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/federation/local/management/${serverId}/cover`,
+        method: "GET",
+        query: query,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ManagedLibraryCover
+     * @name InspectManagedLibraryCover
+     * @request HEAD:/federation/local/management/{serverId}/cover
+     */
+    inspectManagedLibraryCover: (
+      serverId: string,
+      query?: {
+        libraryEpoch?: string;
+        /** @format int32 */
+        resourceId?: number;
+        /**
+         * @format int32
+         * @default 0
+         */
+        index?: number;
+        /** @format int32 */
+        w?: number;
+        /** @format int32 */
+        h?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/federation/local/management/${serverId}/cover`,
+        method: "HEAD",
+        query: query,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ManagedLibraryCover
+     * @name GetManagedLibraryAsset
+     * @request GET:/federation/local/management/{serverId}/asset
+     */
+    getManagedLibraryAsset: (
+      serverId: string,
+      query?: {
+        libraryEpoch?: string;
+        /** @format int32 */
+        resourceId?: number;
+        key?: string;
+        /** @default false */
+        thumbnail?: boolean;
+        /** @format int32 */
+        w?: number;
+        /** @format int32 */
+        h?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/federation/local/management/${serverId}/asset`,
+        method: "GET",
+        query: query,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ManagedLibraryCover
+     * @name InspectManagedLibraryAsset
+     * @request HEAD:/federation/local/management/{serverId}/asset
+     */
+    inspectManagedLibraryAsset: (
+      serverId: string,
+      query?: {
+        libraryEpoch?: string;
+        /** @format int32 */
+        resourceId?: number;
+        key?: string;
+        /** @default false */
+        thumbnail?: boolean;
+        /** @format int32 */
+        w?: number;
+        /** @format int32 */
+        h?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/federation/local/management/${serverId}/asset`,
+        method: "HEAD",
+        query: query,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ManagedLibraryPlayback
+     * @name GetManagedLibraryBatchPlayCandidates
+     * @request POST:/federation/local/management/{serverId}/batch-play/candidates
+     */
+    getManagedLibraryBatchPlayCandidates: (
+      serverId: string,
+      data: BakabaseServiceControllersManagedLibraryBatchRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/federation/local/management/${serverId}/batch-play/candidates`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ManagedLibraryPlayback
+     * @name BatchPlayManagedLibraryResources
+     * @request POST:/federation/local/management/{serverId}/batch-play
+     */
+    batchPlayManagedLibraryResources: (
+      serverId: string,
+      data: BakabaseServiceControllersManagedLibraryBatchRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/federation/local/management/${serverId}/batch-play`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ManagedLibraryPlayback
+     * @name PlayManagedLibraryResource
+     * @request POST:/federation/local/management/{serverId}/play
+     */
+    playManagedLibraryResource: (
+      serverId: string,
+      data: BakabaseServiceControllersManagedLibraryPlayRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/federation/local/management/${serverId}/play`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ManagedLibraryPlayback
+     * @name OpenManagedLibraryResourceDirectory
+     * @request POST:/federation/local/management/{serverId}/directory
+     */
+    openManagedLibraryResourceDirectory: (
+      serverId: string,
+      data: BakabaseServiceControllersManagedLibraryDirectoryRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/federation/local/management/${serverId}/directory`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ManagedLibraryPlayback
+     * @name StreamManagedLibraryMedia
+     * @request GET:/federation/local/management/{serverId}/media
+     */
+    streamManagedLibraryMedia: (
+      serverId: string,
+      query?: {
+        libraryEpoch?: string;
+        /** @format int32 */
+        resourceId?: number;
+        /** [1: Manual, 2: FileSystem, 3: Steam, 4: DLsite, 5: ExHentai, 6: ExternalIdentity] */
+        origin?: BakabaseAbstractionsModelsDomainConstantsDataOrigin;
+        key?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/federation/local/management/${serverId}/media`,
+        method: "GET",
+        query: query,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ManagedLibraryPlayback
+     * @name InspectManagedLibraryMedia
+     * @request HEAD:/federation/local/management/{serverId}/media
+     */
+    inspectManagedLibraryMedia: (
+      serverId: string,
+      query?: {
+        libraryEpoch?: string;
+        /** @format int32 */
+        resourceId?: number;
+        /** [1: Manual, 2: FileSystem, 3: Steam, 4: DLsite, 5: ExHentai, 6: ExternalIdentity] */
+        origin?: BakabaseAbstractionsModelsDomainConstantsDataOrigin;
+        key?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/federation/local/management/${serverId}/media`,
+        method: "HEAD",
+        query: query,
+        ...params,
+      }),
   };
   dlsiteWork = {
     /**
@@ -25358,6 +25887,332 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
       return baseUrl + path;
     },
+  };
+  management = {
+    /**
+     * No description
+     *
+     * @tags ManagedLibraryBrowserFiles
+     * @name GetManagedResourceBrowserFiles
+     * @request GET:/management/library/resources/{id}/browser-files
+     */
+    getManagedResourceBrowserFiles: (
+      id: number,
+      query?: {
+        /**
+         * @format int32
+         * @default 0
+         */
+        offset?: number;
+        /**
+         * @format int32
+         * @default 100
+         */
+        pageSize?: number;
+        /** @default "configured" */
+        scope?: string;
+        initialPath?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/management/library/resources/${id}/browser-files`,
+        method: "GET",
+        query: query,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ManagedLibraryBrowserFiles
+     * @name PlayManagedResourceBrowserFile
+     * @request GET:/management/library/resources/{id}/media
+     */
+    playManagedResourceBrowserFile: (
+      id: number,
+      query?: {
+        key?: string;
+        /** [1: Manual, 2: FileSystem, 3: Steam, 4: DLsite, 5: ExHentai, 6: ExternalIdentity] */
+        origin?: BakabaseAbstractionsModelsDomainConstantsDataOrigin;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/management/library/resources/${id}/media`,
+        method: "GET",
+        query: query,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ManagedLibraryBrowserFiles
+     * @name ValidateManagedResourceNativeFallback
+     * @request GET:/management/library/resources/{id}/native-fallback
+     */
+    validateManagedResourceNativeFallback: (
+      id: number,
+      query?: {
+        key?: string;
+        /** [1: Manual, 2: FileSystem, 3: Steam, 4: DLsite, 5: ExHentai, 6: ExternalIdentity] */
+        origin?: BakabaseAbstractionsModelsDomainConstantsDataOrigin;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/management/library/resources/${id}/native-fallback`,
+        method: "GET",
+        query: query,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ManagedLibraryInfo
+     * @name GetManagedLibraryInfo
+     * @request GET:/management/library/info
+     */
+    getManagedLibraryInfo: (params: RequestParams = {}) =>
+      this.request<BakabaseServiceComponentsFederationManagedLibraryInfo, any>({
+        path: `/management/library/info`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getManagedLibraryInfo
+     * @name getManagedLibraryInfoUrl
+     */
+    getManagedLibraryInfoUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/management/library/info`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ManagedLibrarySearch
+     * @name PreviewManagedCustomPropertyConversion
+     * @request POST:/management/library/custom-properties/{id}/conversion-preview
+     */
+    previewManagedCustomPropertyConversion: (
+      id: number,
+      query?: {
+        /** [1: SingleLineText, 2: MultilineText, 3: SingleChoice, 4: MultipleChoice, 5: Number, 6: Percentage, 7: Rating, 8: Boolean, 9: Link, 10: Attachment, 11: Date, 12: DateTime, 13: Time, 14: Formula, 15: Multilevel, 16: Tags] */
+        targetType?: BakabaseAbstractionsModelsDomainConstantsPropertyType;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/management/library/custom-properties/${id}/conversion-preview`,
+        method: "POST",
+        query: query,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ManagedLibrarySearch
+     * @name SearchManagedResourcePaths
+     * @request GET:/management/library/resource-paths
+     */
+    searchManagedResourcePaths: (
+      query?: {
+        keyword?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/management/library/resource-paths`,
+        method: "GET",
+        query: query,
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for searchManagedResourcePaths
+     * @name searchManagedResourcePathsUrl
+     */
+    searchManagedResourcePathsUrl: (query?: {
+        keyword?: string;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/management/library/resource-paths`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ManagedLibraryUpload
+     * @name UploadManagedResourceAttachment
+     * @request POST:/management/library/resources/{id}/attachment
+     */
+    uploadManagedResourceAttachment: (
+      id: number,
+      data: BakabaseServiceControllersManagedFileUploadInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/management/library/resources/${id}/attachment`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ManagedLibraryUpload
+     * @name UploadManagedResourceTorrent
+     * @request POST:/management/library/resources/{id}/torrent
+     */
+    uploadManagedResourceTorrent: (
+      id: number,
+      data: BakabaseServiceControllersManagedFileUploadInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/management/library/resources/${id}/torrent`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ManagedResourceAssets
+     * @name GetManagedResourceCovers
+     * @request GET:/management/library/resources/{id}/covers
+     */
+    getManagedResourceCovers: (id: number, params: RequestParams = {}) =>
+      this.request<void, any>({
+        path: `/management/library/resources/${id}/covers`,
+        method: "GET",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ManagedResourceAssets
+     * @name GetManagedResourceCover
+     * @request GET:/management/library/resources/{id}/cover
+     */
+    getManagedResourceCover: (
+      id: number,
+      query?: {
+        /**
+         * @format int32
+         * @default 0
+         */
+        index?: number;
+        /** @format int32 */
+        w?: number;
+        /** @format int32 */
+        h?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/management/library/resources/${id}/cover`,
+        method: "GET",
+        query: query,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ManagedResourceAssets
+     * @name GetManagedResourceAsset
+     * @request GET:/management/library/resources/{id}/asset
+     */
+    getManagedResourceAsset: (
+      id: number,
+      query?: {
+        key?: string;
+        /** @default false */
+        thumbnail?: boolean;
+        /** @format int32 */
+        w?: number;
+        /** @format int32 */
+        h?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/management/library/resources/${id}/asset`,
+        method: "GET",
+        query: query,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ManagedResourceAssets
+     * @name GetManagedResourcePreviewerItems
+     * @request GET:/management/library/resources/{id}/previewer
+     */
+    getManagedResourcePreviewerItems: (id: number, params: RequestParams = {}) =>
+      this.request<void, any>({
+        path: `/management/library/resources/${id}/previewer`,
+        method: "GET",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ManagedResourceAssets
+     * @name GetManagedResourceChildren
+     * @request GET:/management/library/resources/{id}/children
+     */
+    getManagedResourceChildren: (
+      id: number,
+      query?: {
+        root?: string;
+        /** @default false */
+        showHiddenFiles?: boolean;
+        cursor?: string;
+        /**
+         * @format int32
+         * @default 100
+         */
+        pageSize?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/management/library/resources/${id}/children`,
+        method: "GET",
+        query: query,
+        ...params,
+      }),
   };
   mediaLibraryResourceMapping = {
     /**

@@ -9,15 +9,17 @@ import { AiOutlineExport, AiOutlineFilter, AiOutlinePlus, AiOutlineSearch } from
 import { MdPlaylistPlay } from "react-icons/md";
 import { HistoryOutlined } from "@ant-design/icons";
 
-import { ReferenceValueSearchProvider } from "@/hooks/useReferenceValueResourceCounts";
-
 import OrderSelector from "./OrderSelector";
 import ShortcutsButton from "./ShortcutsButton";
 import { requiresAdvancedFilterMode } from "./utils";
+import DeviceFilter, { shouldShowDeviceFilter } from "./DeviceFilter";
 
+import { ReferenceValueSearchProvider } from "@/hooks/useReferenceValueResourceCounts";
 import { FilterDisplayMode } from "@/sdk/constants";
 import { PlaylistCollection } from "@/components/Playlist";
 import { Button, Checkbox, Popover, Spinner, Tooltip } from "@/components/bakaui";
+import { useResourceSources } from "@/features/management/resourceSourcesContext";
+import { normalizeQueryOwner } from "@/features/management/resourceQuery";
 import MiscellaneousOptions from "@/pages/resource/components/FilterPanel/MiscellaneousOptions";
 import CreatePlaceholderResourcesModal from "@/components/Resource/components/CreatePlaceholderResourcesModal";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
@@ -26,6 +28,7 @@ import { buildLogger, useTraceUpdate } from "@/components/utils.tsx";
 
 interface IProps {
   selectedResourceIds?: number[];
+  selectedResourceCount?: number;
   maxResourceColCount?: number;
   searchForm?: SearchForm;
   onSearch?: (form: Partial<SearchForm>, newTab: boolean) => Promise<any>;
@@ -79,11 +82,16 @@ const FilterPanel = (props: IProps) => {
   });
 
   const { t } = useTranslation();
+  const sourceContext = useResourceSources();
+  const sources = sourceContext?.sources ?? [];
+  const selectedCount = props.selectedResourceCount ?? selectedResourceIds?.length ?? 0;
   const { createPortal } = useBakabaseContext();
 
   const [selectedAll, setSelectedAll] = useState(false);
 
-  const [searchForm, setSearchForm] = useState<SearchForm>(propsSearchForm || defaultSearchForm());
+  const [searchForm, setSearchForm] = useState<SearchForm>(
+    normalizeQueryOwner(propsSearchForm || defaultSearchForm()),
+  );
   const [searching, setSearching] = useState(false);
   const [filterMode, setFilterMode] = useState<FilterDisplayMode>(() =>
     requiresAdvancedFilterMode(propsSearchForm?.group)
@@ -123,7 +131,7 @@ const FilterPanel = (props: IProps) => {
   };
 
   useUpdateEffect(() => {
-    setSearchForm(propsSearchForm || defaultSearchForm());
+    setSearchForm(normalizeQueryOwner(propsSearchForm || defaultSearchForm()));
     // Restoring a query changes presentation only: never flatten or discard its conditions.
     if (requiresAdvancedFilterMode(propsSearchForm?.group)) {
       setFilterMode(FilterDisplayMode.Advanced);
@@ -250,6 +258,22 @@ const FilterPanel = (props: IProps) => {
             showRecentFilters
             showTags
             filterDisplayMode={filterMode}
+            filterGroupsPrefix={
+              shouldShowDeviceFilter(sources, searchForm) ? (
+                <DeviceFilter
+                  deviceIds={searchForm.deviceIds}
+                  owner={searchForm.owner}
+                  sources={sources}
+                  onChange={(deviceIds) => {
+                    const next = { ...searchForm, owner: undefined, deviceIds, page: 1 };
+
+                    setSearchForm(next);
+                    cancelPendingAutoSearch();
+                    void search(next);
+                  }}
+                />
+              ) : undefined
+            }
             filterLayout="vertical"
             group={searchForm.group}
             keyword={searchForm.keyword}
@@ -342,7 +366,7 @@ const FilterPanel = (props: IProps) => {
             }
           >
             <Checkbox
-              isSelected={selectedAll && selectedResourceIds && selectedResourceIds?.length > 0}
+              isSelected={selectedAll && selectedCount > 0}
               size={"sm"}
               onValueChange={(isSelected) => {
                 onSelectAllChange(isSelected);
@@ -351,7 +375,7 @@ const FilterPanel = (props: IProps) => {
             >
               {selectedAll
                 ? t<string>("resource.search.selectedCount", {
-                    count: selectedResourceIds?.length,
+                    count: selectedCount,
                   })
                 : t<string>("resource.search.selectAll")}
             </Checkbox>

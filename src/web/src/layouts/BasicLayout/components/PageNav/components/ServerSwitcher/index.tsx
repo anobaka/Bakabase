@@ -119,7 +119,7 @@ const LocalSwitcher: React.FC<Props> = ({ collapsed }) => {
   }, [load]);
 
   // A headless server has nothing to switch to; its dashboard brand remains above.
-  if (view && !view.available) return null;
+  if (view && (!view.available || view.canOpenDesktopView === false)) return null;
 
   const localName = serverName || t<string>("federation.thisDevice");
   const entries: SwitcherEntry[] = [

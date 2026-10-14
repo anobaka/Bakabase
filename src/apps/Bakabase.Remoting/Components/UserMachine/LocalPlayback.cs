@@ -83,7 +83,8 @@ public sealed class LocalPlayback(
         // The server owns play history, so it is told after the fact — in the same
         // "{origin}:{key}" shape it writes when it plays something itself, or the two
         // halves would record the same event differently.
-        await upstream.MarkPlayedAsync(resourceId, $"{origin}:{key}", context.RequestAborted);
+        await upstream.MarkPlayedForEpochAsync(resourceId, $"{origin}:{key}",
+            context.Request.Query["managedLibraryEpoch"].FirstOrDefault(), context.RequestAborted);
 
         await UserMachineResponse.WriteAsync(context, HttpStatusCode.OK, null);
 
@@ -111,7 +112,8 @@ public sealed class LocalPlayback(
         try
         {
             var localOptions = selectedPlayer == null && profiles != null && connection.Server != null
-                ? (await profiles.ResolveAsync(connection.Server.ServerId, null, resourceId,
+                ? (await profiles.ResolveAsync(connection.Server.ServerId,
+                    context.Request.Query["managedLibraryEpoch"].FirstOrDefault(), resourceId,
                     context.RequestAborted)).PlayerOptions
                 : null;
             if (selectedPlayer == null && localOptions != null)

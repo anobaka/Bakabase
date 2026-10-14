@@ -10,7 +10,7 @@ import {
 import { TopicCards, TopicHeadline } from "../../components/TopicBlocks";
 
 import { mdk } from "./devices";
-import OpenPageButton, { DEVICES_ROUTE } from "./OpenPageButton";
+import OpenPageButton, { DEVICES_ROUTE, RESOURCE_ROUTE } from "./OpenPageButton";
 import PlayHereDiagram from "./PlayHereDiagram";
 import SwitchMockup from "./SwitchMockup";
 
@@ -31,10 +31,15 @@ const cards = [
   descKey: mdk(`switch.card.${id}.desc`),
 }));
 
-/** Showing a managed device's own interface in this window (server switching). */
+/** Unified resource management, with optional desktop access to a device's full interface. */
 const SwitchSection = ({ onNavigate }: { onNavigate?: (path: string) => void }) => (
   <div className="flex flex-col gap-4">
     <TopicHeadline introKey={mdk("switch.intro")} titleKey={mdk("switch.headline")} />
+    <OpenPageButton
+      labelKey={mdk("open.resources")}
+      route={RESOURCE_ROUTE}
+      onNavigate={onNavigate}
+    />
     <SwitchMockup />
     <PlayHereDiagram />
     <TopicCards cards={cards} columns={2} />

@@ -28,6 +28,7 @@ const reach = vi.hoisted(() => ({
   isLocal: true,
   pureClient: false,
   console: false,
+  federationAvailable: false,
 }));
 
 vi.mock("react-i18next", () => ({
@@ -43,8 +44,7 @@ vi.mock("react-i18next", () => ({
   initReactI18next: { type: "3rdParty", init: vi.fn() },
 }));
 vi.mock("@/stores/remoteAccess", () => ({
-  useRemoteAccessStore: (selector: (state: unknown) => unknown) =>
-    selector({ initialized: reach.initialized, isLocal: reach.isLocal }),
+  useRemoteAccessStore: (selector: (state: unknown) => unknown) => selector(reach),
   useIsPureClient: () => reach.pureClient,
   useIsConsole: () => reach.console,
   useCanAdministerShownServer: () => reach.initialized && (reach.isLocal || reach.pureClient),
@@ -98,7 +98,13 @@ const k = (key: string) => `helpCenter.multiDevice.${key}`;
 const setReach = (next: Partial<typeof reach>) => Object.assign(reach, next);
 
 beforeEach(() => {
-  setReach({ initialized: true, isLocal: true, pureClient: false, console: false });
+  setReach({
+    initialized: true,
+    isLocal: true,
+    pureClient: false,
+    console: false,
+    federationAvailable: false,
+  });
   vi.mocked(openLocalView).mockReset();
 });
 afterEach(() => cleanup());
@@ -313,6 +319,8 @@ describe("multi-device help topic: links to the devices pages", () => {
     expect(onNavigate).toHaveBeenLastCalledWith("/federation/devices?section=add-server");
     fireEvent.click(screen.getByRole("button", { name: k("open.devices") }));
     expect(onNavigate).toHaveBeenLastCalledWith("/federation/devices?section=sharing");
+    fireEvent.click(screen.getByRole("button", { name: k("open.resources") }));
+    expect(onNavigate).toHaveBeenLastCalledWith("/resource");
 
     openTab("browse");
     fireEvent.click(screen.getByRole("button", { name: k("open.library") }));
@@ -325,6 +333,18 @@ describe("multi-device help topic: links to the devices pages", () => {
     expect(map).toHaveTextContent(k("map.desc"));
     fireEvent.click(within(map).getByRole("button", { name: k("open.map") }));
     expect(onNavigate).toHaveBeenLastCalledWith("/federation/map");
+    expect(openLocalView).not.toHaveBeenCalled();
+  });
+
+  it("opens unified management in an authorized LAN browser of a headless server", () => {
+    setReach({ isLocal: false, federationAvailable: true });
+    const onNavigate = vi.fn();
+
+    render(<MultiDeviceTopic section="setup" onNavigate={onNavigate} />);
+    fireEvent.click(screen.getByRole("button", { name: k("open.resources") }));
+    expect(onNavigate).toHaveBeenLastCalledWith("/resource");
+    fireEvent.click(screen.getByRole("button", { name: k("open.addServer") }));
+    expect(onNavigate).toHaveBeenLastCalledWith("/federation/devices?section=add-server");
     expect(openLocalView).not.toHaveBeenCalled();
   });
 

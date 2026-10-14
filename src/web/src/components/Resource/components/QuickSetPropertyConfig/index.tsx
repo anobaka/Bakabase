@@ -30,7 +30,7 @@ import { CSS } from "@dnd-kit/utilities";
 
 import { Button, Checkbox, Chip } from "@/components/bakaui";
 import { PropertyPool } from "@/sdk/constants";
-import BApi from "@/sdk/BApi";
+import { useResourceApi } from "@/features/management/resourceContext";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import PropertySelector from "@/components/PropertySelector";
 import PropertyValueRenderer from "@/components/Property/components/PropertyValueRenderer";
@@ -191,6 +191,7 @@ const QuickSetPropertyConfig = ({
   autoAddRecentPropertyValues,
   onAutoAddChange,
 }: Props) => {
+  const BApi = useResourceApi();
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 

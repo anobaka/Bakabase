@@ -6,6 +6,8 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import Operations from "../index";
+import { ResourceOwnerScopeProvider } from "@/features/management/resourceContext";
+import BApi from "@/sdk/BApi";
 
 const state = vi.hoisted(() => ({
   options: {} as CoverOperationsOptions,
@@ -90,6 +92,29 @@ const resource = {
 const show = (value: Resource = resource) => render(<Operations resource={value} />);
 
 describe("independent cover aggregate menu and shortcuts", () => {
+  it("never sends a managed resource's numeric ID to the local move panel", () => {
+    const owner = {
+      serverId: "other",
+      libraryEpoch: "epoch",
+      name: "Other device",
+      available: true,
+      isLocal: false,
+      contractVersion: 1,
+    };
+
+    render(
+      <ResourceOwnerScopeProvider
+        scope={{ source: owner, resourceId: resource.id, key: "other", api: BApi }}
+      >
+        <Operations resource={resource} />
+      </ResourceOwnerScopeProvider>,
+    );
+    const move = screen.getByRole("menuitem", { name: /resource.operation.move/ });
+
+    expect(move).toBeDisabled();
+    fireEvent.click(move);
+    expect(state.openMovePanel).not.toHaveBeenCalled();
+  });
   it.each([
     {},
     { displayOperations: [] },

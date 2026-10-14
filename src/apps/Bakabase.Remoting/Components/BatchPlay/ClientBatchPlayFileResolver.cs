@@ -24,15 +24,17 @@ namespace Bakabase.Remoting.Components.BatchPlay;
 /// </remarks>
 public sealed class ClientBatchPlayFileResolver(
     ActiveConnection connection,
-    ILoopbackAddressProvider loopback) : IBatchPlayFileResolver
+    ILoopbackAddressProvider loopback, ManagedBatchPlayContext? owner = null) : IBatchPlayFileResolver
 {
     public string? Resolve(string path)
     {
         var mapped = ClientPathMapper.Map(path, connection.Server?.PathMappings ?? []);
 
-        return mapped.Mapped && File.Exists(mapped.LocalPath)
-            ? ToOsSafePath(mapped.LocalPath!)
-            : PlayerFileCapabilities.CanStream(path) ? loopback.BuildRawFileUrl(path) : null;
+        if (mapped.Mapped && File.Exists(mapped.LocalPath)) return ToOsSafePath(mapped.LocalPath!);
+        if (!PlayerFileCapabilities.CanStream(path)) return null;
+        var url = loopback.BuildRawFileUrl(path);
+        return string.IsNullOrEmpty(owner?.LibraryEpoch) ? url : url +
+            (url.Contains('?') ? "&" : "?") + "managedLibraryEpoch=" + Uri.EscapeDataString(owner.LibraryEpoch);
     }
 
     private static string ToOsSafePath(string path) =>

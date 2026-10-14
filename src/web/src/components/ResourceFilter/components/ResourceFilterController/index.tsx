@@ -16,6 +16,8 @@ import { FilterProvider } from "../../context/FilterContext";
 import { createDefaultFilterConfig } from "../../presets/DefaultFilterPreset";
 import { GroupCombinator } from "../../models";
 
+import { useResourceApi, useResourceOwner } from "@/features/management/resourceContext";
+import { useResourceSources } from "@/features/management/resourceSourcesContext";
 import ResourceKeywordAutocomplete from "@/components/ResourceKeywordAutocomplete";
 import { FilterDisplayMode } from "@/sdk/constants";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
@@ -88,6 +90,9 @@ export interface ResourceFilterControllerProps {
   /** Custom class name for filter groups */
   filterGroupsClassName?: string;
 
+  /** Scope controls displayed with the conditions, before their editable logic group. */
+  filterGroupsPrefix?: ReactNode;
+
   /** Placeholder for keyword search */
   keywordPlaceholder?: string;
 
@@ -135,6 +140,7 @@ const ResourceFilterControllerInner = ({
   filterGroupsContainer,
   keywordClassName = "",
   filterGroupsClassName = "",
+  filterGroupsPrefix,
   keywordPlaceholder,
   autoCreateMediaLibraryFilter = false,
   isReadonly = false,
@@ -290,7 +296,7 @@ const ResourceFilterControllerInner = ({
   );
 
   // Render filter groups
-  const filterGroupsElement = (
+  const filterGroupElement = (
     <FilterGroupWithContext
       autoCreateMediaLibraryFilter={autoCreateMediaLibraryFilter}
       className={`min-w-0 ${filterGroupsClassName}`}
@@ -305,6 +311,14 @@ const ResourceFilterControllerInner = ({
         onExternalNewFilterConsumed?.();
       }}
     />
+  );
+  const filterGroupsElement = filterGroupsPrefix ? (
+    <div className="flex min-w-0 flex-col gap-2">
+      {filterGroupsPrefix}
+      {filterGroupElement}
+    </div>
+  ) : (
+    filterGroupElement
   );
 
   // Helper to render element to container or inline
@@ -321,8 +335,9 @@ const ResourceFilterControllerInner = ({
 
   // Check if there's content in the filter groups (for gap spacing)
   const hasFilterGroupContent =
-    group &&
-    ((group.filters && group.filters.length > 0) || (group.groups && group.groups.length > 0));
+    !!filterGroupsPrefix ||
+    (group &&
+      ((group.filters && group.filters.length > 0) || (group.groups && group.groups.length > 0)));
 
   return (
     <>
@@ -350,7 +365,13 @@ const ResourceFilterControllerInner = ({
  */
 const ResourceFilterController = (props: ResourceFilterControllerProps) => {
   const { createPortal } = useBakabaseContext();
-  const filterConfig = useMemo(() => createDefaultFilterConfig(createPortal), [createPortal]);
+  const api = useResourceApi();
+  const owner = useResourceOwner();
+  const sources = useResourceSources()?.sources;
+  const filterConfig = useMemo(
+    () => createDefaultFilterConfig(createPortal, api, sources, owner),
+    [createPortal, api, sources, owner],
+  );
 
   return (
     <FilterProvider config={props.config ?? filterConfig}>

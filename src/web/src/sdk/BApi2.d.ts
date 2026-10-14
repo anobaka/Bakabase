@@ -5754,6 +5754,390 @@ export interface paths {
         patch: operations["ReadAllLog"];
         trace?: never;
     };
+    "/federation/local/management/resource-display-options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetManagedResourceDisplayOptions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["PatchManagedResourceDisplayOptions"];
+        trace?: never;
+    };
+    "/federation/local/management/sources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetManagedLibrarySources"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/federation/local/management/{serverId}/request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["RequestManagedLibrary"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/federation/local/management/{serverId}/upload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["UploadManagedLibraryFile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/management/library/resources/{id}/browser-files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetManagedResourceBrowserFiles"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/management/library/resources/{id}/media": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PlayManagedResourceBrowserFile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/management/library/resources/{id}/native-fallback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ValidateManagedResourceNativeFallback"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/federation/local/management/{serverId}/cover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetManagedLibraryCover"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head: operations["InspectManagedLibraryCover"];
+        patch?: never;
+        trace?: never;
+    };
+    "/federation/local/management/{serverId}/asset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetManagedLibraryAsset"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head: operations["InspectManagedLibraryAsset"];
+        patch?: never;
+        trace?: never;
+    };
+    "/management/library/info": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetManagedLibraryInfo"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/federation/local/management/{serverId}/batch-play/candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["GetManagedLibraryBatchPlayCandidates"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/federation/local/management/{serverId}/batch-play": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["BatchPlayManagedLibraryResources"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/federation/local/management/{serverId}/play": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PlayManagedLibraryResource"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/federation/local/management/{serverId}/directory": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["OpenManagedLibraryResourceDirectory"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/federation/local/management/{serverId}/media": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["StreamManagedLibraryMedia"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head: operations["InspectManagedLibraryMedia"];
+        patch?: never;
+        trace?: never;
+    };
+    "/management/library/custom-properties/{id}/conversion-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PreviewManagedCustomPropertyConversion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/management/library/resource-paths": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SearchManagedResourcePaths"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/management/library/resources/{id}/attachment": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["UploadManagedResourceAttachment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/management/library/resources/{id}/torrent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["UploadManagedResourceTorrent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/management/library/resources/{id}/covers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetManagedResourceCovers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/management/library/resources/{id}/cover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetManagedResourceCover"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/management/library/resources/{id}/asset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetManagedResourceAsset"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/management/library/resources/{id}/previewer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetManagedResourcePreviewerItems"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/management/library/resources/{id}/children": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetManagedResourceChildren"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/media-library-resource-mapping": {
         parameters: {
             query?: never;
@@ -7935,6 +8319,22 @@ export interface paths {
         };
         get?: never;
         put: operations["PutSavedSearchDisplayMode"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource/saved-search/criteria": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["PutSavedSearchCriteria"];
         post?: never;
         delete?: never;
         options?: never;
@@ -10707,11 +11107,14 @@ export interface components {
             pageSize: number;
             /** Format: int32 */
             readonly skipCount: number;
+            owner?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceSearchOwner"];
+            deviceIds?: string[];
             group?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceSearchFilterGroup"];
             orders?: components["schemas"]["Bakabase.Abstractions.Models.Input.ResourceSearchOrderInputModel"][];
             tags?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceTag"][];
         };
         "Bakabase.Abstractions.Models.Domain.ResourceSearchFilter": {
+            owner?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceSearchOwner"];
             propertyPool: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyPool"];
             /** Format: int32 */
             propertyId: number;
@@ -10725,6 +11128,10 @@ export interface components {
             groups?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceSearchFilterGroup"][];
             filters?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceSearchFilter"][];
             disabled: boolean;
+        };
+        "Bakabase.Abstractions.Models.Domain.ResourceSearchOwner": {
+            serverId: string;
+            libraryEpoch: string;
         };
         "Bakabase.Abstractions.Models.Domain.ResourceSourceLink": {
             /** Format: int32 */
@@ -15117,6 +15524,7 @@ export interface components {
             available: boolean;
             servers: components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerView"][];
             requests: components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerPendingRequestView"][];
+            canOpenDesktopView: boolean;
         };
         /**
          * Format: int32
@@ -15143,6 +15551,8 @@ export interface components {
          */
         "Bakabase.Modules.RemoteAccess.Abstractions.Models.ServerKind": 0 | 1 | 2;
         "Bakabase.Modules.Search.Models.Db.ResourceSearchDbModel": {
+            owner?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceSearchOwner"];
+            deviceIds?: string[];
             group?: components["schemas"]["Bakabase.Modules.Search.Models.Db.ResourceSearchFilterGroupDbModel"];
             orders?: components["schemas"]["Bakabase.Abstractions.Models.Input.ResourceSearchOrderInputModel"][];
             keyword?: string;
@@ -15153,6 +15563,7 @@ export interface components {
             tags?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceTag"][];
         };
         "Bakabase.Modules.Search.Models.Db.ResourceSearchFilterDbModel": {
+            owner?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceSearchOwner"];
             propertyPool?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyPool"];
             /** Format: int32 */
             propertyId?: number;
@@ -15497,6 +15908,38 @@ export interface components {
             lineNumber: number;
             alreadyKnown: boolean;
         };
+        "Bakabase.Service.Components.Federation.ManagedLibraryInfo": {
+            serverId: string;
+            name: string;
+            libraryEpoch: string;
+            /** Format: int32 */
+            contractVersion: number;
+        };
+        "Bakabase.Service.Components.Federation.ManagedLibraryRequest": {
+            libraryEpoch: string;
+            operation: string;
+            /** Format: int32 */
+            id?: number;
+            ids?: number[];
+            body?: components["schemas"]["Newtonsoft.Json.Linq.JToken"];
+            query?: {
+                [key: string]: string[];
+            };
+        };
+        "Bakabase.Service.Components.Federation.ManagedLibrarySource": {
+            serverId: string;
+            name?: string;
+            libraryEpoch?: string;
+            isLocal: boolean;
+            available: boolean;
+            errorCode?: string;
+            error?: string;
+            /** Format: int32 */
+            contractVersion: number;
+        };
+        "Bakabase.Service.Components.Federation.ManagedLibrarySources": {
+            sources: components["schemas"]["Bakabase.Service.Components.Federation.ManagedLibrarySource"][];
+        };
         "Bakabase.Service.Components.ServerData.ServerAppDataImport+Validation": {
             valid: boolean;
             error?: string;
@@ -15620,6 +16063,36 @@ export interface components {
         "Bakabase.Service.Controllers.FederationSharingRequest": {
             enabled: boolean;
             enablePairedRemoteAccess: boolean;
+        };
+        "Bakabase.Service.Controllers.ManagedFileUploadInputModel": {
+            fileName: string;
+            base64: string;
+        };
+        "Bakabase.Service.Controllers.ManagedLibraryBatchRequest": {
+            libraryEpoch: string;
+            resourceIds: number[];
+            playerKey?: string;
+            fileSelectionMode: components["schemas"]["Bakabase.Modules.Player.Abstractions.Models.Domain.Constants.BatchPlayFileSelectionMode"];
+        };
+        "Bakabase.Service.Controllers.ManagedLibraryDirectoryRequest": {
+            libraryEpoch: string;
+            /** Format: int32 */
+            resourceId: number;
+        };
+        "Bakabase.Service.Controllers.ManagedLibraryPlayRequest": {
+            libraryEpoch: string;
+            /** Format: int32 */
+            resourceId: number;
+            origin: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.DataOrigin"];
+            key: string;
+            explicitChoice: boolean;
+        };
+        "Bakabase.Service.Controllers.ManagedResourceDisplayOptions": {
+            uiResource: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIOptions+UIResourceOptions"];
+            propertyValueScopePriority: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyValueScope"][];
+        };
+        "Bakabase.Service.Controllers.ManagedResourceDisplayOptionsPatch": {
+            propertyValueScopePriority: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyValueScope"][];
         };
         "Bakabase.Service.Controllers.ManagedServerAddressRequest": {
             address: string;
@@ -15919,6 +16392,7 @@ export interface components {
             disabled: boolean;
         };
         "Bakabase.Service.Models.Input.ResourceSearchFilterInputModel": {
+            owner?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceSearchOwner"];
             propertyPool?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyPool"];
             /** Format: int32 */
             propertyId?: number;
@@ -15927,6 +16401,8 @@ export interface components {
             disabled: boolean;
         };
         "Bakabase.Service.Models.Input.ResourceSearchInputModel": {
+            owner?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceSearchOwner"];
+            deviceIds?: string[];
             group?: components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchFilterGroupInputModel"];
             orders?: components["schemas"]["Bakabase.Abstractions.Models.Input.ResourceSearchOrderInputModel"][];
             keyword?: string;
@@ -16636,6 +17112,7 @@ export interface components {
             disabled: boolean;
         };
         "Bakabase.Service.Models.View.ResourceSearchFilterViewModel": {
+            owner?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceSearchOwner"];
             propertyPool?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyPool"];
             /** Format: int32 */
             propertyId?: number;
@@ -16648,6 +17125,8 @@ export interface components {
             valueProperty?: components["schemas"]["Bakabase.Modules.Property.Models.View.PropertyViewModel"];
         };
         "Bakabase.Service.Models.View.ResourceSearchViewModel": {
+            owner?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceSearchOwner"];
+            deviceIds?: string[];
             group?: components["schemas"]["Bakabase.Service.Models.View.ResourceSearchFilterGroupViewModel"];
             orders?: components["schemas"]["Bakabase.Abstractions.Models.Input.ResourceSearchOrderInputModel"][];
             keyword?: string;
@@ -18227,6 +18706,12 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Controllers.CollectionRulePreview"];
         };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Controllers.ManagedResourceDisplayOptions]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Controllers.ManagedResourceDisplayOptions"];
+        };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Controllers.MediaLibraryStatistics]": {
             /** Format: int32 */
             code: number;
@@ -18522,6 +19007,7 @@ export interface components {
          * @enum {integer}
          */
         "Microsoft.Extensions.Logging.LogLevel": 0 | 1 | 2 | 3 | 4 | 5 | 6;
+        "Newtonsoft.Json.Linq.JToken": components["schemas"]["Newtonsoft.Json.Linq.JToken"][];
         "System.Enum": Record<string, never>;
         "System.IntPtr": Record<string, never>;
         "System.ModuleHandle": {
@@ -29713,6 +30199,701 @@ export interface operations {
             };
         };
     };
+    GetManagedResourceDisplayOptions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Controllers.ManagedResourceDisplayOptions]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Controllers.ManagedResourceDisplayOptions]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Controllers.ManagedResourceDisplayOptions]"];
+                };
+            };
+        };
+    };
+    PatchManagedResourceDisplayOptions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.ManagedResourceDisplayOptionsPatch"];
+                "application/json": components["schemas"]["Bakabase.Service.Controllers.ManagedResourceDisplayOptionsPatch"];
+                "text/json": components["schemas"]["Bakabase.Service.Controllers.ManagedResourceDisplayOptionsPatch"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.ManagedResourceDisplayOptionsPatch"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GetManagedLibrarySources: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bakabase.Service.Components.Federation.ManagedLibrarySources"];
+                    "application/json": components["schemas"]["Bakabase.Service.Components.Federation.ManagedLibrarySources"];
+                    "text/json": components["schemas"]["Bakabase.Service.Components.Federation.ManagedLibrarySources"];
+                };
+            };
+        };
+    };
+    RequestManagedLibrary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                serverId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Components.Federation.ManagedLibraryRequest"];
+                "application/json": components["schemas"]["Bakabase.Service.Components.Federation.ManagedLibraryRequest"];
+                "text/json": components["schemas"]["Bakabase.Service.Components.Federation.ManagedLibraryRequest"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Components.Federation.ManagedLibraryRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UploadManagedLibraryFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                serverId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Components.Federation.ManagedLibraryRequest"];
+                "application/json": components["schemas"]["Bakabase.Service.Components.Federation.ManagedLibraryRequest"];
+                "text/json": components["schemas"]["Bakabase.Service.Components.Federation.ManagedLibraryRequest"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Components.Federation.ManagedLibraryRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GetManagedResourceBrowserFiles: {
+        parameters: {
+            query?: {
+                offset?: number;
+                pageSize?: number;
+                scope?: string;
+                initialPath?: string;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlayManagedResourceBrowserFile: {
+        parameters: {
+            query?: {
+                key?: string;
+                /** @description [1: Manual, 2: FileSystem, 3: Steam, 4: DLsite, 5: ExHentai, 6: ExternalIdentity] */
+                origin?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.DataOrigin"];
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ValidateManagedResourceNativeFallback: {
+        parameters: {
+            query?: {
+                key?: string;
+                /** @description [1: Manual, 2: FileSystem, 3: Steam, 4: DLsite, 5: ExHentai, 6: ExternalIdentity] */
+                origin?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.DataOrigin"];
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GetManagedLibraryCover: {
+        parameters: {
+            query?: {
+                libraryEpoch?: string;
+                resourceId?: number;
+                index?: number;
+                w?: number;
+                h?: number;
+            };
+            header?: never;
+            path: {
+                serverId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    InspectManagedLibraryCover: {
+        parameters: {
+            query?: {
+                libraryEpoch?: string;
+                resourceId?: number;
+                index?: number;
+                w?: number;
+                h?: number;
+            };
+            header?: never;
+            path: {
+                serverId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GetManagedLibraryAsset: {
+        parameters: {
+            query?: {
+                libraryEpoch?: string;
+                resourceId?: number;
+                key?: string;
+                thumbnail?: boolean;
+                w?: number;
+                h?: number;
+            };
+            header?: never;
+            path: {
+                serverId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    InspectManagedLibraryAsset: {
+        parameters: {
+            query?: {
+                libraryEpoch?: string;
+                resourceId?: number;
+                key?: string;
+                thumbnail?: boolean;
+                w?: number;
+                h?: number;
+            };
+            header?: never;
+            path: {
+                serverId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GetManagedLibraryInfo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bakabase.Service.Components.Federation.ManagedLibraryInfo"];
+                    "application/json": components["schemas"]["Bakabase.Service.Components.Federation.ManagedLibraryInfo"];
+                    "text/json": components["schemas"]["Bakabase.Service.Components.Federation.ManagedLibraryInfo"];
+                };
+            };
+        };
+    };
+    GetManagedLibraryBatchPlayCandidates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                serverId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.ManagedLibraryBatchRequest"];
+                "application/json": components["schemas"]["Bakabase.Service.Controllers.ManagedLibraryBatchRequest"];
+                "text/json": components["schemas"]["Bakabase.Service.Controllers.ManagedLibraryBatchRequest"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.ManagedLibraryBatchRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    BatchPlayManagedLibraryResources: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                serverId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.ManagedLibraryBatchRequest"];
+                "application/json": components["schemas"]["Bakabase.Service.Controllers.ManagedLibraryBatchRequest"];
+                "text/json": components["schemas"]["Bakabase.Service.Controllers.ManagedLibraryBatchRequest"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.ManagedLibraryBatchRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlayManagedLibraryResource: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                serverId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.ManagedLibraryPlayRequest"];
+                "application/json": components["schemas"]["Bakabase.Service.Controllers.ManagedLibraryPlayRequest"];
+                "text/json": components["schemas"]["Bakabase.Service.Controllers.ManagedLibraryPlayRequest"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.ManagedLibraryPlayRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OpenManagedLibraryResourceDirectory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                serverId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.ManagedLibraryDirectoryRequest"];
+                "application/json": components["schemas"]["Bakabase.Service.Controllers.ManagedLibraryDirectoryRequest"];
+                "text/json": components["schemas"]["Bakabase.Service.Controllers.ManagedLibraryDirectoryRequest"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.ManagedLibraryDirectoryRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StreamManagedLibraryMedia: {
+        parameters: {
+            query?: {
+                libraryEpoch?: string;
+                resourceId?: number;
+                /** @description [1: Manual, 2: FileSystem, 3: Steam, 4: DLsite, 5: ExHentai, 6: ExternalIdentity] */
+                origin?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.DataOrigin"];
+                key?: string;
+            };
+            header?: never;
+            path: {
+                serverId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    InspectManagedLibraryMedia: {
+        parameters: {
+            query?: {
+                libraryEpoch?: string;
+                resourceId?: number;
+                /** @description [1: Manual, 2: FileSystem, 3: Steam, 4: DLsite, 5: ExHentai, 6: ExternalIdentity] */
+                origin?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.DataOrigin"];
+                key?: string;
+            };
+            header?: never;
+            path: {
+                serverId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PreviewManagedCustomPropertyConversion: {
+        parameters: {
+            query?: {
+                /** @description [1: SingleLineText, 2: MultilineText, 3: SingleChoice, 4: MultipleChoice, 5: Number, 6: Percentage, 7: Rating, 8: Boolean, 9: Link, 10: Attachment, 11: Date, 12: DateTime, 13: Time, 14: Formula, 15: Multilevel, 16: Tags] */
+                targetType?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyType"];
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SearchManagedResourcePaths: {
+        parameters: {
+            query?: {
+                keyword?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UploadManagedResourceAttachment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.ManagedFileUploadInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Controllers.ManagedFileUploadInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Controllers.ManagedFileUploadInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.ManagedFileUploadInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UploadManagedResourceTorrent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.ManagedFileUploadInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Controllers.ManagedFileUploadInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Controllers.ManagedFileUploadInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.ManagedFileUploadInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GetManagedResourceCovers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GetManagedResourceCover: {
+        parameters: {
+            query?: {
+                index?: number;
+                w?: number;
+                h?: number;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GetManagedResourceAsset: {
+        parameters: {
+            query?: {
+                key?: string;
+                thumbnail?: boolean;
+                w?: number;
+                h?: number;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GetManagedResourcePreviewerItems: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GetManagedResourceChildren: {
+        parameters: {
+            query?: {
+                root?: string;
+                showHiddenFiles?: boolean;
+                cursor?: string;
+                pageSize?: number;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     GetAllMediaLibraryResourceMappings: {
         parameters: {
             query?: never;
@@ -34631,6 +35812,37 @@ export interface operations {
                 "application/json": components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.FilterDisplayMode"];
                 "text/json": components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.FilterDisplayMode"];
                 "application/*+json": components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.FilterDisplayMode"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    PutSavedSearchCriteria: {
+        parameters: {
+            query?: {
+                id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
             };
         };
         responses: {

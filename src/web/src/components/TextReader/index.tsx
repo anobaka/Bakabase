@@ -11,12 +11,21 @@ import "./index.scss";
 
 interface TextReaderProps {
   file?: string;
+  /** An owner-bound URL supplied by a managed resource player. */
+  sourceUrl?: string;
   style?: React.CSSProperties;
   onLoad?: () => void;
   onError?: (error: string) => void;
   className?: string;
 }
-const TextReader = ({ file, style, onLoad, onError, className = "" }: TextReaderProps) => {
+const TextReader = ({
+  file,
+  sourceUrl,
+  style,
+  onLoad,
+  onError,
+  className = "",
+}: TextReaderProps) => {
   const { t } = useTranslation();
   const [preview, setPreview] = useState<TextPreview>();
   const [loading, setLoading] = useState(true);
@@ -67,16 +76,16 @@ const TextReader = ({ file, style, onLoad, onError, className = "" }: TextReader
     setError(undefined);
     setPreview(undefined);
     setScrollTop(0);
-    if (!file) {
+    if (!file && !sourceUrl) {
       setLoading(false);
       clearTimeout(timer);
 
       return;
     }
-    const route = file.includes("!") ? "play" : "raw";
+    const route = file?.includes("!") ? "play" : "raw";
 
     void readTextPreview(
-      `${envConfig.apiEndpoint}/file/${route}?fullname=${encodeURIComponent(file)}`,
+      sourceUrl ?? `${envConfig.apiEndpoint}/file/${route}?fullname=${encodeURIComponent(file!)}`,
       controller.signal,
       encoding,
     )
@@ -105,7 +114,7 @@ const TextReader = ({ file, style, onLoad, onError, className = "" }: TextReader
       clearTimeout(timer);
       controller.abort();
     };
-  }, [file, encoding, attempt, t]);
+  }, [file, sourceUrl, encoding, attempt, t]);
   const lines = useMemo(() => preview?.text.split("\n") ?? [], [preview]);
   const lineHeight = Math.round(fontSize * 1.6);
   const layout = useMemo(

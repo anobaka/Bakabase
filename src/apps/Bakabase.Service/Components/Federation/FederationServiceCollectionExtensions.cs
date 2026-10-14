@@ -34,6 +34,7 @@ public static class FederationServiceCollectionExtensions
         services.AddScoped<FederationResourceService>();
         services.AddScoped<FederationMediaService>();
         services.AddScoped<ResourceProfileSourceReader>();
+        services.AddScoped<ManagedLibraryService>();
         services.AddScoped<SourceResourceProfileService>();
         services.AddScoped<ISourceResourceProfilePlaybackService>(sp => sp.GetRequiredService<SourceResourceProfileService>());
         services.AddScoped<FederationDirectoryService>();
@@ -60,6 +61,7 @@ public static class FederationServiceCollectionExtensions
         services.AddHostedService<FederationRemoteModeMonitor>();
         services.Configure<MvcOptions>(options => options.Filters.Add<FederationLocalAccessFilter>());
         services.Configure<MvcOptions>(options => options.Filters.Add<FederationExceptionFilter>());
+        services.Configure<MvcOptions>(options => options.Filters.Add<ManagedLibraryEpochFilter>());
         return services;
     }
 }

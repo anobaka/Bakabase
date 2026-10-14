@@ -31,7 +31,7 @@ import type { SerializedStandardValue } from "@/components/StandardValue";
 
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import PropertyModal from "@/components/PropertyModal";
-import BApi from "@/sdk/BApi";
+import { useResourceApi } from "@/features/management/resourceContext";
 
 interface Props extends DestroyableProps {
   property: IProperty;
@@ -48,6 +48,7 @@ const PropertyValueEditorModal: React.FC<Props> = ({
   onDestroyed,
 }) => {
   const { t } = useTranslation();
+  const BApi = useResourceApi();
   const { createPortal } = useBakabaseContext();
   const isReference = isReferenceValueType(initialProperty.type);
 

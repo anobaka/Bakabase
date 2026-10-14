@@ -9,7 +9,9 @@ vi.mock("@/components/Resource/components/PlayControl/DesktopPlaybackGuide", () 
   DesktopPlaybackGuideButton: () => <button>desktop playback guide</button>,
 }));
 vi.mock("@/components/bakaui", () => ({ Spinner: () => <span data-testid="spinner" /> }));
-vi.mock("@/components/TextReader", () => ({ default: () => <div>text-preview</div> }));
+vi.mock("@/components/TextReader", () => ({
+  default: ({ sourceUrl }: any) => <div data-source={sourceUrl}>text-preview</div>,
+}));
 vi.mock("react-i18next", () => {
   const t = (key: string) => key;
 
@@ -19,6 +21,7 @@ const entry = (path = "/film/main.mkv") => ({
   path,
   playPath: path,
   name: path.split("/").pop()!,
+  meaningfulName: path.split("/").pop()!,
   type: IwFsType.Unknown,
   passwordsForDecompressing: [],
 });
@@ -36,6 +39,31 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 describe("browser media delivery", () => {
+  it.each([MediaType.Image, MediaType.Audio, MediaType.Video])(
+    "uses the owner-bound media URL instead of a manager file path (%s)",
+    (type) => {
+      const url =
+        "/federation/local/management/owner/media?libraryEpoch=epoch&resourceId=42&key=remote-file";
+      const { container } = render(
+        <MediaRenderer {...props} entry={{ ...entry(), mediaUrl: url }} mediaType={type} />,
+      );
+
+      expect(container.querySelector("img, audio, video")).toHaveAttribute("src", url);
+    },
+  );
+  it("passes the owner-bound URL to text previews while retaining the logical filename", () => {
+    const url =
+      "/federation/local/management/owner/media?libraryEpoch=epoch&resourceId=42&key=remote-file";
+
+    render(
+      <MediaRenderer
+        {...props}
+        entry={{ ...entry("/remote/info.txt"), mediaUrl: url }}
+        mediaType={MediaType.Text}
+      />,
+    );
+    expect(screen.getByText("text-preview")).toHaveAttribute("data-source", url);
+  });
   it("reports actual delivery results per item and keeps a failed item retryable", async () => {
     const state = vi.fn();
     const alternative = vi.fn();

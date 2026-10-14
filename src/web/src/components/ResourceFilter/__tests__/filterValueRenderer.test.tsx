@@ -14,11 +14,12 @@ const state = vi.hoisted(() => ({
   filteredCounts: undefined as Record<string, number> | undefined,
   globalStatus: { loading: false, error: false, stale: false },
   filteredStatus: { loading: false, error: false, stale: false },
-  search: undefined as { keyword: string } | undefined,
+  search: undefined as { keyword?: string; deviceIds?: string[] | null } | undefined,
   rendererProps: undefined as Props | undefined,
 }));
 
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
+vi.mock("@/features/management/resourceContext", () => ({ useResourceOwnerKey: () => "local" }));
 vi.mock("@/components/Property/components/PropertyValueRenderer", () => ({
   default: (props: Props) => {
     state.rendererProps = props;
@@ -28,7 +29,8 @@ vi.mock("@/components/Property/components/PropertyValueRenderer", () => ({
 }));
 vi.mock("@/hooks/useReferenceValueResourceCounts", () => ({
   useReferenceValueSearch: () => state.search,
-  referenceValueCountsCriteria: (search?: { keyword: string }) => search ?? {},
+  referenceValueCountsCriteria: (search?: { keyword?: string }) =>
+    search ? { keyword: search.keyword } : {},
   useReferenceValueResourceCounts: (property?: unknown, search?: unknown) => ({
     counts: property ? (search ? state.filteredCounts : state.globalCounts) : undefined,
     ...(search ? state.filteredStatus : state.globalStatus),
@@ -124,6 +126,14 @@ afterEach(async () => {
 });
 
 describe("filter value renderer", () => {
+  it("uses global counts when an unset device filter restores as null", async () => {
+    state.search = { deviceIds: null };
+    state.globalCounts = { choice: 7 };
+    state.filteredCounts = { choice: 0 };
+    await act(async () => root.render(<FilterValueRenderer property={property} />));
+    expect(extra("choice").textContent).toBe("(7)");
+  });
+
   it("shows no counts or status row for ordinary properties", async () => {
     await act(async () =>
       root.render(

@@ -6,7 +6,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { EditOutlined, LayoutOutlined, SearchOutlined } from "@ant-design/icons";
 
-import BApi from "@/sdk/BApi";
+import { useResourceApi } from "@/features/management/resourceContext";
 import {
   Accordion,
   AccordionItem,
@@ -82,6 +82,7 @@ const DataCardAssociationPanel = ({
   onBeforeNavigateToSearch,
 }: DataCardAssociationPanelProps) => {
   const { t } = useTranslation();
+  const BApi = useResourceApi();
   const { createPortal } = useBakabaseContext();
   const { canSearch, triggerSearch } = useSearchByDataCard();
   const [cards, setCards] = useState<DataCardItem[]>([]);

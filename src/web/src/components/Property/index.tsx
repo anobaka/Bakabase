@@ -14,7 +14,7 @@ import Label from "./components/Label";
 
 import PropertyModal from "@/components/PropertyModal";
 import { Button, Chip, Modal, Tooltip } from "@/components/bakaui";
-import BApi from "@/sdk/BApi";
+import { useResourceApi } from "@/features/management/resourceContext";
 import { PropertyPool, PropertyType } from "@/sdk/constants";
 import PropertyTypeIcon from "@/components/Property/components/PropertyTypeIcon";
 
@@ -44,6 +44,7 @@ const Property = ({
   ...props
 }: Props) => {
   const { t } = useTranslation();
+  const BApi = useResourceApi();
 
   const [removeConfirmingDialogVisible, setRemoveConfirmingDialogVisible] = useState(false);
   const { createPortal } = useBakabaseContext();

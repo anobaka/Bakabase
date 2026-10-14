@@ -11,7 +11,7 @@ import { AiOutlinePlusCircle } from "react-icons/ai";
 
 import ScopePreferencePopover from "./ScopePreferencePopover";
 
-import BApi from "@/sdk/BApi";
+import { useResourceApi } from "@/features/management/resourceContext";
 import { propertyValueScopes, PropertyType } from "@/sdk/constants";
 import { selectScopedValue } from "@/core/models/Resource";
 import PropertyValueRenderer from "@/components/Property/components/PropertyValueRenderer";
@@ -41,6 +41,7 @@ export type PropertyContainerProps = {
 
 const log = buildLogger("PropertyContainer");
 const PropertyContainer = (props: PropertyContainerProps) => {
+  const BApi = useResourceApi();
   const forceUpdate = useUpdate();
 
   log(props);

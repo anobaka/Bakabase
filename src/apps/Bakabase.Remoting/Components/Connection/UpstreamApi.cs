@@ -24,6 +24,9 @@ public interface IUpstreamApi
     /// <summary>Null when the server did not answer or does not know that id.</summary>
     Task<UpstreamResource?> GetResourceAsync(int id, CancellationToken ct = default);
 
+    Task<UpstreamResource?> GetResourceForEpochAsync(int id, string? libraryEpoch, CancellationToken ct = default) =>
+        string.IsNullOrEmpty(libraryEpoch) ? GetResourceAsync(id, ct) : Task.FromResult<UpstreamResource?>(null);
+
     /// <summary>
     /// The players configured for this resource. Null when the server did not answer;
     /// a resource with none configured answers with an empty list, which is a different
@@ -37,6 +40,10 @@ public interface IUpstreamApi
     /// than a missing history entry.
     /// </summary>
     Task MarkPlayedAsync(int id, string item, CancellationToken ct = default);
+
+    /// <summary>Records history only in the selected source library incarnation.</summary>
+    Task MarkPlayedForEpochAsync(int id, string item, string? libraryEpoch, CancellationToken ct = default) =>
+        MarkPlayedAsync(id, item, ct);
 
     /// <summary>Where an AIGC artifact's file is, as the server sees it.</summary>
     Task<string?> GetAigcArtifactPathAsync(int id, CancellationToken ct = default);
@@ -59,6 +66,10 @@ public interface IUpstreamApi
     /// </summary>
     Task<BatchPlayResourceSnapshot?> GetBatchPlayResourceSnapshotAsync(int[] resourceIds,
         CancellationToken ct = default);
+
+    Task<BatchPlayResourceSnapshot?> GetBatchPlayResourceSnapshotForEpochAsync(int[] resourceIds, string? libraryEpoch,
+        CancellationToken ct = default) => string.IsNullOrEmpty(libraryEpoch)
+        ? GetBatchPlayResourceSnapshotAsync(resourceIds, ct) : Task.FromResult<BatchPlayResourceSnapshot?>(null);
 
     /// <summary>
     /// A playlist resolved to the files it would play. Null when the server did not
@@ -99,11 +110,21 @@ public sealed class UpstreamApi(HttpClient http, IUpstreamTarget target) : IUpst
         return resources?.FirstOrDefault(r => r.Id == id);
     }
 
+    public async Task<UpstreamResource?> GetResourceForEpochAsync(int id, string? libraryEpoch, CancellationToken ct = default)
+    {
+        var resources = await ReadAsync<List<UpstreamResource>>($"/resource/keys?ids={id}" +
+            (string.IsNullOrEmpty(libraryEpoch) ? "" : "&managedLibraryEpoch=" + Uri.EscapeDataString(libraryEpoch)), ct);
+        return resources?.FirstOrDefault(r => r.Id == id);
+    }
+
     public async Task<ResourceProfilePlayerOptions?> GetEffectivePlayerOptionsAsync(int id,
         CancellationToken ct = default) =>
         await ReadAsync<ResourceProfilePlayerOptions>($"/resource/{id}/effective-player-options", ct);
 
-    public async Task MarkPlayedAsync(int id, string item, CancellationToken ct = default)
+    public Task MarkPlayedAsync(int id, string item, CancellationToken ct = default) =>
+        MarkPlayedForEpochAsync(id, item, null, ct);
+
+    public async Task MarkPlayedForEpochAsync(int id, string item, string? libraryEpoch, CancellationToken ct = default)
     {
         var destination = target.BaseAddress;
 
@@ -115,7 +136,8 @@ public sealed class UpstreamApi(HttpClient http, IUpstreamTarget target) : IUpst
         try
         {
             await http.PostAsync(
-                new Uri(root, $"/resource/{id}/played-at?item={Uri.EscapeDataString(item)}"), null, ct);
+                new Uri(root, $"/resource/{id}/played-at?item={Uri.EscapeDataString(item)}" +
+                    (string.IsNullOrEmpty(libraryEpoch) ? "" : "&managedLibraryEpoch=" + Uri.EscapeDataString(libraryEpoch))), null, ct);
         }
         catch (Exception e) when (e is HttpRequestException or TaskCanceledException && !ct.IsCancellationRequested)
         {
@@ -142,6 +164,12 @@ public sealed class UpstreamApi(HttpClient http, IUpstreamTarget target) : IUpst
     public async Task<BatchPlayResourceSnapshot?> GetBatchPlayResourceSnapshotAsync(int[] resourceIds,
         CancellationToken ct = default) =>
         await PostAsync<BatchPlayResourceSnapshot>("/player/batch-play/resource-snapshot",
+            new {resourceIds}, ct);
+
+    public async Task<BatchPlayResourceSnapshot?> GetBatchPlayResourceSnapshotForEpochAsync(int[] resourceIds,
+        string? libraryEpoch, CancellationToken ct = default) =>
+        await PostAsync<BatchPlayResourceSnapshot>("/player/batch-play/resource-snapshot" +
+            (string.IsNullOrEmpty(libraryEpoch) ? "" : "?managedLibraryEpoch=" + Uri.EscapeDataString(libraryEpoch)),
             new {resourceIds}, ct);
 
     public async Task<UpstreamPlaylistSnapshot?> GetBatchPlayPlaylistSnapshotAsync(int playlistId,

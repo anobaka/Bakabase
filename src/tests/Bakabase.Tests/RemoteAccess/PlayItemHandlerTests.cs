@@ -211,6 +211,28 @@ public class PlayItemHandlerTests
         Assert.AreEqual(Path.Combine(folder, "movie.mp4"), _shell.Launched.Single());
     }
 
+    [DataTestMethod]
+    [DataRow("photo.png")]
+    [DataRow("notes.txt")]
+    public async Task ExplicitMappedFileCanUseTheSystemDefaultWithoutConfiguredPlayableCandidates(string fileName)
+    {
+        var folder = await WithLibraryAt("/srv");
+        var local = Path.Combine(folder, fileName);
+        await File.WriteAllTextAsync(local, "fixture");
+        _upstream.PlayableItems = [];
+        _upstream.PlayerOptions = null;
+        var profiles = new StubSourceResourceProfiles();
+        profiles.Matches[42] = new() {OpeningMode = "browser"};
+
+        var context = Request("?explicitChoice=true&managedLibraryEpoch=owner-epoch");
+        Assert.IsTrue(await Playback(profiles).PlayAsync(context, 42, DataOrigin.FileSystem, "/srv/" + fileName));
+
+        Assert.AreEqual(200, Read(context).Status);
+        CollectionAssert.AreEqual(new[] {local}, _shell.Launched);
+        Assert.AreEqual(0, _shell.Processes.Count);
+        Assert.AreEqual((42, "FileSystem:/srv/" + fileName), _upstream.Played.Single());
+    }
+
     [TestMethod]
     public async Task UnavailableLocalProfileMatchingNeverSilentlyLaunchesTheSourcePlayer()
     {

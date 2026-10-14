@@ -168,7 +168,10 @@ public sealed class FederationAccessMiddleware(RequestDelegate next)
 
     private static async Task<string> BoundBodyAsync(HttpContext context, bool hash)
     {
-        const int max = NodeRequestSignature.MaxControlBodyBytes;
+        var segments = context.Request.Path.Value?.Split('/', StringSplitOptions.RemoveEmptyEntries) ?? [];
+        var upload = !hash && segments.Length == 5 && segments[0] == "federation" && segments[1] == "local" &&
+            segments[2] == "management" && NodeRequestSignature.IsIdentifier(segments[3]) && segments[4] == "upload";
+        var max = upload ? ManagedLibraryOperations.MaximumUploadEnvelopeBytes : NodeRequestSignature.MaxControlBodyBytes;
         if (context.Request.ContentLength > max)
             throw new FederationAccessException("RequestTooLarge", 413, "The node control request is too large.");
         context.Request.EnableBuffering(bufferThreshold: 30 * 1024, bufferLimit: max + 1L);

@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next";
 
 import { Input, NumberInput } from "@/components/bakaui";
 import SortablePlaylistItemList from "@/components/Playlist/Detail/components/SortablePlaylistItemList";
-import BApi from "@/sdk/BApi";
+import { useResourceApi } from "@/features/management/resourceContext";
 
 type PlayList =
   components["schemas"]["Bakabase.InsideWorld.Business.Components.PlayList.Models.Domain.PlayList"];
@@ -21,6 +21,7 @@ interface ResourceMap {
   [key: number]: any;
 }
 const Detail = ({ id, onChange }: PlaylistDetailProps) => {
+  const BApi = useResourceApi();
   const { t } = useTranslation();
   const [playlist, setPlaylist] = useState<PlayList | null>(null);
   const [resourceMap, setResourceMap] = useState<ResourceMap>({});
@@ -34,6 +35,7 @@ const Detail = ({ id, onChange }: PlaylistDetailProps) => {
       try {
         setLoading(true);
         setError(null);
+        setResourceMap({});
 
         const playlistResponse = await BApi.playlist.getPlaylist(id);
         const pl = playlistResponse.data;
@@ -86,7 +88,7 @@ const Detail = ({ id, onChange }: PlaylistDetailProps) => {
     return () => {
       isMounted = false;
     };
-  }, [id]);
+  }, [id, BApi]);
 
   const patchPlaylist = useCallback(
     (patches: Partial<PlayList> = {}) => {

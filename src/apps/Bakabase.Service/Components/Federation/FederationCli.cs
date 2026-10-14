@@ -28,8 +28,8 @@ public static class FederationCli
           reject <requestId>  Reject a pending request
           revoke <grantId>    Stop a device from reading this library
           new-identity        For a copy of another installation's data: make this a new device
-                              (devices paired to manage it and library sharing are dropped;
-                              library data is kept)
+                              (incoming management, saved managed servers and sharing are dropped
+                              locally; the original installation and library data are kept)
           datasync <command>  Definitions sharing (run 'federation datasync' for its commands)
         The port defaults to API_LISTENING_PORTS, ASPNETCORE_HTTP_PORTS, then 8080.
         """;
@@ -59,8 +59,8 @@ public static class FederationCli
                 ("approve", 2) => await http.PostAsync($"requests/{Uri.EscapeDataString(arguments[1])}/approve", null),
                 ("reject", 2) => await http.PostAsync($"requests/{Uri.EscapeDataString(arguments[1])}/reject", null),
                 ("revoke", 2) => await http.DeleteAsync($"grants/{Uri.EscapeDataString(arguments[1])}"),
-                // The devices page's "Make this a new device", which a headless server's
-                // own UI — only ever reached from another device — cannot offer.
+                // Use the running host's same reset path: it also forgets outbound managed
+                // connections locally without revoking credentials used by the original copy.
                 ("new-identity", 1) => await http.PostAsJsonAsync("identity/reset",
                     new { asNewNode = true, replaceInstallIdentity = true }),
                 _ => null

@@ -5,6 +5,15 @@ Every desktop install (and a headless NAS/Docker Service) can share its own libr
 central server and no database replication: each node answers for its own resources and the
 current device merges results.
 
+This is the read-only sharing protocol. Separately, explicit administrator pairing supports
+unified resource/property/media-library management from both desktop and pure Service hosts;
+see `server-switching.md`. Those operations use the paired-device connection core and keep
+owner IDs/epochs separate. Do not promote a `library.read` or `datasync.read` grant into
+management rights or add writes to the read-only export protocol. Existing data sync copies
+custom-property definitions/options and extension groups, not resource metadata or media-library
+membership. The unified manager currently reads bounded online pages rather than syncing a
+full resource database.
+
 ## Where things live
 
 | Concern | Location |
@@ -125,8 +134,8 @@ request, and acts through the same endpoints and confirmations.
   against an id. Two devices of one name that stay apart — an id on either side, or a name
   more than one device has — each say they **may be the same device** as the other
   (`MapNode.namesakes`, the panel's note, with a way to the other): said on both, never drawn
-  as one. Not where what they said of themselves rules it out — a headless server never
-  manages anything, a phone is not a desktop app, another OS is another machine — and never
+  as one. Not where what they said of themselves rules it out — another OS is another
+  machine — and never
   for a request's claim, which says whom it claims to be instead. The note names each other
   record by what it is to this device — the device that manages this one, the one sharing its
   library, one found nearby… — and its address, else its platform (`namesakeDescription`), in
@@ -256,11 +265,12 @@ request, and acts through the same endpoints and confirmations.
 
 ## Invariants — do not weaken
 
-- **The federated view is read-only.** Through `/federation/*` a device browses, searches, views
+- **The shared-library view is read-only.** Through `/federation/v1/*` a device browses, searches, views
   and plays other devices' resources; it never edits, deletes, moves or runs tasks on them.
-  Managing another server is a different feature with a different credential: the desktop app
-  switches its window to that server's own UI through a signed loopback relay using the legacy
-  `Bakabase-Device` pairing (see `server-switching.md`). Never route management through the node
+  Managing another server is a different feature with a different credential: desktop and
+  headless managers use `/federation/local/management` and the legacy `Bakabase-Device`
+  pairing; desktop apps additionally offer full-view switching through a signed loopback relay
+  (see `server-switching.md`). Never route management through the node
   protocol, and never let an admin device key travel on `/federation/v1`.
 
 - **Two interfaces, never mixed.** `/federation/local/*` is for this device's own UI: real
@@ -406,8 +416,9 @@ node; `--federation-invite-on-start` prints a one-time code. The running instanc
 `docker exec <c> dotnet Bakabase.Service.dll federation <status|share on|off|invite|approve|reject|revoke|new-identity>`,
 which only calls its loopback API. `new-identity` is the devices page's "Make this a new device"
 (Advanced → After copying or restoring data), for a copied data directory. The headless
-server's browser UI also offers Multi-device → Devices and sharing and the read-only merged
-library/map to administrators. Data sync is a child of Multi-device in every window, including
+server's browser UI also offers Resources → All devices for paired management, plus
+Multi-device → Devices and sharing and the separate read-only shared-library view/map to
+administrators. Data sync is a child of Multi-device in every window, including
 a desktop relay; relay windows still direct library/map access back to their local device. Data sync's counterparts —
 `BAKABASE_DATASYNC_SHARING=true` (definitions sharing on at every start) and
 `federation datasync <command>` — are in `data-sync.md` ("Headless").

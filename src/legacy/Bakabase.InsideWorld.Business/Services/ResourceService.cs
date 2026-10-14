@@ -957,8 +957,8 @@ namespace Bakabase.InsideWorld.Business.Services
         /// Gets the scope priority map for sorting property values.
         /// </summary>
         private Dictionary<int, int> GetScopePriorityMap() =>
-            _optionsManager.Value.PropertyValueScopePriority.Cast<int>()
-                .Select((x, i) => (Scope: x, Index: i)).ToDictionary(d => d.Scope, d => d.Index);
+            BuildScopePriorityMap(PropertyValueScopeResolver.NormalizeGlobalPriority(
+                _optionsManager.Value.PropertyValueScopePriority).ToArray());
 
         private static Dictionary<int, int> BuildScopePriorityMap(PropertyValueScope[] scopes) =>
             scopes.Cast<int>().Select((x, i) => (Scope: x, Index: i)).ToDictionary(d => d.Scope, d => d.Index);
@@ -984,12 +984,16 @@ namespace Bakabase.InsideWorld.Business.Services
             Dictionary<(int Pool, int Id), Dictionary<int, int>>? perPropertyMaps = null;
             if (propertyOptions?.Properties != null)
             {
+                var globalPriority = globalScopePriorityMap.OrderBy(p => p.Value)
+                    .Select(p => (PropertyValueScope)p.Key).ToArray();
                 foreach (var prop in propertyOptions.Properties)
                 {
                     if (prop.ScopePriority is { Length: > 0 })
                     {
                         perPropertyMaps ??= new Dictionary<(int Pool, int Id), Dictionary<int, int>>();
-                        perPropertyMaps[((int)prop.Pool, prop.Id)] = BuildScopePriorityMap(prop.ScopePriority);
+                        perPropertyMaps[((int)prop.Pool, prop.Id)] = BuildScopePriorityMap(
+                            PropertyValueScopeResolver.BuildEffectiveScopePriority(globalPriority, null,
+                                prop.ScopePriority).ToArray());
                     }
                 }
             }

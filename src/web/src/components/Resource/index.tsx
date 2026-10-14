@@ -9,10 +9,10 @@ import type {
   PropertyValueScopePreference,
 } from "@/core/models/Resource";
 import type { TagValue } from "@/components/StandardValue/models";
-import type {
-  PlayControlRef,
-} from "@/components/Resource/components/PlayControl";
+import type { PlayControlRef } from "@/components/Resource/components/PlayControl";
 import type { PropertyType } from "@/sdk/constants";
+import type { OwnerResourceSelection } from "@/features/management/resourceSelection";
+import type { ManagementSource } from "@/features/management/api";
 
 import React, { useCallback, useImperativeHandle, useMemo, useReducer, useRef } from "react";
 import { useTranslation } from "react-i18next";
@@ -36,8 +36,13 @@ import "./index.css";
 import ResourceDetailModal from "@/components/Resource/components/DetailModal";
 import HealthScoreDiagnosisModal from "@/components/Resource/components/HealthScoreDiagnosisModal";
 import HealthScoreBadge from "@/components/HealthScoreBadge";
-import BApi from "@/sdk/BApi";
+import {
+  ResourceOwnerProvider,
+  useResourceApi,
+  useResourceOwner,
+} from "@/features/management/resourceContext";
 import ResourceCover from "@/components/Resource/components/ResourceCover";
+import { useOwnerResourceDisplayOptions } from "@/features/management/useOwnerResourceDisplayOptions";
 import Operations from "@/components/Resource/components/Operations";
 import { getKnownMoveBlockReason } from "@/components/Resource/resourceMoveEligibility";
 import { useMoveReasonText } from "@/components/ResourceMovePanel/messages";
@@ -112,6 +117,9 @@ type Props = {
   selectedResources?: ResourceModel[];
   selectedResourceIdsRef?: React.RefObject<number[]>;
   selectedResourcesRef?: React.RefObject<ResourceModel[]>;
+  selectedResourceGroups?: OwnerResourceSelection[];
+  onSelectedResourceGroupChanged?: (owner: ManagementSource | undefined, ids: number[]) => any;
+  onResourceGroupDeleted?: (owner: ManagementSource | undefined, ids: number[]) => any;
   onSelectedResourcesChanged?: (ids: number[]) => any;
   /** Called after resources are deleted so the parent can prune them from the list. */
   onResourcesDeleted?: (ids: number[]) => any;
@@ -121,6 +129,10 @@ type Props = {
 };
 
 const Resource = React.forwardRef((props: Props, ref) => {
+  const BApi = useResourceApi();
+  const owner = useResourceOwner();
+  const ownerDisplayOptions = useOwnerResourceDisplayOptions();
+  const isRemoteOwner = !!owner && !owner.isLocal;
   const {
     resource,
     sourceTabId,
@@ -151,10 +163,14 @@ const Resource = React.forwardRef((props: Props, ref) => {
   // so the virtualized grid doesn't re-render them on task pushes.
   const moveReasonText = useMoveReasonText();
   const moveBlockReason = getKnownMoveBlockReason(resource);
-  const movePanelEnabled = useResourceMovePanelStore((state) => state.panelEnabled);
-  const movingTask = useBTasksStore(selectResourceMovingTask(resource.id));
-  const moveReservation = useResourceMovePanelStore(
-    selectPanelResourceReservation(resource.id, resource.path),
+  const movePanelEnabled = useResourceMovePanelStore(
+    (state) => !isRemoteOwner && state.panelEnabled,
+  );
+  const movingTask = useBTasksStore((state) =>
+    isRemoteOwner ? undefined : selectResourceMovingTask(resource.id)(state),
+  );
+  const moveReservation = useResourceMovePanelStore((state) =>
+    isRemoteOwner ? undefined : selectPanelResourceReservation(resource.id, resource.path)(state),
   );
   const moveLocked = !!movingTask || !!moveReservation;
   const moveStatus =
@@ -187,7 +203,9 @@ const Resource = React.forwardRef((props: Props, ref) => {
   );
 
   const valueScopePriority = useMemo<PropertyValueScope[]>(() => {
-    const configured = propertyValueScopePriority;
+    const configured = isRemoteOwner
+      ? ownerDisplayOptions.data?.propertyValueScopePriority
+      : propertyValueScopePriority;
     const vsp =
       configured && configured.length > 0
         ? configured.slice()
@@ -204,7 +222,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
     }
 
     return vsp;
-  }, [propertyValueScopePriority]);
+  }, [propertyValueScopePriority, isRemoteOwner, ownerDisplayOptions.data]);
 
   const scopePreferenceMap = useMemo(() => {
     const map = new Map<string, PropertyValueScopePreference>();
@@ -227,7 +245,9 @@ const Resource = React.forwardRef((props: Props, ref) => {
     };
   }, []);
 
-  const displayPropertyKeys = displayProperties ?? [];
+  const displayPropertyKeys = isRemoteOwner
+    ? (ownerDisplayOptions.data?.uiResource?.displayProperties ?? [])
+    : (displayProperties ?? []);
 
   // Discovery happens automatically via SSE now
 
@@ -276,7 +296,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
   }, [resource, disableCoverClick]);
 
   const renderCover = () => {
-    const elementId = `resource-${resource.id}`;
+    const elementId = `resource-${owner?.serverId ?? "local"}-${resource.id}`;
 
     return (
       <div
@@ -729,6 +749,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
             : ""
       }`}
       data-id={resource.id}
+      data-resource-owner={owner?.serverId}
       style={style}
       onClickCapture={(e) => {
         if (moveLocked) {
@@ -812,6 +833,9 @@ const Resource = React.forwardRef((props: Props, ref) => {
             : [resource.id]
         }
         selectedResourceIds={selectedResourceIds}
+        selectedResourceGroups={props.selectedResourceGroups}
+        onSelectedResourceGroupChanged={props.onSelectedResourceGroupChanged}
+        onResourceGroupDeleted={props.onResourceGroupDeleted}
         selectedResources={selectedResources}
         sourceTabId={sourceTabId}
         sourceTabName={sourceTabName}
@@ -826,7 +850,17 @@ const Resource = React.forwardRef((props: Props, ref) => {
     </div>
   );
 });
-const ResourceMemo = React.memo(Resource);
+const ResourceWithOwner = React.forwardRef((props: Props, ref) => {
+  const inheritedOwner = useResourceOwner();
+  const source = props.resource.owner ?? inheritedOwner;
+
+  return (
+    <ResourceOwnerProvider source={source} resourceId={props.resource.id}>
+      <Resource {...props} ref={ref} />
+    </ResourceOwnerProvider>
+  );
+});
+const ResourceMemo = React.memo(ResourceWithOwner);
 
 ResourceMemo.displayName = "Resource";
 

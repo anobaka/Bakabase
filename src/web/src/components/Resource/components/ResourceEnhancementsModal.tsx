@@ -16,7 +16,7 @@ import {
 } from "@ant-design/icons";
 import { Dayjs } from "dayjs";
 
-import BApi from "@/sdk/BApi";
+import { useResourceApi, useResourceOwner } from "@/features/management/resourceContext";
 import {
   Accordion,
   AccordionItem,
@@ -238,6 +238,7 @@ type EnhancerTabData = {
 };
 
 function ResourceEnhancementsModal({ resourceId, ...props }: Props) {
+  const BApi = useResourceApi();
   const [enhancerTabs, setEnhancerTabs] = useState<EnhancerTabData[]>([]);
   const [resource, setResource] = useState<{
     path: string;
@@ -246,6 +247,11 @@ function ResourceEnhancementsModal({ resourceId, ...props }: Props) {
   });
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const owner = useResourceOwner();
+  const profilePath =
+    owner && !owner.isLocal
+      ? `/resource-profile?sourceDeviceId=${encodeURIComponent(`node:${owner.serverId}:${owner.libraryEpoch}`)}`
+      : "/resource-profile";
   const { createPortal } = useBakabaseContext();
   const [enhancing, setEnhancing] = useState(false);
   const [applyingContext, setApplyingContext] = useState(false);
@@ -516,7 +522,7 @@ function ResourceEnhancementsModal({ resourceId, ...props }: Props) {
             </div>
             <div className={"text-sm"}>{t<string>("enhancer.records.noEnhancers.description")}</div>
           </div>
-          <Button color={"primary"} variant={"flat"} onClick={() => navigate("/resource-profile")}>
+          <Button color={"primary"} variant={"flat"} onClick={() => navigate(profilePath)}>
             {t<string>("enhancer.records.goToProfiles.action")}
           </Button>
         </div>
@@ -560,7 +566,7 @@ function ResourceEnhancementsModal({ resourceId, ...props }: Props) {
                           setEnhancing(false);
                         });
                     }}
-                    onNavigateToProfiles={() => navigate("/resource-profiles")}
+                    onNavigateToProfiles={() => navigate(profilePath)}
                   />
                 ) : (
                   <>
@@ -590,7 +596,7 @@ function ResourceEnhancementsModal({ resourceId, ...props }: Props) {
                               color={"warning"}
                               size={"sm"}
                               variant={"flat"}
-                              onClick={() => navigate("/resource-profiles")}
+                              onClick={() => navigate(profilePath)}
                             >
                               {t<string>("enhancer.records.goToProfiles.action")}
                             </Button>

@@ -21,7 +21,7 @@ import {
 import { Button, Checkbox, Radio, RadioGroup, Select, Tooltip } from "@/components/bakaui";
 import PropertyValueRenderer from "@/components/Property/components/PropertyValueRenderer";
 import { buildLogger } from "@/components/utils";
-import BApi from "@/sdk/BApi";
+import { useResourceApi } from "@/features/management/resourceContext";
 import TypeMismatchTip from "@/pages/bulk-modification/components/BulkModification/ProcessValue/components/TypeMismatchTip";
 import { deserializeStandardValue } from "@/components/StandardValue/helpers";
 import PropertySelector from "@/components/PropertySelector";
@@ -59,6 +59,7 @@ const Editor = (props: Props) => {
     availableValueTypes,
   } = props;
   const { t } = useTranslation();
+  const BApi = useResourceApi();
   const { createPortal } = useBakabaseContext();
 
   const [propertyTypesForManuallySettingValue, setPropertyTypesForManuallySettingValue] = useState<

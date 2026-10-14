@@ -4,7 +4,18 @@ import type { SearchForm } from "@/pages/resource/models";
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 
-import BApi from "@/sdk/BApi";
+import type BApi from "@/sdk/BApi";
+import {
+  useResourceApi,
+  useResourceOwner,
+  useResourceOwnerKey,
+} from "@/features/management/resourceContext";
+import {
+  createResourceApi,
+  subscribeResourceOwnerChanges,
+} from "@/features/management/resourceApi";
+import { useResourceSources } from "@/features/management/resourceSourcesContext";
+import { compileResourceQuery } from "@/features/management/resourceQuery";
 import { ContentType } from "@/sdk/Api";
 import { InternalProperty, PropertyPool } from "@/sdk/constants";
 import { isReferenceValueType } from "@/components/Property/PropertySystem";
@@ -34,32 +45,50 @@ export function referenceValueCountsCriteria(search?: SearchForm) {
   return { group, keyword, tags };
 }
 
-function loadCounts(key: string, property: ReferenceProperty, criteria: object) {
+function loadCounts(key: string, load: () => Promise<CountsResponse>) {
   let request = pending.get(key);
 
   if (!request) {
-    request = BApi.request<{ code?: number; data?: CountsResponse; message?: string }, unknown>({
-      path: `/property/pool/${property.pool}/id/${property.id}/value-resource-counts`,
-      method: "POST",
-      type: ContentType.Json,
-      body: criteria,
-      format: "json",
-    })
-      .then((response) => {
-        if (response.code || !response.data)
-          throw new Error(response.message || "Failed to load resource counts");
-
-        return response.data;
-      })
-      .finally(() => pending.delete(key));
+    request = load().finally(() => pending.delete(key));
     pending.set(key, request);
   }
 
   return request;
 }
 
+async function requestCounts(property: ReferenceProperty, criteria: object, api: typeof BApi) {
+  const response = await api.request<
+    { code?: number; data?: CountsResponse; message?: string },
+    unknown
+  >({
+    path: `/property/pool/${property.pool}/id/${property.id}/value-resource-counts`,
+    method: "POST",
+    type: ContentType.Json,
+    body: criteria,
+    format: "json",
+  });
+  if (response.code || !response.data)
+    throw new Error(response.message || "Failed to load resource counts");
+
+  return response.data;
+}
+
 /** One request per property, with shared in-flight requests and debounced criteria. */
 export function useReferenceValueResourceCounts(property?: ReferenceProperty, search?: SearchForm) {
+  const api = useResourceApi();
+  const owner = useResourceOwner();
+  const ownerKey = useResourceOwnerKey();
+  const sources = useResourceSources()?.sources;
+  const countedSources = owner
+    ? [owner]
+    : sources?.some((source) => !source.isLocal)
+      ? sources
+      : undefined;
+  const sourcesKey = countedSources
+    ? JSON.stringify(
+        countedSources.map((source) => [source.serverId, source.libraryEpoch, source.available]),
+      )
+    : ownerKey;
   const enabled =
     !!property?.id &&
     property.type != undefined &&
@@ -69,8 +98,12 @@ export function useReferenceValueResourceCounts(property?: ReferenceProperty, se
       [InternalProperty.ParentResource, InternalProperty.MediaLibraryV2].includes(property.id)
     );
   const criteria = JSON.stringify(referenceValueCountsCriteria(search));
-  const propertyKey = enabled ? `${property.pool}:${property.id}:${property.type}` : "";
-  const key = enabled ? `${propertyKey}:${criteria}` : "";
+  const propertyKey = enabled
+    ? `${sourcesKey}:${property.pool}:${property.id}:${property.type}`
+    : "";
+  const key = enabled
+    ? `${propertyKey}:${criteria}:${JSON.stringify([search?.owner?.serverId, search?.owner?.libraryEpoch, search?.deviceIds])}`
+    : "";
   const [refreshRequest, setRefreshRequest] = useState({
     revision: 0,
     debouncePropertyKey: "",
@@ -86,13 +119,22 @@ export function useReferenceValueResourceCounts(property?: ReferenceProperty, se
   useEffect(() => {
     if (!enabled) return;
 
-    return resourceChangedChannel.subscribe(() => {
+    const onChanged = () => {
       // Mark the counts stale immediately; the request effect coalesces bursts.
       setRefreshRequest(({ revision }) => ({
         revision: revision + 1,
         debouncePropertyKey: propertyKey,
       }));
-    });
+    };
+
+    const unsubscribe = [
+      ...(!owner || owner.isLocal ? [resourceChangedChannel.subscribe(onChanged)] : []),
+      ...(countedSources ?? [])
+        .filter((source) => !source.isLocal)
+        .map((source) => subscribeResourceOwnerChanges(source, onChanged)),
+    ];
+
+    return () => unsubscribe.forEach((stop) => stop());
   }, [enabled, propertyKey]);
 
   useEffect(() => {
@@ -103,7 +145,39 @@ export function useReferenceValueResourceCounts(property?: ReferenceProperty, se
     let timer: ReturnType<typeof setTimeout>;
     const run = async () => {
       try {
-        const response = await loadCounts(key, property, JSON.parse(criteria));
+        const response = await loadCounts(key, async () => {
+          if (!countedSources) return requestCounts(property, JSON.parse(criteria), api);
+          const responses: CountsResponse[] = [];
+
+          for (let index = 0; index < countedSources.length; index += 4) {
+            responses.push(
+              ...(await Promise.all(
+                countedSources.slice(index, index + 4).map(async (source) => {
+                  const compiled = compileResourceQuery(
+                    { ...search, owner: owner ?? search?.owner, page: 1, pageSize: 100 },
+                    source,
+                  );
+
+                  if (!compiled) return { counts: {}, isReady: true };
+                  if (!source.available) throw new Error(source.error || "Device unavailable");
+
+                  return requestCounts(
+                    property,
+                    referenceValueCountsCriteria(compiled),
+                    createResourceApi(source),
+                  );
+                }),
+              )),
+            );
+          }
+          const counts: Record<string, number> = {};
+
+          for (const result of responses)
+            for (const [value, count] of Object.entries(result.counts))
+              counts[value] = (counts[value] ?? 0) + count;
+
+          return { counts, isReady: responses.every((result) => result.isReady) };
+        });
 
         if (cancelled) return;
         if (response.isReady) {

@@ -24,6 +24,8 @@ import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContext
 import { FileSystemSelectorModal } from "@/components/FileSystemSelector";
 import { AttachmentLayout } from "@/sdk/constants";
 import BApi from "@/sdk/BApi";
+import { useResourceApi, useResourceOwnerScope } from "@/features/management/resourceContext";
+import { managedResourceAssetUrl } from "@/features/management/resourceApi";
 
 type AttachmentValueRendererProps = Omit<ValueRendererProps<string[]>, "variant"> & {
   variant: ValueRendererProps<string[]>["variant"];
@@ -50,6 +52,9 @@ const AttachmentValueRenderer = ({
 }: AttachmentValueRendererProps) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
+  const api = useResourceApi();
+  const scope = useResourceOwnerScope();
+  const remoteOwner = scope && !scope.source.isLocal ? scope.source : undefined;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [addPopoverOpen, setAddPopoverOpen] = useState(false);
@@ -73,8 +78,25 @@ const AttachmentValueRenderer = ({
   };
 
   const openFile = (path: string) => {
+    if (remoteOwner) {
+      if (scope?.resourceId)
+        window.open(
+          managedResourceAssetUrl(remoteOwner, scope.resourceId, path),
+          "_blank",
+          "noopener,noreferrer",
+        );
+
+      return;
+    }
     BApi.tool.openFileOrDirectory({ path });
   };
+
+  const thumbnailUrl = (path: string) =>
+    remoteOwner
+      ? scope?.resourceId
+        ? managedResourceAssetUrl(remoteOwner, scope.resourceId, path, true)
+        : undefined
+      : `${envConfig.apiEndpoint}/tool/thumbnail?path=${encodeURIComponent(path)}`;
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -83,23 +105,12 @@ const AttachmentValueRenderer = ({
 
     setIsUploading(true);
     try {
-      const formData = new FormData();
+      const result = await api.file.uploadFile({ file });
 
-      formData.append("file", file);
+      if (!result.code && result.data) {
+        const newValue = (value ?? []).concat([result.data]);
 
-      const response = await fetch(`${envConfig.apiEndpoint}/file/upload`, {
-        method: "POST",
-        body: formData,
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-
-        if (result.data) {
-          const newValue = (value ?? []).concat([result.data]);
-
-          editor?.onValueChange?.(newValue, newValue);
-        }
+        editor?.onValueChange?.(newValue, newValue);
       }
     } finally {
       setIsUploading(false);
@@ -111,6 +122,7 @@ const AttachmentValueRenderer = ({
   };
 
   const openFileSystemSelector = () => {
+    if (remoteOwner) return;
     setAddPopoverOpen(false);
     createPortal(FileSystemSelectorModal, {
       targetType: "file",
@@ -151,7 +163,7 @@ const AttachmentValueRenderer = ({
   const renderUploadButton = () => (
     <Button
       className="justify-start"
-      isDisabled={isUploading}
+      isDisabled={isUploading || (!!remoteOwner && !scope?.resourceId)}
       size="sm"
       startContent={isUploading ? <LoadingOutlined /> : <UploadOutlined />}
       variant="light"
@@ -171,6 +183,7 @@ const AttachmentValueRenderer = ({
     <div className="flex flex-col gap-1 p-1">
       <Button
         className="justify-start"
+        isDisabled={!!remoteOwner}
         size="sm"
         startContent={<FolderOpenOutlined />}
         variant="light"
@@ -179,6 +192,11 @@ const AttachmentValueRenderer = ({
         {t("property.attachment.selectFromFileSystem")}
       </Button>
       {renderUploadButton()}
+      {remoteOwner && (
+        <p className="max-w-xs px-2 text-xs text-default-400">
+          {t("management.attachmentPickerUnavailable")}
+        </p>
+      )}
       <div className="text-xs text-default-400 px-2">{t("property.attachment.uploadHint")}</div>
     </div>
   );
@@ -241,7 +259,7 @@ const AttachmentValueRenderer = ({
           <Img
             alt={fileName}
             loader={<LoadingOutlined className={config.iconSize} />}
-            src={[`${envConfig.apiEndpoint}/tool/thumbnail?path=${encodeURIComponent(path)}`]}
+            src={thumbnailUrl(path) ?? []}
             style={{
               maxWidth: config.thumbnail,
               maxHeight: config.thumbnail,
@@ -305,7 +323,7 @@ const AttachmentValueRenderer = ({
           <Img
             alt={fileName}
             loader={<LoadingOutlined className={config.iconSize} />}
-            src={[`${envConfig.apiEndpoint}/tool/thumbnail?path=${encodeURIComponent(path)}`]}
+            src={thumbnailUrl(path) ?? []}
             style={{
               width: "100%",
               height: "100%",
@@ -505,6 +523,7 @@ const AttachmentValueRenderer = ({
             <div className="flex flex-col gap-1 p-1">
               <Button
                 className="justify-start"
+                isDisabled={!!remoteOwner}
                 color="danger"
                 size="sm"
                 startContent={<DeleteOutlined />}
@@ -524,6 +543,11 @@ const AttachmentValueRenderer = ({
                 {t("property.attachment.selectFromFileSystem")}
               </Button>
               {renderUploadButton()}
+              {remoteOwner && (
+                <p className="max-w-xs px-2 text-xs text-default-400">
+                  {t("management.attachmentPickerUnavailable")}
+                </p>
+              )}
             </div>
           </Popover>
         );

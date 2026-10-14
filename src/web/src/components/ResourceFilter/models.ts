@@ -3,6 +3,9 @@
 import type { ReactNode } from "react";
 import type { IProperty } from "@/components/Property/models";
 import type { PropertyPool, PropertyType, SearchOperation } from "@/sdk/constants";
+import type { ManagementSource } from "@/features/management/api";
+
+export type FilterOwner = Pick<ManagementSource, "serverId" | "libraryEpoch">;
 
 export enum GroupCombinator {
   And = 1,
@@ -13,6 +16,7 @@ export enum GroupCombinator {
  * 通用筛选器类型
  */
 export type SearchFilter = {
+  owner?: FilterOwner;
   propertyId?: number;
   propertyPool?: PropertyPool;
   operation?: SearchOperation;
@@ -51,6 +55,9 @@ export interface FilterApiAdapter {
    */
   getAvailableOperationsByPropertyType: (propertyType: PropertyType) => Promise<SearchOperation[]>;
 
+  /** Original property definition, before an operation converts its value editor's type. */
+  getProperty?: (filter: SearchFilter) => Promise<IProperty | undefined>;
+
   /**
    * 获取用于渲染值的属性定义
    */
@@ -79,10 +86,10 @@ export interface FilterComponentRenderers {
    * @param disabledProperties 禁用的属性列表（已选择的属性）
    */
   openPropertySelector: (
-    currentSelection: { id: number; pool: PropertyPool } | undefined,
+    currentSelection: { id: number; pool: PropertyPool; owner?: FilterOwner } | undefined,
     onSelect: (property: IProperty, availableOperations: SearchOperation[]) => void,
     onCancel?: () => void,
-    disabledProperties?: { id: number; pool: PropertyPool }[],
+    disabledProperties?: { id: number; pool: PropertyPool; owner?: FilterOwner }[],
   ) => void;
 
   /**

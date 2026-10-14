@@ -9,7 +9,7 @@ import { useNavigate } from "react-router-dom";
 import { InfoCircleOutlined, RightOutlined, SettingOutlined } from "@ant-design/icons";
 
 import { Button, Chip, Modal, Spinner } from "@/components/bakaui";
-import BApi from "@/sdk/BApi";
+import { useResourceApi, useResourceOwner } from "@/features/management/resourceContext";
 
 type Props = {
   resourceId: number;
@@ -17,6 +17,8 @@ type Props = {
 } & DestroyableProps;
 
 const NoPlayableFilesModal = ({ resourceId, hasPath = true, onDestroyed }: Props) => {
+  const BApi = useResourceApi();
+  const owner = useResourceOwner();
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [profiles, setProfiles] = useState<BakabaseServiceModelsViewResourceProfileViewModel[]>([]);
@@ -47,6 +49,10 @@ const NoPlayableFilesModal = ({ resourceId, hasPath = true, onDestroyed }: Props
 
   const handleNavigateToProfile = (profileId?: number) => {
     onDestroyed?.();
+    if (owner && !owner.isLocal) {
+      navigate(`/resource-profile?sourceDeviceId=${encodeURIComponent(`node:${owner.serverId}:${owner.libraryEpoch}`)}`);
+      return;
+    }
     if (profileId) {
       navigate(`/resource-profile?highlight=${profileId}`);
     } else {

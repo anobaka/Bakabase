@@ -13,7 +13,7 @@ public enum ServerKind
     /// <summary>The desktop app: a window on somebody's computer, which can also manage other servers.</summary>
     Desktop = 1,
 
-    /// <summary>A server with no window of its own — Docker, a NAS — which is only ever managed.</summary>
+    /// <summary>A server with no window of its own — Docker, a NAS or direct hosting — which can manage paired devices.</summary>
     Headless = 2
 }
 

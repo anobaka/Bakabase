@@ -53,7 +53,11 @@ import {
 
 import type { DestroyableProps } from "@/components/bakaui/types";
 
-import BApi from "@/sdk/BApi";
+import {
+  ResourceOwnerProvider,
+  useResourceApi,
+  useResourceOwner,
+} from "@/features/management/resourceContext";
 import { PropertyPool, ReservedProperty, ResourceAdditionalItem } from "@/sdk/constants";
 import { convertFromApiValue } from "@/components/StandardValue/helpers";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
@@ -83,6 +87,7 @@ interface Props extends DestroyableProps {
   onRemoved?: () => void;
 }
 const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
+  const BApi = useResourceApi();
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const folderAction = useOpenResourceDirectory();
@@ -534,4 +539,15 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
 
 DetailModal.displayName = "DetailModal";
 
-export default DetailModal;
+export default function OwnedDetailModal(props: Props) {
+  const inheritedOwner = useResourceOwner();
+
+  return (
+    <ResourceOwnerProvider
+      source={props.initialResource?.owner ?? inheritedOwner}
+      resourceId={props.id}
+    >
+      <DetailModal {...props} />
+    </ResourceOwnerProvider>
+  );
+}
