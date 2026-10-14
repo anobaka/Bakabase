@@ -4,7 +4,7 @@ import type { IResourceCoverRef } from "@/components/Resource/components/Resourc
 import type { Resource } from "@/core/models/Resource";
 
 import { useTranslation } from "react-i18next";
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import {
   DeleteOutlined,
   ExportOutlined,
@@ -17,6 +17,8 @@ import {
   VideoCameraAddOutlined,
 } from "@ant-design/icons";
 import { AiOutlinePicture } from "react-icons/ai";
+
+import { resolveCoverOperations } from "./coverOperations";
 
 import BApi from "@/sdk/BApi";
 import ResourceEnhancementsModal from "@/components/Resource/components/ResourceEnhancementsModal.tsx";
@@ -52,7 +54,6 @@ interface IProps {
 
 const Operations = ({
   resource,
-  coverRef,
   reload,
   onResourcesDeleted,
   sourceTabId,
@@ -84,17 +85,7 @@ const Operations = ({
     }
   };
 
-  // Get displayOperations from options, default to ["aggregate"] for new users
-  const displayOperations = useMemo(() => {
-    const ops = uiOptions?.resource?.displayOperations;
-
-    // If null/undefined or empty, default to aggregate button
-    if (!ops || ops.length === 0) {
-      return ["aggregate"];
-    }
-
-    return ops;
-  }, [uiOptions?.resource?.displayOperations]);
+  const { showAggregate, directOperations } = resolveCoverOperations(uiOptions?.resource);
 
   const openBrowserPlayer = useResourceBrowserPlayer();
   const showResourceMediaPlayer = () => openBrowserPlayer(resource);
@@ -141,394 +132,181 @@ const Operations = ({
     });
   };
 
-  const showAggregate = displayOperations.includes("aggregate");
-  const showPin = displayOperations.includes("pin");
-  // Mirrors the right-click "open folder" menu entry — only shown when the
-  // resource has a backing local path (see ContextMenuItems/index.tsx).
-  const showOpenFolder = displayOperations.includes("openFolder") && !!resource.path;
-  const showEnhancements = displayOperations.includes("enhancements");
-  // Previewing means opening the resource's files; a resource with none has nothing to show.
-  const showPreview = displayOperations.includes("preview") && !!resource.path;
-  const showAddToPlaylist = displayOperations.includes("addToPlaylist");
-  const showMove = displayOperations.includes("move");
-  const showDelete = displayOperations.includes("delete");
-
   const openFolder = () => {
     folderAction.open(resource);
   };
 
-  // Aggregate mode: dropdown with icon + label items
-  if (showAggregate) {
-    type MenuItem = {
-      key: string;
-      icon: React.ReactNode;
-      label: string;
-      className?: string;
-      disabledReason?: string;
-      onAction: () => void;
-    };
+  type Operation = {
+    key: string;
+    icon: React.ReactNode;
+    label: string;
+    color?: "warning" | "danger";
+    disabledReason?: string;
+    disabled?: boolean;
+    onAction: () => void;
+  };
 
-    let items: MenuItem[] = [];
-
-    if (showPin) {
-      items.push({
-        key: "pin",
-        icon: <PushpinOutlined />,
-        label: resource.pinned
-          ? t<string>("resource.operation.unpin")
-          : t<string>("resource.operation.pin"),
-        onAction: () => {
-          BApi.resource.pinResource(resource.id, { pin: !resource.pinned }).then(() => reload?.());
-        },
-      });
-    }
-    if (showOpenFolder) {
-      items.push({
-        key: "openFolder",
-        icon: <FolderOpenOutlined />,
-        label: folderAction.label,
-        onAction: openFolder,
-      });
-    }
-    if (showEnhancements) {
-      items.push({
-        key: "enhancements",
-        icon: <FireOutlined />,
-        label: t<string>("resource.operation.enhancements"),
-        onAction: () => {
-          BApi.resource
-            .getResourceEnhancements(resource.id, {
-              additionalItem: EnhancementAdditionalItem.GeneratedPropertyValue,
-            })
-            .then((resp) => {
-              createPortal(ResourceEnhancementsModal, {
-                resourceId: resource.id,
-                // @ts-ignore
-                enhancements: resp.data || [],
-              });
-            });
-        },
-      });
-    }
-    if (showPreview) {
-      items.push({
-        key: "preview",
-        icon: <AiOutlinePicture />,
-        label: t<string>("resource.operation.preview"),
-        onAction: showResourceMediaPlayer,
-      });
-    }
-    if (showAddToPlaylist) {
-      items.push({
-        key: "addToPlaylist",
-        icon: <VideoCameraAddOutlined />,
-        label: t<string>("resource.operation.addToPlaylist"),
-        onAction: () => {
-          createPortal(Modal, {
-            defaultVisible: true,
-            title: t<string>("resource.operation.addToPlaylist"),
-            children: <PlaylistCollection addingResourceId={resource.id} />,
-            style: { minWidth: 600 },
-            footer: {
-              actions: ["cancel"],
-            },
-          });
-        },
-      });
-    }
-    if (showMove) {
-      items.push({
-        key: "move",
-        icon: <ExportOutlined />,
-        label: t<string>("resource.operation.move"),
-        disabledReason: moveDisabledReason,
-        onAction: handleMove,
-      });
-    }
-    if (showDelete) {
-      items.push({
-        key: "delete",
-        icon: <DeleteOutlined />,
-        label: t<string>("common.action.delete"),
-        className: "text-danger",
-        onAction: handleDelete,
-      });
-    }
-
-    // If no individual operations selected, show all (default behavior)
-    if (items.length === 0) {
-      items = [
-        {
-          key: "pin",
-          icon: <PushpinOutlined />,
-          label: resource.pinned
-            ? t<string>("resource.operation.unpin")
-            : t<string>("resource.operation.pin"),
-          onAction: () => {
-            BApi.resource
-              .pinResource(resource.id, { pin: !resource.pinned })
-              .then(() => reload?.());
+  // One action catalog drives both surfaces. Shortcut preferences never narrow
+  // the aggregate menu; availability and capability checks apply to both.
+  const operations: Operation[] = [
+    {
+      key: "pin",
+      icon: <PushpinOutlined />,
+      label: resource.pinned
+        ? t<string>("resource.operation.unpin")
+        : t<string>("resource.operation.pin"),
+      color: resource.pinned ? "warning" : undefined,
+      onAction: () => {
+        BApi.resource.pinResource(resource.id, { pin: !resource.pinned }).then(() => reload?.());
+      },
+    },
+    ...(resource.path
+      ? [
+          {
+            key: "openFolder",
+            icon: <FolderOpenOutlined />,
+            label: folderAction.label,
+            onAction: openFolder,
           },
-        },
-        {
-          key: "enhancements",
-          icon: <FireOutlined />,
-          label: t<string>("resource.operation.enhancements"),
-          onAction: () => {
-            BApi.resource
-              .getResourceEnhancements(resource.id, {
-                additionalItem: EnhancementAdditionalItem.GeneratedPropertyValue,
-              })
-              .then((resp) => {
-                createPortal(ResourceEnhancementsModal, {
-                  resourceId: resource.id,
-                  // @ts-ignore
-                  enhancements: resp.data || [],
-                });
-              });
+        ]
+      : []),
+    {
+      key: "enhancements",
+      icon: <FireOutlined />,
+      label: t<string>("resource.operation.enhancements"),
+      onAction: () => {
+        BApi.resource
+          .getResourceEnhancements(resource.id, {
+            additionalItem: EnhancementAdditionalItem.GeneratedPropertyValue,
+          })
+          .then((response) =>
+            createPortal(ResourceEnhancementsModal, {
+              resourceId: resource.id,
+              // @ts-ignore
+              enhancements: response.data || [],
+            }),
+          );
+      },
+    },
+    ...(resource.path
+      ? [
+          {
+            key: "preview",
+            icon: <AiOutlinePicture />,
+            label: t<string>("resource.operation.preview"),
+            onAction: showResourceMediaPlayer,
           },
-        },
-        {
-          key: "addToPlaylist",
-          icon: <VideoCameraAddOutlined />,
-          label: t<string>("resource.operation.addToPlaylist"),
-          onAction: () => {
-            createPortal(Modal, {
-              defaultVisible: true,
-              title: t<string>("resource.operation.addToPlaylist"),
-              children: <PlaylistCollection addingResourceId={resource.id} />,
-              style: { minWidth: 600 },
-              footer: {
-                actions: ["cancel"],
-              },
-            });
+        ]
+      : []),
+    {
+      key: "addToPlaylist",
+      icon: <VideoCameraAddOutlined />,
+      label: t<string>("resource.operation.addToPlaylist"),
+      onAction: () =>
+        createPortal(Modal, {
+          defaultVisible: true,
+          title: t<string>("resource.operation.addToPlaylist"),
+          children: <PlaylistCollection addingResourceId={resource.id} />,
+          style: { minWidth: 600 },
+          footer: { actions: ["cancel"] },
+        }),
+    },
+    {
+      key: "move",
+      icon: <ExportOutlined />,
+      label: t<string>("resource.operation.move"),
+      disabledReason: moveDisabledReason,
+      onAction: handleMove,
+    },
+    {
+      key: "delete",
+      icon: <DeleteOutlined />,
+      label: t<string>("common.action.delete"),
+      color: "danger",
+      onAction: handleDelete,
+    },
+    ...(hasCacheData
+      ? [
+          {
+            key: "refreshCache",
+            icon: refreshingCache ? <LoadingOutlined spin /> : <ReloadOutlined />,
+            label: t<string>("resource.action.refreshCache"),
+            disabled: refreshingCache,
+            onAction: handleRefreshCache,
           },
-        },
-      ];
-      if (resource.path) {
-        items.push({
-          key: "preview",
-          icon: <AiOutlinePicture />,
-          label: t<string>("resource.operation.preview"),
-          onAction: showResourceMediaPlayer,
-        });
-      }
-      items.push({
-        key: "move",
-        icon: <ExportOutlined />,
-        label: t<string>("resource.operation.move"),
-        disabledReason: moveDisabledReason,
-        onAction: handleMove,
-      });
-    }
+        ]
+      : []),
+  ];
+  const shortcuts = operations.filter((operation) => directOperations.includes(operation.key));
+  const actionMap = new Map(operations.map((operation) => [operation.key, operation]));
 
-    // Always add refreshCache if applicable
-    if (hasCacheData) {
-      items.push({
-        key: "refreshCache",
-        icon: refreshingCache ? <LoadingOutlined spin /> : <ReloadOutlined />,
-        label: t<string>("resource.action.refreshCache"),
-        onAction: handleRefreshCache,
-      });
-    }
-
-    const actionMap = Object.fromEntries(items.map((item) => [item.key, item.onAction]));
-
-    return (
-      <Dropdown>
-        <DropdownTrigger>
-          <Button
-            isIconOnly
-            className={"absolute top-1 right-1 z-10 opacity-0 group-hover/resource:opacity-100"}
-            size={"sm"}
-          >
-            <ProductOutlined className={"text-lg"} />
-          </Button>
-        </DropdownTrigger>
-        <DropdownMenu
-          aria-label="Resource operations"
-          onAction={(key) => actionMap[key as string]?.()}
-        >
-          {items.map((item) => (
-            <DropdownItem
-              key={item.key}
-              className={item.className}
-              startContent={item.icon}
-              isDisabled={!!item.disabledReason}
-              description={item.disabledReason}
-              title={item.disabledReason}
-              classNames={
-                item.disabledReason ? { description: "max-w-64 whitespace-normal" } : undefined
-              }
-            >
-              {item.label}
-            </DropdownItem>
-          ))}
-        </DropdownMenu>
-      </Dropdown>
-    );
-  }
-
-  // Non-aggregate: show individual icon buttons directly on the card
-  const individualButtons = [];
-
-  const buttonClassName = "min-w-6 w-6 h-6 bg-transparent hover:bg-white/20";
-  const iconClassName = "text-sm";
-
-  if (showPin) {
-    individualButtons.push(
-      <Button
-        key="pin"
-        isIconOnly
-        className={buttonClassName}
-        color={resource.pinned ? "warning" : "default"}
-        title={
-          resource.pinned
-            ? t<string>("resource.operation.unpin")
-            : t<string>("resource.operation.pin")
-        }
-        onPress={() => {
-          BApi.resource.pinResource(resource.id, { pin: !resource.pinned }).then((r) => {
-            reload?.();
-          });
-        }}
-      >
-        <PushpinOutlined className={iconClassName} />
-      </Button>,
-    );
-  }
-  if (showOpenFolder) {
-    individualButtons.push(
-      <Button
-        key="openFolder"
-        isIconOnly
-        aria-label={folderAction.label}
-        className={buttonClassName}
-        title={folderAction.label}
-        onPress={openFolder}
-      >
-        <FolderOpenOutlined className={iconClassName} />
-      </Button>,
-    );
-  }
-  if (showEnhancements) {
-    individualButtons.push(
-      <Button
-        key="enhancements"
-        isIconOnly
-        className={buttonClassName}
-        title={t<string>("resource.operation.enhancements")}
-        onPress={() => {
-          BApi.resource
-            .getResourceEnhancements(resource.id, {
-              additionalItem: EnhancementAdditionalItem.GeneratedPropertyValue,
-            })
-            .then((t) => {
-              createPortal(ResourceEnhancementsModal, {
-                resourceId: resource.id,
-                // @ts-ignore
-                enhancements: t.data || [],
-              });
-            });
-        }}
-      >
-        <FireOutlined className={iconClassName} />
-      </Button>,
-    );
-  }
-  if (showPreview) {
-    individualButtons.push(
-      <Button
-        key="preview"
-        isIconOnly
-        className={buttonClassName}
-        title={t<string>("resource.operation.preview")}
-        onPress={showResourceMediaPlayer}
-      >
-        <AiOutlinePicture className={iconClassName} />
-      </Button>,
-    );
-  }
-  if (showAddToPlaylist) {
-    individualButtons.push(
-      <Button
-        key="addToPlaylist"
-        isIconOnly
-        className={buttonClassName}
-        title={t<string>("resource.operation.addToPlaylist")}
-        onPress={() => {
-          createPortal(Modal, {
-            defaultVisible: true,
-            title: t<string>("resource.operation.addToPlaylist"),
-            children: <PlaylistCollection addingResourceId={resource.id} />,
-            style: { minWidth: 600 },
-            footer: {
-              actions: ["cancel"],
-            },
-          });
-        }}
-      >
-        <VideoCameraAddOutlined className={iconClassName} />
-      </Button>,
-    );
-  }
-  if (showMove) {
-    individualButtons.push(
-      <Tooltip key="move" content={moveDisabledReason ?? t<string>("resource.operation.move")}>
-        <span className="inline-flex" title={moveDisabledReason}>
-          <Button
-            isIconOnly
-            isDisabled={!!moveBlockReason}
-            className={buttonClassName}
-            aria-label={t<string>("resource.operation.move")}
-            onPress={handleMove}
-          >
-            <ExportOutlined className={iconClassName} />
-          </Button>
-        </span>
-      </Tooltip>,
-    );
-  }
-  if (showDelete) {
-    individualButtons.push(
-      <Button
-        key="delete"
-        isIconOnly
-        className={buttonClassName}
-        color="danger"
-        title={t<string>("common.action.delete")}
-        onPress={handleDelete}
-      >
-        <DeleteOutlined className={iconClassName} />
-      </Button>,
-    );
-  }
-  if (hasCacheData) {
-    individualButtons.push(
-      <Button
-        key="refreshCache"
-        isIconOnly
-        className={buttonClassName}
-        isDisabled={refreshingCache}
-        title={t<string>("resource.action.refreshCache")}
-        onClick={handleRefreshCache}
-      >
-        {refreshingCache ? (
-          <LoadingOutlined spin className={iconClassName} />
-        ) : (
-          <ReloadOutlined className={iconClassName} />
-        )}
-      </Button>,
-    );
-  }
+  if (!showAggregate && shortcuts.length === 0) return null;
 
   return (
     <div
       className="absolute top-1 right-1 z-10 flex gap-0.5 p-0.5
                  rounded-md bg-black/40 backdrop-blur-sm
-                 opacity-0 group-hover/resource:opacity-100 transition-opacity"
+                 opacity-0 group-hover/resource:opacity-100 group-focus-within/resource:opacity-100 transition-opacity"
     >
-      {individualButtons}
+      {shortcuts.map((operation) => (
+        <Tooltip key={operation.key} content={operation.disabledReason ?? operation.label}>
+          <span className="inline-flex" title={operation.disabledReason}>
+            <Button
+              isIconOnly
+              aria-label={operation.label}
+              className="min-w-6 w-6 h-6 bg-transparent hover:bg-white/20 text-sm"
+              color={operation.color ?? "default"}
+              isDisabled={operation.disabled || !!operation.disabledReason}
+              title={operation.disabledReason ?? operation.label}
+              onPress={operation.onAction}
+            >
+              {operation.icon}
+            </Button>
+          </span>
+        </Tooltip>
+      ))}
+      {showAggregate && (
+        <Dropdown>
+          <DropdownTrigger>
+            <Button
+              isIconOnly
+              aria-label={t<string>("resource.display.aggregateButton")}
+              className="min-w-6 w-6 h-6 bg-transparent hover:bg-white/20"
+              size="sm"
+              title={t<string>("resource.display.aggregateButton")}
+            >
+              <ProductOutlined className="text-sm" />
+            </Button>
+          </DropdownTrigger>
+          <DropdownMenu
+            aria-label={t<string>("resource.display.operations")}
+            onAction={(key) => {
+              const operation = actionMap.get(key as string);
+
+              if (operation && !operation.disabled && !operation.disabledReason)
+                operation.onAction();
+            }}
+          >
+            {operations.map((operation) => (
+              <DropdownItem
+                key={operation.key}
+                className={operation.color === "danger" ? "text-danger" : undefined}
+                classNames={
+                  operation.disabledReason
+                    ? { description: "max-w-64 whitespace-normal" }
+                    : undefined
+                }
+                description={operation.disabledReason}
+                isDisabled={operation.disabled || !!operation.disabledReason}
+                startContent={operation.icon}
+                title={operation.disabledReason}
+              >
+                {operation.label}
+              </DropdownItem>
+            ))}
+          </DropdownMenu>
+        </Dropdown>
+      )}
     </div>
   );
 };

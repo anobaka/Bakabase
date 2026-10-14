@@ -2839,6 +2839,7 @@ export interface BakabaseInsideWorldModelsConfigsUIOptionsUIResourceOptions {
   inlineDisplayName: boolean;
   autoSelectFirstPlayableFile: boolean;
   displayOperations: string[];
+  showAggregateOperations?: boolean;
   hideResourceBorder: boolean;
   hideHealthScore: boolean;
   customContextMenuItems: BakabaseInsideWorldModelsConfigsUIOptionsCustomContextMenuItem[];

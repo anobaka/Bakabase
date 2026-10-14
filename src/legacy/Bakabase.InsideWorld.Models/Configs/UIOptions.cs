@@ -161,6 +161,11 @@ namespace Bakabase.InsideWorld.Models.Configs
             public bool InlineDisplayName { get; set; }
             public bool AutoSelectFirstPlayableFile { get; set; }
             public List<string> DisplayOperations { get; set; } = [];
+            /// <summary>
+            /// Whether to show the complete cover operations menu. Null preserves the
+            /// legacy DisplayOperations aggregate/default behavior until explicitly set.
+            /// </summary>
+            public bool? ShowAggregateOperations { get; set; }
             public bool HideResourceBorder { get; set; }
             public bool HideHealthScore { get; set; }
             public List<CustomContextMenuItem> CustomContextMenuItems { get; set; } = [];

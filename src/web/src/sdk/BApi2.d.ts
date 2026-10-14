@@ -12020,6 +12020,7 @@ export interface components {
             inlineDisplayName: boolean;
             autoSelectFirstPlayableFile: boolean;
             displayOperations: string[];
+            showAggregateOperations?: boolean;
             hideResourceBorder: boolean;
             hideHealthScore: boolean;
             customContextMenuItems: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIOptions+CustomContextMenuItem"][];
