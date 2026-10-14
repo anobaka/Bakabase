@@ -23,6 +23,11 @@ namespace Bakabase.Modules.RemoteAccess.Abstractions.Services;
 /// </remarks>
 public interface IManagedServerService
 {
+    /// <summary>Read-only, bounded resource-profile search operations on a managed source.
+    /// The operation is a fixed name, never a caller-supplied URL. No local player configuration is sent.</summary>
+    Task<string> ReadResourceProfileSourceAsync(string serverId, string operation, string? json, string? libraryEpoch = null,
+        CancellationToken ct = default) => throw new NotSupportedException("Source resource profiles are unavailable.");
+
     /// <param name="probe">Also ask every server how it is, bounded to a couple of seconds.</param>
     Task<ManagedServersView> GetAsync(bool probe, CancellationToken ct = default);
 

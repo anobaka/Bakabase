@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Services;
+using Bakabase.Abstractions.Extensions;
 using Bakabase.Modules.Federation;
 using Bakabase.Modules.Federation.Contracts;
 using Bakabase.Modules.Federation.Identity;
@@ -24,8 +25,9 @@ public sealed class FederationMediaService(INodeIdentityProvider identity, Feder
     FederationMediaSessions mediaSessions, FederationPlayerPolicy players,
     IBatchPlayProcessLauncher launcher, IResourceService resources, GrantLeaseRegistry leases,
     FederationDirectoryService directories, IFederationImageOpener imageOpener,
-    Bakabase.Modules.Player.Services.DevicePlaybackOverridesStore? overrides = null,
-    Bakabase.Abstractions.Components.ISystemPlayer? systemPlayer = null)
+    ISourceResourceProfilePlaybackService? sourceProfiles = null,
+    Bakabase.Abstractions.Components.ISystemPlayer? systemPlayer = null,
+    IResourceProfileService? localProfiles = null)
 {
     public async Task<ResourceResolveResponse> ResolveAsync(ResourceResolveRequest request, CancellationToken ct)
     {
@@ -121,22 +123,21 @@ public sealed class FederationMediaService(INodeIdentityProvider identity, Feder
                 leases.GetCancellationToken(GrantLeaseRegistry.OutboundKey(source.Peer.GrantId)));
         var localPath = await ValidateAndMapAsync(source, authorized.Token);
         authorized.Token.ThrowIfCancellationRequested();
-        string? selectedPlayerId = null;
-        if (request.Mode == "player" && overrides != null)
+        Bakabase.Abstractions.Models.Domain.ResourceProfileOpeningOptions? opening = null;
+        if (request.Mode == "player" && source.Peer != null && sourceProfiles != null)
         {
             var reference = request.AssetRef.ResourceRef;
-            var choice = await overrides.ResolveAsync($"node:{reference.NodeId}:{reference.LibraryEpoch}",
-                reference.ResourceId, source.Asset.Kind, authorized.Token);
-            if (choice?.Mode == "native") selectedPlayerId = choice.PlayerId;
+            opening = await sourceProfiles.ResolveAsync(reference.NodeId, reference.LibraryEpoch,
+                reference.ResourceId, authorized.Token);
+        }
+        else if (request.Mode == "player" && source.Peer == null && localProfiles != null)
+        {
+            var resource = await resources.Get(source.Ref.ResourceRef.ResourceId) ??
+                           throw new FederationQueryException("ResourceGone", 410);
+            opening = (await localProfiles.GetMatchingProfiles(resource)).ResolveOpeningOptions();
         }
         if (request.Mode == "player" && source.Asset.Kind == "image")
         {
-            if (selectedPlayerId is not (null or "system-default"))
-                throw new FederationQueryException("PlayerUnavailable", 409,
-                    "The selected player cannot open images. Choose the system image application or preview.");
-            if (!imageOpener.Available)
-                throw new FederationQueryException("PlayerUnavailable", 501,
-                    "An image viewer cannot be opened on this device. Use the image preview instead.");
             if (localPath == null || !File.Exists(localPath))
                 throw new FederationQueryException("MappedPathUnavailable", 409,
                     "This image is not available on this computer. Configure its path mapping or use the image preview.");
@@ -144,7 +145,16 @@ public sealed class FederationMediaService(INodeIdentityProvider identity, Feder
                 throw new FederationQueryException("UnsupportedPlaybackMode", 422,
                     "Only a matching local image can be opened. Use the image preview instead.");
             authorized.Token.ThrowIfCancellationRequested();
-            imageOpener.Open(physicalImage!, authorized.Token);
+            var imagePlayer = players.ResolveProfile(source.Asset.FileName, physicalImage, opening?.PlayerOptions);
+            if (imagePlayer.IsSystemDefault)
+            {
+                if (!imageOpener.Available)
+                    throw new FederationQueryException("PlayerUnavailable", 501,
+                        "An image viewer cannot be opened on this device. Use the image preview instead.");
+                imageOpener.Open(physicalImage!, authorized.Token);
+            }
+            else await launcher.LaunchAsync(imagePlayer.ExecutablePath!,
+                FederationPlayerArguments.Build(imagePlayer, physicalImage, ""), authorized.Token);
         }
         else
         {
@@ -154,7 +164,7 @@ public sealed class FederationMediaService(INodeIdentityProvider identity, Feder
                 var url = loopbackOrigin.TrimEnd('/') + "/federation/local/media/" + ticket.Id;
                 return new PlaybackSessionResponse(url, source.Asset.ContentType, false, source.Asset.ExpiresAt);
             }
-            var player = players.Resolve(source.Asset.FileName, localPath, selectedPlayerId);
+            var player = players.ResolveProfile(source.Asset.FileName, localPath, opening?.PlayerOptions);
             string? physicalMedia = null;
             if (localPath != null && !TryGetNativeMediaPath(source.Asset, localPath, out physicalMedia))
                 throw new FederationQueryException("UnsupportedPlaybackMode", 422,

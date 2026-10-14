@@ -1,4 +1,5 @@
 using Bakabase.Abstractions.Models.Domain;
+using Bakabase.Abstractions.Services;
 using Bakabase.Remoting.Components.Connection;
 using Bakabase.Modules.Player.Abstractions.Components;
 using Bakabase.Modules.Player.Components;
@@ -17,7 +18,9 @@ namespace Bakabase.Remoting.Components.BatchPlay;
 public sealed class UpstreamBatchPlayResourceSource(
     IUpstreamApi upstream,
     IPlayerExecutableLocator players,
-    ILogger<UpstreamBatchPlayResourceSource> logger) : IBatchPlayResourceSource
+    ILogger<UpstreamBatchPlayResourceSource> logger,
+    ActiveConnection? connection = null,
+    ISourceResourceProfilePlaybackService? profiles = null) : IBatchPlayResourceSource
 {
     public async Task<BatchPlayResourceSnapshot> GetSnapshotAsync(int[] resourceIds, CancellationToken ct)
     {
@@ -31,7 +34,37 @@ public sealed class UpstreamBatchPlayResourceSource(
         // can carry that choice across. The shared orchestration then builds
         // its keys and deduplicates discovery against the actual local path.
         var configuredPlayers = new List<MediaLibraryPlayer>();
-        foreach (var player in snapshot.ConfiguredPlayers)
+        var upstreamPlayers = snapshot.ConfiguredPlayers;
+        if (profiles != null && connection?.Server != null)
+        {
+            var local = new Dictionary<int, ResourceProfileOpeningOptions>();
+            foreach (var chunk in snapshot.Resources.Select(r => r.ResourceId).Distinct().Chunk(256))
+                foreach (var match in await profiles.ResolveManyAsync(connection.Server.ServerId, null, chunk, ct))
+                    local[match.Key] = match.Value;
+            if (local.Values.Any(p => p.PlayerOptions != null))
+            {
+                upstreamPlayers = [];
+                foreach (var resource in snapshot.Resources)
+                {
+                    ct.ThrowIfCancellationRequested();
+                    if (local.TryGetValue(resource.ResourceId, out var matched) && matched.PlayerOptions != null)
+                    {
+                        // These paths and arguments were saved here. Never relocate a custom
+                        // local application using the remote-known-player compatibility path below.
+                        configuredPlayers.AddRange(matched.PlayerOptions.Players ?? []);
+                    }
+                    else
+                    {
+                        var inherited = snapshot.PlayerOptionsByResourceId != null &&
+                                        snapshot.PlayerOptionsByResourceId.TryGetValue(resource.ResourceId, out var captured)
+                            ? captured
+                            : await upstream.GetEffectivePlayerOptionsAsync(resource.ResourceId, ct);
+                        upstreamPlayers.AddRange(inherited?.Players ?? []);
+                    }
+                }
+            }
+        }
+        foreach (var player in upstreamPlayers)
         {
             ct.ThrowIfCancellationRequested();
             var known = KnownPlayerDefinitions.MatchByExecutable(player.ExecutablePath);
@@ -60,7 +93,10 @@ public sealed class UpstreamBatchPlayResourceSource(
             configuredPlayers.Add(player with {ExecutablePath = executable, Extensions = extensions});
         }
 
-        return snapshot with {ConfiguredPlayers = configuredPlayers};
+        return snapshot with
+        {
+            ConfiguredPlayers = configuredPlayers.DistinctBy(p => p.ExecutablePath, StringComparer.OrdinalIgnoreCase).ToList()
+        };
     }
 
     public async Task MarkPlayedAsync(IReadOnlyDictionary<int, string> playedByResourceId, CancellationToken ct)

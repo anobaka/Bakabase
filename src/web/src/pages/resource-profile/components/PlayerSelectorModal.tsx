@@ -185,7 +185,7 @@ const PlayerSelectorModal = ({ players: propPlayers, onSubmit, onDestroyed }: Pr
       ) : (
         <Accordion
           className="px-0"
-          expandedKeys={expanded}
+          selectedKeys={expanded}
           itemClasses={{
             base: "border-b border-default-200/60 last:border-b-0",
             trigger: "py-3",

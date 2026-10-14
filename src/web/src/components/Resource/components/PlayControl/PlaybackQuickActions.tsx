@@ -7,7 +7,7 @@ import OriginalSourceMenu from "./OriginalSourceMenu";
 
 import { Button, Tooltip } from "@/components/bakaui";
 import { DataOrigin } from "@/sdk/constants";
-import { PlaybackOverridesButton } from "@/features/playback/overrides";
+import { ResourceProfileLink } from "@/features/playback/resourceProfiles";
 
 /** Compact, explicit alternatives shared by resource cards and resource details. */
 const PlaybackQuickActions = ({
@@ -31,7 +31,7 @@ const PlaybackQuickActions = ({
 
   return (
     <>
-      {openingRules && <PlaybackOverridesButton {...openingRules} compact />}
+      {openingRules && <ResourceProfileLink {...openingRules} compact />}
       {!mainAlreadyOpensBrowser && onPlayInBrowser && (
         <Tooltip content={t("resource.playback.browserQuickAction")}>
           <Button

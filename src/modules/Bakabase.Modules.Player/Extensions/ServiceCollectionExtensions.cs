@@ -26,7 +26,6 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<IBatchPlayFileResolver, LocalBatchPlayFileResolver>();
         services.TryAddSingleton<IPlayerDiscoveryService, PlayerDiscoveryService>();
         services.TryAddSingleton<IDevicePlaybackPreferencesStore, DevicePlaybackPreferencesStore>();
-        services.TryAddSingleton<DevicePlaybackOverridesStore>();
         // Both default to "the library and the files are on this machine". A host where
         // they are not registers its own before calling this.
         services.TryAddScoped<IBatchPlayResourceSource, ResourceBatchPlaySource>();

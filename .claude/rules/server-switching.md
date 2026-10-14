@@ -133,6 +133,20 @@ manage anything; they are only ever managed.
 
 ## Invariants — do not weaken
 
+- **Source-specific resource profiles belong to the viewing device.** A profile with
+  `SourceDeviceId` is saved through that device's normal ResourceProfile editor; its full
+  player executable, arguments and extension rules never travel to the source. In this
+  iteration only player options and opening mode are configurable for another device;
+  playable-file discovery stays with the resource owner. The source evaluates bounded
+  searches against its own resources and property vocabulary, pinned by `SourceLibraryEpoch`;
+  never hydrate its integer IDs against this device's database. Local profiles have no
+  source ID and retain their existing behavior. A managed page may read its resources'
+  effective opening modes through the relay, but configuration navigates home. No standalone
+  per-kind player override store is used. Explicit local player configurations may name any
+  application; the known-player relocation rules apply only to inherited remote players.
+  Neither this matching API nor a read-only library grant grants reciprocal access or
+  synchronizes profile configuration to the source.
+
 - **Keys stay in the store.** Device keys live in `AppData/remote-access/managed/connection.json`
   (mode 0600 on Unix), never in `[Options]`, never in a DTO, log line or `/client` response.
 - **A relay only serves this device's own window.** The loopback guard checks `Host`; a browser

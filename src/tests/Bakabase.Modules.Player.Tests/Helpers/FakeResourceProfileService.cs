@@ -24,6 +24,8 @@ internal sealed class FakeResourceProfileService : IResourceProfileService
     public Task<List<ResourceProfile>> GetAll(Expression<Func<ResourceProfileDbModel, bool>>? filter = null)
         => throw new NotImplementedException();
     public Task<ResourceProfile?> Get(int id) => throw new NotImplementedException();
+    public Task<List<ResourceProfile>> GetSourceProfiles(string sourceDeviceId, string? libraryEpoch = null)
+        => throw new NotImplementedException();
     public Task<List<ResourceProfile>> GetMatchingProfiles(Resource resource) => throw new NotImplementedException();
     public Task<string?> GetEffectiveNameTemplate(Resource resource) => throw new NotImplementedException();
     public Task<Dictionary<int, string?>> GetEffectiveNameTemplatesForResources(int[] resourceIds)
@@ -43,11 +45,13 @@ internal sealed class FakeResourceProfileService : IResourceProfileService
         => throw new NotImplementedException();
     public Task<ResourceProfile> Add(string name, string? searchJson, string? nameTemplate,
         ResourceProfileEnhancerOptions? enhancerOptions, ResourceProfilePlayableFileOptions? playableFileOptions,
-        ResourceProfilePlayerOptions? playerOptions, ResourceProfilePropertyOptions? propertyOptions, int priority)
+        ResourceProfilePlayerOptions? playerOptions, ResourceProfilePropertyOptions? propertyOptions, int priority, string? sourceDeviceId = null,
+        string? sourceLibraryEpoch = null, string? openingMode = null)
         => throw new NotImplementedException();
     public Task Update(int id, string name, string? searchJson, string? nameTemplate,
         ResourceProfileEnhancerOptions? enhancerOptions, ResourceProfilePlayableFileOptions? playableFileOptions,
-        ResourceProfilePlayerOptions? playerOptions, ResourceProfilePropertyOptions? propertyOptions, int priority)
+        ResourceProfilePlayerOptions? playerOptions, ResourceProfilePropertyOptions? propertyOptions, int priority, string? sourceDeviceId = null,
+        string? sourceLibraryEpoch = null, string? openingMode = null)
         => throw new NotImplementedException();
     public Task Delete(int id) => throw new NotImplementedException();
     public Task<HashSet<int>> GetMatchingResourceIds(int profileId) => throw new NotImplementedException();

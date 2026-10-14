@@ -28,8 +28,8 @@ public abstract class TextPropertyDescriptor<TDbValue, TBizValue> : AbstractProp
                 SearchOperation.NotStartsWith => !s.StartsWith(fv, StringComparison.OrdinalIgnoreCase),
                 SearchOperation.EndsWith => s.EndsWith(fv, StringComparison.OrdinalIgnoreCase),
                 SearchOperation.NotEndsWith => !s.EndsWith(fv, StringComparison.OrdinalIgnoreCase),
-                SearchOperation.Matches => Regex.IsMatch(s, fv),
-                SearchOperation.NotMatches => !Regex.IsMatch(s, fv),
+                SearchOperation.Matches => Regex.IsMatch(s, fv, RegexOptions.None, TimeSpan.FromSeconds(1)),
+                SearchOperation.NotMatches => !Regex.IsMatch(s, fv, RegexOptions.None, TimeSpan.FromSeconds(1)),
                 _ => false
             }
         );

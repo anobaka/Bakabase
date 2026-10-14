@@ -1,20 +1,23 @@
 "use client";
 
 import type { DestroyableProps } from "@/components/bakaui/types";
-import type { BakabaseServiceModelsViewResourceProfileViewModel as ResourceProfile } from "@/sdk/Api";
+import type { ResourceProfile, ProfileSource } from "../sourceProfiles";
 
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AiOutlineInfoCircle } from "react-icons/ai";
 
+import { profileSourceApi } from "../sourceProfiles";
 import { checkProfileResponse } from "../profileUtils";
 
-import { Modal, Input } from "@/components/bakaui";
+import { Modal, Input, Select } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
 
 type Props = {
   profile?: ResourceProfile;
   existingNames?: string[];
+  sources?: ProfileSource[];
+  defaultSourceDeviceId?: string;
   onSaved?: (profile: ResourceProfile) => void;
   onUpdate?: (profileId: number, updates: Partial<ResourceProfile>) => Promise<void>;
 } & DestroyableProps;
@@ -30,6 +33,8 @@ function defaultName(existingNames: string[], baseName: string) {
 export default function ResourceProfileModal({
   profile,
   existingNames = [],
+  sources = [],
+  defaultSourceDeviceId,
   onSaved,
   onUpdate,
   onDestroyed,
@@ -41,6 +46,7 @@ export default function ResourceProfileModal({
       profile?.name ??
       defaultName(existingNames, t<string>("resourceProfile.label.resourceProfile")),
   );
+  const [sourceId, setSourceId] = useState(profile?.sourceDeviceId ?? defaultSourceDeviceId ?? "");
   const [priorityText, setPriorityText] = useState(String(profile?.priority ?? 0));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -72,9 +78,21 @@ export default function ResourceProfileModal({
         if (!onUpdate) throw new Error(t<string>("resourceProfile.basic.editUnavailable"));
         await onUpdate(profile.id, { name: name.trim(), priority });
       } else {
+        const source = sourceId
+          ? await profileSourceApi.info({ sourceDeviceId: sourceId })
+          : undefined;
+
+        if (sourceId && (!source || source.deviceId !== sourceId || !source.libraryEpoch))
+          throw new Error(t<string>("resourceProfile.source.unavailable"));
         const response = await BApi.resourceProfile.addResourceProfile({
           name: name.trim(),
           priority,
+          ...(sourceId
+            ? {
+                sourceDeviceId: sourceId,
+                sourceLibraryEpoch: source?.libraryEpoch,
+              }
+            : {}),
         });
 
         checkProfileResponse(response, t<string>("resourceProfile.basic.saveFailed"));
@@ -121,6 +139,27 @@ export default function ResourceProfileModal({
         {t<string>("resourceProfile.basic.description")}
       </p>
       <div className="flex flex-col gap-5 py-2">
+        <Select
+          disallowEmptySelection
+          dataSource={[
+            { value: "local", label: t<string>("resourceProfile.source.local") },
+            ...sources.map((source) => ({ value: source.deviceId, label: source.name })),
+            ...(sourceId && !sources.some((source) => source.deviceId === sourceId)
+              ? [{ value: sourceId, label: sourceId }]
+              : []),
+          ]}
+          description={t<string>(
+            isEdit ? "resourceProfile.source.fixedHint" : "resourceProfile.source.hint",
+          )}
+          isDisabled={saving || isEdit}
+          label={t<string>("resourceProfile.source.label")}
+          selectedKeys={[sourceId || "local"]}
+          onSelectionChange={(keys) => {
+            const key = [...keys][0];
+
+            if (key) setSourceId(key === "local" ? "" : String(key));
+          }}
+        />
         <Input
           isRequired
           aria-label={t<string>("resourceProfile.label.name")}

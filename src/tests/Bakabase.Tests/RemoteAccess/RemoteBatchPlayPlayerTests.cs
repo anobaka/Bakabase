@@ -27,6 +27,7 @@ public class RemoteBatchPlayPlayerTests
     private Locator _locator = null!;
     private Launcher _launcher = null!;
     private ActiveConnection _connection = null!;
+    private StubSourceResourceProfiles? _profiles;
 
     private sealed class TempDirectory(string path) : IClientDataDirectory
     {
@@ -73,7 +74,39 @@ public class RemoteBatchPlayPlayerTests
     public void Cleanup() => Directory.Delete(_root, true);
 
     private UpstreamBatchPlayResourceSource Source() =>
-        new(_upstream, _locator, NullLogger<UpstreamBatchPlayResourceSource>.Instance);
+        new(_upstream, _locator, NullLogger<UpstreamBatchPlayResourceSource>.Instance, _connection, _profiles);
+
+    [TestMethod]
+    public async Task BatchProfilesAreMatchedOnceAndKeepLocalCustomAppsSeparateFromInheritedSourcePlayers()
+    {
+        await _connection.SaveAsync("server-1", "NAS", "http://192.168.1.5:34567",
+            new ClientCredentials("d1", "k1"), DateTime.UtcNow);
+        _locator.Installed["Vlc"] = LocalVlc;
+        _profiles = new();
+        _profiles.Matches[42] = new()
+        {
+            PlayerOptions = new() {Players = [new() {ExecutablePath = "my-comic-reader", Extensions = [".cbz"], Command = "--book {0}"}]}
+        };
+        _profiles.Matches[44] = new() {PlayerOptions = new() {Players = []}};
+        _upstream.BatchPlayResources = new(
+            [new(42, ["/media/book.cbz"]), new(43, ["/media/movie.mkv"]), new(44, ["/media/other.mkv"]),
+                new(45, ["/media/unconfigured.txt"])],
+            [new() {ExecutablePath = "untrusted-remote.exe"}],
+            new()
+            {
+                [42] = new() {Players = [new() {ExecutablePath = "server-only.exe"}]},
+                [43] = new() {Players = [new() {ExecutablePath = "vlc.exe"}]},
+                [44] = new() {Players = [new() {ExecutablePath = "also-server-only.exe"}]},
+                [45] = null
+            });
+        var snapshot = await Source().GetSnapshotAsync([42, 43, 44, 45], CancellationToken.None);
+        CollectionAssert.AreEqual(new[] {"my-comic-reader", LocalVlc},
+            snapshot.ConfiguredPlayers.Select(p => p.ExecutablePath).ToArray());
+        Assert.AreEqual("--book {0}", snapshot.ConfiguredPlayers[0].Command);
+        Assert.AreEqual(1, _profiles.Calls.Count);
+        CollectionAssert.AreEqual(new[] {42, 43, 44, 45}, _profiles.Calls.Single().Ids);
+        Assert.AreEqual(0, _upstream.PlayerOptionsReadCount);
+    }
 
     private BatchPlayService Service() => new(
         Source(),

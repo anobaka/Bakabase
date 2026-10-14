@@ -1,15 +1,13 @@
 "use client";
 
 import type { ReactNode } from "react";
-import type {
-  BakabaseServiceModelsViewResourceProfileViewModel as ResourceProfile,
-  BakabaseServiceModelsInputResourceProfileInputModel,
-} from "@/sdk/Api";
+import type { BakabaseServiceModelsInputResourceProfileInputModel } from "@/sdk/Api";
+import type { ResourceProfile, ProfileSource } from "./sourceProfiles";
 import type { IProperty } from "@/components/Property/models";
 import type { EnhancerDescriptor } from "@/components/EnhancerSelectorV2/models";
 import type { SearchFilterGroup } from "@/components/ResourceFilter/models";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   AppstoreOutlined,
@@ -31,6 +29,8 @@ import {
   ThunderboltOutlined,
 } from "@ant-design/icons";
 
+import { profileSourceApi } from "./sourceProfiles";
+import { createSourceFilterConfig } from "./sourceFilterConfig";
 import ResourceProfileModal from "./components/ResourceProfileModal";
 import ResourceProfileTestModal from "./components/ResourceProfileTestModal";
 import DisplayNameTemplateEditorModal from "./components/DisplayNameTemplateEditorModal";
@@ -51,12 +51,14 @@ import {
   ListboxItem,
   Popover,
   Spinner,
+  Select,
 } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { HelpCenterButton } from "@/components/HelpCenter";
 import { PropertyLabel } from "@/components/Property";
 import { ResourceFilterController } from "@/components/ResourceFilter";
 import { FilterDisplayMode, PropertyPool, ResourceTagLabel } from "@/sdk/constants";
+import { notifyResourceProfilesChanged } from "@/features/playback/profileInvalidation";
 import BApi from "@/sdk/BApi";
 import ConfirmModal from "@/components/ConfirmModal";
 import BriefEnhancer from "@/components/Chips/Enhancer/BriefEnhancer";
@@ -96,6 +98,19 @@ function ConfigSection({
 export default function ResourceProfilePage() {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
+  const [sources, setSources] = useState<ProfileSource[]>([]);
+  const [sourceError, setSourceError] = useState(false);
+  const [sourceRevision, setSourceRevision] = useState(0);
+  const loadSources = () => {
+    setSourceError(false);
+    void profileSourceApi
+      .list()
+      .then(setSources)
+      .catch(() => setSourceError(true));
+  };
+  const defaultSourceId =
+    new URLSearchParams(window.location.hash.split("?")[1] ?? "").get("sourceDeviceId") ??
+    undefined;
   const [profiles, setProfiles] = useState<ResourceProfile[]>([]);
   const profilesRef = useRef(profiles);
   const [selectedId, setSelectedId] = useState<number>();
@@ -118,7 +133,12 @@ export default function ResourceProfilePage() {
 
     profilesRef.current = sorted;
     setProfiles(sorted);
-    setSelectedId((id) => (sorted.some((p) => p.id === id) ? id : sorted[0]?.id));
+    setSelectedId((id) =>
+      sorted.some((p) => p.id === id)
+        ? id
+        : (sorted.find((p) => defaultSourceId && p.sourceDeviceId === defaultSourceId) ?? sorted[0])
+            ?.id,
+    );
   };
   const loadProfiles = async () => {
     setLoading(true);
@@ -154,6 +174,7 @@ export default function ResourceProfilePage() {
   useEffect(() => {
     void loadProfiles();
     void loadMetadata();
+    loadSources();
   }, []);
 
   const updateProfile = async (id: number, updates: Partial<ResourceProfile>) => {
@@ -171,6 +192,7 @@ export default function ResourceProfilePage() {
       );
 
       checkProfileResponse(response, t("resourceProfile.error.save"));
+      notifyResourceProfilesChanged();
       // Apply only after the server accepts the complete update. A later modal
       // always reads this ref, including scope priorities added by other edits.
       acceptProfiles(profilesRef.current.map((profile) => (profile.id === id ? merged : profile)));
@@ -180,21 +202,74 @@ export default function ResourceProfilePage() {
     }
   };
   const onCreated = (profile: ResourceProfile) => {
+    notifyResourceProfilesChanged();
     acceptProfiles([...profilesRef.current, profile]);
     setSelectedId(profile.id);
     setKeyword("");
-    setDraft({ id: profile.id, search: profile.search ?? { page: 1, pageSize: 100 } });
+    if (!profile.sourceDeviceId)
+      setDraft({ id: profile.id, search: profile.search ?? { page: 1, pageSize: 100 } });
   };
   const create = () =>
     createPortal(ResourceProfileModal, {
       existingNames: profiles.map((p) => p.name),
+      sources,
+      defaultSourceDeviceId: defaultSourceId,
       onSaved: onCreated,
     });
   const filtered = profiles.filter((profile) =>
     profile.name.toLocaleLowerCase().includes(keyword.trim().toLocaleLowerCase()),
   );
   const selected = profiles.find((profile) => profile.id === selectedId);
-  const search = draft?.id === selected?.id ? draft?.search : selected?.search;
+  const [remoteMetadata, setRemoteMetadata] = useState<{
+    key: string;
+    properties: IProperty[];
+    search: ResourceProfile["search"];
+    error?: boolean;
+  }>();
+  const metadataKey = selected?.sourceDeviceId
+    ? `${selected.id}:${selected.sourceDeviceId}:${selected.sourceLibraryEpoch ?? ""}:${sourceRevision}:${JSON.stringify(selected.search)}`
+    : "";
+
+  useEffect(() => {
+    if (!selected?.sourceDeviceId) return;
+    const controller = new AbortController();
+    const profile = selected;
+
+    setRemoteMetadata(undefined);
+    void Promise.all([
+      profileSourceApi.properties(profile, controller.signal),
+      profileSourceApi.resolve(profile, profile.search, controller.signal),
+    ])
+      .then(([properties, search]) => {
+        if (!controller.signal.aborted) setRemoteMetadata({ key: metadataKey, properties, search });
+      })
+      .catch(() => {
+        if (!controller.signal.aborted)
+          setRemoteMetadata({
+            key: metadataKey,
+            properties: [],
+            search: profile.search,
+            error: true,
+          });
+      });
+
+    return () => controller.abort();
+  }, [metadataKey]);
+  const sourceMetadataReady =
+    !selected?.sourceDeviceId || (remoteMetadata?.key === metadataKey && !remoteMetadata.error);
+  const sourceFilterConfig = useMemo(
+    () =>
+      selected?.sourceDeviceId && remoteMetadata?.key === metadataKey && !remoteMetadata.error
+        ? createSourceFilterConfig(selected, remoteMetadata.properties, createPortal)
+        : undefined,
+    [selected?.sourceDeviceId, metadataKey, remoteMetadata, createPortal],
+  );
+  const resolvedSearch = selected?.sourceDeviceId
+    ? remoteMetadata?.key === metadataKey
+      ? remoteMetadata.search
+      : selected.search
+    : selected?.search;
+  const search = draft?.id === selected?.id ? draft?.search : resolvedSearch;
   const scopeEditing = !!draft && draft.id === selected?.id;
   const action = (label: string, onPress: () => void, needsMetadata = false) => (
     <Button
@@ -259,6 +334,7 @@ export default function ResourceProfilePage() {
 
       checkProfileResponse(response, t("resourceProfile.error.save"));
       if (response.data) {
+        notifyResourceProfilesChanged();
         acceptProfiles([...profilesRef.current, response.data]);
         setSelectedId(response.data.id);
         setKeyword("");
@@ -292,6 +368,8 @@ export default function ResourceProfilePage() {
             onPress={() => {
               void loadProfiles();
               void loadMetadata();
+              loadSources();
+              setSourceRevision((value) => value + 1);
             }}
           >
             <ReloadOutlined />
@@ -306,6 +384,11 @@ export default function ResourceProfilePage() {
           </Button>
         </div>
       </header>
+      {sourceError && (
+        <p className="text-sm text-warning-700" role="status">
+          {t("resourceProfile.source.listUnavailable")}
+        </p>
+      )}
       {error && (
         <div
           className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-danger-50 px-4 py-3 text-sm text-danger"
@@ -318,6 +401,8 @@ export default function ResourceProfilePage() {
             onPress={() => {
               void loadProfiles();
               void loadMetadata();
+              loadSources();
+              setSourceRevision((value) => value + 1);
             }}
           >
             {t("resourceProfile.action.retry")}
@@ -383,6 +468,12 @@ export default function ResourceProfilePage() {
                 >
                   <div className="break-words text-sm font-medium">{profile.name}</div>
                   <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-default-500">
+                    <span className="w-full">
+                      {profile.sourceDeviceId
+                        ? (sources.find((source) => source.deviceId === profile.sourceDeviceId)
+                            ?.name ?? profile.sourceDeviceId)
+                        : t("resourceProfile.source.local")}
+                    </span>
                     <span>
                       {t("resourceProfile.label.priority")} {profile.priority}
                     </span>
@@ -422,6 +513,7 @@ export default function ResourceProfilePage() {
                     {action(t("resourceProfile.action.editBasicInfo"), () =>
                       createPortal(ResourceProfileModal, {
                         profile: selected,
+                        sources,
                         onUpdate: updateProfile,
                       }),
                     )}
@@ -459,6 +551,7 @@ export default function ResourceProfilePage() {
                                 );
 
                                 checkProfileResponse(response, t("resourceProfile.error.save"));
+                                notifyResourceProfilesChanged();
                                 acceptProfiles(
                                   profilesRef.current.filter((p) => p.id !== selected.id),
                                 );
@@ -469,7 +562,11 @@ export default function ResourceProfilePage() {
                         <ListboxItem key="copy" startContent={<CopyOutlined />}>
                           {t("resourceProfile.action.duplicate")}
                         </ListboxItem>
-                        <ListboxItem key="clear" startContent={<ClearOutlined />}>
+                        <ListboxItem
+                          key="clear"
+                          isDisabled={!!selected.sourceDeviceId}
+                          startContent={<ClearOutlined />}
+                        >
                           {t("resourceProfile.action.deleteEnhancements")}
                         </ListboxItem>
                         <ListboxItem
@@ -484,6 +581,20 @@ export default function ResourceProfilePage() {
                     </Popover>
                   </div>
                 </div>
+                {selected.sourceDeviceId && (
+                  <div className="rounded-xl bg-primary/5 p-3 text-sm">
+                    <p className="font-medium">
+                      {t("resourceProfile.source.forDevice", {
+                        name:
+                          sources.find((source) => source.deviceId === selected.sourceDeviceId)
+                            ?.name ?? selected.sourceDeviceId,
+                      })}
+                    </p>
+                    <p className="mt-1 text-xs leading-5 text-default-500">
+                      {t("resourceProfile.source.localOnlyHint")}
+                    </p>
+                  </div>
+                )}
                 <section className="rounded-xl bg-default-50 p-4">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
@@ -505,6 +616,7 @@ export default function ResourceProfilePage() {
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
                       <Button
+                        isDisabled={!sourceMetadataReady}
                         size="sm"
                         startContent={<EyeOutlined />}
                         variant="light"
@@ -518,12 +630,20 @@ export default function ResourceProfilePage() {
                         {t("resourceProfile.action.testCriteria")}
                       </Button>
                       {!scopeEditing ? (
-                        action(t("resourceProfile.action.editScope"), () =>
-                          setDraft({
-                            id: selected.id,
-                            search: structuredClone(selected.search ?? { page: 1, pageSize: 100 }),
-                          }),
-                        )
+                        <Button
+                          isDisabled={busy || !sourceMetadataReady}
+                          size="sm"
+                          startContent={<EditOutlined />}
+                          variant="flat"
+                          onPress={() =>
+                            setDraft({
+                              id: selected.id,
+                              search: structuredClone(resolvedSearch ?? { page: 1, pageSize: 100 }),
+                            })
+                          }
+                        >
+                          {t("resourceProfile.action.editScope")}
+                        </Button>
                       ) : (
                         <>
                           <Button
@@ -560,11 +680,21 @@ export default function ResourceProfilePage() {
                   <p className="mt-2 text-xs leading-relaxed text-default-500">
                     {t("resourceProfile.tip.scope")}
                   </p>
-                  {(scopeEditing || hasProfileConditions(search)) && (
+                  {!sourceMetadataReady && (
+                    <p className="mt-3 text-xs text-default-500" role="status">
+                      {t(
+                        remoteMetadata?.error
+                          ? "resourceProfile.source.unavailable"
+                          : "resourceProfile.source.loading",
+                      )}
+                    </p>
+                  )}
+                  {sourceMetadataReady && (scopeEditing || hasProfileConditions(search)) && (
                     <div className="mt-4 space-y-3">
                       <div className={busy ? "pointer-events-none opacity-60" : ""}>
                         <ResourceFilterController
                           key={`${selected.id}-${scopeEditing}`}
+                          config={sourceFilterConfig}
                           defaultFilterDisplayMode={FilterDisplayMode.Simple}
                           filterLayout="horizontal"
                           group={
@@ -574,6 +704,9 @@ export default function ResourceProfilePage() {
                             }) as SearchFilterGroup
                           }
                           isReadonly={!scopeEditing}
+                          showKeyword={false}
+                          showRecentFilters={!selected.sourceDeviceId}
+                          tags={search?.tags}
                           onGroupChange={(group) =>
                             setDraft(
                               (current) =>
@@ -581,6 +714,12 @@ export default function ResourceProfilePage() {
                                   ...current,
                                   search: { ...current.search, group } as typeof current.search,
                                 },
+                            )
+                          }
+                          onTagsChange={(tags) =>
+                            setDraft(
+                              (current) =>
+                                current && { ...current, search: { ...current.search, tags } },
                             )
                           }
                         />
@@ -619,124 +758,159 @@ export default function ResourceProfilePage() {
                   )}
                 </section>
                 <div className="divide-y divide-divider">
-                  <ConfigSection
-                    action={action(
-                      t("resourceProfile.action.configureProperties"),
-                      () => openProperties(selected),
-                      true,
-                    )}
-                    description={t("resourceProfile.tip.properties")}
-                    icon={<AppstoreOutlined />}
-                    title={t("resourceProfile.label.properties")}
-                  >
-                    {selected.propertyOptions?.properties?.length ? (
-                      <div className="flex flex-wrap gap-2">
-                        {selected.propertyOptions.properties.slice(0, 12).map((ref) => {
-                          const property = properties.find(
-                            (p) => p.pool === ref.pool && p.id === ref.id,
-                          );
+                  {!selected.sourceDeviceId && (
+                    <ConfigSection
+                      action={action(
+                        t("resourceProfile.action.configureProperties"),
+                        () => openProperties(selected),
+                        true,
+                      )}
+                      description={t("resourceProfile.tip.properties")}
+                      icon={<AppstoreOutlined />}
+                      title={t("resourceProfile.label.properties")}
+                    >
+                      {selected.propertyOptions?.properties?.length ? (
+                        <div className="flex flex-wrap gap-2">
+                          {selected.propertyOptions.properties.slice(0, 12).map((ref) => {
+                            const property = properties.find(
+                              (p) => p.pool === ref.pool && p.id === ref.id,
+                            );
 
-                          return (
-                            <span
-                              key={`${ref.pool}:${ref.id}`}
-                              className="max-w-full rounded-lg bg-default-100 px-2.5 py-1.5 text-xs"
-                            >
-                              {property ? (
-                                <PropertyLabel property={property} />
-                              ) : (
-                                t("resourceProfile.propertyPool.unknownProperty", { id: ref.id })
-                              )}
-                            </span>
-                          );
-                        })}
-                      </div>
-                    ) : selected.propertyOptions ? (
-                      <p className="text-xs text-default-400">
-                        {t("resourceProfile.status.emptyProperties")}
-                      </p>
-                    ) : (
-                      fallback
-                    )}
-                    {(selected.propertyOptions?.properties?.length ?? 0) > 12 && (
-                      <Button
-                        className="mt-2"
-                        isDisabled={!metadataReady || busy}
-                        size="sm"
-                        variant="light"
-                        onPress={() => openProperties(selected)}
-                      >
-                        {t("resourceProfile.action.viewAllProperties", {
-                          count: selected.propertyOptions!.properties!.length,
-                        })}
-                      </Button>
-                    )}
-                  </ConfigSection>
-                  <ConfigSection
-                    action={action(
-                      t("resourceProfile.action.configureName"),
-                      () =>
-                        createPortal(DisplayNameTemplateEditorModal, {
-                          template: selected.nameTemplate,
-                          properties,
-                          onSubmit: (nameTemplate) =>
-                            updateProfile(selected.id, { nameTemplate: nameTemplate || undefined }),
-                        }),
-                      true,
-                    )}
-                    description={t("resourceProfile.tip.nameTemplate")}
-                    icon={<FileTextOutlined />}
-                    title={t("resourceProfile.label.nameTemplate")}
-                  >
-                    {selected.nameTemplate ? (
-                      <code className="block whitespace-pre-wrap break-words rounded-lg bg-default-100 px-3 py-2 text-sm">
-                        {selected.nameTemplate}
-                      </code>
-                    ) : (
-                      fallback
-                    )}
-                  </ConfigSection>
+                            return (
+                              <span
+                                key={`${ref.pool}:${ref.id}`}
+                                className="max-w-full rounded-lg bg-default-100 px-2.5 py-1.5 text-xs"
+                              >
+                                {property ? (
+                                  <PropertyLabel property={property} />
+                                ) : (
+                                  t("resourceProfile.propertyPool.unknownProperty", { id: ref.id })
+                                )}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      ) : selected.propertyOptions ? (
+                        <p className="text-xs text-default-400">
+                          {t("resourceProfile.status.emptyProperties")}
+                        </p>
+                      ) : (
+                        fallback
+                      )}
+                      {(selected.propertyOptions?.properties?.length ?? 0) > 12 && (
+                        <Button
+                          className="mt-2"
+                          isDisabled={!metadataReady || busy}
+                          size="sm"
+                          variant="light"
+                          onPress={() => openProperties(selected)}
+                        >
+                          {t("resourceProfile.action.viewAllProperties", {
+                            count: selected.propertyOptions!.properties!.length,
+                          })}
+                        </Button>
+                      )}
+                    </ConfigSection>
+                  )}
+                  {!selected.sourceDeviceId && (
+                    <ConfigSection
+                      action={action(
+                        t("resourceProfile.action.configureName"),
+                        () =>
+                          createPortal(DisplayNameTemplateEditorModal, {
+                            template: selected.nameTemplate,
+                            properties,
+                            onSubmit: (nameTemplate) =>
+                              updateProfile(selected.id, {
+                                nameTemplate: nameTemplate || undefined,
+                              }),
+                          }),
+                        true,
+                      )}
+                      description={t("resourceProfile.tip.nameTemplate")}
+                      icon={<FileTextOutlined />}
+                      title={t("resourceProfile.label.nameTemplate")}
+                    >
+                      {selected.nameTemplate ? (
+                        <code className="block whitespace-pre-wrap break-words rounded-lg bg-default-100 px-3 py-2 text-sm">
+                          {selected.nameTemplate}
+                        </code>
+                      ) : (
+                        fallback
+                      )}
+                    </ConfigSection>
+                  )}
                   <ConfigSection
                     action={null}
                     description={t("resourceProfile.tip.playback")}
                     icon={<PlayCircleOutlined />}
                     title={t("resourceProfile.label.playback")}
                   >
-                    <div className="grid gap-3 xl:grid-cols-2">
-                      <div className="rounded-xl bg-default-50 p-3">
-                        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                          <h4 className="text-xs font-medium">
-                            {t("resourceProfile.label.playableFiles")}
-                          </h4>
-                          {action(t("common.action.configure"), () =>
-                            createPortal(PlayableFileSelectorModal, {
-                              options: selected.playableFileOptions,
-                              onSubmit: (options) =>
-                                updateProfile(selected.id, {
-                                  playableFileOptions:
-                                    options.extensions?.length || options.fileNamePattern
-                                      ? options
-                                      : undefined,
-                                }),
-                            }),
-                          )}
-                        </div>
-                        {selected.playableFileOptions ? (
-                          <div className="flex flex-wrap gap-1.5">
-                            {selected.playableFileOptions.extensions?.map((extension) => (
-                              <Chip key={extension} size="sm" variant="flat">
-                                {extension}
-                              </Chip>
-                            ))}
-                            {selected.playableFileOptions.fileNamePattern && (
-                              <code className="w-full break-all text-xs text-default-500">
-                                {selected.playableFileOptions.fileNamePattern}
-                              </code>
+                    {selected.sourceDeviceId && (
+                      <Select
+                        disallowEmptySelection
+                        className="mb-3 max-w-md"
+                        dataSource={["inherit", "browser", "native", "ask"].map((mode) => ({
+                          value: mode,
+                          label: t(`resourceProfile.source.mode.${mode}`),
+                        }))}
+                        description={t("resourceProfile.source.openingHint")}
+                        isDisabled={busy}
+                        label={t("resourceProfile.source.openingMode")}
+                        selectedKeys={[selected.openingMode ?? "inherit"]}
+                        onSelectionChange={(keys) => {
+                          const mode = [...keys][0];
+
+                          if (mode)
+                            void updateProfile(selected.id, {
+                              openingMode:
+                                mode === "inherit"
+                                  ? null
+                                  : (mode as ResourceProfile["openingMode"]),
+                            }).catch((e) => setError(e.message));
+                        }}
+                      />
+                    )}
+                    <div
+                      className={`grid gap-3 ${!selected.sourceDeviceId ? "xl:grid-cols-2" : ""}`}
+                    >
+                      {!selected.sourceDeviceId && (
+                        <div className="rounded-xl bg-default-50 p-3">
+                          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                            <h4 className="text-xs font-medium">
+                              {t("resourceProfile.label.playableFiles")}
+                            </h4>
+                            {action(t("common.action.configure"), () =>
+                              createPortal(PlayableFileSelectorModal, {
+                                options: selected.playableFileOptions,
+                                onSubmit: (options) =>
+                                  updateProfile(selected.id, {
+                                    playableFileOptions:
+                                      options.extensions?.length || options.fileNamePattern
+                                        ? options
+                                        : undefined,
+                                  }),
+                              }),
                             )}
                           </div>
-                        ) : (
-                          fallback
-                        )}
-                      </div>
+                          {selected.playableFileOptions ? (
+                            <div className="flex flex-wrap gap-1.5">
+                              {selected.playableFileOptions.extensions?.map((extension) => (
+                                <Chip key={extension} size="sm" variant="flat">
+                                  {extension}
+                                </Chip>
+                              ))}
+                              {selected.playableFileOptions.fileNamePattern && (
+                                <code className="w-full break-all text-xs text-default-500">
+                                  {selected.playableFileOptions.fileNamePattern}
+                                </code>
+                              )}
+                            </div>
+                          ) : (
+                            fallback
+                          )}
+                        </div>
+                      )}
                       <div className="rounded-xl bg-default-50 p-3">
                         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                           <h4 className="text-xs font-medium">
@@ -747,11 +921,43 @@ export default function ResourceProfilePage() {
                               players: selected.playerOptions?.players ?? [],
                               onSubmit: (players) =>
                                 updateProfile(selected.id, {
-                                  playerOptions: players.length ? { players } : undefined,
+                                  playerOptions:
+                                    players.length || selected.sourceDeviceId
+                                      ? { players }
+                                      : undefined,
                                 }),
                             }),
                           )}
                         </div>
+                        {selected.sourceDeviceId && (
+                          <div className="mb-3 flex flex-wrap gap-2">
+                            <Button
+                              isDisabled={busy}
+                              size="sm"
+                              variant="light"
+                              onPress={() =>
+                                void updateProfile(selected.id, {
+                                  playerOptions: { players: [] },
+                                  openingMode: "native",
+                                }).catch((e) => setError(e.message))
+                              }
+                            >
+                              {t("resourceProfile.source.systemDefault")}
+                            </Button>
+                            <Button
+                              isDisabled={busy || !selected.playerOptions}
+                              size="sm"
+                              variant="light"
+                              onPress={() =>
+                                void updateProfile(selected.id, { playerOptions: undefined }).catch(
+                                  (e) => setError(e.message),
+                                )
+                              }
+                            >
+                              {t("resourceProfile.source.inheritPlayer")}
+                            </Button>
+                          </div>
+                        )}
                         {selected.playerOptions?.players?.length ? (
                           <div className="space-y-2">
                             {selected.playerOptions.players.map((player, index) => (
@@ -780,41 +986,43 @@ export default function ResourceProfilePage() {
                       </div>
                     </div>
                   </ConfigSection>
-                  <ConfigSection
-                    action={action(
-                      t("resourceProfile.action.configureEnhancers"),
-                      () => openEnhancers(selected),
-                      true,
-                    )}
-                    description={t("resourceProfile.tip.enhancers")}
-                    icon={<ThunderboltOutlined />}
-                    title={t("resourceProfile.label.enhancers")}
-                  >
-                    {selected.enhancerOptions?.enhancers?.length ? (
-                      <div className="flex flex-wrap gap-2">
-                        {selected.enhancerOptions.enhancers.map((option) => {
-                          const descriptor = enhancerDescriptors.find(
-                            (e) => e.id === option.enhancerId,
-                          );
+                  {!selected.sourceDeviceId && (
+                    <ConfigSection
+                      action={action(
+                        t("resourceProfile.action.configureEnhancers"),
+                        () => openEnhancers(selected),
+                        true,
+                      )}
+                      description={t("resourceProfile.tip.enhancers")}
+                      icon={<ThunderboltOutlined />}
+                      title={t("resourceProfile.label.enhancers")}
+                    >
+                      {selected.enhancerOptions?.enhancers?.length ? (
+                        <div className="flex flex-wrap gap-2">
+                          {selected.enhancerOptions.enhancers.map((option) => {
+                            const descriptor = enhancerDescriptors.find(
+                              (e) => e.id === option.enhancerId,
+                            );
 
-                          return (
-                            <div
-                              key={option.enhancerId}
-                              className="rounded-lg bg-default-100 px-3 py-2"
-                            >
-                              {descriptor ? (
-                                <BriefEnhancer enhancer={descriptor} />
-                              ) : (
-                                <span>#{option.enhancerId}</span>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      fallback
-                    )}
-                  </ConfigSection>
+                            return (
+                              <div
+                                key={option.enhancerId}
+                                className="rounded-lg bg-default-100 px-3 py-2"
+                              >
+                                {descriptor ? (
+                                  <BriefEnhancer enhancer={descriptor} />
+                                ) : (
+                                  <span>#{option.enhancerId}</span>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        fallback
+                      )}
+                    </ConfigSection>
+                  )}
                 </div>
               </CardBody>
             </Card>

@@ -1,6 +1,7 @@
 // Drives production web assets and real Service listeners; no mocked API responses.
 const { chromium } = require('playwright');
 const serverSwitching = require('./switching.cjs');
+const resourceProfiles = require('./resource-profiles.cjs');
 const dataSync = require('./data-sync.cjs');
 const firstLaunch = require('./first-launch.cjs');
 const mappingSmoke = require('./mapping.cjs');
@@ -193,6 +194,7 @@ async function federation(browser) {
     report.networkConfinementProven = refusedCanary;
     report.firstLaunch = await firstLaunch({ browser, config });
     report.serverSwitching = await serverSwitching({ browser, config, artifacts });
+    report.resourceProfiles = await resourceProfiles({ browser, config, artifacts });
     report.dataSync = await dataSync({ browser, config, artifacts });
     fs.writeFileSync(artifacts('result.json'), JSON.stringify(report, null, 2));
     console.log(JSON.stringify(report, null, 2));

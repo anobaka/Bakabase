@@ -23,6 +23,8 @@ import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContext
 export interface ResourceFilterControllerProps {
   /** Optional adapters for hosts with their own property catalog and value renderer. */
   config?: FilterConfig;
+  /** Hide keyword autocomplete when the host scope is expressed only by filters. */
+  showKeyword?: boolean;
   /** Current keyword value */
   keyword?: string;
   /** Called when keyword changes */
@@ -112,6 +114,7 @@ export interface ResourceFilterControllerProps {
  * allowing flexible layouts.
  */
 const ResourceFilterControllerInner = ({
+  showKeyword = true,
   keyword: externalKeyword,
   onKeywordChange: externalOnKeywordChange,
   onSearch,
@@ -252,14 +255,14 @@ const ResourceFilterControllerInner = ({
   );
 
   // Render keyword search with autocomplete
-  const keywordElement = (
+  const keywordElement = showKeyword ? (
     <ResourceKeywordAutocomplete
       isClearable
       aria-label={t<string>("resourceFilter.toolbar.keyword")}
-      size="sm"
       className={`min-w-0 ${keywordClassName} ${!keywordContainer && !filterPortalContainer ? "flex-1 basis-52" : ""}`}
-      startContent={<SearchOutlined className="text-base text-default-400" />}
       placeholder={keywordPlaceholder}
+      size="sm"
+      startContent={<SearchOutlined className="text-base text-default-400" />}
       value={keyword}
       onKeyDown={(e) => {
         if (e.key === "Enter") {
@@ -268,7 +271,7 @@ const ResourceFilterControllerInner = ({
       }}
       onValueChange={onKeywordChange}
     />
-  );
+  ) : null;
 
   // Render filter portal
   const filterPortalElement = (

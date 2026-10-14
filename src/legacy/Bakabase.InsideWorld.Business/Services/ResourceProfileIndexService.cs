@@ -426,7 +426,7 @@ public class ResourceProfileIndexService : IResourceProfileIndexService
             _profilePriorities.Clear();
 
             // Get all profiles
-            var profiles = await resourceProfileService.GetAll();
+            var profiles = await resourceProfileService.GetAll(p => p.SourceDeviceId == null);
             var totalProfiles = profiles.Count;
 
             if (totalProfiles == 0)
@@ -514,7 +514,7 @@ public class ResourceProfileIndexService : IResourceProfileIndexService
             profileIds.Count);
 
         // Get current profiles
-        var allProfiles = await resourceProfileService.GetAll();
+        var allProfiles = await resourceProfileService.GetAll(p => p.SourceDeviceId == null);
         var profileMap = allProfiles.ToDictionary(p => p.Id);
 
         // Resources touched by a profile add/edit/delete: their effective playable-file options
@@ -628,7 +628,7 @@ public class ResourceProfileIndexService : IResourceProfileIndexService
             "ResourceProfileIndex_LoadingProfilesForResources",
             resourceIds.Count);
 
-        var allProfiles = await resourceProfileService.GetAll();
+        var allProfiles = await resourceProfileService.GetAll(p => p.SourceDeviceId == null);
 
         foreach (var profile in allProfiles)
         {

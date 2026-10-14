@@ -903,6 +903,15 @@ export interface BakabaseAbstractionsModelsDomainResourceProfileEnhancerOptions 
   enhancers?: BakabaseAbstractionsModelsDomainEnhancerFullOptions[];
 }
 
+export interface BakabaseAbstractionsModelsDomainResourceProfileEvaluationInput {
+  resourceIds: number[];
+  profiles: BakabaseAbstractionsModelsDomainResourceProfileSearchRule[];
+}
+
+export interface BakabaseAbstractionsModelsDomainResourceProfileEvaluationResult {
+  matches: BakabaseAbstractionsModelsDomainResourceProfileResourceMatch[];
+}
+
 export interface BakabaseAbstractionsModelsDomainResourceProfilePlayableFileOptions {
   extensions?: string[];
   fileNamePattern?: string;
@@ -914,6 +923,18 @@ export interface BakabaseAbstractionsModelsDomainResourceProfilePlayerOptions {
 
 export interface BakabaseAbstractionsModelsDomainResourceProfilePropertyOptions {
   properties?: BakabaseAbstractionsModelsDomainPropertyKeyWithScopePriority[];
+}
+
+export interface BakabaseAbstractionsModelsDomainResourceProfileResourceMatch {
+  /** @format int32 */
+  resourceId: number;
+  profileIds: number[];
+}
+
+export interface BakabaseAbstractionsModelsDomainResourceProfileSearchRule {
+  /** @format int32 */
+  id: number;
+  searchJson?: string;
 }
 
 export interface BakabaseAbstractionsModelsDomainResourceSearch {
@@ -5824,6 +5845,10 @@ export interface BakabaseModulesPlayerAbstractionsComponentsBatchPlayResourceFil
 export interface BakabaseModulesPlayerAbstractionsComponentsBatchPlayResourceSnapshot {
   resources: BakabaseModulesPlayerAbstractionsComponentsBatchPlayResourceFiles[];
   configuredPlayers: BakabaseAbstractionsModelsDomainMediaLibraryPlayer[];
+  playerOptionsByResourceId?: Record<
+    string,
+    BakabaseAbstractionsModelsDomainResourceProfilePlayerOptions
+  >;
 }
 
 export interface BakabaseModulesPlayerAbstractionsModelsDomainBatchPlayCandidate {
@@ -5899,34 +5924,6 @@ export type BakabaseModulesPlayerAbstractionsModelsDomainConstantsBatchPlayLaunc
 export interface BakabaseModulesPlayerAbstractionsModelsDomainDevicePlaybackChoice {
   mode: string;
   nativeSchemeId?: string;
-}
-
-export interface BakabaseModulesPlayerAbstractionsModelsDomainDevicePlaybackOpener {
-  id: string;
-  name: string;
-  installed: boolean;
-  supportsHttp: boolean;
-  supportedKinds?: string[];
-}
-
-export interface BakabaseModulesPlayerAbstractionsModelsDomainDevicePlaybackOverride {
-  target: string;
-  /** @format int32 */
-  resourceId?: number;
-  choices: Record<
-    string,
-    BakabaseModulesPlayerAbstractionsModelsDomainDevicePlaybackOverrideChoice
-  >;
-}
-
-export interface BakabaseModulesPlayerAbstractionsModelsDomainDevicePlaybackOverrideChoice {
-  mode: string;
-  playerId?: string;
-}
-
-export interface BakabaseModulesPlayerAbstractionsModelsDomainDevicePlaybackOverrideSnapshot {
-  rules: BakabaseModulesPlayerAbstractionsModelsDomainDevicePlaybackOverride[];
-  openers: BakabaseModulesPlayerAbstractionsModelsDomainDevicePlaybackOpener[];
 }
 
 export interface BakabaseModulesPlayerAbstractionsModelsDomainDevicePlaybackPreferences {
@@ -7305,6 +7302,9 @@ export interface BakabaseServiceModelsInputResourcePlaceholderItemInputModel {
 }
 
 export interface BakabaseServiceModelsInputResourceProfileInputModel {
+  sourceDeviceId?: string;
+  sourceLibraryEpoch?: string;
+  openingMode?: string;
   name: string;
   search?: BakabaseServiceModelsInputResourceSearchInputModel;
   nameTemplate?: string;
@@ -7314,6 +7314,12 @@ export interface BakabaseServiceModelsInputResourceProfileInputModel {
   propertyOptions?: BakabaseAbstractionsModelsDomainResourceProfilePropertyOptions;
   /** @format int32 */
   priority: number;
+}
+
+export interface BakabaseServiceModelsInputResourceProfileOpeningInputModel {
+  sourceDeviceId?: string;
+  libraryEpoch?: string;
+  resourceIds: number[];
 }
 
 export interface BakabaseServiceModelsInputResourceSearchFilterGroupInputModel {
@@ -8111,9 +8117,45 @@ export interface BakabaseServiceModelsViewResourcePlaceholderResultViewModel {
   error?: string;
 }
 
+export interface BakabaseServiceModelsViewResourceProfileOpeningResourceViewModel {
+  /** @format int32 */
+  resourceId: number;
+  openingMode?: string;
+  profileIds: number[];
+}
+
+export interface BakabaseServiceModelsViewResourceProfileOpeningViewModel {
+  openingMode?: string;
+  profileIds: number[];
+}
+
+export interface BakabaseServiceModelsViewResourceProfilePreviewResource {
+  /** @format int32 */
+  id: number;
+  path?: string;
+  displayName?: string;
+}
+
+export interface BakabaseServiceModelsViewResourceProfileSourceInfo {
+  deviceId: string;
+  name: string;
+  libraryEpoch: string;
+}
+
+export interface BakabaseServiceModelsViewResourceProfileSourceViewModel {
+  deviceId: string;
+  name: string;
+  libraryEpoch?: string;
+  available: boolean;
+  kind: string;
+}
+
 export interface BakabaseServiceModelsViewResourceProfileViewModel {
   /** @format int32 */
   id: number;
+  sourceDeviceId?: string;
+  sourceLibraryEpoch?: string;
+  openingMode?: string;
   name: string;
   search?: BakabaseServiceModelsViewResourceSearchViewModel;
   nameTemplate?: string;
@@ -8839,6 +8881,20 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModels
   data?: BakabaseServiceModelsViewResourcePlaceholderResultViewModel[];
 }
 
+export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewResourceProfileOpeningResourceViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewResourceProfileOpeningResourceViewModel[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewResourceProfileSourceViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewResourceProfileSourceViewModel[];
+}
+
 export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewResourceProfileViewModel {
   /** @format int32 */
   code: number;
@@ -9031,6 +9087,19 @@ export interface BootstrapModelsResponseModelsSearchResponse1BakabaseServiceMode
   pageSize: number;
 }
 
+export interface BootstrapModelsResponseModelsSearchResponse1BakabaseServiceModelsViewResourceProfilePreviewResource {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewResourceProfilePreviewResource[];
+  /** @format int32 */
+  totalCount: number;
+  /** @format int32 */
+  pageIndex: number;
+  /** @format int32 */
+  pageSize: number;
+}
+
 export interface BootstrapModelsResponseModelsSearchResponse1BootstrapComponentsLoggingLogServiceModelsEntitiesLog {
   /** @format int32 */
   code: number;
@@ -9148,6 +9217,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstract
   code: number;
   message?: string;
   data?: BakabaseAbstractionsModelsDomainResourceFileSystemCache;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainResourceProfileEvaluationResult {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseAbstractionsModelsDomainResourceProfileEvaluationResult;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainResourceProfilePlayerOptions {
@@ -9815,13 +9891,6 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesP
   data?: BakabaseModulesPlayerAbstractionsModelsDomainBatchPlayResult;
 }
 
-export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesPlayerAbstractionsModelsDomainDevicePlaybackOverrideSnapshot {
-  /** @format int32 */
-  code: number;
-  message?: string;
-  data?: BakabaseModulesPlayerAbstractionsModelsDomainDevicePlaybackOverrideSnapshot;
-}
-
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesPlayerAbstractionsModelsDomainDevicePlaybackPreferences {
   /** @format int32 */
   code: number;
@@ -10128,6 +10197,20 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceM
   code: number;
   message?: string;
   data?: BakabaseServiceModelsViewResourceMoveContextViewModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewResourceProfileOpeningViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewResourceProfileOpeningViewModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewResourceProfileSourceInfo {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewResourceProfileSourceInfo;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewResourceProfileViewModel {
@@ -12910,7 +12993,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         key?: string;
         /** @default false */
         explicitChoice?: boolean;
-        openingRuleKind?: string;
       },
       params: RequestParams = {},
     ) =>
@@ -20847,6 +20929,200 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     /**
      * No description
      *
+     * @tags FederationResourceProfileExport
+     * @name GetFederationResourceProfileSourceInfo
+     * @request GET:/federation/v1/export/resource-profile/identity
+     */
+    getFederationResourceProfileSourceInfo: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewResourceProfileSourceInfo,
+        any
+      >({
+        path: `/federation/v1/export/resource-profile/identity`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getFederationResourceProfileSourceInfo
+     * @name getFederationResourceProfileSourceInfoUrl
+     */
+    getFederationResourceProfileSourceInfoUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/v1/export/resource-profile/identity`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationResourceProfileExport
+     * @name GetFederationResourceProfileSearchProperties
+     * @request GET:/federation/v1/export/resource-profile/properties
+     */
+    getFederationResourceProfileSearchProperties: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesPropertyModelsViewPropertyViewModel,
+        any
+      >({
+        path: `/federation/v1/export/resource-profile/properties`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getFederationResourceProfileSearchProperties
+     * @name getFederationResourceProfileSearchPropertiesUrl
+     */
+    getFederationResourceProfileSearchPropertiesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/v1/export/resource-profile/properties`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationResourceProfileExport
+     * @name GetFederationResourceProfileFilterValue
+     * @request POST:/federation/v1/export/resource-profile/filter-value
+     */
+    getFederationResourceProfileFilterValue: (
+      data: BakabaseServiceModelsInputResourceSearchFilterInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesPropertyModelsViewPropertyViewModel,
+        any
+      >({
+        path: `/federation/v1/export/resource-profile/filter-value`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getFederationResourceProfileFilterValue
+     * @name getFederationResourceProfileFilterValueUrl
+     */
+    getFederationResourceProfileFilterValueUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/v1/export/resource-profile/filter-value`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationResourceProfileExport
+     * @name ResolveFederationResourceProfileSearch
+     * @request POST:/federation/v1/export/resource-profile/search-resolve
+     */
+    resolveFederationResourceProfileSearch: (
+      data: BakabaseServiceModelsInputResourceSearchInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewResourceSearchViewModel,
+        any
+      >({
+        path: `/federation/v1/export/resource-profile/search-resolve`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for resolveFederationResourceProfileSearch
+     * @name resolveFederationResourceProfileSearchUrl
+     */
+    resolveFederationResourceProfileSearchUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/v1/export/resource-profile/search-resolve`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationResourceProfileExport
+     * @name PreviewFederationResourceProfileSearch
+     * @request POST:/federation/v1/export/resource-profile/preview
+     */
+    previewFederationResourceProfileSearch: (
+      data: BakabaseServiceModelsInputResourceSearchInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSearchResponse1BakabaseServiceModelsViewResourceProfilePreviewResource,
+        any
+      >({
+        path: `/federation/v1/export/resource-profile/preview`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for previewFederationResourceProfileSearch
+     * @name previewFederationResourceProfileSearchUrl
+     */
+    previewFederationResourceProfileSearchUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/v1/export/resource-profile/preview`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags FederationResourceProfileExport
+     * @name EvaluateFederationResourceProfiles
+     * @request POST:/federation/v1/export/resource-profile/evaluate
+     */
+    evaluateFederationResourceProfiles: (
+      data: BakabaseAbstractionsModelsDomainResourceProfileEvaluationInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainResourceProfileEvaluationResult,
+        any
+      >({
+        path: `/federation/v1/export/resource-profile/evaluate`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for evaluateFederationResourceProfiles
+     * @name evaluateFederationResourceProfilesUrl
+     */
+    evaluateFederationResourceProfilesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/v1/export/resource-profile/evaluate`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
      * @tags FederationServer
      * @name GetManagedServers
      * @request GET:/federation/local/servers
@@ -21043,309 +21319,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     ) =>
       this.request<BakabaseModulesRemoteAccessAbstractionsModelsManagedServerOpenView, any>({
         path: `/federation/local/servers/${serverId}/open`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-  };
-  player = {
-    /**
-     * No description
-     *
-     * @tags DevicePlaybackOverrides
-     * @name GetDevicePlaybackOverrides
-     * @request GET:/player/device-playback/overrides
-     */
-    getDevicePlaybackOverrides: (
-      query?: {
-        target?: string;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesPlayerAbstractionsModelsDomainDevicePlaybackOverrideSnapshot,
-        any
-      >({
-        path: `/player/device-playback/overrides`,
-        method: "GET",
-        query: query,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for getDevicePlaybackOverrides
-     * @name getDevicePlaybackOverridesUrl
-     */
-    getDevicePlaybackOverridesUrl: (query?: {
-        target?: string;
-      }) => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/player/device-playback/overrides`;
-
-      // Build query string
-      if (query) {
-        // Object.entries rather than indexing by key: the query object is a typed
-        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
-        const queryString = Object.entries(query)
-          .filter(([, value]) => value !== undefined && value !== null)
-          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
-          .join("&");
-
-        return baseUrl + path + (queryString ? `?${queryString}` : "");
-      }
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags DevicePlaybackOverrides
-     * @name SetDevicePlaybackOverrides
-     * @request PUT:/player/device-playback/overrides
-     */
-    setDevicePlaybackOverrides: (
-      data: BakabaseModulesPlayerAbstractionsModelsDomainDevicePlaybackOverride,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/player/device-playback/overrides`,
-        method: "PUT",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for setDevicePlaybackOverrides
-     * @name setDevicePlaybackOverridesUrl
-     */
-    setDevicePlaybackOverridesUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/player/device-playback/overrides`;
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags Player
-     * @name GetDevicePlaybackPreferences
-     * @request GET:/player/device-playback/preferences
-     */
-    getDevicePlaybackPreferences: (params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesPlayerAbstractionsModelsDomainDevicePlaybackPreferences,
-        any
-      >({
-        path: `/player/device-playback/preferences`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for getDevicePlaybackPreferences
-     * @name getDevicePlaybackPreferencesUrl
-     */
-    getDevicePlaybackPreferencesUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/player/device-playback/preferences`;
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags Player
-     * @name SetDevicePlaybackPreferences
-     * @request PUT:/player/device-playback/preferences
-     */
-    setDevicePlaybackPreferences: (
-      data: BakabaseModulesPlayerAbstractionsModelsDomainDevicePlaybackPreferences,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/player/device-playback/preferences`,
-        method: "PUT",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for setDevicePlaybackPreferences
-     * @name setDevicePlaybackPreferencesUrl
-     */
-    setDevicePlaybackPreferencesUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/player/device-playback/preferences`;
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags Player
-     * @name GetBatchPlayResourceSnapshot
-     * @request POST:/player/batch-play/resource-snapshot
-     */
-    getBatchPlayResourceSnapshot: (
-      data: BakabaseModulesPlayerAbstractionsModelsInputBatchPlayCandidatesInputModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesPlayerAbstractionsComponentsBatchPlayResourceSnapshot,
-        any
-      >({
-        path: `/player/batch-play/resource-snapshot`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for getBatchPlayResourceSnapshot
-     * @name getBatchPlayResourceSnapshotUrl
-     */
-    getBatchPlayResourceSnapshotUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/player/batch-play/resource-snapshot`;
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags Player
-     * @name GetBatchPlayPlaylistSnapshot
-     * @request GET:/player/playlist/{playlistId}/batch-play/snapshot
-     */
-    getBatchPlayPlaylistSnapshot: (playlistId: number, params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesPlayerAbstractionsComponentsBatchPlayPlaylistSnapshot,
-        any
-      >({
-        path: `/player/playlist/${playlistId}/batch-play/snapshot`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Player
-     * @name GetBatchPlayCandidates
-     * @request POST:/player/batch-play/candidates
-     */
-    getBatchPlayCandidates: (
-      data: BakabaseModulesPlayerAbstractionsModelsInputBatchPlayCandidatesInputModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<
-        BootstrapModelsResponseModelsListResponse1BakabaseModulesPlayerAbstractionsModelsDomainBatchPlayCandidate,
-        any
-      >({
-        path: `/player/batch-play/candidates`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for getBatchPlayCandidates
-     * @name getBatchPlayCandidatesUrl
-     */
-    getBatchPlayCandidatesUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/player/batch-play/candidates`;
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags Player
-     * @name BatchPlayResources
-     * @request POST:/player/batch-play
-     */
-    batchPlayResources: (
-      data: BakabaseModulesPlayerAbstractionsModelsInputBatchPlayInputModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesPlayerAbstractionsModelsDomainBatchPlayResult,
-        any
-      >({
-        path: `/player/batch-play`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for batchPlayResources
-     * @name batchPlayResourcesUrl
-     */
-    batchPlayResourcesUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/player/batch-play`;
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags Player
-     * @name GetPlaylistBatchPlayCandidates
-     * @request GET:/player/playlist/{playlistId}/batch-play/candidates
-     */
-    getPlaylistBatchPlayCandidates: (playlistId: number, params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsListResponse1BakabaseModulesPlayerAbstractionsModelsDomainBatchPlayCandidate,
-        any
-      >({
-        path: `/player/playlist/${playlistId}/batch-play/candidates`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Player
-     * @name BatchPlayPlaylist
-     * @request POST:/player/playlist/{playlistId}/batch-play
-     */
-    batchPlayPlaylist: (
-      playlistId: number,
-      data: BakabaseModulesPlayerAbstractionsModelsInputPlaylistBatchPlayInputModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesPlayerAbstractionsModelsDomainBatchPlayResult,
-        any
-      >({
-        path: `/player/playlist/${playlistId}/batch-play`,
         method: "POST",
         body: data,
         type: ContentType.Json,
@@ -22600,6 +22573,363 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/resource-profile/by-resource/${resourceId}/bind-property`,
         method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ResourceProfile
+     * @name EvaluateResourceProfileSearches
+     * @request POST:/resource-profile/evaluate
+     */
+    evaluateResourceProfileSearches: (
+      data: BakabaseAbstractionsModelsDomainResourceProfileEvaluationInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainResourceProfileEvaluationResult,
+        any
+      >({
+        path: `/resource-profile/evaluate`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for evaluateResourceProfileSearches
+     * @name evaluateResourceProfileSearchesUrl
+     */
+    evaluateResourceProfileSearchesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource-profile/evaluate`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ResourceProfile
+     * @name ResolveResourceProfileSearch
+     * @request POST:/resource-profile/search/resolve
+     */
+    resolveResourceProfileSearch: (
+      data: BakabaseServiceModelsInputResourceSearchInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewResourceSearchViewModel,
+        any
+      >({
+        path: `/resource-profile/search/resolve`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for resolveResourceProfileSearch
+     * @name resolveResourceProfileSearchUrl
+     */
+    resolveResourceProfileSearchUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource-profile/search/resolve`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ResourceProfileSourceData
+     * @name GetResourceProfileSourceInfo
+     * @request GET:/resource-profile/source-info
+     */
+    getResourceProfileSourceInfo: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewResourceProfileSourceInfo,
+        any
+      >({
+        path: `/resource-profile/source-info`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getResourceProfileSourceInfo
+     * @name getResourceProfileSourceInfoUrl
+     */
+    getResourceProfileSourceInfoUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource-profile/source-info`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ResourceProfileSourceData
+     * @name GetResourceProfileSearchProperties
+     * @request GET:/resource-profile/search/properties
+     */
+    getResourceProfileSearchProperties: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesPropertyModelsViewPropertyViewModel,
+        any
+      >({
+        path: `/resource-profile/search/properties`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getResourceProfileSearchProperties
+     * @name getResourceProfileSearchPropertiesUrl
+     */
+    getResourceProfileSearchPropertiesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource-profile/search/properties`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ResourceProfileSourceData
+     * @name GetResourceProfileSearchFilterValue
+     * @request POST:/resource-profile/search/filter-value
+     */
+    getResourceProfileSearchFilterValue: (
+      data: BakabaseServiceModelsInputResourceSearchFilterInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesPropertyModelsViewPropertyViewModel,
+        any
+      >({
+        path: `/resource-profile/search/filter-value`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getResourceProfileSearchFilterValue
+     * @name getResourceProfileSearchFilterValueUrl
+     */
+    getResourceProfileSearchFilterValueUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource-profile/search/filter-value`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ResourceProfileSourceData
+     * @name PreviewResourceProfileSearch
+     * @request POST:/resource-profile/preview
+     */
+    previewResourceProfileSearch: (
+      data: BakabaseServiceModelsInputResourceSearchInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSearchResponse1BakabaseServiceModelsViewResourceProfilePreviewResource,
+        any
+      >({
+        path: `/resource-profile/preview`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for previewResourceProfileSearch
+     * @name previewResourceProfileSearchUrl
+     */
+    previewResourceProfileSearchUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource-profile/preview`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ResourceProfileSources
+     * @name GetResourceProfileSources
+     * @request GET:/resource-profile/sources
+     */
+    getResourceProfileSources: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewResourceProfileSourceViewModel,
+        any
+      >({
+        path: `/resource-profile/sources`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getResourceProfileSources
+     * @name getResourceProfileSourcesUrl
+     */
+    getResourceProfileSourcesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource-profile/sources`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ResourceProfileSources
+     * @name GetConnectedResourceProfileSourceInfo
+     * @request GET:/resource-profile/sources/{deviceId}/info
+     */
+    getConnectedResourceProfileSourceInfo: (
+      deviceId: string,
+      query?: {
+        libraryEpoch?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewResourceProfileSourceInfo,
+        any
+      >({
+        path: `/resource-profile/sources/${deviceId}/info`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ResourceProfileSources
+     * @name GetSourceResourceProfileProperties
+     * @request GET:/resource-profile/sources/{deviceId}/properties
+     */
+    getSourceResourceProfileProperties: (
+      deviceId: string,
+      query?: {
+        libraryEpoch?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesPropertyModelsViewPropertyViewModel,
+        any
+      >({
+        path: `/resource-profile/sources/${deviceId}/properties`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ResourceProfileSources
+     * @name GetSourceResourceProfileFilterValue
+     * @request POST:/resource-profile/sources/{deviceId}/filter-value
+     */
+    getSourceResourceProfileFilterValue: (
+      deviceId: string,
+      data: BakabaseServiceModelsInputResourceSearchFilterInputModel,
+      query?: {
+        libraryEpoch?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesPropertyModelsViewPropertyViewModel,
+        any
+      >({
+        path: `/resource-profile/sources/${deviceId}/filter-value`,
+        method: "POST",
+        query: query,
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ResourceProfileSources
+     * @name ResolveSourceResourceProfileSearch
+     * @request POST:/resource-profile/sources/{deviceId}/search/resolve
+     */
+    resolveSourceResourceProfileSearch: (
+      deviceId: string,
+      data: BakabaseServiceModelsInputResourceSearchInputModel,
+      query?: {
+        libraryEpoch?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewResourceSearchViewModel,
+        any
+      >({
+        path: `/resource-profile/sources/${deviceId}/search/resolve`,
+        method: "POST",
+        query: query,
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ResourceProfileSources
+     * @name PreviewSourceResourceProfileSearch
+     * @request POST:/resource-profile/sources/{deviceId}/preview
+     */
+    previewSourceResourceProfileSearch: (
+      deviceId: string,
+      data: BakabaseServiceModelsInputResourceSearchInputModel,
+      query?: {
+        libraryEpoch?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSearchResponse1BakabaseServiceModelsViewResourceProfilePreviewResource,
+        any
+      >({
+        path: `/resource-profile/sources/${deviceId}/preview`,
+        method: "POST",
+        query: query,
         body: data,
         type: ContentType.Json,
         format: "json",
@@ -28716,6 +29046,318 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
+
+      return baseUrl + path;
+    },
+  };
+  player = {
+    /**
+     * No description
+     *
+     * @tags Player
+     * @name GetDevicePlaybackPreferences
+     * @request GET:/player/device-playback/preferences
+     */
+    getDevicePlaybackPreferences: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesPlayerAbstractionsModelsDomainDevicePlaybackPreferences,
+        any
+      >({
+        path: `/player/device-playback/preferences`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getDevicePlaybackPreferences
+     * @name getDevicePlaybackPreferencesUrl
+     */
+    getDevicePlaybackPreferencesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/player/device-playback/preferences`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Player
+     * @name SetDevicePlaybackPreferences
+     * @request PUT:/player/device-playback/preferences
+     */
+    setDevicePlaybackPreferences: (
+      data: BakabaseModulesPlayerAbstractionsModelsDomainDevicePlaybackPreferences,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/player/device-playback/preferences`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for setDevicePlaybackPreferences
+     * @name setDevicePlaybackPreferencesUrl
+     */
+    setDevicePlaybackPreferencesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/player/device-playback/preferences`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Player
+     * @name GetBatchPlayResourceSnapshot
+     * @request POST:/player/batch-play/resource-snapshot
+     */
+    getBatchPlayResourceSnapshot: (
+      data: BakabaseModulesPlayerAbstractionsModelsInputBatchPlayCandidatesInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesPlayerAbstractionsComponentsBatchPlayResourceSnapshot,
+        any
+      >({
+        path: `/player/batch-play/resource-snapshot`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getBatchPlayResourceSnapshot
+     * @name getBatchPlayResourceSnapshotUrl
+     */
+    getBatchPlayResourceSnapshotUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/player/batch-play/resource-snapshot`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Player
+     * @name GetBatchPlayPlaylistSnapshot
+     * @request GET:/player/playlist/{playlistId}/batch-play/snapshot
+     */
+    getBatchPlayPlaylistSnapshot: (playlistId: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesPlayerAbstractionsComponentsBatchPlayPlaylistSnapshot,
+        any
+      >({
+        path: `/player/playlist/${playlistId}/batch-play/snapshot`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Player
+     * @name GetBatchPlayCandidates
+     * @request POST:/player/batch-play/candidates
+     */
+    getBatchPlayCandidates: (
+      data: BakabaseModulesPlayerAbstractionsModelsInputBatchPlayCandidatesInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesPlayerAbstractionsModelsDomainBatchPlayCandidate,
+        any
+      >({
+        path: `/player/batch-play/candidates`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getBatchPlayCandidates
+     * @name getBatchPlayCandidatesUrl
+     */
+    getBatchPlayCandidatesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/player/batch-play/candidates`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Player
+     * @name BatchPlayResources
+     * @request POST:/player/batch-play
+     */
+    batchPlayResources: (
+      data: BakabaseModulesPlayerAbstractionsModelsInputBatchPlayInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesPlayerAbstractionsModelsDomainBatchPlayResult,
+        any
+      >({
+        path: `/player/batch-play`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for batchPlayResources
+     * @name batchPlayResourcesUrl
+     */
+    batchPlayResourcesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/player/batch-play`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Player
+     * @name GetPlaylistBatchPlayCandidates
+     * @request GET:/player/playlist/{playlistId}/batch-play/candidates
+     */
+    getPlaylistBatchPlayCandidates: (playlistId: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesPlayerAbstractionsModelsDomainBatchPlayCandidate,
+        any
+      >({
+        path: `/player/playlist/${playlistId}/batch-play/candidates`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Player
+     * @name BatchPlayPlaylist
+     * @request POST:/player/playlist/{playlistId}/batch-play
+     */
+    batchPlayPlaylist: (
+      playlistId: number,
+      data: BakabaseModulesPlayerAbstractionsModelsInputPlaylistBatchPlayInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesPlayerAbstractionsModelsDomainBatchPlayResult,
+        any
+      >({
+        path: `/player/playlist/${playlistId}/batch-play`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ResourceProfileOpening
+     * @name GetResourceProfileOpeningBehavior
+     * @request GET:/player/resource-profile
+     */
+    getResourceProfileOpeningBehavior: (
+      query?: {
+        /** @format int32 */
+        resourceId?: number;
+        sourceDeviceId?: string;
+        libraryEpoch?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewResourceProfileOpeningViewModel,
+        any
+      >({
+        path: `/player/resource-profile`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getResourceProfileOpeningBehavior
+     * @name getResourceProfileOpeningBehaviorUrl
+     */
+    getResourceProfileOpeningBehaviorUrl: (query?: {
+        /** @format int32 */
+        resourceId?: number;
+        sourceDeviceId?: string;
+        libraryEpoch?: string;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/player/resource-profile`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ResourceProfileOpening
+     * @name GetResourceProfileOpeningBehaviors
+     * @request POST:/player/resource-profiles
+     */
+    getResourceProfileOpeningBehaviors: (
+      data: BakabaseServiceModelsInputResourceProfileOpeningInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewResourceProfileOpeningResourceViewModel,
+        any
+      >({
+        path: `/player/resource-profiles`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getResourceProfileOpeningBehaviors
+     * @name getResourceProfileOpeningBehaviorsUrl
+     */
+    getResourceProfileOpeningBehaviorsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/player/resource-profiles`;
 
       return baseUrl + path;
     },

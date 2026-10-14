@@ -154,6 +154,8 @@ public static class RelayComposition
         services.AddSingleton<IUserMachineHandler, PlayItemHandler>();
         services.AddSingleton<IUserMachineHandler, PlayResourceHandler>();
         services.AddSingleton<IUserMachineHandler, PlayRandomResourceHandler>();
+        services.AddSingleton<IUserMachineHandler, ResourceProfilePlaybackHandler>();
+        services.AddSingleton<IUserMachineHandler, ResourceProfilesPlaybackHandler>();
 
         // Batch play runs the server's own orchestration in this process, with the
         // library read over HTTP and the files resolved against this machine. Registered
@@ -174,8 +176,6 @@ public static class RelayComposition
 
         services.AddSingleton<IUserMachineHandler, GetDevicePlaybackPreferencesHandler>();
         services.AddSingleton<IUserMachineHandler, SetDevicePlaybackPreferencesHandler>();
-        services.AddSingleton<IUserMachineHandler, GetDevicePlaybackOverridesHandler>();
-        services.AddSingleton<IUserMachineHandler, SetDevicePlaybackOverridesHandler>();
 
         services.AddSingleton<IUserMachineHandler, BatchPlayCandidatesHandler>();
         services.AddSingleton<IUserMachineHandler, BatchPlayResourcesHandler>();

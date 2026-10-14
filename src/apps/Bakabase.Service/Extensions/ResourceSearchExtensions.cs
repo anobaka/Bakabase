@@ -1,3 +1,4 @@
+using Newtonsoft.Json;
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -536,6 +537,17 @@ public static class ResourceSearchExtensions
         return filter;
     }
 
+    private static ResourceSearchViewModel? ForeignProfileSearch(string? json, IPropertyLocalizer localizer)
+    {
+        if (string.IsNullOrEmpty(json)) return null;
+        var search = JsonConvert.DeserializeObject<ResourceSearchDbModel>(json);
+        return search == null ? null : new ResourceSearchViewModel
+        {
+            Group = search.Group?.ToViewModel(new Dictionary<PropertyPool, Dictionary<int, Property>>(), localizer),
+            Orders = search.Orders, Keyword = search.Keyword, Page = search.Page, PageSize = search.PageSize, Tags = search.Tags
+        };
+    }
+
     public static ResourceProfileViewModel ToViewModel(this ResourceProfile profile,
         IPropertyLocalizer propertyLocalizer)
     {
@@ -543,7 +555,12 @@ public static class ResourceSearchExtensions
         {
             Id = profile.Id,
             Name = profile.Name,
-            Search = profile.Search.Group != null ? profile.Search.ToViewModel(propertyLocalizer) : null,
+            SourceDeviceId = profile.SourceDeviceId,
+            SourceLibraryEpoch = profile.SourceLibraryEpoch,
+            OpeningMode = profile.OpeningMode,
+            Search = profile.SourceDeviceId != null
+                ? ForeignProfileSearch(profile.SearchJson, propertyLocalizer)
+                : profile.Search.Group != null ? profile.Search.ToViewModel(propertyLocalizer) : null,
             NameTemplate = profile.NameTemplate,
             EnhancerOptions = profile.EnhancerOptions,
             PlayableFileOptions = profile.PlayableFileOptions,

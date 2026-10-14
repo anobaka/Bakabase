@@ -16,13 +16,11 @@ using Bakabase.Modules.Federation.Transport;
 using Bakabase.Modules.Player.Abstractions.Components;
 using Bakabase.Modules.Player.Abstractions.Models.Domain;
 using Bakabase.Modules.Player.Components;
-using Bakabase.Modules.Player.Services;
 using Bakabase.Modules.RemoteAccess.Abstractions.Models;
 using Bakabase.Service.Components.Federation;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Microsoft.Extensions.Options;
 
 namespace Bakabase.Tests.Federation;
 
@@ -30,12 +28,12 @@ namespace Bakabase.Tests.Federation;
 public sealed class FederationImageOpeningTests
 {
     [TestMethod]
-    public async Task DeviceVideoOverrideUsesTheChosenLocalPlayerWithoutChangingTheSharedSource()
+    public async Task SourceVideoProfileUsesTheChosenLocalPlayerWithoutChangingTheSharedSource()
     {
         await using var f = await Fixture.Create();
         await f.WriteFile("film.mp4");
         await f.MapRoot();
-        await f.OverridePlayer("video", "Mpv");
+        await f.ConfigureProfilePlayer("video", "Mpv");
         var reference = f.RememberAsset("film.mp4", "film.mp4");
         Assert.IsTrue((await f.Media.PrepareAsync(new(reference, "player"), "http://localhost:34567", default)).Launched);
         Assert.AreEqual("Mpv", f.Launcher.Launches.Single());
@@ -44,12 +42,12 @@ public sealed class FederationImageOpeningTests
     }
 
     [TestMethod]
-    public async Task DefaultMediaOverrideOnlyOpensAnAuthorizedMappedPhysicalMediaFile()
+    public async Task DefaultMediaProfileOnlyOpensAnAuthorizedMappedPhysicalMediaFile()
     {
         await using var f = await Fixture.Create();
         var file = await f.WriteFile("film.mp4");
         await f.MapRoot();
-        await f.OverridePlayer("video", "system-default");
+        await f.ConfigureProfilePlayer("video", "system-default");
         var reference = f.RememberAsset("film.mp4", "film.mp4");
         Assert.IsTrue((await f.Media.PrepareAsync(new(reference, "player"), "http://localhost:34567", default)).Launched);
         Assert.AreEqual(MediaPathBoundary.ResolvePhysical(file), f.SystemPlayer.Opened.Single());
@@ -59,10 +57,10 @@ public sealed class FederationImageOpeningTests
     }
 
     [TestMethod]
-    public async Task DefaultMediaOverrideCannotTurnAnUnmappedStreamIntoAShellLaunch()
+    public async Task DefaultMediaProfileCannotTurnAnUnmappedStreamIntoAShellLaunch()
     {
         await using var f = await Fixture.Create();
-        await f.OverridePlayer("video", "system-default");
+        await f.ConfigureProfilePlayer("video", "system-default");
         var reference = f.RememberAsset("film.mp4", "film.mp4");
         Assert.AreEqual("MappedPathUnavailable", (await Assert.ThrowsExactlyAsync<FederationQueryException>(() =>
             f.Media.PrepareAsync(new(reference, "player"), "http://localhost:34567", default))).Code);
@@ -73,13 +71,13 @@ public sealed class FederationImageOpeningTests
     [TestMethod]
     [DataRow(false)]
     [DataRow(true)]
-    public async Task DefaultMediaOverrideCannotExecuteAMislabelledMappedFileOrSymlink(bool symlink)
+    public async Task DefaultMediaProfileCannotExecuteAMislabelledMappedFileOrSymlink(bool symlink)
     {
         if (symlink && OperatingSystem.IsWindows()) Assert.Inconclusive("Creating filesystem links requires an optional Windows privilege.");
         await using var f = await Fixture.Create();
         var executable = await f.WriteFile("payload.exe");
         await f.MapRoot();
-        await f.OverridePlayer("video", "system-default");
+        await f.ConfigureProfilePlayer("video", "system-default");
         if (symlink) File.CreateSymbolicLink(Path.Combine(f.MediaRoot, "film.mp4"), MediaPathBoundary.ResolvePhysical(executable));
         var reference = f.RememberAsset("film.mp4", symlink ? "film.mp4" : "payload.exe");
         Assert.AreEqual("UnsupportedPlaybackMode", (await Assert.ThrowsExactlyAsync<FederationQueryException>(() =>
@@ -89,26 +87,38 @@ public sealed class FederationImageOpeningTests
     }
 
     [TestMethod]
-    public async Task ImageOverrideCannotSendAnImageToAnAvPlayer()
+    public async Task SourceProfileCanOpenMappedImagesWithACustomLocalApplication()
     {
         await using var f = await Fixture.Create();
         await f.WriteFile("cover.jpg");
         await f.MapRoot();
-        await f.OverridePlayer("image", "Vlc");
+        await f.ConfigureProfilePlayer("image", "CustomImageViewer");
         var reference = f.RememberImage("cover.jpg", "cover.jpg");
-        Assert.AreEqual("PlayerUnavailable", (await Assert.ThrowsExactlyAsync<FederationQueryException>(() =>
-            f.Media.PrepareAsync(new(reference, "player"), "http://localhost:34567", default))).Code);
+        Assert.IsTrue((await f.Media.PrepareAsync(new(reference, "player"), "http://localhost:34567", default)).Launched);
         Assert.AreEqual(0, f.Images.Opened.Count);
-        Assert.AreEqual(0, f.Launcher.Launches.Count);
+        Assert.AreEqual("CustomImageViewer", f.Launcher.Launches.Single());
     }
 
     [TestMethod]
-    public async Task RevokingTheSharedSourceStillWinsOverTheDefaultMediaOverride()
+    public async Task OwnLibraryInsideMergedBrowseKeepsItsOrdinaryResourceProfilePlayer()
+    {
+        await using var f = await Fixture.Create();
+        var reference = await f.RememberOwnImage(await f.WriteFile("own.png"));
+        f.LocalProfiles.Profiles = [new ResourceProfile {Id = 9, Name = "Local image app", PlayerOptions = new()
+            {Players = [new() {ExecutablePath = "OwnCustomViewer", Extensions = ["png"]}]}}];
+        Assert.IsTrue((await f.Media.PrepareAsync(new(reference, "player"), "http://localhost:34567", default)).Launched);
+        Assert.AreEqual("OwnCustomViewer", f.Launcher.Launches.Single());
+        Assert.AreEqual(0, f.Profiles.Calls);
+        Assert.AreEqual(0, f.Transport.Methods.Count);
+    }
+
+    [TestMethod]
+    public async Task RevokingTheSharedSourceStillWinsOverTheDefaultMediaProfile()
     {
         await using var f = await Fixture.Create();
         await f.WriteFile("film.mp4");
         await f.MapRoot();
-        await f.OverridePlayer("video", "system-default");
+        await f.ConfigureProfilePlayer("video", "system-default");
         f.Transport.Status = HttpStatusCode.Forbidden;
         var reference = f.RememberAsset("film.mp4", "film.mp4");
         Assert.AreEqual("GrantRevoked", (await Assert.ThrowsExactlyAsync<FederationQueryException>(() =>
@@ -330,6 +340,32 @@ public sealed class FederationImageOpeningTests
         Assert.AreEqual(0, f.Images.Opened.Count);
     }
 
+    private sealed class SourceProfiles : ISourceResourceProfilePlaybackService
+    {
+        public int Calls;
+        public ResourceProfileOpeningOptions Options { get; set; } = new();
+        public Task<ResourceProfileOpeningOptions> ResolveAsync(string sourceDeviceId, string? libraryEpoch,
+            int resourceId, CancellationToken cancellationToken = default)
+        {
+            Calls++;
+            Assert.AreEqual("remote", sourceDeviceId);
+            Assert.AreEqual("remote-epoch", libraryEpoch);
+            Assert.AreEqual(42, resourceId);
+            return Task.FromResult(Options);
+        }
+        public Task<IReadOnlyDictionary<int, ResourceProfileOpeningOptions>> ResolveManyAsync(string sourceDeviceId,
+            string? libraryEpoch, IReadOnlyList<int> resourceIds, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyDictionary<int, ResourceProfileOpeningOptions>>(resourceIds.ToDictionary(id => id, _ => Options));
+    }
+
+    public class LocalProfileProxy : DispatchProxy
+    {
+        public List<ResourceProfile> Profiles = [];
+        protected override object? Invoke(MethodInfo? method, object?[]? args) =>
+            method!.Name == nameof(IResourceProfileService.GetMatchingProfiles)
+                ? Task.FromResult(Profiles) : throw new NotSupportedException(method.Name);
+    }
+
     private sealed class Fixture : IAsyncDisposable
     {
         public readonly FederationBrowsingControlTests.StateDirectory Directory = new();
@@ -344,7 +380,8 @@ public sealed class FederationImageOpeningTests
         public readonly ImageOpener Images = new();
         public readonly RecordingLauncher Launcher = new();
         public readonly RecordingSystemPlayer SystemPlayer = new();
-        public DevicePlaybackOverridesStore Overrides = null!;
+        public readonly SourceProfiles Profiles = new();
+        public LocalProfileProxy LocalProfiles = null!;
         public readonly Transport Transport = new();
         public ResourceProxy Resources = null!;
         public FederationMediaService Media = null!;
@@ -381,18 +418,21 @@ public sealed class FederationImageOpeningTests
                 new Access(), f._assets, f._db);
             var directories = new FederationDirectoryService(identity, f._local, new PeerSessions(), f.Transport,
                 f.Peers, new DirectoryOpener(), f._grants);
-            f.Overrides = new(Options.Create(new PlayerModuleOptions
-                {DevicePlaybackPreferencesFile = () => Path.Combine(f.Directory.Path, "device-playback.json")}));
+            var localProfiles = DispatchProxy.Create<IResourceProfileService, LocalProfileProxy>();
+            f.LocalProfiles = (LocalProfileProxy) localProfiles;
             f.Media = new(identity, f._local, new PeerSessions(), f.Transport, f.Peers, f.Sessions,
                 new FederationPlayerPolicy(new LocalPlayerResolver(new InstalledPlayers()), new DirectProxyEnvironment()),
-                f.Launcher, resources, f._grants, directories, f.Images, f.Overrides, f.SystemPlayer);
+                f.Launcher, resources, f._grants, directories, f.Images, f.Profiles, f.SystemPlayer, localProfiles);
             return f;
         }
 
-        public Task OverridePlayer(string kind, string playerId) => Overrides.SaveAsync(new DevicePlaybackOverride
+        public Task ConfigureProfilePlayer(string kind, string playerId)
         {
-            Target = "node:remote:remote-epoch", Choices = new() {[kind] = new("native", playerId)}
-        });
+            Profiles.Options = new ResourceProfileOpeningOptions {ProfileIds = [7], OpeningMode = "native",
+                PlayerOptions = new ResourceProfilePlayerOptions {Players = playerId == "system-default" ? [] :
+                    [new MediaLibraryPlayer {ExecutablePath = playerId, Extensions = new() {kind == "image" ? ".jpg" : ".mp4"}}]}};
+            return Task.CompletedTask;
+        }
 
         public async Task<string> WriteFile(string name)
         {

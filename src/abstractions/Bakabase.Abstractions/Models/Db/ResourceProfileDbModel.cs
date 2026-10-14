@@ -7,6 +7,15 @@ public record ResourceProfileDbModel
 {
     public int Id { get; set; }
 
+    /// <summary>Null for this library; otherwise the stable identity of the resource owner.</summary>
+    public string? SourceDeviceId { get; set; }
+
+    /// <summary>Pins source-owned filter IDs to one incarnation of that library.</summary>
+    public string? SourceLibraryEpoch { get; set; }
+
+    /// <summary>Null inherits; browser, native or ask changes how this device opens matching resources.</summary>
+    public string? OpeningMode { get; set; }
+
     /// <summary>
     /// 配置名称
     /// </summary>

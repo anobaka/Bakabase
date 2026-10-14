@@ -96,9 +96,9 @@ public class PlayItemHandlerTests
         }
     }
 
-    private LocalPlayback Playback(DevicePlaybackOverridesStore? overrides = null) =>
+    private LocalPlayback Playback(StubSourceResourceProfiles? profiles = null) =>
         new(_connection, _upstream, new LocalPlayerResolver(_locator), _shell, new StubLoopback(),
-            NullLogger<LocalPlayback>.Instance, overrides);
+            NullLogger<LocalPlayback>.Instance, profiles);
 
     private PlayItemHandler Handler() => new(Playback());
 
@@ -138,77 +138,106 @@ public class PlayItemHandlerTests
 
     // ---- local files ----
 
-    private DevicePlaybackOverridesStore Overrides() => new(Options.Create(new PlayerModuleOptions
+    [TestMethod]
+    public async Task AManagedPageReadsOnlyItsOwnOpeningModeAndNeverReceivesLocalExecutablePaths()
     {
-        DevicePlaybackPreferencesFile = () => Path.Combine(_root, "config", "preferences.json")
-    }));
+        await WithLibraryAt("/srv");
+        var profiles = new StubSourceResourceProfiles();
+        profiles.Matches[42] = new()
+        {
+            OpeningMode = "native", ProfileIds = [6],
+            PlayerOptions = new() {Players = [new() {ExecutablePath = "private-local-program", Command = "private-args {0}"}]}
+        };
+        var handler = new ResourceProfilePlaybackHandler(_connection, profiles);
+        var wrong = Request("?sourceDeviceId=another-server&resourceId=42");
+        await handler.HandleAsync(wrong, new Dictionary<string, string>());
+        Assert.AreEqual(400, Read(wrong).Status);
+        Assert.AreEqual(0, profiles.Calls.Count);
+        var own = Request("?sourceDeviceId=server-1&resourceId=42");
+        await handler.HandleAsync(own, new Dictionary<string, string>());
+        var (status, body) = Read(own);
+        Assert.AreEqual(200, status);
+        Assert.AreEqual("native", body.GetProperty("data").GetProperty("openingMode").GetString());
+        Assert.IsFalse(body.ToString().Contains("private-"));
+        Assert.AreEqual("no-store", own.Response.Headers.CacheControl.ToString());
+    }
 
     [TestMethod]
-    public async Task CollectionRuleKindKeepsItsResourceOverrideInsteadOfTheConcreteFileRule()
+    public async Task ALocalProfileUsesItsOwnCustomExecutableArgumentsAndExtensionRules()
+    {
+        var folder = await WithLibraryAt("/srv");
+        await File.WriteAllTextAsync(Path.Combine(folder, "comic.cbz"), "archive");
+        var profiles = new StubSourceResourceProfiles();
+        profiles.Matches[42] = new()
+        {
+            ProfileIds = [5], PlayerOptions = new()
+            {
+                Players = [new() {ExecutablePath = "my-comic-reader", Command = "--book {0}", Extensions = ["cbz"]}]
+            }
+        };
+        Assert.IsTrue(await Playback(profiles).PlayAsync(Request(""), 42,
+            DataOrigin.FileSystem, "/srv/comic.cbz"));
+        Assert.AreEqual("my-comic-reader", _shell.Processes.Single().Executable);
+        StringAssert.Contains(_shell.Processes.Single().Arguments, "--book");
+        StringAssert.Contains(_shell.Processes.Single().Arguments, Path.Combine(folder, "comic.cbz"));
+        Assert.AreEqual("server-1", profiles.Calls.Single().Source);
+        CollectionAssert.AreEqual(new[] {42}, profiles.Calls.Single().Ids);
+        Assert.AreEqual(0, _upstream.PlayerOptionsReadCount);
+    }
+
+    [TestMethod]
+    public async Task AnExplicitEmptyLocalPlayerBlockUsesWindowsAssociationsInsteadOfTheSourceProfile()
     {
         var folder = await WithLibraryAt("/srv");
         await File.WriteAllTextAsync(Path.Combine(folder, "movie.mp4"), "media");
-        _locator.Installed["Vlc"] = "vlc.exe";
-        _locator.Installed["Mpv"] = "mpv.exe";
-        var overrides = Overrides();
-        await overrides.SaveAsync(new()
-        {
-            Target = "server:server-1", Choices = new()
-            {
-                ["other"] = new("native", "Vlc"), ["video"] = new("native", "Mpv")
-            }
-        });
-        await overrides.SaveAsync(new()
-        {
-            Target = "server:server-1", ResourceId = 42,
-            Choices = new() { ["other"] = new("native", "system-default") }
-        });
-
-        Assert.IsTrue(await Playback(overrides).PlayAsync(Request("?openingRuleKind=other"), 42,
-            DataOrigin.FileSystem, "/srv/movie.mp4"));
+        _upstream.PlayerOptions = new() {Players = [new() {ExecutablePath = "vlc.exe"}]};
+        var profiles = new StubSourceResourceProfiles();
+        profiles.Matches[42] = new() {PlayerOptions = new() {Players = []}};
+        Assert.IsTrue(await Playback(profiles).PlayAsync(Request(""), 42, DataOrigin.FileSystem, "/srv/movie.mp4"));
         Assert.AreEqual(Path.Combine(folder, "movie.mp4"), _shell.Launched.Single());
-        Assert.AreEqual(0, _shell.Processes.Count);
         Assert.AreEqual(0, _upstream.PlayerOptionsReadCount);
-
-        Assert.IsTrue(await Playback(overrides).PlayAsync(Request(""), 42, DataOrigin.FileSystem, "/srv/movie.mp4"));
-        Assert.AreEqual("mpv.exe", _shell.Processes.Single().Executable);
-
-        var selected = new LocalPlayerResolver(_locator).ResolveKnown("Vlc", "/srv/movie.mp4");
-        Assert.IsTrue(await Playback(overrides).PlayAsync(Request("?openingRuleKind=other"), 42,
-            DataOrigin.FileSystem, "/srv/movie.mp4", selected, explicitChoice: true));
-        Assert.AreEqual("vlc.exe", _shell.Processes.Last().Executable);
+        Assert.AreEqual(0, _shell.Processes.Count);
     }
 
     [TestMethod]
-    public async Task CollectionRuleKindNeverChangesTheRealFilesPlayerCapabilityCheck()
+    public async Task AOneTimeChoicePrecedesTheLocalProfile()
     {
-        await WithLibraryAt("/srv");
-        _locator.Installed["Foobar2000"] = "foobar2000.exe";
-        var overrides = Overrides();
-        await overrides.SaveAsync(new()
-        {
-            Target = "server:server-1", Choices = new() { ["audio"] = new("native", "Foobar2000") }
-        });
-        var context = Request("?openingRuleKind=audio");
-        Assert.IsFalse(await Playback(overrides).PlayAsync(context, 42, DataOrigin.FileSystem, "/srv/movie.mp4"));
+        var folder = await WithLibraryAt("/srv");
+        await File.WriteAllTextAsync(Path.Combine(folder, "movie.mp4"), "media");
+        var profiles = new StubSourceResourceProfiles {Failure = new InvalidOperationException("source unavailable")};
+        Assert.IsTrue(await Playback(profiles).PlayAsync(Request(""), 42, DataOrigin.FileSystem, "/srv/movie.mp4",
+            ResolvedPlayer.SystemDefault, explicitChoice: true));
+        Assert.AreEqual(0, profiles.Calls.Count);
+        Assert.AreEqual(Path.Combine(folder, "movie.mp4"), _shell.Launched.Single());
+    }
+
+    [TestMethod]
+    public async Task UnavailableLocalProfileMatchingNeverSilentlyLaunchesTheSourcePlayer()
+    {
+        var folder = await WithLibraryAt("/srv");
+        await File.WriteAllTextAsync(Path.Combine(folder, "movie.mp4"), "media");
+        var profiles = new StubSourceResourceProfiles {Failure = new InvalidOperationException("source unavailable")};
+        var context = Request("");
+        Assert.IsFalse(await Playback(profiles).PlayAsync(context, 42, DataOrigin.FileSystem, "/srv/movie.mp4"));
         Assert.AreEqual(409, Read(context).Status);
         Assert.AreEqual(0, _shell.Processes.Count);
-        Assert.AreEqual(0, _upstream.Played.Count);
+        Assert.AreEqual(0, _shell.Launched.Count);
+        Assert.AreEqual(0, _upstream.PlayerOptionsReadCount);
     }
 
     [TestMethod]
-    [DataRow("?openingRuleKind=program")]
-    [DataRow("?openingRuleKind=")]
-    [DataRow("?openingRuleKind=Video")]
-    [DataRow("?openingRuleKind=video&openingRuleKind=other")]
-    public async Task InvalidOpeningRuleKindIsRejectedBeforeAnyLookupOrLaunch(string query)
+    public async Task CustomLocalHttpPlayerRequiresItsConfiguredHttpCapability()
     {
-        var context = Request(query);
-        Assert.IsFalse(await Playback().PlayAsync(context, 42, DataOrigin.FileSystem, "/srv/movie.mp4"));
-        Assert.AreEqual(400, Read(context).Status);
-        Assert.AreEqual(0, _upstream.PlayerOptionsReadCount);
+        await WithLibraryAt("/srv");
+        var player = new MediaLibraryPlayer {ExecutablePath = "custom-stream-player", Command = "--open {0}"};
+        var profiles = new StubSourceResourceProfiles();
+        profiles.Matches[42] = new() {PlayerOptions = new() {Players = [player]}};
+        Assert.IsFalse(await Playback(profiles).PlayAsync(Request(""), 42, DataOrigin.FileSystem, "/srv/movie.mp4"));
         Assert.AreEqual(0, _shell.Processes.Count);
-        Assert.AreEqual(0, _upstream.Played.Count);
+        player.SupportsHttp = true;
+        Assert.IsTrue(await Playback(profiles).PlayAsync(Request(""), 42, DataOrigin.FileSystem, "/srv/movie.mp4"));
+        Assert.AreEqual("custom-stream-player", _shell.Processes.Single().Executable);
+        StringAssert.Contains(_shell.Processes.Single().Arguments, "http://127.0.0.1:34568/");
     }
 
     [TestMethod]

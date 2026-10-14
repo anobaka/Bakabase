@@ -19,5 +19,8 @@ namespace Bakabase.InsideWorld.Business.Components.Search
         /// <para>Any: valid resource id list</para>
         /// </returns>
         Task<HashSet<int>?> SearchAsync(List<Abstractions.Models.Domain.Resource> allResources, ResourceSearchFilterGroup? group, List<ResourceTag>? tags = null);
+
+        /// <summary>Evaluate multiple rules against a bounded candidate set, loading property values once.</summary>
+        Task<IReadOnlyList<HashSet<int>?>> SearchManyAsync(List<Abstractions.Models.Domain.Resource> candidates, IReadOnlyList<ResourceSearch> searches);
     }
 }

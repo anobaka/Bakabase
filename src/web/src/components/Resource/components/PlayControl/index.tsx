@@ -25,7 +25,6 @@ import {
   summarizePlayablePaths,
   resolvePlaybackPreference,
   type PlaybackPreference,
-  type PlaybackKind,
 } from "./playbackPreferences";
 import { originalSourceActions, sourceActionTarget } from "./sourceActions";
 
@@ -44,7 +43,7 @@ import { useUiOptionsStore } from "@/stores/options";
 import { usePlayableItemResolution } from "@/hooks/usePlayableItemResolution";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { useRemoteAccessStore, useUserSideActionsRunHere } from "@/stores/remoteAccess";
-import { useTargetPlayback } from "@/features/playback/overrides";
+import { useSourceResourceProfile } from "@/features/playback/resourceProfiles";
 import { useResourceBrowserPlayer } from "@/hooks/useResourceBrowserPlayer";
 import PlayOnThisDevice from "@/components/Resource/components/PlayOnThisDevice";
 import { preferredDevicePlatform } from "@/components/Resource/components/PlayOnThisDevice/playerSchemes";
@@ -177,13 +176,11 @@ const playItemApi = async (
   origin: DataOrigin,
   key: string,
   explicitChoice = false,
-  openingRuleKind?: PlaybackKind,
 ) =>
   await BApi.resource.playResourceItem(resourceId, {
     origin,
     key,
     ...(explicitChoice ? { explicitChoice: true } : {}),
-    ...(openingRuleKind ? { openingRuleKind } : {}),
   });
 
 export type PlayControlRef = {
@@ -212,7 +209,7 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
     currentServerId && (managing || !userSideActionsRunHere)
       ? `server:${currentServerId}`
       : undefined;
-  const opening = useTargetPlayback(openingTarget, resource.id);
+  const opening = useSourceResourceProfile(openingTarget, resource.id);
 
   // Use the playable item resolution hook which handles SSE discovery internally
   const resolution = usePlayableItemResolution(resource);
@@ -224,7 +221,6 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
   const [retryingOpening, setRetryingOpening] = useState(false);
   const [modalSource, setModalSource] = useState<DataOrigin | null>(null);
   const [modalPlaybackOverride, setModalPlaybackOverride] = useState<PlaybackPreference>();
-  const [modalOpeningRuleKind, setModalOpeningRuleKind] = useState<PlaybackKind>();
   const [videoSelectionVisible, setVideoSelectionVisible] = useState(false);
   const [visibleVideoCount, setVisibleVideoCount] = useState(VideoSelectionPageSize);
 
@@ -366,7 +362,6 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
     setDirs(undefined);
     setModalSource(null);
     setModalPlaybackOverride(undefined);
-    setModalOpeningRuleKind(undefined);
     setVideoSelectionVisible(false);
     setDiscoveryFailureVisible(false);
     setOpeningFailureVisible(false);
@@ -381,19 +376,9 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
   );
 
   // Play a PlayableItem via unified PlayItem API (all sources go through resolvers)
-  const playNativeItem = async (
-    item: PlayableItem,
-    explicitChoice = false,
-    openingRuleKind?: PlaybackKind,
-  ) => {
+  const playNativeItem = async (item: PlayableItem, explicitChoice = false) => {
     try {
-      const rsp = await playItemApi(
-        resource.id,
-        item.origin,
-        item.key,
-        explicitChoice,
-        openingRuleKind,
-      );
+      const rsp = await playItemApi(resource.id, item.origin, item.key, explicitChoice);
 
       if (!rsp.code) {
         if (item.origin === DataOrigin.Steam)
@@ -401,11 +386,11 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
         else toast.success(t<string>("Opened"));
         afterPlaying?.();
       } else if (item.origin === DataOrigin.FileSystem) {
-        choosePlayback(item, t("resource.playbackPolicy.nativeFailed"), openingRuleKind);
+        choosePlayback(item, t("resource.playbackPolicy.nativeFailed"));
       }
     } catch (e) {
       if (item.origin === DataOrigin.FileSystem)
-        choosePlayback(item, t("resource.playbackPolicy.nativeFailed"), openingRuleKind);
+        choosePlayback(item, t("resource.playbackPolicy.nativeFailed"));
       else toast.error(String(e));
     }
   };
@@ -420,11 +405,7 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
       .catch((e) => toast.error(String(e)));
   };
 
-  const choosePlayback = (
-    item?: PlayableItem,
-    unavailableReason?: string,
-    openingRuleKind?: PlaybackKind,
-  ) => {
+  const choosePlayback = (item?: PlayableItem, unavailableReason?: string) => {
     const selectedPath = item?.key ?? representativePath;
 
     if (!selectedPath) return;
@@ -444,7 +425,7 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
       onPlayNative: userSideActionsRunHere
         ? () =>
             item
-              ? void playNativeItem(item, true, openingRuleKind)
+              ? void playNativeItem(item, true)
               : handlePlaySource(DataOrigin.FileSystem, { mode: "native" })
         : undefined,
       onRememberChoice: playback.save,
@@ -465,11 +446,7 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
     }
   };
 
-  const playItem = async (
-    item: PlayableItem,
-    override?: PlaybackPreference,
-    openingRuleKind?: PlaybackKind,
-  ) => {
+  const playItem = async (item: PlayableItem, override?: PlaybackPreference) => {
     if (item.origin === DataOrigin.Steam) {
       const action = sourceActionTarget(ResourceSource.Steam, item.key);
 
@@ -511,7 +488,6 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
           preference.mode === "native"
             ? t("resource.playbackPolicy.preferredUnavailable")
             : undefined,
-          openingRuleKind,
         );
 
         return;
@@ -556,7 +532,6 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
               override ?? playback.preferences[playbackKindForPath(item.key)],
             )
         ).mode === "native",
-      openingRuleKind,
     );
   };
 
@@ -594,18 +569,15 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
           ? (override ?? opening.preference(resourceKind, playback.preferences[resourceKind]))
           : undefined;
 
-      const selectedRuleKind =
-        source === DataOrigin.FileSystem && opening.choice(resourceKind) ? resourceKind : undefined;
-
       if (items.length === 1) {
-        playItem(items[0]!, selectedPreference, selectedRuleKind);
+        playItem(items[0]!, selectedPreference);
 
         return;
       }
 
       // Multiple items - check auto-select preference
       if (resourceUiOptions?.autoSelectFirstPlayableFile) {
-        playItem(items[0]!, selectedPreference, selectedRuleKind);
+        playItem(items[0]!, selectedPreference);
 
         return;
       }
@@ -623,7 +595,6 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
       }
       setModalSource(source);
       setModalPlaybackOverride(selectedPreference);
-      setModalOpeningRuleKind(selectedRuleKind);
       setModalVisible(true);
     },
     [
@@ -840,7 +811,6 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
           setModalVisible(false);
           setModalSource(null);
           setModalPlaybackOverride(undefined);
-          setModalOpeningRuleKind(undefined);
         }}
       >
         {/* FileSystem source: directory-grouped file list */}
@@ -881,7 +851,6 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
                                   playItem(
                                     { origin: DataOrigin.FileSystem, key: file.path },
                                     modalPlaybackOverride,
-                                    modalOpeningRuleKind,
                                   );
                                   setModalVisible(false);
                                 }}

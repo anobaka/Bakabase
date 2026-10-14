@@ -1,5 +1,6 @@
 using System.Net;
 using Bakabase.Infrastructures.Components.App;
+using Bakabase.Abstractions.Services;
 using Bakabase.Infrastructures.Components.Gui;
 using Bakabase.Modules.Player.Abstractions.Services;
 using Bakabase.Modules.Player.Services;
@@ -48,7 +49,8 @@ public sealed record ManagedServerRelayDependencies(
     IUpstreamIdentityVerifier IdentityVerifier,
     UpstreamIdentityPolicy IdentityPolicy,
     DualStackConnector Connector,
-    IDevicePlaybackPreferencesStore? DevicePlaybackPreferencesStore = null);
+    IDevicePlaybackPreferencesStore? DevicePlaybackPreferencesStore = null,
+    IServiceScopeFactory? LocalServiceScopes = null);
 
 /// <summary>
 /// One managed server's relay: a loopback listener, with a container of its own, that
@@ -179,6 +181,10 @@ public sealed class ManagedServerRelay(string serverId, int port, ManagedServerR
         {
             services.AddSingleton(dependencies.DevicePlaybackPreferencesStore);
         }
+
+        if (dependencies.LocalServiceScopes != null)
+            services.AddSingleton<ISourceResourceProfilePlaybackService>(
+                new HostSourceResourceProfiles(dependencies.LocalServiceScopes));
 
         services.AddRelayCore(new RelayEnvironment(
             _ => Port,

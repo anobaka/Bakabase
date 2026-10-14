@@ -1,5 +1,6 @@
 using System.Net;
 using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.Abstractions.Services;
 using Bakabase.Remoting.Components.Connection;
 using Bakabase.Remoting.Components.Paths;
 using Bakabase.Modules.Player.Components;
@@ -46,7 +47,7 @@ public sealed class LocalPlayback(
     IShellOpener shell,
     ILoopbackAddressProvider loopback,
     ILogger<LocalPlayback> logger,
-    Bakabase.Modules.Player.Services.DevicePlaybackOverridesStore? overrides = null)
+    ISourceResourceProfilePlaybackService? profiles = null)
 {
     /// <summary>
     /// Plays one item and tells the server it happened.
@@ -65,34 +66,6 @@ public sealed class LocalPlayback(
         }
 
         explicitChoice |= context.Request.Query["explicitChoice"] == "true";
-        string? openingRuleKind = null;
-        if (context.Request.Query.TryGetValue("openingRuleKind", out var requestedKind))
-        {
-            if (requestedKind.Count != 1 || !DevicePlaybackOverride.Kinds.Contains(requestedKind[0]))
-            {
-                await UserMachineResponse.WriteAsync(context, HttpStatusCode.BadRequest,
-                    "Choose a valid opening rule kind.");
-                return false;
-            }
-            openingRuleKind = requestedKind[0];
-        }
-        if (selectedPlayer == null && overrides != null && connection.Server != null &&
-            origin is DataOrigin.FileSystem or DataOrigin.Manual)
-        {
-            try
-            {
-                var choice = await overrides.ResolveAsync("server:" + connection.Server.ServerId, resourceId,
-                    openingRuleKind ?? DevicePlaybackOverrides.KindForPath(key), context.RequestAborted);
-                if (choice is { Mode: "native", PlayerId: not null })
-                    selectedPlayer = choice.PlayerId == "system-default" ? ResolvedPlayer.SystemDefault :
-                        players.ResolveKnown(choice.PlayerId, key);
-            }
-            catch (Exception e) when (e is InvalidOperationException or System.Text.Json.JsonException or IOException)
-            {
-                await UserMachineResponse.WriteAsync(context, HttpStatusCode.Conflict, e.Message);
-                return false;
-            }
-        }
 
         var played = origin switch
         {
@@ -134,12 +107,18 @@ public sealed class LocalPlayback(
         }
         var target = onDisk ? mapped.LocalPath! : loopback.BuildRawFileUrl(serverPath);
 
-        var options = selectedPlayer == null
-            ? await upstream.GetEffectivePlayerOptionsAsync(resourceId, context.RequestAborted)
-            : null;
         ResolvedPlayer player;
         try
         {
+            var localOptions = selectedPlayer == null && profiles != null && connection.Server != null
+                ? (await profiles.ResolveAsync(connection.Server.ServerId, null, resourceId,
+                    context.RequestAborted)).PlayerOptions
+                : null;
+            if (selectedPlayer == null && localOptions != null)
+                selectedPlayer = LocalPlayerResolver.ResolveLocal(localOptions, serverPath, requireHttp: !onDisk);
+            var options = selectedPlayer == null
+                ? await upstream.GetEffectivePlayerOptionsAsync(resourceId, context.RequestAborted)
+                : null;
             player = selectedPlayer ?? players.Resolve(options, serverPath, requireHttp: !onDisk,
                 explicitChoice: explicitChoice);
             if (player.SupportedExtensions != null &&
@@ -150,7 +129,7 @@ public sealed class LocalPlayback(
             if (!onDisk && !player.IsSystemDefault && !player.SupportsHttp)
                 throw new InvalidOperationException("The selected player cannot open HTTP media. Configure a path mapping or choose another player.");
         }
-        catch (InvalidOperationException e)
+        catch (Exception e) when (e is InvalidOperationException or HttpRequestException or System.Text.Json.JsonException or IOException)
         {
             await UserMachineResponse.WriteAsync(context, HttpStatusCode.Conflict, e.Message);
             return false;

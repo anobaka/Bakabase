@@ -1,4 +1,5 @@
 using Bakabase.Modules.DataSync.Runtime;
+using Bakabase.Abstractions.Services;
 using Bakabase.Modules.Federation.Identity;
 using Bakabase.Modules.Federation.Media;
 using Bakabase.Modules.Federation.Peers;
@@ -32,6 +33,9 @@ public static class FederationServiceCollectionExtensions
         services.AddScoped<FederationMappingTreeClient>();
         services.AddScoped<FederationResourceService>();
         services.AddScoped<FederationMediaService>();
+        services.AddScoped<ResourceProfileSourceReader>();
+        services.AddScoped<SourceResourceProfileService>();
+        services.AddScoped<ISourceResourceProfilePlaybackService>(sp => sp.GetRequiredService<SourceResourceProfileService>());
         services.AddScoped<FederationDirectoryService>();
         services.TryAddSingleton<IFederationDirectoryOpener, FederationDirectoryOpener>();
         services.TryAddSingleton<IFederationImageOpener, FederationImageOpener>();

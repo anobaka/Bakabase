@@ -4,6 +4,7 @@ using System.Net.Sockets;
 using System.Text.Json;
 using Bakabase.Abstractions.Components.Gui;
 using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.Abstractions.Services;
 using Bakabase.Infrastructures.Components.App;
 using Bakabase.Infrastructures.Components.Gui;
 using Bakabase.Modules.Player.Abstractions.Services;
@@ -200,6 +201,65 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
     #endregion
 
     #region IManagedServerService
+
+    public async Task<string> ReadResourceProfileSourceAsync(string serverId, string operation, string? json, string? libraryEpoch = null,
+        CancellationToken ct = default)
+    {
+        var (method, path) = operation switch
+        {
+            "identity" => (HttpMethod.Get, "/resource-profile/source-info"),
+            "properties" => (HttpMethod.Get, "/resource-profile/search/properties"),
+            "filter-value" => (HttpMethod.Post, "/resource-profile/search/filter-value"),
+            "search-resolve" => (HttpMethod.Post, "/resource-profile/search/resolve"),
+            "evaluate" => (HttpMethod.Post, "/resource-profile/evaluate"),
+            "preview" => (HttpMethod.Post, "/resource-profile/preview"),
+            _ => throw new ArgumentException("Unknown resource-profile source operation.", nameof(operation))
+        };
+        if (json != null && System.Text.Encoding.UTF8.GetByteCount(json) > 1024 * 1024)
+            throw new ArgumentException("Resource-profile search is too large.", nameof(json));
+        if (libraryEpoch != null)
+        {
+            if (libraryEpoch.Length is < 1 or > 128 || libraryEpoch.Any(c => !char.IsAsciiLetterOrDigit(c) && c is not ('_' or '-')))
+                throw new ArgumentException("Invalid source library identity.", nameof(libraryEpoch));
+            path += "?libraryEpoch=" + Uri.EscapeDataString(libraryEpoch);
+        }
+        var entry = _store.Find(serverId) ?? throw new InvalidOperationException("This server is no longer managed.");
+        using var budget = CancellationTokenSource.CreateLinkedTokenSource(ct, _lifetime.Token);
+        budget.CancelAfter(TimeSpan.FromSeconds(15));
+        using var exchange = new ServerExchange(_options.Connector);
+        var clock = ClockFor(serverId);
+        var startedAt = DateTimeOffset.UtcNow;
+        var handshake = await HandshakeAsync(exchange.Http, entry.BaseAddress, clock, budget.Token);
+        var identity = await IdentityOfAsync(serverId, entry.BaseAddress, handshake, exchange.Reached,
+            startedAt, budget.Token);
+        if (!identity.IsConfirmed || !handshake.Succeeded)
+            throw new InvalidOperationException("The source device could not be verified. Reconnect it before editing its resource filters.");
+        // The handshake's connection pins the address; a forgotten/replaced pairing must not be reused.
+        if (_store.Find(serverId) is not { } current || current.DeviceKey != entry.DeviceKey ||
+            current.BaseAddress != entry.BaseAddress)
+            throw new InvalidOperationException("The source connection changed. Try again.");
+        using var request = new HttpRequestMessage(method, new Uri(new Uri(entry.BaseAddress), path));
+        if (method == HttpMethod.Post)
+            request.Content = new StringContent(json ?? "{}", System.Text.Encoding.UTF8, "application/json");
+        if (!await TrySignAsync(request, entry, clock, budget.Token))
+            throw new InvalidOperationException("This device is no longer paired with the source.");
+        using var response = await exchange.Http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, budget.Token);
+        response.EnsureSuccessStatusCode();
+        const int maximumBytes = 8 * 1024 * 1024;
+        if (response.Content.Headers.ContentLength > maximumBytes)
+            throw new InvalidOperationException("The source response is too large.");
+        await using var input = await response.Content.ReadAsStreamAsync(budget.Token);
+        using var output = new MemoryStream();
+        var buffer = new byte[16 * 1024];
+        int read;
+        while ((read = await input.ReadAsync(buffer, budget.Token)) > 0)
+        {
+            if (output.Length + read > maximumBytes)
+                throw new InvalidOperationException("The source response is too large.");
+            output.Write(buffer, 0, read);
+        }
+        return System.Text.Encoding.UTF8.GetString(output.GetBuffer(), 0, (int) output.Length);
+    }
 
     public async Task<ManagedServersView> GetAsync(bool probe, CancellationToken ct = default)
     {
@@ -1734,7 +1794,9 @@ public sealed class RemoteConsoleManager : IManagedServerService, IMainViewSwitc
         new UpstreamIdentityPolicy(_options.IdentityCheckInterval, _options.IdentityRetryInterval,
             _options.IdentityCheckTimeout, _options.IdentityConnectionWindow),
         _options.Connector,
-        _services.GetService<IDevicePlaybackPreferencesStore>());
+        _services.GetService<IDevicePlaybackPreferencesStore>(),
+        _services.GetService<IServiceProviderIsService>()?.IsService(typeof(ISourceResourceProfilePlaybackService)) == true
+            ? _services.GetRequiredService<IServiceScopeFactory>() : null);
 
     /// <summary>This app's own server's ports, as it reports them.</summary>
     private IEnumerable<int> ServicePorts()

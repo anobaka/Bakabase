@@ -57,7 +57,7 @@ public class ResourceProfileService<TDbContext>(
             {
                 foreach (var dbModel in dbModels)
                 {
-                    var search = ParseSearchFromDbModelWithPropertyMap(dbModel, propertyMap);
+                    var search = dbModel.SourceDeviceId == null ? ParseSearchFromDbModelWithPropertyMap(dbModel, propertyMap) : null;
                     profiles.Add(dbModel.ToDomainModel(search));
                 }
             }
@@ -75,6 +75,14 @@ public class ResourceProfileService<TDbContext>(
         return dbModel.ToDomainModel(search);
     }
 
+    public async Task<List<ResourceProfile>> GetSourceProfiles(string sourceDeviceId, string? libraryEpoch = null)
+    {
+        if (string.IsNullOrWhiteSpace(sourceDeviceId)) throw new ArgumentException("A source device is required.", nameof(sourceDeviceId));
+        if (string.IsNullOrWhiteSpace(libraryEpoch)) return [];
+        return (await GetAll(p => p.SourceDeviceId == sourceDeviceId))
+            .Where(p => p.SourceLibraryEpoch == libraryEpoch).ToList();
+    }
+
     public async Task<List<ResourceProfile>> GetMatchingProfiles(Resource resource)
     {
         // Use index service for faster lookup if available
@@ -86,7 +94,7 @@ public class ResourceProfileService<TDbContext>(
                 return [];
             }
 
-            var allProfiles = await GetAll();
+            var allProfiles = await GetAll(p => p.SourceDeviceId == null);
             var profileMap = allProfiles.ToDictionary(p => p.Id);
 
             // profileIds are already sorted by priority
@@ -97,7 +105,7 @@ public class ResourceProfileService<TDbContext>(
         }
 
         // Fallback to direct evaluation
-        var allProfilesFallback = await GetAll();
+        var allProfilesFallback = await GetAll(p => p.SourceDeviceId == null);
         var matchingProfiles = new List<ResourceProfile>();
 
         foreach (var profile in allProfilesFallback)
@@ -127,7 +135,7 @@ public class ResourceProfileService<TDbContext>(
             List<ResourceProfile> allProfiles;
             using (MiniProfiler.Current.Step("GetAll profiles"))
             {
-                allProfiles = await GetAll();
+                allProfiles = await GetAll(p => p.SourceDeviceId == null);
             }
 
             List<ResourceProfile> profilesWithNameTemplate;
@@ -206,7 +214,7 @@ public class ResourceProfileService<TDbContext>(
         IEnumerable<Resource> resources)
     {
         var result = new Dictionary<int, List<EnhancerFullOptions>>();
-        var allProfiles = await GetAll();
+        var allProfiles = await GetAll(p => p.SourceDeviceId == null);
         var resourcesList = resources.ToList();
         var profilesWithEnhancerOptions = allProfiles.Where(p => p.EnhancerOptions != null).ToList();
 
@@ -261,7 +269,7 @@ public class ResourceProfileService<TDbContext>(
         IEnumerable<Resource> resources)
     {
         var result = new Dictionary<int, ResourceProfilePropertyOptions>();
-        var allProfiles = await GetAll();
+        var allProfiles = await GetAll(p => p.SourceDeviceId == null);
         var resourcesList = resources.ToList();
         var profilesWithPropertyOptions = allProfiles.Where(p => p.PropertyOptions != null).ToList();
 
@@ -403,12 +411,20 @@ public class ResourceProfileService<TDbContext>(
         ResourceProfilePlayableFileOptions? playableFileOptions,
         ResourceProfilePlayerOptions? playerOptions,
         ResourceProfilePropertyOptions? propertyOptions,
-        int priority)
+        int priority,
+        string? sourceDeviceId = null,
+        string? sourceLibraryEpoch = null,
+        string? openingMode = null)
     {
+        ResourceProfileScope.Validate(sourceDeviceId, sourceLibraryEpoch, openingMode, nameTemplate,
+            enhancerOptions, playableFileOptions, propertyOptions);
         var now = DateTime.UtcNow;
         var dbModel = new ResourceProfileDbModel
         {
             Name = name,
+            SourceDeviceId = sourceDeviceId,
+            SourceLibraryEpoch = sourceLibraryEpoch,
+            OpeningMode = openingMode,
             SearchJson = searchJson,
             NameTemplate = nameTemplate,
             EnhancerSettingsJson = enhancerOptions != null
@@ -447,8 +463,13 @@ public class ResourceProfileService<TDbContext>(
         ResourceProfilePlayableFileOptions? playableFileOptions,
         ResourceProfilePlayerOptions? playerOptions,
         ResourceProfilePropertyOptions? propertyOptions,
-        int priority)
+        int priority,
+        string? sourceDeviceId = null,
+        string? sourceLibraryEpoch = null,
+        string? openingMode = null)
     {
+        ResourceProfileScope.Validate(sourceDeviceId, sourceLibraryEpoch, openingMode, nameTemplate,
+            enhancerOptions, playableFileOptions, propertyOptions);
         // Get old profile to detect changes
         var oldDbModel = await orm.GetByKey(id);
         var oldSearchJson = oldDbModel?.SearchJson;
@@ -462,6 +483,9 @@ public class ResourceProfileService<TDbContext>(
         {
             Id = id,
             Name = name,
+            SourceDeviceId = sourceDeviceId,
+            SourceLibraryEpoch = sourceLibraryEpoch,
+            OpeningMode = openingMode,
             SearchJson = searchJson,
             NameTemplate = nameTemplate,
             EnhancerSettingsJson = enhancerOptions != null
@@ -484,7 +508,7 @@ public class ResourceProfileService<TDbContext>(
         IndexService.InvalidateProfile(id);
 
         // Check if we need to invalidate PlayableFiles cache
-        var searchChanged = oldSearchJson != searchJson;
+        var searchChanged = oldSearchJson != searchJson || oldDbModel?.SourceDeviceId != sourceDeviceId;
         var playableOptionsChanged = oldPlayableFileOptionsJson != newPlayableFileOptionsJson;
 
         // Only invalidate cache if PlayableFileOptions is involved (was set or is now set)
@@ -494,10 +518,10 @@ public class ResourceProfileService<TDbContext>(
             var resourceIds = new HashSet<int>();
 
             // Get matching resources based on what changed
-            var oldMatchingIds = oldSearchJson != null
+            var oldMatchingIds = oldDbModel?.SourceDeviceId == null && oldSearchJson != null
                 ? await GetMatchingResourceIdsBySearchJson(oldSearchJson)
                 : new HashSet<int>();
-            var newMatchingIds = await GetMatchingResourceIdsBySearchJson(searchJson);
+            var newMatchingIds = sourceDeviceId == null ? await GetMatchingResourceIdsBySearchJson(searchJson) : [];
 
             if (searchChanged && playableOptionsChanged)
             {
@@ -539,6 +563,8 @@ public class ResourceProfileService<TDbContext>(
 
     public async Task<HashSet<int>> GetMatchingResourceIds(int profileId)
     {
+        var profile = await Get(profileId);
+        if (profile == null || profile.SourceDeviceId != null) return [];
         // Use index service for faster lookup if available
         if (IndexService.IsReady)
         {
@@ -547,8 +573,7 @@ public class ResourceProfileService<TDbContext>(
         }
 
         // Fallback to direct evaluation
-        var profile = await Get(profileId);
-        return profile == null ? [] : await GetMatchingResourceIds(profile.Search);
+        return await GetMatchingResourceIds(profile.Search);
     }
 
     public async Task<HashSet<int>> GetMatchingResourceIdsBySearchJson(string? searchJson)
@@ -599,6 +624,7 @@ public class ResourceProfileService<TDbContext>(
     {
         using (MiniProfiler.Current.Step($"ParseSearchFromDbModel(id={dbModel.Id})"))
         {
+            if (dbModel.SourceDeviceId != null) return null;
             if (string.IsNullOrEmpty(dbModel.SearchJson))
             {
                 return null;

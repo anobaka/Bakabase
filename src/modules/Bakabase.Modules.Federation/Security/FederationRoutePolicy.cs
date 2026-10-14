@@ -88,6 +88,11 @@ public static class FederationRoutePolicy
             if (segments.Length == 5 && Equal(segments[3], "datasync"))
                 return method == "GET" &&
                        (Equal(segments[4], "head") || Equal(segments[4], "manifest") || Equal(segments[4], "changes"));
+            if (segments.Length == 5 && Equal(segments[3], "resource-profile"))
+                return method == "GET" && (Equal(segments[4], "identity") || Equal(segments[4], "properties")) ||
+                       method == "POST" && (Equal(segments[4], "filter-value") ||
+                           Equal(segments[4], "search-resolve") || Equal(segments[4], "preview") ||
+                           Equal(segments[4], "evaluate"));
             if (segments.Length == 4 && (Equal(segments[3], "mapping-roots") || Equal(segments[3], "mapping-tree"))) return method == "GET";
             if (segments.Length == 5 && Equal(segments[3], "resources") &&
                 (Equal(segments[4], "resolve") || Equal(segments[4], "location")))

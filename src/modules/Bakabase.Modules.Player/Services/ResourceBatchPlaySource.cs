@@ -23,6 +23,7 @@ public class ResourceBatchPlaySource(
         var byId = (await resourceService.GetByKeys(resourceIds)).ToDictionary(r => r.Id);
         var files = new List<BatchPlayResourceFiles>();
         var players = new List<MediaLibraryPlayer>();
+        var optionsByResource = new Dictionary<int, ResourceProfilePlayerOptions?>();
         var covered = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var resourceId in resourceIds)
@@ -41,6 +42,7 @@ public class ResourceBatchPlaySource(
                 .ToList()));
 
             var playerOptions = await resourceProfileService.GetEffectivePlayerOptions(resource);
+            optionsByResource[resourceId] = playerOptions;
             foreach (var player in playerOptions?.Players ?? [])
             {
                 if (!string.IsNullOrWhiteSpace(player.ExecutablePath) && covered.Add(player.ExecutablePath))
@@ -50,7 +52,7 @@ public class ResourceBatchPlaySource(
             }
         }
 
-        return new BatchPlayResourceSnapshot(files, players);
+        return new BatchPlayResourceSnapshot(files, players, optionsByResource);
     }
 
     public Task MarkPlayedAsync(IReadOnlyDictionary<int, string> playedByResourceId, CancellationToken ct) =>

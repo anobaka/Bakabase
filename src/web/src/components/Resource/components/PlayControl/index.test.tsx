@@ -62,8 +62,8 @@ vi.mock("@/stores/remoteAccess", () => ({
           : ClientMode.RemoteBrowser,
     }),
 }));
-vi.mock("@/features/playback/overrides", () => ({
-  useTargetPlayback: (target: string | undefined, resourceId: number) => {
+vi.mock("@/features/playback/resourceProfiles", () => ({
+  useSourceResourceProfile: (target: string | undefined, resourceId: number) => {
     fixture.overrideTarget(target, resourceId);
 
     return {
@@ -76,7 +76,7 @@ vi.mock("@/features/playback/overrides", () => ({
         target && fixture.overrides[kind] ? { mode: fixture.overrides[kind].mode } : fallback,
     };
   },
-  PlaybackOverridesButton: ({ compact, target }: any) => (
+  ResourceProfileLink: ({ compact, target }: any) => (
     <button data-compact={compact} data-target={target}>
       override settings
     </button>
@@ -272,7 +272,6 @@ describe("playback routing on the current device", () => {
       origin: DataOrigin.FileSystem,
       key: resource.path,
       explicitChoice: true,
-      openingRuleKind: "image",
     });
     expect(fixture.browser).not.toHaveBeenCalled();
     await act(async () => fireEvent.click(screen.getByText("browser")));
@@ -572,7 +571,6 @@ describe("mixed media and selecting individual videos", () => {
       origin: DataOrigin.FileSystem,
       key: mixed[1],
       explicitChoice: true,
-      openingRuleKind: "other",
     });
     fixture.native.mockClear();
     fireEvent.click(screen.getByText("videos"));

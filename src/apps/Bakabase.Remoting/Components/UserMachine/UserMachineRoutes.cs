@@ -40,7 +40,7 @@ public static class UserMachineRoutes
         new("GET", "/file/recycle-bin"),
         new("GET", "/gui/url"),
         new("GET", "/player/device-playback/preferences"),
-        new("GET", "/player/device-playback/overrides"),
+        new("GET", "/player/resource-profile"),
         new("GET", "/player/playlist/{playlistId:int}/batch-play/candidates"),
         new("GET", "/resource/directory"),
         new("GET", "/resource/play/random"),
@@ -52,11 +52,11 @@ public static class UserMachineRoutes
         new("POST", "/aigc/artifacts/{id:int}/open"),
         new("POST", "/dlsite-work/{workId}/launch"),
         new("POST", "/player/batch-play"),
+        new("POST", "/player/resource-profiles"),
         new("POST", "/player/batch-play/candidates"),
         new("POST", "/player/playlist/{playlistId:int}/batch-play"),
         new("POST", "/tool/cookie-capture"),
         new("PUT", "/player/device-playback/preferences")
-        ,new("PUT", "/player/device-playback/overrides")
     ];
 
     private static readonly ImmutableHashSet<string> Keys =

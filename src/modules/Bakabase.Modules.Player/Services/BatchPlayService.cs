@@ -167,12 +167,6 @@ public class BatchPlayService(
 
             var known = KnownPlayerDefinitions.MatchByExecutable(player.ExecutablePath);
             var extensions = NormalizeExtensions(player.Extensions);
-            if (known?.SupportedExtensions != null)
-            {
-                extensions = extensions == null ? known.SupportedExtensions :
-                    extensions.Intersect(known.SupportedExtensions, StringComparer.OrdinalIgnoreCase)
-                        .ToHashSet(StringComparer.OrdinalIgnoreCase);
-            }
             candidates.Add(new BatchPlayCandidate
             {
                 Key = $"{ProfileKeyPrefix}{player.ExecutablePath.ToLowerInvariant()}",
@@ -186,9 +180,9 @@ public class BatchPlayService(
                 SupportsHttp = PlayerFileCapabilities.SupportsHttp(player, known),
                 CommandTemplate = player.Command,
                 CapabilitiesAssumed = known == null,
-                // A profile can narrow the catalog, but cannot turn a known AV
-                // player into a program launcher or an image viewer. Custom local
-                // applications keep their existing unrestricted extension behavior.
+                // Locally configured profiles own their extension rules. The remote
+                // adapter constrains inherited server players before reaching here;
+                // discovered players below still use the built-in catalog.
                 SupportedExtensions = extensions,
             });
         }

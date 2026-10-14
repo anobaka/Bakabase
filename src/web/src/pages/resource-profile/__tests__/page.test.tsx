@@ -1,4 +1,4 @@
-import type { BakabaseServiceModelsViewResourceProfileViewModel as ResourceProfile } from "@/sdk/Api";
+import type { ResourceProfile } from "../sourceProfiles";
 
 import { HeroUIProvider } from "@heroui/react";
 import { act } from "react-dom/test-utils";
@@ -23,9 +23,14 @@ const api = vi.hoisted(() => ({
   add: vi.fn(),
   remove: vi.fn(),
   portal: vi.fn(),
+  request: vi.fn(),
+  sourceConfig: vi.fn(),
 }));
+
+vi.mock("../sourceFilterConfig", () => ({ createSourceFilterConfig: api.sourceConfig }));
 vi.mock("@/sdk/BApi", () => ({
   default: {
+    request: api.request,
     resourceProfile: {
       getAllResourceProfiles: api.profiles,
       updateResourceProfile: api.update,
@@ -56,7 +61,7 @@ vi.mock("../components/ResourceProfileModal", () => ({ default: () => null }));
 vi.mock("@/components/ResourceFilter", () => ({
   // The filter editor has its own tests; exercise the page's draft/save boundary.
   ResourceFilterController: ({ group, isReadonly, onGroupChange }: any) => (
-    <div data-testid="scope-filter" data-readonly={String(isReadonly)}>
+    <div data-readonly={String(isReadonly)} data-testid="scope-filter">
       <output>{JSON.stringify(group)}</output>
       {!isReadonly && (
         <button
@@ -86,6 +91,20 @@ vi.mock("@/components/bakaui", async () => ({
   ...(await vi.importActual("@heroui/react")),
   Button: (await import("@/components/bakaui/components/Button")).Button,
   Popover: (await import("@/components/bakaui/components/Popover")).default,
+  Select: ({ label, selectedKeys, onSelectionChange, dataSource, isDisabled }: any) => (
+    <select
+      aria-label={label}
+      disabled={isDisabled}
+      value={[...selectedKeys][0]}
+      onChange={(e) => onSelectionChange(new Set([e.target.value]))}
+    >
+      {dataSource.map((item: any) => (
+        <option key={item.value} value={item.value}>
+          {item.label}
+        </option>
+      ))}
+    </select>
+  ),
 }));
 
 const profile = (id: number, name: string, priority: number): ResourceProfile => ({
@@ -133,6 +152,7 @@ const configured: ResourceProfile = {
 };
 let host: HTMLDivElement;
 let root: Root;
+
 function deferred<T>() {
   let resolve!: (value: T) => void;
   let reject!: (error: Error) => void;
@@ -140,6 +160,7 @@ function deferred<T>() {
     resolve = res;
     reject = rej;
   });
+
   return { promise, resolve, reject };
 }
 async function render() {
@@ -158,20 +179,25 @@ function button(label: string) {
   const found = [...document.querySelectorAll<HTMLButtonElement>("button")].find(
     (el) => (el.getAttribute("aria-label") || el.textContent?.trim()) === label,
   );
+
   if (!found) throw new Error(`Missing button ${label}`);
+
   return found;
 }
 function profileButton(name: string) {
   const found = [...host.querySelectorAll<HTMLButtonElement>("aside button[aria-pressed]")].find(
     (el) => el.firstElementChild?.textContent === name,
   );
+
   if (!found) throw new Error(`Missing profile ${name}`);
+
   return found;
 }
 async function search(value: string) {
   const input = host.querySelector<HTMLInputElement>(
     '[aria-label="resourceProfile.input.search"]',
   )!;
+
   await act(async () => {
     Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(input, value);
     input.dispatchEvent(new Event("input", { bubbles: true }));
@@ -179,7 +205,9 @@ async function search(value: string) {
 }
 function portalProps(component: unknown): any {
   const call = [...api.portal.mock.calls].reverse().find(([type]) => type === component);
+
   expect(call).toBeDefined();
+
   return call![1];
 }
 
@@ -196,6 +224,8 @@ beforeEach(() => {
   });
   api.enhancers.mockResolvedValue({ code: 0, data: [] });
   api.update.mockResolvedValue({ code: 0 });
+  api.request.mockResolvedValue({ code: 0, data: [] });
+  api.sourceConfig.mockReturnValue({ remote: true });
   host = document.createElement("div");
   document.body.append(host);
   root = createRoot(host);
@@ -215,6 +245,7 @@ describe("resource profile page editing", () => {
     await click(profileButton("Books"));
     await click(button("resourceProfile.action.editBasicInfo"));
     const props = portalProps(ResourceProfileModal);
+
     await act(async () => props.onUpdate(2, { priority: 30, name: "Books updated" }));
     expect(profileButton("Books updated")).toHaveAttribute("aria-pressed", "true");
     await search("");
@@ -243,6 +274,7 @@ describe("resource profile page editing", () => {
     await click(button("common.action.save"));
     expect(api.update).toHaveBeenCalledTimes(1);
     const [id, input] = api.update.mock.calls[0];
+
     expect(id).toBe(1);
     expect(input).toMatchObject({
       name: configured.name,
@@ -283,11 +315,14 @@ describe("resource profile page editing", () => {
     await render();
     await click(button("resourceProfile.action.configureName"));
     const titleEditor = portalProps(DisplayNameTemplateEditorModal);
+
     await click(button("resourceProfile.action.configureProperties"));
     const propertyEditor = portalProps(PropertyPoolModal);
     const pending = deferred<{ code: number }>();
+
     api.update.mockReturnValueOnce(pending.promise);
     let save!: Promise<void>;
+
     await act(async () => {
       save = titleEditor.onSubmit("Updated title");
     });
@@ -302,6 +337,7 @@ describe("resource profile page editing", () => {
         { pool: PropertyPool.Custom, id: 9, scopePriority: [PropertyValueScope.Manual] },
       ],
     };
+
     await act(async () => propertyEditor.onSubmit(properties));
     expect(api.update.mock.calls[1][1]).toMatchObject({
       nameTemplate: "Updated title",
@@ -333,8 +369,10 @@ describe("resource profile page editing", () => {
         ],
       },
     ];
+
     await act(async () => portalProps(EnhancementConfigPanel).onSubmit(options));
     const input = api.update.mock.calls[0][1];
+
     expect(input.enhancerOptions).toEqual({ enhancers: options });
     expect(input.propertyOptions.properties).toEqual([
       configured.propertyOptions!.properties![0],
@@ -349,6 +387,7 @@ describe("resource profile page editing", () => {
 
   it("disables metadata dependent actions until metadata succeeds and supports retry", async () => {
     const pending = deferred<{ code: number; data: unknown[] }>();
+
     api.enhancers.mockReturnValueOnce(pending.promise);
     await render();
     expect(button("resourceProfile.action.configureProperties")).toBeDisabled();
@@ -367,10 +406,136 @@ describe("resource profile page editing", () => {
     const item = [...document.querySelectorAll('[role="menuitem"], [role="option"]')].find(
       (el) => el.textContent?.trim() === "resourceProfile.action.deleteEnhancements",
     );
+
     expect(item).toBeDefined();
     await click(item!);
     expect(portalProps(DeleteEnhancementsModal)).toEqual({ profile: configured });
     expect(api.remove).not.toHaveBeenCalled();
     expect(api.update).not.toHaveBeenCalled();
+  });
+});
+
+describe("resource profiles from another device", () => {
+  const remote: ResourceProfile = {
+    ...profile(3, "Mac films", 50),
+    sourceDeviceId: "mac-server",
+    sourceLibraryEpoch: "library-1",
+    search: configured.search,
+    playerOptions: configured.playerOptions,
+  };
+  const sourceProperties = [{ id: 9, pool: PropertyPool.Custom, name: "Source category" }];
+  const setup = () => {
+    api.profiles.mockResolvedValue({ code: 0, data: [remote] });
+    api.request.mockImplementation(async ({ path }: { path: string }) => ({
+      code: 0,
+      data: path.endsWith("/sources")
+        ? [
+            {
+              deviceId: "mac-server",
+              name: "Mac server",
+              available: true,
+              libraryEpoch: "library-1",
+              kind: "managed",
+            },
+          ]
+        : path.endsWith("/properties")
+          ? sourceProperties
+          : {
+              ...configured.search,
+              group: {
+                ...configured.search!.group,
+                filters: [
+                  { ...configured.search!.group!.filters![0], property: sourceProperties[0] },
+                ],
+              },
+            },
+    }));
+  };
+
+  it("hydrates filters on their source and preserves source identity through ordinary profile updates", async () => {
+    setup();
+    await render();
+    expect(api.sourceConfig).toHaveBeenCalledWith(
+      expect.objectContaining({ sourceDeviceId: "mac-server" }),
+      sourceProperties,
+      api.portal,
+    );
+    expect(api.request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        path: "/resource-profile/sources/mac-server/search/resolve",
+        query: { libraryEpoch: "library-1" },
+      }),
+    );
+    expect(host.textContent).toContain("Source category");
+    expect(host.textContent).not.toContain("resourceProfile.action.configureProperties");
+    expect(host.textContent).not.toContain("resourceProfile.action.configureEnhancers");
+    await click(button("resourceProfile.action.editScope"));
+    await click(button("Change scope filter"));
+    await click(button("common.action.save"));
+    expect(api.update).toHaveBeenCalledWith(
+      3,
+      expect.objectContaining({
+        sourceDeviceId: "mac-server",
+        sourceLibraryEpoch: "library-1",
+        playerOptions: remote.playerOptions,
+        search: expect.objectContaining({
+          group: expect.objectContaining({
+            filters: [expect.objectContaining({ propertyId: 9, dbValue: '\"Draft\"' })],
+          }),
+        }),
+      }),
+    );
+  });
+  it("stores an explicit empty player list for Windows default associations instead of deleting the override", async () => {
+    setup();
+    await render();
+    await click(button("resourceProfile.source.systemDefault"));
+    expect(api.update).toHaveBeenCalledWith(
+      3,
+      expect.objectContaining({
+        openingMode: "native",
+        playerOptions: { players: [] },
+        sourceDeviceId: "mac-server",
+      }),
+    );
+    await click(button("resourceProfile.source.inheritPlayer"));
+    expect(api.update).toHaveBeenLastCalledWith(
+      3,
+      expect.objectContaining({ playerOptions: null }),
+    );
+  });
+  it("does not substitute local property IDs when the source is offline", async () => {
+    setup();
+    api.request.mockRejectedValue(new Error("Source offline"));
+    await render();
+    expect(button("resourceProfile.action.editScope")).toBeDisabled();
+    expect(button("resourceProfile.action.testCriteria")).toBeDisabled();
+    expect(api.sourceConfig).not.toHaveBeenCalled();
+    expect(api.update).not.toHaveBeenCalled();
+    expect(host.textContent).toContain("resourceProfile.source.unavailable");
+    // Editing a locally owned player is still available. The offline source's opaque IDs and
+    // serialized values must survive the full replacement payload without local hydration.
+    await click(button("resourceProfile.source.systemDefault"));
+    expect(api.update).toHaveBeenCalledWith(
+      3,
+      expect.objectContaining({
+        sourceDeviceId: "mac-server",
+        sourceLibraryEpoch: "library-1",
+        openingMode: "native",
+        playerOptions: { players: [] },
+        search: expect.objectContaining({
+          group: expect.objectContaining({
+            filters: remote.search!.group!.filters!.map((filter) =>
+              expect.objectContaining({
+                propertyPool: filter.propertyPool,
+                propertyId: filter.propertyId,
+                operation: filter.operation,
+                dbValue: filter.dbValue,
+              }),
+            ),
+          }),
+        }),
+      }),
+    );
   });
 });

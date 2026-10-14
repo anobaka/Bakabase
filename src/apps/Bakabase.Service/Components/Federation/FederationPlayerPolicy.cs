@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.InteropServices;
+using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Modules.Federation.Contracts;
 using Bakabase.Modules.Player.Components;
 
@@ -74,6 +75,27 @@ public sealed class FederationPlayerProxyEnvironment : IFederationPlayerProxyEnv
 
 public sealed class FederationPlayerPolicy(LocalPlayerResolver players, IFederationPlayerProxyEnvironment environment)
 {
+    /// <summary>Only profiles saved by this viewer may supply arbitrary executable paths and argument templates.</summary>
+    public ResolvedPlayer ResolveProfile(string fileName, string? localPath, ResourceProfilePlayerOptions? options)
+    {
+        if (options == null) return Resolve(fileName, localPath);
+        ResolvedPlayer selected;
+        try { selected = LocalPlayerResolver.ResolveLocal(options, fileName, localPath == null); }
+        catch (InvalidOperationException e)
+        { throw new FederationQueryException("PlayerUnavailable", 409, e.Message); }
+        if (localPath != null) return selected;
+        if (selected.IsSystemDefault)
+            throw new FederationQueryException("MappedPathUnavailable", 409,
+                "The default application needs an accessible local file. Map the file or choose an HTTP player.");
+        var known = KnownPlayerDefinitions.MatchByExecutable(selected.ExecutablePath);
+        // The file is untrusted and the ticket grants library access. Local arbitrary programs may open
+        // mapped files, but HTTP still needs a player whose direct connection can be guaranteed.
+        if (known != KnownPlayerDefinitions.Mpv && known != KnownPlayerDefinitions.Iina &&
+            (known != KnownPlayerDefinitions.Vlc || environment.GetVlcLoopbackHttpSupport() != VlcLoopbackHttpSupport.Available))
+            throw new FederationQueryException("PlayerProxyUnsupported", 409);
+        return selected;
+    }
+
     public ResolvedPlayer Resolve(string fileName, string? localPath, string? playerId = null)
     {
         if (playerId != null)
@@ -109,7 +131,6 @@ public sealed class FederationPlayerPolicy(LocalPlayerResolver players, IFederat
                              "Use the in-app preview, configure a local path mapping, or install mpv (or IINA on macOS).");
         }
 
-        return players.ResolveInstalled(fileName) ?? throw new FederationQueryException("PlayerUnavailable", 501,
-            "Install a supported media player on this device to open this stream.");
+        return ResolvedPlayer.SystemDefault;
     }
 }

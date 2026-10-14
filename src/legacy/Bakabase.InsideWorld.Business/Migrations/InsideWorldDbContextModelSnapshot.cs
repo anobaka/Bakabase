@@ -903,6 +903,9 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.Property<string>("NameTemplate")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("OpeningMode")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("PlayableFileSettingsJson")
                         .HasColumnType("TEXT");
 
@@ -916,6 +919,12 @@ namespace Bakabase.InsideWorld.Business.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("SearchJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SourceDeviceId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SourceLibraryEpoch")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("UpdatedAt")

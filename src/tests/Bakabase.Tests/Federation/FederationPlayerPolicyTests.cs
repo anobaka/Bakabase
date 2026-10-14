@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Modules.Federation.Contracts;
 using Bakabase.Modules.Player.Abstractions.Components;
 using Bakabase.Modules.Player.Abstractions.Models.Domain;
@@ -12,6 +13,29 @@ namespace Bakabase.Tests.Federation;
 [TestClass]
 public sealed class FederationPlayerPolicyTests
 {
+    [TestMethod]
+    public void LocallySavedProfilePreservesArbitraryExecutableAndArgumentsForMappedFiles()
+    {
+        var policy = new FederationPlayerPolicy(new LocalPlayerResolver(new Locator()),
+            new Environment(VlcLoopbackHttpSupport.SystemProxy));
+        var selected = policy.ResolveProfile("page.jpg", "/media/page.jpg", new ResourceProfilePlayerOptions
+        {
+            Players = [new() {ExecutablePath = "/custom/image-viewer", Command = "--read-only {0}", Extensions = ["jpg"]}]
+        });
+        Assert.AreEqual("/custom/image-viewer", selected.ExecutablePath);
+        Assert.AreEqual("--read-only {0}", selected.CommandTemplate);
+    }
+
+    [TestMethod]
+    public void LocalHttpFlagDoesNotWeakenSharedTicketProxyProtection()
+    {
+        var policy = new FederationPlayerPolicy(new LocalPlayerResolver(new Locator()),
+            new Environment(VlcLoopbackHttpSupport.Available));
+        Assert.AreEqual("PlayerProxyUnsupported", Assert.ThrowsExactly<FederationQueryException>(() =>
+            policy.ResolveProfile("film.mp4", null, new ResourceProfilePlayerOptions
+                {Players = [new() {ExecutablePath = "/custom/unverified", SupportsHttp = true}]})).Code);
+    }
+
     [TestMethod]
     [DataRow(VlcLoopbackHttpSupport.SystemProxy)]
     [DataRow(VlcLoopbackHttpSupport.Unknown)]
@@ -55,7 +79,7 @@ public sealed class FederationPlayerPolicyTests
         var locator = new Locator {Installed = [KnownPlayerDefinitions.Vlc, KnownPlayerDefinitions.Iina]};
         var environment = new Environment(VlcLoopbackHttpSupport.Unknown);
         var policy = new FederationPlayerPolicy(new LocalPlayerResolver(locator), environment);
-        Assert.AreEqual("Vlc", policy.Resolve("film.mp4", "/Volumes/Media/film.mp4").ExecutablePath);
+        Assert.IsTrue(policy.Resolve("film.mp4", "/Volumes/Media/film.mp4").IsSystemDefault);
         Assert.AreEqual(0, environment.Reads);
     }
 
@@ -105,7 +129,7 @@ public sealed class FederationPlayerPolicyTests
         var policy = new FederationPlayerPolicy(new LocalPlayerResolver(locator), new Environment(VlcLoopbackHttpSupport.Available));
         Assert.AreEqual("Vlc", policy.Resolve("film.mp4", null).DefinitionId);
         CollectionAssert.DoesNotContain(locator.Probed, "PotPlayer");
-        Assert.AreEqual("PotPlayer", policy.Resolve("film.mp4", "/media/film.mp4").DefinitionId);
+        Assert.IsTrue(policy.Resolve("film.mp4", "/media/film.mp4").IsSystemDefault);
     }
 
     [TestMethod]

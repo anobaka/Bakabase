@@ -21,8 +21,8 @@ const openingFixture = vi.hoisted(() => ({
   target: vi.fn(),
 }));
 
-vi.mock("@/features/playback/overrides", () => ({
-  useTargetPlayback: (target: string, resourceId: number) => {
+vi.mock("@/features/playback/resourceProfiles", () => ({
+  useSourceResourceProfile: (target: string, resourceId: number) => {
     openingFixture.target(target, resourceId);
 
     return {
@@ -33,7 +33,7 @@ vi.mock("@/features/playback/overrides", () => ({
       choice: () => openingFixture.choice,
     };
   },
-  PlaybackOverridesButton: () => <button>opening-rules</button>,
+  ResourceProfileLink: () => <button>opening-rules</button>,
 }));
 vi.mock("@/components/bakaui", () => ({
   Modal: ({ children }: any) => <div role="dialog">{children}</div>,

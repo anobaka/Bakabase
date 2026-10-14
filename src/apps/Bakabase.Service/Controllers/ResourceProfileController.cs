@@ -1,3 +1,9 @@
+using System;
+using System.Threading;
+using Bakabase.Modules.Property.Abstractions.Services;
+using Bakabase.Service.Components.RemoteAccess;
+using Bakabase.Service.Components.Federation;
+using Bakabase.Modules.Search.Models.Db;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -72,7 +78,10 @@ public class ResourceProfileController(IResourceProfileService service, IPropert
             model.PlayableFileOptions,
             model.PlayerOptions,
             model.PropertyOptions,
-            model.Priority);
+            model.Priority,
+            model.SourceDeviceId,
+            model.SourceLibraryEpoch,
+            model.OpeningMode);
 
         return new SingletonResponse<ResourceProfileViewModel>(result.ToViewModel(propertyLocalizer));
     }
@@ -97,7 +106,10 @@ public class ResourceProfileController(IResourceProfileService service, IPropert
             model.PlayableFileOptions,
             model.PlayerOptions,
             model.PropertyOptions,
-            model.Priority);
+            model.Priority,
+            model.SourceDeviceId,
+            model.SourceLibraryEpoch,
+            model.OpeningMode);
 
         return BaseResponseBuilder.Ok;
     }
@@ -162,6 +174,38 @@ public class ResourceProfileController(IResourceProfileService service, IPropert
         }
 
         return BaseResponseBuilder.Ok;
+    }
+
+    [HttpPost("evaluate")]
+    [ResourceProfileSourceEpoch]
+    [RemoteAccessible]
+    [SwaggerOperation(OperationId = "EvaluateResourceProfileSearches")]
+    public async Task<ActionResult<SingletonResponse<ResourceProfileEvaluationResult>>> Evaluate(
+        [FromBody] ResourceProfileEvaluationInput input,
+        [FromServices] IResourceProfileSourceEvaluator evaluator, CancellationToken cancellationToken)
+    {
+        try { return new SingletonResponse<ResourceProfileEvaluationResult>(await evaluator.EvaluateAsync(input, cancellationToken)); }
+        catch (ArgumentException e) { return BadRequest(new { message = e.Message }); }
+    }
+
+    [HttpPost("search/resolve")]
+    [ResourceProfileSourceEpoch]
+    [RemoteAccessible]
+    [SwaggerOperation(OperationId = "ResolveResourceProfileSearch")]
+    public async Task<ActionResult<SingletonResponse<ResourceSearchViewModel>>> ResolveSearch(
+        [FromBody] ResourceSearchInputModel input, [FromServices] IPropertyService properties,
+        [FromServices] IResourceService resources, [FromServices] IResourceProfileSourceEvaluator evaluator,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await evaluator.ParseSearchAsync(JsonConvert.SerializeObject(input.ToDbModel()), cancellationToken);
+            var models = new[] { input.ToDbModel() };
+            var resolved = await models.ToViewModels(properties, propertyLocalizer, resources);
+            return new SingletonResponse<ResourceSearchViewModel>(resolved[0]);
+        }
+        catch (Exception e) when (e is ArgumentException or JsonException or InvalidOperationException)
+        { return BadRequest(new { message = "The source filter could not be resolved." }); }
     }
 
     // Note: For testing search criteria, use ResourceController.Search directly

@@ -21,7 +21,10 @@ import { useUserSideActionsRunHere } from "@/stores/remoteAccess";
 import ExternalLink from "@/components/ExternalLink";
 import { browserExternalUrl } from "@/utils/openExternalUrl";
 import { copyTextToClipboard } from "@/core/clipboard";
-import { PlaybackOverridesButton, useTargetPlayback } from "@/features/playback/overrides";
+import {
+  ResourceProfileLink,
+  useSourceResourceProfile,
+} from "@/features/playback/resourceProfiles";
 import { Button, Modal } from "@/components/bakaui";
 import { DesktopPlaybackGuideButton } from "@/components/Resource/components/PlayControl/DesktopPlaybackGuide";
 
@@ -55,7 +58,7 @@ export default function ResourceDetail({
     resourceRef.nodeId !== localNodeId
       ? `node:${resourceRef.nodeId}:${resourceRef.libraryEpoch}`
       : undefined;
-  const opening = useTargetPlayback(openingTarget, resourceRef.resourceId);
+  const opening = useSourceResourceProfile(openingTarget, resourceRef.resourceId);
   const [choiceAsset, setChoiceAsset] = useState<FederatedAsset>();
   const [detail, setDetail] = useState<FederatedResourceDetail>();
   const [error, setError] = useState<Error>();
@@ -321,7 +324,7 @@ export default function ResourceDetail({
       {detail && (
         <>
           <SourceBadge label={detail.ownerLabel || resourceRef.nodeId} local={isLocal} />
-          <PlaybackOverridesButton
+          <ResourceProfileLink
             label={detail.ownerLabel}
             resourceId={resourceRef.resourceId}
             target={openingTarget}

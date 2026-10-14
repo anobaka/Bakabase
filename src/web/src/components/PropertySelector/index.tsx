@@ -26,6 +26,8 @@ type Key = {
 
 interface IProps extends DestroyableProps {
   selection?: Key[];
+  /** Read-only catalog supplied by a different resource source; never persist its IDs locally. */
+  properties?: IProperty[];
   onSubmit?: (selectedProperties: IProperty[]) => Promise<any>;
   /** Called when modal is closed without making a selection */
   onCancel?: () => void;
@@ -72,6 +74,7 @@ const PropertySelector = (props: IProps) => {
     isDisabled,
     v2,
     pinnedProperties,
+    properties: providedProperties,
   } = props;
 
   const [properties, setProperties] = useState<IProperty[]>([]);
@@ -81,10 +84,10 @@ const PropertySelector = (props: IProps) => {
   const hasSubmittedRef = useRef(false);
 
   const loadProperties = async () => {
-    const psr = (await BApi.property.getPropertiesByPool(pool)).data || [];
+    const psr = providedProperties ?? (await BApi.property.getPropertiesByPool(pool)).data ?? [];
 
     // @ts-ignore
-    setProperties(psr.sort((a, b) => (a.order ?? 0) - (b.order ?? 0)));
+    setProperties([...psr].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)));
   };
 
   useEffect(() => {
@@ -125,7 +128,7 @@ const PropertySelector = (props: IProps) => {
   };
 
   const onSubmit = async (sel: Key[]) => {
-    if (sel.length > 0) {
+    if (sel.length > 0 && providedProperties === undefined) {
       await BApi.options.addLatestUsedProperty(sel);
     }
 

@@ -33,10 +33,9 @@ public class UserMachineEndpointCatalogTests
         "GET /file/recycle-bin",
         "GET /gui/url",
         "GET /player/device-playback/preferences",
-        "GET /player/device-playback/overrides",
         "PUT /player/device-playback/preferences",
-        "PUT /player/device-playback/overrides",
         "GET /player/playlist/{playlistId:int}/batch-play/candidates",
+        "GET /player/resource-profile",
         "GET /resource/directory",
         "GET /resource/play/random",
         "GET /resource/{resourceId}/play",
@@ -49,6 +48,7 @@ public class UserMachineEndpointCatalogTests
         "POST /player/batch-play",
         "POST /player/batch-play/candidates",
         "POST /player/playlist/{playlistId:int}/batch-play",
+        "POST /player/resource-profiles",
         "POST /tool/cookie-capture",
     ];
 

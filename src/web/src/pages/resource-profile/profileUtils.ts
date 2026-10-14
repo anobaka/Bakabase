@@ -1,4 +1,4 @@
-import type { BakabaseServiceModelsViewResourceProfileViewModel as ResourceProfile } from "@/sdk/Api";
+import type { ResourceProfile } from "./sourceProfiles";
 
 import { toSearchInputModel } from "@/components/ResourceFilter/utils/toInputModel";
 import { ResourceAdditionalItem } from "@/sdk/constants";
@@ -8,6 +8,9 @@ import { ResourceAdditionalItem } from "@/sdk/constants";
 export const toProfileInputModel = (profile: Partial<ResourceProfile>) => ({
   name: profile.name ?? "",
   priority: profile.priority ?? 0,
+  sourceDeviceId: profile.sourceDeviceId || null,
+  sourceLibraryEpoch: profile.sourceLibraryEpoch || null,
+  openingMode: profile.openingMode || null,
   search: profile.search ? toSearchInputModel(profile.search) : null,
   nameTemplate: profile.nameTemplate || null,
   enhancerOptions: profile.enhancerOptions ?? null,

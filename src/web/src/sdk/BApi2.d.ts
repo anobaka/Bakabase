@@ -3226,22 +3226,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/player/device-playback/overrides": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["GetDevicePlaybackOverrides"];
-        put: operations["SetDevicePlaybackOverrides"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/dlsite-work": {
         parameters: {
             query?: never;
@@ -4660,6 +4644,102 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["VerifyFederationNode"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/federation/v1/export/resource-profile/identity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetFederationResourceProfileSourceInfo"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/federation/v1/export/resource-profile/properties": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetFederationResourceProfileSearchProperties"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/federation/v1/export/resource-profile/filter-value": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["GetFederationResourceProfileFilterValue"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/federation/v1/export/resource-profile/search-resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ResolveFederationResourceProfileSearch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/federation/v1/export/resource-profile/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PreviewFederationResourceProfileSearch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/federation/v1/export/resource-profile/evaluate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["EvaluateFederationResourceProfiles"];
         delete?: never;
         options?: never;
         head?: never;
@@ -8790,6 +8870,230 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/resource-profile/evaluate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["EvaluateResourceProfileSearches"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource-profile/search/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ResolveResourceProfileSearch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/player/resource-profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetResourceProfileOpeningBehavior"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/player/resource-profiles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["GetResourceProfileOpeningBehaviors"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource-profile/source-info": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetResourceProfileSourceInfo"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource-profile/search/properties": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetResourceProfileSearchProperties"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource-profile/search/filter-value": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["GetResourceProfileSearchFilterValue"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource-profile/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PreviewResourceProfileSearch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource-profile/sources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetResourceProfileSources"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource-profile/sources/{deviceId}/info": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetConnectedResourceProfileSourceInfo"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource-profile/sources/{deviceId}/properties": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetSourceResourceProfileProperties"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource-profile/sources/{deviceId}/filter-value": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["GetSourceResourceProfileFilterValue"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource-profile/sources/{deviceId}/search/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ResolveSourceResourceProfileSearch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource-profile/sources/{deviceId}/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PreviewSourceResourceProfileSearch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/app/resource-usage": {
         parameters: {
             query?: never;
@@ -10369,6 +10673,13 @@ export interface components {
         "Bakabase.Abstractions.Models.Domain.ResourceProfileEnhancerOptions": {
             enhancers?: components["schemas"]["Bakabase.Abstractions.Models.Domain.EnhancerFullOptions"][];
         };
+        "Bakabase.Abstractions.Models.Domain.ResourceProfileEvaluationInput": {
+            resourceIds: number[];
+            profiles: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfileSearchRule"][];
+        };
+        "Bakabase.Abstractions.Models.Domain.ResourceProfileEvaluationResult": {
+            matches: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfileResourceMatch"][];
+        };
         "Bakabase.Abstractions.Models.Domain.ResourceProfilePlayableFileOptions": {
             extensions?: string[];
             fileNamePattern?: string;
@@ -10378,6 +10689,16 @@ export interface components {
         };
         "Bakabase.Abstractions.Models.Domain.ResourceProfilePropertyOptions": {
             properties?: components["schemas"]["Bakabase.Abstractions.Models.Domain.PropertyKeyWithScopePriority"][];
+        };
+        "Bakabase.Abstractions.Models.Domain.ResourceProfileResourceMatch": {
+            /** Format: int32 */
+            resourceId: number;
+            profileIds: number[];
+        };
+        "Bakabase.Abstractions.Models.Domain.ResourceProfileSearchRule": {
+            /** Format: int32 */
+            id: number;
+            searchJson?: string;
         };
         "Bakabase.Abstractions.Models.Domain.ResourceSearch": {
             /** Format: int32 */
@@ -14489,6 +14810,9 @@ export interface components {
         "Bakabase.Modules.Player.Abstractions.Components.BatchPlayResourceSnapshot": {
             resources: components["schemas"]["Bakabase.Modules.Player.Abstractions.Components.BatchPlayResourceFiles"][];
             configuredPlayers: components["schemas"]["Bakabase.Abstractions.Models.Domain.MediaLibraryPlayer"][];
+            playerOptionsByResourceId?: {
+                [key: string]: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfilePlayerOptions"];
+            };
         };
         "Bakabase.Modules.Player.Abstractions.Models.Domain.BatchPlayCandidate": {
             key: string;
@@ -14554,29 +14878,6 @@ export interface components {
         "Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackChoice": {
             mode: string;
             nativeSchemeId?: string;
-        };
-        "Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackOpener": {
-            id: string;
-            name: string;
-            installed: boolean;
-            supportsHttp: boolean;
-            supportedKinds?: string[];
-        };
-        "Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackOverride": {
-            target: string;
-            /** Format: int32 */
-            resourceId?: number;
-            choices: {
-                [key: string]: components["schemas"]["Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackOverrideChoice"];
-            };
-        };
-        "Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackOverrideChoice": {
-            mode: string;
-            playerId?: string;
-        };
-        "Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackOverrideSnapshot": {
-            rules: components["schemas"]["Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackOverride"][];
-            openers: components["schemas"]["Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackOpener"][];
         };
         "Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackPreferences": {
             /** Format: int32 */
@@ -15593,6 +15894,9 @@ export interface components {
             sharedUrl?: string;
         };
         "Bakabase.Service.Models.Input.ResourceProfileInputModel": {
+            sourceDeviceId?: string;
+            sourceLibraryEpoch?: string;
+            openingMode?: string;
             name: string;
             search?: components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
             nameTemplate?: string;
@@ -15602,6 +15906,11 @@ export interface components {
             propertyOptions?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfilePropertyOptions"];
             /** Format: int32 */
             priority: number;
+        };
+        "Bakabase.Service.Models.Input.ResourceProfileOpeningInputModel": {
+            sourceDeviceId?: string;
+            libraryEpoch?: string;
+            resourceIds: number[];
         };
         "Bakabase.Service.Models.Input.ResourceSearchFilterGroupInputModel": {
             combinator: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.SearchCombinator"];
@@ -16272,9 +16581,40 @@ export interface components {
             name?: string;
             error?: string;
         };
+        "Bakabase.Service.Models.View.ResourceProfileOpeningResourceViewModel": {
+            /** Format: int32 */
+            resourceId: number;
+            openingMode?: string;
+            profileIds: number[];
+        };
+        "Bakabase.Service.Models.View.ResourceProfileOpeningViewModel": {
+            openingMode?: string;
+            profileIds: number[];
+        };
+        "Bakabase.Service.Models.View.ResourceProfilePreviewResource": {
+            /** Format: int32 */
+            id: number;
+            path?: string;
+            displayName?: string;
+        };
+        "Bakabase.Service.Models.View.ResourceProfileSourceInfo": {
+            deviceId: string;
+            name: string;
+            libraryEpoch: string;
+        };
+        "Bakabase.Service.Models.View.ResourceProfileSourceViewModel": {
+            deviceId: string;
+            name: string;
+            libraryEpoch?: string;
+            available: boolean;
+            kind: string;
+        };
         "Bakabase.Service.Models.View.ResourceProfileViewModel": {
             /** Format: int32 */
             id: number;
+            sourceDeviceId?: string;
+            sourceLibraryEpoch?: string;
+            openingMode?: string;
             name: string;
             search?: components["schemas"]["Bakabase.Service.Models.View.ResourceSearchViewModel"];
             nameTemplate?: string;
@@ -16897,6 +17237,18 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Models.View.ResourcePlaceholderResultViewModel"][];
         };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.ResourceProfileOpeningResourceViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Models.View.ResourceProfileOpeningResourceViewModel"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.ResourceProfileSourceViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Models.View.ResourceProfileSourceViewModel"][];
+        };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.ResourceProfileViewModel]": {
             /** Format: int32 */
             code: number;
@@ -17071,6 +17423,18 @@ export interface components {
             /** Format: int32 */
             pageSize: number;
         };
+        "Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Service.Models.View.ResourceProfilePreviewResource]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Models.View.ResourceProfilePreviewResource"][];
+            /** Format: int32 */
+            totalCount: number;
+            /** Format: int32 */
+            pageIndex: number;
+            /** Format: int32 */
+            pageSize: number;
+        };
         "Bootstrap.Models.ResponseModels.SearchResponse`1[Bootstrap.Components.Logging.LogService.Models.Entities.Log]": {
             /** Format: int32 */
             code: number;
@@ -17172,6 +17536,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceFileSystemCache"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.ResourceProfileEvaluationResult]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfileEvaluationResult"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.ResourceProfilePlayerOptions]": {
             /** Format: int32 */
@@ -17743,12 +18113,6 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Modules.Player.Abstractions.Models.Domain.BatchPlayResult"];
         };
-        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackOverrideSnapshot]": {
-            /** Format: int32 */
-            code: number;
-            message?: string;
-            data?: components["schemas"]["Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackOverrideSnapshot"];
-        };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackPreferences]": {
             /** Format: int32 */
             code: number;
@@ -18012,6 +18376,18 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Models.View.ResourceMoveContextViewModel"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceProfileOpeningViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Models.View.ResourceProfileOpeningViewModel"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceProfileSourceInfo]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Models.View.ResourceProfileSourceInfo"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceProfileViewModel]": {
             /** Format: int32 */
@@ -24802,59 +25178,6 @@ export interface operations {
             };
         };
     };
-    GetDevicePlaybackOverrides: {
-        parameters: {
-            query?: {
-                target?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackOverrideSnapshot]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackOverrideSnapshot]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackOverrideSnapshot]"];
-                };
-            };
-        };
-    };
-    SetDevicePlaybackOverrides: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackOverride"];
-                "application/json": components["schemas"]["Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackOverride"];
-                "text/json": components["schemas"]["Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackOverride"];
-                "application/*+json": components["schemas"]["Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackOverride"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                };
-            };
-        };
-    };
     GetAllDLsiteWorks: {
         parameters: {
             query?: {
@@ -27507,6 +27830,166 @@ export interface operations {
                     "text/plain": components["schemas"]["Bakabase.Modules.Federation.Peers.NodeHandshakeResponse"];
                     "application/json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodeHandshakeResponse"];
                     "text/json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodeHandshakeResponse"];
+                };
+            };
+        };
+    };
+    GetFederationResourceProfileSourceInfo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceProfileSourceInfo]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceProfileSourceInfo]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceProfileSourceInfo]"];
+                };
+            };
+        };
+    };
+    GetFederationResourceProfileSearchProperties: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Property.Models.View.PropertyViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Property.Models.View.PropertyViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Property.Models.View.PropertyViewModel]"];
+                };
+            };
+        };
+    };
+    GetFederationResourceProfileFilterValue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchFilterInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchFilterInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchFilterInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchFilterInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Property.Models.View.PropertyViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Property.Models.View.PropertyViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Property.Models.View.PropertyViewModel]"];
+                };
+            };
+        };
+    };
+    ResolveFederationResourceProfileSearch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceSearchViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceSearchViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceSearchViewModel]"];
+                };
+            };
+        };
+    };
+    PreviewFederationResourceProfileSearch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Service.Models.View.ResourceProfilePreviewResource]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Service.Models.View.ResourceProfilePreviewResource]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Service.Models.View.ResourceProfilePreviewResource]"];
+                };
+            };
+        };
+    };
+    EvaluateFederationResourceProfiles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfileEvaluationInput"];
+                "application/json": components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfileEvaluationInput"];
+                "text/json": components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfileEvaluationInput"];
+                "application/*+json": components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfileEvaluationInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.ResourceProfileEvaluationResult]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.ResourceProfileEvaluationResult]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.ResourceProfileEvaluationResult]"];
                 };
             };
         };
@@ -34559,7 +35042,6 @@ export interface operations {
                 origin?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.DataOrigin"];
                 key?: string;
                 explicitChoice?: boolean;
-                openingRuleKind?: string;
             };
             header?: never;
             path: {
@@ -35920,6 +36402,394 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    EvaluateResourceProfileSearches: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfileEvaluationInput"];
+                "application/json": components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfileEvaluationInput"];
+                "text/json": components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfileEvaluationInput"];
+                "application/*+json": components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfileEvaluationInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.ResourceProfileEvaluationResult]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.ResourceProfileEvaluationResult]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.ResourceProfileEvaluationResult]"];
+                };
+            };
+        };
+    };
+    ResolveResourceProfileSearch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceSearchViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceSearchViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceSearchViewModel]"];
+                };
+            };
+        };
+    };
+    GetResourceProfileOpeningBehavior: {
+        parameters: {
+            query?: {
+                resourceId?: number;
+                sourceDeviceId?: string;
+                libraryEpoch?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceProfileOpeningViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceProfileOpeningViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceProfileOpeningViewModel]"];
+                };
+            };
+        };
+    };
+    GetResourceProfileOpeningBehaviors: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceProfileOpeningInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceProfileOpeningInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceProfileOpeningInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceProfileOpeningInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.ResourceProfileOpeningResourceViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.ResourceProfileOpeningResourceViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.ResourceProfileOpeningResourceViewModel]"];
+                };
+            };
+        };
+    };
+    GetResourceProfileSourceInfo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceProfileSourceInfo]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceProfileSourceInfo]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceProfileSourceInfo]"];
+                };
+            };
+        };
+    };
+    GetResourceProfileSearchProperties: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Property.Models.View.PropertyViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Property.Models.View.PropertyViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Property.Models.View.PropertyViewModel]"];
+                };
+            };
+        };
+    };
+    GetResourceProfileSearchFilterValue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchFilterInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchFilterInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchFilterInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchFilterInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Property.Models.View.PropertyViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Property.Models.View.PropertyViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Property.Models.View.PropertyViewModel]"];
+                };
+            };
+        };
+    };
+    PreviewResourceProfileSearch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Service.Models.View.ResourceProfilePreviewResource]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Service.Models.View.ResourceProfilePreviewResource]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Service.Models.View.ResourceProfilePreviewResource]"];
+                };
+            };
+        };
+    };
+    GetResourceProfileSources: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.ResourceProfileSourceViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.ResourceProfileSourceViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.ResourceProfileSourceViewModel]"];
+                };
+            };
+        };
+    };
+    GetConnectedResourceProfileSourceInfo: {
+        parameters: {
+            query?: {
+                libraryEpoch?: string;
+            };
+            header?: never;
+            path: {
+                deviceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceProfileSourceInfo]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceProfileSourceInfo]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceProfileSourceInfo]"];
+                };
+            };
+        };
+    };
+    GetSourceResourceProfileProperties: {
+        parameters: {
+            query?: {
+                libraryEpoch?: string;
+            };
+            header?: never;
+            path: {
+                deviceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Property.Models.View.PropertyViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Property.Models.View.PropertyViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Property.Models.View.PropertyViewModel]"];
+                };
+            };
+        };
+    };
+    GetSourceResourceProfileFilterValue: {
+        parameters: {
+            query?: {
+                libraryEpoch?: string;
+            };
+            header?: never;
+            path: {
+                deviceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchFilterInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchFilterInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchFilterInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchFilterInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Property.Models.View.PropertyViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Property.Models.View.PropertyViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Property.Models.View.PropertyViewModel]"];
+                };
+            };
+        };
+    };
+    ResolveSourceResourceProfileSearch: {
+        parameters: {
+            query?: {
+                libraryEpoch?: string;
+            };
+            header?: never;
+            path: {
+                deviceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceSearchViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceSearchViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceSearchViewModel]"];
+                };
+            };
+        };
+    };
+    PreviewSourceResourceProfileSearch: {
+        parameters: {
+            query?: {
+                libraryEpoch?: string;
+            };
+            header?: never;
+            path: {
+                deviceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Service.Models.View.ResourceProfilePreviewResource]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Service.Models.View.ResourceProfilePreviewResource]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Service.Models.View.ResourceProfilePreviewResource]"];
                 };
             };
         };

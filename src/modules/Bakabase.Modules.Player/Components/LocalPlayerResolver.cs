@@ -45,6 +45,25 @@ public sealed record ResolvedPlayer(string? ExecutablePath, string? CommandTempl
 /// </remarks>
 public sealed class LocalPlayerResolver(IPlayerExecutableLocator locator)
 {
+    /// <summary>Resolves a profile saved by this device's user. Unlike an upstream profile,
+    /// its executable and arguments belong here and may name any locally configured application.</summary>
+    public static ResolvedPlayer ResolveLocal(ResourceProfilePlayerOptions options, string fileNameOrPath,
+        bool requireHttp = false)
+    {
+        var chosen = PlayerFileCapabilities.SelectConfigured(options, fileNameOrPath);
+        if (chosen == null) return ResolvedPlayer.SystemDefault;
+        if (string.IsNullOrWhiteSpace(chosen.ExecutablePath))
+            throw new InvalidOperationException("The local resource profile has no application path.");
+        var supportsHttp = PlayerFileCapabilities.SupportsHttp(chosen);
+        if (requireHttp && !supportsHttp)
+            throw new InvalidOperationException("The local resource profile's application cannot open HTTP media. Configure a path mapping or enable HTTP support for that application.");
+        return new ResolvedPlayer(chosen.ExecutablePath, chosen.Command)
+        {
+            SupportsHttp = supportsHttp,
+            SupportedExtensions = PlayerFileCapabilities.NormalizeExtensions(chosen.Extensions)
+        };
+    }
+
     /// <summary>
     /// Picks the player for one file, mirroring the server's own rule: the first whose
     /// extensions include this one, else the first that claims no extensions at all.

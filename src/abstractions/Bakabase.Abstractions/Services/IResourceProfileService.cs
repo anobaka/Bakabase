@@ -24,6 +24,9 @@ public interface IResourceProfileService
     /// </summary>
     Task<ResourceProfile?> Get(int id);
 
+    /// <summary>Returns this device's locally stored profiles for a specific source; no foreign IDs are matched locally.</summary>
+    Task<List<ResourceProfile>> GetSourceProfiles(string sourceDeviceId, string? libraryEpoch = null);
+
     /// <summary>
     /// Get matching profiles for a resource (ordered by priority)
     /// </summary>
@@ -106,7 +109,10 @@ public interface IResourceProfileService
         ResourceProfilePlayableFileOptions? playableFileOptions,
         ResourceProfilePlayerOptions? playerOptions,
         ResourceProfilePropertyOptions? propertyOptions,
-        int priority);
+        int priority,
+        string? sourceDeviceId = null,
+        string? sourceLibraryEpoch = null,
+        string? openingMode = null);
 
     /// <summary>
     /// Update an existing resource profile
@@ -129,7 +135,10 @@ public interface IResourceProfileService
         ResourceProfilePlayableFileOptions? playableFileOptions,
         ResourceProfilePlayerOptions? playerOptions,
         ResourceProfilePropertyOptions? propertyOptions,
-        int priority);
+        int priority,
+        string? sourceDeviceId = null,
+        string? sourceLibraryEpoch = null,
+        string? openingMode = null);
 
     /// <summary>
     /// Delete a resource profile by ID

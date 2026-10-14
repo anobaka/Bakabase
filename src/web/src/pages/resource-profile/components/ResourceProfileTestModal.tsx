@@ -1,16 +1,15 @@
 "use client";
 
+import type { ResourceProfile } from "../sourceProfiles";
 import type { DestroyableProps } from "@/components/bakaui/types";
 import type { Resource } from "@/core/models/Resource";
-import type {
-  BakabaseServiceModelsViewResourceProfileViewModel as ResourceProfile,
-  BakabaseServiceModelsInputResourceSearchInputModel as SearchInput,
-} from "@/sdk/Api";
+import type { BakabaseServiceModelsInputResourceSearchInputModel as SearchInput } from "@/sdk/Api";
 
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AiOutlineArrowRight, AiOutlineFile, AiOutlineReload } from "react-icons/ai";
 
+import { profileSourceApi } from "../sourceProfiles";
 import { checkProfileResponse, profilePreviewSearch } from "../profileUtils";
 
 import { Modal, Chip, Button, Pagination, Spinner } from "@/components/bakaui";
@@ -57,7 +56,11 @@ export default function ResourceProfileTestModal({ profile, isDraft = false, onD
 
     return priority;
   }, [configuredPriority]);
-  const criteriaKey = JSON.stringify(profilePreviewSearch(profile, 1));
+  const criteriaKey = JSON.stringify([
+    profile.sourceDeviceId,
+    profile.sourceLibraryEpoch,
+    profilePreviewSearch(profile, 1),
+  ]);
   const [pagination, setPagination] = useState({ criteriaKey, page: 1 });
   const page = pagination.criteriaKey === criteriaKey ? pagination.page : 1;
   const [retryKey, setRetryKey] = useState(0);
@@ -72,12 +75,15 @@ export default function ResourceProfileTestModal({ profile, isDraft = false, onD
     const controller = new AbortController();
     const { additionalItems, ...search } = profilePreviewSearch(profile, page);
 
-    BApi.resource
-      .searchResources(
-        search as SearchInput,
-        { additionalItems, saveSearch: false },
-        { signal: controller.signal },
-      )
+    const request = profile.sourceDeviceId
+      ? profileSourceApi.preview(profile, search as SearchInput, controller.signal)
+      : BApi.resource.searchResources(
+          search as SearchInput,
+          { additionalItems, saveSearch: false },
+          { signal: controller.signal },
+        );
+
+    request
       .then((response) => {
         if (!active) return;
         checkProfileResponse(response, "Preview unavailable");
@@ -192,11 +198,13 @@ export default function ResourceProfileTestModal({ profile, isDraft = false, onD
               <Button
                 key={resource.id}
                 aria-label={t<string>("resourceProfile.preview.openResource", { name })}
-                className="h-auto min-h-14 w-full justify-start gap-3 px-3 py-2 text-left"
+                className="h-auto min-h-14 w-full justify-start gap-3 px-3 py-2 text-left data-[disabled=true]:opacity-100"
+                isDisabled={!!profile.sourceDeviceId}
                 variant="light"
-                onPress={() =>
-                  createPortal(ResourceDetailModal, { id: resource.id, onDestroyed: retry })
-                }
+                onPress={() => {
+                  if (!profile.sourceDeviceId)
+                    createPortal(ResourceDetailModal, { id: resource.id, onDestroyed: retry });
+                }}
               >
                 <AiOutlineFile aria-hidden className="shrink-0 text-lg text-default-400" />
                 <span className="flex min-w-0 flex-1 flex-col gap-1">
@@ -213,7 +221,9 @@ export default function ResourceProfileTestModal({ profile, isDraft = false, onD
                 <span className="shrink-0 text-xs font-normal tabular-nums text-default-400">
                   #{resource.id}
                 </span>
-                <AiOutlineArrowRight aria-hidden className="shrink-0 text-default-400" />
+                {!profile.sourceDeviceId && (
+                  <AiOutlineArrowRight aria-hidden className="shrink-0 text-default-400" />
+                )}
               </Button>
             );
           })}
