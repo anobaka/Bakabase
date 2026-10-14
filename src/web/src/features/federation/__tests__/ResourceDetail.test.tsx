@@ -9,6 +9,44 @@ import { federationResourceApi } from "../resourceApi";
 import { FederationError } from "../transport";
 
 import { useUserSideActionsRunHere } from "@/stores/remoteAccess";
+import { copyTextToClipboard } from "@/core/clipboard";
+
+const openingFixture = vi.hoisted(() => ({
+  choice: undefined as { mode: string; playerId?: string } | undefined,
+  desktop: false,
+  ready: true,
+  unavailable: false,
+  reload: vi.fn(),
+  target: vi.fn(),
+}));
+
+vi.mock("@/features/playback/overrides", () => ({
+  useTargetPlayback: (target: string, resourceId: number) => {
+    openingFixture.target(target, resourceId);
+
+    return {
+      ready: openingFixture.ready,
+      unavailable: openingFixture.unavailable,
+      reload: openingFixture.reload,
+      desktop: openingFixture.desktop,
+      choice: () => openingFixture.choice,
+    };
+  },
+  PlaybackOverridesButton: () => <button>opening-rules</button>,
+}));
+vi.mock("@/components/bakaui", () => ({
+  Modal: ({ children }: any) => <div role="dialog">{children}</div>,
+  Button: ({ children, onPress, isDisabled }: any) => (
+    <button disabled={isDisabled} onClick={onPress}>
+      {children}
+    </button>
+  ),
+}));
+
+vi.mock("@/core/clipboard", () => ({ copyTextToClipboard: vi.fn() }));
+vi.mock("@/components/ExternalLink", () => ({
+  default: ({ href, children }: any) => <a href={href}>{children}</a>,
+}));
 
 vi.mock("@/stores/remoteAccess", () => ({
   useRemoteAccessStore: vi.fn(),
@@ -55,10 +93,176 @@ const view = (ref = remote) => (
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(useUserSideActionsRunHere).mockReturnValue(true);
+  openingFixture.choice = undefined;
+  openingFixture.desktop = false;
+  openingFixture.ready = true;
+  openingFixture.unavailable = false;
+  openingFixture.reload.mockResolvedValue(undefined);
 });
 afterEach(cleanup);
 
 describe("read-only remote detail", () => {
+  it("asks when shared rules cannot load, with retry and explicit preview still available", async () => {
+    openingFixture.ready = false;
+    openingFixture.unavailable = true;
+    openingFixture.desktop = true;
+    vi.mocked(federationResourceApi.detail).mockResolvedValue({ resources: [detail()] });
+    vi.mocked(federationResourceApi.playback).mockResolvedValue({
+      url: "/media/test",
+      launched: false,
+      expiresAt: "2030-01-01",
+      contentType: "video/mp4",
+    });
+    render(view());
+    fireEvent.click(await screen.findByText("resource.openingRules.useDefault"));
+    expect(screen.getByText("resource.playbackPolicy.rulesUnavailable")).toBeInTheDocument();
+    expect(federationResourceApi.playback).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByText("resource.playbackPolicy.retryRules"));
+    expect(openingFixture.reload).toHaveBeenCalledOnce();
+    fireEvent.click(screen.getByText("resource.openingRules.useDefault"));
+    fireEvent.click(screen.getByText("resource.openingRules.browser"));
+    await waitFor(() =>
+      expect(federationResourceApi.playback).toHaveBeenCalledWith(
+        remote,
+        "opaque",
+        "preview",
+        expect.any(AbortSignal),
+      ),
+    );
+  });
+  it.each([
+    { desktop: false, mode: "preview" },
+    { desktop: true, mode: "player" },
+  ])(
+    "uses the viewing surface's default for shared video (desktop=$desktop)",
+    async ({ desktop, mode }) => {
+      openingFixture.desktop = desktop;
+      vi.mocked(federationResourceApi.detail).mockResolvedValue({ resources: [detail()] });
+      vi.mocked(federationResourceApi.playback).mockResolvedValue({
+        url: "/media/test",
+        launched: true,
+        expiresAt: "2030-01-01",
+        contentType: "video/mp4",
+      });
+      render(view());
+      fireEvent.click(await screen.findByText("resource.openingRules.useDefault"));
+      await waitFor(() =>
+        expect(federationResourceApi.playback).toHaveBeenCalledWith(
+          remote,
+          "opaque",
+          mode,
+          expect.any(AbortSignal),
+        ),
+      );
+      expect(openingFixture.target).toHaveBeenCalledWith("node:other:other-epoch", 1);
+    },
+  );
+  it("applies a saved browser override without removing the explicit native alternative", async () => {
+    openingFixture.desktop = true;
+    openingFixture.choice = { mode: "browser" };
+    vi.mocked(federationResourceApi.detail).mockResolvedValue({ resources: [detail()] });
+    vi.mocked(federationResourceApi.playback).mockResolvedValue({
+      url: "/media/test",
+      launched: true,
+      expiresAt: "2030-01-01",
+      contentType: "video/mp4",
+    });
+    render(view());
+    fireEvent.click(await screen.findByText("resource.openingRules.useDefault"));
+    await waitFor(() =>
+      expect(federationResourceApi.playback).toHaveBeenLastCalledWith(
+        remote,
+        "opaque",
+        "preview",
+        expect.any(AbortSignal),
+      ),
+    );
+    fireEvent.click(screen.getByText("federation.playHere"));
+    await waitFor(() =>
+      expect(federationResourceApi.playback).toHaveBeenLastCalledWith(
+        remote,
+        "opaque",
+        "player",
+        expect.any(AbortSignal),
+      ),
+    );
+  });
+  it("asks before launching when the target-specific method is ask", async () => {
+    openingFixture.choice = { mode: "ask" };
+    vi.mocked(federationResourceApi.detail).mockResolvedValue({ resources: [detail()] });
+    vi.mocked(federationResourceApi.playback).mockResolvedValue({
+      url: "/media/test",
+      launched: false,
+      expiresAt: "2030-01-01",
+      contentType: "video/mp4",
+    });
+    render(view());
+    fireEvent.click(await screen.findByText("resource.openingRules.useDefault"));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(federationResourceApi.playback).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByText("resource.openingRules.browser"));
+    await waitFor(() =>
+      expect(federationResourceApi.playback).toHaveBeenCalledWith(
+        remote,
+        "opaque",
+        "preview",
+        expect.any(AbortSignal),
+      ),
+    );
+  });
+  it("explains an unavailable native preference without sending an unmapped image to the player", async () => {
+    openingFixture.desktop = true;
+    openingFixture.choice = { mode: "native", playerId: "system-default" };
+    vi.mocked(federationResourceApi.detail).mockResolvedValue({
+      resources: [
+        { ...detail(), assets: [{ ...detail().assets[0], kind: "image", canOpenLocally: false }] },
+      ],
+    });
+    render(view());
+    fireEvent.click(await screen.findByText("resource.openingRules.useDefault"));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByText("resource.playbackPolicy.preferredUnavailable")).toBeInTheDocument();
+    expect(screen.getByText("resource.openingRules.native")).toBeDisabled();
+    expect(federationResourceApi.playback).not.toHaveBeenCalled();
+  });
+  it("offers only validated original webpages, without treating protocol or file URLs as websites", async () => {
+    vi.mocked(federationResourceApi.detail).mockResolvedValue({
+      resources: [
+        {
+          ...detail(),
+          sources: [
+            { kind: "DLsite", url: "https://www.dlsite.com/work/123" },
+            { kind: "Steam", url: "steam://rungameid/123" },
+            { kind: "FileSystem", url: "file:///private/owner/path" },
+            { kind: "Manual", url: "javascript:alert(1)" },
+          ],
+        },
+      ],
+    });
+    render(view());
+    expect(
+      await screen.findByRole("link", { name: "federation.detail.originalPage" }),
+    ).toHaveAttribute("href", "https://www.dlsite.com/work/123");
+    expect(screen.getAllByRole("link")).toHaveLength(1);
+    expect(screen.queryByText("file:///private/owner/path")).not.toBeInTheDocument();
+  });
+
+  it("copies a share-relative location with the owner name without requesting the owner's filesystem path", async () => {
+    vi.mocked(useUserSideActionsRunHere).mockReturnValue(false);
+    vi.mocked(copyTextToClipboard).mockResolvedValue(undefined);
+    vi.mocked(federationResourceApi.detail).mockResolvedValue({
+      resources: [
+        { ...detail(), assets: [{ ...detail().assets[0]!, relativePath: "Films/movie.mp4" }] },
+      ],
+    });
+    render(view());
+    fireEvent.click(await screen.findByText("federation.detail.copySharedLocation"));
+    expect(await screen.findByText("federation.detail.locationCopied")).toBeInTheDocument();
+    expect(copyTextToClipboard).toHaveBeenCalledWith("Other computer: Films/movie.mp4");
+    expect(federationResourceApi.openDirectory).not.toHaveBeenCalled();
+    expect(screen.getByText("federation.directory.browserTip")).toBeInTheDocument();
+  });
+
   it.each([undefined, false])(
     "keeps images preview-only without confirmed local availability (%s)",
     async (canOpenLocally) => {

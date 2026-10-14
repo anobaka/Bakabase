@@ -9,13 +9,14 @@ export type OriginGroup = {
   origin: DataOrigin;
   items: PlayableItem[];
   status: DataStatus;
+  error?: string;
 };
 
 export type PlayableItemResolutionState = {
   /** Groups ordered by fixed display order */
   groups: OriginGroup[];
   /** Overall status */
-  overallStatus: "ready" | "loading" | "not-found";
+  overallStatus: "ready" | "loading" | "not-found" | "failed";
   /** Trigger SSE discovery for a specific origin */
   triggerDiscovery: (origin: DataOrigin) => void;
 };
@@ -31,12 +32,7 @@ export type PlayableItemResolutionCallbacks = {
 };
 
 // Fixed display order for origins
-const ORIGIN_ORDER: DataOrigin[] = [
-  DataOrigin.Steam,
-  DataOrigin.DLsite,
-  DataOrigin.ExHentai,
-  DataOrigin.FileSystem,
-];
+const ORIGIN_ORDER: DataOrigin[] = [DataOrigin.Steam, DataOrigin.FileSystem];
 
 export function usePlayableItemResolution(
   resource: Resource,
@@ -51,90 +47,115 @@ export function usePlayableItemResolution(
   latestIdentity.current = identity;
   // Get playableItem-related dataStates
   const piStates = useMemo(
-    () => resource.dataStates?.filter((s) => s.dataType === ResourceDataType.PlayableItem) ?? [],
+    () =>
+      resource.dataStates?.filter(
+        (s) => s.dataType === ResourceDataType.PlayableItem && ORIGIN_ORDER.includes(s.origin),
+      ) ?? [],
     [resource.dataStates],
   );
 
-  // SSE-discovered items per origin
+  // Each origin owns an independent attempt. Retrying one source must neither
+  // restart other sources nor let the previous attempt overwrite its result.
   const [sseItems, setSseItems] = useState(() => ({
     owner: identity,
-    items: new Map<DataOrigin, { items: PlayableItem[] }>(),
+    items: new Map<
+      DataOrigin,
+      { items: PlayableItem[]; status: DataStatus; error?: string; attempt: number }
+    >(),
   }));
-  const subscribedRef = useRef(new Set<DataOrigin>());
-  const [manualTriggers, setManualTriggers] = useState<Set<DataOrigin>>(new Set());
+  const [manualTriggers, setManualTriggers] = useState(() => ({
+    owner: identity,
+    attempts: new Map<DataOrigin, number>(),
+  }));
+  const subscriptions = useRef(
+    new Map<
+      DataOrigin,
+      {
+        attempt: number;
+        active: boolean;
+        unsubscribe?: () => void;
+      }
+    >(),
+  );
+  const latestCallbacks = useRef(callbacks);
 
-  const triggerDiscovery = useCallback((origin: DataOrigin) => {
-    setManualTriggers((prev) => {
-      const next = new Set(prev);
+  latestCallbacks.current = callbacks;
 
-      next.add(origin);
+  const triggerDiscovery = useCallback(
+    (origin: DataOrigin) => {
+      if (!ORIGIN_ORDER.includes(origin)) return;
+      setManualTriggers((prev) => {
+        const attempts = new Map(prev.owner === identity ? prev.attempts : []);
 
-      return next;
-    });
-  }, []);
+        attempts.set(origin, (attempts.get(origin) ?? 0) + 1);
 
-  // Origins that need auto-discovery (NotStarted) OR have been manually triggered
-  const originsToDiscover = useMemo(() => {
-    if (piStates.length === 0) return [];
-    const autoOrigins = piStates
-      .filter((s) => s.status === DataStatus.NotStarted)
-      .map((s) => s.origin);
-    // Merge with manual triggers
-    const all = new Set([...autoOrigins, ...manualTriggers]);
+        return { owner: identity, attempts };
+      });
+    },
+    [identity],
+  );
 
-    return Array.from(all);
-  }, [piStates, manualTriggers]);
+  useEffect(
+    () => () => {
+      for (const subscription of subscriptions.current.values()) {
+        subscription.active = false;
+        subscription.unsubscribe?.();
+      }
+      subscriptions.current.clear();
+    },
+    [identity],
+  );
 
-  // SSE subscription
   useEffect(() => {
-    const unsubscribes: (() => void)[] = [];
-    let active = true;
+    for (const state of piStates) {
+      const origin = state.origin;
+      const attempt =
+        manualTriggers.owner === identity ? (manualTriggers.attempts.get(origin) ?? 0) : 0;
 
-    for (const origin of originsToDiscover) {
-      if (subscribedRef.current.has(origin)) continue;
-      subscribedRef.current.add(origin);
+      if (attempt === 0 && state.status !== DataStatus.NotStarted) continue;
+      const previous = subscriptions.current.get(origin);
 
-      callbacks?.onDiscoveryStart?.(resource.id, origin);
+      if (previous?.attempt === attempt) continue;
+      if (previous) {
+        previous.active = false;
+        previous.unsubscribe?.();
+      }
+      const subscription: { attempt: number; active: boolean; unsubscribe?: () => void } = {
+        attempt,
+        active: true,
+      };
+
+      subscriptions.current.set(origin, subscription);
+      latestCallbacks.current?.onDiscoveryStart?.(resource.id, origin);
+
+      const complete = (data: DiscoveryData | null, error?: string) => {
+        if (!subscription.active || latestIdentity.current !== identity) return;
+        latestCallbacks.current?.onDiscoveryComplete?.(resource.id, origin, data, error);
+        setSseItems((prev) => {
+          if (!subscription.active || latestIdentity.current !== identity) return prev;
+          const next = new Map(prev.owner === identity ? prev.items : []);
+
+          next.set(origin, {
+            items: data?.playableItems?.filter((item) => item.origin === origin) ?? [],
+            status: data && !error ? DataStatus.Ready : DataStatus.Failed,
+            error,
+            attempt,
+          });
+
+          return { owner: identity, items: next };
+        });
+      };
 
       resourceDiscoveryChannel
-        .subscribe(resource.id, origin, ResourceDataType.PlayableItem, (data, error) => {
-          if (!active || latestIdentity.current !== identity) return;
-          callbacks?.onDiscoveryComplete?.(resource.id, origin, data, error);
-          // Record completion even when the backend returns no items or an error,
-          // otherwise folder-only resources would stay in NotStarted forever.
-          setSseItems((prev) => {
-            if (!active || latestIdentity.current !== identity) return prev;
-            const next = new Map(prev.owner === identity ? prev.items : []);
-
-            next.set(origin, {
-              items: data?.playableItems ?? [],
-            });
-
-            return { owner: identity, items: next };
-          });
+        .subscribe(resource.id, origin, ResourceDataType.PlayableItem, complete)
+        .then((unsubscribe) => {
+          if (subscription.active && latestIdentity.current === identity)
+            subscription.unsubscribe = unsubscribe;
+          else unsubscribe();
         })
-        .then((unsub) => {
-          if (active && latestIdentity.current === identity) unsubscribes.push(unsub);
-          else unsub();
-        });
+        .catch((error) => complete(null, error instanceof Error ? error.message : String(error)));
     }
-
-    return () => {
-      active = false;
-      unsubscribes.forEach((fn) => fn());
-      subscribedRef.current = new Set();
-    };
-  }, [identity, originsToDiscover.join(",")]);
-
-  // Reset when the resource changes, or when it is force-refreshed (reloadToken bump).
-  // A cache rebuild can change the playable files at the same path, so we must drop the
-  // previously discovered SSE items — otherwise a stale (often empty) result keeps
-  // overriding the freshly returned backend items and the control stays "open folder".
-  useEffect(() => {
-    setSseItems((prev) => (prev.owner === identity ? prev : { owner: identity, items: new Map() }));
-    subscribedRef.current = new Set();
-    setManualTriggers(new Set());
-  }, [identity]);
+  }, [identity, piStates, manualTriggers]);
 
   // Build groups
   const groups = useMemo((): OriginGroup[] => {
@@ -159,7 +180,14 @@ export function usePlayableItemResolution(
 
       // SSE items override backend items for this origin
       const sseData = sseItems.owner === identity ? sseItems.items.get(origin) : undefined;
-      const items = sseData?.items ?? backendItemsByOrigin.get(origin) ?? [];
+      const attempt =
+        manualTriggers.owner === identity ? (manualTriggers.attempts.get(origin) ?? 0) : 0;
+      const pendingRetry = attempt > (sseData?.attempt ?? 0);
+      const status = pendingRetry ? DataStatus.NotStarted : (sseData?.status ?? state.status);
+      const items =
+        status === DataStatus.Ready
+          ? (sseData?.items ?? backendItemsByOrigin.get(origin) ?? [])
+          : [];
 
       // Always include applicable origins. The consumer (PlayControl) filters
       // `sources` by items.length > 0, and having an empty-but-Ready group is
@@ -167,17 +195,19 @@ export function usePlayableItemResolution(
       result.push({
         origin,
         items,
-        status: sseData ? DataStatus.Ready : state.status,
+        status,
+        error: pendingRetry ? undefined : sseData?.error,
       });
     }
 
     return result;
-  }, [piStates, resource.playableItems, sseItems, identity]);
+  }, [piStates, resource.playableItems, sseItems, identity, manualTriggers]);
 
-  const overallStatus = useMemo((): "ready" | "loading" | "not-found" => {
+  const overallStatus = useMemo((): "ready" | "loading" | "not-found" | "failed" => {
     if (piStates.length === 0) return "not-found";
     if (groups.some((g) => g.items.length > 0)) return "ready";
     if (groups.some((g) => g.status === DataStatus.NotStarted)) return "loading";
+    if (groups.some((g) => g.status === DataStatus.Failed)) return "failed";
 
     return "not-found";
   }, [piStates, groups]);

@@ -29,6 +29,19 @@ afterEach(() => {
 });
 
 describe("external web links", () => {
+  it("supports an explicit browser surface while leaving the desktop mode unchanged", () => {
+    useRemoteAccessStore.setState({ clientMode: ClientMode.AllInOne, isLocal: true });
+    render(
+      <ExternalLink forceBrowser href={url}>
+        Original page
+      </ExternalLink>,
+    );
+    const link = screen.getByRole("link", { name: "Original page" });
+
+    expect(link).toHaveAttribute("href", url);
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(useRemoteAccessStore.getState().clientMode).toBe(ClientMode.AllInOne);
+  });
   it.each([true, false])(
     "uses a normal new-tab link in a server browser (isLocal=%s)",
     (isLocal) => {
@@ -77,6 +90,24 @@ describe("external web links", () => {
 });
 
 describe("button and menu external actions", () => {
+  it("can explicitly open on the browser surface even when localhost reports an all-in-one host", () => {
+    useRemoteAccessStore.setState({ clientMode: ClientMode.AllInOne, isLocal: true });
+    let opened: HTMLAnchorElement | undefined;
+    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
+      opened = this;
+    });
+
+    openExternalUrl(url, true);
+    expect(opened?.href).toBe(url);
+    expect(opened?.target).toBe("_blank");
+    expect(opened?.rel).toBe("noopener noreferrer");
+    expect(click).toHaveBeenCalledOnce();
+    expect(nativeOpen).not.toHaveBeenCalled();
+    openExternalUrl("javascript:alert(1)", true);
+    expect(click).toHaveBeenCalledOnce();
+  });
   it.each([true, false])("opens synchronously in a server browser (isLocal=%s)", (isLocal) => {
     useRemoteAccessStore.setState({ clientMode: ClientMode.RemoteBrowser, isLocal });
     let opened: { href: string; target: string; rel: string; connected: boolean } | undefined;

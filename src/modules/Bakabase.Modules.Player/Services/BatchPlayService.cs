@@ -166,6 +166,13 @@ public class BatchPlayService(
             }
 
             var known = KnownPlayerDefinitions.MatchByExecutable(player.ExecutablePath);
+            var extensions = NormalizeExtensions(player.Extensions);
+            if (known?.SupportedExtensions != null)
+            {
+                extensions = extensions == null ? known.SupportedExtensions :
+                    extensions.Intersect(known.SupportedExtensions, StringComparer.OrdinalIgnoreCase)
+                        .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            }
             candidates.Add(new BatchPlayCandidate
             {
                 Key = $"{ProfileKeyPrefix}{player.ExecutablePath.ToLowerInvariant()}",
@@ -176,12 +183,13 @@ public class BatchPlayService(
                 // Unrecognized players get the playlist route by
                 // assumption — most accept an m3u8 as their file argument.
                 Capabilities = known?.Capabilities ?? BatchPlayCapability.PlaylistFile,
+                SupportsHttp = PlayerFileCapabilities.SupportsHttp(player, known),
                 CommandTemplate = player.Command,
                 CapabilitiesAssumed = known == null,
-                // The user's configured extension set wins over the
-                // catalog's; an empty/missing set means "any file".
-                SupportedExtensions = NormalizeExtensions(player.Extensions) ??
-                                      known?.SupportedExtensions,
+                // A profile can narrow the catalog, but cannot turn a known AV
+                // player into a program launcher or an image viewer. Custom local
+                // applications keep their existing unrestricted extension behavior.
+                SupportedExtensions = extensions,
             });
         }
 
@@ -200,6 +208,7 @@ public class BatchPlayService(
                 DisplayName = discovered.DisplayName,
                 ExecutablePath = discovered.ExecutablePath,
                 Capabilities = discovered.Capabilities,
+                SupportsHttp = definition.SupportsHttp,
                 CapabilitiesAssumed = false,
                 SupportedExtensions = definition.SupportedExtensions,
             });
@@ -273,6 +282,12 @@ public class BatchPlayService(
     private async Task<BatchPlayLaunchMethod> LaunchAsync(BatchPlayCandidate candidate, List<string> files,
         CancellationToken ct)
     {
+        if (!candidate.SupportsHttp && files.Any(PlayerFileCapabilities.IsHttpTarget))
+        {
+            throw new InvalidOperationException(
+                $"{candidate.DisplayName} is not configured to open HTTP media. Map the selected files to accessible local folders, or choose a player that supports HTTP media.");
+        }
+
         string arguments;
         BatchPlayLaunchMethod method;
 

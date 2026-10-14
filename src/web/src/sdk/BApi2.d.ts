@@ -3226,6 +3226,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/player/device-playback/overrides": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetDevicePlaybackOverrides"];
+        put: operations["SetDevicePlaybackOverrides"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/dlsite-work": {
         parameters: {
             query?: never;
@@ -10033,6 +10049,7 @@ export interface components {
             extensions?: string[];
             executablePath: string;
             command: string;
+            supportsHttp?: boolean;
         };
         "Bakabase.Abstractions.Models.Domain.MediaLibraryResourceMapping": {
             /** Format: int32 */
@@ -14478,6 +14495,7 @@ export interface components {
             displayName: string;
             executablePath: string;
             capabilities: components["schemas"]["Bakabase.Modules.Player.Abstractions.Models.Domain.Constants.BatchPlayCapability"];
+            supportsHttp: boolean;
             commandTemplate?: string;
             capabilitiesAssumed: boolean;
             supportedExtensions?: string[];
@@ -14535,6 +14553,29 @@ export interface components {
         "Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackChoice": {
             mode: string;
             nativeSchemeId?: string;
+        };
+        "Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackOpener": {
+            id: string;
+            name: string;
+            installed: boolean;
+            supportsHttp: boolean;
+            supportedKinds?: string[];
+        };
+        "Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackOverride": {
+            target: string;
+            /** Format: int32 */
+            resourceId?: number;
+            choices: {
+                [key: string]: components["schemas"]["Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackOverrideChoice"];
+            };
+        };
+        "Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackOverrideChoice": {
+            mode: string;
+            playerId?: string;
+        };
+        "Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackOverrideSnapshot": {
+            rules: components["schemas"]["Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackOverride"][];
+            openers: components["schemas"]["Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackOpener"][];
         };
         "Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackPreferences": {
             /** Format: int32 */
@@ -17700,6 +17741,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Modules.Player.Abstractions.Models.Domain.BatchPlayResult"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackOverrideSnapshot]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackOverrideSnapshot"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackPreferences]": {
             /** Format: int32 */
@@ -24750,6 +24797,59 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.DeploymentPathsViewModel]"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.DeploymentPathsViewModel]"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.DeploymentPathsViewModel]"];
+                };
+            };
+        };
+    };
+    GetDevicePlaybackOverrides: {
+        parameters: {
+            query?: {
+                target?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackOverrideSnapshot]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackOverrideSnapshot]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackOverrideSnapshot]"];
+                };
+            };
+        };
+    };
+    SetDevicePlaybackOverrides: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackOverride"];
+                "application/json": components["schemas"]["Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackOverride"];
+                "text/json": components["schemas"]["Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackOverride"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackOverride"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                 };
             };
         };
@@ -34457,6 +34557,8 @@ export interface operations {
                 /** @description [1: Manual, 2: FileSystem, 3: Steam, 4: DLsite, 5: ExHentai, 6: ExternalIdentity] */
                 origin?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.DataOrigin"];
                 key?: string;
+                explicitChoice?: boolean;
+                openingRuleKind?: string;
             };
             header?: never;
             path: {

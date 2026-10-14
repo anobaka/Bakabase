@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -14,6 +13,9 @@ using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Models.Db;
 using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.Modules.Property.Components;
+using Bakabase.Modules.Player.Abstractions.Components;
+using Bakabase.Modules.Player.Components;
+using Microsoft.Extensions.Logging.Abstractions;
 using Bakabase.Modules.StandardValue.Abstractions.Configurations;
 using Bakabase.Modules.StandardValue.Extensions;
 using Bootstrap.Components.Configuration.Abstractions;
@@ -30,19 +32,22 @@ public class LocalFilePlayableItemProvider : IPlayableItemProvider
     private readonly FullMemoryCacheResourceService<BakabaseDbContext, ResourceCacheDbModel, int> _resourceCacheOrm;
     private readonly IBOptions<UIOptions> _uiOptions;
     private readonly ILogger<LocalFilePlayableItemProvider> _logger;
+    private readonly IBatchPlayProcessLauncher _launcher;
 
     public LocalFilePlayableItemProvider(
         IResourceProfileService resourceProfileService,
         ISystemPlayer systemPlayer,
         FullMemoryCacheResourceService<BakabaseDbContext, ResourceCacheDbModel, int> resourceCacheOrm,
         IBOptions<UIOptions> uiOptions,
-        ILogger<LocalFilePlayableItemProvider> logger)
+        ILogger<LocalFilePlayableItemProvider> logger,
+        IBatchPlayProcessLauncher? launcher = null)
     {
         _resourceProfileService = resourceProfileService;
         _systemPlayer = systemPlayer;
         _resourceCacheOrm = resourceCacheOrm;
         _uiOptions = uiOptions;
         _logger = logger;
+        _launcher = launcher ?? new ProcessBatchPlayLauncher(NullLogger<ProcessBatchPlayLauncher>.Instance);
     }
 
     public DataOrigin Origin => DataOrigin.FileSystem;
@@ -94,17 +99,14 @@ public class LocalFilePlayableItemProvider : IPlayableItemProvider
         if (!resource.HasLocalPath)
             return new PlayableItemProviderResult([]);
 
-        // Handle missing directory gracefully
-        if (!resource.IsFile && !Directory.Exists(resource.Path))
-        {
-            await CachePlayableFiles(resource.Id, []);
-            return new PlayableItemProviderResult([]);
-        }
 
         string[] playableFiles = [];
 
         try
         {
+            // Exists() suppresses permission and I/O errors. A missing/inaccessible
+            // resource is a failed discovery, not a successful empty cached result.
+            _ = File.GetAttributes(resource.Path);
             // Use ResourceProfile to get effective playable file options
             var playableFileOptions = await _resourceProfileService.GetEffectivePlayableFileOptions(resource);
             if (playableFileOptions?.Extensions != null && playableFileOptions.Extensions.Count > 0)
@@ -121,23 +123,16 @@ public class LocalFilePlayableItemProvider : IPlayableItemProvider
                 }
                 else
                 {
-                    try
+                    // Checked per file, not once around the walk: a recursive enumeration of
+                    // a large resource folder is the longest uninterruptible stretch in the
+                    // "prepare resource data" task, and until this existed a stop request
+                    // (app exit included) had to wait the whole scan out.
+                    files = [];
+                    foreach (var file in Directory.EnumerateFiles(resource.Path, "*",
+                                 SearchOption.AllDirectories))
                     {
-                        // Checked per file, not once around the walk: a recursive enumeration of
-                        // a large resource folder is the longest uninterruptible stretch in the
-                        // "prepare resource data" task, and until this existed a stop request
-                        // (app exit included) had to wait the whole scan out.
-                        files = [];
-                        foreach (var file in Directory.EnumerateFiles(resource.Path, "*",
-                                     SearchOption.AllDirectories))
-                        {
-                            ct.ThrowIfCancellationRequested();
-                            files.Add(file);
-                        }
-                    }
-                    catch (DirectoryNotFoundException)
-                    {
-                        files = [];
+                        ct.ThrowIfCancellationRequested();
+                        files.Add(file);
                     }
                 }
 
@@ -170,6 +165,7 @@ public class LocalFilePlayableItemProvider : IPlayableItemProvider
         catch (Exception e)
         {
             _logger.LogWarning(e, "Failed to discover playable files for resource {ResourceId}", resource.Id);
+            throw;
         }
 
         // Save to cache
@@ -200,69 +196,36 @@ public class LocalFilePlayableItemProvider : IPlayableItemProvider
                 $"Playable file no longer exists: {file}");
         }
 
-        var playedByCustomPlayer = false;
-
         var playerOptions = await _resourceProfileService.GetEffectivePlayerOptions(resource);
-        if (playerOptions?.Players is { Count: > 0 })
-        {
-            var fileExtension = Path.GetExtension(file);
-            var player =
-                playerOptions.Players.FirstOrDefault(p =>
-                    p.Extensions?.Contains(fileExtension, StringComparer.OrdinalIgnoreCase) == true) ??
-                playerOptions.Players.FirstOrDefault(x => x.Extensions?.Any() != true);
-            if (player != null)
-            {
-                // Custom player path may be a .lnk (Windows shortcut) — those
-                // are only launchable with UseShellExecute=true. Otherwise the
-                // OS rejects them with Win32Exception "The specified executable
-                // is not a valid Win32 application". Also catch + log any
-                // start failure inside the fire-and-forget Task so it doesn't
-                // surface later as an unobserved AggregateException.
-                var executablePath = player.ExecutablePath;
-                var useShellExecute = executablePath != null &&
-                                      Path.GetExtension(executablePath).Equals(
-                                          ".lnk", StringComparison.OrdinalIgnoreCase);
-
-                _ = Task.Run(async () =>
-                {
-                    try
-                    {
-                        var template = string.IsNullOrEmpty(player.Command) ? "{0}" : player.Command;
-                        var escapedFile = file.Replace("\"", "\\\"");
-                        var args = Regex.Replace(template, @"([""']?)\{(\d+)\}([""']?)", match =>
-                        {
-                            var prefix = match.Groups[1].Value;
-                            var suffix = match.Groups[3].Value;
-                            var alreadyQuoted = (prefix == "\"" && suffix == "\"") ||
-                                                (prefix == "'" && suffix == "'");
-                            return alreadyQuoted
-                                ? $"{prefix}{escapedFile}{suffix}"
-                                : $"\"{escapedFile}\"";
-                        });
-                        var process = new Process
-                        {
-                            StartInfo = new ProcessStartInfo(player.ExecutablePath, args)
-                            {
-                                UseShellExecute = useShellExecute
-                            }
-                        };
-                        process.Start();
-                        await process.WaitForExitAsync();
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning(ex,
-                            "Custom player '{Executable}' failed to launch for {File}",
-                            player.ExecutablePath, file);
-                    }
-                });
-                playedByCustomPlayer = true;
-            }
-        }
-
-        if (!playedByCustomPlayer)
+        var player = PlayerFileCapabilities.SelectConfigured(playerOptions, file);
+        if (player == null)
         {
             await _systemPlayer.Play(file);
+            return;
+        }
+
+        var known = KnownPlayerDefinitions.MatchByExecutable(player.ExecutablePath);
+        if (known != null && !PlayerFileCapabilities.SupportsFile(known, file))
+            throw new InvalidOperationException(
+                $"{known.DisplayName} does not support '{PlayerFileCapabilities.Extension(file)}' files. Choose another application in the resource profile.");
+
+        try
+        {
+            // Keep local custom executables and .lnk shortcuts working as before. Await
+            // only the process-start operation: launch errors reach the caller, while
+            // a running player never holds the playback request open until it exits.
+            await _launcher.LaunchAsync(player.ExecutablePath,
+                BatchPlayArguments.BuildFromTemplate(player.Command, file), ct);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Custom player '{Executable}' failed to launch for {File}",
+                player.ExecutablePath, file);
+            throw new InvalidOperationException($"Could not start the configured player: {ex.Message}", ex);
         }
     }
 

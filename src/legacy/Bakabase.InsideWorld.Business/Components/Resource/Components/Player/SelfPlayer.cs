@@ -11,19 +11,25 @@ namespace Bakabase.InsideWorld.Business.Components.Resource.Components.Player
             return Task.FromResult((string) null);
         }
 
-        public async Task Play(string file)
+        internal static ProcessStartInfo BuildStartInfo(string file, bool isWindows)
         {
-            // todo: windows only.
-            var windowsSafeFile = file.Replace(InternalOptions.DirSeparator, InternalOptions.WindowsSpecificDirSeparator);
-
-            var p = new Process
+            var target = isWindows
+                ? file.Replace(InternalOptions.DirSeparator, InternalOptions.WindowsSpecificDirSeparator)
+                : file;
+            return new ProcessStartInfo(target)
             {
-                StartInfo = new ProcessStartInfo(windowsSafeFile)
-                {
-                    UseShellExecute = true
-                }
+                UseShellExecute = true,
+                WorkingDirectory = System.IO.Path.GetDirectoryName(file) ?? string.Empty
             };
+        }
+
+        public Task Play(string file)
+        {
+            // .NET's shell opener uses the platform's default application. Only
+            // Windows paths need backslashes; changing POSIX paths made them invalid.
+            using var p = new Process {StartInfo = BuildStartInfo(file, System.OperatingSystem.IsWindows())};
             p.Start();
+            return Task.CompletedTask;
         }
     }
 }

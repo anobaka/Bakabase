@@ -111,15 +111,16 @@ export const resolvePlaybackPreference = (
   mediaType: MediaType,
   platform: DevicePlatform,
   isMixed = false,
+  appWindow = desktop,
 ): EffectivePlayback => {
   // A desktop/relay already resolves the resource's configured playable files and
   // player rules. Mixed discovery does not replace that configured native flow.
-  if (preference.mode === "automatic") return { mode: desktop ? "native" : "browser" };
+  if (preference.mode === "automatic") return { mode: desktop && appWindow ? "native" : "browser" };
   if (preference.mode !== "native" || desktop) return { mode: preference.mode };
   // A protocol handler must receive one selected media file, never a mixed collection.
   if (isMixed) return { mode: "ask" };
   // URI handlers are AV-only. Images/text stay viewable even if an old preference names a video player.
-  if (mediaType !== MediaType.Audio && mediaType !== MediaType.Video) return { mode: "browser" };
+  if (mediaType !== MediaType.Audio && mediaType !== MediaType.Video) return { mode: "ask" };
   const scheme = schemesForPlatform(platform, mediaType).find(
     (scheme) => scheme.id === preference.nativeSchemeId,
   );

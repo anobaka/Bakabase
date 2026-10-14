@@ -62,7 +62,7 @@ public partial class NativeWebViewHost
         // Setting autoresizingMask causes double-sizing issues on Retina displays.
 
         // Set a modern User-Agent to avoid "browser version too low" errors
-        var userAgent = ObjC.CreateNSString(WebViewUserAgent.MacOS);
+        var userAgent = ObjC.CreateNSString(PresentationUserAgent(WebViewUserAgent.MacOS));
         ObjC.SendVoid_IntPtr(_macWebView, ObjC.Sel("setCustomUserAgent:"), userAgent);
         ObjC.SendVoid(userAgent, ObjC.Sel("release"));
 

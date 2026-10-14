@@ -14,6 +14,8 @@ import React, {
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
 
+import { isNativePlayerMediaType } from "../PlayOnThisDevice/playerSchemes";
+
 import NoPlayableFilesModal from "./NoPlayableFilesModal";
 import { usePlaybackPreferences } from "./usePlaybackPreferences";
 import {
@@ -22,27 +24,38 @@ import {
   summarizePlayablePaths,
   resolvePlaybackPreference,
   type PlaybackPreference,
+  type PlaybackKind,
 } from "./playbackPreferences";
+import { originalSourceActions, sourceActionTarget } from "./sourceActions";
 
 import { Button, Chip, Modal } from "@/components/bakaui";
 import { splitPathIntoSegments, standardizePath } from "@/components/utils";
 import BApi from "@/sdk/BApi";
 import BusinessConstants from "@/components/BusinessConstants";
-import { DataOrigin, DataStatus, ResourceDataType } from "@/sdk/constants";
+import {
+  ClientMode,
+  DataOrigin,
+  DataStatus,
+  ResourceDataType,
+  ResourceSource,
+} from "@/sdk/constants";
 import { useUiOptionsStore } from "@/stores/options";
 import { usePlayableItemResolution } from "@/hooks/usePlayableItemResolution";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-import { useUserSideActionsRunHere } from "@/stores/remoteAccess";
+import { useRemoteAccessStore, useUserSideActionsRunHere } from "@/stores/remoteAccess";
+import { useTargetPlayback } from "@/features/playback/overrides";
 import { useResourceBrowserPlayer } from "@/hooks/useResourceBrowserPlayer";
 import PlayOnThisDevice from "@/components/Resource/components/PlayOnThisDevice";
 import { preferredDevicePlatform } from "@/components/Resource/components/PlayOnThisDevice/playerSchemes";
 import { useOpenResourceDirectory } from "@/hooks/useOpenResourceDirectory";
+import { openExternalUrl } from "@/utils/openExternalUrl";
+import { isDesktopAppWindow } from "@/utils/clientSurface";
 
 // Play control status for UI rendering
-export type PlayControlStatus = "idle" | "loading" | "ready" | "not-found";
+export type PlayControlStatus = "idle" | "loading" | "ready" | "not-found" | "failed";
 
 // FileSystem discovery status
-export type FsDiscoveryStatus = "idle" | "loading" | "ready";
+export type FsDiscoveryStatus = "idle" | "loading" | "ready" | "failed";
 
 export type SourceEntry = {
   source: DataOrigin;
@@ -50,6 +63,7 @@ export type SourceEntry = {
 };
 
 export type PlayControlPortalProps = {
+  openingRules?: { target: string; resourceId: number; label?: string };
   status: PlayControlStatus;
   /** Available sources, ordered for this device's preferred playback method. */
   sources: SourceEntry[];
@@ -61,6 +75,11 @@ export type PlayControlPortalProps = {
   fsDiscoveryStatus: FsDiscoveryStatus;
   /** Play items from a specific source */
   onPlaySource: (source: DataOrigin) => void;
+  sourceActionLabel?: (source: DataOrigin) => string;
+  /** Original webpages remain separate from playback and discovery state. */
+  originalSourceActions?: { key: string; label: string; onOpen: () => void }[];
+  discoveryFailed?: boolean;
+  onDiscoveryFailure?: () => void;
   /** Open the resource's folder */
   onOpenFolder: () => void;
   openFolderLabel: string;
@@ -151,8 +170,19 @@ const VideoSelectionPageSize = 50;
  * do it yet — arrive as ordinary error responses. A raw fetch swallowed
  * them into an opaque failure.
  */
-const playItemApi = async (resourceId: number, origin: DataOrigin, key: string) =>
-  await BApi.resource.playResourceItem(resourceId, { origin, key });
+const playItemApi = async (
+  resourceId: number,
+  origin: DataOrigin,
+  key: string,
+  explicitChoice = false,
+  openingRuleKind?: PlaybackKind,
+) =>
+  await BApi.resource.playResourceItem(resourceId, {
+    origin,
+    key,
+    ...(explicitChoice ? { explicitChoice: true } : {}),
+    ...(openingRuleKind ? { openingRuleKind } : {}),
+  });
 
 export type PlayControlRef = {
   triggerDiscovery: () => void;
@@ -166,34 +196,49 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
   const { createPortal } = useBakabaseContext();
   const uiOptionsStore = useUiOptionsStore();
   const userSideActionsRunHere = useUserSideActionsRunHere();
+  const appWindow = isDesktopAppWindow();
   const openInBrowserPlayer = useResourceBrowserPlayer();
   const folderAction = useOpenResourceDirectory();
   const resourceUiOptions = uiOptionsStore.data?.resource;
   const playback = usePlaybackPreferences();
+  const currentServerId = useRemoteAccessStore((state) => state.serverId);
+  const currentServerName = useRemoteAccessStore((state) => state.serverName);
+  const managing = useRemoteAccessStore((state) => state.clientMode === ClientMode.PureClient);
+  const openingTarget =
+    currentServerId && (managing || !userSideActionsRunHere)
+      ? `server:${currentServerId}`
+      : undefined;
+  const opening = useTargetPlayback(openingTarget, resource.id);
 
   // Use the playable item resolution hook which handles SSE discovery internally
   const resolution = usePlayableItemResolution(resource);
 
   const [dirs, setDirs] = useState<Directory[]>();
   const [modalVisible, setModalVisible] = useState(false);
+  const [discoveryFailureVisible, setDiscoveryFailureVisible] = useState(false);
+  const [openingFailureVisible, setOpeningFailureVisible] = useState(false);
+  const [retryingOpening, setRetryingOpening] = useState(false);
   const [modalSource, setModalSource] = useState<DataOrigin | null>(null);
   const [modalPlaybackOverride, setModalPlaybackOverride] = useState<PlaybackPreference>();
+  const [modalOpeningRuleKind, setModalOpeningRuleKind] = useState<PlaybackKind>();
   const [videoSelectionVisible, setVideoSelectionVisible] = useState(false);
   const [visibleVideoCount, setVisibleVideoCount] = useState(VideoSelectionPageSize);
 
   const effectiveGroups = useMemo(
     () =>
-      resolution.groups.map((group) => ({
-        ...group,
-        items:
-          group.origin === DataOrigin.FileSystem
-            ? group.status === DataStatus.Ready
-              ? group.items.filter(
-                  (item) => typeof item.key === "string" && item.key.trim().length > 0,
-                )
-              : []
-            : group.items,
-      })),
+      resolution.groups
+        .filter((group) => [DataOrigin.FileSystem, DataOrigin.Steam].includes(group.origin))
+        .map((group) => ({
+          ...group,
+          items:
+            group.origin === DataOrigin.FileSystem
+              ? group.status === DataStatus.Ready
+                ? group.items.filter(
+                    (item) => typeof item.key === "string" && item.key.trim().length > 0,
+                  )
+                : []
+              : group.items,
+        })),
     [resolution.groups],
   );
 
@@ -245,14 +290,16 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
   const resourceKind = collection.kind;
   const representativePath = fsItems[0]?.key ?? resource.path;
   const preferredPlayback = resolvePlaybackPreference(
-    playback.preferences[resourceKind],
+    opening.preference(resourceKind, playback.preferences[resourceKind]),
     userSideActionsRunHere,
     collection.mediaType,
     preferredDevicePlatform(),
     collection.isMixed,
+    appWindow,
   );
-  const playbackCaption =
-    preferredPlayback.mode === "browser"
+  const playbackCaption = opening.unavailable
+    ? t("resource.playback.chooseMethod")
+    : preferredPlayback.mode === "browser"
       ? t(
           resourceKind === "audio" || resourceKind === "video"
             ? "resource.playOnThisDevice.playInBrowser"
@@ -283,6 +330,7 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
 
       return "idle";
     }
+    if (fsGroup.status === DataStatus.Failed) return "failed";
     if (fsGroup.status === DataStatus.Ready) return "ready";
     if (fsGroup.status === DataStatus.NotStarted) return "loading";
 
@@ -293,6 +341,7 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
   const status: PlayControlStatus = useMemo(() => {
     if (effectiveGroups.some((group) => group.items.length > 0)) return "ready";
     if (effectiveGroups.some((group) => group.status === DataStatus.NotStarted)) return "loading";
+    if (effectiveGroups.some((group) => group.status === DataStatus.Failed)) return "failed";
 
     return fsDiscoveryStatus === "idle" ? "idle" : "not-found";
   }, [effectiveGroups, fsDiscoveryStatus]);
@@ -313,7 +362,10 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
     setDirs(undefined);
     setModalSource(null);
     setModalPlaybackOverride(undefined);
+    setModalOpeningRuleKind(undefined);
     setVideoSelectionVisible(false);
+    setDiscoveryFailureVisible(false);
+    setOpeningFailureVisible(false);
   }, [resource.id]);
 
   useImperativeHandle(
@@ -325,26 +377,50 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
   );
 
   // Play a PlayableItem via unified PlayItem API (all sources go through resolvers)
-  const playNativeItem = async (item: PlayableItem) => {
+  const playNativeItem = async (
+    item: PlayableItem,
+    explicitChoice = false,
+    openingRuleKind?: PlaybackKind,
+  ) => {
     try {
-      const rsp = await playItemApi(resource.id, item.origin, item.key);
+      const rsp = await playItemApi(
+        resource.id,
+        item.origin,
+        item.key,
+        explicitChoice,
+        openingRuleKind,
+      );
 
       if (!rsp.code) {
-        toast.success(t<string>("Opened"));
+        if (item.origin === DataOrigin.Steam)
+          toast(t<string>("resource.playbackActions.steamRequested"));
+        else toast.success(t<string>("Opened"));
         afterPlaying?.();
+      } else if (item.origin === DataOrigin.FileSystem) {
+        choosePlayback(item, t("resource.playbackPolicy.nativeFailed"), openingRuleKind);
       }
     } catch (e) {
-      toast.error(String(e));
+      if (item.origin === DataOrigin.FileSystem)
+        choosePlayback(item, t("resource.playbackPolicy.nativeFailed"), openingRuleKind);
+      else toast.error(String(e));
     }
   };
 
   const playInBrowser = (initialPath?: string) => {
-    void openInBrowserPlayer(resource, initialPath)
+    void openInBrowserPlayer(resource, initialPath, {
+      onOpenAlternative: (path) => choosePlayback({ origin: DataOrigin.FileSystem, key: path }),
+      canOpenAlternative: (path) =>
+        userSideActionsRunHere || isNativePlayerMediaType(pathMediaType(path)),
+    })
       .then(() => afterPlaying?.())
       .catch((e) => toast.error(String(e)));
   };
 
-  const choosePlayback = (item?: PlayableItem) => {
+  const choosePlayback = (
+    item?: PlayableItem,
+    unavailableReason?: string,
+    openingRuleKind?: PlaybackKind,
+  ) => {
     const selectedPath = item?.key ?? representativePath;
 
     if (!selectedPath) return;
@@ -353,6 +429,8 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
       filePath: selectedPath,
       kind: item ? playbackKindForPath(selectedPath) : resourceKind,
       isMixed: !item && collection.isMixed,
+      unavailableReason,
+      preferenceScope: appWindow && userSideActionsRunHere ? "device" : "browser",
       onPlayInBrowser: () => playInBrowser(item?.key),
       onPlayVideos:
         !item && videoItems.length > 0 && fsDiscoveryStatus === "ready"
@@ -361,7 +439,7 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
       onPlayNative: userSideActionsRunHere
         ? () =>
             item
-              ? void playNativeItem(item)
+              ? void playNativeItem(item, true, openingRuleKind)
               : handlePlaySource(DataOrigin.FileSystem, { mode: "native" })
         : undefined,
       onRememberChoice: playback.save,
@@ -382,15 +460,39 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
     }
   };
 
-  const playItem = async (item: PlayableItem, override?: PlaybackPreference) => {
+  const playItem = async (
+    item: PlayableItem,
+    override?: PlaybackPreference,
+    openingRuleKind?: PlaybackKind,
+  ) => {
+    if (item.origin === DataOrigin.Steam) {
+      const action = sourceActionTarget(ResourceSource.Steam, item.key);
+
+      if (!action) {
+        toast.error(t<string>("resource.playbackActions.invalidSource"));
+
+        return;
+      }
+      if (!appWindow || !userSideActionsRunHere) {
+        window.open(action.href, "_self");
+        toast(t<string>("resource.playbackActions.steamRequested"));
+
+        return;
+      }
+    }
     if (item.origin === DataOrigin.FileSystem) {
       const kind = playbackKindForPath(item.key);
-      const preference = override ?? playback.preferences[kind];
+      const preference =
+        override && override.mode !== "automatic"
+          ? override
+          : opening.preference(kind, override ?? playback.preferences[kind]);
       const method = resolvePlaybackPreference(
         preference,
         userSideActionsRunHere,
         pathMediaType(item.key),
         preferredDevicePlatform(),
+        false,
+        appWindow,
       );
 
       if (method.mode === "browser") {
@@ -399,7 +501,13 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
         return;
       }
       if (method.mode === "ask") {
-        choosePlayback(item);
+        choosePlayback(
+          item,
+          preference.mode === "native"
+            ? t("resource.playbackPolicy.preferredUnavailable")
+            : undefined,
+          openingRuleKind,
+        );
 
         return;
       }
@@ -419,13 +527,7 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
         return;
       }
     }
-    // The question is where a player would start, not where the files are. In
-    // the app — its own library or a server it manages — it starts here, so the
-    // call goes through;
-    // in a plain browser pointed at a server it would start on the host's
-    // desktop and report success to someone who cannot see it. Local files
-    // stream into the page instead; the other origins (Steam, ExHentai, …) have
-    // nothing to show remotely and say so rather than pretending.
+    // Files execute on the viewing device only when its native bridge is available.
     if (!userSideActionsRunHere) {
       if (item.origin === DataOrigin.FileSystem) {
         // Browser playback is one option among several: for anything the browser
@@ -439,13 +541,31 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
       return;
     }
 
-    await playNativeItem(item);
+    await playNativeItem(
+      item,
+      item.origin === DataOrigin.FileSystem &&
+        (override && override.mode !== "automatic"
+          ? override
+          : opening.preference(
+              playbackKindForPath(item.key),
+              override ?? playback.preferences[playbackKindForPath(item.key)],
+            )
+        ).mode === "native",
+      openingRuleKind,
+    );
   };
 
   /** Play items from a specific source, handling single/multiple items */
   const handlePlaySource = useCallback(
     (source: DataOrigin, override?: PlaybackPreference) => {
-      if (!playback.ready) return;
+      if (source === DataOrigin.FileSystem) {
+        if (!override && opening.unavailable) {
+          setOpeningFailureVisible(true);
+
+          return;
+        }
+        if (!playback.ready || (!override && !opening.ready)) return;
+      }
       const items = sourceGroups.get(source) ?? [];
 
       if (items.length === 0) return;
@@ -455,24 +575,32 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
         return;
       }
       if (source === DataOrigin.FileSystem && !override && preferredPlayback.mode === "ask") {
-        choosePlayback();
+        choosePlayback(
+          undefined,
+          opening.preference(resourceKind, playback.preferences[resourceKind]).mode === "native"
+            ? t("resource.playbackPolicy.preferredUnavailable")
+            : undefined,
+        );
 
         return;
       }
       const selectedPreference =
         source === DataOrigin.FileSystem
-          ? (override ?? playback.preferences[resourceKind])
+          ? (override ?? opening.preference(resourceKind, playback.preferences[resourceKind]))
           : undefined;
 
+      const selectedRuleKind =
+        source === DataOrigin.FileSystem && opening.choice(resourceKind) ? resourceKind : undefined;
+
       if (items.length === 1) {
-        playItem(items[0]!, selectedPreference);
+        playItem(items[0]!, selectedPreference, selectedRuleKind);
 
         return;
       }
 
       // Multiple items - check auto-select preference
       if (resourceUiOptions?.autoSelectFirstPlayableFile) {
-        playItem(items[0]!, selectedPreference);
+        playItem(items[0]!, selectedPreference, selectedRuleKind);
 
         return;
       }
@@ -490,6 +618,7 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
       }
       setModalSource(source);
       setModalPlaybackOverride(selectedPreference);
+      setModalOpeningRuleKind(selectedRuleKind);
       setModalVisible(true);
     },
     [
@@ -503,6 +632,10 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
       resourceKind,
       userSideActionsRunHere,
       collection.isMixed,
+      appWindow,
+      opening.snapshot,
+      opening.ready,
+      opening.unavailable,
     ],
   );
 
@@ -513,10 +646,25 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
 
   /** Handle click when no playable files found */
   const handleNotFound = useCallback(() => {
+    if (effectiveGroups.some((group) => group.status === DataStatus.Failed)) {
+      setDiscoveryFailureVisible(true);
+
+      return;
+    }
     createPortal(NoPlayableFilesModal, {
       resourceId: resource.id,
+      hasPath: !!resource.path,
     });
-  }, [resource.id]);
+  }, [resource.id, resource.path, effectiveGroups]);
+
+  const failedGroups = effectiveGroups.filter((group) => group.status === DataStatus.Failed);
+  const sourceActionLabel = (source: DataOrigin) =>
+    source === DataOrigin.Steam ? t("resource.playbackActions.openSteam") : playbackCaption;
+  const originalActions = originalSourceActions(resource.sourceLinks).map(({ source, href }) => ({
+    key: href,
+    label: t("resource.playbackActions.openOriginal", { source: ResourceSource[source] }),
+    onOpen: () => openExternalUrl(href, !appWindow),
+  }));
 
   // Get items to display in modal (filtered by selected source or all)
   const modalItems = modalSource ? (sourceGroups.get(modalSource) ?? []) : playableItems;
@@ -528,17 +676,26 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
     <>
       <PortalComponent
         browserPlaybackAvailable={!!resource.path}
-        browserPlaybackIsDefault={preferredPlayback.mode === "browser"}
+        browserPlaybackIsDefault={!opening.unavailable && preferredPlayback.mode === "browser"}
+        discoveryFailed={failedGroups.length > 0}
         fsDiscoveryStatus={fsDiscoveryStatus}
         hasPath={!!resource.path}
         isFile={resource.isFile}
         openFolderLabel={folderAction.label}
+        openingRules={
+          openingTarget
+            ? { target: openingTarget, resourceId: resource.id, label: currentServerName }
+            : undefined
+        }
+        originalSourceActions={originalActions}
         playbackCaption={playbackCaption}
         playbackReady={playback.ready}
+        sourceActionLabel={sourceActionLabel}
         sources={orderedSources}
         status={status}
         triggerFsDiscovery={() => resolution.triggerDiscovery(DataOrigin.FileSystem)}
         onChoosePlayback={() => choosePlayback()}
+        onDiscoveryFailure={() => setDiscoveryFailureVisible(true)}
         onNotFound={handleNotFound}
         onOpenFolder={handleOpenFolder}
         onPlayInBrowser={() => playInBrowser()}
@@ -547,6 +704,76 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
           videoItems.length > 0 && fsDiscoveryStatus === "ready" ? handlePlayVideos : undefined
         }
       />
+      <Modal
+        footer={false}
+        size="sm"
+        title={t("resource.playback.chooseMethod")}
+        visible={openingFailureVisible}
+        onClose={() => setOpeningFailureVisible(false)}
+      >
+        <p className="mb-3 text-sm text-warning" role="alert">
+          {t("resource.playbackPolicy.rulesUnavailable")}
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            isLoading={retryingOpening}
+            onPress={async () => {
+              setRetryingOpening(true);
+              await opening.reload();
+              setRetryingOpening(false);
+              setOpeningFailureVisible(false);
+            }}
+          >
+            {t("resource.playbackPolicy.retryRules")}
+          </Button>
+          <Button
+            onPress={() => {
+              setOpeningFailureVisible(false);
+              playInBrowser();
+            }}
+          >
+            {t("resource.openingRules.browser")}
+          </Button>
+          <Button
+            onPress={() => {
+              setOpeningFailureVisible(false);
+              choosePlayback(undefined, t("resource.playbackPolicy.rulesUnavailable"));
+            }}
+          >
+            {t("resource.playback.chooseMethod")}
+          </Button>
+        </div>
+      </Modal>
+      <Modal
+        footer={false}
+        size="md"
+        title={t("resource.playbackActions.discoveryFailed")}
+        visible={discoveryFailureVisible}
+        onClose={() => setDiscoveryFailureVisible(false)}
+      >
+        <p className="text-sm text-foreground-500">
+          {t("resource.playbackActions.discoveryFailureHint")}
+        </p>
+        <div className="my-3 flex max-h-52 flex-col gap-2 overflow-y-auto">
+          {failedGroups.map((group) => (
+            <div key={group.origin} className="rounded-lg bg-warning-50 p-3 text-sm">
+              <div className="font-medium">{t(`resource.source.${DataOrigin[group.origin]}`)}</div>
+              <p className="mt-1 whitespace-pre-wrap break-words text-foreground-500">
+                {group.error || t("resource.playbackActions.discoveryUnknownError")}
+              </p>
+            </div>
+          ))}
+        </div>
+        <Button
+          color="primary"
+          onPress={() => {
+            failedGroups.forEach((group) => resolution.triggerDiscovery(group.origin));
+            setDiscoveryFailureVisible(false);
+          }}
+        >
+          {t("resource.playbackActions.retryDiscovery")}
+        </Button>
+      </Modal>
       <Modal
         footer={false}
         size="md"
@@ -590,12 +817,17 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
       <Modal
         footer={false}
         size={"lg"}
-        title={t<string>("resource.playControl.modal.selectFileTitle")}
+        title={t<string>(
+          isFileSystemModal
+            ? "resource.playControl.modal.selectFileTitle"
+            : "resource.playbackActions.selectSource",
+        )}
         visible={modalVisible}
         onClose={() => {
           setModalVisible(false);
           setModalSource(null);
           setModalPlaybackOverride(undefined);
+          setModalOpeningRuleKind(undefined);
         }}
       >
         {/* FileSystem source: directory-grouped file list */}
@@ -636,6 +868,7 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
                                   playItem(
                                     { origin: DataOrigin.FileSystem, key: file.path },
                                     modalPlaybackOverride,
+                                    modalOpeningRuleKind,
                                   );
                                   setModalVisible(false);
                                 }}

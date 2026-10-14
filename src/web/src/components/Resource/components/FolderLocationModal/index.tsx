@@ -9,9 +9,9 @@ import { useTranslation } from "react-i18next";
 import { Button, Modal, toast } from "@/components/bakaui";
 import { copyTextToClipboard } from "@/core/clipboard";
 
-type Props = DestroyableProps & { path: string };
+type Props = DestroyableProps & { path: string; openFailed?: boolean };
 
-const FolderLocationModal = ({ path, onDestroyed }: Props) => {
+const FolderLocationModal = ({ path, openFailed, onDestroyed }: Props) => {
   const { t } = useTranslation();
   const [copyFeedback, setCopyFeedback] = useState<string>();
 
@@ -36,7 +36,13 @@ const FolderLocationModal = ({ path, onDestroyed }: Props) => {
       onDestroyed={onDestroyed}
     >
       <div className="flex flex-col gap-4">
-        <p className="text-sm text-foreground-500">{t("resource.folderLocation.browserHint")}</p>
+        <p className="text-sm text-foreground-500" role={openFailed ? "alert" : undefined}>
+          {t(
+            openFailed
+              ? "resource.folderLocation.openFailed"
+              : "resource.folderLocation.browserHint",
+          )}
+        </p>
         <label className="flex flex-col gap-2 text-sm">
           <span className="font-medium">{t("resource.folderLocation.serverPath")}</span>
           <textarea

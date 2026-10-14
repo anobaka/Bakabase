@@ -1,12 +1,15 @@
 import React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+
 import MediaRenderer, { MEDIA_LOAD_TIMEOUT } from "./MediaRenderer";
+
 import { IwFsType, MediaType } from "@/sdk/constants";
 vi.mock("@/components/bakaui", () => ({ Spinner: () => <span data-testid="spinner" /> }));
 vi.mock("@/components/TextReader", () => ({ default: () => <div>text-preview</div> }));
 vi.mock("react-i18next", () => {
   const t = (key: string) => key;
+
   return { useTranslation: () => ({ t }) };
 });
 const entry = (path = "/film/main.mkv") => ({
@@ -23,14 +26,59 @@ const props = {
   currentInitialized: false,
   onLoad: vi.fn(),
 };
+
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
   vi.restoreAllMocks();
 });
 describe("browser media delivery", () => {
+  it("reports actual delivery results per item and keeps a failed item retryable", async () => {
+    const state = vi.fn();
+    const alternative = vi.fn();
+    const { container } = render(
+      <MediaRenderer {...props} onOpenAlternative={alternative} onPreviewStateChange={state} />,
+    );
+
+    expect(state).toHaveBeenLastCalledWith("/film/main.mkv", "loading");
+    fireEvent.canPlay(container.querySelector("video")!);
+    expect(state).toHaveBeenLastCalledWith("/film/main.mkv", "ready");
+    fireEvent.error(container.querySelector("video")!);
+    expect(state).toHaveBeenLastCalledWith("/film/main.mkv", "failed");
+    await act(async () =>
+      fireEvent.click(screen.getByText("mediaPlayer.preview.chooseAlternative")),
+    );
+    expect(alternative).toHaveBeenCalledWith("/film/main.mkv");
+    fireEvent.click(screen.getByText("mediaPlayer.retry"));
+    expect(state).toHaveBeenLastCalledWith("/film/main.mkv", "loading");
+    expect(container.querySelector("video")).toBeInTheDocument();
+  });
+  it("does not promise a native action when the caller supplies no available alternative", () => {
+    render(<MediaRenderer {...props} mediaType={MediaType.Unknown} />);
+    expect(screen.queryByText("mediaPlayer.preview.chooseAlternative")).not.toBeInTheDocument();
+  });
+  it("offers an explicit alternative for non-preview files and reports an alternative failure", async () => {
+    const alternative = vi.fn().mockRejectedValue(new Error("missing mapped file"));
+    const state = vi.fn();
+
+    render(
+      <MediaRenderer
+        {...props}
+        entry={entry("/game/start.exe")}
+        mediaType={MediaType.Unknown}
+        onOpenAlternative={alternative}
+        onPreviewStateChange={state}
+      />,
+    );
+    expect(state).toHaveBeenLastCalledWith("/game/start.exe", "unavailable");
+    await act(async () =>
+      fireEvent.click(screen.getByText("mediaPlayer.preview.chooseAlternative")),
+    );
+    expect(screen.getByRole("alert")).toHaveTextContent("mediaPlayer.preview.alternativeFailed");
+  });
   it("attaches /file/play as an actual native video source instead of obsolete ReactPlayer url props", () => {
     const { container } = render(<MediaRenderer {...props} />);
+
     expect(container.querySelector("video")).toHaveAttribute(
       "src",
       "/file/play?fullname=%2Ffilm%2Fmain.mkv",
@@ -43,6 +91,7 @@ describe("browser media delivery", () => {
   it("allows a valid paused video to become ready on metadata even when autoplay is not permitted", () => {
     vi.useFakeTimers();
     const { container } = render(<MediaRenderer {...props} />);
+
     fireEvent.loadedMetadata(container.querySelector("video")!);
     act(() => vi.advanceTimersByTime(MEDIA_LOAD_TIMEOUT + 1));
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
@@ -51,6 +100,7 @@ describe("browser media delivery", () => {
   it("replaces failed or timed-out media with an actionable terminal state and retries with a fresh element", () => {
     vi.useFakeTimers();
     const { container } = render(<MediaRenderer {...props} />);
+
     act(() => vi.advanceTimersByTime(MEDIA_LOAD_TIMEOUT));
     expect(screen.getByRole("alert")).toHaveTextContent("mediaPlayer.media.timeout");
     expect(screen.queryByTestId("spinner")).not.toBeInTheDocument();
@@ -63,6 +113,7 @@ describe("browser media delivery", () => {
   });
   it("never overlays unsupported files or text previews with an unrelated loading spinner", () => {
     const { rerender } = render(<MediaRenderer {...props} mediaType={MediaType.Unknown} />);
+
     expect(screen.getByText("mediaPlayer.unsupported")).toBeInTheDocument();
     expect(screen.queryByTestId("spinner")).not.toBeInTheDocument();
     rerender(<MediaRenderer {...props} entry={entry("/film/a.ass")} mediaType={MediaType.Text} />);
@@ -74,6 +125,7 @@ describe("browser media delivery", () => {
     const pending = new Promise<void>((_resolve, reject) => {
       rejectOld = reject;
     });
+
     vi.spyOn(HTMLMediaElement.prototype, "play")
       .mockImplementationOnce(() => pending)
       .mockResolvedValue(undefined);
@@ -82,12 +134,13 @@ describe("browser media delivery", () => {
     const { rerender, container } = render(
       <MediaRenderer key="first" {...props} playing onVideoPause={paused} onVideoPlay={played} />,
     );
+
     rerender(
       <MediaRenderer
         key="second"
         {...props}
-        entry={entry("/film/next.mp4")}
         playing
+        entry={entry("/film/next.mp4")}
         onVideoPause={paused}
         onVideoPlay={played}
       />,
@@ -103,6 +156,7 @@ describe("browser media delivery", () => {
     vi.useFakeTimers();
     const { container } = render(<MediaRenderer {...props} />);
     const video = container.querySelector("video")!;
+
     Object.defineProperty(video, "readyState", { value: 1 });
     fireEvent.loadedMetadata(video);
     fireEvent.stalled(video);

@@ -559,5 +559,11 @@
   "federation.mappings.draft.saved": "草稿保存在当前浏览器，成功保存映射后清除。",
   "federation.mappings.draft.unavailable": "浏览器未能保存草稿，请保持此页面打开以免丢失编辑。",
   "federation.imageOpenedHere": "已使用本机默认图片应用打开",
-  "federation.mappings.chooseLocal": "选择目录"
+  "federation.mappings.chooseLocal": "选择目录",
+  "federation.directory.browserTip": "浏览器不能直接打开文件管理器。共享位置用于辨认文件；在本机客户端配置可访问的目录映射后，可以打开对应文件夹。",
+  "federation.detail.originalPage": "查看原网页",
+  "federation.detail.sharedLocation": "{{owner}} · 共享内位置：{{path}}",
+  "federation.detail.copySharedLocation": "复制共享位置",
+  "federation.detail.locationCopied": "已复制设备名称和共享内位置。这不是本机文件路径。",
+  "federation.detail.locationCopyFailed": "复制失败，请手动选择共享位置复制。"
 }

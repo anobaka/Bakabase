@@ -35,6 +35,8 @@ type Props = DestroyableProps & {
   /** The desktop/relay's existing configured-player action, never a browser URI handler. */
   onPlayNative?: () => void;
   onRememberChoice?: (kind: PlaybackKind, preference: PlaybackPreference) => Promise<void>;
+  unavailableReason?: string;
+  preferenceScope?: "device" | "browser";
 };
 
 const PlayOnThisDevice = ({
@@ -47,6 +49,8 @@ const PlayOnThisDevice = ({
   onPlayNative,
   onRememberChoice,
   onDestroyed,
+  unavailableReason,
+  preferenceScope,
 }: Props) => {
   const { t } = useTranslation();
   const [copyFeedback, setCopyFeedback] = useState<string>();
@@ -101,6 +105,11 @@ const PlayOnThisDevice = ({
       onDestroyed={onDestroyed}
     >
       <div className="flex flex-col gap-3">
+        {unavailableReason && (
+          <p className="rounded-lg bg-warning-50 p-3 text-sm text-warning-700" role="alert">
+            {unavailableReason}
+          </p>
+        )}
         <Button
           fullWidth
           color="primary"
@@ -204,7 +213,9 @@ const PlayOnThisDevice = ({
             {t("resource.playOnThisDevice.rememberChoice", {
               type: t(`resource.playback.kind.${kind}`),
               place: t(
-                onPlayNative ? "resource.playback.place.device" : "resource.playback.place.browser",
+                (preferenceScope ?? (onPlayNative ? "device" : "browser")) === "device"
+                  ? "resource.playback.place.device"
+                  : "resource.playback.place.browser",
               ),
             })}
           </Checkbox>

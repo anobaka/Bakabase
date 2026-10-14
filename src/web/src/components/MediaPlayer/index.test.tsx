@@ -41,6 +41,51 @@ describe("media player initialization", () => {
     await waitFor(() => expect(screen.getByText("/movie.mkv")).toBeInTheDocument());
     expect(screen.queryByText("/a.ass")).not.toBeInTheDocument();
   });
+  it("keeps whole-directory browsing until the user explicitly chooses configured candidates", () => {
+    render(
+      <MediaPlayer
+        resourceScope
+        configuredPaths={["/main.mkv"]}
+        defaultActiveIndex={0}
+        entries={[entry("/cover.jpg"), entry("/main.mkv"), entry("/extra.mp4")]}
+      />,
+    );
+    expect(screen.getByText("/cover.jpg")).toBeInTheDocument();
+    fireEvent.change(screen.getByRole("combobox", { name: "mediaPlayer.scope.label" }), {
+      target: { value: "configured" },
+    });
+    expect(screen.getByText("/main.mkv")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("Next"));
+    expect(screen.getByText("/main.mkv")).toBeInTheDocument();
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "resource" } });
+    expect(screen.getByText("/cover.jpg")).toBeInTheDocument();
+    expect(mocks.files).not.toHaveBeenCalled();
+  });
+  it("matches Windows configured candidates without case changes affecting their scope", () => {
+    render(
+      <MediaPlayer
+        resourceScope
+        configuredPaths={["c:/media/MAIN.mkv"]}
+        defaultActiveIndex={1}
+        entries={[entry("C:\\Media\\cover.jpg"), entry("C:\\Media\\main.mkv")]}
+        initialScope="configured"
+      />,
+    );
+    expect(screen.getByText("C:\\Media\\main.mkv")).toBeInTheDocument();
+  });
+  it("lets an empty configured scope be switched back to all files", () => {
+    render(
+      <MediaPlayer
+        resourceScope
+        configuredPaths={[]}
+        entries={[entry("/cover.jpg")]}
+        initialScope="configured"
+      />,
+    );
+    expect(screen.getByText("mediaPlayer.scope.configuredEmpty")).toBeInTheDocument();
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "resource" } });
+    expect(screen.getByText("/cover.jpg")).toBeInTheDocument();
+  });
   it("leaves normal input arrow keys to the input and only navigates when the player is focused", () => {
     render(<MediaPlayer entries={[entry("/a.mp4"), entry("/b.mp4")]} />);
     fireEvent.keyDown(screen.getByRole("textbox"), { key: "ArrowRight" });

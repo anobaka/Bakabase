@@ -17,6 +17,21 @@ import { MediaType } from "@/sdk/constants";
 beforeEach(() => localStorage.clear());
 
 describe("current-device playback preferences", () => {
+  it("uses web automatic for an ordinary browser even when its local native bridge is available", () => {
+    expect(
+      resolvePlaybackPreference(
+        { mode: "automatic" },
+        true,
+        MediaType.Video,
+        "windows",
+        false,
+        false,
+      ),
+    ).toEqual({ mode: "browser" });
+    expect(
+      resolvePlaybackPreference({ mode: "native" }, true, MediaType.Video, "windows", false, false),
+    ).toEqual({ mode: "native" });
+  });
   it.each([
     ["/folder/cover.jpg", "/folder/movie.mkv"],
     ["/folder/movie.mkv", "/folder/cover.jpg"],
@@ -118,10 +133,10 @@ describe("current-device playback preferences", () => {
       mode: "ask",
     });
     expect(resolvePlaybackPreference(preference, false, MediaType.Image, "windows")).toEqual({
-      mode: "browser",
+      mode: "ask",
     });
     expect(resolvePlaybackPreference(preference, false, MediaType.Text, "windows")).toEqual({
-      mode: "browser",
+      mode: "ask",
     });
     expect(resolvePlaybackPreference(preference, true, MediaType.Video, "macos")).toEqual({
       mode: "native",

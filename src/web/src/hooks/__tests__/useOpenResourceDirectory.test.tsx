@@ -118,6 +118,22 @@ describe("resource folder actions", () => {
     expect(mocks.openResourceDirectory).not.toHaveBeenCalled();
     expect(mocks.createPortal).not.toHaveBeenCalled();
   });
+  it.each(["response", "network"])(
+    "keeps a failed native directory action copyable (%s)",
+    async (failure) => {
+      useRemoteAccessStore.setState({ clientMode: ClientMode.PureClient, isLocal: false });
+      if (failure === "response")
+        mocks.openResourceDirectory.mockResolvedValue({ code: 409, message: "Mapping missing" });
+      else mocks.openResourceDirectory.mockRejectedValue(new Error("offline"));
+      const { result } = renderHook(useOpenResourceDirectory);
+
+      await act(() => result.current.open(resource));
+      expect(mocks.createPortal).toHaveBeenCalledWith(FolderLocationModal, {
+        path: "/nas/media/title",
+        openFailed: true,
+      });
+    },
+  );
 });
 
 describe("folder location paths", () => {

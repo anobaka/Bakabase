@@ -152,7 +152,8 @@ public class ResourceDiscoveryService : BackgroundService
 
         var resource = await resourceService.Get(request.ResourceId,
             ResourceAdditionalItem.Cover | ResourceAdditionalItem.PlayableItem);
-        if (resource == null) return;
+        if (resource == null)
+            throw new InvalidOperationException($"Resource {request.ResourceId} no longer exists. Refresh the resource list.");
 
         DiscoveryResult result;
 

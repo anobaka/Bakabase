@@ -1,7 +1,9 @@
 "use client";
-import type { MediaPlayerEntry } from "../types";
+import type { MediaPlayerEntry, MediaPreviewState } from "../types";
 import type { MediaType } from "@/sdk/constants";
+
 import React, { useRef } from "react";
+
 import MediaRenderer, { type MediaRendererRef } from "./MediaRenderer";
 import MediaFooter from "./MediaFooter";
 
@@ -36,6 +38,8 @@ interface MediaContentProps {
   }) => void;
   onPrevEntry: () => void;
   onNextEntry: () => void;
+  onPreviewStateChange?: (path: string, state: MediaPreviewState) => void;
+  onOpenAlternative?: (path: string) => void | Promise<void>;
 }
 const MediaContent = (props: MediaContentProps) => {
   const renderer = useRef<MediaRendererRef>(null);
@@ -53,35 +57,37 @@ const MediaContent = (props: MediaContentProps) => {
     onNextEntry,
     ...events
   } = props;
+
   return (
     <main className="media-player-main">
       <div className="media-player-stage">
         <MediaRenderer
           key={activeEntry.playPath || activeEntry.path}
           ref={renderer}
+          currentInitialized={currentInitialized}
           entry={activeEntry}
           mediaType={mediaType}
           playing={playing}
-          currentInitialized={currentInitialized}
           {...events}
         />
       </div>
       <MediaFooter
-        entry={activeEntry}
         activeIndex={activeIndex}
-        totalEntries={playableEntries.length}
-        currentInitialized={currentInitialized}
         autoPlay={autoPlay}
-        progress={progress}
+        currentInitialized={currentInitialized}
+        entry={activeEntry}
+        image={renderer.current?.getImageRef() || null}
         mediaType={mediaType}
         playing={playing}
-        renderOperations={renderOperations}
+        progress={progress}
         reactPlayer={renderer.current?.getPlayerRef()}
-        image={renderer.current?.getImageRef() || null}
-        onPrevEntry={onPrevEntry}
+        renderOperations={renderOperations}
+        totalEntries={playableEntries.length}
         onNextEntry={onNextEntry}
+        onPrevEntry={onPrevEntry}
       />
     </main>
   );
 };
+
 export default MediaContent;

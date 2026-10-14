@@ -1,6 +1,6 @@
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Modules.Player.Abstractions.Components;
-using Bakabase.Modules.Player.Components;
+using Bakabase.Modules.Player.Abstractions.Models.Domain;
 
 namespace Bakabase.Modules.Player.Components;
 
@@ -11,6 +11,9 @@ public sealed record ResolvedPlayer(string? ExecutablePath, string? CommandTempl
     public static readonly ResolvedPlayer SystemDefault = new(null, null);
 
     public bool IsSystemDefault => ExecutablePath == null;
+    public string? DefinitionId { get; init; }
+    public bool SupportsHttp { get; init; }
+    public IReadOnlySet<string>? SupportedExtensions { get; init; }
 
     /// <summary>
     /// Windows shortcuts only start through the shell; the OS refuses them otherwise
@@ -46,19 +49,10 @@ public sealed class LocalPlayerResolver(IPlayerExecutableLocator locator)
     /// Picks the player for one file, mirroring the server's own rule: the first whose
     /// extensions include this one, else the first that claims no extensions at all.
     /// </summary>
-    public ResolvedPlayer Resolve(ResourceProfilePlayerOptions? options, string fileNameOrPath)
+    public ResolvedPlayer Resolve(ResourceProfilePlayerOptions? options, string fileNameOrPath,
+        bool requireHttp = false, bool explicitChoice = false)
     {
-        if (options?.Players is not {Count: > 0} players)
-        {
-            return ResolvedPlayer.SystemDefault;
-        }
-
-        var extension = Path.GetExtension(fileNameOrPath);
-
-        var chosen =
-            players.FirstOrDefault(p =>
-                p.Extensions?.Contains(extension, StringComparer.OrdinalIgnoreCase) == true) ??
-            players.FirstOrDefault(p => p.Extensions?.Any() != true);
+        var chosen = PlayerFileCapabilities.SelectConfigured(options, fileNameOrPath);
 
         if (chosen == null)
         {
@@ -72,13 +66,55 @@ public sealed class LocalPlayerResolver(IPlayerExecutableLocator locator)
             // Not a player we know how to find. The stored path belongs to another
             // machine, so trying it is at best a failure and at worst a launch of
             // something unrelated that happens to live there.
+            if (explicitChoice)
+                throw new InvalidOperationException("The configured player cannot be identified on this device. Choose an installed local player or the system default application.");
             return ResolvedPlayer.SystemDefault;
         }
 
+        if (!PlayerFileCapabilities.SupportsFile(known, fileNameOrPath))
+        {
+            if (explicitChoice) throw UnsupportedFile(known, fileNameOrPath);
+            return ResolvedPlayer.SystemDefault;
+        }
+
+        var supportsHttp = PlayerFileCapabilities.SupportsHttp(chosen, known);
+        if (requireHttp && !supportsHttp)
+            throw new InvalidOperationException($"{known.DisplayName} is configured not to open HTTP media. Map the file to an accessible local folder, or choose a player that supports HTTP media.");
+
         var here = locator.Locate(known).FirstOrDefault();
 
-        return here == null ? ResolvedPlayer.SystemDefault : new ResolvedPlayer(here, AddRequiredArguments(known, chosen.Command));
+        if (here == null)
+        {
+            if (explicitChoice) throw NotInstalled(known);
+            return ResolvedPlayer.SystemDefault;
+        }
+        return ResolveAt(known, here, chosen.Command) with {SupportsHttp = supportsHttp};
     }
+
+    /// <summary>Resolves an explicit device-local choice. A failed choice is never replaced silently.</summary>
+    public ResolvedPlayer ResolveKnown(string playerId, string fileNameOrPath, bool requireHttp = false)
+    {
+        var known = KnownPlayerDefinitions.All.FirstOrDefault(d => d.Id == playerId) ??
+                    throw new InvalidOperationException("The selected player is not available. Choose another local player.");
+        if (!PlayerFileCapabilities.SupportsFile(known, fileNameOrPath)) throw UnsupportedFile(known, fileNameOrPath);
+        if (requireHttp && (!known.SupportsHttp || !PlayerFileCapabilities.CanStream(fileNameOrPath)))
+            throw new InvalidOperationException($"{known.DisplayName} cannot open this file through HTTP. Map an accessible local folder first.");
+        var here = locator.Locate(known).FirstOrDefault() ?? throw NotInstalled(known);
+        return ResolveAt(known, here, null);
+    }
+
+    private static InvalidOperationException NotInstalled(KnownPlayerDefinition known) =>
+        new($"{known.DisplayName} is not installed on this device. Install it or choose another player.");
+
+    private static InvalidOperationException UnsupportedFile(KnownPlayerDefinition known, string path) =>
+        new($"{known.DisplayName} does not support '{PlayerFileCapabilities.Extension(path)}' files. Choose another application or the system default.");
+
+    private static ResolvedPlayer ResolveAt(KnownPlayerDefinition known, string executable, string? template) =>
+        new(executable, AddRequiredArguments(known, template))
+        {
+            DefinitionId = known.Id, SupportsHttp = known.SupportsHttp,
+            SupportedExtensions = known.SupportedExtensions
+        };
 
     private static string? AddRequiredArguments(Abstractions.Models.Domain.KnownPlayerDefinition definition, string? template) =>
         definition.ArgumentPrefix == null ? template : $"{definition.ArgumentPrefix} {template ?? "{0}"}";
@@ -94,20 +130,20 @@ public sealed class LocalPlayerResolver(IPlayerExecutableLocator locator)
     /// known to be a player, not whatever the OS would pick.
     /// </remarks>
     public ResolvedPlayer? ResolveInstalled(string fileNameOrPath,
-        Func<Abstractions.Models.Domain.KnownPlayerDefinition, bool>? isAllowed = null)
+        Func<Abstractions.Models.Domain.KnownPlayerDefinition, bool>? isAllowed = null, bool requireHttp = false)
     {
-        var extension = Path.GetExtension(fileNameOrPath);
+        if (requireHttp && !PlayerFileCapabilities.CanStream(fileNameOrPath)) return null;
 
         foreach (var definition in KnownPlayerDefinitions.All)
         {
-            if (isAllowed?.Invoke(definition) == false)
+            if (isAllowed?.Invoke(definition) == false || (requireHttp && !definition.SupportsHttp))
             {
                 continue;
             }
 
             // A null set means the player claims everything; foobar2000 claims audio
             // only, and starting it on a video is not an improvement on failing.
-            if (definition.SupportedExtensions?.Contains(extension) == false)
+            if (!PlayerFileCapabilities.SupportsFile(definition, fileNameOrPath))
             {
                 continue;
             }
@@ -116,7 +152,7 @@ public sealed class LocalPlayerResolver(IPlayerExecutableLocator locator)
 
             if (here != null)
             {
-                return new ResolvedPlayer(here, AddRequiredArguments(definition, null));
+                return ResolveAt(definition, here, null);
             }
         }
 

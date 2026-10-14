@@ -57,7 +57,7 @@ public partial class NativeWebViewHost
         var settings = WebKitGtk.webkit_web_view_get_settings(_linuxWebView);
         if (settings != IntPtr.Zero)
         {
-            WebKitGtk.webkit_settings_set_user_agent(settings, WebViewUserAgent.Linux);
+            WebKitGtk.webkit_settings_set_user_agent(settings, PresentationUserAgent(WebViewUserAgent.Linux));
         }
 
         _initialized = true;

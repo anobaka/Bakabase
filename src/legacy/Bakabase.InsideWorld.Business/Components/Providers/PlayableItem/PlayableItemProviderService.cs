@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -39,7 +40,14 @@ public class PlayableItemProviderService : IPlayableItemProviderService
     {
         var provider = _providers.FirstOrDefault(p => p.Origin == origin);
         if (provider == null)
-            return;
+        {
+            // Download origins describe where files came from, not an alternative
+            // playable target. A stale page/client must not report a website visit
+            // (or no action at all) as a successful play in the resource history.
+            throw new InvalidOperationException(origin is DataOrigin.DLsite or DataOrigin.ExHentai
+                ? "Play the downloaded files from this resource. Refresh its playable files; opening the original website is a separate action."
+                : $"No playable item provider is available for {origin}.");
+        }
 
         var item = new Abstractions.Models.Domain.PlayableItem
         {

@@ -14,17 +14,108 @@ using Bakabase.Modules.Federation.Queries;
 using Bakabase.Modules.Federation.Security;
 using Bakabase.Modules.Federation.Transport;
 using Bakabase.Modules.Player.Abstractions.Components;
+using Bakabase.Modules.Player.Abstractions.Models.Domain;
+using Bakabase.Modules.Player.Components;
+using Bakabase.Modules.Player.Services;
 using Bakabase.Modules.RemoteAccess.Abstractions.Models;
 using Bakabase.Service.Components.Federation;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Microsoft.Extensions.Options;
 
 namespace Bakabase.Tests.Federation;
 
 [TestClass]
 public sealed class FederationImageOpeningTests
 {
+    [TestMethod]
+    public async Task DeviceVideoOverrideUsesTheChosenLocalPlayerWithoutChangingTheSharedSource()
+    {
+        await using var f = await Fixture.Create();
+        await f.WriteFile("film.mp4");
+        await f.MapRoot();
+        await f.OverridePlayer("video", "Mpv");
+        var reference = f.RememberAsset("film.mp4", "film.mp4");
+        Assert.IsTrue((await f.Media.PrepareAsync(new(reference, "player"), "http://localhost:34567", default)).Launched);
+        Assert.AreEqual("Mpv", f.Launcher.Launches.Single());
+        Assert.AreEqual(0, f.SystemPlayer.Opened.Count);
+        Assert.AreEqual(0, f.Resources.Played.Count);
+    }
+
+    [TestMethod]
+    public async Task DefaultMediaOverrideOnlyOpensAnAuthorizedMappedPhysicalMediaFile()
+    {
+        await using var f = await Fixture.Create();
+        var file = await f.WriteFile("film.mp4");
+        await f.MapRoot();
+        await f.OverridePlayer("video", "system-default");
+        var reference = f.RememberAsset("film.mp4", "film.mp4");
+        Assert.IsTrue((await f.Media.PrepareAsync(new(reference, "player"), "http://localhost:34567", default)).Launched);
+        Assert.AreEqual(MediaPathBoundary.ResolvePhysical(file), f.SystemPlayer.Opened.Single());
+        Assert.AreEqual(0, f.Launcher.Launches.Count);
+        Assert.AreEqual(0, f.Resources.Played.Count);
+        CollectionAssert.AreEqual(new[] {HttpMethod.Head}, f.Transport.Methods.ToArray());
+    }
+
+    [TestMethod]
+    public async Task DefaultMediaOverrideCannotTurnAnUnmappedStreamIntoAShellLaunch()
+    {
+        await using var f = await Fixture.Create();
+        await f.OverridePlayer("video", "system-default");
+        var reference = f.RememberAsset("film.mp4", "film.mp4");
+        Assert.AreEqual("MappedPathUnavailable", (await Assert.ThrowsExactlyAsync<FederationQueryException>(() =>
+            f.Media.PrepareAsync(new(reference, "player"), "http://localhost:34567", default))).Code);
+        Assert.AreEqual(0, f.SystemPlayer.Opened.Count);
+        Assert.AreEqual(0, f.Launcher.Launches.Count);
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task DefaultMediaOverrideCannotExecuteAMislabelledMappedFileOrSymlink(bool symlink)
+    {
+        if (symlink && OperatingSystem.IsWindows()) Assert.Inconclusive("Creating filesystem links requires an optional Windows privilege.");
+        await using var f = await Fixture.Create();
+        var executable = await f.WriteFile("payload.exe");
+        await f.MapRoot();
+        await f.OverridePlayer("video", "system-default");
+        if (symlink) File.CreateSymbolicLink(Path.Combine(f.MediaRoot, "film.mp4"), MediaPathBoundary.ResolvePhysical(executable));
+        var reference = f.RememberAsset("film.mp4", symlink ? "film.mp4" : "payload.exe");
+        Assert.AreEqual("UnsupportedPlaybackMode", (await Assert.ThrowsExactlyAsync<FederationQueryException>(() =>
+            f.Media.PrepareAsync(new(reference, "player"), "http://localhost:34567", default))).Code);
+        Assert.AreEqual(0, f.SystemPlayer.Opened.Count);
+        Assert.AreEqual(0, f.Launcher.Launches.Count);
+    }
+
+    [TestMethod]
+    public async Task ImageOverrideCannotSendAnImageToAnAvPlayer()
+    {
+        await using var f = await Fixture.Create();
+        await f.WriteFile("cover.jpg");
+        await f.MapRoot();
+        await f.OverridePlayer("image", "Vlc");
+        var reference = f.RememberImage("cover.jpg", "cover.jpg");
+        Assert.AreEqual("PlayerUnavailable", (await Assert.ThrowsExactlyAsync<FederationQueryException>(() =>
+            f.Media.PrepareAsync(new(reference, "player"), "http://localhost:34567", default))).Code);
+        Assert.AreEqual(0, f.Images.Opened.Count);
+        Assert.AreEqual(0, f.Launcher.Launches.Count);
+    }
+
+    [TestMethod]
+    public async Task RevokingTheSharedSourceStillWinsOverTheDefaultMediaOverride()
+    {
+        await using var f = await Fixture.Create();
+        await f.WriteFile("film.mp4");
+        await f.MapRoot();
+        await f.OverridePlayer("video", "system-default");
+        f.Transport.Status = HttpStatusCode.Forbidden;
+        var reference = f.RememberAsset("film.mp4", "film.mp4");
+        Assert.AreEqual("GrantRevoked", (await Assert.ThrowsExactlyAsync<FederationQueryException>(() =>
+            f.Media.PrepareAsync(new(reference, "player"), "http://localhost:34567", default))).Code);
+        Assert.AreEqual(0, f.SystemPlayer.Opened.Count);
+    }
+
     [TestMethod]
     public async Task MappedImageUsesOnlyTheViewingComputersDefaultAssociationAfterSourceAuthorization()
     {
@@ -252,6 +343,8 @@ public sealed class FederationImageOpeningTests
         public readonly FederationMediaSessions Sessions = new();
         public readonly ImageOpener Images = new();
         public readonly RecordingLauncher Launcher = new();
+        public readonly RecordingSystemPlayer SystemPlayer = new();
+        public DevicePlaybackOverridesStore Overrides = null!;
         public readonly Transport Transport = new();
         public ResourceProxy Resources = null!;
         public FederationMediaService Media = null!;
@@ -288,10 +381,18 @@ public sealed class FederationImageOpeningTests
                 new Access(), f._assets, f._db);
             var directories = new FederationDirectoryService(identity, f._local, new PeerSessions(), f.Transport,
                 f.Peers, new DirectoryOpener(), f._grants);
-            f.Media = new(identity, f._local, new PeerSessions(), f.Transport, f.Peers, f.Sessions, null!,
-                f.Launcher, resources, f._grants, directories, f.Images);
+            f.Overrides = new(Options.Create(new PlayerModuleOptions
+                {DevicePlaybackPreferencesFile = () => Path.Combine(f.Directory.Path, "device-playback.json")}));
+            f.Media = new(identity, f._local, new PeerSessions(), f.Transport, f.Peers, f.Sessions,
+                new FederationPlayerPolicy(new LocalPlayerResolver(new InstalledPlayers()), new DirectProxyEnvironment()),
+                f.Launcher, resources, f._grants, directories, f.Images, f.Overrides, f.SystemPlayer);
             return f;
         }
+
+        public Task OverridePlayer(string kind, string playerId) => Overrides.SaveAsync(new DevicePlaybackOverride
+        {
+            Target = "node:remote:remote-epoch", Choices = new() {[kind] = new("native", playerId)}
+        });
 
         public async Task<string> WriteFile(string name)
         {
@@ -303,10 +404,13 @@ public sealed class FederationImageOpeningTests
         public Task MapRoot() => Peers.SetPathMappingsAsync("remote", [new("source-root", MediaRoot)]);
 
         public AssetRef RememberImage(string fileName, string relativePath)
+            => RememberAsset(fileName, relativePath);
+
+        public AssetRef RememberAsset(string fileName, string relativePath)
         {
             var reference = new ResourceRef("remote", "remote-epoch", 42);
             var content = MediaContentTypes.Get(fileName)!.Value.ContentType;
-            var asset = new FederatedAsset(new string('a', 64), "image", fileName, content,
+            var asset = new FederatedAsset(new string('a', 64), MediaContentTypes.Get(fileName)!.Value.Kind, fileName, content,
                 "source-root", relativePath, DateTimeOffset.UtcNow.AddMinutes(5));
             Sessions.Remember(Detail(reference, asset), PeerSessions.Snapshot("remote"));
             return new(reference, asset.AssetId);
@@ -387,6 +491,22 @@ public sealed class FederationImageOpeningTests
             Launches.Add(executablePath);
             return Task.CompletedTask;
         }
+    }
+
+    private sealed class RecordingSystemPlayer : Bakabase.Abstractions.Components.ISystemPlayer
+    {
+        public readonly List<string> Opened = [];
+        public Task Play(string file) { Opened.Add(file); return Task.CompletedTask; }
+    }
+
+    private sealed class InstalledPlayers : IPlayerExecutableLocator
+    {
+        public IReadOnlyList<string> Locate(KnownPlayerDefinition definition) => [definition.Id];
+    }
+
+    private sealed class DirectProxyEnvironment : IFederationPlayerProxyEnvironment
+    {
+        public VlcLoopbackHttpSupport GetVlcLoopbackHttpSupport() => VlcLoopbackHttpSupport.Available;
     }
 
     private sealed class DirectoryOpener : IFederationDirectoryOpener

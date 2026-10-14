@@ -76,6 +76,52 @@ public sealed class FederationPlayerPolicyTests
         Assert.AreEqual("PlayerUnavailable", error.Code);
     }
 
+    [TestMethod]
+    public void AnExplicitMappedPlayerWinsOverCatalogPriorityWithoutReadingProxySettings()
+    {
+        var locator = new Locator {Installed = [KnownPlayerDefinitions.PotPlayer, KnownPlayerDefinitions.Vlc]};
+        var environment = new Environment(VlcLoopbackHttpSupport.SystemProxy);
+        var policy = new FederationPlayerPolicy(new LocalPlayerResolver(locator), environment);
+        Assert.AreEqual("Vlc", policy.Resolve("film.mp4", "/media/film.mp4", "Vlc").DefinitionId);
+        Assert.AreEqual(0, environment.Reads);
+    }
+
+    [TestMethod]
+    [DataRow("PotPlayer", VlcLoopbackHttpSupport.Available)]
+    [DataRow("Vlc", VlcLoopbackHttpSupport.Unknown)]
+    [DataRow("Vlc", VlcLoopbackHttpSupport.SystemProxy)]
+    public void AnExplicitHttpPlayerCannotBypassTicketProxyRestrictions(string id, VlcLoopbackHttpSupport state)
+    {
+        var locator = new Locator {Installed = [KnownPlayerDefinitions.PotPlayer, KnownPlayerDefinitions.Vlc, KnownPlayerDefinitions.Mpv]};
+        var policy = new FederationPlayerPolicy(new LocalPlayerResolver(locator), new Environment(state));
+        var error = Assert.ThrowsExactly<FederationQueryException>(() => policy.Resolve("film.mp4", null, id));
+        Assert.AreEqual("PlayerProxyUnsupported", error.Code);
+    }
+
+    [TestMethod]
+    public void AutomaticHttpSelectionNeverUsesAnUnverifiedPlayerEvenWhenVlcIsAllowed()
+    {
+        var locator = new Locator {Installed = [KnownPlayerDefinitions.PotPlayer, KnownPlayerDefinitions.Vlc]};
+        var policy = new FederationPlayerPolicy(new LocalPlayerResolver(locator), new Environment(VlcLoopbackHttpSupport.Available));
+        Assert.AreEqual("Vlc", policy.Resolve("film.mp4", null).DefinitionId);
+        CollectionAssert.DoesNotContain(locator.Probed, "PotPlayer");
+        Assert.AreEqual("PotPlayer", policy.Resolve("film.mp4", "/media/film.mp4").DefinitionId);
+    }
+
+    [TestMethod]
+    public void ExplicitSystemDefaultRequiresALocalPathAndExplicitTypeMismatchesDoNotFallBack()
+    {
+        var locator = new Locator {Installed = [KnownPlayerDefinitions.Vlc]};
+        var policy = new FederationPlayerPolicy(new LocalPlayerResolver(locator), new Environment(VlcLoopbackHttpSupport.Available));
+        Assert.IsTrue(policy.Resolve("film.mp4", "/media/film.mp4", "system-default").IsSystemDefault);
+        Assert.AreEqual("MappedPathUnavailable", Assert.ThrowsExactly<FederationQueryException>(() =>
+            policy.Resolve("film.mp4", null, "system-default")).Code);
+        Assert.AreEqual("PlayerUnavailable", Assert.ThrowsExactly<FederationQueryException>(() =>
+            policy.Resolve("cover.jpg", "/media/cover.jpg", "Vlc")).Code);
+        Assert.AreEqual("PlayerUnavailable", Assert.ThrowsExactly<FederationQueryException>(() =>
+            policy.Resolve("film.mp4", "/media/film.mp4", "Mpv")).Code);
+    }
+
     private sealed class Environment(VlcLoopbackHttpSupport state) : IFederationPlayerProxyEnvironment
     {
         public int Reads { get; private set; }

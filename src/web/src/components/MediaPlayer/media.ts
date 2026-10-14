@@ -1,4 +1,5 @@
 import type { BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntry as Entry } from "@/sdk/Api";
+
 import { ExtensionMediaTypes, IwFsType, MediaType } from "@/sdk/constants";
 
 export const getEntryMediaType = (entry: Entry): MediaType => {
@@ -10,14 +11,18 @@ export const getEntryMediaType = (entry: Entry): MediaType => {
     entry.path.split(".").pop() ||
     ""
   ).toLowerCase();
+
   return ExtensionMediaTypes[`.${extension}`] ?? MediaType.Unknown;
 };
 
 export const isPreviewEntry = (entry: Entry) =>
   ![IwFsType.Directory, IwFsType.Drive, IwFsType.CompressedFileEntry].includes(entry.type);
 
-const pathKey = (path: string) => {
+export const mediaPathKey = (path: string) => {
+  // On POSIX, a backslash is a literal filename character, not a directory separator.
+  if (!/^[a-z]:[/\\]/i.test(path) && !path.startsWith("\\\\")) return path;
   const normalized = path.replace(/\\/g, "/");
+
   return /^[a-z]:\//i.test(normalized) ? normalized.toLowerCase() : normalized;
 };
 
@@ -27,13 +32,18 @@ export const selectInitialMediaIndex = (
   preferredPaths: string[] = [],
 ): number => {
   for (const preferred of preferredPaths) {
-    const index = entries.findIndex((entry) => pathKey(entry.path) === pathKey(preferred));
+    const index = entries.findIndex(
+      (entry) => mediaPathKey(entry.path) === mediaPathKey(preferred),
+    );
+
     if (index >= 0) return index;
   }
   for (const type of [MediaType.Video, MediaType.Audio, MediaType.Image, MediaType.Text]) {
     const index = entries.findIndex((entry) => getEntryMediaType(entry) === type);
+
     if (index >= 0) return index;
   }
+
   return 0;
 };
 

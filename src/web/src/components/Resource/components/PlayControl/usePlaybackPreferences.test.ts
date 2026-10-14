@@ -1,9 +1,13 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 
-import { useDevicePlaybackStore } from "./usePlaybackPreferences";
+import { useDevicePlaybackStore, usePlaybackPreferences } from "./usePlaybackPreferences";
 import { automaticPlaybackPreferences, PLAYBACK_PREFERENCE_KEY } from "./playbackPreferences";
 
 const api = vi.hoisted(() => ({ get: vi.fn(), save: vi.fn() }));
+const context = vi.hoisted(() => ({ native: true, app: true }));
+
+vi.mock("@/utils/clientSurface", () => ({ isDesktopAppWindow: () => context.app }));
 
 vi.mock("@/sdk/BApi", () => ({
   default: {
@@ -11,13 +15,15 @@ vi.mock("@/sdk/BApi", () => ({
   },
 }));
 vi.mock("@/stores/remoteAccess", () => ({
-  useRemoteAccessStore: vi.fn(),
-  useUserSideActionsRunHere: vi.fn(),
+  useRemoteAccessStore: (selector: (value: unknown) => unknown) => selector({ initialized: true }),
+  useUserSideActionsRunHere: () => context.native,
 }));
 
 beforeEach(() => {
   vi.clearAllMocks();
   localStorage.clear();
+  context.native = true;
+  context.app = true;
   useDevicePlaybackStore.setState({
     scope: undefined,
     initialized: false,
@@ -26,8 +32,30 @@ beforeEach(() => {
   api.get.mockResolvedValue({ code: 0, data: automaticPlaybackPreferences() });
   api.save.mockResolvedValue({ code: 0 });
 });
+afterEach(cleanup);
 
 describe("device preference persistence", () => {
+  it("uses browser-local preferences on localhost even when the server can perform native actions", async () => {
+    context.app = false;
+    const { result } = renderHook(usePlaybackPreferences);
+
+    await waitFor(() => expect(result.current.ready).toBe(true));
+    expect(result.current.desktop).toBe(false);
+    await act(() => result.current.save("video", { mode: "ask" }));
+    expect(JSON.parse(localStorage.getItem(PLAYBACK_PREFERENCE_KEY)!).video.mode).toBe("ask");
+    expect(api.get).not.toHaveBeenCalled();
+    expect(api.save).not.toHaveBeenCalled();
+  });
+  it("keeps actual all-in-one app preferences in the current device endpoint", async () => {
+    const { result } = renderHook(usePlaybackPreferences);
+
+    await waitFor(() => expect(result.current.ready).toBe(true));
+    expect(result.current.desktop).toBe(true);
+    await act(() => result.current.save("video", { mode: "ask" }));
+    expect(api.get).toHaveBeenCalledOnce();
+    expect(api.save).toHaveBeenCalledOnce();
+    expect(localStorage.getItem(PLAYBACK_PREFERENCE_KEY)).toBeNull();
+  });
   it("reads and saves browser preferences locally without requesting the server's device settings", async () => {
     localStorage.setItem(
       PLAYBACK_PREFERENCE_KEY,

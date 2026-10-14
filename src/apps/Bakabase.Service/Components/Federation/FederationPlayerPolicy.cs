@@ -74,17 +74,39 @@ public sealed class FederationPlayerProxyEnvironment : IFederationPlayerProxyEnv
 
 public sealed class FederationPlayerPolicy(LocalPlayerResolver players, IFederationPlayerProxyEnvironment environment)
 {
-    public ResolvedPlayer Resolve(string fileName, string? localPath)
+    public ResolvedPlayer Resolve(string fileName, string? localPath, string? playerId = null)
     {
-        if (localPath == null && environment.GetVlcLoopbackHttpSupport() != VlcLoopbackHttpSupport.Available)
+        if (playerId != null)
         {
+            if (playerId == "system-default")
+                return localPath != null ? ResolvedPlayer.SystemDefault :
+                    throw new FederationQueryException("MappedPathUnavailable", 409,
+                        "The default application needs an accessible local file. Map the file or choose an HTTP player.");
+            try
+            {
+                var selected = players.ResolveKnown(playerId, fileName, localPath == null);
+                if (localPath == null && playerId is not ("Mpv" or "Iina") &&
+                    (playerId != "Vlc" || environment.GetVlcLoopbackHttpSupport() != VlcLoopbackHttpSupport.Available))
+                    throw new FederationQueryException("PlayerProxyUnsupported", 409);
+                return selected;
+            }
+            catch (InvalidOperationException e)
+            { throw new FederationQueryException("PlayerUnavailable", 409, e.Message); }
+        }
+        if (localPath == null)
+        {
+            var vlcAllowed = environment.GetVlcLoopbackHttpSupport() == VlcLoopbackHttpSupport.Available;
             // These players have explicit direct-proxy options in FederationPlayerArguments.
             // Do not try VLC first: the ticket would already have reached the system proxy.
             return players.ResolveInstalled(fileName,
-                       candidate => candidate == KnownPlayerDefinitions.Mpv || candidate == KnownPlayerDefinitions.Iina)
-                   ?? throw new FederationQueryException("PlayerProxyUnsupported", 409,
-                       "A direct connection cannot be verified for VLC with the current player and proxy configuration. " +
-                       "Use the in-app preview, configure a local path mapping, or install mpv (or IINA on macOS).");
+                       candidate => candidate == KnownPlayerDefinitions.Mpv || candidate == KnownPlayerDefinitions.Iina ||
+                                    vlcAllowed && candidate == KnownPlayerDefinitions.Vlc, requireHttp: true)
+                   ?? throw new FederationQueryException(vlcAllowed ? "PlayerUnavailable" : "PlayerProxyUnsupported",
+                       vlcAllowed ? 501 : 409,
+                       vlcAllowed
+                           ? "Install VLC, mpv or IINA to open this stream, configure a local path mapping, or use the preview."
+                           : "A direct connection cannot be verified for VLC with the current player and proxy configuration. " +
+                             "Use the in-app preview, configure a local path mapping, or install mpv (or IINA on macOS).");
         }
 
         return players.ResolveInstalled(fileName) ?? throw new FederationQueryException("PlayerUnavailable", 501,

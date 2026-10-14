@@ -75,7 +75,8 @@ public static class MediaLibraryTemplateExtensions
         {
             Extensions = mediaLibraryTemplatePlayer.Extensions,
             ExecutablePath = mediaLibraryTemplatePlayer.ExecutablePath,
-            Command = mediaLibraryTemplatePlayer.Command
+            Command = mediaLibraryTemplatePlayer.Command,
+            SupportsHttp = mediaLibraryTemplatePlayer.SupportsHttp
         };
     }
 
@@ -170,7 +171,8 @@ public static class MediaLibraryTemplateExtensions
         {
             Extensions = dbModel.Extensions,
             ExecutablePath = dbModel.ExecutablePath,
-            Command = dbModel.Command
+            Command = dbModel.Command,
+            SupportsHttp = dbModel.SupportsHttp
         };
     }
 

@@ -29,15 +29,14 @@ type PendingSubscription = {
   dataType: number;
 };
 
-class ResourceDiscoveryChannel {
+export class ResourceDiscoveryChannel {
   private eventSource: EventSource | null = null;
   private subscribers = new Map<SubscriberKey, Set<Subscriber>>();
   private pendingRequests = new Set<string>(); // resourceId-origin-dataType (already sent)
   private pendingSubscriptions = new Map<string, PendingSubscription>(); // to be sent in batch
   private connectionPromise: Promise<void> | null = null;
-  private reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
   private batchTimeout: ReturnType<typeof setTimeout> | null = null;
-  private isConnecting = false;
+  private connectionTimeout: ReturnType<typeof setTimeout> | null = null;
 
   // Batch delay in ms - requests within this window will be merged
   private readonly batchDelay = 50;
@@ -55,36 +54,64 @@ class ResourceDiscoveryChannel {
       return this.connectionPromise;
     }
 
-    this.isConnecting = true;
-
+    // Replace a transport still reconnecting from an earlier failure. A new
+    // retry must not leave two live EventSources delivering the same results.
+    this.eventSource?.close();
+    this.eventSource = null;
     this.connectionPromise = new Promise((resolve, reject) => {
       const endpoint = this.getApiEndpoint();
       const url = `${endpoint}/resource/discovery/stream`;
 
       console.log("[ResourceDiscoveryChannel] Connecting to SSE:", url);
 
-      this.eventSource = new EventSource(url);
+      const source = new EventSource(url);
+      let connected = false;
 
-      this.eventSource.onopen = () => {
+      this.eventSource = source;
+      const failConnection = (message: string) => {
+        if (this.eventSource !== source) return;
+        this.clearConnectionTimeout();
+        this.connectionPromise = null;
+        source.close();
+        this.eventSource = null;
+        reject(new Error(message));
+      };
+
+      this.connectionTimeout = setTimeout(
+        () => failConnection("Discovery connection timed out"),
+        15000,
+      );
+      source.onopen = () => {
+        if (this.eventSource !== source) return;
         console.log("[ResourceDiscoveryChannel] SSE connection established");
-        this.isConnecting = false;
+        connected = true;
+        this.clearConnectionTimeout();
         this.connectionPromise = null;
         resolve();
       };
 
-      this.eventSource.onerror = (event) => {
-        console.error("[ResourceDiscoveryChannel] SSE connection error:", event);
-        this.isConnecting = false;
-        this.connectionPromise = null;
+      source.onerror = (event) => {
+        if (this.eventSource !== source) return;
+        // The backend also uses an SSE event named "error" for one failed
+        // discovery. It is not a broken transport and must not fail other jobs.
+        if (event instanceof MessageEvent) return;
+        if (!connected) {
+          failConnection("Could not connect to file discovery");
 
-        // If we were connecting, reject the promise
-        if (this.eventSource?.readyState === EventSource.CONNECTING) {
-          // Still trying to connect, let EventSource handle it
           return;
         }
-
-        // Connection closed, schedule reconnect
-        this.scheduleReconnect();
+        for (const key of this.pendingRequests) {
+          this.pendingRequests.delete(key);
+          this.subscribers
+            .get(key as SubscriberKey)
+            ?.forEach((callback) => callback(null, "File discovery connection was interrupted"));
+        }
+        // EventSource reconnects CONNECTING transports itself. Closed transports
+        // are replaced on the next request; their pending jobs have a visible error.
+        if (source.readyState === EventSource.CLOSED) {
+          source.close();
+          if (this.eventSource === source) this.eventSource = null;
+        }
       };
 
       // Listen for result events
@@ -115,26 +142,17 @@ class ResourceDiscoveryChannel {
     return this.connectionPromise;
   }
 
-  private scheduleReconnect() {
-    if (this.reconnectTimeout) {
-      return;
+  private clearConnectionTimeout() {
+    if (this.connectionTimeout) {
+      clearTimeout(this.connectionTimeout);
+      this.connectionTimeout = null;
     }
-
-    console.log("[ResourceDiscoveryChannel] Scheduling reconnect in 3 seconds");
-
-    this.reconnectTimeout = setTimeout(() => {
-      this.reconnectTimeout = null;
-
-      // Only reconnect if we still have subscribers
-      if (this.subscribers.size > 0) {
-        console.log("[ResourceDiscoveryChannel] Reconnecting...");
-        this.ensureConnected();
-      }
-    }, 3000);
   }
 
   private notifySubscribers(result: DiscoveryResult) {
     const key: SubscriberKey = `${result.resourceId}-${result.origin}-${result.dataType}`;
+
+    this.pendingRequests.delete(key);
     const subscribers = this.subscribers.get(key);
 
     if (!subscribers || subscribers.size === 0) return;
@@ -192,28 +210,48 @@ class ResourceDiscoveryChannel {
     console.log("[ResourceDiscoveryChannel] Sending batch of", requests.length, "subscriptions");
 
     const endpoint = this.getApiEndpoint();
+    const requestController = new AbortController();
+    const requestTimeout = setTimeout(() => requestController.abort(), 15000);
 
     try {
-      await fetch(`${endpoint}/resource/discovery/subscribe/batch`, {
+      const response = await fetch(`${endpoint}/resource/discovery/subscribe/batch`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(requests),
+        signal: requestController.signal,
       });
+
+      if (!response.ok) throw new Error(`Discovery request failed (${response.status})`);
+      const result = (await response.json()) as { code?: number; message?: string };
+
+      if (result.code)
+        throw new Error(result.message || `Discovery request failed (${result.code})`);
     } catch (e) {
       console.error("[ResourceDiscoveryChannel] Failed to send batch:", e);
-      // Remove from pending on failure so they can be retried
-      requestKeys.forEach((key) => this.pendingRequests.delete(key));
+      // A result may arrive over SSE before this HTTP response fails. Preserve
+      // that completed result; only requests still waiting need an error.
+      const failedRequests = requests.filter((req) =>
+        this.pendingRequests.has(`${req.resourceId}-${req.origin}-${req.dataType}`),
+      );
 
-      // Notify subscribers of error
-      requests.forEach((req) => {
+      requestKeys.forEach((key) => this.pendingRequests.delete(key));
+      failedRequests.forEach((req) => {
         const key: SubscriberKey =
           `${req.resourceId}-${req.origin}-${req.dataType}` as SubscriberKey;
         const subs = this.subscribers.get(key);
 
         if (subs) {
-          subs.forEach((cb) => cb(null, "Failed to subscribe"));
+          const message = requestController.signal.aborted
+            ? "Discovery request timed out"
+            : e instanceof Error
+              ? e.message
+              : "Failed to subscribe";
+
+          subs.forEach((cb) => cb(null, message));
         }
       });
+    } finally {
+      clearTimeout(requestTimeout);
     }
   }
 
@@ -231,13 +269,23 @@ class ResourceDiscoveryChannel {
     }
     this.subscribers.get(key)!.add(callback);
 
-    // Ensure connection is established
-    await this.ensureConnected();
+    let connected = false;
+
+    try {
+      await this.ensureConnected();
+      connected = true;
+    } catch (error) {
+      callback(null, error instanceof Error ? error.message : "Failed to connect");
+    }
 
     const requestKey = `${resourceId}-${origin}-${dataType}`;
 
     // Add to batch if not already pending or sent
-    if (!this.pendingRequests.has(requestKey) && !this.pendingSubscriptions.has(requestKey)) {
+    if (
+      connected &&
+      !this.pendingRequests.has(requestKey) &&
+      !this.pendingSubscriptions.has(requestKey)
+    ) {
       this.pendingSubscriptions.set(requestKey, { resourceId, origin, dataType });
       this.scheduleBatchSend();
     }
@@ -250,12 +298,12 @@ class ResourceDiscoveryChannel {
         subs.delete(callback);
         if (subs.size === 0) {
           this.subscribers.delete(key);
+          // Another card/detail may share this request. Removing one listener
+          // must not remove the other listener's pending batch.
+          this.pendingRequests.delete(requestKey);
+          this.pendingSubscriptions.delete(requestKey);
         }
       }
-
-      // Clear from pending
-      this.pendingRequests.delete(requestKey);
-      this.pendingSubscriptions.delete(requestKey);
 
       // Disconnect if no more subscribers
       if (this.subscribers.size === 0) {
@@ -266,11 +314,6 @@ class ResourceDiscoveryChannel {
 
   disconnect() {
     console.log("[ResourceDiscoveryChannel] Disconnecting");
-
-    if (this.reconnectTimeout) {
-      clearTimeout(this.reconnectTimeout);
-      this.reconnectTimeout = null;
-    }
 
     if (this.batchTimeout) {
       clearTimeout(this.batchTimeout);
@@ -283,7 +326,7 @@ class ResourceDiscoveryChannel {
     }
 
     this.connectionPromise = null;
-    this.isConnecting = false;
+    this.clearConnectionTimeout();
     this.pendingRequests.clear();
     this.pendingSubscriptions.clear();
   }

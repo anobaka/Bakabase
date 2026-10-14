@@ -3,8 +3,11 @@ import type { PlayControlPortalProps } from ".";
 import { GlobalOutlined, MoreOutlined, VideoCameraOutlined } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
 
+import OriginalSourceMenu from "./OriginalSourceMenu";
+
 import { Button, Tooltip } from "@/components/bakaui";
 import { DataOrigin } from "@/sdk/constants";
+import { PlaybackOverridesButton } from "@/features/playback/overrides";
 
 /** Compact, explicit alternatives shared by resource cards and resource details. */
 const PlaybackQuickActions = ({
@@ -15,16 +18,20 @@ const PlaybackQuickActions = ({
   onPlayInBrowser,
   onChoosePlayback,
   onPlayVideos,
+  openingRules,
+  originalSourceActions,
   className,
 }: PlayControlPortalProps & { className?: string }) => {
   const { t } = useTranslation();
 
-  if (!browserPlaybackAvailable) return null;
+  if (!browserPlaybackAvailable)
+    return <OriginalSourceMenu actions={originalSourceActions} className={className} />;
   const mainAlreadyOpensBrowser =
     browserPlaybackIsDefault && sources[0]?.source === DataOrigin.FileSystem;
 
   return (
     <>
+      {openingRules && <PlaybackOverridesButton {...openingRules} compact />}
       {!mainAlreadyOpensBrowser && onPlayInBrowser && (
         <Tooltip content={t("resource.playback.browserQuickAction")}>
           <Button
@@ -70,6 +77,7 @@ const PlaybackQuickActions = ({
           </Button>
         </Tooltip>
       )}
+      <OriginalSourceMenu actions={originalSourceActions} className={className} />
     </>
   );
 };

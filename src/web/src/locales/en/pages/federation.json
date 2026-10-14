@@ -564,5 +564,11 @@
   "federation.mappings.draft.saved": "Draft saved in this browser; cleared after mappings save successfully.",
   "federation.mappings.draft.unavailable": "The browser could not save this draft. Keep this page open to retain your edits.",
   "federation.imageOpenedHere": "Opened with this device’s default image app",
-  "federation.mappings.chooseLocal": "Choose directory"
+  "federation.mappings.chooseLocal": "Choose directory",
+  "federation.directory.browserTip": "A browser cannot open a file manager directly. Shared locations identify files; use the desktop app with an accessible directory mapping to open their folders.",
+  "federation.detail.originalPage": "View original webpage",
+  "federation.detail.sharedLocation": "{{owner}} · Within share: {{path}}",
+  "federation.detail.copySharedLocation": "Copy shared location",
+  "federation.detail.locationCopied": "Copied the device name and location within its share. This is not a local file path.",
+  "federation.detail.locationCopyFailed": "Could not copy. Select the shared location and copy it manually."
 }

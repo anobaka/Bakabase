@@ -54,6 +54,22 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("remembering the current device's opening method", () => {
+  it("explains an unavailable preference without changing it unless the user asks", () => {
+    render(
+      <PlayOnThisDevice
+        filePath="/album/001.jpg"
+        resource={{ id: 42 } as any}
+        unavailableReason="The preferred player is unavailable; saved preference unchanged."
+        onPlayInBrowser={mocks.browser}
+        onRememberChoice={mocks.save}
+      />,
+    );
+    expect(screen.getByRole("alert")).toHaveTextContent("saved preference unchanged");
+    expect(mocks.save).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByText("resource.playOnThisDevice.viewInBrowser"));
+    expect(mocks.browser).toHaveBeenCalledOnce();
+    expect(mocks.save).not.toHaveBeenCalled();
+  });
   it.each(["/album/cover.jpg", "/album/movie.mkv"])(
     "shows configured desktop playback and video selection for mixed resources without first-file URI handlers or links: %s",
     (filePath) => {

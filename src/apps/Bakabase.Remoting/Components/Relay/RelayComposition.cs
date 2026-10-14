@@ -174,6 +174,8 @@ public static class RelayComposition
 
         services.AddSingleton<IUserMachineHandler, GetDevicePlaybackPreferencesHandler>();
         services.AddSingleton<IUserMachineHandler, SetDevicePlaybackPreferencesHandler>();
+        services.AddSingleton<IUserMachineHandler, GetDevicePlaybackOverridesHandler>();
+        services.AddSingleton<IUserMachineHandler, SetDevicePlaybackOverridesHandler>();
 
         services.AddSingleton<IUserMachineHandler, BatchPlayCandidatesHandler>();
         services.AddSingleton<IUserMachineHandler, BatchPlayResourcesHandler>();

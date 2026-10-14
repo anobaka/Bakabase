@@ -10,7 +10,7 @@ import { BsController, BsTerminal } from "react-icons/bs";
 
 import { normalizeProfileExtensions, useProfileModalSave } from "./useProfileModalSave";
 
-import { Accordion, AccordionItem, Button, Chip, Input, Modal } from "@/components/bakaui";
+import { Accordion, AccordionItem, Button, Chip, Input, Modal, Select } from "@/components/bakaui";
 import ExtensionsInput from "@/components/ExtensionsInput";
 import PathAutocomplete from "@/components/PathAutocomplete";
 import { splitPathIntoSegments } from "@/components/utils";
@@ -101,6 +101,7 @@ const PlayerSelectorModal = ({ players: propPlayers, onSubmit, onDestroyed }: Pr
         executablePath: player.executablePath,
         command: player.command || "{0}",
         extensions: normalizeProfileExtensions(player.extensions),
+        supportsHttp: player.supportsHttp,
       })),
     );
   };
@@ -274,6 +275,38 @@ const PlayerSelectorModal = ({ players: propPlayers, onSubmit, onDestroyed }: Pr
                       </span>
                     </summary>
                     <div className="mt-3 flex flex-col gap-3">
+                      <Select
+                        disallowEmptySelection
+                        dataSource={[
+                          { value: "auto", label: t<string>("resourceProfile.players.http.auto") },
+                          {
+                            value: "supported",
+                            label: t<string>("resourceProfile.players.http.supported"),
+                          },
+                          {
+                            value: "unsupported",
+                            label: t<string>("resourceProfile.players.http.unsupported"),
+                          },
+                        ]}
+                        description={t<string>("resourceProfile.players.http.description")}
+                        isDisabled={editor.saving}
+                        label={t<string>("resourceProfile.players.http.label")}
+                        selectedKeys={[
+                          player.supportsHttp == null
+                            ? "auto"
+                            : player.supportsHttp
+                              ? "supported"
+                              : "unsupported",
+                        ]}
+                        onSelectionChange={(keys) => {
+                          const selected = [...keys][0];
+
+                          if (selected)
+                            updatePlayer(player.editingId, {
+                              supportsHttp: selected === "auto" ? null : selected === "supported",
+                            });
+                        }}
+                      />
                       <Input
                         description={t<string>("resourceProfile.tip.commandTemplatePlaceholder")}
                         isDisabled={editor.saving}

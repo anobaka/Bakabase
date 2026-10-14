@@ -4,6 +4,7 @@ import type {
   PlaybackSession,
   ResourceRef,
 } from "../types";
+import type { PlaybackKind } from "@/components/Resource/components/PlayControl/playbackPreferences";
 
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -17,6 +18,11 @@ import { buttonClass, ErrorNotice, panelClass, SourceBadge } from "./common";
 
 import { PropertyValueScopeLabel } from "@/sdk/constants";
 import { useUserSideActionsRunHere } from "@/stores/remoteAccess";
+import ExternalLink from "@/components/ExternalLink";
+import { browserExternalUrl } from "@/utils/openExternalUrl";
+import { copyTextToClipboard } from "@/core/clipboard";
+import { PlaybackOverridesButton, useTargetPlayback } from "@/features/playback/overrides";
+import { Button, Modal } from "@/components/bakaui";
 
 export function displayValue(value: unknown): string {
   if (value === null || value === undefined) return "—";
@@ -44,6 +50,12 @@ export default function ResourceDetail({
 }) {
   const { t } = useTranslation();
   const nativeActionsAvailable = useUserSideActionsRunHere();
+  const openingTarget =
+    resourceRef.nodeId !== localNodeId
+      ? `node:${resourceRef.nodeId}:${resourceRef.libraryEpoch}`
+      : undefined;
+  const opening = useTargetPlayback(openingTarget, resourceRef.resourceId);
+  const [choiceAsset, setChoiceAsset] = useState<FederatedAsset>();
   const [detail, setDetail] = useState<FederatedResourceDetail>();
   const [error, setError] = useState<Error>();
   const [revision, setRevision] = useState(0);
@@ -54,6 +66,7 @@ export default function ResourceDetail({
   const [openingDirectory, setOpeningDirectory] = useState(false);
   const [directoryOpened, setDirectoryOpened] = useState(false);
   const [directoryError, setDirectoryError] = useState<Error>();
+  const [copyStatus, setCopyStatus] = useState<string>();
   const [media, setMedia] = useState<{
     asset: FederatedAsset;
     session: PlaybackSession;
@@ -79,6 +92,8 @@ export default function ResourceDetail({
     setOpeningDirectory(false);
     setDirectoryOpened(false);
     setDirectoryError(undefined);
+    setCopyStatus(undefined);
+    setChoiceAsset(undefined);
     void federationResourceApi
       .detail(resourceRef, controller.signal)
       .then((response) => {
@@ -178,6 +193,28 @@ export default function ResourceDetail({
   };
 
   const isLocal = resourceRef.nodeId === localNodeId && resourceRef.libraryEpoch === localEpoch;
+  const openPreferred = (asset: FederatedAsset) => {
+    const choice = opening.choice(asset.kind as PlaybackKind);
+
+    if (opening.unavailable || choice?.mode === "ask") {
+      setChoiceAsset(asset);
+
+      return;
+    }
+    const native = choice
+      ? choice.mode === "native"
+      : opening.desktop && (asset.kind !== "image" || asset.canOpenLocally === true);
+
+    if (
+      native &&
+      (!nativeActionsAvailable || (asset.kind === "image" && asset.canOpenLocally !== true))
+    ) {
+      setChoiceAsset(asset);
+
+      return;
+    }
+    void play(asset, native ? "player" : "preview");
+  };
   const openDirectory = async () => {
     if (!detail?.directoryAccess?.canOpen || openingDirectory) return;
     const current = generation.current;
@@ -225,10 +262,69 @@ export default function ResourceDetail({
         </button>
       </div>
       <ErrorNotice error={error} onRetry={() => setRevision((value) => value + 1)} />
+      {choiceAsset && (
+        <Modal
+          defaultVisible
+          footer={false}
+          size="sm"
+          title={t("resource.playOnThisDevice.title")}
+          onDestroyed={() => setChoiceAsset(undefined)}
+        >
+          <div className="flex flex-col gap-2">
+            {opening.unavailable && (
+              <>
+                <p className="text-sm text-warning" role="alert">
+                  {t("resource.playbackPolicy.rulesUnavailable")}
+                </p>
+                <Button
+                  onPress={() => {
+                    void opening.reload();
+                    setChoiceAsset(undefined);
+                  }}
+                >
+                  {t("resource.playbackPolicy.retryRules")}
+                </Button>
+              </>
+            )}
+            {opening.choice(choiceAsset.kind as PlaybackKind)?.mode === "native" &&
+              (!nativeActionsAvailable ||
+                (choiceAsset.kind === "image" && choiceAsset.canOpenLocally !== true)) && (
+                <p className="text-sm text-warning" role="alert">
+                  {t("resource.playbackPolicy.preferredUnavailable")}
+                </p>
+              )}
+            <Button
+              color="primary"
+              onPress={() => {
+                void play(choiceAsset, "preview");
+                setChoiceAsset(undefined);
+              }}
+            >
+              {t("resource.openingRules.browser")}
+            </Button>
+            {nativeActionsAvailable && (
+              <Button
+                isDisabled={choiceAsset.kind === "image" && !choiceAsset.canOpenLocally}
+                onPress={() => {
+                  void play(choiceAsset, "player");
+                  setChoiceAsset(undefined);
+                }}
+              >
+                {t("resource.openingRules.native")}
+              </Button>
+            )}
+          </div>
+        </Modal>
+      )}
       {!detail && !error && <p role="status">{t("federation.loading")}</p>}
       {detail && (
         <>
           <SourceBadge label={detail.ownerLabel || resourceRef.nodeId} local={isLocal} />
+          <PlaybackOverridesButton
+            label={detail.ownerLabel}
+            resourceId={resourceRef.resourceId}
+            target={openingTarget}
+          />
           {detail.fileName && (
             <p className="break-all text-sm text-default-500">{detail.fileName}</p>
           )}
@@ -270,6 +366,9 @@ export default function ResourceDetail({
               )}
               <ErrorNotice error={directoryError} />
             </div>
+          )}
+          {!nativeActionsAvailable && (
+            <p className="text-xs text-default-500">{t("federation.directory.browserTip")}</p>
           )}
           {detail.properties.length > 0 && (
             <dl className="divide-y divide-default-200">
@@ -332,7 +431,16 @@ export default function ResourceDetail({
               {detail.sources.map((source, index) => (
                 <p key={`${source.kind}:${index}`} className="break-all text-sm text-default-500">
                   {source.label || t(`federation.source.${source.kind}`)}
-                  {source.url && <span className="ml-2">{source.url}</span>}
+                  {source.url && browserExternalUrl(source.url) && (
+                    <ExternalLink
+                      className="ml-2 inline-flex"
+                      forceBrowser={!opening.desktop}
+                      href={source.url}
+                      size="sm"
+                    >
+                      {t("federation.detail.originalPage")}
+                    </ExternalLink>
+                  )}
                 </p>
               ))}
             </div>
@@ -347,6 +455,45 @@ export default function ResourceDetail({
               {detail.assets.map((asset) => (
                 <div key={asset.assetId} className="rounded-lg bg-default-50 p-3">
                   <p className="mb-2 break-all text-sm">{asset.fileName}</p>
+                  <button
+                    className={`${buttonClass} mb-2`}
+                    disabled={playing || (!opening.ready && !opening.unavailable)}
+                    type="button"
+                    onClick={() => openPreferred(asset)}
+                  >
+                    {t("resource.openingRules.useDefault")}
+                  </button>
+                  {asset.relativePath && (
+                    <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-default-500">
+                      <span className="break-all">
+                        {t("federation.detail.sharedLocation", {
+                          owner: detail.ownerLabel || resourceRef.nodeId,
+                          path: asset.relativePath,
+                        })}
+                      </span>
+                      <button
+                        className="underline underline-offset-2"
+                        type="button"
+                        onClick={() => {
+                          const current = generation.current;
+
+                          void copyTextToClipboard(
+                            `${detail.ownerLabel || resourceRef.nodeId}: ${asset.relativePath}`,
+                          )
+                            .then(() => {
+                              if (current === generation.current)
+                                setCopyStatus(t("federation.detail.locationCopied"));
+                            })
+                            .catch(() => {
+                              if (current === generation.current)
+                                setCopyStatus(t("federation.detail.locationCopyFailed"));
+                            });
+                        }}
+                      >
+                        {t("federation.detail.copySharedLocation")}
+                      </button>
+                    </div>
+                  )}
                   <div className="flex flex-wrap gap-2">
                     <button
                       className={buttonClass}
@@ -375,6 +522,11 @@ export default function ResourceDetail({
                 </div>
               ))}
             </div>
+            {copyStatus && (
+              <p className="mt-2 text-xs" role="status">
+                {copyStatus}
+              </p>
+            )}
             {playing && (
               <p className="mt-3 text-sm" role="status">
                 {t("federation.mediaPreparing")}

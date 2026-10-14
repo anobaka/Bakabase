@@ -23,7 +23,9 @@ public sealed class FederationMediaService(INodeIdentityProvider identity, Feder
     IPeerSessionFactory sessions, INodeTransport transport, FederationPeerService peers,
     FederationMediaSessions mediaSessions, FederationPlayerPolicy players,
     IBatchPlayProcessLauncher launcher, IResourceService resources, GrantLeaseRegistry leases,
-    FederationDirectoryService directories, IFederationImageOpener imageOpener)
+    FederationDirectoryService directories, IFederationImageOpener imageOpener,
+    Bakabase.Modules.Player.Services.DevicePlaybackOverridesStore? overrides = null,
+    Bakabase.Abstractions.Components.ISystemPlayer? systemPlayer = null)
 {
     public async Task<ResourceResolveResponse> ResolveAsync(ResourceResolveRequest request, CancellationToken ct)
     {
@@ -119,8 +121,19 @@ public sealed class FederationMediaService(INodeIdentityProvider identity, Feder
                 leases.GetCancellationToken(GrantLeaseRegistry.OutboundKey(source.Peer.GrantId)));
         var localPath = await ValidateAndMapAsync(source, authorized.Token);
         authorized.Token.ThrowIfCancellationRequested();
+        string? selectedPlayerId = null;
+        if (request.Mode == "player" && overrides != null)
+        {
+            var reference = request.AssetRef.ResourceRef;
+            var choice = await overrides.ResolveAsync($"node:{reference.NodeId}:{reference.LibraryEpoch}",
+                reference.ResourceId, source.Asset.Kind, authorized.Token);
+            if (choice?.Mode == "native") selectedPlayerId = choice.PlayerId;
+        }
         if (request.Mode == "player" && source.Asset.Kind == "image")
         {
+            if (selectedPlayerId is not (null or "system-default"))
+                throw new FederationQueryException("PlayerUnavailable", 409,
+                    "The selected player cannot open images. Choose the system image application or preview.");
             if (!imageOpener.Available)
                 throw new FederationQueryException("PlayerUnavailable", 501,
                     "An image viewer cannot be opened on this device. Use the image preview instead.");
@@ -135,18 +148,69 @@ public sealed class FederationMediaService(INodeIdentityProvider identity, Feder
         }
         else
         {
-            var ticket = mediaSessions.Issue(source, localPath, authorized.Token);
-            var url = loopbackOrigin.TrimEnd('/') + "/federation/local/media/" + ticket.Id;
             if (request.Mode == "preview")
+            {
+                var ticket = mediaSessions.Issue(source, localPath, authorized.Token);
+                var url = loopbackOrigin.TrimEnd('/') + "/federation/local/media/" + ticket.Id;
                 return new PlaybackSessionResponse(url, source.Asset.ContentType, false, source.Asset.ExpiresAt);
-            var player = players.Resolve(source.Asset.FileName, localPath);
-            await launcher.LaunchAsync(player.ExecutablePath!,
-                FederationPlayerArguments.Build(player, localPath, url), authorized.Token);
+            }
+            var player = players.Resolve(source.Asset.FileName, localPath, selectedPlayerId);
+            string? physicalMedia = null;
+            if (localPath != null && !TryGetNativeMediaPath(source.Asset, localPath, out physicalMedia))
+                throw new FederationQueryException("UnsupportedPlaybackMode", 422,
+                    "The mapped file does not match this media type. Check the mapping or use the preview.");
+            authorized.Token.ThrowIfCancellationRequested();
+            if (player.IsSystemDefault)
+            {
+                if (systemPlayer == null || physicalMedia == null)
+                    throw new FederationQueryException("PlayerUnavailable", 409);
+                // Validate the physical target too: a peer's safe-looking .mp4 name
+                // must not turn a mapped link to an executable into an OS-shell launch.
+                try { await systemPlayer.Play(physicalMedia); }
+                catch (Exception e) when (e is System.ComponentModel.Win32Exception or InvalidOperationException)
+                {
+                    throw new FederationQueryException("PlayerUnavailable", 501,
+                        "The default media application could not be opened. Choose another player or use the preview.",
+                        innerException: e);
+                }
+            }
+            else
+            {
+                string? url = null;
+                if (physicalMedia == null)
+                {
+                    var ticket = mediaSessions.Issue(source, null, authorized.Token);
+                    url = loopbackOrigin.TrimEnd('/') + "/federation/local/media/" + ticket.Id;
+                }
+                await launcher.LaunchAsync(player.ExecutablePath!,
+                    FederationPlayerArguments.Build(player, physicalMedia, url ?? ""), authorized.Token);
+            }
         }
         if (source.Peer == null)
             await resources.MarkPlayed(new Dictionary<int, string>
                 { [source.Ref.ResourceRef.ResourceId] = "FileSystem:" + localPath });
         return new PlaybackSessionResponse(null, source.Asset.ContentType, true, source.Asset.ExpiresAt);
+    }
+
+    internal static bool TryGetNativeMediaPath(FederatedAsset asset, string? localPath, out string? physicalPath)
+    {
+        physicalPath = null;
+        if (asset.Kind is not ("audio" or "video") || string.IsNullOrWhiteSpace(localPath) ||
+            !Path.IsPathFullyQualified(localPath) || !File.Exists(localPath)) return false;
+        try
+        {
+            var physical = MediaPathBoundary.ResolvePhysical(localPath);
+            var extension = Path.GetExtension(asset.FileName);
+            if (!PlayerFileCapabilities.CanStream(asset.FileName) ||
+                !extension.Equals(Path.GetExtension(localPath), StringComparison.OrdinalIgnoreCase) ||
+                !extension.Equals(Path.GetExtension(physical), StringComparison.OrdinalIgnoreCase) ||
+                MediaContentTypes.Get(asset.FileName)?.Kind != asset.Kind ||
+                MediaContentTypes.Get(physical)?.Kind != asset.Kind || !File.Exists(physical)) return false;
+            physicalPath = physical;
+            return true;
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException)
+        { return false; }
     }
 
     /// <summary>Renew leases this close to expiry before use, so a read never races the source's clock.</summary>

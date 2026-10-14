@@ -13,6 +13,7 @@ import {
 
 import BApi from "@/sdk/BApi";
 import { useRemoteAccessStore, useUserSideActionsRunHere } from "@/stores/remoteAccess";
+import { isDesktopAppWindow } from "@/utils/clientSurface";
 
 type Scope = "browser" | "desktop";
 let pending: { scope: Scope; promise: Promise<void> } | undefined;
@@ -90,7 +91,8 @@ export const useDevicePlaybackStore = create<{
 }));
 
 export const usePlaybackPreferences = () => {
-  const desktop = useUserSideActionsRunHere();
+  const nativeAvailable = useUserSideActionsRunHere();
+  const desktop = nativeAvailable && isDesktopAppWindow();
   const contextInitialized = useRemoteAccessStore((state) => state.initialized);
   const store = useDevicePlaybackStore();
   const scope: Scope = desktop ? "desktop" : "browser";

@@ -110,11 +110,23 @@ public class ClientBatchPlayTests
     }
 
     [TestMethod]
-    public void Nothing_is_ever_unresolvable_on_a_client()
+    public void UnmappedMediaCanStreamButProgramsAndOtherFilesNeedMapping()
     {
         // Not paired at all, so there are no mappings whatsoever — still a URL, because
         // the forwarding layer can reach anything the server can.
         Assert.IsNotNull(Resolver().Resolve("/anywhere/at/all.mkv"));
+        Assert.IsNull(Resolver().Resolve("/anywhere/game.exe"));
+        Assert.IsNull(Resolver().Resolve("/anywhere/cover.jpg"));
+        Assert.IsNull(Resolver().Resolve("/anywhere/archive.zip"));
+    }
+
+    [TestMethod]
+    public async Task AMappedNonMediaFileStillUsesItsAccessiblePath()
+    {
+        var directory = await WithLibraryAt("/media");
+        var file = Path.Combine(directory, "game.exe");
+        await File.WriteAllTextAsync(file, "program");
+        Assert.AreEqual(file, Resolver().Resolve("/media/game.exe"));
     }
 
     // ---- reading the library ----

@@ -529,6 +529,7 @@ export interface BakabaseAbstractionsModelsDomainMediaLibraryPlayer {
   extensions?: string[];
   executablePath: string;
   command: string;
+  supportsHttp?: boolean;
 }
 
 export interface BakabaseAbstractionsModelsDomainMediaLibraryResourceMapping {
@@ -5832,6 +5833,7 @@ export interface BakabaseModulesPlayerAbstractionsModelsDomainBatchPlayCandidate
   executablePath: string;
   /** [0: None, 1: PlaylistFile, 2: MultiFileArguments] */
   capabilities: BakabaseModulesPlayerAbstractionsModelsDomainConstantsBatchPlayCapability;
+  supportsHttp: boolean;
   commandTemplate?: string;
   capabilitiesAssumed: boolean;
   supportedExtensions?: string[];
@@ -5896,6 +5898,34 @@ export type BakabaseModulesPlayerAbstractionsModelsDomainConstantsBatchPlayLaunc
 export interface BakabaseModulesPlayerAbstractionsModelsDomainDevicePlaybackChoice {
   mode: string;
   nativeSchemeId?: string;
+}
+
+export interface BakabaseModulesPlayerAbstractionsModelsDomainDevicePlaybackOpener {
+  id: string;
+  name: string;
+  installed: boolean;
+  supportsHttp: boolean;
+  supportedKinds?: string[];
+}
+
+export interface BakabaseModulesPlayerAbstractionsModelsDomainDevicePlaybackOverride {
+  target: string;
+  /** @format int32 */
+  resourceId?: number;
+  choices: Record<
+    string,
+    BakabaseModulesPlayerAbstractionsModelsDomainDevicePlaybackOverrideChoice
+  >;
+}
+
+export interface BakabaseModulesPlayerAbstractionsModelsDomainDevicePlaybackOverrideChoice {
+  mode: string;
+  playerId?: string;
+}
+
+export interface BakabaseModulesPlayerAbstractionsModelsDomainDevicePlaybackOverrideSnapshot {
+  rules: BakabaseModulesPlayerAbstractionsModelsDomainDevicePlaybackOverride[];
+  openers: BakabaseModulesPlayerAbstractionsModelsDomainDevicePlaybackOpener[];
 }
 
 export interface BakabaseModulesPlayerAbstractionsModelsDomainDevicePlaybackPreferences {
@@ -9784,6 +9814,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesP
   data?: BakabaseModulesPlayerAbstractionsModelsDomainBatchPlayResult;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesPlayerAbstractionsModelsDomainDevicePlaybackOverrideSnapshot {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesPlayerAbstractionsModelsDomainDevicePlaybackOverrideSnapshot;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesPlayerAbstractionsModelsDomainDevicePlaybackPreferences {
   /** @format int32 */
   code: number;
@@ -12870,6 +12907,9 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         /** [1: Manual, 2: FileSystem, 3: Steam, 4: DLsite, 5: ExHentai, 6: ExternalIdentity] */
         origin?: BakabaseAbstractionsModelsDomainConstantsDataOrigin;
         key?: string;
+        /** @default false */
+        explicitChoice?: boolean;
+        openingRuleKind?: string;
       },
       params: RequestParams = {},
     ) =>
@@ -21009,6 +21049,309 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         ...params,
       }),
   };
+  player = {
+    /**
+     * No description
+     *
+     * @tags DevicePlaybackOverrides
+     * @name GetDevicePlaybackOverrides
+     * @request GET:/player/device-playback/overrides
+     */
+    getDevicePlaybackOverrides: (
+      query?: {
+        target?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesPlayerAbstractionsModelsDomainDevicePlaybackOverrideSnapshot,
+        any
+      >({
+        path: `/player/device-playback/overrides`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getDevicePlaybackOverrides
+     * @name getDevicePlaybackOverridesUrl
+     */
+    getDevicePlaybackOverridesUrl: (query?: {
+        target?: string;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/player/device-playback/overrides`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags DevicePlaybackOverrides
+     * @name SetDevicePlaybackOverrides
+     * @request PUT:/player/device-playback/overrides
+     */
+    setDevicePlaybackOverrides: (
+      data: BakabaseModulesPlayerAbstractionsModelsDomainDevicePlaybackOverride,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/player/device-playback/overrides`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for setDevicePlaybackOverrides
+     * @name setDevicePlaybackOverridesUrl
+     */
+    setDevicePlaybackOverridesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/player/device-playback/overrides`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Player
+     * @name GetDevicePlaybackPreferences
+     * @request GET:/player/device-playback/preferences
+     */
+    getDevicePlaybackPreferences: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesPlayerAbstractionsModelsDomainDevicePlaybackPreferences,
+        any
+      >({
+        path: `/player/device-playback/preferences`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getDevicePlaybackPreferences
+     * @name getDevicePlaybackPreferencesUrl
+     */
+    getDevicePlaybackPreferencesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/player/device-playback/preferences`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Player
+     * @name SetDevicePlaybackPreferences
+     * @request PUT:/player/device-playback/preferences
+     */
+    setDevicePlaybackPreferences: (
+      data: BakabaseModulesPlayerAbstractionsModelsDomainDevicePlaybackPreferences,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/player/device-playback/preferences`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for setDevicePlaybackPreferences
+     * @name setDevicePlaybackPreferencesUrl
+     */
+    setDevicePlaybackPreferencesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/player/device-playback/preferences`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Player
+     * @name GetBatchPlayResourceSnapshot
+     * @request POST:/player/batch-play/resource-snapshot
+     */
+    getBatchPlayResourceSnapshot: (
+      data: BakabaseModulesPlayerAbstractionsModelsInputBatchPlayCandidatesInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesPlayerAbstractionsComponentsBatchPlayResourceSnapshot,
+        any
+      >({
+        path: `/player/batch-play/resource-snapshot`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getBatchPlayResourceSnapshot
+     * @name getBatchPlayResourceSnapshotUrl
+     */
+    getBatchPlayResourceSnapshotUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/player/batch-play/resource-snapshot`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Player
+     * @name GetBatchPlayPlaylistSnapshot
+     * @request GET:/player/playlist/{playlistId}/batch-play/snapshot
+     */
+    getBatchPlayPlaylistSnapshot: (playlistId: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesPlayerAbstractionsComponentsBatchPlayPlaylistSnapshot,
+        any
+      >({
+        path: `/player/playlist/${playlistId}/batch-play/snapshot`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Player
+     * @name GetBatchPlayCandidates
+     * @request POST:/player/batch-play/candidates
+     */
+    getBatchPlayCandidates: (
+      data: BakabaseModulesPlayerAbstractionsModelsInputBatchPlayCandidatesInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesPlayerAbstractionsModelsDomainBatchPlayCandidate,
+        any
+      >({
+        path: `/player/batch-play/candidates`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getBatchPlayCandidates
+     * @name getBatchPlayCandidatesUrl
+     */
+    getBatchPlayCandidatesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/player/batch-play/candidates`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Player
+     * @name BatchPlayResources
+     * @request POST:/player/batch-play
+     */
+    batchPlayResources: (
+      data: BakabaseModulesPlayerAbstractionsModelsInputBatchPlayInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesPlayerAbstractionsModelsDomainBatchPlayResult,
+        any
+      >({
+        path: `/player/batch-play`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for batchPlayResources
+     * @name batchPlayResourcesUrl
+     */
+    batchPlayResourcesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/player/batch-play`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Player
+     * @name GetPlaylistBatchPlayCandidates
+     * @request GET:/player/playlist/{playlistId}/batch-play/candidates
+     */
+    getPlaylistBatchPlayCandidates: (playlistId: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesPlayerAbstractionsModelsDomainBatchPlayCandidate,
+        any
+      >({
+        path: `/player/playlist/${playlistId}/batch-play/candidates`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Player
+     * @name BatchPlayPlaylist
+     * @request POST:/player/playlist/{playlistId}/batch-play
+     */
+    batchPlayPlaylist: (
+      playlistId: number,
+      data: BakabaseModulesPlayerAbstractionsModelsInputPlaylistBatchPlayInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesPlayerAbstractionsModelsDomainBatchPlayResult,
+        any
+      >({
+        path: `/player/playlist/${playlistId}/batch-play`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+  };
   dlsiteWork = {
     /**
      * No description
@@ -28375,229 +28718,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
       return baseUrl + path;
     },
-  };
-  player = {
-    /**
-     * No description
-     *
-     * @tags Player
-     * @name GetDevicePlaybackPreferences
-     * @request GET:/player/device-playback/preferences
-     */
-    getDevicePlaybackPreferences: (params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesPlayerAbstractionsModelsDomainDevicePlaybackPreferences,
-        any
-      >({
-        path: `/player/device-playback/preferences`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for getDevicePlaybackPreferences
-     * @name getDevicePlaybackPreferencesUrl
-     */
-    getDevicePlaybackPreferencesUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/player/device-playback/preferences`;
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags Player
-     * @name SetDevicePlaybackPreferences
-     * @request PUT:/player/device-playback/preferences
-     */
-    setDevicePlaybackPreferences: (
-      data: BakabaseModulesPlayerAbstractionsModelsDomainDevicePlaybackPreferences,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/player/device-playback/preferences`,
-        method: "PUT",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for setDevicePlaybackPreferences
-     * @name setDevicePlaybackPreferencesUrl
-     */
-    setDevicePlaybackPreferencesUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/player/device-playback/preferences`;
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags Player
-     * @name GetBatchPlayResourceSnapshot
-     * @request POST:/player/batch-play/resource-snapshot
-     */
-    getBatchPlayResourceSnapshot: (
-      data: BakabaseModulesPlayerAbstractionsModelsInputBatchPlayCandidatesInputModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesPlayerAbstractionsComponentsBatchPlayResourceSnapshot,
-        any
-      >({
-        path: `/player/batch-play/resource-snapshot`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for getBatchPlayResourceSnapshot
-     * @name getBatchPlayResourceSnapshotUrl
-     */
-    getBatchPlayResourceSnapshotUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/player/batch-play/resource-snapshot`;
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags Player
-     * @name GetBatchPlayPlaylistSnapshot
-     * @request GET:/player/playlist/{playlistId}/batch-play/snapshot
-     */
-    getBatchPlayPlaylistSnapshot: (playlistId: number, params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesPlayerAbstractionsComponentsBatchPlayPlaylistSnapshot,
-        any
-      >({
-        path: `/player/playlist/${playlistId}/batch-play/snapshot`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Player
-     * @name GetBatchPlayCandidates
-     * @request POST:/player/batch-play/candidates
-     */
-    getBatchPlayCandidates: (
-      data: BakabaseModulesPlayerAbstractionsModelsInputBatchPlayCandidatesInputModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<
-        BootstrapModelsResponseModelsListResponse1BakabaseModulesPlayerAbstractionsModelsDomainBatchPlayCandidate,
-        any
-      >({
-        path: `/player/batch-play/candidates`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for getBatchPlayCandidates
-     * @name getBatchPlayCandidatesUrl
-     */
-    getBatchPlayCandidatesUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/player/batch-play/candidates`;
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags Player
-     * @name BatchPlayResources
-     * @request POST:/player/batch-play
-     */
-    batchPlayResources: (
-      data: BakabaseModulesPlayerAbstractionsModelsInputBatchPlayInputModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesPlayerAbstractionsModelsDomainBatchPlayResult,
-        any
-      >({
-        path: `/player/batch-play`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for batchPlayResources
-     * @name batchPlayResourcesUrl
-     */
-    batchPlayResourcesUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/player/batch-play`;
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags Player
-     * @name GetPlaylistBatchPlayCandidates
-     * @request GET:/player/playlist/{playlistId}/batch-play/candidates
-     */
-    getPlaylistBatchPlayCandidates: (playlistId: number, params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsListResponse1BakabaseModulesPlayerAbstractionsModelsDomainBatchPlayCandidate,
-        any
-      >({
-        path: `/player/playlist/${playlistId}/batch-play/candidates`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Player
-     * @name BatchPlayPlaylist
-     * @request POST:/player/playlist/{playlistId}/batch-play
-     */
-    batchPlayPlaylist: (
-      playlistId: number,
-      data: BakabaseModulesPlayerAbstractionsModelsInputPlaylistBatchPlayInputModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesPlayerAbstractionsModelsDomainBatchPlayResult,
-        any
-      >({
-        path: `/player/playlist/${playlistId}/batch-play`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
   };
   playHistory = {
     /**

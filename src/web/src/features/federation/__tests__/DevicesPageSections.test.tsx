@@ -51,6 +51,10 @@ vi.mock("react-i18next", () => ({
   initReactI18next: { type: "3rdParty", init: vi.fn() },
 }));
 vi.mock("../hooks/useFederationStatus", () => ({ useFederationStatus: vi.fn() }));
+vi.mock("@/components/ContextProvider/BakabaseContextProvider", () => ({
+  useBakabaseContext: () => ({ createPortal: vi.fn() }),
+}));
+vi.mock("@/components/FileSystemSelector", () => ({ FileSystemSelectorModal: () => null }));
 vi.mock("../peerApi", () => ({
   federationPeerApi: { status: vi.fn(), claim: vi.fn(), mappingRoots: vi.fn(), sharing: vi.fn() },
 }));

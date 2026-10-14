@@ -37,6 +37,22 @@ vi.mock("@/components/bakaui", () => ({
     </section>
   ),
   Chip: ({ children }: { children: ReactNode }) => <span>{children}</span>,
+  Select: ({ label, selectedKeys, onSelectionChange, dataSource }: any) => (
+    <label>
+      {label}
+      <select
+        aria-label={label}
+        value={[...selectedKeys][0]}
+        onChange={(event) => onSelectionChange(new Set([event.target.value]))}
+      >
+        {dataSource.map((item: any) => (
+          <option key={item.value} value={item.value}>
+            {item.label}
+          </option>
+        ))}
+      </select>
+    </label>
+  ),
   Input: ({ label, value, onValueChange, isDisabled, isInvalid, errorMessage }: any) => (
     <label>
       {label}
@@ -140,6 +156,24 @@ afterEach(() => {
 });
 
 describe("playback configuration editors", () => {
+  it("preserves automatic HTTP support for old players and saves a deliberate opt-out", async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+
+    act(() => root.render(<PlayerSelectorModal players={[player("vlc")]} onSubmit={onSubmit} />));
+    const select = container.querySelector<HTMLSelectElement>("select")!;
+
+    expect(select.value).toBe("auto");
+    act(() => {
+      select.value = "unsupported";
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    await act(async () => button("common.action.save").click());
+    expect(onSubmit.mock.calls[0][0][0]).toMatchObject({
+      executablePath: "/apps/vlc",
+      supportsHttp: false,
+    });
+  });
+
   it.each(["player", "playable"])(
     "%s waits for save, keeps the draft after failure and closes only after a successful retry",
     async (kind) => {

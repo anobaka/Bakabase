@@ -25,6 +25,7 @@ using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.InsideWorld.Models.RequestModels;
 using Bakabase.Modules.Property;
+using Bakabase.Modules.Player.Abstractions.Models.Domain;
 using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property.Abstractions.Services;
 using Bakabase.Modules.Property.Extensions;
@@ -571,8 +572,11 @@ public class ResourceController(
     [RunsOnUserMachine(Reason = "A player starts on the machine you are sitting at.")]
     [HttpGet("{resourceId}/play-item")]
     [SwaggerOperation(OperationId = "PlayResourceItem")]
-    public async Task<BaseResponse> PlayItem(int resourceId, DataOrigin origin, string key)
+    public async Task<BaseResponse> PlayItem(int resourceId, DataOrigin origin, string key, bool explicitChoice = false,
+        string? openingRuleKind = null)
     {
+        if (openingRuleKind != null && !DevicePlaybackOverride.Kinds.Contains(openingRuleKind))
+            return BaseResponseBuilder.BuildBadRequest("Choose a valid opening rule kind.");
         return await service.PlayItem(resourceId, origin, key);
     }
 

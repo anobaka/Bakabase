@@ -113,6 +113,21 @@ public class RemoteBatchPlayPlayerTests
     }
 
     [TestMethod]
+    public async Task AProfileHttpOptOutIsPreservedAndRejectsTheBatchBeforeLaunchOrHistory()
+    {
+        _locator.Installed["Vlc"] = LocalVlc;
+        Seed([new() {ExecutablePath = "/usr/bin/vlc", SupportsHttp = false}], "/srv/movie.mp4");
+        var service = Service();
+        var candidate = (await service.GetCandidatesAsync([42], CancellationToken.None)).Single();
+        Assert.IsFalse(candidate.SupportsHttp);
+        var error = await Assert.ThrowsExactlyAsync<InvalidOperationException>(() =>
+            service.PlayAsync(Input(candidate.Key), CancellationToken.None));
+        StringAssert.Contains(error.Message, "HTTP");
+        Assert.AreEqual(0, _launcher.Launches.Count);
+        Assert.AreEqual(0, _upstream.BulkPlayed.Count);
+    }
+
+    [TestMethod]
     public async Task A_macos_server_profile_uses_the_windows_clients_installation()
     {
         _locator.Installed["Vlc"] = LocalVlc;

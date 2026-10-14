@@ -51,5 +51,19 @@
   "mediaPlayer.window.minimize": "最小化",
   "mediaPlayer.window.maximize": "最大化",
   "mediaPlayer.window.restore": "还原窗口",
-  "mediaPlayer.window.scrollHint": "查看图片时，向上或向下滚动可切换文件。文件列表和文本保留正常滚动；视频控件和文本输入保留自己的键盘操作。"
+  "mediaPlayer.window.scrollHint": "查看图片时，向上或向下滚动可切换文件。文件列表和文本保留正常滚动；视频控件和文本输入保留自己的键盘操作。",
+  "mediaPlayer.scope.label": "浏览范围",
+  "mediaPlayer.scope.resource": "资源内全部文件",
+  "mediaPlayer.scope.configured": "配置匹配的文件",
+  "mediaPlayer.scope.selected": "所选文件",
+  "mediaPlayer.scope.hint": "默认浏览资源内全部文件；配置的可播放文件用于选择首次打开项。文件能否预览以实际加载结果为准。",
+  "mediaPlayer.scope.configuredEmpty": "没有配置匹配的文件，可切回资源内全部文件浏览。",
+  "mediaPlayer.scope.failed": "未能读取配置匹配的文件，请稍后重试。",
+  "mediaPlayer.preview.unknown": "尚未加载",
+  "mediaPlayer.preview.loading": "正在加载",
+  "mediaPlayer.preview.ready": "已加载",
+  "mediaPlayer.preview.failed": "加载失败",
+  "mediaPlayer.preview.unavailable": "无网页预览",
+  "mediaPlayer.preview.chooseAlternative": "选择其他打开方式",
+  "mediaPlayer.preview.alternativeFailed": "未能打开，请检查本机播放器或路径映射后重试。"
 }

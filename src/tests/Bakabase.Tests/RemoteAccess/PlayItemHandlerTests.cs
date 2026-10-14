@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
+using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
@@ -17,6 +18,8 @@ using Bakabase.Modules.Player.Abstractions.Components;
 using Bakabase.Modules.Player.Abstractions.Models.Domain;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
+using Bakabase.Modules.Player.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Bakabase.Tests.RemoteAccess;
@@ -93,9 +96,9 @@ public class PlayItemHandlerTests
         }
     }
 
-    private LocalPlayback Playback() =>
+    private LocalPlayback Playback(DevicePlaybackOverridesStore? overrides = null) =>
         new(_connection, _upstream, new LocalPlayerResolver(_locator), _shell, new StubLoopback(),
-            NullLogger<LocalPlayback>.Instance);
+            NullLogger<LocalPlayback>.Instance, overrides);
 
     private PlayItemHandler Handler() => new(Playback());
 
@@ -134,6 +137,174 @@ public class PlayItemHandlerTests
         Handler().HandleAsync(context, new Dictionary<string, string> {["resourceId"] = resourceId});
 
     // ---- local files ----
+
+    private DevicePlaybackOverridesStore Overrides() => new(Options.Create(new PlayerModuleOptions
+    {
+        DevicePlaybackPreferencesFile = () => Path.Combine(_root, "config", "preferences.json")
+    }));
+
+    [TestMethod]
+    public async Task CollectionRuleKindKeepsItsResourceOverrideInsteadOfTheConcreteFileRule()
+    {
+        var folder = await WithLibraryAt("/srv");
+        await File.WriteAllTextAsync(Path.Combine(folder, "movie.mp4"), "media");
+        _locator.Installed["Vlc"] = "vlc.exe";
+        _locator.Installed["Mpv"] = "mpv.exe";
+        var overrides = Overrides();
+        await overrides.SaveAsync(new()
+        {
+            Target = "server:server-1", Choices = new()
+            {
+                ["other"] = new("native", "Vlc"), ["video"] = new("native", "Mpv")
+            }
+        });
+        await overrides.SaveAsync(new()
+        {
+            Target = "server:server-1", ResourceId = 42,
+            Choices = new() { ["other"] = new("native", "system-default") }
+        });
+
+        Assert.IsTrue(await Playback(overrides).PlayAsync(Request("?openingRuleKind=other"), 42,
+            DataOrigin.FileSystem, "/srv/movie.mp4"));
+        Assert.AreEqual(Path.Combine(folder, "movie.mp4"), _shell.Launched.Single());
+        Assert.AreEqual(0, _shell.Processes.Count);
+        Assert.AreEqual(0, _upstream.PlayerOptionsReadCount);
+
+        Assert.IsTrue(await Playback(overrides).PlayAsync(Request(""), 42, DataOrigin.FileSystem, "/srv/movie.mp4"));
+        Assert.AreEqual("mpv.exe", _shell.Processes.Single().Executable);
+
+        var selected = new LocalPlayerResolver(_locator).ResolveKnown("Vlc", "/srv/movie.mp4");
+        Assert.IsTrue(await Playback(overrides).PlayAsync(Request("?openingRuleKind=other"), 42,
+            DataOrigin.FileSystem, "/srv/movie.mp4", selected, explicitChoice: true));
+        Assert.AreEqual("vlc.exe", _shell.Processes.Last().Executable);
+    }
+
+    [TestMethod]
+    public async Task CollectionRuleKindNeverChangesTheRealFilesPlayerCapabilityCheck()
+    {
+        await WithLibraryAt("/srv");
+        _locator.Installed["Foobar2000"] = "foobar2000.exe";
+        var overrides = Overrides();
+        await overrides.SaveAsync(new()
+        {
+            Target = "server:server-1", Choices = new() { ["audio"] = new("native", "Foobar2000") }
+        });
+        var context = Request("?openingRuleKind=audio");
+        Assert.IsFalse(await Playback(overrides).PlayAsync(context, 42, DataOrigin.FileSystem, "/srv/movie.mp4"));
+        Assert.AreEqual(409, Read(context).Status);
+        Assert.AreEqual(0, _shell.Processes.Count);
+        Assert.AreEqual(0, _upstream.Played.Count);
+    }
+
+    [TestMethod]
+    [DataRow("?openingRuleKind=program")]
+    [DataRow("?openingRuleKind=")]
+    [DataRow("?openingRuleKind=Video")]
+    [DataRow("?openingRuleKind=video&openingRuleKind=other")]
+    public async Task InvalidOpeningRuleKindIsRejectedBeforeAnyLookupOrLaunch(string query)
+    {
+        var context = Request(query);
+        Assert.IsFalse(await Playback().PlayAsync(context, 42, DataOrigin.FileSystem, "/srv/movie.mp4"));
+        Assert.AreEqual(400, Read(context).Status);
+        Assert.AreEqual(0, _upstream.PlayerOptionsReadCount);
+        Assert.AreEqual(0, _shell.Processes.Count);
+        Assert.AreEqual(0, _upstream.Played.Count);
+    }
+
+    [TestMethod]
+    [DataRow("game.exe")]
+    [DataRow("cover.jpg")]
+    [DataRow("unknown.bin")]
+    public async Task AnUnmappedNonMediaFileNeverBecomesAPlayerHttpLaunch(string file)
+    {
+        _locator.Installed["Vlc"] = "vlc.exe";
+        var context = Request("");
+        var played = await Playback().PlayAsync(context, 42, DataOrigin.FileSystem, $"/srv/{file}");
+        Assert.IsFalse(played);
+        Assert.AreEqual(409, Read(context).Status);
+        Assert.AreEqual(0, _shell.Processes.Count);
+        Assert.AreEqual(0, _shell.Launched.Count);
+        Assert.AreEqual(0, _upstream.Played.Count);
+    }
+
+    [TestMethod]
+    public async Task APlayerHttpOptOutRejectsUnmappedVideoButKeepsMappedPlayback()
+    {
+        var folder = await WithLibraryAt("/srv");
+        _locator.Installed["Vlc"] = "vlc.exe";
+        _upstream.PlayerOptions = new()
+        {
+            Players = [new() {ExecutablePath = "vlc.exe", SupportsHttp = false}]
+        };
+        var context = Request("");
+        Assert.IsFalse(await Playback().PlayAsync(context, 42, DataOrigin.FileSystem, "/srv/movie.mp4"));
+        Assert.AreEqual(409, Read(context).Status);
+        Assert.AreEqual(0, _shell.Processes.Count);
+        await File.WriteAllTextAsync(Path.Combine(folder, "movie.mp4"), "media");
+        Assert.IsTrue(await Playback().PlayAsync(Request(""), 42, DataOrigin.FileSystem, "/srv/movie.mp4"));
+        Assert.AreEqual("vlc.exe", _shell.Processes.Single().Executable);
+    }
+
+    [TestMethod]
+    public async Task ExplicitSystemDefaultForAnUnmappedFileDoesNotSilentlySelectVlc()
+    {
+        _locator.Installed["Vlc"] = "vlc.exe";
+        var context = Request("");
+        Assert.IsFalse(await Playback().PlayAsync(context, 42, DataOrigin.FileSystem, "/srv/movie.mp4",
+            ResolvedPlayer.SystemDefault));
+        Assert.AreEqual(409, Read(context).Status);
+        Assert.AreEqual(0, _shell.Processes.Count);
+        Assert.AreEqual(0, _upstream.Played.Count);
+    }
+
+    [TestMethod]
+    public async Task ExplicitResolvedPlayerOverridesTheOwnersProfileAndIsCheckedForType()
+    {
+        _locator.Installed["Vlc"] = "vlc.exe";
+        _locator.Installed["Foobar2000"] = "foobar2000.exe";
+        _upstream.PlayerOptions = new() {Players = [new() {ExecutablePath = "foobar2000.exe"}]};
+        var local = new LocalPlayerResolver(_locator).ResolveKnown("Vlc", "/srv/movie.mp4");
+        Assert.IsTrue(await Playback().PlayAsync(Request(""), 42, DataOrigin.FileSystem, "/srv/movie.mp4", local));
+        Assert.AreEqual("vlc.exe", _shell.Processes.Single().Executable);
+        var wrongType = new LocalPlayerResolver(_locator).ResolveKnown("Foobar2000", "song.mp3");
+        Assert.IsFalse(await Playback().PlayAsync(Request(""), 42, DataOrigin.FileSystem, "/srv/movie.mp4", wrongType));
+        Assert.AreEqual(1, _shell.Processes.Count);
+    }
+
+    [TestMethod]
+    public async Task ASelectedLocalPlayerDoesNotDependOnTheOwnersProfileEndpoint()
+    {
+        _locator.Installed["Vlc"] = "vlc.exe";
+        _upstream.PlayerOptionsFailure = new HttpRequestException("Owner profile endpoint unavailable");
+        var local = new LocalPlayerResolver(_locator).ResolveKnown("Vlc", "movie.mp4");
+        Assert.IsTrue(await Playback().PlayAsync(Request(""), 42, DataOrigin.FileSystem, "/srv/movie.mp4", local));
+        Assert.AreEqual(0, _upstream.PlayerOptionsReadCount);
+        Assert.AreEqual("vlc.exe", _shell.Processes.Single().Executable);
+        Assert.AreEqual(1, _upstream.Played.Count);
+    }
+
+    [TestMethod]
+    public async Task AutomaticPlaybackStillResolvesTheOwnersProfile()
+    {
+        _locator.Installed["Vlc"] = "vlc.exe";
+        _locator.Installed["Mpv"] = "mpv.exe";
+        _upstream.PlayerOptions = new() {Players = [new() {ExecutablePath = "mpv.exe"}]};
+        Assert.IsTrue(await Playback().PlayAsync(Request(""), 42, DataOrigin.FileSystem, "/srv/movie.mp4"));
+        Assert.AreEqual(1, _upstream.PlayerOptionsReadCount);
+        Assert.AreEqual("mpv.exe", _shell.Processes.Single().Executable);
+    }
+
+    [TestMethod]
+    public async Task ARealMappedImageUsesTheDefaultApplicationWithoutAnAvPlayer()
+    {
+        var folder = await WithLibraryAt("/srv");
+        await File.WriteAllTextAsync(Path.Combine(folder, "cover.jpg"), "image");
+        _locator.Installed["Vlc"] = "vlc.exe";
+        _upstream.PlayerOptions = new() {Players = [new() {ExecutablePath = "vlc.exe"}]};
+        Assert.IsTrue(await Playback().PlayAsync(Request(""), 42, DataOrigin.FileSystem, "/srv/cover.jpg"));
+        Assert.AreEqual(Path.Combine(folder, "cover.jpg"), _shell.Launched.Single());
+        Assert.AreEqual(0, _shell.Processes.Count);
+    }
 
     [TestMethod]
     public async Task A_mapped_file_is_played_from_disk()
@@ -325,18 +496,20 @@ public class PlayItemHandlerTests
     }
 
     [TestMethod]
-    public async Task A_web_source_opens_its_page()
+    [DataRow(DataOrigin.DLsite, "RJ01234567")]
+    [DataRow(DataOrigin.ExHentai, "12345/abcdef")]
+    public async Task A_stale_download_origin_does_not_open_a_website_or_record_playback(DataOrigin origin, string key)
     {
-        var dlsite = Request("?origin=DLsite&key=RJ01234567");
+        var context = Request($"?origin={origin}&key={Uri.EscapeDataString(key)}");
 
-        await Play(dlsite);
-        StringAssert.Contains(_shell.Launched[0], "dlsite.com");
-        StringAssert.Contains(_shell.Launched[0], "RJ01234567");
+        await Play(context);
 
-        var exhentai = Request("?origin=ExHentai&key=12345%2Fabcdef");
-
-        await Play(exhentai);
-        StringAssert.Contains(_shell.Launched[1], "exhentai.org/g/12345/abcdef");
+        var (status, body) = Read(context);
+        Assert.AreEqual((int) HttpStatusCode.BadRequest, status);
+        StringAssert.Contains(body.GetProperty("message").GetString()!, "downloaded files");
+        Assert.AreEqual(0, _shell.Launched.Count);
+        Assert.AreEqual(0, _shell.Processes.Count);
+        Assert.AreEqual(0, _upstream.Played.Count);
     }
 
     // ---- history ----
@@ -450,6 +623,22 @@ public class PlayItemHandlerTests
     private Task PlayRandom(HttpContext context) =>
         new PlayRandomResourceHandler(_upstream, Playback())
             .HandleAsync(context, new Dictionary<string, string>());
+
+    [TestMethod]
+    [DataRow(DataOrigin.DLsite, "RJ01234567")]
+    [DataRow(DataOrigin.ExHentai, "12345/abcdef")]
+    public async Task A_stale_random_pick_does_not_open_a_source_website(DataOrigin origin, string key)
+    {
+        _upstream.RandomPick = new UpstreamRandomPick(new PlayableItemPick(42, origin, key));
+        var context = Request("");
+
+        await PlayRandom(context);
+
+        Assert.AreEqual((int) HttpStatusCode.BadRequest, Read(context).Status);
+        Assert.AreEqual(0, _shell.Launched.Count);
+        Assert.AreEqual(0, _shell.Processes.Count);
+        Assert.AreEqual(0, _upstream.Played.Count);
+    }
 
     [TestMethod]
     public async Task A_random_pick_is_played_and_recorded_against_the_resource_it_came_from()

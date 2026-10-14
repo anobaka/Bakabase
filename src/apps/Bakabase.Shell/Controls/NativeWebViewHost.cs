@@ -28,6 +28,13 @@ public partial class NativeWebViewHost : NativeControlHost
     /// <summary>Optional bootstrap profile: avoids initializing AppService before setup.</summary>
     public string? WindowsUserDataDirectory { get; init; }
 
+    /// <summary>Presentation hint for the main application window only. It never
+    /// grants native permissions; cookie capture windows retain their original agent.</summary>
+    public bool IsApplicationView { get; set; }
+
+    private string PresentationUserAgent(string browserAgent) =>
+        IsApplicationView ? browserAgent + " BakabaseDesktop/1.0" : browserAgent;
+
     private static string? DiagnosticUrl(string? url) => url?.Split('#')[0];
 
     public void Navigate(string url)

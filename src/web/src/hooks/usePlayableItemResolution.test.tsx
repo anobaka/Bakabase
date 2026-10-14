@@ -94,7 +94,7 @@ describe("effective playable items from async discovery", () => {
     await act(async () => callback(1)(files(`${newPath}/current.mp4`)));
     expect(result.current.groups[0]!.items).toEqual(files(`${newPath}/current.mp4`).playableItems);
   });
-  it("replaces cached paths with current SSE data and treats empty/error discoveries as finished", async () => {
+  it("replaces cached paths with current SSE data and distinguishes failed discovery from a successful empty result", async () => {
     const value = { ...resource(1), playableItems: files("/old/video.mkv").playableItems };
     const { result } = renderHook(() => usePlayableItemResolution(value));
 
@@ -105,6 +105,14 @@ describe("effective playable items from async discovery", () => {
       items: files("/new/cover.jpg", "/new/movie.mp4").playableItems,
     });
     await act(async () => callback(0)(null, "missing directory"));
+    expect(result.current.groups[0]).toMatchObject({
+      status: DataStatus.Failed,
+      items: [],
+      error: "missing directory",
+    });
+    expect(result.current.overallStatus).toBe("failed");
+    await act(async () => result.current.triggerDiscovery(DataOrigin.FileSystem));
+    await act(async () => callback(1)(files()));
     expect(result.current.groups[0]).toMatchObject({ status: DataStatus.Ready, items: [] });
     expect(result.current.overallStatus).toBe("not-found");
   });
@@ -178,4 +186,88 @@ describe("effective playable items from async discovery", () => {
     expect(unsubscribe).toHaveBeenCalledOnce();
     expect(complete).not.toHaveBeenCalled();
   });
+});
+
+describe("per-source discovery retry", () => {
+  it("retries repeatedly, clears the old failure while pending, and ignores its late result", async () => {
+    const { result } = renderHook(() => usePlayableItemResolution(resource(1)));
+
+    await act(async () => callback(0)(null, "NAS unavailable"));
+    await act(async () => result.current.triggerDiscovery(DataOrigin.FileSystem));
+    expect(subscribe).toHaveBeenCalledTimes(2);
+    expect(result.current.overallStatus).toBe("loading");
+    expect(result.current.groups[0]?.error).toBeUndefined();
+    await act(async () => callback(0)(files("/old.mp4")));
+    expect(result.current.overallStatus).toBe("loading");
+    await act(async () => callback(1)(null, "still unavailable"));
+    await act(async () => result.current.triggerDiscovery(DataOrigin.FileSystem));
+    expect(subscribe).toHaveBeenCalledTimes(3);
+    await act(async () => callback(2)(files("/available.mp4")));
+    expect(result.current.overallStatus).toBe("ready");
+    expect(result.current.groups[0]?.items[0]?.key).toBe("/available.mp4");
+  });
+
+  it("keeps a ready independent source usable and does not resubscribe it on file retry", async () => {
+    const value = resource(1);
+
+    value.dataStates.push({
+      origin: DataOrigin.Steam,
+      dataType: ResourceDataType.PlayableItem,
+      status: DataStatus.Ready,
+    });
+    value.playableItems = [{ origin: DataOrigin.Steam, key: "123" }];
+    const { result } = renderHook(() => usePlayableItemResolution(value));
+
+    await act(async () => callback(0)(null, "NAS unavailable"));
+    expect(result.current.overallStatus).toBe("ready");
+    expect(result.current.groups[0]?.origin).toBe(DataOrigin.Steam);
+    await act(async () => result.current.triggerDiscovery(DataOrigin.FileSystem));
+    expect(subscribe.mock.calls.every((call) => call[1] === DataOrigin.FileSystem)).toBe(true);
+    expect(result.current.groups[0]?.items[0]?.key).toBe("123");
+  });
+
+  it("reports rejected subscriptions and permits a retry of a backend failed origin", async () => {
+    const value = resource(1);
+
+    value.dataStates[0].status = DataStatus.Failed;
+    subscribe.mockRejectedValueOnce(new Error("connection refused"));
+    const { result } = renderHook(() => usePlayableItemResolution(value));
+
+    expect(result.current.overallStatus).toBe("failed");
+    expect(subscribe).not.toHaveBeenCalled();
+    await act(async () => result.current.triggerDiscovery(DataOrigin.FileSystem));
+    expect(result.current.groups[0]?.error).toBe("connection refused");
+    await act(async () => result.current.triggerDiscovery(DataOrigin.FileSystem));
+    await act(async () => callback(1)(files("/video.mp4")));
+    expect(result.current.overallStatus).toBe("ready");
+  });
+});
+
+it("ignores legacy webpage playable states and cache while discovering downloaded files", async () => {
+  const value = resource(1);
+
+  for (const origin of [DataOrigin.DLsite, DataOrigin.ExHentai]) {
+    value.dataStates.push({
+      origin,
+      dataType: ResourceDataType.PlayableItem,
+      status: DataStatus.NotStarted,
+    });
+    value.playableItems.push({ origin, key: "old-website" });
+  }
+  const { result } = renderHook(() => usePlayableItemResolution(value));
+
+  expect(subscribe).toHaveBeenCalledTimes(1);
+  expect(result.current.overallStatus).toBe("loading");
+  await act(async () =>
+    callback(0)({
+      playableItems: [
+        ...files("/downloaded/game.exe").playableItems,
+        { origin: DataOrigin.DLsite, key: "RJ123" },
+      ],
+    }),
+  );
+  expect(result.current.groups).toHaveLength(1);
+  expect(result.current.groups[0]?.items).toEqual(files("/downloaded/game.exe").playableItems);
+  await act(async () => result.current.triggerDiscovery(DataOrigin.DLsite));
+  expect(subscribe).toHaveBeenCalledTimes(1);
 });
