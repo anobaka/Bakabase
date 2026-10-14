@@ -68,6 +68,11 @@ public class ResourceDiscoveryService : BackgroundService
         }
     }
 
+    public Task SendHeartbeatAsync(string connectionId, CancellationToken ct) =>
+        _connections.TryGetValue(connectionId, out var connection)
+            ? connection.SendHeartbeatAsync(ct)
+            : Task.CompletedTask;
+
     public async Task EnqueueRequest(int resourceId, DataOrigin origin, ResourceDataType dataType)
     {
         var requestKey = $"{resourceId}-{origin}-{dataType}";
@@ -245,13 +250,13 @@ public class ResourceDiscoveryService : BackgroundService
             }
         }
 
-        public async Task SendHeartbeatAsync()
+        public async Task SendHeartbeatAsync(CancellationToken ct)
         {
-            await _writeLock.WaitAsync();
+            await _writeLock.WaitAsync(ct);
             try
             {
-                await _response.WriteAsync(": heartbeat\n\n");
-                await _response.Body.FlushAsync();
+                await _response.WriteAsync(": heartbeat\n\n", ct);
+                await _response.Body.FlushAsync(ct);
             }
             finally
             {
