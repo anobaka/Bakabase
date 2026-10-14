@@ -92,10 +92,9 @@ describe("local resource profiles for another source", () => {
         body: { sourceDeviceId: "mac", libraryEpoch: "epoch", resourceIds: [42] },
       }),
     );
-    expect(result.current.preference("image", { mode: "browser" })).toEqual({ mode: "native" });
-    expect(result.current.preference("other", { mode: "browser" })).toEqual({ mode: "native" });
+    expect(result.current.choice()).toEqual({ mode: "native" });
   });
-  it("uses browser preference and ignores superseded per-kind browser storage", () => {
+  it("keeps ordinary browsers on the web and ignores superseded per-kind browser storage", () => {
     fixture.app = false;
     localStorage.setItem(
       "bakabase.playback.overrides.v1",
@@ -106,7 +105,7 @@ describe("local resource profiles for another source", () => {
     const { result } = renderHook(() => useSourceResourceProfile("server:mac", 42));
 
     expect(result.current.ready).toBe(true);
-    expect(result.current.preference("video", { mode: "browser" })).toEqual({ mode: "browser" });
+    expect(result.current.choice()).toBeUndefined();
     expect(fixture.request).not.toHaveBeenCalled();
   });
   it("leaves local resource profiles to the existing local playback path", () => {

@@ -33,7 +33,6 @@ import {
 } from "@/components/bakaui";
 import { CoverFit, PropertyPool } from "@/sdk/constants";
 import CoverOperationsSettings from "@/components/Resource/components/Operations/CoverOperationsSettings";
-import PlaybackPreferencesSettings from "@/components/Resource/components/PlayControl/PlaybackPreferencesSettings";
 import QuickSetPropertyConfig from "@/components/Resource/components/QuickSetPropertyConfig";
 import ResourceDetailLayoutConfigModal from "@/components/ResourceDetailLayoutConfigModal";
 import {
@@ -514,9 +513,6 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
           <Tabs disableAnimation>
             <Tab key="general" title={t<string>("resource.display.tab.general")}>
               {renderGeneralTab()}
-            </Tab>
-            <Tab key="playback" title={t("resource.display.tab.playback")}>
-              <PlaybackPreferencesSettings />
             </Tab>
             <Tab key="cover" title={t<string>("resource.display.tab.cover")}>
               {renderCoverTab()}

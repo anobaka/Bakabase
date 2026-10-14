@@ -3,14 +3,13 @@
 import type { DevicePlatform } from "./playerSchemes";
 import type { DestroyableProps } from "@/components/bakaui/types";
 import type { Resource as ResourceModel } from "@/core/models/Resource";
-import type { PlaybackKind, PlaybackPreference } from "../PlayControl/playbackPreferences";
 
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AiOutlineCopy, AiOutlinePlayCircle } from "react-icons/ai";
 
 import { DesktopPlaybackGuideButton } from "../PlayControl/DesktopPlaybackGuide";
-import { pathMediaType, playbackKindForPath } from "../PlayControl/playbackPreferences";
+import { pathMediaType } from "../PlayControl/playbackPolicy";
 
 import {
   preferredDevicePlatform,
@@ -19,7 +18,7 @@ import {
   schemesForPlatform,
 } from "./playerSchemes";
 
-import { Button, Checkbox, Chip, Modal, Select, toast } from "@/components/bakaui";
+import { Button, Chip, Modal, Select, toast } from "@/components/bakaui";
 import { copyTextToClipboard } from "@/core/clipboard";
 import BApi from "@/sdk/BApi";
 import { MediaType } from "@/sdk/constants";
@@ -29,15 +28,12 @@ const platformOptions: DevicePlatform[] = ["android", "ios", "windows", "macos",
 type Props = DestroyableProps & {
   resource: ResourceModel;
   filePath: string;
-  kind?: PlaybackKind;
   isMixed?: boolean;
   onPlayVideos?: () => void;
   onPlayInBrowser: () => void;
   /** The desktop/relay's existing configured-player action, never a browser URI handler. */
   onPlayNative?: () => void;
-  onRememberChoice?: (kind: PlaybackKind, preference: PlaybackPreference) => Promise<void>;
   unavailableReason?: string;
-  preferenceScope?: "device" | "browser";
   /** Only offer guidance after an actual file candidate has been discovered. */
   offerDesktopGuidance?: boolean;
 };
@@ -45,26 +41,21 @@ type Props = DestroyableProps & {
 const PlayOnThisDevice = ({
   resource,
   filePath,
-  kind: kindOverride,
   isMixed = false,
   onPlayVideos,
   onPlayInBrowser,
   onPlayNative,
-  onRememberChoice,
   onDestroyed,
   unavailableReason,
-  preferenceScope,
   offerDesktopGuidance = false,
 }: Props) => {
   const { t } = useTranslation();
   const [copyFeedback, setCopyFeedback] = useState<string>();
-  const [rememberChoice, setRememberChoice] = useState(false);
   const [platform, setPlatform] = useState<DevicePlatform>(preferredDevicePlatform);
   const mediaType = useMemo(
     () => (isMixed ? MediaType.Unknown : pathMediaType(filePath)),
     [filePath, isMixed],
   );
-  const kind = kindOverride ?? playbackKindForPath(filePath);
   const nativePlaybackSupported = isNativePlayerMediaType(mediaType);
   const streamUrl = useMemo(
     () => new URL(BApi.file.getRawFileUrl({ fullname: filePath }), window.location.origin).href,
@@ -72,20 +63,9 @@ const PlayOnThisDevice = ({
   );
   const schemes = useMemo(() => schemesForPlatform(platform, mediaType), [platform, mediaType]);
   const title = resource.displayName ?? filePath.split(/[/\\]/).pop() ?? "";
-  const remember = (preference: PlaybackPreference, force = false) => {
-    if (onRememberChoice && (rememberChoice || force)) {
-      void onRememberChoice(kind, preference).catch(() =>
-        toast.danger(t("resource.playOnThisDevice.preferenceFailed")),
-      );
-    }
-  };
-  const openIn = (
-    id: string,
-    build: (url: string, title: string, mediaType: MediaType) => string,
-  ) => {
-    remember({ mode: "native", nativeSchemeId: id });
+  const openIn = (build: (url: string, title: string, mediaType: MediaType) => string) => {
     BApi.resource.markResourceAsPlayed(resource.id, { item: filePath }).catch(() => {});
-    // Keep custom protocol navigation within the click gesture; saving a preference must not delay it.
+    // Keep custom protocol navigation within the click gesture.
     window.location.href = build(streamUrl, title, mediaType);
   };
   const copyStreamUrl = async () => {
@@ -119,7 +99,6 @@ const PlayOnThisDevice = ({
           color="primary"
           startContent={<AiOutlinePlayCircle />}
           onPress={() => {
-            remember({ mode: "browser" });
             onPlayInBrowser();
             onDestroyed?.();
           }}
@@ -147,7 +126,6 @@ const PlayOnThisDevice = ({
             fullWidth
             variant="flat"
             onPress={() => {
-              remember({ mode: "native" });
               onPlayNative();
               onDestroyed?.();
             }}
@@ -193,7 +171,7 @@ const PlayOnThisDevice = ({
                     className="justify-start"
                     size="sm"
                     variant="flat"
-                    onPress={() => openIn(scheme.id, scheme.build)}
+                    onPress={() => openIn(scheme.build)}
                   >
                     <span className="truncate">{scheme.name}</span>
                     {scheme.needsSetup && (
@@ -213,18 +191,6 @@ const PlayOnThisDevice = ({
           )
         )}
         {!onPlayNative && offerDesktopGuidance && <DesktopPlaybackGuideButton />}
-        {onRememberChoice && (
-          <Checkbox isSelected={rememberChoice} size="sm" onValueChange={setRememberChoice}>
-            {t("resource.playOnThisDevice.rememberChoice", {
-              type: t(`resource.playback.kind.${kind}`),
-              place: t(
-                (preferenceScope ?? (onPlayNative ? "device" : "browser")) === "device"
-                  ? "resource.playback.place.device"
-                  : "resource.playback.place.browser",
-              ),
-            })}
-          </Checkbox>
-        )}
         <details className="rounded-lg border border-default-200 px-3 py-2">
           <summary className="cursor-pointer text-sm text-foreground-500">
             {t("resource.playOnThisDevice.moreOptions")}
@@ -270,30 +236,6 @@ const PlayOnThisDevice = ({
                   {copyFeedback}
                 </div>
               </>
-            )}
-            {onRememberChoice && (
-              <div className="flex flex-wrap gap-1">
-                <Button
-                  size="sm"
-                  variant="light"
-                  onPress={() => {
-                    remember({ mode: "ask" }, true);
-                    onDestroyed?.();
-                  }}
-                >
-                  {t("resource.playback.askEveryTime")}
-                </Button>
-                <Button
-                  size="sm"
-                  variant="light"
-                  onPress={() => {
-                    remember({ mode: "automatic" }, true);
-                    onDestroyed?.();
-                  }}
-                >
-                  {t("resource.playback.resetDefault")}
-                </Button>
-              </div>
             )}
           </div>
         </details>

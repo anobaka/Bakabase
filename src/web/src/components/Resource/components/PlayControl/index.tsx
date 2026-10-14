@@ -18,14 +18,12 @@ import { isNativePlayerMediaType } from "../PlayOnThisDevice/playerSchemes";
 
 import NoPlayableFilesModal from "./NoPlayableFilesModal";
 import { DesktopPlaybackGuide, useDesktopPlaybackGuidanceAvailable } from "./DesktopPlaybackGuide";
-import { usePlaybackPreferences } from "./usePlaybackPreferences";
 import {
   pathMediaType,
-  playbackKindForPath,
   summarizePlayablePaths,
-  resolvePlaybackPreference,
-  type PlaybackPreference,
-} from "./playbackPreferences";
+  resolvePlaybackMethod,
+  type PlaybackChoice,
+} from "./playbackPolicy";
 import { originalSourceActions, sourceActionTarget } from "./sourceActions";
 
 import { Button, Chip, Modal } from "@/components/bakaui";
@@ -46,7 +44,6 @@ import { useRemoteAccessStore, useUserSideActionsRunHere } from "@/stores/remote
 import { useSourceResourceProfile } from "@/features/playback/resourceProfiles";
 import { useResourceBrowserPlayer } from "@/hooks/useResourceBrowserPlayer";
 import PlayOnThisDevice from "@/components/Resource/components/PlayOnThisDevice";
-import { preferredDevicePlatform } from "@/components/Resource/components/PlayOnThisDevice/playerSchemes";
 import { useOpenResourceDirectory } from "@/hooks/useOpenResourceDirectory";
 import { openExternalUrl } from "@/utils/openExternalUrl";
 import { isDesktopAppWindow } from "@/utils/clientSurface";
@@ -200,7 +197,6 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
   const openInBrowserPlayer = useResourceBrowserPlayer();
   const folderAction = useOpenResourceDirectory();
   const resourceUiOptions = uiOptionsStore.data?.resource;
-  const playback = usePlaybackPreferences();
   const currentServerId = useRemoteAccessStore((state) => state.serverId);
   const managing = useRemoteAccessStore((state) => state.clientMode === ClientMode.PureClient);
   const openingTarget =
@@ -218,7 +214,7 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
   const [openingFailureVisible, setOpeningFailureVisible] = useState(false);
   const [retryingOpening, setRetryingOpening] = useState(false);
   const [modalSource, setModalSource] = useState<DataOrigin | null>(null);
-  const [modalPlaybackOverride, setModalPlaybackOverride] = useState<PlaybackPreference>();
+  const [modalPlaybackOverride, setModalPlaybackOverride] = useState<PlaybackChoice>();
   const [videoSelectionVisible, setVideoSelectionVisible] = useState(false);
   const [visibleVideoCount, setVisibleVideoCount] = useState(VideoSelectionPageSize);
 
@@ -287,29 +283,21 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
   );
   const resourceKind = collection.kind;
   const representativePath = fsItems[0]?.key ?? resource.path;
-  const preferredPlayback = resolvePlaybackPreference(
-    opening.preference(resourceKind, playback.preferences[resourceKind]),
-    userSideActionsRunHere,
-    collection.mediaType,
-    preferredDevicePlatform(),
-    collection.isMixed,
-    appWindow,
-  );
+  const openingChoice = opening.choice();
+  const preferredPlayback = resolvePlaybackMethod(openingChoice, userSideActionsRunHere, appWindow);
   const playbackCaption = opening.unavailable
     ? t("resource.playback.chooseMethod")
-    : preferredPlayback.mode === "browser"
+    : preferredPlayback === "browser"
       ? t(
           resourceKind === "audio" || resourceKind === "video"
             ? "resource.playOnThisDevice.playInBrowser"
             : "resource.playOnThisDevice.viewInBrowser",
         )
-      : preferredPlayback.mode === "ask"
+      : preferredPlayback === "ask"
         ? t("resource.playback.chooseMethod")
-        : preferredPlayback.scheme
-          ? t("resource.playback.usePlayer", { player: preferredPlayback.scheme.name })
-          : t("resource.playOnThisDevice.desktopPlayer");
+        : t("resource.playOnThisDevice.desktopPlayer");
   const orderedSources = [...sources].sort((a, b) =>
-    preferredPlayback.mode === "browser" || preferredPlayback.mode === "ask"
+    preferredPlayback === "browser" || preferredPlayback === "ask"
       ? Number(b.source === DataOrigin.FileSystem) - Number(a.source === DataOrigin.FileSystem)
       : 0,
   );
@@ -410,11 +398,9 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
     createPortal(PlayOnThisDevice, {
       resource,
       filePath: selectedPath,
-      kind: item ? playbackKindForPath(selectedPath) : resourceKind,
       isMixed: !item && collection.isMixed,
       unavailableReason,
       offerDesktopGuidance: fsDiscoveryStatus === "ready" && (!!item || fsItems.length > 0),
-      preferenceScope: appWindow && userSideActionsRunHere ? "device" : "browser",
       onPlayInBrowser: () => playInBrowser(item?.key),
       onPlayVideos:
         !item && videoItems.length > 0 && fsDiscoveryStatus === "ready"
@@ -426,7 +412,6 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
               ? void playNativeItem(item, true)
               : handlePlaySource(DataOrigin.FileSystem, { mode: "native" })
         : undefined,
-      onRememberChoice: playback.save,
     });
   };
 
@@ -436,7 +421,7 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
     return collection.videoPaths.map((path) => fsItemsByPath.get(path)!).filter(Boolean);
   }, [fsItems, collection.videoPaths]);
   const handlePlayVideos = () => {
-    if (!playback.ready || fsDiscoveryStatus !== "ready") return;
+    if (fsDiscoveryStatus !== "ready") return;
     if (videoItems.length === 1) choosePlayback(videoItems[0]);
     else if (videoItems.length > 1) {
       setVisibleVideoCount(VideoSelectionPageSize);
@@ -444,7 +429,7 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
     }
   };
 
-  const playItem = async (item: PlayableItem, override?: PlaybackPreference) => {
+  const playItem = async (item: PlayableItem, override?: PlaybackChoice) => {
     if (item.origin === DataOrigin.Steam) {
       const action = sourceActionTarget(ResourceSource.Steam, item.key);
 
@@ -461,46 +446,18 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
       }
     }
     if (item.origin === DataOrigin.FileSystem) {
-      const kind = playbackKindForPath(item.key);
-      const preference =
-        override && override.mode !== "automatic"
-          ? override
-          : opening.preference(kind, override ?? playback.preferences[kind]);
-      const method = resolvePlaybackPreference(
-        preference,
-        userSideActionsRunHere,
-        pathMediaType(item.key),
-        preferredDevicePlatform(),
-        false,
-        appWindow,
-      );
+      const choice = override ?? openingChoice;
+      const method = resolvePlaybackMethod(choice, userSideActionsRunHere, appWindow);
 
-      if (method.mode === "browser") {
+      if (method === "browser") {
         playInBrowser(item.key);
 
         return;
       }
-      if (method.mode === "ask") {
+      if (method === "ask") {
         choosePlayback(
           item,
-          preference.mode === "native"
-            ? t("resource.playbackPolicy.preferredUnavailable")
-            : undefined,
-        );
-
-        return;
-      }
-      if (method.scheme) {
-        const streamUrl = new URL(
-          BApi.file.getRawFileUrl({ fullname: item.key }),
-          window.location.origin,
-        ).href;
-
-        BApi.resource.markResourceAsPlayed(resource.id, { item: item.key }).catch(() => {});
-        window.location.href = method.scheme.build(
-          streamUrl,
-          resource.displayName ?? item.key,
-          pathMediaType(item.key),
+          choice?.mode === "native" ? t("resource.playbackPolicy.preferredUnavailable") : undefined,
         );
 
         return;
@@ -522,60 +479,51 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
 
     await playNativeItem(
       item,
-      item.origin === DataOrigin.FileSystem &&
-        (override && override.mode !== "automatic"
-          ? override
-          : opening.preference(
-              playbackKindForPath(item.key),
-              override ?? playback.preferences[playbackKindForPath(item.key)],
-            )
-        ).mode === "native",
+      item.origin === DataOrigin.FileSystem && (override ?? openingChoice)?.mode === "native",
     );
   };
 
   /** Play items from a specific source, handling single/multiple items */
   const handlePlaySource = useCallback(
-    (source: DataOrigin, override?: PlaybackPreference) => {
+    (source: DataOrigin, override?: PlaybackChoice) => {
       if (source === DataOrigin.FileSystem) {
         if (!override && opening.unavailable) {
           setOpeningFailureVisible(true);
 
           return;
         }
-        if (!playback.ready || (!override && !opening.ready)) return;
+        if (!override && !opening.ready) return;
       }
       const items = sourceGroups.get(source) ?? [];
 
       if (items.length === 0) return;
-      if (source === DataOrigin.FileSystem && !override && preferredPlayback.mode === "browser") {
+      if (source === DataOrigin.FileSystem && !override && preferredPlayback === "browser") {
         playInBrowser(items.length === 1 ? items[0]?.key : undefined);
 
         return;
       }
-      if (source === DataOrigin.FileSystem && !override && preferredPlayback.mode === "ask") {
+      if (source === DataOrigin.FileSystem && !override && preferredPlayback === "ask") {
         choosePlayback(
           undefined,
-          opening.preference(resourceKind, playback.preferences[resourceKind]).mode === "native"
+          openingChoice?.mode === "native"
             ? t("resource.playbackPolicy.preferredUnavailable")
             : undefined,
         );
 
         return;
       }
-      const selectedPreference =
-        source === DataOrigin.FileSystem
-          ? (override ?? opening.preference(resourceKind, playback.preferences[resourceKind]))
-          : undefined;
+      const selectedChoice =
+        source === DataOrigin.FileSystem ? (override ?? openingChoice) : undefined;
 
       if (items.length === 1) {
-        playItem(items[0]!, selectedPreference);
+        playItem(items[0]!, selectedChoice);
 
         return;
       }
 
       // Multiple items - check auto-select preference
       if (resourceUiOptions?.autoSelectFirstPlayableFile) {
-        playItem(items[0]!, selectedPreference);
+        playItem(items[0]!, selectedChoice);
 
         return;
       }
@@ -592,7 +540,7 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
         }
       }
       setModalSource(source);
-      setModalPlaybackOverride(selectedPreference);
+      setModalPlaybackOverride(selectedChoice);
       setModalVisible(true);
     },
     [
@@ -600,10 +548,8 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
       resourceUiOptions?.autoSelectFirstPlayableFile,
       resource.path,
       resource.isFile,
-      playback.ready,
       preferredPlayback,
-      playback.preferences,
-      resourceKind,
+      openingChoice,
       userSideActionsRunHere,
       collection.isMixed,
       appWindow,
@@ -653,7 +599,7 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
       )}
       <PortalComponent
         browserPlaybackAvailable={!!resource.path}
-        browserPlaybackIsDefault={!opening.unavailable && preferredPlayback.mode === "browser"}
+        browserPlaybackIsDefault={!opening.unavailable && preferredPlayback === "browser"}
         discoveryFailed={failedGroups.length > 0}
         fsDiscoveryStatus={fsDiscoveryStatus}
         hasPath={!!resource.path}
@@ -661,7 +607,7 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
         openFolderLabel={folderAction.label}
         originalSourceActions={originalActions}
         playbackCaption={playbackCaption}
-        playbackReady={playback.ready}
+        playbackReady={opening.ready || opening.unavailable}
         sourceActionLabel={sourceActionLabel}
         sources={orderedSources}
         status={status}

@@ -6,7 +6,6 @@ import PlayOnThisDevice from "..";
 const mocks = vi.hoisted(() => ({
   browser: vi.fn(),
   native: vi.fn(),
-  save: vi.fn(),
   destroy: vi.fn(),
   danger: vi.fn(),
 }));
@@ -43,32 +42,27 @@ const show = (desktop = false) =>
       onDestroyed={mocks.destroy}
       onPlayInBrowser={mocks.browser}
       onPlayNative={desktop ? mocks.native : undefined}
-      onRememberChoice={mocks.save}
     />,
   );
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mocks.save.mockResolvedValue(undefined);
 });
 afterEach(cleanup);
 
-describe("remembering the current device's opening method", () => {
-  it("explains an unavailable preference without changing it unless the user asks", () => {
+describe("one-time opening alternatives", () => {
+  it("explains an unavailable configured player and allows a one-time alternative", () => {
     render(
       <PlayOnThisDevice
         filePath="/album/001.jpg"
         resource={{ id: 42 } as any}
-        unavailableReason="The preferred player is unavailable; saved preference unchanged."
+        unavailableReason="The configured player is unavailable."
         onPlayInBrowser={mocks.browser}
-        onRememberChoice={mocks.save}
       />,
     );
-    expect(screen.getByRole("alert")).toHaveTextContent("saved preference unchanged");
-    expect(mocks.save).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert")).toHaveTextContent("configured player is unavailable");
     fireEvent.click(screen.getByText("resource.playOnThisDevice.viewInBrowser"));
     expect(mocks.browser).toHaveBeenCalledOnce();
-    expect(mocks.save).not.toHaveBeenCalled();
   });
   it.each(["/album/cover.jpg", "/album/movie.mkv"])(
     "shows configured desktop playback and video selection for mixed resources without first-file URI handlers or links: %s",
@@ -79,12 +73,10 @@ describe("remembering the current device's opening method", () => {
         <PlayOnThisDevice
           isMixed
           filePath={filePath}
-          kind="other"
           resource={{ id: 42 } as any}
           onPlayInBrowser={mocks.browser}
           onPlayNative={mocks.native}
           onPlayVideos={videos}
-          onRememberChoice={mocks.save}
         />,
       );
       expect(screen.queryByText("PotPlayer")).toBeNull();
@@ -97,26 +89,22 @@ describe("remembering the current device's opening method", () => {
     },
   );
 
-  it("uses and remembers the mixed desktop configured-player action without guessing an AV URI handler", async () => {
+  it("uses the mixed desktop configured-player action without guessing an AV URI handler", async () => {
     render(
       <PlayOnThisDevice
         isMixed
         filePath="/album/movie.mkv"
-        kind="other"
         resource={{ id: 42 } as any}
         onDestroyed={mocks.destroy}
         onPlayInBrowser={mocks.browser}
         onPlayNative={mocks.native}
-        onRememberChoice={mocks.save}
       />,
     );
     expect(screen.queryByText("PotPlayer")).toBeNull();
     expect(screen.queryByRole("textbox")).toBeNull();
-    fireEvent.click(screen.getByRole("checkbox"));
     await act(async () =>
       fireEvent.click(screen.getByText("resource.playOnThisDevice.desktopPlayer")),
     );
-    expect(mocks.save).toHaveBeenCalledWith("other", { mode: "native" });
     expect(mocks.native).toHaveBeenCalledOnce();
     expect(mocks.destroy).toHaveBeenCalledOnce();
     expect(mocks.browser).not.toHaveBeenCalled();
@@ -129,7 +117,6 @@ describe("remembering the current device's opening method", () => {
         <PlayOnThisDevice
           isMixed
           filePath={filePath}
-          kind="other"
           resource={{ id: 42 } as any}
           onPlayInBrowser={mocks.browser}
         />,
@@ -140,55 +127,27 @@ describe("remembering the current device's opening method", () => {
       expect(screen.queryByRole("textbox")).toBeNull();
     },
   );
-  it("uses a one-time browser choice unless remembering is selected", () => {
+  it("uses a one-time browser choice", () => {
     show();
     fireEvent.click(screen.getByText("resource.playOnThisDevice.viewInBrowser"));
     expect(mocks.browser).toHaveBeenCalledOnce();
-    expect(mocks.save).not.toHaveBeenCalled();
-  });
-
-  it("remembers images independently and keeps browser opening synchronous with the click", async () => {
-    mocks.save.mockReturnValue(new Promise(() => {}));
-    show();
-    fireEvent.click(screen.getByRole("checkbox"));
-    await act(async () =>
-      fireEvent.click(screen.getByText("resource.playOnThisDevice.viewInBrowser")),
-    );
-    expect(mocks.save).toHaveBeenCalledWith("image", { mode: "browser" });
-    expect(mocks.browser).toHaveBeenCalledOnce();
-    expect(mocks.destroy).toHaveBeenCalledOnce();
   });
 
   it("preserves the desktop configured-player action without exposing AV URI handlers for an image", async () => {
     show(true);
     expect(screen.queryByText("PotPlayer")).toBeNull();
-    fireEvent.click(screen.getByRole("checkbox"));
     await act(async () =>
       fireEvent.click(screen.getByText("resource.playOnThisDevice.desktopPlayer")),
     );
-    expect(mocks.save).toHaveBeenCalledWith("image", { mode: "native" });
     expect(mocks.native).toHaveBeenCalledOnce();
     expect(mocks.browser).not.toHaveBeenCalled();
   });
 
-  it("allows Ask and Restore independently of the remember checkbox", async () => {
-    show();
-    await act(async () => fireEvent.click(screen.getByText("resource.playback.askEveryTime")));
-    expect(mocks.save).toHaveBeenLastCalledWith("image", { mode: "ask" });
-    await act(async () => fireEvent.click(screen.getByText("resource.playback.resetDefault")));
-    expect(mocks.save).toHaveBeenLastCalledWith("image", { mode: "automatic" });
-    expect(mocks.browser).not.toHaveBeenCalled();
-    expect(mocks.native).not.toHaveBeenCalled();
-  });
-
-  it("reports failed persistence while still opening the one-time selected method", async () => {
-    mocks.save.mockRejectedValue(new Error("full disk"));
-    show();
-    fireEvent.click(screen.getByRole("checkbox"));
-    await act(async () =>
-      fireEvent.click(screen.getByText("resource.playOnThisDevice.viewInBrowser")),
-    );
-    expect(mocks.danger).toHaveBeenCalledWith("resource.playOnThisDevice.preferenceFailed");
-    expect(mocks.browser).toHaveBeenCalledOnce();
+  it("does not expose per-kind remembering, reset or ask-every-time settings", () => {
+    show(true);
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    expect(screen.queryByText("resource.playback.askEveryTime")).not.toBeInTheDocument();
+    expect(screen.queryByText("resource.playback.resetDefault")).not.toBeInTheDocument();
+    expect(screen.queryByText("resource.playOnThisDevice.rememberChoice")).not.toBeInTheDocument();
   });
 });

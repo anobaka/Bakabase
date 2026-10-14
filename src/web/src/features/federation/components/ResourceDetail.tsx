@@ -4,7 +4,6 @@ import type {
   PlaybackSession,
   ResourceRef,
 } from "../types";
-import type { PlaybackKind } from "@/components/Resource/components/PlayControl/playbackPreferences";
 
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -195,7 +194,7 @@ export default function ResourceDetail({
 
   const isLocal = resourceRef.nodeId === localNodeId && resourceRef.libraryEpoch === localEpoch;
   const openPreferred = (asset: FederatedAsset) => {
-    const choice = opening.choice(asset.kind as PlaybackKind);
+    const choice = opening.choice();
 
     if (opening.unavailable || choice?.mode === "ask") {
       setChoiceAsset(asset);
@@ -287,7 +286,7 @@ export default function ResourceDetail({
                 </Button>
               </>
             )}
-            {opening.choice(choiceAsset.kind as PlaybackKind)?.mode === "native" &&
+            {opening.choice()?.mode === "native" &&
               (!nativeActionsAvailable ||
                 (choiceAsset.kind === "image" && choiceAsset.canOpenLocally !== true)) && (
                 <p className="text-sm text-warning" role="alert">

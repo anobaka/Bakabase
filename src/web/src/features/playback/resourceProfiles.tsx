@@ -1,7 +1,4 @@
-import type {
-  PlaybackKind,
-  PlaybackPreference,
-} from "@/components/Resource/components/PlayControl/playbackPreferences";
+import type { PlaybackChoice } from "@/components/Resource/components/PlayControl/playbackPolicy";
 import type { ContentType } from "@/sdk/Api";
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -150,7 +147,7 @@ async function loadProfile(key: string, query: ProfileQuery, force = false) {
   }
 }
 
-/** Local resource profiles are evaluated against the source's metadata. Browsers keep their own playback preference. */
+/** Local resource profiles are evaluated against the source's metadata. Browsers open files in the web player by default. */
 export function useSourceResourceProfile(target: string | undefined, resourceId?: number) {
   const nativeAvailable = useUserSideActionsRunHere();
   const desktop = nativeAvailable && isDesktopAppWindow();
@@ -190,7 +187,7 @@ export function useSourceResourceProfile(target: string | undefined, resourceId?
   }, [load, enabled]);
   const current = result?.key === key ? result : undefined;
   const snapshot = enabled ? current?.value : undefined;
-  const choice = (_kind?: PlaybackKind) =>
+  const choice = (): PlaybackChoice | undefined =>
     snapshot?.openingMode ? { mode: snapshot.openingMode } : undefined;
 
   return {
@@ -201,8 +198,6 @@ export function useSourceResourceProfile(target: string | undefined, resourceId?
     error: enabled && !!current?.error,
     unavailable: enabled && !!current?.error,
     choice,
-    preference: (_kind: PlaybackKind, fallback: PlaybackPreference): PlaybackPreference =>
-      snapshot?.openingMode ? { mode: snapshot.openingMode } : fallback,
     reload: () => load(true),
   };
 }

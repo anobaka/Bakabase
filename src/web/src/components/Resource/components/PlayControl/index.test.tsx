@@ -1,7 +1,6 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { automaticPlaybackPreferences } from "./playbackPreferences";
 import PlaybackQuickActions from "./PlaybackQuickActions";
 import { ResourceCardPlaybackButton, ResourceDetailPlaybackButton } from "./PlaybackButtons";
 
@@ -12,20 +11,17 @@ import { ClientMode, DataOrigin, DataStatus, ResourceSource } from "@/sdk/consta
 const fixture = vi.hoisted(() => ({
   desktop: false,
   appWindow: undefined as boolean | undefined,
-  ready: true,
-  preferences: {} as any,
   groups: [] as any[],
   browser: vi.fn(),
   native: vi.fn(),
   portal: vi.fn(),
-  save: vi.fn(),
   after: vi.fn(),
   first: false,
   external: vi.fn(),
   retry: vi.fn(),
   serverId: undefined as string | undefined,
   managing: false,
-  overrides: {} as Record<string, { mode: string; playerId?: string }>,
+  opening: undefined as { mode: string } | undefined,
   overrideReady: true,
   overrideUnavailable: false,
   reloadOverrides: vi.fn(),
@@ -36,13 +32,6 @@ vi.mock("@/utils/clientSurface", () => ({
   isDesktopAppWindow: () => fixture.appWindow ?? fixture.desktop,
 }));
 
-vi.mock("./usePlaybackPreferences", () => ({
-  usePlaybackPreferences: () => ({
-    preferences: fixture.preferences,
-    ready: fixture.ready,
-    save: fixture.save,
-  }),
-}));
 vi.mock("@/utils/openExternalUrl", () => ({ openExternalUrl: fixture.external }));
 vi.mock("./NoPlayableFilesModal", () => ({ default: () => null }));
 vi.mock("@/stores/options", () => ({
@@ -70,10 +59,8 @@ vi.mock("@/features/playback/resourceProfiles", () => ({
       ready: fixture.overrideReady,
       unavailable: fixture.overrideUnavailable,
       reload: fixture.reloadOverrides,
-      snapshot: { rules: fixture.overrides },
-      choice: (kind: string) => (target ? fixture.overrides[kind] : undefined),
-      preference: (kind: string, fallback: unknown) =>
-        target && fixture.overrides[kind] ? { mode: fixture.overrides[kind].mode } : fallback,
+      snapshot: { openingMode: fixture.opening?.mode },
+      choice: () => (target ? fixture.opening : undefined),
     };
   },
   ResourceProfileLink: ({ compact, target }: any) => (
@@ -175,17 +162,15 @@ beforeEach(() => {
   fixture.appWindow = undefined;
   fixture.serverId = undefined;
   fixture.managing = false;
-  fixture.overrides = {};
+  fixture.opening = undefined;
+  localStorage.clear();
   fixture.overrideReady = true;
   fixture.overrideUnavailable = false;
   fixture.reloadOverrides.mockResolvedValue(undefined);
-  fixture.ready = true;
   fixture.first = false;
-  fixture.preferences = automaticPlaybackPreferences();
   fixture.groups = [fs([resource.path])];
   fixture.browser.mockResolvedValue(undefined);
   fixture.native.mockResolvedValue({ code: 0 });
-  fixture.save.mockResolvedValue(undefined);
 });
 afterEach(() => {
   cleanup();
@@ -242,7 +227,6 @@ describe("playback routing on the current device", () => {
     });
   });
   it("keeps website and Steam source actions independent of pending playback rules", async () => {
-    fixture.ready = false;
     fixture.overrideReady = false;
     fixture.overrideUnavailable = true;
     fixture.groups = [
@@ -264,8 +248,7 @@ describe("playback routing on the current device", () => {
     fixture.desktop = true;
     fixture.managing = true;
     fixture.serverId = "library";
-    fixture.preferences.image = { mode: "browser" };
-    fixture.overrides.image = { mode: "native", playerId: "system-default" };
+    fixture.opening = { mode: "native" };
     show();
     expect(fixture.overrideTarget).toHaveBeenCalledWith("server:library", 42);
     await act(async () => fireEvent.click(screen.getByText("main")));
@@ -282,7 +265,7 @@ describe("playback routing on the current device", () => {
   it("does not apply cross-device overrides to the app's own resource profiles", async () => {
     fixture.desktop = true;
     fixture.serverId = "self";
-    fixture.overrides.image = { mode: "browser" };
+    fixture.opening = { mode: "browser" };
     show();
     expect(fixture.overrideTarget).toHaveBeenCalledWith(undefined, 42);
     await act(async () => fireEvent.click(screen.getByText("main")));
@@ -293,7 +276,7 @@ describe("playback routing on the current device", () => {
     fixture.serverId = "library";
     fixture.overrideReady = false;
     show();
-    expect(portal.playbackReady).toBe(true);
+    expect(portal.playbackReady).toBe(false);
     fireEvent.click(screen.getByText("main"));
     expect(fixture.browser).not.toHaveBeenCalled();
     expect(fixture.native).not.toHaveBeenCalled();
@@ -307,7 +290,6 @@ describe("playback routing on the current device", () => {
     expect(fixture.browser).toHaveBeenCalledOnce();
     expect(fixture.native).not.toHaveBeenCalled();
     fireEvent.click(screen.getByText("choose"));
-    expect(fixture.portal.mock.lastCall![1].preferenceScope).toBe("browser");
     await act(async () => fixture.portal.mock.lastCall![1].onPlayNative());
     expect(fixture.native).toHaveBeenCalledWith(42, {
       origin: DataOrigin.FileSystem,
@@ -318,7 +300,9 @@ describe("playback routing on the current device", () => {
 
   it("retains an explicit native preference and offers choices when the requested launch fails", async () => {
     fixture.desktop = true;
-    fixture.preferences.image = { mode: "native" };
+    fixture.managing = true;
+    fixture.serverId = "library";
+    fixture.opening = { mode: "native" };
     fixture.native.mockResolvedValue({ code: 409, message: "Player unavailable" });
     show();
     await act(async () => fireEvent.click(screen.getByText("main")));
@@ -331,22 +315,50 @@ describe("playback routing on the current device", () => {
       unavailableReason: "resource.playbackPolicy.nativeFailed",
       filePath: resource.path,
     });
-    expect(fixture.preferences.image).toEqual({ mode: "native" });
-    expect(fixture.save).not.toHaveBeenCalled();
+    expect(fixture.opening).toEqual({ mode: "native" });
     expect(fixture.browser).not.toHaveBeenCalled();
   });
 
-  it("explains an unavailable image-native browser preference instead of silently opening the browser player", () => {
-    fixture.preferences.image = { mode: "native", nativeSchemeId: "potplayer-windows" };
-    show();
-    fireEvent.click(screen.getByText("main"));
-    expect(fixture.portal.mock.lastCall![1]).toMatchObject({
-      unavailableReason: "resource.playbackPolicy.preferredUnavailable",
-      onPlayNative: undefined,
-    });
-    expect(fixture.browser).not.toHaveBeenCalled();
-    expect(fixture.save).not.toHaveBeenCalled();
-  });
+  it.each([
+    { desktop: false, path: "/album/001.jpg", mode: "native" },
+    { desktop: false, path: "/album/movie.mkv", mode: "ask" },
+    { desktop: true, path: "/album/001.jpg", mode: "browser" },
+    { desktop: true, path: "/album/game.exe", mode: "ask" },
+  ])(
+    "ignores legacy media preferences (desktop=$desktop, path=$path, saved=$mode)",
+    async ({ desktop, path, mode }) => {
+      fixture.desktop = desktop;
+      localStorage.setItem(
+        "bakabase.playback.device.preferences.v1",
+        JSON.stringify({
+          version: 1,
+          ...Object.fromEntries(
+            ["image", "text", "audio", "video", "other"].map((kind) => [
+              kind,
+              { mode, nativeSchemeId: "potplayer-windows" },
+            ]),
+          ),
+        }),
+      );
+      const storage = vi.spyOn(Storage.prototype, "getItem");
+
+      fixture.groups = [fs([path])];
+      show({ ...resource, path });
+      await act(async () => fireEvent.click(screen.getByText("main")));
+      expect(storage).not.toHaveBeenCalledWith("bakabase.playback.device.preferences.v1");
+      if (desktop) {
+        expect(fixture.native).toHaveBeenCalledWith(42, {
+          origin: DataOrigin.FileSystem,
+          key: path,
+        });
+        expect(fixture.browser).not.toHaveBeenCalled();
+      } else {
+        expect(fixture.browser).toHaveBeenCalledOnce();
+        expect(fixture.native).not.toHaveBeenCalled();
+      }
+      expect(fixture.portal).not.toHaveBeenCalled();
+    },
+  );
 
   it("routes a failed browser preview's alternative to that precise file and hides unsupported browser-only alternatives", async () => {
     show();
@@ -359,7 +371,6 @@ describe("playback routing on the current device", () => {
     expect(fixture.portal.mock.lastCall![1]).toMatchObject({
       filePath: "/album/video.mkv",
       isMixed: false,
-      kind: "video",
     });
     expect(fixture.native).not.toHaveBeenCalled();
   });
@@ -417,9 +428,11 @@ describe("playback routing on the current device", () => {
     expect(fixture.native).toHaveBeenLastCalledWith(42, { origin: DataOrigin.Steam, key: "123" });
   });
 
-  it("honors a desktop web preference while retaining the configured-player alternative", async () => {
+  it("honors the source resource profile web mode while retaining the configured-player alternative", async () => {
     fixture.desktop = true;
-    fixture.preferences.image = { mode: "browser" };
+    fixture.managing = true;
+    fixture.serverId = "library";
+    fixture.opening = { mode: "browser" };
     fixture.groups = [steam, fs([resource.path])];
     show();
     await act(async () => fireEvent.click(screen.getByText("main")));
@@ -434,8 +447,7 @@ describe("playback routing on the current device", () => {
     fireEvent.click(screen.getByText("choose"));
     const choice = fixture.portal.mock.lastCall![1];
 
-    expect(choice.kind).toBe("image");
-    expect(choice.onRememberChoice).toBe(fixture.save);
+    expect(choice.onRememberChoice).toBeUndefined();
     await act(async () => choice.onPlayNative());
     expect(fixture.native).toHaveBeenCalledWith(42, {
       origin: DataOrigin.FileSystem,
@@ -444,15 +456,17 @@ describe("playback routing on the current device", () => {
     });
   });
 
-  it("asks without opening either player when the media default requests a choice", () => {
-    fixture.preferences.image = { mode: "ask" };
+  it("asks when the matching source resource profile requests a choice", () => {
+    fixture.desktop = true;
+    fixture.managing = true;
+    fixture.serverId = "library";
+    fixture.opening = { mode: "ask" };
     show();
     fireEvent.click(screen.getByText("main"));
     expect(fixture.portal).toHaveBeenCalledTimes(1);
     expect(fixture.portal.mock.lastCall![1]).toMatchObject({
       filePath: resource.path,
-      kind: "image",
-      onPlayNative: undefined,
+      onPlayNative: expect.any(Function),
     });
     expect(fixture.browser).not.toHaveBeenCalled();
     expect(fixture.native).not.toHaveBeenCalled();
@@ -475,26 +489,18 @@ describe("playback routing on the current device", () => {
     },
   );
 
-  it("offers explicit browser preview even for desktop-native defaults and waits for preferences before main playback", async () => {
+  it("offers one-time browser preview without changing normal desktop playback", async () => {
     fixture.desktop = true;
-    fixture.ready = false;
-    show();
-    fireEvent.click(screen.getByText("main"));
-    expect(fixture.native).not.toHaveBeenCalled();
-    expect(portal.playbackReady).toBe(false);
-    fixture.ready = true;
-    cleanup();
     show();
     await act(async () => fireEvent.click(screen.getByText("browser")));
-    expect(fixture.browser).toHaveBeenCalledWith(
-      resource,
-      undefined,
-      expect.objectContaining({
-        onOpenAlternative: expect.any(Function),
-        canOpenAlternative: expect.any(Function),
-      }),
-    );
+    expect(fixture.browser).toHaveBeenCalledWith(resource, undefined, expect.anything());
     expect(fixture.native).not.toHaveBeenCalled();
+    expect(portal.playbackReady).toBe(true);
+    await act(async () => fireEvent.click(screen.getByText("main")));
+    expect(fixture.native).toHaveBeenCalledWith(42, {
+      origin: DataOrigin.FileSystem,
+      key: resource.path,
+    });
   });
 });
 
@@ -720,8 +726,7 @@ describe("mixed media and selecting individual videos", () => {
     fixture.desktop = true;
     fixture.managing = true;
     fixture.serverId = "library";
-    fixture.overrides.other = { mode: "native", playerId: "system-default" };
-    fixture.overrides.video = { mode: "native", playerId: "vlc" };
+    fixture.opening = { mode: "native" };
     fixture.groups = [fs(mixed)];
     show(folder);
     fireEvent.click(screen.getByText("main"));
@@ -826,9 +831,11 @@ describe("mixed media and selecting individual videos", () => {
     expect(fixture.browser).not.toHaveBeenCalled();
   });
 
-  it("retains an explicit mixed web preference on desktop", async () => {
+  it("honors a source profile web mode for a mixed collection", async () => {
     fixture.desktop = true;
-    fixture.preferences.other = { mode: "browser" };
+    fixture.managing = true;
+    fixture.serverId = "library";
+    fixture.opening = { mode: "browser" };
     fixture.groups = [fs(mixed)];
     show(folder);
     await act(async () => fireEvent.click(screen.getByText("main")));
@@ -846,7 +853,9 @@ describe("mixed media and selecting individual videos", () => {
 
   it("offers the configured desktop mixed action from the chooser and resolves a concrete item before playing", async () => {
     fixture.desktop = true;
-    fixture.preferences.other = { mode: "ask" };
+    fixture.managing = true;
+    fixture.serverId = "library";
+    fixture.opening = { mode: "ask" };
     fixture.groups = [fs(mixed)];
     show(folder);
     fireEvent.click(screen.getByText("main"));
@@ -865,9 +874,11 @@ describe("mixed media and selecting individual videos", () => {
     expect(fixture.browser).not.toHaveBeenCalled();
   });
 
-  it("retains an explicit mixed native preference, passing only the chosen item to the desktop API", async () => {
+  it("honors a source profile native mode, passing only the selected mixed item to the desktop API", async () => {
     fixture.desktop = true;
-    fixture.preferences.other = { mode: "native" };
+    fixture.managing = true;
+    fixture.serverId = "library";
+    fixture.opening = { mode: "native" };
     fixture.groups = [fs(mixed)];
     show(folder);
     fireEvent.click(screen.getByText("main"));
@@ -882,32 +893,21 @@ describe("mixed media and selecting individual videos", () => {
   });
 
   it.each([true, false])(
-    "retains Ask for the entire mixed collection, and exposes video selection without guessing an AV scheme (desktop=%s)",
+    "offers explicit choices for a mixed collection without creating a saved rule (desktop=%s)",
     (desktop) => {
       fixture.desktop = desktop;
-      fixture.preferences.other = { mode: "ask" };
       fixture.groups = [fs(mixed)];
       show(folder);
-      fireEvent.click(screen.getByText("main"));
+      fireEvent.click(screen.getByText("choose"));
       expect(fixture.portal.mock.lastCall![1]).toMatchObject({
-        kind: "other",
         isMixed: true,
         onPlayVideos: expect.any(Function),
       });
+      expect(fixture.portal.mock.lastCall![1].onRememberChoice).toBeUndefined();
       expect(fixture.browser).not.toHaveBeenCalled();
       expect(fixture.native).not.toHaveBeenCalled();
     },
   );
-
-  it("asks for a concrete file for a browser-native mixed preference instead of applying a handler to the first file", () => {
-    fixture.preferences.other = { mode: "native", nativeSchemeId: "potplayer-windows" };
-    fixture.groups = [fs(mixed)];
-    show(folder);
-    fireEvent.click(screen.getByText("main"));
-    expect(fixture.portal.mock.lastCall![1]).toMatchObject({ isMixed: true });
-    expect(fixture.browser).not.toHaveBeenCalled();
-    expect(fixture.native).not.toHaveBeenCalled();
-  });
 
   it.each([true, false])(
     "directly selects a sole video, preserving original gallery for web and single filepath for native (desktop=%s)",
@@ -921,7 +921,6 @@ describe("mixed media and selecting individual videos", () => {
       expect(choice).toMatchObject({
         resource: folder,
         filePath: mixed[1],
-        kind: "video",
         isMixed: false,
       });
       expect(screen.queryByRole("dialog")).toBeNull();
@@ -958,7 +957,6 @@ describe("mixed media and selecting individual videos", () => {
     fireEvent.click(screen.getByText("second.MP4"));
     expect(fixture.portal.mock.lastCall![1]).toMatchObject({
       filePath: "/album/second.MP4",
-      kind: "video",
       isMixed: false,
     });
     expect(fixture.native).not.toHaveBeenCalled();
@@ -984,7 +982,6 @@ describe("mixed media and selecting individual videos", () => {
     fireEvent.click(screen.getByText("video-99.mp4"));
     expect(fixture.portal.mock.lastCall![1]).toMatchObject({
       filePath: "/album/video-99.mp4",
-      kind: "video",
     });
   });
 
@@ -1086,7 +1083,7 @@ describe("downloaded external resources use ordinary file playback", () => {
     fixture.desktop = true;
     fixture.managing = true;
     fixture.serverId = "library";
-    fixture.overrides.image = { mode: "browser" };
+    fixture.opening = { mode: "browser" };
     fixture.groups = [...oldSources, fs([resource.path])];
     show({ ...resource, sourceLinks });
     await act(async () => fireEvent.click(screen.getByText("main")));
@@ -1128,7 +1125,6 @@ describe("downloaded external resources use ordinary file playback", () => {
       { name: "failed", status: DataStatus.Failed },
       { name: "empty", status: DataStatus.Ready },
     ])("keeps original pages separate while discovery is $name", ({ status }) => {
-      fixture.ready = false;
       fixture.overrideReady = false;
       fixture.overrideUnavailable = true;
       fixture.groups = [...oldSources, { ...fs([]), status }];
