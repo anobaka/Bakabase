@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { automaticPlaybackPreferences } from "./playbackPreferences";
@@ -165,6 +165,11 @@ const show = (value = resource) =>
 
 beforeEach(() => {
   vi.clearAllMocks();
+  global.ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
   vi.spyOn(window, "open").mockImplementation(() => null);
   fixture.desktop = false;
   fixture.appWindow = undefined;
@@ -262,11 +267,7 @@ describe("playback routing on the current device", () => {
     fixture.preferences.image = { mode: "browser" };
     fixture.overrides.image = { mode: "native", playerId: "system-default" };
     show();
-    expect(portal.openingRules).toEqual({
-      target: "server:library",
-      resourceId: 42,
-      label: "Library server",
-    });
+    expect(fixture.overrideTarget).toHaveBeenCalledWith("server:library", 42);
     await act(async () => fireEvent.click(screen.getByText("main")));
     expect(fixture.native).toHaveBeenCalledWith(42, {
       origin: DataOrigin.FileSystem,
@@ -283,7 +284,7 @@ describe("playback routing on the current device", () => {
     fixture.serverId = "self";
     fixture.overrides.image = { mode: "browser" };
     show();
-    expect(portal.openingRules).toBeUndefined();
+    expect(fixture.overrideTarget).toHaveBeenCalledWith(undefined, 42);
     await act(async () => fireEvent.click(screen.getByText("main")));
     expect(fixture.native).toHaveBeenCalledOnce();
     expect(fixture.browser).not.toHaveBeenCalled();
@@ -512,44 +513,202 @@ describe("compact playback alternatives", () => {
     ...overrides,
   });
 
-  it("avoids duplicating a browser main action and keeps the chooser reachable", () => {
-    const choose = vi.fn();
-    const browser = vi.fn();
+  it.each([true, false])(
+    "does not add opening settings beside the main action (web default: %s)",
+    (browserDefault) => {
+      render(
+        <PlaybackQuickActions
+          {...props({
+            browserPlaybackAvailable: true,
+            browserPlaybackIsDefault: browserDefault,
+            playbackReady: true,
+            sources: [fs([resource.path])].map((g) => ({ source: g.origin, items: g.items })),
+            onChoosePlayback: vi.fn(),
+            onPlayInBrowser: vi.fn(),
+          })}
+        />,
+      );
+      expect(screen.queryByLabelText("resource.playback.browserQuickAction")).toBeNull();
+      expect(screen.queryByLabelText("resource.playback.chooseMethod")).toBeNull();
+      expect(screen.queryByText("override settings")).toBeNull();
+      expect(screen.queryByRole("button")).toBeNull();
+    },
+  );
 
-    render(
-      <PlaybackQuickActions
+  it("ports hover actions outside the cover without changing direct play or stealing focus", () => {
+    const folder = vi.fn();
+    const source = vi.fn();
+    const videos = vi.fn();
+    const original = vi.fn();
+    const { container } = render(
+      <ResourceCardPlaybackButton
         {...props({
-          browserPlaybackAvailable: true,
-          browserPlaybackIsDefault: true,
-          playbackReady: true,
-          sources: [fs([resource.path])].map((g) => ({ source: g.origin, items: g.items })),
-          onChoosePlayback: choose,
-          onPlayInBrowser: browser,
+          sources: [
+            { source: DataOrigin.FileSystem, items: [] },
+            { source: DataOrigin.Steam, items: [] },
+          ],
+          onPlaySource: source,
+          onOpenFolder: folder,
+          onPlayVideos: videos,
+          originalSourceActions: [{ key: "source", label: "Original webpage", onOpen: original }],
         })}
       />,
     );
+    const primary = container.querySelector("button")!;
+    const anchor = screen.getByRole("group", { name: "resource.playOnThisDevice.moreOptions" });
+
+    fireEvent.pointerEnter(anchor, { pointerType: "mouse" });
+    const menu = screen.getByRole("menu");
+
+    expect(container).not.toContainElement(menu);
+    expect(document.activeElement).toBe(document.body);
+    fireEvent.click(primary);
+    expect(source).toHaveBeenCalledWith(DataOrigin.FileSystem);
+    fireEvent.pointerEnter(anchor, { pointerType: "mouse" });
+    fireEvent.click(screen.getByRole("menuitem", { name: "Open folder" }));
+    fireEvent.pointerEnter(anchor, { pointerType: "mouse" });
+    fireEvent.click(screen.getByRole("menuitem", { name: "resource.playback.playVideos" }));
+    fireEvent.pointerEnter(anchor, { pointerType: "mouse" });
+    fireEvent.click(screen.getByRole("menuitem", { name: "Original webpage" }));
+    expect(folder).toHaveBeenCalledOnce();
+    expect(videos).toHaveBeenCalledOnce();
+    expect(original).toHaveBeenCalledOnce();
     expect(screen.queryByLabelText("resource.playback.browserQuickAction")).toBeNull();
-    fireEvent.click(screen.getByLabelText("resource.playback.chooseMethod"));
-    expect(choose).toHaveBeenCalledOnce();
-    expect(browser).not.toHaveBeenCalled();
+    expect(screen.queryByLabelText("resource.playback.chooseMethod")).toBeNull();
+    expect(screen.queryByText("override settings")).toBeNull();
+    const touchMenu = screen.getByRole("button", { name: "resource.playOnThisDevice.moreOptions" });
+
+    fireEvent.pointerEnter(anchor, { pointerType: "touch" });
+    fireEvent.pointerDown(touchMenu, { pointerType: "touch" });
+    act(() => touchMenu.focus());
+    fireEvent.pointerUp(touchMenu, { pointerType: "touch" });
+    fireEvent.click(touchMenu);
+    expect(menu).toHaveClass("szh-menu--state-open");
+    fireEvent.click(touchMenu);
+    expect(menu).toHaveClass("szh-menu--state-closed");
   });
 
-  it("adds the explicit browser alternative beside a desktop-native main action", () => {
-    const browser = vi.fn();
+  it("lets the keyboard enter and dismiss actions while discovery is pending", async () => {
+    const open = vi.fn();
 
     render(
-      <PlaybackQuickActions
-        {...props({
-          browserPlaybackAvailable: true,
-          playbackReady: true,
-          sources: [],
-          onChoosePlayback: vi.fn(),
-          onPlayInBrowser: browser,
-        })}
+      <ResourceCardPlaybackButton
+        {...props({ status: "loading", fsDiscoveryStatus: "loading", onOpenFolder: open })}
       />,
     );
-    fireEvent.click(screen.getByLabelText("resource.playback.browserQuickAction"));
-    expect(browser).toHaveBeenCalledOnce();
+    const group = screen.getByRole("group", { name: "resource.playOnThisDevice.moreOptions" });
+
+    expect(group).toHaveAttribute("tabindex", "0");
+    act(() => group.focus());
+    expect(group).toHaveFocus();
+    fireEvent.keyDown(group, { key: "Tab" });
+    const folder = screen.getByRole("menuitem", { name: "Open folder" });
+
+    await waitFor(() => expect(folder).toHaveFocus());
+    fireEvent.keyDown(folder, { key: "Escape" });
+    expect(screen.getByRole("menu", { hidden: true })).toHaveClass("szh-menu--state-closed");
+    expect(group).toHaveFocus();
+    fireEvent.keyDown(group, { key: "ArrowDown" });
+    fireEvent.click(screen.getByRole("menuitem", { name: "Open folder" }));
+    expect(open).toHaveBeenCalledOnce();
+  });
+
+  it("closes when keyboard focus leaves the anchor without entering the menu", () => {
+    render(
+      <>
+        <button>Outside</button>
+        <ResourceCardPlaybackButton
+          {...props({ sources: [{ source: DataOrigin.FileSystem, items: [] }] })}
+        />
+      </>,
+    );
+    const anchor = screen.getByRole("group", { name: "resource.playOnThisDevice.moreOptions" });
+
+    act(() => anchor.querySelector("button")!.focus());
+    expect(screen.getByRole("menu")).toHaveClass("szh-menu--state-open");
+    fireEvent.keyDown(anchor.querySelector("button")!, { key: "Escape" });
+    expect(screen.getByRole("menu", { hidden: true })).toHaveClass("szh-menu--state-closed");
+    expect(anchor.querySelector("button")).toHaveFocus();
+    fireEvent.pointerEnter(anchor, { pointerType: "mouse" });
+    fireEvent.keyDown(anchor.querySelector("button")!, { key: "Tab", shiftKey: true });
+    act(() => screen.getByText("Outside").focus());
+    expect(screen.getByRole("menu", { hidden: true })).toHaveClass("szh-menu--state-closed");
+  });
+
+  it("keeps the menu open across the hover gap and closes after leaving both surfaces", () => {
+    vi.useFakeTimers();
+    try {
+      render(
+        <ResourceCardPlaybackButton
+          {...props({ sources: [{ source: DataOrigin.FileSystem, items: [] }] })}
+        />,
+      );
+      const anchor = screen.getByRole("group", { name: "resource.playOnThisDevice.moreOptions" });
+
+      fireEvent.pointerEnter(anchor, { pointerType: "mouse" });
+      const menu = screen.getByRole("menu");
+
+      fireEvent.pointerLeave(anchor, { pointerType: "mouse" });
+      fireEvent.pointerEnter(menu.parentElement!, { pointerType: "mouse" });
+      act(() => vi.advanceTimersByTime(200));
+      expect(menu).toHaveClass("szh-menu--state-open");
+      const hoveredItem = screen.getByRole("menuitem", { name: "Open folder" });
+
+      fireEvent.pointerMove(hoveredItem, { pointerType: "mouse" });
+      act(() => vi.advanceTimersByTime(200));
+      expect(hoveredItem).toHaveFocus();
+      fireEvent.pointerLeave(menu.parentElement!, { pointerType: "mouse" });
+      act(() => vi.advanceTimersByTime(200));
+      expect(menu).toHaveClass("szh-menu--state-closed");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it.each([
+    { x: 1190, y: 730, side: "left" },
+    { x: 10, y: 730, side: "right" },
+    { x: 1190, y: 10, side: "left" },
+    { x: 10, y: 10, side: "right" },
+  ])("keeps the actual portaled menu inside the viewport at $x,$y", ({ x, y, side }) => {
+    const rect = (left: number, top: number, width: number, height: number) => ({
+      x: left,
+      y: top,
+      left,
+      top,
+      width,
+      height,
+      right: left + width,
+      bottom: top + height,
+      toJSON: () => ({}),
+    });
+
+    vi.spyOn(document.documentElement, "clientWidth", "get").mockReturnValue(1280);
+    vi.spyOn(window, "innerHeight", "get").mockReturnValue(800);
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function () {
+      if (this.getAttribute("role") === "group") return rect(x, y, 40, 40);
+      if (this.getAttribute("role") === "menu") return rect(0, 0, 220, 180);
+
+      return rect(0, 0, 0, 0);
+    });
+    render(
+      <ResourceCardPlaybackButton
+        {...props({ sources: [{ source: DataOrigin.FileSystem, items: [] }] })}
+      />,
+    );
+    fireEvent.pointerEnter(
+      screen.getByRole("group", { name: "resource.playOnThisDevice.moreOptions" }),
+      { pointerType: "mouse" },
+    );
+    const menu = screen.getByRole("menu");
+    const left = Number.parseFloat(menu.style.left);
+    const top = Number.parseFloat(menu.style.top);
+
+    expect(menu).toHaveClass(`szh-menu--dir-${side}`);
+    expect(left).toBeGreaterThanOrEqual(8);
+    expect(top).toBeGreaterThanOrEqual(8);
+    expect(left + 220).toBeLessThanOrEqual(1272);
+    expect(top + 180).toBeLessThanOrEqual(792);
   });
 });
 

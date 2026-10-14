@@ -378,5 +378,16 @@
   "resource.desktopPlayback.alreadyInstalled": "已经安装？打开 Bakabase 桌面版，按上面的步骤连接即可。此入口不会自动连接或播放。",
   "resource.desktopPlayback.sharedPaths": "按文件路径打开共享媒体时，这台电脑必须能访问对应文件，并按需配置路径前缀映射。映射不会共享或传输文件。",
   "resource.profilePlayback.configure": "本机资源扩展",
-  "resource.profilePlayback.openFailed": "未能打开本机的资源扩展，请通过左上角设备切换器返回本机后重试。"
+  "resource.profilePlayback.openFailed": "未能打开本机的资源扩展，请通过左上角设备切换器返回本机后重试。",
+  "resource.display.tab.playback": "播放",
+  "resource.playbackSettings.title": "资源列表的默认打开方式",
+  "resource.playbackSettings.browserScope": "适用于当前浏览器的资源列表，设置仅保存在这个浏览器中。",
+  "resource.playbackSettings.deviceScope": "适用于当前客户端的资源列表。来源设备的资源扩展指定打开方式时，优先使用该配置。",
+  "resource.playbackSettings.automaticBrowser": "自动模式使用网页播放器，也可以在播放器内临时选择其他打开方式。",
+  "resource.playbackSettings.automaticDevice": "自动模式遵循资源扩展中的可播放文件和播放器规则，未配置播放器时使用系统默认应用。",
+  "resource.playbackSettings.automatic": "自动（推荐）",
+  "resource.playbackSettings.kind": "{{type}}的打开方式",
+  "resource.playbackSettings.protocolSetup": "需要在此设备安装播放器及其链接处理程序。",
+  "resource.playbackSettings.unavailablePreference": "当前浏览器系统无法使用这个已保存的选项，播放时会提示选择其他打开方式。",
+  "resource.playbackSettings.saveFailed": "未能保存打开方式偏好，原设置保持不变。"
 }

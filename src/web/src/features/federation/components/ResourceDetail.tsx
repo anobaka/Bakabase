@@ -21,10 +21,7 @@ import { useUserSideActionsRunHere } from "@/stores/remoteAccess";
 import ExternalLink from "@/components/ExternalLink";
 import { browserExternalUrl } from "@/utils/openExternalUrl";
 import { copyTextToClipboard } from "@/core/clipboard";
-import {
-  ResourceProfileLink,
-  useSourceResourceProfile,
-} from "@/features/playback/resourceProfiles";
+import { useSourceResourceProfile } from "@/features/playback/resourceProfiles";
 import { Button, Modal } from "@/components/bakaui";
 import { DesktopPlaybackGuideButton } from "@/components/Resource/components/PlayControl/DesktopPlaybackGuide";
 
@@ -324,11 +321,6 @@ export default function ResourceDetail({
       {detail && (
         <>
           <SourceBadge label={detail.ownerLabel || resourceRef.nodeId} local={isLocal} />
-          <ResourceProfileLink
-            label={detail.ownerLabel}
-            resourceId={resourceRef.resourceId}
-            target={openingTarget}
-          />
           {detail.fileName && (
             <p className="break-all text-sm text-default-500">{detail.fileName}</p>
           )}

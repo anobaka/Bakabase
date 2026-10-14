@@ -1,17 +1,23 @@
 import type { PlayControlPortalProps } from ".";
 
 import React from "react";
+import { ControlledMenu, MenuItem } from "@szhsin/react-menu";
 import { useTranslation } from "react-i18next";
 import {
   DesktopOutlined,
+  ExportOutlined,
   FolderOpenOutlined,
   LoadingOutlined,
+  MoreOutlined,
   PlayCircleOutlined,
   QuestionCircleOutlined,
+  VideoCameraOutlined,
 } from "@ant-design/icons";
 import { AiOutlineFolderOpen, AiOutlinePlayCircle } from "react-icons/ai";
 
 import PlaybackQuickActions from "./PlaybackQuickActions";
+
+import "../ContextMenu/index.css";
 
 import { Button, Tooltip } from "@/components/bakaui";
 import { SteamIcon } from "@/components/SourceIcons";
@@ -52,7 +58,7 @@ const renderPlayButtonMainIcon = (origin: DataOrigin, className: string): React.
 
 type MenuEntry = {
   key: string;
-  type: "source" | "openFolder" | "notFound" | "desktopGuide";
+  type: "source" | "openFolder" | "notFound" | "desktopGuide" | "videos" | "original";
   source?: DataOrigin;
   icon: React.ReactNode;
   label: string;
@@ -60,6 +66,8 @@ type MenuEntry = {
   isLoading?: boolean;
   isDisabled?: boolean;
 };
+
+const firstMenuItem = { position: "first" as const, alwaysUpdate: true };
 
 // PlayButton component defined outside Resource to maintain stable reference
 export const ResourceCardPlaybackButton: React.FC<PlayControlPortalProps> = (props) => {
@@ -79,18 +87,46 @@ export const ResourceCardPlaybackButton: React.FC<PlayControlPortalProps> = (pro
     discoveryFailed,
     onDiscoveryFailure,
     onDesktopPlaybackGuide,
+    onPlayVideos,
+    originalSourceActions,
   } = props;
   const { t } = useTranslation();
 
   const fsTriggeredRef = React.useRef(false);
+  const [menuOpen, setMenuOpen] = React.useState(false);
+  const [tooltipOpen, setTooltipOpen] = React.useState(false);
+  const [keyboardMenu, setKeyboardMenu] = React.useState(false);
+  const actionsId = React.useId();
+  const anchorRef = React.useRef<HTMLDivElement>(null);
+  const pointerFocus = React.useRef(false);
+  const menuRef = React.useRef<HTMLUListElement>(null);
+  const closeTimer = React.useRef<ReturnType<typeof setTimeout>>();
+  const cancelClose = () => clearTimeout(closeTimer.current);
+  const closeMenu = () => {
+    cancelClose();
+    setMenuOpen(false);
+    setKeyboardMenu(false);
+  };
+  const openMenu = (keyboard = false) => {
+    cancelClose();
+    setKeyboardMenu(keyboard);
+    setTooltipOpen(false);
+    setMenuOpen(true);
+  };
+  const scheduleClose = () => {
+    cancelClose();
+    closeTimer.current = setTimeout(() => {
+      if (!keyboardMenu || !menuRef.current?.contains(document.activeElement)) closeMenu();
+    }, 140);
+  };
+
+  React.useEffect(() => () => clearTimeout(closeTimer.current), []);
 
   const iconClass = "text-2xl";
   const buttonClass = "!p-0";
 
   // Keep source actions in the order chosen by the current device's playback preference.
   const entries: MenuEntry[] = React.useMemo(() => {
-    if (status === "idle" || status === "loading") return [];
-
     const result: MenuEntry[] = [];
 
     for (const { source } of sources) {
@@ -154,6 +190,17 @@ export const ResourceCardPlaybackButton: React.FC<PlayControlPortalProps> = (pro
       });
     }
 
+    if (onPlayVideos) {
+      result.push({
+        key: "videos",
+        type: "videos",
+        icon: <VideoCameraOutlined className="text-base" />,
+        label: t("resource.playback.playVideos"),
+        onClick: onPlayVideos,
+        isDisabled: playbackReady === false,
+      });
+    }
+
     if (onDesktopPlaybackGuide) {
       result.push({
         key: "desktopGuide",
@@ -174,6 +221,16 @@ export const ResourceCardPlaybackButton: React.FC<PlayControlPortalProps> = (pro
       });
     }
 
+    for (const action of originalSourceActions ?? []) {
+      result.push({
+        key: `original-${action.key}`,
+        type: "original",
+        icon: <ExportOutlined className="text-base" />,
+        label: action.label,
+        onClick: action.onOpen,
+      });
+    }
+
     return result;
   }, [
     status,
@@ -191,6 +248,8 @@ export const ResourceCardPlaybackButton: React.FC<PlayControlPortalProps> = (pro
     discoveryFailed,
     onDiscoveryFailure,
     onDesktopPlaybackGuide,
+    onPlayVideos,
+    originalSourceActions,
   ]);
 
   // Trigger FS discovery when FS button is visible
@@ -209,69 +268,167 @@ export const ResourceCardPlaybackButton: React.FC<PlayControlPortalProps> = (pro
     }
   }, [fsDiscoveryStatus]);
 
-  // Overall loading/idle — no items yet, possibly discovering
-  if (status === "idle" || status === "loading") {
-    return (
-      <div className="hidden group-hover/cover:flex group-focus-within/cover:flex has-[[data-open=true]]:flex absolute left-0 bottom-0 z-[1]">
-        <Button
-          isDisabled
-          isIconOnly
-          aria-label={t("resource.playControl.tooltip.discoveringFiles")}
-          className={buttonClass}
-        >
-          <LoadingOutlined spin className={iconClass} />
-        </Button>
-        <PlaybackQuickActions {...props} className="!p-0" />
-      </div>
-    );
-  }
-
+  const waiting = status === "idle" || status === "loading";
   const mainEntry = entries[0];
 
-  if (!mainEntry) return null;
+  if (!mainEntry && !waiting) return null;
 
-  // Dropdown entries = all entries except the main one (which is the trigger button)
-  const dropdownEntries = entries.slice(1).filter((e) => !e.isDisabled);
+  // Cover hover reveals only the primary action. Resource-specific alternatives
+  // stay inside this button's hover/focus panel, without widening the cover overlay.
+  const dropdownEntries = (waiting ? entries : entries.slice(1)).filter((entry) =>
+    waiting ? entry.type !== "source" && !entry.isDisabled : !entry.isDisabled,
+  );
+  const mainLabel = waiting ? t("resource.playControl.tooltip.discoveringFiles") : mainEntry!.label;
 
   return (
-    <div className="hidden group-hover/cover:flex group-focus-within/cover:flex has-[[data-open=true]]:flex has-[[data-bakabase-tooltip-open]]:flex absolute left-0 bottom-0 z-[1] group/play">
-      <Tooltip content={mainEntry.label}>
+    // Keep nested buttons accessible while the group also opens their keyboard menu.
+    <div
+      ref={anchorRef}
+      aria-label={t("resource.playOnThisDevice.moreOptions")}
+      className={`${menuOpen ? "flex" : "hidden"} group-hover/cover:flex group-focus-within/cover:flex has-[[data-open=true]]:flex has-[[data-bakabase-tooltip-open]]:flex [@media(hover:none)]:flex absolute left-0 bottom-0 z-[1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary`}
+      role="group"
+      tabIndex={(waiting || mainEntry?.isDisabled) && dropdownEntries.length > 0 ? 0 : undefined}
+      onBlur={(event) => {
+        const next = event.relatedTarget as Node | null;
+
+        if (!anchorRef.current?.contains(next) && !menuRef.current?.contains(next)) closeMenu();
+      }}
+      onFocus={(event) => {
+        // Pointer hover never moves focus. Keyboard focus reveals the alternatives,
+        // then ArrowDown or Tab enters their ordinary keyboard-navigable menu.
+        if (
+          dropdownEntries.length &&
+          !pointerFocus.current &&
+          event.currentTarget.contains(event.target)
+        )
+          openMenu();
+      }}
+      onKeyDownCapture={(event) => {
+        // HeroUI's Tooltip/Button consumes keydown during bubbling. Capture
+        // the menu keys first, while leaving the primary Enter/Space action intact.
+        if (!dropdownEntries.length || !event.currentTarget.contains(event.target as Node)) return;
+        if (event.key === "Escape" && menuOpen) {
+          event.preventDefault();
+          event.stopPropagation();
+          closeMenu();
+        } else if (event.key === "ArrowDown" || (event.key === "Tab" && !event.shiftKey)) {
+          event.preventDefault();
+          event.stopPropagation();
+          openMenu(true);
+        }
+      }}
+      onPointerCancel={() => {
+        pointerFocus.current = false;
+      }}
+      onPointerDownCapture={() => {
+        pointerFocus.current = true;
+      }}
+      onPointerEnter={(event) => {
+        if (event.pointerType === "mouse" && dropdownEntries.length) openMenu();
+      }}
+      onPointerLeave={(event) => {
+        if (event.pointerType === "mouse") scheduleClose();
+      }}
+      onPointerUpCapture={() => {
+        pointerFocus.current = false;
+      }}
+    >
+      <Tooltip
+        content={mainLabel}
+        isDisabled={menuOpen}
+        isOpen={!menuOpen && tooltipOpen}
+        onOpenChange={setTooltipOpen}
+      >
         <Button
           isIconOnly
-          aria-label={mainEntry.label}
+          aria-controls={dropdownEntries.length ? actionsId : undefined}
+          aria-expanded={dropdownEntries.length ? menuOpen : undefined}
+          aria-haspopup={dropdownEntries.length ? "menu" : undefined}
+          aria-label={mainLabel}
           className={buttonClass}
-          isDisabled={mainEntry.isDisabled}
-          onPress={mainEntry.onClick}
+          isDisabled={waiting || mainEntry?.isDisabled}
+          onPress={() => {
+            closeMenu();
+            mainEntry?.onClick();
+          }}
         >
-          {mainEntry.isLoading ? (
+          {waiting || mainEntry?.isLoading ? (
             <LoadingOutlined spin className={iconClass} />
-          ) : mainEntry.type === "openFolder" ? (
+          ) : mainEntry?.type === "openFolder" ? (
             <AiOutlineFolderOpen className={iconClass} />
           ) : (
-            renderPlayButtonMainIcon(mainEntry.source ?? DataOrigin.FileSystem, iconClass)
+            renderPlayButtonMainIcon(mainEntry?.source ?? DataOrigin.FileSystem, iconClass)
           )}
         </Button>
       </Tooltip>
 
-      <PlaybackQuickActions {...props} className="!p-0" />
-
       {dropdownEntries.length > 0 && (
-        <div className="hidden group-hover/play:block group-focus-within/play:block absolute left-full top-0 pl-1 z-10">
-          <div className="flex flex-col gap-0.5 bg-content1 rounded-lg shadow-medium p-1 min-w-max">
+        <>
+          <Button
+            isIconOnly
+            aria-controls={actionsId}
+            aria-expanded={menuOpen}
+            aria-haspopup="menu"
+            aria-label={t("resource.playOnThisDevice.moreOptions")}
+            className="!p-0 [@media(hover:hover)]:hidden"
+            size="sm"
+            variant="light"
+            onPress={() => (menuOpen ? closeMenu() : openMenu())}
+          >
+            <MoreOutlined className="text-lg" />
+          </Button>
+          <ControlledMenu
+            ref={menuRef}
+            portal
+            align="start"
+            anchorRef={anchorRef}
+            aria-label={t("resource.playOnThisDevice.moreOptions")}
+            boundingBoxPadding="8"
+            captureFocus={keyboardMenu}
+            containerProps={{
+              onPointerEnter: cancelClose,
+              onPointerLeave: (event) => {
+                if (event.pointerType === "mouse") scheduleClose();
+              },
+            }}
+            direction="right"
+            id={actionsId}
+            menuClassName="resource-context-menu !w-max !min-w-44 !max-w-[min(320px,calc(100vw-16px))] !rounded-lg !p-1"
+            menuItemFocus={keyboardMenu ? firstMenuItem : undefined}
+            offsetX={4}
+            overflow="auto"
+            state={menuOpen ? "open" : "closed"}
+            viewScroll="close"
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+            }}
+            onClose={(event) => {
+              closeMenu();
+              if (event.key === "Escape") {
+                // Focus restoration must not reopen the just-dismissed menu.
+                const target =
+                  waiting || mainEntry?.isDisabled
+                    ? anchorRef.current
+                    : (anchorRef.current?.querySelector<HTMLButtonElement>(
+                        "button:not(:disabled)",
+                      ) ?? anchorRef.current);
+
+                target?.focus({ preventScroll: true });
+                closeMenu();
+              }
+            }}
+          >
             {dropdownEntries.map((entry) => (
-              <Button
-                key={entry.key}
-                className="justify-start gap-2 px-2"
-                size="sm"
-                startContent={entry.icon}
-                variant="light"
-                onPress={entry.onClick}
-              >
-                {entry.label}
-              </Button>
+              <MenuItem key={entry.key} onClick={entry.onClick}>
+                <div className="flex items-center gap-2">
+                  <span aria-hidden>{entry.icon}</span>
+                  <span className="min-w-0 break-words">{entry.label}</span>
+                </div>
+              </MenuItem>
             ))}
-          </div>
-        </div>
+          </ControlledMenu>
+        </>
       )}
     </div>
   );

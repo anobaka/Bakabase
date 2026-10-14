@@ -63,7 +63,6 @@ export type SourceEntry = {
 };
 
 export type PlayControlPortalProps = {
-  openingRules?: { target: string; resourceId: number; label?: string };
   status: PlayControlStatus;
   /** Available sources, ordered for this device's preferred playback method. */
   sources: SourceEntry[];
@@ -203,7 +202,6 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
   const resourceUiOptions = uiOptionsStore.data?.resource;
   const playback = usePlaybackPreferences();
   const currentServerId = useRemoteAccessStore((state) => state.serverId);
-  const currentServerName = useRemoteAccessStore((state) => state.serverName);
   const managing = useRemoteAccessStore((state) => state.clientMode === ClientMode.PureClient);
   const openingTarget =
     currentServerId && (managing || !userSideActionsRunHere)
@@ -661,11 +659,6 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
         hasPath={!!resource.path}
         isFile={resource.isFile}
         openFolderLabel={folderAction.label}
-        openingRules={
-          openingTarget
-            ? { target: openingTarget, resourceId: resource.id, label: currentServerName }
-            : undefined
-        }
         originalSourceActions={originalActions}
         playbackCaption={playbackCaption}
         playbackReady={playback.ready}

@@ -382,5 +382,16 @@
   "resource.desktopPlayback.alreadyInstalled": "Already installed? Open Bakabase desktop and follow the steps above. This guide does not connect or start playback automatically.",
   "resource.desktopPlayback.sharedPaths": "To open shared media by file path, this computer must already be able to access the files. Configure prefix mappings as needed. Mapping does not share or transfer files.",
   "resource.profilePlayback.configure": "Resource profiles on this device",
-  "resource.profilePlayback.openFailed": "Could not open local resource profiles. Switch back to this device from the device selector and try again."
+  "resource.profilePlayback.openFailed": "Could not open local resource profiles. Switch back to this device from the device selector and try again.",
+  "resource.display.tab.playback": "Playback",
+  "resource.playbackSettings.title": "Default opening method in resource lists",
+  "resource.playbackSettings.browserScope": "Applies to resource lists in this browser. Settings are saved only in this browser.",
+  "resource.playbackSettings.deviceScope": "Applies to resource lists in this Bakabase app. An opening method specified by resource profiles for the source device takes priority.",
+  "resource.playbackSettings.automaticBrowser": "Automatic opens files in the web player. You can still choose another method inside the player.",
+  "resource.playbackSettings.automaticDevice": "Automatic follows the playable-file and player rules in resource profiles, using the system default application when no player is configured.",
+  "resource.playbackSettings.automatic": "Automatic (recommended)",
+  "resource.playbackSettings.kind": "Opening method for {{type}}",
+  "resource.playbackSettings.protocolSetup": "Requires the player and its URL handler to be installed on this device.",
+  "resource.playbackSettings.unavailablePreference": "This saved choice is unavailable on the current browser platform. Playback will ask you to choose another method.",
+  "resource.playbackSettings.saveFailed": "Could not save the opening preference. Your previous setting is unchanged."
 }
