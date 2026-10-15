@@ -48,6 +48,7 @@ import BriefProperty from "@/components/Chips/Property/BriefProperty";
 import { cssVariableGroups } from "@/cons/uiStyleVariables";
 
 type Props = {
+  className?: string;
   rearrangeResources?: () => any;
 };
 
@@ -57,7 +58,7 @@ const MinResourceColCount = 3;
 const DefaultResourceColCount = 6;
 const MaxResourceColCount = 12;
 
-const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
+const MiscellaneousOptions = ({ rearrangeResources, className }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const uiOptionsStore = useUiOptionsStore();
@@ -496,6 +497,8 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
       <Button
         isIconOnly
         aria-label={t("resource.display.title")}
+        className={className}
+        title={t("resource.display.title")}
         size={"sm"}
         variant={"light"}
         onPress={() => setVisible(true)}

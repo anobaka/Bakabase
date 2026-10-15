@@ -39,7 +39,7 @@
   "ResourceSearchSortableProperty.AddDt": "添加时间",
   "ResourceSearchSortableProperty.PlayedAt": "上次播放时间",
   "ResourceSearchSortableProperty.HealthScore": "健康分",
-  "resource.display.title": "显示选项",
+  "resource.display.title": "设置",
   "resource.display.columnCount": "列数",
   "resource.display.useNameAsCover": "无封面时使用资源名称",
   "resource.display.useNameAsCoverDescription": "为没有封面的资源显示带有名称和配色的文字封面；已有封面不受影响。",

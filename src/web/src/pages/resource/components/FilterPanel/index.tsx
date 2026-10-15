@@ -19,7 +19,8 @@ import { FilterDisplayMode } from "@/sdk/constants";
 import { PlaylistCollection } from "@/components/Playlist";
 import { Button, Checkbox, Popover, Spinner, Tooltip } from "@/components/bakaui";
 import { useResourceSources } from "@/features/management/resourceSourcesContext";
-import { normalizeQueryOwner } from "@/features/management/resourceQuery";
+import { MetadataSyncStatus } from "@/features/management/MetadataSyncStatus";
+import { normalizeQueryOwner, resolveQuerySources } from "@/features/management/resourceQuery";
 import MiscellaneousOptions from "@/pages/resource/components/FilterPanel/MiscellaneousOptions";
 import CreatePlaceholderResourcesModal from "@/components/Resource/components/CreatePlaceholderResourcesModal";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
@@ -47,6 +48,7 @@ const MinResourceColCount = 3;
 const DefaultResourceColCount = 6;
 const DefaultMaxResourceColCount = 10;
 const AutoSearchDebounceMs = 1000;
+const ToolbarButtonClassName = "h-7 w-7 min-w-7";
 
 const defaultSearchForm = (): SearchForm => ({
   page: 1,
@@ -194,16 +196,19 @@ const FilterPanel = (props: IProps) => {
       className="flex h-full min-h-0 min-w-0 flex-col"
     >
       <header className="flex shrink-0 flex-col gap-3 pb-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="flex items-center gap-2 text-sm font-semibold">
-            <AiOutlineFilter aria-hidden className="text-base text-primary" />
-            {t("resource.search.panelTitle")}
+        <div className="flex min-w-0 flex-wrap items-center justify-between gap-1">
+          <h2 className="flex min-w-0 items-center gap-1.5 text-sm font-semibold">
+            <AiOutlineFilter aria-hidden className="shrink-0 text-base text-primary" />
+            <span className="truncate" title={t("resource.search.panelTitle")}>
+              {t("resource.search.panelTitle")}
+            </span>
           </h2>
-          <div className="flex items-center gap-1">
+          <div className="flex shrink-0 items-center gap-0.5">
             <Tooltip content={t<string>("resource.unmaterialized.tip")}>
               <Button
                 isIconOnly
                 aria-label={t("resource.unmaterialized.action.open")}
+                className={ToolbarButtonClassName}
                 color="default"
                 size="sm"
                 variant="light"
@@ -216,13 +221,14 @@ const FilterPanel = (props: IProps) => {
                 <AiOutlinePlus aria-hidden className="text-lg" />
               </Button>
             </Tooltip>
-            <ShortcutsButton />
+            <ShortcutsButton className={ToolbarButtonClassName} />
             <Popover
               className="min-w-[160px]"
               trigger={
                 <Button
                   isIconOnly
                   aria-label={t("resource.search.playlists")}
+                  className={ToolbarButtonClassName}
                   color={"default"}
                   size={"sm"}
                   variant={"light"}
@@ -237,6 +243,7 @@ const FilterPanel = (props: IProps) => {
               <Button
                 isIconOnly
                 aria-label={t("resource.search.recentlyPlayed")}
+                className={ToolbarButtonClassName}
                 color={"default"}
                 size={"sm"}
                 variant={"light"}
@@ -245,7 +252,18 @@ const FilterPanel = (props: IProps) => {
                 <HistoryOutlined className={"text-base"} />
               </Button>
             </Tooltip>
-            <MiscellaneousOptions rearrangeResources={rearrangeResources} />
+            {sourceContext && (
+              <MetadataSyncStatus
+                className={ToolbarButtonClassName}
+                presentation="popover"
+                sources={resolveQuerySources(searchForm, sources)}
+                onRefresh={sourceContext.refresh}
+              />
+            )}
+            <MiscellaneousOptions
+              className={ToolbarButtonClassName}
+              rearrangeResources={rearrangeResources}
+            />
           </div>
         </div>
       </header>

@@ -76,7 +76,14 @@ const ShortcutsButton = ({ className }: Props) => {
 
   return (
     <Tooltip content={t<string>("resource.shortcut.title")}>
-      <Button isIconOnly className={className} size={"sm"} variant={"light"} onPress={openModal}>
+      <Button
+        isIconOnly
+        aria-label={t("resource.shortcut.title")}
+        className={className}
+        size={"sm"}
+        variant={"light"}
+        onPress={openModal}
+      >
         <RiKeyboardLine className={"text-lg"} />
       </Button>
     </Tooltip>

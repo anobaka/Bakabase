@@ -7,14 +7,18 @@ import { canReadSourceMetadata } from "./metadata";
 import DeviceDot from "./DeviceDot";
 import { useManagementSources } from "./useManagementSources";
 
-import { Button } from "@/components/bakaui";
+import { Button, Popover } from "@/components/bakaui";
 
 export function MetadataSyncStatus({
   sources,
   onRefresh,
+  presentation = "section",
+  className,
 }: {
   sources: ManagementSource[];
   onRefresh: () => void;
+  presentation?: "section" | "popover";
+  className?: string;
 }) {
   const { t, i18n } = useTranslation();
   const [busy, setBusy] = useState<string>();
@@ -33,23 +37,16 @@ export function MetadataSyncStatus({
       source.metadata!.data.checkpoint?.cursor,
   );
 
-  return (
-    <details className="shrink-0 rounded-lg border border-divider bg-content1 px-3 py-2 text-xs">
-      <summary className="cursor-pointer select-none text-default-600">
-        {t("management.metadata.title")}
-        <span className="ml-2 text-default-500">
-          {t(
-            pending.length
-              ? "management.metadata.pendingSummary"
-              : attention
-                ? "management.metadata.attentionSummary"
-                : "management.metadata.readySummary",
-            {
-              count: pending.length || remote.length,
-            },
-          )}
-        </span>
-      </summary>
+  const summary = t(
+    pending.length
+      ? "management.metadata.pendingSummary"
+      : attention
+        ? "management.metadata.attentionSummary"
+        : "management.metadata.readySummary",
+    { count: pending.length || remote.length },
+  );
+  const content = (
+    <>
       <div className="mt-2 flex flex-col divide-y divide-divider">
         {remote.map((source) => {
           const metadata = source.metadata!;
@@ -161,6 +158,46 @@ export function MetadataSyncStatus({
           {error}
         </p>
       )}
+    </>
+  );
+
+  if (presentation === "popover") {
+    return (
+      <Popover
+        placement="bottom-end"
+        trigger={
+          <Button
+            isIconOnly
+            aria-label={t("management.metadata.title")}
+            className={className}
+            color={attention || pending.length ? "warning" : "default"}
+            size="sm"
+            title={`${t("management.metadata.title")} · ${summary}`}
+            variant="light"
+          >
+            <AiOutlineSync aria-hidden className="text-lg" />
+          </Button>
+        }
+      >
+        <section
+          aria-label={t("management.metadata.title")}
+          className="max-h-[min(70vh,32rem)] w-[min(26rem,calc(100vw-2rem))] overflow-y-auto overscroll-contain p-2 text-xs"
+        >
+          <h3 className="text-sm font-semibold">{t("management.metadata.title")}</h3>
+          <p className="mt-1 text-default-500">{summary}</p>
+          {content}
+        </section>
+      </Popover>
+    );
+  }
+
+  return (
+    <details className="shrink-0 rounded-lg border border-divider bg-content1 px-3 py-2 text-xs">
+      <summary className="cursor-pointer select-none text-default-600">
+        {t("management.metadata.title")}
+        <span className="ml-2 text-default-500">{summary}</span>
+      </summary>
+      {content}
     </details>
   );
 }
