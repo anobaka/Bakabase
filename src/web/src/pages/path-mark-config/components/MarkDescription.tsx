@@ -108,24 +108,20 @@ const MarkDescription = ({ mark, className, label, priority }: Props) => {
             parts.push(`="${fixedValue}"`);
           }
         } else if (valueType === PropertyValueType.Dynamic) {
-          // Dynamic mode: check valueLayer and valueRegex to determine extraction method
-          const valueLayer = config.valueLayer;
+          // Stable sync selects value extraction using the mark's matching mode.
+          const valueLayer = config.valueLayer ?? 0;
           const valueRegex = config.valueRegex;
 
-          if (valueLayer !== undefined && valueLayer !== null) {
+          if (matchMode === PathMatchMode.Layer) {
             // Layer-based extraction
             if (valueLayer === 0) {
               parts.push(t("markDescription.valueLayer.current"));
             } else if (valueLayer > 0) {
-              parts.push(
-                `${t("markDescription.valueFrom")}+${valueLayer}${t("markDescription.layer.suffix")}`,
-              );
+              parts.push(t("markDescription.valueLayer.descendant", { layer: valueLayer }));
             } else {
-              parts.push(
-                `${t("markDescription.valueFrom")}${valueLayer}${t("markDescription.layer.suffix")}`,
-              );
+              parts.push(t("markDescription.valueLayer.ancestor", { layer: -valueLayer }));
             }
-          } else if (valueRegex) {
+          } else if (matchMode === PathMatchMode.Regex && valueRegex) {
             // Regex-based extraction
             parts.push(t("markDescription.valueRegex", { regex: valueRegex }));
           }
@@ -139,24 +135,23 @@ const MarkDescription = ({ mark, className, label, priority }: Props) => {
         if (valueType === PropertyValueType.Fixed) {
           // Fixed mode: library name is already shown in the label
         } else if (valueType === PropertyValueType.Dynamic) {
-          // Dynamic mode: check layerToMediaLibrary and regexToMediaLibrary
-          const layerToMediaLibrary = config.layerToMediaLibrary;
+          const layerToMediaLibrary = config.layerToMediaLibrary ?? 0;
           const regexToMediaLibrary = config.regexToMediaLibrary;
 
-          if (layerToMediaLibrary !== undefined && layerToMediaLibrary !== null) {
+          if (matchMode === PathMatchMode.Layer) {
             // Layer-based extraction
             if (layerToMediaLibrary === 0) {
               parts.push(t("markDescription.mediaLibraryLayer.current"));
             } else if (layerToMediaLibrary > 0) {
               parts.push(
-                `${t("markDescription.mediaLibraryFrom")}+${layerToMediaLibrary}${t("markDescription.layer.suffix")}`,
+                t("markDescription.mediaLibraryLayer.descendant", { layer: layerToMediaLibrary }),
               );
             } else {
               parts.push(
-                `${t("markDescription.mediaLibraryFrom")}${layerToMediaLibrary}${t("markDescription.layer.suffix")}`,
+                t("markDescription.mediaLibraryLayer.ancestor", { layer: -layerToMediaLibrary }),
               );
             }
-          } else if (regexToMediaLibrary) {
+          } else if (matchMode === PathMatchMode.Regex && regexToMediaLibrary) {
             // Regex-based extraction
             parts.push(t("markDescription.mediaLibraryRegex", { regex: regexToMediaLibrary }));
           }

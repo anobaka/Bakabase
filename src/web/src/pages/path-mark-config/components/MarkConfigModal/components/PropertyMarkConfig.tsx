@@ -187,6 +187,9 @@ const PropertyMarkConfig = ({
             <span className="text-sm font-medium">
               {t("pathMarkConfig.label.valueExtractionMode")}
             </span>
+            <div className="text-xs text-default-400">
+              {t("pathMarkConfig.tip.valueExtractionFollowsMatchMode")}
+            </div>
             <RadioGroup
               orientation="horizontal"
               size="sm"
@@ -200,7 +203,7 @@ const PropertyMarkConfig = ({
 
           {config.valueMatchMode === PathMatchMode.Layer ? (
             <NumberInput
-              description={t("pathMarkConfig.tip.zeroEqualsMatchedItem")}
+              description={t("pathMarkConfig.tip.valueLayerDescription")}
               label={t("pathMarkConfig.label.valueLayer")}
               size="sm"
               value={config.valueLayer ?? 0}
@@ -208,6 +211,7 @@ const PropertyMarkConfig = ({
             />
           ) : (
             <Input
+              description={t("pathMarkConfig.tip.valueRegexDescription")}
               label={t("pathMarkConfig.label.valueRegex")}
               placeholder={t("pathMarkConfig.tip.regexExample")}
               size="sm"

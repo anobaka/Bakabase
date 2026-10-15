@@ -27,7 +27,14 @@ const PreviewResults = ({
   t,
   applyScope,
 }: Props) => {
-  const showSubdirectoriesSuffix = applyScope === PathMarkApplyScope.MatchedAndSubdirectories;
+  const showSubdirectoriesSuffix =
+    markType === PathMarkType.Resource &&
+    applyScope === PathMarkApplyScope.MatchedAndSubdirectories;
+  const previewTitle = t(
+    markType === PathMarkType.Resource
+      ? "pathMarkConfig.label.previewMatches"
+      : "pathMarkConfig.label.previewValueExamples",
+  );
 
   if (loading) {
     return (
@@ -159,9 +166,7 @@ const PreviewResults = ({
   if (isMultiplePaths && resultsByPath && resultsByPath.length > 0) {
     return (
       <div className="bg-default-100 rounded p-2">
-        <div className="text-xs text-default-500 mb-1">
-          {t("pathMarkConfig.label.previewMatches")}:
-        </div>
+        <div className="text-xs text-default-500 mb-1">{previewTitle}:</div>
         <div className="flex flex-col gap-2 max-h-48 overflow-y-auto">
           {resultsByPath.map((group, groupIdx) => (
             <div key={groupIdx} className="border-l-2 border-primary-200 pl-2">
@@ -180,9 +185,7 @@ const PreviewResults = ({
 
   return (
     <div className="bg-default-100 rounded p-2">
-      <div className="text-xs text-default-500 mb-1">
-        {t("pathMarkConfig.label.previewMatches")}:
-      </div>
+      <div className="text-xs text-default-500 mb-1">{previewTitle}:</div>
       <div className="flex flex-col gap-1 max-h-32 overflow-y-auto">
         {results.map((result, idx) => renderResult(result, idx))}
       </div>
