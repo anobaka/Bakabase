@@ -69,7 +69,7 @@ public class DataSyncTwoHostFirstSyncTests
             await service.Put(property.Id, Genre("Rock & Roll"));
         });
         var created = await _b.CallAsync(s => s.CreateLinkAsync(
-            new DataSyncLinkCreateInput(_a.NodeId, null, null, DataSyncLinkMode.TwoWay, []), true, default));
+            new DataSyncLinkCreateInput(_a.NodeId, null, DataSyncLinkMode.TwoWay, []), true, default));
         Assert.IsNull(created.Problem, created.Problem?.Code.ToString());
         Assert.AreEqual(DataSyncLinkState.AwaitingReview, created.Link!.State, "B already reads A");
         // A reader gets one snapshot per 10 s (§7.5.2).
@@ -96,7 +96,7 @@ public class DataSyncTwoHostFirstSyncTests
     public async Task A_two_way_request_approved_without_reading_back_says_so_until_the_approver_reads_back()
     {
         var created = await _b.CallAsync(s => s.CreateLinkAsync(
-            new DataSyncLinkCreateInput(_a.NodeId, null, null, DataSyncLinkMode.TwoWay, []), true, default));
+            new DataSyncLinkCreateInput(_a.NodeId, null, DataSyncLinkMode.TwoWay, []), true, default));
         Assert.IsNull(created.Problem);
         var request = (await _a.CallAsync(s => s.GetRequestsAsync(default)))
             .Single(r => r.Direction == DataSyncRequestDirection.Incoming);
@@ -129,7 +129,7 @@ public class DataSyncTwoHostFirstSyncTests
     {
         _network.FailNextReadBack = nameof(DataSyncPeerErrorCode.Unreachable);
         var created = await _b.CallAsync(s => s.CreateLinkAsync(
-            new DataSyncLinkCreateInput(_a.NodeId, null, null, DataSyncLinkMode.TwoWay, []), true, default));
+            new DataSyncLinkCreateInput(_a.NodeId, null, DataSyncLinkMode.TwoWay, []), true, default));
         Assert.IsNull(created.Problem);
         var request = (await _a.CallAsync(s => s.GetRequestsAsync(default)))
             .Single(r => r.Direction == DataSyncRequestDirection.Incoming);

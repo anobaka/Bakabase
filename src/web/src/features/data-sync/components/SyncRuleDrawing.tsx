@@ -7,7 +7,7 @@ import type { RemoteAccessMode } from "@/sdk/constants";
 
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 import { dataSyncApi } from "../api";
 import {
@@ -36,7 +36,7 @@ import {
 
 import { linkButtonClass, smallButtonClass, StatusDot, syncText, toneText } from "./common";
 import { DecideThereHint } from "./ElsewhereLines";
-import { openCodeFirst, turnOnSharing } from "./SharingControls";
+import { turnOnSharing } from "./SharingControls";
 
 import { edgeStyles, KindBadgeGlyph } from "@/features/federation/map/DeviceMapCanvas";
 import {
@@ -68,11 +68,9 @@ export interface SyncRuleDrawingProps {
   remoteAccessMode: RemoteAccessMode;
   /** This device's name as the other device will be told it, in a request's preview. */
   selfName: string;
-  /** Opens the one-time code for the other device to redeem. */
-  onCreateCode?: () => void;
   /** Where the page is not the host (the device map): links to the page's own details. */
   linkToPage?: boolean;
-  /** A new link or copy was made (the wizard closes), before a copy's first sync is opened. */
+  /** A new link was made (the wizard closes). */
   onCreated?: (result: DataSyncLinkResult) => void;
   now?: number;
 }
@@ -84,13 +82,11 @@ export default function SyncRuleDrawing({
   sharingEnabled,
   remoteAccessMode,
   selfName,
-  onCreateCode,
   linkToPage = false,
   onCreated,
   now,
 }: SyncRuleDrawingProps) {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const editor = linkEditor(peer);
   // The kinds a new link will receive, chosen before it exists.
   const [draftKinds, setDraftKinds] = useState<string[]>(editor.kinds);
@@ -104,15 +100,13 @@ export default function SyncRuleDrawing({
   /** Sharing (and remote access) this device must turn on before the other can read it. */
   const mustTurnOn = sharingNeeded(own);
   /**
-   * Who a new link or copy goes to: an address and a code, or the device by its id and — where it
+   * Who a new link goes to: an address, or the device by its id and — where it
    * is no device the server knows yet (one found nearby) — the address its request goes to.
    */
-  const destination = peer.code
-    ? { address: peer.address, code: peer.code }
-    : {
-        peerNodeId: peer.nodeId,
-        ...(peer.linkId === undefined && peer.address ? { address: peer.address } : {}),
-      };
+  const destination = {
+    ...(peer.nodeId ? { peerNodeId: peer.nodeId } : {}),
+    ...(peer.linkId === undefined && peer.address ? { address: peer.address } : {}),
+  };
   /** Whether switching to `target` would create or widen access (§7.1.5). */
   const createsAccess = (target: ModeName) =>
     target !== "off" &&
@@ -136,8 +130,7 @@ export default function SyncRuleDrawing({
 
       return;
     }
-    // A code is redeemed one way (§7.2.3): the link then offers to ask the other device to read this one.
-    const twoWay = target === "twoWay" && !peer.code;
+    const twoWay = target === "twoWay";
     const turnsOn = twoWay && !peer.peerMayRead && mustTurnOn;
     const operation = async () => {
       if (turnsOn) await turnOnSharing(own);
@@ -209,35 +202,10 @@ export default function SyncRuleDrawing({
       refresh: ["dataSync"],
     });
 
-  const copyOnce = () =>
-    actions.confirm({
-      title: t("dataSync.copyOnce.title", { name }),
-      description: t("dataSync.copyOnce.description", { name }),
-      warning:
-        peer.weMayRead === true ? undefined : t("dataSync.request.follow", { name: selfName }),
-      action: async () => {
-        const result = await dataSyncApi.copyOnce({ ...destination, kinds });
-        const link = result.link;
-
-        if (!link || !actions.mounted.current) return;
-        onCreated?.(result);
-        // A copy this device may not read yet sent a request: its first sync comes once it is
-        // approved there, which may take hours. Said here, where the request now shows.
-        if (link.state === DataSyncLinkState.AwaitingAccess)
-          actions.setNotice(t("dataSync.wizard.requested", { name }));
-        else navigate(dataSyncReviewRoute(link.id));
-      },
-      refresh: ["dataSync"],
-    });
-
   const readLabel =
     editor.read === "active"
       ? t("federation.map.direction.sync.out.active", { name })
       : t("dataSync.arrow.read.off", { name });
-  const copyOnceOffered =
-    editor.mode === "off" &&
-    (peer.state === undefined || peer.state === DataSyncLinkState.Stopped) &&
-    peer.outcome !== "awaitingApproval";
   const manageNote = !canManage && (["follow", "twoWay"] as const).some((mode) => !allowed(mode));
 
   return (
@@ -305,19 +273,6 @@ export default function SyncRuleDrawing({
         canManage && (
           <div className="flex flex-wrap items-center gap-2 text-xs text-default-500">
             <span>{t("dataSync.arrow.read.offHint", { name })}</span>
-            {onCreateCode && (
-              <Button
-                className={smallButtonClass}
-                data-testid="data-sync-create-code-for"
-                disabled={actions.busy}
-                size="sm"
-                type="button"
-                variant="bordered"
-                onClick={() => openCodeFirst(t, actions, own, onCreateCode, name)}
-              >
-                {t("dataSync.invitation.createFor", { name })}
-              </Button>
-            )}
           </div>
         )
       )}
@@ -357,19 +312,6 @@ export default function SyncRuleDrawing({
               </button>
             ))}
           </div>
-          {copyOnceOffered && (
-            <Button
-              className={`${smallButtonClass} ml-auto`}
-              data-testid="data-sync-copy-once"
-              disabled={actions.busy || (!canManage && peer.weMayRead !== true)}
-              size="sm"
-              type="button"
-              variant="bordered"
-              onClick={copyOnce}
-            >
-              {t("dataSync.copyOnce.button")}
-            </Button>
-          )}
         </div>
         {manageNote && (
           <p className="text-xs text-default-500" data-testid="data-sync-manage-elsewhere">

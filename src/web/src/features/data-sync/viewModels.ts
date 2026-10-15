@@ -117,8 +117,6 @@ export interface SyncPeer {
   nodeId: string;
   name: string;
   address?: string;
-  /** A one-time code of its own that a new link or copy redeems (the wizard's way in by address). */
-  code?: string;
   linkId?: number;
   mode: DataSyncLinkMode;
   state?: DataSyncLinkState;
@@ -428,19 +426,6 @@ export const turnsOnWarning = (t: T, own: OwnSharing) =>
   ]
     .filter(Boolean)
     .join(" ") || undefined;
-
-/**
- * The question asked before a code is shown where it could not work yet (spec §7.2.3, §7.2.4):
- * a code needs this device to share its definitions and remote access to be on, and what is off
- * is turned on first. For a code meant for one device, `name` names it.
- */
-export const codeTurnsOnConfirmation = (t: T, own: OwnSharing, name?: string) => ({
-  title: own.sharingEnabled ? t("dataSync.remoteAccess.onTitle") : t("dataSync.sharing.onTitle"),
-  description: name
-    ? t("dataSync.invitation.needsSharingFirst", { name })
-    : t("dataSync.invitation.turnOnFirst"),
-  warning: turnsOnWarning(t, own),
-});
 
 /**
  * The question asked before remote access is turned on where sharing already is (spec §7.2.4):

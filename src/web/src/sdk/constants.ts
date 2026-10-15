@@ -5710,69 +5710,6 @@ export const DataSyncFirstSyncActionLabel: Record<DataSyncFirstSyncAction, strin
   [DataSyncFirstSyncAction.KeepBoth]: 'KeepBoth'
 };
 
-export enum DataSyncUndoState {
-  Available = 1,
-  Undone = 2,
-  Expired = 3
-}
-
-export const dataSyncUndoStates = [
-  { label: 'Available', value: DataSyncUndoState.Available },
-  { label: 'Undone', value: DataSyncUndoState.Undone },
-  { label: 'Expired', value: DataSyncUndoState.Expired }
-] as const;
-
-export const DataSyncUndoStateLabel: Record<DataSyncUndoState, string> = {
-  [DataSyncUndoState.Available]: 'Available',
-  [DataSyncUndoState.Undone]: 'Undone',
-  [DataSyncUndoState.Expired]: 'Expired'
-};
-
-export enum DataSyncUndoAction {
-  Remove = 1,
-  Revert = 2,
-  RemoveAliases = 3,
-  Recreate = 4,
-  Exclude = 5
-}
-
-export const dataSyncUndoActions = [
-  { label: 'Remove', value: DataSyncUndoAction.Remove },
-  { label: 'Revert', value: DataSyncUndoAction.Revert },
-  { label: 'RemoveAliases', value: DataSyncUndoAction.RemoveAliases },
-  { label: 'Recreate', value: DataSyncUndoAction.Recreate },
-  { label: 'Exclude', value: DataSyncUndoAction.Exclude }
-] as const;
-
-export const DataSyncUndoActionLabel: Record<DataSyncUndoAction, string> = {
-  [DataSyncUndoAction.Remove]: 'Remove',
-  [DataSyncUndoAction.Revert]: 'Revert',
-  [DataSyncUndoAction.RemoveAliases]: 'RemoveAliases',
-  [DataSyncUndoAction.Recreate]: 'Recreate',
-  [DataSyncUndoAction.Exclude]: 'Exclude'
-};
-
-export enum DataSyncUndoBlock {
-  ChangedSinceImport = 1,
-  InUse = 2,
-  AddedOptionsInUse = 3,
-  Missing = 4
-}
-
-export const dataSyncUndoBlocks = [
-  { label: 'ChangedSinceImport', value: DataSyncUndoBlock.ChangedSinceImport },
-  { label: 'InUse', value: DataSyncUndoBlock.InUse },
-  { label: 'AddedOptionsInUse', value: DataSyncUndoBlock.AddedOptionsInUse },
-  { label: 'Missing', value: DataSyncUndoBlock.Missing }
-] as const;
-
-export const DataSyncUndoBlockLabel: Record<DataSyncUndoBlock, string> = {
-  [DataSyncUndoBlock.ChangedSinceImport]: 'ChangedSinceImport',
-  [DataSyncUndoBlock.InUse]: 'InUse',
-  [DataSyncUndoBlock.AddedOptionsInUse]: 'AddedOptionsInUse',
-  [DataSyncUndoBlock.Missing]: 'Missing'
-};
-
 export enum DataSyncProblemCode {
   Busy = 1,
   ApplyInProgress = 2,

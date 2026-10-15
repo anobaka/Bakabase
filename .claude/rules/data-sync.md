@@ -12,7 +12,10 @@ this definitions engine or this device's ordinary resource tables. See `server-s
 Every definition carries a sync key and a version vector. Safe changes apply by themselves;
 conflicts, deletions of things in use, type changes and name-only matches wait in the inbox
 (“Needs you” / 「待你决定」), and deciding on one device closes the same item everywhere.
-Every apply can be undone.
+Every committed apply is recorded for audit. History is read-only: there is no user undo or
+undo-preview endpoint. Corrections are ordinary edits followed by synchronization and the usual
+conflict decisions. Syncing again does not reconstruct an older version or recover deleted values.
+Keep historical undo records and transactional rollback/recovery separate from user actions.
 
 Most rules below are **not** compile-checked. Use the checklists when you add a kind, a
 field, a DbSet or an inbox item type.
@@ -57,8 +60,8 @@ scopes").
   pattern or a timed-out match as invalid input, never as a crash.
 - [ ] **Adapter** — an `IDataSyncKind` next to the service that owns the table. It writes
   only through that service: no `ExecuteUpdate`/`ExecuteDelete`, raw SQL or hand-built
-  `UpdateRange`, and everything it writes joins the apply's transaction, since a refused undo
-  step or Convert is taken back by rolling the whole transaction back. `ResetCaches` drops the
+  `UpdateRange`, and everything it writes joins the apply's transaction, since a refused
+  Convert is taken back by rolling the whole transaction back. `ResetCaches` drops the
   service's cache after a rollback. Usage counts, order, subtype changes and raw-row hashes as
   the interface asks.
 - [ ] **DbSet classification** — the kind's tables are `Synced` with the kind id in
@@ -192,7 +195,7 @@ scopes").
   backoff. `NotApplied` (the attempt ended, the actor unverified or changing) puts the pull and
   a requested re-merge back for the next run.
 - **Deletions and size never pause a link.** A pull applies whatever it changes or creates,
-  however many definitions, as one undoable history entry. When a peer deletes more
+  however many definitions, as one audit history entry. When a peer deletes more
   definitions of a kind than B2 allows (new deletions only: one already asked about is not
   new), every deletion of that kind in that pull becomes a `DeletedThere` question and the rest
   applies; a kind the peer stops offering is recorded as `MissingAtPeer` by the next full
@@ -209,7 +212,7 @@ scopes").
   runs in a deferred transaction, never EF's `BEGIN IMMEDIATE`, so a page load neither waits
   for nor holds up a writer.
 - **The gate and link rows.** The gated `/data-sync` actions (Off, reset, pause all,
-  resolving, entity settings, undo, the restore choice) wait for the `DataSyncGate` at most
+  resolving, entity settings, the restore choice) wait for the `DataSyncGate` at most
   30 s, then answer `Busy` having changed nothing; reads never wait. Departures from §10.1's
   gate column, on purpose: creating, changing (other than Off), pausing and resuming a link and
   a first sync's Start (its task takes the gate) take **no** gate, and neither does approving a
@@ -282,7 +285,7 @@ scopes").
   deadline and `MaxStagedPullBytes`.
 - **An auto-sync apply is one transaction**, a first sync's Start included. Refresh, the merge, every write, the
   inbox, the history entry and the cursor commit together, or nothing does: every committed apply
-  has its history entry, so it can be undone and the lost-update guard sees it. There is no
+  has its history entry for audit and the lost-update guard. There is no
   per-transaction time bound; `ApplyTransactionTests` runs a first sync of 500 properties, one
   with 10,000 options, on its own and holds it to 15 s — a guard against a pathological regression
   (the target is 5 s; a quiet machine takes about 1–2 s, a shared CI runner more). After Refresh the session forgets the rows it tracked
@@ -300,7 +303,7 @@ scopes").
   is an ordinary revision again; `RefreshedAtJson` is written only while a guarded apply lies in
   the window, so heads do not write the row for nothing.
 - **Local child ids follow a rebuild.** A subtype change rebuilds the children with fresh ids
-  (F73). Convert (and undo converting back) maps holds, local-only children and every link's child
+  (F73). Convert maps holds, local-only children and every link's child
   map to the rebuilt children by label class (`IDataSyncKindCodec.MapChildrenByClass`,
   `DataSyncChildIdRemap`) before anything is merged or published; a question about a held child
   that no longer exists closes `Superseded` and releases the hold, never `ResolvedHere`.
@@ -308,20 +311,13 @@ scopes").
   (a `TypeChange` record still pending over an entity phase one gave its type), Refresh publishes
   the entity held (`PendingDecision`) and issues no revision; it publishes again, under a revision,
   once the decision merges the record or the link forgets it.
-- **Undo is faithful, or the step is taken back** (§8.11). A step refused only after it wrote,
-  or key moves that cannot all return, roll the whole transaction back, and the undo runs again
-  without them (`DataSyncRunWithoutException`; a Convert whose phase two cannot run defers its
-  item the same way). A
-  deletion is re-created from its captured content verbatim (`CreateEntityOperation.FromPreImage`);
-  a type change goes back through `IDataSyncKind.RestoreAsync` with the captured raw row, never a
-  subtype change alone (which rebuilds children with fresh ids, F73); a change list removes a
-  child only together with everything now under it that the same list removes (a child added or
-  moved under it since is a conflict). The entity re-read after each step must have the canonical
-  content the step restored, or the step is refused as `ChangedSinceImport`. An undo whose every
-  step is refused undoes nothing and its task fails `UndoNotAvailable`, naming the refused steps —
-  never completes with its entry still undoable.
+- **History is not an action queue.** Do not add replay/undo controls to old entries: later
+  edits, references and sync decisions may have changed their meaning. Keep recorded outcomes
+  and historical undo metadata readable. An incomplete Convert still rolls its transaction back
+  (`DataSyncRunWithoutException`) before deferring the item; removing user undo never weakens
+  transactional recovery or the lost-update guard.
 - **Nothing a decision writes back removes a child in use.** "Put the synced change back"
-  (`Reapply`) checks usage like a merge (§8.5.4 step 3) and undo (`AddedOptionsInUse`): while
+  (`Reapply`) checks usage like a merge (§8.5.4 step 3): while
   resources use a child it would remove, it writes nothing and the item names them
   (`Detail = reapplyInUse`). One with an undone change that no longer fits the content (a
   conflict) writes nothing either, keeps the hold and offers Publish only (`reapplyUnavailable`).
@@ -425,8 +421,7 @@ scopes").
 - **Writes only through services.** Adapters call the owning service; nothing writes around it.
 - **No local ids in content**, and **no secrets**, ever.
 - **The key invariant.** Within a kind, a key is exactly one of: a live primary, a tombstoned
-  primary or an alias. `DataSyncIdentityStore` is its only writer and enforces it. Undo never
-  removes a side row or an alias.
+  primary or an alias. `DataSyncIdentityStore` is its only writer and enforces it.
 - **Nothing is merged by name alone.** Name matches are suggestions (link, keep both, skip),
   answered under "Needs you" or, for a copy once, in its preview; the only exception is an
   extension group identical in name and extensions. A definition already agreed with another
@@ -439,8 +434,8 @@ scopes").
 - **Who may create or widen access.** Only this device's own window, a paired device or the
   CLI (and `BAKABASE_DATASYNC_SHARING` at start) may turn definitions sharing on, approve a
   definitions request, create a code, or send a request / mint a reciprocal code
-  (`AskAccessAgain` included). The controller refuses what always widens access; for links and
-  copy once it passes who is asking, and the link service refuses exactly the calls that would
+  (`AskAccessAgain` included). The controller refuses what always widens access; for links
+  it passes who is asking, and the link service refuses exactly the calls that would
   send a request or mint a code. An unpaired browser admitted only by Unrestricted mode may
   reduce access, never widen it (`NotAllowedOnThisDevice`). **What that holds against:** it
   refuses callers that have not paired, so it is only as strong as the way to a device key.
@@ -474,15 +469,14 @@ scopes").
   (`IDataSyncRuntimeObserver.TaskEndedAsync`), and the status pushed then leaves that task out
   (`DataSyncViews.IsSyncing(endingTaskId)`); a waiting task a cancel removes is pushed from the
   cancel. The page's header reads the status the hub pushes, as the indicator does.
-- **Following a task the page started.** Its id may be listed already — a restore chosen again,
-  an undo retried — so the page takes `listedTasks()` before sending the request and never takes
-  that earlier run for the new one. "Needs you" and the history follow their decisions and undos
-  with one `useTaskFollower`: a task that fails says so on its card or row; one that completes,
+- **Following a task the page started.** Its id may be listed already — a restore chosen again — so the page takes `listedTasks()` before sending the request and never takes
+  that earlier run for the new one. "Needs you" follows decisions
+  with `useTaskFollower`: a task that fails says so on its card or row; one that completes,
   was listed and then is not, or was never listed for 30 s, is over once a read after it is in.
   The restore panel and the first sync follow theirs with `useDataSyncTask(id, earlier)`; the
   restore panel disables its choices until its task is over and reads the restore again then,
-  and also whenever the overview or the hub says something new about it. An undo that completes
-  with its entry still undoable says nothing was undone.
+  and also whenever the overview or the hub says something new about it. History refreshes on
+  the usual poll and hub updates without following a write task.
 - **A problem's detail is not copy.** `DataSyncProblem.Detail` is a token, an id or an English
   sentence. The UI words the details that change what a problem means
   (`wordedProblemDetails`, `dataSync.problem.detail.{code}.{detail}`) and shows any other only
@@ -505,10 +499,10 @@ scopes").
 - **This device's counts** (`DataSyncOverview.Kinds`) come from the kinds' own rows, less those
   kept local or detached (and, while new definitions stay local, those no Refresh has met):
   never from what Refresh last published, which a device no peer has read has none of.
-- **A device found only nearby is asked at its address.** A link or copy once to a device the
+- **A device found only nearby is asked at its address.** A link to a device the
   server does not know sends its `peerNodeId` and the `address` it answered at; the wizard and
   the map do alike, through the one rule editor (`SyncRuleDrawing`): the wizard only chooses the
-  device, or an address and a code, and asks its questions inside its dialog. Sharing the rule
+  device, or an address, and asks its questions inside its dialog. Sharing the rule
   editor turned on for a request that then failed is turned off again (remote access, a setting
   of its own, stays).
 - **Copy.** The feature is 数据同步 / Data sync; never 配置同步, 配置包 or 分享给他人. “Needs
@@ -517,6 +511,16 @@ scopes").
   capability before it works. An English string with a `{{count}}` noun has a `_one` form
   beside it (i18next resolves it); Chinese needs none, and the locale test holds both to that.
   A switch's label is quoted with “ ” in both languages, as the help does.
+
+## Authorization and one-time synchronization
+
+User-facing invitation-code generation/redemption and “copy once” entry points are retired.
+Devices use the ordinary access request/approval and Follow/TwoWay links. For a single transfer,
+review the initial synchronization, wait for completion, then stop that link; synchronized data
+is retained. Keep management pairing codes and internal reciprocal grant tokens: these authorize
+normal pairing and two-way definitions synchronization, not a separate user flow. Historic
+`CopyOnce` entries and stored pending first-sync state stay readable; do not expose a new copy
+route or delete historical data as part of UI cleanup.
 
 ## Headless (NAS/Docker)
 
@@ -535,7 +539,7 @@ request's — and says so in its heads (`Attention.Headless`).
   `API_LISTENING_PORTS`, `ASPNETCORE_HTTP_PORTS`, then 8080). Like `federation status`, it prints
   the API's answer as JSON (enums as numbers, times in UTC); a refusal prints `Refused: {code}`
   and exits 1. Commands: `status` (overview, links, readers and requests), `share on|off`,
-  `invite` (a one-way code and this device's addresses), `requests` (pending ones, in prose, with
+  `requests` (pending ones, in prose, with
   the claim warning and the warning that approving replaces a reader's access),
   `approve <requestId> [--no-receive-back]` (a two-way request is read back unless told not
   to), `reject <requestId>`, `revoke <nodeId>`, and `pause [<nodeId>]` / `resume [<nodeId>]`
@@ -650,7 +654,7 @@ to browse and edit synchronized data, using owning-device metadata.
   the actual replica checkpoint. Paused/checkpointed/interrupted attempts are never completed syncs.
 - Definition history lists are keyset-paged in SQL (50 default, 100 maximum) and project summaries
   without loading result arrays or undo preimages. The UI replaces one page at a time and requests
-  details only on expansion; details and undo still read the existing committed history entry.
+  details only on expansion; details read the existing committed history entry.
 - The activity center routes conflicts to the existing inbox, prefiltered by kind and peer. Batch
   selections operate on whole conflict groups. Previewed decision tokens and allowed actions remain
   authoritative; changing an item while a preview is open requires a fresh review. Type conversion,

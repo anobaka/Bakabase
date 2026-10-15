@@ -27,7 +27,6 @@ public static class DataSyncCli
           status                         Overview, links (with what waits on each peer), readers and requests, as JSON
           share on|off                   Let approved devices read this device's definitions (on also turns on remote access
                                          with pairing required when it is off)
-          invite                         One-time code another device redeems to read this one (with this device's addresses)
           requests                       Pending requests: direction, device name, the address it came from, the claim warning
                                          when it names a device this one knows at another address, a warning when a device
                                          already reads this one under its id (approving replaces that access), and what it
@@ -97,8 +96,6 @@ public static class DataSyncCli
 
                 return exit;
             }
-            case ("invite", 1, false):
-                return await cli.PrintAsync(HttpMethod.Post, "invitations", null, "problem");
             case ("requests", 1, false):
                 return await cli.RequestsAsync();
             case ("approve", 2, _):

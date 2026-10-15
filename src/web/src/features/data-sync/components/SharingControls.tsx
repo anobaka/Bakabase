@@ -1,4 +1,3 @@
-import type { TFunction } from "i18next";
 import type { DataSyncPanelActions } from "../hooks/useDataSyncActions";
 import type { OwnSharing } from "../viewModels";
 
@@ -6,7 +5,7 @@ import { useId } from "react";
 import { useTranslation } from "react-i18next";
 
 import { dataSyncApi } from "../api";
-import { codeTurnsOnConfirmation, remoteAccessConfirmation, sharingNeeded } from "../viewModels";
+import { remoteAccessConfirmation } from "../viewModels";
 
 import { smallButtonClass } from "./common";
 
@@ -23,33 +22,6 @@ export const turnOnSharing = (own: OwnSharing) =>
     enabled: true,
     enablePairedRemoteAccess: own.remoteAccessMode === RemoteAccessMode.Disabled,
   });
-
-/**
- * A code only works while this device shares its definitions and remote access is on (spec
- * §7.2.3): where either is off, it asks to turn them on first, then opens the code. For a code
- * meant for one device, `name` names it.
- */
-export const openCodeFirst = (
-  t: TFunction,
-  actions: DataSyncPanelActions,
-  own: OwnSharing,
-  open: () => void,
-  name?: string,
-) => {
-  if (!sharingNeeded(own)) {
-    open();
-
-    return;
-  }
-  actions.confirm({
-    ...codeTurnsOnConfirmation(t, own, name),
-    action: async () => {
-      await turnOnSharing(own);
-      if (actions.mounted.current) open();
-    },
-    refresh: ["dataSync", "identity"],
-  });
-};
 
 /*
  * Whether devices this one approves may read its definitions, on the `/data-sync` page and in

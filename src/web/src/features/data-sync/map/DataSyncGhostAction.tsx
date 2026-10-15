@@ -27,7 +27,7 @@ export interface DataSyncGhostActionProps extends DataSyncMapHost {
 
 export default function DataSyncGhostAction({ node, ...host }: DataSyncGhostActionProps) {
   const { t } = useTranslation();
-  const { editor, createCode, invitation } = useMapEditor(host);
+  const { editor } = useMapEditor(host);
   const candidate = node.sources.dataSyncCandidate;
   const name = node.name;
 
@@ -39,7 +39,6 @@ export default function DataSyncGhostAction({ node, ...host }: DataSyncGhostActi
           name={name}
           peerAddress={candidate.address}
           peerNodeId={candidate.nodeId}
-          onCreateCode={() => createCode(name)}
         >
           <p className="text-xs text-default-500">{t("dataSync.map.ghost.shares")}</p>
         </SyncWithDevice>
@@ -48,7 +47,6 @@ export default function DataSyncGhostAction({ node, ...host }: DataSyncGhostActi
           {t("dataSync.map.ghost.notSharing")}
         </p>
       )}
-      {invitation}
     </div>
   );
 }

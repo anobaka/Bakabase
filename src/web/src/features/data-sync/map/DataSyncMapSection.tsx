@@ -51,7 +51,7 @@ export interface DataSyncMapSectionProps extends DataSyncMapHost {
 export default function DataSyncMapSection({ node, ...host }: DataSyncMapSectionProps) {
   const { t } = useTranslation();
   const headingId = useId();
-  const { actions, canManage, editor, createCode, invitation } = useMapEditor(host);
+  const { actions, canManage, editor } = useMapEditor(host);
   const { syncRequests } = node.sources;
   const name = node.name;
   const installId = installIdOf(node.keys);
@@ -87,18 +87,12 @@ export default function DataSyncMapSection({ node, ...host }: DataSyncMapSection
       return (
         <>
           {card}
-          <SyncRuleDrawing {...editor} peer={peer} onCreateCode={() => createCode(name)} />
+          <SyncRuleDrawing {...editor} peer={peer} />
         </>
       );
 
     return (
-      <SyncWithDevice
-        editor={editor}
-        name={name}
-        peerAddress={reachableAt}
-        peerNodeId={installId!}
-        onCreateCode={() => createCode(name)}
-      >
+      <SyncWithDevice editor={editor} name={name} peerAddress={reachableAt} peerNodeId={installId!}>
         <p className="text-sm text-default-500">{t("dataSync.map.none", { name })}</p>
       </SyncWithDevice>
     );
@@ -118,7 +112,6 @@ export default function DataSyncMapSection({ node, ...host }: DataSyncMapSection
         <DataSyncHelp />
       </div>
       {body()}
-      {invitation}
     </section>
   );
 }

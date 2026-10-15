@@ -22,12 +22,12 @@ import { Button, Input, Checkbox } from "@/components/bakaui";
  * "Sync with another device" (spec §11.2): choose the device, then the rule editor for it — the
  * same one the page and the map show. A device this window cannot read yet is asked for access,
  * which only this device's own window or a device paired with it may do (§7.1.5); anywhere else
- * such devices are shown but cannot be picked, and the way in by address and code is not offered.
- * Once a link or copy is made the wizard closes, and the page shows the device and says what came
+ * such devices are shown but cannot be picked, and the way in by address is not offered.
+ * Once a link is made the wizard closes, and the page shows the device and says what came
  * of it.
  */
 
-/** What the page is told once a link or copy is made. */
+/** What the page is told once a link is made. */
 export interface AddLinkCreated {
   nodeId?: string;
   notice: string;
@@ -71,7 +71,6 @@ export default function AddLinkWizard({
   const [chosen, setChosen] = useState<DataSyncPeerCandidate>();
   const [byAddress, setByAddress] = useState(false);
   const [address, setAddress] = useState("");
-  const [code, setCode] = useState("");
   // The device the rule editor is shown for: the second step.
   const [peer, setPeer] = useState<SyncPeer>();
 
@@ -96,7 +95,7 @@ export default function AddLinkWizard({
     };
   }, []);
 
-  const addressReady = address.trim().length > 0 && /^\d{8}$/.test(code.trim());
+  const addressReady = address.trim().length > 0;
 
   const created = ({ link, requestId }: DataSyncLinkResult) => {
     const name = link?.peerName ?? peer?.name ?? "";
@@ -179,7 +178,7 @@ export default function AddLinkWizard({
             {t("dataSync.wizard.byAddress")}
           </Checkbox>
           {byAddress && (
-            <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_10rem]">
+            <div className="space-y-2">
               <label className="space-y-1 text-xs" htmlFor={`${id}-address`}>
                 <span>{t("dataSync.wizard.address")}</span>
                 <Input
@@ -189,18 +188,6 @@ export default function AddLinkWizard({
                   value={address}
                   variant="bordered"
                   onChange={(event) => setAddress(event.target.value)}
-                />
-              </label>
-              <label className="space-y-1 text-xs" htmlFor={`${id}-code`}>
-                <span>{t("dataSync.wizard.code")}</span>
-                <Input
-                  id={`${id}-code`}
-                  inputMode="numeric"
-                  maxLength={8}
-                  size="sm"
-                  value={code}
-                  variant="bordered"
-                  onChange={(event) => setCode(event.target.value.replace(/\D/g, ""))}
                 />
               </label>
             </div>
@@ -247,9 +234,7 @@ export default function AddLinkWizard({
         variant="bordered"
         onClick={() =>
           setPeer(
-            byAddress
-              ? { ...newSyncPeer("", address.trim(), address.trim()), code: code.trim() }
-              : peerOfCandidate(chosen!),
+            byAddress ? newSyncPeer("", address.trim(), address.trim()) : peerOfCandidate(chosen!),
           )
         }
       >

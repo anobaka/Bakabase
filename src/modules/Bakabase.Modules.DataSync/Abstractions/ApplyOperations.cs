@@ -17,7 +17,7 @@ public abstract record ApplyOperation(string ItemId);
 /// create — or, with <paramref name="FromPreImage"/>, a captured pre-image's content.
 /// </param>
 /// <param name="FromPreImage">
-/// Undo re-creating a deleted entity from its captured pre-image (§8.11, <c>DataSyncUndoAction.Recreate</c>): the
+/// Re-creating a deleted entity from a captured pre-image: the
 /// adapter stores the content exactly as captured, where the service's ordinary create could normalize it (custom
 /// properties: case-variant duplicates stored before IgnoreCase was switched on, F72).
 /// </param>

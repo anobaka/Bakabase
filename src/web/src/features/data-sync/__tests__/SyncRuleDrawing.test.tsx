@@ -1,4 +1,5 @@
 import type * as Api from "../api";
+import type { link } from "./dataSyncFixtures";
 import type { SyncPeer } from "../viewModels";
 
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
@@ -9,7 +10,7 @@ import SyncRuleDrawing from "../components/SyncRuleDrawing";
 import { dataSyncApi } from "../api";
 import { newSyncPeer, syncPeerOf } from "../viewModels";
 
-import { link, mapPeer, NOW, recordingActions } from "./dataSyncFixtures";
+import { mapPeer, NOW, recordingActions } from "./dataSyncFixtures";
 
 import {
   DataSyncLinkInitiator,
@@ -54,9 +55,7 @@ vi.mock("../api", async (importOriginal) => ({
     syncNow: vi.fn(async () => ({})),
     resetLink: vi.fn(async () => undefined),
     setAllPaused: vi.fn(async () => undefined),
-    copyOnce: vi.fn(async () => ({
-      link: link(21, "node-nas", "NAS", { mode: 0, state: DataSyncLinkState.AwaitingReview }),
-    })),
+
     links: vi.fn(async () => []),
   },
 }));
@@ -72,7 +71,6 @@ const draw = (
     canManage?: boolean;
     sharingEnabled?: boolean;
     remoteAccessMode?: RemoteAccessMode;
-    onCreateCode?: () => void;
   } = {},
 ) =>
   render(
@@ -85,7 +83,6 @@ const draw = (
         remoteAccessMode={options.remoteAccessMode ?? RemoteAccessMode.Enabled}
         selfName="This PC"
         sharingEnabled={options.sharingEnabled ?? true}
-        onCreateCode={options.onCreateCode}
       />
       <Where />
     </MemoryRouter>,
@@ -162,32 +159,6 @@ describe("the rule editor's arrows", () => {
     expect(lastConfirmation()).toMatchObject({ title: "dataSync.arrow.read.stopTitle NAS" });
     await lastConfirmation().action();
     expect(dataSyncApi.revokeReader).toHaveBeenCalledWith("node-nas");
-  });
-
-  it("offers ways to let the other device read, where this window may", () => {
-    const onCreateCode = vi.fn();
-
-    draw(
-      nas({ mode: DataSyncLinkMode.Follow, peerMayReadUs: false, peerModeTowardsUs: undefined }),
-      {
-        onCreateCode,
-      },
-    );
-    fireEvent.click(screen.getByText("dataSync.invitation.createFor NAS"));
-    expect(onCreateCode).toHaveBeenCalled();
-    // Nothing to stop where it does not read this device.
-    expect(read()).toHaveAttribute("data-status", "none");
-    expect(screen.queryByTestId("data-sync-stop-reading")).toBeNull();
-    cleanup();
-
-    draw(
-      nas({ mode: DataSyncLinkMode.Follow, peerMayReadUs: false, peerModeTowardsUs: undefined }),
-      {
-        onCreateCode,
-        canManage: false,
-      },
-    );
-    expect(screen.queryByText("dataSync.invitation.createFor NAS")).toBeNull();
   });
 
   it("shows the kinds the other device receives on the may-read arrow", () => {
@@ -322,50 +293,6 @@ describe("the mode buttons", () => {
     expect(screen.getByTestId("data-sync-manage-elsewhere")).toBeInTheDocument();
   });
 
-  it("copies once through a confirmation, then opens its first sync", async () => {
-    draw(
-      nas({
-        mode: DataSyncLinkMode.Off,
-        lastMode: DataSyncLinkMode.Off,
-        state: DataSyncLinkState.Stopped,
-      }),
-    );
-
-    fireEvent.click(screen.getByTestId("data-sync-copy-once"));
-    await act(async () => {
-      await lastConfirmation().action();
-    });
-    expect(dataSyncApi.copyOnce).toHaveBeenCalledWith({
-      peerNodeId: "node-nas",
-      kinds: ["customProperty", "extensionGroup"],
-    });
-    expect(screen.getByTestId("location")).toHaveTextContent("/data-sync?link=21&review=1");
-    expect(recorded.actions.setNotice).not.toHaveBeenCalled();
-  });
-
-  it("says a copy once asked for access, and opens no first sync that cannot come yet", async () => {
-    vi.mocked(dataSyncApi.copyOnce).mockResolvedValueOnce({
-      link: link(21, "node-nas", "NAS", {
-        mode: DataSyncLinkMode.Off,
-        state: DataSyncLinkState.AwaitingAccess,
-      }),
-    });
-    draw(
-      nas({
-        mode: DataSyncLinkMode.Off,
-        lastMode: DataSyncLinkMode.Off,
-        state: DataSyncLinkState.Stopped,
-      }),
-    );
-
-    fireEvent.click(screen.getByTestId("data-sync-copy-once"));
-    await act(async () => {
-      await lastConfirmation().action();
-    });
-    expect(recorded.actions.setNotice).toHaveBeenCalledWith("dataSync.wizard.requested NAS");
-    expect(screen.getByTestId("location")).toHaveTextContent(/^\/$/);
-  });
-
   it("says only what is off when keeping in step both ways turns it on", () => {
     draw(
       nas({ mode: DataSyncLinkMode.Follow, peerMayReadUs: false, peerModeTowardsUs: undefined }),
@@ -382,32 +309,14 @@ describe("the mode buttons", () => {
 });
 
 describe("what the rule editor keeps offering", () => {
-  it("turns sharing on before it makes a code that could not work otherwise", async () => {
-    const onCreateCode = vi.fn();
-    const reader = nas({
-      mode: DataSyncLinkMode.Follow,
-      peerMayReadUs: false,
-      peerModeTowardsUs: undefined,
-    });
-
-    draw(reader, { onCreateCode, sharingEnabled: false });
-    fireEvent.click(screen.getByTestId("data-sync-create-code-for"));
-    expect(onCreateCode).not.toHaveBeenCalled();
-    expect(lastConfirmation()).toMatchObject({
-      title: "dataSync.sharing.onTitle",
-      warning: "dataSync.twoWay.turnsOnSharing",
-    });
-    await lastConfirmation().action();
-    expect(dataSyncApi.setSharing).toHaveBeenCalledWith({
-      enabled: true,
-      enablePairedRemoteAccess: false,
-    });
-    expect(onCreateCode).toHaveBeenCalledTimes(1);
-    cleanup();
-
-    draw(reader, { onCreateCode, remoteAccessMode: RemoteAccessMode.Disabled });
-    fireEvent.click(screen.getByTestId("data-sync-create-code-for"));
-    expect(lastConfirmation().warning).toBe("dataSync.sharing.remoteAccess");
+  it("offers ordinary synchronization without code generation or copy-once actions", () => {
+    draw(
+      nas({ mode: DataSyncLinkMode.Off, state: DataSyncLinkState.Stopped, peerMayReadUs: false }),
+    );
+    expect(screen.queryByTestId("data-sync-create-code-for")).toBeNull();
+    expect(screen.queryByTestId("data-sync-copy-once")).toBeNull();
+    expect(screen.getByTestId("data-sync-mode-follow")).toBeEnabled();
+    expect(screen.getByTestId("data-sync-mode-twoWay")).toBeEnabled();
   });
 
   it("offers to start without the other device's review once it has waited a week", async () => {

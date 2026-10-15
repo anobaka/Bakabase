@@ -28,7 +28,7 @@ namespace Bakabase.Tests.DataSync.Api;
 /// unpaired LAN browser only in Unrestricted mode. That last caller may read and shut access off, but never grant it:
 /// the controller refuses it the actions that always create or widen access before the service sees the request, and
 /// tells the service who is asking where only the service knows whether a call sends a request or mints a reciprocal
-/// code (links, copy once).
+/// code (links).
 /// </remarks>
 [TestClass]
 public class DataSyncEndpointExposureTests
@@ -49,7 +49,6 @@ public class DataSyncEndpointExposureTests
         "POST /data-sync/sync-now SyncDataSyncNow",
         "PUT /data-sync/paused SetDataSyncAllPaused",
         "DELETE /data-sync/access/{nodeId} ForgetDataSyncAccess",
-        "POST /data-sync/copy-once CreateDataSyncCopyOnce",
         "GET /data-sync/links/{id:int}/first-sync GetDataSyncFirstSync",
         "POST /data-sync/links/{id:int}/first-sync StartDataSyncFirstSync",
         "GET /data-sync/requests GetDataSyncRequests",
@@ -58,7 +57,6 @@ public class DataSyncEndpointExposureTests
         "DELETE /data-sync/requests/{id} CancelDataSyncRequest",
         "GET /data-sync/readers GetDataSyncReaders",
         "DELETE /data-sync/readers/{nodeId} RevokeDataSyncReader",
-        "POST /data-sync/invitations CreateDataSyncInvitation",
         "GET /data-sync/inbox GetDataSyncInbox",
         "GET /data-sync/inbox/{id:long}/preview PreviewDataSyncInboxItem",
         "POST /data-sync/inbox/resolve ResolveDataSyncInbox",
@@ -67,8 +65,6 @@ public class DataSyncEndpointExposureTests
         "GET /data-sync/history GetDataSyncHistory",
         "GET /data-sync/history/page GetDataSyncHistoryPage",
         "GET /data-sync/history/{id:int} GetDataSyncHistoryEntry",
-        "GET /data-sync/history/{id:int}/undo-preview PreviewDataSyncUndo",
-        "POST /data-sync/history/{id:int}/undo UndoDataSync",
         "GET /data-sync/restore GetDataSyncRestore",
         "POST /data-sync/restore ChooseDataSyncRestore",
     ];
@@ -110,6 +106,27 @@ public class DataSyncEndpointExposureTests
         var publicActions = typeof(DataSyncController)
             .GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
         Assert.AreEqual(Table.Length, publicActions.Length, "every public method is exactly one routed action");
+    }
+
+    [TestMethod]
+    public void History_exposes_only_reads_and_cannot_enqueue_an_undo()
+    {
+        var history = Routes().Where(route => route.Path.StartsWith("/data-sync/history")).ToArray();
+        Assert.AreEqual(3, history.Length);
+        Assert.IsTrue(history.All(route => route.Method == "GET"));
+        Assert.IsFalse(history.Any(route => route.Path.Contains("undo", StringComparison.OrdinalIgnoreCase)));
+        Assert.IsFalse(typeof(IDataSyncService).GetMethods().Any(method =>
+            method.Name.Contains("Undo", StringComparison.OrdinalIgnoreCase)));
+    }
+
+    [TestMethod]
+    public void Definition_sync_uses_requests_without_public_codes_or_copy_once_routes()
+    {
+        Assert.IsFalse(Routes().Any(route => route.Path is "/data-sync/copy-once" or "/data-sync/invitations"));
+        Assert.IsFalse(typeof(IDataSyncService).GetMethods().Any(method =>
+            method.Name is "CreateCopyOnceAsync" or "CreateInvitationAsync"));
+        Assert.IsNull(typeof(DataSyncLinkCreateInput).GetProperty("Code"));
+        Assert.IsTrue(Routes().Any(route => route.Path == "/data-sync/requests/{id}/approve"));
     }
 
     [TestMethod]
@@ -191,7 +208,7 @@ public class DataSyncEndpointExposureTests
         await controller.SetSharing(new DataSyncSharingInput(true), default);
         await controller.GetPeers(true, default);
         await controller.GetLinks(default);
-        await controller.CreateLink(new DataSyncLinkCreateInput("node-nas", null, null, DataSyncLinkMode.Follow, AllKinds),
+        await controller.CreateLink(new DataSyncLinkCreateInput("node-nas", null, DataSyncLinkMode.Follow, AllKinds),
             default);
         await controller.UpdateLink(1, new DataSyncLinkUpdateInput(DataSyncLinkMode.TwoWay, null), default);
         await controller.PauseLink(1, default);
@@ -200,7 +217,6 @@ public class DataSyncEndpointExposureTests
         await controller.SyncNow(new DataSyncSyncNowInputModel(), default);
         await controller.SetAllPaused(new DataSyncPausedInputModel {Paused = true}, default);
         await controller.ForgetAccess("node-nas", default);
-        await controller.CreateCopyOnce(new DataSyncCopyOnceInput("node-nas", null, null, AllKinds), default);
         await controller.GetFirstSync(1, default);
         await controller.StartFirstSync(1, new DataSyncFirstSyncStartInput([]), default);
         await controller.GetRequests(default);
@@ -209,7 +225,6 @@ public class DataSyncEndpointExposureTests
         await controller.CancelRequest("req-out-1", default);
         await controller.GetReaders(default);
         await controller.RevokeReader("node-nas", default);
-        await controller.CreateInvitation(default);
         await controller.GetInbox(ct: default);
         await controller.PreviewInboxItem(3, default);
         await controller.Resolve(new DataSyncResolveBatchInput(
@@ -220,8 +235,6 @@ public class DataSyncEndpointExposureTests
         await controller.GetHistory(default);
         await controller.GetHistoryPage(ct: default);
         await controller.GetHistoryEntry(1, default);
-        await controller.PreviewUndo(1, default);
-        await controller.Undo(1, default);
         await controller.GetRestore(default);
         await controller.ChooseRestore(new DataSyncRestoreChoiceInputModel {Choice = DataSyncRestoreChoice.ThisDeviceWins},
             default);
@@ -261,23 +274,19 @@ public class DataSyncEndpointExposureTests
         ("POST requests/{id}/approve",
             async c => (await c.ApproveRequest("req-in-1", new DataSyncApproveInput(true, null), default)).Data!
                 .Problem),
-        ("POST invitations",
-            async c => (await c.CreateInvitation(default)).Data!.Problem),
     ];
 
     /// <summary>
-    /// Link and copy-once calls, which create access only when they send a request or mint a reciprocal code: only the
+    /// Link calls, which create access only when they send a request or mint a reciprocal code: only the
     /// service knows, so it is told who is asking (its refusal is pinned on the real link service).
     /// </summary>
     private static IEnumerable<(string Name, Func<DataSyncController, Task> Call)> ServiceDecides() =>
     [
         ("POST links", c => c.CreateLink(
-            new DataSyncLinkCreateInput(null, "192.168.1.40:34567", "48213705", DataSyncLinkMode.TwoWay, AllKinds),
+            new DataSyncLinkCreateInput(null, "192.168.1.40:34567", DataSyncLinkMode.TwoWay, AllKinds),
             default)),
         ("PUT links/{id}",
             c => c.UpdateLink(5, new DataSyncLinkUpdateInput(DataSyncLinkMode.TwoWay, null), default)),
-        ("POST copy-once", c => c.CreateCopyOnce(
-            new DataSyncCopyOnceInput(null, "192.168.1.40:34567", "48213705", AllKinds), default)),
     ];
 
     /// <summary>Every call that reduces access or only reads; open to whoever the gate admits.</summary>

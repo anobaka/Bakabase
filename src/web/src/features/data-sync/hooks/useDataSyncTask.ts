@@ -41,7 +41,7 @@ export const isTaskOver = (phase: DataSyncTaskPhase) =>
 
 /**
  * When each task the task list shows now was created, by id. Taken just before starting a task
- * whose id may be listed already — a restore chosen again, an undo retried: until the hub says
+ * whose id may be listed already — a restore chosen again: until the hub says
  * otherwise, the list still shows the earlier run under that id, which is over.
  */
 export const listedTasks = (): ReadonlyMap<string, string> =>
@@ -55,7 +55,7 @@ export const findTask = (tasks: readonly BTask[], taskId: string, earlier?: stri
   tasks.find((task) => task.id === taskId && (earlier === undefined || task.createdAt !== earlier));
 
 /**
- * One data sync task (an apply, a resolution, an undo, a restore), as the task list pushes it
+ * One data sync task (an apply, a resolution, a restore), as the task list pushes it
  * over the UI hub (v3.1 `useDataSyncTask`). Undefined id: nothing to watch. `earlier`: the
  * creation time of an earlier run under the same id, still listed when this one started.
  */

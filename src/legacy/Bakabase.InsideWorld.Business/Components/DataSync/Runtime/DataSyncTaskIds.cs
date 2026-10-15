@@ -21,7 +21,6 @@ public static class DataSyncTaskIds
 
     public const string ReviewPrefix = "DataSyncReview";
     public const string ResolvePrefix = "DataSyncResolve";
-    public const string UndoPrefix = "DataSyncUndo";
 
     /// <summary>
     /// Every task that writes definitions shares these keys, so they serialize with each other, with the enhancer's
@@ -33,7 +32,6 @@ public static class DataSyncTaskIds
     /// <summary>A first sync's Start (§8.3), one per link.</summary>
     public static string Review(int linkId) => $"{ReviewPrefix}:{linkId.ToString(CultureInfo.InvariantCulture)}";
     public static string Resolve(string batchId) => $"{ResolvePrefix}:{batchId}";
-    public static string Undo(int applyLogId) => $"{UndoPrefix}:{applyLogId.ToString(CultureInfo.InvariantCulture)}";
 
     /// <summary>The localization key of a task id: the id without its <c>:{suffix}</c>.</summary>
     public static string NameKey(string taskId)
@@ -44,5 +42,5 @@ public static class DataSyncTaskIds
 
     /// <summary>True for every data sync task that writes definitions (ApplyInProgress).</summary>
     public static bool IsWriteTask(string taskId) =>
-        NameKey(taskId) is Apply or Restore or ReviewPrefix or ResolvePrefix or UndoPrefix;
+        NameKey(taskId) is Apply or Restore or ReviewPrefix or ResolvePrefix;
 }

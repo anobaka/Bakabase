@@ -24,7 +24,7 @@ public static class DataSyncPreImageActions
     /// <summary>Content changed: undo writes back the changed paths (a child-level diff) as a local revision.</summary>
     public const string Updated = "updated";
 
-    /// <summary>Sync deleted it: undo re-creates it with the same child ids (<see cref="DataSyncUndoAction.Recreate"/>).</summary>
+    /// <summary>Sync deleted it: the retained pre-image preserves its content and child ids for audit.</summary>
     public const string Deleted = "deleted";
 
     /// <summary>Keys of a peer's record were recorded on it: undo excludes that link's record, keeping the aliases.</summary>

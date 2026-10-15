@@ -41,7 +41,7 @@ internal enum DataSyncTaskCancelOutcome
 /// <b>Why EnqueueOnce</b> (gate B3): <c>BTaskManager</c> keeps a finished non-persistent task in its map until
 /// <c>Clean</c>. With a fixed id, <c>IgnoreIfExists</c> would ignore every enqueue after the first, so
 /// <c>DataSyncApply</c> would run once per process, and the default <c>Reject</c> would refuse a second restore choice
-/// or a retried undo. Nothing is enqueued once the host is stopping: <c>BTaskManager</c> has no shutdown check of its
+/// or a repeated restore choice. Nothing is enqueued once the host is stopping: <c>BTaskManager</c> has no shutdown check of its
 /// own (F71).
 /// </remarks>
 public sealed class DataSyncTaskLauncher
@@ -133,18 +133,6 @@ public sealed class DataSyncTaskLauncher
                 await sp.GetRequiredService<DataSyncLinkService>().AfterRestoreAsync(linkId, args.CancellationToken);
                 await ObserveAppliedAsync(DataSyncHistoryKind.Restore, logId, linkId, args.CancellationToken);
             })));
-
-    /// <summary>Undo of one history entry (§8.11); retried after an Error by enqueueing it again.</summary>
-    public Task<DataSyncTaskAttempt?> EnqueueUndoAsync(int applyLogId)
-    {
-        var taskId = DataSyncTaskIds.Undo(applyLogId);
-        return EnqueueOnceAsync(taskId, attempt => WriteTask(taskId, persistent: true,
-            args => RunInScopeAsync(args, attempt, async sp =>
-            {
-                var logId = await sp.GetRequiredService<IDataSyncApplyRunner>().RunUndoAsync(applyLogId, args);
-                await ObserveAppliedAsync(DataSyncHistoryKind.Undo, logId, null, args.CancellationToken);
-            })));
-    }
 
     /// <summary>
     /// A first sync's Start (§8.3): the ordinary merge of the snapshot its preview showed, with what the person chose

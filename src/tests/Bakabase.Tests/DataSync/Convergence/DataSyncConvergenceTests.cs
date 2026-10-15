@@ -19,7 +19,7 @@ namespace Bakabase.Tests.DataSync.Convergence;
 /// a star around a headless hub, a mesh; two-way, Follow, mutual Follow) whose steps are what people and the hosts'
 /// loops do — create, rename, add, rename, recolour and remove options, toggle IgnoreCase with case duplicates, edit
 /// tag groups, move multilevel nodes, change types, delete, hold values, detach and keep on one device, pull, decide
-/// what an item asks, undo, restore a database, stop, start and reset links, cut hosts off and advance the clock.
+/// what an item asks, restore a database, stop, start and reset links, cut hosts off and advance the clock.
 /// After every step: no key names two rows (I8) and no option or definition resources use went away without a person
 /// (I4). Then quiescence — healed, links resumed, restore choices made, every item decided by a chooser on a desktop,
 /// rounds until nothing changes, and again a day later (and the day after, when a link completed its first contact)
@@ -39,7 +39,7 @@ public class DataSyncConvergenceTests
         "edit:renameProperty", "edit:addOption", "edit:renameOption", "edit:recolorOption", "edit:removeOption",
         "edit:ignoreCaseWithDuplicates", "edit:tagGroup", "edit:moveNode", "edit:changeType", "step:Delete",
         "step:Use", "step:EntityState", "step:RestoreDatabase", "step:ResetLink", "step:Partition", "chooser:headless",
-        "item:LinkSuggestion", "item:FieldConflict", "item:DeletedThere", "item:TypeChange", "undo",
+        "item:LinkSuggestion", "item:FieldConflict", "item:DeletedThere", "item:TypeChange",
     ];
 
     [TestMethod]
@@ -68,14 +68,14 @@ public class DataSyncConvergenceTests
 
     private enum Step
     {
-        Create, Edit, Delete, Sync, SyncAll, Resolve, Use, EntityState, Undo, RestoreDatabase, StopLink, StartLink,
+        Create, Edit, Delete, Sync, SyncAll, Resolve, Use, EntityState, RestoreDatabase, StopLink, StartLink,
         ResetLink, Partition, Heal, Advance,
     }
 
     private static readonly (Step Step, int Weight)[] Weights =
     [
         (Step.Create, 9), (Step.Edit, 20), (Step.Delete, 3), (Step.Sync, 18), (Step.SyncAll, 5), (Step.Resolve, 8),
-        (Step.Use, 6), (Step.EntityState, 2), (Step.Undo, 3), (Step.RestoreDatabase, 1),
+        (Step.Use, 6), (Step.EntityState, 2), (Step.RestoreDatabase, 1),
         (Step.StopLink, 1), (Step.StartLink, 1), (Step.ResetLink, 2), (Step.Partition, 2), (Step.Heal, 2),
         (Step.Advance, 2),
     ];
@@ -285,21 +285,6 @@ public class DataSyncConvergenceTests
                     var start = await host.CallAsync(s => s.SetEntitySyncAsync(entity.Kind, entity.LocalKey,
                         new DataSyncEntitySyncInput(state, null, null, null), default));
                     return $"{host} sets {entity.Kind}/{entity.LocalKey} {state} {start.Problem?.Code}";
-                }
-                case Step.Undo:
-                {
-                    var entries = (await host.CallAsync(s => s.GetHistoryAsync(default)))
-                        .Where(e => e.UndoState == DataSyncUndoState.Available).ToList();
-                    if (entries.Count == 0) return "no entry to undo";
-                    var entry = entries[_random.Next(Math.Min(entries.Count, 4))];
-                    var start = await host.CallAsync(s => s.StartUndoAsync(entry.Id, default));
-                    // The preview reads what the last Refresh recorded, and the task refreshes first: it refuses every
-                    // step of an entry whose entity went since then, and says so (§8.11, UndoNotAvailable).
-                    await host.Node.RunWriteTasksAsync(id => id == start.TaskId);
-                    var undone = (await host.CallAsync(s => s.GetHistoryAsync(default)))
-                        .Any(e => e.Id == entry.Id && e.UndoState == DataSyncUndoState.Undone);
-                    if (start.Problem is null) Count(undone ? "undo" : "undo:refused");
-                    return $"{host} undoes #{entry.Id} {entry.Kind} {start.Problem?.Code}{(undone ? "" : " (not undone)")}";
                 }
                 case Step.RestoreDatabase:
                 {
@@ -517,6 +502,20 @@ public class DataSyncConvergenceTests
                 }
 
                 await StabilizeAsync("before the decisions", failOnChurn: false);
+                if (pass == 0 && seed == 1)
+                {
+                    // A short random run need not change a type after another host has received it.
+                    // Keep that decision path exercised when the set of supported random actions changes.
+                    var source = _links[0].Source;
+                    var property = await source.AddPropertyAsync("Type change coverage", PropertyType.SingleChoice,
+                        "First", "Second");
+                    await StabilizeAsync("before the type-change probe", failOnChurn: false);
+                    await source.ChangeTypeAsync(property, PropertyType.MultipleChoice);
+                    Count("edit:changeType");
+                    _trace.Add($"{source} changes the type of the already synchronized probe");
+                    await StabilizeAsync("after the type-change probe", failOnChurn: false);
+                }
+
                 for (var decisions = 0;; decisions++)
                 {
                     if (decisions == MaxDecisions)

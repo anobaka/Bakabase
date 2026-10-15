@@ -313,7 +313,6 @@ internal sealed class FakeApplyRunner(IDataSyncTaskRegistry registry, DataSyncLi
 {
     public ConcurrentQueue<AutoSyncCall> AutoSyncs { get; } = new();
     public ConcurrentQueue<(DataSyncRestoreChoice Choice, int? LinkId)> Restores { get; } = new();
-    public ConcurrentQueue<int> Undos { get; } = new();
 
     /// <summary>Awaited by every call: lets a test hold an apply inside its body.</summary>
     public Func<CancellationToken, Task>? Hold { get; set; }
@@ -321,7 +320,6 @@ internal sealed class FakeApplyRunner(IDataSyncTaskRegistry registry, DataSyncLi
     public Func<AutoSyncCall, DataSyncAutoSyncOutcome> AutoSyncOutcome { get; set; } =
         _ => new DataSyncAutoSyncOutcome(1, null, 0, 0, 1, [], [], DataSyncAutoSyncEnd.Committed);
 
-    public Queue<Exception> UndoErrors { get; } = new();
     public Queue<Exception> AutoSyncErrors { get; } = new();
 
     /// <summary>Whether the attempt was still current when the runner would have entered the gate.</summary>
@@ -355,22 +353,13 @@ internal sealed class FakeApplyRunner(IDataSyncTaskRegistry registry, DataSyncLi
     public Task<int?> RunResolutionsAsync(IReadOnlyList<DataSyncResolveInput> resolutions, DataSyncApplyOptions options,
         BTaskArgs args) => Task.FromResult<int?>(1);
 
-    public async Task<int?> RunUndoAsync(int applyLogId, BTaskArgs args)
-    {
-        if (Hold is { } hold) await hold(args.CancellationToken);
-        Undos.Enqueue(applyLogId);
-        lock (UndoErrors)
-        {
-            if (UndoErrors.TryDequeue(out var error)) throw error;
-        }
-
-        return applyLogId + 100;
-    }
+    public Exception? RestoreError { get; set; }
 
     public async Task<int?> RunRestoreAsync(DataSyncRestoreChoice choice, int? linkId, BTaskArgs args)
     {
         if (Hold is { } hold) await hold(args.CancellationToken);
         Restores.Enqueue((choice, linkId));
+        if (RestoreError is { } error) throw error;
         return 1;
     }
 }

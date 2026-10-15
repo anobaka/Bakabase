@@ -13,7 +13,7 @@ import {
   AiOutlinePauseCircle,
   AiOutlineRollback,
   AiOutlineSwap,
-  AiOutlineUndo,
+  AiOutlineHistory,
 } from "react-icons/ai";
 
 import { TopicCallout, TopicHeadline } from "../../../components/TopicBlocks";
@@ -29,7 +29,7 @@ import { useCanAdministerShownServer } from "@/stores/remoteAccess";
 
 /** The three ways to sync with a device, drawn from this device's side (it sits on the left). */
 export const syncModes: {
-  id: "follow" | "twoWay" | "copyOnce";
+  id: "follow" | "twoWay";
   toHere: LaneState;
   toThere: LaneState;
   mark?: string;
@@ -38,11 +38,10 @@ export const syncModes: {
   { id: "twoWay", toHere: "active", toThere: "active" },
   // Copied a single time, then the link stays off. The mark is a sign, not prose: the same
   // in every language.
-  { id: "copyOnce", toHere: "once", toThere: "none", mark: "1×" },
 ];
 
-/** A link from its start to undo, and a rename conflict: steps in words, numbered. */
-export const howStops = ["link", "review", "inStep", "needsYou", "undo"] as const;
+/** A link from its start to history, and a rename conflict: steps in words, numbered. */
+export const howStops = ["link", "review", "inStep", "needsYou", "history"] as const;
 export const conflictSteps = ["rename", "ask", "decide"] as const;
 
 const conflictLines = ["fields", "same", "hub", "types", "case", "labelWriters"];
@@ -50,7 +49,7 @@ const deletionLines = ["options", "definitions", "edited", "filters"];
 const safetyLines = ["noValues", "noMerge", "noRemote", "stop", "grant"];
 
 const recoverCards = [
-  { id: "undo", icon: <AiOutlineUndo /> },
+  { id: "history", icon: <AiOutlineHistory /> },
   { id: "pause", icon: <AiOutlinePauseCircle /> },
   { id: "restore", icon: <AiOutlineRollback /> },
 ];
@@ -88,7 +87,7 @@ const Statements = ({
 
 /**
  * The help center's 「数据同步 / Data sync」 section: what data sync keeps in step, how a link
- * works from the first sync to undo, what happens on conflicts and deletions, and where to
+ * works from the first sync to audit history, what happens on conflicts and deletions, and where to
  * find it. The linking words and the Device map line follow whether this window has the
  * map (this device's own window, or the desktop app showing a device it manages, which can
  * switch back to it); a browser on another device has none.
@@ -124,7 +123,7 @@ const DataSyncSection = ({ onNavigate }: { onNavigate?: (path: string) => void }
 
       <section className="@container flex flex-col gap-2" data-testid="data-sync-modes">
         <h4 className="text-sm font-medium">{t(dsk("modes.title"))}</h4>
-        <ul className="grid grid-cols-1 gap-2 @min-[40rem]:grid-cols-3">
+        <ul className="grid grid-cols-1 gap-2 @min-[30rem]:grid-cols-2">
           {syncModes.map((mode) => (
             <li
               key={mode.id}

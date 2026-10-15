@@ -37,7 +37,6 @@ import EntitySyncList from "./components/EntitySyncList";
 import HistoryList from "./components/HistoryList";
 import SyncActivityCenter from "./components/SyncActivityCenter";
 import InboxList from "./components/InboxList";
-import InvitationDialog from "./components/InvitationDialog";
 import LinkDetails from "./components/LinkDetails";
 import NotAvailableNotice from "./components/NotAvailableNotice";
 import RequestsList from "./components/RequestsList";
@@ -124,7 +123,6 @@ function DataSync() {
   const [wizard, setWizard] = useState(false);
   // A device the wizard made a link to: shown once the page lists it.
   const [showWhenListed, setShowWhenListed] = useState<string>();
-  const [invitationFor, setInvitationFor] = useState<{ name?: string }>();
   const [definitions, setDefinitions] = useState<{ open: boolean; onlyApart: boolean }>({
     open: false,
     onlyApart: false,
@@ -510,7 +508,6 @@ function DataSync() {
                 selfName={selfName}
                 sharingEnabled={sharingEnabled}
                 onClose={close}
-                onCreateCode={() => setInvitationFor({ name: selected.name })}
                 onDismissMessage={dismiss}
                 onShowDefinitions={showDefinitions}
                 onShowHistory={() => showHistory(selected.nodeId)}
@@ -555,7 +552,6 @@ function DataSync() {
           peer={historyPeer}
           peers={peers}
           version={data.version}
-          onChanged={() => void data.reload()}
           onPeerChange={setHistoryPeer}
         />
       )}
@@ -566,7 +562,6 @@ function DataSync() {
           canManage={canManage}
           overview={overview}
           readers={peers.flatMap((peer) => (peer.reader ? [peer.reader] : []))}
-          onCreateCode={() => setInvitationFor({})}
         />
       )}
 
@@ -628,13 +623,6 @@ function DataSync() {
           returnFocus={reviewReturnFocus}
           onChanged={() => void data.reload()}
           onClose={closeReview}
-        />
-      )}
-      {invitationFor && (
-        <InvitationDialog
-          actions={actions}
-          forName={invitationFor.name}
-          onClose={() => setInvitationFor(undefined)}
         />
       )}
     </div>

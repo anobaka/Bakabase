@@ -8,16 +8,15 @@ import { dataSyncApi } from "../api";
 import { timeAgo } from "../times";
 
 import { panelClass, SectionHeading, smallButtonClass } from "./common";
-import SharingControls, { openCodeFirst } from "./SharingControls";
+import SharingControls from "./SharingControls";
 
 import { Button, Checkbox } from "@/components/bakaui";
 
 /*
  * This device's side of data sync: whether devices it approves may read its definitions
- * (`SharingControls`), whether definitions made here are shared by themselves, a code for
- * another device, pausing everything, and who reads this device now. Creating a code is offered
- * only where this window may create access (spec §7.1.5); pausing and stopping a reader stay
- * available everywhere, so access can always be shut.
+ * (`SharingControls`), whether definitions made here are shared automatically, pausing
+ * everything, and who reads this device now. Pausing and stopping a reader remain available
+ * everywhere, so access can always be shut.
  */
 
 /**
@@ -50,14 +49,12 @@ export default function ThisDeviceSection({
   readers,
   actions,
   canManage,
-  onCreateCode,
   now,
 }: {
   overview: DataSyncOverview;
   readers: DataSyncReaderView[];
   actions: DataSyncActions;
   canManage: boolean;
-  onCreateCode: () => void;
   now?: number;
 }) {
   const { t } = useTranslation();
@@ -122,19 +119,6 @@ export default function ThisDeviceSection({
         >
           {t("dataSync.self.newDefinitions")}
         </Checkbox>
-        {canManage && (
-          <Button
-            className={smallButtonClass}
-            data-testid="data-sync-create-code"
-            disabled={actions.busy}
-            size="sm"
-            type="button"
-            variant="bordered"
-            onClick={() => openCodeFirst(t, actions, own, onCreateCode)}
-          >
-            {t("dataSync.invitation.button")}
-          </Button>
-        )}
       </div>
       {!canManage && (
         <p className="text-xs text-default-500" data-testid="data-sync-manage-elsewhere">

@@ -17,7 +17,7 @@ const keepFocusIn = (heading: HTMLElement | null) => {
 
 /**
  * A modal of data sync's own, for what takes more than a yes or a no: the "sync with another
- * device" wizard, a one-time code, the first sync review, the undo preview. A HeroUI modal, so
+ * device" wizard, a one-time code, the first sync review. A HeroUI modal, so
  * Tab stays inside and Escape closes it (unless it is busy); it takes the keyboard on its
  * heading, focus it takes away goes back there, and on closing focus goes back to what opened
  * it — or, when what opened it went away meanwhile (the review's link, gone once the first sync
@@ -41,7 +41,7 @@ export default function DataSyncDialog({
   /** Where the keyboard goes on closing when what opened the dialog is no longer there. */
   returnFocus?: () => HTMLElement | null | undefined;
   testId?: string;
-  /** For what needs room: the first sync review, the undo preview. */
+  /** For what needs room: the first sync review. */
   wide?: boolean;
 }) {
   const { t } = useTranslation();

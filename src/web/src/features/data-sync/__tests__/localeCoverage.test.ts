@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { dataSyncKinds, failureCodesWithWords } from "../viewModels";
 import { scalarPaths } from "../components/InboxCard";
 import { wordedProblemDetails } from "../components/common";
-import { historyCountKeys, undoGroupOrder } from "../historyModels";
+import { historyCountKeys } from "../historyModels";
 import { actionKeyVariants, headlineVariants } from "../inboxModels";
 
 import {
@@ -27,8 +27,6 @@ import {
   DataSyncPreviewOutcomeLabel,
   DataSyncProblemCode,
   DataSyncProblemCodeLabel,
-  DataSyncUndoBlock,
-  DataSyncUndoBlockLabel,
 } from "@/sdk/constants";
 
 /*
@@ -169,7 +167,7 @@ const dynamicKeys = [
     "linkStopped",
   ].map((closure) => `dataSync.inbox.closure.${closure}`),
 
-  // The history, undo, restore.
+  // The history and restore.
   ...labels(DataSyncHistoryKind, DataSyncHistoryKindLabel).map(
     (kind) => `dataSync.history.kind.${kind}`,
   ),
@@ -179,10 +177,6 @@ const dynamicKeys = [
   ),
   ...labels(DataSyncItemOutcome, DataSyncItemOutcomeLabel).map(
     (outcome) => `dataSync.history.outcome.${outcome}`,
-  ),
-  ...undoGroupOrder.map((group) => `dataSync.undo.group.${group}`),
-  ...labels(DataSyncUndoBlock, DataSyncUndoBlockLabel).map(
-    (block) => `dataSync.undo.blocked.${block}`,
   ),
   ...["own", "peer", "both"].map((evidence) => `dataSync.restore.evidence.${evidence}`),
 ];
@@ -301,7 +295,6 @@ describe("locales for data sync", () => {
       "dataSync.status.NeedsYou",
       "dataSync.diagram.count.customProperty",
       "dataSync.inbox.card.inUse",
-      "dataSync.undo.values",
       "dataSync.entity.localOnlyChildren",
       "dataSync.readers.state.needsYou",
     ])

@@ -21,7 +21,6 @@ export default function SyncWithDevice({
   peerAddress,
   name,
   editor,
-  onCreateCode,
   children,
 }: {
   /** Its install id. */
@@ -29,8 +28,7 @@ export default function SyncWithDevice({
   /** Where a request to it goes, when the server may not know it by its id. */
   peerAddress?: string;
   name: string;
-  editor: Omit<SyncRuleDrawingProps, "peer" | "onCreateCode">;
-  onCreateCode: () => void;
+  editor: Omit<SyncRuleDrawingProps, "peer">;
   /** What is said before the way to start. */
   children?: ReactNode;
 }) {
@@ -55,11 +53,7 @@ export default function SyncWithDevice({
       </Button>
       {open && (
         <div id={regionId}>
-          <SyncRuleDrawing
-            {...editor}
-            peer={newSyncPeer(peerNodeId, name, peerAddress)}
-            onCreateCode={onCreateCode}
-          />
+          <SyncRuleDrawing {...editor} peer={newSyncPeer(peerNodeId, name, peerAddress)} />
         </div>
       )}
     </div>

@@ -14,7 +14,6 @@ vi.mock("@/sdk/BApi", () => ({
       setDataSyncSharing: vi.fn(),
       createDataSyncLink: vi.fn(),
       syncDataSyncNow: vi.fn(),
-      createDataSyncInvitation: vi.fn(),
     },
   },
 }));
@@ -115,14 +114,5 @@ describe("data sync's calls", () => {
     expect(sdk.syncDataSyncNow).toHaveBeenCalledWith({}, { showErrorToast: false });
     await dataSyncApi.syncNow(3);
     expect(sdk.syncDataSyncNow).toHaveBeenLastCalledWith({ linkId: 3 }, { showErrorToast: false });
-  });
-
-  it("answer the code itself for a new invitation", async () => {
-    sdk.createDataSyncInvitation.mockResolvedValue({
-      code: 0,
-      data: { invitation: { code: "12345678", expiresAt: "", addresses: [] } },
-    });
-
-    await expect(dataSyncApi.createInvitation()).resolves.toMatchObject({ code: "12345678" });
   });
 });

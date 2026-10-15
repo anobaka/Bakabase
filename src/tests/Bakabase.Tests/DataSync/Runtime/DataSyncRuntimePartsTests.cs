@@ -69,8 +69,6 @@ public class DataSyncRuntimePartsTests
     [TestMethod]
     public void Task_ids_and_their_localization_keys()
     {
-        Assert.AreEqual("DataSyncUndo:42", DataSyncTaskIds.Undo(42));
-        Assert.AreEqual("DataSyncUndo", DataSyncTaskIds.NameKey(DataSyncTaskIds.Undo(42)));
         Assert.AreEqual("DataSyncReview", DataSyncTaskIds.NameKey(DataSyncTaskIds.Review(1)));
         Assert.IsTrue(DataSyncTaskIds.IsWriteTask(DataSyncTaskIds.Apply));
         Assert.IsTrue(DataSyncTaskIds.IsWriteTask(DataSyncTaskIds.Resolve("b")));

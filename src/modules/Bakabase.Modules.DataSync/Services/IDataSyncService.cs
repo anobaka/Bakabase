@@ -50,8 +50,6 @@ public interface IDataSyncService
     Task<DataSyncProblem?> ResetLinkAsync(int linkId, CancellationToken ct);      // forgets state, keeps definitions; also "Dismiss"
     Task<DataSyncProblem?> SetAllPausedAsync(bool paused, CancellationToken ct);
     Task<DataSyncProblem?> ForgetAccessAsync(string peerNodeId, CancellationToken ct);                    // "stop reading X"
-    Task<DataSyncLinkResult> CreateCopyOnceAsync(DataSyncCopyOnceInput input, bool callerMayCreateAccess,
-        CancellationToken ct);
 
     Task<DataSyncFirstSyncPreview> GetFirstSyncAsync(int linkId, CancellationToken ct);                 // never gated
     Task<DataSyncTaskStart> StartFirstSyncAsync(int linkId, DataSyncFirstSyncStartInput input, CancellationToken ct);
@@ -61,7 +59,6 @@ public interface IDataSyncService
     Task<DataSyncProblem?> CancelRequestAsync(string requestId, CancellationToken ct);
     Task<IReadOnlyList<DataSyncReaderView>> GetReadersAsync(CancellationToken ct);
     Task<DataSyncProblem?> RevokeReaderAsync(string peerNodeId, CancellationToken ct);
-    Task<DataSyncInvitationResult> CreateInvitationAsync(CancellationToken ct);
     Task<DataSyncInboxPage> GetInboxAsync(DataSyncInboxQuery query, CancellationToken ct);                // never gated
     Task<DataSyncTypeChangePreview?> PreviewInboxItemAsync(long id, CancellationToken ct);   // never gated; null unless TypeChange
     Task<DataSyncTaskStart> ResolveAsync(DataSyncResolveBatchInput input, CancellationToken ct);
@@ -73,8 +70,6 @@ public interface IDataSyncService
     Task<IReadOnlyList<DataSyncHistoryEntry>> GetHistoryAsync(CancellationToken ct);                      // never gated
     Task<DataSyncHistoryPage> GetHistoryPageAsync(int? beforeId, int take, string? peerNodeId, CancellationToken ct);
     Task<DataSyncHistoryDetail?> GetHistoryEntryAsync(int id, CancellationToken ct);                      // never gated
-    Task<DataSyncUndoPreview> PreviewUndoAsync(int id, CancellationToken ct);                             // never gated
-    Task<DataSyncTaskStart> StartUndoAsync(int id, CancellationToken ct);
     Task<DataSyncRestoreView> GetRestoreAsync(CancellationToken ct);
     Task<DataSyncTaskStart> ChooseRestoreAsync(DataSyncRestoreChoice choice, int? linkId, CancellationToken ct);
 }

@@ -285,7 +285,6 @@ internal sealed class DataSyncApplyFixture
     public Task<int?> ResolveAsync(IReadOnlyList<DataSyncResolveInput> inputs, bool backup = false) =>
         Runner.RunResolutionsAsync(inputs, new DataSyncApplyOptions(backup), Args("DataSyncResolve:" + ++_task));
 
-    public Task<int?> UndoAsync(int logId) => Runner.RunUndoAsync(logId, Args("DataSyncUndo:" + logId));
 
     #endregion
 

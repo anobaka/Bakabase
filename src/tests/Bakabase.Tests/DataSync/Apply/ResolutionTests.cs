@@ -1011,35 +1011,6 @@ public partial class ResolutionTests
             _f.Kind.Definitions.Values.Select(d => d.Name).ToArray());
     }
 
-    [TestMethod]
-    public async Task A_paused_undo_never_waits_inside_its_transaction()
-    {
-        // One apply that renamed two definitions: undoing it takes two steps in one transaction.
-        var (genre, mood) = (SyncKey.New().Value, SyncKey.New().Value);
-        var (g1, m1) = (_peer.Next(), _peer.Next());
-        await _f.ApplyAsync(_link, _peer, (Item, _peer.Record([genre], g1, Content("Genre", ("a", "Rock")), "a0")),
-            (Item, _peer.Record([mood], m1, Content("Mood", ("c", "Calm")), "a1")));
-        await _f.ApplyAsync(_link, _peer, (Item, _peer.Record([genre], _peer.Next(g1), Content("Genres", ("a", "Rock")), "a0")),
-            (Item, _peer.Record([mood], _peer.Next(m1), Content("Moods", ("c", "Calm")), "a1")));
-        var logId = (await _f.HistoryAsync()).Last().Id;
-        var pause = new PauseTokenSource();
-        _f.Kind.FailOn = _ =>
-        {
-            pause.Pause();
-            return null;
-        };
-
-        // Asked to pause at its first write, the undo still finishes: inside the transaction only a stop counts.
-        var undone = await Task.Run(() => _f.Runner.RunUndoAsync(logId, _f.Args("DataSyncUndo:" + logId, pause: pause.Token)))
-            .WaitAsync(TimeSpan.FromSeconds(30));
-        _f.Kind.FailOn = null;
-        pause.Resume();
-
-        Assert.IsNotNull(undone);
-        CollectionAssert.AreEquivalent(new[] { "Genre", "Mood" }, _f.Kind.Definitions.Values.Select(d => d.Name).ToArray());
-        Assert.IsTrue(await _f.TryTakeWriteLockAsync(TimeSpan.FromSeconds(1)));
-    }
-
     #endregion
 }
 

@@ -66,7 +66,6 @@ vi.mock("../api", async (importOriginal) => ({
     entities: vi.fn(async () => []),
     updateLink: vi.fn(async () => ({})),
     setSharing: vi.fn(async () => undefined),
-    createInvitation: vi.fn(),
     syncNow: vi.fn(async () => ({})),
     inbox: vi.fn(async () => ({ items: [], total: 0, openTotal: 0 })),
     history: vi.fn(async () => []),

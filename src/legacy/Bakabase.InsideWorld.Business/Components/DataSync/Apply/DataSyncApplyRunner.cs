@@ -33,8 +33,8 @@ public interface IDataSyncApplyListener
 
 /// <summary>
 /// The apply runner (§8.10): the bodies of <c>DataSyncApply</c>, <c>DataSyncReview:{linkId}</c> (a first sync's
-/// Start), <c>DataSyncResolve:{id}</c>,
-/// <c>DataSyncUndo:{id}</c> and <c>DataSyncRestore</c>. Every method follows one shape: <c>YieldAsync</c> and the
+/// Start), <c>DataSyncResolve:{id}</c> and <c>DataSyncRestore</c>. Every method follows one shape:
+/// <c>YieldAsync</c> and the
 /// attempt check, the gate (waited for without a limit), the attempt check again, the actor check
 /// (<see cref="IDataSyncActorGuard.CheckAsync"/>) before any transaction, then its work in <c>BEGIN IMMEDIATE</c>
 /// transactions that start with Refresh (§6.6). A <see cref="DataSyncActorChangedException"/> rolls back, checks the
@@ -44,7 +44,7 @@ public interface IDataSyncApplyListener
 /// the <see cref="IDataSyncApplyListener"/>s.
 /// </summary>
 /// <remarks>
-/// Every committed transaction is a complete attempt with its history entry: an auto-sync apply, a first sync, an undo
+/// Every committed transaction is a complete attempt with its history entry: an auto-sync apply, a first sync
 /// and a restore run in one transaction, and a large resolution batch in parts, each its own attempt. No task waits for a
 /// pause while it holds the gate: every attempt honours a pause before it enters the gate, and inside a transaction only
 /// a stop reaches any task.
@@ -274,14 +274,12 @@ public sealed partial class DataSyncApplyRunner : IDataSyncApplyRunner
 public sealed class DataSyncActorUnverifiedException() : Exception("actorUnverified");
 
 /// <summary>
-/// Something a task wrote cannot stand: an undo step refused after it wrote (<see cref="Block"/>, §8.11), a Convert
-/// whose phase two cannot run (§8.5.6). The transaction rolls back, and the task runs again without <see cref="Id"/>:
-/// the step's place in the undo's plan, or the inbox item.
+/// A Convert whose phase two cannot run (§8.5.6) cannot keep its partial writes. The transaction rolls back,
+/// and the task runs again without the inbox item named by <see cref="Id"/>.
 /// </summary>
-internal sealed class DataSyncRunWithoutException(long id, DataSyncUndoBlock? block = null) : Exception("runWithout")
+internal sealed class DataSyncRunWithoutException(long id) : Exception("runWithout")
 {
     public long Id { get; } = id;
-    public DataSyncUndoBlock? Block { get; } = block;
 }
 
 /// <summary>

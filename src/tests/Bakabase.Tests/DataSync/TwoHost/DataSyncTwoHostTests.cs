@@ -32,7 +32,7 @@ namespace Bakabase.Tests.DataSync.TwoHost;
 /// <c>DataSync</c> fetch task and the write tasks it enqueues.
 /// </summary>
 /// <remarks>
-/// Every step of §13.7 runs in one flow, step 6 last: resetting B's link to A takes away the link the undo and the
+/// Every step of §13.7 runs in one flow, step 6 last: resetting B's link to A takes away the link the correction and the
 /// restores pull through. Step 8 runs three times: the database alone rewound (B's own records), and the whole data
 /// directory restored with 60 edits, detected once by A's read and once by B's startup verification — the restore
 /// choices "this device wins", "take the others'" and a link-scoped "this device wins" after them.
@@ -55,7 +55,7 @@ public class DataSyncTwoHostTests
 
     [TestMethod]
     [Timeout(60_000)]
-    public async Task Two_hosts_link_converge_decide_undo_and_survive_restores()
+    public async Task Two_hosts_link_converge_decide_correct_and_survive_restores()
     {
         var total = Stopwatch.StartNew();
         _clock = new DataSyncTestClock(DateTime.UtcNow.AddTicks(-(DateTime.UtcNow.Ticks % TimeSpan.TicksPerSecond)));
@@ -76,7 +76,7 @@ public class DataSyncTwoHostTests
         _bBackupState = await _b.LocalStateAsync();
 
         await StepAsync("5 concurrent rename", Step5_a_concurrent_rename_is_decided_onceAsync);
-        await StepAsync("7 undo", Step7_undo_of_the_first_sync_reaches_nobodyAsync);
+        await StepAsync("7 correction", Step7_a_new_edit_corrects_synced_data_without_rewriting_historyAsync);
         await StepAsync("8a database rewound", Step8a_a_database_rewound_alone_is_detected_by_its_own_recordsAsync);
         await StepAsync("8b whole directory, reader", Step8b_a_whole_directory_restore_is_detected_by_the_readerAsync);
         await StepAsync("8c whole directory, startup", Step8c_a_whole_directory_restore_is_detected_at_startupAsync);
@@ -150,7 +150,7 @@ public class DataSyncTwoHostTests
     {
         // B asks A to keep in step both ways: no access yet, so a request goes out with a reciprocal offer (§7.2.4).
         var created = await _b.CallAsync(s => s.CreateLinkAsync(
-            new DataSyncLinkCreateInput(_a.NodeId, null, null, DataSyncLinkMode.TwoWay, []), true, default));
+            new DataSyncLinkCreateInput(_a.NodeId, null, DataSyncLinkMode.TwoWay, []), true, default));
         Assert.IsNull(created.Problem, created.Problem?.Code.ToString());
         Assert.AreEqual(DataSyncLinkState.AwaitingAccess, created.Link!.State);
         Assert.IsNotNull(created.RequestId);
@@ -301,54 +301,25 @@ public class DataSyncTwoHostTests
         await AssertConvergedAsync();
     }
 
-    // ---- 7. Undo of B's first sync -------------------------------------------------------------------------------
+    // ---- 7. Corrections use ordinary edits and synchronization ---------------------------------------------------
 
-    private async Task Step7_undo_of_the_first_sync_reaches_nobodyAsync()
+    private async Task Step7_a_new_edit_corrects_synced_data_without_rewriting_historyAsync()
     {
         var first = (await _b.HistoryAsync()).Single(h => h.Kind == DataSyncHistoryKind.FirstLink);
-        var preview = await _b.CallAsync(s => s.PreviewUndoAsync(first.Id, default));
-        Assert.IsTrue(preview.CanUndo, preview.Problem?.Code.ToString());
-        var removable = preview.Items.Count(i => i.Action == DataSyncUndoAction.Remove && i.Blocked is null);
-        Assert.IsTrue(removable > 90, $"{removable} created definitions can be removed");
-
-        var aProperties = (await PropertiesAsync(_a)).Select(p => p.Name).OrderBy(n => n).ToList();
-        var aKeys = (await _a.KeysAsync()).Keys.OrderBy(k => k.Kind).ThenBy(k => k.Key).ToList();
-        var aItems = (await _a.ItemsAsync(false)).Count;
-        var bProperties = (await PropertiesAsync(_b)).Count;
-
-        await _b.RunAsync(await _b.CallAsync(s => s.StartUndoAsync(first.Id, default)));
-        Assert.IsNotNull((await _b.HistoryAsync()).Single(h => h.Id == first.Id).UndoneAtUtc);
-        Assert.IsTrue((await PropertiesAsync(_b)).Count <= bProperties - 90, "the created definitions are gone on B");
-
-        // Nothing is created or re-linked on A at its next pull: undone creates are never served. B no longer offers
-        // any extension group (it had only A's): nothing pauses, and nothing changes on A (D12).
-        async Task AssertNothingChangedOnAAsync(string when)
-        {
-            CollectionAssert.AreEqual(aProperties,
-                (await PropertiesAsync(_a)).Select(p => p.Name).OrderBy(n => n).ToList(), when);
-            CollectionAssert.AreEqual(aKeys,
-                (await _a.KeysAsync()).Keys.OrderBy(k => k.Kind).ThenBy(k => k.Key).ToList(), when);
-            Assert.AreEqual(aItems, (await _a.ItemsAsync(false)).Count, $"{when}: no item on A");
-            Assert.AreEqual(8, await _a.InScopeAsync(async sp =>
-                (await sp.GetRequiredService<IExtensionGroupService>().GetAll()).Length), when);
-        }
-
+        var originalResult = first.ResultJson;
+        // The immediate stale-write window is over; this is a deliberate correction, not an old whole-row writer.
+        _clock.Advance(TimeSpan.FromMinutes(2));
+        await _b.TickAsync();
+        await RenameAsync(_b, "Prop 10 (A)", "Prop 10 corrected");
         await PullAsync(_a);
-        await AssertNothingChangedOnAAsync("pulled");
-        Assert.AreEqual(DataSyncLinkState.Active, (await _a.RequireLinkToAsync(_b)).State);
-        await PullAsync(_a);
-        await AssertNothingChangedOnAAsync("pulled again");
-
-        // A full reconciliation on B changes nothing: its bases of what it undid are excluded (§8.11).
-        var before = await RevisionsAsync();
-        var bNames = (await PropertiesAsync(_b)).Select(p => p.Name).OrderBy(n => n).ToList();
-        _clock.Advance(DataSyncSchedule.FullReconciliationInterval);
         await PullAsync(_b);
-        var link = await _b.RequireLinkToAsync(_a);
-        Assert.AreEqual(_clock.UtcNow, link.LastFullReconciliationAtUtc, "the pull was a full reconciliation");
-        CollectionAssert.AreEqual(bNames, (await PropertiesAsync(_b)).Select(p => p.Name).OrderBy(n => n).ToList());
-        CollectionAssert.AreEqual(before.B, (await RevisionsAsync()).B, "no revision on B");
-        Assert.AreEqual(0, (await _b.ItemsAsync()).Count, "no item on B");
+
+        Assert.IsTrue((await PropertiesAsync(_a)).Any(p => p.Name == "Prop 10 corrected"));
+        Assert.IsTrue((await PropertiesAsync(_b)).Any(p => p.Name == "Prop 10 corrected"));
+        var stillRecorded = (await _b.HistoryAsync()).Single(h => h.Id == first.Id);
+        Assert.AreEqual(originalResult, stillRecorded.ResultJson);
+        Assert.IsNull(stillRecorded.UndoneAtUtc);
+        await AssertConvergedAsync();
     }
 
     // ---- 8. Restore detection ------------------------------------------------------------------------------------

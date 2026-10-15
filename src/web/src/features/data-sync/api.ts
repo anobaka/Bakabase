@@ -42,10 +42,6 @@ export type DataSyncApproveInput =
 export type DataSyncRequestResult =
   Schemas["Bakabase.Modules.DataSync.Services.DataSyncRequestResult"];
 export type DataSyncReaderView = Schemas["Bakabase.Modules.DataSync.Services.DataSyncReaderView"];
-export type DataSyncInvitationView =
-  Schemas["Bakabase.Modules.DataSync.Services.DataSyncInvitationView"];
-export type DataSyncCopyOnceInput =
-  Schemas["Bakabase.Modules.DataSync.Services.DataSyncCopyOnceInput"];
 export type DataSyncFirstSyncPreview =
   Schemas["Bakabase.Modules.DataSync.Services.DataSyncFirstSyncPreview"];
 export type DataSyncPreviewEntry =
@@ -69,7 +65,6 @@ export type DataSyncHistoryEntry =
   Schemas["Bakabase.Modules.DataSync.Services.DataSyncHistoryEntry"];
 export type DataSyncHistoryDetail =
   Schemas["Bakabase.Modules.DataSync.Services.DataSyncHistoryDetail"];
-export type DataSyncUndoPreview = Schemas["Bakabase.Modules.DataSync.Services.DataSyncUndoPreview"];
 export type DataSyncRestoreView = Schemas["Bakabase.Modules.DataSync.Services.DataSyncRestoreView"];
 export type DataSyncDisplayValue =
   Schemas["Bakabase.Modules.DataSync.Planning.DataSyncDisplayValue"];
@@ -84,8 +79,6 @@ export type DataSyncResolveInput =
 export type DataSyncHistoryItem = Schemas["Bakabase.Modules.DataSync.Services.DataSyncHistoryItem"];
 export type DataSyncHistoryCounts =
   Schemas["Bakabase.Modules.DataSync.Services.DataSyncHistoryCounts"];
-export type DataSyncUndoPreviewItem =
-  Schemas["Bakabase.Modules.DataSync.Services.DataSyncUndoPreviewItem"];
 
 /**
  * The inbox query, as `GET /data-sync/inbox` binds it (one query parameter per member). With
@@ -184,7 +177,7 @@ const solved = <T extends { problem?: DataSyncProblem | null }>(result: T): T =>
 };
 
 /**
- * A record answered whole (a task start, a review, an undo preview) whose problem the caller
+ * A record answered whole (a task start, a review) whose problem the caller
  * wants thrown after all: said where the action's failures are said.
  */
 export const throwIfProblem = solved;
@@ -224,8 +217,6 @@ export const dataSyncApi = {
   /** "Stop reading X": drops this device's own access to that device's definitions. */
   forgetAccess: async (nodeId: string) =>
     done(await call((p) => api().forgetDataSyncAccess(nodeId, p))),
-  copyOnce: async (input: DataSyncCopyOnceInput) =>
-    solved(await call((p) => api().createDataSyncCopyOnce(input, p))),
   approveRequest: async (id: string, input: DataSyncApproveInput) =>
     solved(await call((p) => api().approveDataSyncRequest(id, input, p))),
   rejectRequest: async (id: string) => done(await call((p) => api().rejectDataSyncRequest(id, p))),
@@ -234,13 +225,6 @@ export const dataSyncApi = {
   /** Stops a device from reading this device's definitions. */
   revokeReader: async (nodeId: string) =>
     done(await call((p) => api().revokeDataSyncReader(nodeId, p))),
-  createInvitation: async () => {
-    const result = solved(await call((p) => api().createDataSyncInvitation(p)));
-
-    if (!result?.invitation) throw new DataSyncRequestError("Server", "");
-
-    return result.invitation;
-  },
   setEntitySync: async (kind: string, localKey: string, input: DataSyncEntitySyncInput) =>
     solved(await call((p) => api().setDataSyncEntitySync(kind, localKey, input, p))),
 
@@ -264,8 +248,6 @@ export const dataSyncApi = {
       }),
     ).then((page) => page?.entries ?? []),
   historyEntry: (id: number) => call((p) => api().getDataSyncHistoryEntry(id, p)),
-  undoPreview: (id: number) => call((p) => api().previewDataSyncUndo(id, p)),
-  undo: (id: number) => call((p) => api().undoDataSync(id, p)),
   restore: () => call((p) => api().getDataSyncRestore(p)),
   chooseRestore: (choice: DataSyncRestoreChoiceValue, linkId?: number) =>
     call((p) => api().chooseDataSyncRestore({ choice, linkId }, p)),

@@ -2858,22 +2858,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/data-sync/copy-once": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["CreateDataSyncCopyOnce"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/data-sync/links/{id}/first-sync": {
         parameters: {
             query?: never;
@@ -2981,22 +2965,6 @@ export interface paths {
         put?: never;
         post?: never;
         delete: operations["RevokeDataSyncReader"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/data-sync/invitations": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["CreateDataSyncInvitation"];
-        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -3124,38 +3092,6 @@ export interface paths {
         get: operations["GetDataSyncHistoryEntry"];
         put?: never;
         post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/data-sync/history/{id}/undo-preview": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["PreviewDataSyncUndo"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/data-sync/history/{id}/undo": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["UndoDataSync"];
         delete?: never;
         options?: never;
         head?: never;
@@ -14069,12 +14005,6 @@ export interface components {
             receiveBack: boolean;
             kinds?: string[];
         };
-        "Bakabase.Modules.DataSync.Services.DataSyncCopyOnceInput": {
-            peerNodeId?: string;
-            address?: string;
-            code?: string;
-            kinds: string[];
-        };
         "Bakabase.Modules.DataSync.Services.DataSyncEntityStatusView": {
             localKey: string;
             syncKey: string;
@@ -14167,7 +14097,6 @@ export interface components {
             peerNodeId?: string;
             peerName?: string;
             counts: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncHistoryCounts"];
-            undoState: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncUndoState"];
             /** Format: date-time */
             undoneAt?: string;
         };
@@ -14218,16 +14147,6 @@ export interface components {
             /** Format: int32 */
             openTotal: number;
         };
-        "Bakabase.Modules.DataSync.Services.DataSyncInvitationResult": {
-            invitation?: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncInvitationView"];
-            problem?: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncProblem"];
-        };
-        "Bakabase.Modules.DataSync.Services.DataSyncInvitationView": {
-            code: string;
-            /** Format: date-time */
-            expiresAt: string;
-            addresses: string[];
-        };
         "Bakabase.Modules.DataSync.Services.DataSyncKindCount": {
             kind: string;
             /** Format: int32 */
@@ -14236,7 +14155,6 @@ export interface components {
         "Bakabase.Modules.DataSync.Services.DataSyncLinkCreateInput": {
             peerNodeId?: string;
             address?: string;
-            code?: string;
             mode: components["schemas"]["Bakabase.Modules.DataSync.DataSyncLinkMode"];
             kinds: string[];
         };
@@ -14467,40 +14385,6 @@ export interface components {
             taskId?: string;
             problem?: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncProblem"];
         };
-        /**
-         * Format: int32
-         * @description [1: Remove, 2: Revert, 3: RemoveAliases, 4: Recreate, 5: Exclude]
-         * @enum {integer}
-         */
-        "Bakabase.Modules.DataSync.Services.DataSyncUndoAction": 1 | 2 | 3 | 4 | 5;
-        /**
-         * Format: int32
-         * @description [1: ChangedSinceImport, 2: InUse, 3: AddedOptionsInUse, 4: Missing]
-         * @enum {integer}
-         */
-        "Bakabase.Modules.DataSync.Services.DataSyncUndoBlock": 1 | 2 | 3 | 4;
-        "Bakabase.Modules.DataSync.Services.DataSyncUndoPreview": {
-            canUndo: boolean;
-            items: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncUndoPreviewItem"][];
-            problem?: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncProblem"];
-        };
-        "Bakabase.Modules.DataSync.Services.DataSyncUndoPreviewItem": {
-            kind: string;
-            localKey: string;
-            name: string;
-            action: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncUndoAction"];
-            blocked?: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncUndoBlock"];
-            /** Format: int32 */
-            valueCount?: number;
-            settingsMayReferenceIt: boolean;
-            recreatedGetsNewId: boolean;
-        };
-        /**
-         * Format: int32
-         * @description [1: Available, 2: Undone, 3: Expired]
-         * @enum {integer}
-         */
-        "Bakabase.Modules.DataSync.Services.DataSyncUndoState": 1 | 2 | 3;
         "Bakabase.Modules.DataSync.Wire.DataSyncFeedCounterpart": {
             mode: string;
             firstContactCompleted: boolean;
@@ -18432,12 +18316,6 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncInboxPage"];
         };
-        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncInvitationResult]": {
-            /** Format: int32 */
-            code: number;
-            message?: string;
-            data?: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncInvitationResult"];
-        };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncLinkResult]": {
             /** Format: int32 */
             code: number;
@@ -18479,12 +18357,6 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncTaskStart"];
-        };
-        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncUndoPreview]": {
-            /** Format: int32 */
-            code: number;
-            message?: string;
-            data?: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncUndoPreview"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.HealthScore.Models.View.HealthScoreProfileViewModel]": {
             /** Format: int32 */
@@ -24950,35 +24822,6 @@ export interface operations {
             };
         };
     };
-    CreateDataSyncCopyOnce: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncCopyOnceInput"];
-                "application/json": components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncCopyOnceInput"];
-                "text/json": components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncCopyOnceInput"];
-                "application/*+json": components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncCopyOnceInput"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncLinkResult]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncLinkResult]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncLinkResult]"];
-                };
-            };
-        };
-    };
     GetDataSyncFirstSync: {
         parameters: {
             query?: never;
@@ -25177,28 +25020,6 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncProblem]"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncProblem]"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncProblem]"];
-                };
-            };
-        };
-    };
-    CreateDataSyncInvitation: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncInvitationResult]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncInvitationResult]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncInvitationResult]"];
                 };
             };
         };
@@ -25408,54 +25229,6 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncHistoryDetail]"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncHistoryDetail]"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncHistoryDetail]"];
-                };
-            };
-        };
-    };
-    PreviewDataSyncUndo: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncUndoPreview]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncUndoPreview]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncUndoPreview]"];
-                };
-            };
-        };
-    };
-    UndoDataSync: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncTaskStart]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncTaskStart]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncTaskStart]"];
                 };
             };
         };

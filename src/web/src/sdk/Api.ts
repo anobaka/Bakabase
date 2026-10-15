@@ -4690,13 +4690,6 @@ export interface BakabaseModulesDataSyncServicesDataSyncApproveInput {
   kinds?: string[];
 }
 
-export interface BakabaseModulesDataSyncServicesDataSyncCopyOnceInput {
-  peerNodeId?: string;
-  address?: string;
-  code?: string;
-  kinds: string[];
-}
-
 export interface BakabaseModulesDataSyncServicesDataSyncEntityStatusView {
   localKey: string;
   syncKey: string;
@@ -4803,8 +4796,6 @@ export interface BakabaseModulesDataSyncServicesDataSyncHistoryEntry {
   peerNodeId?: string;
   peerName?: string;
   counts: BakabaseModulesDataSyncServicesDataSyncHistoryCounts;
-  /** [1: Available, 2: Undone, 3: Expired] */
-  undoState: BakabaseModulesDataSyncServicesDataSyncUndoState;
   /** @format date-time */
   undoneAt?: string;
 }
@@ -4868,18 +4859,6 @@ export interface BakabaseModulesDataSyncServicesDataSyncInboxPage {
   openTotal: number;
 }
 
-export interface BakabaseModulesDataSyncServicesDataSyncInvitationResult {
-  invitation?: BakabaseModulesDataSyncServicesDataSyncInvitationView;
-  problem?: BakabaseModulesDataSyncServicesDataSyncProblem;
-}
-
-export interface BakabaseModulesDataSyncServicesDataSyncInvitationView {
-  code: string;
-  /** @format date-time */
-  expiresAt: string;
-  addresses: string[];
-}
-
 export interface BakabaseModulesDataSyncServicesDataSyncKindCount {
   kind: string;
   /** @format int32 */
@@ -4889,7 +4868,6 @@ export interface BakabaseModulesDataSyncServicesDataSyncKindCount {
 export interface BakabaseModulesDataSyncServicesDataSyncLinkCreateInput {
   peerNodeId?: string;
   address?: string;
-  code?: string;
   /** [0: Off, 1: Follow, 2: TwoWay] */
   mode: BakabaseModulesDataSyncDataSyncLinkMode;
   kinds: string[];
@@ -5181,44 +5159,6 @@ export interface BakabaseModulesDataSyncServicesDataSyncTaskStart {
   taskId?: string;
   problem?: BakabaseModulesDataSyncServicesDataSyncProblem;
 }
-
-/**
- * [1: Remove, 2: Revert, 3: RemoveAliases, 4: Recreate, 5: Exclude]
- * @format int32
- */
-export type BakabaseModulesDataSyncServicesDataSyncUndoAction = 1 | 2 | 3 | 4 | 5;
-
-/**
- * [1: ChangedSinceImport, 2: InUse, 3: AddedOptionsInUse, 4: Missing]
- * @format int32
- */
-export type BakabaseModulesDataSyncServicesDataSyncUndoBlock = 1 | 2 | 3 | 4;
-
-export interface BakabaseModulesDataSyncServicesDataSyncUndoPreview {
-  canUndo: boolean;
-  items: BakabaseModulesDataSyncServicesDataSyncUndoPreviewItem[];
-  problem?: BakabaseModulesDataSyncServicesDataSyncProblem;
-}
-
-export interface BakabaseModulesDataSyncServicesDataSyncUndoPreviewItem {
-  kind: string;
-  localKey: string;
-  name: string;
-  /** [1: Remove, 2: Revert, 3: RemoveAliases, 4: Recreate, 5: Exclude] */
-  action: BakabaseModulesDataSyncServicesDataSyncUndoAction;
-  /** [1: ChangedSinceImport, 2: InUse, 3: AddedOptionsInUse, 4: Missing] */
-  blocked?: BakabaseModulesDataSyncServicesDataSyncUndoBlock;
-  /** @format int32 */
-  valueCount?: number;
-  settingsMayReferenceIt: boolean;
-  recreatedGetsNewId: boolean;
-}
-
-/**
- * [1: Available, 2: Undone, 3: Expired]
- * @format int32
- */
-export type BakabaseModulesDataSyncServicesDataSyncUndoState = 1 | 2 | 3;
 
 export interface BakabaseModulesDataSyncWireDataSyncFeedCounterpart {
   mode: string;
@@ -9992,13 +9932,6 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesD
   data?: BakabaseModulesDataSyncServicesDataSyncInboxPage;
 }
 
-export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncInvitationResult {
-  /** @format int32 */
-  code: number;
-  message?: string;
-  data?: BakabaseModulesDataSyncServicesDataSyncInvitationResult;
-}
-
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncLinkResult {
   /** @format int32 */
   code: number;
@@ -10046,13 +9979,6 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesD
   code: number;
   message?: string;
   data?: BakabaseModulesDataSyncServicesDataSyncTaskStart;
-}
-
-export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncUndoPreview {
-  /** @format int32 */
-  code: number;
-  message?: string;
-  data?: BakabaseModulesDataSyncServicesDataSyncUndoPreview;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesHealthScoreModelsViewHealthScoreProfileViewModel {
@@ -19441,40 +19367,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags DataSync
-     * @name CreateDataSyncCopyOnce
-     * @request POST:/data-sync/copy-once
-     */
-    createDataSyncCopyOnce: (
-      data: BakabaseModulesDataSyncServicesDataSyncCopyOnceInput,
-      params: RequestParams = {},
-    ) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncLinkResult,
-        any
-      >({
-        path: `/data-sync/copy-once`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for createDataSyncCopyOnce
-     * @name createDataSyncCopyOnceUrl
-     */
-    createDataSyncCopyOnceUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/data-sync/copy-once`;
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags DataSync
      * @name GetDataSyncFirstSync
      * @request GET:/data-sync/links/{id}/first-sync
      */
@@ -19648,35 +19540,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         format: "json",
         ...params,
       }),
-
-    /**
-     * No description
-     *
-     * @tags DataSync
-     * @name CreateDataSyncInvitation
-     * @request POST:/data-sync/invitations
-     */
-    createDataSyncInvitation: (params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncInvitationResult,
-        any
-      >({
-        path: `/data-sync/invitations`,
-        method: "POST",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for createDataSyncInvitation
-     * @name createDataSyncInvitationUrl
-     */
-    createDataSyncInvitationUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/data-sync/invitations`;
-
-      return baseUrl + path;
-    },
 
     /**
      * No description
@@ -19985,42 +19848,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       >({
         path: `/data-sync/history/${id}`,
         method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags DataSync
-     * @name PreviewDataSyncUndo
-     * @request GET:/data-sync/history/{id}/undo-preview
-     */
-    previewDataSyncUndo: (id: number, params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncUndoPreview,
-        any
-      >({
-        path: `/data-sync/history/${id}/undo-preview`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags DataSync
-     * @name UndoDataSync
-     * @request POST:/data-sync/history/{id}/undo
-     */
-    undoDataSync: (id: number, params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncTaskStart,
-        any
-      >({
-        path: `/data-sync/history/${id}/undo`,
-        method: "POST",
         format: "json",
         ...params,
       }),

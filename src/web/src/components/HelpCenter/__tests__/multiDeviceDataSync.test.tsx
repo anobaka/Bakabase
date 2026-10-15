@@ -212,7 +212,7 @@ describe("data sync help: diagrams", () => {
       "review",
       "inStep",
       "needsYou",
-      "undo",
+      "history",
     ]);
     stops.forEach((stop, index) => {
       const id = howStops[index];
@@ -234,14 +234,7 @@ describe("data sync help: diagrams", () => {
       { ...toHere, state: "active" },
       { ...toThere, state: "active" },
     ]);
-    // Copied once, then off: not the live lane of receiving only, and its sign is text that
-    // keeps a readable size, not part of the scaled drawing.
-    expect(arrows(mode("copyOnce"))).toEqual([{ ...toHere, state: "once" }]);
-    const mark = mode("copyOnce").querySelector("[data-mark]")!;
-
-    expect(mark).toHaveTextContent("1×");
-    expect(mark.closest("svg")).toBeNull();
-    expect(mark).toHaveClass("text-xs");
+    expect(mode("copyOnce")).toBeNull();
     expect(mode("follow").querySelector("[data-mark]")).toBeNull();
   });
 
@@ -301,7 +294,7 @@ describe("data sync help: diagrams", () => {
     expect(new Set(drawn.map(pointing))).toEqual(new Set(["left", "right"]));
     // Every look a lane can have is drawn somewhere, so the bar checks are not vacuous either.
     expect(new Set(drawn.map((arrow) => arrow.getAttribute("data-state")))).toEqual(
-      new Set(["active", "once"]),
+      new Set(["active"]),
     );
   });
 
@@ -309,7 +302,7 @@ describe("data sync help: diagrams", () => {
     render(<DataSyncSection onNavigate={vi.fn()} />);
     const modes = screen.getByTestId("data-sync-modes");
 
-    expect(syncModes.map((mode) => mode.id)).toEqual(["follow", "twoWay", "copyOnce"]);
+    expect(syncModes.map((mode) => mode.id)).toEqual(["follow", "twoWay"]);
     for (const mode of syncModes) {
       expect(within(modes).getByText(d(`modes.${mode.id}.title`))).toBeInTheDocument();
       expect(within(modes).getByText(d(`modes.${mode.id}.desc`))).toBeInTheDocument();
@@ -324,12 +317,6 @@ describe("data sync help: diagrams", () => {
     );
     expect(cnHelpDataSync[d("modes.twoWay.title") as keyof typeof cnHelpDataSync]).toBe(
       "双向保持一致",
-    );
-    expect(enHelpDataSync[d("modes.copyOnce.title") as keyof typeof enHelpDataSync]).toBe(
-      "Copy once",
-    );
-    expect(cnHelpDataSync[d("modes.copyOnce.title") as keyof typeof cnHelpDataSync]).toBe(
-      "只复制一次",
     );
   });
 
@@ -383,7 +370,7 @@ describe("data sync help: diagrams", () => {
     }
   });
 
-  it("covers deletions, undo, pauses, restores and what sync never does", () => {
+  it("covers deletions, history, pauses, restores and what sync never does", () => {
     render(<DataSyncSection onNavigate={vi.fn()} />);
 
     const deletes = screen.getByTestId("data-sync-deletes");
@@ -394,7 +381,7 @@ describe("data sync help: diagrams", () => {
 
     const recover = screen.getByTestId("data-sync-recover");
 
-    for (const id of ["undo", "pause", "restore"]) {
+    for (const id of ["history", "pause", "restore"]) {
       expect(recover.querySelector(`[data-recover="${id}"]`)).toHaveTextContent(d(`${id}.desc`));
     }
 
@@ -596,7 +583,6 @@ describe("data sync help: translations", () => {
     const quoted: { help: string; page: string; how: "is" | "quotes" }[] = [
       { help: d("modes.follow.title"), page: "dataSync.mode.follow", how: "is" },
       { help: d("modes.twoWay.title"), page: "dataSync.mode.twoWay", how: "is" },
-      { help: d("modes.copyOnce.title"), page: "dataSync.copyOnce.button", how: "is" },
       { help: d("how.link.desc"), page: "dataSync.thisDevice", how: "quotes" },
       { help: d("how.link.desc"), page: "dataSync.sharing.label", how: "quotes" },
       { help: d("how.link.desc"), page: "dataSync.mode.follow", how: "quotes" },

@@ -30,10 +30,9 @@ namespace Bakabase.Tests.DataSync;
 /// every secret a device keeps: the federation <c>state.json</c> (library and datasync grant keys, invitation and
 /// reciprocal codes, claim secrets, reciprocal offers), <c>remote-access/devices.json</c> (device keys, an approved
 /// request's key, the pairing code) and the desktop app's managed-connection keys (<c>connection.json</c>). Then a
-/// two-way pairing by request with its reciprocal read-back, and one by a (one-way) code, run through the facade. Neither
+/// two-way pairing by request with its reciprocal read-back, and a one-way request, run through the facade. Neither
 /// the marker nor any key, code, claim secret or hash the flows wrote shows in any <c>/data-sync</c> answer, any
-/// notification or the Information-level log, except the code in its own creator's <c>POST /data-sync/invitations</c>
-/// answer; the test folders never show either.
+/// notification or the Information-level log; the test folders never show either.
 /// </summary>
 public partial class SecretCanaryTests
 {
@@ -70,7 +69,7 @@ public partial class SecretCanaryTests
             // By request, two-way: the desk asks the NAS, the NAS approves and reads the desk back through the desk's
             // reciprocal code, and the desk collects its grant.
             var asked = (await Call(desk, "create link by request", c => c.CreateLink(
-                new DataSyncLinkCreateInput(null, nas.Node.Address, null, DataSyncLinkMode.TwoWay, AllKinds),
+                new DataSyncLinkCreateInput(null, nas.Node.Address, DataSyncLinkMode.TwoWay, AllKinds),
                 default))).Data!;
             Assert.IsNull(asked.Problem, asked.Problem?.Detail);
             Assert.IsNotNull(asked.RequestId);
@@ -84,13 +83,17 @@ public partial class SecretCanaryTests
             Assert.IsTrue(await desk.Node.Grants.HasOutboundGrantAsync("node-nas", default));
             Assert.IsTrue(await nas.Node.Grants.HasOutboundGrantAsync("node-desk", default));
 
-            // By a code: the PC redeems the NAS's code, which grants one way.
-            var invitation = await Call(nas, "invitation", c => c.CreateInvitation(default));
-            var code = invitation.Data!.Invitation!.Code;
-            var redeemed = (await Call(pc, "create link by code", c => c.CreateLink(
-                new DataSyncLinkCreateInput(null, nas.Node.Address, code, DataSyncLinkMode.TwoWay, AllKinds),
+            // A second device requests one-way access by address; approval remains required.
+            var pcAsked = (await Call(pc, "create one-way link", c => c.CreateLink(
+                new DataSyncLinkCreateInput(null, nas.Node.Address, DataSyncLinkMode.Follow, AllKinds),
                 default))).Data!;
-            Assert.IsNull(redeemed.Problem, redeemed.Problem?.Detail);
+            Assert.IsNull(pcAsked.Problem, pcAsked.Problem?.Detail);
+            Assert.IsNotNull(pcAsked.RequestId);
+            var pcRequest = (await Call(nas, "requests", c => c.GetRequests(default))).Data!
+                .Single(r => r.NodeId == "node-pc");
+            Assert.IsNull((await Call(nas, "approve one-way", c => c.ApproveRequest(pcRequest.RequestId,
+                new DataSyncApproveInput(false, AllKinds), default))).Data!.Problem);
+            await pc.Node.Flow.ClaimPendingAsync(default);
             Assert.IsTrue(await pc.Node.Grants.HasOutboundGrantAsync("node-nas", default));
 
             foreach (var device in devices)
@@ -106,7 +109,6 @@ public partial class SecretCanaryTests
             var secrets = devices.SelectMany(d => d.Secrets()).Distinct().ToList();
             Assert.IsTrue(secrets.Count(s => !s.Contains(Marker, StringComparison.Ordinal)) >= 9,
                 $"the flows wrote keys, codes and claim secrets: {secrets.Count}");
-            secrets.Add(code);
 
             var exposed = new List<(string What, string Text)>();
             foreach (var (what, answer) in answers) exposed.Add((what, string.Join("\n", Strings(answer))));
@@ -130,14 +132,11 @@ public partial class SecretCanaryTests
             Assert.IsTrue(exposed.Any(e => e.What.EndsWith("notifications of pairing") && e.Text.Length > 0),
                 "a request told a person");
 
-            var invitationText = exposed.Single(e => e.What == "NAS: invitation").Text;
-            StringAssert.Contains(invitationText, code, "the creator's own answer carries the code it made");
             foreach (var (what, text) in exposed)
             {
                 Assert.IsFalse(text.Contains(Marker, StringComparison.OrdinalIgnoreCase), $"the marker is in {what}");
                 foreach (var secret in secrets)
                 {
-                    if (what == "NAS: invitation" && secret == code) continue;
                     Assert.IsFalse(text.Contains(secret, StringComparison.Ordinal), $"a secret is in {what}");
                 }
 

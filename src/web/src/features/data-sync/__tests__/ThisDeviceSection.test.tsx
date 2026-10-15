@@ -113,7 +113,6 @@ describe("the devices that read this device", () => {
             reader("node-c", "C", { state: "needsYou:2" }),
             reader("node-d", "D", { state: "somethingNewer" }),
           ]}
-          onCreateCode={vi.fn()}
         />
       );
     };
@@ -146,7 +145,6 @@ describe("this device's sharing while remote access is off", () => {
           now={NOW}
           overview={overview({ sharingEnabled, remoteAccessMode: RemoteAccessMode.Disabled })}
           readers={[]}
-          onCreateCode={vi.fn()}
         />
         {actions.confirmation && (
           <div data-testid="confirmation">

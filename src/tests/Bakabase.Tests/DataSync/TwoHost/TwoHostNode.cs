@@ -56,7 +56,7 @@ internal sealed class TwoHostNode
     public async Task<DataSyncLinkDbModel> PairTwoWayAsync(TwoHostNode approver, TwoHostNetwork network)
     {
         var created = await CallAsync(s => s.CreateLinkAsync(
-            new DataSyncLinkCreateInput(approver.NodeId, null, null, DataSyncLinkMode.TwoWay, []), true, default));
+            new DataSyncLinkCreateInput(approver.NodeId, null, DataSyncLinkMode.TwoWay, []), true, default));
         Assert.IsNull(created.Problem, created.Problem?.Code.ToString());
         var request = (await approver.CallAsync(s => s.GetRequestsAsync(default)))
             .Single(r => r.Direction == DataSyncRequestDirection.Incoming);

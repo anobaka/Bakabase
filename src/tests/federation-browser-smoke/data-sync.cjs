@@ -271,12 +271,10 @@ module.exports = async function dataSync({ browser, config, artifacts }) {
     assert.equal(await lan.getByTestId('data-sync-create-code').count(), 0, 'A LAN browser was offered [Create a code]');
     assert.equal((await lan.evaluate(() => fetch('/data-sync/overview').then(response => response.json()))).data.canManageSharing,
       false);
-    const invitation = await lan.evaluate(() => fetch('/data-sync/invitations', {
+    const retiredInvitationStatus = await lan.evaluate(() => fetch('/data-sync/invitations', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}'
-    }).then(response => response.json()));
-    assert.equal(invitation.data?.problem?.code, PROBLEM.NotAllowedOnThisDevice,
-      `A LAN browser created a code: ${JSON.stringify(invitation.data?.problem)}`);
-    assert.equal(invitation.data?.invitation ?? null, null);
+    }).then(response => response.status));
+    assert.equal(retiredInvitationStatus, 404, 'The retired invitation endpoint is still exposed');
     await lan.screenshot({ path: artifacts('data-sync-lan-unrestricted.png'), fullPage: true });
     await lan.close();
     // Outside Unrestricted mode (and not asking to be paired, so the page opens at all) such a

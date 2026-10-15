@@ -56,7 +56,7 @@ public sealed class DataSyncTaskRegistry : IDataSyncTaskRegistry
 
 /// <summary>
 /// The attempt a task body runs as (§8.10.1). The body that enqueued the attempt enters it around the runner call:
-/// <c>using (DataSyncTaskAttempts.Enter(attempt)) await runner.RunUndoAsync(id, args);</c>. Without one, the runner
+/// <c>using (DataSyncTaskAttempts.Enter(attempt)) await runner.RunAutoSyncAsync(id, pull, args);</c>. Without one, the runner
 /// checks only the cancel flag of the task's current attempt.
 /// </summary>
 public static class DataSyncTaskAttempts

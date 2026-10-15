@@ -20,7 +20,7 @@ interface Followed {
 }
 
 /**
- * Follows the data sync tasks started from here — a decision of "Needs you", an undo — each under
+ * Follows the data sync tasks started from here — a decision of "Needs you" — each under
  * the keys it is shown on; one task can carry several keys (a bulk decision). A task that fails
  * or is cancelled is said through `onFailed`. One that completes, that the list showed and then
  * no longer does, or that it never showed for {@link UNSEEN_TASK_MS}, is over: `onOver` reads
