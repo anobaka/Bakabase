@@ -10,12 +10,13 @@ import { dataSyncApi } from "../api";
 import { useDataSyncActions } from "../hooks/useDataSyncActions";
 import { candidateStatus, isPickable, newSyncPeer } from "../viewModels";
 
-import { buttonClass, DataSyncErrorNotice, fieldClass, primaryClass } from "./common";
+import { buttonClass, DataSyncErrorNotice, primaryClass } from "./common";
 import DataSyncDialog from "./DataSyncDialog";
 import InlineConfirmation from "./InlineConfirmation";
 import SyncRuleDrawing from "./SyncRuleDrawing";
 
 import { DataSyncLinkState } from "@/sdk/constants";
+import { Button, Input, Checkbox } from "@/components/bakaui";
 
 /*
  * "Sync with another device" (spec §11.2): choose the device, then the rule editor for it — the
@@ -164,38 +165,41 @@ export default function AddLinkWizard({
       </ul>
       {canManage && (
         <div className="space-y-2 rounded-lg border border-default-200 p-2.5">
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              checked={byAddress}
-              data-testid="data-sync-wizard-by-address"
-              type="checkbox"
-              onChange={(event) => {
-                setByAddress(event.target.checked);
-                setChosen(undefined);
-              }}
-            />
+          <Checkbox
+            classNames={{ base: "m-0 max-w-full p-0", label: "text-xs" }}
+            color="secondary"
+            data-testid="data-sync-wizard-by-address"
+            isSelected={byAddress}
+            size="sm"
+            onChange={(event) => {
+              setByAddress(event.target.checked);
+              setChosen(undefined);
+            }}
+          >
             {t("dataSync.wizard.byAddress")}
-          </label>
+          </Checkbox>
           {byAddress && (
             <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_10rem]">
               <label className="space-y-1 text-xs" htmlFor={`${id}-address`}>
                 <span>{t("dataSync.wizard.address")}</span>
-                <input
-                  className={fieldClass}
+                <Input
                   id={`${id}-address`}
                   placeholder="192.168.1.10:34567"
+                  size="sm"
                   value={address}
+                  variant="bordered"
                   onChange={(event) => setAddress(event.target.value)}
                 />
               </label>
               <label className="space-y-1 text-xs" htmlFor={`${id}-code`}>
                 <span>{t("dataSync.wizard.code")}</span>
-                <input
-                  className={fieldClass}
+                <Input
                   id={`${id}-code`}
                   inputMode="numeric"
                   maxLength={8}
+                  size="sm"
                   value={code}
+                  variant="bordered"
                   onChange={(event) => setCode(event.target.value.replace(/\D/g, ""))}
                 />
               </label>
@@ -209,10 +213,12 @@ export default function AddLinkWizard({
   );
 
   const footer = peer ? (
-    <button
+    <Button
       className={buttonClass}
       disabled={actions.busy}
+      size="sm"
       type="button"
+      variant="bordered"
       onClick={() => {
         actions.reset();
         actions.cancelConfirmation();
@@ -220,17 +226,25 @@ export default function AddLinkWizard({
       }}
     >
       {t("dataSync.wizard.back")}
-    </button>
+    </Button>
   ) : (
     <>
-      <button className={buttonClass} type="button" onClick={() => onClose()}>
+      <Button
+        className={buttonClass}
+        size="sm"
+        type="button"
+        variant="bordered"
+        onClick={() => onClose()}
+      >
         {t("dataSync.cancel")}
-      </button>
-      <button
+      </Button>
+      <Button
         className={primaryClass}
         data-testid="data-sync-wizard-next"
         disabled={byAddress ? !addressReady : !chosen}
+        size="sm"
         type="button"
+        variant="bordered"
         onClick={() =>
           setPeer(
             byAddress
@@ -240,7 +254,7 @@ export default function AddLinkWizard({
         }
       >
         {t("dataSync.wizard.next")}
-      </button>
+      </Button>
     </>
   );
 

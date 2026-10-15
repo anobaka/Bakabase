@@ -23,7 +23,6 @@ import { localDateTime, timeAgo } from "../times";
 import UndoDialog from "./UndoDialog";
 import {
   DataSyncErrorNotice,
-  fieldClass,
   linkButtonClass,
   panelClass,
   SectionHeading,
@@ -39,6 +38,7 @@ import {
   DataSyncItemOutcomeLabel,
   DataSyncUndoState,
 } from "@/sdk/constants";
+import { Button, Select } from "@/components/bakaui";
 
 /*
  * The history (spec §11.3): every entry — a first sync, a copy, an automatic sync, the reader's
@@ -206,23 +206,23 @@ const HistoryList = forwardRef<HTMLHeadingElement, HistoryListProps>(function Hi
         title={t("dataSync.history.title")}
       >
         {onPeerChange && (devices.length > 1 || peer) ? (
-          <select
+          <Select
+            disallowEmptySelection
             aria-label={t("dataSync.history.filter.device")}
-            className={`${fieldClass} w-auto py-1 text-xs`}
+            className="w-full sm:w-48"
             data-testid="data-sync-history-filter-device"
-            value={peer ?? ""}
+            dataSource={[
+              { value: "", label: t("dataSync.history.filter.allDevices") },
+              ...devices.map((device) => ({ value: device.nodeId, label: device.name })),
+              ...(peer && !devices.some((device) => device.nodeId === peer)
+                ? [{ value: peer, label: peerName ?? t("dataSync.otherDevice") }]
+                : []),
+            ]}
+            selectedKeys={[peer ?? ""]}
+            size="sm"
+            variant="bordered"
             onChange={(event) => onPeerChange(event.target.value || undefined)}
-          >
-            <option value="">{t("dataSync.history.filter.allDevices")}</option>
-            {devices.map((device) => (
-              <option key={device.nodeId} value={device.nodeId}>
-                {device.name}
-              </option>
-            ))}
-            {peer && !devices.some((device) => device.nodeId === peer) && (
-              <option value={peer}>{peerName ?? t("dataSync.otherDevice")}</option>
-            )}
-          </select>
+          />
         ) : null}
       </SectionHeading>
       <DataSyncErrorNotice error={error} onRetry={() => void load()} />
@@ -288,17 +288,19 @@ const HistoryList = forwardRef<HTMLHeadingElement, HistoryListProps>(function Hi
                       </span>
                     )}
                     {isUndoable(entry) && !busy && (
-                      <button
+                      <Button
                         className={smallButtonClass}
                         data-testid="data-sync-history-undo"
+                        size="sm"
                         type="button"
+                        variant="bordered"
                         onClick={() => {
                           listedAtOpen.current = listedTasks();
                           setUndoing(entry);
                         }}
                       >
                         {t("dataSync.undo.button")}
-                      </button>
+                      </Button>
                     )}
                     <button
                       aria-expanded={open === entry.id}
@@ -366,9 +368,11 @@ const HistoryList = forwardRef<HTMLHeadingElement, HistoryListProps>(function Hi
       {(beforeId !== undefined || hasMore) && (
         <div className="flex justify-end gap-2">
           {beforeId !== undefined && (
-            <button
+            <Button
               className={smallButtonClass}
+              size="sm"
               type="button"
+              variant="bordered"
               onClick={() => {
                 setBeforeId(undefined);
                 setOpen(undefined);
@@ -376,12 +380,14 @@ const HistoryList = forwardRef<HTMLHeadingElement, HistoryListProps>(function Hi
               }}
             >
               {t("dataSync.activity.newest")}
-            </button>
+            </Button>
           )}
           {hasMore && (
-            <button
+            <Button
               className={smallButtonClass}
+              size="sm"
               type="button"
+              variant="bordered"
               onClick={() => {
                 setBeforeId(all?.at(-1)?.id);
                 setOpen(undefined);
@@ -389,7 +395,7 @@ const HistoryList = forwardRef<HTMLHeadingElement, HistoryListProps>(function Hi
               }}
             >
               {t("dataSync.activity.older")}
-            </button>
+            </Button>
           )}
         </div>
       )}

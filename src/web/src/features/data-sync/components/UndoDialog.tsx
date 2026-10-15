@@ -18,6 +18,7 @@ import {
   DataSyncProblemCodeLabel,
   DataSyncUndoBlockLabel,
 } from "@/sdk/constants";
+import { Button } from "@/components/bakaui";
 
 /*
  * What undoing one history entry would do (spec §8.11), grouped the way it happens: definitions
@@ -93,18 +94,27 @@ export default function UndoDialog({ entry, linkMode, onClose, onStarted }: Undo
       busy={actions.busy}
       footer={
         <>
-          <button className={buttonClass} disabled={actions.busy} type="button" onClick={onClose}>
+          <Button
+            className={buttonClass}
+            disabled={actions.busy}
+            size="sm"
+            type="button"
+            variant="bordered"
+            onClick={onClose}
+          >
             {t("dataSync.cancel")}
-          </button>
-          <button
+          </Button>
+          <Button
             className={primaryClass}
             data-testid="data-sync-undo-confirm"
             disabled={actions.busy || !preview?.canUndo}
+            size="sm"
             type="button"
+            variant="bordered"
             onClick={undo}
           >
             {t("dataSync.undo.button")}
-          </button>
+          </Button>
         </>
       }
       testId="data-sync-undo"

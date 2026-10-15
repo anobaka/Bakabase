@@ -52,6 +52,7 @@ import { useEscapeKey } from "@/features/federation/map/useEscapeKey";
 import { useMediaQuery } from "@/features/federation/map/useMediaQuery";
 import HelpCenterButton from "@/components/HelpCenter/HelpCenterButton";
 import { RemoteAccessMode } from "@/sdk/constants";
+import { Button } from "@/components/bakaui";
 
 /**
  * The data sync page, under System: every device this one syncs definitions with, drawn first,
@@ -351,34 +352,40 @@ function DataSync() {
           )}
         </div>
         <div className="flex flex-wrap gap-2">
-          <button
+          <Button
             className={buttonClass}
             disabled={actions.busy}
+            size="sm"
             type="button"
+            variant="bordered"
             onClick={() => void data.reload()}
           >
             <AiOutlineReload aria-hidden />
             {t("dataSync.refresh")}
-          </button>
+          </Button>
           {peers.some((peer) => peer.linkId !== undefined) && (
-            <button
+            <Button
               className={buttonClass}
               data-testid="data-sync-sync-all"
               disabled={actions.busy}
+              size="sm"
               type="button"
+              variant="bordered"
               onClick={() => void actions.run(() => dataSyncApi.syncNow(), ["dataSync"])}
             >
               {t("dataSync.link.syncAll")}
-            </button>
+            </Button>
           )}
-          <button
+          <Button
             className={primaryClass}
             data-testid="data-sync-open-wizard"
+            size="sm"
             type="button"
+            variant="bordered"
             onClick={() => setWizard(true)}
           >
             {t("dataSync.wizard.open")}
-          </button>
+          </Button>
         </div>
       </header>
 
@@ -571,14 +578,16 @@ function DataSync() {
           data-testid="data-sync-definitions"
         >
           <SectionHeading id="data-sync-definitions" title={t("dataSync.entity.title")}>
-            <button
+            <Button
               aria-expanded={definitions.open}
               className={buttonClass}
+              size="sm"
               type="button"
+              variant="bordered"
               onClick={() => setDefinitions((current) => ({ ...current, open: !current.open }))}
             >
               {t(definitions.open ? "dataSync.entity.hide" : "dataSync.entity.show")}
-            </button>
+            </Button>
           </SectionHeading>
           <p className="text-xs text-default-500">{t("dataSync.entity.intro")}</p>
           {definitions.open && (

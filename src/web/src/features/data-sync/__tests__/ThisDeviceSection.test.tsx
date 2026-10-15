@@ -165,7 +165,9 @@ describe("this device's sharing while remote access is off", () => {
     render(<Host sharingEnabled />);
 
     // The switch is on: the hint no longer says what turning it on would do.
-    expect(screen.getByTestId("data-sync-sharing-switch")).toBeChecked();
+    expect(
+      within(screen.getByTestId("data-sync-sharing-switch")).getByRole("switch"),
+    ).toBeChecked();
     expect(screen.getByTestId("data-sync-sharing-hint")).not.toHaveTextContent(
       "dataSync.sharing.remoteAccess",
     );

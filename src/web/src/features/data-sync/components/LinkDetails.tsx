@@ -16,6 +16,7 @@ import SyncRuleDrawing from "./SyncRuleDrawing";
 import { DataSyncLinkMode, DataSyncLinkState } from "@/sdk/constants";
 import DeviceColorEditor from "@/features/management/DeviceColorEditor";
 import { DismissButton } from "@/features/federation/components/common";
+import { Button } from "@/components/bakaui";
 
 /*
  * The details of one device, beside the diagram: the rule editor, then the way to its history,
@@ -185,25 +186,29 @@ export default function LinkDetails({
           )}
           <div className="flex flex-wrap gap-2 pt-1">
             {reads && (
-              <button
+              <Button
                 className={smallButtonClass}
                 data-testid="data-sync-stop-reading"
                 disabled={actions.busy}
+                size="sm"
                 type="button"
+                variant="bordered"
                 onClick={stopReading}
               >
                 {t("dataSync.link.stopReading.button", { name })}
-              </button>
+              </Button>
             )}
-            <button
+            <Button
               className={smallButtonClass}
               data-testid="data-sync-reset"
               disabled={actions.busy}
+              size="sm"
               type="button"
+              variant="bordered"
               onClick={reset}
             >
               {t("dataSync.link.reset.button")}
-            </button>
+            </Button>
           </div>
         </div>
       )}

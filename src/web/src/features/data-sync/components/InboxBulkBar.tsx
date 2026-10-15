@@ -6,6 +6,8 @@ import { useTranslation } from "react-i18next";
 import { BackupCheckbox } from "./InboxCard";
 import { smallButtonClass } from "./common";
 
+import { Button } from "@/components/bakaui";
+
 /*
  * Deciding many at once (spec §9.1): link every exact match, skip every suggestion, delete or
  * keep every deletion, keep this device's or take one device's for every conflict. Each sends
@@ -35,20 +37,22 @@ export default function InboxBulkBar({
     <div className="space-y-2 rounded-lg bg-default-50 p-2" data-testid="data-sync-inbox-bulk">
       <div className="flex flex-wrap gap-2">
         {bulks.map((bulk) => (
-          <button
+          <Button
             key={`${bulk.id}-${bulk.peer?.nodeId ?? ""}`}
             className={`${smallButtonClass} ${bulk.destructive ? "border-danger/40 text-danger-700" : ""}`}
             data-bulk={bulk.id}
             data-testid="data-sync-inbox-bulk-action"
             disabled={busy}
+            size="sm"
             type="button"
+            variant="bordered"
             onClick={() => onRun(bulk)}
           >
             {t(`dataSync.inbox.bulk.${bulk.id}`, {
               count: bulk.count,
               name: bulk.peer?.name ?? "",
             })}
-          </button>
+          </Button>
         ))}
       </div>
       {bulks.some((bulk) => bulk.destructive) && (

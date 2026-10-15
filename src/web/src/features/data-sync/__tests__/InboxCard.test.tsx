@@ -113,8 +113,7 @@ const actionNames = () =>
   screen
     .getAllByTestId("data-sync-inbox-action")
     .map((button) => button.getAttribute("data-action"));
-const radio = (label: string) =>
-  screen.getByText(label, { selector: "label" }).querySelector("input")!;
+const radio = (label: string) => screen.getByRole("radio", { name: label });
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -270,7 +269,7 @@ describe("cards of one item", () => {
     );
     expect(actionNames()).toEqual(["Convert", "Detach", "KeepLocalType"]);
     // Lossy: backed up first by default, and asked.
-    expect(screen.getByTestId("data-sync-backup")).toBeChecked();
+    expect(within(screen.getByTestId("data-sync-backup")).getByRole("checkbox")).toBeChecked();
     fireEvent.click(action("Convert"));
     const [batch, confirmation] = onResolve.mock.calls[0];
 
@@ -295,7 +294,7 @@ describe("cards of one item", () => {
     expect(actionNames()).toEqual(["DeleteHere", "KeepHereOnly", "RestoreEverywhere"]);
     const box = screen.getByTestId("data-sync-backup");
 
-    expect(box).toBeChecked();
+    expect(within(box).getByRole("checkbox")).toBeChecked();
     expect(box.parentElement).toHaveTextContent("dataSync.inbox.backup 50 MB /data/backups");
     fireEvent.click(box);
     fireEvent.click(action("DeleteHere"));
@@ -656,7 +655,7 @@ describe("the list of what needs you", () => {
 
     const bulk = within(screen.getByTestId("data-sync-inbox-bulk"));
 
-    expect(bulk.getByTestId("data-sync-backup")).toBeChecked();
+    expect(within(bulk.getByTestId("data-sync-backup")).getByRole("checkbox")).toBeChecked();
     await waitFor(() =>
       expect(bulk.getByTestId("data-sync-backup").parentElement).toHaveTextContent(
         "dataSync.inbox.backup 50 MB /data/backups",
@@ -1018,7 +1017,9 @@ describe("the list of what needs you", () => {
         "dataSync.link.decideThere NAS dataSync.link.switchNeedsManagement NAS federation.mode federation.devices.title federation.devices.tab.manage",
       ),
     );
-    expect(screen.getByTestId("data-sync-inbox-filter-device")).toHaveValue("node-nas");
+    expect(screen.getByRole("button", { name: /dataSync.inbox.filter.device/ })).toHaveTextContent(
+      "NAS",
+    );
     expect(screen.getByTestId("data-sync-inbox-empty")).toBeInTheDocument();
   });
 });

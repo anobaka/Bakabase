@@ -98,7 +98,10 @@ describe("processing task controls", () => {
     request.mockRejectedValueOnce(new Error("Task changed elsewhere"));
     request.mockResolvedValueOnce([job({ state: "Paused", version: 9 })]);
     await act(async () => button("resourceProfile.processing.action.pause").click());
-    expect(host.querySelector('[role="alert"]')?.textContent).toBe("Task changed elsewhere");
+    const alert = host.querySelector('[role="alert"]');
+    expect(alert?.querySelector("p")?.textContent).toBe("resourceProfile.processing.controlFailed");
+    expect(alert?.querySelector("details")?.hasAttribute("open")).toBe(false);
+    expect(alert?.querySelector("pre")?.textContent).toBe("Task changed elsewhere");
     request.mockResolvedValueOnce(job({ state: "Running", version: 10 }));
     await act(async () => button("resourceProfile.processing.action.resume").click());
     expect(request).toHaveBeenLastCalledWith(

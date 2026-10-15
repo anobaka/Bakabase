@@ -9,10 +9,12 @@ import { activityApi } from "../activityApi";
 import { dataSyncApi } from "../api";
 import { localDateTime } from "../times";
 
-import { fieldClass, panelClass, smallButtonClass } from "./common";
+import { panelClass, smallButtonClass } from "./common";
+import ActivityErrorNotice, { ErrorExplanation } from "./ActivityErrorNotice";
 
 import DeviceDot from "@/features/management/DeviceDot";
 import { processingActions, processingApi } from "@/pages/resource-profile/processingApi";
+import { Button, Select } from "@/components/bakaui";
 
 const states = [
   "Current",
@@ -77,10 +79,9 @@ export default function SyncActivityCenter({
   onDefinitionHistory: (peer: string) => void;
 }) {
   const { t } = useTranslation();
-  const loadError = t<string>("dataSync.activity.loadFailed");
   const [filters, setFilters] = useState<ActivityFilters>({});
   const [page, setPage] = useState<ActivityPage>();
-  const [error, setError] = useState<string>();
+  const [error, setError] = useState<{ key: string; detail?: string }>();
   const [busy, setBusy] = useState<string>();
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState<string>();
@@ -100,11 +101,15 @@ export default function SyncActivityCenter({
         setError(undefined);
       }
     } catch (cause) {
-      if (!controller.signal.aborted) setError(cause instanceof Error ? cause.message : loadError);
+      if (!controller.signal.aborted)
+        setError({
+          key: "dataSync.activity.loadFailed",
+          detail: cause instanceof Error ? cause.message : undefined,
+        });
     } finally {
       if (!controller.signal.aborted) setLoading(false);
     }
-  }, [filters, loadError]);
+  }, [filters]);
 
   useEffect(() => {
     void load();
@@ -128,9 +133,10 @@ export default function SyncActivityCenter({
       await operation();
       await load();
     } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : t<string>("dataSync.activity.operationFailed"),
-      );
+      setError({
+        key: "dataSync.activity.operationFailed",
+        detail: cause instanceof Error ? cause.message : undefined,
+      });
     } finally {
       setBusy(undefined);
     }
@@ -158,77 +164,86 @@ export default function SyncActivityCenter({
           </h2>
           <p className="mt-1 text-xs text-default-500">{t("dataSync.activity.description")}</p>
         </div>
-        <button
+        <Button
           className={smallButtonClass}
           disabled={loading || !!busy}
+          size="sm"
           type="button"
+          variant="bordered"
           onClick={() => void load()}
         >
           <AiOutlineReload aria-hidden />
           {t("dataSync.refresh")}
-        </button>
+        </Button>
       </div>
       <div className="flex flex-wrap gap-2">
-        <select
+        <Select
+          disallowEmptySelection
           aria-label={t<string>("dataSync.activity.filter.type")}
-          className={`${fieldClass} w-auto text-xs`}
-          value={filters.dataType ?? ""}
+          className="w-full sm:w-48"
+          dataSource={[
+            { value: "", label: t("dataSync.activity.filter.allTypes") },
+            ...(page?.dataTypes ?? []).map((kind) => ({
+              value: kind,
+              label: t(`dataSync.activity.type.${kind}`),
+            })),
+          ]}
+          selectedKeys={[filters.dataType ?? ""]}
+          size="sm"
+          variant="bordered"
           onChange={(event) => change("dataType", event.target.value)}
-        >
-          <option value="">{t("dataSync.activity.filter.allTypes")}</option>
-          {(page?.dataTypes ?? []).map((kind) => (
-            <option key={kind} value={kind}>
-              {t(`dataSync.activity.type.${kind}`)}
-            </option>
-          ))}
-        </select>
-        <select
+        />
+        <Select
+          disallowEmptySelection
           aria-label={t<string>("dataSync.activity.filter.device")}
-          className={`${fieldClass} w-auto text-xs`}
-          value={filters.deviceId ?? ""}
+          className="w-full sm:w-48"
+          dataSource={[
+            { value: "", label: t("dataSync.activity.filter.allDevices") },
+            ...devices.map((device) => ({ value: device.id, label: device.name })),
+          ]}
+          selectedKeys={[filters.deviceId ?? ""]}
+          size="sm"
+          variant="bordered"
           onChange={(event) => change("deviceId", event.target.value)}
-        >
-          <option value="">{t("dataSync.activity.filter.allDevices")}</option>
-          {devices.map((device) => (
-            <option key={device.id} value={device.id}>
-              {device.name}
-            </option>
-          ))}
-        </select>
-        <select
+        />
+        <Select
+          disallowEmptySelection
           aria-label={t<string>("dataSync.activity.filter.state")}
-          className={`${fieldClass} w-auto text-xs`}
-          value={filters.state ?? ""}
+          className="w-full sm:w-48"
+          dataSource={[
+            { value: "", label: t("dataSync.activity.filter.allStates") },
+            ...states.map((state) => ({ value: state, label: stateText(state) })),
+          ]}
+          selectedKeys={[filters.state ?? ""]}
+          size="sm"
+          variant="bordered"
           onChange={(event) => change("state", event.target.value)}
-        >
-          <option value="">{t("dataSync.activity.filter.allStates")}</option>
-          {states.map((state) => (
-            <option key={state} value={state}>
-              {stateText(state)}
-            </option>
-          ))}
-        </select>
+        />
         <div className="ml-auto flex flex-wrap gap-2">
-          <button
+          <Button
             className={smallButtonClass}
+            size="sm"
             type="button"
+            variant="bordered"
             onClick={() => setHistory({ engine: "metadata", source: filters.deviceId })}
           >
             {t("dataSync.activity.metadataHistory")}
-          </button>
-          <button
+          </Button>
+          <Button
             className={smallButtonClass}
+            size="sm"
             type="button"
+            variant="bordered"
             onClick={() => setHistory({ engine: "processing" })}
           >
             {t("dataSync.activity.processingHistory")}
-          </button>
+          </Button>
         </div>
       </div>
       {error && (
-        <p className="break-words text-xs text-danger" role="alert">
-          {error}
-        </p>
+        <div role="alert">
+          <ErrorExplanation detail={error.detail} message={t(error.key)} />
+        </div>
       )}
       {!page && loading && (
         <p className="py-5 text-center text-sm text-default-500" role="status">
@@ -336,26 +351,25 @@ export default function SyncActivityCenter({
                 {row.job?.state === "Conflict" && (
                   <p className="text-danger">{t("resourceProfile.processing.conflict")}</p>
                 )}
-                {(row.error || row.errorCode) && (
-                  <pre className="max-h-28 overflow-auto whitespace-pre-wrap break-words text-danger">
-                    {row.errorCode}
-                    {row.error ? `\n${row.error}` : ""}
-                  </pre>
-                )}
+                <ActivityErrorNotice {...row} sourceName={row.source.name} />
                 <div className="flex flex-wrap gap-2">
                   {row.engine === "definitions" && row.linkId != null && (
                     <>
-                      <button
+                      <Button
                         className={smallButtonClass}
                         disabled={!!busy}
+                        size="sm"
                         type="button"
+                        variant="bordered"
                         onClick={() => void act(row, () => dataSyncApi.syncNow(row.linkId!))}
                       >
                         {t("dataSync.link.syncNow")}
-                      </button>
-                      <button
+                      </Button>
+                      <Button
                         className={smallButtonClass}
+                        size="sm"
                         type="button"
+                        variant="bordered"
                         onClick={() =>
                           onReviewDefinitions(
                             row.source.id,
@@ -364,23 +378,27 @@ export default function SyncActivityCenter({
                         }
                       >
                         {t("dataSync.activity.review")}
-                      </button>
-                      <button
+                      </Button>
+                      <Button
                         className={smallButtonClass}
+                        size="sm"
                         type="button"
+                        variant="bordered"
                         onClick={() => onDefinitionHistory(row.source.id)}
                       >
                         {t("dataSync.history.title")}
-                      </button>
+                      </Button>
                     </>
                   )}
                   {row.engine === "metadata" &&
                     row.libraryEpoch &&
                     !["Denied", "IdentityChanged", "UpdateRequired"].includes(row.state) && (
-                      <button
+                      <Button
                         className={smallButtonClass}
                         disabled={!!busy}
+                        size="sm"
                         type="button"
+                        variant="bordered"
                         onClick={() =>
                           void act(row, () =>
                             activityApi.metadataPause(row, row.state !== "Paused"),
@@ -392,28 +410,32 @@ export default function SyncActivityCenter({
                             ? "management.metadata.resume"
                             : "management.metadata.pause",
                         )}
-                      </button>
+                      </Button>
                     )}
                   {row.engine === "metadata" && (
-                    <button
+                    <Button
                       className={smallButtonClass}
+                      size="sm"
                       type="button"
+                      variant="bordered"
                       onClick={() => setHistory({ engine: "metadata", source: row.source.id })}
                     >
                       {t("dataSync.activity.runHistory")}
-                    </button>
+                    </Button>
                   )}
                   {row.job?.role === "Manager" &&
                     processingActions(row.job).map((action) => (
-                      <button
+                      <Button
                         key={action}
                         className={smallButtonClass}
                         disabled={!!busy}
+                        size="sm"
                         type="button"
+                        variant="bordered"
                         onClick={() => void act(row, () => processingApi.control(row.job!, action))}
                       >
                         {t(`resourceProfile.processing.action.${action}`)}
-                      </button>
+                      </Button>
                     ))}
                 </div>
               </div>
@@ -427,9 +449,11 @@ export default function SyncActivityCenter({
             {(filters.offset ?? 0) + 1}–{(filters.offset ?? 0) + page.items.length} / {page.total}
           </span>
           {(filters.offset ?? 0) > 0 && (
-            <button
+            <Button
               className={smallButtonClass}
+              size="sm"
               type="button"
+              variant="bordered"
               onClick={() =>
                 setFilters((current) => ({
                   ...current,
@@ -438,16 +462,18 @@ export default function SyncActivityCenter({
               }
             >
               {t("dataSync.activity.previous")}
-            </button>
+            </Button>
           )}
           {page.nextOffset != null && (
-            <button
+            <Button
               className={smallButtonClass}
+              size="sm"
               type="button"
+              variant="bordered"
               onClick={() => setFilters((current) => ({ ...current, offset: page.nextOffset! }))}
             >
               {t("dataSync.activity.next")}
-            </button>
+            </Button>
           )}
         </div>
       )}
@@ -476,7 +502,7 @@ function ActivityHistory({
   const [cursor, setCursor] = useState<string | number>();
   const [next, setNext] = useState<string | number>();
   const [role, setRole] = useState(0);
-  const [error, setError] = useState<string>();
+  const [error, setError] = useState<{ key: string; detail?: string }>();
 
   useEffect(() => {
     const abort = new AbortController();
@@ -502,9 +528,10 @@ function ActivityHistory({
         if (!abort.signal.aborted) setError(undefined);
       } catch (cause) {
         if (!abort.signal.aborted)
-          setError(
-            cause instanceof Error ? cause.message : t<string>("dataSync.activity.operationFailed"),
-          );
+          setError({
+            key: "dataSync.activity.loadFailed",
+            detail: cause instanceof Error ? cause.message : undefined,
+          });
       }
     };
 
@@ -527,33 +554,40 @@ function ActivityHistory({
           )}
         </h3>
         {engine === "processing" && (
-          <select
+          <Select
+            disallowEmptySelection
             aria-label={t<string>("dataSync.activity.role")}
-            className={`${fieldClass} w-auto`}
-            value={role}
+            className="w-full sm:w-40"
+            dataSource={["Manager", "Owner", "Worker"].map((value, index) => ({
+              value: String(index),
+              label: t(`dataSync.activity.role.${value}`),
+            }))}
+            selectedKeys={[String(role)]}
+            size="sm"
+            variant="bordered"
             onChange={(event) => {
               setRole(Number(event.target.value));
               setCursor(undefined);
             }}
-          >
-            {["Manager", "Owner", "Worker"].map((value, index) => (
-              <option key={value} value={index}>
-                {t(`dataSync.activity.role.${value}`)}
-              </option>
-            ))}
-          </select>
+          />
         )}
-        <button className={smallButtonClass} type="button" onClick={onClose}>
+        <Button
+          className={smallButtonClass}
+          size="sm"
+          type="button"
+          variant="bordered"
+          onClick={onClose}
+        >
           {t("dataSync.close")}
-        </button>
+        </Button>
       </div>
       {engine === "metadata" && (
         <p className="text-default-500">{t("dataSync.activity.retention")}</p>
       )}
       {error && (
-        <p className="text-danger" role="alert">
-          {error}
-        </p>
+        <div role="alert">
+          <ErrorExplanation detail={error.detail} message={t(error.key)} />
+        </div>
       )}
       {!entries && !error && <p role="status">{t("dataSync.loading")}</p>}
       {entries?.length === 0 && (
@@ -594,12 +628,7 @@ function ActivityHistory({
                   {t("dataSync.activity.resultOwner")}: {entry.ownerId}
                 </p>
               )}
-              {(entry.error || entry.errorCode) && (
-                <pre className="max-h-28 overflow-auto whitespace-pre-wrap break-words text-danger">
-                  {entry.errorCode}
-                  {entry.error ? `\n${entry.error}` : ""}
-                </pre>
-              )}
+              <ActivityErrorNotice {...entry} engine={engine} />
             </div>
           </details>
         ))}
@@ -607,14 +636,26 @@ function ActivityHistory({
       {(cursor !== undefined || next !== undefined) && (
         <div className="flex justify-end gap-2">
           {cursor !== undefined && (
-            <button className={smallButtonClass} type="button" onClick={() => setCursor(undefined)}>
+            <Button
+              className={smallButtonClass}
+              size="sm"
+              type="button"
+              variant="bordered"
+              onClick={() => setCursor(undefined)}
+            >
               {t("dataSync.activity.newest")}
-            </button>
+            </Button>
           )}
           {next !== undefined && (
-            <button className={smallButtonClass} type="button" onClick={() => setCursor(next)}>
+            <Button
+              className={smallButtonClass}
+              size="sm"
+              type="button"
+              variant="bordered"
+              onClick={() => setCursor(next)}
+            >
               {t("dataSync.activity.older")}
-            </button>
+            </Button>
           )}
         </div>
       )}

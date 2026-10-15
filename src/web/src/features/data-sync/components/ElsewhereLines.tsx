@@ -8,6 +8,8 @@ import { elsewhereLines } from "../viewModels";
 
 import { smallButtonClass } from "./common";
 
+import { Button } from "@/components/bakaui";
+
 /*
  * "Waiting on other devices" (spec §9.1 N): one line per device whose own decisions nobody has
  * taken there — typically a headless hub, which holds back what it has not decided. Decided
@@ -58,10 +60,12 @@ export default function ElsewhereLines({ peers }: { peers: SyncPeer[] }) {
           >
             <span className="min-w-0 flex-1">{line.text}</span>
             {canOpen(line.nodeId) ? (
-              <button
+              <Button
                 className={smallButtonClass}
                 data-testid="data-sync-elsewhere-open"
+                size="sm"
                 type="button"
+                variant="bordered"
                 onClick={() =>
                   open(line.nodeId).catch(() =>
                     setError(t("dataSync.inbox.elsewhere.openFailed", { name: line.name })),
@@ -69,7 +73,7 @@ export default function ElsewhereLines({ peers }: { peers: SyncPeer[] }) {
                 }
               >
                 {t("dataSync.inbox.elsewhere.open", { name: line.name })}
-              </button>
+              </Button>
             ) : (
               <span className="text-xs">
                 <DecideThereHint name={line.name} pairable={canPair} />

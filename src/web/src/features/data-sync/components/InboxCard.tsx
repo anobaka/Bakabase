@@ -29,13 +29,7 @@ import {
 import { localDateTime, timeAgo } from "../times";
 
 import DisplayValue, { displayText } from "./DisplayValue";
-import {
-  DataSyncErrorNotice,
-  fieldClass,
-  linkButtonClass,
-  smallButtonClass,
-  syncText,
-} from "./common";
+import { DataSyncErrorNotice, linkButtonClass, smallButtonClass, syncText } from "./common";
 
 import {
   DataSyncInboxAction,
@@ -43,6 +37,7 @@ import {
   DataSyncInboxItemTypeLabel,
   DataSyncNaturalMatchLabel,
 } from "@/sdk/constants";
+import { Button, Input, Checkbox, RadioGroup, Radio } from "@/components/bakaui";
 
 /*
  * One card of "Needs you" (spec §11.3): what happened and where on top, a small comparison — the
@@ -297,26 +292,30 @@ export default function InboxCard({
         <div className="space-y-2">
           {typing ? (
             <div className="flex flex-wrap items-center gap-2" data-testid="data-sync-inbox-input">
-              <input
+              <Input
                 aria-label={t(
                   typing.input === "newName"
                     ? "dataSync.inbox.card.newName"
                     : "dataSync.inbox.card.customValue",
                 )}
-                className={`${fieldClass} w-60 py-1 text-xs`}
+                className="w-60 max-w-full"
                 maxLength={256}
+                size="sm"
                 value={typing.input === "newName" ? newName : text}
+                variant="bordered"
                 onChange={(event) =>
                   typing.input === "newName"
                     ? setNewName(event.target.value)
                     : setText(event.target.value)
                 }
               />
-              <button
+              <Button
                 className={smallButtonClass}
                 data-testid="data-sync-inbox-input-apply"
                 disabled={disabled || !(typing.input === "newName" ? newName : text).trim().length}
+                size="sm"
                 type="button"
+                variant="bordered"
                 onClick={() =>
                   send(
                     typing,
@@ -327,7 +326,7 @@ export default function InboxCard({
                 }
               >
                 {t("dataSync.inbox.card.apply")}
-              </button>
+              </Button>
               <button
                 className={linkButtonClass}
                 type="button"
@@ -338,34 +337,38 @@ export default function InboxCard({
             </div>
           ) : conflict ? (
             <div className="flex flex-wrap gap-2">
-              <button
+              <Button
                 className={smallButtonClass}
                 data-testid="data-sync-inbox-apply"
                 disabled={disabled || !conflictDecided(card, choices)}
+                size="sm"
                 type="button"
+                variant="bordered"
                 onClick={() => onResolve(conflictBatch(card, choices, backupFirst))}
               >
                 {t("dataSync.inbox.card.apply")}
-              </button>
+              </Button>
               {card.items.every((item) =>
                 item.allowedActions.includes(DataSyncInboxAction.Detach),
               ) && (
-                <button
+                <Button
                   className={smallButtonClass}
                   data-action="Detach"
                   data-testid="data-sync-inbox-action"
                   disabled={disabled}
+                  size="sm"
                   type="button"
+                  variant="bordered"
                   onClick={() => onResolve(conflictBatch(card, "detach", backupFirst))}
                 >
                   {t("dataSync.inbox.action.Detach")}
-                </button>
+                </Button>
               )}
             </div>
           ) : (
             <div className="flex flex-wrap gap-2">
               {inboxChoices(first).map((choice) => (
-                <button
+                <Button
                   key={`${choice.action}-${choice.targetLocalKey ?? choice.targetRecordKey ?? ""}`}
                   className={`${smallButtonClass} ${
                     choice.destructive ? "border-danger/40 text-danger-700" : ""
@@ -373,11 +376,13 @@ export default function InboxCard({
                   data-action={actionKey(first.type, choice.action)}
                   data-testid="data-sync-inbox-action"
                   disabled={disabled}
+                  size="sm"
                   type="button"
+                  variant="bordered"
                   onClick={() => pick(choice)}
                 >
                   {choiceLabel(t, first, choice)}
-                </button>
+                </Button>
               ))}
             </div>
           )}
@@ -417,17 +422,17 @@ export function BackupCheckbox({
 
   return (
     <div className="space-y-0.5">
-      <label className="flex items-start gap-2 text-xs">
-        <input
-          checked={checked}
-          className="mt-0.5"
-          data-testid="data-sync-backup"
-          disabled={disabled}
-          type="checkbox"
-          onChange={(event) => onChange(event.target.checked)}
-        />
+      <Checkbox
+        classNames={{ base: "m-0 max-w-full p-0", label: "text-xs" }}
+        color="secondary"
+        data-testid="data-sync-backup"
+        isDisabled={disabled}
+        isSelected={checked}
+        size="sm"
+        onChange={(event) => onChange(event.target.checked)}
+      >
         <span className="break-all">{label}</span>
-      </label>
+      </Checkbox>
       <p className="pl-5 text-[11px] text-default-500">{t("dataSync.inbox.backupRestoreHint")}</p>
     </div>
   );
@@ -560,7 +565,7 @@ function ConflictBody({
             data-field={field.path}
             data-testid="data-sync-inbox-field"
           >
-            <legend className="text-xs font-medium">
+            <legend className="text-xs font-medium" id={`${group}-label`}>
               {first.type === DataSyncInboxItemType.ChildRenameConflict
                 ? t("dataSync.inbox.card.option", {
                     label: displayText(t, outcome?.base ?? outcome?.local),
@@ -583,55 +588,53 @@ function ConflictBody({
                 outcome={outcome}
               />
             )}
-            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs" role="radiogroup">
-              <label className="inline-flex items-center gap-1.5">
-                <input
-                  checked={choice?.take === "local"}
-                  disabled={disabled}
-                  name={group}
-                  type="radio"
-                  onChange={() => onChoose(field.path, { take: "local" })}
-                />
+            <RadioGroup
+              aria-labelledby={`${group}-label`}
+              classNames={{ wrapper: "gap-x-4 gap-y-2" }}
+              color="secondary"
+              isDisabled={disabled}
+              name={group}
+              orientation="horizontal"
+              size="sm"
+              value={choice?.take === "remote" ? `remote:${choice.itemId}` : (choice?.take ?? "")}
+              onValueChange={(value) => {
+                if (value === "local") onChoose(field.path, { take: "local" });
+                else if (value === "custom")
+                  onChoose(field.path, {
+                    take: "custom",
+                    value: choice?.take === "custom" ? choice.value : "",
+                  });
+                else {
+                  const item = field.items.find((candidate) => `remote:${candidate.id}` === value);
+
+                  if (item) onChoose(field.path, { take: "remote", itemId: item.id });
+                }
+              }}
+            >
+              <Radio classNames={{ label: "text-xs" }} value="local">
                 {t("dataSync.inbox.action.KeepLocal")}
-              </label>
+              </Radio>
               {field.items.map((item) => (
-                <label key={item.id} className="inline-flex items-center gap-1.5">
-                  <input
-                    checked={choice?.take === "remote" && choice.itemId === item.id}
-                    disabled={disabled}
-                    name={group}
-                    type="radio"
-                    onChange={() => onChoose(field.path, { take: "remote", itemId: item.id })}
-                  />
+                <Radio key={item.id} classNames={{ label: "text-xs" }} value={`remote:${item.id}`}>
                   {t("dataSync.inbox.action.UseRemote", { name: peerName(item) })}
-                </label>
+                </Radio>
               ))}
               {field.custom && (
-                <label className="inline-flex items-center gap-1.5">
-                  <input
-                    checked={choice?.take === "custom"}
-                    disabled={disabled}
-                    name={group}
-                    type="radio"
-                    onChange={() =>
-                      onChoose(field.path, {
-                        take: "custom",
-                        value: choice?.take === "custom" ? choice.value : "",
-                      })
-                    }
-                  />
+                <Radio classNames={{ label: "text-xs" }} value="custom">
                   {t("dataSync.inbox.action.UseCustom")}
-                </label>
+                </Radio>
               )}
-            </div>
+            </RadioGroup>
             {choice?.take === "custom" && (
-              <input
+              <Input
                 aria-label={t("dataSync.inbox.card.customValue")}
-                className={`${fieldClass} w-60 py-1 text-xs`}
+                className="w-60 max-w-full"
                 data-testid="data-sync-inbox-custom"
-                disabled={disabled}
+                isDisabled={disabled}
                 maxLength={256}
+                size="sm"
                 value={choice.value}
+                variant="bordered"
                 onChange={(event) =>
                   onChoose(field.path, { take: "custom", value: event.target.value })
                 }

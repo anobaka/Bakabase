@@ -10,6 +10,8 @@ import { timeAgo } from "../times";
 import { panelClass, SectionHeading, smallButtonClass } from "./common";
 import SharingControls, { openCodeFirst } from "./SharingControls";
 
+import { Button, Checkbox } from "@/components/bakaui";
+
 /*
  * This device's side of data sync: whether devices it approves may read its definitions
  * (`SharingControls`), whether definitions made here are shared by themselves, a code for
@@ -91,43 +93,47 @@ export default function ThisDeviceSection({
       data-testid="data-sync-this-device"
     >
       <SectionHeading id="data-sync-this-device" title={t("dataSync.self.title")}>
-        <button
+        <Button
           className={smallButtonClass}
           data-testid="data-sync-pause-all"
           disabled={actions.busy}
+          size="sm"
           type="button"
+          variant="bordered"
           onClick={() =>
             void actions.run(() => dataSyncApi.setAllPaused(!overview.allPaused), ["dataSync"])
           }
         >
           {t(overview.allPaused ? "dataSync.pause.resumeAll" : "dataSync.pause.pauseAll")}
-        </button>
+        </Button>
       </SectionHeading>
 
       <SharingControls actions={actions} canManage={canManage} {...own} />
 
       <div className="flex flex-wrap items-center gap-3">
-        <label className="flex items-center gap-3 text-sm">
-          <input
-            checked={!overview.newDefinitionsStayLocal}
-            className="accent-secondary"
-            data-testid="data-sync-new-definitions"
-            disabled={actions.busy}
-            type="checkbox"
-            onChange={(event) => setNewDefinitionsShared(event.target.checked)}
-          />
+        <Checkbox
+          classNames={{ base: "m-0 max-w-full p-0", label: "text-xs" }}
+          color="secondary"
+          data-testid="data-sync-new-definitions"
+          isDisabled={actions.busy}
+          isSelected={!overview.newDefinitionsStayLocal}
+          size="sm"
+          onChange={(event) => setNewDefinitionsShared(event.target.checked)}
+        >
           {t("dataSync.self.newDefinitions")}
-        </label>
+        </Checkbox>
         {canManage && (
-          <button
+          <Button
             className={smallButtonClass}
             data-testid="data-sync-create-code"
             disabled={actions.busy}
+            size="sm"
             type="button"
+            variant="bordered"
             onClick={() => openCodeFirst(t, actions, own, onCreateCode)}
           >
             {t("dataSync.invitation.button")}
-          </button>
+          </Button>
         )}
       </div>
       {!canManage && (
@@ -165,14 +171,16 @@ export default function ThisDeviceSection({
                       .filter(Boolean)
                       .join(" · ")}
                   </span>
-                  <button
+                  <Button
                     className={smallButtonClass}
                     disabled={actions.busy}
+                    size="sm"
                     type="button"
+                    variant="bordered"
                     onClick={() => stopReader(reader)}
                   >
                     {t("dataSync.readers.stop")}
-                  </button>
+                  </Button>
                 </li>
               );
             })}

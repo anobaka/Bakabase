@@ -10,6 +10,8 @@ import { minutesLeft } from "../times";
 import { buttonClass, DataSyncErrorNotice, primaryClass } from "./common";
 import DataSyncDialog from "./DataSyncDialog";
 
+import { Button } from "@/components/bakaui";
+
 /*
  * A one-time code another device redeems to read this device's definitions (spec §7.2.3), one
  * way. It needs sharing on and remote access not off; the page offers it only then, so a code
@@ -58,23 +60,38 @@ export default function InvitationDialog({
       busy={actions.busy}
       footer={
         invitation ? (
-          <button className={primaryClass} type="button" onClick={onClose}>
+          <Button
+            className={primaryClass}
+            size="sm"
+            type="button"
+            variant="bordered"
+            onClick={onClose}
+          >
             {t("dataSync.done")}
-          </button>
+          </Button>
         ) : (
           <>
-            <button className={buttonClass} disabled={actions.busy} type="button" onClick={onClose}>
+            <Button
+              className={buttonClass}
+              disabled={actions.busy}
+              size="sm"
+              type="button"
+              variant="bordered"
+              onClick={onClose}
+            >
               {t("dataSync.cancel")}
-            </button>
-            <button
+            </Button>
+            <Button
               className={primaryClass}
               data-testid="data-sync-invitation-create"
               disabled={actions.busy}
+              size="sm"
               type="button"
+              variant="bordered"
               onClick={create}
             >
               {t("dataSync.invitation.create")}
-            </button>
+            </Button>
           </>
         )
       }

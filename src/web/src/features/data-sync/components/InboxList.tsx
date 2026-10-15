@@ -33,13 +33,13 @@ import InboxCard, { cardValues } from "./InboxCard";
 import {
   DataSyncConfirmDialog,
   DataSyncErrorNotice,
-  fieldClass,
   panelClass,
   SectionHeading,
   taskFailureText,
 } from "./common";
 
 import { DataSyncLinkMode, DataSyncProblemCode } from "@/sdk/constants";
+import { Checkbox, Select } from "@/components/bakaui";
 
 /*
  * "Needs you" (spec §11.3): the changes that wait for a decision here, one card per definition
@@ -510,44 +510,51 @@ export default function InboxList({
       >
         <DataSyncHelp />
         {devices.length > 1 || peer ? (
-          <select
+          <Select
+            disallowEmptySelection
             aria-label={t("dataSync.inbox.filter.device")}
-            className={`${fieldClass} w-auto py-1 text-xs`}
+            className="w-full sm:w-48"
             data-testid="data-sync-inbox-filter-device"
-            value={peer}
+            dataSource={[
+              { value: "", label: t("dataSync.inbox.filter.allDevices") },
+              ...devices.map((device) => ({ value: device.nodeId, label: device.name })),
+              ...(peer && !devices.some((device) => device.nodeId === peer)
+                ? [
+                    {
+                      value: peer,
+                      label:
+                        peers.find((one) => one.nodeId === peer)?.name ?? t("dataSync.otherDevice"),
+                    },
+                  ]
+                : []),
+            ]}
+            selectedKeys={[peer]}
+            size="sm"
+            variant="bordered"
             onChange={(event) => setPeer(event.target.value)}
-          >
-            <option value="">{t("dataSync.inbox.filter.allDevices")}</option>
-            {devices.map((device) => (
-              <option key={device.nodeId} value={device.nodeId}>
-                {device.name}
-              </option>
-            ))}
-            {peer && !devices.some((device) => device.nodeId === peer) && (
-              <option value={peer}>
-                {peers.find((one) => one.nodeId === peer)?.name ?? t("dataSync.otherDevice")}
-              </option>
-            )}
-          </select>
+          />
         ) : null}
         {(kinds.length > 1 || kind) && (
-          <select
+          <Select
+            disallowEmptySelection
             aria-label={t("dataSync.inbox.filter.kind")}
-            className={`${fieldClass} w-auto py-1 text-xs`}
+            className="w-full sm:w-48"
             data-testid="data-sync-inbox-filter-kind"
-            value={kind}
+            dataSource={[
+              { value: "", label: t("dataSync.inbox.filter.allKinds") },
+              ...kinds.map((item) => ({
+                value: item,
+                label: t(`dataSync.kind.${item}`, { defaultValue: item }),
+              })),
+              ...(kind && !kinds.includes(kind)
+                ? [{ value: kind, label: t(`dataSync.kind.${kind}`, { defaultValue: kind }) }]
+                : []),
+            ]}
+            selectedKeys={[kind]}
+            size="sm"
+            variant="bordered"
             onChange={(event) => setKind(event.target.value)}
-          >
-            <option value="">{t("dataSync.inbox.filter.allKinds")}</option>
-            {kinds.map((item) => (
-              <option key={item} value={item}>
-                {t(`dataSync.kind.${item}`, { defaultValue: item })}
-              </option>
-            ))}
-            {kind && !kinds.includes(kind) && (
-              <option value={kind}>{t(`dataSync.kind.${kind}`, { defaultValue: kind })}</option>
-            )}
-          </select>
+          />
         )}
       </SectionHeading>
 
@@ -570,22 +577,23 @@ export default function InboxList({
       )}
       {selectable.length > 0 && (
         <div className="flex flex-wrap items-center gap-3 text-xs">
-          <label className="inline-flex items-center gap-2">
-            <input
-              checked={selectedCards.length === selectable.length}
-              disabled={actions.busy}
-              type="checkbox"
-              onChange={(event) => {
-                setSelected(
-                  event.target.checked
-                    ? new Map(selectable.map((card) => [card.key, inboxCardRevision(card)]))
-                    : new Map(),
-                );
-                setSelectionNotice(undefined);
-              }}
-            />
+          <Checkbox
+            classNames={{ base: "m-0 max-w-full p-0", label: "text-xs" }}
+            color="secondary"
+            isDisabled={actions.busy}
+            isSelected={selectedCards.length === selectable.length}
+            size="sm"
+            onChange={(event) => {
+              setSelected(
+                event.target.checked
+                  ? new Map(selectable.map((card) => [card.key, inboxCardRevision(card)]))
+                  : new Map(),
+              );
+              setSelectionNotice(undefined);
+            }}
+          >
             {t("dataSync.selection.allVisible")}
-          </label>
+          </Checkbox>
           <span>{t("dataSync.selection.count", { count: selectedCards.length })}</span>
           {selectedCards.length > 0 && !bulks.length && (
             <span>{t("dataSync.selection.individual")}</span>
@@ -633,27 +641,28 @@ export default function InboxList({
         ))}
         {filtered.map((card) => (
           <div key={card.key} className="space-y-1">
-            <label className="inline-flex items-center gap-2 text-xs text-default-500">
-              <input
-                checked={selected.get(card.key) === inboxCardRevision(card)}
-                disabled={actions.busy || follower.running.has(card.key)}
-                type="checkbox"
-                onChange={(event) => {
-                  const checked = event.target.checked;
+            <Checkbox
+              classNames={{ base: "m-0 max-w-full p-0", label: "text-xs" }}
+              color="secondary"
+              isDisabled={actions.busy || follower.running.has(card.key)}
+              isSelected={selected.get(card.key) === inboxCardRevision(card)}
+              size="sm"
+              onChange={(event) => {
+                const checked = event.target.checked;
 
-                  setSelected((current) => {
-                    const next = new Map(current);
+                setSelected((current) => {
+                  const next = new Map(current);
 
-                    if (checked) next.set(card.key, inboxCardRevision(card));
-                    else next.delete(card.key);
+                  if (checked) next.set(card.key, inboxCardRevision(card));
+                  else next.delete(card.key);
 
-                    return next;
-                  });
-                  setSelectionNotice(undefined);
-                }}
-              />
+                  return next;
+                });
+                setSelectionNotice(undefined);
+              }}
+            >
               {t("dataSync.selection.item", { name: card.entityName })}
-            </label>
+            </Checkbox>
             <InboxCard
               applying={follower.running.has(card.key)}
               backup={backup}

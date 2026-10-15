@@ -11,6 +11,7 @@ import { codeTurnsOnConfirmation, remoteAccessConfirmation, sharingNeeded } from
 import { smallButtonClass } from "./common";
 
 import { RemoteAccessMode } from "@/sdk/constants";
+import { Button, Switch } from "@/components/bakaui";
 
 /**
  * Turns on everything another device needs to read this one: sharing, and remote access with
@@ -94,19 +95,18 @@ export default function SharingControls({
   return (
     <div className="space-y-1">
       {canManage ? (
-        <label className="flex cursor-pointer items-start gap-3 text-sm">
-          <input
-            aria-describedby={hintId}
-            checked={sharingEnabled}
-            className="mt-1 accent-secondary"
-            data-testid="data-sync-sharing-switch"
-            disabled={actions.busy}
-            role="switch"
-            type="checkbox"
-            onChange={(event) => setSharing(event.target.checked)}
-          />
+        <Switch
+          aria-describedby={hintId}
+          classNames={{ base: "m-0 max-w-full p-0", label: "text-xs" }}
+          color="secondary"
+          data-testid="data-sync-sharing-switch"
+          isDisabled={actions.busy}
+          isSelected={sharingEnabled}
+          size="sm"
+          onChange={(event) => setSharing(event.target.checked)}
+        >
           <span className="font-medium">{t("dataSync.sharing.label")}</span>
-        </label>
+        </Switch>
       ) : (
         // Not a switch here: it could only ever be turned off from this window.
         <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -114,15 +114,17 @@ export default function SharingControls({
             {t(sharingEnabled ? "dataSync.sharing.isOn" : "dataSync.sharing.isOff")}
           </span>
           {sharingEnabled && (
-            <button
+            <Button
               className={smallButtonClass}
               data-testid="data-sync-sharing-off"
               disabled={actions.busy}
+              size="sm"
               type="button"
+              variant="bordered"
               onClick={() => setSharing(false)}
             >
               {t("dataSync.sharing.turnOff")}
-            </button>
+            </Button>
           )}
         </div>
       )}
@@ -139,11 +141,13 @@ export default function SharingControls({
           <span className="min-w-0 flex-1 text-warning-700 dark:text-warning">
             {t("dataSync.remoteAccess.offLine")}
           </span>
-          <button
+          <Button
             className={smallButtonClass}
             data-testid="data-sync-remote-access-on"
             disabled={actions.busy}
+            size="sm"
             type="button"
+            variant="bordered"
             onClick={() =>
               actions.confirm({
                 ...remoteAccessConfirmation(t),
@@ -153,7 +157,7 @@ export default function SharingControls({
             }
           >
             {t("dataSync.remoteAccess.turnOn")}
-          </button>
+          </Button>
         </div>
       )}
     </div>

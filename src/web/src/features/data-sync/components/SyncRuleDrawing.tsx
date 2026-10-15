@@ -45,6 +45,7 @@ import {
   DataSyncPauseReason,
   DataSyncResumeAction,
 } from "@/sdk/constants";
+import { Button } from "@/components/bakaui";
 
 /*
  * The rule editor: the other device above this one, the arrow along which the other may read
@@ -289,29 +290,33 @@ export default function SyncRuleDrawing({
       </div>
 
       {editor.read === "active" ? (
-        <button
+        <Button
           className={smallButtonClass}
           data-testid="data-sync-stop-reading"
           disabled={actions.busy}
+          size="sm"
           type="button"
+          variant="bordered"
           onClick={stopReading}
         >
           {t("dataSync.arrow.read.stop", { name })}
-        </button>
+        </Button>
       ) : (
         canManage && (
           <div className="flex flex-wrap items-center gap-2 text-xs text-default-500">
             <span>{t("dataSync.arrow.read.offHint", { name })}</span>
             {onCreateCode && (
-              <button
+              <Button
                 className={smallButtonClass}
                 data-testid="data-sync-create-code-for"
                 disabled={actions.busy}
+                size="sm"
                 type="button"
+                variant="bordered"
                 onClick={() => openCodeFirst(t, actions, own, onCreateCode, name)}
               >
                 {t("dataSync.invitation.createFor", { name })}
-              </button>
+              </Button>
             )}
           </div>
         )
@@ -353,15 +358,17 @@ export default function SyncRuleDrawing({
             ))}
           </div>
           {copyOnceOffered && (
-            <button
+            <Button
               className={`${smallButtonClass} ml-auto`}
               data-testid="data-sync-copy-once"
               disabled={actions.busy || (!canManage && peer.weMayRead !== true)}
+              size="sm"
               type="button"
+              variant="bordered"
               onClick={copyOnce}
             >
               {t("dataSync.copyOnce.button")}
-            </button>
+            </Button>
           )}
         </div>
         {manageNote && (
@@ -540,16 +547,18 @@ function StatusBlock({
   // it manages that device.
   const elsewhere = useOpenPeerDataSync((peer.attention?.openDecisions ?? 0) > 0);
   const button = (label: string, onClick: () => void, testId?: string) => (
-    <button
+    <Button
       key={label}
       className={smallButtonClass}
       data-testid={testId}
       disabled={actions.busy}
+      size="sm"
       type="button"
+      variant="bordered"
       onClick={onClick}
     >
       {label}
-    </button>
+    </Button>
   );
   const resume = (action: DataSyncResumeAction, label: string, testId?: string) =>
     linkId === undefined

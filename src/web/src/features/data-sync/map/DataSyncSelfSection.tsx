@@ -18,6 +18,7 @@ import { useWordedActions } from "./useWordedActions";
 
 import { KindBadge } from "@/features/federation/map/DeviceMapCanvas";
 import { RemoteAccessMode } from "@/sdk/constants";
+import { Button } from "@/components/bakaui";
 
 /*
  * This device's side of data sync, in the device map's details when this device is shown
@@ -101,15 +102,17 @@ export default function DataSyncSelfSection({
           </Link>
         )}
         {canManage && (
-          <button
+          <Button
             className={buttonClass}
             data-testid="data-sync-self-code"
             disabled={actions.busy}
+            size="sm"
             type="button"
+            variant="bordered"
             onClick={() => openCodeFirst(t, actions, own, () => setCode(true))}
           >
             {t("dataSync.invitation.button")}
-          </button>
+          </Button>
         )}
         <Link className={buttonClass} to={DATA_SYNC_ROUTE}>
           {t("dataSync.link.openPage")}

@@ -19,6 +19,7 @@ import { primaryClass, smallButtonClass } from "../components/common";
 import { turnOnSharing } from "../components/SharingControls";
 
 import { DataSyncRequestIntent } from "@/sdk/constants";
+import { Button, Checkbox } from "@/components/bakaui";
 
 /*
  * One device asking to read this device's definitions — on the data sync page's Requests, and
@@ -153,40 +154,41 @@ export default function DataSyncRequestCard({
           data-testid="data-sync-request-options"
         >
           <legend className="sr-only">{t("dataSync.request.options")}</legend>
-          <label className="flex items-start gap-2 text-xs">
-            <input
-              checked={receiveBack}
-              className="mt-0.5 accent-secondary"
-              data-testid="data-sync-request-receive-back"
-              disabled={actions.busy}
-              type="checkbox"
-              onChange={(event) => setReceiveBack(event.target.checked)}
-            />
+          <Checkbox
+            classNames={{ base: "m-0 max-w-full p-0", label: "text-xs" }}
+            color="secondary"
+            data-testid="data-sync-request-receive-back"
+            isDisabled={actions.busy}
+            isSelected={receiveBack}
+            size="sm"
+            onChange={(event) => setReceiveBack(event.target.checked)}
+          >
             <span>{t("dataSync.request.receiveBack", { name })}</span>
-          </label>
+          </Checkbox>
           {receiveBack && (
             <div className="flex flex-wrap items-center gap-3 pl-5 text-xs">
               {dataSyncKinds.map((kind) => {
                 const on = kinds.includes(kind);
 
                 return (
-                  <label key={kind} className="inline-flex items-center gap-1.5">
-                    <input
-                      aria-disabled={on && kinds.length === 1 ? "true" : undefined}
-                      checked={on}
-                      className="accent-secondary"
-                      data-kind={kind}
-                      data-testid="data-sync-request-kind"
-                      disabled={actions.busy}
-                      type="checkbox"
-                      onChange={() => {
-                        const next = toggleKind(kinds, kind);
+                  <Checkbox
+                    key={kind}
+                    aria-disabled={on && kinds.length === 1 ? "true" : undefined}
+                    classNames={{ base: "m-0 max-w-full p-0", label: "text-xs" }}
+                    color="secondary"
+                    data-kind={kind}
+                    data-testid="data-sync-request-kind"
+                    isDisabled={actions.busy}
+                    isSelected={on}
+                    size="sm"
+                    onChange={() => {
+                      const next = toggleKind(kinds, kind);
 
-                        if (next) setKinds(next);
-                      }}
-                    />
+                      if (next) setKinds(next);
+                    }}
+                  >
                     {t(`dataSync.kind.${kind}`, { defaultValue: kind })}
-                  </label>
+                  </Checkbox>
                 );
               })}
             </div>
@@ -195,25 +197,29 @@ export default function DataSyncRequestCard({
       )}
       <div className="flex flex-wrap gap-2">
         {canManage && (
-          <button
+          <Button
             className={`${primaryClass} !px-2.5 !py-1 !text-xs`}
             data-testid="data-sync-request-approve"
             disabled={actions.busy}
+            size="sm"
             type="button"
+            variant="bordered"
             onClick={approve}
           >
             {t("dataSync.request.approve")}
-          </button>
+          </Button>
         )}
-        <button
+        <Button
           className={smallButtonClass}
           data-testid="data-sync-request-reject"
           disabled={actions.busy}
+          size="sm"
           type="button"
+          variant="bordered"
           onClick={reject}
         >
           {t("dataSync.request.reject")}
-        </button>
+        </Button>
       </div>
       {!canManage && <p className="text-xs text-default-500">{t("dataSync.manageElsewhere")}</p>}
     </article>

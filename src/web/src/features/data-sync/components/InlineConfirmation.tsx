@@ -5,6 +5,8 @@ import { useTranslation } from "react-i18next";
 
 import { buttonClass, DataSyncErrorNotice, primaryClass } from "./common";
 
+import { Button } from "@/components/bakaui";
+
 /**
  * A question asked inside a data sync dialog (the first sync, the wizard) rather than in a dialog
  * over it: a second one on top would fight it for the keyboard, and react-aria would hide it from
@@ -69,18 +71,27 @@ export default function InlineConfirmation({
       )}
       <DataSyncErrorNotice error={error} />
       <div className="flex flex-wrap justify-end gap-2">
-        <button className={buttonClass} disabled={busy} type="button" onClick={onCancel}>
+        <Button
+          className={buttonClass}
+          disabled={busy}
+          size="sm"
+          type="button"
+          variant="bordered"
+          onClick={onCancel}
+        >
           {t("dataSync.cancel")}
-        </button>
-        <button
+        </Button>
+        <Button
           className={primaryClass}
           data-testid="data-sync-review-confirm-yes"
           disabled={busy}
+          size="sm"
           type="button"
+          variant="bordered"
           onClick={onConfirm}
         >
           {t("federation.confirm")}
-        </button>
+        </Button>
       </div>
     </section>
   );

@@ -12,6 +12,9 @@ import {
   PROCESSING_JOBS_CHANGED,
 } from "../processingApi";
 
+import ActivityErrorNotice, {
+  ErrorExplanation,
+} from "@/features/data-sync/components/ActivityErrorNotice";
 import { Button, Chip } from "@/components/bakaui";
 import { parseServerTime } from "@/core/serverTime";
 
@@ -44,7 +47,7 @@ export default function ResourceProcessingTasks({ sources }: { sources: ProfileS
   const loadError = t<string>("resourceProfile.processing.loadFailed");
   const [jobs, setJobs] = useState<ProcessingJob[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string>();
+  const [error, setError] = useState<{ key: string; detail?: string }>();
   const [busy, setBusy] = useState<string>();
   const [pageCursor, setPageCursor] = useState<string>();
   const cursorRef = useRef<string>();
@@ -71,7 +74,10 @@ export default function ResourceProcessingTasks({ sources }: { sources: ProfileS
         setError(undefined);
       } catch (cause) {
         if (!controller.signal.aborted)
-          setError(cause instanceof Error ? cause.message : loadError);
+          setError({
+            key: "resourceProfile.processing.loadFailed",
+            detail: cause instanceof Error ? cause.message : undefined,
+          });
       } finally {
         if (!controller.signal.aborted) setLoading(false);
       }
@@ -113,17 +119,13 @@ export default function ResourceProcessingTasks({ sources }: { sources: ProfileS
 
       setJobs((previous) => previous.map((item) => (item.id === job.id ? result : item)));
     } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : t<string>("resourceProfile.processing.controlFailed"),
-      );
-      // Reload current versions after a conflict, but keep the rejection visible.
-      const message =
-        cause instanceof Error
-          ? cause.message
-          : t<string>("resourceProfile.processing.controlFailed");
+      const message = {
+        key: "resourceProfile.processing.controlFailed",
+        detail: cause instanceof Error ? cause.message : undefined,
+      };
 
+      setError(message);
+      // Reload current versions after a conflict, but keep the rejection visible.
       await load();
       setError(message);
     } finally {
@@ -155,9 +157,9 @@ export default function ResourceProcessingTasks({ sources }: { sources: ProfileS
         </Button>
       </div>
       {error && (
-        <p className="mt-2 text-xs text-danger" role="alert">
-          {error}
-        </p>
+        <div className="mt-2" role="alert">
+          <ErrorExplanation detail={error.detail} message={t(error.key)} />
+        </div>
       )}
       {!jobs.length && !error && (
         <p className="py-3 text-xs text-default-400" role="status">
@@ -255,17 +257,7 @@ export default function ResourceProcessingTasks({ sources }: { sources: ProfileS
             {job.state === "Conflict" && (
               <p className="mt-2 text-xs text-danger">{t("resourceProfile.processing.conflict")}</p>
             )}
-            {job.error && (
-              <details className="mt-2 text-xs text-default-500">
-                <summary className="cursor-pointer">
-                  {t("resourceProfile.processing.errorDetails")}
-                </summary>
-                <pre className="mt-2 max-h-32 overflow-auto whitespace-pre-wrap break-words">
-                  {job.errorCode ? `${job.errorCode}\n` : ""}
-                  {job.error}
-                </pre>
-              </details>
-            )}
+            <ActivityErrorNotice {...job} engine="processing" />
             <time
               className="mt-2 block text-[11px] text-default-400"
               dateTime={parseServerTime(job.updatedAtUtc)?.toISOString() ?? job.updatedAtUtc}

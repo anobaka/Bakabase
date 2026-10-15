@@ -8,6 +8,8 @@ import SyncRuleDrawing from "../components/SyncRuleDrawing";
 import { buttonClass } from "../components/common";
 import { newSyncPeer } from "../viewModels";
 
+import { Button } from "@/components/bakaui";
+
 /*
  * The way to start syncing with a device data sync has nothing to do with yet: a device this one
  * knows, or one found nearby that shares its definitions. The rule editor is shown on request —
@@ -39,16 +41,18 @@ export default function SyncWithDevice({
   return (
     <div className="space-y-3" data-testid="data-sync-start">
       {children}
-      <button
+      <Button
         aria-controls={open ? regionId : undefined}
         aria-expanded={open}
         className={buttonClass}
         data-testid="data-sync-start-toggle"
+        size="sm"
         type="button"
+        variant="bordered"
         onClick={() => setOpen((current) => !current)}
       >
         {t("dataSync.map.syncWith", { name })}
-      </button>
+      </Button>
       {open && (
         <div id={regionId}>
           <SyncRuleDrawing

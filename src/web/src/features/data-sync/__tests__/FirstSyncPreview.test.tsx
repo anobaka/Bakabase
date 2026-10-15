@@ -1,5 +1,6 @@
 import type * as Api from "../api";
 
+import userEvent from "@testing-library/user-event";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -180,12 +181,15 @@ describe("the first sync", () => {
     const choice = await screen.findByLabelText("dataSync.review.choice.label Rating");
 
     // Only a definition of the same type can be linked to.
-    expect(
-      within(choice)
-        .getAllByRole("option")
-        .map((option) => option.getAttribute("value")),
-    ).toEqual(["", "15", "keepBoth"]);
-    fireEvent.change(choice, { target: { value: "15" } });
+    await userEvent.click(choice);
+    expect((await screen.findAllByRole("option")).map((option) => option.textContent)).toEqual([
+      "dataSync.review.choice.leaveOut",
+      "dataSync.review.choice.link Rating",
+      "dataSync.review.choice.keepBoth",
+    ]);
+    await userEvent.click(
+      screen.getByRole("option", { name: "dataSync.review.choice.link Rating" }),
+    );
     await startAndFinish(DataSyncLinkState.Stopped);
     expect(dataSyncApi.startFirstSync).toHaveBeenCalledWith(3, [
       { kind: "customProperty", key: "n1", action: DataSyncFirstSyncAction.Link, localKey: "15" },

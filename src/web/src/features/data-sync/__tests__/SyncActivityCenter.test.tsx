@@ -1,3 +1,4 @@
+import userEvent from "@testing-library/user-event";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -38,7 +39,7 @@ const base: SyncActivity = {
   pendingDecisions: 0,
   itemCount: 1000000,
   libraryEpoch: "epoch",
-  errorCode: "Offline",
+  errorCode: "MetadataSyncFailed",
   error: "Connection timed out",
 };
 const page = (items = [base]) => ({
@@ -69,6 +70,8 @@ describe("unified sync activity", () => {
     expect(row.textContent).toContain("dataSync.activity.state.Offline");
     fireEvent.click(row.querySelector("button")!);
     expect(await screen.findByText("dataSync.activity.cached")).toBeTruthy();
+    expect(screen.getByText("dataSync.activity.error.metadata.MetadataSyncFailed")).toBeTruthy();
+    expect(screen.getByTestId("sync-error-technical")).not.toHaveAttribute("open");
     expect(screen.getByText(/Connection timed out/)).toBeTruthy();
     expect(screen.getByTestId("sync-activity-row").textContent).not.toContain(
       "dataSync.activity.state.Completed",
@@ -78,18 +81,29 @@ describe("unified sync activity", () => {
   it("sends data type, associated device and status filters to the same listing", async () => {
     renderCenter();
     await screen.findByTestId("sync-activity-row");
-    fireEvent.change(screen.getByLabelText("dataSync.activity.filter.type"), {
-      target: { value: "metadata.resources" },
-    });
-    fireEvent.change(screen.getByLabelText("dataSync.activity.filter.device"), {
-      target: { value: "source" },
-    });
-    fireEvent.change(screen.getByLabelText("dataSync.activity.filter.state"), {
-      target: { value: "Offline" },
-    });
+    await userEvent.click(screen.getByRole("button", { name: /dataSync.activity.filter.type/ }));
+    await userEvent.click(
+      await screen.findByRole("option", { name: "dataSync.activity.type.metadata.resources" }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: /dataSync.activity.filter.device/ }));
+    await userEvent.click(await screen.findByRole("option", { name: "NAS" }));
+    await userEvent.click(screen.getByRole("button", { name: /dataSync.activity.filter.state/ }));
+    await userEvent.click(
+      await screen.findByRole("option", { name: "dataSync.activity.state.Offline" }),
+    );
     await waitFor(() =>
       expect(activityApi.list).toHaveBeenLastCalledWith(
         { dataType: "metadata.resources", deviceId: "source", state: "Offline", offset: 0 },
+        expect.any(AbortSignal),
+      ),
+    );
+    await userEvent.click(screen.getByRole("button", { name: /dataSync.activity.filter.state/ }));
+    await userEvent.click(
+      await screen.findByRole("option", { name: "dataSync.activity.filter.allStates" }),
+    );
+    await waitFor(() =>
+      expect(activityApi.list).toHaveBeenLastCalledWith(
+        { dataType: "metadata.resources", deviceId: "source", state: undefined, offset: 0 },
         expect.any(AbortSignal),
       ),
     );
@@ -127,6 +141,8 @@ describe("unified sync activity", () => {
             phase: "Snapshot",
             processedCount: 200,
             resourceCount: 200,
+            errorCode: "ManagedSourceDenied",
+            error: "RAW DENIAL",
           },
         ],
         nextBeforeId: 99,
@@ -137,6 +153,8 @@ describe("unified sync activity", () => {
     expect(activityApi.metadataHistory).not.toHaveBeenCalled();
     fireEvent.click(screen.getByText("dataSync.activity.metadataHistory"));
     expect(await screen.findByText("dataSync.activity.state.Interrupted")).toBeTruthy();
+    expect(screen.getByText("dataSync.activity.error.metadata.ManagedSourceDenied")).toBeTruthy();
+    expect(screen.getByTestId("sync-error-technical")).not.toHaveAttribute("open");
     fireEvent.click(screen.getByText("dataSync.activity.older"));
     await waitFor(() =>
       expect(activityApi.metadataHistory).toHaveBeenLastCalledWith(
@@ -145,6 +163,17 @@ describe("unified sync activity", () => {
         expect.any(AbortSignal),
       ),
     );
+  });
+
+  it("localizes request failures without displaying raw server messages as the explanation", async () => {
+    vi.mocked(activityApi.list).mockRejectedValue(new Error("RAW SERVER FAILURE"));
+    renderCenter();
+    const alert = await screen.findByRole("alert");
+
+    expect(alert.querySelector("p")).toHaveTextContent("dataSync.activity.loadFailed");
+    expect(alert.querySelector("p")).not.toHaveTextContent("RAW SERVER FAILURE");
+    expect(screen.getByTestId("sync-error-technical")).not.toHaveAttribute("open");
+    expect(screen.getByTestId("sync-error-technical")).toHaveTextContent("RAW SERVER FAILURE");
   });
 
   it("separates processing owner and worker, and never turns a conflict into success", async () => {

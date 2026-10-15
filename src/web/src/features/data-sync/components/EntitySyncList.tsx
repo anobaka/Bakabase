@@ -13,6 +13,7 @@ import EntitySyncMenu from "./EntitySyncMenu";
 
 import BApi from "@/sdk/BApi";
 import { DataSyncEntitySyncState, PropertyType } from "@/sdk/constants";
+import { Checkbox } from "@/components/bakaui";
 
 /*
  * Every definition of one kind with how it syncs, and the choices for each: the page's view of
@@ -146,14 +147,15 @@ export default function EntitySyncList({
             </button>
           ))}
         </div>
-        <label className="inline-flex items-center gap-2 text-xs">
-          <input
-            checked={onlyApart}
-            type="checkbox"
-            onChange={(event) => setOnlyApart(event.target.checked)}
-          />
+        <Checkbox
+          classNames={{ base: "m-0 max-w-full p-0", label: "text-xs" }}
+          color="secondary"
+          isSelected={onlyApart}
+          size="sm"
+          onChange={(event) => setOnlyApart(event.target.checked)}
+        >
           {t("dataSync.entity.onlyApart")}
-        </label>
+        </Checkbox>
       </div>
       <DataSyncErrorNotice error={error} onRetry={() => void load()} />
       {!entities && !error && (

@@ -328,7 +328,9 @@ describe("locales for data sync", () => {
       expect(text, key).not.toContain("配置包");
       expect(text, key).not.toContain("分享给他人");
       // A definition is 定义, never 配置 (spec §0.3, §11.5).
-      expect(text, key).not.toContain("配置");
+      // Processing errors describe rule/worker configuration, not synced definitions.
+      if (!key.startsWith("dataSync.activity.error.processing."))
+        expect(text, key).not.toContain("配置");
     }
   });
 
