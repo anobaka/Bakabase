@@ -1,7 +1,9 @@
 import { act, cleanup, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useResourceSearch } from "@/hooks/useResourceSearch";
-import { PropertyPool, SearchOperation } from "@/sdk/constants";
+import { PropertyPool, ResourceProperty, SearchOperation, StandardValueType } from "@/sdk/constants";
+import { mediaLibraryChoiceValue } from "../mediaLibraryFilter";
+import { serializeStandardValue } from "@/components/StandardValue/helpers";
 
 const calls = vi.hoisted(() => ({
   managedSearch: vi.fn(),
@@ -49,6 +51,38 @@ const ownedFilter = {
 };
 
 describe("resource search owner routing after devices are removed", () => {
+  it("compiles saved unified library selections even after the last managed device is removed", async () => {
+    const { result } = renderHook(useResourceSearch);
+    const form = {
+      page: 1,
+      pageSize: 50,
+      group: {
+        combinator: 1 as const,
+        disabled: false,
+        groups: [{
+          combinator: 2 as const,
+          disabled: false,
+          filters: [{
+            propertyPool: PropertyPool.Internal,
+            propertyId: ResourceProperty.MediaLibraryV2Multi,
+            operation: SearchOperation.In,
+            dbValue: serializeStandardValue(
+              [mediaLibraryChoiceValue(ownedFilter.owner, "7")],
+              StandardValueType.ListString,
+            ),
+            disabled: false,
+          }],
+        }],
+      },
+    };
+    await act(() => result.current.search(form));
+    await act(() => result.current.searchAllResourceKeys(form));
+    expect(calls.managedSearch).toHaveBeenCalledWith(form, undefined);
+    expect(calls.managedAll).toHaveBeenCalledWith(form);
+    expect(calls.localSearch).not.toHaveBeenCalled();
+    expect(calls.localAll).not.toHaveBeenCalled();
+  });
+
   it("keeps an all-in-one saved query with backend null fields on the normal local endpoints", async () => {
     const { result } = renderHook(useResourceSearch);
     const form = JSON.parse(

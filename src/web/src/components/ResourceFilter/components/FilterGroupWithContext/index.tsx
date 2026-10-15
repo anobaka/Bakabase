@@ -9,10 +9,10 @@ import { useEffect, useMemo, useRef } from "react";
 import FilterGroup from "../FilterGroup";
 import { FilterProvider, useHasFilterContext } from "../../context/FilterContext";
 import { createDefaultFilterConfig } from "../../presets/DefaultFilterPreset";
-import { useResourceApi, useResourceOwner } from "@/features/management/resourceContext";
-import { useResourceSources } from "@/features/management/resourceSourcesContext";
 import { GroupCombinator } from "../../models";
 
+import { useResourceApi, useResourceOwner } from "@/features/management/resourceContext";
+import { useResourceSources } from "@/features/management/resourceSourcesContext";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { PropertyPool, ResourceProperty, SearchOperation } from "@/sdk/constants";
 import BApi from "@/sdk/BApi";
@@ -131,16 +131,26 @@ const FilterGroupWithContextContent = ({
       createInternalPropertyFilter(ResourceProperty.Source, SearchOperation.In, api),
       createInternalPropertyFilter(ResourceProperty.MediaLibraryV2Multi, SearchOperation.In, api),
     ]).then((filters) => {
-      const localOwner =
-        owner ??
-        (sources?.some((source) => !source.isLocal)
-          ? sources.find((source) => source.isLocal)
-          : undefined);
+      const localOwner = owner;
       const validFilters = filters
         .filter((f): f is SearchFilter => f !== null)
         .map((filter) => {
-          if (!localOwner || (!owner && filter.propertyId !== ResourceProperty.MediaLibraryV2Multi))
-            return filter;
+          if (
+            !owner &&
+            sources?.some((source) => !source.isLocal) &&
+            filter.propertyId === ResourceProperty.MediaLibraryV2Multi
+          ) {
+            return {
+              ...filter,
+              property: filter.property
+                ? { ...filter.property, unifiedMediaLibraries: true }
+                : undefined,
+              valueProperty: filter.valueProperty
+                ? { ...filter.valueProperty, unifiedMediaLibraries: true }
+                : undefined,
+            };
+          }
+          if (!localOwner) return filter;
 
           return {
             ...filter,

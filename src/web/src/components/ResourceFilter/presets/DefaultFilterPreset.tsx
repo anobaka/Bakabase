@@ -6,7 +6,13 @@ import type { ManagementSource } from "@/features/management/api";
 import type { FilterOwner } from "../models";
 
 import FilterValueRenderer from "../components/Filter/FilterValueRenderer";
+import UnifiedMediaLibraryFilterValue from "../components/Filter/UnifiedMediaLibraryFilterValue";
 
+import {
+  hasQualifiedMediaLibraryChoices,
+  isMediaLibraryFilter,
+  isMediaLibraryProperty,
+} from "@/features/management/mediaLibraryFilter";
 import BApi from "@/sdk/BApi";
 import PropertySelector from "@/components/PropertySelector";
 import { InternalProperty, PropertyPool, ResourceProperty } from "@/sdk/constants";
@@ -18,7 +24,6 @@ const ownerLocalProperties = new Set<number>([
   ResourceProperty.ParentResource,
   InternalProperty.Resource,
   ResourceProperty.MediaLibraryV2,
-  ResourceProperty.MediaLibraryV2Multi,
   ResourceProperty.CollectionMulti,
 ]);
 const needsOwner = (property: IProperty) =>
@@ -52,6 +57,12 @@ export function createDefaultFilterConfig(
   owner?: ManagementSource,
 ): FilterConfig {
   const mixed = !owner && !!sources?.some((source) => !source.isLocal);
+  const shouldUnifyLibraries = (filter: SearchFilter) =>
+    !owner &&
+    isMediaLibraryFilter(filter) &&
+    (mixed ||
+      hasQualifiedMediaLibraryChoices({ filters: [filter] }) ||
+      (!!filter.owner && !!sources && !sources.some((source) => sameOwner(source, filter.owner))));
   const findOwner = (identity?: FilterOwner) => {
     if (!identity) return owner;
     const found = [owner, ...(sources ?? [])].find(
@@ -71,18 +82,24 @@ export function createDefaultFilterConfig(
     api: {
       getProperty: async (filter) => {
         if (filter.propertyPool == null || filter.propertyId == null) return undefined;
-        const selectedOwner = findOwner(filter.owner);
+        const unified = shouldUnifyLibraries(filter);
+        const selectedOwner = unified
+          ? sources?.find((source) => sameOwner(source, filter.owner))
+          : findOwner(filter.owner);
         const key = JSON.stringify([
+          unified,
           selectedOwner?.serverId,
           selectedOwner?.libraryEpoch,
           filter.propertyPool,
         ]);
         let pending = pendingCatalogs.get(key);
+
         if (!pending) {
-          pending = apiFor(filter.owner)
-            .property.getPropertiesByPool(filter.propertyPool)
+          pending = (unified ? api : apiFor(filter.owner)).property
+            .getPropertiesByPool(filter.propertyPool)
             .then((response) => {
               if (response.code) throw new Error(response.message || String(response.code));
+
               return (response.data ?? []) as IProperty[];
             })
             .finally(() => pendingCatalogs.delete(key));
@@ -91,8 +108,13 @@ export function createDefaultFilterConfig(
         const property = (await pending).find(
           (property) => property.id === filter.propertyId && property.pool === filter.propertyPool,
         );
+
         return property
-          ? { ...property, ...(selectedOwner ? { owner: selectedOwner } : {}) }
+          ? {
+              ...property,
+              ...(selectedOwner ? { owner: selectedOwner } : {}),
+              ...(shouldUnifyLibraries(filter) ? { unifiedMediaLibraries: true } : {}),
+            }
           : undefined;
       },
 
@@ -117,20 +139,32 @@ export function createDefaultFilterConfig(
         if (!filter.propertyPool || !filter.propertyId || !filter.operation) {
           return undefined;
         }
-        const selectedOwner = findOwner(filter.owner);
-        const response = await apiFor(filter.owner).resource.getFilterValueProperty({
+        const unified = shouldUnifyLibraries(filter);
+        const selectedOwner = unified
+          ? sources?.find((source) => sameOwner(source, filter.owner))
+          : findOwner(filter.owner);
+        const response = await (
+          unified ? api : apiFor(filter.owner)
+        ).resource.getFilterValueProperty({
           propertyPool: filter.propertyPool,
           propertyId: filter.propertyId,
           operation: filter.operation,
         });
 
         return response.data
-          ? ({ ...response.data, ...(selectedOwner ? { owner: selectedOwner } : {}) } as IProperty)
+          ? ({
+              ...response.data,
+              ...(selectedOwner ? { owner: selectedOwner } : {}),
+              ...(shouldUnifyLibraries(filter) ? { unifiedMediaLibraries: true } : {}),
+            } as IProperty)
           : undefined;
       },
 
       saveRecentFilter: async (filter) => {
+        // Owner APIs accept owner-local IDs only; qualified choices live in the search form.
+        if (hasQualifiedMediaLibraryChoices({ filters: [filter] })) return;
         const selectedOwner = findOwner(filter.owner);
+
         // Offline filtering remains usable; recents are an optional owner-side preference.
         if (selectedOwner && (!selectedOwner.available || selectedOwner.metadata?.denied)) return;
         if (filter.propertyPool && filter.propertyId && filter.operation) {
@@ -158,6 +192,7 @@ export function createDefaultFilterConfig(
           );
           const groups = results.map((result) => {
             if (result.status === "rejected") throw result.reason;
+
             return result.value;
           });
 
@@ -179,6 +214,7 @@ export function createDefaultFilterConfig(
 
         if (mixed) {
           const availableSources = (sources ?? []).filter(canReadSourceMetadata);
+
           unavailableSources.push(
             ...(sources ?? [])
               .filter((source) => !canReadSourceMetadata(source))
@@ -188,11 +224,13 @@ export function createDefaultFilterConfig(
             const response = await createResourceApi(source).property.getPropertiesByPool(
               PropertyPool.All,
             );
+
             if (response.code) throw new Error(response.message || String(response.code));
 
             return { source, properties: (response.data ?? []) as IProperty[] };
           });
           const groups: { source: ManagementSource; properties: IProperty[] }[] = [];
+
           results.forEach((result, index) => {
             if (result.status === "fulfilled") groups.push(result.value);
             else
@@ -205,7 +243,13 @@ export function createDefaultFilterConfig(
           const commonSource = groups.find(({ source }) => source.isLocal) ?? groups[0];
 
           catalog = [
-            ...(commonSource?.properties.filter((property) => !needsOwner(property)) ?? []),
+            ...(commonSource?.properties
+              .filter((property) => !needsOwner(property))
+              .map((property) =>
+                isMediaLibraryProperty(property)
+                  ? { ...property, unifiedMediaLibraries: true }
+                  : property,
+              ) ?? []),
             ...groups.flatMap(({ source, properties }) =>
               properties.filter(needsOwner).map((property) => ({ ...property, owner: source })),
             ),
@@ -220,7 +264,9 @@ export function createDefaultFilterConfig(
                 {
                   id: currentSelection.id,
                   pool: currentSelection.pool,
-                  ...(currentSelection.owner ? { owner: currentSelection.owner } : {}),
+                  ...(currentSelection.owner && !(mixed && isMediaLibraryProperty(currentSelection))
+                    ? { owner: currentSelection.owner }
+                    : {}),
                 },
               ]
             : undefined,
@@ -249,7 +295,10 @@ export function createDefaultFilterConfig(
           isDisabled: disabledProperties?.length
             ? (p: IProperty) =>
                 disabledProperties.some(
-                  (dp) => dp.id === p.id && dp.pool === p.pool && sameOwner(dp.owner, p.owner),
+                  (dp) =>
+                    dp.id === p.id &&
+                    dp.pool === p.pool &&
+                    ((mixed && isMediaLibraryProperty(p)) || sameOwner(dp.owner, p.owner)),
                 )
             : undefined,
           pinnedProperties: [
@@ -262,6 +311,26 @@ export function createDefaultFilterConfig(
       },
 
       renderValueInput: (property, dbValue, bizValue, onValueChange, options) => {
+        if (
+          !owner &&
+          (property.unifiedMediaLibraries || (mixed && isMediaLibraryProperty(property)))
+        ) {
+          return (
+            <UnifiedMediaLibraryFilterValue
+              bizValue={bizValue}
+              dbValue={dbValue}
+              defaultEditing={options?.defaultEditing}
+              isEditing={options?.isEditing}
+              isReadonly={options?.isReadonly}
+              operation={options?.operation}
+              property={property}
+              size={options?.size ?? "sm"}
+              sources={sources ?? []}
+              variant={options?.variant ?? "light"}
+              onValueChange={onValueChange}
+            />
+          );
+        }
         const input = (
           <FilterValueRenderer
             bizValue={bizValue}

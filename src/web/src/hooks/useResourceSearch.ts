@@ -6,6 +6,7 @@ import { useState, useCallback, useRef } from "react";
 
 import BApi from "@/sdk/BApi";
 import { useManagedResourceSearch } from "@/features/management/useManagedResourceSearch";
+import { hasQualifiedMediaLibraryChoices } from "@/features/management/mediaLibraryFilter";
 import type { ResourceSelectionKey } from "@/features/management/resourceIdentity";
 import type { ManagementSource } from "@/features/management/api";
 import { ResourceAdditionalItem } from "@/sdk/constants";
@@ -21,7 +22,12 @@ function hasOwnedFilter(group?: SearchForm["group"]): boolean {
 }
 
 function requiresManagedSearch(form: SearchForm) {
-  return !!form.owner || form.deviceIds != null || hasOwnedFilter(form.group);
+  return (
+    !!form.owner ||
+    form.deviceIds != null ||
+    hasOwnedFilter(form.group) ||
+    hasQualifiedMediaLibraryChoices(form.group)
+  );
 }
 
 export type SearchOptions = {

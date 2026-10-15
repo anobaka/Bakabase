@@ -4,8 +4,22 @@ import {
   type SearchFilter,
   type SearchFilterGroup,
 } from "@/components/ResourceFilter/models";
-import { InternalProperty, PropertyPool, SearchOperation } from "@/sdk/constants";
+import {
+  InternalProperty,
+  PropertyPool,
+  SearchOperation,
+  StandardValueType,
+} from "@/sdk/constants";
 import type { ManagementSource } from "./api";
+import {
+  deserializeStandardValue,
+  serializeStandardValue,
+} from "@/components/StandardValue/helpers";
+import {
+  isMediaLibraryFilter,
+  MEDIA_LIBRARY_CHOICE_PREFIX,
+  parseMediaLibraryChoiceValue,
+} from "./mediaLibraryFilter";
 
 export type QueryOwner = Pick<ManagementSource, "serverId" | "libraryEpoch">;
 const owns = (a: QueryOwner, b: QueryOwner) =>
@@ -65,10 +79,64 @@ export function compileResourceQuery(
       )
         continue;
       const owner = (filter as SearchFilter & { owner?: QueryOwner }).owner ?? form.owner;
-      const localReference =
+      let localReference =
         filter.propertyPool === PropertyPool.Custom ||
         (filter.propertyPool === PropertyPool.Internal &&
           ownerLocalReferences.has(filter.propertyId));
+      let dbValue = filter.dbValue;
+      if (owner && !owns(owner, source)) {
+        constants.push(false);
+        continue;
+      }
+      if (isMediaLibraryFilter(filter)) {
+        if (
+          filter.operation === SearchOperation.IsNull ||
+          filter.operation === SearchOperation.IsNotNull
+        ) {
+          // An ownerless library emptiness condition has the same meaning on every device.
+          localReference = false;
+        } else if (dbValue?.includes(MEDIA_LIBRARY_CHOICE_PREFIX)) {
+          const values: unknown = deserializeStandardValue(dbValue, StandardValueType.ListString);
+          if (!Array.isArray(values) || values.some((value) => typeof value !== "string")) {
+            constants.push(false);
+            continue;
+          }
+          const choices = values.map(parseMediaLibraryChoiceValue);
+          if (!choices.length || choices.some((choice) => !choice)) {
+            // Never reinterpret a damaged qualified value as an owner-local numeric ID.
+            constants.push(false);
+            continue;
+          }
+          const ownedIds = [
+            ...new Set(
+              choices.flatMap((choice) =>
+                choice && owns(choice.owner, source) ? [choice.id] : [],
+              ),
+            ),
+          ];
+          if (filter.operation === SearchOperation.In) {
+            if (!ownedIds.length) {
+              constants.push(false);
+              continue;
+            }
+          } else if (filter.operation === SearchOperation.Contains) {
+            if (choices.some((choice) => !owns(choice!.owner, source))) {
+              constants.push(false);
+              continue;
+            }
+          } else if (filter.operation === SearchOperation.NotContains) {
+            if (!ownedIds.length) {
+              constants.push(true);
+              continue;
+            }
+          } else {
+            constants.push(false);
+            continue;
+          }
+          dbValue = serializeStandardValue(ownedIds, StandardValueType.ListString);
+          localReference = false;
+        }
+      }
       if (owner ? !owns(owner, source) : localReference && !source.isLocal) {
         constants.push(false);
       } else {
@@ -76,7 +144,7 @@ export function compileResourceQuery(
           propertyId: filter.propertyId,
           propertyPool: filter.propertyPool,
           operation: filter.operation,
-          dbValue: filter.dbValue,
+          dbValue,
           disabled: false,
         });
       }

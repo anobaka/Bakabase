@@ -1,7 +1,10 @@
+import type { ManagementSource } from "@/features/management/api";
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createDefaultFilterConfig } from "../presets/DefaultFilterPreset";
 import { toFilterInputModel } from "../utils/toInputModel";
+
 import { ResourceOwnerProvider } from "@/features/management/resourceContext";
 import BApi from "@/sdk/BApi";
 import {
@@ -11,7 +14,6 @@ import {
   ResourceProperty,
   SearchOperation,
 } from "@/sdk/constants";
-import type { ManagementSource } from "@/features/management/api";
 
 const { request } = vi.hoisted(() => ({ request: vi.fn() }));
 
@@ -85,11 +87,13 @@ describe("mixed-device filters reuse the normal property picker", () => {
       },
     };
     const createPortal = vi.fn();
+
     await createDefaultFilterConfig(createPortal, BApi, [
       local,
       offline,
     ]).renderers.openPropertySelector(undefined, vi.fn());
     const props = createPortal.mock.calls[0][1];
+
     expect(
       props.properties.some(
         (p: any) => p.pool === PropertyPool.Custom && p.owner?.serverId === "remote",
@@ -119,6 +123,13 @@ describe("mixed-device filters reuse the normal property picker", () => {
         (p: any) => p.id === ResourceProperty.Source && p.pool === PropertyPool.Internal,
       ),
     ).toHaveLength(1);
+    const libraries = props.properties.filter(
+      (p: any) => p.pool === PropertyPool.Internal && p.id === ResourceProperty.MediaLibraryV2Multi,
+    );
+
+    expect(libraries).toHaveLength(1);
+    expect(libraries[0]).toMatchObject({ unifiedMediaLibraries: true });
+    expect(libraries[0].owner).toBeUndefined();
     expect(
       props.properties
         .filter((p: any) => p.pool === PropertyPool.Custom)
@@ -147,14 +158,18 @@ describe("mixed-device filters reuse the normal property picker", () => {
 
   it("keeps available catalogs when another device fails and names the missing device", async () => {
     const load = request.getMockImplementation()!;
+
     request.mockImplementation(async (input) => {
       if (input.path.includes("/remote/")) throw new Error("Device disconnected");
+
       return load(input);
     });
     const createPortal = vi.fn();
     const config = createDefaultFilterConfig(createPortal, BApi, [local, remote]);
+
     await config.renderers.openPropertySelector(undefined, vi.fn());
     const props = createPortal.mock.calls[0][1];
+
     expect(props.properties.some((p: any) => p.owner?.serverId === "local")).toBe(true);
     expect(props.properties.some((p: any) => p.owner?.serverId === "remote")).toBe(false);
     expect(props.unavailableSources).toEqual([{ name: "remote", message: "Device disconnected" }]);
@@ -163,11 +178,13 @@ describe("mixed-device filters reuse the normal property picker", () => {
   it("limits catalog fanout to four owners", async () => {
     let inFlight = 0;
     let maximum = 0;
+
     request.mockImplementation(async () => {
       inFlight++;
       maximum = Math.max(maximum, inFlight);
       await new Promise((resolve) => setTimeout(resolve, 0));
       inFlight--;
+
       return { code: 0, data: [property] };
     });
     const createPortal = vi.fn();
@@ -176,6 +193,7 @@ describe("mixed-device filters reuse the normal property picker", () => {
       BApi,
       Array.from({ length: 9 }, (_, i) => source(`remote-${i}`)),
     );
+
     await config.renderers.openPropertySelector(undefined, vi.fn());
     expect(maximum).toBe(4);
     expect(createPortal.mock.calls[0][1].properties).toHaveLength(9);
@@ -225,6 +243,7 @@ describe("mixed-device filters reuse the normal property picker", () => {
         config.api.getProperty!(filter),
         config.api.getValueProperty(filter),
       ]);
+
       expect(original).toMatchObject({ type: PropertyType.SingleChoice, owner: remote });
       expect(value).toMatchObject({ type: PropertyType.MultipleChoice, owner: remote });
       expect(

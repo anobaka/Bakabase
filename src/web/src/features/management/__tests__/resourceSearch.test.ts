@@ -7,11 +7,21 @@ import {
   PropertyPool,
   ResourceSearchSortableProperty,
   SearchOperation,
+  StandardValueType,
 } from "@/sdk/constants";
 import type { ManagementSource } from "../api";
 import { ManagedResourcePager, compareOwnedResources } from "../resourceSearch";
 import { compileResourceQuery, normalizeQueryOwner, resolveQuerySources } from "../resourceQuery";
 import { resourceSelectionKey } from "../resourceIdentity";
+import {
+  deserializeStandardValue,
+  serializeStandardValue,
+} from "@/components/StandardValue/helpers";
+import {
+  hasQualifiedMediaLibraryChoices,
+  mediaLibraryChoiceValue,
+  parseMediaLibraryChoiceValue,
+} from "../mediaLibraryFilter";
 
 const source = (serverId: string, isLocal = false): ManagementSource => ({
   serverId,
@@ -261,6 +271,202 @@ describe("unified resource query ownership", () => {
     expect(resolveQuerySources({ ...form, owner: saved }, [a, b])[0].available).toBe(false);
     expect(resolveQuerySources({ ...form, deviceIds: [] }, [a, b])).toEqual([]);
     expect(compileResourceQuery({ ...form, owner: saved }, b)).toBe(false);
+  });
+});
+
+describe("unified media library choices", () => {
+  const libraryQuery = (
+    operation: SearchOperation,
+    values?: string[],
+    owner?: ManagementSource,
+  ): SearchForm => ({
+    ...form,
+    group: {
+      combinator: GroupCombinator.And,
+      disabled: false,
+      filters: [
+        {
+          propertyPool: PropertyPool.Internal,
+          propertyId: InternalProperty.MediaLibraryV2Multi,
+          operation,
+          dbValue: values
+            ? serializeStandardValue(values, StandardValueType.ListString)
+            : undefined,
+          owner,
+          disabled: false,
+        },
+      ],
+    },
+  });
+  const nativeIds = (query: SearchForm | false) =>
+    query &&
+    deserializeStandardValue(
+      query.group?.filters?.[0].dbValue ?? null,
+      StandardValueType.ListString,
+    );
+
+  it("namespaces colliding library IDs and sends only native IDs to the selected owners", () => {
+    const query = libraryQuery(SearchOperation.In, [
+      mediaLibraryChoiceValue(a, 7),
+      mediaLibraryChoiceValue(b, 7),
+    ]);
+    expect(nativeIds(compileResourceQuery(query, a))).toEqual(["7"]);
+    expect(nativeIds(compileResourceQuery(query, b))).toEqual(["7"]);
+    expect(compileResourceQuery(query, c)).toBe(false);
+    expect(JSON.stringify(compileResourceQuery(query, b))).not.toContain("bakabase:library:");
+    expect(JSON.stringify(compileResourceQuery(query, b))).not.toContain('"owner"');
+    expect(parseMediaLibraryChoiceValue(mediaLibraryChoiceValue(b, 7))).toEqual({
+      owner: { serverId: "b", libraryEpoch: "epoch-b" },
+      id: "7",
+    });
+  });
+
+  it("requires every Contains selection to belong to the resource owner", () => {
+    const multipleOwners = libraryQuery(SearchOperation.Contains, [
+      mediaLibraryChoiceValue(a, 7),
+      mediaLibraryChoiceValue(b, 7),
+    ]);
+    expect(compileResourceQuery(multipleOwners, a)).toBe(false);
+    expect(compileResourceQuery(multipleOwners, b)).toBe(false);
+    const oneOwner = libraryQuery(SearchOperation.Contains, [
+      mediaLibraryChoiceValue(b, 7),
+      mediaLibraryChoiceValue(b, 8),
+    ]);
+    expect(nativeIds(compileResourceQuery(oneOwner, b))).toEqual(["7", "8"]);
+    expect(compileResourceQuery(oneOwner, a)).toBe(false);
+  });
+
+  it("excludes selected libraries without excluding unrelated owners", () => {
+    const query = libraryQuery(SearchOperation.NotContains, [
+      mediaLibraryChoiceValue(a, 7),
+      mediaLibraryChoiceValue(b, 9),
+    ]);
+    expect(nativeIds(compileResourceQuery(query, a))).toEqual(["7"]);
+    expect(nativeIds(compileResourceQuery(query, b))).toEqual(["9"]);
+    expect(compileResourceQuery(query, c)).toMatchObject({ group: undefined });
+  });
+
+  it("does not mistake the same ID after a source's data directory is replaced", () => {
+    const old = { ...b, libraryEpoch: "old-epoch" };
+    expect(
+      compileResourceQuery(libraryQuery(SearchOperation.In, [mediaLibraryChoiceValue(old, 7)]), b),
+    ).toBe(false);
+    expect(
+      compileResourceQuery(
+        libraryQuery(SearchOperation.Contains, [mediaLibraryChoiceValue(old, 7)]),
+        b,
+      ),
+    ).toBe(false);
+    expect(
+      compileResourceQuery(
+        libraryQuery(SearchOperation.NotContains, [mediaLibraryChoiceValue(old, 7)]),
+        b,
+      ),
+    ).toMatchObject({ group: undefined });
+  });
+
+  it.each([SearchOperation.IsNull, SearchOperation.IsNotNull])(
+    "applies ownerless emptiness operation %s to each source while preserving explicitly scoped filters",
+    (operation) => {
+      for (const source of [a, b, c])
+        expect(compileResourceQuery(libraryQuery(operation), source)).toMatchObject({
+          group: { filters: [{ operation }] },
+        });
+      expect(compileResourceQuery(libraryQuery(operation, undefined, b), a)).toBe(false);
+      expect(compileResourceQuery(libraryQuery(operation, undefined, b), b)).toMatchObject({
+        group: { filters: [{ operation }] },
+      });
+    },
+  );
+
+  it("preserves existing numeric local and owner-bound saved filters", () => {
+    const local = libraryQuery(SearchOperation.In, ["7"]);
+    expect(nativeIds(compileResourceQuery(local, a))).toEqual(["7"]);
+    expect(compileResourceQuery(local, b)).toBe(false);
+    const owned = libraryQuery(SearchOperation.NotContains, ["7"], b);
+    expect(compileResourceQuery(owned, a)).toBe(false);
+    expect(nativeIds(compileResourceQuery(owned, b))).toEqual(["7"]);
+  });
+
+  it("retains explicit query and device filters around qualified library choices", () => {
+    const query = libraryQuery(SearchOperation.In, [
+      mediaLibraryChoiceValue(a, 7),
+      mediaLibraryChoiceValue(b, 7),
+    ]);
+    expect(compileResourceQuery({ ...query, owner: a }, b)).toBe(false);
+    expect(compileResourceQuery({ ...query, deviceIds: [a.serverId] }, b)).toBe(false);
+    expect(nativeIds(compileResourceQuery({ ...query, owner: a }, a))).toEqual(["7"]);
+  });
+
+  it.each([
+    "bakabase:library:not-json",
+    'bakabase:library:["b","epoch-b","7","extra"]',
+    'bakabase:library:["","epoch-b","7"]',
+    'bakabase:library:["b","epoch-b",7]',
+    'bakabase:library:["b","epoch-b","0"]',
+    'bakabase:library:["b","epoch-b","2147483648"]',
+    'bakabase:library:["b","epoch-b","7.5"]',
+  ])("fails closed for malformed qualified choices: %s", (malformed) => {
+    expect(parseMediaLibraryChoiceValue(malformed)).toBeUndefined();
+    for (const operation of [
+      SearchOperation.In,
+      SearchOperation.Contains,
+      SearchOperation.NotContains,
+    ]) {
+      const query = libraryQuery(operation, [mediaLibraryChoiceValue(b, 7), malformed]);
+      expect(compileResourceQuery(query, b)).toBe(false);
+      expect(hasQualifiedMediaLibraryChoices(query.group)).toBe(true);
+    }
+  });
+
+  it.each([
+    "bakabase:library:null",
+    "bakabase:library:42",
+    'bakabase:library:{"serverId":"b","libraryEpoch":"epoch-b","id":"7"}',
+    '["bakabase:library:[\\"b\\",\\"epoch-b\\",\\"7\\"]"]',
+    '[null,42,"bakabase:library:invalid"]',
+  ])("refuses malformed raw StandardValue payloads without throwing: %s", (dbValue) => {
+    const query = libraryQuery(SearchOperation.NotContains);
+    query.group!.filters![0].dbValue = dbValue;
+    expect(compileResourceQuery(query, b)).toBe(false);
+    expect(hasQualifiedMediaLibraryChoices(query.group)).toBe(true);
+  });
+
+  it("refuses an unnormalized mixture or an unsupported operation rather than leaking tokens to native search", () => {
+    expect(
+      compileResourceQuery(
+        libraryQuery(SearchOperation.In, ["7", mediaLibraryChoiceValue(b, 7)]),
+        b,
+      ),
+    ).toBe(false);
+    expect(
+      compileResourceQuery(
+        libraryQuery(SearchOperation.Equals, [mediaLibraryChoiceValue(b, 7)]),
+        b,
+      ),
+    ).toBe(false);
+  });
+
+  it("composes qualified choice constants with nested AND and OR conditions", () => {
+    const excluded = libraryQuery(SearchOperation.NotContains, [
+      mediaLibraryChoiceValue(a, 7),
+    ]).group!;
+    const owned = { combinator: GroupCombinator.And, disabled: false, filters: [filter(b)] };
+    const and = {
+      ...form,
+      group: { combinator: GroupCombinator.And, disabled: false, groups: [excluded, owned] },
+    };
+    expect(compileResourceQuery(and, a)).toBe(false);
+    expect(compileResourceQuery(and, b)).toMatchObject({
+      group: { groups: [{ filters: [{ propertyId: 12 }] }] },
+    });
+    const or = { ...form, group: { ...and.group, combinator: GroupCombinator.Or } };
+    expect(compileResourceQuery(or, b)).toMatchObject({ group: undefined });
+    expect(compileResourceQuery(or, a)).toMatchObject({
+      group: { groups: [{ filters: [{ operation: SearchOperation.NotContains, dbValue: "7" }] }] },
+    });
+    expect(hasQualifiedMediaLibraryChoices(and.group)).toBe(true);
+    expect(hasQualifiedMediaLibraryChoices(owned)).toBe(false);
   });
 });
 

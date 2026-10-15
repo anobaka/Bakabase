@@ -47,6 +47,8 @@ export type {
 export interface IProperty {
   /** UI catalog provenance; never used as a replacement for an owner's numeric ID. */
   owner?: ManagementSource;
+  /** Synthetic library choices include an explicit device and data-directory identity. */
+  unifiedMediaLibraries?: boolean;
   id: number;
   dbValueType: StandardValueType;
   bizValueType: StandardValueType;

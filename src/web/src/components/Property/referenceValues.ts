@@ -5,7 +5,10 @@ import { PropertyType, SearchOperation, StandardValueType } from "@/sdk/constant
 import { GroupCombinator } from "@/components/ResourceFilter/models";
 import { serializeStandardValue } from "@/components/StandardValue/helpers";
 
-export type ReferenceProperty = Pick<IProperty, "id" | "pool" | "type" | "name">;
+export type ReferenceProperty = Pick<
+  IProperty,
+  "id" | "pool" | "type" | "name" | "unifiedMediaLibraries"
+>;
 
 /** Use reference IDs, never labels, so case handling stays inside the property module. */
 export function buildReferenceValueSearch(property: ReferenceProperty, value: string): SearchForm {

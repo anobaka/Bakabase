@@ -1,10 +1,10 @@
 import type { PropsWithChildren } from "react";
 import type { ReferenceProperty } from "@/components/Property/referenceValues";
 import type { SearchForm } from "@/pages/resource/models";
+import type BApi from "@/sdk/BApi";
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 
-import type BApi from "@/sdk/BApi";
 import {
   useResourceApi,
   useResourceOwner,
@@ -22,6 +22,7 @@ import { isReferenceValueType } from "@/components/Property/PropertySystem";
 import { toSearchInputModel } from "@/components/ResourceFilter/utils/toInputModel";
 import { resourceChangedChannel } from "@/services/ResourceChangedChannel";
 import { canReadSourceMetadata, sourceSearchRevision } from "@/features/management/metadata";
+import { mediaLibraryChoiceValue } from "@/features/management/mediaLibraryFilter";
 
 type CountsResponse = { counts: Record<string, number>; isReady: boolean };
 const pending = new Map<string, Promise<CountsResponse>>();
@@ -68,6 +69,7 @@ async function requestCounts(property: ReferenceProperty, criteria: object, api:
     body: criteria,
     format: "json",
   });
+
   if (response.code || !response.data)
     throw new Error(response.message || "Failed to load resource counts");
 
@@ -80,11 +82,19 @@ export function useReferenceValueResourceCounts(property?: ReferenceProperty, se
   const owner = useResourceOwner();
   const ownerKey = useResourceOwnerKey();
   const sources = useResourceSources()?.sources;
+  const unifiedMediaLibraries =
+    !!property?.unifiedMediaLibraries &&
+    property.pool === PropertyPool.Internal &&
+    property.id === InternalProperty.MediaLibraryV2Multi;
+  // The aggregate catalog reports unavailable sources separately. Count only
+  // readable catalogs, including complete snapshots of offline devices.
   const countedSources = owner
     ? [owner]
-    : sources?.some((source) => !source.isLocal)
-      ? sources
-      : undefined;
+    : unifiedMediaLibraries
+      ? (sources ?? []).filter(canReadSourceMetadata)
+      : sources?.some((source) => !source.isLocal)
+        ? sources
+        : undefined;
   const sourcesKey = countedSources
     ? JSON.stringify(countedSources.map(sourceSearchRevision))
     : ownerKey;
@@ -98,7 +108,7 @@ export function useReferenceValueResourceCounts(property?: ReferenceProperty, se
     );
   const criteria = JSON.stringify(referenceValueCountsCriteria(search));
   const propertyKey = enabled
-    ? `${sourcesKey}:${property.pool}:${property.id}:${property.type}`
+    ? `${sourcesKey}:${property.pool}:${property.id}:${property.type}:${unifiedMediaLibraries}`
     : "";
   const key = enabled
     ? `${propertyKey}:${criteria}:${JSON.stringify([search?.owner?.serverId, search?.owner?.libraryEpoch, search?.deviceIds])}`
@@ -161,11 +171,23 @@ export function useReferenceValueResourceCounts(property?: ReferenceProperty, se
                   if (!canReadSourceMetadata(source))
                     throw new Error(source.error || "Device unavailable");
 
-                  return requestCounts(
+                  const result = await requestCounts(
                     property,
                     referenceValueCountsCriteria(compiled),
                     createResourceApi(source),
                   );
+
+                  return unifiedMediaLibraries
+                    ? {
+                        ...result,
+                        counts: Object.fromEntries(
+                          Object.entries(result.counts).map(([value, count]) => [
+                            mediaLibraryChoiceValue(source, value),
+                            count,
+                          ]),
+                        ),
+                      }
+                    : result;
                 }),
               )),
             );
