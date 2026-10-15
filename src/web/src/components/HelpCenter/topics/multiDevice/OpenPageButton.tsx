@@ -8,13 +8,10 @@ import { Button } from "@/components/bakaui";
 import { DEVICES_ROUTE, openLocalView } from "@/features/federation/switching";
 import { useIsConsole, useIsPureClient, useRemoteAccessStore } from "@/stores/remoteAccess";
 
-export const LIBRARY_ROUTE = "/federation";
 export const RESOURCE_ROUTE = "/resource";
 export { DEVICES_ROUTE };
 /** "Who may manage this device", in the Devices page's Management tab. */
 export const MANAGEMENT_ROUTE = `${DEVICES_ROUTE}?section=management`;
-/** The Devices page's Library sharing tab. */
-export const SHARING_ROUTE = `${DEVICES_ROUTE}?section=sharing`;
 /** The form that adds a device to manage, in the Devices page's Management tab. */
 export const ADD_SERVER_ROUTE = `${DEVICES_ROUTE}?section=add-server`;
 /** The device map: every device and relationship as one picture. */

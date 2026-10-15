@@ -180,12 +180,8 @@ public sealed class DataSyncPeerClientTests
         // Definitions sharing off: at the feed route with a verified session, and at info or the handshake without one.
         await nas.Grants.SetSharingEnabledAsync(false, false, default);
         Assert.AreEqual((DataSyncPeerErrorCode.PeerSharingOff, "DataSyncSharingDisabled"), await Head(desk.PeerClient));
-        Assert.AreEqual((DataSyncPeerErrorCode.PeerSharingOff, "SharingDisabled"), await Head(desk.NewPeerClient()),
-            "Nothing shared: info is refused.");
-        await nas.Peers.SetSharingAsync(true);
         Assert.AreEqual((DataSyncPeerErrorCode.PeerSharingOff, "DataSyncSharingDisabled"), await Head(desk.NewPeerClient()),
-            "Only the library shared: the handshake is refused.");
-        await nas.Peers.SetSharingAsync(false);
+            "Definitions sharing off also refuses a new session.");
         await nas.Grants.SetSharingEnabledAsync(true, false, default);
 
         nas.Remote.Mode = RemoteAccessMode.Disabled;
@@ -335,7 +331,7 @@ public sealed class DataSyncPeerClientTests
 
     /// <summary>
     /// The desk reads the NAS, and the NAS reads the PC. The desk can still never read the PC through the NAS, nor
-    /// with a library grant it holds for the PC: nothing is sent, and the PC's feed is never asked.
+    /// through its NAS grant: nothing is sent, and the PC's feed is never asked.
     /// </summary>
     [TestMethod]
     public async Task ADevicePullsOnlyFromANodeItHoldsADirectDefinitionsGrantFor()
@@ -356,42 +352,25 @@ public sealed class DataSyncPeerClientTests
         Assert.AreEqual(DataSyncPeerErrorCode.AccessMissing, (await Assert.ThrowsExactlyAsync<DataSyncPeerException>(() =>
             desk.PeerClient.GetHeadAsync("node-pc", Query(), default))).Code);
 
-        // A library grant for the PC does not count.
-        await pc.Peers.SetSharingAsync(true);
-        var code = await pc.Peers.IssueInvitationAsync();
-        Assert.AreEqual("granted", (await desk.Services.GetRequiredService<NodePairingClient>()
-            .ConnectAsync(pc.Address, code.Code)).Outcome);
+        // Access to a hub never grants access to a device the hub reads.
         Assert.AreEqual(DataSyncPeerErrorCode.AccessMissing, (await Assert.ThrowsExactlyAsync<DataSyncPeerException>(() =>
             desk.PeerClient.GetManifestAsync("node-pc", Query(), default))).Code);
         Assert.AreEqual(0, pcFeed.Calls.Count);
         Assert.AreEqual(1, nasFeed.Calls.Count);
     }
 
-    /// <summary>
-    /// §8.2 "a federation session to it came online → now", as the scheduler reads it on every tick
-    /// (<see cref="FederationDataSyncPeerSessions"/>): a verified library session — browsing the peer — is the signal.
-    /// Data sync's own fetch is not (its session only echoes the fetch that is already running), and a grant alone,
-    /// never verified, is not either.
-    /// </summary>
+    /// <summary>The scheduler must not treat its own fetch as an external device-online event.</summary>
     [TestMethod]
-    public async Task APeerComesOnlineForDataSyncOnceALibrarySessionToItIsVerified()
+    public async Task ADefinitionsFetchDoesNotTriggerItsOwnReconnectSchedule()
     {
         await using var desk = await DataSyncNodeHost.StartAsync("node-desk", "Desk");
         await using var nas = await DataSyncNodeHost.StartAsync("node-nas", "NAS", feed: new ScriptedFeed("node-nas"));
         var sessions = new Bakabase.Service.Components.DataSync.FederationDataSyncPeerSessions(desk.Services);
         await PairAsync(desk, nas);
+        Assert.IsFalse(sessions.IsOnline("node-nas"));
         Assert.AreEqual("node-nas", (await desk.PeerClient.GetHeadAsync("node-nas", Query(), default)).NodeId);
         Assert.AreEqual("Online", desk.Sessions.GetConnectionState("node-nas", FederationScopes.DataSyncRead));
         Assert.IsFalse(sessions.IsOnline("node-nas"), "the fetch's own session");
-
-        await nas.Peers.SetSharingAsync(true);
-        var code = await nas.Peers.IssueInvitationAsync();
-        Assert.AreEqual("granted", (await desk.Services.GetRequiredService<NodePairingClient>()
-            .ConnectAsync(nas.Address, code.Code)).Outcome);
-        Assert.IsFalse(sessions.IsOnline("node-nas"), "a library grant nobody used yet");
-
-        await desk.Sessions.GetAsync("node-nas");
-        Assert.IsTrue(sessions.IsOnline("node-nas"));
         Assert.IsFalse(sessions.IsOnline("node-pc"), "a device this one never reached");
     }
 
@@ -530,7 +509,7 @@ public sealed class DataSyncPeerClientTests
     [TestMethod]
     public void TheServiceReadsFeedsWithThisClient()
     {
-        var services = new ServiceCollection().AddFederatedLibrary();
+        var services = new ServiceCollection().AddMultiDeviceServices();
         var registration = services.Last(d => d.ServiceType == typeof(IDataSyncPeerClient));
         Assert.AreEqual(ServiceLifetime.Singleton, registration.Lifetime);
         Assert.IsTrue(services.Any(d => d.ServiceType == typeof(FederationDataSyncPeerClient) &&

@@ -359,16 +359,13 @@
   "resource.desktopPlayback.title": "Want to use a player on this computer?",
   "resource.desktopPlayback.intro": "Bakabase desktop can connect to a server and open resources with players or default apps installed on your computer.",
   "resource.desktopPlayback.install": "Download and install the Bakabase desktop app on your computer.",
-  "resource.desktopPlayback.connect": "Add this server under Multi-device in the desktop app, complete pairing, then switch to it. Use an address reachable from that computer.",
-  "resource.desktopPlayback.connectShared": "Connect to the resource owner’s read-only library sharing under Multi-device in the desktop app, with the owner’s authorization.",
+  "resource.desktopPlayback.connect": "Add the resource-owning server under Multi-device → Devices → Management in the desktop app. After pairing, its resources are available on the Resources page. Use an address reachable from that computer.",
   "resource.desktopPlayback.configure": "In Resource profiles on this device, select the source device and configure matching conditions, players and the opening method as needed.",
   "resource.desktopPlayback.requirements": "What do I need?",
   "resource.desktopPlayback.http": "For audio or video over HTTP, the player must support remote URLs and the file format. Installing Bakabase does not add format support to your player.",
   "resource.desktopPlayback.paths": "To open a file path, this computer must already be able to access the files. Configure prefix mappings when paths differ. Mapping does not share or transfer files; games and similar files usually require a mounted file share such as SMB.",
-  "resource.desktopPlayback.sharedLimits": "Read-only sharing permits browsing and playing the owner’s shared media, not running remote programs. Installing the desktop app does not grant management access or expose unshared files.",
   "resource.desktopPlayback.download": "Get the desktop app",
   "resource.desktopPlayback.alreadyInstalled": "Already installed? Open Bakabase desktop and follow the steps above. This guide does not connect or start playback automatically.",
-  "resource.desktopPlayback.sharedPaths": "To open shared media by file path, this computer must already be able to access the files. Configure prefix mappings as needed. Mapping does not share or transfer files.",
   "resource.profilePlayback.configure": "Resource profiles on this device",
   "resource.profilePlayback.openFailed": "Could not open local resource profiles. Switch back to this device from the device selector and try again."
 }

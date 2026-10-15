@@ -22,7 +22,7 @@ import { devicesRoute } from "../switching";
 
 import { useDevicesPage } from "./context";
 import TabHeading from "./TabHeading";
-import { dataSyncWaiting, troubledServers, waitingSharingRequests } from "./selectors";
+import { dataSyncWaiting, troubledServers } from "./selectors";
 
 import { RemoteAccessMode } from "@/sdk/constants";
 
@@ -45,7 +45,7 @@ function RowLink({ to, children }: { to: DevicesSection; children: ReactNode }) 
 
 /**
  * The device tab: what this device is called, the address another device types, what is
- * waiting for an answer here, and the way to add another device — manage it, or browse it.
+ * waiting for an answer here, and the way to add another device — manage it, or synchronize definitions.
  * The everyday questions; everything they lead to is decided in the other tabs.
  */
 export default function ThisDeviceTab() {
@@ -63,12 +63,10 @@ export default function ThisDeviceTab() {
     });
 
   const waitingManage = access?.pendingRequests ?? [];
-  const waitingBrowse = waitingSharingRequests(data);
   const troubled = troubledServers(data);
   const waitingSync = dataSyncWaiting(data);
   const unrestricted = mode === RemoteAccessMode.Unrestricted;
-  const waiting =
-    waitingManage.length + waitingBrowse.length + troubled.length + waitingSync > 0 || unrestricted;
+  const waiting = waitingManage.length + troubled.length + waitingSync > 0 || unrestricted;
   const choosers = tabs.flatMap((tab) =>
     tab.chooser && !tab.chooser.hidden?.(data) ? [tab.chooser] : [],
   );
@@ -81,8 +79,6 @@ export default function ThisDeviceTab() {
         : access.requirePairing
           ? "paired"
           : "open";
-  const inbound = (status?.peers ?? []).filter((peer) => peer.inboundGrant).length;
-  const outbound = (status?.peers ?? []).filter((peer) => peer.outboundGrant).length;
 
   return (
     <>
@@ -199,11 +195,6 @@ export default function ThisDeviceTab() {
                 <span>{t("federation.devices.waiting.manage", { name: request.deviceName })}</span>
               </RowLink>
             ))}
-            {waitingBrowse.map((request) => (
-              <RowLink key={`browse:${request.requestId}`} to="sharing-requests">
-                <span>{t("federation.devices.waiting.browse", { name: request.nodeName })}</span>
-              </RowLink>
-            ))}
             {troubled.map((server) => (
               <RowLink key={`server:${server.serverId}`} to="servers">
                 <span>
@@ -272,33 +263,6 @@ export default function ThisDeviceTab() {
             <RowLink to="servers">
               <span className="text-default-500">{t("federation.map.panel.self.manages")}</span>
               <span className="ml-auto">{servers.servers.length}</span>
-            </RowLink>
-          )}
-          {status && (
-            <RowLink to="share">
-              <span className="text-default-500">{t("federation.devices.status.sharing")}</span>
-              {/* The row's label names the switch; its value is only on or off. */}
-              <span className="ml-auto">
-                {t(
-                  status.sharingEnabled
-                    ? "federation.devices.status.on"
-                    : "federation.devices.status.off",
-                )}{" "}
-                · {t("federation.map.panel.self.sharesWith")} {inbound}
-              </span>
-            </RowLink>
-          )}
-          {status && (
-            <RowLink to="browsing">
-              <span className="text-default-500">{t("federation.devices.status.browsing")}</span>
-              <span className="ml-auto">
-                {t(
-                  status.browsingEnabled
-                    ? "federation.devices.status.on"
-                    : "federation.devices.status.off",
-                )}{" "}
-                · {t("federation.map.panel.self.browses")} {outbound}
-              </span>
             </RowLink>
           )}
         </ul>

@@ -31,10 +31,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(federationPeerApi.status).mockResolvedValue({
     identity: { nodeId: "local", libraryEpoch: "current", name: "PC" },
-    peers: [],
-    requests: [],
-    browsingEnabled: false,
-    sharingEnabled: false,
+    reachableAddresses: [],
     requirePairing: false,
     remoteAccessMode: 0,
   });

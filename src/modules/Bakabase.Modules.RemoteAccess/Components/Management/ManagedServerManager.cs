@@ -477,7 +477,7 @@ public class ManagedServerManager : IManagedServerService, IUpstreamIdentityVeri
     }
 
     public async Task<bool> SetPathMappingsAsync(string serverId, IReadOnlyList<ManagedServerPathMapping> mappings,
-        CancellationToken ct = default) =>
+        CancellationToken ct = default, IReadOnlyList<ManagedServerPathMapping>? expectedMappings = null) =>
         await _store.MutateAsync(data =>
         {
             var entry = Find(data, serverId);
@@ -486,6 +486,10 @@ public class ManagedServerManager : IManagedServerService, IUpstreamIdentityVeri
             {
                 return false;
             }
+
+            if (expectedMappings != null && !entry.PathMappings
+                    .Select(m => new ManagedServerPathMapping(m.ServerPath, m.LocalPath)).SequenceEqual(expectedMappings))
+                throw new ManagedPathMappingsChangedException();
 
             // Replaced as a whole: the page edits a table, and a merge would keep a row the
             // user deleted.

@@ -13,13 +13,13 @@ public static class DataSyncServiceComponentsExtensions
     /// What data sync takes from the Service host (spec §2.11): this install's device identity over the federation
     /// node, its host kind, the addresses other devices reach it at, whether a federation session to a peer is online
     /// (§8.2), and the headless sharing announcer (§7.8). <c>AddDataSync()</c> registers none of them, so the test
-    /// kit's fakes stay in place. Called by <see cref="BakabaseStartup"/> after <c>AddFederatedLibrary()</c>.
+    /// kit's fakes stay in place. Called by <see cref="BakabaseStartup"/> after <c>AddMultiDeviceServices()</c>.
     /// </summary>
     /// <remarks>
     /// The facade (<see cref="IDataSyncService"/>) and the grant events are the runtime's, registered earlier through
     /// <c>AddInsideWorldBusinesses</c> (<c>AddDataSync()</c> → <c>AddDataSyncRuntime()</c>); the feed source, the gate
     /// and the stores are the persistence layer's, and the peer client and grant service federation's
-    /// (<c>AddFederatedLibrary()</c>).
+    /// (<c>AddMultiDeviceServices()</c>).
     /// </remarks>
     public static IServiceCollection AddDataSyncServiceComponents(this IServiceCollection services)
     {

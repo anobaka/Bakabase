@@ -185,7 +185,7 @@ describe("a request to read this device's definitions", () => {
       title: "dataSync.request.approveTitle New PC",
       description: "dataSync.request.twoWay New PC",
       warning: "dataSync.request.from 192.168.1.40",
-      refresh: ["dataSync", "sharing"],
+      refresh: ["dataSync", "identity"],
     });
     expect(dataSyncApi.approveRequest).not.toHaveBeenCalled();
     await act(() => confirmation().action() as Promise<void>);

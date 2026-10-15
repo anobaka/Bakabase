@@ -16,7 +16,7 @@ import { TopicCallout, TopicCards, TopicHeadline } from "../../components/TopicB
 
 import { mdk } from "./devices";
 import NetworkDiagram from "./NetworkDiagram";
-import OpenPageButton, { LIBRARY_ROUTE, MAP_ROUTE, RESOURCE_ROUTE } from "./OpenPageButton";
+import OpenPageButton, { MANAGEMENT_ROUTE, MAP_ROUTE, RESOURCE_ROUTE } from "./OpenPageButton";
 
 import { Button } from "@/components/bakaui";
 
@@ -35,16 +35,16 @@ const ways = [
   {
     id: "browse" as const,
     icon: <AiOutlineAppstore className="text-lg" />,
-    route: LIBRARY_ROUTE,
-    openKey: mdk("open.library"),
+    route: RESOURCE_ROUTE,
+    openKey: mdk("open.resources"),
     tone: "border-primary/25 bg-primary/5",
     chip: "bg-primary/10 text-primary",
   },
   {
     id: "switch" as const,
     icon: <AiOutlineSwap className="text-lg" />,
-    route: RESOURCE_ROUTE,
-    openKey: mdk("open.resources"),
+    route: MANAGEMENT_ROUTE,
+    openKey: mdk("open.management"),
     tone: "border-warning/30 bg-warning/5",
     chip: "bg-warning/15 text-warning-700 dark:text-warning",
   },
@@ -54,7 +54,7 @@ const comparisonRows = ["see", "do", "play", "access"];
 
 /**
  * A thumbnail of the device map: this device in the middle, lines out to the others in the
- * colours the map uses — sharing blue, management amber. Decoration beside the words.
+ * colours the map uses — data sync blue, management amber. Decoration beside the words.
  */
 const MiniMap = () => (
   <svg aria-hidden className="h-20 w-28 shrink-0 self-center" viewBox="0 0 112 80">

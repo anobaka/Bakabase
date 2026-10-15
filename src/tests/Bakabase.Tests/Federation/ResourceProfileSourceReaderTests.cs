@@ -1,7 +1,6 @@
 using System.Reflection;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
-using Bakabase.Modules.Federation.Security;
 using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property.Abstractions.Services;
 using Bakabase.Modules.Property.Components.Properties.Choice;
@@ -47,26 +46,6 @@ public sealed class ResourceProfileSourceReaderTests
         var response = await reader.FilterValueAsync(new ResourceSearchFilterInputModel
             {PropertyPool = PropertyPool.Custom, PropertyId = 17, Operation = SearchOperation.Equals}, default);
         Assert.IsFalse(JObject.FromObject(response).ToString().Contains("private-default"));
-    }
-
-    [TestMethod]
-    [DataRow("GET", "identity")]
-    [DataRow("GET", "properties")]
-    [DataRow("POST", "filter-value")]
-    [DataRow("POST", "search-resolve")]
-    [DataRow("POST", "preview")]
-    [DataRow("POST", "evaluate")]
-    public void SearchExportRoutesAreExactAndReadOnlyLibraryScope(string method, string operation)
-    {
-        var path = "/federation/v1/export/resource-profile/" + operation;
-        Assert.IsTrue(FederationRoutePolicy.Allows(FederationEndpointKind.Export, method, path));
-        Assert.AreEqual(FederationSharingRequirement.Library,
-            FederationRoutePolicy.RequiredSharing(FederationEndpointKind.Export, method, path));
-        Assert.IsFalse(FederationRoutePolicy.Allows(FederationEndpointKind.Export, "PUT", path));
-        Assert.IsFalse(FederationRoutePolicy.Allows(FederationEndpointKind.Export, "DELETE", path));
-        Assert.IsFalse(FederationRoutePolicy.Allows(FederationEndpointKind.Export, method, path + "/extra"));
-        Assert.IsFalse(FederationRoutePolicy.Allows(FederationEndpointKind.Export, "GET",
-            "/federation/v1/export/resource-profile/players"));
     }
 
     public class Properties : DispatchProxy

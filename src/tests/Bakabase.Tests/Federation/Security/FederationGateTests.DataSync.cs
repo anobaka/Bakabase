@@ -34,9 +34,8 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Bakabase.Tests.Federation.Security;
 
 /// <summary>
-/// The gate split of §7.3: every row of the gate matrix (G1–G36, G22b, G31b), and the generated matrix over every Export
-/// action × {library grant, datasync grant, none} × both switches. S is library sharing, D definitions sharing. G31–G33,
-/// who may create definitions access through <c>/data-sync</c>, are the controller's rows in
+/// Definitions protocol gate coverage: every Export action with and without its scoped grant, with the
+/// definitions switch on and off. Access creation is covered by
 /// <see cref="Bakabase.Tests.DataSync.Api.DataSyncEndpointExposureTests"/>.
 /// </summary>
 public sealed partial class FederationGateTests
@@ -51,21 +50,21 @@ public sealed partial class FederationGateTests
     // ---- G1–G5: info and pairing, before any grant ---------------------------------------------------------------
 
     [TestMethod]
-    public async Task G01_InfoIsRefusedWithBothSwitchesOff()
+    public async Task G01_InfoIsRefusedWithDefinitionsOff()
     {
         using var gate = await ScopeGate.CreateAsync();
-        await gate.SwitchAsync(library: false, dataSync: false);
+        await gate.SwitchAsync(false);
         var context = Context(Info, "GET");
         await gate.RunAsync(context, gate.InfoEndpoint);
-        Assert.AreEqual((403, "SharingDisabled"), (context.Response.StatusCode, Error(context)));
+        Assert.AreEqual((403, "DataSyncSharingDisabled"), (context.Response.StatusCode, Error(context)));
         Assert.IsFalse(gate.ReachedEndpoint);
     }
 
     [TestMethod]
-    public async Task G02_InfoAnswersWhenOnlyDefinitionsAreSharedAndSaysSo()
+    public async Task G02_InfoAnswersWhenDefinitionsAreSharedAndSaysSo()
     {
         using var gate = await ScopeGate.CreateAsync();
-        await gate.SwitchAsync(library: false, dataSync: true);
+        await gate.SwitchAsync(true);
         var context = Context(Info, "GET");
         await gate.RunAsync(context, gate.InfoEndpoint);
         Assert.AreEqual(200, context.Response.StatusCode);
@@ -74,22 +73,22 @@ public sealed partial class FederationGateTests
         Assert.AreEqual(DataSyncContract.Version, info.DataSyncContractVersion);
         Assert.AreEqual(DataSyncContract.MinimumPeerVersion, info.DataSyncMinimumPeerContract);
 
-        await gate.SwitchAsync(library: true, dataSync: false);
+        await gate.SwitchAsync(false);
         context = Context(Info, "GET");
         await gate.RunAsync(context, gate.InfoEndpoint);
-        Assert.IsFalse(Body<NodeInfo>(context).SharesDefinitions);
+        Assert.AreEqual((403, "DataSyncSharingDisabled"), (context.Response.StatusCode, Error(context)));
     }
 
     [TestMethod]
-    public async Task G03_LibraryPairingNeedsLibrarySharingEvenWithDefinitionsShared()
+    public async Task G03_RetiredLibraryPairingIsRefusedEvenWithDefinitionsShared()
     {
         using var gate = await ScopeGate.CreateAsync();
-        await gate.SwitchAsync(library: false, dataSync: true);
+        await gate.SwitchAsync(true);
         foreach (var step in new[] { "request", "code", "claim" })
         {
             var context = Context("/federation/v1/pair/" + step, "POST");
             await gate.RunAsync(context);
-            Assert.AreEqual((403, "SharingDisabled"), (context.Response.StatusCode, Error(context)), step);
+            Assert.AreEqual((403, "NodeRouteForbidden"), (context.Response.StatusCode, Error(context)), step);
             Assert.IsFalse(gate.ReachedEndpoint);
         }
     }
@@ -98,7 +97,7 @@ public sealed partial class FederationGateTests
     public async Task G04_DefinitionsPairingNeedsDefinitionsSharingEvenWithTheLibraryShared()
     {
         using var gate = await ScopeGate.CreateAsync();
-        await gate.SwitchAsync(library: true, dataSync: false);
+        await gate.SwitchAsync(false);
         foreach (var step in new[] { "request", "code", "claim" })
         {
             var context = Context("/federation/v1/pair/datasync/" + step, "POST");
@@ -112,7 +111,7 @@ public sealed partial class FederationGateTests
     public async Task G05_ADefinitionsRequestIsStoredAmongDefinitionsRequestsOnly()
     {
         using var gate = await ScopeGate.CreateAsync();
-        await gate.SwitchAsync(library: false, dataSync: true);
+        await gate.SwitchAsync(true);
         var context = Context("/federation/v1/pair/datasync/request", "POST", "192.168.20.30");
         var request = new NodeDataSyncPairRequest("asker-node", "Asker", "asker-transaction",
             NodeRequestSignature.RandomToken(), NodeDataSyncIntents.TwoWay);
@@ -120,7 +119,6 @@ public sealed partial class FederationGateTests
 
         Assert.AreEqual(200, context.Response.StatusCode);
         Assert.AreEqual("awaitingApproval", Body<NodePairExchange>(context).Outcome);
-        Assert.IsFalse((await gate.Peers.GetStatusAsync()).Requests.Any(r => r.NodeId == "asker-node"));
         var stored = (await gate.Peers.GetDataSyncStatusAsync()).Requests.Single(r => r.NodeId == "asker-node");
         Assert.AreEqual(("incoming", NodeDataSyncIntents.TwoWay, "192.168.20.30"),
             (stored.Direction, stored.Intent, stored.RemoteAddress));
@@ -134,15 +132,6 @@ public sealed partial class FederationGateTests
     // ---- G6–G12: a grant reaches only the routes of its own scope, under its own switch ---------------------------
 
     [TestMethod]
-    public async Task G06_ALibraryGrantCannotReadTheFeed()
-    {
-        using var gate = await ScopeGate.CreateAsync();
-        var context = await gate.SendAsync(Head, "GET", gate.Library);
-        Assert.AreEqual((403, "ScopeNotGranted"), (context.Response.StatusCode, Error(context)));
-        Assert.IsFalse(gate.ReachedEndpoint);
-    }
-
-    [TestMethod]
     [DataRow(Queries, "POST")]
     [DataRow("/federation/v1/export/assets/asset-1", "GET")]
     [DataRow("/federation/v1/export/mapping-roots", "GET")]
@@ -150,7 +139,7 @@ public sealed partial class FederationGateTests
     {
         using var gate = await ScopeGate.CreateAsync();
         var context = await gate.SendAsync(path, method, gate.DataSync);
-        Assert.AreEqual((403, "ScopeNotGranted"), (context.Response.StatusCode, Error(context)));
+        Assert.AreEqual((403, "NodeRouteForbidden"), (context.Response.StatusCode, Error(context)));
         Assert.IsFalse(gate.ReachedEndpoint);
     }
 
@@ -158,7 +147,7 @@ public sealed partial class FederationGateTests
     public async Task G10_TheFeedIsClosedWithDefinitionsSharingOff()
     {
         using var gate = await ScopeGate.CreateAsync();
-        await gate.SwitchAsync(library: true, dataSync: false);
+        await gate.SwitchAsync(false);
         var context = await gate.SendAsync(Manifest, "GET", gate.DataSync);
         Assert.AreEqual((403, "DataSyncSharingDisabled"), (context.Response.StatusCode, Error(context)));
         Assert.IsFalse(gate.ReachedEndpoint);
@@ -168,7 +157,7 @@ public sealed partial class FederationGateTests
     public async Task G11_TheFeedAnswersADataSyncGrantWithTheLibraryNotShared()
     {
         using var gate = await ScopeGate.CreateAsync();
-        await gate.SwitchAsync(library: false, dataSync: true);
+        await gate.SwitchAsync(true);
         var context = Context(Manifest, "GET");
         context.Request.QueryString = new QueryString("?mode=twoWay&since=customProperty:12,extensionGroup:0&state=ok");
         gate.Sign(context, gate.DataSync);
@@ -184,39 +173,19 @@ public sealed partial class FederationGateTests
             (query!.Mode, query.Since["customProperty"], query.Since["extensionGroup"], query.ReaderState));
     }
 
-    [TestMethod]
-    public async Task G12_ALibraryGrantStillReadsTheLibraryWithDefinitionsSharingOff()
-    {
-        using var gate = await ScopeGate.CreateAsync();
-        await gate.SwitchAsync(library: true, dataSync: false);
-        var context = await gate.SendAsync(Queries, "POST", gate.Library);
-        Assert.IsTrue(gate.ReachedEndpoint);
-        Assert.AreEqual(FederationScopes.LibraryRead, FederationHttpContext.GetNodePrincipal(context)!.Scope);
-    }
-
     // ---- G13–G15: the handshake and unsigned reads -----------------------------------------------------------------
 
     [TestMethod]
     public async Task G13_ADataSyncGrantHandshakesWithOnlyDefinitionsShared()
     {
         using var gate = await ScopeGate.CreateAsync();
-        await gate.SwitchAsync(library: false, dataSync: true);
+        await gate.SwitchAsync(true);
         var response = await gate.HandshakeAsync(gate.DataSync);
         Assert.AreEqual(200, response.Response.StatusCode);
         var proof = Body<NodeHandshakeResponse>(response);
         Assert.IsTrue(proof.Info.SharesDefinitions);
         Assert.IsTrue(NodeRequestSignature.FixedEquals(proof.Proof,
             NodeRequestSignature.HandshakeProof(gate.DataSync.Key, proof.Info, proof.Challenge)));
-    }
-
-    [TestMethod]
-    public async Task G14_ALibraryGrantCannotHandshakeWithOnlyDefinitionsShared()
-    {
-        using var gate = await ScopeGate.CreateAsync();
-        await gate.SwitchAsync(library: false, dataSync: true);
-        var response = await gate.HandshakeAsync(gate.Library);
-        Assert.AreEqual((403, "SharingDisabled"), (response.Response.StatusCode, Error(response)));
-        Assert.IsFalse(gate.ReachedEndpoint);
     }
 
     [TestMethod]
@@ -258,58 +227,12 @@ public sealed partial class FederationGateTests
 
     // ---- G19–G23: leases, revocation and identity changes ---------------------------------------------------------
 
-    [TestMethod]
-    public async Task G19_TurningLibrarySharingOffLeavesAnInflightFeedPageAlone()
-    {
-        using var gate = await ScopeGate.CreateAsync();
-        gate.Feed.DuringPage = () => gate.Peers.SetSharingAsync(false);
-        var context = Context(Changes, "GET");
-        context.Request.QueryString = new QueryString("?snapshot=snapshot-1&kind=customProperty&since=0");
-        gate.Sign(context, gate.DataSync);
-        await gate.RunAsync(context, Endpoint(http => gate.FeedController(http)
-            .Changes("snapshot-1", "customProperty", "0", null, http.RequestAborted)));
-
-        Assert.AreEqual(200, context.Response.StatusCode);
-        Assert.AreEqual(ScopeGate.Page, Encoding.UTF8.GetString(((MemoryStream)context.Response.Body).ToArray()));
-        Assert.IsFalse(gate.Leases.GetCancellationToken(gate.DataSync.GrantId).IsCancellationRequested);
-        Assert.IsTrue(gate.Leases.GetCancellationToken(gate.Library.GrantId).IsCancellationRequested);
-    }
-
-    [TestMethod]
-    public async Task G20_TurningDefinitionsSharingOffLeavesAnInflightLibraryPageAlone()
-    {
-        using var gate = await ScopeGate.CreateAsync();
-        var context = Context("/federation/v1/export/queries/query-1/pages", "GET");
-        gate.Sign(context, gate.Library);
-        await gate.RunAsync(context, Endpoint(async http =>
-        {
-            await gate.Peers.SetDataSyncSharingAsync(false);
-            http.RequestAborted.ThrowIfCancellationRequested();
-            return new ContentResult { Content = "{\"page\":1}" };
-        }));
-        Assert.AreEqual(200, context.Response.StatusCode);
-        Assert.IsTrue(gate.Leases.GetCancellationToken(gate.DataSync.GrantId).IsCancellationRequested);
-    }
-
-    [TestMethod]
-    public async Task G21_RevokingAPeersLibraryGrantLeavesItsDataSyncGrant()
-    {
-        using var gate = await ScopeGate.CreateAsync();
-        await gate.Peers.RevokeAsync(gate.Library.GrantId);
-        var context = await gate.SendAsync(Head, "GET", gate.DataSync);
-        Assert.IsTrue(gate.ReachedEndpoint);
-        Assert.AreEqual(FederationScopes.DataSyncRead, FederationHttpContext.GetNodePrincipal(context)!.Scope);
-        var library = await gate.SendAsync(Queries, "POST", gate.Library);
-        Assert.AreEqual((401, "GrantRevoked"), (library.Response.StatusCode, Error(library)));
-    }
-
     /// <summary>G22: the switch is checked before authentication, so the old grant is not even looked at.</summary>
     [TestMethod]
     public async Task G22_AfterAnEpochRotationTheFeedIsClosedBeforeAnySignatureIsChecked()
     {
         using var gate = await ScopeGate.CreateAsync();
         await gate.Peers.RotateLibraryEpochAsync();
-        await gate.Peers.SetSharingAsync(true);
         var context = await gate.SendAsync(Head, "GET", gate.DataSync);
         Assert.AreEqual((403, "DataSyncSharingDisabled"), (context.Response.StatusCode, Error(context)));
         var garbage = Context(Head, "GET");
@@ -329,7 +252,7 @@ public sealed partial class FederationGateTests
     {
         using var gate = await ScopeGate.CreateAsync();
         var rotated = await gate.Peers.RotateLibraryEpochAsync();
-        await gate.SwitchAsync(library: false, dataSync: true);
+        await gate.SwitchAsync(true);
         var info = Context(Info, "GET");
         await gate.RunAsync(info, gate.InfoEndpoint);
         Assert.AreEqual(rotated.LibraryEpoch, Body<NodeInfo>(info).LibraryEpoch);
@@ -339,104 +262,7 @@ public sealed partial class FederationGateTests
         Assert.AreEqual((401, "GrantRevoked"), (handshake.Response.StatusCode, Error(handshake)));
     }
 
-    [TestMethod]
-    public async Task G23_RemovingThePeerRevokesItsDataSyncGrant()
-    {
-        using var gate = await ScopeGate.CreateAsync();
-        await gate.Peers.RemovePeerAsync("reader-node");
-        var context = await gate.SendAsync(Head, "GET", gate.DataSync);
-        Assert.AreEqual((401, "GrantRevoked"), (context.Response.StatusCode, Error(context)));
-        Assert.IsFalse(gate.ReachedEndpoint);
-    }
-
     // ---- G24–G30: codes, approvals and the two management planes --------------------------------------------------
-
-    [TestMethod]
-    public async Task G24_ALibraryCodeIsNotADefinitionsCodeAndIsNotUsedUpByTrying()
-    {
-        using var gate = await ScopeGate.CreateAsync();
-        var code = (await gate.Peers.IssueInvitationAsync()).Code;
-        var context = await gate.PairCodeAsync(new NodeDataSyncPairCodeRequest("asker-node", "Asker", code,
-            "asker-transaction", NodeRequestSignature.RandomToken(), NodeDataSyncIntents.Follow));
-        Assert.AreEqual((403, "InvalidPairingCode"), (context.Response.StatusCode, Error(context)));
-        Assert.AreEqual("granted", (await gate.Peers.ExchangeCodeAsync(new NodePairCodeRequest("asker-node", "Asker",
-            code, "library-asker", NodeRequestSignature.RandomToken()))).Outcome);
-    }
-
-    [TestMethod]
-    public async Task G25_ADefinitionsCodeIsNotALibraryCodeAndIsNotUsedUpByTrying()
-    {
-        using var gate = await ScopeGate.CreateAsync();
-        var code = (await gate.Peers.IssueDataSyncInvitationAsync()).Code;
-        var library = await Assert.ThrowsExactlyAsync<FederationAccessException>(() => gate.Peers.ExchangeCodeAsync(
-            new NodePairCodeRequest("asker-node", "Asker", code, "library-asker", NodeRequestSignature.RandomToken())));
-        Assert.AreEqual("InvalidPairingCode", library.ErrorCode);
-        var context = await gate.PairCodeAsync(new NodeDataSyncPairCodeRequest("asker-node", "Asker", code,
-            "asker-transaction", NodeRequestSignature.RandomToken(), NodeDataSyncIntents.Follow));
-        Assert.AreEqual("granted", Body<NodePairExchange>(context).Outcome);
-    }
-
-    [TestMethod]
-    public async Task G26_ApprovingADefinitionsRequestNeitherCreatesNorRevokesLibraryAccess()
-    {
-        using var gate = await ScopeGate.CreateAsync();
-        var libraryBefore = await LibraryGrantsAsync(gate);
-        await gate.Peers.SubmitDataSyncRequestAsync(new NodeDataSyncPairRequest("reader-node", "Reader", "again",
-            NodeRequestSignature.RandomToken(), NodeDataSyncIntents.Follow));
-        await gate.Peers.ApproveDataSyncAsync("again");
-        CollectionAssert.AreEqual(libraryBefore, await LibraryGrantsAsync(gate));
-        Assert.AreEqual(FederationScopes.LibraryRead,
-            (await gate.Grants.ValidateAsync(gate.Library.GrantId, gate.Library.LibraryEpoch)).Scope);
-    }
-
-    [TestMethod]
-    public async Task G27_ApprovingALibraryRequestNeitherCreatesNorRevokesDefinitionsAccess()
-    {
-        using var gate = await ScopeGate.CreateAsync();
-        var before = (await gate.Peers.GetDataSyncStatusAsync()).Grants.Select(g => g.GrantId).ToArray();
-        await gate.Peers.RequestPairingAsync(new NodePairRequest("reader-node", "Reader", "library-again",
-            NodeRequestSignature.RandomToken()));
-        await gate.Peers.ApproveAsync("library-again");
-        CollectionAssert.AreEqual(before, (await gate.Peers.GetDataSyncStatusAsync()).Grants.Select(g => g.GrantId).ToArray());
-        await gate.SendAsync(Head, "GET", gate.DataSync);
-        Assert.IsTrue(gate.ReachedEndpoint);
-    }
-
-    [TestMethod]
-    public async Task G28_TheLibrarysOwnValidationRefusesADataSyncGrant()
-    {
-        using var gate = await ScopeGate.CreateAsync();
-        var e = await Assert.ThrowsExactlyAsync<FederationAccessException>(() =>
-            gate.Grants.ValidateAsync(gate.DataSync.GrantId, gate.DataSync.LibraryEpoch));
-        Assert.AreEqual(("ScopeNotGranted", 403), (e.ErrorCode, e.StatusCode));
-    }
-
-    [TestMethod]
-    public async Task G29_TheDataSyncPlaneDoesNotSeeLibraryRequests()
-    {
-        using var gate = await ScopeGate.CreateAsync();
-        await gate.Peers.RequestPairingAsync(new NodePairRequest("asker-node", "Asker", "library-request",
-            NodeRequestSignature.RandomToken()));
-        var e = await Assert.ThrowsExactlyAsync<DataSyncProblemException>(() =>
-            gate.DataSyncGrants.ApproveAsync("library-request", true, default));
-        Assert.AreEqual(DataSyncProblemCode.RequestNotFound, e.Problem.Code);
-        Assert.AreEqual("awaitingApproval",
-            (await gate.Peers.GetStatusAsync()).Requests.Single(r => r.RequestId == "library-request").Status);
-        Assert.IsFalse((await gate.DataSyncGrants.GetRequestsAsync(default)).Any(r => r.RequestId == "library-request"));
-    }
-
-    [TestMethod]
-    public async Task G30_TheLibraryPlaneDoesNotSeeDefinitionsRequests()
-    {
-        using var gate = await ScopeGate.CreateAsync();
-        await gate.Peers.SubmitDataSyncRequestAsync(new NodeDataSyncPairRequest("asker-node", "Asker",
-            "datasync-request", NodeRequestSignature.RandomToken(), NodeDataSyncIntents.Follow));
-        var e = await Assert.ThrowsExactlyAsync<FederationAccessException>(() => gate.Peers.ApproveAsync("datasync-request"));
-        Assert.AreEqual(("InvalidPairingRequest", 400), (e.ErrorCode, e.StatusCode));
-        Assert.IsFalse((await gate.Peers.GetStatusAsync()).Requests.Any(r => r.RequestId == "datasync-request"));
-        Assert.AreEqual("awaitingApproval",
-            (await gate.Peers.GetDataSyncStatusAsync()).Requests.Single(r => r.NodeId == "asker-node").Status);
-    }
 
     // ---- G31b: the way to a device key (G31–G33 are in DataSyncEndpointExposureTests) --------------------------
 
@@ -542,20 +368,18 @@ public sealed partial class FederationGateTests
     {
         using var gate = await ScopeGate.CreateAsync();
         var actions = FederationActions().Where(a => a.Endpoint?.Kind == FederationEndpointKind.Export).ToArray();
-        Assert.IsTrue(actions.Length >= 12, actions.Length.ToString());
+        Assert.AreEqual(4, actions.Length);
         var cases = 0;
-        foreach (var library in new[] { false, true })
         foreach (var dataSync in new[] { false, true })
         {
-            await gate.SwitchAsync(library, dataSync);
+            await gate.SwitchAsync(dataSync);
             foreach (var (type, action, path, methods, endpoint) in actions)
             foreach (var method in methods)
-            foreach (var grant in new[] { gate.Library, gate.DataSync, null })
+            foreach (var grant in new[] { gate.DataSync, null })
             {
-                var grantScope = grant == null ? null
-                    : grant == gate.Library ? FederationScopes.LibraryRead : FederationScopes.DataSyncRead;
+                var grantScope = grant == null ? null : FederationScopes.DataSyncRead;
                 var expected = grantScope != null && FederationScopes.Admits(endpoint!.Scope, grantScope) &&
-                               (grantScope == FederationScopes.LibraryRead ? library : dataSync);
+                               dataSync;
                 var context = Context(path, method);
                 if (grant != null) gate.Sign(context, grant);
                 var reached = false;
@@ -568,14 +392,14 @@ public sealed partial class FederationGateTests
                     reached = filter.Result == null;
                     return Task.CompletedTask;
                 });
-                var name = $"{method} {path} as {grantScope ?? "nobody"} with S={library} D={dataSync}";
+                var name = $"{method} {path} as {grantScope ?? "nobody"} with definitions={dataSync}";
                 Assert.AreEqual(expected, reached, name);
                 if (!expected)
                     Assert.IsTrue(context.Response.StatusCode is 401 or 403, $"{name}: {context.Response.StatusCode}");
                 cases++;
             }
         }
-        Assert.IsTrue(cases >= 12 * 3 * 4, cases.ToString());
+        Assert.IsTrue(cases == 4 * 2 * 2, cases.ToString());
     }
 
     /// <summary>A scope the endpoint does not declare, or none at all, is refused by the endpoint check itself.</summary>
@@ -584,18 +408,16 @@ public sealed partial class FederationGateTests
     {
         foreach (var (action, scope, allowed) in new[]
                  {
-                     (nameof(ScopedActions.Library), FederationScopes.LibraryRead, true),
-                     (nameof(ScopedActions.Library), FederationScopes.DataSyncRead, false),
                      (nameof(ScopedActions.DataSync), FederationScopes.DataSyncRead, true),
-                     (nameof(ScopedActions.DataSync), FederationScopes.LibraryRead, false),
-                     (nameof(ScopedActions.Either), FederationScopes.LibraryRead, true),
+                     (nameof(ScopedActions.DataSync), "library.read", false),
+                     (nameof(ScopedActions.Either), "library.read", false),
                      (nameof(ScopedActions.Either), FederationScopes.DataSyncRead, true),
                      (nameof(ScopedActions.Either), FederationScopes.Any, false),
-                     (nameof(ScopedActions.Unscoped), FederationScopes.LibraryRead, false),
+                     (nameof(ScopedActions.Unscoped), "library.read", false),
                      (nameof(ScopedActions.Unscoped), FederationScopes.DataSyncRead, false),
                  })
         {
-            var http = Context(Queries, "POST");
+            var http = Context(Head, "GET");
             FederationHttpContext.MarkHandled(http, FederationEndpointKind.Export,
                 new NodePrincipal("grant", "reader", "owner", "epoch", 1, scope));
             var descriptor = new ControllerActionDescriptor
@@ -610,9 +432,6 @@ public sealed partial class FederationGateTests
 
     private static T Body<T>(HttpContext context) =>
         JsonSerializer.Deserialize<T>(((MemoryStream)context.Response.Body).ToArray(), FederationJson.Options)!;
-
-    private static async Task<string[]> LibraryGrantsAsync(ScopeGate gate) =>
-        (await gate.Peers.GetStatusAsync()).Peers.Select(p => p.InboundGrant?.GrantId ?? "-").ToArray();
 
     /// <summary>
     /// The endpoint that runs <paramref name="action"/> and writes its result (<see cref="Execute"/>). A method group
@@ -658,7 +477,6 @@ public sealed partial class FederationGateTests
 
     private sealed class ScopedActions
     {
-        [FederationEndpoint(FederationEndpointKind.Export, Scope = FederationScopes.LibraryRead)] public void Library() { }
         [FederationEndpoint(FederationEndpointKind.Export, Scope = FederationScopes.DataSyncRead)] public void DataSync() { }
         [FederationEndpoint(FederationEndpointKind.Export, Scope = FederationScopes.Any)] public void Either() { }
         [FederationEndpoint(FederationEndpointKind.Export)] public void Unscoped() { }
@@ -693,7 +511,7 @@ public sealed partial class FederationGateTests
             // Reading back goes to whatever address a redeemer offered; here it only records that it tried.
             var wire = new FederationHttpClient(new HttpClient(new RecordingHandler(ReadBackRequests)));
             var pairing = new NodePairingClient(Store, Identity, wire, TimeProvider.System, Leases, Peers);
-            Flow = new FederationPairingFlow(pairing, Peers, null!, Remote, NullLogger<FederationPairingFlow>.Instance,
+            Flow = new FederationPairingFlow(pairing, Peers, Remote, NullLogger<FederationPairingFlow>.Instance,
                 _services);
             DataSyncGrants = new FederationDataSyncGrants(Peers, pairing, Flow, Store, Identity, Remote,
                 new TestBOptionsManager<RemoteAccessOptions>(new RemoteAccessOptions()), new NoDiscovery());
@@ -718,18 +536,13 @@ public sealed partial class FederationGateTests
         public RecordingEvents Events { get; } = new();
         public System.Threading.Channels.Channel<string> ReadBackRequests { get; } =
             System.Threading.Channels.Channel.CreateUnbounded<string>();
-        public NodeCredentials Library { get; private set; } = null!;
         public NodeCredentials DataSync { get; private set; } = null!;
         public bool ReachedEndpoint { get; private set; }
 
         public static async Task<ScopeGate> CreateAsync()
         {
             var gate = new ScopeGate();
-            await gate.SwitchAsync(library: true, dataSync: true);
-            var librarySecret = NodeRequestSignature.RandomToken();
-            await gate.Peers.RequestPairingAsync(new NodePairRequest("reader-node", "Reader", "library-grant", librarySecret));
-            await gate.Peers.ApproveAsync("library-grant");
-            gate.Library = (await gate.Peers.ClaimPairingAsync(new("library-grant", "reader-node", librarySecret))).Credentials!;
+            await gate.SwitchAsync(true);
             var dataSyncSecret = NodeRequestSignature.RandomToken();
             await gate.Peers.SubmitDataSyncRequestAsync(new NodeDataSyncPairRequest("reader-node", "Reader",
                 "datasync-grant", dataSyncSecret, NodeDataSyncIntents.Follow));
@@ -739,9 +552,8 @@ public sealed partial class FederationGateTests
             return gate;
         }
 
-        public async Task SwitchAsync(bool library, bool dataSync)
+        public async Task SwitchAsync(bool dataSync)
         {
-            await Peers.SetSharingAsync(library);
             await Peers.SetDataSyncSharingAsync(dataSync);
         }
 
@@ -778,7 +590,7 @@ public sealed partial class FederationGateTests
         }
 
         public FederationPeerController PeerController(HttpContext http) =>
-            new(Peers, null!, Identity, Grants, null!, null!, null!, null!, Remote, null!, TimeProvider.System, Flow, Store)
+            new(Peers, Identity, Grants, Remote, TimeProvider.System, Store)
                 { ControllerContext = new ControllerContext { HttpContext = http } };
 
         public FederationDataSyncPairingController PairingController(HttpContext http) =>

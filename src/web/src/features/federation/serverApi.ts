@@ -5,6 +5,7 @@ import type {
   ManagedServerProbe,
   ManagedServersView,
 } from "./types";
+import type { ManagedMappingTreePage } from "./components/managedMappingTypes";
 
 import { FederationError, federationRequest, jsonBody } from "./transport";
 
@@ -92,10 +93,30 @@ export const managedServerApi = {
         body: { name, expectedName: snapshot.name },
       }),
     ),
-  setPathMappings: (serverId: string, mappings: ManagedServerPathMapping[]) =>
+  mappingTree: (
+    serverId: string,
+    options: { parent?: string; cursor?: string; libraryEpoch?: string } = {},
+    signal?: AbortSignal,
+  ) => {
+    const query = new URLSearchParams({ limit: "200" });
+
+    if (options.parent !== undefined) query.set("parent", options.parent);
+    if (options.cursor) query.set("cursor", options.cursor);
+    if (options.libraryEpoch) query.set("libraryEpoch", options.libraryEpoch);
+
+    return federationRequest<ManagedMappingTreePage>(
+      `${server(serverId)}/path-mapping-tree?${query}`,
+      { signal },
+    );
+  },
+  setPathMappings: (
+    serverId: string,
+    mappings: ManagedServerPathMapping[],
+    expectedMappings?: ManagedServerPathMapping[],
+  ) =>
     federationRequest<{ changed: boolean }>(
       `${server(serverId)}/path-mappings`,
-      jsonBody({ mappings }, "PUT"),
+      jsonBody({ mappings, expectedMappings }, "PUT"),
     ),
   /**
    * Starts the server's relay if needed and answers where the window should go.

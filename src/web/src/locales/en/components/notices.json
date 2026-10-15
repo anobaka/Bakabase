@@ -14,7 +14,7 @@
   "notices.topic.readOnly": "This window cannot mark notices read. Open this list on the device they belong to.",
   "notices.item.multiDevice.title": "Multi-device: Bakabase across your devices",
   "notices.item.multiDevice.body": "Every computer running the desktop app is now a Bakabase server of its own, and the devices on your network can reach one another.",
-  "notices.item.multiDevice.point.library": "Multi-device library searches this computer and the devices that share with it, and lists everything in one place.",
+  "notices.item.multiDevice.point.library": "Resources from added devices appear in the same resource list. Synchronized resource metadata supports local search and device filtering.",
   "notices.item.multiDevice.point.switch": "Switch this window to a NAS or another computer you manage, and control it as if you were sitting in front of it.",
   "notices.item.multiDevice.action": "Open the Multi-device guide"
 }

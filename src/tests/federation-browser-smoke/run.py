@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run isolated federated browser, first-launch, server-switching and data sync flows.
+"""Run isolated management, first-launch, server-switching and data sync flows.
 
 Requires the built web app and this directory's pinned Playwright/Chromium installation.
 Every listener (and the relays the unified host starts), database and credential is
@@ -122,7 +122,7 @@ def host_environment(role, port, fixture, web_root, lan_port=None):
         # relay, and this device's own answers to the managed server's page.
         env["BAKABASE_FEDERATION_TEST_REQUEST_LOG"] = str(fixture / (role + "-requests.jsonl"))
     env["BAKABASE_FEDERATION_TEST_SERVER_NAME"] = "fixture-" + role
-    # The same name as a node — what library sharing and data sync call it — as a headless
+    # The same name as a node — what management and data sync call it — as a headless
     # server names itself.
     env["BAKABASE_NODE_NAME"] = "fixture-" + role
     if lan_port is not None:
@@ -246,7 +246,7 @@ def main():
             if code:
                 raise AssertionError(f"Browser checks failed (exit {code}); inspect {results / 'browser.log'}")
         passed = True
-        print(f"PASS: federated browser, first-launch, server-switching and data sync flows. Results: {results}")
+        print(f"PASS: management, first-launch, server-switching and data sync flows. Results: {results}")
         return 0
     except Exception as error:
         (results / "result.json").write_text(json.dumps({"passed": False, "status": "failed", "reason": str(error)}, indent=2))

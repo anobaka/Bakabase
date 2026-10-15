@@ -20,9 +20,7 @@ namespace Bakabase.Service.Components.Federation;
 
 /// <summary>
 /// Definitions access (<c>datasync.read</c>) for the data sync runtime, over the federation peer service and pairing
-/// client (§7.1, §7.2). It only ever touches definitions access: library grants stay on the loopback
-/// <c>/federation/local</c> API and the CLI, so nothing that reaches data sync can create or change them
-/// (<c>DataSyncGrantBoundaryTests</c>).
+/// client (§7.1, §7.2). It only touches definitions access; administrator management uses a different credential.
 /// </summary>
 /// <remarks>
 /// Expected failures on this device are thrown as <see cref="DataSyncProblemException"/>, what a peer answered as
@@ -38,7 +36,7 @@ public sealed class FederationDataSyncGrants(FederationPeerService peers, NodePa
     /// <summary>
     /// The switch, and with <paramref name="enablePairedRemoteAccess"/> remote access with pairing required — but only
     /// from Disabled (§7.1.3, N3). A mode the user opened further (Enabled, or a Docker install's Unrestricted) is
-    /// never touched, unlike the library wizard's request, which writes Enabled whatever the mode was (F68).
+    /// never touched.
     /// </summary>
     public async Task SetSharingEnabledAsync(bool enabled, bool enablePairedRemoteAccess, CancellationToken ct)
     {
@@ -239,7 +237,7 @@ public sealed class FederationDataSyncGrants(FederationPeerService peers, NodePa
     public Task ForgetOutboundAsync(string peerNodeId, CancellationToken ct) =>
         peers.ForgetOutboundDataSyncAsync(peerNodeId, ct);
 
-    /// <summary>As the library's sharing wizard writes it, keeping the install's legacy identity and settings.</summary>
+    /// <summary>Enable paired remote access while preserving the install's identity and unrelated settings.</summary>
     private async Task EnablePairedRemoteAccessAsync(CancellationToken ct)
     {
         // Capture the existing settings before initializing either identity: the legacy file watcher can briefly
@@ -269,7 +267,7 @@ public sealed class FederationDataSyncGrants(FederationPeerService peers, NodePa
                 "Remote access is off on this device, so no other device can reach it. Turn it on with pairing required.");
     }
 
-    /// <summary>The same complete endpoints the library shows next to its code.</summary>
+    /// <summary>The same reachable endpoints shown in device management.</summary>
     private IReadOnlyList<string> ReachableAddresses() => remoteAccess.GetReachableAddresses().Select(a => a.Url)
         .Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
 

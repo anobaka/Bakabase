@@ -559,6 +559,21 @@ public class RemoteConsolePairingTests
     }
 
     [TestMethod]
+    public async Task Stale_mapping_draft_cannot_replace_another_saved_edit()
+    {
+        var desk = await Server("server-draft");
+        await _console.AddManagedAsync(desk);
+        var first = new ManagedServerPathMapping("/Volumes/nas", @"Z:\Media");
+        Assert.IsTrue(await _console.Manager.SetPathMappingsAsync(desk.ServerId, [first], expectedMappings: []));
+        await Assert.ThrowsExactlyAsync<ManagedPathMappingsChangedException>(() =>
+            _console.Manager.SetPathMappingsAsync(desk.ServerId, [], expectedMappings: []));
+        var view = (await _console.Manager.GetAsync(false)).Servers.Single();
+        Assert.AreEqual(first, view.PathMappings.Single());
+        Assert.IsTrue(await _console.Manager.SetPathMappingsAsync(desk.ServerId, [], expectedMappings: [first]));
+        Assert.AreEqual(0, (await _console.Manager.GetAsync(false)).Servers.Single().PathMappings.Count);
+    }
+
+    [TestMethod]
     public async Task The_switcher_lists_this_device_first()
     {
         var desk = await Server("server-desk", "Desk");

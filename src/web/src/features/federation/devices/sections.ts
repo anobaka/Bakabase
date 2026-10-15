@@ -7,16 +7,14 @@ import {
   AiOutlineCloudServer,
   AiOutlineLaptop,
   AiOutlineSetting,
-  AiOutlineShareAlt,
   AiOutlineSync,
 } from "react-icons/ai";
 
 import AdvancedTab from "./AdvancedTab";
 import ManageTab from "./ManageTab";
-import SharingTab from "./SharingTab";
 import SyncTab from "./SyncTab";
 import ThisDeviceTab from "./ThisDeviceTab";
-import { dataSyncWaiting, loaded, troubledServers, waitingSharingRequests } from "./selectors";
+import { dataSyncWaiting, loaded, troubledServers } from "./selectors";
 
 import { RemoteAccessMode } from "@/sdk/constants";
 
@@ -63,11 +61,7 @@ export const devicesAnchors: Record<
     elementId: "management-access",
     ready: (data) => loaded(data, "servers") && loaded(data, "access"),
   },
-  browsing: { elementId: "library-browsing", ready: (data) => loaded(data, "sharing") },
-  connect: { elementId: "library-connect", ready: (data) => loaded(data, "sharing") },
-  share: { elementId: "library-share", ready: (data) => loaded(data, "sharing") },
-  "sharing-requests": { elementId: "sharing-requests", ready: (data) => loaded(data, "sharing") },
-  identity: { elementId: "federation-identity", ready: (data) => loaded(data, "sharing") },
+  identity: { elementId: "federation-identity", ready: (data) => loaded(data, "identity") },
 };
 
 export const devicesTabs: DevicesTab[] = [
@@ -98,25 +92,6 @@ export const devicesTabs: DevicesTab[] = [
       descKey: "federation.devices.chooser.manage.desc",
       section: "add-server",
       hidden: (data) => data.servers?.available === false,
-    },
-  },
-  {
-    id: "sharing",
-    labelKey: "federation.devices.tab.sharing",
-    icon: AiOutlineShareAlt,
-    anchors: ["browsing", "connect", "share", "sharing-requests"],
-    Panel: SharingTab,
-    badge: (data) => {
-      const count = waitingSharingRequests(data).length;
-
-      return count
-        ? { count, countKey: "federation.devices.nav.pendingShare", attention: false }
-        : undefined;
-    },
-    chooser: {
-      titleKey: "federation.devices.chooser.browse.title",
-      descKey: "federation.devices.chooser.browse.desc",
-      section: "connect",
     },
   },
   {

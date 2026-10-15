@@ -62,7 +62,6 @@ public sealed class ManagedDeviceNameTests
     {
         await using var host = await Host();
         var store = host.Services.GetRequiredService<FederationStateStore>();
-        await store.SetBrowsingEnabledAsync(true);
         await store.SetDisplayNameAsync("Original");
         var before = await store.GetIdentityAsync();
         var filename = Path.Combine(host.Root, "federation", FederationStateStore.FileName);

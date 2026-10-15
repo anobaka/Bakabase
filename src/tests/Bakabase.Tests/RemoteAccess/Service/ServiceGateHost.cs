@@ -234,10 +234,6 @@ internal sealed class ServiceGateHost : IAsyncDisposable
                     services.AddSingleton<IFederationDataDirectory>(new TempDirectory(Path.Combine(root, "federation")));
                     services.AddSingleton<INodeIdSource>(new FixedNodeId());
                     services.AddFederationPeers();
-                    services.AddSingleton(new FederationMediaSessions());
-                    services.AddSingleton(sp => new FederationBrowsingControl(
-                        sp.GetRequiredService<FederationStateStore>(), null!,
-                        sp.GetRequiredService<FederationMediaSessions>()));
 
                     services.AddRouting();
                     services.AddSignalR();

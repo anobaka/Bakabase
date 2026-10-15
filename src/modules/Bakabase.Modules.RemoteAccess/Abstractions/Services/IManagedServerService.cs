@@ -92,7 +92,7 @@ public interface IManagedServerService
     Task<int> ForgetAllLocallyAsync(CancellationToken ct = default);
 
     Task<bool> SetPathMappingsAsync(string serverId, IReadOnlyList<ManagedServerPathMapping> mappings,
-        CancellationToken ct = default);
+        CancellationToken ct = default, IReadOnlyList<ManagedServerPathMapping>? expectedMappings = null);
 
     /// <summary>
     /// Starts the server's relay if needed and returns where the window should navigate.

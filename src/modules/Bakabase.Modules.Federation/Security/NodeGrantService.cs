@@ -6,7 +6,7 @@ namespace Bakabase.Modules.Federation.Security;
 
 /// <param name="Scope">What the grant lets the caller read (<see cref="FederationScopes"/>); never <see cref="FederationScopes.Any"/>.</param>
 public sealed record NodePrincipal(string GrantId, string SubjectNodeId, string AudienceNodeId,
-    string LibraryEpoch, long Revision, string Scope = FederationScopes.LibraryRead);
+    string LibraryEpoch, long Revision, string Scope = FederationScopes.DataSyncRead);
 
 public interface INodeGrantService
 {
@@ -18,16 +18,10 @@ public sealed class NodeGrantService(FederationStateStore store, INodeIdentityPr
     GrantLeaseRegistry leases, TimeProvider timeProvider, IServerSelfDescription? self = null,
     INodeInfoContributor? contributor = null) : INodeGrantService
 {
-    /// <summary>
-    /// For the library's export services only: a <c>datasync.read</c> grant is refused here too
-    /// (<c>ScopeNotGranted</c>), behind the gate that already keeps it off library routes.
-    /// </summary>
     public async Task<NodePrincipal> ValidateAsync(string grantId, string expectedLibraryEpoch,
         CancellationToken cancellationToken = default)
     {
         var (credentials, scope) = await GetCredentialsAsync(grantId, cancellationToken);
-        if (scope != FederationScopes.LibraryRead)
-            throw ScopeNotGranted();
         if (credentials.LibraryEpoch != expectedLibraryEpoch)
             throw new FederationAccessException("LibraryEpochChanged", 409, "The source library was replaced. Refresh its identity and pair again.");
         return new NodePrincipal(credentials.GrantId, credentials.SubjectNodeId, credentials.AudienceNodeId,
@@ -43,27 +37,14 @@ public sealed class NodeGrantService(FederationStateStore store, INodeIdentityPr
     {
         var local = await identity.GetAsync(ct);
         var state = await store.ReadAsync(ct);
-        StoredGrant? grant;
-        string scope;
-        if (state.InboundGrants.TryGetValue(grantId, out grant))
-        {
-            scope = FederationScopes.LibraryRead;
-            if (!state.SharingEnabled)
-                throw new FederationAccessException("SharingDisabled", 403, "Resource sharing is disabled on this node.");
-        }
-        else if (state.InboundDataSyncGrants.TryGetValue(grantId, out grant))
-        {
-            scope = FederationScopes.DataSyncRead;
-            if (!state.DataSyncSharingEnabled) throw DataSyncSharingDisabled();
-        }
-        else if (!state.SharingEnabled && !state.DataSyncSharingEnabled)
-            // Nothing is shared: say so, as before there were two kinds of grant.
-            throw new FederationAccessException("SharingDisabled", 403, "Resource sharing is disabled on this node.");
-        else throw GrantRevoked(FederationScopes.LibraryRead);
+        if (!state.DataSyncSharingEnabled) throw DataSyncSharingDisabled();
+        if (!state.InboundDataSyncGrants.TryGetValue(grantId, out var grant))
+            throw GrantRevoked();
+        const string scope = FederationScopes.DataSyncRead;
         if (grant.Revoked || grant.Credentials.AudienceNodeId != local.NodeId ||
             grant.Credentials.LibraryEpoch != local.LibraryEpoch ||
             leases.GetCancellationToken(grantId).IsCancellationRequested)
-            throw GrantRevoked(scope);
+            throw GrantRevoked();
         return (grant.Credentials, scope);
     }
 
@@ -88,8 +69,6 @@ public sealed class NodeGrantService(FederationStateStore store, INodeIdentityPr
     public static FederationAccessException DataSyncSharingDisabled() =>
         new("DataSyncSharingDisabled", 403, "Definitions sharing is disabled on this node.");
 
-    private static FederationAccessException GrantRevoked(string scope) => new("GrantRevoked", 401,
-        scope == FederationScopes.DataSyncRead
-            ? "This node no longer has permission to read the source's definitions."
-            : "This node no longer has permission to read the source library.");
+    private static FederationAccessException GrantRevoked() => new("GrantRevoked", 401,
+        "This node no longer has permission to read the source's definitions.");
 }

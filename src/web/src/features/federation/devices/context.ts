@@ -1,29 +1,11 @@
 import type { MutableRefObject, RefObject } from "react";
 import type { useDevicesData } from "../hooks/useDevicesData";
-import type { SharingCandidate } from "../types";
 import type { DevicesAnchor, DevicesTabId } from "../switching";
 import type { DevicesTab } from "./sections";
 
 import { createContext, useContext } from "react";
 
 export type DevicesData = ReturnType<typeof useDevicesData>;
-
-/** What the library sharing forms hold; kept by the page, so a tab switch loses nothing. */
-export interface SharingForm {
-  address: string;
-  setAddress: (value: string) => void;
-  code: string;
-  setCode: (value: string) => void;
-  shareBack: boolean;
-  setShareBack: (value: boolean) => void;
-  /** Unset until the user touches it: the default then follows the remote-access mode. */
-  configureRemote?: boolean;
-  setConfigureRemote: (value: boolean) => void;
-  invite?: { code: string; expiresAt: string };
-  setInvite: (value?: { code: string; expiresAt: string }) => void;
-  discovered?: SharingCandidate[];
-  setDiscovered: (value?: SharingCandidate[]) => void;
-}
 
 /**
  * The devices page as its tabs see it: the data read once for the whole page, and the
@@ -34,7 +16,7 @@ export interface DevicesPageContextValue {
   data: DevicesData;
   busy: boolean;
   /**
-   * Runs a user action. Library sharing's status is read again afterwards (and remote
+   * Runs a user action. Device identity status is read again afterwards (and remote
    * access, which turning sharing on can change); a failure goes to `onError`.
    */
   run: (operation: () => Promise<unknown>, onError?: (cause: Error) => void) => Promise<boolean>;
@@ -49,9 +31,6 @@ export interface DevicesPageContextValue {
   /** A clock that ticks every second, for expiries. */
   now: number;
   mounted: MutableRefObject<boolean>;
-  /** Outgoing requests whose claim failed lately, left alone for a while. */
-  claimBackoff: MutableRefObject<Map<string, number>>;
-  sharingForm: SharingForm;
   /** The tab shown and the place inside it a link asked for. */
   tab: DevicesTabId;
   anchor: DevicesAnchor | null;

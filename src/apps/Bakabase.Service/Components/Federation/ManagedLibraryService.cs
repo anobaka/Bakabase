@@ -110,7 +110,7 @@ public sealed class ManagedLibraryService(IManagedServerService managed, INodeId
             "This device's library was replaced. Refresh its resources before making changes.");
     }
 
-    private async Task<ManagedLibraryInfo> RemoteInfoAsync(string serverId, CancellationToken ct)
+    internal async Task<ManagedLibraryInfo> RemoteInfoAsync(string serverId, CancellationToken ct)
     {
         var response = await SendAsync(serverId, HttpMethod.Get, "/management/library/info", null, ct);
         if (response.StatusCode == 404) throw new FederationAccessException("ManagementUpdateRequired", 409,

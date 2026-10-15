@@ -12,28 +12,28 @@ import SyncWithDevice from "./SyncWithDevice";
  */
 
 /**
- * What library sharing's discovery answered for it: the map's `SharingCandidate` fits, and an
+ * What definitions discovery answered for it: the map's candidate fits, and an
  * install new enough for data sync also says whether it shares its definitions.
  */
 export interface DataSyncGhostCandidate {
   nodeId: string;
-  address: string;
+  address?: string;
   sharesDefinitions?: boolean | null;
 }
 
 export interface DataSyncGhostActionProps extends DataSyncMapHost {
-  node: { name: string; sources: { sharingCandidate?: DataSyncGhostCandidate } };
+  node: { name: string; sources: { dataSyncCandidate?: DataSyncGhostCandidate } };
 }
 
 export default function DataSyncGhostAction({ node, ...host }: DataSyncGhostActionProps) {
   const { t } = useTranslation();
   const { editor, createCode, invitation } = useMapEditor(host);
-  const candidate = node.sources.sharingCandidate;
+  const candidate = node.sources.dataSyncCandidate;
   const name = node.name;
 
   return (
     <div className="space-y-2" data-testid="data-sync-ghost">
-      {candidate?.sharesDefinitions ? (
+      {candidate?.sharesDefinitions && candidate.address ? (
         <SyncWithDevice
           editor={editor}
           name={name}

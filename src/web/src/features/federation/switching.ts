@@ -8,27 +8,18 @@ export const DEVICES_ROUTE = "/federation/devices";
 
 /**
  * The devices page's tabs, each one kind of trust — the same kinds the device map draws:
- * management, library sharing and data sync (whose tab only sums it up; `/data-sync` is its
+ * management and data sync (whose tab only sums it up; `/data-sync` is its
  * page).
  */
-export type DevicesTabId = "device" | "manage" | "sharing" | "sync" | "advanced";
+export type DevicesTabId = "device" | "manage" | "sync" | "advanced";
 
 /**
  * Places inside the tabs a link can land on; each one implies its tab. Named on the wire:
  * the Service links `management` (a "wants to manage this device" notification) and
- * `sharing-requests` (a "wants to browse" one), the window's switcher `servers`, the
+ * the window's switcher `servers`, the
  * configuration page `identity`. Never rename one.
  */
-export type DevicesAnchor =
-  | "addresses"
-  | "servers"
-  | "add-server"
-  | "management"
-  | "browsing"
-  | "connect"
-  | "share"
-  | "sharing-requests"
-  | "identity";
+export type DevicesAnchor = "addresses" | "servers" | "add-server" | "management" | "identity";
 
 /** What `?section=` may say: a tab, or a place inside one. */
 export type DevicesSection = DevicesTabId | DevicesAnchor;

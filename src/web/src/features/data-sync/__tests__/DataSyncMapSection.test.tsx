@@ -431,7 +431,7 @@ describe("data sync for a device found nearby", () => {
           node={{
             name: "Garage",
             sources: {
-              sharingCandidate: {
+              dataSyncCandidate: {
                 nodeId: "garage",
                 address: "http://192.168.1.70:34567",
                 sharesDefinitions,

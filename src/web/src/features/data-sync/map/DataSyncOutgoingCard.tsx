@@ -63,7 +63,7 @@ export default function DataSyncOutgoingCard({
                 onClick={() =>
                   void actions.run(
                     () => dataSyncApi.cancelRequest(requestId),
-                    ["dataSync", "sharing"],
+                    ["dataSync", "identity"],
                   )
                 }
               >
@@ -77,7 +77,7 @@ export default function DataSyncOutgoingCard({
                 disabled={actions.busy}
                 type="button"
                 onClick={() =>
-                  void actions.run(() => dataSyncApi.resetLink(linkId), ["dataSync", "sharing"])
+                  void actions.run(() => dataSyncApi.resetLink(linkId), ["dataSync", "identity"])
                 }
               >
                 {t("dataSync.link.dismiss")}

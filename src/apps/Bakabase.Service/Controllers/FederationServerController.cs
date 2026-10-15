@@ -20,7 +20,8 @@ public sealed record ManagedServerAddressRequest(string Address);
 /// <param name="Code">A pairing code shown on the other server; without one a request is filed for it to approve.</param>
 public sealed record ManagedServerPairRequest(string Address, string? Code = null);
 /// <param name="Mappings">The whole table, replacing the previous one. Null or absent clears it, as an empty list does.</param>
-public sealed record ManagedServerPathMappingsRequest(ManagedServerPathMapping[]? Mappings = null);
+public sealed record ManagedServerPathMappingsRequest(ManagedServerPathMapping[]? Mappings = null,
+    ManagedServerPathMapping[]? ExpectedMappings = null);
 /// <param name="Path">A path on the server's own UI to land on; its root when absent.</param>
 public sealed record ManagedServerOpenRequest(string? Path = null);
 
@@ -52,7 +53,7 @@ public sealed class FederationServerController : FederationControllerBase
 
     /// <summary>
     /// Servers on this network that could be managed from here, found by their remote-access
-    /// beacons — not by library sharing, which a server that can be managed usually has off.
+    /// beacons. Discovery does not establish trust or grant management access.
     /// </summary>
     [HttpGet("discover")]
     [SwaggerOperation(OperationId = "DiscoverManagedServers")]
@@ -88,9 +89,19 @@ public sealed class FederationServerController : FederationControllerBase
     [SwaggerOperation(OperationId = "SetManagedServerPathMappings")]
     [ProducesResponseType(typeof(FederationPeerChange), 200)]
     public async Task<IActionResult> PathMappings(string serverId,
-        [FromBody] ManagedServerPathMappingsRequest request, CancellationToken ct) =>
-        FederationResult(new FederationPeerChange(
-            await Required.SetPathMappingsAsync(serverId, request.Mappings ?? [], ct)));
+        [FromBody] ManagedServerPathMappingsRequest request, CancellationToken ct)
+    {
+        try
+        {
+            return FederationResult(new FederationPeerChange(
+                await Required.SetPathMappingsAsync(serverId, request.Mappings ?? [], ct, request.ExpectedMappings)));
+        }
+        catch (ManagedPathMappingsChangedException)
+        {
+            throw new FederationAccessException("PathMappingsChanged", 409,
+                "The saved path mappings changed. Reload them before saving this edit.");
+        }
+    }
 
     [HttpPost("{serverId}/open")]
     [SwaggerOperation(OperationId = "OpenManagedServer")]

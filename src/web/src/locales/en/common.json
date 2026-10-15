@@ -424,7 +424,6 @@
   "otherDevices.intro": "Manage a library on your computer, browse from your phone, or deploy to a NAS. Choose the version for your device and connect it to your other devices.",
   "otherDevices.unavailable": "Mobile downloads are unavailable right now. Try again later; desktop downloads and Docker deployment remain available.",
   "otherDevices.retry": "Try again",
-  "otherDevices.canShare": "Library sharing supported",
   "otherDevices.desktop.title": "All-in-one desktop app",
   "otherDevices.desktop.subtitle": "Manage, browse and share in one installation",
   "otherDevices.desktop.intro": "The complete Bakabase app: manage your local library, browse libraries shared by other devices, and manage Docker or other servers in the same window.",
@@ -437,7 +436,7 @@
   "otherDevices.mobile.title": "Mobile app",
   "otherDevices.mobile.subtitle": "Browse on your phone or tablet",
   "otherDevices.mobile.intro": "Connect to the desktop app or a Docker server with remote access enabled to browse and play its library on your phone or tablet.",
-  "otherDevices.mobile.noSharing": "Mobile apps cannot share a library with other devices yet. Use the desktop app or Docker server to share local media.",
+  "otherDevices.mobile.noSharing": "The mobile app connects to a server to use its resources; it does not act as a server managing other devices.",
   "otherDevices.mobile.androidQrHint": "Scan with your phone to download the APK (arm64-v8a fits most phones), then install it directly.",
   "otherDevices.mobile.iosSourceHint": "Scan or copy the SideStore source URL, add it in SideStore once, and every future update arrives automatically.",
   "otherDevices.mobile.sidestoreSource": "SideStore source",
@@ -477,5 +476,6 @@
   "filePath.dockerVolume": "Stored in a Docker volume.",
   "filePath.containerStorage": "Stored inside the container; no host folder is mapped.",
   "filePath.hostPathUnavailable": "Host path mapping is unavailable. Showing the container path.",
-  "filePath.copyFailed": "Could not copy. Select the path and copy it manually."
+  "filePath.copyFailed": "Could not copy. Select the path and copy it manually.",
+  "otherDevices.canManage": "Multi-device management supported"
 }

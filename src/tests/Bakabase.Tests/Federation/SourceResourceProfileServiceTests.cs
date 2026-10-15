@@ -31,7 +31,7 @@ public sealed class SourceResourceProfileServiceTests
         var peers = new FederationPeerService(state, new NodeIdentityProvider(state), new(), TimeProvider.System);
         var registry = new MetadataReplicaRegistry(directory);
         var manager = new FakeManagedServerService();
-        var service = new SourceResourceProfileService(null!, peers, null!, null!, new(), manager, registry);
+        var service = new SourceResourceProfileService(null!, manager, registry);
         var original = FakeManagedServerService.Server;
         var unverified = (await service.SourcesAsync(default)).Single();
         Assert.AreEqual(original.Name, unverified.Name);
@@ -79,7 +79,6 @@ public sealed class SourceResourceProfileServiceTests
         Assert.IsFalse(f.EvaluationBody!.Contains("exe"));
         Assert.IsFalse(f.EvaluationBody.Contains("private-argument"));
         Assert.AreEqual("epoch", f.ExpectedEpoch);
-        Assert.AreEqual(0, f.Sessions.Calls);
     }
 
     [TestMethod]
@@ -95,25 +94,11 @@ public sealed class SourceResourceProfileServiceTests
     }
 
     [TestMethod]
-    public async Task SharedSourceUsesOnlyLibraryReadProtocolAndNeverSendsLocalPlayerOptions()
-    {
-        var f = new Fixture(managed: false);
-        f.Profiles.Items.Add(Profile(4, "private-player.exe"));
-        var result = await f.Service.ResolveAsync("source", "epoch", 77);
-        Assert.AreEqual("private-player.exe", result.PlayerOptions!.Players!.Single().ExecutablePath);
-        CollectionAssert.AreEqual(new[] {"/federation/v1/export/resource-profile/identity?libraryEpoch=epoch",
-            "/federation/v1/export/resource-profile/evaluate?libraryEpoch=epoch"}, f.Transport.Paths.ToArray());
-        Assert.IsFalse(f.EvaluationBody!.Contains("player.exe"));
-        Assert.IsFalse(f.EvaluationBody.Contains("private-argument"));
-    }
-
-    [TestMethod]
     public async Task EmptyLocalProfileSetNeedsNoSourceNetwork()
     {
         var f = new Fixture(managed: false);
         var result = await f.Service.ResolveAsync("source", "epoch", 77);
         Assert.AreEqual(0, result.ProfileIds.Length);
-        Assert.AreEqual(0, f.Sessions.Calls);
     }
 
     [TestMethod]
@@ -141,16 +126,6 @@ public sealed class SourceResourceProfileServiceTests
         Assert.AreEqual("InvalidProfileSource", (await Assert.ThrowsExactlyAsync<FederationQueryException>(() =>
             f.Service.ResolveAsync("source", "epoch", 77))).Code);
         Assert.IsNull(f.EvaluationBody);
-    }
-
-    [TestMethod]
-    public async Task DefinitionOnlyGrantCannotReadLibrarySearchMetadata()
-    {
-        var f = new Fixture(managed: false);
-        f.Sessions.Scope = FederationScopes.DataSyncRead;
-        Assert.AreEqual("InvalidProfileSource", (await Assert.ThrowsExactlyAsync<FederationQueryException>(() =>
-            f.Service.InfoAsync("source", "epoch", default))).Code);
-        Assert.AreEqual(0, f.Transport.Paths.Count);
     }
 
     [TestMethod]
@@ -195,8 +170,6 @@ public sealed class SourceResourceProfileServiceTests
     private sealed class Fixture
     {
         public readonly ProfileProxy Profiles;
-        public readonly Sessions Sessions = new();
-        public readonly Transport Transport;
         public readonly SourceResourceProfileService Service;
         public ResourceProfileSourceInfo Info = new("source", "Source", "epoch");
         public ResourceProfileEvaluationResult Matches = new() {Matches = [new() {ResourceId = 77, ProfileIds = [4]}]};
@@ -208,7 +181,6 @@ public sealed class SourceResourceProfileServiceTests
         {
             var profileService = DispatchProxy.Create<IResourceProfileService, ProfileProxy>();
             Profiles = (ProfileProxy) profileService;
-            Transport = new(this);
             IManagedServerService? manager = null;
             if (managed)
             {
@@ -219,7 +191,7 @@ public sealed class SourceResourceProfileServiceTests
                     return Read(operation, json);
                 };
             }
-            Service = new(profileService, null!, Sessions, Transport, new GrantLeaseRegistry(), manager);
+            Service = new(profileService, manager);
         }
 
         public string Read(string operation, string? json)
@@ -257,33 +229,4 @@ public sealed class SourceResourceProfileServiceTests
         };
     }
 
-    private sealed class Sessions : IPeerSessionFactory
-    {
-        public int Calls;
-        public string Scope = FederationScopes.LibraryRead;
-        public Task<PeerSessionSnapshot> GetAsync(string nodeId, CancellationToken cancellationToken = default)
-        {
-            Calls++;
-            return Task.FromResult(new PeerSessionSnapshot(nodeId, "http://source.invalid",
-                new("grant", "viewer", nodeId, "epoch", "secret", 1), TimeSpan.Zero,
-                new(nodeId, "epoch", "Source", 1, DateTimeOffset.UtcNow), DateTimeOffset.UtcNow, Scope));
-        }
-    }
-
-    private sealed class Transport(Fixture owner) : INodeTransport
-    {
-        public readonly List<string> Paths = [];
-        public Task<HttpResponseMessage> SendAsync(string nodeId, HttpMethod method, string relativePath,
-            object? body = null, CancellationToken cancellationToken = default) =>
-            throw new NotSupportedException();
-        public Task<HttpResponseMessage> SendAsync(PeerSessionSnapshot peer, HttpMethod method, string relativePath,
-            object? body = null, CancellationToken cancellationToken = default,
-            IReadOnlyDictionary<string, string>? headers = null)
-        {
-            Paths.Add(relativePath);
-            var operation = relativePath.Split('/').Last().Split('?')[0];
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
-                {Content = new StringContent(owner.Read(operation, body?.ToString()))});
-        }
-    }
 }

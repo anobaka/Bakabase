@@ -27,11 +27,10 @@ public sealed class NodeTransport(FederationStateStore store, IPeerSessionFactor
         string relativePath, object? body = null, CancellationToken cancellationToken = default,
         IReadOnlyDictionary<string, string>? headers = null)
     {
-        // A query pins its target, but cannot keep using a credential the user removed
-        // after opening that query. Never replace its target with a newer active peer.
+        // A request pins its target, but cannot keep a credential removed in the meantime.
         var state = await store.ReadAsync(cancellationToken);
         if (!IsCurrent(state, session, out var current))
-            throw new FederationAccessException("NodeSessionChanged", 409, "The node connection changed. Start a new query or playback session.");
+            throw new FederationAccessException("NodeSessionChanged", 409, "The node connection changed. Start a new definitions request.");
         using var request = FederationHttpClient.CreateRequest(session.BaseAddress, method, relativePath, body);
         if (!request.RequestUri!.AbsolutePath.StartsWith("/federation/v1/export/", StringComparison.Ordinal))
             throw new FederationAccessException("InvalidNodeRoute", 403, "Node credentials only authorize explicit export routes.");
@@ -62,19 +61,13 @@ public sealed class NodeTransport(FederationStateStore store, IPeerSessionFactor
         catch { linked.Dispose(); throw; }
     }
 
-    /// <summary>
-    /// Whether the session's grant and address are still the ones stored for its scope. A library session also
-    /// needs the peer's browsing switch; a datasync session does not, and goes where data sync reaches the peer.
-    /// </summary>
+    /// <summary>The grant and direct address must still match the saved definitions connection.</summary>
     private static bool IsCurrent(FederationState state, PeerSessionSnapshot session, out NodeCredentials current)
     {
         current = null!;
         if (!state.Peers.TryGetValue(session.NodeId, out var peer)) return false;
-        if (session.Scope == FederationScopes.DataSyncRead)
-            return state.OutboundDataSyncGrants.TryGetValue(session.NodeId, out current!) &&
-                   current == session.Credentials && (peer.DataSyncAddress ?? peer.Address) == session.BaseAddress;
-        return session.Scope == FederationScopes.LibraryRead && peer.Enabled &&
-               state.OutboundGrants.TryGetValue(session.NodeId, out current!) && current == session.Credentials &&
-               peer.Address == session.BaseAddress;
+        return session.Scope == FederationScopes.DataSyncRead &&
+               state.OutboundDataSyncGrants.TryGetValue(session.NodeId, out current!) &&
+               current == session.Credentials && (peer.DataSyncAddress ?? peer.Address) == session.BaseAddress;
     }
 }

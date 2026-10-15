@@ -1,14 +1,12 @@
 import type { FederationStatus, ManagedServersView } from "../types";
 import type * as DataSyncApi from "@/features/data-sync/api";
 
-import { useState } from "react";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, useNavigate } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import DevicesPage from "../DevicesPage";
 import { managedServerApi } from "../serverApi";
-import { federationPeerApi } from "../peerApi";
 import { useFederationStatus } from "../hooks/useFederationStatus";
 import { REVEAL_HIGHLIGHT_MS } from "../hooks/useSectionReveal";
 
@@ -56,7 +54,7 @@ vi.mock("@/components/ContextProvider/BakabaseContextProvider", () => ({
 }));
 vi.mock("@/components/FileSystemSelector", () => ({ FileSystemSelectorModal: () => null }));
 vi.mock("../peerApi", () => ({
-  federationPeerApi: { status: vi.fn(), claim: vi.fn(), mappingRoots: vi.fn(), sharing: vi.fn() },
+  federationPeerApi: { status: vi.fn(), setName: vi.fn(), resetIdentity: vi.fn() },
 }));
 vi.mock("../serverApi", () => ({ managedServerApi: { list: vi.fn() } }));
 vi.mock("@/core/clientApi", () => ({
@@ -82,12 +80,9 @@ const setStore = (state: Partial<ReturnType<typeof useRemoteAccessStore.getState
 
 const status: FederationStatus = {
   identity: { nodeId: "local", libraryEpoch: "epoch", name: "Desk" },
-  browsingEnabled: true,
-  sharingEnabled: false,
   remoteAccessMode: 0,
   requirePairing: false,
-  peers: [],
-  requests: [],
+  reachableAddresses: [],
 };
 const emptyServers: ManagedServersView = { available: true, servers: [], requests: [] };
 
@@ -284,8 +279,6 @@ describe("landing on a section of this device's own devices page", () => {
   });
 
   it.each([
-    ["connect", "library-connect", "federation.devices.add"],
-    ["browsing", "library-browsing", "federation.browsing.title"],
     [
       "addresses",
       "device-addresses",
@@ -297,16 +290,6 @@ describe("landing on a section of this device's own devices page", () => {
 
     await waitFor(() => expect(place).toHaveFocus());
     expect(place).toHaveAccessibleName(name);
-  });
-
-  it("falls back to the tab's heading when the place a link names is not there", async () => {
-    // The browse request the notification announced was decided elsewhere meanwhile.
-    renderPage("/federation/devices?section=sharing-requests");
-    const heading = screen.getByRole("heading", { level: 2 });
-
-    expect(heading).toHaveTextContent("federation.devices.tab.sharing");
-    await waitFor(() => expect(heading).toHaveFocus());
-    expect(scrollIntoView).not.toHaveBeenCalledWith({ block: "start" });
   });
 });
 
@@ -321,62 +304,23 @@ describe("the devices page's nav", () => {
     expect(links.map((link) => link.getAttribute("data-tab"))).toEqual([
       "device",
       "manage",
-      "sharing",
       "sync",
       "advanced",
     ]);
     expect(links.map((link) => link.getAttribute("href"))).toEqual([
       "/federation/devices?section=device",
       "/federation/devices?section=manage",
-      "/federation/devices?section=sharing",
       "/federation/devices?section=sync",
       "/federation/devices?section=advanced",
     ]);
     expect(navLink("device")).toHaveAttribute("aria-current", "page");
-    fireEvent.click(navLink("sharing"));
-    expect(navLink("sharing")).toHaveAttribute("aria-current", "page");
+    fireEvent.click(navLink("sync"));
+    expect(navLink("sync")).toHaveAttribute("aria-current", "page");
     expect(navLink("device")).not.toHaveAttribute("aria-current");
     const heading = screen.getByRole("heading", { level: 2 });
 
-    expect(heading).toHaveTextContent("federation.devices.tab.sharing");
+    expect(heading).toHaveTextContent("federation.devices.tab.sync");
     await waitFor(() => expect(heading).toHaveFocus());
-  });
-
-  it("counts the requests waiting in a tab, in words as well as the number", async () => {
-    vi.mocked(useFederationStatus).mockReturnValue({
-      status: {
-        ...status,
-        requests: [
-          {
-            requestId: "browse-1",
-            nodeId: "laptop",
-            nodeName: "Laptop",
-            direction: "incoming",
-            status: "awaitingApproval",
-            expiresAt: new Date(Date.now() + 60_000).toISOString(),
-            replacesExistingAccess: false,
-            offersReciprocalAccess: false,
-          },
-        ],
-      },
-      loading: false,
-      error: undefined,
-      refresh: vi.fn().mockResolvedValue(undefined),
-    });
-    renderPage("/federation/devices");
-    await waitFor(() =>
-      expect(navLink("manage")).toHaveTextContent("federation.devices.nav.pendingManage 1"),
-    );
-    expect(navLink("sharing")).toHaveTextContent("federation.devices.nav.pendingShare 1");
-    // The number itself is hidden from screen readers, which hear the words instead.
-    expect(navLink("sharing").querySelector('[aria-hidden="true"]:not(svg)')).toHaveTextContent(
-      "1",
-    );
-    expect(navLink("device")).not.toHaveTextContent("pending");
-    // The device tab lists the same requests: the badge is never the only way to learn it.
-    expect(screen.getByTestId("devices-waiting")).toHaveTextContent(
-      "federation.devices.waiting.browse Laptop",
-    );
   });
 
   it("flags a tab that needs a look", async () => {
@@ -436,14 +380,15 @@ describe("the devices page's nav", () => {
       requests: [],
     });
     renderPage("/federation/devices");
-    const chooser = await screen.findByTestId("devices-chooser");
+    await waitFor(() => expect(screen.queryByTestId("devices-chooser")).toBeNull());
+    const chooser = screen.getByTestId("devices-nav");
 
     await waitFor(() =>
       expect(
         within(chooser)
           .getAllByRole("link")
           .map((link) => link.getAttribute("href")),
-      ).toEqual(["/federation/devices?section=connect"]),
+      ).not.toContain("/federation/devices?section=add-server"),
     );
     fireEvent.click(navLink("manage"));
     expect(await screen.findByTestId("management-access")).toBeInTheDocument();
@@ -452,37 +397,6 @@ describe("the devices page's nav", () => {
 });
 
 describe("the devices page where the rest of it is not available", () => {
-  it("shows library sharing for an authorized headless browser without desktop management", async () => {
-    setStore({
-      initialized: true,
-      isLocal: false,
-      clientMode: ClientMode.RemoteBrowser,
-      mode: RemoteAccessMode.Unrestricted,
-      federationAvailable: true,
-    });
-    vi.mocked(managedServerApi.list).mockResolvedValue({
-      available: false,
-      servers: [],
-      requests: [],
-    });
-    renderPage("/federation/devices?section=sharing");
-    expect(screen.queryByText("federation.localOnly")).not.toBeInTheDocument();
-    expect(
-      screen.getByRole("navigation", { name: "federation.devices.nav.label" }),
-    ).toBeInTheDocument();
-    expect(useFederationStatus).toHaveBeenCalled();
-    fireEvent.click(
-      within(screen.getByRole("navigation", { name: "federation.devices.nav.label" })).getByRole(
-        "link",
-        { name: "federation.devices.tab.manage" },
-      ),
-    );
-    expect(await screen.findByTestId("management-access")).toBeInTheDocument();
-    await waitFor(() =>
-      expect(screen.queryByText("federation.servers.title")).not.toBeInTheDocument(),
-    );
-  });
-
   it("in the desktop app showing a managed server: answers for that server, and offers the way back", async () => {
     setStore({
       initialized: true,
@@ -557,58 +471,6 @@ describe("the devices page where the rest of it is not available", () => {
  * the next poll.
  */
 describe("the management section keeps up with the page around it", () => {
-  it("reads its settings again when the sharing panel turns remote access on", async () => {
-    // The page's status as the server would report it; `refresh` reads it again.
-    let reported = status;
-
-    vi.mocked(useFederationStatus).mockImplementation(() => {
-      const [shown, setShown] = useState(reported);
-
-      return {
-        status: shown,
-        loading: false,
-        error: undefined,
-        refresh: async () => setShown(reported),
-      };
-    });
-    vi.mocked(BApi.remoteAccess.getRemoteAccessSettings).mockResolvedValue(
-      settingsResponse(RemoteAccessMode.Disabled, []) as never,
-    );
-    // Starting sharing with remote access off also opens it: Enabled, pairing required.
-    vi.mocked(federationPeerApi.sharing).mockImplementation(async () => {
-      reported = {
-        ...status,
-        sharingEnabled: true,
-        remoteAccessMode: RemoteAccessMode.Enabled,
-        requirePairing: true,
-      };
-      vi.mocked(BApi.remoteAccess.getRemoteAccessSettings).mockResolvedValue(
-        settingsResponse() as never,
-      );
-
-      return {};
-    });
-    renderPage("/federation/devices?section=sharing");
-    await waitFor(() => expect(settingsReads()).toBeGreaterThan(0));
-    const before = settingsReads();
-
-    fireEvent.click(screen.getByRole("button", { name: "federation.sharing.start" }));
-    fireEvent.click(within(screen.getByRole("alertdialog")).getByText("federation.confirm"));
-    await waitFor(() => expect(federationPeerApi.sharing).toHaveBeenCalledWith(true, true));
-    await waitFor(() => expect(settingsReads()).toBeGreaterThan(before));
-    // Over in Management the new mode already shows — far short of the settings' idle poll.
-    fireEvent.click(
-      screen
-        .getByRole("navigation", { name: "federation.devices.nav.label" })
-        .querySelector<HTMLAnchorElement>('a[data-tab="manage"]')!,
-    );
-    expect(
-      await within(accessSection()).findByText("federation.management.status.paired"),
-    ).toBeInTheDocument();
-    expect(within(accessSection()).getByText("Laptop")).toBeInTheDocument();
-    expect(settingsReads()).toBeGreaterThan(before);
-  });
-
   it("reads them again when the notification leads here while the page is open", async () => {
     vi.mocked(BApi.remoteAccess.getRemoteAccessSettings).mockResolvedValue(
       settingsResponse(RemoteAccessMode.Enabled, []) as never,
@@ -704,92 +566,5 @@ describe("the devices page's forms", () => {
     await waitFor(() => expect(field).toHaveFocus());
     await act(async () => new Promise((done) => setTimeout(done, 10)));
     expect(field).toHaveFocus();
-  });
-
-  it("does the same on Library sharing", async () => {
-    vi.mocked(useFederationStatus).mockReturnValue({
-      status: {
-        ...status,
-        peers: [
-          {
-            nodeId: "nas",
-            label: "NAS",
-            address: "http://192.168.1.5:34567",
-            enabled: true,
-            connectionState: "Online",
-            outboundGrant: { grantId: "grant", revision: 1 },
-            pathMappings: [],
-          },
-        ],
-      },
-      loading: false,
-      error: undefined,
-      refresh: vi.fn().mockResolvedValue(undefined),
-    });
-    vi.mocked(federationPeerApi.mappingRoots).mockResolvedValue([]);
-    renderPage("/federation/devices?section=sharing");
-    const toggle = await screen.findByRole("button", { name: "federation.devices.add" });
-
-    expect(toggle).toHaveAttribute("aria-expanded", "false");
-    toggle.focus();
-    fireEvent.click(toggle);
-    const field = screen.getByLabelText("federation.pair.address");
-
-    await waitFor(() => expect(field).toHaveFocus());
-    await act(async () => new Promise((done) => setTimeout(done, 10)));
-    expect(field).toHaveFocus();
-  });
-
-  describe("the address beside a share code", () => {
-    const sharing = () =>
-      vi.mocked(useFederationStatus).mockReturnValue({
-        status: { ...status, sharingEnabled: true, remoteAccessMode: RemoteAccessMode.Enabled },
-        loading: false,
-        error: undefined,
-        refresh: vi.fn().mockResolvedValue(undefined),
-      });
-
-    it("says it is loading while remote access's settings are on their way, never that none was found", async () => {
-      const settings = deferred<unknown>();
-
-      sharing();
-      vi.mocked(BApi.remoteAccess.getRemoteAccessSettings).mockReturnValue(
-        settings.promise as never,
-      );
-      renderPage("/federation/devices?section=share");
-      const list = await screen.findByTestId("device-addresses");
-
-      expect(list).toHaveTextContent("federation.loading");
-      expect(list).not.toHaveTextContent("federation.devices.addresses.none");
-      const answer = settingsResponse(RemoteAccessMode.Enabled, []);
-
-      await act(async () =>
-        settings.resolve({
-          ...answer,
-          data: {
-            ...answer.data,
-            addresses: [{ url: "http://192.168.1.2:34567", interfaceName: "en0" }],
-          },
-        }),
-      );
-      expect(await within(list).findByText("http://192.168.1.2:34567")).toBeInTheDocument();
-    });
-
-    it("says why the settings could not be read, with a way to try again", async () => {
-      sharing();
-      vi.mocked(BApi.remoteAccess.getRemoteAccessSettings).mockRejectedValue(new Error("down"));
-      renderPage("/federation/devices?section=share");
-      const list = await screen.findByTestId("device-addresses");
-
-      await waitFor(() => expect(within(list).getByRole("alert")).toBeInTheDocument());
-      expect(list).not.toHaveTextContent("federation.devices.addresses.none");
-      vi.mocked(BApi.remoteAccess.getRemoteAccessSettings).mockResolvedValue(
-        settingsResponse() as never,
-      );
-      const before = settingsReads();
-
-      fireEvent.click(within(list).getByRole("button", { name: "federation.retry" }));
-      await waitFor(() => expect(settingsReads()).toBe(before + 1));
-    });
   });
 });

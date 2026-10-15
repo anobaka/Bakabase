@@ -1,261 +1,147 @@
-// Production mapping UI and real HTTP CAS; directories belong only to disposable TestHosts.
+// Production management mapping UI, durable browser drafts and real HTTP compare-and-swap.
+// Uses only the disposable pair left by switching.cjs; preserves that pair's baseline mappings.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const { confine, assertStayedLocal } = require('./network.cjs');
 
-module.exports = async function mappingSmoke({ context, devices, config, peer, uiBase, status, artifacts }) {
-  const locales = ['en', 'cn'].map(lang => JSON.parse(fs.readFileSync(
-    path.join(config.repo, `src/web/src/locales/${lang}/pages/federation.json`), 'utf8')));
+module.exports = async function mappingSmoke({ browser, config, artifacts }) {
+  const { unified: a, source: b } = config.hosts;
+  const home = a.window;
+  const locales = ['en', 'cn'].map(lang => Object.assign({},
+    ...['federation', 'managedMappings'].map(page => JSON.parse(fs.readFileSync(
+      path.join(config.repo, `src/web/src/locales/${lang}/pages/${page}.json`), 'utf8')))));
   const escape = text => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const name = (key, values = {}) => new RegExp(`^(?:${locales.map(locale => escape(
-    locale[key].replace(/{{\s*(\w+)\s*}}/g, (_, field) => String(values[field])))).join('|')})$`);
-  const endpoint = `/federation/local/peers/${encodeURIComponent(peer.nodeId)}/path-mappings`;
-  const treePath = `/federation/local/peers/${encodeURIComponent(peer.nodeId)}/mapping-tree`;
-  const draftPrefix = 'bakabase:federation:mapping-draft:v1:';
-  const draftSuffix = `:${encodeURIComponent(peer.nodeId)}`;
-  const requests = [];
-  const nativeActions = [];
-  const observe = request => {
-    const url = new URL(request.url());
-    if (url.pathname.endsWith('/mapping-tree')) requests.push({
-      pathname: url.pathname, parent: url.searchParams.get('parent'),
-      cursor: url.searchParams.get('cursor'), limit: url.searchParams.get('limit'),
-    });
-    if (request.method() === 'POST' && /\/federation\/local\/(playback-sessions|open-directory)$/.test(url.pathname))
-      nativeActions.push(url.pathname);
+  const name = (key, values = {}) => new RegExp(`^(?:${locales.map(locale => {
+    assert.ok(locale[key], `Missing locale key ${key}`);
+    return escape(locale[key].replace(/{{\s*(\w+)\s*}}/g, (_, field) => String(values[field])));
+  }).join('|')})$`);
+  const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, locale: 'en-US' });
+  const origins = new Set([a, b].flatMap(host => [host.base, host.base.replace('127.0.0.1', 'localhost')]));
+  const blocked = await confine(context, url => origins.has(url.origin));
+  const call = async (base, endpoint, method = 'GET', data) => {
+    const response = await context.request.fetch(base + endpoint, { method, data });
+    assert.ok(response.ok(), `${method} ${endpoint}: HTTP ${response.status()}`);
+    return response.json();
   };
-  context.on('request', observe);
-  const fixtureDirectory = fs.mkdtempSync(path.join(config.hosts.unified.directory, 'mapping-browser-'));
-  const [firstPath, proposedPath, competingPath] = ['first', 'proposed', 'competing'].map(folder => {
+  const sourceId = (await call(b.base, '/remote-access/server-info')).data.id;
+  const endpoint = `/federation/local/servers/${encodeURIComponent(sourceId)}/path-mappings`;
+  const treePath = `/federation/local/servers/${encodeURIComponent(sourceId)}/path-mapping-tree`;
+  const listing = async () => (await call(a.base, '/federation/local/servers')).servers;
+  const current = async () => {
+    const server = (await listing()).find(server => server.serverId === sourceId);
+    assert.ok(server, 'The source management pairing must remain available');
+    return server;
+  };
+  const before = await current();
+  const baseline = before.pathMappings;
+  const draftKey = `bakabase:management:mapping-draft:v1:${encodeURIComponent(new URL(home).href)}:${encodeURIComponent(sourceId)}`;
+  const fixtureDirectory = fs.mkdtempSync(path.join(a.directory, 'management-mapping-browser-'));
+  const [selectedPath, competingPath] = ['selected', 'competing'].map(folder => {
     const directory = path.join(fixtureDirectory, folder);
     fs.mkdirSync(directory);
     return directory;
   });
-  const card = devices.getByTestId('sharing-outbound').getByRole('group', { name: peer.label, exact: true });
+  const devices = await context.newPage();
+  const errors = [];
+  devices.on('pageerror', error => errors.push(error.message));
+  const requests = [];
+  devices.on('request', request => {
+    if (new URL(request.url()).pathname === treePath) requests.push(new URL(request.url()));
+  });
+  const card = devices.getByTestId('managed-server').filter({ hasText: before.name });
   const editor = card.locator('details').first();
-  const localInput = () => editor.getByRole('textbox', { name: name('federation.mappings.local'), exact: true });
-  const currentMappings = async () => {
-    const current = (await status()).peers.find(item => item.nodeId === peer.nodeId);
-    assert.ok(current?.outboundGrant, 'The isolated source grant went away during mapping checks');
-    return current.pathMappings;
-  };
-  const putMappings = async (mappings, expectedMappings) => {
-    const response = await context.request.put(config.hosts.unified.base + endpoint, {
-      data: { mappings, expectedMappings },
-    });
-    assert.equal(response.status(), 200, 'The isolated mapping write was refused');
-  };
-  const draftEntries = () => devices.evaluate(({ prefix, suffix }) => Object.keys(localStorage)
-    .filter(key => key.startsWith(prefix) && key.endsWith(suffix))
-    .map(key => ({ key, value: JSON.parse(localStorage.getItem(key)) })),
-  { prefix: draftPrefix, suffix: draftSuffix });
-  const waitForDraft = async mappings => {
-    await devices.waitForFunction(({ prefix, suffix, expected }) => Object.keys(localStorage)
-      .some(key => key.startsWith(prefix) && key.endsWith(suffix) &&
-        JSON.stringify(JSON.parse(localStorage.getItem(key))?.mappings) === JSON.stringify(expected)),
-    { prefix: draftPrefix, suffix: draftSuffix, expected: mappings });
-    const entries = await draftEntries();
-    assert.equal(entries.length, 1, 'More than one current-peer mapping draft was saved');
-    assert.equal(entries[0].key, `${draftPrefix}${encodeURIComponent(new URL(uiBase).href)}${draftSuffix}`);
-    assert.deepEqual(Object.keys(entries[0].value).sort(), ['grantId', 'grantRevision', 'mappings', 'version']);
-    assert.deepEqual(entries[0].value, {
-      version: 1, mappings, grantId: peer.outboundGrant.grantId,
-      grantRevision: peer.outboundGrant.revision,
-    }, 'Drafts must contain mapping edits and grant metadata only');
-  };
-  const waitForNoDraft = () => devices.waitForFunction(({ prefix, suffix }) => !Object.keys(localStorage)
-    .some(key => key.startsWith(prefix) && key.endsWith(suffix)),
-  { prefix: draftPrefix, suffix: draftSuffix });
-  const openEditor = async () => {
+  const open = async () => {
     await card.waitFor();
     if (!(await editor.evaluate(element => element.open))) await editor.locator('summary').first().click();
   };
-  const reloadEditor = async () => {
-    await devices.reload();
-    await openEditor();
+  const reload = async () => { await devices.reload(); await open(); };
+  const localInput = () => editor.getByRole('textbox', { name: name('federation.servers.mappings.local'), exact: true }).last();
+  const waitForDraft = async mappings => {
+    await devices.waitForFunction(({ key, expected }) => {
+      const raw = localStorage.getItem(key);
+      return raw && JSON.stringify(JSON.parse(raw).mappings) === JSON.stringify(expected);
+    }, { key: draftKey, expected: mappings });
+    const draft = await devices.evaluate(key => JSON.parse(localStorage.getItem(key)), draftKey);
+    assert.deepEqual(Object.keys(draft).sort(), ['baseMappings', 'mappings', 'pairedAt', 'version']);
+    assert.deepEqual(draft.baseMappings, baseline);
+    assert.equal(draft.pairedAt, before.pairedAt);
   };
-  const waitForWrite = (expectedStatus = 200) => devices.waitForResponse(response =>
-    new URL(response.url()).pathname === endpoint && response.request().method() === 'PUT' &&
-    response.status() === expectedStatus);
-  const saveWithoutConflict = async (mappings, expectedMappings) => {
-    const pending = waitForWrite();
-    await editor.getByRole('button', { name: name('federation.save'), exact: true }).click();
-    const response = await pending;
-    assert.deepEqual(response.request().postDataJSON(), { mappings, expectedMappings });
-    await waitForNoDraft();
-    assert.deepEqual(await currentMappings(), mappings);
-  };
-  const review = () => editor.getByRole('alertdialog', { name: name('federation.mappings.conflictTitle'), exact: true });
-  const saveReviewed = async (decision, mappings, expectedMappings) => {
-    const pending = waitForWrite();
-    await review().getByRole('button', { name: name(decision), exact: true }).click();
-    const response = await pending;
-    assert.deepEqual(response.request().postDataJSON(), { mappings, expectedMappings });
-    await review().waitFor({ state: 'hidden' });
-    await waitForNoDraft();
-    assert.deepEqual(await currentMappings(), mappings);
-  };
-  let releasePut;
-  let heldHandler;
-  let routeHandler;
+  const noDraft = () => devices.waitForFunction(key => localStorage.getItem(key) === null, draftKey);
+  const waitForWrite = () => devices.waitForResponse(response =>
+    new URL(response.url()).pathname === endpoint && response.request().method() === 'PUT');
   try {
-    assert.deepEqual(await currentMappings(), []);
-    await devices.goto(uiBase + '/#/federation/devices?section=browsing');
+    await devices.goto(home + '/#/federation/devices?section=servers');
     await card.waitFor();
-    assert.equal(await editor.evaluate(element => element.open), false);
-    assert.deepEqual(requests, [], 'Closed per-peer editors must not request a directory tree');
-    const rootResponse = devices.waitForResponse(response => {
-      const url = new URL(response.url());
-      return url.pathname === treePath && !url.searchParams.has('parent');
+    assert.equal(requests.length, 0, 'Collapsed mapping editors must not fetch a remote tree');
+    const pendingTree = devices.waitForResponse(response => new URL(response.url()).pathname === treePath);
+    await open();
+    const tree = await (await pendingTree).json();
+    assert.ok(tree.libraryEpoch);
+    assert.equal(tree.nodes.length, 1, 'Only the fixture resource with an owned path belongs in the tree');
+    assert.equal(tree.nodes[0].resourceCount, 1);
+    assert.ok(tree.nodes[0].serverPath);
+    assert.equal(tree.nodes[0].sourceRootId, undefined);
+    assert.ok(tree.nextCursor == null);
+    const chosen = tree.nodes[0];
+    const select = editor.getByRole('button', {
+      name: name('federation.managedMappings.tree.select', { name: chosen.serverPath }), exact: true,
     });
-    await openEditor();
-    const root = await rootResponse;
-    assert.equal(root.status(), 200);
-    const validatePage = page => {
-      assert.equal(page.nodes.length, 1, 'Only the single owned fixture resource has a path');
-      assert.ok(page.nodes.length <= 200);
-      assert.ok(!page.nextCursor, 'The tiny fixture unexpectedly required another page');
-      for (const node of page.nodes) {
-        assert.match(node.sourceRootId, /^g[0-9a-f]{64}$/);
-        assert.equal(node.resourceCount, 1, 'Metadata-only resources must not become mapping directories');
-        assert.ok(node.browseToken);
-        assert.ok(!path.isAbsolute(node.name) && !/^[a-z]:[\\/]/i.test(node.name), 'Tree labels exposed absolute paths');
-      }
-      return page.nodes[0];
-    };
-    let node = validatePage(await root.json());
-    let branch = [node.name];
-    let childReads = 0;
-    assert.equal(requests.length, 1, 'Opening one editor must read only its root page');
-    while (node.hasChildren) {
-      assert.ok(childReads < 16, 'The fixture tree failed to reach its resource directory');
-      const label = branch.join(' / ');
-      const childResponse = devices.waitForResponse(response => {
-        const url = new URL(response.url());
-        return url.pathname === treePath && url.searchParams.get('parent') === node.browseToken;
-      });
-      await editor.getByRole('button', { name: name('federation.mappings.tree.expand', { name: label }), exact: true }).click();
-      const child = await childResponse;
-      assert.equal(child.status(), 200);
-      const next = validatePage(await child.json());
-      await editor.getByRole('button', { name: name('federation.mappings.tree.select', { name: [...branch, next.name].join(' / ') }), exact: true }).waitFor();
-      const readCount = requests.length;
-      // Collapsing and opening a loaded branch reuses its page, without eagerly reading descendants.
-      await editor.getByRole('button', { name: name('federation.mappings.tree.collapse', { name: label }), exact: true }).click();
-      await editor.getByRole('button', { name: name('federation.mappings.tree.expand', { name: label }), exact: true }).click();
-      await editor.getByRole('button', { name: name('federation.mappings.tree.select', { name: [...branch, next.name].join(' / ') }), exact: true }).waitFor();
-      assert.equal(requests.length, readCount, 'A loaded branch was fetched again or expanded recursively');
-      node = next;
-      branch.push(node.name);
-      childReads++;
+    await select.click();
+    // The earlier server-switching stage maps the resource's exact parent. The root aggregate
+    // is normally broader; if equal, create another draft row through the existing manual path.
+    if (baseline.some(mapping => mapping.serverPath === chosen.serverPath)) {
+      await editor.getByRole('button', { name: name('federation.servers.mappings.add'), exact: true }).click();
+      await editor.getByRole('textbox', { name: name('federation.servers.mappings.server'), exact: true }).last()
+        .fill(`${chosen.serverPath.replace(/[\\/]$/, '')}/mapping-test`);
     }
-    assert.ok(childReads > 0, 'The real fixture did not exercise a lazy child request');
-    assert.equal(node.name, path.basename(config.hosts.source.directory));
-    const mapping = localPath => [{ sourceRootId: node.sourceRootId, localPath }];
-    await editor.getByRole('button', { name: name('federation.mappings.tree.select', { name: branch.join(' / ') }), exact: true }).click();
-    assert.equal(await localInput().inputValue(), '');
-    await localInput().fill(firstPath);
-    await waitForDraft(mapping(firstPath));
-    assert.deepEqual(await currentMappings(), [], 'Selecting a tree directory must not apply its draft');
+    await localInput().fill(selectedPath);
+    const serverPath = await editor.getByRole('textbox', { name: name('federation.servers.mappings.server'), exact: true }).last().inputValue();
+    const proposed = [...baseline, { serverPath, localPath: selectedPath }];
+    await waitForDraft(proposed);
+    assert.deepEqual((await current()).pathMappings, baseline, 'Editing the tree must not save a mapping');
 
-    await reloadEditor();
-    await editor.getByRole('button', { name: name('federation.mappings.draft.restore'), exact: true }).click();
-    assert.equal(await localInput().inputValue(), firstPath);
-    assert.deepEqual(await currentMappings(), []);
-    await editor.getByRole('button', { name: name('federation.mappings.draft.discard'), exact: true }).click();
-    await waitForNoDraft();
-    assert.equal(await localInput().count(), 0);
-    assert.deepEqual(await currentMappings(), []);
+    await reload();
+    await editor.getByRole('button', { name: name('federation.managedMappings.draft.restore'), exact: true }).click();
+    assert.equal(await localInput().inputValue(), selectedPath);
+    const pendingSave = waitForWrite();
+    await editor.getByRole('button', { name: name('federation.servers.mappings.save'), exact: true }).click();
+    const saved = await pendingSave;
+    assert.equal(saved.status(), 200);
+    assert.deepEqual(saved.request().postDataJSON(), { mappings: proposed, expectedMappings: baseline });
+    await noDraft();
+    assert.deepEqual((await current()).pathMappings, proposed);
 
-    const addTypedMapping = async localPath => {
-      await editor.getByRole('button', { name: name('federation.mappings.add'), exact: true }).click();
-      await editor.locator('summary').filter({ hasText: name('federation.mappings.manual') }).click();
-      await editor.getByRole('textbox', { name: name('federation.mappings.rootId'), exact: true }).fill(node.sourceRootId);
-      await localInput().fill(localPath);
-      await waitForDraft(mapping(localPath));
-    };
-    await addTypedMapping(firstPath);
-    await reloadEditor();
-    await editor.getByRole('button', { name: name('federation.mappings.draft.discard'), exact: true }).click();
-    await waitForNoDraft();
-    assert.equal(await localInput().count(), 0, 'Discarding an unrestored draft applied its rows');
-    assert.deepEqual(await currentMappings(), []);
-    await addTypedMapping(firstPath);
-    await saveWithoutConflict(mapping(firstPath), []);
-
-    await localInput().fill(proposedPath);
-    await waitForDraft(mapping(proposedPath));
-    await editor.getByRole('button', { name: name('federation.save'), exact: true }).click();
-    await review().waitFor();
-    // Pause, rather than mock, one real browser PUT so a real competing write wins first.
-    let markHeld;
-    const held = new Promise(resolve => { markHeld = resolve; });
-    const released = new Promise(resolve => { releasePut = resolve; });
-    routeHandler = async route => {
-      heldHandler = (async () => {
-        markHeld(route.request().postDataJSON());
-        await released;
-        await route.continue();
-      })();
-      await heldHandler;
-    };
-    await devices.route(uiBase + endpoint, routeHandler);
-    const rejected = waitForWrite(409);
-    const browserPut = devices.waitForRequest(request =>
-      new URL(request.url()).pathname === endpoint && request.method() === 'PUT');
-    await review().getByRole('button', { name: name('federation.mappings.replace'), exact: true }).click();
-    await browserPut;
-    assert.deepEqual(await held, { mappings: mapping(proposedPath), expectedMappings: mapping(firstPath) });
-    await putMappings(mapping(competingPath), mapping(firstPath));
-    releasePut();
-    const rejection = await rejected;
-    const failure = await rejection.json();
-    assert.equal((failure.error ?? failure).code, 'PathMappingsChanged');
-    await heldHandler;
-    await devices.unroute(uiBase + endpoint, routeHandler);
-    routeHandler = undefined;
-    await editor.getByText(name('federation.mappings.changedDuringReview'), { exact: true }).waitFor();
-    assert.equal(await localInput().inputValue(), proposedPath, 'A CAS rejection discarded the proposed path');
-    assert.deepEqual(await currentMappings(), mapping(competingPath), 'A stale draft overwrote the competing mapping');
-    await waitForDraft(mapping(proposedPath));
-    await editor.screenshot({ path: artifacts('mapping-cas-draft-retained.png') });
-
-    await reloadEditor();
-    await editor.getByRole('button', { name: name('federation.mappings.draft.restore'), exact: true }).click();
-    assert.equal(await localInput().inputValue(), proposedPath);
-    await editor.getByRole('button', { name: name('federation.save'), exact: true }).click();
-    await review().waitFor();
-    await saveReviewed('federation.mappings.replace', mapping(proposedPath), mapping(competingPath));
-    // Keeping an existing rule really keeps it; removing it requires explicit replacement.
-    await editor.getByRole('button', { name: name('federation.mappings.remove'), exact: true }).click();
-    await editor.getByRole('button', { name: name('federation.save'), exact: true }).click();
-    await review().waitFor();
-    await saveReviewed('federation.mappings.keep', mapping(proposedPath), mapping(proposedPath));
-    await editor.getByRole('button', { name: name('federation.mappings.remove'), exact: true }).click();
-    await editor.getByRole('button', { name: name('federation.save'), exact: true }).click();
-    await review().waitFor();
-    await saveReviewed('federation.mappings.replace', [], mapping(proposedPath));
-    assert.ok(requests.every(request => request.pathname === treePath && request.limit === '200'));
-    assert.deepEqual(nativeActions, [], 'Mapping edits must not launch a player or open a directory');
-    return {
-      passed: true, closedEditorsDoNotRead: true, ownMetadataOnly: true,
-      boundedLazyChildReads: childReads, loadedBranchesReused: true,
-      typedDirectoryBelongsToFixture: true, draftScopedToEndpointAndPeer: true,
-      draftRestoresAfterReload: true, restoredAndUnrestoredDraftDiscarded: true,
-      successfulSaveClearsDraft: true, realCasRejectsStaleWrite: true,
-      rejectedDraftSurvivesReload: true, existingRulesRequireExplicitDecision: true,
-      nativeActions: nativeActions.length,
-    };
+    // Restore the baseline, then leave an edit pending while another window saves a different
+    // destination. Restoring the draft must require a deliberate replacement decision.
+    await call(a.base, endpoint, 'PUT', { mappings: baseline, expectedMappings: proposed });
+    await reload();
+    await editor.getByRole('button', { name: name('federation.servers.mappings.add'), exact: true }).click();
+    await editor.getByRole('textbox', { name: name('federation.servers.mappings.server'), exact: true }).last().fill(serverPath);
+    await localInput().fill(selectedPath);
+    await waitForDraft(proposed);
+    const competing = [...baseline, { serverPath, localPath: competingPath }];
+    await call(a.base, endpoint, 'PUT', { mappings: competing, expectedMappings: baseline });
+    await reload();
+    await editor.getByRole('button', { name: name('federation.managedMappings.draft.restore'), exact: true }).click();
+    await editor.getByRole('button', { name: name('federation.servers.mappings.save'), exact: true }).click();
+    await editor.getByText(name('federation.managedMappings.conflict'), { exact: true }).waitFor();
+    assert.deepEqual((await current()).pathMappings, competing, 'The stale draft overwrote another saved edit');
+    await editor.screenshot({ path: artifacts('management-mapping-conflict.png') });
+    await editor.getByRole('button', { name: name('federation.managedMappings.useCurrent'), exact: true }).click();
+    await noDraft();
+    assert.equal(await localInput().inputValue(), competingPath);
+    assert.deepEqual((await current()).pathMappings, competing);
+    assert.ok(requests.every(url => url.searchParams.get('limit') === '200'));
+    assert.deepEqual(errors, []);
+    await assertStayedLocal(context, blocked, 'Management mapping tree');
+    return { passed: true, boundedOwnedTree: true, actualPathPrefixes: true,
+      deferredTreeRead: true, draftSurvivesReload: true, savedDraftCleared: true,
+      staleDraftRequiresReview: true, discardKeepsCurrentMappings: true };
   } finally {
-    releasePut?.();
-    await heldHandler?.catch(() => {});
-    if (routeHandler) await devices.unroute(uiBase + endpoint, routeHandler).catch(() => {});
-    context.off('request', observe);
-    // Leave the existing disable/recovery stages exactly the paired, unmapped fixture they expect.
-    await putMappings([], await currentMappings());
-    await devices.evaluate(({ prefix, suffix }) => Object.keys(localStorage)
-      .filter(key => key.startsWith(prefix) && key.endsWith(suffix))
-      .forEach(key => localStorage.removeItem(key)), { prefix: draftPrefix, suffix: draftSuffix });
+    const latest = await current();
+    await call(a.base, endpoint, 'PUT', { mappings: baseline, expectedMappings: latest.pathMappings });
+    await context.close();
     fs.rmSync(fixtureDirectory, { recursive: true, force: true });
   }
 };

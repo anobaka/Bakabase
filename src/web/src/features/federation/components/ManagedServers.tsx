@@ -32,8 +32,8 @@ import {
 import ConfirmDialog from "./ConfirmDialog";
 import ManagedServerPathMappings from "./ManagedServerPathMappings";
 import ManagedDeviceNameEditor from "./ManagedDeviceNameEditor";
-import { MetadataSyncStatusSection } from "@/features/management/MetadataSyncStatus";
 
+import { MetadataSyncStatusSection } from "@/features/management/MetadataSyncStatus";
 import { minutesUntil } from "@/core/serverTime";
 import { ManagedServerOutcome, ManagedServerState, RemoteAccessMode } from "@/sdk/constants";
 
@@ -191,9 +191,8 @@ export default function ManagedServersSection({
 }
 
 /**
- * Kept apart from the read-only library sharing on purpose: this is the other device's
- * administrator access, with its own pairing, and nothing here grants or uses a sharing
- * permission.
+ * Administrator relationships and their local path mappings. Definitions synchronization
+ * remains separately authorized and never implies management access.
  */
 export function ManagedServersPanel({
   source,
@@ -468,9 +467,13 @@ export function ManagedServersPanel({
                 void run(() => openManagedServer(server.serverId, route), setError, false)
               }
               onRenamed={() => void load({ probe: true, quiet: true })}
-              onSaveMappings={(mappings) =>
+              onSaveMappings={(mappings, expectedMappings) =>
                 run(async () => {
-                  await managedServerApi.setPathMappings(server.serverId, mappings);
+                  await managedServerApi.setPathMappings(
+                    server.serverId,
+                    mappings,
+                    expectedMappings,
+                  );
                   if (mounted.current) setNotice(t("federation.servers.mappings.saved"));
                 })
               }
@@ -711,7 +714,10 @@ function ManagedServerCard({
   /** Shows the server in this window, on one of its own routes when given one. */
   onOpen: (route?: string) => void;
   onForget: () => void;
-  onSaveMappings: (mappings: ManagedServerPathMapping[]) => Promise<boolean>;
+  onSaveMappings: (
+    mappings: ManagedServerPathMapping[],
+    expectedMappings?: ManagedServerPathMapping[],
+  ) => Promise<boolean>;
   onRenamed: () => void;
 }) {
   const { t } = useTranslation();

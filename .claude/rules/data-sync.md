@@ -394,15 +394,13 @@ scopes").
   "Try again", one left after a Reset), plus the requests other devices filed. The page shows
   this device's own requests on their device and lists incoming ones only; a failed read keeps
   the whole view as it was, with the error beside it.
-- **Removing a device ends its link too.** "Remove device" (`DELETE /federation/local/peers/{id}`)
-  removes both scopes' grants with the peer, then resets this device's links to that node as
-  Dismiss does (`ResetLinkAsync`: every definition kept, the link, its bases and pending records
-  forgotten, its items closed). A link left behind would find its access gone on the next pull,
-  read as `AccessRevoked` — "X stopped sharing", blaming the device just removed — and put it
-  back on the map. The Service reaches data sync there through `IDataSyncService`, resolved per
-  request; a host without data sync has nothing to reset.
+- **Management and definitions links end separately.** Stopping management must not reset
+  a definitions link or erase the node's peer address. Definitions Dismiss remains
+  `DELETE /data-sync/links/{id}` (`ResetLinkAsync`): every definition is kept while the link,
+  bases and pending records are forgotten and its open items close. There is no generic
+  federation peer-delete endpoint that silently tears down both relationships.
 - **Withdrawn consent takes the reciprocal codes with it.** Revoking a reader, "Done — stop
-  reading X", removing the peer and an identity reset drop the datasync codes this device
+  reading X" and an identity reset drop the datasync codes this device
   minted for that device to read it back with; cancelling an outgoing request drops them
   unless another unexpired two-way request to that device is waiting or granted. A stale copy
   of the request approved later then reads nothing back.
@@ -437,7 +435,7 @@ scopes").
 - **Type changes always ask**, even lossless ones.
 - **Federation.** Every new federation route needs an exact `FederationRoutePolicy` entry, a
   `RequiredSharing` value and gate-matrix rows; every Export action declares its scope.
-  `library.read` is never reachable from `/data-sync`.
+  The only node grant scope is `datasync.read`; it never grants management rights.
 - **Who may create or widen access.** Only this device's own window, a paired device or the
   CLI (and `BAKABASE_DATASYNC_SHARING` at start) may turn definitions sharing on, approve a
   definitions request, create a code, or send a request / mint a reciprocal code
@@ -534,7 +532,7 @@ request's — and says so in its heads (`Attention.Headless`).
   the CLI says so. A failure to turn it on is logged and never stops the server.
 - `docker exec <c> dotnet Bakabase.Service.dll federation datasync <command> [--port <port>]`
   calls only its loopback `/data-sync/*` API (`DataSyncCli`; the port defaults to
-  `API_LISTENING_PORTS`, `ASPNETCORE_HTTP_PORTS`, then 8080). Like the library's CLI it prints
+  `API_LISTENING_PORTS`, `ASPNETCORE_HTTP_PORTS`, then 8080). Like `federation status`, it prints
   the API's answer as JSON (enums as numbers, times in UTC); a refusal prints `Refused: {code}`
   and exits 1. Commands: `status` (overview, links, readers and requests), `share on|off`,
   `invite` (a one-way code and this device's addresses), `requests` (pending ones, in prose, with
@@ -608,12 +606,12 @@ request's — and says so in its heads (`Attention.Headless`).
   CLI: pairing for definitions with a two-way read-back, first syncs (name matches linked under
   "Needs you") and pulls, a conflict
   decided once, an in-use option held, a reset peer, a record of another schema held, and headless
-  silence. `run.py` runs it after the library checks (`--skip-datasync` leaves it out), so
+  silence. `run.py` runs it after the management checks (`--skip-datasync` leaves it out), so
   CI's federation job does; every TestHost offers other devices the loopback address it listens
   on, and `BAKABASE_DATASYNC_TEST_FUTURE_SCHEMA` exists for it (see its README).
-- The `state.json` an older build must read (§13.8), rewritten with `DATASYNC_WRITE_FIXTURES=<dir>`:
-  `Bakabase.Modules.Federation.Tests/Fixtures/VersionSkew`. Data sync itself has no cross-build
-  fixtures: one contract number (§8.12).
+- `FederationRetirementStateTests` preserves node identity, display name, definitions grants
+  and peer fallback addresses when an existing state also contains ignored retired fields;
+  a normal atomic save drops those fields and old resource grants are never accepted.
 - Frontend: `yarn vitest run src/features/data-sync src/components/HelpCenter`.
 - Browser: `src/tests/federation-browser-smoke/data-sync.cjs`, the last stage of that smoke's `run.py`
   — started on the device map, approved in the window switched to the server, a conflict decided on

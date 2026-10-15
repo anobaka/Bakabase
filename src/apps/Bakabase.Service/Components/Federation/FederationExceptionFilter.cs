@@ -25,7 +25,7 @@ public sealed class FederationExceptionFilter(ILogger<FederationExceptionFilter>
             case FederationQueryException query:
                 status = query.StatusCode;
                 payload = new { code = query.Code, message = query.Message, retryable = query.Retryable,
-                    field = query.Field, nodeId = query.NodeId, omittedNodes = query.OmittedNodes };
+                    field = query.Field, nodeId = query.NodeId };
                 break;
             case FederationAccessException access:
                 status = access.StatusCode;

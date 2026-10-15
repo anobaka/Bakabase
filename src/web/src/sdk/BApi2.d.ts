@@ -4010,262 +4010,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/federation/v1/export/queries": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["CreateFederationExportQuery"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/v1/export/queries/{id}/pages": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["ReadFederationExportQuery"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/v1/export/queries/{id}/validate": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["ValidateFederationExportQuery"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/v1/export/queries/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete: operations["ReleaseFederationExportQuery"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/v1/export/resources/resolve": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["ResolveFederationExportResources"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/v1/export/resources/location": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["LocateFederationExportResource"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/v1/export/mapping-roots": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["GetFederationExportMappingRoots"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/v1/export/mapping-tree": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["GetFederationExportMappingTree"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/v1/export/assets/{assetId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["ReadFederationExportAsset"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head: operations["InspectFederationExportAsset"];
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/local/queries": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["CreateFederatedLibraryQuery"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/local/queries/{id}/pages": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["ReadFederatedLibraryQuery"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/local/queries/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete: operations["ReleaseFederatedLibraryQuery"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/local/resources/resolve": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["ResolveFederatedResources"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/local/resources/open-directory": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["OpenFederatedResourceDirectory"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/local/playback-sessions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["CreateFederatedPlaybackSession"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/local/media/{ticketId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["ReadFederatedMediaSession"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head: operations["InspectFederatedMediaSession"];
-        patch?: never;
-        trace?: never;
-    };
     "/federation/local/peers": {
         parameters: {
             query?: never;
@@ -4282,38 +4026,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/federation/local/peers/browsing": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put: operations["SetFederationBrowsing"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/local/peers/sharing": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put: operations["SetFederationSharing"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/federation/local/peers/name": {
         parameters: {
             query?: never;
@@ -4323,230 +4035,6 @@ export interface paths {
         };
         get?: never;
         put: operations["SetFederationDeviceName"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/local/peers/invite": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["CreateFederationInvitation"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/local/peers/discover": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["DiscoverFederationPeers"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/local/peers/connect": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["ConnectFederationPeer"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/local/peers/claim": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["ClaimFederationPairing"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/local/peers/requests/{id}/approve": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["ApproveFederationPairing"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/local/peers/requests/{id}/reject": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["RejectFederationPairing"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/local/peers/requests/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete: operations["CancelFederationPairing"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/local/peers/grants/{grantId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete: operations["RevokeFederationGrant"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/local/peers/{nodeId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete: operations["RemoveFederationPeer"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/local/peers/{nodeId}/outbound": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete: operations["ForgetFederationPeer"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/local/peers/{nodeId}/enabled": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put: operations["SetFederationPeerEnabled"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/local/peers/{nodeId}/path-mappings": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put: operations["SetFederationPathMappings"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/local/peers/{nodeId}/mapping-roots": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["GetFederationMappingRoots"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/local/peers/{nodeId}/mapping-tree": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["GetFederationMappingTree"];
-        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -4586,54 +4074,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/federation/v1/pair/code": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["ExchangeFederationInvitation"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/v1/pair/request": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["RequestFederationPairing"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/v1/pair/claim": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["ClaimFederationNodeGrant"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/federation/v1/export/handshake": {
         parameters: {
             query?: never;
@@ -4644,102 +4084,6 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["VerifyFederationNode"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/v1/export/resource-profile/identity": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["GetFederationResourceProfileSourceInfo"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/v1/export/resource-profile/properties": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["GetFederationResourceProfileSearchProperties"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/v1/export/resource-profile/filter-value": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["GetFederationResourceProfileFilterValue"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/v1/export/resource-profile/search-resolve": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["ResolveFederationResourceProfileSearch"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/v1/export/resource-profile/preview": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["PreviewFederationResourceProfileSearch"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/v1/export/resource-profile/evaluate": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["EvaluateFederationResourceProfiles"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5946,6 +5290,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/management/library/path-mapping-tree": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetOwnedResourcePathMappingTree"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/federation/local/management/{serverId}/batch-play/candidates": {
         parameters: {
             query?: never;
@@ -6356,6 +5716,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["AbandonManagedResourceProcessingWorker"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/federation/local/servers/{serverId}/path-mapping-tree": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetManagedServerPathMappingTree"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -15078,86 +14454,6 @@ export interface components {
          * @enum {integer}
          */
         "Bakabase.Modules.Enhancer.Models.Domain.Constants.EnhancerTag": 1 | 2;
-        "Bakabase.Modules.Federation.Contracts.CommonLibraryQuery": {
-            /** Format: int32 */
-            queryContractVersion: number;
-            text?: string;
-            fileAvailability?: string;
-            sourceKinds?: number[];
-            sort: string;
-        } & {
-            [key: string]: unknown;
-        };
-        "Bakabase.Modules.Federation.Contracts.FederatedQueryPage": {
-            sessionId: string;
-            items: components["schemas"]["Bakabase.Modules.Federation.Contracts.FederatedResourceSummary"][];
-            nextCursor?: string;
-            /** Format: int64 */
-            expiresInMs: number;
-            participants: components["schemas"]["Bakabase.Modules.Federation.Contracts.QueryParticipant"][];
-            omittedNodes: components["schemas"]["Bakabase.Modules.Federation.Contracts.QueryOmittedNode"][];
-            /** Format: int64 */
-            totalWithinParticipants: number;
-            coverageComplete: boolean;
-        };
-        "Bakabase.Modules.Federation.Contracts.FederatedResourceSummary": {
-            ref: components["schemas"]["Bakabase.Modules.Federation.Contracts.ResourceRef"];
-            ownerLabel: string;
-            title?: string;
-            displayName: string;
-            fileName?: string;
-            sourceKinds: number[];
-            fileAvailability: string;
-            normalizedSortKey?: string;
-            coverAsset?: string;
-            playbackCapabilities: string[];
-        };
-        "Bakabase.Modules.Federation.Contracts.LocalFederatedQuery": {
-            nodeIds: string[];
-            query: components["schemas"]["Bakabase.Modules.Federation.Contracts.CommonLibraryQuery"];
-            /** Format: int32 */
-            pageSize: number;
-        } & {
-            [key: string]: unknown;
-        };
-        "Bakabase.Modules.Federation.Contracts.NodeExportQuery": {
-            expectedLibraryEpoch: string;
-            query: components["schemas"]["Bakabase.Modules.Federation.Contracts.CommonLibraryQuery"];
-            /** Format: int32 */
-            blockSize: number;
-        } & {
-            [key: string]: unknown;
-        };
-        "Bakabase.Modules.Federation.Contracts.NodeQueryBlock": {
-            snapshotId: string;
-            nodeId: string;
-            libraryEpoch: string;
-            queryHash: string;
-            /** Format: int64 */
-            totalCount: number;
-            /** Format: int32 */
-            offset: number;
-            items: components["schemas"]["Bakabase.Modules.Federation.Contracts.FederatedResourceSummary"][];
-            nextCursor?: string;
-            /** Format: int64 */
-            expiresInMs: number;
-            /** Format: date-time */
-            captureStartedAt: string;
-            /** Format: date-time */
-            captureCompletedAt: string;
-            consistency: string;
-        };
-        "Bakabase.Modules.Federation.Contracts.QueryOmittedNode": {
-            nodeId: string;
-            code: string;
-            retryable: boolean;
-        };
-        "Bakabase.Modules.Federation.Contracts.QueryParticipant": {
-            nodeId: string;
-            libraryEpoch: string;
-            /** Format: int64 */
-            totalCount: number;
-        };
         "Bakabase.Modules.Federation.Contracts.ResourceRef": {
             nodeId: string;
             libraryEpoch: string;
@@ -15168,130 +14464,6 @@ export interface components {
             nodeId: string;
             libraryEpoch: string;
             name: string;
-        };
-        "Bakabase.Modules.Federation.Media.AssetRef": {
-            resourceRef: components["schemas"]["Bakabase.Modules.Federation.Contracts.ResourceRef"];
-            assetId: string;
-        };
-        "Bakabase.Modules.Federation.Media.FederatedAsset": {
-            assetId: string;
-            kind: string;
-            fileName: string;
-            contentType: string;
-            sourceRootId?: string;
-            relativePath?: string;
-            /** Format: date-time */
-            expiresAt: string;
-            mappingLocations?: components["schemas"]["Bakabase.Modules.Federation.Media.FederatedMappingLocation"][];
-            canOpenLocally?: boolean;
-        };
-        "Bakabase.Modules.Federation.Media.FederatedCollection": {
-            name: string;
-            color?: string;
-        };
-        "Bakabase.Modules.Federation.Media.FederatedExternalIdentity": {
-            provider: string;
-            externalId: string;
-        };
-        "Bakabase.Modules.Federation.Media.FederatedMappingLocation": {
-            sourceRootId: string;
-            relativePath: string;
-        };
-        "Bakabase.Modules.Federation.Media.FederatedProperty": {
-            label: string;
-            type: string;
-            value?: unknown;
-            /** Format: int32 */
-            scope: number;
-        };
-        "Bakabase.Modules.Federation.Media.FederatedResourceDetail": {
-            ref: components["schemas"]["Bakabase.Modules.Federation.Contracts.ResourceRef"];
-            ownerLabel: string;
-            displayName: string;
-            fileName?: string;
-            availability: string;
-            properties: components["schemas"]["Bakabase.Modules.Federation.Media.FederatedProperty"][];
-            sources: components["schemas"]["Bakabase.Modules.Federation.Media.FederatedSource"][];
-            externalIdentities: components["schemas"]["Bakabase.Modules.Federation.Media.FederatedExternalIdentity"][];
-            collections: components["schemas"]["Bakabase.Modules.Federation.Media.FederatedCollection"][];
-            assets: components["schemas"]["Bakabase.Modules.Federation.Media.FederatedAsset"][];
-            unavailableReason?: string;
-            directoryAccess?: components["schemas"]["Bakabase.Modules.Federation.Media.FederationDirectoryAccess"];
-            location?: components["schemas"]["Bakabase.Modules.Federation.Media.FederatedResourceLocation"];
-        };
-        "Bakabase.Modules.Federation.Media.FederatedResourceLocation": {
-            sourceRootId: string;
-            relativePath: string;
-            isDirectory: boolean;
-            mappingLocations?: components["schemas"]["Bakabase.Modules.Federation.Media.FederatedMappingLocation"][];
-        };
-        "Bakabase.Modules.Federation.Media.FederatedSource": {
-            /** Format: int32 */
-            kind: number;
-            label?: string;
-            url?: string;
-        };
-        "Bakabase.Modules.Federation.Media.FederationDirectoryAccess": {
-            canOpen: boolean;
-            reason?: string;
-        };
-        "Bakabase.Modules.Federation.Media.MappingRoot": {
-            sourceRootId: string;
-            name: string;
-        };
-        "Bakabase.Modules.Federation.Media.MappingTreeNode": {
-            sourceRootId: string;
-            name: string;
-            /** Format: int64 */
-            resourceCount: number;
-            hasChildren: boolean;
-            browseToken: string;
-        };
-        "Bakabase.Modules.Federation.Media.MappingTreePage": {
-            nodes: components["schemas"]["Bakabase.Modules.Federation.Media.MappingTreeNode"][];
-            nextCursor?: string;
-        };
-        "Bakabase.Modules.Federation.Media.OpenResourceDirectoryRequest": {
-            resourceRef: components["schemas"]["Bakabase.Modules.Federation.Contracts.ResourceRef"];
-        };
-        "Bakabase.Modules.Federation.Media.OpenResourceDirectoryResponse": {
-            opened: boolean;
-        };
-        "Bakabase.Modules.Federation.Media.PlaybackSessionRequest": {
-            assetRef: components["schemas"]["Bakabase.Modules.Federation.Media.AssetRef"];
-            mode: string;
-        };
-        "Bakabase.Modules.Federation.Media.PlaybackSessionResponse": {
-            url?: string;
-            contentType: string;
-            launched: boolean;
-            /** Format: date-time */
-            expiresAt: string;
-        };
-        "Bakabase.Modules.Federation.Media.ResourceLocationRequest": {
-            resourceRef: components["schemas"]["Bakabase.Modules.Federation.Contracts.ResourceRef"];
-        };
-        "Bakabase.Modules.Federation.Media.ResourceLocationResponse": {
-            ref: components["schemas"]["Bakabase.Modules.Federation.Contracts.ResourceRef"];
-            location?: components["schemas"]["Bakabase.Modules.Federation.Media.FederatedResourceLocation"];
-        };
-        "Bakabase.Modules.Federation.Media.ResourceResolveRequest": {
-            refs: components["schemas"]["Bakabase.Modules.Federation.Contracts.ResourceRef"][];
-        };
-        "Bakabase.Modules.Federation.Media.ResourceResolveResponse": {
-            resources: components["schemas"]["Bakabase.Modules.Federation.Media.FederatedResourceDetail"][];
-        };
-        "Bakabase.Modules.Federation.Peers.FederationPeerView": {
-            nodeId: string;
-            label: string;
-            address?: string;
-            enabled: boolean;
-            connectionState: string;
-            outboundGrant?: components["schemas"]["Bakabase.Modules.Federation.Peers.NodeGrantSummary"];
-            inboundGrant?: components["schemas"]["Bakabase.Modules.Federation.Peers.NodeGrantSummary"];
-            pathMappings: components["schemas"]["Bakabase.Modules.Federation.Peers.NodePathMapping"][];
-            kind?: components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ServerKind"];
-            platform?: components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.RemoteDevicePlatform"];
         };
         "Bakabase.Modules.Federation.Peers.NodeCredentials": {
             grantId: string;
@@ -15319,21 +14491,6 @@ export interface components {
             intent: string;
             reciprocal?: components["schemas"]["Bakabase.Modules.Federation.Peers.NodeReciprocalOffer"];
         };
-        "Bakabase.Modules.Federation.Peers.NodeDiscoveryCandidate": {
-            nodeId: string;
-            name: string;
-            address: string;
-            kind?: components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ServerKind"];
-            platform?: components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.RemoteDevicePlatform"];
-            /** Format: int32 */
-            dataSyncContractVersion?: number;
-            sharesDefinitions?: boolean;
-        };
-        "Bakabase.Modules.Federation.Peers.NodeGrantSummary": {
-            grantId: string;
-            /** Format: int64 */
-            revision: number;
-        };
         "Bakabase.Modules.Federation.Peers.NodeHandshakeRequest": {
             challenge: string;
         };
@@ -15350,13 +14507,6 @@ export interface components {
             protocolVersion: number;
             /** Format: date-time */
             serverTimeUtc: string;
-            /** Format: int32 */
-            queryContractVersion: number;
-            supportedFilters: string[];
-            supportedSorts: string[];
-            supportedAssetKinds: string[];
-            /** Format: int32 */
-            maxBatchSize: number;
             kind?: string;
             platform?: string;
             /** Format: int32 */
@@ -15365,23 +14515,10 @@ export interface components {
             dataSyncMinimumPeerContract?: number;
             sharesDefinitions?: boolean;
         };
-        "Bakabase.Modules.Federation.Peers.NodeInvitation": {
-            code: string;
-            /** Format: date-time */
-            expiresAt: string;
-        };
         "Bakabase.Modules.Federation.Peers.NodePairClaimRequest": {
             requestId: string;
             nodeId: string;
             claimSecret: string;
-        };
-        "Bakabase.Modules.Federation.Peers.NodePairCodeRequest": {
-            nodeId: string;
-            nodeName: string;
-            code: string;
-            transactionId: string;
-            claimSecret: string;
-            reciprocal?: components["schemas"]["Bakabase.Modules.Federation.Peers.NodeReciprocalOffer"];
         };
         "Bakabase.Modules.Federation.Peers.NodePairExchange": {
             outcome: string;
@@ -15390,35 +14527,6 @@ export interface components {
             expiresAt: string;
             credentials?: components["schemas"]["Bakabase.Modules.Federation.Peers.NodeCredentials"];
             readBack?: string;
-        };
-        "Bakabase.Modules.Federation.Peers.NodePairRequest": {
-            nodeId: string;
-            nodeName: string;
-            transactionId: string;
-            claimSecret: string;
-            reciprocal?: components["schemas"]["Bakabase.Modules.Federation.Peers.NodeReciprocalOffer"];
-        };
-        "Bakabase.Modules.Federation.Peers.NodePairingOutcome": {
-            outcome: string;
-            requestId?: string;
-            peerNodeId?: string;
-            message?: string;
-        };
-        "Bakabase.Modules.Federation.Peers.NodePairingRequestView": {
-            requestId: string;
-            nodeId: string;
-            nodeName: string;
-            direction: string;
-            status: string;
-            /** Format: date-time */
-            expiresAt: string;
-            remoteAddress?: string;
-            replacesExistingAccess: boolean;
-            offersReciprocalAccess: boolean;
-        };
-        "Bakabase.Modules.Federation.Peers.NodePathMapping": {
-            sourceRootId: string;
-            localPath: string;
         };
         "Bakabase.Modules.Federation.Peers.NodeReciprocalOffer": {
             addresses: string[];
@@ -16254,6 +15362,18 @@ export interface components {
             /** Format: int32 */
             contractVersion: number;
         };
+        "Bakabase.Service.Components.Federation.ManagedLibraryMappingTreeNode": {
+            serverPath: string;
+            name: string;
+            /** Format: int64 */
+            resourceCount: number;
+            hasChildren: boolean;
+        };
+        "Bakabase.Service.Components.Federation.ManagedLibraryMappingTreePage": {
+            libraryEpoch: string;
+            nodes: components["schemas"]["Bakabase.Service.Components.Federation.ManagedLibraryMappingTreeNode"][];
+            nextCursor?: string;
+        };
         "Bakabase.Service.Components.Federation.ManagedLibraryRequest": {
             libraryEpoch: string;
             operation: string;
@@ -16543,17 +15663,6 @@ export interface components {
             resourceId: number;
             mediaLibraryIds: number[];
         };
-        "Bakabase.Service.Controllers.FederationBrowsingRequest": {
-            enabled: boolean;
-        };
-        "Bakabase.Service.Controllers.FederationClaimRequest": {
-            requestId: string;
-        };
-        "Bakabase.Service.Controllers.FederationConnectRequest": {
-            address: string;
-            code?: string;
-            shareBack: boolean;
-        };
         "Bakabase.Service.Controllers.FederationDeviceNameRequest": {
             name?: string;
             expectedName?: string;
@@ -16562,29 +15671,14 @@ export interface components {
             asNewNode: boolean;
             replaceInstallIdentity: boolean;
         };
-        "Bakabase.Service.Controllers.FederationPathMappingsRequest": {
-            mappings: components["schemas"]["Bakabase.Modules.Federation.Peers.NodePathMapping"][];
-            expectedMappings?: components["schemas"]["Bakabase.Modules.Federation.Peers.NodePathMapping"][];
-        };
         "Bakabase.Service.Controllers.FederationPeerChange": {
             changed: boolean;
         };
-        "Bakabase.Service.Controllers.FederationPeerEnabledRequest": {
-            enabled: boolean;
-        };
         "Bakabase.Service.Controllers.FederationPeerStatusResponse": {
             identity: components["schemas"]["Bakabase.Modules.Federation.Identity.NodeIdentity"];
-            sharingEnabled: boolean;
             remoteAccessMode: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.RemoteAccessMode"];
             requirePairing: boolean;
-            peers: components["schemas"]["Bakabase.Modules.Federation.Peers.FederationPeerView"][];
-            requests: components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairingRequestView"][];
-            browsingEnabled: boolean;
-            reachableAddresses?: string[];
-        };
-        "Bakabase.Service.Controllers.FederationSharingRequest": {
-            enabled: boolean;
-            enablePairedRemoteAccess: boolean;
+            reachableAddresses: string[];
         };
         "Bakabase.Service.Controllers.ManagedDeviceNameInput": {
             name?: string;
@@ -16642,6 +15736,7 @@ export interface components {
         };
         "Bakabase.Service.Controllers.ManagedServerPathMappingsRequest": {
             mappings?: components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerPathMapping"][];
+            expectedMappings?: components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerPathMapping"][];
         };
         "Bakabase.Service.Controllers.MediaLibraryStatistics": {
             /** Format: int32 */
@@ -27811,449 +26906,6 @@ export interface operations {
             };
         };
     };
-    CreateFederationExportQuery: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Federation.Contracts.NodeExportQuery"];
-                "application/json": components["schemas"]["Bakabase.Modules.Federation.Contracts.NodeExportQuery"];
-                "text/json": components["schemas"]["Bakabase.Modules.Federation.Contracts.NodeExportQuery"];
-                "application/*+json": components["schemas"]["Bakabase.Modules.Federation.Contracts.NodeExportQuery"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bakabase.Modules.Federation.Contracts.NodeQueryBlock"];
-                    "application/json": components["schemas"]["Bakabase.Modules.Federation.Contracts.NodeQueryBlock"];
-                    "text/json": components["schemas"]["Bakabase.Modules.Federation.Contracts.NodeQueryBlock"];
-                };
-            };
-        };
-    };
-    ReadFederationExportQuery: {
-        parameters: {
-            query?: {
-                cursor?: string;
-            };
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bakabase.Modules.Federation.Contracts.NodeQueryBlock"];
-                    "application/json": components["schemas"]["Bakabase.Modules.Federation.Contracts.NodeQueryBlock"];
-                    "text/json": components["schemas"]["Bakabase.Modules.Federation.Contracts.NodeQueryBlock"];
-                };
-            };
-        };
-    };
-    ValidateFederationExportQuery: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ReleaseFederationExportQuery: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ResolveFederationExportResources: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Federation.Media.ResourceResolveRequest"];
-                "application/json": components["schemas"]["Bakabase.Modules.Federation.Media.ResourceResolveRequest"];
-                "text/json": components["schemas"]["Bakabase.Modules.Federation.Media.ResourceResolveRequest"];
-                "application/*+json": components["schemas"]["Bakabase.Modules.Federation.Media.ResourceResolveRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bakabase.Modules.Federation.Media.ResourceResolveResponse"];
-                    "application/json": components["schemas"]["Bakabase.Modules.Federation.Media.ResourceResolveResponse"];
-                    "text/json": components["schemas"]["Bakabase.Modules.Federation.Media.ResourceResolveResponse"];
-                };
-            };
-        };
-    };
-    LocateFederationExportResource: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Federation.Media.ResourceLocationRequest"];
-                "application/json": components["schemas"]["Bakabase.Modules.Federation.Media.ResourceLocationRequest"];
-                "text/json": components["schemas"]["Bakabase.Modules.Federation.Media.ResourceLocationRequest"];
-                "application/*+json": components["schemas"]["Bakabase.Modules.Federation.Media.ResourceLocationRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bakabase.Modules.Federation.Media.ResourceLocationResponse"];
-                    "application/json": components["schemas"]["Bakabase.Modules.Federation.Media.ResourceLocationResponse"];
-                    "text/json": components["schemas"]["Bakabase.Modules.Federation.Media.ResourceLocationResponse"];
-                };
-            };
-        };
-    };
-    GetFederationExportMappingRoots: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bakabase.Modules.Federation.Media.MappingRoot"][];
-                    "application/json": components["schemas"]["Bakabase.Modules.Federation.Media.MappingRoot"][];
-                    "text/json": components["schemas"]["Bakabase.Modules.Federation.Media.MappingRoot"][];
-                };
-            };
-        };
-    };
-    GetFederationExportMappingTree: {
-        parameters: {
-            query?: {
-                parent?: string;
-                cursor?: string;
-                limit?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bakabase.Modules.Federation.Media.MappingTreePage"];
-                    "application/json": components["schemas"]["Bakabase.Modules.Federation.Media.MappingTreePage"];
-                    "text/json": components["schemas"]["Bakabase.Modules.Federation.Media.MappingTreePage"];
-                };
-            };
-        };
-    };
-    ReadFederationExportAsset: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                assetId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    InspectFederationExportAsset: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                assetId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    CreateFederatedLibraryQuery: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Federation.Contracts.LocalFederatedQuery"];
-                "application/json": components["schemas"]["Bakabase.Modules.Federation.Contracts.LocalFederatedQuery"];
-                "text/json": components["schemas"]["Bakabase.Modules.Federation.Contracts.LocalFederatedQuery"];
-                "application/*+json": components["schemas"]["Bakabase.Modules.Federation.Contracts.LocalFederatedQuery"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bakabase.Modules.Federation.Contracts.FederatedQueryPage"];
-                    "application/json": components["schemas"]["Bakabase.Modules.Federation.Contracts.FederatedQueryPage"];
-                    "text/json": components["schemas"]["Bakabase.Modules.Federation.Contracts.FederatedQueryPage"];
-                };
-            };
-        };
-    };
-    ReadFederatedLibraryQuery: {
-        parameters: {
-            query?: {
-                cursor?: string;
-            };
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bakabase.Modules.Federation.Contracts.FederatedQueryPage"];
-                    "application/json": components["schemas"]["Bakabase.Modules.Federation.Contracts.FederatedQueryPage"];
-                    "text/json": components["schemas"]["Bakabase.Modules.Federation.Contracts.FederatedQueryPage"];
-                };
-            };
-        };
-    };
-    ReleaseFederatedLibraryQuery: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ResolveFederatedResources: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Federation.Media.ResourceResolveRequest"];
-                "application/json": components["schemas"]["Bakabase.Modules.Federation.Media.ResourceResolveRequest"];
-                "text/json": components["schemas"]["Bakabase.Modules.Federation.Media.ResourceResolveRequest"];
-                "application/*+json": components["schemas"]["Bakabase.Modules.Federation.Media.ResourceResolveRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bakabase.Modules.Federation.Media.ResourceResolveResponse"];
-                    "application/json": components["schemas"]["Bakabase.Modules.Federation.Media.ResourceResolveResponse"];
-                    "text/json": components["schemas"]["Bakabase.Modules.Federation.Media.ResourceResolveResponse"];
-                };
-            };
-        };
-    };
-    OpenFederatedResourceDirectory: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Federation.Media.OpenResourceDirectoryRequest"];
-                "application/json": components["schemas"]["Bakabase.Modules.Federation.Media.OpenResourceDirectoryRequest"];
-                "text/json": components["schemas"]["Bakabase.Modules.Federation.Media.OpenResourceDirectoryRequest"];
-                "application/*+json": components["schemas"]["Bakabase.Modules.Federation.Media.OpenResourceDirectoryRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bakabase.Modules.Federation.Media.OpenResourceDirectoryResponse"];
-                    "application/json": components["schemas"]["Bakabase.Modules.Federation.Media.OpenResourceDirectoryResponse"];
-                    "text/json": components["schemas"]["Bakabase.Modules.Federation.Media.OpenResourceDirectoryResponse"];
-                };
-            };
-        };
-    };
-    CreateFederatedPlaybackSession: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Federation.Media.PlaybackSessionRequest"];
-                "application/json": components["schemas"]["Bakabase.Modules.Federation.Media.PlaybackSessionRequest"];
-                "text/json": components["schemas"]["Bakabase.Modules.Federation.Media.PlaybackSessionRequest"];
-                "application/*+json": components["schemas"]["Bakabase.Modules.Federation.Media.PlaybackSessionRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bakabase.Modules.Federation.Media.PlaybackSessionResponse"];
-                    "application/json": components["schemas"]["Bakabase.Modules.Federation.Media.PlaybackSessionResponse"];
-                    "text/json": components["schemas"]["Bakabase.Modules.Federation.Media.PlaybackSessionResponse"];
-                };
-            };
-        };
-    };
-    ReadFederatedMediaSession: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                ticketId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    InspectFederatedMediaSession: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                ticketId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
     GetFederationPeers: {
         parameters: {
             query?: never;
@@ -28272,64 +26924,6 @@ export interface operations {
                     "text/plain": components["schemas"]["Bakabase.Service.Controllers.FederationPeerStatusResponse"];
                     "application/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerStatusResponse"];
                     "text/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerStatusResponse"];
-                };
-            };
-        };
-    };
-    SetFederationBrowsing: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.FederationBrowsingRequest"];
-                "application/json": components["schemas"]["Bakabase.Service.Controllers.FederationBrowsingRequest"];
-                "text/json": components["schemas"]["Bakabase.Service.Controllers.FederationBrowsingRequest"];
-                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.FederationBrowsingRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
-                    "application/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
-                    "text/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
-                };
-            };
-        };
-    };
-    SetFederationSharing: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.FederationSharingRequest"];
-                "application/json": components["schemas"]["Bakabase.Service.Controllers.FederationSharingRequest"];
-                "text/json": components["schemas"]["Bakabase.Service.Controllers.FederationSharingRequest"];
-                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.FederationSharingRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
-                    "application/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
-                    "text/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
                 };
             };
         };
@@ -28359,366 +26953,6 @@ export interface operations {
                     "text/plain": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
                     "application/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
                     "text/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
-                };
-            };
-        };
-    };
-    CreateFederationInvitation: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bakabase.Modules.Federation.Peers.NodeInvitation"];
-                    "application/json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodeInvitation"];
-                    "text/json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodeInvitation"];
-                };
-            };
-        };
-    };
-    DiscoverFederationPeers: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bakabase.Modules.Federation.Peers.NodeDiscoveryCandidate"][];
-                    "application/json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodeDiscoveryCandidate"][];
-                    "text/json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodeDiscoveryCandidate"][];
-                };
-            };
-        };
-    };
-    ConnectFederationPeer: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.FederationConnectRequest"];
-                "application/json": components["schemas"]["Bakabase.Service.Controllers.FederationConnectRequest"];
-                "text/json": components["schemas"]["Bakabase.Service.Controllers.FederationConnectRequest"];
-                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.FederationConnectRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairingOutcome"];
-                    "application/json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairingOutcome"];
-                    "text/json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairingOutcome"];
-                };
-            };
-        };
-    };
-    ClaimFederationPairing: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.FederationClaimRequest"];
-                "application/json": components["schemas"]["Bakabase.Service.Controllers.FederationClaimRequest"];
-                "text/json": components["schemas"]["Bakabase.Service.Controllers.FederationClaimRequest"];
-                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.FederationClaimRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairingOutcome"];
-                    "application/json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairingOutcome"];
-                    "text/json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairingOutcome"];
-                };
-            };
-        };
-    };
-    ApproveFederationPairing: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
-                    "application/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
-                    "text/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
-                };
-            };
-        };
-    };
-    RejectFederationPairing: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
-                    "application/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
-                    "text/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
-                };
-            };
-        };
-    };
-    CancelFederationPairing: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
-                    "application/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
-                    "text/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
-                };
-            };
-        };
-    };
-    RevokeFederationGrant: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                grantId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
-                    "application/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
-                    "text/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
-                };
-            };
-        };
-    };
-    RemoveFederationPeer: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                nodeId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
-                    "application/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
-                    "text/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
-                };
-            };
-        };
-    };
-    ForgetFederationPeer: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                nodeId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
-                    "application/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
-                    "text/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
-                };
-            };
-        };
-    };
-    SetFederationPeerEnabled: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                nodeId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerEnabledRequest"];
-                "application/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerEnabledRequest"];
-                "text/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerEnabledRequest"];
-                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerEnabledRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
-                    "application/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
-                    "text/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
-                };
-            };
-        };
-    };
-    SetFederationPathMappings: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                nodeId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.FederationPathMappingsRequest"];
-                "application/json": components["schemas"]["Bakabase.Service.Controllers.FederationPathMappingsRequest"];
-                "text/json": components["schemas"]["Bakabase.Service.Controllers.FederationPathMappingsRequest"];
-                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.FederationPathMappingsRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
-                    "application/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
-                    "text/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
-                };
-            };
-        };
-    };
-    GetFederationMappingRoots: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                nodeId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bakabase.Modules.Federation.Media.MappingRoot"][];
-                    "application/json": components["schemas"]["Bakabase.Modules.Federation.Media.MappingRoot"][];
-                    "text/json": components["schemas"]["Bakabase.Modules.Federation.Media.MappingRoot"][];
-                };
-            };
-        };
-    };
-    GetFederationMappingTree: {
-        parameters: {
-            query?: {
-                parent?: string;
-                cursor?: string;
-                limit?: number;
-            };
-            header?: never;
-            path: {
-                nodeId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bakabase.Modules.Federation.Media.MappingTreePage"];
-                    "application/json": components["schemas"]["Bakabase.Modules.Federation.Media.MappingTreePage"];
-                    "text/json": components["schemas"]["Bakabase.Modules.Federation.Media.MappingTreePage"];
                 };
             };
         };
@@ -28774,93 +27008,6 @@ export interface operations {
             };
         };
     };
-    ExchangeFederationInvitation: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairCodeRequest"];
-                "application/json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairCodeRequest"];
-                "text/json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairCodeRequest"];
-                "application/*+json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairCodeRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairExchange"];
-                    "application/json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairExchange"];
-                    "text/json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairExchange"];
-                };
-            };
-        };
-    };
-    RequestFederationPairing: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairRequest"];
-                "application/json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairRequest"];
-                "text/json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairRequest"];
-                "application/*+json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairExchange"];
-                    "application/json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairExchange"];
-                    "text/json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairExchange"];
-                };
-            };
-        };
-    };
-    ClaimFederationNodeGrant: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairClaimRequest"];
-                "application/json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairClaimRequest"];
-                "text/json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairClaimRequest"];
-                "application/*+json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairClaimRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairExchange"];
-                    "application/json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairExchange"];
-                    "text/json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairExchange"];
-                };
-            };
-        };
-    };
     VerifyFederationNode: {
         parameters: {
             query?: never;
@@ -28886,166 +27033,6 @@ export interface operations {
                     "text/plain": components["schemas"]["Bakabase.Modules.Federation.Peers.NodeHandshakeResponse"];
                     "application/json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodeHandshakeResponse"];
                     "text/json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodeHandshakeResponse"];
-                };
-            };
-        };
-    };
-    GetFederationResourceProfileSourceInfo: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceProfileSourceInfo]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceProfileSourceInfo]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceProfileSourceInfo]"];
-                };
-            };
-        };
-    };
-    GetFederationResourceProfileSearchProperties: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Property.Models.View.PropertyViewModel]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Property.Models.View.PropertyViewModel]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Property.Models.View.PropertyViewModel]"];
-                };
-            };
-        };
-    };
-    GetFederationResourceProfileFilterValue: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchFilterInputModel"];
-                "application/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchFilterInputModel"];
-                "text/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchFilterInputModel"];
-                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchFilterInputModel"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Property.Models.View.PropertyViewModel]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Property.Models.View.PropertyViewModel]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Property.Models.View.PropertyViewModel]"];
-                };
-            };
-        };
-    };
-    ResolveFederationResourceProfileSearch: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
-                "application/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
-                "text/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
-                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceSearchViewModel]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceSearchViewModel]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceSearchViewModel]"];
-                };
-            };
-        };
-    };
-    PreviewFederationResourceProfileSearch: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
-                "application/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
-                "text/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
-                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Service.Models.View.ResourceProfilePreviewResource]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Service.Models.View.ResourceProfilePreviewResource]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Service.Models.View.ResourceProfilePreviewResource]"];
-                };
-            };
-        };
-    };
-    EvaluateFederationResourceProfiles: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfileEvaluationInput"];
-                "application/json": components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfileEvaluationInput"];
-                "text/json": components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfileEvaluationInput"];
-                "application/*+json": components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfileEvaluationInput"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.ResourceProfileEvaluationResult]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.ResourceProfileEvaluationResult]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.ResourceProfileEvaluationResult]"];
                 };
             };
         };
@@ -31171,6 +29158,32 @@ export interface operations {
             };
         };
     };
+    GetOwnedResourcePathMappingTree: {
+        parameters: {
+            query?: {
+                parent?: string;
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bakabase.Service.Components.Federation.ManagedLibraryMappingTreePage"];
+                    "application/json": components["schemas"]["Bakabase.Service.Components.Federation.ManagedLibraryMappingTreePage"];
+                    "text/json": components["schemas"]["Bakabase.Service.Components.Federation.ManagedLibraryMappingTreePage"];
+                };
+            };
+        };
+    };
     GetManagedLibraryBatchPlayCandidates: {
         parameters: {
             query?: never;
@@ -31875,6 +29888,35 @@ export interface operations {
                     "text/plain": boolean;
                     "application/json": boolean;
                     "text/json": boolean;
+                };
+            };
+        };
+    };
+    GetManagedServerPathMappingTree: {
+        parameters: {
+            query?: {
+                parent?: string;
+                cursor?: string;
+                limit?: number;
+                libraryEpoch?: string;
+            };
+            header?: never;
+            path: {
+                serverId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bakabase.Service.Components.Federation.ManagedLibraryMappingTreePage"];
+                    "application/json": components["schemas"]["Bakabase.Service.Components.Federation.ManagedLibraryMappingTreePage"];
+                    "text/json": components["schemas"]["Bakabase.Service.Components.Federation.ManagedLibraryMappingTreePage"];
                 };
             };
         };

@@ -81,7 +81,7 @@ export default function ThisDeviceSection({
       title: t("dataSync.arrow.read.stopTitle", { name: reader.name }),
       description: t("dataSync.arrow.read.stopDescription", { name: reader.name }),
       action: () => dataSyncApi.revokeReader(reader.nodeId),
-      refresh: ["dataSync", "sharing"],
+      refresh: ["dataSync", "identity"],
     });
 
   return (

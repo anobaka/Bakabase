@@ -628,9 +628,9 @@ describe("data sync help: translations", () => {
     const enTopic = enHelpMultiDevice as Record<string, string>;
     const cnTopic = cnHelpMultiDevice as Record<string, string>;
 
-    expect(enTopic[m("pillar.storage.desc")]).toContain("only the definitions you choose to sync");
-    expect(cnTopic[m("pillar.storage.desc")]).toContain("只有你选择同步的定义会保持一致");
-    expect(enTopic[m("map.desc")]).toMatch(/Data sync lines show which device receives/);
-    expect(cnTopic[m("map.desc")]).toContain("数据同步连线显示哪台设备接收另一台的定义");
+    expect(enTopic[m("pillar.storage.desc")]).toContain("selected definitions can also sync");
+    expect(cnTopic[m("pillar.storage.desc")]).toContain("选定的基础定义也可以在设备间同步");
+    expect(enTopic[m("map.desc")]).toMatch(/management and data sync connections/);
+    expect(cnTopic[m("map.desc")]).toContain("管理和数据同步关系");
   });
 });

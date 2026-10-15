@@ -1,5 +1,3 @@
-import type { OmittedNode } from "./types";
-
 import envConfig from "@/config/env";
 
 export class FederationError extends Error {
@@ -9,7 +7,6 @@ export class FederationError extends Error {
     public readonly status: number,
     public readonly retryable: boolean = false,
     public readonly nodeId?: string,
-    public readonly omittedNodes: OmittedNode[] = [],
   ) {
     super(message);
     this.name = "FederationError";
@@ -39,7 +36,6 @@ export async function federationRequest<T>(path: string, init?: RequestInit): Pr
       response.status,
       error?.retryable ?? false,
       error?.nodeId,
-      Array.isArray(error?.omittedNodes) ? error.omittedNodes : [],
     );
   }
 

@@ -28,8 +28,7 @@ namespace Bakabase.Service.Components.Federation;
 /// Device-local profile configuration, source-owned matching. The source receives only bounded searches and IDs.
 /// Management transport is an optional host abstraction; the Service never references a desktop relay.
 /// </summary>
-public sealed class SourceResourceProfileService(IResourceProfileService profiles, FederationPeerService peers,
-    IPeerSessionFactory sessions, INodeTransport transport, GrantLeaseRegistry leases,
+public sealed class SourceResourceProfileService(IResourceProfileService profiles,
     IManagedServerService? managed = null, MetadataReplicaRegistry? metadata = null) : ISourceResourceProfilePlaybackService
 {
     private static readonly JsonSerializerSettings Json = new()
@@ -37,10 +36,7 @@ public sealed class SourceResourceProfileService(IResourceProfileService profile
 
     public async Task<List<ResourceProfileSourceViewModel>> SourcesAsync(CancellationToken ct)
     {
-        var status = await peers.GetStatusAsync(ct);
-        var result = status.Peers.Where(p => p.OutboundGrant != null).ToDictionary(p => p.NodeId,
-            p => new ResourceProfileSourceViewModel(p.NodeId, p.Label, null,
-                p.Enabled && p.ConnectionState == "Online", "shared"), StringComparer.Ordinal);
+        var result = new Dictionary<string, ResourceProfileSourceViewModel>(StringComparer.Ordinal);
         if (managed != null)
         {
             var devices = await managed.GetAsync(false, ct);
@@ -94,34 +90,8 @@ public sealed class SourceResourceProfileService(IResourceProfileService profile
             response = await managed!.ReadResourceProfileSourceAsync(deviceId, operation, json, libraryEpoch,
                 deadline.Token);
         }
-        else
-        {
-            var peer = await sessions.GetAsync(deviceId, deadline.Token);
-            if (peer.NodeId != deviceId || peer.Info.NodeId != deviceId ||
-                peer.Credentials.AudienceNodeId != deviceId || peer.LibraryEpoch != peer.Info.LibraryEpoch ||
-                peer.Scope != FederationScopes.LibraryRead)
-                throw new FederationQueryException("InvalidProfileSource", 502);
-            if (libraryEpoch != null && peer.LibraryEpoch != libraryEpoch)
-                throw new FederationQueryException("LibraryEpochChanged", 409);
-            using var authorized = CancellationTokenSource.CreateLinkedTokenSource(deadline.Token,
-                leases.GetCancellationToken(GrantLeaseRegistry.OutboundKey(peer.GrantId)));
-            var path = "/federation/v1/export/resource-profile/" + operation +
-                       "?libraryEpoch=" + Uri.EscapeDataString(libraryEpoch ?? peer.LibraryEpoch);
-            // A JsonElement keeps Newtonsoft's source filter/property vocabulary intact in the federation
-            // transport's System.Text.Json serializer. It never contains the local player's configuration.
-            using var document = json == null ? null : JsonDocument.Parse(json);
-            object? body = document?.RootElement.Clone();
-            using var http = await transport.SendAsync(peer, input == null ? HttpMethod.Get : HttpMethod.Post,
-                path, body, authorized.Token);
-            if (http.StatusCode == HttpStatusCode.NotFound)
-                throw new FederationQueryException("ResourceProfilesUnavailable", 501,
-                    "Update the source device to configure local resource profiles for its library.");
-            FederationMediaService.EnsureSuccess(http);
-            var bytes = await FederationHttpClient.ReadBoundedAsync(http.Content,
-                ResourceProfileSourceReader.MaximumResponseBytes, authorized.Token);
-            response = Encoding.UTF8.GetString(bytes);
-            authorized.Token.ThrowIfCancellationRequested();
-        }
+        else throw new FederationQueryException("ManagedServerNotFound", 404,
+            "Add this device through management before configuring its resource rules.");
         if (Encoding.UTF8.GetByteCount(response) > ResourceProfileSourceReader.MaximumResponseBytes)
             throw new FederationQueryException("ProfileMetadataTooLarge", 502);
         T result;

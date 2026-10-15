@@ -49,6 +49,7 @@ import enAcquisition from "@/locales/en/pages/acquisition.json";
 import enCollection from "@/locales/en/pages/collection.json";
 import enCollectionMemo from "@/locales/en/pages/collectionMemo.json";
 import enFederation from "@/locales/en/pages/federation.json";
+import enManagedMappings from "@/locales/en/pages/managedMappings.json";
 import enDataSync from "@/locales/en/pages/dataSync.json";
 
 // English - Components
@@ -127,6 +128,7 @@ import cnAcquisition from "@/locales/cn/pages/acquisition.json";
 import cnCollection from "@/locales/cn/pages/collection.json";
 import cnCollectionMemo from "@/locales/cn/pages/collectionMemo.json";
 import cnFederation from "@/locales/cn/pages/federation.json";
+import cnManagedMappings from "@/locales/cn/pages/managedMappings.json";
 import cnDataSync from "@/locales/cn/pages/dataSync.json";
 
 // Chinese - Components
@@ -205,6 +207,7 @@ const enResources = {
   ...enCollection,
   ...enCollectionMemo,
   ...enFederation,
+  ...enManagedMappings,
   ...enDataSync,
   // Components
   ...enFileExplorer,
@@ -212,8 +215,8 @@ const enResources = {
   ...enEnhancer,
   ...enProperty,
   ...enMediaPlayer,
-      ...enResourceComponent,
-      ...enResourceUsage,
+  ...enResourceComponent,
+  ...enResourceUsage,
   ...enToolExecution,
   ...enFloatingAssistant,
   ...enCookieValidator,
@@ -283,6 +286,7 @@ const cnResources = {
   ...cnCollection,
   ...cnCollectionMemo,
   ...cnFederation,
+  ...cnManagedMappings,
   ...cnDataSync,
   // Components
   ...cnFileExplorer,
@@ -290,8 +294,8 @@ const cnResources = {
   ...cnEnhancer,
   ...cnProperty,
   ...cnMediaPlayer,
-      ...cnResourceComponent,
-      ...cnResourceUsage,
+  ...cnResourceComponent,
+  ...cnResourceUsage,
   ...cnToolExecution,
   ...cnFloatingAssistant,
   ...cnCookieValidator,

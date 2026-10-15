@@ -25,7 +25,7 @@ public sealed class DataSyncScopeServiceTests
 {
     /// <summary>
     /// Asked to, turning sharing on opens remote access with pairing required — only from Disabled. A mode the user
-    /// opened further, a Docker install's Unrestricted included, is never touched (unlike the library wizard, F68).
+    /// opened further, a Docker install's Unrestricted included, is never touched.
     /// </summary>
     [TestMethod]
     [DataRow(RemoteAccessMode.Disabled, true, true)]
@@ -49,7 +49,6 @@ public sealed class DataSyncScopeServiceTests
         Assert.IsTrue(options.AllowLiveTranscode);
         Assert.AreEqual("https://bakabase.example.com", options.AdvertisedAddress);
         Assert.AreEqual("legacy-server-id", options.ServerId, "The install's own identity is kept.");
-        Assert.IsFalse(await node.Store.IsSharingEnabledAsync(), "Library sharing is its own switch.");
     }
 
     [TestMethod]
@@ -369,7 +368,7 @@ public sealed class DataSyncScopeServiceTests
             _services = new ServiceCollection().AddSingleton<IDataSyncGrantEvents>(Events).BuildServiceProvider();
             var wire = new FederationHttpClient(new HttpClient(new RecordingHandler(Requests)));
             var pairing = new NodePairingClient(Store, identity, wire, TimeProvider.System, Leases, Peers);
-            var flow = new FederationPairingFlow(pairing, Peers, null!, Remote,
+            var flow = new FederationPairingFlow(pairing, Peers, Remote,
                 NullLogger<FederationPairingFlow>.Instance, _services);
             Grants = new FederationDataSyncGrants(Peers, pairing, flow, Store, identity, Remote, Options, new NoDiscovery());
         }

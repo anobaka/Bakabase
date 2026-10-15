@@ -136,11 +136,7 @@ const namesakeRoles = {
   nearby: "federation.map.namesake.role.nearby",
   manager: "federation.map.namesake.role.manager",
   managed: "federation.map.namesake.role.managed",
-  sharesWithThis: "federation.map.namesake.role.sharesWithThis",
-  browsesThis: "federation.map.namesake.role.browsesThis",
-  sharing: "federation.map.namesake.role.sharing",
   askedToManage: "federation.map.namesake.role.askedToManage",
-  askedToBrowse: "federation.map.namesake.role.askedToBrowse",
   known: "federation.map.namesake.role.known",
 } as const;
 
@@ -148,19 +144,14 @@ const namesakeRole = ({ ghost, sources }: MapNode): keyof typeof namesakeRoles =
   if (ghost) return "nearby";
   if (sources.managers.length) return "manager";
   if (sources.server) return "managed";
-  if (sources.peer?.outboundGrant) return "sharesWithThis";
-  if (sources.peer?.inboundGrant) return "browsesThis";
-  if (sources.peer) return "sharing";
   if (sources.managementRequestsOut.length) return "askedToManage";
-  if (sources.sharingRequests.some((request) => request.direction === "outgoing"))
-    return "askedToBrowse";
 
   return "known";
 };
 
 /**
  * What a device of the same name is, for telling records of one name apart: what it has to
- * do with this device — the device that manages this one, the one sharing its library, one
+ * do with this device — the device that manages this one, the one synchronizing its definitions, one
  * found nearby — and where it is, or what it runs on when no address is known. `precise` adds
  * when a device that manages this one was paired, for two such pairings that say the same.
  */

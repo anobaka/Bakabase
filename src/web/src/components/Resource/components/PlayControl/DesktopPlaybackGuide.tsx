@@ -16,13 +16,7 @@ export const useDesktopPlaybackGuidanceAvailable = () => {
   return browserWithoutBridge && !isDesktopAppWindow();
 };
 
-export const DesktopPlaybackGuide = ({
-  shared = false,
-  onClose,
-}: {
-  shared?: boolean;
-  onClose: () => void;
-}) => {
+export const DesktopPlaybackGuide = ({ onClose }: { onClose: () => void }) => {
   const { t } = useTranslation();
 
   return (
@@ -46,13 +40,7 @@ export const DesktopPlaybackGuide = ({
         <p className="text-default-600">{t("resource.desktopPlayback.intro")}</p>
         <ol className="list-decimal space-y-2 pl-5">
           <li>{t("resource.desktopPlayback.install")}</li>
-          <li>
-            {t(
-              shared
-                ? "resource.desktopPlayback.connectShared"
-                : "resource.desktopPlayback.connect",
-            )}
-          </li>
+          <li>{t("resource.desktopPlayback.connect")}</li>
           <li>{t("resource.desktopPlayback.configure")}</li>
         </ol>
         <details className="rounded-lg border border-default-200 px-3 py-2">
@@ -61,12 +49,7 @@ export const DesktopPlaybackGuide = ({
           </summary>
           <ul className="mt-2 list-disc space-y-2 pl-4 text-default-500">
             <li>{t("resource.desktopPlayback.http")}</li>
-            <li>
-              {t(
-                shared ? "resource.desktopPlayback.sharedPaths" : "resource.desktopPlayback.paths",
-              )}
-            </li>
-            {shared && <li>{t("resource.desktopPlayback.sharedLimits")}</li>}
+            <li>{t("resource.desktopPlayback.paths")}</li>
           </ul>
         </details>
         <a
@@ -85,7 +68,7 @@ export const DesktopPlaybackGuide = ({
 };
 
 /** Opt-in guidance, never an automatic dialog or a claim that installation fixes missing files. */
-export const DesktopPlaybackGuideButton = ({ shared = false }: { shared?: boolean }) => {
+export const DesktopPlaybackGuideButton = () => {
   const { t } = useTranslation();
   const available = useDesktopPlaybackGuidanceAvailable();
   const [visible, setVisible] = useState(false);
@@ -102,7 +85,7 @@ export const DesktopPlaybackGuideButton = ({ shared = false }: { shared?: boolea
       >
         {t("resource.desktopPlayback.action")}
       </Button>
-      {visible && <DesktopPlaybackGuide shared={shared} onClose={() => setVisible(false)} />}
+      {visible && <DesktopPlaybackGuide onClose={() => setVisible(false)} />}
     </>
   );
 };

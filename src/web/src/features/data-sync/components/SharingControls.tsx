@@ -46,7 +46,7 @@ export const openCodeFirst = (
       await turnOnSharing(own);
       if (actions.mounted.current) open();
     },
-    refresh: ["dataSync", "sharing"],
+    refresh: ["dataSync", "identity"],
   });
 };
 
@@ -78,7 +78,7 @@ export default function SharingControls({
         title: t("dataSync.sharing.offTitle"),
         description: t("dataSync.sharing.offDescription"),
         action: () => dataSyncApi.setSharing({ enabled: false, enablePairedRemoteAccess: false }),
-        refresh: ["dataSync", "sharing"],
+        refresh: ["dataSync", "identity"],
       });
     else if (remoteOff)
       actions.confirm({
@@ -86,9 +86,9 @@ export default function SharingControls({
         description: t("dataSync.sharing.hint"),
         warning: t("dataSync.sharing.remoteAccess"),
         action: () => turnOnSharing(own),
-        refresh: ["dataSync", "sharing"],
+        refresh: ["dataSync", "identity"],
       });
-    else void actions.run(() => turnOnSharing(own), ["dataSync", "sharing"]);
+    else void actions.run(() => turnOnSharing(own), ["dataSync", "identity"]);
   };
 
   return (
@@ -148,7 +148,7 @@ export default function SharingControls({
               actions.confirm({
                 ...remoteAccessConfirmation(t),
                 action: () => turnOnSharing(own),
-                refresh: ["dataSync", "sharing"],
+                refresh: ["dataSync", "identity"],
               })
             }
           >

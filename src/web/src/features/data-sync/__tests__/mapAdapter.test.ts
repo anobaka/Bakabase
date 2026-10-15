@@ -18,11 +18,10 @@ import { keyT, mapPeer, mapRequest, mapView, NOW, ownRequest } from "./dataSyncF
 import { buildDeviceGraph, identityKey } from "@/features/federation/map/graph";
 import { directionPhrases } from "@/features/federation/map/describe";
 import {
-  grant,
-  peer,
   server,
+  access,
+  managementRequestIn,
   servers,
-  sharingRequest,
   shuffled,
   status,
 } from "@/features/federation/__tests__/deviceMapFixtures";
@@ -90,16 +89,15 @@ const attention = {
 describe("data sync on the device map: which device", () => {
   it("draws a link on the device that carries its install id", () => {
     const graph = graphOf(mapView({ peers: [mapPeer("nas", "NAS")] }), {
-      status: status({ peers: [peer("nas", { label: "NAS", outboundGrant: grant("g") })] }),
       servers: servers({ servers: [server("nas", { name: "NAS" })] }),
     });
 
     // One device — its sharing record, the server this device manages, and its link.
-    expect(graph.nodes.map((item) => item.id)).toEqual(["peer:nas"]);
-    expect(node(graph, "peer:nas")?.sources.sync?.link?.id).toBe(1);
-    expect(edge(graph, "sync:peer:nas")).toMatchObject({
+    expect(graph.nodes.map((item) => item.id)).toEqual(["server:nas"]);
+    expect(node(graph, "server:nas")?.sources.sync?.link?.id).toBe(1);
+    expect(edge(graph, "sync:server:nas")).toMatchObject({
       kind: "sync",
-      nodeId: "peer:nas",
+      nodeId: "server:nas",
       in: "active",
       out: "active",
       mode: "twoWay",
@@ -126,13 +124,13 @@ describe("data sync on the device map: which device", () => {
 
   it("never joins a device by name: another install of the same name stays another device", () => {
     const graph = graphOf(mapView({ peers: [mapPeer("nas-2", "NAS")] }), {
-      status: status({ peers: [peer("nas", { label: "NAS", outboundGrant: grant("g") })] }),
+      servers: servers({ servers: [server("nas", { name: "NAS" })] }),
     });
 
-    expect(edge(graph, "sync:peer:nas")).toBeUndefined();
+    expect(edge(graph, "sync:server:nas")).toBeUndefined();
     expect(edge(graph, "sync:peer:nas-2")?.nodeId).toBe("peer:nas-2");
     // Said on both, never drawn as one.
-    expect(node(graph, "peer:nas")?.namesakes.map((item) => item.nodeId)).toEqual(["peer:nas-2"]);
+    expect(node(graph, "server:nas")?.namesakes.map((item) => item.nodeId)).toEqual(["peer:nas-2"]);
   });
 
   it("puts a request of this device's own to a device that is no peer yet on a device of its own", () => {
@@ -173,13 +171,13 @@ describe("data sync on the device map: which device", () => {
           ),
         ],
       }),
-      { status: status({ peers: [peer("nas", { label: "NAS", outboundGrant: grant("g") })] }) },
+      { servers: servers({ servers: [server("nas", { name: "NAS" })] }) },
     );
 
-    expect(graph.nodes.map((item) => item.id)).toEqual(["peer:nas"]);
-    expect(node(graph, "peer:nas")?.sources.sync?.request).toBeDefined();
+    expect(graph.nodes.map((item) => item.id)).toEqual(["server:nas"]);
+    expect(node(graph, "server:nas")?.sources.sync?.request).toBeDefined();
     // Its address stays the one its own record gives.
-    expect(node(graph, "peer:nas")?.address).toBe("http://192.168.1.13:34567");
+    expect(node(graph, "server:nas")?.address).toBe("http://192.168.1.53:34567");
   });
 
   it("does not depend on the order the records come in", () => {
@@ -411,13 +409,13 @@ describe("data sync on the device map: requests other devices filed", () => {
           }),
         ],
       }),
-      { status: status({ peers: [peer("nas", { label: "NAS", outboundGrant: grant("g") })] }) },
+      { servers: servers({ servers: [server("nas", { name: "NAS" })] }) },
     );
 
-    expect(node(graph, "peer:nas")?.sources.syncRequests).toEqual([]);
-    expect(node(graph, "sync-request:r1")?.claimsToBe).toMatchObject({ nodeId: "peer:nas" });
+    expect(node(graph, "server:nas")?.sources.syncRequests).toEqual([]);
+    expect(node(graph, "sync-request:r1")?.claimsToBe).toMatchObject({ nodeId: "server:nas" });
     // The device's own line is its link's; the claim has its own.
-    expect(edge(graph, "sync:peer:nas")?.out).toBe("active");
+    expect(edge(graph, "sync:server:nas")?.out).toBe("active");
     expect(edge(graph, "sync:sync-request:r1")?.out).toBe("pending");
     // It lends the claim nothing.
     expect(node(graph, "sync-request:r1")?.kind).toBe("unknown");
@@ -435,13 +433,12 @@ describe("data sync on the device map: requests other devices filed", () => {
         ],
       }),
       {
-        // …and a library request from the same requester joins them.
-        status: status({
-          requests: [
-            sharingRequest("newpc", "incoming", {
-              requestId: "s1",
-              nodeName: "New PC",
+        // Management requests remain unverified even when their name matches.
+        access: access({
+          pendingRequests: [
+            managementRequestIn("s1", "New PC", {
               remoteAddress: "192.168.1.40",
+              expiresAt: new Date(NOW + 60000).toISOString(),
             }),
           ],
         }),
@@ -450,15 +447,15 @@ describe("data sync on the device map: requests other devices filed", () => {
     const claims = graph.nodes.filter((item) => item.unverified);
 
     expect(claims.map((item) => item.id).sort()).toEqual([
-      "sharing-request:s1",
+      "manager-request:s1",
       "sync-request:r3",
       "sync-request:r4",
     ]);
-    expect(node(graph, "sharing-request:s1")?.sources.syncRequests.map((r) => r.requestId)).toEqual(
+    expect(node(graph, "manager-request:s1")?.sources.syncRequests.map((r) => r.requestId)).toEqual(
       ["r1", "r2"],
     );
-    expect(edge(graph, "sync:sharing-request:s1")?.out).toBe("pending");
-    expect(edge(graph, "sharing:sharing-request:s1")?.out).toBe("pending");
+    expect(edge(graph, "sync:manager-request:s1")?.out).toBe("pending");
+    expect(edge(graph, "management:manager-request:s1")?.in).toBe("pending");
   });
 
   it("leaves out a request whose time is over, read as UTC", () => {

@@ -4997,24 +4997,15 @@ export const FederationEndpointKindLabel: Record<FederationEndpointKind, string>
 };
 
 export enum FederationSharingRequirement {
-  Library = 0,
-  DataSync = 1,
-  Either = 2,
-  GrantScope = 3
+  DataSync = 0
 }
 
 export const federationSharingRequirements = [
-  { label: 'Library', value: FederationSharingRequirement.Library },
-  { label: 'DataSync', value: FederationSharingRequirement.DataSync },
-  { label: 'Either', value: FederationSharingRequirement.Either },
-  { label: 'GrantScope', value: FederationSharingRequirement.GrantScope }
+  { label: 'DataSync', value: FederationSharingRequirement.DataSync }
 ] as const;
 
 export const FederationSharingRequirementLabel: Record<FederationSharingRequirement, string> = {
-  [FederationSharingRequirement.Library]: 'Library',
-  [FederationSharingRequirement.DataSync]: 'DataSync',
-  [FederationSharingRequirement.Either]: 'Either',
-  [FederationSharingRequirement.GrantScope]: 'GrantScope'
+  [FederationSharingRequirement.DataSync]: 'DataSync'
 };
 
 export enum DataSyncVvRelation {

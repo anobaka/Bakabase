@@ -11,33 +11,25 @@ namespace Bakabase.Tests.Federation;
 public sealed class FederationAddressCandidatesTests
 {
     [TestMethod]
-    public async Task LibraryReadBackContinuesAfterASilentCandidateAndRemembersTheWorkingEndpoint()
+    public async Task DefinitionsReadBackContinuesAfterASilentCandidateAndRemembersTheWorkingEndpoint()
     {
         await using var desk = await DataSyncNodeHost.StartAsync("node-desk", "Desk");
         await using var nas = await DataSyncNodeHost.StartAsync("node-nas", "NAS",
             publicDeadline: DataSyncNodeHost.GiveUpSoon);
         await using var silent = await DataSyncNodeHost.StartAsync("node-silent", "Silent");
         silent.Answer = DataSyncNodeHost.Silent;
-        await desk.Peers.SetSharingAsync(true);
-        await nas.Peers.SetSharingAsync(true);
-        var code = await desk.Peers.CreateReciprocalInvitationAsync("node-nas");
-        var request = await nas.Peers.SubmitPairingRequestAsync(new NodePairRequest("node-desk", "Desk",
-            NodeRequestSignature.RandomToken(18), NodeRequestSignature.RandomToken(),
+        await desk.Peers.SetDataSyncSharingAsync(true);
+        await nas.Peers.SetDataSyncSharingAsync(true);
+        var code = await desk.Peers.CreateDataSyncReciprocalInvitationAsync("node-nas");
+        var request = await nas.Peers.SubmitDataSyncRequestAsync(new NodeDataSyncPairRequest("node-desk", "Desk",
+            NodeRequestSignature.RandomToken(18), NodeRequestSignature.RandomToken(), NodeDataSyncIntents.TwoWay,
             new NodeReciprocalOffer([silent.Address, desk.Address], code)));
-
-        nas.Flow.ReadBack(await nas.Peers.ApproveAsync(request.Exchange.RequestId));
-
-        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(15));
-        while (true)
-        {
-            var peer = (await nas.Peers.GetStatusAsync(deadline.Token)).Peers.SingleOrDefault(p => p.NodeId == "node-desk");
-            if (peer?.OutboundGrant != null)
-            {
-                Assert.AreEqual(desk.Address, peer.Address);
-                break;
-            }
-            await Task.Delay(25, deadline.Token);
-        }
+        await nas.Peers.ApproveDataSyncAsync(request.Exchange.RequestId, true);
+        var readBack = await nas.Flow.ReadBackDataSyncAsync("node-desk");
+        Assert.IsTrue(readBack.Granted, readBack.ErrorCode);
+        var peer = (await nas.Peers.GetDataSyncStatusAsync()).Peers.Single(p => p.NodeId == "node-desk");
+        Assert.AreEqual(desk.Address, peer.Address);
+        Assert.IsTrue(await nas.Peers.HasOutboundDataSyncGrantAsync("node-desk"));
     }
 
     [TestMethod]
@@ -50,7 +42,7 @@ public sealed class FederationAddressCandidatesTests
             new RemoteAccessAddress("http://10.0.0.2:34567", "en0"),
             new RemoteAccessAddress("http://10.0.0.2:34568", "en0"),
             new RemoteAccessAddress("http://10.0.0.2:34567", "en0")]);
-        var flow = new FederationPairingFlow(null!, null!, null!, remote,
+        var flow = new FederationPairingFlow(null!, null!, remote,
             NullLogger<FederationPairingFlow>.Instance);
 
         CollectionAssert.AreEqual(new[] {

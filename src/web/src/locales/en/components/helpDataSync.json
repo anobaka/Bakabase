@@ -74,6 +74,6 @@
   "helpCenter.dataSync.where.map": "On the Device map, the data sync line between two devices shows what is synced; its arrow points to the device that receives. Select it to change it.",
   "helpCenter.dataSync.where.page": "System → Data sync lists what needs you, requests and the history. It also works in a window switched to another device.",
   "helpCenter.dataSync.where.nas": "A NAS has no screen: switch the window to it and use Data sync there, or, inside its container, list requests with federation datasync requests and approve one with federation datasync approve. With BAKABASE_DATASYNC_SHARING=true, sharing is turned on again at every start. The NAS must run the same data sync version as your other devices: when you update them, update it too.",
-  "helpCenter.dataSync.vsOthers": "Library sharing lets another device browse your resources, and switching lets you manage another device. Data sync keeps your definitions the same, so every device organizes things the same way.",
+  "helpCenter.dataSync.vsOthers": "Device management lets you search, view and manage resources from added devices here. Data sync keeps definitions such as custom properties and media libraries consistent, so each device organizes resources the same way.",
   "helpCenter.dataSync.open": "Open Data sync"
 }

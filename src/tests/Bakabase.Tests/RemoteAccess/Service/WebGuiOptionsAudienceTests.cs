@@ -12,13 +12,11 @@ using Bakabase.InsideWorld.Business.Components.Configurations;
 using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.Gui;
 using Bakabase.InsideWorld.Models.Configs;
-using Bakabase.Modules.Federation.Peers;
 using Bakabase.Modules.RemoteAccess.Abstractions.Components;
 using Bakabase.Modules.RemoteAccess.Abstractions.Models;
 using Bakabase.Modules.RemoteAccess.Abstractions.Services;
 using Bakabase.Modules.RemoteAccess.Components.Pairing;
 using Bakabase.Modules.RemoteAccess.Services;
-using Bakabase.Service.Components.Federation;
 using Bakabase.Service.Components.RemoteAccess;
 using Bakabase.Service.Controllers;
 using Bootstrap.Components.Configuration;
@@ -123,12 +121,6 @@ public class WebGuiOptionsAudienceTests
         public IReadOnlyList<string> GetListeningAddresses() => [];
     }
 
-    private sealed class NoPeerDiscovery : INodePeerDiscovery
-    {
-        public Task<IReadOnlyList<NodeDiscoveryCandidate>> DiscoverAsync(CancellationToken cancellationToken = default) =>
-            Task.FromResult<IReadOnlyList<NodeDiscoveryCandidate>>([]);
-    }
-
     [TestCleanup]
     public void DeleteSettings()
     {
@@ -163,10 +155,6 @@ public class WebGuiOptionsAudienceTests
                     sp.GetRequiredService<IBOptionsManager<RemoteAccessOptions>>(),
                     sp.GetRequiredService<RemoteAccessDefaults>(), new RemoteAccessHostInfo("0.0.0"),
                     new NoListeningAddresses(), NullLogger<RemoteAccessService>.Instance));
-
-                // What the devices page's sharing switch needs besides the host's federation.
-                services.AddSingleton<INodePeerDiscovery, NoPeerDiscovery>();
-                services.AddSingleton<FederationPairingFlow>();
 
                 AddSettings(services, new AppOptions {Language = "en-US", UiTheme = UiTheme.Dark, WwwRootPath = HostPath});
                 AddSettings(services, new UIOptions {IsMenuCollapsed = true});
@@ -320,16 +308,9 @@ public class WebGuiOptionsAudienceTests
         AssertNoSecret(again.Records, "reconnected on Enabled");
     }
 
-    /// <summary>
-    /// The mode is not only changed on the remote-access settings page: turning library sharing
-    /// on from the devices page, with its "also set remote access to Enabled and require
-    /// pairing" option, makes an Unrestricted server Enabled for paired devices only; and the
-    /// settings file can change on disk.
-    /// </summary>
+    /// <summary>Reloading a narrower remote-access mode from disk also closes previously trusted browsers.</summary>
     [TestMethod]
-    [DataRow("sharing switch")]
-    [DataRow("settings file")]
-    public async Task Every_writer_that_narrows_the_mode_hangs_up_on_the_browsers_Unrestricted_trusted(string writer)
+    public async Task A_settings_reload_hangs_up_on_the_browsers_Unrestricted_trusted()
     {
         const string changedApiKey = "tmdb-api-key-canary-after-switch";
 
@@ -341,17 +322,8 @@ public class WebGuiOptionsAudienceTests
         CollectionAssert.AreEquivalent(AllOptions, (await browser.GetInitialDataAsync()).Keys.ToArray());
         CollectionAssert.AreEquivalent(AllOptions, (await paired.GetInitialDataAsync()).Keys.ToArray());
 
-        if (writer == "sharing switch")
-        {
-            var shared = await host.SendAsync(HttpMethod.Put, "/federation/local/peers/sharing",
-                json: """{"enabled":true,"enablePairedRemoteAccess":true}""");
-            Assert.AreEqual(HttpStatusCode.OK, shared.StatusCode, await shared.Content.ReadAsStringAsync());
-        }
-        else
-        {
-            host.Services.GetRequiredService<SettingsFile<RemoteAccessOptions>>().Reload(new RemoteAccessOptions
-                {Mode = RemoteAccessMode.Enabled, RequirePairing = true, ServerId = "this-server"});
-        }
+        host.Services.GetRequiredService<SettingsFile<RemoteAccessOptions>>().Reload(new RemoteAccessOptions
+            {Mode = RemoteAccessMode.Enabled, RequirePairing = true, ServerId = "this-server"});
 
         var remote = host.Services.GetRequiredService<IRemoteAccessService>();
         Assert.AreEqual(RemoteAccessMode.Enabled, remote.GetEffectiveMode());

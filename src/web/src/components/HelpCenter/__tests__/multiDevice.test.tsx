@@ -122,7 +122,6 @@ describe("multi-device help topic: registration", () => {
     expect(topic!.Content).toBe(MultiDeviceTopic);
     expect(topic!.ConceptContent).toBe(MultiDeviceConceptDetail);
     expect(topic!.concepts?.map((concept) => concept.id)).toEqual([
-      "sharing",
       "management",
       "pathMapping",
       "remoteAccess",
@@ -151,7 +150,7 @@ describe("multi-device help topic: sections", () => {
     expect(screen.getByTestId("multi-device-play-here")).toBeInTheDocument();
 
     openTab("setup");
-    expect(document.querySelector('[data-track="browse"]')).not.toBeNull();
+    expect(document.querySelector('[data-track="browse"]')).toBeNull();
     expect(document.querySelector('[data-track="manage"]')).not.toBeNull();
     expect(screen.getByText(k("setup.unrestricted"))).toBeInTheDocument();
   });
@@ -278,7 +277,7 @@ describe("multi-device help topic: mock-ups", () => {
       new Set(["desktop", "laptop", "nas"]),
     );
 
-    fireEvent.click(within(mockup).getByRole("button", { name: "federation.scope.local" }));
+    fireEvent.click(within(mockup).getByRole("button", { name: k("browse.mock.scope.local") }));
     expect(tiles()).toHaveLength(2);
     expect(tiles().every((tile) => tile.getAttribute("data-device") === "desktop")).toBe(true);
     expect(screen.getByText(k("browse.mock.caption.local"))).toBeInTheDocument();
@@ -312,19 +311,17 @@ describe("multi-device help topic: links to the devices pages", () => {
 
     render(<MultiDeviceTopic section="setup" onNavigate={onNavigate} />);
     // Each track opens the tab of the devices page it describes: allowing management on the
-    // device to be managed, adding it on this one, and library sharing.
+    // device to be managed and adding it on this one.
     fireEvent.click(screen.getByRole("button", { name: k("open.management") }));
     expect(onNavigate).toHaveBeenLastCalledWith("/federation/devices?section=management");
     fireEvent.click(screen.getByRole("button", { name: k("open.addServer") }));
     expect(onNavigate).toHaveBeenLastCalledWith("/federation/devices?section=add-server");
-    fireEvent.click(screen.getByRole("button", { name: k("open.devices") }));
-    expect(onNavigate).toHaveBeenLastCalledWith("/federation/devices?section=sharing");
     fireEvent.click(screen.getByRole("button", { name: k("open.resources") }));
     expect(onNavigate).toHaveBeenLastCalledWith("/resource");
 
     openTab("browse");
-    fireEvent.click(screen.getByRole("button", { name: k("open.library") }));
-    expect(onNavigate).toHaveBeenLastCalledWith("/federation");
+    fireEvent.click(screen.getByRole("button", { name: k("open.resources") }));
+    expect(onNavigate).toHaveBeenLastCalledWith("/resource");
 
     // The overview points at the device map, where every connection is drawn.
     openTab("whatIs");
@@ -355,10 +352,10 @@ describe("multi-device help topic: links to the devices pages", () => {
 
     render(<MultiDeviceTopic section="browse" onNavigate={onNavigate} />);
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: k("open.library") }));
+      fireEvent.click(screen.getByRole("button", { name: k("open.resources") }));
     });
 
-    expect(openLocalView).toHaveBeenCalledWith("/federation");
+    expect(openLocalView).toHaveBeenCalledWith("/resource");
     expect(onNavigate).not.toHaveBeenCalled();
     expect(screen.getByRole("alert")).toHaveTextContent("federation.switcher.openFailed");
   });
@@ -366,7 +363,7 @@ describe("multi-device help topic: links to the devices pages", () => {
   it("offers no link where those pages cannot open", () => {
     setReach({ isLocal: false });
     render(<MultiDeviceTopic section="setup" onNavigate={vi.fn()} />);
-    expect(screen.queryByRole("button", { name: k("open.devices") })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: k("open.management") })).not.toBeInTheDocument();
     cleanup();
 
     setReach({ isLocal: false, pureClient: true, console: false });
@@ -395,7 +392,7 @@ describe("multi-device help topic: translations", () => {
     }
     for (const id of multiDeviceSections) openTab(id);
     openTab("browse");
-    fireEvent.click(screen.getByRole("button", { name: "federation.scope.local" }));
+    fireEvent.click(screen.getByRole("button", { name: k("browse.mock.scope.local") }));
     openTab("switch");
     fireEvent.click(document.querySelector('button[data-device="desktop"]')!);
     cleanup();
@@ -410,7 +407,7 @@ describe("multi-device help topic: translations", () => {
     vi.mocked(openLocalView).mockRejectedValueOnce(new Error("gone"));
     render(<MultiDeviceTopic section="browse" />);
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: k("open.library") }));
+      fireEvent.click(screen.getByRole("button", { name: k("open.resources") }));
     });
     cleanup();
 

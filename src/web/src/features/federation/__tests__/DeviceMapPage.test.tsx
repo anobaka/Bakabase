@@ -1,4 +1,4 @@
-import type { FederationStatus, ManagedServersView, SharingCandidate } from "../types";
+import type { FederationStatus, ManagedServersView } from "../types";
 import type * as Switching from "../switching";
 import type { BakabaseServiceModelsViewRemoteAccessSettingsViewModel as RemoteAccessSettings } from "@/sdk/Api";
 import type { MockInstance } from "vitest";
@@ -10,7 +10,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import DeviceMapPage, { ON_DEMAND_QUERY } from "../DeviceMapPage";
 import DeviceMapCanvas, { ATTENTION_DASH } from "../map/DeviceMapCanvas";
-import DeviceMapLegend from "../map/DeviceMapLegend";
 import { buildDeviceGraph } from "../map/graph";
 import { federationPeerApi } from "../peerApi";
 import { managedServerApi } from "../serverApi";
@@ -18,15 +17,12 @@ import { openManagedServer } from "../switching";
 
 import {
   access,
-  grant,
   inTenMinutes,
   manager,
   managementRequestIn,
   managementRequestOut,
-  peer,
   server,
   servers,
-  sharingRequest,
   status,
 } from "./deviceMapFixtures";
 
@@ -37,7 +33,6 @@ vi.mock("@/components/ContextProvider/BakabaseContextProvider", () => ({
 vi.mock("@/components/FileSystemSelector", () => ({ FileSystemSelectorModal: () => null }));
 import {
   ClientMode,
-  DataSyncLinkMode,
   DataSyncLinkState,
   ManagedServerOutcome,
   ManagedServerState,
@@ -83,23 +78,7 @@ vi.mock("@/stores/remoteAccess", () => ({
   useIsPureClient: () => false,
 }));
 vi.mock("../peerApi", () => ({
-  federationPeerApi: {
-    status: vi.fn(),
-    discover: vi.fn(),
-    connect: vi.fn(),
-    setName: vi.fn(),
-    forget: vi.fn(),
-    revoke: vi.fn(),
-    remove: vi.fn(),
-    enable: vi.fn(),
-    decide: vi.fn(),
-    claim: vi.fn(),
-    cancelRequest: vi.fn(),
-    invite: vi.fn(),
-    mappings: vi.fn(),
-    mappingRoots: vi.fn(),
-    mappingTree: vi.fn().mockResolvedValue({ nodes: [] }),
-  },
+  federationPeerApi: { status: vi.fn(), setName: vi.fn(), resetIdentity: vi.fn() },
 }));
 vi.mock("../serverApi", () => ({
   managedServerApi: {
@@ -141,6 +120,7 @@ vi.mock("@/features/data-sync/api", async (importOriginal) => ({
   dataSyncApi: {
     map: vi.fn(),
     overview: vi.fn(),
+    peers: vi.fn().mockResolvedValue([]),
     createLink: vi.fn(async () => ({})),
     updateLink: vi.fn(async () => ({})),
     resetLink: vi.fn(async () => undefined),
@@ -155,7 +135,7 @@ vi.mock("@/features/data-sync/api", async (importOriginal) => ({
 
 const ok = { code: 0 };
 
-/** What the listings answer right now: library sharing, management both ways, data sync. */
+/** Current device identity, management in both directions and definitions synchronization. */
 let sharing: FederationStatus;
 let managed: ManagedServersView;
 let settings: RemoteAccessSettings;
@@ -167,27 +147,13 @@ let syncView: DataSyncApi.DataSyncMapView;
  * makes the laptop.
  */
 const homeOffice = () => {
-  sharing = status({
-    peers: [
-      peer("nas", {
-        label: "NAS",
-        address: "192.168.1.20:34567",
-        outboundGrant: grant("g-out"),
-        inboundGrant: grant("g-in"),
-      }),
-      peer("lap", {
-        label: "Laptop",
-        address: "http://192.168.1.31:40211",
-        inboundGrant: grant("g-lap"),
-      }),
-    ],
-    requests: [
-      sharingRequest("attic", "incoming", { nodeName: "Attic", remoteAddress: "192.168.1.44" }),
-    ],
-  });
+  sharing = status();
   managed = servers({
     // The same install as the peer: its sharing NodeId is its ServerId.
-    servers: [server("nas", { name: "NAS", address: "http://192.168.1.20:34567" })],
+    servers: [
+      server("nas", { name: "NAS", address: "http://192.168.1.20:34567" }),
+      server("lap", { name: "Laptop", address: "http://192.168.1.31:40211" }),
+    ],
   });
   settings = access({
     devices: [manager("d-lap", "Laptop")],
@@ -220,8 +186,6 @@ const edge = (id: string) =>
 /** A device, or a relationship, where the map lists them instead of drawing them. */
 const listed = (id: string) =>
   document.querySelector<HTMLButtonElement>(`button[data-node="${id}"]`)!;
-const listedEdge = (id: string) =>
-  document.querySelector<HTMLButtonElement>(`button[data-edge="${id}"]`)!;
 
 /**
  * What Chromium does and jsdom does not: a focused control that is disabled loses focus, to
@@ -265,7 +229,7 @@ const narrowWindow = () => {
   };
 };
 const panel = () => screen.getByTestId("device-map-panel");
-const loaded = () => waitFor(() => expect(node("peer:nas")).not.toBeNull());
+const loaded = () => waitFor(() => expect(node("server:nas")).not.toBeNull());
 const dialog = () => screen.getByRole("alertdialog");
 
 beforeEach(() => {
@@ -280,7 +244,7 @@ beforeEach(() => {
   vi.mocked(BApi.remoteAccess.revokeRemoteAccessDevice).mockResolvedValue(ok as never);
   vi.mocked(BApi.remoteAccess.approveRemoteDevicePairingRequest).mockResolvedValue(ok as never);
   vi.mocked(BApi.remoteAccess.rejectRemoteDevicePairingRequest).mockResolvedValue(ok as never);
-  vi.mocked(federationPeerApi.discover).mockResolvedValue([]);
+  vi.mocked(dataSyncApi.peers).mockResolvedValue([]);
   vi.mocked(managedServerApi.discover).mockResolvedValue({ servers: [] });
   vi.mocked(managedServerApi.probe).mockResolvedValue({
     outcome: ManagedServerOutcome.Unreachable,
@@ -298,33 +262,6 @@ afterEach(() => {
 });
 
 describe("device map: the picture", () => {
-  it("draws this device, every other device and every relationship", async () => {
-    renderPage();
-    await loaded();
-
-    expect(node("self")).toHaveAttribute("data-kind", "desktop");
-    // The NAS is shared with and managed from here: one device, two relationships.
-    expect(edge("sharing:peer:nas")).toHaveAttribute("data-out", "active");
-    expect(edge("sharing:peer:nas")).toHaveAttribute("data-in", "active");
-    expect(edge("management:peer:nas")).toHaveAttribute("data-out", "active");
-    // The laptop browses this library. What manages this device has the laptop's name but
-    // nothing else of it: a device of its own, never the laptop's line.
-    expect(edge("sharing:peer:lap")).toHaveAttribute("data-out", "active");
-    expect(edge("sharing:peer:lap")).toHaveAttribute("data-in", "none");
-    expect(edge("management:peer:lap")).toBeNull();
-    expect(edge("management:manager:d-lap")).toHaveAttribute("data-in", "active");
-    expect(node("manager:d-lap")).toHaveAttribute("data-kind", "desktop");
-    // Requests are drawn as pending, from devices known only by them.
-    expect(edge("sharing:sharing-request:incoming-attic")).toHaveAttribute("data-out", "pending");
-    expect(edge("management:manager-request:m1")).toHaveAttribute("data-in", "pending");
-    // Two-way in one state is one line with two arrowheads.
-    expect(edge("sharing:peer:nas").querySelectorAll("line[data-direction]")).toHaveLength(1);
-    expect(edge("sharing:peer:nas").querySelector("line[data-direction]")).toHaveAttribute(
-      "data-direction",
-      "both",
-    );
-  });
-
   it("shows what each device says it is: a headless server, a desktop app, and what it runs on", async () => {
     managed = servers({
       servers: [
@@ -338,9 +275,9 @@ describe("device map: the picture", () => {
     });
     renderPage();
     await loaded();
-    await waitFor(() => expect(node("peer:nas")).toHaveAttribute("data-kind", "server"));
+    await waitFor(() => expect(node("server:nas")).toHaveAttribute("data-kind", "server"));
 
-    expect(node("peer:nas").getAttribute("aria-label")).toContain("federation.map.kind.server");
+    expect(node("server:nas").getAttribute("aria-label")).toContain("federation.map.kind.server");
     // A device manages this one: a pairing only a desktop app or a phone makes.
     expect(node("manager:d-lap")).toHaveAttribute("data-kind", "desktop");
   });
@@ -350,7 +287,7 @@ describe("device map: the picture", () => {
     await loaded();
 
     expect(screen.getByRole("group", { name: "federation.map.canvasLabel" })).toBeInTheDocument();
-    expect(node("peer:nas").getAttribute("aria-label")).toContain("NAS");
+    expect(node("server:nas").getAttribute("aria-label")).toContain("NAS");
     expect(edge("management:manager:d-lap").getAttribute("aria-label")).toContain(
       "federation.map.direction.management.in.active Laptop",
     );
@@ -358,7 +295,7 @@ describe("device map: the picture", () => {
 
     expect(list).toHaveClass("sr-only");
     expect(
-      within(list).getByText(/federation\.map\.direction\.sharing\.out\.pending Attic/),
+      within(list).getByText(/federation\.map\.direction\.management\.in\.pending Guest/),
     ).toBeInTheDocument();
     expect(
       within(list).getByText(/federation\.map\.direction\.management\.out\.active NAS/),
@@ -370,38 +307,11 @@ describe("device map: the picture", () => {
     await loaded();
     const legend = screen.getByTestId("device-map-legend");
 
-    expect(legend.querySelector('[data-legend="sharing"]')).not.toBeNull();
+    expect(legend.querySelector('[data-legend="sharing"]')).toBeNull();
     expect(legend.querySelector('[data-legend="management"]')).not.toBeNull();
     expect(legend.querySelector('[data-legend="pending"]')).not.toBeNull();
     expect(legend.querySelector('[data-legend="sync"]')).toBeNull();
     expect(used.has("federation.map.legend.sync")).toBe(false);
-  });
-
-  it("draws a data-sync relationship, once there is one, in its own style with its own legend entry", () => {
-    const graph = buildDeviceGraph({
-      status: status({ peers: [peer("nas", { label: "NAS", outboundGrant: grant("g") })] }),
-      extraEdges: [
-        {
-          id: "sync:peer:nas",
-          kind: "sync",
-          nodeId: "peer:nas",
-          out: "active",
-          in: "none",
-        },
-      ],
-    });
-
-    render(
-      <MemoryRouter>
-        <DeviceMapCanvas graph={graph} onSelect={vi.fn()} />
-        <DeviceMapLegend graph={graph} />
-      </MemoryRouter>,
-    );
-    const sync = edge("sync:peer:nas");
-
-    expect(sync).toHaveAttribute("data-kind", "sync");
-    expect(sync.querySelector("line[data-direction]")).toHaveClass("stroke-secondary");
-    expect(document.querySelector('[data-legend="sync"]')).not.toBeNull();
   });
 });
 
@@ -440,7 +350,7 @@ describe("device map: relationships that do not work right now", () => {
       ),
     ).toBeInTheDocument();
     // A working one carries none of it.
-    const working = edge("management:peer:nas");
+    const working = edge("management:server:nas");
 
     expect(working.querySelector("[data-attention]")).toBeNull();
     expect(working.querySelector("[data-attention-mark]")).toBeNull();
@@ -465,12 +375,11 @@ describe("device map: names", () => {
     "Living-room-media-server-B",
   ];
   const graph = buildDeviceGraph({
-    status: status({
-      peers: names.map((label, i) =>
-        peer(`p${i}`, {
-          label,
+    servers: servers({
+      servers: names.map((label, i) =>
+        server(`p${i}`, {
+          name: label,
           address: `http://192.168.1.${i + 10}:34567`,
-          outboundGrant: grant(`g${i}`),
         }),
       ),
     }),
@@ -483,7 +392,7 @@ describe("device map: names", () => {
       </MemoryRouter>,
     );
     expect(screen.getByTestId("device-map-canvas")).toHaveAttribute("data-mode", "map");
-    const shown = names.map((_, i) => node(`peer:p${i}`).querySelector("text")!.textContent!);
+    const shown = names.map((_, i) => node(`server:p${i}`).querySelector("text")!.textContent!);
 
     // Every card reads differently, and keeps the end that tells it apart…
     expect(new Set(shown).size).toBe(names.length);
@@ -492,8 +401,8 @@ describe("device map: names", () => {
     if (width >= 1200) expect(shown.slice(0, 5)).toEqual(names.slice(0, 5));
     names.forEach((name, i) => {
       // The full name is its tooltip and its accessible name.
-      expect(node(`peer:p${i}`).querySelector("title")).toHaveTextContent(name);
-      expect(node(`peer:p${i}`).getAttribute("aria-label")).toContain(name);
+      expect(node(`server:p${i}`).querySelector("title")).toHaveTextContent(name);
+      expect(node(`server:p${i}`).getAttribute("aria-label")).toContain(name);
     });
   });
 
@@ -506,40 +415,20 @@ describe("device map: names", () => {
 
     expect(screen.getByTestId("device-map-canvas")).toHaveAttribute("data-mode", "list");
     names.forEach((name, i) =>
-      expect(listed(`peer:p${i}`)).toHaveTextContent(new RegExp(`^${name}`)),
+      expect(listed(`server:p${i}`)).toHaveTextContent(new RegExp(`^${name}`)),
     );
   });
 });
 
 describe("device map: keyboard", () => {
-  it("walks this device, then each device followed by its relationships", async () => {
-    renderPage();
-    await loaded();
-    const order = Array.from(
-      document.querySelectorAll<SVGGElement>('svg [role="button"][tabindex="0"]'),
-    ).map((element) => element.getAttribute("data-node") ?? element.getAttribute("data-edge"));
-
-    expect(order[0]).toBe("self");
-    // Each device comes right before its own relationships.
-    for (const id of ["peer:nas", "peer:lap", "sharing-request:incoming-attic"]) {
-      const at = order.indexOf(id);
-      const following = order.slice(at + 1, at + 3).filter((item) => item?.endsWith(`:${id}`));
-
-      expect(following.length, id).toBeGreaterThan(0);
-    }
-    expect(
-      order.filter((item) => item?.startsWith("sharing:") || item?.startsWith("management:")),
-    ).toHaveLength(6);
-  });
-
   it("opens the details with Enter, reads them out, and gives focus back on Escape", async () => {
     renderPage();
     await loaded();
-    const nas = node("peer:nas");
+    const nas = node("server:nas");
 
     act(() => nas.focus());
     fireEvent.keyDown(nas, { key: "Enter" });
-    await waitFor(() => expect(panel()).toHaveAttribute("data-selection", "node:peer:nas"));
+    await waitFor(() => expect(panel()).toHaveAttribute("data-selection", "node:server:nas"));
     const heading = within(panel()).getByRole("heading", { level: 2 });
 
     expect(heading).toHaveTextContent("NAS");
@@ -549,28 +438,6 @@ describe("device map: keyboard", () => {
     fireEvent.keyDown(heading, { key: "Escape" });
     await waitFor(() => expect(panel()).toHaveAttribute("data-overview", "true"));
     expect(nas).toHaveFocus();
-  });
-
-  it("opens a relationship's details with Space, showing only that relationship", async () => {
-    renderPage();
-    await loaded();
-    fireEvent.keyDown(edge("management:manager:d-lap"), { key: " " });
-
-    await waitFor(() =>
-      expect(panel()).toHaveAttribute("data-selection", "edge:management:manager:d-lap"),
-    );
-    expect(screen.getByTestId("device-map-management")).toBeInTheDocument();
-    expect(screen.queryByTestId("device-map-sharing")).not.toBeInTheDocument();
-    expect(screen.getByTestId("management-in")).toHaveAttribute("data-status", "active");
-
-    // The relationship's own device — not the other device of its name the details point to.
-    const [itsDevice] = within(panel())
-      .getAllByRole("button", { name: "federation.map.panel.showDevice Laptop" })
-      .filter((button) => !button.closest('[data-testid="device-map-namesakes"]'));
-
-    fireEvent.click(itsDevice);
-    expect(panel()).toHaveAttribute("data-selection", "node:manager:d-lap");
-    expect(screen.getByTestId("device-map-sharing")).toBeInTheDocument();
   });
 });
 
@@ -582,44 +449,9 @@ describe("device map: acting on a device", () => {
     await waitFor(() => expect(panel()).toHaveAttribute("data-selection", `node:${id}`));
   };
 
-  it("asks before revoking a device's access to this library", async () => {
-    vi.mocked(federationPeerApi.revoke).mockResolvedValue(undefined);
-    await open("peer:nas");
-    const reads = vi.mocked(federationPeerApi.status).mock.calls.length;
-
-    fireEvent.click(
-      within(screen.getByTestId("sharing-out")).getByRole("button", {
-        name: "federation.devices.revoke",
-      }),
-    );
-    expect(dialog()).toHaveTextContent("federation.devices.revokeConfirm NAS");
-    expect(federationPeerApi.revoke).not.toHaveBeenCalled();
-
-    await act(async () => {
-      fireEvent.click(within(dialog()).getByRole("button", { name: "federation.confirm" }));
-    });
-    expect(federationPeerApi.revoke).toHaveBeenCalledWith("g-in");
-    // What it changed is read again.
-    expect(vi.mocked(federationPeerApi.status).mock.calls.length).toBeGreaterThan(reads);
-    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
-  });
-
-  it("changes nothing when the confirmation is cancelled", async () => {
-    await open("peer:nas");
-    fireEvent.click(
-      within(screen.getByTestId("sharing-in")).getByRole("button", {
-        name: "federation.devices.forget",
-      }),
-    );
-    fireEvent.click(within(dialog()).getByRole("button", { name: "federation.cancel" }));
-
-    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
-    expect(federationPeerApi.forget).not.toHaveBeenCalled();
-  });
-
   it("asks before stopping to manage a server, then forgets it by its own identity", async () => {
     vi.mocked(managedServerApi.forget).mockResolvedValue({ changed: true });
-    await open("peer:nas");
+    await open("server:nas");
     fireEvent.click(
       within(screen.getByTestId("management-out")).getByRole("button", {
         name: "federation.servers.forget",
@@ -634,22 +466,13 @@ describe("device map: acting on a device", () => {
   });
 
   it("switches the window to a managed server without asking", async () => {
-    await open("peer:nas");
+    await open("server:nas");
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "federation.servers.open" }));
     });
 
     expect(openManagedServer).toHaveBeenCalledWith("nas");
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
-  });
-
-  it("opens the multi-device library on that device alone", async () => {
-    await open("peer:nas");
-    fireEvent.click(screen.getByRole("link", { name: "federation.map.panel.openLibrary" }));
-
-    expect(screen.getByTestId("location")).toHaveTextContent(
-      "/federation?scope=selected&source=nas",
-    );
   });
 
   it("asks before revoking a device that manages this one, through remote access", async () => {
@@ -671,7 +494,7 @@ describe("device map: acting on a device", () => {
   });
 
   it("says on both devices of one name that they may be one, and never draws them as one", async () => {
-    await open("peer:lap");
+    await open("server:lap");
     const namesakes = screen.getByTestId("device-map-namesakes");
 
     expect(namesakes).toHaveTextContent("federation.map.panel.namesakes.one");
@@ -688,11 +511,11 @@ describe("device map: acting on a device", () => {
     expect(screen.getByTestId("management-in")).toHaveAttribute("data-status", "active");
     // And the other way: the laptop, which browses this library, by its address.
     const browses = within(screen.getByTestId("device-map-namesakes")).getByRole("button", {
-      name: "federation.map.panel.showNamesake Laptop federation.map.namesake.what federation.map.namesake.role.browsesThis http://192.168.1.31:40211",
+      name: "federation.map.panel.showNamesake Laptop federation.map.namesake.what federation.map.namesake.role.managed http://192.168.1.31:40211",
     });
 
     fireEvent.click(browses);
-    await waitFor(() => expect(panel()).toHaveAttribute("data-selection", "node:peer:lap"));
+    await waitFor(() => expect(panel()).toHaveAttribute("data-selection", "node:server:lap"));
   });
 
   it("tells three or more devices of one name apart by what each is and where", async () => {
@@ -721,8 +544,8 @@ describe("device map: acting on a device", () => {
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "federation.servers.add.discover" }));
     });
-    fireEvent.click(node("peer:lap"));
-    await waitFor(() => expect(panel()).toHaveAttribute("data-selection", "node:peer:lap"));
+    fireEvent.click(node("server:lap"));
+    await waitFor(() => expect(panel()).toHaveAttribute("data-selection", "node:server:lap"));
     const namesakes = screen.getByTestId("device-map-namesakes");
     const rows = within(namesakes).getAllByRole("button");
     const names = rows.map((row) => row.textContent ?? "");
@@ -769,7 +592,7 @@ describe("device map: acting on a device", () => {
 
     expect(
       fromNearby.map((row) => row.closest("li")!.getAttribute("data-namesake")).sort(),
-    ).toEqual(["manager:d-lap", "manager:d-lap2", "peer:lap"]);
+    ).toEqual(["manager:d-lap", "manager:d-lap2", "server:lap"]);
     expect(new Set(fromNearby.map((row) => row.textContent)).size).toBe(3);
   });
 
@@ -794,19 +617,6 @@ describe("device map: acting on a device", () => {
     });
   });
 
-  it("asks before approving a request to browse this library, with the requester's own claims flagged", async () => {
-    vi.mocked(federationPeerApi.decide).mockResolvedValue(undefined);
-    await open("sharing-request:incoming-attic");
-    expect(screen.getByText("federation.map.panel.unverified")).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: "federation.requests.approve" }));
-    expect(dialog()).toHaveTextContent("federation.requests.approveConfirmFrom Attic 192.168.1.44");
-    await act(async () => {
-      fireEvent.click(within(dialog()).getByRole("button", { name: "federation.confirm" }));
-    });
-    expect(federationPeerApi.decide).toHaveBeenCalledWith("incoming-attic", true);
-  });
-
   it("surfaces a refusal in the dialog, next to the decision", async () => {
     vi.mocked(BApi.remoteAccess.revokeRemoteAccessDevice).mockResolvedValue({
       code: 1,
@@ -825,19 +635,6 @@ describe("device map: acting on a device", () => {
     expect(within(dialog()).getByRole("alert")).toHaveTextContent("Not now");
   });
 
-  it("offers to manage a device that shares with this one, pairing at its own address", async () => {
-    vi.mocked(managedServerApi.pair).mockResolvedValue({ outcome: 1, serverName: "Laptop" });
-    await open("peer:lap");
-    const form = screen.getByTestId("manage-form");
-
-    await act(async () => {
-      fireEvent.submit(form);
-    });
-
-    expect(managedServerApi.pair).toHaveBeenCalledWith("http://192.168.1.31:40211", undefined);
-    expect(screen.getByRole("status")).toHaveTextContent("federation.servers.requested Laptop");
-  });
-
   it("renames this device", async () => {
     vi.mocked(federationPeerApi.setName).mockResolvedValue(undefined);
     renderPage();
@@ -851,59 +648,6 @@ describe("device map: acting on a device", () => {
     });
 
     expect(federationPeerApi.setName).toHaveBeenCalledWith("Den", "Studio PC");
-  });
-});
-
-describe("device map: requests that only claim who they are", () => {
-  it("draws a claim on its own marked device, never on the device it claims to be", async () => {
-    // Someone at .66 uses the laptop's name to ask for management, and its id to ask for
-    // the library.
-    sharing = status({
-      ...sharing,
-      requests: [
-        sharingRequest("lap", "incoming", {
-          requestId: "spoof",
-          nodeName: "Laptop",
-          remoteAddress: "192.168.1.66",
-        }),
-      ],
-    });
-    settings = access({
-      devices: [manager("d-lap", "Laptop")],
-      pendingRequests: [
-        managementRequestIn("m-spoof", "Laptop", {
-          platform: RemoteDevicePlatform.Windows,
-          remoteAddress: "192.168.1.66",
-        }),
-      ],
-    });
-    renderPage();
-    await loaded();
-
-    // The laptop's own lines — and those of the device of its name — say only what they have.
-    expect(edge("sharing:peer:lap")).toHaveAttribute("data-out", "active");
-    expect(edge("management:manager:d-lap")).toHaveAttribute("data-in", "active");
-    const claimant = node("sharing-request:spoof");
-
-    expect(claimant).not.toBeNull();
-    expect(claimant.querySelector("[data-unverified-mark]")).not.toBeNull();
-    expect(claimant.getAttribute("aria-label")).toContain("federation.map.unverified");
-    expect(edge("management:sharing-request:spoof")).toHaveAttribute("data-in", "pending");
-
-    fireEvent.click(claimant);
-    await waitFor(() =>
-      expect(panel()).toHaveAttribute("data-selection", "node:sharing-request:spoof"),
-    );
-    // Where the laptop is known, against where the request came from.
-    expect(screen.getByTestId("device-map-claim")).toHaveTextContent(
-      "federation.map.panel.claim.knownAt Laptop http://192.168.1.31:40211 192.168.1.66",
-    );
-    fireEvent.click(
-      within(screen.getByTestId("device-map-claim")).getByRole("button", {
-        name: "federation.map.panel.showDevice Laptop",
-      }),
-    );
-    expect(panel()).toHaveAttribute("data-selection", "node:peer:lap");
   });
 });
 
@@ -962,45 +706,6 @@ describe("device map: following a device through an action", () => {
     keepFocus = blurWhenDisabled();
   });
   afterEach(() => keepFocus());
-
-  it("stays with a device found nearby once asking for its library turns it into a request", async () => {
-    vi.mocked(federationPeerApi.discover).mockResolvedValue([
-      { nodeId: "garage", name: "Garage", address: "http://192.168.1.70:34567" },
-    ]);
-    vi.mocked(federationPeerApi.connect).mockImplementation(async () => {
-      sharing = status({
-        ...sharing,
-        requests: [
-          ...sharing.requests,
-          sharingRequest("garage", "outgoing", { requestId: "out-garage", nodeName: "Garage" }),
-        ],
-      });
-
-      return { outcome: "awaitingApproval", requestId: "out-garage", peerNodeId: "garage" };
-    });
-    renderPage();
-    await loaded();
-    await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "federation.servers.add.discover" }));
-    });
-    fireEvent.click(await waitFor(() => node("ghost:192.168.1.70:34567")));
-    const form = screen.getByTestId("sharing-request-form");
-    const submit = within(form).getByRole("button", { name: "federation.pair.request" });
-
-    act(() => submit.focus());
-    await act(async () => {
-      fireEvent.submit(form);
-    });
-
-    await waitFor(() => expect(panel()).toHaveAttribute("data-selection", "node:peer:garage"));
-    expect(node("ghost:192.168.1.70:34567")).toBeNull();
-    // What the action said is still there, and the keyboard is back in the details.
-    expect(within(panel()).getByRole("status")).toHaveTextContent(
-      "federation.pair.awaitingApproval",
-    );
-    expect(heading()).toHaveTextContent("Garage");
-    expect(heading()).toHaveFocus();
-  });
 
   it("keeps what approving said when the request leaves the map, and the keyboard in the details", async () => {
     vi.mocked(BApi.remoteAccess.approveRemoteDevicePairingRequest).mockImplementation(async () => {
@@ -1155,62 +860,6 @@ describe("device map: following a device through an action", () => {
     await waitFor(() => expect(within(panel()).queryByRole("status")).toBeNull());
     expect(heading()).toHaveFocus();
   });
-
-  it("takes the keyboard back to what it was on when an action leaves it there", async () => {
-    vi.mocked(federationPeerApi.enable).mockImplementation(async () => {
-      sharing = status({
-        ...sharing,
-        peers: sharing.peers.map((item) =>
-          item.nodeId === "nas" ? { ...item, enabled: false } : item,
-        ),
-      });
-    });
-    renderPage();
-    await loaded();
-    fireEvent.click(node("peer:nas"));
-    await waitFor(() => expect(panel()).toHaveAttribute("data-selection", "node:peer:nas"));
-    const include = within(panel()).getByRole("checkbox", { name: "federation.devices.include" });
-
-    act(() => include.focus());
-    await act(async () => {
-      fireEvent.click(include);
-    });
-
-    await waitFor(() => expect(include).not.toBeChecked());
-    await waitFor(() => expect(include).toHaveFocus());
-  });
-
-  it("moves to the device a request to browse this library becomes once approved", async () => {
-    vi.mocked(federationPeerApi.decide).mockImplementation(async () => {
-      sharing = status({
-        ...sharing,
-        peers: [
-          ...sharing.peers,
-          peer("attic", { label: "Attic", address: undefined, inboundGrant: grant("g-attic") }),
-        ],
-        requests: [],
-      });
-    });
-    renderPage();
-    await loaded();
-    fireEvent.click(edge("sharing:sharing-request:incoming-attic"));
-    await waitFor(() =>
-      expect(panel()).toHaveAttribute(
-        "data-selection",
-        "edge:sharing:sharing-request:incoming-attic",
-      ),
-    );
-    fireEvent.click(screen.getByRole("button", { name: "federation.requests.approve" }));
-    await act(async () => {
-      fireEvent.click(within(dialog()).getByRole("button", { name: "federation.confirm" }));
-    });
-
-    // The same relationship, on the device it now is.
-    await waitFor(() =>
-      expect(panel()).toHaveAttribute("data-selection", "edge:sharing:peer:attic"),
-    );
-    expect(screen.getByTestId("sharing-out")).toHaveAttribute("data-status", "active");
-  });
 });
 
 describe("device map: a managed server that moved", () => {
@@ -1293,63 +942,6 @@ describe("device map: a managed server that moved", () => {
     expect(within(panel()).getByRole("status")).toHaveTextContent(
       "federation.servers.paired Old NAS",
     );
-  });
-
-  it("never offers the way back from a state kept from earlier, only from who answers now", async () => {
-    // Its sharing peer (the same install) was last seen online at another address, where
-    // another server answers today.
-    sharing = status({
-      ...sharing,
-      peers: [
-        ...sharing.peers,
-        peer("s4", {
-          label: "Old NAS",
-          address: "http://192.168.1.80:5000",
-          connectionState: "Online",
-          outboundGrant: grant("g-s4"),
-        }),
-      ],
-    });
-    answers({ "http://192.168.1.80:5000": "intruder" });
-    // One device: the peer and the server carry one install id.
-    await openMoved({ id: "peer:s4" });
-
-    expect(managedServerApi.probe).toHaveBeenCalledWith("http://192.168.1.80:5000");
-    expect(screen.queryByTestId("manage-form")).not.toBeInTheDocument();
-  });
-
-  it("never asks at the address where another server answers, however it is spelt", async () => {
-    managed = servers({
-      servers: [
-        server("s4", {
-          name: "Old NAS",
-          address: "http://127.0.0.1:45202",
-          state: ManagedServerState.WrongServer,
-          answeredBy: { serverId: "intruder", name: "Intruder", isThisDevice: false },
-        }),
-      ],
-    });
-    sharing = status({
-      ...sharing,
-      // This device's own LAN address is this machine too.
-      reachableAddresses: ["http://192.168.1.2:34567"],
-      peers: [
-        ...sharing.peers,
-        peer("s4", {
-          label: "Old NAS",
-          address: "http://localhost:45202",
-          connectionState: "Online",
-          outboundGrant: grant("g-s4"),
-        }),
-      ],
-    });
-    foundAt("http://192.168.1.2:45202");
-    // Even should the question be asked, the answer would be the intruder's.
-    answers({});
-    await openMoved({ discover: true, id: "peer:s4" });
-
-    expect(managedServerApi.probe).not.toHaveBeenCalled();
-    expect(screen.queryByTestId("manage-form")).not.toBeInTheDocument();
   });
 
   it("sends nothing when the address changed hands after it was found", async () => {
@@ -1475,85 +1067,6 @@ describe("device map: a managed server that moved", () => {
 });
 
 describe("device map: finding devices", () => {
-  it("looks both ways at once and draws what it finds as devices to connect to", async () => {
-    vi.mocked(federationPeerApi.discover).mockResolvedValue([
-      { nodeId: "garage", name: "Garage", address: "http://192.168.1.70:34567" },
-    ]);
-    vi.mocked(managedServerApi.discover).mockResolvedValue({
-      servers: [
-        {
-          serverId: "garage",
-          name: "Garage",
-          address: "http://192.168.1.70:34567",
-          appVersion: "2.4.0",
-          alreadyManaged: false,
-        },
-        {
-          serverId: "nas",
-          name: "NAS",
-          address: "http://192.168.1.20:34567",
-          appVersion: "2.4.0",
-          alreadyManaged: true,
-        },
-      ],
-    });
-    vi.mocked(federationPeerApi.connect).mockResolvedValue({ outcome: "awaitingApproval" });
-    vi.mocked(managedServerApi.pair).mockResolvedValue({ outcome: 0, serverName: "Garage" });
-    renderPage();
-    await loaded();
-
-    await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "federation.servers.add.discover" }));
-    });
-    const ghost = await waitFor(() => node("ghost:192.168.1.70:34567"));
-
-    expect(federationPeerApi.discover).toHaveBeenCalled();
-    expect(managedServerApi.discover).toHaveBeenCalled();
-    // What is already on the map is not found again.
-    expect(document.querySelectorAll('[data-ghost="true"]')).toHaveLength(1);
-    expect(ghost.getAttribute("aria-label")).toContain("federation.map.node.ghostLabel");
-
-    fireEvent.click(ghost);
-    await act(async () => {
-      fireEvent.submit(screen.getByTestId("sharing-request-form"));
-    });
-    expect(federationPeerApi.connect).toHaveBeenCalledWith(
-      "http://192.168.1.70:34567",
-      undefined,
-      true,
-    );
-
-    fireEvent.change(
-      within(screen.getByTestId("manage-form")).getByLabelText("federation.servers.add.code"),
-      {
-        target: { value: " 123456 " },
-      },
-    );
-    await act(async () => {
-      fireEvent.submit(screen.getByTestId("manage-form"));
-    });
-    expect(managedServerApi.pair).toHaveBeenCalledWith("http://192.168.1.70:34567", "123456");
-  });
-
-  it("on a headless server, never looks for servers to manage nor offers to", async () => {
-    managed = servers({ available: false });
-    vi.mocked(federationPeerApi.discover).mockResolvedValue([
-      { nodeId: "garage", name: "Garage", address: "http://192.168.1.70:34567" },
-    ]);
-    renderPage();
-    await loaded();
-    await waitFor(() => expect(node("self")).toHaveAttribute("data-kind", "server"));
-
-    await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "federation.servers.add.discover" }));
-    });
-    fireEvent.click(await waitFor(() => node("ghost:192.168.1.70:34567")));
-
-    expect(managedServerApi.discover).not.toHaveBeenCalled();
-    expect(screen.queryByTestId("manage-form")).not.toBeInTheDocument();
-    expect(screen.getByTestId("sharing-request-form")).toBeInTheDocument();
-  });
-
   it("alone, explains the mode and offers to look around", async () => {
     sharing = status();
     managed = servers();
@@ -1596,7 +1109,7 @@ describe("device map: details on demand, below the widest windows", () => {
     // What the details would say with nothing selected, where they would say it.
     expect(screen.getByTestId("device-map-hint")).toHaveTextContent("federation.map.hint");
 
-    const nas = node("peer:nas");
+    const nas = node("server:nas");
 
     act(() => nas.focus());
     fireEvent.keyDown(nas, { key: "Enter" });
@@ -1626,19 +1139,19 @@ describe("device map: details on demand, below the widest windows", () => {
   it("closes with its button, back to what opened it; the map stays usable meanwhile", async () => {
     renderPage();
     await loaded();
-    const lap = node("peer:lap");
+    const lap = node("server:lap");
 
     act(() => lap.focus());
     fireEvent.click(lap);
-    await waitFor(() => expect(panel()).toHaveAttribute("data-selection", "node:peer:lap"));
+    await waitFor(() => expect(panel()).toHaveAttribute("data-selection", "node:server:lap"));
     // Not modal: another device can be chosen with the details open.
-    act(() => node("peer:nas").focus());
-    fireEvent.click(node("peer:nas"));
-    await waitFor(() => expect(panel()).toHaveAttribute("data-selection", "node:peer:nas"));
+    act(() => node("server:nas").focus());
+    fireEvent.click(node("server:nas"));
+    await waitFor(() => expect(panel()).toHaveAttribute("data-selection", "node:server:nas"));
 
     fireEvent.click(within(panel()).getByRole("button", { name: "federation.close" }));
     await waitFor(() => expect(details()).toBeNull());
-    expect(node("peer:nas")).toHaveFocus();
+    expect(node("server:nas")).toHaveFocus();
   });
 
   describe("with more devices than the width the details leave can draw", () => {
@@ -1654,15 +1167,14 @@ describe("device map: details on demand, below the widest windows", () => {
 
     beforeEach(() => {
       // Eight more devices: drawn across the page's width, listed in what the details leave.
-      sharing = status({
-        ...sharing,
-        peers: [
-          ...sharing.peers,
+      managed = servers({
+        ...managed,
+        servers: [
+          ...managed.servers,
           ...Array.from({ length: 8 }, (_, i) =>
-            peer(`x${i}`, {
-              label: `DESKTOP-${String(2000 + i)}QX`,
+            server(`x${i}`, {
+              name: `DESKTOP-${String(2000 + i)}QX`,
               address: `http://10.1.0.${i + 1}:34567`,
-              outboundGrant: grant(`x${i}`),
             }),
           ),
         ],
@@ -1716,7 +1228,7 @@ describe("device map: details on demand, below the widest windows", () => {
       renderPage();
       await loaded();
       expect(mode()).toBe("map");
-      const nas = node("peer:nas");
+      const nas = node("server:nas");
 
       act(() => nas.focus());
       fireEvent.keyDown(nas, { key: "Enter" });
@@ -1734,67 +1246,46 @@ describe("device map: details on demand, below the widest windows", () => {
       // Escape closes them: the keyboard is on the device that opened them in the list…
       fireEvent.keyDown(heading, { key: "Escape" });
       await waitFor(() => expect(details()).toBeNull());
-      expect(listed("peer:nas")).toHaveFocus();
+      expect(listed("server:nas")).toHaveFocus();
       // …and, once the map has its whole width back and is drawn again, on its card there.
       resized();
       expect(mode()).toBe("map");
-      expect(node("peer:nas")).toHaveFocus();
-    });
-
-    it("gives it back to the relationship that opened them when they close with their button", async () => {
-      renderPage();
-      await loaded();
-      const sharingWithNas = edge("sharing:peer:nas");
-
-      act(() => sharingWithNas.focus());
-      fireEvent.keyDown(sharingWithNas, { key: " " });
-      await waitFor(() =>
-        expect(panel()).toHaveAttribute("data-selection", "edge:sharing:peer:nas"),
-      );
-      resized();
-      expect(mode()).toBe("list");
-
-      fireEvent.click(within(panel()).getByRole("button", { name: "federation.close" }));
-      await waitFor(() => expect(details()).toBeNull());
-      expect(listedEdge("sharing:peer:nas")).toHaveFocus();
-      resized();
-      expect(mode()).toBe("map");
-      expect(edge("sharing:peer:nas")).toHaveFocus();
+      expect(node("server:nas")).toHaveFocus();
     });
 
     it("keeps the keyboard on the device it is on as the drawing and the list replace each other", async () => {
       renderPage();
       await loaded();
-      const lap = node("peer:lap");
+      const lap = node("server:lap");
 
       // A pointer: the card takes the keyboard, the details open and leave the map too narrow.
       act(() => lap.focus());
       fireEvent.pointerDown(lap);
       fireEvent.click(lap);
-      await waitFor(() => expect(panel()).toHaveAttribute("data-selection", "node:peer:lap"));
+      await waitFor(() => expect(panel()).toHaveAttribute("data-selection", "node:server:lap"));
       expect(lap).toHaveFocus();
       resized();
       expect(mode()).toBe("list");
       // The card went with the drawing: the keyboard is on the same device in the list.
-      expect(listed("peer:lap")).toHaveFocus();
+      expect(listed("server:lap")).toHaveFocus();
 
       // Escape on the map lets go and closes the details; the map is drawn again, and the
       // keyboard is on the device's card — never on the page's body.
-      fireEvent.keyDown(listed("peer:lap"), { key: "Escape" });
+      fireEvent.keyDown(listed("server:lap"), { key: "Escape" });
       await waitFor(() => expect(details()).toBeNull());
       resized();
       expect(mode()).toBe("map");
-      expect(node("peer:lap")).toHaveFocus();
+      expect(node("server:lap")).toHaveFocus();
     });
 
     it("never takes the keyboard from where the reader put it", async () => {
       renderPage();
       await loaded();
-      const lap = node("peer:lap");
+      const lap = node("server:lap");
 
       act(() => lap.focus());
       fireEvent.click(lap);
-      await waitFor(() => expect(panel()).toHaveAttribute("data-selection", "node:peer:lap"));
+      await waitFor(() => expect(panel()).toHaveAttribute("data-selection", "node:server:lap"));
       // The reader moves on, to the refresh button: the map being listed does not pull the
       // keyboard back to it.
       const refresh = screen.getByRole("button", { name: "federation.refresh" });
@@ -1843,110 +1334,6 @@ describe("device map: details on demand, below the widest windows", () => {
   });
 });
 
-describe("device map: more devices than a map this wide can draw", () => {
-  /** Machine names, as most devices have; every other one browses this library too. */
-  const many = (n: number) =>
-    buildDeviceGraph({
-      status: status({
-        peers: Array.from({ length: n }, (_, i) =>
-          peer(`p${i}`, {
-            label: `DESKTOP-${String(1000 + i)}QH`,
-            address: `http://10.0.0.${i + 1}:34567`,
-            outboundGrant: grant(`o${i}`),
-            inboundGrant: i % 2 ? grant(`i${i}`) : undefined,
-          }),
-        ),
-      }),
-      servers: servers({
-        servers: [server("p0", { name: "DESKTOP-1000QH", address: "http://10.0.0.1:34567" })],
-      }),
-      discovery: {
-        sharing: [{ nodeId: "g0", name: "Nearby", address: "http://10.9.0.1:34567" }],
-      },
-    });
-
-  it.each([
-    [20, 1100],
-    [20, 1280],
-    [20, 1440],
-    [24, 1100],
-    [24, 1280],
-    [24, 1440],
-  ])(
-    "lists %i devices at %i px, each with every relationship, readable and selectable",
-    (n, width) => {
-      const graph = many(n);
-      const onSelect = vi.fn();
-
-      render(
-        <MemoryRouter>
-          <DeviceMapCanvas graph={graph} initialWidth={width} onSelect={onSelect} />
-        </MemoryRouter>,
-      );
-
-      expect(screen.getByTestId("device-map-canvas")).toHaveAttribute("data-mode", "list");
-      expect(screen.getByRole("note")).toHaveTextContent(`federation.map.large.note ${n + 1}`);
-      // No drawing shrunk to fit: nothing is drawn at all.
-      expect(document.querySelector('svg[role="group"]')).toBeNull();
-      // Every device, whole, with every relationship in words.
-      for (const device of graph.nodes) {
-        expect(listed(device.id), device.id).toHaveTextContent(device.name);
-        expect(listed(device.id).getAttribute("aria-label")).toContain(device.name);
-      }
-      for (const relationship of graph.edges)
-        expect(listedEdge(relationship.id), relationship.id).toHaveAttribute(
-          "aria-label",
-          expect.stringContaining("federation.map.edge.label"),
-        );
-      expect(listedEdge("sharing:peer:p1")).toHaveTextContent(
-        "federation.map.direction.sharing.in.active DESKTOP-1001QH",
-      );
-      expect(listedEdge("sharing:peer:p1")).toHaveTextContent(
-        "federation.map.direction.sharing.out.active DESKTOP-1001QH",
-      );
-      expect(listedEdge("management:peer:p0")).toHaveAttribute("data-out", "active");
-      // Found nearby, apart, as on the map.
-      expect(listed("ghost:10.9.0.1:34567")).toHaveAttribute("data-ghost", "true");
-
-      // Selected as on the map — from the keyboard too, which the details then take.
-      fireEvent.click(listed("peer:p3"), { detail: 1 });
-      expect(onSelect).toHaveBeenLastCalledWith({ type: "node", id: "peer:p3" }, "pointer");
-      fireEvent.click(listedEdge("sharing:peer:p3"), { detail: 0 });
-      expect(onSelect).toHaveBeenLastCalledWith(
-        { type: "edge", id: "sharing:peer:p3" },
-        "keyboard",
-      );
-    },
-  );
-
-  it("opens the same details from the list, and marks what is selected", async () => {
-    sharing = status({
-      ...sharing,
-      peers: [
-        ...sharing.peers,
-        ...Array.from({ length: 22 }, (_, i) =>
-          peer(`x${i}`, {
-            label: `DESKTOP-${String(2000 + i)}QX`,
-            address: `http://10.1.0.${i + 1}:34567`,
-            outboundGrant: grant(`x${i}`),
-          }),
-        ),
-      ],
-    });
-    renderPage();
-    await waitFor(() => expect(listed("peer:nas")).not.toBeNull());
-
-    expect(screen.getByTestId("device-map-canvas")).toHaveAttribute("data-mode", "list");
-    fireEvent.click(listedEdge("management:manager:d-lap"), { detail: 0 });
-    await waitFor(() =>
-      expect(panel()).toHaveAttribute("data-selection", "edge:management:manager:d-lap"),
-    );
-    expect(listedEdge("management:manager:d-lap")).toHaveAttribute("aria-pressed", "true");
-    expect(within(panel()).getByRole("heading", { level: 2 })).toHaveFocus();
-    expect(screen.getByTestId("management-in")).toHaveAttribute("data-status", "active");
-  });
-});
-
 describe("device map: data sync", () => {
   /**
    * The NAS kept in step both ways, a new PC asking to read this device's definitions, and this
@@ -1966,23 +1353,23 @@ describe("device map: data sync", () => {
       peers: [...(patch.peers ?? [mapPeer("nas", "NAS")]), garage()],
     });
   };
-  const synced = () => waitFor(() => expect(edge("sync:peer:nas")).not.toBeNull());
+  const synced = () => waitFor(() => expect(edge("sync:server:nas")).not.toBeNull());
 
   it("draws a line to each device it names, a claim on its own node, and this device's request", async () => {
     syncing();
     renderPage();
     await synced();
 
-    expect(edge("sync:peer:nas")).toHaveAttribute("data-kind", "sync");
-    expect(edge("sync:peer:nas")).toHaveAttribute("data-in", "active");
-    expect(edge("sync:peer:nas")).toHaveAttribute("data-out", "active");
+    expect(edge("sync:server:nas")).toHaveAttribute("data-kind", "sync");
+    expect(edge("sync:server:nas")).toHaveAttribute("data-in", "active");
+    expect(edge("sync:server:nas")).toHaveAttribute("data-out", "active");
     // Both ways in one state: one line with two arrowheads.
-    expect(edge("sync:peer:nas").querySelector("line[data-direction]")).toHaveAttribute(
+    expect(edge("sync:server:nas").querySelector("line[data-direction]")).toHaveAttribute(
       "data-direction",
       "both",
     );
     // The NAS it syncs with is the NAS it shares with and manages: one device.
-    expect(document.querySelectorAll('[data-node="peer:nas"][role="button"]')).toHaveLength(1);
+    expect(document.querySelectorAll('[data-node="server:nas"][role="button"]')).toHaveLength(1);
     expect(edge("sync:sync-request:r1")).toHaveAttribute("data-out", "pending");
     expect(node("sync-request:r1").querySelector("[data-unverified-mark]")).not.toBeNull();
     expect(edge("sync:peer:garage")).toHaveAttribute("data-in", "pending");
@@ -1997,28 +1384,6 @@ describe("device map: data sync", () => {
         /federation\.map\.direction\.sync\.in\.active NAS/,
       ),
     ).toHaveTextContent("federation.map.sync.mode.twoWay");
-  });
-
-  it("shows only data sync for its line, and data sync beside the rest for its device", async () => {
-    syncing();
-    renderPage();
-    await synced();
-    fireEvent.keyDown(edge("sync:peer:nas"), { key: " " });
-
-    await waitFor(() => expect(panel()).toHaveAttribute("data-selection", "edge:sync:peer:nas"));
-    const section = screen.getByTestId("device-map-sync-section");
-
-    expect(within(section).getByTestId("data-sync-rule-drawing")).toBeInTheDocument();
-    expect(screen.queryByTestId("device-map-sharing")).toBeNull();
-    expect(screen.queryByTestId("device-map-management")).toBeNull();
-
-    fireEvent.click(
-      within(panel()).getByRole("button", { name: "federation.map.panel.showDevice NAS" }),
-    );
-    await waitFor(() => expect(panel()).toHaveAttribute("data-selection", "node:peer:nas"));
-    expect(screen.getByTestId("device-map-sharing")).toBeInTheDocument();
-    expect(screen.getByTestId("device-map-management")).toBeInTheDocument();
-    expect(screen.getByTestId("device-map-sync-section")).toBeInTheDocument();
   });
 
   it("shows a claim only as its request, saying where it came from", async () => {
@@ -2067,80 +1432,6 @@ describe("device map: data sync", () => {
     );
   });
 
-  it("keeps the keyboard in the details through a data sync action", async () => {
-    const keepFocus = blurWhenDisabled();
-
-    syncing();
-    vi.mocked(dataSyncApi.updateLink).mockImplementation(async () => {
-      // An answer takes a moment, as over a network: the busy controls have let go of focus.
-      await new Promise((resolve) => setTimeout(resolve, 20));
-      syncView = mapView({
-        ...syncView,
-        peers: [
-          mapPeer("nas", "NAS", { mode: DataSyncLinkMode.Off, state: DataSyncLinkState.Stopped }),
-        ],
-      });
-
-      return {} as never;
-    });
-    try {
-      renderPage();
-      await synced();
-      const line = edge("sync:peer:nas");
-
-      act(() => line.focus());
-      fireEvent.keyDown(line, { key: "Enter" });
-      await waitFor(() => expect(panel()).toHaveAttribute("data-selection", "edge:sync:peer:nas"));
-      const off = screen.getByTestId("data-sync-mode-off");
-
-      act(() => off.focus());
-      fireEvent.click(off);
-      await act(async () => {
-        fireEvent.click(within(dialog()).getByRole("button", { name: "federation.confirm" }));
-      });
-
-      await waitFor(() =>
-        expect(screen.getByTestId("data-sync-mode-off")).toHaveAttribute("aria-pressed", "true"),
-      );
-      expect(dataSyncApi.updateLink).toHaveBeenCalledWith(1, { mode: DataSyncLinkMode.Off });
-      // It still reads this device: the line stays, and so do the details.
-      expect(panel()).toHaveAttribute("data-selection", "edge:sync:peer:nas");
-      await waitFor(() => expect(panel().contains(document.activeElement)).toBe(true));
-    } finally {
-      keepFocus();
-    }
-  });
-
-  it("says decisions wait on the NAS, and switches the window there, where this device manages it", async () => {
-    syncing({
-      peers: [
-        mapPeer("nas", "NAS", {
-          peerAttention: {
-            headless: true,
-            openDecisions: 3,
-            pausedLinks: 0,
-            restorePending: false,
-            awaitingReview: 0,
-          },
-        }),
-      ],
-    });
-    renderPage();
-    await synced();
-    fireEvent.click(node("peer:nas"));
-
-    await waitFor(() => expect(panel()).toHaveAttribute("data-selection", "node:peer:nas"));
-    expect(screen.getByTestId("device-map-issues")).toHaveTextContent(
-      "federation.map.issue.syncNeedsYouThere",
-    );
-    const open = await screen.findByTestId("data-sync-open-there");
-
-    await act(async () => {
-      fireEvent.click(open);
-    });
-    expect(openManagedServer).toHaveBeenCalledWith("nas", "/data-sync");
-  });
-
   it("shows this device's data sync with the rest of this device", async () => {
     syncing();
     renderPage();
@@ -2148,29 +1439,6 @@ describe("device map: data sync", () => {
 
     expect(within(panel()).getByTestId("data-sync-self-section")).toBeInTheDocument();
     expect(panel()).toHaveAttribute("data-overview", "true");
-  });
-
-  it("offers to sync with a device found nearby that shares its definitions", async () => {
-    vi.mocked(federationPeerApi.discover).mockResolvedValue([
-      {
-        nodeId: "garage-2",
-        name: "Garage",
-        address: "http://192.168.1.71:34567",
-        sharesDefinitions: true,
-      } as SharingCandidate & { sharesDefinitions: boolean },
-    ]);
-    renderPage();
-    await loaded();
-    await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "federation.servers.add.discover" }));
-    });
-    fireEvent.click(await waitFor(() => node("ghost:192.168.1.71:34567")));
-
-    await waitFor(() =>
-      expect(panel()).toHaveAttribute("data-selection", "node:ghost:192.168.1.71:34567"),
-    );
-    expect(screen.getByTestId("data-sync-ghost")).toHaveTextContent("dataSync.map.ghost.shares");
-    expect(screen.getByTestId("data-sync-start-toggle")).toBeInTheDocument();
   });
 
   it("links to the data sync page from its header", async () => {
@@ -2182,133 +1450,9 @@ describe("device map: data sync", () => {
       "/data-sync",
     );
   });
-
-  describe("at 1280 px, with the details open beside the map", () => {
-    const measured = new Set<() => void>();
-    const layout = () => screen.getByTestId("device-map-layout");
-    /** 1280 less the page's padding; with the details open, less their column and the gap. */
-    const widthOfMap = () => (layout().getAttribute("data-details") === "open" ? 834 : 1208);
-    const resized = () => act(() => measured.forEach((measure) => measure()));
-    let measuring: MockInstance<(this: HTMLElement) => DOMRect> | undefined;
-
-    beforeEach(() => {
-      narrowWindow();
-      measured.clear();
-      vi.stubGlobal(
-        "ResizeObserver",
-        class {
-          private readonly measure: () => void;
-
-          constructor(callback: () => void) {
-            this.measure = callback;
-          }
-
-          observe() {
-            measured.add(this.measure);
-          }
-
-          unobserve() {}
-
-          disconnect() {
-            measured.delete(this.measure);
-          }
-        },
-      );
-      const original = HTMLElement.prototype.getBoundingClientRect;
-
-      measuring = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect");
-      measuring.mockImplementation(function (this: HTMLElement) {
-        if (this.dataset.testid !== "device-map-canvas") return original.call(this);
-        const width = widthOfMap();
-
-        return {
-          width,
-          height: 600,
-          top: 0,
-          left: 0,
-          right: width,
-          bottom: 600,
-          x: 0,
-          y: 0,
-        } as DOMRect;
-      });
-    });
-    afterEach(() => {
-      vi.unstubAllGlobals();
-      measuring?.mockRestore();
-    });
-
-    it("draws, or lists, every device and every line — data sync's included", async () => {
-      syncing({
-        peers: [
-          mapPeer("nas", "NAS"),
-          ...["Office PC", "Studio Mac", "Living Room", "Attic Box"].map((name, i) =>
-            mapPeer(`s${i}`, name, { id: 10 + i }),
-          ),
-        ],
-      });
-      renderPage();
-      await synced();
-      const line = edge("sync:peer:nas");
-
-      act(() => line.focus());
-      fireEvent.keyDown(line, { key: "Enter" });
-      await waitFor(() => expect(layout()).toHaveAttribute("data-details", "open"));
-      resized();
-
-      const devices = [
-        "peer:nas",
-        "peer:lap",
-        "manager:d-lap",
-        "sharing-request:incoming-attic",
-        "manager-request:m1",
-        "sync-request:r1",
-        "peer:garage",
-        ...[0, 1, 2, 3].map((i) => `peer:s${i}`),
-      ];
-
-      for (const id of devices) expect(node(id) ?? listed(id), id).not.toBeNull();
-      for (const id of [
-        "sync:peer:nas",
-        "sync:sync-request:r1",
-        "sync:peer:garage",
-        ...[0, 1, 2, 3].map((i) => `sync:peer:s${i}`),
-      ])
-        expect(edge(id) ?? listedEdge(id), id).not.toBeNull();
-      // Nothing of the map is under the details: they are a column of their own beside it.
-      expect(screen.getByTestId("device-map-details").parentElement).toBe(layout());
-      expect(screen.getByTestId("device-map-details").className).not.toMatch(
-        /\b(fixed|absolute)\b/,
-      );
-    });
-  });
 });
 
 describe("device map: failures", () => {
-  it("keeps the rest of the map when one listing cannot be read", async () => {
-    vi.mocked(managedServerApi.list).mockRejectedValue(new Error("down"));
-    renderPage();
-    await loaded();
-
-    expect(screen.getByText("federation.map.source.servers")).toBeInTheDocument();
-    expect(edge("sharing:peer:nas")).toHaveAttribute("data-in", "active");
-    expect(document.querySelector('[data-edge="management:peer:nas"]')).toBeNull();
-    // Without the listing, this device's kind is not guessed.
-    expect(node("self")).toHaveAttribute("data-kind", "unknown");
-  });
-
-  it("keeps the rest of the map when data sync cannot be read", async () => {
-    vi.mocked(dataSyncApi.map).mockRejectedValue(new Error("down"));
-    renderPage();
-    await loaded();
-
-    await waitFor(() =>
-      expect(screen.getByText("federation.map.source.dataSync")).toBeInTheDocument(),
-    );
-    expect(edge("sharing:peer:nas")).toHaveAttribute("data-in", "active");
-    expect(edge("management:peer:nas")).toHaveAttribute("data-out", "active");
-  });
-
   it("names the remote-access mode this device is in", async () => {
     settings = access({ mode: RemoteAccessMode.Unrestricted });
     renderPage();
@@ -2318,108 +1462,4 @@ describe("device map: failures", () => {
       "federation.management.status.unrestricted",
     );
   });
-});
-
-describe("device map: translations", () => {
-  type Resources = Record<string, string>;
-  const merge = (modules: Record<string, Resources>): Resources =>
-    Object.assign({}, ...Object.values(modules));
-  const en = merge(
-    import.meta.glob<Resources>("../../../locales/en/**/*.json", {
-      eager: true,
-      import: "default",
-    }),
-  );
-  const cn = merge(
-    import.meta.glob<Resources>("../../../locales/cn/**/*.json", {
-      eager: true,
-      import: "default",
-    }),
-  );
-
-  it("asks only for keys that exist in English and Chinese, with the values they name", async () => {
-    // Everything the scenarios above show, in one pass: devices, relationships, panels.
-    renderPage();
-    await loaded();
-    for (const id of [
-      "self",
-      "peer:nas",
-      "peer:lap",
-      "sharing-request:incoming-attic",
-      "manager-request:m1",
-    ]) {
-      fireEvent.click(node(id));
-      await waitFor(() => expect(panel()).toHaveAttribute("data-selection", `node:${id}`));
-    }
-    fireEvent.click(edge("sharing:peer:nas"));
-
-    expect(used.size).toBeGreaterThan(60);
-    expectKnown();
-  });
-
-  it("asks only for such keys for data sync, too", async () => {
-    // Each state of a line, a claim, a request of this device's own, and a device to start with.
-    syncView = mapView({
-      peers: [
-        mapPeer("nas", "NAS", {
-          openItems: 2,
-          peerAttention: {
-            headless: true,
-            openDecisions: 1,
-            pausedLinks: 0,
-            restorePending: false,
-            awaitingReview: 0,
-          },
-        }),
-        mapPeer("lap", "Laptop", {
-          id: 2,
-          state: DataSyncLinkState.Paused,
-          peerMayReadUs: false,
-        }),
-        mapPeer(
-          "garage",
-          "Garage",
-          { id: 3, state: DataSyncLinkState.AwaitingAccess, peerMayReadUs: false },
-          { request: ownRequest({ expiresAt: inTenMinutes() }) },
-        ),
-      ],
-      requests: [mapRequest("r1", "newpc", "New PC", { expiresAt: inTenMinutes() })],
-    });
-    managed = servers({
-      servers: [server("nas", { name: "NAS", address: "http://192.168.1.20:34567" })],
-    });
-    renderPage();
-    await waitFor(() => expect(edge("sync:peer:nas")).not.toBeNull());
-    for (const id of ["self", "peer:nas", "peer:lap", "sync-request:r1", "peer:garage"]) {
-      fireEvent.click(node(id));
-      await waitFor(() => expect(panel()).toHaveAttribute("data-selection", `node:${id}`));
-    }
-    fireEvent.click(node("manager:d-lap"));
-    await waitFor(() => expect(panel()).toHaveAttribute("data-selection", "node:manager:d-lap"));
-    fireEvent.click(edge("sync:peer:nas"));
-    await waitFor(() => expect(panel()).toHaveAttribute("data-selection", "edge:sync:peer:nas"));
-
-    for (const key of [
-      "federation.map.direction.sync.in.active",
-      "federation.map.sync.mode.twoWay",
-      "federation.map.issue.syncNeedsYouThere",
-      "federation.map.legend.sync",
-      "dataSync.request.from",
-      "dataSync.status.AwaitingAccess",
-    ])
-      expect(used.has(key), key).toBe(true);
-    expectKnown();
-  });
-
-  /** Every key asked for exists in both languages and names every value it was asked with. */
-  const expectKnown = () => {
-    for (const [key, options] of used) {
-      expect(en[key], `en: ${key}`).toEqual(expect.any(String));
-      expect(cn[key], `cn: ${key}`).toEqual(expect.any(String));
-      for (const name of Object.keys(options ?? {}).filter((option) => option !== "defaultValue")) {
-        expect(en[key], key).toContain(`{{${name}}}`);
-        expect(cn[key], key).toContain(`{{${name}}}`);
-      }
-    }
-  };
 });

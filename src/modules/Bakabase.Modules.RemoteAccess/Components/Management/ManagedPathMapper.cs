@@ -91,6 +91,10 @@ public static class ManagedPathMapper
     /// </remarks>
     private static string? Remainder(string path, string prefix)
     {
+        if (prefix == "/")
+            return path.StartsWith('/') && !path.StartsWith("//", StringComparison.Ordinal)
+                ? path.TrimStart('/') : null;
+
         var pathSegments = Split(path);
         var prefixSegments = Split(prefix);
 
@@ -119,6 +123,8 @@ public static class ManagedPathMapper
     {
         var separator = SeparatorFor(localRoot);
         var root = localRoot.TrimEnd('/', '\\');
+        if (root.Length == 0 && localRoot.StartsWith('/')) root = "/";
+        if (root.Length == 2 && char.IsAsciiLetter(root[0]) && root[1] == ':') root += separator;
 
         // The mapped path is the root itself when the server named the library's own
         // folder rather than something inside it.
@@ -127,7 +133,7 @@ public static class ManagedPathMapper
             return root;
         }
 
-        return root + separator + remainder.Replace('/', separator);
+        return root.TrimEnd('/', '\\') + separator + remainder.Replace('/', separator);
     }
 
     private static string[] Split(string path) =>
@@ -147,10 +153,8 @@ public static class ManagedPathMapper
     /// </summary>
     private static bool IsWindowsStyle(string path)
     {
-        if (path.StartsWith('/'))
-        {
-            return false;
-        }
+        if (path.StartsWith("//", StringComparison.Ordinal)) return true;
+        if (path.StartsWith('/')) return false;
 
         return path.Contains('\\') || (path.Length >= 2 && char.IsAsciiLetter(path[0]) && path[1] == ':');
     }

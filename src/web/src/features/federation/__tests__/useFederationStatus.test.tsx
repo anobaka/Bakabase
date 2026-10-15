@@ -5,17 +5,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useFederationStatus } from "../hooks/useFederationStatus";
 import { federationPeerApi } from "../peerApi";
-import { notifyBrowsingChanged } from "../statusEvents";
+import { notifyFederationChanged } from "../statusEvents";
 
 vi.mock("../peerApi", () => ({ federationPeerApi: { status: vi.fn() } }));
 const status: FederationStatus = {
   identity: { nodeId: "local", libraryEpoch: "epoch", name: "Local" },
-  browsingEnabled: true,
-  sharingEnabled: true,
   requirePairing: true,
   remoteAccessMode: 2,
-  peers: [],
-  requests: [],
+  reachableAddresses: [],
 };
 
 beforeEach(() => {
@@ -24,8 +21,8 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
-describe("browsing status notifications", () => {
-  it("disables immediately while refresh is pending, and ignores a superseded enabled response", async () => {
+describe("federation state notifications", () => {
+  it("invalidates immediately after reset and ignores a superseded status response", async () => {
     let finishOld!: (value: FederationStatus) => void;
     const pending = new Promise<FederationStatus>((resolve) => {
       finishOld = resolve;
@@ -37,28 +34,27 @@ describe("browsing status notifications", () => {
       .mockReturnValueOnce(new Promise(() => {}));
     const { result } = renderHook(useFederationStatus);
 
-    await waitFor(() => expect(result.current.status?.browsingEnabled).toBe(true));
+    await waitFor(() => expect(result.current.status).toEqual(status));
     act(() => {
       void result.current.refresh();
     });
-    act(() => notifyBrowsingChanged(false));
-    expect(result.current.status?.browsingEnabled).toBe(false);
-    expect(result.current.status?.sharingEnabled).toBe(true);
+    act(() => notifyFederationChanged("reset"));
+    expect(result.current.status).toBeUndefined();
     await act(async () => finishOld(status));
-    expect(result.current.status?.browsingEnabled).toBe(false);
+    expect(result.current.status).toBeUndefined();
   });
-  it("does not enable from a notification without an authoritative server response", async () => {
+  it("refreshes changed state without replacing it before the server responds", async () => {
     vi.mocked(federationPeerApi.status)
-      .mockResolvedValueOnce({ ...status, browsingEnabled: false })
+      .mockResolvedValueOnce(status)
       .mockReturnValueOnce(new Promise(() => {}));
     const { result } = renderHook(useFederationStatus);
 
     await waitFor(() => expect(result.current.status).toBeDefined());
-    act(() => notifyBrowsingChanged(true));
-    expect(result.current.status?.browsingEnabled).toBe(false);
+    act(() => notifyFederationChanged());
+    expect(result.current.status).toEqual(status);
     expect(federationPeerApi.status).toHaveBeenCalledTimes(2);
   });
-  it("observes another window disabling browsing and rejects malformed cross-window notifications", async () => {
+  it("observes another window resetting identity and rejects malformed cross-window notifications", async () => {
     vi.mocked(federationPeerApi.status)
       .mockResolvedValueOnce(status)
       .mockReturnValue(new Promise(() => {}));
@@ -69,20 +65,20 @@ describe("browsing status notifications", () => {
       window.dispatchEvent(
         new StorageEvent("storage", {
           key: "federation.status-change",
-          newValue: '{"sender":"other","enabled":"false"}',
+          newValue: '{"sender":"other","kind":"invalid"}',
         }),
       ),
     );
-    expect(result.current.status?.browsingEnabled).toBe(true);
+    expect(result.current.status).toEqual(status);
     act(() =>
       window.dispatchEvent(
         new StorageEvent("storage", {
           key: "federation.status-change",
-          newValue: '{"sender":"other","enabled":false}',
+          newValue: '{"sender":"other","kind":"reset"}',
         }),
       ),
     );
-    expect(result.current.status?.browsingEnabled).toBe(false);
+    expect(result.current.status).toBeUndefined();
   });
 });
 
@@ -108,15 +104,15 @@ describe("quiet background refresh", () => {
     });
     expect(result.current.loading).toBe(false);
     await act(async () => {
-      finish({ ...status, sharingEnabled: false });
+      finish({ ...status, identity: { ...status.identity, name: "Updated" } });
       await pending;
     });
-    expect(result.current.status?.sharingEnabled).toBe(false);
+    expect(result.current.status?.identity.name).toBe("Updated");
     await act(async () => {
       await result.current.refresh({ quiet: true });
     });
     expect(result.current.error).toBeUndefined();
-    expect(result.current.status?.sharingEnabled).toBe(false);
+    expect(result.current.status?.identity.name).toBe("Updated");
     expect(result.current.loading).toBe(false);
   });
   it("yields to a refresh that is already in flight", async () => {
@@ -140,8 +136,8 @@ describe("quiet background refresh", () => {
     });
     expect(federationPeerApi.status).toHaveBeenCalledTimes(2);
     expect(result.current.loading).toBe(true);
-    await act(async () => finish({ ...status, browsingEnabled: false }));
+    await act(async () => finish({ ...status, identity: { ...status.identity, name: "Updated" } }));
     expect(result.current.loading).toBe(false);
-    expect(result.current.status?.browsingEnabled).toBe(false);
+    expect(result.current.status?.identity.name).toBe("Updated");
   });
 });

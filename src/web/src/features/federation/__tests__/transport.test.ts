@@ -1,37 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { federationRequest } from "../transport";
 import { federationPeerApi } from "../peerApi";
-import { federationQueryApi } from "../queryApi";
-import { federationResourceApi, localMediaUrl } from "../resourceApi";
 import { readResourceRef, withResourceRef } from "../navigation";
-import { resourceKey, sameResource } from "../types";
 
 vi.mock("@/config/env", () => ({ default: { apiEndpoint: "http://localhost:5555" } }));
 afterEach(() => vi.unstubAllGlobals());
 
 describe("local federation transport", () => {
-  it("requests a bounded mapping tree level with encoded opaque parent and cursor", async () => {
-    const fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify({ nodes: [] })));
-
-    vi.stubGlobal("fetch", fetch);
-    const controller = new AbortController();
-
-    await federationPeerApi.mappingTree(
-      "peer-a",
-      { parent: "opaque+/=", cursor: "cursor&?=" },
-      controller.signal,
-    );
-    const url = new URL(fetch.mock.calls[0][0]);
-
-    expect(url.pathname).toBe("/federation/local/peers/peer-a/mapping-tree");
-    expect([...url.searchParams.entries()]).toEqual([
-      ["limit", "200"],
-      ["parent", "opaque+/="],
-      ["cursor", "cursor&?="],
-    ]);
-    expect(fetch.mock.calls[0][1]).toMatchObject({ signal: controller.signal, cache: "no-store" });
-  });
   it.each([
     [false, false],
     [true, false],
@@ -53,79 +28,6 @@ describe("local federation transport", () => {
       });
     },
   );
-  it("reads raw DTOs and preserves per-node failures rather than claiming an empty result", async () => {
-    const omittedNodes = [{ nodeId: "offline", code: "Offline", retryable: true }];
-    const fetch = vi
-      .fn()
-      .mockResolvedValueOnce(new Response(JSON.stringify({ identity: { nodeId: "local" } })))
-      .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({ code: "NoParticipants", message: "No source completed", omittedNodes }),
-          { status: 503 },
-        ),
-      );
-
-    vi.stubGlobal("fetch", fetch);
-    expect(await federationRequest("/peers")).toEqual({ identity: { nodeId: "local" } });
-    await expect(federationRequest("/queries")).rejects.toMatchObject({
-      code: "NoParticipants",
-      omittedNodes,
-    });
-    expect(fetch.mock.calls[0][0]).toBe("http://localhost:5555/federation/local/peers");
-  });
-  it("releases sessions through a 204 response and carries complete refs when resolving or playing", async () => {
-    const fetch = vi
-      .fn()
-      .mockImplementation(() => Promise.resolve(new Response(null, { status: 204 })));
-
-    vi.stubGlobal("fetch", fetch);
-    await expect(federationQueryApi.release("a/b")).resolves.toBeUndefined();
-    const ref = { nodeId: "remote", libraryEpoch: "old", resourceId: 1 };
-
-    await federationResourceApi.detail(ref);
-    await federationResourceApi.playback(ref, "opaque", "player");
-    expect(fetch.mock.calls[0]).toEqual([
-      "http://localhost:5555/federation/local/queries/a%2Fb",
-      expect.objectContaining({ method: "DELETE", keepalive: true }),
-    ]);
-    expect(JSON.parse(fetch.mock.calls[1][1].body)).toEqual({ refs: [ref] });
-    await federationResourceApi.openDirectory(ref);
-    expect(fetch.mock.calls[3][0]).toBe(
-      "http://localhost:5555/federation/local/resources/open-directory",
-    );
-    expect(fetch.mock.calls[3][1].method).toBe("POST");
-    expect(JSON.parse(fetch.mock.calls[3][1].body)).toEqual({ resourceRef: ref });
-    expect(JSON.parse(fetch.mock.calls[2][1].body)).toEqual({
-      assetRef: { resourceRef: ref, assetId: "opaque" },
-      mode: "player",
-    });
-  });
-  it("sends expected mappings so a concurrent edit cannot silently overwrite saved paths", async () => {
-    const fetch = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
-
-    vi.stubGlobal("fetch", fetch);
-    const existing = [{ sourceRootId: "root", localPath: "/Old" }];
-    const next = [{ sourceRootId: "root", localPath: "/New" }];
-
-    await federationPeerApi.mappings("peer", next, existing);
-    expect(JSON.parse(fetch.mock.calls[0][1].body)).toEqual({
-      mappings: next,
-      expectedMappings: existing,
-    });
-    expect(fetch.mock.calls[0][1].method).toBe("PUT");
-  });
-  it("only renders media capabilities issued on this coordinator", () => {
-    expect(localMediaUrl("/federation/local/media/opaque")).toBe(
-      "http://localhost:5555/federation/local/media/opaque",
-    );
-    for (const path of [
-      "https://remote.example/federation/local/media/key",
-      "//evil.example/federation/local/file",
-      "/resource/1/file",
-      "javascript:alert(1)",
-    ])
-      expect(() => localMediaUrl(path)).toThrow();
-  });
 });
 
 describe("resource navigation identity", () => {
@@ -135,8 +37,6 @@ describe("resource navigation identity", () => {
 
     expect(params.get("scope")).toBe("all");
     expect(readResourceRef(params)).toEqual(ref);
-    expect(sameResource(ref, { ...ref, nodeId: "local" })).toBe(false);
-    expect(resourceKey(ref)).not.toBe(resourceKey({ ...ref, libraryEpoch: "epoch:old" }));
     expect(readResourceRef(withResourceRef(params))).toBeUndefined();
     expect(
       readResourceRef(new URLSearchParams("node=x&epoch=y&resource=9007199254740993")),

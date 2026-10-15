@@ -94,7 +94,6 @@ const DataSyncPage = lazy(() => import("@/features/data-sync/DataSyncPage"));
 
 // Lazy load test page to avoid circular dependency
 const Test = lazy(() => import("@/pages/test"));
-const FederationLibraryPage = lazy(() => import("@/features/federation/LibraryPage"));
 const FederationDevicesPage = lazy(() => import("@/features/federation/DevicesPage"));
 const FederationDeviceMapPage = lazy(() => import("@/features/federation/DeviceMapPage"));
 
@@ -320,14 +319,6 @@ export const routesMenuConfig: RouteMenuItem[] = [
     icon: AiOutlineCluster,
     menu: true,
     children: [
-      {
-        name: "federation.title",
-        path: "/federation",
-        component: FederationLibraryPage,
-        icon: AiOutlineCloudServer,
-        layout: "basic",
-        localNodeOnly: true,
-      },
       {
         name: "federation.devices.title",
         path: "/federation/devices",

@@ -12,7 +12,7 @@ workspace. They have no desktop relay or native program launcher.
   `Bakabase.Modules.RemoteAccess/Components/Management`. `RemoteConsoleManager` is the
   desktop adapter; existing connection files, keys, path mappings and relay ports are preserved.
 - `/federation/local/management` serves the local manager UI. It uses paired administrator
-  connections, never read-only federation grants. A manages B only after B authorizes it;
+  connections, never definitions-sync grants. A manages B only after B authorizes it;
   neither reciprocal management nor access to devices managed by B is implied.
 - Resource, property and media-library operations are named allowlisted operations, bound
   to `(serverId, libraryEpoch, owner-local ID)`. Editing B writes B. Source-scoped resource
@@ -142,7 +142,7 @@ management does not require navigating to another device's SPA.
   waits on the network or the disk.
 - **Management is legacy paired-device access.** Pairing uses `/remote-access/pair/*` with a
   code or an approved request, exactly as the removed thin client did, and grants full control
-  of the target. It is unrelated to federation grants, which stay read-only. Approving a request
+  of the target. It is unrelated to definitions-sync grants, which only permit reading definitions. Approving a request
   (`pairing/requests/{id}/approve`) answers the id the device will be listed under once it has
   collected its key — never the key — so the page that approved it can find it.
 - **A filed request is collected in the background.** The manager claims it every few seconds
@@ -160,16 +160,15 @@ management does not require navigating to another device's SPA.
   last answer as itself, like `mode` and `appVersion`: never from whoever answers at its
   address instead, and never a reason to refuse a handshake — a value this app does not know,
   as a number or a name, reads as nothing.
-- **Finding servers to manage uses the remote-access beacons**, not library sharing:
+- **Finding servers to manage uses the remote-access beacons**:
   `GET /federation/local/servers/discover` (UDP probe + mDNS, ~3 s, on request only) lists
   every server answering them, minus this machine's own answers (loopback or any address of its
   interfaces, `ThisMachine`; over mDNS, only a host whose every advertised address is — another
   machine can advertise a VPN or virtual adapter's address this one holds too, and is offered
   at one it does not) and marked when already managed. Another machine answering with
   this install's own id is listed, never hidden behind this machine's answer: it is a copy of
-  this data directory, and adding it says so (`SameIdentity`). Library
-  sharing's discovery only lists servers that opted into sharing, which says nothing about
-  whether a server can be managed.
+  this data directory, and adding it says so (`SameIdentity`). No extra resource-sharing switch
+  is required. Definitions discovery is separate and does not imply management access.
 
 ## Invariants — do not weaken
 
@@ -187,7 +186,7 @@ management does not require navigating to another device's SPA.
   effective opening modes through the relay, but configuration navigates home. No standalone
   per-kind player override store is used. Explicit local player configurations may name any
   application; the known-player relocation rules apply only to inherited remote players.
-  Neither this matching API nor a read-only library grant grants reciprocal access or
+  Neither this matching API nor a definitions grant grants reciprocal access or
   synchronizes profile configuration to the source.
 
 - **Cross-device processing is explicit, resumable work.** `Components/Federation/Processing`
@@ -312,8 +311,7 @@ management does not require navigating to another device's SPA.
   own name from such an address is this device through another door — a reverse proxy or port forward on another host, the router's
   public address looping back — and stays `ThisDevice`: the reset would unpair every device
   for nothing (a copy on a machine of the same name reads as this device too, refused all the
-  same). Library sharing cannot tell those two apart (a node's name is in its data
-  directory), so its `SameIdentity` names both. Only that action replaces the `ServerId`: the
+  same). Only that action replaces the `ServerId`: the
   recovery of an unreadable federation state replaces the node alone, with an id of its own.
   Whether an address is this machine's is judged by its host — an address its interfaces hold,
   or a name resolving only to such addresses — and, where a lookup runs out of time, reads as

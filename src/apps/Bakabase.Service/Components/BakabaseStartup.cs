@@ -140,7 +140,7 @@ namespace Bakabase.Service.Components
             services.AddSingleton<IListeningAddressProvider, AppContextListeningAddressProvider>();
             services.AddSingleton<IRemoteAccessDataDirectory, AppServiceRemoteAccessDataDirectory>();
             services.AddManagedServerConnections();
-            services.AddFederatedLibrary();
+            services.AddMultiDeviceServices();
             services.AddDataSyncServiceComponents();
 
             // Which pages CORS, the cross-site guard and the framing headers trust, for the
@@ -386,7 +386,6 @@ namespace Bakabase.Service.Components
             app.UseMiddleware<FederationAccessMiddleware>();
             app.UseMiddleware<RemoteAccessMiddleware>();
             app.UseMiddleware<FederationAdministrationMiddleware>();
-            app.UseMiddleware<FederationBrowsingMiddleware>();
             // After the loopback bypass above: narrows what a page on another site can
             // make this computer's browser do here, showing this UI in a frame included.
             app.UseMiddleware<LoopbackCrossSiteGuard>();

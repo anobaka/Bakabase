@@ -9,7 +9,6 @@ import OpenPageButton, {
   ADD_SERVER_ROUTE,
   MANAGEMENT_ROUTE,
   RESOURCE_ROUTE,
-  SHARING_ROUTE,
 } from "./OpenPageButton";
 
 const steps = (track: string, ids: string[]) =>
@@ -20,11 +19,6 @@ const steps = (track: string, ids: string[]) =>
   }));
 
 const tracks = [
-  {
-    id: "browse",
-    steps: steps("browse", ["share", "connect", "both", "enable"]),
-    links: [{ route: SHARING_ROUTE, openKey: mdk("open.devices") }],
-  },
   {
     id: "manage",
     steps: steps("manage", ["allow", "add", "switch", "map"]),
@@ -37,12 +31,12 @@ const tracks = [
   },
 ];
 
-/** How to get there: the Devices and sharing page, one track per way of using a device. */
+/** How to get there: the Devices page, one track per way of using a device. */
 const SetupSection = ({ onNavigate }: { onNavigate?: (path: string) => void }) => (
   <div className="flex flex-col gap-4">
     <TopicHeadline introKey={mdk("setup.intro")} titleKey={mdk("setup.headline")} />
 
-    <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+    <div className="flex flex-col gap-4">
       {tracks.map((track) => (
         <section key={track.id} className="flex flex-col gap-2" data-track={track.id}>
           <TopicSteps steps={track.steps} titleKey={mdk(`setup.${track.id}.title`)} />

@@ -25,6 +25,36 @@ namespace Bakabase.Tests.Federation.Security;
 public sealed partial class FederationGateTests
 {
     [TestMethod]
+    [DataRow("PUT", "/federation/local/peers/browsing")]
+    [DataRow("PUT", "/federation/local/peers/sharing")]
+    [DataRow("POST", "/federation/local/peers/invite")]
+    [DataRow("POST", "/federation/local/peers/connect")]
+    [DataRow("POST", "/federation/local/peers/claim")]
+    [DataRow("GET", "/federation/local/peers/discover")]
+    [DataRow("PUT", "/federation/local/peers/peer/path-mappings")]
+    [DataRow("GET", "/federation/local/peers/peer/mapping-tree")]
+    [DataRow("GET", "/federation/local/peers/peer/mapping-roots")]
+    [DataRow("DELETE", "/federation/local/peers/peer")]
+    [DataRow("POST", "/federation/local/queries")]
+    [DataRow("GET", "/federation/local/media/ticket")]
+    [DataRow("POST", "/federation/local/playback-sessions")]
+    [DataRow("POST", "/federation/local/resources/resolve")]
+    [DataRow("POST", "/federation/v1/export/queries")]
+    [DataRow("GET", "/federation/v1/export/assets/asset")]
+    [DataRow("GET", "/federation/v1/export/mapping-tree")]
+    [DataRow("GET", "/federation/v1/export/resource-profile/identity")]
+    [DataRow("POST", "/federation/v1/pair/code")]
+    [DataRow("POST", "/federation/v1/pair/request")]
+    [DataRow("POST", "/federation/v1/pair/claim")]
+    public void Retired_library_routes_have_no_api(string method, string path)
+    {
+        foreach (var kind in Enum.GetValues<FederationEndpointKind>())
+            Assert.IsFalse(FederationRoutePolicy.Allows(kind, method, path), $"{kind} {method} {path}");
+        Assert.IsFalse(FederationActions().Any(action =>
+            action.Path.Equals(path, StringComparison.OrdinalIgnoreCase)));
+    }
+
+    [TestMethod]
     public async Task NodeExportAlwaysRequiresGrantBeforeLegacyLoopbackAndUnrestrictedBypasses()
     {
         using var fixture = await GateFixture.CreateAsync();
@@ -32,7 +62,7 @@ public sealed partial class FederationGateTests
         foreach (var mode in new[] { RemoteAccessMode.Enabled, RemoteAccessMode.Unrestricted })
         {
             fixture.Remote.Mode = mode;
-            var context = Context("/federation/v1/export/queries", "POST", ip);
+            var context = Context("/federation/v1/export/handshake", "POST", ip);
             await fixture.RunAsync(context);
             Assert.AreEqual(401, context.Response.StatusCode, $"{ip} {mode}");
             Assert.AreEqual("NodeAuthenticationRequired", Error(context));
@@ -46,7 +76,7 @@ public sealed partial class FederationGateTests
     {
         using var fixture = await GateFixture.CreateAsync();
         fixture.Remote.Mode = RemoteAccessMode.Disabled;
-        var context = Context("/federation/v1/export/queries", "POST");
+        var context = Context("/federation/v1/export/handshake", "POST");
         fixture.Sign(context);
         await fixture.RunAsync(context);
         Assert.AreEqual(403, context.Response.StatusCode);
@@ -66,7 +96,7 @@ public sealed partial class FederationGateTests
     {
         using var fixture = await GateFixture.CreateAsync();
         fixture.Remote.Mode = RemoteAccessMode.Unrestricted;
-        foreach (var path in new[] { "/resource", "/hub", "/options", "/federation/local/peers", "/federation/v1/pair/request" })
+        foreach (var path in new[] { "/resource", "/hub", "/options", "/federation/local/peers", "/federation/v1/pair/datasync/request" })
         foreach (var header in new[] { "Bakabase-Node", " Bakabase-Node malformed", "bakabase-node-suffix payload", "Bearer value, Bakabase-Node malformed" })
         {
             var context = Context(path, "POST");
@@ -76,7 +106,7 @@ public sealed partial class FederationGateTests
             Assert.AreEqual("NodeRouteForbidden", Error(context));
             Assert.IsFalse(fixture.ReachedEndpoint);
         }
-        var malformedExport = Context("/federation/v1/export/queries", "POST");
+        var malformedExport = Context("/federation/v1/export/handshake", "POST");
         malformedExport.Request.Headers.Authorization = "Bakabase-Node malformed";
         await fixture.RunAsync(malformedExport);
         Assert.AreEqual("InvalidNodeSignature", Error(malformedExport));
@@ -115,7 +145,7 @@ public sealed partial class FederationGateTests
     public async Task ValidSignatureCrossesLegacyGateWithoutCreatingFullControlPairedContext()
     {
         using var fixture = await GateFixture.CreateAsync();
-        var context = Context("/federation/v1/export/queries", "POST", "192.168.20.8");
+        var context = Context("/federation/v1/export/handshake", "POST", "192.168.20.8");
         context.Request.QueryString = new QueryString("??name=one&name=two");
         fixture.Sign(context);
         await fixture.RunAsync(context);
@@ -125,12 +155,8 @@ public sealed partial class FederationGateTests
     }
 
     [TestMethod]
-    [DataRow("/federation/v1/export/resources/resolve", "POST", false)]
-    [DataRow("/federation/v1/export/resources/resolve", "POST", true)]
-    [DataRow("/federation/v1/export/resources/location", "POST", false)]
-    [DataRow("/federation/v1/export/resources/location", "POST", true)]
-    [DataRow("/federation/v1/export/mapping-roots", "GET", false)]
-    [DataRow("/federation/v1/export/mapping-roots", "GET", true)]
+    [DataRow("/federation/v1/export/datasync/head", "GET", false)]
+    [DataRow("/federation/v1/export/datasync/head", "GET", true)]
     public async Task RevocationDuringExportCancelsRequestAndRejectsLateSuccessfulControlResults(
         string path, string method, bool disableSharing)
     {
@@ -143,8 +169,8 @@ public sealed partial class FederationGateTests
         {
             // Model a storage read which began while allowed, then returns without
             // observing cancellation (the existing resource Get API has no token).
-            if (disableSharing) await fixture.Peers.SetSharingAsync(false);
-            else await fixture.Peers.RevokeAsync(fixture.Grant.GrantId);
+            if (disableSharing) await fixture.Peers.SetDataSyncSharingAsync(false);
+            else await fixture.Peers.RevokeDataSyncAsync(fixture.Grant.SubjectNodeId);
             var controller = new LateResultController
                 { ControllerContext = new ControllerContext { HttpContext = http } };
             controller.Success();
@@ -158,7 +184,7 @@ public sealed partial class FederationGateTests
     public async Task ChunkedControlBodiesAreBoundedBeforeModelBindingOrAuthentication()
     {
         using var fixture = await GateFixture.CreateAsync();
-        foreach (var path in new[] { "/federation/local/peers/connect", "/federation/v1/pair/request", "/federation/v1/export/queries" })
+        foreach (var path in new[] { "/federation/local/servers/pair", "/federation/v1/pair/datasync/request", "/federation/v1/export/handshake" })
         {
             var context = Context(path, "POST");
             context.Request.ContentLength = null;
@@ -184,7 +210,7 @@ public sealed partial class FederationGateTests
                      (nameof(Actions.Export), true, FederationEndpointKind.Export, true, true)
                  })
         {
-            var http = Context("/federation/v1/export/queries", "POST");
+            var http = Context("/federation/v1/export/handshake", "POST");
             if (handled) FederationHttpContext.MarkHandled(http, kind,
                 principal ? new NodePrincipal("grant", "reader", "owner", "epoch", 1) : null);
             var descriptor = new ControllerActionDescriptor
@@ -201,9 +227,7 @@ public sealed partial class FederationGateTests
     public void EveryRealFederationActionHasAnExactAllowedProtocolRoute()
     {
         var controllers = FederationActions().Select(x => x.Controller).Distinct().ToArray();
-        foreach (var known in new[] { typeof(FederationPeerController), typeof(FederationLocalController),
-                     typeof(FederationExportController), typeof(FederationMediaController),
-                     typeof(FederationServerController), typeof(FederationDataSyncPairingController),
+        foreach (var known in new[] { typeof(FederationPeerController), typeof(FederationServerController), typeof(FederationDataSyncPairingController),
                      typeof(DataSyncNodeController) })
             CollectionAssert.Contains(controllers, known);
         foreach (var (type, action, path, methods, endpoint) in FederationActions())
@@ -218,7 +242,7 @@ public sealed partial class FederationGateTests
 
     /// <summary>
     /// A grant reaches only the Export actions of its own scope, so every Export action names one:
-    /// the library's <c>library.read</c>, the data sync feed's <c>datasync.read</c>, the handshake either.
+    /// the data sync feed declares <c>datasync.read</c>; the handshake accepts every retained scope.
     /// </summary>
     [TestMethod]
     public void EveryExportActionDeclaresAScope()
@@ -236,12 +260,10 @@ public sealed partial class FederationGateTests
             exportActions++;
             var expected = path.Equals("/federation/v1/export/handshake", StringComparison.OrdinalIgnoreCase)
                 ? FederationScopes.Any
-                : path.StartsWith("/federation/v1/export/datasync/", StringComparison.OrdinalIgnoreCase)
-                    ? FederationScopes.DataSyncRead
-                    : FederationScopes.LibraryRead;
+                : FederationScopes.DataSyncRead;
             Assert.AreEqual(expected, endpoint.Scope, name);
         }
-        Assert.IsTrue(exportActions >= 13, exportActions.ToString());
+        Assert.IsTrue(exportActions == 4, exportActions.ToString());
     }
 
     /// <summary>The data sync routes, exactly as their controllers declare them, and only as their own kind.</summary>
@@ -268,7 +290,7 @@ public sealed partial class FederationGateTests
     [DataRow(FederationEndpointKind.Public, "POST", "/federation/v1/pair/datasync")]
     [DataRow(FederationEndpointKind.Public, "POST", "/federation/v1/pair/datasync/invite")]
     [DataRow(FederationEndpointKind.Public, "POST", "/federation/v1/pair/datasync/request/extra")]
-    [DataRow(FederationEndpointKind.Public, "POST", "/federation/v1/pair/request/datasync")]
+    [DataRow(FederationEndpointKind.Public, "POST", "/federation/v1/pair/datasync/request/datasync")]
     [DataRow(FederationEndpointKind.Public, "POST", "/federation/v1/pair/datasyncx/request")]
     [DataRow(FederationEndpointKind.Public, "POST", "/federation/v1/pair/library/request")]
     [DataRow(FederationEndpointKind.Export, "POST", "/federation/v1/export/datasync/manifest")]
@@ -431,7 +453,7 @@ public sealed partial class FederationGateTests
     {
         // FederationLocalAccessFilter refuses an Export action that declares no scope (fail-closed, §7.3), so the
         // fixture serves the library's, as every Export action before data sync did. The assertions are unchanged.
-        [FederationEndpoint(FederationEndpointKind.Export, Scope = FederationScopes.LibraryRead)] public void Export() { }
+        [FederationEndpoint(FederationEndpointKind.Export, Scope = FederationScopes.DataSyncRead)] public void Export() { }
         public void Unmarked() { }
     }
     private sealed class LateResultController : FederationControllerBase
@@ -459,10 +481,10 @@ public sealed partial class FederationGateTests
             f.Peers = peers;
             var grants = new NodeGrantService(f.Store, identity, f.Leases, TimeProvider.System);
             f.Auth = new(grants, new NodeNonceCache(TimeProvider.System), TimeProvider.System);
-            await peers.SetSharingAsync(true);
-            var invitation = await peers.IssueInvitationAsync();
-            f.Grant = (await peers.ExchangeCodeAsync(new("reader-node", "Reader", invitation.Code,
-                "test-transaction", NodeRequestSignature.RandomToken()))).Credentials!;
+            await peers.SetDataSyncSharingAsync(true);
+            var invitation = await peers.IssueDataSyncInvitationAsync();
+            f.Grant = (await peers.ExchangeDataSyncCodeAsync(new("reader-node", "Reader", invitation.Code,
+                "test-transaction", NodeRequestSignature.RandomToken(), NodeDataSyncIntents.Follow))).Exchange.Credentials!;
             return f;
         }
         public void Sign(HttpContext context) => context.Request.Headers.Authorization = NodeRequestSignature.Create(

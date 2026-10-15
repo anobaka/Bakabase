@@ -4,12 +4,7 @@ import type {
   BakabaseServiceModelsViewRemoteAccessPendingRequestViewModel as ManagementRequest,
   BakabaseServiceModelsViewRemoteAccessSettingsViewModel as RemoteAccessSettings,
 } from "@/sdk/Api";
-import type {
-  FederationStatus,
-  ManagedServer,
-  ManagedServerPairing,
-  PairingRequest,
-} from "../types";
+import type { FederationStatus, ManagedServer, ManagedServerPairing } from "../types";
 import type { DeviceGraph, MapEdge, MapEdgeKind, MapNode } from "./graph";
 import type { MapSelection } from "./DeviceMapCanvas";
 import type { MapSource } from "./useDeviceMapData";
@@ -33,13 +28,11 @@ import ConfirmDialog from "../components/ConfirmDialog";
 import ManagedServerPathMappings from "../components/ManagedServerPathMappings";
 import ManagedDeviceNameEditor from "../components/ManagedDeviceNameEditor";
 import { ManagedServerWarnings, stateBadgeClass } from "../components/ManagedServers";
-import PeerPathMappings from "../components/PeerPathMappings";
 import { federationPeerApi } from "../peerApi";
 import { managedServerApi } from "../serverApi";
 import { devicesRoute, openManagedServer } from "../switching";
 import { FederationError } from "../transport";
-import { PROXY_FAKE_ADDRESS } from "../types";
-import { managedServerOutcomeCode, proxyFakeAddressKey } from "../proxy";
+import { managedServerOutcomeCode } from "../proxy";
 
 import {
   SELF_ID,
@@ -57,7 +50,7 @@ import { useEscapeKey } from "./useEscapeKey";
 
 import BApi from "@/sdk/BApi";
 import { ManagedServerOutcome, ManagedServerState, RemoteAccessMode } from "@/sdk/constants";
-import { millisecondsUntil, minutesUntil, parseServerTime } from "@/core/serverTime";
+import { minutesUntil, parseServerTime } from "@/core/serverTime";
 import { remoteDevicePlatformLabelKey } from "@/core/remoteDevicePlatform";
 import DataSyncGhostAction from "@/features/data-sync/map/DataSyncGhostAction";
 import DataSyncMapSection from "@/features/data-sync/map/DataSyncMapSection";
@@ -65,10 +58,6 @@ import DataSyncSelfSection from "@/features/data-sync/map/DataSyncSelfSection";
 
 /** Failures show in the panel; a toast from the shared client would say it twice. */
 const inline = { showErrorToast: false } as const;
-
-/** The multi-device library, searching only the given device (and choosing it). */
-export const libraryRoute = (nodeId: string) =>
-  `/federation?scope=selected&source=${encodeURIComponent(nodeId)}`;
 
 const sectionClass = "space-y-3 border-t border-default-200 pt-4";
 
@@ -328,7 +317,6 @@ export default function DeviceMapPanel({
               {t("federation.map.panel.showDevice", { name })}
             </button>
           )}
-          {(!edge || edge.kind === "sharing") && <SharingSection context={context} node={node} />}
           {(!edge || edge.kind === "management") && (
             <ManagementSection context={context} node={node} />
           )}
@@ -373,7 +361,6 @@ function UnverifiedNote({
   const { t } = useTranslation();
   const claim = node.claimsToBe;
   const from =
-    node.sources.sharingRequests.find((request) => request.remoteAddress)?.remoteAddress ??
     node.sources.managementRequestsIn.find((request) => request.remoteAddress)?.remoteAddress ??
     node.sources.syncRequests.find((request) => request.remoteAddress)?.remoteAddress ??
     t("federation.map.panel.claim.unknownFrom");
@@ -528,392 +515,6 @@ const ensureOk = <T extends { code?: number; message?: string | null }>(
   return rsp;
 };
 
-/** Read-only library sharing between this device and another, both ways. */
-function SharingSection({ context, node }: { context: PanelContext; node: MapNode }) {
-  const { t } = useTranslation();
-  const { graph, status, actions } = context;
-  const { busy, run, confirm } = actions;
-  const edge = edgesOf(graph, node.id).find((item) => item.kind === "sharing");
-  const peer = node.sources.peer;
-  const name = nodeName(t, node);
-  const now = Date.now();
-  const incoming = node.sources.sharingRequests.filter((r) => r.direction === "incoming");
-  const outgoing = node.sources.sharingRequests.filter((r) => r.direction === "outgoing");
-  const canRequest =
-    !peer?.outboundGrant &&
-    !outgoing.length &&
-    !!node.address &&
-    !node.issues.includes("wrongServer");
-  const [invite, setInvite] = useState<{ code: string; expiresAt: string }>();
-
-  const approve = (request: PairingRequest) => {
-    const reciprocal = request.offersReciprocalAccess;
-
-    confirm({
-      title: t("federation.requests.approve"),
-      description: t(
-        request.remoteAddress
-          ? reciprocal
-            ? "federation.requests.approveConfirmFromReciprocal"
-            : "federation.requests.approveConfirmFrom"
-          : reciprocal
-            ? "federation.requests.approveConfirmReciprocal"
-            : "federation.requests.approveConfirm",
-        { name: request.nodeName, address: request.remoteAddress },
-      ),
-      warning: request.replacesExistingAccess
-        ? t("federation.requests.replacesExisting")
-        : undefined,
-      action: async () => {
-        await federationPeerApi.decide(request.requestId, true);
-        // Approved, the claimed id is a device this one shares with: the panel moves there.
-        context.follow([identityKey.install(request.nodeId)]);
-      },
-      refresh: ["sharing"],
-    });
-  };
-
-  return (
-    <section
-      aria-labelledby={`sharing-${node.id}`}
-      className={sectionClass}
-      data-testid="device-map-sharing"
-    >
-      <h3
-        className={`flex items-center gap-2 text-sm font-semibold ${edgeStyles.sharing.text}`}
-        id={`sharing-${node.id}`}
-      >
-        <KindBadge kind="sharing" />
-        {t("federation.map.edge.sharing")}
-      </h3>
-      {!edge && (
-        <p className="text-sm text-default-500">
-          {t("federation.map.panel.sharing.none", { name })}
-        </p>
-      )}
-
-      <DirectionRow direction="in" edge={edge} kind="sharing" name={name} testId="sharing-in">
-        {peer?.outboundGrant ? (
-          <>
-            {peer.connectionState === PROXY_FAKE_ADDRESS ? (
-              // A proxy on this computer took over its name: said in full, with the fix.
-              <p className="text-xs text-warning-600 dark:text-warning" data-testid="peer-proxy">
-                {t(proxyFakeAddressKey(peer.address))}
-              </p>
-            ) : (
-              peer.connectionState !== "Online" &&
-              peer.connectionState !== "Unknown" && (
-                <p className="text-xs text-default-500">
-                  {t(`federation.connection.${peer.connectionState}`, {
-                    defaultValue: peer.connectionState,
-                  })}
-                </p>
-              )
-            )}
-            <div className="flex flex-wrap items-center gap-2">
-              <Link className={primaryClass} to={libraryRoute(peer.nodeId)}>
-                {t("federation.map.panel.openLibrary")}
-              </Link>
-              <button
-                className={buttonClass}
-                disabled={busy}
-                type="button"
-                onClick={() =>
-                  confirm({
-                    title: t("federation.devices.forget"),
-                    description: t("federation.devices.forgetConfirm", { name }),
-                    action: () => federationPeerApi.forget(peer.nodeId),
-                    refresh: ["sharing"],
-                  })
-                }
-              >
-                {t("federation.devices.forget")}
-              </button>
-            </div>
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                checked={peer.enabled}
-                disabled={busy}
-                type="checkbox"
-                onChange={(event) =>
-                  void run(
-                    () => federationPeerApi.enable(peer.nodeId, event.target.checked),
-                    ["sharing"],
-                  )
-                }
-              />
-              {t("federation.devices.include")}
-            </label>
-            <PeerPathMappings
-              busy={busy}
-              className="pt-1"
-              peer={peer}
-              onSave={(mappings, expected) =>
-                run(async () => {
-                  await federationPeerApi.mappings(peer.nodeId, mappings, expected);
-                  if (actions.mounted.current) actions.setNotice(t("federation.mappings.saved"));
-                }, ["sharing"])
-              }
-            />
-          </>
-        ) : (
-          <>
-            {incoming.some((request) => request.offersReciprocalAccess) && (
-              // Asked for by the other device: approving its request below opens this way too.
-              <p className="text-xs text-success">
-                {t("federation.requests.offersReciprocal", { name })}
-              </p>
-            )}
-            {outgoing.map((request) => (
-              <div key={request.requestId} className="flex flex-wrap items-center gap-2">
-                <p className="mr-auto text-xs text-default-500">
-                  {t("federation.expires", {
-                    time: parseServerTime(request.expiresAt)?.toLocaleTimeString() ?? "",
-                  })}
-                </p>
-                <button
-                  className={buttonClass}
-                  disabled={busy}
-                  type="button"
-                  onClick={() =>
-                    void run(async () => {
-                      const result = await federationPeerApi.claim(request.requestId);
-
-                      if (actions.mounted.current)
-                        actions.setNotice(t(`federation.pair.${result.outcome}`));
-                    }, ["sharing"])
-                  }
-                >
-                  {t("federation.requests.check")}
-                </button>
-                <button
-                  className={buttonClass}
-                  disabled={busy}
-                  type="button"
-                  onClick={() =>
-                    void run(() => federationPeerApi.cancelRequest(request.requestId), ["sharing"])
-                  }
-                >
-                  {t("federation.requests.cancel")}
-                </button>
-              </div>
-            ))}
-          </>
-        )}
-      </DirectionRow>
-
-      <DirectionRow direction="out" edge={edge} kind="sharing" name={name} testId="sharing-out">
-        {peer?.inboundGrant && (
-          <button
-            className={`${buttonClass} text-danger`}
-            disabled={busy}
-            type="button"
-            onClick={() =>
-              confirm({
-                title: t("federation.devices.revoke"),
-                description: t("federation.devices.revokeConfirm", { name }),
-                action: () => federationPeerApi.revoke(peer.inboundGrant!.grantId),
-                refresh: ["sharing"],
-              })
-            }
-          >
-            {t("federation.devices.revoke")}
-          </button>
-        )}
-        {
-          // Also beside a grant it already has: a new request would replace that access,
-          // which its approval says.
-          incoming.map((request) => (
-            <div key={request.requestId} className="space-y-2">
-              {request.remoteAddress && (
-                <p className="break-all text-xs text-default-500">
-                  {t("federation.requests.from", { address: request.remoteAddress })}
-                </p>
-              )}
-              {request.offersReciprocalAccess && (
-                <p className="text-xs text-success">
-                  {t("federation.requests.offersReciprocal", { name: request.nodeName })}
-                </p>
-              )}
-              {request.replacesExistingAccess && (
-                <p className="text-xs text-warning">{t("federation.requests.replacesExisting")}</p>
-              )}
-              <div className="flex flex-wrap gap-2">
-                <button
-                  className={primaryClass}
-                  disabled={busy}
-                  type="button"
-                  onClick={() => approve(request)}
-                >
-                  {t("federation.requests.approve")}
-                </button>
-                <button
-                  className={buttonClass}
-                  disabled={busy}
-                  type="button"
-                  onClick={() =>
-                    void run(() => federationPeerApi.decide(request.requestId, false), ["sharing"])
-                  }
-                >
-                  {t("federation.requests.reject")}
-                </button>
-              </div>
-            </div>
-          ))
-        }
-      </DirectionRow>
-
-      {canRequest && (
-        <SharingRequestForm
-          actions={actions}
-          address={node.address!}
-          follow={context.follow}
-          remoteDisabled={status?.remoteAccessMode === RemoteAccessMode.Disabled}
-        />
-      )}
-
-      {peer?.outboundGrant && !peer.inboundGrant && !incoming.length && (
-        // Letting another device read this one is decided here and entered there: a code
-        // made here, typed into that device's "Connect another device".
-        <div className="space-y-2 rounded-lg bg-default-50 p-3 text-sm" data-testid="share-mine">
-          <p className="font-medium">{t("federation.map.panel.shareMine.title", { name })}</p>
-          <p className="text-xs text-default-500">
-            {t("federation.map.panel.shareMine.tip", { name })}
-          </p>
-          {status?.sharingEnabled ? (
-            <>
-              <button
-                className={buttonClass}
-                disabled={busy}
-                type="button"
-                onClick={() =>
-                  void run(async () => {
-                    const issued = await federationPeerApi.invite();
-
-                    if (actions.mounted.current) setInvite(issued);
-                  }, [])
-                }
-              >
-                {t("federation.sharing.issueCode")}
-              </button>
-              {invite && millisecondsUntil(invite.expiresAt, now) > 0 && (
-                <div>
-                  <code className="block text-2xl tracking-[0.25em]">{invite.code}</code>
-                  <p className="text-xs text-default-500">
-                    {t("federation.expires", {
-                      time: parseServerTime(invite.expiresAt)?.toLocaleTimeString() ?? "",
-                    })}
-                  </p>
-                </div>
-              )}
-            </>
-          ) : (
-            <Link className="text-xs text-primary underline" to={devicesRoute("share")}>
-              {t("federation.map.panel.shareMine.enableFirst")}
-            </Link>
-          )}
-        </div>
-      )}
-
-      {peer && (
-        <button
-          className={`${buttonClass} text-danger`}
-          disabled={busy}
-          type="button"
-          onClick={() =>
-            confirm({
-              title: t("federation.devices.remove"),
-              description: t("federation.devices.removeConfirm", { name: peer.label }),
-              action: () => federationPeerApi.remove(peer.nodeId),
-              // Removing it also forgets this device's data sync link to it.
-              refresh: ["sharing", "dataSync"],
-            })
-          }
-        >
-          {t("federation.devices.remove")}
-        </button>
-      )}
-    </section>
-  );
-}
-
-/** Asks another device for read access to its library — the devices page's form, for one device. */
-function SharingRequestForm({
-  actions,
-  address,
-  remoteDisabled,
-  follow,
-}: {
-  actions: PanelActions;
-  address: string;
-  remoteDisabled: boolean;
-  follow: PanelContext["follow"];
-}) {
-  const { t } = useTranslation();
-  const [code, setCode] = useState("");
-  const [shareBack, setShareBack] = useState(true);
-
-  return (
-    <form
-      aria-label={t("federation.map.panel.requestAccess")}
-      className="space-y-2 rounded-lg bg-default-50 p-3"
-      data-testid="sharing-request-form"
-      onSubmit={(event) => {
-        event.preventDefault();
-        void actions.run(async () => {
-          const result = await federationPeerApi.connect(
-            address,
-            code.trim() || undefined,
-            shareBack,
-          );
-
-          actions.setNotice(t(`federation.pair.${result.outcome}`));
-          // A device found nearby becomes a request, or a device shared with.
-          follow([
-            result.requestId && identityKey.request(result.requestId),
-            result.peerNodeId && identityKey.install(result.peerNodeId),
-            identityKey.address(address),
-          ]);
-          if (actions.mounted.current && result.outcome === "granted") setCode("");
-        }, ["sharing"]);
-      }}
-    >
-      <p className="text-sm font-medium">{t("federation.map.panel.requestAccess")}</p>
-      <label className="block space-y-1 text-xs">
-        <span>{t("federation.pair.code")}</span>
-        <input
-          autoComplete="off"
-          className={fieldClass}
-          value={code}
-          onChange={(event) => setCode(event.target.value)}
-        />
-      </label>
-      <label className="flex items-start gap-2 text-xs">
-        <input
-          checked={shareBack}
-          className="mt-0.5"
-          type="checkbox"
-          onChange={(event) => setShareBack(event.target.checked)}
-        />
-        <span>
-          {t("federation.pair.shareBack")}
-          <span className="mt-0.5 block text-default-500">
-            {t(
-              remoteDisabled
-                ? "federation.pair.shareBackTipRemote"
-                : "federation.pair.shareBackTip",
-            )}
-          </span>
-        </span>
-      </label>
-      <button className={primaryClass} disabled={actions.busy} type="submit">
-        {t(code.trim() ? "federation.pair.withCode" : "federation.pair.request")}
-      </button>
-    </form>
-  );
-}
-
-/** Full control, either way: servers this device manages, devices that manage it. */
 function ManagementSection({ context, node }: { context: PanelContext; node: MapNode }) {
   const { t } = useTranslation();
   const { graph, actions } = context;
@@ -931,16 +532,15 @@ function ManagementSection({ context, node }: { context: PanelContext; node: Map
     !!node.address &&
     !node.issues.includes("wrongServer");
   // A managed server whose address answers as another, seen again as itself elsewhere — by
-  // its own beacon, or where library sharing reaches the same install — and confirmed there
+  // its own beacon, or where definitions synchronization reaches the same install — and confirmed there
   // just now. Pairing again there keeps its path mappings and relay port: the way back its
   // warning describes.
-  const { managementCandidate, sharingCandidate, peer } = node.sources;
+  const { managementCandidate, dataSyncCandidate } = node.sources;
   const wayBack = useWayBack(
     canManageFromHere(graph) ? server : undefined,
     [
       managementCandidate?.serverId === server?.serverId ? managementCandidate?.address : undefined,
-      peer?.address,
-      sharingCandidate?.address,
+      dataSyncCandidate?.address,
     ],
     context.ownHosts,
   );
@@ -1084,9 +684,13 @@ function ManagementSection({ context, node }: { context: PanelContext; node: Map
               busy={busy}
               className="pt-1"
               server={server}
-              onSave={(mappings) =>
+              onSave={(mappings, expectedMappings) =>
                 run(async () => {
-                  await managedServerApi.setPathMappings(server.serverId, mappings);
+                  await managedServerApi.setPathMappings(
+                    server.serverId,
+                    mappings,
+                    expectedMappings,
+                  );
                   if (actions.mounted.current)
                     actions.setNotice(t("federation.servers.mappings.saved"));
                 }, ["servers"])
@@ -1230,7 +834,7 @@ function ManagementSection({ context, node }: { context: PanelContext; node: Map
 
 /**
  * Where a managed server whose address answers as another install answers as itself now.
- * Each place it was last seen — found nearby by its own id, or where library sharing reaches
+ * Each place it was last seen — found nearby by its own id, or where definitions synchronization reaches
  * the same install — is asked afresh, and only an answer carrying the server's own id counts:
  * a state kept from an earlier conversation says nothing about who answers there today. A
  * place that is the server's own address under another spelling (`localhost` for `127.0.0.1`,
@@ -1403,8 +1007,6 @@ function SelfDetails({ context }: { context: PanelContext }) {
   const count = (kind: MapEdgeKind, direction: "in" | "out") =>
     graph.edges.filter((edge) => edge.kind === kind && edge[direction] === "active").length;
   const counts = [
-    ["sharesWith", count("sharing", "out")],
-    ["browses", count("sharing", "in")],
     ["manages", count("management", "out")],
     ["managedBy", count("management", "in")],
   ] as const;
@@ -1435,7 +1037,7 @@ function SelfDetails({ context }: { context: PanelContext }) {
                 void actions.run(async () => {
                   await federationPeerApi.setName(name || null, expectedName);
                   if (actions.mounted.current) setEditing(undefined);
-                }, ["sharing"]);
+                }, ["identity"]);
               }}
             >
               <label className="block space-y-1 text-sm">
@@ -1462,7 +1064,7 @@ function SelfDetails({ context }: { context: PanelContext }) {
                     void actions.run(async () => {
                       await federationPeerApi.setName(null, expectedName);
                       if (actions.mounted.current) setEditing(undefined);
-                    }, ["sharing"])
+                    }, ["identity"])
                   }
                 >
                   {t("federation.name.reset")}
@@ -1482,22 +1084,6 @@ function SelfDetails({ context }: { context: PanelContext }) {
       )}
       <section className={sectionClass}>
         <ul className="space-y-1.5 text-sm" data-testid="device-map-self-status">
-          {status && (
-            <li className="flex justify-between gap-3">
-              <span className="text-default-500">{t("federation.map.edge.sharing")}</span>
-              <span>
-                {t(status.sharingEnabled ? "federation.sharing.on" : "federation.sharing.off")}
-              </span>
-            </li>
-          )}
-          {status && (
-            <li className="flex justify-between gap-3">
-              <span className="text-default-500">{t("federation.browsing.title")}</span>
-              <span>
-                {t(status.browsingEnabled ? "federation.browsing.on" : "federation.browsing.off")}
-              </span>
-            </li>
-          )}
           {management && (
             <li className="flex justify-between gap-3">
               <span className="text-default-500">
@@ -1532,25 +1118,16 @@ function SelfDetails({ context }: { context: PanelContext }) {
 /** A device found nearby: the ways to connect to it that it answered to. */
 function GhostDetails({ context, node }: { context: PanelContext; node: MapNode }) {
   const { t } = useTranslation();
-  const { graph, status, actions } = context;
+  const { graph, actions } = context;
   const name = nodeName(t, node);
-  const { sharingCandidate, managementCandidate } = node.sources;
+  const { managementCandidate } = node.sources;
   const manageable = !!managementCandidate && canManageFromHere(graph);
 
   return (
     <div className="space-y-3">
       <ul className="space-y-1 text-xs text-default-500">
-        {sharingCandidate && <li>{t("federation.map.panel.ghost.sharing")}</li>}
         {managementCandidate && <li>{t("federation.map.panel.ghost.management")}</li>}
       </ul>
-      {sharingCandidate && (
-        <SharingRequestForm
-          actions={actions}
-          address={sharingCandidate.address}
-          follow={context.follow}
-          remoteDisabled={status?.remoteAccessMode === RemoteAccessMode.Disabled}
-        />
-      )}
       {manageable && (
         <ManageForm
           actions={actions}
@@ -1559,7 +1136,7 @@ function GhostDetails({ context, node }: { context: PanelContext; node: MapNode 
           name={name}
         />
       )}
-      {!sharingCandidate && !manageable && (
+      {!manageable && (
         <p className="text-sm text-default-500">{t("federation.map.panel.ghost.nothing")}</p>
       )}
       <DataSyncGhostAction

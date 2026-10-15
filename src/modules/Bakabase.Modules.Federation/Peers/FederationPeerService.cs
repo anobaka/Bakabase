@@ -5,14 +5,7 @@ using Bakabase.Modules.Federation.Security;
 
 namespace Bakabase.Modules.Federation.Peers;
 
-/// <summary>Owns local sharing decisions. A peer grant never calls these management methods.</summary>
-/// <remarks>
-/// Library access (<c>library.read</c>) and definitions access (<c>datasync.read</c>) are separate grants in separate
-/// collections, each with its own switch, requests, codes and leases (§7.1). The methods named <c>DataSync</c> work on
-/// definitions access only; every other method is about library access, except <see cref="RevokeAsync"/> (a grant
-/// id of either kind), <see cref="RemovePeerAsync"/>, <see cref="RotateLibraryEpochAsync"/> and
-/// <see cref="ResetAsNewNodeAsync"/>, which end both.
-/// </remarks>
+/// <summary>Owns explicit definitions-sharing decisions and the device's identity lifecycle.</summary>
 public sealed class FederationPeerService(FederationStateStore store, INodeIdentityProvider identity,
     GrantLeaseRegistry leases, TimeProvider timeProvider)
 {
@@ -20,298 +13,6 @@ public sealed class FederationPeerService(FederationStateStore store, INodeIdent
     private const int MaxPendingRequests = 64;
     private const int MaxPendingRequestsPerAddress = 4;
     private const int MaxStoredRequests = 256;
-
-    public async Task<FederationPeerStatus> GetStatusAsync(CancellationToken ct = default)
-    {
-        var local = await identity.GetAsync(ct);
-        var state = await store.ReadAsync(ct);
-        var peers = state.Peers.Values.Select(peer =>
-        {
-            state.OutboundGrants.TryGetValue(peer.NodeId, out var outgoing);
-            var incoming = state.InboundGrants.Values.FirstOrDefault(g => !g.Revoked &&
-                g.Credentials.SubjectNodeId == peer.NodeId && g.Credentials.LibraryEpoch == local.LibraryEpoch);
-            return new FederationPeerView(peer.NodeId, peer.Label, peer.Address, peer.Enabled,
-                peer.Enabled ? "Unknown" : "Disabled",
-                outgoing == null ? null : new NodeGrantSummary(outgoing.GrantId, outgoing.Revision),
-                incoming == null ? null : new NodeGrantSummary(incoming.Credentials.GrantId, incoming.Credentials.Revision),
-                peer.PathMappings, peer.Kind, peer.Platform);
-        }).OrderBy(p => p.Label, StringComparer.Ordinal).ToArray();
-        var now = timeProvider.GetUtcNow();
-        var requests = state.IncomingRequests.Where(r => r.ExpiresAt > now).Select(r =>
-                new NodePairingRequestView(r.RequestId, r.NodeId, r.NodeName, "incoming", r.Status, r.ExpiresAt,
-                    r.RemoteAddress, r.Status == "awaitingApproval" && state.InboundGrants.Values.Any(g =>
-                        !g.Revoked && g.Credentials.SubjectNodeId == r.NodeId), r.Reciprocal != null))
-            .Concat(state.OutgoingRequests.Where(r => r.ExpiresAt > now).Select(r =>
-                new NodePairingRequestView(r.RequestId, r.NodeId, r.NodeName, "outgoing", r.Status, r.ExpiresAt)))
-            .ToArray();
-        return new FederationPeerStatus(local, state.SharingEnabled, peers, requests, state.DataSyncSharingEnabled);
-    }
-
-    public async Task SetSharingAsync(bool enabled, CancellationToken ct = default)
-    {
-        await identity.GetAsync(ct);
-        var grants = await store.MutateAsync(state =>
-        {
-            state.SharingEnabled = enabled;
-            return LiveGrantIds(state.InboundGrants);
-        }, ct);
-        // Per grant: library sharing never touches a definitions reader's lease, nor the reverse.
-        SetLeases(grants, enabled);
-    }
-
-    public async Task<NodeInvitation> IssueInvitationAsync(CancellationToken ct = default)
-    {
-        await identity.GetAsync(ct);
-        var code = RandomNumberGenerator.GetInt32(100_000_000).ToString("D8", CultureInfo.InvariantCulture);
-        var expiresAt = timeProvider.GetUtcNow() + PairingLifetime;
-        await store.MutateAsync(state =>
-        {
-            RequireSharing(state);
-            state.Invitation = new StoredInvitation
-                { CodeHash = NodeRequestSignature.HashSecret(code), ExpiresAt = expiresAt };
-            return true;
-        }, ct);
-        return new NodeInvitation(code, expiresAt);
-    }
-
-    public async Task<NodePairExchange> ExchangeCodeAsync(NodePairCodeRequest request,
-        string? remoteAddress = null, CancellationToken ct = default)
-    {
-        ValidatePairRequest(request.NodeId, request.NodeName, request.TransactionId, request.ClaimSecret);
-        var local = await identity.GetAsync(ct);
-        if (request.NodeId == local.NodeId) throw BadRequest("A node cannot pair with itself.");
-        var now = timeProvider.GetUtcNow();
-        var revoked = new List<string>();
-        var result = await store.MutateAsync<NodePairExchange?>(state =>
-        {
-            RequireSharing(state);
-            Prune(state, now);
-            var existing = FindTransaction(state.IncomingRequests, request.TransactionId, request.NodeId,
-                request.ClaimSecret);
-            // Retrying a pending request with an invitation is a new approval path
-            // for the same claimant, not merely a status poll. Completed/rejected
-            // transactions remain idempotent and must never be revived by a code.
-            if (existing != null && existing.Status != "awaitingApproval")
-                return Exchange(state.InboundGrants, existing);
-            // A wrong code says nothing about a pending transaction, which stays approvable on
-            // both sides. Return rather than throw: a failed attempt has to be committed.
-            var codeHash = NodeRequestSignature.HashSecret(request.Code?.Trim());
-            var reciprocal = state.ReciprocalInvitations.FirstOrDefault(i => i.ExpiresAt > now &&
-                i.AudienceNodeId == request.NodeId && NodeRequestSignature.FixedEquals(i.CodeHash, codeHash));
-            if (reciprocal != null) state.ReciprocalInvitations.Remove(reciprocal);
-            else if (state.Invitation is not { } invitation || invitation.ExpiresAt <= now ||
-                     invitation.FailedAttempts >= 5)
-                return null;
-            else if (!NodeRequestSignature.FixedEquals(invitation.CodeHash, codeHash))
-            {
-                invitation.FailedAttempts++;
-                return null;
-            }
-            else state.Invitation = null;
-            var pending = existing;
-            if (pending == null)
-            {
-                // A valid code is the owner's approval, so pending-request limits do not apply.
-                AdmitIncoming(state.IncomingRequests, remoteAddress, authorized: true);
-                pending = NewRequest(request.NodeId, request.NodeName, request.TransactionId, request.ClaimSecret,
-                    remoteAddress, now);
-                state.IncomingRequests.Add(pending);
-            }
-            pending.Reciprocal = ValidOffer(request.Reciprocal) ?? pending.Reciprocal;
-            IssueGrant(state, pending, local, now, revoked);
-            return Exchange(state.InboundGrants, pending);
-        }, ct);
-        foreach (var grantId in revoked) leases.Revoke(grantId);
-        return result ?? throw new FederationAccessException("InvalidPairingCode", 403,
-            "The sharing code is wrong or has expired. Create a new code on the sharing device.");
-    }
-
-    public async Task<NodePairExchange> RequestPairingAsync(NodePairRequest request, string? remoteAddress = null,
-        CancellationToken ct = default) => (await SubmitPairingRequestAsync(request, remoteAddress, ct)).Exchange;
-
-    /// <summary><see cref="RequestPairingAsync"/>, also telling whether this call created the request.</summary>
-    public async Task<(NodePairExchange Exchange, bool Created)> SubmitPairingRequestAsync(NodePairRequest request,
-        string? remoteAddress = null, CancellationToken ct = default)
-    {
-        ValidatePairRequest(request.NodeId, request.NodeName, request.TransactionId, request.ClaimSecret);
-        var local = await identity.GetAsync(ct);
-        if (request.NodeId == local.NodeId) throw BadRequest("A node cannot pair with itself.");
-        var now = timeProvider.GetUtcNow();
-        return await store.MutateAsync(state =>
-        {
-            RequireSharing(state);
-            Prune(state, now);
-            var existing = FindTransaction(state.IncomingRequests, request.TransactionId, request.NodeId,
-                request.ClaimSecret);
-            if (existing != null)
-            {
-                // A retry mints a new offer and the requester keeps only the newest code.
-                if (existing.Status == "awaitingApproval" && ValidOffer(request.Reciprocal) is { } retried)
-                    existing.Reciprocal = retried;
-                return (Exchange(state.InboundGrants, existing), false);
-            }
-            AdmitIncoming(state.IncomingRequests, remoteAddress, authorized: false);
-            var pending = NewRequest(request.NodeId, request.NodeName, request.TransactionId, request.ClaimSecret,
-                remoteAddress, now);
-            pending.Reciprocal = ValidOffer(request.Reciprocal);
-            state.IncomingRequests.Add(pending);
-            return (Exchange(state.InboundGrants, pending), true);
-        }, ct);
-    }
-
-    public async Task<NodePairExchange> ClaimPairingAsync(NodePairClaimRequest request, CancellationToken ct = default)
-    {
-        var state = await store.ReadAsync(ct);
-        RequireSharing(state);
-        return Claim(state.IncomingRequests, state.InboundGrants, request);
-    }
-
-    /// <returns>The approved requester's claimed NodeId.</returns>
-    public async Task<string> ApproveAsync(string requestId, CancellationToken ct = default)
-    {
-        var local = await identity.GetAsync(ct);
-        var revoked = new List<string>();
-        var nodeId = await store.MutateAsync(state =>
-        {
-            RequireSharing(state);
-            var request = state.IncomingRequests.FirstOrDefault(r => r.RequestId == requestId &&
-                r.ExpiresAt > timeProvider.GetUtcNow()) ?? throw BadRequest("This pairing request has expired.");
-            if (request.Status == "granted") return request.NodeId;
-            if (request.Status != "awaitingApproval") throw BadRequest("This pairing request was rejected.");
-            IssueGrant(state, request, local, timeProvider.GetUtcNow(), revoked);
-            return request.NodeId;
-        }, ct);
-        foreach (var grantId in revoked) leases.Revoke(grantId);
-        return nodeId;
-    }
-
-    /// <summary>
-    /// Takes (once) the offer to read back a requester this node just granted. The caller connects
-    /// back with it; the offer is useless to anyone else because its code is bound to this NodeId.
-    /// </summary>
-    public async Task<NodeReciprocalOffer?> TakeReciprocalOfferAsync(string nodeId, CancellationToken ct = default) =>
-        await store.MutateAsync(state => TakeOffer(state.IncomingRequests, nodeId), ct);
-
-    /// <summary>A single-use code that lets exactly <paramref name="audienceNodeId"/> read this library.</summary>
-    public async Task<string> CreateReciprocalInvitationAsync(string audienceNodeId, CancellationToken ct = default)
-    {
-        if (!NodeRequestSignature.IsIdentifier(audienceNodeId)) throw BadRequest("The reciprocal device is invalid.");
-        await identity.GetAsync(ct);
-        var code = NodeRequestSignature.RandomToken();
-        var now = timeProvider.GetUtcNow();
-        await store.MutateAsync(state =>
-        {
-            RequireSharing(state);
-            AddReciprocal(state.ReciprocalInvitations, audienceNodeId, code, now);
-            return true;
-        }, ct);
-        return code;
-    }
-
-    /// <summary>
-    /// Forgets a device in both directions: no access to it, no access from it, no record — library access and
-    /// definitions access alike, with every request and code that concerns it.
-    /// </summary>
-    public async Task RemovePeerAsync(string nodeId, CancellationToken ct = default)
-    {
-        var leaseKeys = await store.MutateAsync(state =>
-        {
-            var keys = new List<string>();
-            if (state.OutboundGrants.GetValueOrDefault(nodeId)?.GrantId is { } outbound)
-                keys.Add(GrantLeaseRegistry.OutboundKey(outbound));
-            if (state.OutboundDataSyncGrants.GetValueOrDefault(nodeId)?.GrantId is { } outboundDataSync)
-                keys.Add(GrantLeaseRegistry.OutboundKey(outboundDataSync));
-            state.OutboundGrants.Remove(nodeId);
-            state.OutboundDataSyncGrants.Remove(nodeId);
-            keys.AddRange(RevokeSubject(state.InboundGrants, nodeId));
-            keys.AddRange(RevokeSubject(state.InboundDataSyncGrants, nodeId));
-            state.Peers.Remove(nodeId);
-            state.IncomingRequests.RemoveAll(r => r.NodeId == nodeId);
-            state.OutgoingRequests.RemoveAll(r => r.NodeId == nodeId);
-            state.ReciprocalInvitations.RemoveAll(i => i.AudienceNodeId == nodeId);
-            state.IncomingDataSyncRequests.RemoveAll(r => r.NodeId == nodeId);
-            state.OutgoingDataSyncRequests.RemoveAll(r => r.NodeId == nodeId);
-            state.DataSyncReciprocalInvitations.RemoveAll(i => i.AudienceNodeId == nodeId);
-            return keys;
-        }, ct);
-        foreach (var key in leaseKeys) leases.Revoke(key);
-    }
-
-    public async Task RejectAsync(string requestId, CancellationToken ct = default)
-    {
-        await store.MutateAsync(state => Reject(state.IncomingRequests, requestId), ct);
-    }
-
-    /// <summary>Stops waiting for an outgoing request; the other device lets its copy expire.</summary>
-    public async Task CancelOutgoingAsync(string requestId, CancellationToken ct = default)
-    {
-        await store.MutateAsync(state => state.OutgoingRequests.RemoveAll(r =>
-            r.RequestId == requestId && r.Status == "awaitingApproval"), ct);
-    }
-
-    /// <summary>Revokes one grant this device issued, of either kind: grant ids never collide.</summary>
-    public async Task RevokeAsync(string grantId, CancellationToken ct = default)
-    {
-        await store.MutateAsync(state =>
-        {
-            if (state.InboundGrants.TryGetValue(grantId, out var grant)) grant.Revoked = true;
-            if (state.InboundDataSyncGrants.TryGetValue(grantId, out var dataSync)) dataSync.Revoked = true;
-            return true;
-        }, ct);
-        leases.Revoke(grantId);
-    }
-
-    public async Task ForgetOutboundAsync(string nodeId, CancellationToken ct = default)
-    {
-        var grantId = await store.MutateAsync(state =>
-        {
-            var grantId = state.OutboundGrants.GetValueOrDefault(nodeId)?.GrantId;
-            state.OutboundGrants.Remove(nodeId);
-            state.OutgoingRequests.RemoveAll(r => r.NodeId == nodeId);
-            if (state.Peers.TryGetValue(nodeId, out var peer)) peer.Enabled = false;
-            return grantId;
-        }, ct);
-        if (grantId != null) leases.Revoke(GrantLeaseRegistry.OutboundKey(grantId));
-    }
-
-    public async Task SetEnabledAsync(string nodeId, bool enabled, CancellationToken ct = default)
-    {
-        var grantId = await store.MutateAsync(state =>
-        {
-            var peer = state.Peers.GetValueOrDefault(nodeId) ?? throw BadRequest("This node is not known here.");
-            peer.Enabled = enabled;
-            return state.OutboundGrants.GetValueOrDefault(nodeId)?.GrantId;
-        }, ct);
-        if (grantId != null)
-        {
-            if (enabled) leases.Resume(GrantLeaseRegistry.OutboundKey(grantId));
-            else leases.Revoke(GrantLeaseRegistry.OutboundKey(grantId));
-        }
-    }
-
-    public async Task SetPathMappingsAsync(string nodeId, IReadOnlyList<NodePathMapping> mappings,
-        CancellationToken ct = default, IReadOnlyList<NodePathMapping>? expectedMappings = null)
-    {
-        if (mappings.Count > 128 || expectedMappings is { Count: > 128 } ||
-            mappings.Any(m => m == null || !NodeRequestSignature.IsIdentifier(m.SourceRootId) ||
-                string.IsNullOrWhiteSpace(m.LocalPath) || m.LocalPath.Length > 4096 || !Path.IsPathFullyQualified(m.LocalPath)) ||
-            mappings.Select(m => m.SourceRootId).Distinct(StringComparer.Ordinal).Count() != mappings.Count)
-            throw BadRequest("Mappings need distinct source root identifiers and absolute paths on this machine.");
-        await store.MutateAsync(state =>
-        {
-            var peer = state.Peers.GetValueOrDefault(nodeId) ?? throw BadRequest("This node is not known here.");
-            if (expectedMappings != null && (expectedMappings.Any(m => m == null) ||
-                !peer.PathMappings.OrderBy(m => m.SourceRootId, StringComparer.Ordinal).SequenceEqual(
-                    expectedMappings.OrderBy(m => m.SourceRootId, StringComparer.Ordinal))))
-                throw new FederationAccessException("PathMappingsChanged", 409,
-                    "Mappings changed on this device. Review the current values before replacing them.");
-            peer.PathMappings = mappings.ToList();
-            return true;
-        }, ct);
-    }
-
-    public async Task<IReadOnlyList<NodePathMapping>> GetPathMappingsAsync(string nodeId, CancellationToken ct = default) =>
-        (await store.ReadAsync(ct)).Peers.GetValueOrDefault(nodeId)?.PathMappings ?? [];
 
     /// <summary>Call from supported database replacement/restore operations before exposing the new library.</summary>
     /// <remarks>
@@ -324,11 +25,6 @@ public sealed class FederationPeerService(FederationStateStore store, INodeIdent
         var result = await store.MutateAsync(state =>
         {
             state.LibraryEpoch = Guid.NewGuid().ToString("N");
-            state.SharingEnabled = false;
-            state.BrowsingEnabled = false;
-            foreach (var grant in state.InboundGrants.Values) grant.Revoked = true;
-            state.IncomingRequests.Clear();
-            state.Invitation = null;
             state.DataSyncSharingEnabled = false;
             foreach (var grant in state.InboundDataSyncGrants.Values) grant.Revoked = true;
             state.IncomingDataSyncRequests.Clear();
@@ -368,7 +64,18 @@ public sealed class FederationPeerService(FederationStateStore store, INodeIdent
         var local = await identity.GetAsync(ct);
         var state = await store.ReadAsync(ct);
         var now = timeProvider.GetUtcNow();
-        var peers = state.Peers.Values.Select(peer => new NodeDataSyncPeerView(peer.NodeId, peer.Label,
+        // The address book may retain addresses used before definitions sync. Only definitions evidence
+        // makes a peer a sync candidate; keep the saved fallback addresses for existing link recovery.
+        var definitionsPeers = state.OutboundDataSyncGrants.Keys
+            .Concat(state.InboundDataSyncGrants.Values.Select(g => g.Credentials.SubjectNodeId))
+            .Concat(state.IncomingDataSyncRequests.Select(r => r.NodeId))
+            .Concat(state.OutgoingDataSyncRequests.Select(r => r.NodeId))
+            .Concat(state.DataSyncReciprocalInvitations.Select(i => i.AudienceNodeId))
+            .ToHashSet(StringComparer.Ordinal);
+        var peers = state.Peers.Values
+            .Where(peer => peer.DataSyncAddress != null || peer.DataSyncOfferedAddresses is { Length: > 0 } ||
+                           definitionsPeers.Contains(peer.NodeId))
+            .Select(peer => new NodeDataSyncPeerView(peer.NodeId, peer.Label,
                 peer.DataSyncAddress ?? peer.Address, state.OutboundDataSyncGrants.ContainsKey(peer.NodeId),
                 LiveGrant(state.InboundDataSyncGrants, peer.NodeId, local.LibraryEpoch) != null))
             .OrderBy(p => p.Name, StringComparer.Ordinal).ToArray();
@@ -397,8 +104,8 @@ public sealed class FederationPeerService(FederationStateStore store, INodeIdent
     }
 
     /// <summary>
-    /// The definitions sharing switch. Off cancels every datasync reader's lease, on resumes them; library leases are
-    /// never touched. It never changes remote access: the host couples that (§7.1.3).
+    /// The definitions sharing switch. Off cancels every reader's lease; on resumes them.
+    /// It never changes remote access: the host couples that (§7.1.3).
     /// </summary>
     public async Task SetDataSyncSharingAsync(bool enabled, CancellationToken ct = default)
     {
@@ -465,7 +172,7 @@ public sealed class FederationPeerService(FederationStateStore store, INodeIdent
     }
 
     /// <summary>
-    /// <c>pair/datasync/code</c>: a datasync code (never a library one) grants at once, one way: a two-way redemption
+    /// <c>pair/datasync/code</c>: a definitions code grants at once, one way: a two-way redemption
     /// of an ordinary code is never read back, and the exchange says <see cref="NodeDataSyncReadBack.Declined"/> (two-way
     /// consent is given only when approving a request). A reciprocal code (this device's own read-back of a device that
     /// approved it) grants and is never read back again.
@@ -530,7 +237,7 @@ public sealed class FederationPeerService(FederationStateStore store, INodeIdent
         return Claim(state.IncomingDataSyncRequests, state.InboundDataSyncGrants, request);
     }
 
-    /// <summary>Issues the requester a <c>datasync.read</c> grant; library access is never created or revoked.</summary>
+    /// <summary>Issues the requester a <c>datasync.read</c> grant.</summary>
     public Task<NodeDataSyncApproval> ApproveDataSyncAsync(string requestId, CancellationToken ct = default) =>
         ApproveDataSyncAsync(requestId, null, ct);
 
@@ -650,8 +357,7 @@ public sealed class FederationPeerService(FederationStateStore store, INodeIdent
 
     /// <summary>
     /// "Done — stop reading X": drops this device's own datasync credentials for the peer and its datasync requests
-    /// to it, with the offer to be read back that a two-way request made. Library access and the peer's browsing
-    /// switch are untouched.
+    /// to it, with the offer to be read back that a two-way request made.
     /// </summary>
     public async Task ForgetOutboundDataSyncAsync(string nodeId, CancellationToken ct = default)
     {
@@ -793,30 +499,6 @@ public sealed class FederationPeerService(FederationStateStore store, INodeIdent
         });
     }
 
-    private static void IssueGrant(FederationState state, StoredPairRequest request, NodeIdentity local,
-        DateTimeOffset now, List<string> revoked)
-    {
-        revoked.AddRange(RevokeSubject(state.InboundGrants, request.NodeId));
-        var credentials = new NodeCredentials(NodeRequestSignature.RandomToken(18), request.NodeId, local.NodeId,
-            local.LibraryEpoch, NodeRequestSignature.RandomToken(), 1);
-        state.InboundGrants.Add(credentials.GrantId, new StoredGrant { Credentials = credentials, CreatedAt = now });
-        request.GrantId = credentials.GrantId;
-        request.Status = "granted";
-        // Older requests from the same node are superseded. Approving one later would
-        // otherwise revoke this grant for a transaction nobody claims.
-        foreach (var stale in state.IncomingRequests.Where(r => r != request && r.NodeId == request.NodeId &&
-                     r.Status == "awaitingApproval"))
-            stale.Status = "rejected";
-        if (!state.Peers.TryGetValue(request.NodeId, out var peer))
-            state.Peers.Add(request.NodeId, peer = new StoredPeer { NodeId = request.NodeId });
-        peer.Label = request.NodeName;
-    }
-
-    /// <summary>
-    /// <see cref="IssueGrant"/> for definitions: it replaces only the subject's datasync grants, and adds the peer
-    /// if it is new, so every datasync peer is listed; but the name an unsigned request claims never replaces the
-    /// name of a device this one already knows (§7.1.1).
-    /// </summary>
     private static void IssueDataSyncGrant(FederationState state, StoredPairRequest request, NodeIdentity local,
         DateTimeOffset now, List<string> revoked)
     {
@@ -861,22 +543,10 @@ public sealed class FederationPeerService(FederationStateStore store, INodeIdent
             else leases.Revoke(grantId);
     }
 
-    private static void Prune(FederationState state, DateTimeOffset now)
-    {
-        state.IncomingRequests.RemoveAll(r => r.ExpiresAt <= now);
-        state.OutgoingRequests.RemoveAll(r => r.ExpiresAt <= now);
-    }
-
     private static void PruneDataSync(FederationState state, DateTimeOffset now)
     {
         state.IncomingDataSyncRequests.RemoveAll(r => r.ExpiresAt <= now);
         state.OutgoingDataSyncRequests.RemoveAll(r => r.ExpiresAt <= now);
-    }
-
-    private static void RequireSharing(FederationState state)
-    {
-        if (!state.SharingEnabled)
-            throw new FederationAccessException("SharingDisabled", 403, "Enable resource sharing before pairing another node.");
     }
 
     private static void RequireDataSyncSharing(FederationState state)

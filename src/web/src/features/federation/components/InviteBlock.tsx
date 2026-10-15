@@ -5,10 +5,9 @@ import AddressList from "./AddressList";
 
 /**
  * Everything the other device types, side by side: this device's address, and a code with
- * the button that makes one. Management hands out pairing codes, library sharing share
- * codes; the block is the same, only the words and the code differ.
+ * the button that makes one. Management hands out pairing codes that authorize the other device.
  *
- * A new code is said as it appears ("Share code 123456, expires at …"): the button that
+ * A new code is said as it appears ("Pairing code 123456, expires at …"): the button that
  * made it keeps focus and its own name, so without a live region the digits would appear
  * in silence. Only `status` is said with it, so it must not tick; a countdown goes in `note`.
  *
@@ -34,12 +33,12 @@ export default function InviteBlock({
   addressesError?: Error;
   onRetryAddresses?: () => void;
   target: string;
-  context: "manage" | "sharing";
+  context: "manage";
   /** What the code is for and how long it lasts. */
   tip: string;
   /** The digits, while they still work. */
   code?: string;
-  /** What the code is called ("Share code", "Pairing code"), said before its digits. */
+  /** What the code is called ("Pairing code"), said before its digits. */
   codeLabel: string;
   /** Until when the code works, or that it expired: said with the code, so never a countdown. */
   status?: ReactNode;

@@ -232,7 +232,6 @@ sealed class FederationTestHost(int port, string dataDirectory, int count, strin
             services.GetRequiredService<IBOptions<AppOptions>>().Value.EnableAnonymousDataTracking);
         if (serverName != null && (await remoteAccess.GetServerDescriptorAsync()).Name != serverName)
             throw new InvalidOperationException("The fixture's server name did not take.");
-        await services.GetRequiredService<FederationPeerService>().SetSharingAsync(true);
         if (desktopWindow != null)
         {
             // Ready means "this device" has an origin.

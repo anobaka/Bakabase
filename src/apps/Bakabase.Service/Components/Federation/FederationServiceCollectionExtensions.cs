@@ -3,7 +3,6 @@ using Bakabase.Abstractions.Services;
 using Bakabase.Modules.Federation.Identity;
 using Bakabase.Modules.Federation.Media;
 using Bakabase.Modules.Federation.Peers;
-using Bakabase.Modules.Federation.Queries;
 using Bakabase.Modules.Player.Components;
 using Bakabase.Modules.RemoteAccess.Components.Discovery.Clients;
 using Microsoft.AspNetCore.Mvc;
@@ -17,25 +16,13 @@ namespace Bakabase.Service.Components.Federation;
 
 public static class FederationServiceCollectionExtensions
 {
-    public static IServiceCollection AddFederatedLibrary(this IServiceCollection services)
+    public static IServiceCollection AddMultiDeviceServices(this IServiceCollection services)
     {
         services.AddSingleton<IFederationDataDirectory, FederationDataDirectory>();
         services.AddSingleton<INodeIdSource, FederationNodeIdSource>();
         services.AddFederationPeers();
-        services.AddSingleton<IFederationQueryAccess, FederationQueryAccess>();
-        services.AddSingleton<ILocalLibraryReader, ServiceLocalLibraryReader>();
-        services.AddSingleton<FederationQueryLimits>();
-        services.AddSingleton<LocalSearchSnapshotService>();
-        services.AddSingleton<IPeerSearchTargetResolver, PeerSearchTargetResolver>();
-        services.AddSingleton<FederatedQueryCoordinator>();
-        services.AddSingleton<AssetLeaseStore>();
-        services.AddSingleton<FederationMediaSessions>();
-        services.AddSingleton<FederationBrowsingControl>();
-        services.AddSingleton<FederationMappingTreeTokens>();
-        services.AddScoped<FederationMappingTreeService>();
-        services.AddScoped<FederationMappingTreeClient>();
-        services.AddScoped<FederationResourceService>();
-        services.AddScoped<FederationMediaService>();
+        services.AddScoped<ManagedLibraryMappingTreeService>();
+        services.AddSingleton<ManagedLibraryMappingTreeTokens>();
         services.AddScoped<ResourceProfileSourceReader>();
         services.AddScoped<ManagedLibraryService>();
         services.AddSingleton<MetadataSourceJournalGate>();
@@ -55,12 +42,6 @@ public static class FederationServiceCollectionExtensions
         services.AddSingleton<ResourceProcessingCoordinator>();
         services.AddScoped<SourceResourceProfileService>();
         services.AddScoped<ISourceResourceProfilePlaybackService>(sp => sp.GetRequiredService<SourceResourceProfileService>());
-        services.AddScoped<FederationDirectoryService>();
-        services.TryAddSingleton<IFederationDirectoryOpener, FederationDirectoryOpener>();
-        services.TryAddSingleton<IFederationImageOpener, FederationImageOpener>();
-        services.TryAddSingleton<LocalPlayerResolver>();
-        services.TryAddSingleton<IFederationPlayerProxyEnvironment, FederationPlayerProxyEnvironment>();
-        services.TryAddSingleton<FederationPlayerPolicy>();
         services.TryAddSingleton<UdpProbeClient>();
         services.TryAddSingleton<MdnsBrowser>();
         services.TryAddSingleton<IServerDiscovery, ServerDiscovery>();
@@ -75,7 +56,6 @@ public static class FederationServiceCollectionExtensions
         services.AddSingleton<IDataSyncGrantService>(sp => sp.GetRequiredService<FederationDataSyncGrants>());
         services.AddSingleton<FederationDataSyncPeerClient>();
         services.AddSingleton<IDataSyncPeerClient>(sp => sp.GetRequiredService<FederationDataSyncPeerClient>());
-        services.AddHostedService<FederationInviteAnnouncer>();
         services.AddHostedService<FederationRemoteModeMonitor>();
         services.Configure<MvcOptions>(options => options.Filters.Add<FederationLocalAccessFilter>());
         services.Configure<MvcOptions>(options => options.Filters.Add<FederationExceptionFilter>());

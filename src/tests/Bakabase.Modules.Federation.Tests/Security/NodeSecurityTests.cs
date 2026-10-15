@@ -25,7 +25,7 @@ public sealed class NodeSecurityTests
         var explicitReset = new FederationPeerService(corrupt, new NodeIdentityProvider(corrupt), node.Leases, node.Clock);
         var clone = await explicitReset.ResetAsNewNodeAsync();
         Assert.AreNotEqual(first.NodeId, clone.NodeId);
-        Assert.IsFalse((await explicitReset.GetStatusAsync()).SharingEnabled);
+        Assert.IsFalse((await explicitReset.GetDataSyncStatusAsync()).SharingEnabled);
     }
 
     [TestMethod]
@@ -54,56 +54,12 @@ public sealed class NodeSecurityTests
     public async Task FailedAtomicWriteDoesNotPublishNewStateOrAlterExistingFile()
     {
         using var node = new TestNode();
-        await node.Peers.SetSharingAsync(true);
+        await node.Peers.SetDataSyncSharingAsync(true);
         var before = await File.ReadAllTextAsync(Path.Combine(node.Directory.Path, FederationStateStore.FileName));
         node.Directory.FailWrites = true;
-        await Assert.ThrowsExactlyAsync<IOException>(() => node.Peers.SetSharingAsync(false));
-        Assert.IsTrue((await node.Peers.GetStatusAsync()).SharingEnabled);
+        await Assert.ThrowsExactlyAsync<IOException>(() => node.Peers.SetDataSyncSharingAsync(false));
+        Assert.IsTrue((await node.Peers.GetDataSyncStatusAsync()).SharingEnabled);
         Assert.AreEqual(before, await File.ReadAllTextAsync(Path.Combine(node.Directory.Path, FederationStateStore.FileName)));
-    }
-
-    [TestMethod]
-    public async Task PairingApprovalIsDirectionalSecretBoundAndSurvivesRestart()
-    {
-        using var node = new TestNode();
-        await node.Peers.SetSharingAsync(true);
-        var request = new NodePairRequest("reader-a", "Reader A", "transaction-a", NodeRequestSignature.RandomToken());
-        Assert.AreEqual("awaitingApproval", (await node.Peers.RequestPairingAsync(request)).Outcome);
-        Assert.AreEqual("PairingRejected", (await Assert.ThrowsExactlyAsync<FederationAccessException>(() =>
-            node.Peers.RequestPairingAsync(request with { NodeId = "another-reader" }))).ErrorCode);
-        Assert.IsNull((await node.Peers.ClaimPairingAsync(new(request.TransactionId, request.NodeId, request.ClaimSecret))).Credentials);
-        await node.Peers.ApproveAsync(request.TransactionId);
-        var restart = new FederationStateStore(node.Directory, node.Source);
-        var peers = new FederationPeerService(restart, new NodeIdentityProvider(restart), node.Leases, node.Clock);
-        var exchange = await peers.ClaimPairingAsync(new(request.TransactionId, request.NodeId, request.ClaimSecret));
-        Assert.AreEqual("granted", exchange.Outcome);
-        Assert.AreEqual("reader-a", exchange.Credentials!.SubjectNodeId);
-        Assert.AreEqual((await node.Identity.GetAsync()).NodeId, exchange.Credentials.AudienceNodeId);
-        var status = await peers.GetStatusAsync();
-        Assert.IsNotNull(status.Peers.Single().InboundGrant);
-        Assert.IsNull(status.Peers.Single().OutboundGrant);
-        var error = await Assert.ThrowsExactlyAsync<FederationAccessException>(() =>
-            peers.ClaimPairingAsync(new(request.TransactionId, "reader-b", request.ClaimSecret)));
-        Assert.AreEqual("PairingRejected", error.ErrorCode);
-    }
-
-    [TestMethod]
-    public async Task InvitationAttemptsArePersistedAndCodeIsSingleUse()
-    {
-        using var node = new TestNode();
-        await node.Peers.SetSharingAsync(true);
-        var invitation = await node.Peers.IssueInvitationAsync();
-        for (var i = 0; i < 5; i++)
-            await AssertInvalidCode(node.Peers.ExchangeCodeAsync(new("reader", "Reader", "bad",
-                "attempt-" + i, NodeRequestSignature.RandomToken())));
-        await AssertInvalidCode(node.Peers.ExchangeCodeAsync(new("reader", "Reader", invitation.Code,
-            "correct-but-exhausted", NodeRequestSignature.RandomToken())));
-        invitation = await node.Peers.IssueInvitationAsync();
-        var request = new NodePairCodeRequest("reader", "Reader", invitation.Code, "valid-transaction", NodeRequestSignature.RandomToken());
-        var first = await node.Peers.ExchangeCodeAsync(request);
-        Assert.AreEqual("granted", first.Outcome);
-        Assert.AreEqual(first.Credentials, (await node.Peers.ExchangeCodeAsync(request)).Credentials);
-        await AssertInvalidCode(node.Peers.ExchangeCodeAsync(request with { TransactionId = "another-transaction" }));
     }
 
     private static async Task AssertInvalidCode(Task<NodePairExchange> exchange) =>
@@ -111,82 +67,11 @@ public sealed class NodeSecurityTests
             (await Assert.ThrowsExactlyAsync<FederationAccessException>(() => exchange)).ErrorCode);
 
     [TestMethod]
-    public async Task WrongCodeLeavesAPendingRequestApprovableAndAGrantSupersedesOlderRequests()
-    {
-        using var node = new TestNode();
-        await node.Peers.SetSharingAsync(true);
-        var plain = new NodePairRequest("reader", "Reader", "plain-request", NodeRequestSignature.RandomToken());
-        await node.Peers.RequestPairingAsync(plain);
-        await node.Peers.IssueInvitationAsync();
-        await AssertInvalidCode(node.Peers.ExchangeCodeAsync(new(plain.NodeId, plain.NodeName, "00000000",
-            plain.TransactionId, plain.ClaimSecret)));
-        Assert.AreEqual("awaitingApproval", (await node.Peers.GetStatusAsync()).Requests.Single().Status);
-
-        // A newer transaction is granted; the stale one can no longer revoke that grant.
-        var invitation = await node.Peers.IssueInvitationAsync();
-        var coded = new NodePairCodeRequest(plain.NodeId, plain.NodeName, invitation.Code, "coded-request",
-            NodeRequestSignature.RandomToken());
-        var granted = await node.Peers.ExchangeCodeAsync(coded);
-        Assert.AreEqual("granted", granted.Outcome);
-        await Assert.ThrowsExactlyAsync<FederationAccessException>(() => node.Peers.ApproveAsync(plain.TransactionId));
-        Assert.AreEqual(granted.Credentials, (await node.Peers.ExchangeCodeAsync(coded)).Credentials);
-    }
-
-    [TestMethod]
-    public async Task AnonymousRequestsAreBoundedPerAddressAndDecidedOnesDoNotBlockNewcomers()
-    {
-        using var node = new TestNode();
-        await node.Peers.SetSharingAsync(true);
-        NodePairRequest Request(int i) => new("reader-" + i, "Reader", "request-" + i, NodeRequestSignature.RandomToken());
-        for (var i = 0; i < 4; i++)
-            await node.Peers.RequestPairingAsync(Request(i), "10.0.0.9");
-        Assert.AreEqual("PairingBusy", (await Assert.ThrowsExactlyAsync<FederationAccessException>(() =>
-            node.Peers.RequestPairingAsync(Request(4), "10.0.0.9"))).ErrorCode);
-
-        // Rejecting frees the address's slot, and a valid code is never refused as busy.
-        await node.Peers.RejectAsync(Request(0).TransactionId);
-        await node.Peers.RequestPairingAsync(Request(5), "10.0.0.9");
-        var invitation = await node.Peers.IssueInvitationAsync();
-        Assert.AreEqual("granted", (await node.Peers.ExchangeCodeAsync(new("reader-6", "Reader", invitation.Code,
-            "request-6", NodeRequestSignature.RandomToken()), "10.0.0.9")).Outcome);
-        var incoming = (await node.Peers.GetStatusAsync()).Requests.Where(r => r.Direction == "incoming").ToArray();
-        Assert.IsTrue(incoming.All(r => r.RemoteAddress == "10.0.0.9"));
-    }
-
-    [TestMethod]
-    public async Task ValidInvitationCanApproveAnExistingPendingTransactionWithoutRevivingRejectedRequests()
-    {
-        using var node = new TestNode();
-        await node.Peers.SetSharingAsync(true);
-        var invitation = await node.Peers.IssueInvitationAsync();
-        var request = new NodePairRequest("reader-a", "Reader A", "pending-transaction", NodeRequestSignature.RandomToken());
-        Assert.AreEqual("awaitingApproval", (await node.Peers.RequestPairingAsync(request)).Outcome);
-        var coded = new NodePairCodeRequest(request.NodeId, request.NodeName, invitation.Code,
-            request.TransactionId, request.ClaimSecret);
-
-        var granted = await node.Peers.ExchangeCodeAsync(coded);
-
-        Assert.AreEqual("granted", granted.Outcome);
-        Assert.IsNotNull(granted.Credentials);
-        Assert.AreEqual(granted.Credentials, (await node.Peers.ExchangeCodeAsync(coded)).Credentials);
-        Assert.AreEqual(1, (await node.Peers.GetStatusAsync()).Requests.Count);
-        // The invitation must still be consumed once.
-        await AssertInvalidCode(node.Peers.ExchangeCodeAsync(coded with { TransactionId = "different-transaction" }));
-
-        invitation = await node.Peers.IssueInvitationAsync();
-        request = request with { TransactionId = "rejected-transaction" };
-        await node.Peers.RequestPairingAsync(request);
-        await node.Peers.RejectAsync(request.TransactionId);
-        Assert.AreEqual("rejected", (await node.Peers.ExchangeCodeAsync(coded with
-            { Code = invitation.Code, TransactionId = request.TransactionId })).Outcome);
-    }
-
-    [TestMethod]
     public async Task SignatureBindsAudienceMethodPathRawQueryBodyAndRejectsReplay()
     {
         using var node = new TestNode();
         var grant = await node.GrantAsync();
-        const string path = "/federation/v1/export/queries";
+        const string path = "/federation/v1/export/datasync/head";
         var body = NodeRequestSignature.Hash(Encoding.UTF8.GetBytes("{\"text\":\"name\"}"));
         var signature = NodeRequestSignature.Create(grant, "POST", path, "?x=1&x=2", body, node.Clock.GetUtcNow());
         foreach (var (method, route, query, hash) in new[]
@@ -213,48 +98,46 @@ public sealed class NodeSecurityTests
         var grant = await node.GrantAsync();
         var incoming = node.Leases.GetCancellationToken(grant.GrantId);
         var outgoing = node.Leases.GetCancellationToken(GrantLeaseRegistry.OutboundKey("other-owner-grant"));
-        await node.Peers.SetSharingAsync(false);
+        await node.Peers.SetDataSyncSharingAsync(false);
         Assert.IsTrue(incoming.IsCancellationRequested);
         Assert.IsFalse(outgoing.IsCancellationRequested);
-        await node.Peers.SetSharingAsync(true);
+        await node.Peers.SetDataSyncSharingAsync(true);
         await node.Grants.ValidateAsync(grant.GrantId, grant.LibraryEpoch);
-        await node.Peers.RevokeAsync(grant.GrantId);
-        await node.Peers.SetSharingAsync(true);
+        await node.Peers.RevokeDataSyncAsync(grant.SubjectNodeId);
+        await node.Peers.SetDataSyncSharingAsync(true);
         Assert.AreEqual("GrantRevoked", (await Assert.ThrowsExactlyAsync<FederationAccessException>(() =>
             node.Grants.ValidateAsync(grant.GrantId, grant.LibraryEpoch))).ErrorCode);
         grant = await node.GrantAsync();
-        await node.Store.SetBrowsingEnabledAsync(true);
-        await node.Peers.IssueInvitationAsync();
+        await node.Peers.IssueDataSyncInvitationAsync();
         var before = await node.Identity.GetAsync();
         var after = await node.Peers.RotateLibraryEpochAsync();
         Assert.AreEqual(before.NodeId, after.NodeId);
         Assert.AreNotEqual(before.LibraryEpoch, after.LibraryEpoch);
         Assert.IsFalse(outgoing.IsCancellationRequested);
-        Assert.IsFalse((await node.Peers.GetStatusAsync()).SharingEnabled);
-        Assert.IsFalse(await node.Store.IsBrowsingEnabledAsync());
-        Assert.AreEqual(0, (await node.Peers.GetStatusAsync()).Requests.Count);
-        await node.Peers.SetSharingAsync(true);
+        Assert.IsFalse((await node.Peers.GetDataSyncStatusAsync()).SharingEnabled);
+        Assert.AreEqual(0, (await node.Peers.GetDataSyncStatusAsync()).Requests.Count);
+        await node.Peers.SetDataSyncSharingAsync(true);
         await Assert.ThrowsExactlyAsync<FederationAccessException>(() => node.Grants.ValidateAsync(grant.GrantId, grant.LibraryEpoch));
         var clone = await node.Peers.ResetAsNewNodeAsync();
         Assert.AreNotEqual(before.NodeId, clone.NodeId);
         Assert.IsTrue(outgoing.IsCancellationRequested);
-        Assert.IsFalse((await node.Peers.GetStatusAsync()).SharingEnabled);
+        Assert.IsFalse((await node.Peers.GetDataSyncStatusAsync()).SharingEnabled);
     }
 
     [TestMethod]
     public async Task ExpiredOrSelfPairingCannotIssueGrantAndLegacySignaturesAreNotNodeCredentials()
     {
         using var node = new TestNode();
-        await node.Peers.SetSharingAsync(true);
+        await node.Peers.SetDataSyncSharingAsync(true);
         var local = await node.Identity.GetAsync();
-        await Assert.ThrowsExactlyAsync<FederationAccessException>(() => node.Peers.RequestPairingAsync(
-            new(local.NodeId, "Self", "self-transaction", NodeRequestSignature.RandomToken())));
+        await Assert.ThrowsExactlyAsync<FederationAccessException>(() => node.Peers.SubmitDataSyncRequestAsync(
+            new(local.NodeId, "Self", "self-transaction", NodeRequestSignature.RandomToken(), NodeDataSyncIntents.Follow)));
         var grant = await node.GrantAsync();
-        var signature = NodeRequestSignature.Create(grant, "POST", "/federation/v1/export/queries", "",
+        var signature = NodeRequestSignature.Create(grant, "POST", "/federation/v1/export/datasync/head", "",
             NodeRequestSignature.Hash([]), node.Clock.GetUtcNow());
         node.Clock.Now += TimeSpan.FromMinutes(6);
         Assert.AreEqual("SignatureExpired", (await Assert.ThrowsExactlyAsync<FederationAccessException>(() =>
-            node.Auth.AuthenticateAsync(signature, "POST", "/federation/v1/export/queries", "", NodeRequestSignature.Hash([])))).ErrorCode);
+            node.Auth.AuthenticateAsync(signature, "POST", "/federation/v1/export/datasync/head", "", NodeRequestSignature.Hash([])))).ErrorCode);
         Assert.IsNull(NodeRequestSignature.Parse(signature.Replace("Bakabase-Node", "Bakabase-Device")));
         Assert.IsNull(NodeRequestSignature.Parse("Bakabase-Node malformed"));
         Assert.IsTrue(NodeRequestSignature.HasScheme(" Bakabase-Node-malformed"));
@@ -281,11 +164,11 @@ public sealed class NodeSecurityTests
         }
         public async Task<NodeCredentials> GrantAsync()
         {
-            await Peers.SetSharingAsync(true);
-            var request = new NodePairRequest("reader-a", "Reader A", NodeRequestSignature.RandomToken(18), NodeRequestSignature.RandomToken());
-            await Peers.RequestPairingAsync(request);
-            await Peers.ApproveAsync(request.TransactionId);
-            return (await Peers.ClaimPairingAsync(new(request.TransactionId, request.NodeId, request.ClaimSecret))).Credentials!;
+            await Peers.SetDataSyncSharingAsync(true);
+            var request = new NodeDataSyncPairRequest("reader-a", "Reader A", NodeRequestSignature.RandomToken(18), NodeRequestSignature.RandomToken(), NodeDataSyncIntents.Follow);
+            await Peers.SubmitDataSyncRequestAsync(request);
+            await Peers.ApproveDataSyncAsync(request.TransactionId);
+            return (await Peers.ClaimDataSyncAsync(new(request.TransactionId, request.NodeId, request.ClaimSecret))).Credentials!;
         }
         public void Dispose() { Leases.Dispose(); System.IO.Directory.Delete(Directory.Path, true); }
     }

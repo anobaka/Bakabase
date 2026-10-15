@@ -74,6 +74,6 @@
   "helpCenter.dataSync.where.map": "在设备关系图上，两台设备之间的数据同步连线显示同步情况，箭头指向接收的一方；选中它即可调整。",
   "helpCenter.dataSync.where.page": "「系统 → 数据同步」列出待你决定的项、请求和同步记录；在切换到其他设备的窗口里同样可用。",
   "helpCenter.dataSync.where.nas": "NAS 没有屏幕：把窗口切换到它，在那里使用「数据同步」；也可以在它的容器里用 federation datasync requests 列出请求，再用 federation datasync approve 批准。设置 BAKABASE_DATASYNC_SHARING=true 后，每次启动都会重新开启共享。NAS 上 Bakabase 的「数据同步」版本需要与其他设备一致：更新其他设备后，也要更新它。",
-  "helpCenter.dataSync.vsOthers": "资源库共享让其他设备浏览你的资源，切换设备让你管理另一台设备；数据同步则让你的定义保持一致，使每台设备以同样的方式整理资源。",
+  "helpCenter.dataSync.vsOthers": "设备管理让你在本机搜索、查看和管理已添加设备的资源；数据同步则让自定义属性、媒体库等定义保持一致，使每台设备以同样的方式整理资源。",
   "helpCenter.dataSync.open": "打开数据同步"
 }

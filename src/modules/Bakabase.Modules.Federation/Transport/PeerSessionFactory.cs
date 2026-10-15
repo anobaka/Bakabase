@@ -6,12 +6,9 @@ using Bakabase.Modules.RemoteAccess.Abstractions.Models;
 
 namespace Bakabase.Modules.Federation.Transport;
 
-/// <param name="Scope">
-/// Which of this device's grants for the peer the session uses (<see cref="FederationScopes"/>): library browsing
-/// or reading the peer's definitions.
-/// </param>
+/// <summary>A verified direct definitions-sync session.</summary>
 public sealed record PeerSessionSnapshot(string NodeId, string BaseAddress, NodeCredentials Credentials,
-    TimeSpan ClockOffset, NodeInfo Info, DateTimeOffset VerifiedAt, string Scope = FederationScopes.LibraryRead)
+    TimeSpan ClockOffset, NodeInfo Info, DateTimeOffset VerifiedAt, string Scope = FederationScopes.DataSyncRead)
 {
     public string LibraryEpoch => Credentials.LibraryEpoch;
     public string GrantId => Credentials.GrantId;
@@ -23,13 +20,7 @@ public interface IPeerSessionFactory
     Task<PeerSessionSnapshot> GetAsync(string nodeId, CancellationToken cancellationToken = default);
 }
 
-/// <remarks>
-/// A peer has up to two sessions, one per grant this device holds for it: library browsing
-/// (<see cref="FederationScopes.LibraryRead"/>, the default) and reading its definitions
-/// (<see cref="FederationScopes.DataSyncRead"/>). They share nothing: each has its own verified cache, gate,
-/// connection state and relocation throttle (the datasync ones keyed <c>datasync:</c>), and a datasync session
-/// never writes what library browsing routes by (§7.1.1).
-/// </remarks>
+/// <summary>Verifies a peer's identity before sending any definitions-sync credentials.</summary>
 public sealed class PeerSessionFactory(FederationStateStore store, INodeIdentityProvider identity,
     FederationHttpClient http, TimeProvider timeProvider, INodePeerDiscovery? discovery = null) : IPeerSessionFactory
 {
@@ -41,22 +32,18 @@ public sealed class PeerSessionFactory(FederationStateStore store, INodeIdentity
     private readonly ConcurrentDictionary<string, string> _statuses = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, DateTimeOffset> _relocationAttempts = new(StringComparer.Ordinal);
 
-    /// <summary>The connection state of one of a peer's sessions (the library's by default).</summary>
-    public string GetConnectionState(string nodeId, string scope = FederationScopes.LibraryRead) =>
+    /// <summary>The connection state of a peer's definitions session.</summary>
+    public string GetConnectionState(string nodeId, string scope = FederationScopes.DataSyncRead) =>
         _statuses.GetValueOrDefault(Key(nodeId, scope), "Unknown");
 
     public Task<PeerSessionSnapshot> GetAsync(string nodeId, CancellationToken cancellationToken = default) =>
-        GetAsync(nodeId, FederationScopes.LibraryRead, cancellationToken);
+        GetAsync(nodeId, FederationScopes.DataSyncRead, cancellationToken);
 
-    /// <summary>
-    /// A verified session with the grant of <paramref name="scope"/>. A datasync session needs the peer, an address
-    /// (<c>DataSyncAddress ?? Address</c>) and <c>OutboundDataSyncGrants[nodeId]</c>, but not <c>peer.Enabled</c>, which
-    /// is the library browsing switch.
-    /// </summary>
+    /// <summary>Requires a saved definitions grant and a direct address for this peer.</summary>
     public async Task<PeerSessionSnapshot> GetAsync(string nodeId, string scope,
         CancellationToken cancellationToken = default)
     {
-        var dataSync = IsDataSync(scope);
+        RequireScope(scope);
         var key = Key(nodeId, scope);
         var gate = _gates.GetOrAdd(key, _ => new SemaphoreSlim(1, 1));
         await gate.WaitAsync(cancellationToken);
@@ -64,7 +51,7 @@ public sealed class PeerSessionFactory(FederationStateStore store, INodeIdentity
         {
             var local = await identity.GetAsync(cancellationToken);
             var state = await store.ReadAsync(cancellationToken);
-            if (!TryGetRoute(state, nodeId, dataSync, out var peer, out var address, out var credentials))
+            if (!TryGetRoute(state, nodeId, out var peer, out var address, out var credentials))
                 throw new FederationAccessException("NodeNotAuthorized", 403, "This node is not enabled with a direct read authorization.");
             if (nodeId == local.NodeId || credentials.SubjectNodeId != local.NodeId || credentials.AudienceNodeId != nodeId)
                 throw new FederationAccessException("IdentityConflict", 409, "The saved node authorization has the wrong direction.");
@@ -89,26 +76,7 @@ public sealed class PeerSessionFactory(FederationStateStore store, INodeIdentity
             _statuses[key] = "Online";
             var kind = ServerSelfDescriptionWords.KindOf(snapshot.Info.Kind);
             var platform = ServerSelfDescriptionWords.PlatformOf(snapshot.Info.Platform);
-            if (!dataSync)
-            {
-                if (snapshot.Info.Name != peer.Label || kind != peer.Kind || platform != peer.Platform)
-                {
-                    // The name came with the authenticated handshake; follow the peer's renames — and
-                    // what it says it is, which rides on the same verified answer.
-                    await store.MutateAsync(current =>
-                    {
-                        if (current.Peers.TryGetValue(nodeId, out var stored))
-                        {
-                            stored.Label = snapshot.Info.Name;
-                            stored.Kind = kind;
-                            stored.Platform = platform;
-                        }
-                        return true;
-                    }, cancellationToken);
-                }
-            }
-            else if (!state.HasLibraryGrant(nodeId) &&
-                     (snapshot.Info.Name != peer.Label || kind != peer.Kind || platform != peer.Platform))
+            if (snapshot.Info.Name != peer.Label || kind != peer.Kind || platform != peer.Platform)
                 await FollowDataSyncPeerAsync(nodeId, snapshot, kind, platform, cancellationToken);
             return snapshot;
         }
@@ -149,45 +117,35 @@ public sealed class PeerSessionFactory(FederationStateStore store, INodeIdentity
         return _verified.TryRemove(KeyValuePair.Create(Key(session.NodeId, session.Scope), session));
     }
 
-    private static bool IsDataSync(string scope) => scope switch
+    private static void RequireScope(string scope)
     {
-        FederationScopes.LibraryRead => false,
-        FederationScopes.DataSyncRead => true,
-        _ => throw new ArgumentOutOfRangeException(nameof(scope), scope, "A session uses a library or a datasync grant.")
-    };
+        if (scope != FederationScopes.DataSyncRead) throw new ArgumentOutOfRangeException(nameof(scope));
+    }
 
-    /// <summary>Library keys are the bare node id, as they always were; datasync keys are prefixed.</summary>
-    private static string Key(string nodeId, string scope) => IsDataSync(scope) ? DataSyncKeyPrefix + nodeId : nodeId;
+    private static string Key(string nodeId, string scope)
+    {
+        RequireScope(scope);
+        return DataSyncKeyPrefix + nodeId;
+    }
 
-    /// <summary>Where a session of this scope goes and with which grant; false when this device has none.</summary>
-    private static bool TryGetRoute(FederationState state, string nodeId, bool dataSync, out StoredPeer peer,
+    private static bool TryGetRoute(FederationState state, string nodeId, out StoredPeer peer,
         out string address, out NodeCredentials credentials)
     {
         address = null!;
         credentials = null!;
-        if (!state.Peers.TryGetValue(nodeId, out peer!)) return false;
-        if (dataSync)
-        {
-            if ((peer.DataSyncAddress ?? peer.Address) is not { } dataSyncAddress ||
-                !state.OutboundDataSyncGrants.TryGetValue(nodeId, out var dataSyncCredentials)) return false;
-            (address, credentials) = (dataSyncAddress, dataSyncCredentials);
-            return true;
-        }
-        if (!peer.Enabled || peer.Address == null || !state.OutboundGrants.TryGetValue(nodeId, out var libraryCredentials))
-            return false;
-        (address, credentials) = (peer.Address, libraryCredentials);
+        if (!state.Peers.TryGetValue(nodeId, out peer!) ||
+            (peer.DataSyncAddress ?? peer.Address) is not { } known ||
+            !state.OutboundDataSyncGrants.TryGetValue(nodeId, out credentials!)) return false;
+        address = known;
         return true;
     }
 
-    /// <summary>
-    /// A datasync handshake's name, kind and platform, for a peer only data sync knows. Checked again inside the
-    /// write, so a library grant that arrived meanwhile keeps its routing (§7.1.1).
-    /// </summary>
+    /// <summary>Only a verified handshake may update the peer's display metadata.</summary>
     private Task FollowDataSyncPeerAsync(string nodeId, PeerSessionSnapshot snapshot, ServerKind? kind,
         RemoteDevicePlatform? platform, CancellationToken cancellationToken) =>
         store.MutateAsync(current =>
         {
-            if (!current.HasLibraryGrant(nodeId) && current.Peers.TryGetValue(nodeId, out var stored) &&
+            if (current.Peers.TryGetValue(nodeId, out var stored) &&
                 current.OutboundDataSyncGrants.GetValueOrDefault(nodeId) == snapshot.Credentials)
             {
                 stored.Label = snapshot.Info.Name;
@@ -221,7 +179,7 @@ public sealed class PeerSessionFactory(FederationStateStore store, INodeIdentity
             throw new FederationAccessException("IdentityConflict", 409, "The address could not prove the paired node's identity.");
 
         // The unsigned info clock only bootstraps this challenge. Retain the
-        // authenticated server clock for query signatures and asset lifetimes.
+        // authenticated server clock for signed definitions requests.
         var verifiedOffset = proof.Info.ServerTimeUtc -
                              (handshakeSentAt + (timeProvider.GetUtcNow() - handshakeSentAt) / 2);
         return new PeerSessionSnapshot(nodeId, address, credentials, verifiedOffset, proof.Info,
@@ -261,23 +219,13 @@ public sealed class PeerSessionFactory(FederationStateStore store, INodeIdentity
             catch (FederationAccessException) { continue; }
             await store.MutateAsync(state =>
             {
-                if (IsDataSync(scope))
+                if (state.Peers.TryGetValue(nodeId, out var peer) &&
+                    (peer.DataSyncAddress ?? peer.Address) == oldAddress &&
+                    state.OutboundDataSyncGrants.GetValueOrDefault(nodeId) == credentials)
                 {
-                    // Only while the datasync grant is the one proven here. The library's address moves along
-                    // only for a peer library browsing does not route to (§7.1.1).
-                    if (state.Peers.TryGetValue(nodeId, out var dataSyncPeer) &&
-                        (dataSyncPeer.DataSyncAddress ?? dataSyncPeer.Address) == oldAddress &&
-                        state.OutboundDataSyncGrants.GetValueOrDefault(nodeId) == credentials)
-                    {
-                        dataSyncPeer.DataSyncAddress = address;
-                        if (!state.HasLibraryGrant(nodeId)) dataSyncPeer.Address = address;
-                    }
-                    return true;
-                }
-                // Keep a concurrent re-pairing's newer address and grant.
-                if (state.Peers.TryGetValue(nodeId, out var peer) && peer.Address == oldAddress &&
-                    state.OutboundGrants.GetValueOrDefault(nodeId) == credentials)
+                    peer.DataSyncAddress = address;
                     peer.Address = address;
+                }
                 return true;
             }, cancellationToken);
             return snapshot;
@@ -290,8 +238,6 @@ public sealed class PeerSessionFactory(FederationStateStore store, INodeIdentity
         if (!NodeRequestSignature.IsIdentifier(info.NodeId) || !NodeRequestSignature.IsIdentifier(info.LibraryEpoch))
             throw new FederationAccessException("InvalidNodeResponse", 502, "The node did not return a valid identity.");
         if (string.IsNullOrWhiteSpace(info.Name) || info.Name.Length > 128 || info.Name.Any(char.IsControl) ||
-            !ValidCapabilities(info.SupportedFilters) || !ValidCapabilities(info.SupportedSorts) ||
-            !ValidCapabilities(info.SupportedAssetKinds) || info.MaxBatchSize is < 1 or > 1000 ||
             !ValidWord(info.Kind) || !ValidWord(info.Platform) ||
             info.DataSyncContractVersion is < 0 or > MaxDataSyncContractVersion ||
             info.DataSyncMinimumPeerContract is < 0 or > MaxDataSyncContractVersion)
@@ -306,9 +252,6 @@ public sealed class PeerSessionFactory(FederationStateStore store, INodeIdentity
 
     /// <summary>The data sync contract versions a node may state (§7.4): absent, or 0..1,000,000.</summary>
     private const int MaxDataSyncContractVersion = 1_000_000;
-
-    private static bool ValidCapabilities(string[]? values) => values is { Length: <= 64 } &&
-        values.All(value => value is { Length: > 0 and <= 128 } && !value.Any(char.IsControl));
 
     /// <summary>
     /// An optional word a node says about itself: absent, or short and printable. One this build

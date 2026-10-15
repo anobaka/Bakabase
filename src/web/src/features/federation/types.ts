@@ -1,20 +1,4 @@
-import type {
-  BakabaseModulesFederationContractsCommonLibraryQuery,
-  BakabaseModulesFederationContractsFederatedQueryPage,
-  BakabaseModulesFederationContractsFederatedResourceSummary,
-  BakabaseModulesFederationContractsLocalFederatedQuery,
-  BakabaseModulesFederationContractsQueryOmittedNode,
-  BakabaseModulesFederationContractsResourceRef,
-  BakabaseModulesFederationMediaFederatedAsset,
-  BakabaseModulesFederationMediaFederatedProperty,
-  BakabaseModulesFederationMediaFederatedResourceDetail,
-  BakabaseModulesFederationMediaPlaybackSessionResponse,
-  BakabaseModulesFederationPeersFederationPeerView,
-  BakabaseModulesFederationPeersNodePairingOutcome,
-  BakabaseModulesFederationPeersNodePairingRequestView,
-  BakabaseModulesFederationPeersNodePathMapping,
-  BakabaseServiceControllersFederationPeerStatusResponse,
-} from "@/sdk/Api";
+import type { BakabaseServiceControllersFederationPeerStatusResponse } from "@/sdk/Api";
 import type {
   ManagedServerOutcome,
   ManagedServerState,
@@ -23,59 +7,12 @@ import type {
   ServerKind,
 } from "@/sdk/constants";
 
-/** Generated wire DTOs remain tied to the backend; only supported input choices are narrowed here. */
-export type ResourceRef = BakabaseModulesFederationContractsResourceRef;
-export type CommonLibraryQuery = Pick<
-  BakabaseModulesFederationContractsCommonLibraryQuery,
-  "text" | "sourceKinds"
-> & {
-  queryContractVersion: 1;
-  fileAvailability?: "Any" | "HasFile" | "MetadataOnly";
-  sort: "NameAsc" | "NameDesc";
-};
-export type LocalFederatedQuery = Pick<
-  BakabaseModulesFederationContractsLocalFederatedQuery,
-  "nodeIds" | "pageSize"
-> & { query: CommonLibraryQuery };
-export type FederatedResourceSummary = BakabaseModulesFederationContractsFederatedResourceSummary;
-export type OmittedNode = BakabaseModulesFederationContractsQueryOmittedNode;
-export type FederatedQueryPage = BakabaseModulesFederationContractsFederatedQueryPage;
-export type PathMapping = BakabaseModulesFederationPeersNodePathMapping;
-/** Bounded own-library directory metadata; names never contain the source's absolute path. */
-export interface MappingTreeNode {
-  sourceRootId: string;
-  name: string;
-  resourceCount: number;
-  hasChildren: boolean;
-  browseToken: string;
+export interface ResourceRef {
+  nodeId: string;
+  libraryEpoch: string;
+  resourceId: number;
 }
-export interface MappingTreePage {
-  nodes: MappingTreeNode[];
-  nextCursor?: string;
-}
-export type Peer = BakabaseModulesFederationPeersFederationPeerView;
-export type PairingRequest = BakabaseModulesFederationPeersNodePairingRequestView;
 export type FederationStatus = BakabaseServiceControllersFederationPeerStatusResponse;
-export type PairingResult = BakabaseModulesFederationPeersNodePairingOutcome;
-export type FederatedAsset = BakabaseModulesFederationMediaFederatedAsset & {
-  canOpenLocally?: boolean;
-};
-export type FederatedResourceDetail = Omit<
-  BakabaseModulesFederationMediaFederatedResourceDetail,
-  "properties" | "assets"
-> & {
-  assets: FederatedAsset[];
-  properties: (Omit<BakabaseModulesFederationMediaFederatedProperty, "value"> & {
-    value?: unknown;
-  })[];
-};
-export type PlaybackSession = BakabaseModulesFederationMediaPlaybackSessionResponse;
-
-/**
- * A peer's {@link Peer.connectionState} — and the error code library sharing refuses with — when
- * its address led into a proxy on this computer: a name the proxy took over in fake-IP or TUN
- * mode, or one of the proxy's own addresses. Nothing was sent; the fix is on this computer.
- */
 export const PROXY_FAKE_ADDRESS = "ProxyFakeAddress";
 
 /*
@@ -205,23 +142,7 @@ export interface ManagedServerCandidate {
   platform?: RemoteDevicePlatform | null;
 }
 
-/** A device sharing its library on this network, found by library sharing's discovery. */
-export interface SharingCandidate {
-  nodeId: string;
-  name: string;
-  address: string;
-  /** What its node info says it is, if it says; older devices do not. */
-  kind?: ServerKind | null;
-  platform?: RemoteDevicePlatform | null;
-}
-
 export interface ManagedServerDiscovery {
   /** Never this installation itself. */
   servers: ManagedServerCandidate[];
 }
-
-export const resourceKey = (ref: ResourceRef) =>
-  JSON.stringify([ref.nodeId, ref.libraryEpoch, ref.resourceId]);
-
-/** Never resolve a ref against the current device just because its numeric ID exists here. */
-export const sameResource = (a: ResourceRef, b: ResourceRef) => resourceKey(a) === resourceKey(b);

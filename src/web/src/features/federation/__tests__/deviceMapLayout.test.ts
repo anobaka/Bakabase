@@ -13,37 +13,18 @@ import {
   MIN_WIDTH,
   spokeAngles,
 } from "../map/layout";
-import { SEMIBOLD, textWidth } from "../map/text";
 
-import {
-  grant,
-  manager,
-  peer,
-  server,
-  servers,
-  access,
-  shuffled,
-  status,
-} from "./deviceMapFixtures";
+import { manager, server, servers, access, status } from "./deviceMapFixtures";
 
 import { ManagedServerState } from "@/sdk/constants";
 
 /** `n` other devices, each connected some way, a few found nearby as well. */
 const graphOf = (n: number, ghosts = 0) =>
   buildDeviceGraph({
-    status: status({
-      peers: Array.from({ length: n }, (_, i) =>
-        peer(`p${i}`, {
-          label: `Device ${String.fromCharCode(65 + i)}`,
-          address: `http://10.0.0.${i + 1}:34567`,
-          outboundGrant: grant(`o${i}`),
-          inboundGrant: i % 2 ? grant(`i${i}`) : undefined,
-        }),
-      ),
-    }),
+    status: status(),
     servers: servers({
       // The same installs, managed from here too: one device each.
-      servers: Array.from({ length: Math.min(n, 3) }, (_, i) =>
+      servers: Array.from({ length: n }, (_, i) =>
         server(`p${i}`, {
           name: `Device ${String.fromCharCode(65 + i)}`,
           address: `http://10.0.0.${i + 1}:34567`,
@@ -51,8 +32,10 @@ const graphOf = (n: number, ghosts = 0) =>
       ),
     }),
     discovery: {
-      sharing: Array.from({ length: ghosts }, (_, i) => ({
-        nodeId: `g${i}`,
+      management: Array.from({ length: ghosts }, (_, i) => ({
+        serverId: `g${i}`,
+        appVersion: "2.4.0",
+        alreadyManaged: false,
         name: `Nearby ${i}`,
         address: `http://10.9.0.${i + 1}:34567`,
       })),
@@ -182,38 +165,14 @@ describe("device map layout", () => {
     }
   });
 
-  it("puts every other device further out when that is the shorter picture", () => {
-    const graph = graphOf(10);
-    const layout = layoutDeviceMap(graph, 1100);
-    // How much line shows between this device and each one, fanned out above it.
-    const line = (id: string) => {
-      const { from, to } = layout.edges.get(`sharing:${id}`)!;
-
-      return Math.hypot(to.x - from.x, to.y - from.y);
-    };
-    const above = graph.nodes.slice(0, 5).map((item) => line(item.id));
-
-    expect(layout.readable).toBe(true);
-    expect(layout.tiers).toBe(2);
-    // Alternately near and far: a card's height and more further out.
-    expect(above[1]).toBeGreaterThan(above[0] + 80);
-    expect(above[1]).toBeGreaterThan(above[2] + 80);
-    expect(above[3]).toBeGreaterThan(above[2] + 80);
-    expect(above[3]).toBeGreaterThan(above[4] + 80);
-    // A few devices never need it.
-    expect(layoutDeviceMap(graphOf(4), 1100).tiers).toBe(1);
-  });
-
   // Machine names, as most devices have, and what they are under them.
   const namedGraph = (n: number) =>
     buildDeviceGraph({
-      status: status({
-        peers: Array.from({ length: n }, (_, i) =>
-          peer(`p${i}`, {
-            label: `DESKTOP-${String(1000 + i)}QH`,
+      servers: servers({
+        servers: Array.from({ length: n }, (_, i) =>
+          server(`p${i}`, {
+            name: `DESKTOP-${String(1000 + i)}QH`,
             address: `http://10.0.0.${i + 1}:34567`,
-            outboundGrant: grant(`o${i}`),
-            inboundGrant: i % 2 ? grant(`i${i}`) : undefined,
           }),
         ),
       }),
@@ -236,40 +195,6 @@ describe("device map layout", () => {
       );
     },
   );
-
-  it("widens cards for the names they carry, up to a limit that grows with the width", () => {
-    const named = (names: string[]) =>
-      buildDeviceGraph({
-        status: status({
-          peers: names.map((label, i) => peer(`p${i}`, { label, outboundGrant: grant(`g${i}`) })),
-        }),
-      });
-    const short = layoutDeviceMap(named(["NAS", "Den"]), 900);
-    const windows = layoutDeviceMap(named(["DESKTOP-7F3K2QH", "DESKTOP-7F3K2QX"]), 900);
-    const long = named(["Living-room-media-server-A", "Living-room-media-server-B"]);
-
-    expect(short.boxes.get("peer:p0")!.w).toBe(188);
-    // A default Windows name fits whole, marks and all.
-    expect(windows.boxes.get("peer:p0")!.w).toBeGreaterThan(188);
-    expect(windows.boxes.get("peer:p0")!.w).toBeGreaterThanOrEqual(
-      textWidth("DESKTOP-7F3K2QH", 14 * SEMIBOLD) + 90,
-    );
-    // Not a fraction of a pixel short, either: a Mac's default name under a short line.
-    expect(
-      layoutDeviceMap(named(["jaxs-Mac-mini"]), 900, () => "无界面服务端 · macOS").boxes.get(
-        "peer:p0",
-      )!.w,
-    ).toBeGreaterThanOrEqual(textWidth("jaxs-Mac-mini", 14 * SEMIBOLD) + 90);
-    expect(layoutDeviceMap(long, 600).boxes.get("peer:p0")!.w).toBeLessThan(
-      layoutDeviceMap(long, 1100).boxes.get("peer:p0")!.w,
-    );
-    // And for what the card says the device is, under its name.
-    const line = "Headless server · Windows";
-
-    expect(
-      layoutDeviceMap(named(["NAS"]), 900, () => line).boxes.get("peer:p0")!.w,
-    ).toBeGreaterThanOrEqual(Math.floor(textWidth(line, 11) + 62));
-  });
 
   it("gives every spoke room for its arrows and badge", () => {
     for (const n of [1, 3, 6, 8]) {
@@ -295,27 +220,6 @@ describe("device map layout", () => {
     expect(spokeAngles(2)).toEqual([-90, 90]);
   });
 
-  it("is the same picture for the same devices, whatever order they were listed in", () => {
-    const base = graphOf(6, 2);
-    const again = graphOf(6, 2);
-
-    expect(layoutDeviceMap(again, 900)).toEqual(layoutDeviceMap(base, 900));
-
-    const listed = status({
-      peers: shuffled(
-        Array.from({ length: 5 }, (_, i) =>
-          peer(`p${i}`, { label: `Device ${i}`, outboundGrant: grant(`g${i}`) }),
-        ),
-      ),
-    });
-    const reordered = buildDeviceGraph({
-      status: { ...listed, peers: shuffled(listed.peers, 11) },
-    });
-    const original = buildDeviceGraph({ status: listed });
-
-    expect(layoutDeviceMap(reordered, 800).boxes).toEqual(layoutDeviceMap(original, 800).boxes);
-  });
-
   it("does not move anything when only a status changes", () => {
     const before = buildDeviceGraph({
       servers: servers({ servers: [server("a"), server("b"), server("c")] }),
@@ -339,7 +243,7 @@ describe("device map layout", () => {
     const layout = layoutDeviceMap(graphOf(4, 6), 760);
     const self = layout.boxes.get(SELF_ID)!;
     const ghosts = [...layout.boxes.values()].filter((box) => box.id.startsWith("ghost:"));
-    const connected = [...layout.boxes.values()].filter((box) => box.id.startsWith("peer:"));
+    const connected = [...layout.boxes.values()].filter((box) => box.id.startsWith("server:"));
 
     expect(self.cx).toBe(layout.width / 2);
     expect(ghosts).toHaveLength(6);
@@ -347,81 +251,6 @@ describe("device map layout", () => {
 
     for (const ghost of ghosts) expect(ghost.cy - ghost.h / 2).toBeGreaterThan(lowestConnected);
     expect(layout.ghostTop).toBeGreaterThan(lowestConnected);
-  });
-
-  it("draws each kind on its own lane, and one line for both ways in one state", () => {
-    const graph = buildDeviceGraph({
-      status: status({
-        peers: [
-          peer("both", {
-            address: "http://10.0.0.1:34567",
-            outboundGrant: grant("o"),
-            inboundGrant: grant("i"),
-          }),
-        ],
-        requests: [],
-      }),
-      servers: servers({ servers: [server("both", { address: "http://10.0.0.1:34567" })] }),
-    });
-    const layout = layoutDeviceMap(graph, 800);
-    const sharing = layout.edges.get("sharing:peer:both")!;
-    const management = layout.edges.get("management:peer:both")!;
-
-    expect(sharing.lanes.map((lane) => lane.direction)).toEqual(["both"]);
-    expect(management.lanes.map((lane) => lane.direction)).toEqual(["out"]);
-    // Parallel lanes, apart from each other.
-    expect(
-      Math.hypot(sharing.badge.x - management.badge.x, sharing.badge.y - management.badge.y),
-    ).toBeGreaterThan(20);
-  });
-
-  it("splits a relationship whose two directions are in different states", () => {
-    const graph = buildDeviceGraph({
-      status: status({
-        // It may browse this library; this device asked to browse its own.
-        peers: [peer("x", { inboundGrant: grant("i") })],
-        requests: [
-          {
-            requestId: "r",
-            nodeId: "x",
-            nodeName: "X",
-            direction: "outgoing",
-            status: "awaitingApproval",
-            expiresAt: new Date(Date.now() + 60_000).toISOString(),
-            replacesExistingAccess: false,
-            offersReciprocalAccess: false,
-          },
-        ],
-      }),
-    });
-    const lanes = layoutDeviceMap(graph, 800).edges.get("sharing:peer:x")!.lanes;
-
-    expect(lanes.map((lane) => [lane.direction, lane.status])).toEqual([
-      ["out", "active"],
-      ["in", "pending"],
-    ]);
-  });
-
-  it("draws a direction that does not work on a line of its own", () => {
-    const graph = buildDeviceGraph({
-      // Each browses the other's library — but it no longer lets this device in.
-      status: status({
-        peers: [
-          peer("den", {
-            label: "Den",
-            connectionState: "Unauthorized",
-            outboundGrant: grant("g-out"),
-            inboundGrant: grant("g-in"),
-          }),
-        ],
-      }),
-    });
-    const lanes = layoutDeviceMap(graph, 800).edges.get("sharing:peer:den")!.lanes;
-
-    expect(lanes.map((lane) => [lane.direction, lane.status, lane.attention])).toEqual([
-      ["out", "active", false],
-      ["in", "active", true],
-    ]);
   });
 
   it("clamps the width it lays out for", () => {

@@ -56,6 +56,7 @@ public static class ManagedLibraryOperations
             "getPropertyDbValue" => new[] {"pool", "bizValue"},
             "getChildrenIwFsInfo" => new[] {"root", "showHiddenFiles", "cursor", "pageSize"},
             "searchResourcePaths" => new[] {"keyword"},
+            "resourcePathMappingTree" => new[] {"parent", "cursor", "limit"},
             "previewCustomPropertyTypeConversion" => new[] {"targetType"},
             "changeCustomPropertyType" => new[] {"type"},
             _ => Array.Empty<string>()
@@ -64,7 +65,7 @@ public static class ManagedLibraryOperations
         string Value(string key, string? fallback = null)
         {
             if (!query.TryGetValue(key, out var values)) return fallback ?? throw Invalid($"Missing {key}.");
-            if (values is not {Length: 1} || values[0] == null || values[0].Length > (key is "item" or "dbValue" or "bizValue" ? 8192 : key is "key" or "root" or "keyword" or "cursor" or "initialPath" ? 4096 : key == "id" ? 128 : 32))
+            if (values is not {Length: 1} || values[0] == null || values[0].Length > (request.Operation == "resourcePathMappingTree" && key == "cursor" ? ManagedLibraryMappingTreeTokens.MaximumTokenChars : key is "item" or "dbValue" or "bizValue" ? 8192 : key is "key" or "root" or "parent" or "keyword" or "cursor" or "initialPath" ? 4096 : key == "id" ? 128 : 32))
                 throw Invalid($"Invalid {key}.");
             return values[0];
         }
@@ -116,6 +117,7 @@ public static class ManagedLibraryOperations
             "getResourceSearchKeywordRecommendation" => (HttpMethod.Get, $"/resource/search/keyword-recommendation?keyword={Uri.EscapeDataString(Value("keyword", ""))}&maxCount={BoundedNumber("maxCount", 10, 1, MaximumPageSize)}"),
             "addLatestUsedProperty" => (HttpMethod.Post, "/options/ui/latest-used-property"),
             "transferResourceData" => (HttpMethod.Put, "/resource/transfer"),
+            "resourcePathMappingTree" => (HttpMethod.Get, $"/management/library/path-mapping-tree?parent={Uri.EscapeDataString(Value("parent", ""))}&cursor={Uri.EscapeDataString(Value("cursor", ""))}&limit={BoundedNumber("limit", 200, 1, ManagedLibraryMappingTreeService.MaximumPageSize)}"),
             "searchResourcePaths" => (HttpMethod.Get, $"/management/library/resource-paths?keyword={Uri.EscapeDataString(Value("keyword", ""))}"),
             "getAssociatedDataCards" => (HttpMethod.Get, $"/data-card/resource/{Id()}/associated"),
             "findDataCardByIdentity" => (HttpMethod.Post, "/data-card/find-by-identity"),

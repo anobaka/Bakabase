@@ -10,7 +10,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Bakabase.Tests.Federation;
 
 /// <summary>
-/// Library sharing's "Find nearby devices": what answered the beacons, asked who it is over the
+/// Definitions sync's "Find nearby devices": what answered the beacons, asked who it is over the
 /// connector the host composes — with only the network underneath being the test's.
 /// </summary>
 [TestClass]

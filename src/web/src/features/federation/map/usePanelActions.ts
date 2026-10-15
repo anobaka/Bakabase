@@ -91,7 +91,7 @@ export function usePanelActions(
         onError(cause instanceof Error ? cause : new Error(String(cause)));
         // Mappings changed elsewhere: show the current ones to decide against.
         if (cause instanceof FederationError && cause.code === "PathMappingsChanged")
-          await latest.current(["sharing"]);
+          await latest.current(["identity"]);
       }
 
       return false;

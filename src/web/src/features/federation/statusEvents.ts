@@ -1,16 +1,16 @@
-const eventName = "bakabase:federation-browsing-changed";
+const eventName = "bakabase:federation-status-changed";
 const channelName = "bakabase-federation-status";
 const storageKey = "federation.status-change";
 const sender = `${Date.now()}:${Math.random()}`;
 
-interface BrowsingChange {
+interface StatusChange {
   sender: string;
-  enabled: boolean;
+  kind: "changed" | "reset";
 }
 
-/** Notifications are hints to refresh local status, never a source of permission to enable browsing. */
-export function notifyBrowsingChanged(enabled: boolean) {
-  const message: BrowsingChange = { sender, enabled };
+/** Notifications invalidate local state; permissions always come from the next server response. */
+export function notifyFederationChanged(kind: StatusChange["kind"] = "changed") {
+  const message: StatusChange = { sender, kind };
 
   window.dispatchEvent(new CustomEvent(eventName, { detail: message }));
   if (typeof window.BroadcastChannel === "function") {
@@ -27,13 +27,17 @@ export function notifyBrowsingChanged(enabled: boolean) {
   }
 }
 
-export function subscribeBrowsingChanged(listener: (enabled: boolean) => void) {
+export function subscribeFederationChanged(listener: (kind: StatusChange["kind"]) => void) {
   const receive = (message: unknown, remote: boolean) => {
     if (!message || typeof message !== "object") return;
-    const change = message as Partial<BrowsingChange>;
+    const change = message as Partial<StatusChange>;
 
-    if (typeof change.enabled === "boolean" && (!remote || change.sender !== sender))
-      listener(change.enabled);
+    if (
+      typeof change.sender === "string" &&
+      (change.kind === "changed" || change.kind === "reset") &&
+      (!remote || change.sender !== sender)
+    )
+      listener(change.kind);
   };
   const onLocal = (event: Event) => receive((event as CustomEvent).detail, false);
   const onStorage = (event: StorageEvent) => {

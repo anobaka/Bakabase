@@ -355,16 +355,13 @@
   "resource.desktopPlayback.title": "想使用本机播放器？",
   "resource.desktopPlayback.intro": "Bakabase 桌面版可以连接服务器，并调用电脑上安装的播放器或默认应用打开资源。",
   "resource.desktopPlayback.install": "在电脑上下载并安装 Bakabase 桌面版（一体版）。",
-  "resource.desktopPlayback.connect": "在桌面版的“多设备互联”中添加此服务器，完成配对后切换到它。连接地址需能从这台电脑访问。",
-  "resource.desktopPlayback.connectShared": "在桌面版的“多设备互联”中连接资源所属设备的只读资源库共享，并由对方授权。",
+  "resource.desktopPlayback.connect": "在桌面版的“多设备互联 → 设备管理 → 管理”中添加资源所属服务器，完成配对后即可在资源页查看它的资源。请使用这台电脑可访问的地址。",
   "resource.desktopPlayback.configure": "在本机的资源扩展中选择来源设备，按需配置匹配条件、播放器和打开方式。",
   "resource.desktopPlayback.requirements": "使用前需要什么？",
   "resource.desktopPlayback.http": "通过 HTTP 播放音视频时，播放器需要支持远程地址和对应格式。安装桌面版本身不会增加播放器的格式支持。",
   "resource.desktopPlayback.paths": "按文件路径打开时，这台电脑必须能访问文件；路径不同时需配置前缀映射。映射不会共享或传输文件。游戏等文件通常需要先通过 SMB 等文件协议共享并挂载。",
-  "resource.desktopPlayback.sharedLimits": "只读共享仅允许浏览和播放对方已共享的媒体，不能运行远端程序。安装桌面版不会获得管理权限，也不会公开未共享的文件。",
   "resource.desktopPlayback.download": "前往下载桌面版",
   "resource.desktopPlayback.alreadyInstalled": "已经安装？打开 Bakabase 桌面版，按上面的步骤连接即可。此入口不会自动连接或播放。",
-  "resource.desktopPlayback.sharedPaths": "按文件路径打开共享媒体时，这台电脑必须能访问对应文件，并按需配置路径前缀映射。映射不会共享或传输文件。",
   "resource.profilePlayback.configure": "本机资源扩展",
   "resource.profilePlayback.openFailed": "未能打开本机的资源扩展，请通过左上角设备切换器返回本机后重试。"
 }

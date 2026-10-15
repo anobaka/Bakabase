@@ -98,7 +98,7 @@ export const resolveSelection = (
 
 /**
  * The multi-device mode as a picture: this device, the devices it knows, and every
- * relationship between them — library sharing and management — each of which can be
+ * relationship between them — management and data synchronization — each of which can be
  * selected and acted on. Only this device's own window can show it, like the other
  * multi-device pages.
  */
@@ -142,7 +142,7 @@ function DeviceMap() {
         servers,
         access,
         dataSync,
-        discovery: { sharing: discovery.sharing, management: discovery.management },
+        discovery: { dataSync: discovery.dataSync, management: discovery.management },
         selfName: serverName,
         selfPlatform: platform,
       }),
@@ -151,7 +151,7 @@ function DeviceMap() {
       servers,
       access,
       dataSync,
-      discovery.sharing,
+      discovery.dataSync,
       discovery.management,
       serverName,
       platform,
@@ -191,13 +191,13 @@ function DeviceMap() {
     servers ||
     access ||
     dataSync ||
-    data.sharingError ||
+    data.identityError ||
     data.serversError ||
     data.accessError ||
     data.dataSyncError
   );
   const alone = settled && graph.nodes.length === 0;
-  const searched = !discovery.running && discovery.sharing !== undefined;
+  const searched = !discovery.running && discovery.dataSync !== undefined;
   const found = graph.nodes.filter((node) => node.ghost).length;
   const selectionKey = selection ? `${selection.type}:${selection.id}` : "";
   const selectedNode = selection ? nodeOfSelection(graph, selection) : undefined;
@@ -311,8 +311,8 @@ function DeviceMap() {
   }, [selectionKey]);
 
   const sharingUnavailable =
-    data.sharingError instanceof FederationError &&
-    data.sharingError.code === "SharingStateUnavailable";
+    data.identityError instanceof FederationError &&
+    data.identityError.code === "SharingStateUnavailable";
 
   return (
     <div
@@ -332,7 +332,7 @@ function DeviceMap() {
         <div className="flex flex-wrap gap-2">
           <button
             className={buttonClass}
-            disabled={data.sharingLoading || data.serversLoading}
+            disabled={data.identityLoading || data.serversLoading}
             type="button"
             onClick={() => void data.refreshAll()}
           >
@@ -360,9 +360,6 @@ function DeviceMap() {
           <Link className={buttonClass} to={devicesRoute()}>
             {t("federation.devices.title")}
           </Link>
-          <Link className={buttonClass} to="/federation">
-            {t("federation.title")}
-          </Link>
           <Link className={buttonClass} to={DATA_SYNC_ROUTE}>
             <AiOutlineSync aria-hidden />
             {t("dataSync.title")}
@@ -370,21 +367,21 @@ function DeviceMap() {
         </div>
       </header>
 
-      {(data.sharingError ||
+      {(data.identityError ||
         data.serversError ||
         data.accessError ||
         data.dataSyncError ||
         discovery.error) && (
         <div className="space-y-2" data-testid="device-map-errors">
-          {data.sharingError && (
+          {data.identityError && (
             <div className="space-y-1">
-              <p className="text-xs text-default-500">{t("federation.map.source.sharing")}</p>
+              <p className="text-xs text-default-500">{t("federation.map.source.identity")}</p>
               <ErrorNotice
-                error={data.sharingError}
-                onRetry={() => void data.reload(["sharing"])}
+                error={data.identityError}
+                onRetry={() => void data.reload(["identity"])}
               />
               {sharingUnavailable && (
-                <Link className="text-xs text-primary underline" to={devicesRoute("sharing")}>
+                <Link className="text-xs text-primary underline" to={devicesRoute("identity")}>
                   {t("federation.devices.title")}
                 </Link>
               )}

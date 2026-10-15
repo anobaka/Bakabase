@@ -107,11 +107,11 @@ export default function DataSyncRequestCard({
               : t("dataSync.request.approved", { name }),
         );
       },
-      refresh: ["dataSync", "sharing"],
+      refresh: ["dataSync", "identity"],
     });
 
   const reject = () =>
-    void actions.run(() => dataSyncApi.rejectRequest(request.requestId), ["dataSync", "sharing"]);
+    void actions.run(() => dataSyncApi.rejectRequest(request.requestId), ["dataSync", "identity"]);
 
   return (
     <article

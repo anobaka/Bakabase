@@ -50,15 +50,6 @@ describe("desktop playback guidance", () => {
     fireEvent.click(screen.getByText("close guide"));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
-  it("explains read-only pairing without suggesting management permissions", () => {
-    render(<DesktopPlaybackGuideButton shared />);
-    fireEvent.click(screen.getByText("resource.desktopPlayback.action"));
-    expect(screen.getByText("resource.desktopPlayback.connectShared")).toBeInTheDocument();
-    expect(screen.getByText("resource.desktopPlayback.sharedLimits")).toBeInTheDocument();
-    expect(screen.getByText("resource.desktopPlayback.sharedPaths")).toBeInTheDocument();
-    expect(screen.queryByText("resource.desktopPlayback.paths")).not.toBeInTheDocument();
-    expect(screen.queryByText("resource.desktopPlayback.connect")).not.toBeInTheDocument();
-  });
   it.each([ClientMode.AllInOne, ClientMode.PureClient])(
     "does not ask a bridged client (%s) to install again",
     (mode) => {
