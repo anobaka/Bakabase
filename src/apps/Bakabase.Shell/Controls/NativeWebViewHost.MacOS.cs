@@ -132,7 +132,7 @@ public partial class NativeWebViewHost
                 ObjC.SendIntPtr(ObjC.objc_getClass("NSUUID"), ObjC.Sel("alloc")),
                 ObjC.Sel("initWithUUIDString:"), identifierText);
             return identifier != IntPtr.Zero ? identifier
-                : throw new InvalidOperationException("Cannot create the data-space browser identifier.");
+                : throw new InvalidOperationException("Cannot create the workspace browser identifier.");
         }
         finally { ObjC.SendVoid(identifierText, ObjC.Sel("release")); }
     }

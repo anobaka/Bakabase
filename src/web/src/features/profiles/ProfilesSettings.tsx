@@ -1,28 +1,27 @@
-import type {
-  BakabaseAbstractionsComponentsAppDesktopProfilesView,
-  BakabaseAbstractionsComponentsAppDesktopProfileView,
-} from "@/sdk/Api";
+import type { BakabaseAbstractionsComponentsAppDesktopProfileView } from "@/sdk/Api";
+import type { DesktopProfilesController } from "./useDesktopProfiles";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FolderOpenOutlined, PlusOutlined } from "@ant-design/icons";
 
 import BApi from "@/sdk/BApi";
-import { useRemoteAccessStore } from "@/stores/remoteAccess";
-import { ClientMode } from "@/sdk/constants";
 import { useSettingsSearchMatch } from "@/pages/configuration/components/SettingsSection";
 import { Button, Input } from "@/components/bakaui";
 import { FileSystemSelectorModal } from "@/components/FileSystemSelector";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 
 /** Local desktop launch settings; unavailable on headless hosts and managed-device relays. */
-export default function ProfilesSettings({ query }: { query?: string }) {
+export default function ProfilesSettings({
+  query,
+  controller,
+}: {
+  query?: string;
+  controller: DesktopProfilesController;
+}) {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
-  const localDesktop = useRemoteAccessStore(
-    (s) => s.context === "known" && s.clientMode === ClientMode.AllInOne && s.isLocal,
-  );
-  const [state, setState] = useState<BakabaseAbstractionsComponentsAppDesktopProfilesView>();
+  const { state, error: loadError, localDesktop, load } = controller;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const [notice, setNotice] = useState<string>();
@@ -32,33 +31,20 @@ export default function ProfilesSettings({ query }: { query?: string }) {
   const [renaming, setRenaming] = useState<string>();
   const [rename, setRename] = useState("");
   const [removing, setRemoving] = useState<BakabaseAbstractionsComponentsAppDesktopProfileView>();
-  const load = useCallback(async () => {
-    const response = await BApi.app.getDesktopProfiles();
-
-    if (response.code) throw new Error(response.message || t("profiles.error.load"));
-    setState(response.data);
-  }, [t]);
-
-  useEffect(() => {
-    load().catch((reason) => {
-      if (localDesktop)
-        setError(reason instanceof Error ? reason.message : t("profiles.error.load"));
-    });
-  }, [load, localDesktop, t]);
   const matches =
     !query ||
-    `${t("profiles.title")} ${t("profiles.description")} profiles appdata`
+    `${t("profiles.title")} ${t("profiles.description")} ${t("profiles.manageSection")} profiles workspaces appdata`
       .toLowerCase()
       .includes(query.trim().toLowerCase());
 
   useSettingsSearchMatch(
     "desktop-profiles",
-    matches && (!!state?.available || (!!error && localDesktop)),
+    matches && (!!state?.available || (!!loadError && localDesktop)),
   );
   if (!state?.available)
-    return localDesktop && error && matches ? (
+    return localDesktop && loadError && matches ? (
       <p className="text-danger" role="alert">
-        {error}
+        {loadError}
       </p>
     ) : null;
   if (!matches) return null;
@@ -97,11 +83,10 @@ export default function ProfilesSettings({ query }: { query?: string }) {
   };
 
   return (
-    <section aria-label={t("profiles.title")} className="rounded-xl border border-default-200 p-4">
+    <section aria-label={t("profiles.manageSection")} className="border-t border-default-200 p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 className="font-medium">{t("profiles.title")}</h3>
-          <p className="mt-1 max-w-3xl text-sm text-default-500">{t("profiles.description")}</p>
+          <h3 className="text-sm font-medium">{t("profiles.manageSection")}</h3>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button

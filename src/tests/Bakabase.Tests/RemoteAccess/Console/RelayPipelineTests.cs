@@ -586,7 +586,7 @@ public class RelayPipelineTests
             Assert.AreEqual(409, document.RootElement.GetProperty("code").GetInt32());
             var message = document.RootElement.GetProperty("message").GetString()!;
             StringAssert.Contains(message, "this app's own view");
-            StringAssert.Contains(message, "data spaces");
+            StringAssert.Contains(message, "workspaces");
             Assert.IsFalse(message.Contains("updat", StringComparison.OrdinalIgnoreCase));
             Assert.AreEqual(0, Arrived(path).Count, "a profile mutation reached the managed device");
         }

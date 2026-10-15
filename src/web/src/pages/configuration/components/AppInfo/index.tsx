@@ -8,27 +8,15 @@ import type { SettingItem } from "@/pages/configuration/components/SettingsSecti
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { WarningOutlined } from "@ant-design/icons";
 
-import IdentityRecoveryLink from "./IdentityRecoveryLink";
 import AppVersionPanel from "./AppVersionPanel";
-import AppDataImportButton from "./Import";
 
-import { Divider } from "@/components/bakaui";
-import { DataPathSource } from "@/sdk/constants";
 import { useAppUpdaterStateStore } from "@/stores/appUpdaterState";
 import { useIsPureClient, useIsRemoteClient } from "@/stores/remoteAccess";
 import { useAppOptionsStore } from "@/stores/options";
-import { Chip } from "@/components/bakaui";
-import FilePathValue from "@/components/FilePathValue";
 import SettingsSection from "@/pages/configuration/components/SettingsSection";
 import BApi from "@/sdk/BApi";
 import { useRemoteServerUpdateRestart, useUpdateRestart } from "@/components/UpdateRestart";
-import {
-  RelocationButton,
-  RelocationRestartGate,
-} from "@/pages/configuration/components/AppInfo/Relocation";
-import { LegacyAppDataNoticeBanner } from "@/pages/configuration/components/AppInfo/LegacyNotice";
 
 interface AppInfoProps {
   appInfo: Partial<BakabaseInfrastructuresComponentsAppModelsResponseModelsAppInfo>;
@@ -104,138 +92,11 @@ const AppInfo: React.FC<AppInfoProps> = ({ appInfo, applyPatches, query }) => {
     };
   }, [checkNewAppVersion]);
 
-  const renderPathValue = (path?: string, description?: string) => (
-    <FilePathValue description={description} path={path} />
-  );
-
-  const renderDataPathSource = () => {
-    const source = appInfo.dataPathSource;
-    const envVarName = appInfo.envVarName ?? "BAKABASE_DATA_DIR";
-
-    let label: string;
-    let color: "default" | "primary" | "warning" = "default";
-
-    switch (source) {
-      case DataPathSource.Environment:
-        label = t("configuration.appInfo.dataPathSource.environment", { name: envVarName });
-        color = "warning";
-        break;
-      case DataPathSource.UserConfigured:
-        label = t("configuration.appInfo.dataPathSource.userConfigured");
-        color = "primary";
-        break;
-      case DataPathSource.Default:
-      default:
-        label = t("configuration.appInfo.dataPathSource.default");
-        color = "default";
-        break;
-    }
-
-    return (
-      <Chip color={color} radius="sm" size="sm" variant="flat">
-        {label}
-      </Chip>
-    );
-  };
-
   const buildAppInfoDataSource = (): SettingItem[] => {
     const items: (Omit<SettingItem, "label" | "render"> & {
       label: string;
       value: React.ReactNode;
     })[] = [
-      {
-        id: "appDataPath",
-        label: "configuration.appInfo.appDataPath",
-        keywords: [
-          "path",
-          "directory",
-          "folder",
-          "import",
-          "数据",
-          "目录",
-          "导入",
-          "已有数据",
-          "服务器",
-          "一体版",
-        ],
-        value: (
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-1 flex-wrap">
-              <FilePathValue path={appInfo.appDataPath} />
-              {renderDataPathSource()}
-              <AppDataImportButton />
-              {appInfo.appDataPath &&
-                !appInfo.dataInSystemPath &&
-                appInfo.dataPathSource !== DataPathSource.Environment && (
-                  <>
-                    <Divider className="mx-1" orientation="vertical" />
-                    <RelocationButton />
-                  </>
-                )}
-            </div>
-            <span className="text-xs text-foreground-400">
-              {t("configuration.appInfo.tip.appDataPath")}
-            </span>
-            <span className="text-xs text-foreground-400">
-              {t("configuration.appInfo.tip.appDataPath.manualMerge")}
-            </span>
-            <IdentityRecoveryLink />
-            {appInfo.dataInInstallRoot && (
-              <span className="text-xs text-warning-500">
-                {t("configuration.appInfo.tip.appDataPath.installRootRiskNotice")}
-              </span>
-            )}
-            {appInfo.dataInSystemPath && appInfo.appDataPath && (
-              <div className="flex items-center gap-2 flex-wrap text-warning-500">
-                <WarningOutlined className="text-sm" />
-                <span className="text-xs">
-                  {t("configuration.appInfo.tip.appDataPath.systemPathRiskNotice")}
-                </span>
-                {appInfo.dataPathSource !== DataPathSource.Environment && <RelocationButton />}
-              </div>
-            )}
-          </div>
-        ),
-      },
-      ...(appInfo.anchorPath && appInfo.anchorPath !== appInfo.appDataPath
-        ? [
-            {
-              id: "anchorPath",
-              label: "configuration.appInfo.anchorPath",
-              keywords: ["path", "目录"],
-              value: renderPathValue(appInfo.anchorPath, t("configuration.appInfo.tip.anchorPath")),
-            },
-          ]
-        : []),
-      {
-        id: "dataPath",
-        label: "configuration.appInfo.dataPath",
-        keywords: ["path", "database", "目录", "数据"],
-        value: renderPathValue(appInfo.dataPath, t("configuration.appInfo.tip.dataPath")),
-      },
-      {
-        id: "tempFilesPath",
-        label: "configuration.appInfo.tempFilesPath",
-        keywords: ["path", "cache", "temp", "缓存", "临时"],
-        value: renderPathValue(appInfo.tempFilesPath, t("configuration.appInfo.tip.tempFilesPath")),
-      },
-      {
-        id: "logPath",
-        label: "configuration.appInfo.logPath",
-        keywords: ["path", "log", "日志", "目录"],
-        value: renderPathValue(appInfo.logPath, t("configuration.appInfo.tip.logPath")),
-      },
-      {
-        id: "backupPath",
-        label: "configuration.appInfo.backupPath",
-        keywords: ["path", "backup", "备份"],
-        value: (
-          <div className="flex flex-col gap-1">
-            {renderPathValue(appInfo.backupPath, t("configuration.appInfo.tip.backupPath"))}
-            <IdentityRecoveryLink />
-          </div>
-        ),
-      },
       {
         id: "coreVersion",
         label: "configuration.appInfo.coreVersion",
@@ -299,12 +160,6 @@ const AppInfo: React.FC<AppInfoProps> = ({ appInfo, applyPatches, query }) => {
 
   return (
     <SettingsSection
-      header={
-        <>
-          <RelocationRestartGate />
-          <LegacyAppDataNoticeBanner />
-        </>
-      }
       items={buildAppInfoDataSource()}
       keywords={["about", "app", "version", "关于", "应用"]}
       query={query}

@@ -1,8 +1,8 @@
 {
-  "profiles.title": "Data spaces",
-  "profiles.description": "Each space keeps its own library, settings and device pairings. Open several at once, or switch by opening another space and closing this one normally.",
-  "profiles.original": "Original data space",
-  "profiles.addNew": "New data space",
+  "profiles.title": "Workspaces",
+  "profiles.description": "Each workspace keeps its own library, settings and device connections. Open several at once; switching closes the current window normally.",
+  "profiles.original": "Original workspace",
+  "profiles.addNew": "New workspace",
   "profiles.addExisting": "Add existing directory",
   "profiles.newDescription": "Choose an empty directory. Its first launch opens Setup and creates a separate device identity.",
   "profiles.existingDescription": "Use the selected data in place, preserving its identity, pairings and path mappings. No files are copied or moved.",
@@ -24,9 +24,11 @@
   "profiles.removeConfirm": "Remove the registration for “{{name}}”? Its directory and all files will remain, and can be added again.",
   "profiles.environment": "The current directory was selected by a launch environment variable. Register it and make it the default to use it from an ordinary Bakabase launch.",
   "profiles.registerCurrent": "Register current directory",
-  "profiles.opened": "The selected data space is open.",
-  "profiles.switching": "Switching spaces. This window will close normally.",
-  "profiles.upgrade": "These spaces share this installation. Close its other data-space windows before updating.",
-  "profiles.error.load": "Could not load data spaces.",
-  "profiles.error.save": "The operation did not complete. Please retry."
+  "profiles.opened": "The selected workspace is open.",
+  "profiles.switching": "Switching workspaces. This window will close normally.",
+  "profiles.upgrade": "These workspaces share this installation. Close its other workspace windows before updating.",
+  "profiles.error.load": "Could not load workspaces.",
+  "profiles.error.save": "The operation did not complete. Please retry.",
+  "profiles.currentSection": "Current workspace",
+  "profiles.manageSection": "Manage workspaces"
 }

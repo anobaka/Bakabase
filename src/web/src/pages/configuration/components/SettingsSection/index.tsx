@@ -84,6 +84,30 @@ export const useSettingsSearchMatch = (id: string, matched: boolean) => {
   }, [report, id, matched]);
 };
 
+/** Shared row layout for settings that group rows inside expandable subsections. */
+export const SettingsRows = ({ items }: { items: SettingItem[] }) => (
+  <div className="divide-y divide-default-200/60 dark:divide-default-100/60">
+    {items.map((item) => (
+      <div
+        key={item.id}
+        className="grid gap-x-4 gap-y-1 px-4 py-2.5 items-center hover:bg-[var(--bakaui-overlap-background)] grid-cols-1 sm:grid-cols-[minmax(140px,220px)_1fr]"
+      >
+        <div className="flex items-center gap-1 text-sm text-foreground-600">
+          {item.label}
+          {item.tip && (
+            <Tooltip className="max-w-[300px]" color="secondary" content={item.tip} placement="top">
+              <span className="inline-flex">
+                <AiOutlineQuestionCircle className="text-base" />
+              </span>
+            </Tooltip>
+          )}
+        </div>
+        <div className="min-w-0">{item.render()}</div>
+      </div>
+    ))}
+  </div>
+);
+
 interface Props {
   /** Already translated. */
   title: string;
@@ -112,31 +136,7 @@ const SettingsSection: React.FC<Props> = ({ title, items, query = "", keywords, 
         {title}
       </h2>
       {header && <div className="px-4 pt-3">{header}</div>}
-      <div className="divide-y divide-default-200/60 dark:divide-default-100/60">
-        {visible.map((item) => (
-          <div
-            key={item.id}
-            className="grid gap-x-4 gap-y-1 px-4 py-2.5 items-center hover:bg-[var(--bakaui-overlap-background)] grid-cols-1 sm:grid-cols-[minmax(140px,220px)_1fr]"
-          >
-            <div className="flex items-center gap-1 text-sm text-foreground-600">
-              {item.label}
-              {item.tip && (
-                <Tooltip
-                  className="max-w-[300px]"
-                  color="secondary"
-                  content={item.tip}
-                  placement="top"
-                >
-                  <span className="inline-flex">
-                    <AiOutlineQuestionCircle className="text-base" />
-                  </span>
-                </Tooltip>
-              )}
-            </div>
-            <div className="min-w-0">{item.render()}</div>
-          </div>
-        ))}
-      </div>
+      <SettingsRows items={visible} />
     </section>
   );
 };

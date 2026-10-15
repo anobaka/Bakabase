@@ -1,7 +1,14 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import ProfilesSettings from "./ProfilesSettings";
+import ProfilesManagement from "./ProfilesSettings";
+import { useDesktopProfiles } from "./useDesktopProfiles";
+
+function ProfilesSettings({ query }: { query?: string }) {
+  const controller = useDesktopProfiles();
+
+  return <ProfilesManagement controller={controller} query={query} />;
+}
 
 const reportMatch = vi.hoisted(() => vi.fn());
 
@@ -82,7 +89,7 @@ beforeEach(() => {
     api[key].mockResolvedValue({ code: 0 });
 });
 
-describe("desktop data spaces", () => {
+describe("desktop workspaces", () => {
   it("surfaces an unreadable registry in the local desktop instead of silently hiding it", async () => {
     api.getDesktopProfiles.mockRejectedValue(new Error("Registry is unreadable"));
     render(<ProfilesSettings />);
@@ -90,6 +97,7 @@ describe("desktop data spaces", () => {
   });
   it("reports matched sections to the existing configuration search and hides unmatched searches", async () => {
     const { rerender } = render(<ProfilesSettings query="profiles" />);
+
     await screen.findByText("Main");
     expect(reportMatch).toHaveBeenLastCalledWith("desktop-profiles", true);
     rerender(<ProfilesSettings query="not a matching section" />);

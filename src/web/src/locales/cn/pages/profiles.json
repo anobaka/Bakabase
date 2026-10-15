@@ -1,8 +1,8 @@
 {
-  "profiles.title": "数据空间",
-  "profiles.description": "每个数据空间独立保存媒体库、设置和设备配对。可以同时打开多个空间；切换会打开所选空间，并正常关闭当前空间。",
-  "profiles.original": "原有数据空间",
-  "profiles.addNew": "新建数据空间",
+  "profiles.title": "工作区",
+  "profiles.description": "每个工作区独立保存媒体库、设置和设备连接。可以同时打开多个工作区；切换时会正常关闭当前窗口。",
+  "profiles.original": "原有工作区",
+  "profiles.addNew": "新建工作区",
   "profiles.addExisting": "添加已有数据目录",
   "profiles.newDescription": "选择一个空目录。首次打开时会进入初始化向导，并创建独立的设备身份。",
   "profiles.existingDescription": "直接使用所选目录中的数据，保留设备身份、配对和路径映射；不会复制或搬动文件。",
@@ -24,9 +24,11 @@
   "profiles.removeConfirm": "移除“{{name}}”的登记？数据目录及其中的所有文件会保留，可以随时重新添加。",
   "profiles.environment": "当前由启动环境指定数据目录。登记后可设为默认，以后正常启动 Bakabase 即可使用，不再需要特殊快捷方式。",
   "profiles.registerCurrent": "登记当前数据目录",
-  "profiles.opened": "已打开所选数据空间。",
+  "profiles.opened": "已打开所选工作区。",
   "profiles.switching": "正在切换，当前窗口将正常关闭。",
-  "profiles.upgrade": "这些空间共用当前安装的程序。更新程序前，请先退出此安装下的其他数据空间。",
-  "profiles.error.load": "无法读取数据空间。",
-  "profiles.error.save": "操作未完成，请重试。"
+  "profiles.upgrade": "这些工作区共用当前安装的程序。更新程序前，请先退出此安装下的其他工作区。",
+  "profiles.error.load": "无法读取工作区。",
+  "profiles.error.save": "操作未完成，请重试。",
+  "profiles.currentSection": "当前工作区",
+  "profiles.manageSection": "管理工作区"
 }
