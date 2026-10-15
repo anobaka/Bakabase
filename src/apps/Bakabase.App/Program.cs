@@ -124,6 +124,10 @@ class Program
                 (_, _) => throw new InvalidOperationException("The setup coordinator cannot start application services."),
                 () => bootstrap.RunAsync(args), onActivation: bootstrap.OnActivated))
             .UsePlatformDetect()
+            // The coordinator may show Setup, but is not a second desktop app.
+            // SetupWindow temporarily restores its Dock entry while visible; the
+            // business process retains the normal Dock and activation behavior.
+            .With(new MacOSPlatformOptions { ShowInDock = false })
             .LogToTrace();
 
     private static AppBuilder BuildBusinessApp(SetupChildConnection connection, string? restartHandoff)

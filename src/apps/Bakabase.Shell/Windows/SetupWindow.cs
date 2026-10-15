@@ -8,6 +8,7 @@ using Avalonia.Controls;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using Bakabase.Shell.Controls;
+using Bakabase.Shell.Components;
 
 namespace Bakabase.Shell.Windows;
 
@@ -39,6 +40,8 @@ public sealed class SetupWindow : Window
         {
             if (!_continuingStartup) _cancelled.Cancel();
             _closed.TrySetResult();
+            // Native activation callbacks must already observe this window as closed.
+            MacOSDockVisibility.SetVisible(false);
             // WebView2 may hold files until its process exits. Never delay exit for a cache.
             try { if (Directory.Exists(_temporaryProfile)) Directory.Delete(_temporaryProfile, true); }
             catch (IOException) { }
@@ -51,6 +54,7 @@ public sealed class SetupWindow : Window
     public void BringToFront()
     {
         if (_closed.Task.IsCompleted) return;
+        MacOSDockVisibility.SetVisible(true);
         Show();
         WindowState = WindowState.Normal;
         Activate();

@@ -7,6 +7,7 @@ using Bakabase.Infrastructures.Components.App.Profiles;
 using Bakabase.Infrastructures.Components.App.SingleInstance;
 using Bakabase.Service.Components.ServerData;
 using Bakabase.Shell.Windows;
+using Bakabase.Shell.Components;
 
 namespace Bakabase.App;
 
@@ -161,6 +162,13 @@ internal sealed class DesktopSetupBootstrap : IDisposable
 
     internal void OnActivated(ActivatedEventArgs e)
     {
+        // Avalonia uses Background for native application activation (including an
+        // accessory app being promoted by Launch Services), separately from Reopen.
+        if (e.Kind == ActivationKind.Background)
+        {
+            MacOSDockVisibility.SetVisible(_window?.ClosedTask.IsCompleted == false);
+            return;
+        }
         if (e is ProtocolActivatedEventArgs protocol)
         {
             var link = protocol.Uri.OriginalString;
@@ -196,6 +204,9 @@ internal sealed class DesktopSetupBootstrap : IDisposable
             _window.BringToFront();
             return;
         }
+        // Reopening the app bundle can promote this process to a regular app again.
+        // With no Setup window, only the business child should retain a Dock entry.
+        MacOSDockVisibility.SetVisible(false);
         // Finder / Dock may reopen the coordinator rather than the UI child. Contact the
         // business owner's existing activation pipe without taking its data-directory lock.
         _ = Task.Run(async () =>
