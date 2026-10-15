@@ -4,7 +4,7 @@ import { AiOutlineSync } from "react-icons/ai";
 
 import { setMetadataSyncPaused, type ManagementSource } from "./api";
 import { canReadSourceMetadata } from "./metadata";
-import { deviceColor } from "./resourceIdentity";
+import DeviceDot from "./DeviceDot";
 import { useManagementSources } from "./useManagementSources";
 
 import { Button } from "@/components/bakaui";
@@ -29,6 +29,7 @@ export function MetadataSyncStatus({
       source.metadata!.sync.error ||
       source.metadata!.sync.paused ||
       source.metadata!.sync.refreshPending ||
+      source.metadata!.sync.catchupPending ||
       source.metadata!.data.checkpoint?.cursor,
   );
 
@@ -70,6 +71,7 @@ export function MetadataSyncStatus({
                     : initial
                       ? "initial"
                       : metadata.sync.refreshPending ||
+                          metadata.sync.catchupPending ||
                           metadata.data.checkpoint?.complete === false ||
                           metadata.data.checkpoint?.cursor
                         ? "updating"
@@ -81,11 +83,7 @@ export function MetadataSyncStatus({
 
           return (
             <div key={source.serverId} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">
-              <span
-                aria-hidden
-                className="h-2 w-2 shrink-0 rounded-full"
-                style={{ backgroundColor: deviceColor(source.serverId) }}
-              />
+              <DeviceDot name={source.name} serverId={source.serverId} />
               <span className="max-w-48 truncate font-medium" title={source.name}>
                 {source.name}
               </span>

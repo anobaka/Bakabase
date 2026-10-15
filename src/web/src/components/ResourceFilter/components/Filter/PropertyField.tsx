@@ -11,7 +11,7 @@ import { useFilterConfig } from "../../context/FilterContext";
 import { Button, Tooltip } from "@/components/bakaui";
 import { PropertyPool, ResourceProperty } from "@/sdk/constants";
 import PropertyTypeIcon from "@/components/Property/components/PropertyTypeIcon";
-import { deviceColor } from "@/features/management/resourceIdentity";
+import DeviceDot from "@/features/management/DeviceDot";
 
 export interface PropertyFieldProps {
   /** Current property. Used for display and as current selection in selector. */
@@ -62,11 +62,7 @@ const PropertyField = ({ property, isReadonly, onSelect, onCancel }: PropertyFie
       )}
       <span className="min-w-0 break-words">{displayText}</span>
       {property?.owner && (
-        <span
-          title={property.owner.name}
-          className="h-2 w-2 shrink-0 rounded-full"
-          style={{ backgroundColor: deviceColor(property.owner.serverId) }}
-        />
+        <DeviceDot name={property.owner.name} serverId={property.owner.serverId} />
       )}
     </>
   );

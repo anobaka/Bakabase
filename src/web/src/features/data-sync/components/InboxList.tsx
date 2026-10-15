@@ -19,6 +19,7 @@ import {
   groupInbox,
   headlineKey,
   inboxBulks,
+  inboxCardRevision,
   recentlyResolved,
 } from "../inboxModels";
 import { useDataSyncStore } from "../stores/dataSync";
@@ -190,6 +191,7 @@ export interface InboxListProps {
   peers: SyncPeer[];
   /** `?tab=inbox&peer=`: the device to show first. */
   initialPeer?: string;
+  initialKind?: string;
   /** `?tab=inbox`: shown even when empty, and scrolled to. */
   focus: boolean;
   onChanged: () => void;
@@ -200,6 +202,7 @@ export default function InboxList({
   version,
   peers,
   initialPeer,
+  initialKind,
   focus,
   onChanged,
   now,
@@ -211,7 +214,9 @@ export default function InboxList({
   const [closed, setClosed] = useState<Item[]>([]);
   const [error, setError] = useState<Error>();
   const [peer, setPeer] = useState(initialPeer ?? "");
-  const [kind, setKind] = useState("");
+  const [kind, setKind] = useState(initialKind ?? "");
+  const [selected, setSelected] = useState<Map<string, string>>(new Map());
+  const [selectionNotice, setSelectionNotice] = useState<string>();
   const [cardErrors, setCardErrors] = useState<Map<string, Error>>(new Map());
   const [leaving, setLeaving] = useState<Map<string, { card: InboxCardModel; item: Item }>>(
     new Map(),
@@ -229,6 +234,11 @@ export default function InboxList({
   const sent = useRef(new Map<string, ReadonlyMap<number, string>>());
 
   useEffect(() => setPeer(initialPeer ?? ""), [initialPeer]);
+  useEffect(() => setKind(initialKind ?? ""), [initialKind]);
+  useEffect(() => {
+    setSelected(new Map());
+    setSelectionNotice(undefined);
+  }, [peer, kind]);
   useCardFocus(section, heading);
 
   const setCardError = useCallback(
@@ -342,7 +352,25 @@ export default function InboxList({
 
   shownCards.current = cards;
   const filtered = filterCards(cards, { peer: peer || undefined, kind: kind || undefined });
-  const bulks = inboxBulks(filtered, bulkBackup);
+  const selectable = filtered.filter((card) => !follower.running.has(card.key));
+  const selectedCards = selectable.filter(
+    (card) => selected.get(card.key) === inboxCardRevision(card),
+  );
+  const bulks = inboxBulks(selectedCards, bulkBackup, 1);
+
+  useEffect(() => {
+    const current = new Map(cards.map((card) => [card.key, inboxCardRevision(card)]));
+    const remaining = new Map(
+      [...selected].filter(([key, revision]) => current.get(key) === revision),
+    );
+
+    if (remaining.size !== selected.size) {
+      setSelectionNotice(
+        t("dataSync.selection.changed", { count: selected.size - remaining.size }),
+      );
+      setSelected(remaining);
+    }
+  }, [cards, selected, t]);
   const recent = recentlyResolved(closed, now);
   const devices = useMemo(() => {
     const byId = new Map<string, string>();
@@ -430,23 +458,40 @@ export default function InboxList({
         start.taskId,
         earlier,
       );
+      setSelected(new Map());
+      setSelectionNotice(t("dataSync.selection.submitted", { count: bulk.count }));
       resolved();
     };
 
-    if (bulk.destructive)
-      actions.confirm({
-        title: t(`dataSync.inbox.bulk.${bulk.id}`, {
-          count: bulk.count,
-          name: bulk.peer?.name ?? "",
+    const ids = new Set(bulk.batch.items.map((item) => item.itemId));
+    const affected = selectedCards.filter((card) => card.items.some((item) => ids.has(item.id)));
+    const names = affected
+      .slice(0, 20)
+      .map((card) => `${card.entityName} (${card.peers.map((device) => device.name).join(", ")})`)
+      .join("; ");
+
+    actions.confirm({
+      title: t(`dataSync.inbox.bulk.${bulk.id}`, {
+        count: bulk.count,
+        name: bulk.peer?.name ?? "",
+      }),
+      description: [
+        bulk.destructive ? t("dataSync.inbox.confirm.deleteAll", { count: bulk.count }) : "",
+        t("dataSync.selection.preview", {
+          count: affected.length,
+          selected: selectedCards.length,
+          names,
         }),
-        description: t("dataSync.inbox.confirm.deleteAll", { count: bulk.count }),
-        warning: bulkBackup
-          ? t("dataSync.inbox.confirm.backedUp")
-          : t("dataSync.inbox.confirm.notBackedUp"),
-        action: operation,
-        refresh: [],
-      });
-    else void actions.run(operation, [], setBulkError);
+        affected.length > 20 ? t("dataSync.selection.more", { count: affected.length - 20 }) : "",
+      ]
+        .filter(Boolean)
+        .join(" "),
+      warning: bulk.destructive
+        ? t(bulkBackup ? "dataSync.inbox.confirm.backedUp" : "dataSync.inbox.confirm.notBackedUp")
+        : t("dataSync.selection.recheck"),
+      action: operation,
+      refresh: [],
+    });
   };
 
   if (!visible) return null;
@@ -485,7 +530,7 @@ export default function InboxList({
             )}
           </select>
         ) : null}
-        {kinds.length > 1 && (
+        {(kinds.length > 1 || kind) && (
           <select
             aria-label={t("dataSync.inbox.filter.kind")}
             className={`${fieldClass} w-auto py-1 text-xs`}
@@ -499,6 +544,9 @@ export default function InboxList({
                 {t(`dataSync.kind.${item}`, { defaultValue: item })}
               </option>
             ))}
+            {kind && !kinds.includes(kind) && (
+              <option value={kind}>{t(`dataSync.kind.${kind}`, { defaultValue: kind })}</option>
+            )}
           </select>
         )}
       </SectionHeading>
@@ -515,6 +563,35 @@ export default function InboxList({
       )}
       <DataSyncErrorNotice error={error} onRetry={() => void load()} />
       <DataSyncErrorNotice error={bulkError} onDismiss={() => setBulkError(undefined)} />
+      {selectionNotice && (
+        <p className="text-xs text-default-500" role="status">
+          {selectionNotice}
+        </p>
+      )}
+      {selectable.length > 0 && (
+        <div className="flex flex-wrap items-center gap-3 text-xs">
+          <label className="inline-flex items-center gap-2">
+            <input
+              checked={selectedCards.length === selectable.length}
+              disabled={actions.busy}
+              type="checkbox"
+              onChange={(event) => {
+                setSelected(
+                  event.target.checked
+                    ? new Map(selectable.map((card) => [card.key, inboxCardRevision(card)]))
+                    : new Map(),
+                );
+                setSelectionNotice(undefined);
+              }}
+            />
+            {t("dataSync.selection.allVisible")}
+          </label>
+          <span>{t("dataSync.selection.count", { count: selectedCards.length })}</span>
+          {selectedCards.length > 0 && !bulks.length && (
+            <span>{t("dataSync.selection.individual")}</span>
+          )}
+        </div>
+      )}
       <InboxBulkBar
         backup={backup}
         backupFirst={bulkBackup}
@@ -555,21 +632,43 @@ export default function InboxList({
           </motion.div>
         ))}
         {filtered.map((card) => (
-          <InboxCard
-            key={card.key}
-            applying={follower.running.has(card.key)}
-            backup={backup}
-            busy={actions.busy}
-            card={card}
-            error={cardErrors.get(card.key)}
-            follows={peers.some(
-              (peer) =>
-                peer.linkId === card.items[0].linkId && peer.mode === DataSyncLinkMode.Follow,
-            )}
-            now={now}
-            onDismissError={() => setCardError(card.key)}
-            onResolve={(batch, confirmation) => resolve(card, batch, confirmation)}
-          />
+          <div key={card.key} className="space-y-1">
+            <label className="inline-flex items-center gap-2 text-xs text-default-500">
+              <input
+                checked={selected.get(card.key) === inboxCardRevision(card)}
+                disabled={actions.busy || follower.running.has(card.key)}
+                type="checkbox"
+                onChange={(event) => {
+                  const checked = event.target.checked;
+
+                  setSelected((current) => {
+                    const next = new Map(current);
+
+                    if (checked) next.set(card.key, inboxCardRevision(card));
+                    else next.delete(card.key);
+
+                    return next;
+                  });
+                  setSelectionNotice(undefined);
+                }}
+              />
+              {t("dataSync.selection.item", { name: card.entityName })}
+            </label>
+            <InboxCard
+              applying={follower.running.has(card.key)}
+              backup={backup}
+              busy={actions.busy}
+              card={card}
+              error={cardErrors.get(card.key)}
+              follows={peers.some(
+                (peer) =>
+                  peer.linkId === card.items[0].linkId && peer.mode === DataSyncLinkMode.Follow,
+              )}
+              now={now}
+              onDismissError={() => setCardError(card.key)}
+              onResolve={(batch, confirmation) => resolve(card, batch, confirmation)}
+            />
+          </div>
         ))}
       </div>
 

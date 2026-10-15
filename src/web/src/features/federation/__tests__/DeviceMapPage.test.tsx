@@ -102,6 +102,7 @@ vi.mock("../switching", async (importOriginal) => ({
 }));
 vi.mock("@/sdk/BApi", () => ({
   default: {
+    options: {},
     remoteAccess: {
       getRemoteAccessSettings: vi.fn(),
       revokeRemoteAccessDevice: vi.fn(),

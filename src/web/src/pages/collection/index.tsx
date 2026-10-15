@@ -14,6 +14,16 @@ import CompositionBar from "./components/CompositionBar";
 import ProgressChip from "./components/ProgressChip";
 import { buildCollectionSearch } from "./helpers";
 
+import {
+  useOwnedCatalog,
+  catalogItemKey,
+  catalogItemApi,
+  canEditCatalogItem,
+  CatalogOwnerMark,
+  CatalogSourceStatus,
+  catalogOwnerSearch,
+  type OwnedCatalogItem,
+} from "@/features/management/ownedCatalog";
 import BApi from "@/sdk/BApi";
 import { HelpCenterButton } from "@/components/HelpCenter";
 import {
@@ -43,6 +53,17 @@ const CollectionPage = () => {
   const setCollections = useCollectionsStore((s) => s.setCollections);
   const setPendingSearch = usePendingSearchStore((s) => s.setPendingSearch);
 
+  const catalog = useOwnedCatalog(collections, (api) =>
+    api.collection.getAllCollections({ withProgress: true }),
+  );
+  const allCollections = [...catalog.items].sort(
+    (a, b) =>
+      (a.order ?? 0) - (b.order ?? 0) ||
+      (a.id ?? 0) - (b.id ?? 0) ||
+      catalogItemKey(a).localeCompare(catalogItemKey(b)),
+  );
+  const detailUrl = (collection: OwnedCatalogItem<CollectionModel>) =>
+    `/collections/detail?id=${collection.id}${collection.owner && !collection.owner.isLocal ? `&serverId=${encodeURIComponent(collection.owner.serverId)}&libraryEpoch=${encodeURIComponent(collection.owner.libraryEpoch)}` : ""}`;
   const [loading, setLoading] = useState(true);
   const [keyword, setKeyword] = useState("");
 
@@ -69,7 +90,7 @@ const CollectionPage = () => {
     if (rsp.data?.id) navigate(`/collections/detail?id=${rsp.data.id}`);
   };
 
-  const remove = (collection: CollectionModel) => {
+  const remove = (collection: OwnedCatalogItem<CollectionModel>) => {
     createPortal(Modal, {
       defaultVisible: true,
       title: t<string>("collection.confirm.deleteTitle", { name: collection.name }),
@@ -82,9 +103,10 @@ const CollectionPage = () => {
         </div>
       ),
       onOk: async () => {
-        await BApi.collection.deleteCollection(collection.id);
+        await catalogItemApi(collection).collection.deleteCollection(collection.id);
         toast.success(t<string>("collection.deleted"));
         await load();
+        catalog.refresh();
       },
       footer: {
         actions: ["ok", "cancel"],
@@ -94,19 +116,22 @@ const CollectionPage = () => {
   };
 
   /** The collection, on the resource page. Membership is a property, so this is just a filter. */
-  const openInResourcePage = (collection: CollectionModel) => {
-    setPendingSearch(buildCollectionSearch(collection) as any);
+  const openInResourcePage = (collection: OwnedCatalogItem<CollectionModel>) => {
+    setPendingSearch({
+      ...buildCollectionSearch(collection),
+      ...catalogOwnerSearch(collection.owner),
+    } as any);
 
     if (location.pathname !== "/resource") navigate("/resource");
   };
 
   const shown = keyword
-    ? collections.filter((c) => c.name.toLowerCase().includes(keyword.toLowerCase()))
-    : collections;
+    ? allCollections.filter((c) => c.name.toLowerCase().includes(keyword.toLowerCase()))
+    : allCollections;
 
-  const renderCard = (collection: CollectionModel) => (
+  const renderCard = (collection: OwnedCatalogItem<CollectionModel>) => (
     <div
-      key={collection.id}
+      key={catalogItemKey(collection)}
       aria-label={collection.name}
       className="h-full cursor-pointer rounded-large outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
       role="link"
@@ -125,35 +150,54 @@ const CollectionPage = () => {
           return;
         }
 
-        navigate(`/collections/detail?id=${collection.id}`);
+        navigate(detailUrl(collection));
       }}
       onKeyDown={(event) => {
         if (event.target !== event.currentTarget || event.repeat) return;
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
-          navigate(`/collections/detail?id=${collection.id}`);
+          navigate(detailUrl(collection));
         }
       }}
     >
       <Card className="h-full transition-shadow hover:shadow-md" shadow="sm">
         <CardBody className="p-4 flex flex-col gap-3">
           <div className="flex items-center justify-between gap-2">
+            <CatalogOwnerMark owner={collection.owner} />
             <h2
               className="min-w-0 flex-1 break-words text-base font-medium"
               style={{ color: collection.color ?? undefined }}
             >
               {collection.name}
             </h2>
-            <ColorPicker
-              color={collection.color ?? undefined}
-              onChange={async (color) => {
-                await BApi.collection.putCollection(collection.id, {
-                  ...collection,
-                  color: buildColorValueString(color),
-                });
-                await load();
-              }}
-            />
+            {canEditCatalogItem(collection) && (
+              <ColorPicker
+                color={collection.color ?? undefined}
+                onChange={async (color) => {
+                  const api = catalogItemApi(collection);
+                  // Replica rows intentionally omit acquisition settings. Fetch the owner's full
+                  // editor model before a PUT so a color edit cannot erase unreplicated settings.
+                  const current =
+                    collection.owner && !collection.owner.isLocal
+                      ? (await api.collection.getCollection(collection.id)).data
+                      : collection;
+
+                  if (!current) throw new Error(t("collection.notFound"));
+                  await api.collection.putCollection(collection.id, {
+                    name: current.name,
+                    description: current.description,
+                    coverPath: current.coverPath,
+                    ruleSearchJson: current.ruleSearchJson,
+                    autoAcquire: current.autoAcquire,
+                    acquisitionSettingsJson: current.acquisitionSettingsJson,
+                    order: current.order,
+                    color: buildColorValueString(color),
+                  });
+                  await load();
+                  catalog.refresh();
+                }}
+              />
+            )}
           </div>
 
           <CompositionBar collection={collection} />
@@ -187,6 +231,7 @@ const CollectionPage = () => {
                 aria-label={t<string>("collection.action.delete")}
                 className="ml-auto"
                 color="danger"
+                isDisabled={!canEditCatalogItem(collection)}
                 size="sm"
                 variant="light"
                 onPress={() => remove(collection)}
@@ -229,7 +274,8 @@ const CollectionPage = () => {
         <HelpCenterButton topic="collection" />
       </div>
 
-      {collections.length === 0 ? (
+      <CatalogSourceStatus {...catalog} />
+      {allCollections.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
           <div className="w-20 h-20 rounded-full bg-secondary/10 flex items-center justify-center">
             <HiOutlineCollection className="text-4xl text-secondary" />

@@ -142,10 +142,11 @@ public sealed class ResourceProcessingJobStore(BakabaseDbContext db)
     }
 
     public async Task<IReadOnlyList<ResourceProcessingJobView>> ListAsync(ResourceProcessingRole role,
-        string? beforeId, int take, CancellationToken ct)
+        string? beforeId, int take, CancellationToken ct, bool activeOnly = false)
     {
         if (take is < 1 or > 100) throw new ArgumentOutOfRangeException(nameof(take));
         var query = db.ResourceProcessingJobs.AsNoTracking().Where(j => j.Role == role.ToString());
+        if (activeOnly) query = query.Where(j => j.State == "Running" || j.State == "Queued" || j.State == "Paused" || j.State == "Failed" || j.State == "Conflict");
         if (beforeId != null)
         {
             var cursor = await query.Where(j => j.Id == beforeId).Select(j => new { j.CreatedAtUtc, j.Id }).SingleOrDefaultAsync(ct);
@@ -158,6 +159,28 @@ public sealed class ResourceProcessingJobStore(BakabaseDbContext db)
             j.ProcessedCount, j.TotalCount, j.Attempt, j.PauseRequested, j.CancelRequested, j.ErrorCode, j.Error,
             j.CreatedAtUtc, j.UpdatedAtUtc, j.Version, j.CurrentStepPhase,
             j.CurrentStepProcessedCount, j.CurrentStepTotalCount)).ToArrayAsync(ct);
+    }
+
+    /// <summary>Read execution identity without loading the saved resource, credentials, or rule payload.</summary>
+    public async Task<string?> WorkerIdAsync(string id, string localId, CancellationToken ct)
+    {
+        var connection = db.Database.GetDbConnection();
+        var close = connection.State != System.Data.ConnectionState.Open;
+        if (close) await connection.OpenAsync(ct);
+        try
+        {
+            await using var command = connection.CreateCommand();
+            command.CommandText = """
+                SELECT CASE Role WHEN 'Worker' THEN $local WHEN 'Manager' THEN
+                    CASE json_extract(InputJson,'$.Target.Kind')
+                      WHEN 0 THEN OwnerId WHEN 1 THEN $local WHEN 2 THEN json_extract(InputJson,'$.Target.DeviceId')
+                    END END FROM ResourceProcessingJobs WHERE Id=$id
+                """;
+            var key = command.CreateParameter(); key.ParameterName = "$id"; key.Value = id; command.Parameters.Add(key);
+            var self = command.CreateParameter(); self.ParameterName = "$local"; self.Value = localId; command.Parameters.Add(self);
+            return await command.ExecuteScalarAsync(ct) as string;
+        }
+        finally { if (close) await connection.CloseAsync(); }
     }
 
     public Task<ResourceProcessingJobDbModel?> NextQueuedAsync(ResourceProcessingRole role, CancellationToken ct) =>

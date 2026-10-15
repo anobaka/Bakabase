@@ -68,6 +68,7 @@ namespace Bakabase.Service.Controllers
             {
                 if (!coordinator.TryReserveUpdateRestart(launchUpdater))
                 {
+                    Bakabase.Infrastructures.Components.App.Profiles.DesktopInstallationInstances.CancelUpdate();
                     return BaseResponseBuilder.BuildBadRequest("Bakabase is already closing or updating.");
                 }
 
@@ -85,6 +86,7 @@ namespace Bakabase.Service.Controllers
             {
                 if (_lifetime.ApplicationStopping.IsCancellationRequested)
                 {
+                    Bakabase.Infrastructures.Components.App.Profiles.DesktopInstallationInstances.CancelUpdate();
                     return BaseResponseBuilder.BuildBadRequest("Bakabase is already closing.");
                 }
 

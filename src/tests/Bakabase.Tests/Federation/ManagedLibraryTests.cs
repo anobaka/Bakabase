@@ -25,6 +25,68 @@ public class ManagedLibraryTests
         Body: JObject.FromObject(new {page = 1, pageSize = size, keyword = "film"}));
 
     [DataTestMethod]
+    [DataRow(0)]
+    [DataRow(2)]
+    public void Custom_property_catalog_reads_accept_their_own_defined_additional_items(int flags)
+    {
+        foreach (var operation in new[] {"customProperties", "getCustomPropertyByKeys"})
+        {
+            var result = ManagedLibraryOperations.Build(new(Epoch, operation, Ids: [7],
+                Query: new() {{"additionalItems", [flags.ToString()]}}));
+            StringAssert.Contains(result.Path, "additionalItems=" + flags);
+            StringAssert.Contains(result.Path, "managedLibraryEpoch=" + Epoch);
+            Assert.AreEqual(HttpMethod.Get, result.Method);
+        }
+        Assert.AreEqual(2, (int)Bakabase.InsideWorld.Models.Constants.AdditionalItems.CustomPropertyAdditionalItem.ValueCount,
+            "The editor requests the custom-property enum, not resource metadata bits.");
+    }
+
+    [DataTestMethod]
+    [DataRow("1")]
+    [DataRow("3")]
+    [DataRow("4")]
+    [DataRow("-1")]
+    [DataRow("2147483647")]
+    [DataRow("not-a-flag")]
+    public void Custom_property_catalog_reads_reject_retired_or_unknown_additional_items(string flags)
+    {
+        foreach (var operation in new[] {"customProperties", "getCustomPropertyByKeys"})
+            Assert.ThrowsExactly<FederationAccessException>(() => ManagedLibraryOperations.Build(
+                new(Epoch, operation, Ids: [7], Query: new() {{"additionalItems", [flags]}})));
+    }
+
+    [TestMethod]
+    public void Definition_and_collection_page_operations_remain_named_epoch_bound_and_bounded()
+    {
+        var extension = ManagedLibraryOperations.Build(new(Epoch, "extensionGroupPut", Id: 7,
+            Body: JObject.FromObject(new {name = "Videos", extensions = new[] {".mkv"}})));
+        Assert.AreEqual(HttpMethod.Put, extension.Method);
+        Assert.AreEqual("/extension-group/7?managedLibraryEpoch=library-one", extension.Path);
+        var members = ManagedLibraryOperations.Build(new(Epoch, "getCollectionMemberships", Id: 7, Ids: [8, 9]));
+        Assert.AreEqual("/collection/7/memberships?resourceIds=8&resourceIds=9&managedLibraryEpoch=library-one", members.Path);
+        Assert.ThrowsExactly<FederationAccessException>(() => ManagedLibraryOperations.Build(
+            new(Epoch, "getCollectionMemberships", Id: 7, Ids: Enumerable.Range(1, 101).ToArray())));
+        Assert.ThrowsExactly<FederationAccessException>(() => ManagedLibraryOperations.Build(
+            new(Epoch, "searchCollectionMembers", Id: 7, Query: new() {{"pageSize", ["100000"]}})));
+        var gone = ManagedLibraryOperations.Build(new(Epoch, "searchCollectionMembers", Id: 7,
+            Query: new() {{"filter", ["5"]}, {"pageIndex", ["2"]}, {"pageSize", ["40"]}}));
+        StringAssert.Contains(gone.Path, "filter=5&pageIndex=2&pageSize=40");
+        Assert.ThrowsExactly<FederationAccessException>(() => ManagedLibraryOperations.Build(
+            new(Epoch, "searchCollectionMembers", Id: 7, Query: new() {{"filter", ["6"]}})));
+        var ignored = ManagedLibraryOperations.Build(new(Epoch, "setCollectionMemberIgnored", Id: 7,
+            Query: new() {{"resourceId", ["8"]}, {"ignored", ["true"]}}));
+        Assert.AreEqual("/collection/7/members/8/ignored?ignored=true&managedLibraryEpoch=library-one", ignored.Path);
+        Assert.IsNull(ignored.Json);
+        var sorting = ManagedLibraryOperations.Build(new(Epoch, "sortCustomProperties",
+            Body: JObject.FromObject(new {ids = Enumerable.Range(1, 200).ToArray()})));
+        Assert.AreEqual("/custom-property/order?managedLibraryEpoch=library-one", sorting.Path);
+        Assert.ThrowsExactly<FederationAccessException>(() => ManagedLibraryOperations.Build(new(Epoch, "sortCustomProperties",
+            Body: JObject.FromObject(new {ids = new[] {7, 7}}))));
+        Assert.ThrowsExactly<FederationAccessException>(() => ManagedLibraryOperations.Build(new(Epoch, "extensionGroups",
+            Query: new() {{"serverId", ["different-owner"]}})));
+    }
+
+    [DataTestMethod]
     [DataRow("/gui/url")]
     [DataRow("fileDelete")]
     [DataRow("resourcePlay")]

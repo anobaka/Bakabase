@@ -34,6 +34,8 @@ public static class FederationServiceCollectionExtensions
             sp.GetRequiredService<IFederationDataDirectory>().Path, "metadata-replicas")));
         services.AddSingleton<MetadataReplicaQuery>();
         services.AddSingleton<MetadataReplicaCoordinator>();
+        services.AddSingleton<MetadataSyncActivityStore>();
+        services.AddScoped<Bakabase.Service.Components.DataSync.SyncActivityService>();
         services.AddScoped<ManagedMetadataReader>();
         services.AddScoped<ResourceProcessingJobStore>();
         services.AddSingleton<ResourceProcessingArtifacts>();

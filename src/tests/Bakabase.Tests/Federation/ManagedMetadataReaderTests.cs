@@ -8,6 +8,28 @@ namespace Bakabase.Tests.Federation;
 public sealed partial class MetadataReplicaCoordinatorTests
 {
     [TestMethod]
+    public async Task Definition_catalogs_read_from_the_paired_owner_replica_without_network_or_id_merging()
+    {
+        await SeedAsync();
+        var checkpoint = (await _store.GetStatusAsync(Owner)).Checkpoint!;
+        await _store.ApplyBatchAsync(Owner, new(checkpoint, checkpoint with {CatalogRevision = 2}, [], [],
+            [new("extensionGroups", "7", """{"id":7,"name":"Owner videos","extensions":[".mkv"]}"""),
+             new("collections", "7", """{"id":7,"name":"Owner series","order":3,"hasRule":true}""")], []));
+        var other = Owner with {ServerId = "other-owner"};
+        var second = await _store.BeginSnapshotAsync(other, "other-generation", 1);
+        await _store.ApplyBatchAsync(other, new(second, second with {Complete = true}, [], [],
+            [new("extensionGroups", "7", """{"id":7,"name":"Not this owner","extensions":[".png"]}""")], []));
+        _wire.Calls.Clear();
+        foreach (var (operation, name) in new[] {("extensionGroups", "Owner videos"), ("getAllCollections", "Owner series")})
+        {
+            var response = JObject.Parse((await Service().ExecuteAsync(Owner.ServerId, new(Owner.LibraryEpoch, operation), default)).Body);
+            Assert.AreEqual(7, (int)response["data"]![0]!["id"]!);
+            Assert.AreEqual(name, (string)response["data"]![0]!["name"]!);
+        }
+        Assert.IsEmpty(_wire.Calls, "Reading a synced catalog must not fetch the owner's entire native catalog again.");
+    }
+
+    [TestMethod]
     public async Task Catalog_only_rename_and_reorder_overlay_resource_get_and_search_without_rewriting_values()
     {
         await SeedAsync();

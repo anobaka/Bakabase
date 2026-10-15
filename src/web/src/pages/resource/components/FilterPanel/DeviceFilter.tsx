@@ -11,7 +11,7 @@ import Filter from "@/components/ResourceFilter/components/Filter";
 import valueStyles from "@/components/ResourceFilter/components/Filter/value.module.scss";
 import { FilterProvider } from "@/components/ResourceFilter/context/FilterContext";
 import { deserializeStandardValue, serializeStandardValue } from "@/components/StandardValue";
-import { deviceColor } from "@/features/management/resourceIdentity";
+import DeviceDot from "@/features/management/DeviceDot";
 import {
   FilterDisplayMode,
   PropertyPool,
@@ -111,11 +111,7 @@ function DeviceFilterEditor({ sources, owner, deviceIds, onChange }: Props) {
               property={valueProperty}
               renderOptionExtra={({ value }) => (
                 <>
-                  <span
-                    aria-hidden
-                    className="ml-1 inline-block h-2 w-2 shrink-0 rounded-full"
-                    style={{ backgroundColor: deviceColor(value) }}
-                  />
+                  <DeviceDot className="ml-1 h-2 w-2" serverId={value} />
                   {choices.find((choice) => choice.value === value)?.unavailable && (
                     <span className="ml-1 text-xs text-warning" title={value}>
                       {t("management.offline")}

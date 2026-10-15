@@ -35,6 +35,7 @@ import {
 } from "./components/common";
 import EntitySyncList from "./components/EntitySyncList";
 import HistoryList from "./components/HistoryList";
+import SyncActivityCenter from "./components/SyncActivityCenter";
 import InboxList from "./components/InboxList";
 import InvitationDialog from "./components/InvitationDialog";
 import LinkDetails from "./components/LinkDetails";
@@ -129,6 +130,7 @@ function DataSync() {
   });
   // The history shows one device's entries alone once a link's details asked for them.
   const [historyPeer, setHistoryPeer] = useState<string>();
+  const [inboxFilter, setInboxFilter] = useState<{ peer: string; kind: string }>();
   const historyHeading = useRef<HTMLHeadingElement>(null);
   const page = useRef<HTMLDivElement>(null);
   const heading = useRef<HTMLHeadingElement>(null);
@@ -409,6 +411,19 @@ function DataSync() {
         </div>
       )}
 
+      <SyncActivityCenter
+        version={data.version}
+        onDefinitionHistory={showHistory}
+        onReviewDefinitions={(peer, kind) => {
+          setInboxFilter({ peer, kind });
+          setTimeout(() =>
+            document
+              .querySelector('[data-testid="data-sync-inbox"]')
+              ?.scrollIntoView?.({ block: "start", behavior: "smooth" }),
+          );
+        }}
+      />
+
       <div
         ref={layoutRef}
         className={
@@ -510,8 +525,9 @@ function DataSync() {
       </div>
 
       <InboxList
-        focus={query.tab === "inbox"}
-        initialPeer={query.peer}
+        focus={query.tab === "inbox" || !!inboxFilter}
+        initialKind={inboxFilter?.kind}
+        initialPeer={inboxFilter?.peer ?? query.peer}
         peers={peers}
         version={data.version}
         onChanged={() => void data.reload()}

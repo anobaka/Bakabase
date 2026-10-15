@@ -134,7 +134,7 @@ public sealed class MetadataReplicaProjection(
             yield return Catalog("collections", Id(collection.Id), new
             {
                 collection.Id, collection.Name, collection.Description, collection.Color,
-                collection.CoverPath, collection.RuleSearchJson, collection.Order,
+                collection.CoverPath, collection.RuleSearchJson, collection.Order, collection.HasRule,
                 collection.CreatedAt, collection.UpdatedAt
             });
         }

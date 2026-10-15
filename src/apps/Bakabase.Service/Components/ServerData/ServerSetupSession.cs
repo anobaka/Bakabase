@@ -264,6 +264,7 @@ public sealed class ServerSetupSession : IDisposable
         {
             var operation = Operation(request);
             target = string.IsNullOrWhiteSpace(request.TargetPath) ? _currentPath : Canonical(request.TargetPath);
+            Bakabase.Infrastructures.Components.App.Profiles.DesktopProfileSelection.EnsureDataTargetAllowed(target);
             _storage.EnsurePathAllowed(target, UserStoragePurpose.Setup);
             if (!string.IsNullOrWhiteSpace(request.SourcePath))
                 _storage.EnsurePathAllowed(request.SourcePath, UserStoragePurpose.Setup);

@@ -77,6 +77,8 @@ const HistoryList = forwardRef<HTMLHeadingElement, HistoryListProps>(function Hi
   heading,
 ) {
   const { t } = useTranslation();
+  const [beforeId, setBeforeId] = useState<number>();
+  const [hasMore, setHasMore] = useState(false);
   const [all, setEntries] = useState<DataSyncHistoryEntry[]>();
   const [error, setError] = useState<Error>();
   const [open, setOpen] = useState<number>();
@@ -96,18 +98,30 @@ const HistoryList = forwardRef<HTMLHeadingElement, HistoryListProps>(function Hi
       return errors;
     });
 
+  const requestVersion = useRef(0);
   const load = useCallback(async () => {
-    try {
-      const next = await dataSyncApi.history();
+    const attempt = ++requestVersion.current;
 
+    try {
+      const next = await dataSyncApi.history({ beforeId, peerNodeId: peer, take: 50 });
+
+      if (attempt !== requestVersion.current) return;
       setEntries(next);
+      setHasMore(next.length === 50);
       setError(undefined);
 
       return next;
     } catch (cause) {
+      if (attempt !== requestVersion.current) return;
       setError(cause instanceof Error ? cause : new Error(String(cause)));
     }
-  }, []);
+  }, [beforeId, peer]);
+
+  useEffect(() => {
+    setBeforeId(undefined);
+    setOpen(undefined);
+    setDetails({});
+  }, [peer]);
 
   // An undo whose task failed says so on its row. One that is over is read again: an entry that
   // can still be undone then undid nothing — every step was refused.
@@ -167,13 +181,14 @@ const HistoryList = forwardRef<HTMLHeadingElement, HistoryListProps>(function Hi
   const devices = useMemo(() => {
     const byId = new Map<string, string>();
 
+    for (const device of peers ?? []) byId.set(device.nodeId, device.name);
     for (const entry of all ?? [])
       if (entry.peerNodeId) byId.set(entry.peerNodeId, entry.peerName ?? entry.peerNodeId);
 
     return Array.from(byId, ([nodeId, name]) => ({ nodeId, name })).sort((a, b) =>
       a.name.localeCompare(b.name),
     );
-  }, [all]);
+  }, [all, peers]);
   const entries = peer ? all?.filter((entry) => entry.peerNodeId === peer) : all;
   const peerName =
     devices.find((device) => device.nodeId === peer)?.name ??
@@ -347,6 +362,36 @@ const HistoryList = forwardRef<HTMLHeadingElement, HistoryListProps>(function Hi
             );
           })}
         </ul>
+      )}
+      {(beforeId !== undefined || hasMore) && (
+        <div className="flex justify-end gap-2">
+          {beforeId !== undefined && (
+            <button
+              className={smallButtonClass}
+              type="button"
+              onClick={() => {
+                setBeforeId(undefined);
+                setOpen(undefined);
+                setDetails({});
+              }}
+            >
+              {t("dataSync.activity.newest")}
+            </button>
+          )}
+          {hasMore && (
+            <button
+              className={smallButtonClass}
+              type="button"
+              onClick={() => {
+                setBeforeId(all?.at(-1)?.id);
+                setOpen(undefined);
+                setDetails({});
+              }}
+            >
+              {t("dataSync.activity.older")}
+            </button>
+          )}
+        </div>
       )}
       {undoing && (
         <UndoDialog

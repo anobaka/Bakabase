@@ -457,6 +457,14 @@ public sealed class DataSyncService : IDataSyncService
             .Select(l => ToEntry(l, now)).ToList();
     }
 
+    public async Task<DataSyncHistoryPage> GetHistoryPageAsync(int? beforeId, int take, string? peerNodeId, CancellationToken ct)
+    {
+        take = Math.Clamp(take, 1, 100);
+        var rows = await Store.GetHistoryAsync(ct, beforeId, take + 1, peerNodeId);
+        var entries = rows.Take(take).Select(row => ToEntry(row, Now)).ToArray();
+        return new(entries, rows.Count > take ? entries[^1].Id : null);
+    }
+
     public async Task<DataSyncHistoryDetail?> GetHistoryEntryAsync(int id, CancellationToken ct)
     {
         var log = await Store.GetHistoryEntryAsync(id, ct);

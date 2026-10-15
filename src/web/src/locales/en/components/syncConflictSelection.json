@@ -1,0 +1,11 @@
+{
+  "dataSync.selection.allVisible": "Select all items in the current filter",
+  "dataSync.selection.count": "{{count}} selected",
+  "dataSync.selection.item": "Select {{name}}",
+  "dataSync.selection.changed": "{{count}} items changed or were resolved and have been deselected. Review them again.",
+  "dataSync.selection.submitted": "Submitted {{count}} decisions. Check each item's status and sync history for the results.",
+  "dataSync.selection.individual": "These items need individual review; no batch action is available.",
+  "dataSync.selection.preview": "This action affects {{count}} of the {{selected}} selected items. Other items stay unchanged. Includes: {{names}}.",
+  "dataSync.selection.more": "And {{count}} more.",
+  "dataSync.selection.recheck": "Conflicts involving the same definition on multiple devices are decided together. Versions are checked again before applying. Changed items will not be overwritten and need another review."
+}

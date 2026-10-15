@@ -16,13 +16,15 @@ using Newtonsoft.Json;
 namespace Bakabase.Service.Components.Federation.MetadataReplicas;
 
 public sealed record ManagedMetadataStatus(ReplicaIdentity Identity, string? Name, ReplicaStatus Data,
-    ReplicaSyncState Sync, bool Denied = false);
+    ReplicaSyncState Sync, bool Denied = false, string? ActivePhase = null);
 
 /// <summary>One bounded fetch at a time. Neither definitions nor foreign resource IDs enter the owned DB.</summary>
 public sealed class MetadataReplicaCoordinator(IManagedServerService managed, MetadataReplicaStore store,
-    MetadataReplicaRegistry registry)
+    MetadataReplicaRegistry registry, MetadataSyncActivityStore? activity = null)
 {
     private readonly SemaphoreSlim _cycle = new(1);
+    private readonly ConcurrentDictionary<string, string> _active = new();
+    private readonly ConcurrentDictionary<string, (string Code, DateTimeOffset At)> _lastFailure = new();
     private readonly ConcurrentDictionary<string, SemaphoreSlim> _ownerGates = new();
 
     public async Task<IAsyncDisposable> BeginWriteAsync(string serverId, string epoch, CancellationToken ct)
@@ -85,7 +87,7 @@ public sealed class MetadataReplicaCoordinator(IManagedServerService managed, Me
                     new(ErrorCode: entry.ErrorCode, Error: entry.Error, IsOffline: true), entry.Denied));
                 continue;
             }
-            result.Add(new(id, entry.Name, await store.GetStatusAsync(id, ct), await store.GetSyncStateAsync(id, ct), entry.Denied));
+            result.Add(new(id, entry.Name, await store.GetStatusAsync(id, ct), await store.GetSyncStateAsync(id, ct), entry.Denied, _active.GetValueOrDefault(id.ServerId)));
         }
         return result;
     }
@@ -136,9 +138,14 @@ public sealed class MetadataReplicaCoordinator(IManagedServerService managed, Me
     {
         var old = (await registry.ReadAsync(ct)).SingleOrDefault(r => r.ServerId == connection.ServerId);
         ReplicaIdentity? id = old == null || string.IsNullOrEmpty(old.LibraryEpoch) ? null : new(old.ServerId, old.LibraryEpoch);
+        long? activityId = null;
+        long processed = 0;
+        long resources = 0;
+        var phase = "Connecting";
         try
         {
             if (id != null && (await store.GetSyncStateAsync(id, ct)).Paused) return;
+            _active[connection.ServerId] = phase;
             var headResponse = await managed.SendAsync(connection.ServerId, HttpMethod.Get,
                 "/management/library/metadata/head", null, ct);
             ThrowResponse(headResponse, 64 * 1024);
@@ -150,6 +157,12 @@ public sealed class MetadataReplicaCoordinator(IManagedServerService managed, Me
             await registry.PutAsync(new(id.ServerId, id.LibraryEpoch, head.Name ?? connection.Name), ct);
             var data = await store.GetStatusAsync(id, ct);
             var checkpoint = data.Checkpoint;
+            var previousSync = await store.GetSyncStateAsync(id, ct);
+            var hasWork = checkpoint == null || checkpoint.Generation != head.Start.Generation ||
+                !IsCaughtUp(checkpoint, head.Start) || previousSync.ErrorCode != null || previousSync.IsOffline || previousSync.RefreshPending;
+            if (hasWork && activity != null)
+                activityId = await activity.BeginAsync(id.ServerId, head.Name ?? connection.Name, id.LibraryEpoch,
+                    checkpoint?.Complete == true ? "Changes" : "Snapshot", ct);
             if (checkpoint == null || checkpoint.Generation != head.Start.Generation)
                 checkpoint = await store.BeginSnapshotAsync(id, head.Start.Generation, head.Start.Sequence, head.Start.Cursor, ct);
             var timer = Stopwatch.StartNew();
@@ -159,6 +172,8 @@ public sealed class MetadataReplicaCoordinator(IManagedServerService managed, Me
                 if (yield != null) await yield();
                 ct.ThrowIfCancellationRequested();
                 if ((await store.GetSyncStateAsync(id, ct)).Paused) break;
+                phase = checkpoint.Complete ? "Changes" : "Snapshot";
+                _active[connection.ServerId] = phase;
                 var response = await managed.SendAsync(id.ServerId, HttpMethod.Post,
                     "/management/library/metadata/page?managedLibraryEpoch=" + Uri.EscapeDataString(id.LibraryEpoch),
                     JsonConvert.SerializeObject(new MetadataPageRequest(checkpoint, pageSize)), ct);
@@ -170,25 +185,51 @@ public sealed class MetadataReplicaCoordinator(IManagedServerService managed, Me
                     throw new InvalidDataException("The metadata page does not continue the committed checkpoint.");
                 await store.ApplyBatchAsync(id, batch, ct);
                 checkpoint = batch.Next;
+                processed += batch.Upserts.Count + batch.Deletes.Count + batch.CatalogUpserts.Count + batch.CatalogDeletes.Count;
                 if (progress != null)
                 {
                     var status = await store.GetStatusAsync(id, ct);
                     await progress(head.Name ?? connection.Name ?? id.ServerId,
                         checkpoint.Complete ? status.ResourceCount : status.StagedResourceCount);
                 }
-                if (checkpoint.Complete && checkpoint.Cursor == null && checkpoint.Sequence >= head.Start.Sequence &&
-                    checkpoint.CatalogRevision >= head.Start.CatalogRevision) break;
+                if (IsCaughtUp(checkpoint, head.Start)) break;
             }
+            var caughtUp = IsCaughtUp(checkpoint, head.Start);
             await store.UpdateSyncStateAsync(id, state => state with {ErrorCode = null, Error = null, IsOffline = false,
-                LastSyncedAtUtc = checkpoint.Complete && checkpoint.Cursor == null ? DateTimeOffset.UtcNow : state.LastSyncedAtUtc,
-                RefreshPending = state.RefreshPending && !(checkpoint.Complete && checkpoint.Cursor == null && checkpoint.Sequence >= head.Start.Sequence &&
-                    checkpoint.CatalogRevision >= head.Start.CatalogRevision)}, ct);
+                LastSyncedAtUtc = caughtUp ? DateTimeOffset.UtcNow : state.LastSyncedAtUtc,
+                RefreshPending = state.RefreshPending && !caughtUp, CatchupPending = !caughtUp}, ct);
+            _lastFailure.TryRemove(connection.ServerId, out _);
+            var final = await store.GetStatusAsync(id, ct);
+            resources = checkpoint.Complete ? final.ResourceCount : final.StagedResourceCount;
+            if (activityId != null && activity != null)
+                await activity.FinishAsync(activityId.Value, caughtUp ? "Completed" :
+                    (await store.GetSyncStateAsync(id, ct)).Paused ? "Paused" : "Checkpointed",
+                    caughtUp ? "Completed" : phase, processed, resources, null, null, ct);
         }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            // A cancelled request may have committed pages. Preserve their checkpoint and mark
+            // this attempt interrupted, never completed. A killed process is recovered by the store.
+            if (activityId != null && activity != null)
+                await activity.FinishAsync(activityId.Value, "Interrupted", phase, processed, resources, null, null, CancellationToken.None);
+            throw;
+        }
         catch (Exception error) when (error is FederationAccessException or HttpRequestException or
             IOException or InvalidDataException or OperationCanceledException or InvalidOperationException or JsonException or ArgumentException)
         {
             var denied = error is FederationAccessException {StatusCode: 401 or 403};
+            var code = (error as FederationAccessException)?.ErrorCode ?? "MetadataSyncFailed";
+            if (activity != null)
+            {
+                // Identical offline polls are one diagnosis, not a log every 15 seconds.
+                var now = DateTimeOffset.UtcNow;
+                var repeat = _lastFailure.TryGetValue(connection.ServerId, out var last) && last.Code == code && now - last.At < TimeSpan.FromMinutes(15);
+                if (activityId == null && !repeat)
+                    activityId = await activity.BeginAsync(connection.ServerId, connection.Name, id?.LibraryEpoch, phase, ct);
+                if (activityId != null)
+                    await activity.FinishAsync(activityId.Value, denied ? "Denied" : "Failed", phase, processed, resources, code, error.Message, ct);
+                if (!repeat) _lastFailure[connection.ServerId] = (code, now);
+            }
             if (id == null)
             {
                 await registry.PutAsync(new(connection.ServerId, "", connection.Name, denied,
@@ -200,7 +241,12 @@ public sealed class MetadataReplicaCoordinator(IManagedServerService managed, Me
                 Error = error.Message, IsOffline = error is HttpRequestException or IOException or OperationCanceledException or
                     FederationAccessException {StatusCode: >= 500}}, ct);
         }
+        finally { _active.TryRemove(connection.ServerId, out _); }
     }
+
+    public static bool IsCaughtUp(ReplicaCheckpoint checkpoint, ReplicaCheckpoint head) =>
+        checkpoint.Generation == head.Generation && checkpoint.Complete && checkpoint.Cursor == null &&
+        checkpoint.Sequence >= head.Sequence && checkpoint.CatalogRevision >= head.CatalogRevision;
 
     private static void ValidateResponseSize(ManagedServerResponse response, long limit)
     {

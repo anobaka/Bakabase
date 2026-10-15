@@ -8,6 +8,7 @@ using Bakabase.Service.Components.ServerData;
 using Avalonia.Threading;
 using System.Runtime.InteropServices;
 using Velopack;
+using Bakabase.Infrastructures.Components.App.Profiles;
 // Aliased because this project's own namespace is Bakabase.App: an unqualified `App`
 // binds to that namespace rather than to the shell's Avalonia application class.
 using ShellApp = Bakabase.Shell.App;
@@ -50,6 +51,7 @@ class Program
         // line (Run ends in Environment.Exit for them), so installing the handler after it costs
         // no coverage of a real launch.
         CrashHandler.Install();
+        DesktopProfileSelection.Initialize(args);
 
         // Internal child roles are authenticated by the coordinator before any directory
         // guard, AppService or Avalonia initialization can run.
@@ -74,7 +76,10 @@ class Program
             Console.CancelKeyPress += cancel;
             using var sigterm = OperatingSystem.IsWindows() ? null : PosixSignalRegistration.Create(PosixSignal.SIGTERM,
                 context => { context.Cancel = true; coordinator.RequestStop(); });
-            try { BuildCoordinatorApp(coordinator, args).StartWithClassicDesktopLifetime(args); }
+            var launchArguments = DesktopProfileSelection.CurrentId is { } profileId && DesktopProfileSelection.ParseId(args) == null
+                ? args.Append(DesktopProfileSelection.ArgumentPrefix + profileId).ToArray() : args;
+            using var installationInstance = DesktopInstallationInstances.RegisterCoordinator();
+            try { BuildCoordinatorApp(coordinator, launchArguments).StartWithClassicDesktopLifetime(launchArguments); }
             finally { Console.CancelKeyPress -= cancel; }
             return;
         }

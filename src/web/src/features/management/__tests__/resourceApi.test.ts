@@ -3,7 +3,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import BApi from "@/sdk/BApi";
 import i18next from "i18next";
 import { ContentType } from "@/sdk/Api";
-import { PropertyPool, type ResourceAdditionalItem } from "@/sdk/constants";
+import {
+  CustomPropertyAdditionalItem,
+  CollectionMemberFilter,
+  PropertyPool,
+  type ResourceAdditionalItem,
+} from "@/sdk/constants";
 import {
   createResourceApi,
   managedResourceCoverUrl,
@@ -38,6 +43,92 @@ beforeEach(() => {
 });
 
 describe("original resource UI owner-scoped SDK", () => {
+  it("forwards the generated custom-property ValueCount query unchanged for both catalog and ID reads", async () => {
+    const api = createResourceApi(source("owner"));
+    await api.customProperty.getAllCustomProperties({
+      additionalItems: CustomPropertyAdditionalItem.ValueCount,
+    });
+    await api.customProperty.getCustomPropertyByKeys({
+      ids: [7],
+      additionalItems: CustomPropertyAdditionalItem.ValueCount,
+    });
+    expect(CustomPropertyAdditionalItem.ValueCount).toBe(2);
+    expect(request.mock.calls.map(([r]) => r.body)).toEqual([
+      {
+        libraryEpoch: "epoch-owner",
+        operation: "customProperties",
+        query: { additionalItems: ["2"] },
+      },
+      {
+        libraryEpoch: "epoch-owner",
+        operation: "getCustomPropertyByKeys",
+        ids: [7],
+        query: { additionalItems: ["2"] },
+      },
+    ]);
+  });
+  it("keeps definition and collection editors on the captured owner, including same numeric IDs", async () => {
+    const a = createResourceApi(source("a")),
+      b = createResourceApi(source("b"));
+    await a.extensionGroup.putExtensionGroup(7, { name: "Video", extensions: [".mkv"] });
+    await b.customProperty.sortCustomProperties({ ids: [7, 8] });
+    await a.collection.getCollection(7);
+    await b.collection.putCollection(7, { name: "Series", autoAcquire: false, order: 0 });
+    await a.collection.searchCollectionMembers(7, { pageIndex: 2, pageSize: 40, filter: 0 });
+    await b.collection.setCollectionMemberIgnored(7, 8, { ignored: true });
+    await a.subscription.patchSubscription(7, { enabled: false });
+    expect(request.mock.calls.map(([r]) => [r.path, r.body.operation, r.body.id])).toEqual([
+      ["/federation/local/management/a/request", "extensionGroupPut", 7],
+      ["/federation/local/management/b/request", "sortCustomProperties", undefined],
+      ["/federation/local/management/a/request", "getCollection", 7],
+      ["/federation/local/management/b/request", "putCollection", 7],
+      ["/federation/local/management/a/request", "searchCollectionMembers", 7],
+      ["/federation/local/management/b/request", "setCollectionMemberIgnored", 7],
+      ["/federation/local/management/a/request", "patchSubscription", 7],
+    ]);
+    expect(request.mock.calls[5][0].body.query).toEqual({ ignored: ["true"], resourceId: ["8"] });
+  });
+  it("retains native collection filter and page-member query values rather than treating them as resource flags", async () => {
+    const api = createResourceApi(source("owner"));
+    await api.collection.searchCollectionMembers(7, {
+      filter: CollectionMemberFilter.GoneFromSource,
+      pageIndex: 2,
+      pageSize: 40,
+    });
+    await api.collection.getCollectionMemberships(7, { resourceIds: [8, 9] });
+    expect(request.mock.calls.map(([r]) => r.body)).toEqual([
+      {
+        libraryEpoch: "epoch-owner",
+        operation: "searchCollectionMembers",
+        id: 7,
+        query: { filter: ["5"], pageIndex: ["2"], pageSize: ["40"] },
+      },
+      { libraryEpoch: "epoch-owner", operation: "getCollectionMemberships", id: 7, ids: [8, 9] },
+    ]);
+  });
+  it("reads cached extension groups offline while refusing edits", async () => {
+    const owner = source("offline");
+    owner.available = false;
+    owner.metadata = {
+      identity: { serverId: owner.serverId, libraryEpoch: owner.libraryEpoch },
+      name: owner.name,
+      denied: false,
+      data: {
+        activeGeneration: "complete",
+        activeSequence: 1,
+        resourceCount: 0,
+        stagedResourceCount: 0,
+      },
+      sync: { paused: false, isOffline: true },
+    };
+    const api = createResourceApi(owner);
+    await api.extensionGroup.getAllExtensionGroups();
+    await expect(
+      api.extensionGroup.putExtensionGroup(7, { name: "Video", extensions: [] }),
+    ).rejects.toThrow();
+    expect(request).toHaveBeenCalledOnce();
+    expect(request.mock.calls[0][0].body.operation).toBe("extensionGroups");
+  });
   it("reports a saved mutation awaiting fresh metadata without retrying the mutation", async () => {
     request.mockResolvedValueOnce({ code: 0, metadataPending: true });
     const owner = source("b");

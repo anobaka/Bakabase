@@ -172,6 +172,34 @@ public partial class ResolutionTests
         Assert.IsNull(logId);
     }
 
+    [TestMethod]
+    public async Task A_batch_applies_reviewed_conflicts_but_keeps_a_changed_definition_for_another_review()
+    {
+        var inputs = new List<DataSyncResolveInput>();
+        var localKeys = new List<string>();
+        for (var i = 0; i < 2; i++)
+        {
+            var key = SyncKey.New().Value;
+            var first = _peer.Next();
+            await _f.ApplyAsync(_link, _peer, (Item, _peer.Record([key], first, Content("Genre" + i), "a" + i)));
+            var localKey = _f.Kind.KeyOf("Genre" + i);
+            localKeys.Add(localKey);
+            _f.Kind.Definitions[localKey] = _f.Kind[localKey].With(name: "Style" + i);
+            await _f.ApplyAsync(_link, _peer, (Item, _peer.Record([key], _peer.Next(first), Content("Kind" + i), "a" + i)));
+            var item = (await _f.OpenItemsAsync()).Single(x => x.SyncKey == key);
+            inputs.Add(new(item.Id, DataSyncInboxAction.UseRemote, item.Token, null, null, null, null));
+        }
+        _f.Kind.Definitions[localKeys[1]] = _f.Kind[localKeys[1]].With(name: "Edited after preview");
+        await _f.Runner.RunResolutionsAsync(inputs, new DataSyncApplyOptions(false), _f.Args("DataSyncResolve:selected"));
+        Assert.AreEqual("Kind0", _f.Kind[localKeys[0]].Name);
+        Assert.AreEqual("Edited after preview", _f.Kind[localKeys[1]].Name);
+        var items = await _f.ItemsAsync();
+        Assert.AreEqual(DataSyncInboxClosure.ResolvedHere, items.Single(x => x.Id == inputs[0].ItemId).Closure);
+        var changed = items.Single(x => x.Id == inputs[1].ItemId);
+        Assert.IsNull(changed.ClosedAtUtc);
+        Assert.AreNotEqual(inputs[1].Token, changed.Token);
+    }
+
     #endregion
 
     #region TypeChange

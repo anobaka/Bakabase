@@ -9,7 +9,7 @@ import { useTranslation } from "react-i18next";
 
 import { getProviderUI } from "./Providers";
 
-import BApi from "@/sdk/BApi";
+import { useResourceApi } from "@/features/management/resourceContext";
 import { Input, Modal, Select, Switch, toast } from "@/components/bakaui";
 import ThirdPartyLabel from "@/components/ThirdPartyLabel";
 import { ThirdPartyId } from "@/sdk/constants";
@@ -53,6 +53,7 @@ const SubscriptionEditor = ({
   onDestroyed,
 }: SubscriptionEditorProps) => {
   const { t } = useTranslation();
+  const BApi = useResourceApi();
   const isEditing = !!subscription;
 
   const groupedProviders = useMemo(() => groupByThirdParty(providers), [providers]);

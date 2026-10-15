@@ -42,6 +42,32 @@ workspace. They have no desktop relay or native program launcher.
   reuses the desktop's existing `LocalPlayback` and source-scoped ResourceProfiles; browser
   media is streamed through the manager using owner-discovered candidates.
 
+## Synced items in ordinary pages
+
+Resource metadata and catalogs are rendered in the existing resource, custom-property,
+media-library, extension-group and collection pages. Reuse the original cards, table rows,
+filters and editors; do not add per-device sections, a separate remote-data view or a reduced
+editor. Ownership is item metadata. The common `DeviceDot` marks foreign items, using the
+viewing server's `UIOptions.DeviceColors`; an unset color remains stable by device ID.
+Native ordering and filtering mix all owners. An equal numeric ID or name never merges items:
+React keys, selections, deep links and mutation targets include server ID and library epoch.
+
+`features/management/ownedCatalog` augments native local lists with completed replica catalogs,
+with bounded source fan-out and stale-response guards. Catalog revision changes refresh catalog
+rows even without a resource sequence change. Offline replicas remain readable, edits need the
+owner online, and revoked/changed-owner rows cease to be actionable. Only local custom-property
+and extension-group rows query definitions-sync status by local ID. A definition imported by
+that protocol belongs to the receiving device; sync provenance is separate from ownership.
+
+Editors use the captured `ResourceOwnerProvider` / owner SDK and named operation allowlist,
+never a global endpoint override. Ordinary type conversion and option-use checks run on the
+same owner as the property being edited. Property order is stored per owner; the existing sort
+editor chooses that owner before saving. Owner-specific collection/library search links pin
+both device and epoch. Collection member flag reads are limited to the displayed page's IDs.
+Collection replica summaries omit acquisition settings and subscription configuration: full
+online editors read the owner model before a full PUT so a color or settings edit cannot erase
+unsynced fields. Offline views do not invent missing configuration values.
+
 The following relay rules describe the optional desktop full-view fallback. Daily library
 management does not require navigating to another device's SPA.
 

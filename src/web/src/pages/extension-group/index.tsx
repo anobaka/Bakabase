@@ -1,7 +1,5 @@
 "use client";
 
-import type { BootstrapModelsResponseModelsBaseResponse } from "@/sdk/Api";
-
 import { useTranslation } from "react-i18next";
 import React, { useCallback, useEffect, useState } from "react";
 import { DeleteOutlined, EditOutlined } from "@ant-design/icons";
@@ -26,6 +24,15 @@ import {
   DefinitionSyncRow,
   useDefinitionSync,
 } from "@/features/data-sync/components/DefinitionsPageSync";
+import {
+  useOwnedCatalog,
+  catalogItemKey,
+  catalogItemApi,
+  canEditCatalogItem,
+  CatalogOwnerMark,
+  CatalogSourceStatus,
+  type OwnedCatalogItem,
+} from "@/features/management/ownedCatalog";
 import BApi from "@/sdk/BApi";
 
 export type ExtensionGroup = {
@@ -39,7 +46,22 @@ const ExtensionGroupPage = () => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const [groups, setGroups] = useState<ExtensionGroup[]>([]);
-  const [editingGroup, setEditingGroup] = useState<ExtensionGroup | undefined>(undefined);
+  const [editingGroup, setEditingGroup] = useState<OwnedCatalogItem<ExtensionGroup> | undefined>(
+    undefined,
+  );
+  const catalog = useOwnedCatalog(groups, (api) => api.extensionGroup.getAllExtensionGroups());
+  const allGroups = [...catalog.items].sort(
+    (a, b) => a.name.localeCompare(b.name) || catalogItemKey(a).localeCompare(catalogItemKey(b)),
+  );
+  const editingOwner =
+    editingGroup?.owner && !editingGroup.owner.isLocal
+      ? (catalog.sources.find(
+          (source) =>
+            source.serverId === editingGroup.owner!.serverId &&
+            source.libraryEpoch === editingGroup.owner!.libraryEpoch,
+        ) ?? { ...editingGroup.owner, available: false })
+      : editingGroup?.owner;
+  const canSave = canEditCatalogItem({ owner: editingOwner });
   const [editingExtensionsText, setEditingExtensionsText] = useState<string>("");
 
   const loadGroups = useCallback(() => {
@@ -58,27 +80,23 @@ const ExtensionGroupPage = () => {
       <Modal
         title={t<string>("extensionGroup.action.editGroup")}
         visible={!!editingGroup}
+        footer={{ actions: ["ok", "cancel"], okProps: { isDisabled: !canSave } }}
         onClose={() => setEditingGroup(undefined)}
         onOk={async () => {
-          let r: BootstrapModelsResponseModelsBaseResponse;
+          if (!editingGroup || !canSave) throw new Error(t("management.catalog.ownerUnavailable"));
+          const api = catalogItemApi({ owner: editingOwner });
+          const body = { name: editingGroup.name, extensions: editingGroup.extensions ?? [] };
+          const r =
+            editingGroup.id === 0
+              ? await api.extensionGroup.addExtensionGroup(body)
+              : await api.extensionGroup.putExtensionGroup(editingGroup.id, body);
 
-          if (editingGroup!.id == 0) {
-            r = await BApi.extensionGroup.addExtensionGroup(editingGroup!);
-            if (!r.code) {
-              groups.push(editingGroup!);
-            }
-          } else {
-            r = await BApi.extensionGroup.putExtensionGroup(editingGroup!.id, editingGroup!);
-            groups.splice(
-              groups.findIndex((x) => x == editingGroup),
-              1,
-              editingGroup!,
-            );
-          }
           if (r.code) {
             toast.error(r.message!);
             throw new Error(r.message);
           }
+          loadGroups();
+          catalog.refresh();
           setEditingGroup(undefined);
         }}
       >
@@ -109,7 +127,7 @@ const ExtensionGroupPage = () => {
             }}
           />
           <div className={"mt-2 flex flex-wrap gap-1"}>
-            {editingGroup?.extensions.map((ext, i) => {
+            {editingGroup?.extensions?.map((ext, i) => {
               return (
                 <Chip key={i} radius={"sm"} size={"sm"} variant={"flat"}>
                   {ext}
@@ -120,6 +138,7 @@ const ExtensionGroupPage = () => {
         </div>
       </Modal>
       {dataSync.host}
+      <CatalogSourceStatus {...catalog} />
       <div className={"flex flex-wrap items-center gap-2"}>
         <Button
           color={"primary"}
@@ -144,19 +163,22 @@ const ExtensionGroupPage = () => {
           <TableColumn>{t<string>("common.label.operations")}</TableColumn>
         </TableHeader>
         <TableBody>
-          {groups.map((eg, i) => {
+          {allGroups.map((eg) => {
             return (
-              <TableRow key={eg.id ?? i}>
+              <TableRow key={catalogItemKey(eg)}>
                 <TableCell>
                   <div className={"flex flex-wrap items-center gap-2"}>
                     {eg.name}
-                    <DefinitionSyncRow
-                      kind="extensionGroup"
-                      localKey={String(eg.id)}
-                      menu={false}
-                      name={eg.name}
-                      sync={dataSync}
-                    />
+                    <CatalogOwnerMark owner={eg.owner} />
+                    {(!eg.owner || eg.owner.isLocal) && (
+                      <DefinitionSyncRow
+                        kind="extensionGroup"
+                        localKey={String(eg.id)}
+                        menu={false}
+                        name={eg.name}
+                        sync={dataSync}
+                      />
+                    )}
                   </div>
                 </TableCell>
                 <TableCell>
@@ -164,13 +186,16 @@ const ExtensionGroupPage = () => {
                     return (
                       <Chip
                         key={j}
-                        isCloseable
+                        isCloseable={canEditCatalogItem(eg)}
                         size={"sm"}
                         variant={"flat"}
                         onClose={async () => {
-                          eg.extensions?.splice(j, 1);
-                          await BApi.extensionGroup.putExtensionGroup(eg.id, eg);
-                          setGroups([...groups]);
+                          await catalogItemApi(eg).extensionGroup.putExtensionGroup(eg.id, {
+                            name: eg.name,
+                            extensions: eg.extensions?.filter((_, index) => index !== j) ?? [],
+                          });
+                          loadGroups();
+                          catalog.refresh();
                         }}
                       >
                         {ext}
@@ -183,10 +208,11 @@ const ExtensionGroupPage = () => {
                     <Button
                       isIconOnly
                       color={"primary"}
+                      isDisabled={!canEditCatalogItem(eg)}
                       size={"sm"}
                       variant={"light"}
                       onPress={() => {
-                        setEditingExtensionsText(eg.extensions.join(" "));
+                        setEditingExtensionsText((eg.extensions ?? []).join(" "));
                         setEditingGroup(JSON.parse(JSON.stringify(eg)));
                       }}
                     >
@@ -195,6 +221,7 @@ const ExtensionGroupPage = () => {
                     <Button
                       isIconOnly
                       color={"danger"}
+                      isDisabled={!canEditCatalogItem(eg)}
                       size={"sm"}
                       variant={"light"}
                       onPress={() => {
@@ -203,9 +230,9 @@ const ExtensionGroupPage = () => {
                           title: t<string>("extensionGroup.confirm.deleteTitle"),
                           children: t<string>("common.confirm.irreversibleWarning"),
                           onOk: async () => {
-                            await BApi.extensionGroup.deleteExtensionGroup(eg.id);
-                            groups.splice(i, 1);
-                            setGroups(groups.slice());
+                            await catalogItemApi(eg).extensionGroup.deleteExtensionGroup(eg.id);
+                            loadGroups();
+                            catalog.refresh();
                           },
                         });
                       }}

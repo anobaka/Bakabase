@@ -75,6 +75,10 @@ vi.mock("../api", async (importOriginal) => ({
     firstSync: vi.fn(),
   },
 }));
+vi.mock("../components/SyncActivityCenter", () => ({
+  default: () => <div data-testid="sync-activity-center" />,
+}));
+vi.mock("@/features/management/DeviceColorEditor", () => ({ default: () => null }));
 vi.mock("@/sdk/BApi", () => ({
   default: {
     app: { getAppInfo: vi.fn(async () => ({ code: 0, data: { backupPath: "/data/backups" } })) },

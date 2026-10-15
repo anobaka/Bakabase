@@ -71,6 +71,20 @@ public class CollectionRuleIndex(ILogger<CollectionRuleIndex> logger)
         return _index.GetMembers(collectionId).ToList();
     }
 
+    /// <summary>Tests a bounded page against the existing index without copying its whole set.</summary>
+    public async Task<IReadOnlyList<int>> MatchingCandidatesAsync(int collectionId, string? ruleSearchJson,
+        IReadOnlyCollection<int> resourceIds, IResourceProfileService profiles, CancellationToken ct = default)
+    {
+        if (string.IsNullOrEmpty(ruleSearchJson))
+        {
+            Forget(collectionId);
+            return [];
+        }
+        await EnsureCurrent(collectionId, ruleSearchJson, profiles, ct);
+        var matched = _index.GetMembers(collectionId);
+        return resourceIds.Where(matched.Contains).Distinct().ToArray();
+    }
+
     /// <summary>
     /// Brings every one of these collections up to date, so the reverse direction can be read.
     /// </summary>

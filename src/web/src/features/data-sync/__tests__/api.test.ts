@@ -7,6 +7,7 @@ import { DataSyncProblemCode } from "@/sdk/constants";
 
 vi.mock("@/sdk/BApi", () => ({
   default: {
+    request: vi.fn(),
     dataSync: {
       getDataSyncOverview: vi.fn(),
       getDataSyncHistory: vi.fn(),
@@ -43,7 +44,7 @@ describe("data sync's calls", () => {
   });
 
   it("answer an empty list for a list that came back empty", async () => {
-    sdk.getDataSyncHistory.mockResolvedValue({ code: 0 });
+    vi.mocked(BApi.request).mockResolvedValue({ code: 0 });
 
     await expect(dataSyncApi.history()).resolves.toEqual([]);
   });

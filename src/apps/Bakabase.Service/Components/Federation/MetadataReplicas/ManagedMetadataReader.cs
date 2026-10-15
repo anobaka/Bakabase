@@ -24,7 +24,7 @@ public sealed class ManagedMetadataReader(MetadataReplicaCoordinator coordinator
     MetadataReplicaQuery query, IBOptionsManager<UIOptions> uiOptions)
 {
     public static readonly HashSet<string> Operations = ["resourceSearch", "resourceGet", "properties",
-        "customProperties", "getCustomPropertyByKeys", "libraries", "getAllCollections", "resourceMappings",
+        "customProperties", "getCustomPropertyByKeys", "libraries", "getAllCollections", "extensionGroups", "resourceMappings",
         "getCollectionIdsByResourceIds", "getResourceSourceLinks", "resourceScopePreferencesGet",
         "getSearchOperationsForProperty", "getSearchOperationsByPropertyType", "getFilterValueProperty", "resourceDisplayOptions",
         "propertyValueResourceCounts", "getResourceSearchKeywordRecommendation"];
@@ -54,7 +54,7 @@ public sealed class ManagedMetadataReader(MetadataReplicaCoordinator coordinator
             var kind = request.Operation switch
             {
                 "properties" => "properties", "customProperties" or "getCustomPropertyByKeys" => "customProperties",
-                "libraries" => "mediaLibraries", "getAllCollections" => "collections", _ => null
+                "libraries" => "mediaLibraries", "getAllCollections" => "collections", "extensionGroups" => "extensionGroups", _ => null
             };
             if (kind != null)
             {

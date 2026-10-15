@@ -170,6 +170,30 @@ public sealed class CollectionRuleTests
         Assert.IsTrue(members[0].IsIgnored, "the written-down row is the one that carries state");
     }
 
+    [TestMethod]
+    public async Task MembershipPageCombinesOnlyRequestedRuleMatchesAndWrittenMembers()
+    {
+        var both = await NewResource("Both", "Asagi");
+        var ruleOnly = await NewResource("Rule only", "Asagi");
+        await NewResource("Not requested", "Asagi");
+        var writtenOnly = await NewResource("Written only", "Kuro");
+        var neither = await NewResource("Neither", "Kuro");
+        var id = await NewRuleCollection(AuthorIs("Asagi"));
+        await Collections.AddMembers(id, [both, writtenOnly]);
+        await Collections.SetMemberIgnored(id, both, true);
+
+        var members = await Collections.GetMembers(id, [both, ruleOnly, writtenOnly, neither, both]);
+
+        CollectionAssert.AreEquivalent(new[] {both, ruleOnly, writtenOnly},
+            members.Select(member => member.ResourceId).ToArray());
+        Assert.IsTrue(members.Single(member => member.ResourceId == both).IsIgnored);
+
+        await SetAuthor(ruleOnly, "Kuro");
+        CollectionAssert.AreEquivalent(new[] {both, writtenOnly},
+            (await Collections.GetMembers(id, [both, ruleOnly, writtenOnly])).Select(member => member.ResourceId).ToArray(),
+            "bounded lookup uses the same invalidation rules as the complete membership index");
+    }
+
     /// <summary>
     /// Ratios work the same for rule members — they are members, not a second kind of thing.
     /// </summary>

@@ -76,7 +76,7 @@ public sealed class ManagedLibraryService(IManagedServerService managed, INodeId
             return cached;
         await RequireSourceAsync(serverId, request.LibraryEpoch, ct);
         var mutation = operation.Method != HttpMethod.Get && operation.Method != HttpMethod.Head &&
-            request.Operation is not ("previewCustomPropertyTypeConversion" or "findDataCardByIdentity" or
+            request.Operation is not ("previewCustomPropertyTypeConversion" or "previewCollectionRule" or "findDataCardByIdentity" or
                 "resourceSearch" or "resourceMappings" or "propertyValueResourceCounts");
         await using var write = replicas != null && mutation
             ? await replicas.BeginWriteAsync(serverId, request.LibraryEpoch, ct) : null;

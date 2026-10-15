@@ -71,6 +71,7 @@ public interface IDataSyncService
         CancellationToken ct);
 
     Task<IReadOnlyList<DataSyncHistoryEntry>> GetHistoryAsync(CancellationToken ct);                      // never gated
+    Task<DataSyncHistoryPage> GetHistoryPageAsync(int? beforeId, int take, string? peerNodeId, CancellationToken ct);
     Task<DataSyncHistoryDetail?> GetHistoryEntryAsync(int id, CancellationToken ct);                      // never gated
     Task<DataSyncUndoPreview> PreviewUndoAsync(int id, CancellationToken ct);                             // never gated
     Task<DataSyncTaskStart> StartUndoAsync(int id, CancellationToken ct);

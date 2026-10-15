@@ -54,6 +54,7 @@ public static class ServerAppDataRelocation
         {
             source = ServerSetupSession.Canonical(sourcePath);
             target = ServerSetupSession.Canonical(targetPath);
+            Bakabase.Infrastructures.Components.App.Profiles.DesktopProfileSelection.EnsureDataTargetAllowed(target);
             var anchor = ServerSetupSession.Canonical(anchorPath);
             if (Contains(source, target) || Contains(target, source))
                 throw new IOException("Source and destination must be different, non-nested data directories.");

@@ -31,9 +31,9 @@ import BApi from "@/sdk/BApi";
 import {
   type ResourceSelectionKey,
   resourceSelectionKey,
-  deviceColor,
   sameResourceOwner,
 } from "@/features/management/resourceIdentity";
+import DeviceDot from "@/features/management/DeviceDot";
 import { groupResourceSelection } from "@/features/management/resourceSelection";
 import { useResourceSources } from "@/features/management/resourceSourcesContext";
 import { canReadSourceMetadata, sourceSearchRevision } from "@/features/management/metadata";
@@ -1036,11 +1036,10 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
             }
           />
           {resource.owner && !resource.owner.isLocal && sourcesRef.current.length > 1 && (
-            <span
-              aria-label={resource.owner.name}
-              title={resource.owner.name}
+            <DeviceDot
+              name={resource.owner.name}
+              serverId={resource.owner.serverId}
               className="absolute right-2 top-2 z-10 h-2.5 w-2.5 rounded-full ring-2 ring-black/35"
-              style={{ backgroundColor: deviceColor(resource.owner.serverId) }}
             />
           )}
         </div>

@@ -8,7 +8,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AiOutlinePlusCircle, AiOutlineReload } from "react-icons/ai";
 
-import BApi from "@/sdk/BApi";
+import { useResourceApi } from "@/features/management/resourceContext";
 import { HelpCenterButton } from "@/components/HelpCenter";
 import SubscriptionEditor from "@/components/Subscription/SubscriptionEditor";
 import { Button, Chip, Spinner, Tooltip, toast } from "@/components/bakaui";
@@ -33,14 +33,17 @@ type Props = {
  */
 const SourceTab: React.FC<Props> = ({ collection, onChanged }) => {
   const { t } = useTranslation();
+  const BApi = useResourceApi();
   const { createPortal } = useBakabaseContext();
 
   const [subscriptions, setSubscriptions] = useState<SubscriptionVm[]>([]);
   const [providers, setProviders] = useState<ProviderVm[]>([]);
+  const [error, setError] = useState<string>();
   const [loading, setLoading] = useState(true);
   const [checking, setChecking] = useState<number>();
 
   const load = useCallback(async () => {
+    setError(undefined);
     try {
       const [subsRsp, providersRsp] = await Promise.all([
         BApi.subscription.searchSubscriptions({}),
@@ -51,10 +54,12 @@ const SourceTab: React.FC<Props> = ({ collection, onChanged }) => {
         ((subsRsp.data ?? []) as SubscriptionVm[]).filter((s) => s.collectionId === collection.id),
       );
       setProviders((providersRsp.data ?? []) as ProviderVm[]);
+    } catch (reason) {
+      setError(String(reason));
     } finally {
       setLoading(false);
     }
-  }, [collection.id]);
+  }, [collection.id, BApi]);
 
   useEffect(() => {
     void load();
@@ -117,7 +122,11 @@ const SourceTab: React.FC<Props> = ({ collection, onChanged }) => {
         </Button>
       </div>
 
-      {subscriptions.length === 0 ? (
+      {error ? (
+        <p className="text-danger" role="alert">
+          {error}
+        </p>
+      ) : subscriptions.length === 0 ? (
         <div className="flex flex-col gap-1 py-8 text-center text-default-400">
           <span>{t<string>("collection.source.none")}</span>
           <span className="text-xs">{t<string>("collection.source.noneHint")}</span>

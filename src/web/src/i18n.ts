@@ -50,6 +50,9 @@ import enCollection from "@/locales/en/pages/collection.json";
 import enCollectionMemo from "@/locales/en/pages/collectionMemo.json";
 import enFederation from "@/locales/en/pages/federation.json";
 import enManagedMappings from "@/locales/en/pages/managedMappings.json";
+import enDeviceAppearance from "@/locales/en/components/deviceAppearance.json";
+import enSyncConflictSelection from "@/locales/en/components/syncConflictSelection.json";
+import enProfiles from "@/locales/en/pages/profiles.json";
 import enDataSync from "@/locales/en/pages/dataSync.json";
 
 // English - Components
@@ -129,6 +132,9 @@ import cnCollection from "@/locales/cn/pages/collection.json";
 import cnCollectionMemo from "@/locales/cn/pages/collectionMemo.json";
 import cnFederation from "@/locales/cn/pages/federation.json";
 import cnManagedMappings from "@/locales/cn/pages/managedMappings.json";
+import cnDeviceAppearance from "@/locales/cn/components/deviceAppearance.json";
+import cnSyncConflictSelection from "@/locales/cn/components/syncConflictSelection.json";
+import cnProfiles from "@/locales/cn/pages/profiles.json";
 import cnDataSync from "@/locales/cn/pages/dataSync.json";
 
 // Chinese - Components
@@ -208,6 +214,9 @@ const enResources = {
   ...enCollectionMemo,
   ...enFederation,
   ...enManagedMappings,
+  ...enDeviceAppearance,
+  ...enSyncConflictSelection,
+  ...enProfiles,
   ...enDataSync,
   // Components
   ...enFileExplorer,
@@ -287,6 +296,9 @@ const cnResources = {
   ...cnCollectionMemo,
   ...cnFederation,
   ...cnManagedMappings,
+  ...cnDeviceAppearance,
+  ...cnSyncConflictSelection,
+  ...cnProfiles,
   ...cnDataSync,
   // Components
   ...cnFileExplorer,

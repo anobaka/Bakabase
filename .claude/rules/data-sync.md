@@ -618,3 +618,40 @@ request's — and says so in its heads (`Attention.Headless`).
   the page, the rule editor from the keyboard at 1440 and 1280 px (its mode buttons changing
   nothing under the arrow keys), 375 px, and a LAN browser (the
   test host's `BAKABASE_FEDERATION_TEST_LAN_PORT`) in and outside Unrestricted mode.
+
+## Unified synchronization activity
+
+`SyncActivityController` (`/data-sync/activity`) and `SyncActivityService` present the existing
+engines together; they do not introduce another protocol or grant. The local administration gate
+is the same as `/data-sync`. Listing reads only local state and grouped counts, never probes a
+remote device or hydrates resource/definition payloads. The ordinary entity pages remain the place
+to browse and edit synchronized data, using owning-device metadata.
+
+- Definitions remain only `customProperty` and `extensionGroup`. Incoming rows show committed local
+  apply status, while outgoing rows explicitly show the receiving device's last report. A reader's
+  report is not evidence from our BTask. Pending decisions and pending apply counts are grouped by
+  link and kind in SQL; one kind's conflicts must not mark every kind as conflicted. `Busy` is
+  syncing, and identity/recovery/version problems stay distinct from transport failures.
+- Metadata rows cover resources and the properties/custom properties/media libraries/collections/
+  extension groups catalogs of each directly managed owner. Catalogs are stages of the same
+  checkpointed replication, not new independent synchronization engines. `CatchupPending` prevents
+  a complete resource page from reading as success while its resource sequence or catalog revision
+  is still behind the source head. Success requires a matching generation, a complete checkpoint,
+  no remaining cursor, and both revisions caught up.
+- Processing rows distinguish the resource owner, coordinator/owner/worker role, and the execution
+  device where known. Computing a result is not the same as committing it to the owner; conflicts
+  from stale resource/rule/epoch inputs require a new reviewed run, never a force-overwrite action.
+  The compact overview includes active and recent jobs; all retained jobs remain available through
+  role-filtered, keyset-paged processing history.
+- `MetadataSyncActivityStore` keeps only bounded run summaries in a separate SQLite file under
+  `federation/metadata-replicas`: at most 5,000 rows and 30 days, 2 MiB connection cache, bounded error
+  strings, 100-row maximum pages, no per-resource log. Unchanged polls add no run; identical offline
+  failures are deduplicated for 15 minutes. Startup marks unfinished attempts interrupted and keeps
+  the actual replica checkpoint. Paused/checkpointed/interrupted attempts are never completed syncs.
+- Definition history lists are keyset-paged in SQL (50 default, 100 maximum) and project summaries
+  without loading result arrays or undo preimages. The UI replaces one page at a time and requests
+  details only on expansion; details and undo still read the existing committed history entry.
+- The activity center routes conflicts to the existing inbox, prefiltered by kind and peer. Batch
+  selections operate on whole conflict groups. Previewed decision tokens and allowed actions remain
+  authoritative; changing an item while a preview is open requires a fresh review. Type conversion,
+  deleting in-use data, identity recovery and other special actions retain their existing safeguards.

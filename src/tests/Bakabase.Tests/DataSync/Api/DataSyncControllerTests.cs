@@ -92,6 +92,7 @@ public class DataSyncControllerTests
         ("inbox preview", async c => (await c.PreviewInboxItem(1, default)).Data),
         ("entities", async c => (await c.GetEntities(DataSyncKindIds.CustomProperty, default)).Data),
         ("history", async c => (await c.GetHistory(default)).Data),
+        ("history page", async c => (await c.GetHistoryPage(ct: default)).Data),
         ("history entry", async c => (await c.GetHistoryEntry(1, default)).Data),
         ("undo preview", async c => (await c.PreviewUndo(1, default)).Data),
         ("restore", async c => (await c.GetRestore(default)).Data),

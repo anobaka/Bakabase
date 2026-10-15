@@ -6,6 +6,7 @@ using System.Text;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.Modules.Federation.Security;
+using Bakabase.Modules.Collection.Abstractions.Models.Domain.Constants;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -49,6 +50,10 @@ public static class ManagedLibraryOperations
             "getResourceSearchKeywordRecommendation" => new[] {"keyword", "maxCount"},
             "getSavedSearch" or "putSavedSearchName" or "putSavedSearchDisplayMode" or "deleteSavedSearch" => new[] {"id"},
             "getAllCollections" => new[] {"withProgress"},
+            "searchCollectionMembers" => new[] {"filter", "pageIndex", "pageSize"},
+            "getCollectionMemberships" => new[] {"resourceIds"},
+            "setCollectionMemberIgnored" => new[] {"resourceId", "ignored"},
+            "customProperties" => new[] {"additionalItems"},
             "getResourceEnhancements" => new[] {"additionalItem"},
             "enhanceResourceByEnhancer" or "applyEnhancementContextDataForResourceByEnhancer" => new[] {"enhancerId"},
             "deleteResourceAcquisitionLead" => new[] {"leadId"},
@@ -78,8 +83,22 @@ public static class ManagedLibraryOperations
             ? b.ToString().ToLowerInvariant() : throw Invalid($"Invalid {key}.");
         string BoundedNumber(string key, int fallback, int min, int max) => int.TryParse(Value(key, fallback.ToString()), out var n) &&
             n >= min && n <= max ? n.ToString() : throw Invalid($"Invalid {key}.");
+        string CustomPropertyItems()
+        {
+            if (!int.TryParse(Value("additionalItems", "0"), out var flags) ||
+                !Enum.IsDefined((CustomPropertyAdditionalItem)flags))
+                throw Invalid("Invalid custom property additionalItems.");
+            return flags.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        }
+        string CollectionMemberFilterValue()
+        {
+            if (!int.TryParse(Value("filter", "0"), out var filter) ||
+                !Enum.IsDefined((CollectionMemberFilter)filter))
+                throw Invalid("Invalid collection member filter.");
+            return filter.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        }
         var requestedMetadata = (int) MetadataItems;
-        if (query.ContainsKey("additionalItems") && request.Operation != "getCustomPropertyByKeys")
+        if (query.ContainsKey("additionalItems") && (request.Operation is "resourceSearch" or "resourceGet" or "getResourceConflicts"))
         {
             if (!int.TryParse(Value("additionalItems"), out var requested) || requested < 0)
                 throw Invalid("Invalid additionalItems.");
@@ -148,10 +167,29 @@ public static class ManagedLibraryOperations
             "refreshResourceCache" => (HttpMethod.Post, $"/cache/resource/{Id()}/refresh"),
             "refreshResourcesCache" => (HttpMethod.Post, "/cache/resources/refresh"),
             "getAllCollections" => (HttpMethod.Get, $"/collection?withProgress={Boolean("withProgress", "true")}"),
+            "getCollection" => (HttpMethod.Get, $"/collection/{Id()}"),
+            "addCollection" => (HttpMethod.Post, "/collection"),
+            "putCollection" => (HttpMethod.Put, $"/collection/{Id()}"),
+            "deleteCollection" => (HttpMethod.Delete, $"/collection/{Id()}"),
+            "searchCollectionMembers" => (HttpMethod.Get, $"/collection/{Id()}/members?filter={CollectionMemberFilterValue()}&pageIndex={BoundedNumber("pageIndex", 1, 1, 1000000)}&pageSize={BoundedNumber("pageSize", 40, 1, MaximumPageSize)}"),
+            "getCollectionMemberships" => (HttpMethod.Get, $"/collection/{Id()}/memberships?" + string.Join("&", ValidIds(request.Ids).Select(i => $"resourceIds={i}"))),
+            "setCollectionMemberIgnored" => (HttpMethod.Put, $"/collection/{Id()}/members/{Number("resourceId")}/ignored?ignored={Boolean("ignored")}"),
+            "addCollectionPlaceholderMember" => (HttpMethod.Post, $"/collection/{Id()}/members/placeholder"),
+            "previewCollectionRule" => (HttpMethod.Post, "/collection/rule/preview"),
+            "acquireMissingCollectionMembers" => (HttpMethod.Post, $"/collection/{Id()}/acquire-missing"),
+            "searchSubscriptions" => (HttpMethod.Get, "/subscription"),
+            "getSubscriptionProviders" => (HttpMethod.Get, "/subscription/providers"),
+            "addSubscription" => (HttpMethod.Post, "/subscription"),
+            "patchSubscription" => (HttpMethod.Patch, $"/subscription/{Id()}"),
+            "runSubscriptionCheck" => (HttpMethod.Post, $"/subscription/{Id()}/run"),
+            "extensionGroups" => (HttpMethod.Get, "/extension-group"),
+            "extensionGroupAdd" => (HttpMethod.Post, "/extension-group"),
+            "extensionGroupPut" => (HttpMethod.Put, $"/extension-group/{Id()}"),
+            "extensionGroupDelete" => (HttpMethod.Delete, $"/extension-group/{Id()}"),
             "addCollectionMembers" => (HttpMethod.Post, $"/collection/{Id()}/members"),
             "removeCollectionMembers" => (HttpMethod.Delete, $"/collection/{Id()}/members"),
             "getCollectionIdsByResourceIds" => (HttpMethod.Get, "/resource/collections?" + string.Join("&", ValidIds(request.Ids).Select(i => $"resourceIds={i}"))),
-            "getCustomPropertyByKeys" => (HttpMethod.Get, $"/custom-property/ids?additionalItems={BoundedNumber("additionalItems", 0, 0, 2)}&" + string.Join("&", ValidIds(request.Ids).Select(i => $"ids={i}"))),
+            "getCustomPropertyByKeys" => (HttpMethod.Get, $"/custom-property/ids?additionalItems={CustomPropertyItems()}&" + string.Join("&", ValidIds(request.Ids).Select(i => $"ids={i}"))),
             "getAllHealthScoreProfiles" => (HttpMethod.Get, "/health-score/profiles"),
             "getHealthScoreDiagnosisForResource" => (HttpMethod.Get, $"/health-score/resource/{Id()}/diagnosis"),
             "getMappingsByResourceId" => (HttpMethod.Get, $"/media-library-resource-mapping/by-resource/{Id()}"),
@@ -177,7 +215,8 @@ public static class ManagedLibraryOperations
             "resourceBrowserFiles" => (HttpMethod.Get, $"/management/library/resources/{Id()}/browser-files?offset={BoundedNumber("offset", 0, 0, 1_000_000)}&pageSize={BoundedNumber("pageSize", 100, 1, MaximumPageSize)}&scope={Uri.EscapeDataString(Value("scope", "configured"))}&initialPath={Uri.EscapeDataString(Value("initialPath", ""))}"),
             "resourceNativeFallback" => (HttpMethod.Get, $"/management/library/resources/{Id()}/native-fallback?key={Uri.EscapeDataString(Value("key"))}&origin={BoundedNumber("origin", (int) DataOrigin.FileSystem, (int) DataOrigin.Manual, (int) DataOrigin.FileSystem)}"),
             "properties" => (HttpMethod.Get, $"/property/pool/{Pool("pool", ((int) PropertyPool.All).ToString())}?includeDeprecated={Boolean("includeDeprecated", "false")}"),
-            "customProperties" => (HttpMethod.Get, "/custom-property/all"),
+            "customProperties" => (HttpMethod.Get, $"/custom-property/all?additionalItems={CustomPropertyItems()}"),
+            "sortCustomProperties" => (HttpMethod.Put, "/custom-property/order"),
             "customPropertyAdd" => (HttpMethod.Post, "/custom-property"),
             "customPropertyPut" => (HttpMethod.Put, $"/custom-property/{Id()}"),
             "customPropertyDelete" => (HttpMethod.Delete, $"/custom-property/{Id()}"),
@@ -239,6 +278,12 @@ public static class ManagedLibraryOperations
         };
         if (bodyIdsKey != null)
             ValidIds(ReadIds((body as JObject)?.GetValue(bodyIdsKey, StringComparison.OrdinalIgnoreCase)));
+        if (request.Operation == "sortCustomProperties")
+        {
+            var order = ReadIds((body as JObject)?.GetValue("ids", StringComparison.OrdinalIgnoreCase));
+            if (order.Length is < 1 or > 10000 || order.Any(id => id <= 0) || order.Distinct().Count() != order.Length)
+                throw Invalid("At most 10000 distinct positive property IDs are allowed.");
+        }
         if (request.Operation == "deleteEnhancementsByResources") ValidIds(ReadIds(body));
         if (request.Operation == "mergeResources")
         {
@@ -261,7 +306,8 @@ public static class ManagedLibraryOperations
         }
         var noBody = request.Operation is "resourcePin" or "resourceMarkPlayed" or "refreshResourceCache" or
             "enhanceResourceByEnhancer" or "applyEnhancementContextDataForResourceByEnhancer" or
-            "previewCustomPropertyTypeConversion" or "changeCustomPropertyType";
+            "previewCustomPropertyTypeConversion" or "changeCustomPropertyType" or
+            "setCollectionMemberIgnored" or "acquireMissingCollectionMembers" or "runSubscriptionCheck";
         var needsBody = !noBody && (method != HttpMethod.Get && method != HttpMethod.Delete ||
             request.Operation is "removeCollectionMembers" or "deleteEnhancementsByResources");
         if (needsBody && body == null) throw Invalid("A request body is required.");

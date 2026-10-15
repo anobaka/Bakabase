@@ -140,6 +140,23 @@ public sealed class MetadataReplicaStore(string directory)
         return state with {ResourceCount = activeCount, StagedResourceCount = (long)(await command.ExecuteScalarAsync(cancellationToken))!};
     }
 
+    /// <summary>Counts only, including the staged snapshot before its first complete publication.</summary>
+    public async Task<IReadOnlyDictionary<string, long>> GetCatalogCountsAsync(ReplicaIdentity identity,
+        CancellationToken cancellationToken = default)
+    {
+        await using var connection = await OpenAsync(identity, cancellationToken);
+        using var transaction = connection.BeginTransaction(deferred: true);
+        var state = await ReadStateAsync(connection, transaction, cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = "SELECT kind,count(*) FROM catalog WHERE generation=$g GROUP BY kind";
+        command.Parameters.AddWithValue("$g", (object?)state.ActiveGeneration ?? state.Checkpoint?.Generation ?? (object)DBNull.Value);
+        var counts = new Dictionary<string, long>(StringComparer.Ordinal);
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken)) counts[reader.GetString(0)] = reader.GetInt64(1);
+        return counts;
+    }
+
     public async Task<IReadOnlyList<string>> GetByIdsAsync(ReplicaIdentity identity, IReadOnlyCollection<int> ids,
         CancellationToken cancellationToken = default) =>
         (await GetRowsByIdsAsync(identity, ids, cancellationToken)).Select(r => r.ResourceJson).ToArray();

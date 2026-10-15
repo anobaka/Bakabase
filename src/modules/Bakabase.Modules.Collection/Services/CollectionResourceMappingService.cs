@@ -27,6 +27,23 @@ public class CollectionResourceMappingService<TDbContext>(
         .Select(x => x.ToDomainModel())
         .ToList();
 
+    public async Task<List<CollectionMember>> GetByCollectionId(int collectionId,
+        IReadOnlyCollection<int> resourceIds)
+    {
+        if (resourceIds.Count > ICollectionService.MaximumMembershipLookupSize || resourceIds.Any(id => id <= 0))
+            throw new ArgumentOutOfRangeException(nameof(resourceIds));
+        if (resourceIds.Count == 0) return [];
+        var wanted = resourceIds.Distinct().ToArray();
+        // A page lookup must not warm or clone the full membership cache. The predicate
+        // reaches SQLite through the existing persisted-read path.
+        using var persisted = PersistedReadScope.Enter();
+        return (await orm.GetAll(x => x.CollectionId == collectionId && wanted.Contains(x.ResourceId)))
+            .OrderBy(x => x.Order ?? int.MaxValue)
+            .ThenBy(x => x.Id)
+            .Select(x => x.ToDomainModel())
+            .ToList();
+    }
+
     public async Task<List<CollectionMember>> GetByResourceId(int resourceId) =>
         (await orm.GetAll(x => x.ResourceId == resourceId))
         .Select(x => x.ToDomainModel())

@@ -164,6 +164,7 @@ public partial class SecretCanaryTests
         ("custom properties", async c => (await c.GetEntities(DataSyncKindIds.CustomProperty, default)).Data),
         ("extension groups", async c => (await c.GetEntities(DataSyncKindIds.ExtensionGroup, default)).Data),
         ("history", async c => (await c.GetHistory(default)).Data),
+        ("history page", async c => (await c.GetHistoryPage(ct: default)).Data),
         ("restore", async c => (await c.GetRestore(default)).Data),
     ];
 

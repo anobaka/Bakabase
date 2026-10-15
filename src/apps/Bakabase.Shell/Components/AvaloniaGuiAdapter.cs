@@ -174,7 +174,7 @@ public partial class AvaloniaGuiAdapter : GuiAdapter, ITrayIconController, IUpda
             }
 
             _mainWindow.Show();
-            _mainWindow.Title = title;
+            _mainWindow.Title = Bakabase.Infrastructures.Components.App.Profiles.DesktopProfileSelection.WindowTitle(title);
 
             var webView = _mainWindow.FindControl<NativeWebViewHost>("WebView")!;
             webView.Navigate(url);
@@ -217,7 +217,7 @@ public partial class AvaloniaGuiAdapter : GuiAdapter, ITrayIconController, IUpda
     {
         if (_mainWindow != null)
         {
-            _mainWindow.Title = title;
+            _mainWindow.Title = Bakabase.Infrastructures.Components.App.Profiles.DesktopProfileSelection.WindowTitle(title);
         }
     }
 

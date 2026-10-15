@@ -225,6 +225,8 @@ public sealed record DataSyncHistoryCounts(int Created, int Updated, int Linked,
 public sealed record DataSyncHistoryEntry(int Id, DateTime AppliedAt, DataSyncHistoryKind Kind, int? LinkId,
     string? PeerNodeId, string? PeerName, DataSyncHistoryCounts Counts, DataSyncUndoState UndoState, DateTime? UndoneAt);
 
+public sealed record DataSyncHistoryPage(IReadOnlyList<DataSyncHistoryEntry> Entries, int? NextBeforeId);
+
 public sealed record DataSyncHistoryItem(string ItemId, string Kind, string Name, DataSyncItemOutcome Outcome,
     DataSyncItemAction Action, string? LocalKey, DataSyncPlanItemType Type);
 

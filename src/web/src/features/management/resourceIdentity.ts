@@ -17,7 +17,9 @@ export function sameResourceOwner(a?: ManagementSource, b?: ManagementSource) {
   return a.serverId === b.serverId && a.libraryEpoch === b.libraryEpoch;
 }
 
-export function deviceColor(serverId: string) {
+export function deviceColor(serverId: string, colors?: Record<string, string> | null) {
+  const configured = colors?.[serverId];
+  if (configured && /^#[\da-f]{6}$/i.test(configured)) return configured;
   // Stable across source ordering, reconnects and pages; independent of another device's IDs.
   let hash = 2166136261;
   for (const character of serverId) hash = Math.imul(hash ^ character.charCodeAt(0), 16777619);

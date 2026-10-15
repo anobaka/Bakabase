@@ -14,6 +14,39 @@ const log = buildLogger("BApi");
  * ---------------------------------------------------------------
  */
 
+export interface BakabaseAbstractionsComponentsAppDesktopProfileAddInput {
+  name: string;
+  directory: string;
+  create: boolean;
+}
+
+export interface BakabaseAbstractionsComponentsAppDesktopProfileOpenInput {
+  closeCurrent: boolean;
+}
+
+export interface BakabaseAbstractionsComponentsAppDesktopProfileUpdateInput {
+  name: string;
+  makeDefault: boolean;
+}
+
+export interface BakabaseAbstractionsComponentsAppDesktopProfileView {
+  id: string;
+  name: string;
+  dataDirectory: string;
+  isCurrent: boolean;
+  isDefault: boolean;
+  isRunning: boolean;
+  isAvailable: boolean;
+}
+
+export interface BakabaseAbstractionsComponentsAppDesktopProfilesView {
+  available: boolean;
+  currentId?: string;
+  environmentOverride: boolean;
+  currentDirectory?: string;
+  profiles: BakabaseAbstractionsComponentsAppDesktopProfileView[];
+}
+
 export interface BakabaseAbstractionsComponentsConfigurationResourceMoveDestination {
   id: string;
   path: string;
@@ -2823,6 +2856,7 @@ export interface BakabaseInsideWorldModelsConfigsUIOptions {
   startupPage: BakabaseInsideWorldModelsConstantsStartupPage;
   isMenuCollapsed: boolean;
   navigationLayout?: BakabaseInsideWorldModelsConfigsUINavigationLayout;
+  deviceColors: Record<string, string>;
   showResourceUsage: boolean;
   hideResourceCovers: boolean;
   resourceDetailLayout?: BakabaseInsideWorldModelsConfigsUIOptionsResourceDetailLayoutConfig;
@@ -4788,6 +4822,12 @@ export interface BakabaseModulesDataSyncServicesDataSyncHistoryItem {
   type: BakabaseModulesDataSyncPlanningDataSyncPlanItemType;
 }
 
+export interface BakabaseModulesDataSyncServicesDataSyncHistoryPage {
+  entries: BakabaseModulesDataSyncServicesDataSyncHistoryEntry[];
+  /** @format int32 */
+  nextBeforeId?: number;
+}
+
 export interface BakabaseModulesDataSyncServicesDataSyncInboxItemView {
   /** @format int64 */
   id: number;
@@ -6522,6 +6562,45 @@ export interface BakabaseServiceComponentsAcquisitionSharedListPreviewRow {
   alreadyKnown: boolean;
 }
 
+export interface BakabaseServiceComponentsDataSyncSyncActivityDevice {
+  id: string;
+  name: string;
+}
+
+export interface BakabaseServiceComponentsDataSyncSyncActivityPage {
+  items: BakabaseServiceComponentsDataSyncSyncActivityRow[];
+  /** @format int32 */
+  total: number;
+  /** @format int32 */
+  nextOffset?: number;
+  devices: BakabaseServiceComponentsDataSyncSyncActivityDevice[];
+  dataTypes: string[];
+}
+
+export interface BakabaseServiceComponentsDataSyncSyncActivityRow {
+  id: string;
+  engine: string;
+  dataType: string;
+  state: string;
+  phase: string;
+  source: BakabaseServiceComponentsDataSyncSyncActivityDevice;
+  destination: BakabaseServiceComponentsDataSyncSyncActivityDevice;
+  /** @format date-time */
+  lastSuccessAtUtc?: string;
+  /** @format int64 */
+  itemCount?: number;
+  errorCode?: string;
+  error?: string;
+  cachedDataAvailable: boolean;
+  /** @format int32 */
+  linkId?: number;
+  libraryEpoch?: string;
+  worker?: BakabaseServiceComponentsDataSyncSyncActivityDevice;
+  job?: BakabaseServiceComponentsFederationProcessingResourceProcessingJobView;
+  /** @format int32 */
+  pendingDecisions: number;
+}
+
 export interface BakabaseServiceComponentsFederationManagedLibraryInfo {
   serverId: string;
   name: string;
@@ -6577,6 +6656,7 @@ export interface BakabaseServiceComponentsFederationMetadataReplicasManagedMetad
   data: BakabaseServiceComponentsFederationMetadataReplicasReplicaStatus;
   sync: BakabaseServiceComponentsFederationMetadataReplicasReplicaSyncState;
   denied: boolean;
+  activePhase?: string;
 }
 
 export interface BakabaseServiceComponentsFederationMetadataReplicasMetadataPageRequest {
@@ -6591,6 +6671,32 @@ export interface BakabaseServiceComponentsFederationMetadataReplicasMetadataSour
   name?: string;
   /** @format int32 */
   contractVersion: number;
+}
+
+export interface BakabaseServiceComponentsFederationMetadataReplicasMetadataSyncActivity {
+  /** @format int64 */
+  id: number;
+  serverId: string;
+  name?: string;
+  libraryEpoch?: string;
+  /** @format date-time */
+  startedAtUtc: string;
+  /** @format date-time */
+  updatedAtUtc: string;
+  state: string;
+  phase: string;
+  /** @format int64 */
+  processedCount: number;
+  /** @format int64 */
+  resourceCount: number;
+  errorCode?: string;
+  error?: string;
+}
+
+export interface BakabaseServiceComponentsFederationMetadataReplicasMetadataSyncActivityPage {
+  entries: BakabaseServiceComponentsFederationMetadataReplicasMetadataSyncActivity[];
+  /** @format int64 */
+  nextBeforeId?: number;
 }
 
 export interface BakabaseServiceComponentsFederationMetadataReplicasReplicaCheckpoint {
@@ -6627,6 +6733,7 @@ export interface BakabaseServiceComponentsFederationMetadataReplicasReplicaSyncS
   error?: string;
   isOffline: boolean;
   refreshPending: boolean;
+  catchupPending: boolean;
 }
 
 export interface BakabaseServiceComponentsFederationProcessingResourceProcessingAbandonRequest {
@@ -6754,6 +6861,12 @@ export interface BakabaseServiceComponentsFederationProcessingResourceProcessing
 export interface BakabaseServiceComponentsFederationProcessingResourceProcessingReceiptStatus {
   receipt?: BakabaseServiceComponentsFederationProcessingResourceProcessingReceipt;
 }
+
+/**
+ * [0: Manager, 1: Owner, 2: Worker]
+ * @format int32
+ */
+export type BakabaseServiceComponentsFederationProcessingResourceProcessingRole = 0 | 1 | 2;
 
 export interface BakabaseServiceComponentsFederationProcessingResourceProcessingStart {
   /** @format int32 */
@@ -7191,6 +7304,10 @@ export interface BakabaseServiceModelsInputDecompressionInputModelItem {
   deleteAfterDecompression: boolean;
   moveToParent: boolean;
   overwriteExistFiles: boolean;
+}
+
+export interface BakabaseServiceModelsInputDeviceColorInput {
+  color?: string;
 }
 
 export interface BakabaseServiceModelsInputExHentaiDownloadTaskAddInputModel {
@@ -9167,6 +9284,20 @@ export interface BootstrapModelsResponseModelsSearchResponse1BootstrapComponents
   pageSize: number;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsComponentsAppDesktopProfileView {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseAbstractionsComponentsAppDesktopProfileView;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsComponentsAppDesktopProfilesView {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseAbstractionsComponentsAppDesktopProfilesView;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsComponentsConfigurationResourceMovePanelOptions {
   /** @format int32 */
   code: number;
@@ -9845,6 +9976,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesD
   code: number;
   message?: string;
   data?: BakabaseModulesDataSyncServicesDataSyncHistoryDetail;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncHistoryPage {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesDataSyncServicesDataSyncHistoryPage;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncInboxPage {
@@ -16005,6 +16143,129 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     /**
      * No description
      *
+     * @tags DesktopProfiles
+     * @name GetDesktopProfiles
+     * @request GET:/app/profiles
+     */
+    getDesktopProfiles: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsComponentsAppDesktopProfilesView,
+        any
+      >({
+        path: `/app/profiles`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getDesktopProfiles
+     * @name getDesktopProfilesUrl
+     */
+    getDesktopProfilesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/app/profiles`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags DesktopProfiles
+     * @name AddDesktopProfile
+     * @request POST:/app/profiles
+     */
+    addDesktopProfile: (
+      data: BakabaseAbstractionsComponentsAppDesktopProfileAddInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsComponentsAppDesktopProfileView,
+        any
+      >({
+        path: `/app/profiles`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for addDesktopProfile
+     * @name addDesktopProfileUrl
+     */
+    addDesktopProfileUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/app/profiles`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags DesktopProfiles
+     * @name UpdateDesktopProfile
+     * @request PUT:/app/profiles/{id}
+     */
+    updateDesktopProfile: (
+      id: string,
+      data: BakabaseAbstractionsComponentsAppDesktopProfileUpdateInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsComponentsAppDesktopProfileView,
+        any
+      >({
+        path: `/app/profiles/${id}`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DesktopProfiles
+     * @name RemoveDesktopProfile
+     * @request DELETE:/app/profiles/{id}
+     */
+    removeDesktopProfile: (id: string, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/app/profiles/${id}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DesktopProfiles
+     * @name OpenDesktopProfile
+     * @request POST:/app/profiles/{id}/open
+     */
+    openDesktopProfile: (
+      id: string,
+      data: BakabaseAbstractionsComponentsAppDesktopProfileOpenInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/app/profiles/${id}/open`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
      * @tags ResourceUsage
      * @name GetResourceUsage
      * @request GET:/app/resource-usage
@@ -17171,13 +17432,20 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name GetCollectionMemberships
      * @request GET:/collection/{id}/memberships
      */
-    getCollectionMemberships: (id: number, params: RequestParams = {}) =>
+    getCollectionMemberships: (
+      id: number,
+      query?: {
+        resourceIds?: number[];
+      },
+      params: RequestParams = {},
+    ) =>
       this.request<
         BootstrapModelsResponseModelsListResponse1BakabaseModulesCollectionAbstractionsModelsDomainCollectionMember,
         any
       >({
         path: `/collection/${id}/memberships`,
         method: "GET",
+        query: query,
         format: "json",
         ...params,
       }),
@@ -19644,6 +19912,69 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags DataSync
+     * @name GetDataSyncHistoryPage
+     * @request GET:/data-sync/history/page
+     */
+    getDataSyncHistoryPage: (
+      query?: {
+        /** @format int32 */
+        beforeId?: number;
+        /**
+         * @format int32
+         * @default 50
+         */
+        take?: number;
+        peerNodeId?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncHistoryPage,
+        any
+      >({
+        path: `/data-sync/history/page`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getDataSyncHistoryPage
+     * @name getDataSyncHistoryPageUrl
+     */
+    getDataSyncHistoryPageUrl: (query?: {
+        /** @format int32 */
+        beforeId?: number;
+        /**
+         * @format int32
+         * @default 50
+         */
+        take?: number;
+        peerNodeId?: string;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/data-sync/history/page`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags DataSync
      * @name GetDataSyncHistoryEntry
      * @request GET:/data-sync/history/{id}
      */
@@ -19753,6 +20084,199 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     chooseDataSyncRestoreUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/data-sync/restore`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags SyncActivity
+     * @name GetSyncActivity
+     * @request GET:/data-sync/activity
+     */
+    getSyncActivity: (
+      query?: {
+        dataType?: string;
+        deviceId?: string;
+        state?: string;
+        /**
+         * @format int32
+         * @default 0
+         */
+        offset?: number;
+        /**
+         * @format int32
+         * @default 50
+         */
+        take?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseServiceComponentsDataSyncSyncActivityPage, any>({
+        path: `/data-sync/activity`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getSyncActivity
+     * @name getSyncActivityUrl
+     */
+    getSyncActivityUrl: (query?: {
+        dataType?: string;
+        deviceId?: string;
+        state?: string;
+        /**
+         * @format int32
+         * @default 0
+         */
+        offset?: number;
+        /**
+         * @format int32
+         * @default 50
+         */
+        take?: number;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/data-sync/activity`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags SyncActivity
+     * @name GetMetadataSyncHistory
+     * @request GET:/data-sync/activity/metadata-history
+     */
+    getMetadataSyncHistory: (
+      query?: {
+        serverId?: string;
+        /** @format int64 */
+        beforeId?: number;
+        /**
+         * @format int32
+         * @default 30
+         */
+        take?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BakabaseServiceComponentsFederationMetadataReplicasMetadataSyncActivityPage,
+        any
+      >({
+        path: `/data-sync/activity/metadata-history`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getMetadataSyncHistory
+     * @name getMetadataSyncHistoryUrl
+     */
+    getMetadataSyncHistoryUrl: (query?: {
+        serverId?: string;
+        /** @format int64 */
+        beforeId?: number;
+        /**
+         * @format int32
+         * @default 30
+         */
+        take?: number;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/data-sync/activity/metadata-history`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags SyncActivity
+     * @name GetSyncProcessingHistory
+     * @request GET:/data-sync/activity/processing-history
+     */
+    getSyncProcessingHistory: (
+      query?: {
+        /** [0: Manager, 1: Owner, 2: Worker] */
+        role?: BakabaseServiceComponentsFederationProcessingResourceProcessingRole;
+        beforeId?: string;
+        /**
+         * @format int32
+         * @default 30
+         */
+        take?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseServiceComponentsFederationProcessingResourceProcessingJobView[], any>({
+        path: `/data-sync/activity/processing-history`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getSyncProcessingHistory
+     * @name getSyncProcessingHistoryUrl
+     */
+    getSyncProcessingHistoryUrl: (query?: {
+        /** [0: Manager, 1: Owner, 2: Worker] */
+        role?: BakabaseServiceComponentsFederationProcessingResourceProcessingRole;
+        beforeId?: string;
+        /**
+         * @format int32
+         * @default 30
+         */
+        take?: number;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/data-sync/activity/processing-history`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
 
       return baseUrl + path;
     },
@@ -26689,6 +27213,27 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
       return baseUrl + path;
     },
+
+    /**
+     * No description
+     *
+     * @tags Options
+     * @name SetDeviceColor
+     * @request PUT:/options/ui/device-colors/{serverId}
+     */
+    setDeviceColor: (
+      serverId: string,
+      data: BakabaseServiceModelsInputDeviceColorInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/options/ui/device-colors/${serverId}`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
 
     /**
      * No description

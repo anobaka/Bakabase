@@ -291,5 +291,11 @@
   "management.metadata.savedRefreshing": "Saved. Updating this device’s resource list.",
   "management.metadata.refreshPendingHelp": "Checking the latest data after your change. The displayed values will update once fresh data is available. Do not submit the change again.",
   "management.metadata.updateRequired": "Source update required",
-  "management.metadata.updateRequiredHelp": "The source version does not support resource metadata sync. Update Bakabase on that device first; existing data and pairing are retained."
+  "management.metadata.updateRequiredHelp": "The source version does not support resource metadata sync. Update Bakabase on that device first; existing data and pairing are retained.",
+  "management.catalog.readOnly": "Offline · read only",
+  "management.catalog.loading": "Loading synced items…",
+  "management.catalog.sourcesFailed": "Device status could not be refreshed. Existing items remain visible.",
+  "management.catalog.unavailable": "{{device}}: its synced items are not available yet.",
+  "management.catalog.ownerUnavailable": "This device is offline. Synced information is available to view; changes require the device to be online.",
+  "management.catalog.orderDevice": "Device whose property order to change"
 }

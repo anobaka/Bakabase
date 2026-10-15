@@ -36,6 +36,12 @@ public static class UserMachineRoutes
 {
     public static readonly ImmutableArray<UserMachineRoute> All =
     [
+        // A remote device's page must never alter/open this desktop's data spaces.
+        // No local handler: the dispatcher refuses these rather than forwarding them.
+        new("DELETE", "/app/profiles/{id}"),
+        new("POST", "/app/profiles"),
+        new("POST", "/app/profiles/{id}/open"),
+        new("PUT", "/app/profiles/{id}"),
         new("GET", "/file/icon"),
         new("GET", "/file/recycle-bin"),
         new("GET", "/gui/url"),

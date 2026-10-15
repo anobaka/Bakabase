@@ -10,7 +10,7 @@ import { useTranslation } from "react-i18next";
 import { AiOutlinePlusCircle } from "react-icons/ai";
 import { SelectItem } from "@heroui/react";
 
-import BApi from "@/sdk/BApi";
+import { useResourceApi } from "@/features/management/resourceContext";
 import Resource from "@/components/Resource";
 import {
   Button,
@@ -65,6 +65,7 @@ type Membership = {
  */
 const MembersTab: React.FC<Props> = ({ collection, onChanged }) => {
   const { t } = useTranslation();
+  const BApi = useResourceApi();
   const { createPortal } = useBakabaseContext();
 
   const [filter, setFilter] = useState<CollectionMemberFilter>(CollectionMemberFilter.All);
@@ -72,23 +73,29 @@ const MembersTab: React.FC<Props> = ({ collection, onChanged }) => {
   const [total, setTotal] = useState(0);
   const [resources, setResources] = useState<ResourceModel[]>([]);
   const [memberships, setMemberships] = useState<Map<number, Membership>>(new Map());
+  const [error, setError] = useState<string>();
   const [loading, setLoading] = useState(true);
   const [groupPropertyId, setGroupPropertyId] = useState<string>("");
   const [properties, setProperties] = useState<IProperty[]>([]);
 
   const load = useCallback(async () => {
     setLoading(true);
+    setError(undefined);
     try {
-      const [pageRsp, membershipRsp] = await Promise.all([
-        BApi.collection.searchCollectionMembers(collection.id, {
-          filter,
-          pageIndex: page,
-          pageSize: PAGE_SIZE,
-        }),
-        BApi.collection.getCollectionMemberships(collection.id),
-      ]);
-
+      const pageRsp = await BApi.collection.searchCollectionMembers(collection.id, {
+        filter,
+        pageIndex: page,
+        pageSize: PAGE_SIZE,
+      });
       const ids = pageRsp.data?.resourceIds ?? [];
+      const membershipRsp = ids.length
+        ? await BApi.request<{ data?: Membership[] }>({
+            path: `/collection/${collection.id}/memberships`,
+            method: "GET",
+            format: "json",
+            query: { resourceIds: ids },
+          })
+        : { data: [] };
 
       setTotal(pageRsp.data?.totalCount ?? 0);
       setMemberships(
@@ -113,10 +120,12 @@ const MembersTab: React.FC<Props> = ({ collection, onChanged }) => {
         // reads in that order, not in whatever order the resource endpoint answered.
         setResources(ids.map((id) => byId.get(id)).filter(Boolean) as ResourceModel[]);
       }
+    } catch (reason) {
+      setError(String(reason));
     } finally {
       setLoading(false);
     }
-  }, [collection.id, filter, page]);
+  }, [collection.id, filter, page, BApi]);
 
   useEffect(() => {
     void load();
@@ -302,6 +311,11 @@ const MembersTab: React.FC<Props> = ({ collection, onChanged }) => {
         </Button>
       </div>
 
+      {error && (
+        <p className="text-danger" role="alert">
+          {error}
+        </p>
+      )}
       {loading ? (
         <div className="flex justify-center py-10">
           <Spinner />

@@ -3,6 +3,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
 using Bakabase.Abstractions.Components.App;
 using Bakabase.Infrastructures.Components.App;
+using Bakabase.Infrastructures.Components.App.Profiles;
 using Bakabase.Infrastructures.Components.App.SingleInstance;
 using Bakabase.Service.Components.ServerData;
 using Bakabase.Shell.Windows;
@@ -162,7 +163,18 @@ internal sealed class DesktopSetupBootstrap : IDisposable
     {
         if (e is ProtocolActivatedEventArgs protocol)
         {
-            AcceptToolLink(protocol.Uri.OriginalString);
+            var link = protocol.Uri.OriginalString;
+            if (DesktopToolLink.GetRoute(link) == null) return;
+            var defaultId = DesktopProfileRegistry.ForCurrentUser().Read().DefaultId;
+            if (DesktopProfileSelection.CurrentId != defaultId)
+            {
+                // macOS may deliver the URL to an already-running named space. External
+                // links always target the configured default, never an arbitrary active space.
+                var launch = DesktopProfileSelection.CreateStartInfo(defaultId);
+                launch.ArgumentList.Add(link);
+                using var process = System.Diagnostics.Process.Start(launch);
+            }
+            else AcceptToolLink(link);
             return;
         }
         if (e.Kind != ActivationKind.Reopen) return;

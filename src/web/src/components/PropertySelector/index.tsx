@@ -2,6 +2,7 @@
 
 import type { IProperty } from "@/components/Property/models";
 import type { DestroyableProps } from "@/components/bakaui/types";
+import type { FilterOwner } from "@/components/ResourceFilter/models";
 
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -17,8 +18,7 @@ import { buildLogger } from "@/components/utils";
 import { PropertyPool, PropertyType, ResourceProperty, StandardValueType } from "@/sdk/constants";
 import { useResourceApi } from "@/features/management/resourceContext";
 import { ResourceOwnerProvider } from "@/features/management/resourceContext";
-import { deviceColor } from "@/features/management/resourceIdentity";
-import type { FilterOwner } from "@/components/ResourceFilter/models";
+import DeviceDot from "@/features/management/DeviceDot";
 import { Button, Chip, Divider, Input, Modal, Spacer } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 
@@ -184,19 +184,10 @@ const PropertySelector = (props: IProps) => {
   });
 
   // Group properties by pool first, then by type
-  const commonProperties = filteredProperties.filter((property) => !property.owner);
+  const commonProperties = filteredProperties;
   const reservedProperties = commonProperties.filter((p) => p.pool === PropertyPool.Reserved);
   const customProperties = commonProperties.filter((p) => p.pool === PropertyPool.Custom);
   const internalProperties = commonProperties.filter((p) => p.pool === PropertyPool.Internal);
-  const ownerGroups = new Map<string, IProperty[]>();
-
-  for (const property of filteredProperties) {
-    if (!property.owner) continue;
-    const key = JSON.stringify([property.owner.serverId, property.owner.libraryEpoch]);
-
-    ownerGroups.set(key, [...(ownerGroups.get(key) ?? []), property]);
-  }
-
   // Group custom properties by type
   const groupedCustomProperties: { [key in PropertyType]?: IProperty[] } = customProperties.reduce<{
     [key in PropertyType]?: IProperty[];
@@ -301,6 +292,11 @@ const PropertySelector = (props: IProps) => {
             onSaved={loadProperties}
           />
         )}
+        {property.owner && !property.owner.isLocal && (
+          <span className="absolute -left-1 -top-1">
+            <DeviceDot name={property.owner.name} serverId={property.owner.serverId} />
+          </span>
+        )}
         {selected && (
           <div className="absolute -top-1 -right-1 bg-success rounded-full p-0.5">
             <AiOutlineCheckCircle className="text-white text-xs" />
@@ -382,28 +378,6 @@ const PropertySelector = (props: IProps) => {
         )}
 
         <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
-          {[...ownerGroups.entries()].map(([key, properties]) => {
-            const owner = properties[0].owner!;
-
-            return (
-              <div
-                key={key}
-                className="rounded-lg border border-default-200 bg-content1 overflow-hidden"
-              >
-                <div className="flex items-center gap-2 px-4 py-3 bg-default-100 border-b border-default-200">
-                  <span
-                    className="h-2 w-2 shrink-0 rounded-full"
-                    style={{ backgroundColor: deviceColor(owner.serverId) }}
-                  />
-                  <span className="font-medium">{owner.name}</span>
-                  <span className="text-default-500 text-sm">({properties.length})</span>
-                </div>
-                <div className="p-4 flex flex-wrap gap-2">
-                  {properties.map((property) => renderPropertyItem(property, false))}
-                </div>
-              </div>
-            );
-          })}
           {/* Internal Properties */}
           {(pool & PropertyPool.Internal) !== 0 &&
             internalProperties.length > 0 &&

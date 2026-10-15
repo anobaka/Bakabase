@@ -73,7 +73,7 @@ public sealed record ReplicaStatus(ReplicaCheckpoint? Checkpoint, string? Active
     long ResourceCount, long ActiveSequence, long StagedResourceCount = 0);
 
 public sealed record ReplicaSyncState(bool Paused = false, DateTimeOffset? LastSyncedAtUtc = null,
-    string? ErrorCode = null, string? Error = null, bool IsOffline = false, bool RefreshPending = false);
+    string? ErrorCode = null, string? Error = null, bool IsOffline = false, bool RefreshPending = false, bool CatchupPending = false);
 
 public sealed record ReplicaResourceRow(int ResourceId, long Revision, string ResourceJson);
 

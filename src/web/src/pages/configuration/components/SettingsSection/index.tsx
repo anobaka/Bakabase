@@ -73,6 +73,17 @@ export const SettingsSearchResults: React.FC<{
   );
 };
 
+/** Shared with full-width settings panels that do not use the label/value row layout. */
+export const useSettingsSearchMatch = (id: string, matched: boolean) => {
+  const report = useContext(MatchReportContext);
+
+  useEffect(() => {
+    report?.(id, matched);
+
+    return () => report?.(id, false);
+  }, [report, id, matched]);
+};
+
 interface Props {
   /** Already translated. */
   title: string;
@@ -87,12 +98,9 @@ interface Props {
 
 const SettingsSection: React.FC<Props> = ({ title, items, query = "", keywords, header }) => {
   const visible = filterItems(title, items, query, keywords);
-  const report = useContext(MatchReportContext);
   const matched = visible.length > 0;
 
-  useEffect(() => {
-    report?.(title, matched);
-  }, [report, title, matched]);
+  useSettingsSearchMatch(title, matched);
 
   if (!matched) {
     return null;

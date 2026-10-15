@@ -9,7 +9,7 @@ import { buildRuleSearchJson, isEmptyGroup, parseRuleSearchJson } from "./ruleJs
 
 import { Button, Chip, Spinner } from "@/components/bakaui";
 import { ResourceFilterController } from "@/components/ResourceFilter";
-import BApi from "@/sdk/BApi";
+import { useResourceApi } from "@/features/management/resourceContext";
 
 type Props = {
   /** The collection's stored rule, or null when it has none. */
@@ -30,6 +30,7 @@ type Preview = { totalCount: number; sampleResourceIds: number[] } | "failed" | 
  */
 const CollectionRuleEditor = ({ value, onChange, sampleSize = 8 }: Props) => {
   const { t } = useTranslation();
+  const BApi = useResourceApi();
   const [group, setGroup] = useState<SearchFilterGroup | undefined>(() =>
     parseRuleSearchJson(value),
   );
@@ -73,7 +74,7 @@ const CollectionRuleEditor = ({ value, onChange, sampleSize = 8 }: Props) => {
     }, 400);
 
     return () => clearTimeout(handle);
-  }, [ruleJson, empty, sampleSize]);
+  }, [ruleJson, empty, sampleSize, BApi]);
 
   const apply = (next: SearchFilterGroup | undefined) => {
     setGroup(next);

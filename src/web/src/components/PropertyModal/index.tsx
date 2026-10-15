@@ -10,7 +10,7 @@ import { useTranslation } from "react-i18next";
 import ModalContent from "./components/ModalContent";
 
 import "./index.scss";
-import { useResourceApi } from "@/features/management/resourceContext";
+import { useResourceApi, useResourceOwner } from "@/features/management/resourceContext";
 import { Modal } from "@/components/bakaui";
 
 type Props = {
@@ -41,6 +41,8 @@ const PropertyModal = ({
 }: Props) => {
   const { t } = useTranslation();
   const BApi = useResourceApi();
+  const owner = useResourceOwner();
+  const readOnly = !!owner && (!owner.available || owner.metadata?.denied);
   const [visible, setVisible] = useState(true);
   const [property, setProperty] = useState<CustomPropertyForm>();
 
@@ -54,7 +56,7 @@ const PropertyModal = ({
       footer={{
         actions: ["ok", "cancel"],
         okProps: {
-          isDisabled: !property,
+          isDisabled: !property || readOnly,
           children: t<string>("property.editor.save"),
         },
         cancelProps: { children: t<string>("property.editor.cancel"), color: "default" },
@@ -65,6 +67,7 @@ const PropertyModal = ({
       visible={visible}
       onClose={close}
       onOk={async () => {
+        if (readOnly) throw new Error(t("management.catalog.ownerUnavailable"));
         if (!property) {
           throw new Error("Property is required");
         }
@@ -97,13 +100,20 @@ const PropertyModal = ({
       }}
       {...props}
     >
-      <ModalContent
-        checkOptionUsage={checkOptionUsage}
-        ownerScoped={ownerScoped}
-        validValueTypes={validValueTypes}
-        value={value}
-        onChange={(v) => setProperty(v)}
-      />
+      {readOnly && (
+        <p className="mb-3 text-sm text-warning" role="status">
+          {t("management.catalog.ownerUnavailable")}
+        </p>
+      )}
+      <fieldset className="min-w-0" disabled={readOnly}>
+        <ModalContent
+          checkOptionUsage={checkOptionUsage}
+          ownerScoped={ownerScoped}
+          validValueTypes={validValueTypes}
+          value={value}
+          onChange={(v) => setProperty(v)}
+        />
+      </fieldset>
     </Modal>
   );
 };

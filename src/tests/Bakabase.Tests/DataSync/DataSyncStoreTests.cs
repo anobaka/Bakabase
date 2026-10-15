@@ -280,6 +280,26 @@ public class DataSyncStoreTests
     }
 
     [TestMethod]
+    public async Task History_pagination_is_source_scoped_and_omits_large_result_and_undo_payloads()
+    {
+        var ids = new List<int>();
+        for (var n = 0; n < 8; n++)
+        {
+            var row = Log(DataSyncHistoryKind.AutoSync);
+            row.PeerNodeId = n % 2 == 0 ? "a" : "b";
+            row.ResultJson = new string('r', 10000);
+            row.PreImageJson = new string('p', 10000);
+            ids.Add(await _f.Store.AddHistoryAsync(row, default));
+        }
+        var page = await _f.Store.GetHistoryAsync(default, null, 2, "a");
+        CollectionAssert.AreEqual(new[] {ids[6], ids[4]}, page.Select(row => row.Id).ToArray());
+        Assert.IsTrue(page.All(row => row.ResultJson == "{}" && row.PreImageJson == "{}"));
+        var next = await _f.Store.GetHistoryAsync(default, page[^1].Id, 2, "a");
+        CollectionAssert.AreEqual(new[] {ids[2], ids[0]}, next.Select(row => row.Id).ToArray());
+        Assert.AreEqual(10000, (await _f.Store.GetHistoryEntryAsync(ids[0], default))!.PreImageJson.Length);
+    }
+
+    [TestMethod]
     public async Task Attention_counts_decisions_pauses_restores_and_reviews_without_names()
     {
         var paused = await _f.LinkAsync("peer-1", state: DataSyncLinkState.Paused);

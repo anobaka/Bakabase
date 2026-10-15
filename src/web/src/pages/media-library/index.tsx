@@ -25,6 +25,16 @@ import {
   Spinner,
 } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
+import {
+  useOwnedCatalog,
+  catalogItemKey,
+  catalogItemApi,
+  canEditCatalogItem,
+  CatalogOwnerMark,
+  CatalogSourceStatus,
+  catalogOwnerSearch,
+  type OwnedCatalogItem,
+} from "@/features/management/ownedCatalog";
 import BApi from "@/sdk/BApi";
 import {
   InternalProperty,
@@ -44,6 +54,12 @@ const MediaLibraryPage = () => {
   const navigate = useNavigate();
 
   const [mediaLibraries, setMediaLibraries] = useState<MediaLibrary[]>([]);
+  const catalog = useOwnedCatalog(mediaLibraries, (api) =>
+    api.mediaLibraryV2.getAllMediaLibraryV2(),
+  );
+  const allLibraries = [...catalog.items].sort(
+    (a, b) => a.name.localeCompare(b.name) || catalogItemKey(a).localeCompare(catalogItemKey(b)),
+  );
   const [loading, setLoading] = useState(true);
   const [highlightedId, setHighlightedId] = useState<number | null>(null);
   const highlightTimerRef = useRef<ReturnType<typeof setTimeout>>();
@@ -105,7 +121,7 @@ const MediaLibraryPage = () => {
     }
   };
 
-  const deleteMediaLibrary = (ml: MediaLibrary) => {
+  const deleteMediaLibrary = (ml: OwnedCatalogItem<MediaLibrary>) => {
     createPortal(Modal, {
       defaultVisible: true,
       title: t("mediaLibrary.confirm.title"),
@@ -117,8 +133,9 @@ const MediaLibraryPage = () => {
         </div>
       ),
       onOk: async () => {
-        await BApi.mediaLibraryV2.deleteMediaLibraryV2(ml.id);
-        loadMediaLibraries();
+        await catalogItemApi(ml).mediaLibraryV2.deleteMediaLibraryV2(ml.id);
+        await loadMediaLibraries();
+        catalog.refresh();
       },
       footer: {
         actions: ["ok", "cancel"],
@@ -134,18 +151,19 @@ const MediaLibraryPage = () => {
     });
   };
 
-  const searchResources = (ml: MediaLibrary) => {
+  const searchResources = (ml: OwnedCatalogItem<MediaLibrary>) => {
     createPortal(Modal, {
       title: t("mediaLibrary.confirm.title"),
       children: t("mediaLibrary.confirm.leavePage"),
       defaultVisible: true,
       onOk: async () => {
-        const valuePropertyResponse = await BApi.resource.getFilterValueProperty({
+        const valuePropertyResponse = await catalogItemApi(ml).resource.getFilterValueProperty({
           propertyPool: PropertyPool.Internal,
           propertyId: InternalProperty.MediaLibraryV2Multi,
           operation: SearchOperation.In,
         });
         const searchForm = {
+          ...catalogOwnerSearch(ml.owner),
           group: {
             combinator: 1,
             disabled: false,
@@ -253,7 +271,7 @@ const MediaLibraryPage = () => {
     );
   };
 
-  const renderMediaLibraryCard = (ml: MediaLibrary) => {
+  const renderMediaLibraryCard = (ml: OwnedCatalogItem<MediaLibrary>) => {
     const getCssVariable = (variableName: string) => {
       if (typeof document === "undefined") return "";
 
@@ -262,74 +280,82 @@ const MediaLibraryPage = () => {
     const textColor = getCssVariable("--theme-text") || "#222";
     const libraryColor = ml.color ?? textColor;
 
-    const isHighlighted = highlightedId === ml.id;
+    const isHighlighted = (!ml.owner || ml.owner.isLocal) && highlightedId === ml.id;
 
     return (
       <Card
-        key={ml.id}
+        key={catalogItemKey(ml)}
         className={`group hover:shadow-md hover:scale-[1.02] transition-all duration-300 ${isHighlighted ? "ring-2 ring-primary shadow-md" : ""}`}
-        id={`media-library-card-${ml.id}`}
+        id={ml.owner && !ml.owner.isLocal ? undefined : `media-library-card-${ml.id}`}
         shadow="sm"
       >
         <CardBody className="p-4 flex flex-col gap-3">
           {/* Header: Name + Color picker */}
           <div className="flex items-center justify-between gap-2">
-            <EditableValue<string, InputProps, ButtonProps & { value: string }>
-              Editor={Input}
-              Viewer={({ value, ...props }) => (
-                <Button
-                  className="whitespace-break-spaces h-auto text-left font-medium text-base px-2 min-w-0"
-                  size="sm"
-                  style={{ color: libraryColor }}
-                  variant="light"
-                  {...props}
-                >
-                  <span className="truncate">{value}</span>
-                </Button>
-              )}
-              editorProps={{
-                size: "sm",
-                isRequired: true,
-              }}
-              trigger="viewer"
-              value={ml.name}
-              onSubmit={async (v) => {
-                if (v == undefined || v.length == 0) {
-                  toast.danger(t("mediaLibrary.error.nameEmpty"));
+            <CatalogOwnerMark owner={ml.owner} />
+            {canEditCatalogItem(ml) ? (
+              <EditableValue<string, InputProps, ButtonProps & { value: string }>
+                Editor={Input}
+                Viewer={({ value, ...props }) => (
+                  <Button
+                    className="whitespace-break-spaces h-auto text-left font-medium text-base px-2 min-w-0"
+                    size="sm"
+                    style={{ color: libraryColor }}
+                    variant="light"
+                    {...props}
+                  >
+                    <span className="truncate">{value}</span>
+                  </Button>
+                )}
+                editorProps={{
+                  size: "sm",
+                  isRequired: true,
+                }}
+                trigger="viewer"
+                value={ml.name}
+                onSubmit={async (v) => {
+                  if (v == undefined || v.length == 0) {
+                    toast.danger(t("mediaLibrary.error.nameEmpty"));
 
-                  return;
-                }
-                const rsp = await BApi.mediaLibraryV2.patchMediaLibraryV2(ml.id, {
-                  name: v,
-                });
+                    return;
+                  }
+                  const rsp = await catalogItemApi(ml).mediaLibraryV2.patchMediaLibraryV2(ml.id, {
+                    name: v,
+                  });
 
-                if (!rsp.code) {
-                  ml.name = v;
+                  if (!rsp.code) {
+                    ml.name = v;
+                    forceUpdate();
+                    catalog.refresh();
+                  }
+                }}
+              />
+            ) : (
+              <span className="min-w-0 flex-1 truncate font-medium">{ml.name}</span>
+            )}
+
+            {canEditCatalogItem(ml) && (
+              <ColorPicker
+                color={libraryColor}
+                onChange={async (color) => {
+                  const strColor = buildColorValueString(color);
+
+                  await catalogItemApi(ml).mediaLibraryV2.patchMediaLibraryV2(ml.id, {
+                    color: strColor,
+                  });
+                  ml.color = strColor;
                   forceUpdate();
-                }
-              }}
-            />
-
-            <ColorPicker
-              color={libraryColor}
-              onChange={async (color) => {
-                const strColor = buildColorValueString(color);
-
-                await BApi.mediaLibraryV2.putMediaLibraryV2(ml.id, {
-                  ...ml,
-                  color: strColor,
-                });
-                ml.color = strColor;
-                forceUpdate();
-              }}
-            />
+                  catalog.refresh();
+                }}
+              />
+            )}
           </div>
 
           {/* Stats: Large number + description */}
           <div className="flex items-center justify-center gap-2 py-2 px-3 rounded-md bg-default-100/50">
             <AiOutlineProduct className="text-base text-default-400" />
             <span className="text-xl font-semibold text-foreground">
-              {ml.resourceCount.toLocaleString()}
+              {(ml.resourceCount ?? 0).toLocaleString()}
             </span>
             <span className="text-sm text-default-500">{t("mediaLibrary.label.resources")}</span>
           </div>
@@ -362,6 +388,7 @@ const MediaLibraryPage = () => {
               <Button
                 isIconOnly
                 className="text-danger opacity-0 group-hover:opacity-100 transition-opacity"
+                isDisabled={!canEditCatalogItem(ml)}
                 radius="sm"
                 size="sm"
                 variant="light"
@@ -385,7 +412,7 @@ const MediaLibraryPage = () => {
       );
     }
 
-    if (mediaLibraries.length === 0) {
+    if (allLibraries.length === 0) {
       return renderEmptyState();
     }
 
@@ -400,7 +427,7 @@ const MediaLibraryPage = () => {
 
         {/* Media library cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
-          {mediaLibraries.map((ml) => renderMediaLibraryCard(ml))}
+          {allLibraries.map((ml) => renderMediaLibraryCard(ml))}
         </div>
       </div>
     );
@@ -411,7 +438,7 @@ const MediaLibraryPage = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold">{t("mediaLibrary.title")}</h1>
-        {mediaLibraries.length > 0 && (
+        {allLibraries.length > 0 && (
           <Button
             color="primary"
             size="sm"
@@ -423,6 +450,7 @@ const MediaLibraryPage = () => {
         )}
       </div>
 
+      <CatalogSourceStatus {...catalog} />
       {renderContent()}
 
       {/* Path mark config hint */}

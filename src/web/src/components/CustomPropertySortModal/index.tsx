@@ -2,6 +2,7 @@
 
 import type { PropertyType } from "@/sdk/constants";
 import type { DestroyableProps } from "@/components/bakaui/types";
+import type { ManagementSource } from "@/features/management/api";
 
 import React, { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -24,13 +25,16 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
-import { Button, Input, Modal, Tooltip } from "@/components/bakaui";
-import BApi from "@/sdk/BApi";
+import { Button, Input, Modal, Tooltip, Select } from "@/components/bakaui";
+import { sourceKey } from "@/features/management/api";
+import { createResourceApi } from "@/features/management/resourceApi";
+import { canEditCatalogItem } from "@/features/management/ownedCatalog";
 import { PropertyLabel } from "@/components/Property";
 import { PropertyPool } from "@/sdk/constants";
 import DragHandle from "@/components/DragHandle";
 
 type PropertyLike = {
+  owner?: ManagementSource;
   id: number;
   name: string;
   type: PropertyType;
@@ -160,7 +164,16 @@ const SortableRow = ({
 
 const CustomPropertySortModal = ({ properties, onSaved, onDestroyed }: Props) => {
   const { t } = useTranslation();
-  const [items, setItems] = useState<PropertyLike[]>(properties);
+  const ownerKey = (item: PropertyLike) => (item.owner ? sourceKey(item.owner) : "local");
+  const owners = [...new Map(properties.map((item) => [ownerKey(item), item.owner])).entries()];
+  const initialOwner =
+    owners.find(([, owner]) => !owner || owner.isLocal)?.[0] ?? owners[0]?.[0] ?? "local";
+  const [selectedOwner, setSelectedOwner] = useState(initialOwner);
+  const [items, setItems] = useState<PropertyLike[]>(() =>
+    properties.filter((item) => ownerKey(item) === initialOwner),
+  );
+  const owner = owners.find(([key]) => key === selectedOwner)?.[1];
+  const BApi = useMemo(() => createResourceApi(owner), [owner]);
   const [searchText, setSearchText] = useState("");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editingValue, setEditingValue] = useState("");
@@ -183,11 +196,12 @@ const CustomPropertySortModal = ({ properties, onSaved, onDestroyed }: Props) =>
     async (newItems: PropertyLike[]) => {
       const ids = newItems.map((item) => item.id);
 
+      if (!canEditCatalogItem({ owner })) throw new Error(t("management.catalog.ownerUnavailable"));
       await BApi.customProperty.sortCustomProperties({ ids });
       toast.success(t<string>("common.state.saved"));
       onSaved?.();
     },
-    [t, onSaved],
+    [t, onSaved, BApi, owner],
   );
 
   const handleOrderChange = useCallback(
@@ -301,6 +315,27 @@ const CustomPropertySortModal = ({ properties, onSaved, onDestroyed }: Props) =>
       onDestroyed={onDestroyed}
     >
       <div className="flex flex-col gap-4">
+        {owners.length > 1 && (
+          <Select
+            dataSource={owners.map(([key, source]) => ({
+              value: key,
+              label: source?.name ?? t("management.thisDevice"),
+            }))}
+            label={t("management.catalog.orderDevice")}
+            selectedKeys={[selectedOwner]}
+            onSelectionChange={(keys) => {
+              const key = String([...keys][0] ?? initialOwner);
+
+              setSelectedOwner(key);
+              setItems(properties.filter((item) => ownerKey(item) === key));
+              setEditingId(null);
+            }}
+          />
+        )}
+        {!canEditCatalogItem({ owner }) && (
+          <p className="text-warning text-sm">{t("management.catalog.ownerUnavailable")}</p>
+        )}
+
         <div className="flex items-center justify-between">
           <div className="text-sm text-default-500">{t("property.tip.orderEditInstructions")}</div>
           <Input

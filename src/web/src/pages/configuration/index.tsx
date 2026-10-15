@@ -23,6 +23,7 @@ import {
 } from "@/pages/configuration/components/SettingsSection";
 import { Input } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
+import ProfilesSettings from "@/features/profiles/ProfilesSettings";
 
 const ConfigurationPage: React.FC = () => {
   const { t } = useTranslation();
@@ -78,6 +79,7 @@ const ConfigurationPage: React.FC = () => {
             <Others applyPatches={applyPatches} query={query} />
             <RemoteAccess query={query} />
             <AppInfo appInfo={appInfo} applyPatches={applyPatches} query={query} />
+            <ProfilesSettings query={query} />
             <Development query={query} />
             <ContactUs query={query} />
 

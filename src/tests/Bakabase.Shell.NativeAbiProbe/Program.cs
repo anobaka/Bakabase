@@ -16,7 +16,7 @@ var report = new Dictionary<string, object?>
     ["architecture"] = RuntimeInformation.ProcessArchitecture.ToString(),
     ["framework"] = RuntimeInformation.FrameworkDescription,
     ["shellAssembly"] = typeof(NativeWebViewHost).Assembly.Location,
-    ["scope"] = "Real shell P/Invoke CGRect arguments; Foundation NSValue round trip; no GUI or product startup"
+    ["scope"] = "Real shell P/Invoke CGRect arguments and profile NSUUID construction; Foundation round trips; no GUI or product startup"
 };
 try
 {
@@ -53,6 +53,33 @@ try
             set.Invoke(null, new[] {(object)probe, Selector("setCapturedRect:"), value});
             CheckValue(Send(probe, "capturedRect"), expected);
             cases.Add(new {rect = expected, creationAndTrailingPointer = true, voidFrameSetter = true});
+        }
+        // Execute the same Foundation allocation/initializer used when a named
+        // profile opens its WebView. A source-string assertion cannot detect an
+        // Objective-C selector that exists on no native class and aborts the app.
+        var createIdentifier = typeof(NativeWebViewHost).GetMethod("CreateMacOSProfileIdentifier",
+            BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("Production profile identifier factory is missing");
+        var anchor = Path.Combine(Path.GetTempPath(), "bakabase-native-profile-probe", "profile-a");
+        var first = ProfileIdentifier(anchor);
+        var same = ProfileIdentifier(anchor + Path.DirectorySeparatorChar);
+        var other = ProfileIdentifier(Path.Combine(Path.GetDirectoryName(anchor)!, "profile-b"));
+        Require(first == same, "The same profile changed its native browser identifier");
+        Require(first != other, "Different profiles share a native browser identifier");
+        report["profileIdentifier"] = new {nativeRoundTrip = true, stableForSameAnchor = true, distinctForDifferentAnchors = true};
+
+        Guid ProfileIdentifier(string path)
+        {
+            var identifier = (IntPtr)createIdentifier.Invoke(null, new object[] {path})!;
+            Require(identifier != IntPtr.Zero, "Profile identifier allocation returned nil");
+            try
+            {
+                var value = Marshal.PtrToStringUTF8(Send(Send(identifier, "UUIDString"), "UTF8String"));
+                Require(Guid.TryParse(value, out var uuid), "Foundation did not return a valid UUID string");
+                Require(uuid != Guid.Empty, "Profile identifier must not be empty");
+                return uuid;
+            }
+            finally { Method("SendVoid").Invoke(null, new object[] {identifier, Selector("release")}); }
         }
     }
     finally

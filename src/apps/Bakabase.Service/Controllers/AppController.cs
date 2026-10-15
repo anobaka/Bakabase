@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -168,6 +168,7 @@ namespace Bakabase.Service.Controllers
 
                     var psi = RestartHandoff.CreateStartInfo(exePath, Assembly.GetEntryAssembly()?.Location,
                         SetupChildConnection.Current?.ParentProcessId ?? Environment.ProcessId);
+                    Bakabase.Infrastructures.Components.App.Profiles.DesktopProfileSelection.PreserveForRestart(psi);
                     using var replacement = Process.Start(psi)
                         ?? throw new InvalidOperationException("The replacement process did not start.");
                     _lifetime.StopApplication();

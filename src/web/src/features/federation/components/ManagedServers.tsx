@@ -34,6 +34,8 @@ import ManagedServerPathMappings from "./ManagedServerPathMappings";
 import ManagedDeviceNameEditor from "./ManagedDeviceNameEditor";
 
 import { MetadataSyncStatusSection } from "@/features/management/MetadataSyncStatus";
+import DeviceDot from "@/features/management/DeviceDot";
+import DeviceColorEditor from "@/features/management/DeviceColorEditor";
 import { minutesUntil } from "@/core/serverTime";
 import { ManagedServerOutcome, ManagedServerState, RemoteAccessMode } from "@/sdk/constants";
 
@@ -734,7 +736,10 @@ function ManagedServerCard({
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <Title className="font-semibold">{name}</Title>
+          <Title className="flex items-center gap-2 font-semibold">
+            <DeviceDot name={name} serverId={server.serverId} />
+            {name}
+          </Title>
           <p className="mt-1 break-all text-xs text-default-500">
             {server.address}
             {server.appVersion ? ` · v${server.appVersion}` : ""}
@@ -777,6 +782,7 @@ function ManagedServerCard({
           onRenamed();
         }}
       />
+      <DeviceColorEditor key={server.serverId} name={name} serverId={server.serverId} />
       <ManagedServerPathMappings busy={busy} server={server} onSave={onSaveMappings} />
     </article>
   );

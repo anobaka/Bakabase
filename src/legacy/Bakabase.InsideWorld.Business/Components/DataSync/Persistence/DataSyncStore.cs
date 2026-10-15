@@ -434,11 +434,21 @@ public sealed partial class DataSyncStore : IDataSyncStore
         return log.Id;
     }
 
-    /// <summary>Every retained entry, newest first; read-only copies.</summary>
-    public async Task<IReadOnlyList<DataSyncApplyLogDbModel>> GetHistoryAsync(CancellationToken ct)
+    /// <summary>A bounded keyset page; never hydrate every retained result/undo payload.</summary>
+    public async Task<IReadOnlyList<DataSyncApplyLogDbModel>> GetHistoryAsync(CancellationToken ct, int? beforeId = null, int take = 50, string? peerNodeId = null)
     {
         await FlushAsync(ct);
-        return await _db.DataSyncApplyLogs.AsNoTracking().OrderByDescending(l => l.Id).ToListAsync(ct);
+        var query = _db.DataSyncApplyLogs.AsNoTracking();
+        if (beforeId != null) query = query.Where(l => l.Id < beforeId);
+        if (peerNodeId != null) query = query.Where(l => l.PeerNodeId == peerNodeId);
+        return await query.OrderByDescending(l => l.Id).Take(Math.Clamp(take, 1, 101))
+            .Select(l => new DataSyncApplyLogDbModel {
+                Id = l.Id, Kind = l.Kind, LinkId = l.LinkId, PeerNodeId = l.PeerNodeId, PeerName = l.PeerName,
+                AppliedAtUtc = l.AppliedAtUtc, UndoneAtUtc = l.UndoneAtUtc, SummaryJson = l.SummaryJson,
+                // Old or damaged summaries can be expanded on the single-entry details request.
+                // Listing never reads full per-definition results or rollback preimages.
+                ResultJson = "{}", PreImageJson = "{}"
+            }).ToListAsync(ct);
     }
 
     /// <summary>One entry, tracked, so undo can record <c>UndoneAtUtc</c> on it.</summary>

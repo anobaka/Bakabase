@@ -72,6 +72,7 @@ vi.mock("@/core/clientApi", () => ({
 }));
 vi.mock("@/sdk/BApi", () => ({
   default: {
+    options: {},
     remoteAccess: {
       getRemoteAccessSettings: vi.fn(),
       setRemoteAccessMode: vi.fn(),

@@ -209,4 +209,39 @@ public sealed class CollectionMembershipTests
         CollectionAssert.AreEqual(new[] {c, a, b},
             (await Collections.GetMembers(id)).Select(m => m.ResourceId).ToArray());
     }
+
+    [TestMethod]
+    public async Task MembershipPageKeepsOnlyRequestedMembersAndTheirState()
+    {
+        var id = await NewCollection();
+        var other = await NewCollection("Other collection");
+        var a = await Missing("Volume 1");
+        var b = await Missing("Volume 2");
+        var c = await Missing("Volume 3");
+        var foreign = await Missing("Not in this collection");
+        await Collections.AddMembers(id, [a, b, c]);
+        await Collections.AddMembers(other, [foreign]);
+        await Collections.SetMemberIgnored(id, c, true);
+        await Collections.ReorderMembers(id, [c, a, b]);
+
+        var members = await Collections.GetMembers(id, [a, c, foreign, c]);
+
+        CollectionAssert.AreEqual(new[] {c, a}, members.Select(m => m.ResourceId).ToArray());
+        Assert.IsTrue(members[0].IsIgnored);
+        Assert.AreEqual(0, (await Collections.GetMembers(id, Array.Empty<int>())).Count);
+    }
+
+    [TestMethod]
+    public async Task MembershipPageRejectsOversizedOrInvalidIdsBeforeReadingMembers()
+    {
+        await Assert.ThrowsExactlyAsync<ArgumentOutOfRangeException>(() =>
+            Collections.GetMembers(1, Enumerable.Range(1, ICollectionService.MaximumMembershipLookupSize + 1).ToArray()));
+        await Assert.ThrowsExactlyAsync<ArgumentOutOfRangeException>(() => Collections.GetMembers(1, [0]));
+
+        var controller = new Bakabase.Service.Controllers.CollectionController(
+            Collections, Resources, _sp.GetRequiredService<IPlaceholderResourceService>());
+        Assert.AreNotEqual(0, (await controller.GetMemberships(1, [-1])).Code);
+        Assert.AreNotEqual(0, (await controller.GetMemberships(1,
+            Enumerable.Range(1, ICollectionService.MaximumMembershipLookupSize + 1).ToArray())).Code);
+    }
 }

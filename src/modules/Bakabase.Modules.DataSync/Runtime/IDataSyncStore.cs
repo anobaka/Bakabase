@@ -130,7 +130,7 @@ public interface IDataSyncStore
     Task SetReaderNotifiedAsync(string nodeId, DateTime nowUtc, CancellationToken ct);
 
     Task<int> AddHistoryAsync(DataSyncApplyLogDbModel log, CancellationToken ct);
-    Task<IReadOnlyList<DataSyncApplyLogDbModel>> GetHistoryAsync(CancellationToken ct);
+    Task<IReadOnlyList<DataSyncApplyLogDbModel>> GetHistoryAsync(CancellationToken ct, int? beforeId = null, int take = 50, string? peerNodeId = null);
     Task<DataSyncApplyLogDbModel?> GetHistoryEntryAsync(int id, CancellationToken ct);
 
     /// <summary>§4.6.</summary>

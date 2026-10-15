@@ -139,6 +139,21 @@ public class CollectionService<TDbContext>(
         return members;
     }
 
+    public async Task<List<CollectionMember>> GetMembers(int id, IReadOnlyCollection<int> resourceIds,
+        CancellationToken ct = default)
+    {
+        if (resourceIds.Count > ICollectionService.MaximumMembershipLookupSize || resourceIds.Any(resourceId => resourceId <= 0))
+            throw new ArgumentOutOfRangeException(nameof(resourceIds), "Request at most 500 positive resource IDs.");
+        if (resourceIds.Count == 0) return [];
+        var wanted = resourceIds.Distinct().ToArray();
+        var members = await mappings.GetByCollectionId(id, wanted);
+        var seen = members.Select(member => member.ResourceId).ToHashSet();
+        foreach (var resourceId in await RuleMatchedResourceIds(id, wanted, ct))
+            if (seen.Add(resourceId))
+                members.Add(new CollectionMember {CollectionId = id, ResourceId = resourceId});
+        return members;
+    }
+
     public async Task<CollectionMemberPage> SearchMembers(int id, CollectionMemberFilter filter,
         int pageIndex, int pageSize, CancellationToken ct = default)
     {
@@ -287,6 +302,13 @@ public class CollectionService<TDbContext>(
     /// </summary>
     protected virtual Task<IReadOnlyList<int>> RuleMatchedResourceIds(int collectionId,
         CancellationToken ct) => Task.FromResult<IReadOnlyList<int>>([]);
+
+    protected virtual async Task<IReadOnlyList<int>> RuleMatchedResourceIds(int collectionId,
+        IReadOnlyCollection<int> resourceIds, CancellationToken ct)
+    {
+        var wanted = resourceIds.ToHashSet();
+        return (await RuleMatchedResourceIds(collectionId, ct)).Where(wanted.Contains).ToArray();
+    }
 
     /// <summary>
     /// Which of these are being acquired. Also overridden in the app layer — the module does not

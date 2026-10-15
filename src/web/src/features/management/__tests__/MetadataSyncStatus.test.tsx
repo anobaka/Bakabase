@@ -7,6 +7,9 @@ import { MetadataSyncStatus } from "../MetadataSyncStatus";
 
 const { pause } = vi.hoisted(() => ({ pause: vi.fn() }));
 
+vi.mock("../DeviceDot", () => ({
+  default: ({ name }: { name: string }) => <i aria-label={name} />,
+}));
 vi.mock("../api", () => ({ setMetadataSyncPaused: pause }));
 vi.mock("../useManagementSources", () => ({
   useManagementSources: () => ({ sources: [], refresh: vi.fn() }),
@@ -49,6 +52,7 @@ afterEach(cleanup);
 describe("resource list sync status", () => {
   it("asks to update an older source instead of presenting it as an offline empty library", () => {
     const owner = source();
+
     owner.libraryEpoch = undefined;
     owner.available = false;
     owner.metadata!.sync.isOffline = true;
@@ -61,6 +65,7 @@ describe("resource list sync status", () => {
   });
   it("keeps the completed library visible while refreshing its catalog", () => {
     const owner = source();
+
     owner.metadata!.data.activeGeneration = "complete";
     owner.metadata!.data.resourceCount = 100000;
     owner.metadata!.data.checkpoint = {
@@ -76,6 +81,7 @@ describe("resource list sync status", () => {
   });
   it("keeps completed resource counts while explicitly waiting for a saved change to refresh", () => {
     const owner = source();
+
     owner.metadata!.data.activeGeneration = "complete";
     owner.metadata!.data.resourceCount = 23;
     owner.metadata!.sync.refreshPending = true;

@@ -1,12 +1,14 @@
 import type { Api, ApiConfig, ContentType, FullRequestParams } from "@/sdk/Api";
 import type { ManagementSource } from "./api";
 
-import BApi from "@/sdk/BApi";
-import envConfig from "@/config/env";
-import { sourceKey } from "./api";
-import { canReadSourceMetadata, metadataReadError, metadataReadOperations } from "./metadata";
 import toast from "react-hot-toast";
 import i18next from "i18next";
+
+import { sourceKey } from "./api";
+import { canReadSourceMetadata, metadataReadError, metadataReadOperations } from "./metadata";
+
+import BApi from "@/sdk/BApi";
+import envConfig from "@/config/env";
 
 type OwnerChangeListener = (resourceIds?: readonly number[]) => void;
 const ownerChangeListeners = new Map<string, Set<OwnerChangeListener>>();
@@ -45,6 +47,7 @@ const readOperations = new Set([
   "propertyValueResourceCounts",
   "resourceMappings",
   "previewCustomPropertyTypeConversion",
+  "previewCollectionRule",
   "findDataCardByIdentity",
 ]);
 
@@ -77,6 +80,7 @@ const routes: readonly Route[] = [
     "previewCustomPropertyTypeConversion",
   ],
   ["PUT", "/custom-property/{id}/{type}", "changeCustomPropertyType"],
+  ["PUT", "/custom-property/order", "sortCustomProperties"],
   ["POST", "/custom-property", "customPropertyAdd"],
   ["PUT", "/custom-property/{id}", "customPropertyPut"],
   ["DELETE", "/custom-property/{id}", "customPropertyDelete"],
@@ -131,6 +135,25 @@ const routes: readonly Route[] = [
   ["POST", "/cache/resource/{id}/refresh", "refreshResourceCache"],
   ["POST", "/cache/resources/refresh", "refreshResourcesCache"],
   ["GET", "/collection", "getAllCollections"],
+  ["GET", "/collection/{id}", "getCollection"],
+  ["POST", "/collection", "addCollection"],
+  ["PUT", "/collection/{id}", "putCollection"],
+  ["DELETE", "/collection/{id}", "deleteCollection"],
+  ["GET", "/collection/{id}/members", "searchCollectionMembers"],
+  ["GET", "/collection/{id}/memberships", "getCollectionMemberships"],
+  ["PUT", "/collection/{id}/members/{resourceId}/ignored", "setCollectionMemberIgnored"],
+  ["POST", "/collection/{id}/members/placeholder", "addCollectionPlaceholderMember"],
+  ["POST", "/collection/rule/preview", "previewCollectionRule"],
+  ["POST", "/collection/{id}/acquire-missing", "acquireMissingCollectionMembers"],
+  ["GET", "/subscription", "searchSubscriptions"],
+  ["GET", "/subscription/providers", "getSubscriptionProviders"],
+  ["POST", "/subscription", "addSubscription"],
+  ["PATCH", "/subscription/{id}", "patchSubscription"],
+  ["POST", "/subscription/{id}/run", "runSubscriptionCheck"],
+  ["GET", "/extension-group", "extensionGroups"],
+  ["POST", "/extension-group", "extensionGroupAdd"],
+  ["PUT", "/extension-group/{id}", "extensionGroupPut"],
+  ["DELETE", "/extension-group/{id}", "extensionGroupDelete"],
   ["POST", "/collection/{id}/members", "addCollectionMembers"],
   ["DELETE", "/collection/{id}/members", "removeCollectionMembers"],
   ["GET", "/playlist", "getAllPlaylists"],
@@ -328,6 +351,7 @@ export function createResourceApi(
         playerKey?: string;
         fileSelectionMode?: number;
       };
+
       if (
         !Array.isArray(data?.resourceIds) ||
         data.resourceIds.length === 0 ||
@@ -353,6 +377,7 @@ export function createResourceApi(
 
     if (request.method === "GET" && request.path === "/resource/directory") {
       if (!owner.available) throw new Error(owner.error || "Device unavailable");
+
       return BApi.request<T>({
         path: `/federation/local/management/${encodeURIComponent(owner.serverId)}/directory`,
         method: "POST",
@@ -366,6 +391,7 @@ export function createResourceApi(
 
     if (request.method === "GET" && nativePlay) {
       if (!owner.available) throw new Error(owner.error || "Device unavailable");
+
       return BApi.request<T>({
         path: `/federation/local/management/${encodeURIComponent(owner.serverId)}/play`,
         method: "POST",
@@ -412,7 +438,7 @@ export function createResourceApi(
       ids = query.ids?.map(Number);
       delete query.ids;
     }
-    if (route.operation === "getCollectionIdsByResourceIds") {
+    if (["getCollectionIdsByResourceIds", "getCollectionMemberships"].includes(route.operation)) {
       ids = query.resourceIds?.map(Number);
       delete query.resourceIds;
     }

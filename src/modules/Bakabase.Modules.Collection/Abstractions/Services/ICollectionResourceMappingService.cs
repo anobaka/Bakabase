@@ -15,6 +15,9 @@ public interface ICollectionResourceMappingService
 {
     Task<List<CollectionMember>> GetByCollectionId(int collectionId);
 
+    /// <summary>Only written memberships for the supplied page, read directly from persistence.</summary>
+    Task<List<CollectionMember>> GetByCollectionId(int collectionId, IReadOnlyCollection<int> resourceIds);
+
     Task<List<CollectionMember>> GetByResourceId(int resourceId);
 
     /// <summary>Which collections each of these resources is written into. Resources with none are absent.</summary>

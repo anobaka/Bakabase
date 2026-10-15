@@ -94,6 +94,57 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("the history", () => {
+  it("replaces a bounded page and scopes the next request by cursor and device", async () => {
+    const first = Array.from({ length: 50 }, (_, index) => historyEntry(100 - index, K.AutoSync));
+
+    vi.mocked(dataSyncApi.history)
+      .mockResolvedValueOnce(first)
+      .mockResolvedValue([historyEntry(50, K.AutoSync)]);
+    renderList();
+    await waitFor(() => expect(screen.getAllByTestId("data-sync-history-entry")).toHaveLength(50));
+    fireEvent.click(screen.getByText("dataSync.activity.older"));
+    await waitFor(() =>
+      expect(dataSyncApi.history).toHaveBeenLastCalledWith({
+        beforeId: 51,
+        peerNodeId: undefined,
+        take: 50,
+      }),
+    );
+    await waitFor(() => expect(screen.getAllByTestId("data-sync-history-entry")).toHaveLength(1));
+    expect(entry(100)).toBeNull();
+    expect(entry(50)).toBeTruthy();
+    fireEvent.click(screen.getByText("dataSync.activity.newest"));
+    await waitFor(() =>
+      expect(dataSyncApi.history).toHaveBeenLastCalledWith({
+        beforeId: undefined,
+        peerNodeId: undefined,
+        take: 50,
+      }),
+    );
+  });
+
+  it("keeps the latest device filter when an earlier history request completes late", async () => {
+    let resolveOld!: (value: Api.DataSyncHistoryEntry[]) => void;
+
+    vi.mocked(dataSyncApi.history)
+      .mockReturnValueOnce(
+        new Promise((resolve) => {
+          resolveOld = resolve;
+        }),
+      )
+      .mockResolvedValue([
+        historyEntry(99, K.AutoSync, { peerNodeId: "node-new", peerName: "New device" }),
+      ]);
+    const view = render(<HistoryList now={NOW} peer="node-old" version={0} onChanged={vi.fn()} />);
+
+    await waitFor(() => expect(dataSyncApi.history).toHaveBeenCalledTimes(1));
+    view.rerender(<HistoryList now={NOW} peer="node-new" version={0} onChanged={vi.fn()} />);
+    await waitFor(() => expect(entry(99)).toBeTruthy());
+    await act(async () => resolveOld([historyEntry(10, K.AutoSync, { peerNodeId: "node-old" })]));
+    expect(entry(99)).toBeTruthy();
+    expect(entry(10)).toBeNull();
+  });
+
   it("names each kind, the device, what it did, and whether it can be undone", async () => {
     renderList();
     await waitFor(() => expect(screen.getAllByTestId("data-sync-history-entry")).toHaveLength(7));

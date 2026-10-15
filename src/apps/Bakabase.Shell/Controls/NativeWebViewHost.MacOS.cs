@@ -1,5 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Security.Cryptography;
+using System.Text;
+using Bakabase.Infrastructures.Components.App;
+using Bakabase.Infrastructures.Components.App.SingleInstance;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
@@ -41,6 +45,28 @@ public partial class NativeWebViewHost
         _macConfig = ObjC.SendIntPtr(
             ObjC.SendIntPtr(ObjC.objc_getClass("WKWebViewConfiguration"), ObjC.Sel("alloc")),
             ObjC.Sel("init"));
+
+        // The legacy default keeps its existing WebKit store. Named spaces and ENV
+        // spaces must not share cookies/localStorage just because they use one app bundle.
+        if (WindowsUserDataDirectory != null || AppDataAnchor.Current.AnchorDirectory != null || AppDataLocator.IsEnvironmentOverride)
+        {
+            var storeClass = ObjC.objc_getClass("WKWebsiteDataStore");
+            var selector = ObjC.Sel("dataStoreForIdentifier:");
+            IntPtr store;
+            if (WindowsUserDataDirectory == null && ObjC.SendBool(storeClass, ObjC.Sel("respondsToSelector:"), selector))
+            {
+                var identifier = CreateMacOSProfileIdentifier(AppDataLocator.ResolveAnchor());
+                try { store = ObjC.SendIntPtr_IntPtr(storeClass, selector, identifier); }
+                finally { ObjC.SendVoid(identifier, ObjC.Sel("release")); }
+            }
+            else
+            {
+                // Before macOS 14 there is no public persistent-store namespace API.
+                // Isolation wins over sharing another space's credentials on those systems.
+                store = ObjC.SendIntPtr(storeClass, ObjC.Sel("nonPersistentDataStore"));
+            }
+            ObjC.SendVoid_IntPtr(_macConfig, ObjC.Sel("setWebsiteDataStore:"), store);
+        }
 
         // Enable developer extras on preferences (for Safari Web Inspector)
         var prefs = ObjC.SendIntPtr(_macConfig, ObjC.Sel("preferences"));
@@ -91,6 +117,24 @@ public partial class NativeWebViewHost
             NavigateMacOS(_pendingUrl);
 
         return new PlatformHandle(_macWebView, "NSView");
+    }
+
+    // Returns an owned NSUUID. Foundation exposes initWithUUIDString: on an
+    // allocated instance; there is no UUIDWithString: class factory.
+    // Keep this native construction shared with the real macOS acceptance probe.
+    private static IntPtr CreateMacOSProfileIdentifier(string anchor)
+    {
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(DataDirectoryIdentity.Normalize(anchor)));
+        var identifierText = ObjC.CreateNSString(new Guid(hash.AsSpan(0, 16)).ToString());
+        try
+        {
+            var identifier = ObjC.SendIntPtr_IntPtr(
+                ObjC.SendIntPtr(ObjC.objc_getClass("NSUUID"), ObjC.Sel("alloc")),
+                ObjC.Sel("initWithUUIDString:"), identifierText);
+            return identifier != IntPtr.Zero ? identifier
+                : throw new InvalidOperationException("Cannot create the data-space browser identifier.");
+        }
+        finally { ObjC.SendVoid(identifierText, ObjC.Sel("release")); }
     }
 
     private void OnSizeChangedMacOS(object? sender, Avalonia.Controls.SizeChangedEventArgs e)
@@ -144,7 +188,7 @@ public partial class NativeWebViewHost
     private static void SetMacOSDockIcon()
     {
         // Try to find favicon.png relative to the executable
-        var exeDir = AppContext.BaseDirectory;
+        var exeDir = System.AppContext.BaseDirectory;
         var iconPath = System.IO.Path.Combine(exeDir, "Assets", "dock-icon.png");
         if (!System.IO.File.Exists(iconPath))
             iconPath = System.IO.Path.Combine(exeDir, "dock-icon.png");

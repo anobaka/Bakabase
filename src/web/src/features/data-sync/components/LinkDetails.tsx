@@ -14,6 +14,7 @@ import { DataSyncErrorNotice, linkButtonClass, smallButtonClass, syncText } from
 import SyncRuleDrawing from "./SyncRuleDrawing";
 
 import { DataSyncLinkMode, DataSyncLinkState } from "@/sdk/constants";
+import DeviceColorEditor from "@/features/management/DeviceColorEditor";
 import { DismissButton } from "@/features/federation/components/common";
 
 /*
@@ -109,6 +110,7 @@ export default function LinkDetails({
             </p>
           )}
         </div>
+        <DeviceColorEditor name={name} serverId={peer.nodeId} />
         {closable && (
           <button
             aria-label={t("dataSync.close")}

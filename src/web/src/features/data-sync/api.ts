@@ -253,7 +253,16 @@ export const dataSyncApi = {
   inbox: (query: DataSyncInboxQuery = {}) => call((p) => api().getDataSyncInbox(query, p)),
   previewInboxItem: (id: number) => call((p) => api().previewDataSyncInboxItem(id, p)),
   resolve: (input: DataSyncResolveBatchInput) => call((p) => api().resolveDataSyncInbox(input, p)),
-  history: () => call((p) => api().getDataSyncHistory(p)).then((entries) => entries ?? []),
+  history: (query?: { beforeId?: number; peerNodeId?: string; take?: number }) =>
+    call((params) =>
+      BApi.request<{ data?: { entries: DataSyncHistoryEntry[] } }>({
+        path: "/data-sync/history/page",
+        method: "GET",
+        query: { take: 50, ...query },
+        format: "json",
+        ...params,
+      }),
+    ).then((page) => page?.entries ?? []),
   historyEntry: (id: number) => call((p) => api().getDataSyncHistoryEntry(id, p)),
   undoPreview: (id: number) => call((p) => api().previewDataSyncUndo(id, p)),
   undo: (id: number) => call((p) => api().undoDataSync(id, p)),

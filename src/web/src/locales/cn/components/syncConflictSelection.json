@@ -1,0 +1,11 @@
+{
+  "dataSync.selection.allVisible": "选择当前筛选中的全部项目",
+  "dataSync.selection.count": "已选择 {{count}} 项",
+  "dataSync.selection.item": "选择 {{name}}",
+  "dataSync.selection.changed": "{{count}} 项已发生变化或已处理，已取消选择，请重新审阅。",
+  "dataSync.selection.submitted": "已提交 {{count}} 项处理请求，实际结果请查看各项状态和同步历史。",
+  "dataSync.selection.individual": "这些项目需要逐项审阅，暂无可用的批量处理操作。",
+  "dataSync.selection.preview": "所选 {{selected}} 项中，本次操作将处理 {{count}} 项，其余保持不变。涉及：{{names}}。",
+  "dataSync.selection.more": "另有 {{count}} 项。",
+  "dataSync.selection.recheck": "同一条定义与不同设备的冲突会一起处理。应用前将重新检查版本；发生变化的项目不会被覆盖，需要重新审阅。"
+}

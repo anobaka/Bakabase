@@ -257,6 +257,12 @@ public class DataSyncController(IDataSyncService service) : Controller
     public async Task<ListResponse<DataSyncHistoryEntry>> GetHistory(CancellationToken ct) =>
         new(await service.GetHistoryAsync(ct));
 
+    [HttpGet("history/page")]
+    [SwaggerOperation(OperationId = "GetDataSyncHistoryPage")]
+    public async Task<SingletonResponse<DataSyncHistoryPage>> GetHistoryPage([FromQuery] int? beforeId = null,
+        [FromQuery] int take = 50, [FromQuery] string? peerNodeId = null, CancellationToken ct = default) =>
+        new(await service.GetHistoryPageAsync(beforeId, take, peerNodeId, ct));
+
     [HttpGet("history/{id:int}")]
     [SwaggerOperation(OperationId = "GetDataSyncHistoryEntry")]
     public async Task<SingletonResponse<DataSyncHistoryDetail>> GetHistoryEntry(int id, CancellationToken ct) =>

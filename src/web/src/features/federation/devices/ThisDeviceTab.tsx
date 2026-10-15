@@ -25,6 +25,8 @@ import TabHeading from "./TabHeading";
 import { dataSyncWaiting, troubledServers } from "./selectors";
 
 import { RemoteAccessMode } from "@/sdk/constants";
+import DeviceDot from "@/features/management/DeviceDot";
+import DeviceColorEditor from "@/features/management/DeviceColorEditor";
 
 const ADDRESSES_TITLE_ID = "device-addresses-title";
 
@@ -88,7 +90,11 @@ export default function ThisDeviceTab() {
         <section data-focus-section className={`${panelClass} space-y-2`}>
           {editingName === undefined ? (
             <div className="flex flex-wrap items-center gap-2">
-              <h3 className={`text-lg font-semibold ${focusHeadingClass}`} tabIndex={-1}>
+              <h3
+                className={`flex items-center gap-2 text-lg font-semibold ${focusHeadingClass}`}
+                tabIndex={-1}
+              >
+                <DeviceDot name={status.identity.name} serverId={status.identity.nodeId} />
                 {status.identity.name}
               </h3>
               <button
@@ -102,6 +108,7 @@ export default function ThisDeviceTab() {
               >
                 {t("federation.name.edit")}
               </button>
+              <DeviceColorEditor name={status.identity.name} serverId={status.identity.nodeId} />
             </div>
           ) : (
             <form

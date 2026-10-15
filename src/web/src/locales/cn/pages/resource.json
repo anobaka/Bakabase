@@ -287,5 +287,11 @@
   "management.metadata.savedRefreshing": "已保存，正在更新此设备的资源列表。",
   "management.metadata.refreshPendingHelp": "正在确认变更后的最新数据。当前显示的内容会在同步完成后更新，请勿重复提交。",
   "management.metadata.updateRequired": "需要更新来源设备",
-  "management.metadata.updateRequiredHelp": "来源设备的版本尚不支持资源元数据同步。请先更新该设备上的 Bakabase；现有数据和配对会保留。"
+  "management.metadata.updateRequiredHelp": "来源设备的版本尚不支持资源元数据同步。请先更新该设备上的 Bakabase；现有数据和配对会保留。",
+  "management.catalog.readOnly": "离线 · 只读",
+  "management.catalog.loading": "正在加载已同步的数据…",
+  "management.catalog.sourcesFailed": "暂时无法刷新设备状态，已加载的数据仍可查看。",
+  "management.catalog.unavailable": "{{device}}：暂时无法读取已同步的数据。",
+  "management.catalog.ownerUnavailable": "此设备已离线。可以查看已同步的信息，设备上线后才能修改。",
+  "management.catalog.orderDevice": "调整哪台设备的属性顺序"
 }

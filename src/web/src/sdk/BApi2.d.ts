@@ -3098,6 +3098,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/data-sync/history/page": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetDataSyncHistoryPage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/data-sync/history/{id}": {
         parameters: {
             query?: never;
@@ -3220,6 +3236,54 @@ export interface paths {
         get: operations["GetDeploymentPaths"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/app/profiles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetDesktopProfiles"];
+        put?: never;
+        post: operations["AddDesktopProfile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/app/profiles/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["UpdateDesktopProfile"];
+        post?: never;
+        delete: operations["RemoveDesktopProfile"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/app/profiles/{id}/open": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["OpenDesktopProfile"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6180,6 +6244,22 @@ export interface paths {
         options?: never;
         head?: never;
         patch: operations["PatchUIOptions"];
+        trace?: never;
+    };
+    "/options/ui/device-colors/{serverId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["SetDeviceColor"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/options/ui/resource-detail-layout": {
@@ -9382,6 +9462,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/data-sync/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetSyncActivity"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/data-sync/activity/metadata-history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetMetadataSyncHistory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/data-sync/activity/processing-history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetSyncProcessingHistory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/Tampermonkey/health": {
         parameters: {
             query?: never;
@@ -10026,6 +10154,34 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        "Bakabase.Abstractions.Components.App.DesktopProfileAddInput": {
+            name: string;
+            directory: string;
+            create: boolean;
+        };
+        "Bakabase.Abstractions.Components.App.DesktopProfileOpenInput": {
+            closeCurrent: boolean;
+        };
+        "Bakabase.Abstractions.Components.App.DesktopProfileUpdateInput": {
+            name: string;
+            makeDefault: boolean;
+        };
+        "Bakabase.Abstractions.Components.App.DesktopProfileView": {
+            id: string;
+            name: string;
+            dataDirectory: string;
+            isCurrent: boolean;
+            isDefault: boolean;
+            isRunning: boolean;
+            isAvailable: boolean;
+        };
+        "Bakabase.Abstractions.Components.App.DesktopProfilesView": {
+            available: boolean;
+            currentId?: string;
+            environmentOverride: boolean;
+            currentDirectory?: string;
+            profiles: components["schemas"]["Bakabase.Abstractions.Components.App.DesktopProfileView"][];
+        };
         "Bakabase.Abstractions.Components.Configuration.ResourceMoveDestination": {
             id: string;
             path: string;
@@ -12404,6 +12560,9 @@ export interface components {
             startupPage: components["schemas"]["Bakabase.InsideWorld.Models.Constants.StartupPage"];
             isMenuCollapsed: boolean;
             navigationLayout?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UINavigationLayout"];
+            deviceColors: {
+                [key: string]: string;
+            };
             showResourceUsage: boolean;
             hideResourceCovers: boolean;
             resourceDetailLayout?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIOptions+ResourceDetailLayoutConfig"];
@@ -14021,6 +14180,11 @@ export interface components {
             localKey?: string;
             type: components["schemas"]["Bakabase.Modules.DataSync.Planning.DataSyncPlanItemType"];
         };
+        "Bakabase.Modules.DataSync.Services.DataSyncHistoryPage": {
+            entries: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncHistoryEntry"][];
+            /** Format: int32 */
+            nextBeforeId?: number;
+        };
         "Bakabase.Modules.DataSync.Services.DataSyncInboxItemView": {
             /** Format: int64 */
             id: number;
@@ -15355,6 +15519,42 @@ export interface components {
             lineNumber: number;
             alreadyKnown: boolean;
         };
+        "Bakabase.Service.Components.DataSync.SyncActivityDevice": {
+            id: string;
+            name: string;
+        };
+        "Bakabase.Service.Components.DataSync.SyncActivityPage": {
+            items: components["schemas"]["Bakabase.Service.Components.DataSync.SyncActivityRow"][];
+            /** Format: int32 */
+            total: number;
+            /** Format: int32 */
+            nextOffset?: number;
+            devices: components["schemas"]["Bakabase.Service.Components.DataSync.SyncActivityDevice"][];
+            dataTypes: string[];
+        };
+        "Bakabase.Service.Components.DataSync.SyncActivityRow": {
+            id: string;
+            engine: string;
+            dataType: string;
+            state: string;
+            phase: string;
+            source: components["schemas"]["Bakabase.Service.Components.DataSync.SyncActivityDevice"];
+            destination: components["schemas"]["Bakabase.Service.Components.DataSync.SyncActivityDevice"];
+            /** Format: date-time */
+            lastSuccessAtUtc?: string;
+            /** Format: int64 */
+            itemCount?: number;
+            errorCode?: string;
+            error?: string;
+            cachedDataAvailable: boolean;
+            /** Format: int32 */
+            linkId?: number;
+            libraryEpoch?: string;
+            worker?: components["schemas"]["Bakabase.Service.Components.DataSync.SyncActivityDevice"];
+            job?: components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingJobView"];
+            /** Format: int32 */
+            pendingDecisions: number;
+        };
         "Bakabase.Service.Components.Federation.ManagedLibraryInfo": {
             serverId: string;
             name: string;
@@ -15406,6 +15606,7 @@ export interface components {
             data: components["schemas"]["Bakabase.Service.Components.Federation.MetadataReplicas.ReplicaStatus"];
             sync: components["schemas"]["Bakabase.Service.Components.Federation.MetadataReplicas.ReplicaSyncState"];
             denied: boolean;
+            activePhase?: string;
         };
         "Bakabase.Service.Components.Federation.MetadataReplicas.MetadataPageRequest": {
             checkpoint: components["schemas"]["Bakabase.Service.Components.Federation.MetadataReplicas.ReplicaCheckpoint"];
@@ -15418,6 +15619,30 @@ export interface components {
             name?: string;
             /** Format: int32 */
             contractVersion: number;
+        };
+        "Bakabase.Service.Components.Federation.MetadataReplicas.MetadataSyncActivity": {
+            /** Format: int64 */
+            id: number;
+            serverId: string;
+            name?: string;
+            libraryEpoch?: string;
+            /** Format: date-time */
+            startedAtUtc: string;
+            /** Format: date-time */
+            updatedAtUtc: string;
+            state: string;
+            phase: string;
+            /** Format: int64 */
+            processedCount: number;
+            /** Format: int64 */
+            resourceCount: number;
+            errorCode?: string;
+            error?: string;
+        };
+        "Bakabase.Service.Components.Federation.MetadataReplicas.MetadataSyncActivityPage": {
+            entries: components["schemas"]["Bakabase.Service.Components.Federation.MetadataReplicas.MetadataSyncActivity"][];
+            /** Format: int64 */
+            nextBeforeId?: number;
         };
         "Bakabase.Service.Components.Federation.MetadataReplicas.ReplicaCheckpoint": {
             generation: string;
@@ -15450,6 +15675,7 @@ export interface components {
             error?: string;
             isOffline: boolean;
             refreshPending: boolean;
+            catchupPending: boolean;
         };
         "Bakabase.Service.Components.Federation.Processing.ResourceProcessingAbandonRequest": {
             token?: string;
@@ -15562,6 +15788,12 @@ export interface components {
         "Bakabase.Service.Components.Federation.Processing.ResourceProcessingReceiptStatus": {
             receipt?: components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingReceipt"];
         };
+        /**
+         * Format: int32
+         * @description [0: Manager, 1: Owner, 2: Worker]
+         * @enum {integer}
+         */
+        "Bakabase.Service.Components.Federation.Processing.ResourceProcessingRole": 0 | 1 | 2;
         "Bakabase.Service.Components.Federation.Processing.ResourceProcessingStart": {
             /** Format: int32 */
             profileId: number;
@@ -15913,6 +16145,9 @@ export interface components {
             deleteAfterDecompression: boolean;
             moveToParent: boolean;
             overwriteExistFiles: boolean;
+        };
+        "Bakabase.Service.Models.Input.DeviceColorInput": {
+            color?: string;
         };
         "Bakabase.Service.Models.Input.ExHentaiDownloadTaskAddInputModel": {
             type: components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloaders.ExHentai.ExHentaiDownloadTaskType"];
@@ -17591,6 +17826,18 @@ export interface components {
             /** Format: int32 */
             pageSize: number;
         };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Components.App.DesktopProfileView]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Abstractions.Components.App.DesktopProfileView"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Components.App.DesktopProfilesView]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Abstractions.Components.App.DesktopProfilesView"];
+        };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Components.Configuration.ResourceMovePanelOptions]": {
             /** Format: int32 */
             code: number;
@@ -18172,6 +18419,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncHistoryDetail"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncHistoryPage]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncHistoryPage"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncInboxPage]": {
             /** Format: int32 */
@@ -22565,7 +22818,9 @@ export interface operations {
     };
     GetCollectionMemberships: {
         parameters: {
-            query?: never;
+            query?: {
+                resourceIds?: number[];
+            };
             header?: never;
             path: {
                 id: number;
@@ -25107,6 +25362,32 @@ export interface operations {
             };
         };
     };
+    GetDataSyncHistoryPage: {
+        parameters: {
+            query?: {
+                beforeId?: number;
+                take?: number;
+                peerNodeId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncHistoryPage]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncHistoryPage]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncHistoryPage]"];
+                };
+            };
+        };
+    };
     GetDataSyncHistoryEntry: {
         parameters: {
             query?: never;
@@ -25325,6 +25606,143 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.DeploymentPathsViewModel]"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.DeploymentPathsViewModel]"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.DeploymentPathsViewModel]"];
+                };
+            };
+        };
+    };
+    GetDesktopProfiles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Components.App.DesktopProfilesView]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Components.App.DesktopProfilesView]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Components.App.DesktopProfilesView]"];
+                };
+            };
+        };
+    };
+    AddDesktopProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Abstractions.Components.App.DesktopProfileAddInput"];
+                "application/json": components["schemas"]["Bakabase.Abstractions.Components.App.DesktopProfileAddInput"];
+                "text/json": components["schemas"]["Bakabase.Abstractions.Components.App.DesktopProfileAddInput"];
+                "application/*+json": components["schemas"]["Bakabase.Abstractions.Components.App.DesktopProfileAddInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Components.App.DesktopProfileView]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Components.App.DesktopProfileView]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Components.App.DesktopProfileView]"];
+                };
+            };
+        };
+    };
+    UpdateDesktopProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Abstractions.Components.App.DesktopProfileUpdateInput"];
+                "application/json": components["schemas"]["Bakabase.Abstractions.Components.App.DesktopProfileUpdateInput"];
+                "text/json": components["schemas"]["Bakabase.Abstractions.Components.App.DesktopProfileUpdateInput"];
+                "application/*+json": components["schemas"]["Bakabase.Abstractions.Components.App.DesktopProfileUpdateInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Components.App.DesktopProfileView]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Components.App.DesktopProfileView]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Components.App.DesktopProfileView]"];
+                };
+            };
+        };
+    };
+    RemoveDesktopProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    OpenDesktopProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Abstractions.Components.App.DesktopProfileOpenInput"];
+                "application/json": components["schemas"]["Bakabase.Abstractions.Components.App.DesktopProfileOpenInput"];
+                "text/json": components["schemas"]["Bakabase.Abstractions.Components.App.DesktopProfileOpenInput"];
+                "application/*+json": components["schemas"]["Bakabase.Abstractions.Components.App.DesktopProfileOpenInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                 };
             };
         };
@@ -31008,6 +31426,37 @@ export interface operations {
                 "application/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.UIOptionsPatchRequestModel"];
                 "text/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.UIOptionsPatchRequestModel"];
                 "application/*+json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.UIOptionsPatchRequestModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    SetDeviceColor: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                serverId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.DeviceColorInput"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.DeviceColorInput"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.DeviceColorInput"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.DeviceColorInput"];
             };
         };
         responses: {
@@ -37701,6 +38150,87 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Subscription.Abstractions.Models.View.SubscriptionProviderViewModel]"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Subscription.Abstractions.Models.View.SubscriptionProviderViewModel]"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Subscription.Abstractions.Models.View.SubscriptionProviderViewModel]"];
+                };
+            };
+        };
+    };
+    GetSyncActivity: {
+        parameters: {
+            query?: {
+                dataType?: string;
+                deviceId?: string;
+                state?: string;
+                offset?: number;
+                take?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bakabase.Service.Components.DataSync.SyncActivityPage"];
+                    "application/json": components["schemas"]["Bakabase.Service.Components.DataSync.SyncActivityPage"];
+                    "text/json": components["schemas"]["Bakabase.Service.Components.DataSync.SyncActivityPage"];
+                };
+            };
+        };
+    };
+    GetMetadataSyncHistory: {
+        parameters: {
+            query?: {
+                serverId?: string;
+                beforeId?: number;
+                take?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bakabase.Service.Components.Federation.MetadataReplicas.MetadataSyncActivityPage"];
+                    "application/json": components["schemas"]["Bakabase.Service.Components.Federation.MetadataReplicas.MetadataSyncActivityPage"];
+                    "text/json": components["schemas"]["Bakabase.Service.Components.Federation.MetadataReplicas.MetadataSyncActivityPage"];
+                };
+            };
+        };
+    };
+    GetSyncProcessingHistory: {
+        parameters: {
+            query?: {
+                /** @description [0: Manager, 1: Owner, 2: Worker] */
+                role?: components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingRole"];
+                beforeId?: string;
+                take?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingJobView"][];
+                    "application/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingJobView"][];
+                    "text/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingJobView"][];
                 };
             };
         };

@@ -4,7 +4,13 @@ export interface ManagedMetadataStatus {
   identity: { serverId: string; libraryEpoch: string };
   name: string;
   data: {
-    checkpoint?: { generation: string; sequence: number; cursor?: string; complete: boolean };
+    checkpoint?: {
+      generation: string;
+      sequence: number;
+      cursor?: string;
+      complete: boolean;
+      catalogRevision?: number;
+    };
     activeGeneration?: string;
     resourceCount: number;
     activeSequence: number;
@@ -17,6 +23,7 @@ export interface ManagedMetadataStatus {
     error?: string;
     isOffline: boolean;
     refreshPending?: boolean;
+    catchupPending?: boolean;
   };
   denied: boolean;
 }
@@ -44,6 +51,7 @@ export const metadataReadOperations = new Set([
   "getCustomPropertyByKeys",
   "libraries",
   "getAllCollections",
+  "extensionGroups",
   "resourceMappings",
   "getCollectionIdsByResourceIds",
   "getResourceSourceLinks",
