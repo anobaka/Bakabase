@@ -154,6 +154,10 @@ public static class RelayComposition
         services.AddSingleton<IUserMachineHandler, PlayItemHandler>();
         services.AddSingleton<IUserMachineHandler, PlayResourceHandler>();
         services.AddSingleton<IUserMachineHandler, PlayRandomResourceHandler>();
+        services.AddSingleton<IUserMachineHandler>(new DesktopProfileMutationHandler("DELETE /app/profiles/{id}"));
+        services.AddSingleton<IUserMachineHandler>(new DesktopProfileMutationHandler("POST /app/profiles"));
+        services.AddSingleton<IUserMachineHandler>(new DesktopProfileMutationHandler("POST /app/profiles/{id}/open"));
+        services.AddSingleton<IUserMachineHandler>(new DesktopProfileMutationHandler("PUT /app/profiles/{id}"));
         services.AddSingleton<IUserMachineHandler, NestedManagementPlayHandler>();
         services.AddSingleton<IUserMachineHandler, NestedManagementDirectoryHandler>();
         services.AddSingleton<IUserMachineHandler, NestedManagementBatchCandidatesHandler>();

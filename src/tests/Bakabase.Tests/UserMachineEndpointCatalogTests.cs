@@ -29,6 +29,10 @@ public class UserMachineEndpointCatalogTests
 {
     private static readonly string[] Expected =
     [
+        "DELETE /app/profiles/{id}",
+        "POST /app/profiles",
+        "POST /app/profiles/{id}/open",
+        "PUT /app/profiles/{id}",
         "GET /file/icon",
         "GET /file/recycle-bin",
         "GET /gui/url",

@@ -567,6 +567,32 @@ public class RelayPipelineTests
     }
 
     [TestMethod]
+    [DataRow("DELETE", "/app/profiles/example")]
+    [DataRow("POST", "/app/profiles")]
+    [DataRow("POST", "/app/profiles/example/open")]
+    [DataRow("PUT", "/app/profiles/example")]
+    public async Task A_managed_view_cannot_change_or_open_this_apps_data_spaces(string method, string path)
+    {
+        // The refusal applies even after the managed server is removed. It must never
+        // forward profile mutations or suggest that upgrading would enable them here.
+        foreach (var attached in new[] {true, false})
+        {
+            if (!attached) await DetachAsync();
+            using var response = await Send(path, method: new HttpMethod(method), body: "{}");
+
+            Assert.AreEqual(HttpStatusCode.Conflict, response.StatusCode);
+            Assert.IsNull(FailureOf(response));
+            using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+            Assert.AreEqual(409, document.RootElement.GetProperty("code").GetInt32());
+            var message = document.RootElement.GetProperty("message").GetString()!;
+            StringAssert.Contains(message, "this app's own view");
+            StringAssert.Contains(message, "data spaces");
+            Assert.IsFalse(message.Contains("updat", StringComparison.OrdinalIgnoreCase));
+            Assert.AreEqual(0, Arrived(path).Count, "a profile mutation reached the managed device");
+        }
+    }
+
+    [TestMethod]
     public async Task A_user_machine_route_is_intercepted_rather_than_forwarded()
     {
         // Playing a file is this machine's to do. Forwarding it would ask a server —
