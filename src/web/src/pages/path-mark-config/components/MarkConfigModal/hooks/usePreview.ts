@@ -1,7 +1,7 @@
 import type { MarkConfig } from "../types";
 import type { PathMarkType } from "@/sdk/constants";
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 
 import { buildConfigJson } from "../utils";
 
@@ -31,7 +31,11 @@ export const usePreview = (
   const [results, setResults] = useState<PathMarkPreviewResult[]>([]);
   const [resultsByPath, setResultsByPath] = useState<PreviewResultsByPath[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const configJson = buildConfigJson(config, markType);
+  const hasValidConfig =
+    config.matchMode === PathMatchMode.Layer
+      ? config.layer !== undefined
+      : Boolean(config.regex && config.regex.length > 0);
 
   // Use rootPaths if provided, otherwise use single rootPath
   const effectivePaths = useMemo(() => {
@@ -43,37 +47,25 @@ export const usePreview = (
   }, [rootPath, rootPaths]);
 
   useEffect(() => {
-    if (effectivePaths.length === 0) {
+    if (effectivePaths.length === 0 || !hasValidConfig) {
+      setLoading(false);
+      setError(null);
       setResults([]);
       setResultsByPath([]);
 
       return;
     }
 
-    // Only preview if we have valid config
-    const hasValidConfig =
-      config.matchMode === PathMatchMode.Layer
-        ? config.layer !== undefined
-        : config.regex && config.regex.length > 0;
-
-    if (!hasValidConfig) {
-      setResults([]);
-      setResultsByPath([]);
-
-      return;
-    }
-
-    // Clear previous timeout
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
+    // In-flight requests may finish after a config change, path change or unmount.
+    let active = true;
 
     setLoading(true);
     setError(null);
-    timeoutRef.current = setTimeout(async () => {
+    const timeout = setTimeout(async () => {
       try {
         const allResults: PathMarkPreviewResult[] = [];
         const allResultsByPath: PreviewResultsByPath[] = [];
+        let previewError: string | null = null;
 
         // Fetch preview for each path
         await Promise.all(
@@ -82,7 +74,7 @@ export const usePreview = (
             const rsp = await BApi.pathMark.previewPathMarkMatchedPaths({
               path: path,
               type: markType,
-              configJson: buildConfigJson(config, markType),
+              configJson,
             });
 
             if (!rsp.code && rsp.data) {
@@ -91,40 +83,31 @@ export const usePreview = (
               allResults.push(...pathResults);
               allResultsByPath.push({ path, results: pathResults });
             } else if (rsp.message) {
-              setError(rsp.message);
+              previewError = rsp.message;
             }
           }),
         );
 
+        if (!active) return;
+        setError(previewError);
         setResults(allResults.slice(0, 10)); // Show max 10 combined results
         setResultsByPath(allResultsByPath);
       } catch (err) {
+        if (!active) return;
         console.error("Preview failed:", err);
         setError("Preview failed");
         setResults([]);
         setResultsByPath([]);
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     }, debounceMs);
 
     return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
+      active = false;
+      clearTimeout(timeout);
     };
-  }, [
-    effectivePaths,
-    markType,
-    config.matchMode,
-    config.layer,
-    config.regex,
-    config.fsTypeFilter,
-    config.extensions,
-    config.extensionGroupIds,
-    config.applyScope,
-    debounceMs,
-  ]);
+  }, [effectivePaths, markType, configJson, hasValidConfig, debounceMs]);
 
   return {
     loading,

@@ -924,64 +924,14 @@ public class PathMarkSyncService : ScopedService
         string? valueRegex,
         SyncContext ctx)
     {
-        var markSegments = ctx.GetPathSegments(markPath);
-
-        if (matchMode == PathMatchMode.Layer)
-        {
-            var layer = valueLayer ?? 0;
-
-            if (layer == 0)
-            {
-                var targetIndex = markSegments.Length - 1;
-                if (targetIndex < 0) return null;
-                return markSegments[targetIndex];
-            }
-            else if (layer < 0)
-            {
-                var targetIndex = markSegments.Length - 1 + layer;
-                if (targetIndex < 0 || targetIndex >= markSegments.Length)
-                {
-                    return null;
-                }
-
-                return markSegments[targetIndex];
-            }
-            else
-            {
-                if (string.IsNullOrEmpty(resourcePath)) return null;
-
-                var resourceSegments = ctx.GetPathSegments(resourcePath);
-                var targetIndex = markSegments.Length + layer - 1;
-                if (targetIndex < 0 || targetIndex >= resourceSegments.Length)
-                {
-                    return null;
-                }
-
-                return resourceSegments[targetIndex];
-            }
-        }
-        else if (matchMode == PathMatchMode.Regex && !string.IsNullOrEmpty(valueRegex))
-        {
-            var normalizedMarkPath = ctx.GetStandardizedPath(markPath);
-            var markDirectoryName = Path.GetFileName(normalizedMarkPath);
-            try
-            {
-                var regex = ctx.GetOrCreateRegex(valueRegex);
-                var match = regex.Match(markDirectoryName);
-                if (match.Success)
-                {
-                    return match.Groups.Count > 1 ? match.Groups[1].Value : match.Value;
-                }
-
-                return null;
-            }
-            catch
-            {
-                return markDirectoryName;
-            }
-        }
-
-        return null;
+        var resourceSegments = matchMode == PathMatchMode.Layer && valueLayer is > 0 &&
+                               !string.IsNullOrEmpty(resourcePath)
+            ? ctx.GetPathSegments(resourcePath)
+            : null;
+        return PathMarkDynamicValueExtractor.Extract(
+            Path.GetFileName(ctx.GetStandardizedPath(markPath)),
+            ctx.GetPathSegments(markPath), resourceSegments, matchMode, valueLayer, valueRegex,
+            ctx.GetOrCreateRegex);
     }
 
     private async Task PreCreateDynamicMediaLibraries(List<PathMark> mediaLibraryMarks, SyncContext ctx,

@@ -571,6 +571,17 @@ public class PathMarkService<TDbContext>(
 
         // Step 3: Get matched paths using common logic
         var matchedPaths = GetMatchingPaths(rootPath, matchMode, layer, regex, applyScope, fsTypeFilter, extensions);
+        if (request.Type is PathMarkType.Property or PathMarkType.MediaLibrary &&
+            matchMode == PathMatchMode.Layer && layer is >= 0 &&
+            applyScope == PathMarkApplyScope.MatchedAndSubdirectories &&
+            valueType == PropertyValueType.Dynamic && valueLayer > layer)
+        {
+            // Deeper dynamic values need descendant examples, but normal edits must not
+            // recursively scan a large library. Put useful samples before shallower paths
+            // whose value is absent, since the client displays only the first few results.
+            var samples = GetPreviewDescendantSamples(matchedPaths, valueLayer!.Value - layer.Value);
+            matchedPaths = samples.Concat(matchedPaths).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        }
 
         var rootSegments = rootPath.Split(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar },
             StringSplitOptions.RemoveEmptyEntries);
@@ -593,7 +604,7 @@ public class PathMarkService<TDbContext>(
             {
                 // For Property and MediaLibrary: calculate value
                 result.PropertyValue = CalculatePropertyValue(
-                    rootPath, matchedPath, rootSegments, matchedSegments,
+                    rootPath, rootSegments, matchedSegments, matchMode,
                     valueType, fixedValue, valueLayer, valueRegex);
             }
 
@@ -601,6 +612,51 @@ public class PathMarkService<TDbContext>(
         }
 
         return results;
+    }
+
+    private static List<string> GetPreviewDescendantSamples(IEnumerable<string> matchedPaths, int layersBelowMatch)
+    {
+        const int sampleLimit = 50;
+        const int visitLimit = 200;
+        var samples = new List<string>();
+        var visited = 0;
+
+        void Collect(string directory, int remainingLayers)
+        {
+            if (samples.Count >= sampleLimit || visited >= visitLimit) return;
+            visited++;
+            try
+            {
+                foreach (var entry in Directory.EnumerateFileSystemEntries(directory))
+                {
+                    if (samples.Count >= sampleLimit || visited >= visitLimit) break;
+                    visited++;
+                    if (remainingLayers == 1)
+                    {
+                        samples.Add(entry.StandardizePath()!);
+                    }
+                    else if (Directory.Exists(entry))
+                    {
+                        Collect(entry, remainingLayers - 1);
+                    }
+                }
+            }
+            catch (IOException)
+            {
+                // A preview may contain paths that disappeared during enumeration.
+            }
+            catch (UnauthorizedAccessException)
+            {
+                // Keep examples from accessible branches.
+            }
+        }
+
+        foreach (var path in matchedPaths)
+        {
+            if (samples.Count >= sampleLimit || visited >= visitLimit) break;
+            if (Directory.Exists(path)) Collect(path, layersBelowMatch);
+        }
+        return samples;
     }
 
     private async Task<List<string>?> ResolveExtensions(List<string>? extensions, List<int>? extensionGroupIds)
@@ -743,7 +799,7 @@ public class PathMarkService<TDbContext>(
     /// Calculate property value for Property and MediaLibrary mark types
     /// </summary>
     private string? CalculatePropertyValue(
-        string rootPath, string matchedPath, string[] rootSegments, string[] matchedSegments,
+        string rootPath, string[] rootSegments, string[] matchedSegments, PathMatchMode matchMode,
         PropertyValueType? valueType, object? fixedValue, int? valueLayer, string? valueRegex)
     {
         if (valueType == PropertyValueType.Fixed)
@@ -756,50 +812,9 @@ public class PathMarkService<TDbContext>(
             return null;
         }
 
-        // Dynamic value extraction
-        if (valueLayer.HasValue)
-        {
-            var layer = valueLayer.Value;
-            // 0 = matched item itself
-            if (layer == 0)
-            {
-                var relativePath = matchedPath.Substring(rootPath.Length)
-                    .TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-                var fileName = Path.GetFileName(relativePath);
-                if (!string.IsNullOrEmpty(fileName))
-                {
-                    return fileName;
-                }
-                return relativePath.Split(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar },
-                    StringSplitOptions.RemoveEmptyEntries).LastOrDefault();
-            }
-            else
-            {
-                // Positive = forward from root, negative = backward
-                var targetIndex = rootSegments.Length + layer - 1;
-                if (targetIndex >= 0 && targetIndex < matchedSegments.Length)
-                {
-                    return matchedSegments[targetIndex];
-                }
-            }
-        }
-        else if (!string.IsNullOrEmpty(valueRegex))
-        {
-            var relativePath = matchedPath.Substring(rootPath.Length)
-                .TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-            var regex = new Regex(valueRegex, RegexOptions.IgnoreCase);
-            var match = regex.Match(relativePath);
-            if (match.Success && match.Groups.Count > 1)
-            {
-                return match.Groups[1].Value;
-            }
-            if (match.Success)
-            {
-                return match.Value;
-            }
-        }
-
-        return null;
+        return PathMarkDynamicValueExtractor.Extract(
+            Path.GetFileName(rootPath), rootSegments, matchedSegments, matchMode, valueLayer, valueRegex,
+            pattern => new Regex(pattern, RegexOptions.IgnoreCase));
     }
 
 
