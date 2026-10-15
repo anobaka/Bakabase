@@ -5,7 +5,14 @@ const save = vi.hoisted(() => vi.fn());
 
 vi.mock("@/sdk/BApi", () => ({ default: { options: { setDeviceColor: save } } }));
 vi.mock("react-i18next", () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
+  useTranslation: () => ({
+    t: (key: string, options?: { name?: string }) =>
+      key === "deviceAppearance.source"
+        ? `Source device: ${options?.name}`
+        : key === "deviceAppearance.device"
+          ? `Device: ${options?.name}`
+          : key,
+  }),
 }));
 
 import DeviceDot from "../DeviceDot";
@@ -31,13 +38,13 @@ describe("device appearance", () => {
   it("updates every dot when this server's shared options change", () => {
     render(
       <>
-        <DeviceDot name="NAS" serverId="owner-a" />
+        <DeviceDot isSource name="NAS" serverId="owner-a" />
         <DeviceDot name="NAS renamed" serverId="owner-a" />
       </>,
     );
     act(() => useUiOptionsStore.getState().update({ deviceColors: { "owner-a": "#112233" } }));
-    expect(screen.getByTitle("NAS").style.backgroundColor).toBe("rgb(17, 34, 51)");
-    expect(screen.getByTitle("NAS renamed").style.backgroundColor).toBe("rgb(17, 34, 51)");
+    expect(screen.getByTitle("Source device: NAS").style.backgroundColor).toBe("rgb(17, 34, 51)");
+    expect(screen.getByTitle("Device: NAS renamed").style.backgroundColor).toBe("rgb(17, 34, 51)");
   });
 
   it("saves one device without replacing another's preference and can restore automatic", async () => {

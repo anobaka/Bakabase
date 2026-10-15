@@ -294,7 +294,7 @@ const PropertySelector = (props: IProps) => {
         )}
         {property.owner && !property.owner.isLocal && (
           <span className="absolute -left-1 -top-1">
-            <DeviceDot name={property.owner.name} serverId={property.owner.serverId} />
+            <DeviceDot isSource name={property.owner.name} serverId={property.owner.serverId} />
           </span>
         )}
         {selected && (

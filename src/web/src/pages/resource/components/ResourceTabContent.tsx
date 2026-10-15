@@ -1037,6 +1037,7 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
           />
           {resource.owner && !resource.owner.isLocal && sourcesRef.current.length > 1 && (
             <DeviceDot
+              isSource
               name={resource.owner.name}
               serverId={resource.owner.serverId}
               className="absolute right-2 top-2 z-10 h-2.5 w-2.5 rounded-full ring-2 ring-black/35"

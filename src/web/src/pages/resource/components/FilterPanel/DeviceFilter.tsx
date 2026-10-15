@@ -111,7 +111,11 @@ function DeviceFilterEditor({ sources, owner, deviceIds, onChange }: Props) {
               property={valueProperty}
               renderOptionExtra={({ value }) => (
                 <>
-                  <DeviceDot className="ml-1 h-2 w-2" serverId={value} />
+                  <DeviceDot
+                    className="ml-1 h-2 w-2"
+                    name={choices.find((choice) => choice.value === value)?.label}
+                    serverId={value}
+                  />
                   {choices.find((choice) => choice.value === value)?.unavailable && (
                     <span className="ml-1 text-xs text-warning" title={value}>
                       {t("management.offline")}

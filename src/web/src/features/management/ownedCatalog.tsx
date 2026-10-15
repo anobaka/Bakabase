@@ -113,7 +113,7 @@ export function CatalogOwnerMark({ owner }: { owner?: ManagementSource }) {
 
   return (
     <span className="inline-flex shrink-0 items-center gap-1.5">
-      <DeviceDot name={owner.name} serverId={owner.serverId} />
+      <DeviceDot isSource name={owner.name} serverId={owner.serverId} />
       {!owner.available && (
         <span className="text-xs text-warning">{t("management.catalog.readOnly")}</span>
       )}
@@ -145,9 +145,11 @@ export function CatalogSourceStatus({
       {loading && <p>{t("management.catalog.loading")}</p>}
       {error && <p className="text-warning">{t("management.catalog.sourcesFailed")}</p>}
       {unavailable.map((s) => (
-        <p key={sourceKey(s)} className="text-warning">
-          <DeviceDot name={s.name} serverId={s.serverId} />{" "}
-          {t("management.catalog.unavailable", { device: s.name })}
+        <p key={sourceKey(s)} className="flex items-center gap-1.5 text-warning">
+          <DeviceDot name={s.name} serverId={s.serverId} />
+          <span className="min-w-0 break-words">
+            {t("management.catalog.unavailable", { device: s.name })}
+          </span>
         </p>
       ))}
     </div>

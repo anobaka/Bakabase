@@ -1,4 +1,6 @@
 {
+  "deviceAppearance.device": "Device: {{name}}",
+  "deviceAppearance.source": "Source device: {{name}}",
   "deviceAppearance.color": "Device color",
   "deviceAppearance.editFor": "Color for {{name}}",
   "deviceAppearance.scope": "Used for resources, properties and sync status on this server, across browsers. Does not change device names or data.",

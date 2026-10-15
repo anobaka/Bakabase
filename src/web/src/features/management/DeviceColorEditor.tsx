@@ -51,7 +51,7 @@ export default function DeviceColorEditor({ serverId, name }: { serverId: string
           setOpen(true);
         }}
       >
-        <DeviceDot serverId={serverId} />
+        <DeviceDot name={name} serverId={serverId} />
         {t("deviceAppearance.color")}
       </button>
     );

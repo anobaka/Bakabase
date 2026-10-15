@@ -333,15 +333,17 @@ const CustomPropertyPage = () => {
                 className="group grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-5 gap-y-2 px-4 py-4 transition-colors hover:bg-default-50/60 focus-within:bg-default-50/60 lg:grid-cols-[minmax(200px,1.2fr)_minmax(160px,1.5fr)_4rem_4.5rem]"
               >
                 <div className="min-w-0">
-                  <button
-                    className="max-w-full rounded text-left text-sm font-medium text-default-800 [overflow-wrap:anywhere] hover:text-primary focus-visible:outline-2 focus-visible:outline-primary"
-                    disabled={!canEditCatalogItem(property)}
-                    type="button"
-                    onClick={() => openEditor(property)}
-                  >
-                    {property.name}
-                  </button>
-                  <CatalogOwnerMark owner={property.owner} />
+                  <div className="flex min-w-0 items-center gap-2">
+                    <button
+                      className="min-w-0 rounded text-left text-sm font-medium text-default-800 [overflow-wrap:anywhere] hover:text-primary focus-visible:outline-2 focus-visible:outline-primary"
+                      disabled={!canEditCatalogItem(property)}
+                      type="button"
+                      onClick={() => openEditor(property)}
+                    >
+                      {property.name}
+                    </button>
+                    <CatalogOwnerMark owner={property.owner} />
+                  </div>
                   <div className="mt-1.5 flex flex-wrap items-center gap-3 text-default-500">
                     <PropertyTypeIcon type={property.type} />
                     <span className="text-xs tabular-nums lg:hidden">

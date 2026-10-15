@@ -292,47 +292,50 @@ const MediaLibraryPage = () => {
         <CardBody className="p-4 flex flex-col gap-3">
           {/* Header: Name + Color picker */}
           <div className="flex items-center justify-between gap-2">
-            <CatalogOwnerMark owner={ml.owner} />
-            {canEditCatalogItem(ml) ? (
-              <EditableValue<string, InputProps, ButtonProps & { value: string }>
-                Editor={Input}
-                Viewer={({ value, ...props }) => (
-                  <Button
-                    className="whitespace-break-spaces h-auto text-left font-medium text-base px-2 min-w-0"
-                    size="sm"
-                    style={{ color: libraryColor }}
-                    variant="light"
-                    {...props}
-                  >
-                    <span className="truncate">{value}</span>
-                  </Button>
-                )}
-                editorProps={{
-                  size: "sm",
-                  isRequired: true,
-                }}
-                trigger="viewer"
-                value={ml.name}
-                onSubmit={async (v) => {
-                  if (v == undefined || v.length == 0) {
-                    toast.danger(t("mediaLibrary.error.nameEmpty"));
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              <CatalogOwnerMark owner={ml.owner} />
+              {canEditCatalogItem(ml) ? (
+                <EditableValue<string, InputProps, ButtonProps & { value: string }>
+                  Editor={Input}
+                  Viewer={({ value, ...props }) => (
+                    <Button
+                      className="whitespace-break-spaces h-auto text-left font-medium text-base px-2 min-w-0"
+                      size="sm"
+                      style={{ color: libraryColor }}
+                      variant="light"
+                      {...props}
+                    >
+                      <span className="truncate">{value}</span>
+                    </Button>
+                  )}
+                  className="min-w-0"
+                  editorProps={{
+                    size: "sm",
+                    isRequired: true,
+                  }}
+                  trigger="viewer"
+                  value={ml.name}
+                  onSubmit={async (v) => {
+                    if (v == undefined || v.length == 0) {
+                      toast.danger(t("mediaLibrary.error.nameEmpty"));
 
-                    return;
-                  }
-                  const rsp = await catalogItemApi(ml).mediaLibraryV2.patchMediaLibraryV2(ml.id, {
-                    name: v,
-                  });
+                      return;
+                    }
+                    const rsp = await catalogItemApi(ml).mediaLibraryV2.patchMediaLibraryV2(ml.id, {
+                      name: v,
+                    });
 
-                  if (!rsp.code) {
-                    ml.name = v;
-                    forceUpdate();
-                    catalog.refresh();
-                  }
-                }}
-              />
-            ) : (
-              <span className="min-w-0 flex-1 truncate font-medium">{ml.name}</span>
-            )}
+                    if (!rsp.code) {
+                      ml.name = v;
+                      forceUpdate();
+                      catalog.refresh();
+                    }
+                  }}
+                />
+              ) : (
+                <span className="min-w-0 flex-1 truncate font-medium">{ml.name}</span>
+              )}
+            </div>
 
             {canEditCatalogItem(ml) && (
               <ColorPicker

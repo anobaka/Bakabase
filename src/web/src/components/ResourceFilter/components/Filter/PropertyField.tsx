@@ -62,7 +62,7 @@ const PropertyField = ({ property, isReadonly, onSelect, onCancel }: PropertyFie
       )}
       <span className="min-w-0 break-words">{displayText}</span>
       {property?.owner && (
-        <DeviceDot name={property.owner.name} serverId={property.owner.serverId} />
+        <DeviceDot isSource name={property.owner.name} serverId={property.owner.serverId} />
       )}
     </>
   );
