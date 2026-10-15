@@ -1179,4 +1179,21 @@
   <data name="BTask_Process_CheckingStorage" xml:space="preserve">
     <value>正在检查存储位置：{0}</value>
   </data>
+  <data name="BTask_Name_MetadataSync" xml:space="preserve">
+    <value>同步资源库元数据</value>
+  </data>
+  <data name="BTask_Description_MetadataSync" xml:space="preserve">
+    <value>将被管理设备的资源检索数据保存在本机，中断后从上次已保存的进度继续。</value>
+  </data>
+  <data name="BTask_MessageOnInterruption_MetadataSync" xml:space="preserve">
+    <value>下次运行会从已保存的同步进度继续。</value>
+  </data>
+  <data name="BTask_Process_MetadataSync_Resources" xml:space="preserve">
+    <value>{0}：已保存 {1:N0} 个资源的检索数据</value>
+  </data>
+
+  <data name="BTask_Name_ResourceProcessing" xml:space="preserve"><value>跨设备资源处理</value></data>
+  <data name="BTask_Description_ResourceProcessing" xml:space="preserve"><value>在选定设备上执行规则，检查结果后保存到资源所属设备。</value></data>
+  <data name="BTask_MessageOnInterruption_ResourceProcessing" xml:space="preserve"><value>下次将从已保存的位置继续处理。</value></data>
+  <data name="BTask_Process_ResourceProcessing_Resources" xml:space="preserve"><value>已处理 {0} 个资源</value></data>
 </root>

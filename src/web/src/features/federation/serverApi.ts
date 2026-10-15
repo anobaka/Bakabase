@@ -6,7 +6,13 @@ import type {
   ManagedServersView,
 } from "./types";
 
-import { federationRequest, jsonBody } from "./transport";
+import { FederationError, federationRequest, jsonBody } from "./transport";
+
+export interface ManagedDeviceName {
+  name: string;
+  libraryEpoch: string;
+  environmentControlled: boolean;
+}
 
 const prefix = "/servers";
 const server = (serverId: string) => `${prefix}/${encodeURIComponent(serverId)}`;
@@ -51,6 +57,41 @@ export const managedServerApi = {
   /** Asks the server to revoke this device (best effort), then deletes the key here. */
   forget: (serverId: string) =>
     federationRequest<{ changed: boolean }>(server(serverId), { method: "DELETE" }),
+  /** Reads the owner's effective name and captures its library incarnation before editing. */
+  getDeviceName: async (serverId: string, signal?: AbortSignal) => {
+    const { sources } = await federationRequest<{
+      sources: {
+        serverId: string;
+        libraryEpoch?: string;
+        available: boolean;
+        errorCode?: string;
+        error?: string;
+      }[];
+    }>("/management/sources", { signal });
+    const owner = sources.find((source) => source.serverId === serverId);
+
+    if (!owner?.available || !owner.libraryEpoch)
+      throw new FederationError(
+        owner?.errorCode ?? "ManagedSourceUnavailable",
+        owner?.error ?? "",
+        503,
+      );
+
+    return federationRequest<ManagedDeviceName>(
+      `/management/${encodeURIComponent(serverId)}/request`,
+      jsonBody({ libraryEpoch: owner.libraryEpoch, operation: "deviceNameGet" }, "POST", signal),
+    );
+  },
+  /** A global rename on that device, not an alias in this one's connection list. */
+  setDeviceName: (serverId: string, snapshot: ManagedDeviceName, name: string | null) =>
+    federationRequest<ManagedDeviceName>(
+      `/management/${encodeURIComponent(serverId)}/request`,
+      jsonBody({
+        libraryEpoch: snapshot.libraryEpoch,
+        operation: "deviceNameSet",
+        body: { name, expectedName: snapshot.name },
+      }),
+    ),
   setPathMappings: (serverId: string, mappings: ManagedServerPathMapping[]) =>
     federationRequest<{ changed: boolean }>(
       `${server(serverId)}/path-mappings`,

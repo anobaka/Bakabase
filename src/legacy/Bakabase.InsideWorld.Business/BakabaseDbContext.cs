@@ -79,6 +79,8 @@ namespace Bakabase.InsideWorld.Business
         public DbSet<PathMarkDbModel> PathMarks { get; set; }
         public DbSet<MediaLibraryResourceMappingDbModel> MediaLibraryResourceMappings { get; set; }
         public DbSet<ResourceProfileDbModel> ResourceProfiles { get; set; }
+        public DbSet<ResourceScopeDbModel> ResourceScopes { get; set; }
+        public DbSet<ResourceProcessingJobDbModel> ResourceProcessingJobs { get; set; }
 
         // PathMark effect tracking tables
         public DbSet<ResourceMarkEffectDbModel> ResourceMarkEffects { get; set; }
@@ -159,6 +161,8 @@ namespace Bakabase.InsideWorld.Business
         public DbSet<DataSyncInboxItemDbModel> DataSyncInboxItems { get; set; }
         public DbSet<DataSyncLocalStateDbModel> DataSyncLocalStates { get; set; }
         public DbSet<DataSyncReaderDbModel> DataSyncReaders { get; set; }
+        public DbSet<MetadataSourceClockDbModel> MetadataSourceClocks { get; set; }
+        public DbSet<MetadataSourceChangeDbModel> MetadataSourceChanges { get; set; }
 
         public BakabaseDbContext()
         {
@@ -378,6 +382,20 @@ namespace Bakabase.InsideWorld.Business
             modelBuilder.Entity<ResourceProfileDbModel>(t =>
             {
                 t.HasIndex(x => x.Priority);
+                t.HasIndex(x => x.ResourceScopeId);
+                t.HasOne<ResourceScopeDbModel>().WithMany().HasForeignKey(x => x.ResourceScopeId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+            modelBuilder.Entity<ResourceScopeDbModel>(t =>
+            {
+                t.Property(x => x.Revision).IsConcurrencyToken();
+            });
+            modelBuilder.Entity<ResourceProcessingJobDbModel>(t =>
+            {
+                t.Property(x => x.Version).IsConcurrencyToken();
+                t.HasIndex(x => new {x.Role, x.State, x.UpdatedAtUtc});
+                t.HasIndex(x => new {x.OwnerId, x.OwnerEpoch, x.ResourceId});
+                t.HasIndex(x => x.JobId);
             });
 
             modelBuilder.Entity<PathMarkDbModel>(t =>
@@ -647,6 +665,17 @@ namespace Bakabase.InsideWorld.Business
                 t.HasIndex(x => x.ClosedAtUtc);
             });
             modelBuilder.Entity<DataSyncReaderDbModel>(t => t.HasKey(x => x.NodeId));
+            modelBuilder.Entity<MetadataSourceClockDbModel>(t =>
+            {
+                t.Property(x => x.Id).ValueGeneratedNever();
+                t.ToTable("MetadataSourceClocks", table =>
+                    table.HasCheckConstraint("CK_MetadataSourceClocks_Singleton", "Id = 1"));
+            });
+            modelBuilder.Entity<MetadataSourceChangeDbModel>(t =>
+            {
+                t.Property(x => x.ResourceId).ValueGeneratedNever();
+                t.HasIndex(x => x.Revision);
+            });
         }
     }
 }

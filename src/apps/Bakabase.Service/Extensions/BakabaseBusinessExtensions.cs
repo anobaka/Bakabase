@@ -382,6 +382,7 @@ namespace Bakabase.Service.Extensions
             // Note: Depends on IResourceDataChangeEvent for event-driven index updates
             services.AddSingleton<ResourceSearchIndexService>();
             services.AddSingleton<IResourceSearchIndexService>(sp => sp.GetRequiredService<ResourceSearchIndexService>());
+            services.AddSingleton<IResourceSearchIndexExportService>(sp => sp.GetRequiredService<ResourceSearchIndexService>());
 
             // Temporary: Resource index notification service (notifies frontend about index updates)
             // TODO: Remove when no longer needed

@@ -4,7 +4,10 @@ Data sync (「数据同步」, part of 「多设备互联」) keeps **definition
 their options, and extension groups — the same on a person's devices. It is pull-only: a
 device reads what a peer publishes over federation with a `datasync.read` grant and writes
 its **own** database, through its **own** services. There is no remote write path. Library
-data (resources, values, files, path marks, play history…) never travels.
+data (resources, values, files, path marks, play history…) never travels through this
+definitions protocol. The separate administrator-paired management protocol now maintains
+owner-isolated metadata replicas for search; it never imports foreign resource IDs into
+this definitions engine or this device's ordinary resource tables. See `server-switching.md`.
 
 Every definition carries a sync key and a version vector. Safe changes apply by themselves;
 conflicts, deletions of things in use, type changes and name-only matches wait in the inbox

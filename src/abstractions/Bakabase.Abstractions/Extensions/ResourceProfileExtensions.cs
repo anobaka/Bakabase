@@ -109,6 +109,7 @@ public static class ResourceProfileExtensions
         return new ResourceProfileDbModel
         {
             Id = model.Id,
+            ResourceScopeId = model.ResourceScopeId,
             Name = model.Name,
             SourceDeviceId = model.SourceDeviceId,
             SourceLibraryEpoch = model.SourceLibraryEpoch,
@@ -138,6 +139,7 @@ public static class ResourceProfileExtensions
         var domain = new ResourceProfile
         {
             Id = dbModel.Id,
+            ResourceScopeId = dbModel.ResourceScopeId,
             Name = dbModel.Name,
             SourceDeviceId = dbModel.SourceDeviceId,
             SourceLibraryEpoch = dbModel.SourceLibraryEpoch,

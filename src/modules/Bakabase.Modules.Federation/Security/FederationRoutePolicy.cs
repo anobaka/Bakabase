@@ -110,6 +110,7 @@ public static class FederationRoutePolicy
         if (Equal(segments[2], "management"))
             return segments.Length == 4 && (Equal(segments[3], "sources") || Equal(segments[3], "resource-display-options")) && method == "GET" ||
                    segments.Length == 4 && Equal(segments[3], "resource-display-options") && method == "PATCH" ||
+                   segments.Length == 6 && NodeRequestSignature.IsIdentifier(segments[3]) && Equal(segments[4], "metadata") && Equal(segments[5], "control") && method == "POST" ||
                    segments.Length == 6 && NodeRequestSignature.IsIdentifier(segments[3]) && Equal(segments[4], "batch-play") && Equal(segments[5], "candidates") && method == "POST" ||
                    segments.Length == 5 && NodeRequestSignature.IsIdentifier(segments[3]) &&
                    ((Equal(segments[4], "request") || Equal(segments[4], "play") || Equal(segments[4], "batch-play") || Equal(segments[4], "directory") || Equal(segments[4], "upload")) && method == "POST" ||

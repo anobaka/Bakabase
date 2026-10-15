@@ -17,6 +17,7 @@ using Bakabase.Modules.Federation.Transport;
 using Bakabase.Modules.RemoteAccess.Abstractions.Models;
 using Bakabase.Modules.RemoteAccess.Abstractions.Services;
 using Bakabase.Service.Models.View;
+using Bakabase.Service.Components.Federation.MetadataReplicas;
 using Bootstrap.Models.ResponseModels;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
@@ -29,7 +30,7 @@ namespace Bakabase.Service.Components.Federation;
 /// </summary>
 public sealed class SourceResourceProfileService(IResourceProfileService profiles, FederationPeerService peers,
     IPeerSessionFactory sessions, INodeTransport transport, GrantLeaseRegistry leases,
-    IManagedServerService? managed = null) : ISourceResourceProfilePlaybackService
+    IManagedServerService? managed = null, MetadataReplicaRegistry? metadata = null) : ISourceResourceProfilePlaybackService
 {
     private static readonly JsonSerializerSettings Json = new()
         { ContractResolver = new CamelCasePropertyNamesContractResolver(), MaxDepth = 64 };
@@ -43,9 +44,19 @@ public sealed class SourceResourceProfileService(IResourceProfileService profile
         if (managed != null)
         {
             var devices = await managed.GetAsync(false, ct);
+            var identities = metadata == null ? null : (await metadata.ReadAsync(ct)).ToDictionary(r => r.ServerId);
             foreach (var device in devices.Servers)
+            {
+                var known = identities?.GetValueOrDefault(device.ServerId);
+                // Only the validated metadata handshake supplies the library incarnation.
+                // A cached connection name or merely knowing an address cannot authorize a rule.
+                var verified = known != null && !known.Denied &&
+                    NodeRequestSignature.IsIdentifier(known.LibraryEpoch) &&
+                    device.State is not (ManagedServerState.Revoked or ManagedServerState.WrongServer);
                 result[device.ServerId] = new ResourceProfileSourceViewModel(device.ServerId,
-                    device.Name ?? device.ServerId, null, device.State == ManagedServerState.Online, "managed");
+                    known?.Name ?? device.Name ?? device.ServerId, verified ? known!.LibraryEpoch : null,
+                    verified && device.State == ManagedServerState.Online, "managed");
+            }
         }
         return result.Values.OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase).ToList();
     }

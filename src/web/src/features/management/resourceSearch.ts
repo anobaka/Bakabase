@@ -3,6 +3,7 @@ import type { SearchForm, SearchFormOrderModel } from "@/pages/resource/models";
 import { ResourceSearchSortableProperty } from "@/sdk/constants";
 import type { ManagementSource } from "./api";
 import { resourceSelectionKey } from "./resourceIdentity";
+import { canReadSourceMetadata, metadataReadError } from "./metadata";
 
 export interface ResourcePageResult {
   data: Resource[];
@@ -133,11 +134,11 @@ export class ManagedResourcePager {
       source,
       page: 0,
       queue: [],
-      exhausted: !source.available,
+      exhausted: !canReadSourceMetadata(source),
       total: 0,
     }));
-    for (const source of this.sources.filter((source) => !source.available))
-      this.failures.set(source.serverId, new Error(source.error || "Device unavailable"));
+    for (const source of this.sources.filter((source) => !canReadSourceMetadata(source)))
+      this.failures.set(source.serverId, new Error(metadataReadError(source)));
     // Bounded device fan-out as well as bounded pages.
     await this.fillPending(this.streams);
     this.initialized = true;
@@ -159,8 +160,8 @@ export class ManagedResourcePager {
     if (this.sources.length === 1) {
       this.checkCancelled();
       const source = this.sources[0];
-      if (!source.available) {
-        this.failures.set(source.serverId, new Error(source.error || "Device unavailable"));
+      if (!canReadSourceMetadata(source)) {
+        this.failures.set(source.serverId, new Error(metadataReadError(source)));
         return { data: [], totalCount: 0 };
       }
       const pageSize = this.form.pageSize > 0 ? this.form.pageSize : 50;

@@ -11,6 +11,7 @@ import { resourceSelectionKey, type ResourceSelectionKey } from "./resourceIdent
 import type { ManagementSource } from "./api";
 import type { SearchOptions } from "@/hooks/useResourceSearch";
 import { compileResourceQuery, resolveQuerySources } from "./resourceQuery";
+import { sourceSearchRevision } from "./metadata";
 
 const metadata = (ResourceAdditionalItem.Cover |
   ResourceAdditionalItem.Properties |
@@ -87,7 +88,10 @@ export function useManagedResourceSearch() {
       if ((options?.mode ?? "replace") === "replace") cancelResourceSelection();
       form = owner ? { ...form, owner } : form;
       const sources = resolveQuerySources(form, context?.sources ?? [], owner);
-      const signature = JSON.stringify([sources, { ...form, page: undefined }]);
+      const signature = JSON.stringify([
+        sources.map(sourceSearchRevision),
+        { ...form, page: undefined },
+      ]);
       const mode = options?.mode ?? "replace";
       if (
         !active.current ||

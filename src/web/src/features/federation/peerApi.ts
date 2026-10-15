@@ -53,8 +53,8 @@ export const federationPeerApi = {
   connect: (address: string, code: string | undefined, shareBack: boolean) =>
     federationRequest<PairingResult>(`${prefix}/connect`, jsonBody({ address, code, shareBack })),
   /** The name other devices see; null restores this computer's name. */
-  setName: (name: string | null) =>
-    federationRequest<unknown>(`${prefix}/name`, jsonBody({ name }, "PUT")),
+  setName: (name: string | null, expectedName?: string) =>
+    federationRequest<unknown>(`${prefix}/name`, jsonBody({ name, expectedName }, "PUT")),
   claim: (requestId: string, signal?: AbortSignal) =>
     federationRequest<PairingResult>(`${prefix}/claim`, jsonBody({ requestId }, "POST", signal)),
   /** Withdraws an outgoing request that is still awaiting the other device's approval. */

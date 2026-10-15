@@ -13,10 +13,14 @@ import {
   toSearchInputModel,
 } from "@/components/ResourceFilter/utils/toInputModel";
 
-export type ResourceProfile = BakabaseServiceModelsViewResourceProfileViewModel & {
+export type ResourceProfile = Omit<
+  BakabaseServiceModelsViewResourceProfileViewModel,
+  "resourceScopeId" | "sourceDeviceId" | "sourceLibraryEpoch" | "openingMode"
+> & {
+  resourceScopeId?: number | null;
   sourceDeviceId?: string | null;
   sourceLibraryEpoch?: string | null;
-  openingMode?: "browser" | "native" | "ask" | null;
+  openingMode?: string | null;
 };
 export type ProfileSource = {
   deviceId: string;

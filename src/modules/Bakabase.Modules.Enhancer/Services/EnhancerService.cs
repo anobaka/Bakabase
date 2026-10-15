@@ -80,12 +80,13 @@ namespace Bakabase.Modules.Enhancer.Services
 
         protected async Task<Dictionary<Enhancement, EnhancerTargetFullOptions>> PrepareEnhancementOptions(
             List<Enhancement> enhancements, Dictionary<int, Resource> resourceMap,
-            Dictionary<int, CustomProperty> propertyMap)
+            Dictionary<int, CustomProperty> propertyMap,
+            Dictionary<int, List<EnhancerFullOptions>>? preparedOptions = null)
         {
             var enhancerIds = enhancements.Select(s => s.EnhancerId).ToHashSet();
 
             // Use ResourceProfileService to get enhancer options for all resources
-            var resourceEnhancerOptionsMap = await _resourceProfileService.GetEffectiveEnhancerOptionsForResources(resourceMap.Values);
+            var resourceEnhancerOptionsMap = preparedOptions ?? await _resourceProfileService.GetEffectiveEnhancerOptionsForResources(resourceMap.Values);
 
             // Build a map from resource ID to enhancer options map
             var resourceIdEnhancerOptionsMap = resourceEnhancerOptionsMap.ToDictionary(
@@ -189,20 +190,33 @@ namespace Bakabase.Modules.Enhancer.Services
             return emptyRecords.Count;
         }
 
-        public async Task ApplyEnhancementsToResources(Dictionary<int, HashSet<int>> resourceIdEnhancerIdsMap,
-            List<Enhancement> enhancements, CancellationToken ct)
+        public Task ApplyEnhancementsToResources(Dictionary<int, HashSet<int>> resourceIdEnhancerIdsMap,
+            List<Enhancement> enhancements, CancellationToken ct) =>
+            ApplyEnhancementsCore(resourceIdEnhancerIdsMap, enhancements, null, ct);
+
+        public Task ApplyPreparedEnhancementsToResource(int resourceId, EnhancerFullOptions options,
+            List<Enhancement> enhancements, CancellationToken ct) =>
+            ApplyEnhancementsCore(new() {[resourceId] = [options.EnhancerId]}, enhancements,
+                new() {[resourceId] = [options]}, ct);
+
+        private async Task ApplyEnhancementsCore(Dictionary<int, HashSet<int>> resourceIdEnhancerIdsMap,
+            List<Enhancement> enhancements, Dictionary<int, List<EnhancerFullOptions>>? preparedOptions, CancellationToken ct)
         {
             var resourceIds = resourceIdEnhancerIdsMap.Keys.ToHashSet();
-            var resourceMap = (await _resourceService.GetByKeys(resourceIds.ToArray())).ToDictionary(d => d.Id, d => d);
-
-            var propertyMap = (await _customPropertyService.GetAll()).ToDictionary(d => d.Id, d => d);
-            var currentPropertyValues =
-                await _customPropertyValueService.GetAll(x => resourceIdEnhancerIdsMap.ContainsKey(x.ResourceId),
+            Dictionary<int, CustomProperty> propertyMap;
+            List<CustomPropertyValue> currentPropertyValues;
+            Dictionary<Enhancement, EnhancerTargetFullOptions> enhancementTargetOptionsMap;
+            // Prepared cross-device work validates committed source data. End the read scope
+            // before writes: converters may create options inside this same transaction.
+            using (preparedOptions == null ? null : ResourceMetadataReadScope.Enter(resourceIds.ToArray()))
+            {
+                var resourceMap = (await _resourceService.GetByKeys(resourceIds.ToArray())).ToDictionary(d => d.Id);
+                propertyMap = (await _customPropertyService.GetAll()).ToDictionary(d => d.Id);
+                currentPropertyValues = await _customPropertyValueService.GetAll(x => resourceIds.Contains(x.ResourceId),
                     CustomPropertyValueAdditionalItem.None, true);
-            var currentPropertyValuesMap = currentPropertyValues.ToDictionary(d => d.BizKey, d => d);
-
-            var enhancementTargetOptionsMap = await PrepareEnhancementOptions(enhancements, resourceMap, propertyMap);
-
+                enhancementTargetOptionsMap = await PrepareEnhancementOptions(enhancements, resourceMap, propertyMap, preparedOptions);
+            }
+            var currentPropertyValuesMap = currentPropertyValues.ToDictionary(d => d.BizKey);
             var pvs = new List<CustomPropertyValue>();
             var addedPvKeys = new HashSet<string>();
             var scopedRpvMap = new Dictionary<PropertyValueScope, Dictionary<int, ReservedPropertyValue>>();
@@ -338,9 +352,12 @@ namespace Bakabase.Modules.Enhancer.Services
             if (scopedRpvMap.Any())
             {
                 var scopes = scopedRpvMap.Keys.Cast<int>().ToHashSet();
-                var reservedValues = (await _reservedPropertyValueService.GetAll(x => scopes.Contains(x.Scope)))
-                    .GroupBy(d => d.Scope).ToDictionary(d => (PropertyValueScope)d.Key,
-                        d => d.GroupBy(x => x.ResourceId).ToDictionary(y => y.Key, y => y.First()));
+                List<ReservedPropertyValue> currentReservedValues;
+                using (preparedOptions == null ? null : ResourceMetadataReadScope.Enter(resourceIds.ToArray()))
+                    currentReservedValues = await _reservedPropertyValueService.GetAll(x => scopes.Contains(x.Scope) &&
+                        (preparedOptions == null || resourceIds.Contains(x.ResourceId)));
+                var reservedValues = currentReservedValues.GroupBy(d => d.Scope).ToDictionary(d => (PropertyValueScope)d.Key,
+                    d => d.GroupBy(x => x.ResourceId).ToDictionary(y => y.Key, y => y.First()));
                 var reservedPropertyValuesToBeAdded = new List<ReservedPropertyValue>();
                 var reservedPropertyValuesToBeUpdated = new List<ReservedPropertyValue>();
                 foreach (var (scope, reservedResourceValues) in scopedRpvMap)
@@ -947,6 +964,10 @@ namespace Bakabase.Modules.Enhancer.Services
                             : [];
                     }
                 }
+                catch (OperationCanceledException) when (ct.IsCancellationRequested)
+                {
+                    throw;
+                }
                 catch (Exception ex)
                 {
                     errorMessage = ex.Message;
@@ -976,6 +997,9 @@ namespace Bakabase.Modules.Enhancer.Services
                     new Dictionary<int, HashSet<int>> { { resourceId, [enhancerId] } }, enhancements, ct);
             }
         }
+
+        public Task ProcessComputedValuesAsync(List<EnhancementRawValue> values, EnhancerFullOptions options,
+            int resourceId, CancellationToken ct) => RunPostProcessorAsync(values, options, resourceId, options.EnhancerId, ct);
 
         private async Task RunPostProcessorAsync(
             List<EnhancementRawValue> values,

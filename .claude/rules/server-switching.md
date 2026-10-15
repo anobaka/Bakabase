@@ -18,11 +18,25 @@ workspace. They have no desktop relay or native program launcher.
   to `(serverId, libraryEpoch, owner-local ID)`. Editing B writes B. Source-scoped resource
   profiles configured on A stay on A. Never replace the global frontend SDK endpoint or
   merge different owners' numeric IDs.
-- First-phase queries are online and independently paged per owner (at most 100 resources
-  per page), with bounded response sizes. There is no full resource database replication or
-  offline write queue. Unavailable sources remain visible; unknown write outcomes are not
-  retried automatically. An incompatible source needs an update. A changed library epoch
-  invalidates the selected IDs before dispatch and is checked again at the owner API.
+- Managed resource metadata is pulled into one disk SQLite replica per owner and library
+  epoch (`Components/Federation/MetadataReplicas`). Search and metadata reads use that local
+  replica; files and mutations still go to their owner. Replicas never enter local resource
+  tables or get exported as this device's resources. There is no offline write queue.
+  Unavailable sources remain visible and their last complete snapshot is searchable; confirmed
+  revoked or changed identities are denied. Unknown ordinary write outcomes are never retried.
+- Initial sync pages catalogs, resources and a catch-up journal. Checkpoint and page contents
+  commit together. A new generation stages alongside the previous complete snapshot; partial
+  sync is never an empty successful library. Source dirty rows are durable, transactionally
+  maintained and bounded by resource IDs (including tombstones), not edit count. Triggers are
+  activated only when a manager first requests metadata, preserving standalone startup costs.
+  Queries run the existing property descriptor algebra in bounded partitions and keep matches
+  on disk; never hydrate all resource properties into another whole-library memory index.
+- Before dispatching an ordinary managed write, persist a refresh barrier and hold that owner's
+  sync gate. Subsequent metadata reads catch up or report `MetadataRefreshPending`; never show
+  stale cached values as a successful read after a save. This barrier does not invent optimistic
+  concurrency for old owner APIs: ordinary edits keep their existing owner-side semantics.
+  Device names, shared scope/rule editors and processing results have explicit compare-and-swap
+  checks. Device renaming preserves identity, grants, pairings and path mappings.
 - `ManagedServersView.available` means management is available. Only
   `canOpenDesktopView` permits desktop view switching. Native managed-resource playback
   reuses the desktop's existing `LocalPlayback` and source-scoped ResourceProfiles; browser
@@ -162,9 +176,12 @@ management does not require navigating to another device's SPA.
 - **Source-specific resource profiles belong to the viewing device.** A profile with
   `SourceDeviceId` is saved through that device's normal ResourceProfile editor; its full
   player executable, arguments and extension rules never travel to the source. In this
-  iteration only player options and opening mode are configurable for another device;
-  playable-file discovery stays with the resource owner. The source evaluates bounded
-  searches against its own resources and property vocabulary, pinned by `SourceLibraryEpoch`;
+  player options and opening mode are evaluated on the viewing device. Enhancement and
+  playable-file rules may also name an explicit execution device; resulting metadata still
+  belongs to the resource owner. Rules can share a named `ResourceScope`; resolve the current
+  scope's search before matching, never its profile's old inline fallback. Each rule block is
+  saved independently with a version guard, retaining existing effective-profile precedence.
+  Searches use the source's resources and property vocabulary, pinned by `SourceLibraryEpoch`;
   never hydrate its integer IDs against this device's database. Local profiles have no
   source ID and retain their existing behavior. A managed page may read its resources'
   effective opening modes through the relay, but configuration navigates home. No standalone
@@ -172,6 +189,24 @@ management does not require navigating to another device's SPA.
   application; the known-player relocation rules apply only to inherited remote players.
   Neither this matching API nor a read-only library grant grants reciprocal access or
   synchronizes profile configuration to the source.
+
+- **Cross-device processing is explicit, resumable work.** `Components/Federation/Processing`
+  separates coordinator, owner and worker rows in the main DB; these rows are never full-memory
+  cached, journaled as resources, or definition-synced. A manager selects one of its saved rules
+  and scans matching resource IDs in bounded keyset pages. The owner prepares one resource and
+  enhancer step; the worker computes using its own explicit owner-to-worker path mapping.
+  Management is directional: A coordinating B does not require B to manage A. A third worker C
+  must be explicitly managed by A and have its own mapping/connection to B.
+  No arbitrary command, player program or executable config is part of this protocol.
+- **Apply only checked results.** Pin owner epoch, source revision, property catalog and rule
+  hash. Check the manager's current rule/scope before applying; the owner checks its revision
+  and catalog under the same transaction that writes normal metadata and the idempotent receipt.
+  Dependent enhancers prepare fresh data after their predecessor commits. On a lost response,
+  read the receipt before retransferring files or retrying apply. Attachments are bounded,
+  content-addressed chunks outside JSON and installed through the owner's file manager.
+  Worker-local paths/IDs never become owner attachment paths/IDs. Compact completed payloads
+  and clean temporary files after durable acknowledgement. A stopped job retains its checkpoint;
+  conflict requires a new run with the current data rather than an automatic overwrite.
 
 - **Keys stay in the store.** Device keys live in `AppData/remote-access/managed/connection.json`
   (mode 0600 on Unix), never in `[Options]`, never in a DTO, log line or `/client` response.

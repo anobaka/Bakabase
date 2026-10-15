@@ -213,10 +213,21 @@ public class RemoteAccessService(
     {
         var id = await GetOrCreateServerIdAsync();
         var ports = GetListeningPorts();
+        var name = GetServerName();
+        if (hostInfo.GetDisplayNameAsync != null)
+        {
+            try { name = await hostInfo.GetDisplayNameAsync(); }
+            catch (Exception)
+            {
+                // This optional label must not break discovery when its separate state
+                // is unavailable. Identity failures above still propagate unchanged.
+                logger.LogWarning("The configured device name is unavailable; using the machine name for remote access.");
+            }
+        }
 
         return new RemoteAccessServerDescriptor(
             id,
-            GetServerName(),
+            name,
             ports.Count > 0 ? ports[0] : null,
             hostInfo.AppVersion,
             RemoteAccessProtocol.CurrentVersion,

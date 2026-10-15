@@ -110,6 +110,34 @@ describe("source-bound management transport", () => {
     expect(localPut).not.toHaveBeenCalled();
     expect(fetcher).not.toHaveBeenCalled();
   });
+  it("reads completed offline metadata while continuing to refuse owner writes and files", async () => {
+    const owner = source("b");
+    owner.available = false;
+    owner.metadata = {
+      identity: { serverId: owner.serverId, libraryEpoch: owner.libraryEpoch },
+      name: owner.name,
+      denied: false,
+      data: {
+        activeGeneration: "complete",
+        resourceCount: 1,
+        activeSequence: 1,
+        stagedResourceCount: 0,
+      },
+      sync: { paused: false, isOffline: true },
+    };
+    const fetcher = vi.fn(async () => new Response('{"code":0,"data":[]}'));
+    vi.stubGlobal("fetch", fetcher);
+    await ownerClient(owner)("resourceGet", { ids: [7] });
+    await ownerClient(owner)("properties");
+    expect(fetcher).toHaveBeenCalledTimes(2);
+    await expect(ownerClient(owner)("resourcePropertyPut", { id: 7 })).rejects.toThrow(
+      "unavailable",
+    );
+    await expect(ownerClient(owner)("resourcePlayableItems", { id: 7 })).rejects.toThrow(
+      "unavailable",
+    );
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  });
   it("surfaces source-side HTTP and application refusals as failures", async () => {
     const fetcher = vi
       .fn()

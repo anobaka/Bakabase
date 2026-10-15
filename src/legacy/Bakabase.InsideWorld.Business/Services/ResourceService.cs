@@ -302,6 +302,15 @@ namespace Bakabase.InsideWorld.Business.Services
 
         public async Task<int[]> GetAllIds(ResourceSearch model)
         {
+            if (ResourceMetadataReadScope.ResourceIds is { } candidates)
+            {
+                // Rule matching during an export never scans the library or consults the
+                // asynchronously updated global search index.
+                var ids = candidates.ToArray();
+                var resources = await GetByKeys(ids);
+                var matches = await _legacySearchService.SearchManyAsync(resources, [model]);
+                return (matches[0] ?? resources.Select(r => r.Id).ToHashSet()).ToArray();
+            }
             HashSet<int>? resourceIds = null;
 
             // Try to use inverted index first for property filters

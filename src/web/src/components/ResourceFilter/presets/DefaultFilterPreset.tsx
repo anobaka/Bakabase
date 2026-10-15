@@ -12,6 +12,7 @@ import PropertySelector from "@/components/PropertySelector";
 import { InternalProperty, PropertyPool, ResourceProperty } from "@/sdk/constants";
 import { createResourceApi } from "@/features/management/resourceApi";
 import { ResourceOwnerProvider } from "@/features/management/resourceContext";
+import { canReadSourceMetadata } from "@/features/management/metadata";
 
 const ownerLocalProperties = new Set<number>([
   ResourceProperty.ParentResource,
@@ -129,6 +130,9 @@ export function createDefaultFilterConfig(
       },
 
       saveRecentFilter: async (filter) => {
+        const selectedOwner = findOwner(filter.owner);
+        // Offline filtering remains usable; recents are an optional owner-side preference.
+        if (selectedOwner && (!selectedOwner.available || selectedOwner.metadata?.denied)) return;
         if (filter.propertyPool && filter.propertyId && filter.operation) {
           await apiFor(filter.owner).options.addRecentResourceFilter({
             propertyPool: filter.propertyPool,
@@ -174,10 +178,10 @@ export function createDefaultFilterConfig(
         const unavailableSources: { name: string; message?: string }[] = [];
 
         if (mixed) {
-          const availableSources = (sources ?? []).filter((source) => source.available);
+          const availableSources = (sources ?? []).filter(canReadSourceMetadata);
           unavailableSources.push(
             ...(sources ?? [])
-              .filter((source) => !source.available)
+              .filter((source) => !canReadSourceMetadata(source))
               .map((source) => ({ name: source.name, message: source.error })),
           );
           const results = await loadBySource(availableSources, async (source) => {

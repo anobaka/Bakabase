@@ -36,6 +36,46 @@ const filter = (owner?: ManagementSource) => ({
 const row = (id: number, extra: Partial<Resource> = {}) => ({ id, ...extra }) as Resource;
 
 describe("unified resource query ownership", () => {
+  it("searches a complete offline replica and reports incomplete replicas instead of empty success", async () => {
+    const offline: ManagementSource = {
+      ...b,
+      available: false,
+      metadata: {
+        identity: { serverId: b.serverId, libraryEpoch: b.libraryEpoch },
+        name: b.name,
+        denied: false,
+        data: {
+          activeGeneration: "complete",
+          resourceCount: 1,
+          activeSequence: 1,
+          stagedResourceCount: 0,
+        },
+        sync: { paused: false, isOffline: true },
+      },
+    };
+    const request = vi.fn().mockResolvedValue({ data: [row(7)], totalCount: 1 });
+    const pager = new ManagedResourcePager([offline], form, request, new AbortController().signal);
+    expect((await pager.page(1)).data[0].owner).toEqual(offline);
+    expect(pager.failures.size).toBe(0);
+    const incomplete = {
+      ...offline,
+      available: true,
+      metadata: {
+        ...offline.metadata!,
+        data: { ...offline.metadata!.data, activeGeneration: undefined },
+      },
+    };
+    request.mockClear();
+    const pending = new ManagedResourcePager(
+      [incomplete],
+      form,
+      request,
+      new AbortController().signal,
+    );
+    expect((await pending.page(1)).data).toEqual([]);
+    expect(pending.failures.get(b.serverId)?.message).toContain("not ready");
+    expect(request).not.toHaveBeenCalled();
+  });
   it("treats backend null DeviceIds as all sources while keeping [] as none", () => {
     const restored = JSON.parse(
       '{"page":1,"pageSize":50,"owner":null,"deviceIds":null,"group":null,"orders":null,"keyword":null,"tags":null}',

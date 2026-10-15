@@ -90,7 +90,7 @@ export default function ResourceProfileModal({
           ...(sourceId
             ? {
                 sourceDeviceId: sourceId,
-                sourceLibraryEpoch: source?.libraryEpoch,
+                sourceLibraryEpoch: source?.libraryEpoch ?? undefined,
               }
             : {}),
         });

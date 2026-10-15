@@ -21,6 +21,7 @@ import { InternalProperty, PropertyPool } from "@/sdk/constants";
 import { isReferenceValueType } from "@/components/Property/PropertySystem";
 import { toSearchInputModel } from "@/components/ResourceFilter/utils/toInputModel";
 import { resourceChangedChannel } from "@/services/ResourceChangedChannel";
+import { canReadSourceMetadata, sourceSearchRevision } from "@/features/management/metadata";
 
 type CountsResponse = { counts: Record<string, number>; isReady: boolean };
 const pending = new Map<string, Promise<CountsResponse>>();
@@ -85,9 +86,7 @@ export function useReferenceValueResourceCounts(property?: ReferenceProperty, se
       ? sources
       : undefined;
   const sourcesKey = countedSources
-    ? JSON.stringify(
-        countedSources.map((source) => [source.serverId, source.libraryEpoch, source.available]),
-      )
+    ? JSON.stringify(countedSources.map(sourceSearchRevision))
     : ownerKey;
   const enabled =
     !!property?.id &&
@@ -159,7 +158,8 @@ export function useReferenceValueResourceCounts(property?: ReferenceProperty, se
                   );
 
                   if (!compiled) return { counts: {}, isReady: true };
-                  if (!source.available) throw new Error(source.error || "Device unavailable");
+                  if (!canReadSourceMetadata(source))
+                    throw new Error(source.error || "Device unavailable");
 
                   return requestCounts(
                     property,

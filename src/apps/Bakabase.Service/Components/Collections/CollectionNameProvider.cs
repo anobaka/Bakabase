@@ -17,6 +17,8 @@ public class CollectionNameProvider(
     CollectionRuleIndex ruleIndex,
     IResourceProfileService profiles) : ICollectionNameProvider
 {
+    private static readonly AsyncLocal<HashSet<int>?> EvaluatingPersistedRules = new();
+
     public async Task<List<CollectionName>> GetAllAsync(CancellationToken ct = default) =>
         (await collections.GetAll(false, ct)).Select(c => new CollectionName(c.Id, c.Name)).ToList();
 
@@ -56,6 +58,28 @@ public class CollectionNameProvider(
 
         if (rules.Count == 0) return result;
 
+        if (ResourceMetadataReadScope.ResourceIds != null)
+        {
+            // Evaluate only this page against persisted values, never a stale rule cache.
+            using var candidates = ResourceMetadataReadScope.Enter(resourceIds.ToArray());
+            foreach (var (id, search) in rules)
+            {
+                ct.ThrowIfCancellationRequested();
+                var previous = EvaluatingPersistedRules.Value;
+                // Nested collection filters may ask for the same whole membership map.
+                // Re-entered rules contribute their explicit memberships only; evaluate
+                // other rules normally instead of recursing or dropping valid A -> B rules.
+                if (previous?.Contains(id) == true) continue;
+                EvaluatingPersistedRules.Value = previous == null ? [id] : [..previous, id];
+                try
+                {
+                    foreach (var resourceId in await profiles.GetMatchingResourceIdsBySearchJson(search))
+                        Attach(resourceId, id);
+                }
+                finally { EvaluatingPersistedRules.Value = previous; }
+            }
+            return result;
+        }
         await ruleIndex.EnsureCurrentAsync(rules, profiles, ct);
 
         foreach (var resourceId in resourceIds)

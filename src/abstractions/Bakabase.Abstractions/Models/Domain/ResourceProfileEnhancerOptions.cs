@@ -5,6 +5,7 @@ namespace Bakabase.Abstractions.Models.Domain;
 /// </summary>
 public class ResourceProfileEnhancerOptions
 {
+    public ResourceProcessingExecutionTarget? ExecutionTarget { get; set; }
     /// <summary>
     /// 各增强器的配置
     /// </summary>

@@ -11,8 +11,9 @@ see `server-switching.md`. Those operations use the paired-device connection cor
 owner IDs/epochs separate. Do not promote a `library.read` or `datasync.read` grant into
 management rights or add writes to the read-only export protocol. Existing data sync copies
 custom-property definitions/options and extension groups, not resource metadata or media-library
-membership. The unified manager currently reads bounded online pages rather than syncing a
-full resource database.
+membership through that definitions protocol. Explicitly paired managers separately pull
+bounded resource metadata into owner/epoch-isolated SQLite replicas for local search. These
+replicas are not new owners or read-only sharing grants; see `server-switching.md`.
 
 ## Where things live
 

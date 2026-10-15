@@ -850,7 +850,7 @@ describe("device map: acting on a device", () => {
       fireEvent.click(screen.getByRole("button", { name: "federation.save" }));
     });
 
-    expect(federationPeerApi.setName).toHaveBeenCalledWith("Den");
+    expect(federationPeerApi.setName).toHaveBeenCalledWith("Den", "Studio PC");
   });
 });
 

@@ -13,7 +13,7 @@ import DeleteEnhancementsModal from "../components/DeleteEnhancementsModal";
 import ResourceProfileTestModal from "../components/ResourceProfileTestModal";
 import ResourceProfileModal from "../components/ResourceProfileModal";
 
-import { PropertyPool, PropertyValueScope } from "@/sdk/constants";
+import { PropertyPool, PropertyValueScope, ResourceProfileRuleKind } from "@/sdk/constants";
 
 const api = vi.hoisted(() => ({
   profiles: vi.fn(),
@@ -57,7 +57,9 @@ vi.mock("../components/PlayableFileSelectorModal", () => ({ default: () => null 
 vi.mock("../components/PlayerSelectorModal", () => ({ default: () => null }));
 vi.mock("../components/DeleteEnhancementsModal", () => ({ default: () => null }));
 vi.mock("../components/ResourceProfileTestModal", () => ({ default: () => null }));
+vi.mock("../components/ResourceProcessingTasks", () => ({ default: () => null }));
 vi.mock("../components/ResourceProfileModal", () => ({ default: () => null }));
+vi.mock("../components/ResourceScopeEditorModal", () => ({ default: () => null }));
 vi.mock("@/components/ResourceFilter", () => ({
   // The filter editor has its own tests; exercise the page's draft/save boundary.
   ResourceFilterController: ({ group, isReadonly, onGroupChange }: any) => (
@@ -211,6 +213,38 @@ function portalProps(component: unknown): any {
   return call![1];
 }
 
+let lastProfile: ResourceProfile;
+
+function ruleRequest({ path, body }: any) {
+  if (path === "/resource-scope") return [];
+  if (path.endsWith("/rule")) {
+    const field = (
+      {
+        [ResourceProfileRuleKind.NameTemplate]: "nameTemplate",
+        [ResourceProfileRuleKind.Enhancers]: "enhancerOptions",
+        [ResourceProfileRuleKind.PlayableFiles]: "playableFileOptions",
+        [ResourceProfileRuleKind.Players]: "playerOptions",
+        [ResourceProfileRuleKind.Properties]: "propertyOptions",
+        [ResourceProfileRuleKind.OpeningMode]: "openingMode",
+      } as Record<number, string>
+    )[body.kind];
+
+    lastProfile = {
+      ...lastProfile,
+      [field]: body.valueJson == null ? null : JSON.parse(body.valueJson),
+      updatedAt: `revision-${api.request.mock.calls.length}`,
+    };
+
+    return lastProfile;
+  }
+
+  return { code: 0, data: [] };
+}
+const ruleCalls = () =>
+  api.request.mock.calls
+    .filter(([request]) => request.path.endsWith("/rule"))
+    .map(([request]) => request);
+
 beforeEach(() => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   Object.values(api).forEach((mock) => mock.mockReset());
@@ -224,7 +258,8 @@ beforeEach(() => {
   });
   api.enhancers.mockResolvedValue({ code: 0, data: [] });
   api.update.mockResolvedValue({ code: 0 });
-  api.request.mockResolvedValue({ code: 0, data: [] });
+  lastProfile = structuredClone(configured);
+  api.request.mockImplementation(async (request) => ruleRequest(request));
   api.sourceConfig.mockReturnValue({ remote: true });
   host = document.createElement("div");
   document.body.append(host);
@@ -311,16 +346,16 @@ describe("resource profile page editing", () => {
     expect(host.querySelector('[role="alert"]')).toBeNull();
   });
 
-  it("returns the save Promise to modal editors and merges later edits with the latest profile", async () => {
+  it("saves only the selected category with the current revision and preserves later edits", async () => {
     await render();
     await click(button("resourceProfile.action.configureName"));
     const titleEditor = portalProps(DisplayNameTemplateEditorModal);
 
     await click(button("resourceProfile.action.configureProperties"));
     const propertyEditor = portalProps(PropertyPoolModal);
-    const pending = deferred<{ code: number }>();
+    const pending = deferred<ResourceProfile>();
 
-    api.update.mockReturnValueOnce(pending.promise);
+    api.request.mockReturnValueOnce(pending.promise);
     let save!: Promise<void>;
 
     await act(async () => {
@@ -329,7 +364,8 @@ describe("resource profile page editing", () => {
     expect(save).toBeInstanceOf(Promise);
     expect(button("resourceProfile.action.configureProperties")).toBeDisabled();
     await act(async () => {
-      pending.resolve({ code: 0 });
+      lastProfile = { ...configured, nameTemplate: "Updated title", updatedAt: "revision-2" };
+      pending.resolve(lastProfile);
       await save;
     });
     const properties = {
@@ -339,22 +375,26 @@ describe("resource profile page editing", () => {
     };
 
     await act(async () => propertyEditor.onSubmit(properties));
-    expect(api.update.mock.calls[1][1]).toMatchObject({
-      nameTemplate: "Updated title",
-      propertyOptions: properties,
+    expect(ruleCalls()[1]).toMatchObject({
+      path: "/resource-scope/profile/1/rule",
+      method: "PATCH",
+      body: {
+        kind: ResourceProfileRuleKind.Properties,
+        valueJson: JSON.stringify(properties),
+        expectedUpdatedAt: "revision-2",
+      },
     });
-
-    api.update.mockResolvedValueOnce({ code: 409, message: "Conflict" });
+    expect(lastProfile.nameTemplate).toBe("Updated title");
+    expect(api.update).not.toHaveBeenCalled();
+    api.request.mockRejectedValueOnce(new Error("Conflict"));
     await act(async () => {
       await expect(titleEditor.onSubmit("Rejected title")).rejects.toThrow("Conflict");
     });
     await act(async () => propertyEditor.onSubmit(configured.propertyOptions));
-    expect(api.update.mock.calls[api.update.mock.calls.length - 1][1].nameTemplate).toBe(
-      "Updated title",
-    );
+    expect(lastProfile.nameTemplate).toBe("Updated title");
   });
 
-  it("merges enhancer targets by pool and id without overwriting scope priorities or adding duplicates", async () => {
+  it("saving enhancer targets never writes or implicitly links property settings", async () => {
     await render();
     await click(button("resourceProfile.action.configureEnhancers"));
     const options = [
@@ -364,25 +404,21 @@ describe("resource profile page editing", () => {
           { target: 1, propertyPool: PropertyPool.Custom, propertyId: 9 },
           { target: 2, propertyPool: PropertyPool.Reserved, propertyId: 9 },
           { target: 3, propertyPool: PropertyPool.Custom, propertyId: 10 },
-          { target: 4, propertyPool: PropertyPool.Custom, propertyId: 10 },
-          { target: 5 },
         ],
       },
     ];
 
     await act(async () => portalProps(EnhancementConfigPanel).onSubmit(options));
-    const input = api.update.mock.calls[0][1];
-
-    expect(input.enhancerOptions).toEqual({ enhancers: options });
-    expect(input.propertyOptions.properties).toEqual([
-      configured.propertyOptions!.properties![0],
-      { pool: PropertyPool.Reserved, id: 9 },
-      { pool: PropertyPool.Custom, id: 10 },
-    ]);
-    expect(input.playableFileOptions).toEqual(configured.playableFileOptions);
+    expect(ruleCalls()[0].body).toMatchObject({
+      kind: ResourceProfileRuleKind.Enhancers,
+      valueJson: JSON.stringify({ enhancers: options }),
+    });
+    expect(lastProfile.propertyOptions).toEqual(configured.propertyOptions);
+    expect(lastProfile.playableFileOptions).toEqual(configured.playableFileOptions);
     await act(async () => portalProps(EnhancementConfigPanel).onSubmit([]));
-    expect(api.update.mock.calls[1][1].enhancerOptions).toBeNull();
-    expect(api.update.mock.calls[1][1].propertyOptions).toEqual(input.propertyOptions);
+    expect(ruleCalls()[1].body.valueJson).toBeNull();
+    expect(lastProfile.propertyOptions).toEqual(configured.propertyOptions);
+    expect(api.update).not.toHaveBeenCalled();
   });
 
   it("disables metadata dependent actions until metadata succeeds and supports retry", async () => {
@@ -426,30 +462,37 @@ describe("resource profiles from another device", () => {
   const sourceProperties = [{ id: 9, pool: PropertyPool.Custom, name: "Source category" }];
   const setup = () => {
     api.profiles.mockResolvedValue({ code: 0, data: [remote] });
-    api.request.mockImplementation(async ({ path }: { path: string }) => ({
-      code: 0,
-      data: path.endsWith("/sources")
-        ? [
-            {
-              deviceId: "mac-server",
-              name: "Mac server",
-              available: true,
-              libraryEpoch: "library-1",
-              kind: "managed",
-            },
-          ]
-        : path.endsWith("/properties")
-          ? sourceProperties
-          : {
-              ...configured.search,
-              group: {
-                ...configured.search!.group,
-                filters: [
-                  { ...configured.search!.group!.filters![0], property: sourceProperties[0] },
-                ],
+    lastProfile = structuredClone(remote);
+    api.request.mockImplementation(async (request: any) => {
+      const { path } = request;
+
+      if (path.startsWith("/resource-scope")) return ruleRequest(request);
+
+      return {
+        code: 0,
+        data: path.endsWith("/sources")
+          ? [
+              {
+                deviceId: "mac-server",
+                name: "Mac server",
+                available: true,
+                libraryEpoch: "library-1",
+                kind: "managed",
               },
-            },
-    }));
+            ]
+          : path.endsWith("/properties")
+            ? sourceProperties
+            : {
+                ...configured.search,
+                group: {
+                  ...configured.search!.group,
+                  filters: [
+                    { ...configured.search!.group!.filters![0], property: sourceProperties[0] },
+                  ],
+                },
+              },
+      };
+    });
   };
 
   it("hydrates filters on their source and preserves source identity through ordinary profile updates", async () => {
@@ -468,7 +511,9 @@ describe("resource profiles from another device", () => {
     );
     expect(host.textContent).toContain("Source category");
     expect(host.textContent).not.toContain("resourceProfile.action.configureProperties");
-    expect(host.textContent).not.toContain("resourceProfile.action.configureEnhancers");
+    expect(button("resourceProfile.action.configureEnhancers")).toBeEnabled();
+    await click(button("resourceProfile.action.configureEnhancers"));
+    expect(portalProps(EnhancementConfigPanel).propertyCatalog).toEqual(sourceProperties);
     await click(button("resourceProfile.action.editScope"));
     await click(button("Change scope filter"));
     await click(button("common.action.save"));
@@ -499,10 +544,10 @@ describe("resource profiles from another device", () => {
       }),
     );
     await click(button("resourceProfile.source.inheritPlayer"));
-    expect(api.update).toHaveBeenLastCalledWith(
-      3,
-      expect.objectContaining({ playerOptions: null }),
-    );
+    expect(ruleCalls().at(-1).body).toMatchObject({
+      kind: ResourceProfileRuleKind.Players,
+      valueJson: null,
+    });
   });
   it("does not substitute local property IDs when the source is offline", async () => {
     setup();

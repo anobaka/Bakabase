@@ -36,6 +36,9 @@ import {
 } from "@/features/management/resourceIdentity";
 import { groupResourceSelection } from "@/features/management/resourceSelection";
 import { useResourceSources } from "@/features/management/resourceSourcesContext";
+import { canReadSourceMetadata, sourceSearchRevision } from "@/features/management/metadata";
+import { MetadataSyncStatus } from "@/features/management/MetadataSyncStatus";
+import { resolveQuerySources } from "@/features/management/resourceQuery";
 import ResizablePanelDivider from "@/components/ResizablePanelDivider";
 import ResourceCard from "@/components/Resource";
 import { getSelectionMoveBlockReasons } from "@/components/Resource/resourceMoveEligibility";
@@ -239,13 +242,7 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
 
   const initStartPageRef = useRef(1);
   const initializedSourcesRef = useRef<string>();
-  const sourcesSignature = JSON.stringify(
-    sourcesContext?.sources.map((source) => [
-      source.serverId,
-      source.libraryEpoch,
-      source.available,
-    ]) ?? [],
-  );
+  const sourcesSignature = JSON.stringify(sourcesContext?.sources.map(sourceSearchRevision) ?? []);
 
   useEffect(() => {
     if (sourcesContext?.loading) return;
@@ -1092,6 +1089,15 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
 
   const rightPanelContent = (
     <div className="flex flex-col h-full overflow-hidden">
+      {sourcesContext && (
+        <MetadataSyncStatus
+          sources={resolveQuerySources(
+            searchForm ?? { page: 1, pageSize: BasePageSize },
+            sourcesContext.sources,
+          )}
+          onRefresh={sourcesContext.refresh}
+        />
+      )}
       {(sourcesContext?.error || !!sourceErrors?.length) && (
         <div
           className="flex shrink-0 items-center gap-2 rounded-lg bg-warning-50 px-3 py-2 text-xs text-warning-700"
@@ -1101,7 +1107,16 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
             {[
               sourcesContext?.error?.message,
               ...(sourceErrors ?? []).map(
-                ({ source, error }) => `${source.name}: ${error.message}`,
+                ({ source, error }) =>
+                  `${source.name}: ${
+                    source.metadata && !canReadSourceMetadata(source)
+                      ? t(
+                          source.metadata.denied
+                            ? "management.metadata.deniedHelp"
+                            : "management.metadata.incompleteHelp",
+                        )
+                      : error.message
+                  }`,
               ),
             ]
               .filter(Boolean)
@@ -1258,7 +1273,12 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
             </CardBody>
           </Card>
         ) : (
-          resources.length == 0 && (
+          resources.length == 0 &&
+          (sourceErrors?.length || sourcesContext?.error ? (
+            <p className="max-w-lg px-6 py-10 text-center text-sm text-default-500" role="status">
+              {t("management.metadata.partialHelp")}
+            </p>
+          ) : (
             <Card className="w-[520px]">
               <CardBody className="gap-5 p-6">
                 <div className="flex items-center gap-3">
@@ -1323,7 +1343,7 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
                 </div>
               </CardBody>
             </Card>
-          )
+          ))
         )}
       </div>
     </div>

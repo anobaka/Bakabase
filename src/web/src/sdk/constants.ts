@@ -1117,6 +1117,51 @@ export const CategoryResourceDisplayNameSegmentTypeLabel: Record<CategoryResourc
   [CategoryResourceDisplayNameSegmentType.RightWrapper]: 'RightWrapper'
 };
 
+export enum ResourceProcessingExecutionKind {
+  Owner = 0,
+  Local = 1,
+  Managed = 2
+}
+
+export const resourceProcessingExecutionKinds = [
+  { label: 'Owner', value: ResourceProcessingExecutionKind.Owner },
+  { label: 'Local', value: ResourceProcessingExecutionKind.Local },
+  { label: 'Managed', value: ResourceProcessingExecutionKind.Managed }
+] as const;
+
+export const ResourceProcessingExecutionKindLabel: Record<ResourceProcessingExecutionKind, string> = {
+  [ResourceProcessingExecutionKind.Owner]: 'Owner',
+  [ResourceProcessingExecutionKind.Local]: 'Local',
+  [ResourceProcessingExecutionKind.Managed]: 'Managed'
+};
+
+export enum ResourceProfileRuleKind {
+  NameTemplate = 1,
+  Enhancers = 2,
+  PlayableFiles = 3,
+  Players = 4,
+  Properties = 5,
+  OpeningMode = 6
+}
+
+export const resourceProfileRuleKinds = [
+  { label: 'NameTemplate', value: ResourceProfileRuleKind.NameTemplate },
+  { label: 'Enhancers', value: ResourceProfileRuleKind.Enhancers },
+  { label: 'PlayableFiles', value: ResourceProfileRuleKind.PlayableFiles },
+  { label: 'Players', value: ResourceProfileRuleKind.Players },
+  { label: 'Properties', value: ResourceProfileRuleKind.Properties },
+  { label: 'OpeningMode', value: ResourceProfileRuleKind.OpeningMode }
+] as const;
+
+export const ResourceProfileRuleKindLabel: Record<ResourceProfileRuleKind, string> = {
+  [ResourceProfileRuleKind.NameTemplate]: 'NameTemplate',
+  [ResourceProfileRuleKind.Enhancers]: 'Enhancers',
+  [ResourceProfileRuleKind.PlayableFiles]: 'PlayableFiles',
+  [ResourceProfileRuleKind.Players]: 'Players',
+  [ResourceProfileRuleKind.Properties]: 'Properties',
+  [ResourceProfileRuleKind.OpeningMode]: 'OpeningMode'
+};
+
 export enum ResolverConfigFieldType {
   String = 1,
   Password = 2,

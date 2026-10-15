@@ -12,6 +12,7 @@ using Bakabase.Service.Components.Federation;
 using Bakabase.Service.Components.RemoteAccess;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
+using Bakabase.Service.Components.Federation.MetadataReplicas;
 
 namespace Bakabase.Service.Controllers;
 
@@ -19,6 +20,7 @@ public sealed record ManagedResourceDisplayOptions(UIOptions.UIResourceOptions U
     PropertyValueScope[] PropertyValueScopePriority);
 
 public sealed record ManagedResourceDisplayOptionsPatch(PropertyValueScope[] PropertyValueScopePriority);
+public sealed record ManagedMetadataControlInput(string LibraryEpoch, bool Paused);
 
 [ApiController]
 [Route("management/library")]
@@ -36,6 +38,14 @@ public sealed class ManagedLibraryInfoController(ManagedLibraryService service) 
 [FederationServerController.InvalidRequest]
 public sealed class ManagedLibraryController(ManagedLibraryService service) : FederationControllerBase
 {
+    [HttpPost("{serverId}/metadata/control")]
+    [SwaggerOperation(OperationId = "ControlManagedMetadataSync")]
+    public async Task<IActionResult> ControlMetadata(string serverId, [FromBody] ManagedMetadataControlInput input,
+        [FromServices] MetadataReplicaCoordinator coordinator, CancellationToken ct)
+    {
+        await coordinator.ControlAsync(serverId, input.LibraryEpoch, input.Paused, ct);
+        return Ok(new {code = 0});
+    }
     [HttpGet("resource-display-options")]
     [RemoteAccessible]
     [SwaggerOperation(OperationId = "GetManagedResourceDisplayOptions")]

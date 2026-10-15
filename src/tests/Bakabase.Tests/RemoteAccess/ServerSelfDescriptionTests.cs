@@ -50,6 +50,51 @@ public class ServerSelfDescriptionTests
             NullLogger<RemoteAccessService>.Instance, self);
 
     [TestMethod]
+    public async Task Discovery_and_handshake_descriptor_follow_the_hosts_current_name_without_changing_identity()
+    {
+        var name = "Original source";
+        var reads = 0;
+        var service = new RemoteAccessService(
+            new TestBOptionsManager<RemoteAccessOptions>(new RemoteAccessOptions {ServerId = "stable-server"}),
+            new RemoteAccessDefaults(RemoteAccessMode.Enabled), new RemoteAccessHostInfo("2.4.0")
+            {
+                GetDisplayNameAsync = () => { reads++; return Task.FromResult(name); }
+            }, new NoAddresses(), NullLogger<RemoteAccessService>.Instance);
+        Assert.AreEqual(0, reads, "Resolving the service must not resolve the host identity recursively.");
+        var before = await service.GetServerDescriptorAsync();
+        name = "Renamed source";
+        var after = await service.GetServerDescriptorAsync();
+        Assert.AreEqual("Original source", before.Name);
+        Assert.AreEqual("Renamed source", after.Name);
+        Assert.AreEqual(before.Id, after.Id);
+        Assert.AreEqual("stable-server", after.Id);
+        Assert.AreEqual(before.ProtocolVersion, after.ProtocolVersion);
+        Assert.AreEqual(2, reads);
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task An_unavailable_optional_name_does_not_break_descriptor_identity_or_protocol(bool asynchronous)
+    {
+        var error = new IOException("Private configuration details must not reach the descriptor.");
+        var service = new RemoteAccessService(
+            new TestBOptionsManager<RemoteAccessOptions>(new RemoteAccessOptions {ServerId = "stable-server"}),
+            new RemoteAccessDefaults(RemoteAccessMode.Enabled), new RemoteAccessHostInfo("2.4.0")
+            {
+                GetDisplayNameAsync = () => asynchronous ? Task.FromException<string>(error) : throw error
+            }, new NoAddresses(), NullLogger<RemoteAccessService>.Instance,
+            new Says(ServerKind.Desktop, RemoteDevicePlatform.Windows));
+        var descriptor = await service.GetServerDescriptorAsync();
+        Assert.AreEqual("stable-server", descriptor.Id);
+        Assert.AreEqual(Environment.MachineName, descriptor.Name);
+        Assert.AreEqual(RemoteAccessProtocol.CurrentVersion, descriptor.ProtocolVersion);
+        Assert.AreEqual("2.4.0", descriptor.AppVersion);
+        Assert.AreEqual(ServerKind.Desktop, descriptor.Kind);
+        Assert.AreEqual(RemoteDevicePlatform.Windows, descriptor.Platform);
+    }
+
+    [TestMethod]
     public async Task The_descriptor_carries_what_the_host_says_and_nothing_it_cannot_tell()
     {
         var said = await Service(new Says(ServerKind.Headless, RemoteDevicePlatform.Linux)).GetServerDescriptorAsync();

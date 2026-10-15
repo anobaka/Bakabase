@@ -104,56 +104,11 @@ public class LocalFilePlayableItemProvider : IPlayableItemProvider
 
         try
         {
-            // Exists() suppresses permission and I/O errors. A missing/inaccessible
-            // resource is a failed discovery, not a successful empty cached result.
-            _ = File.GetAttributes(resource.Path);
-            // Use ResourceProfile to get effective playable file options
-            var playableFileOptions = await _resourceProfileService.GetEffectivePlayableFileOptions(resource);
-            if (playableFileOptions?.Extensions != null && playableFileOptions.Extensions.Count > 0)
-            {
-                // Normalize extensions to ensure they start with a dot
-                var extensions = playableFileOptions.Extensions
-                    .Select(e => e.StartsWith('.') ? e : $".{e}")
-                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var options = await _resourceProfileService.GetEffectivePlayableFileOptions(resource);
+            if (options?.ExecutionTarget?.Kind == ResourceProcessingExecutionKind.Managed)
+                throw new InvalidOperationException("Run the playable-file rule on its selected device before opening this resource.");
+            playableFiles = await PlayableFileDiscovery.DiscoverAsync(resource.Path, resource.IsFile, options, ct);
 
-                List<string> files;
-                if (resource.IsFile)
-                {
-                    files = [resource.Path];
-                }
-                else
-                {
-                    // Checked per file, not once around the walk: a recursive enumeration of
-                    // a large resource folder is the longest uninterruptible stretch in the
-                    // "prepare resource data" task, and until this existed a stop request
-                    // (app exit included) had to wait the whole scan out.
-                    files = [];
-                    foreach (var file in Directory.EnumerateFiles(resource.Path, "*",
-                                 SearchOption.AllDirectories))
-                    {
-                        ct.ThrowIfCancellationRequested();
-                        files.Add(file);
-                    }
-                }
-
-                var result = files.Where(f => extensions.Contains(Path.GetExtension(f))).ToList();
-
-                // Apply file name pattern filter if configured
-                if (!string.IsNullOrEmpty(playableFileOptions.FileNamePattern))
-                {
-                    try
-                    {
-                        var regex = new Regex(playableFileOptions.FileNamePattern, RegexOptions.IgnoreCase);
-                        result = result.Where(f => regex.IsMatch(Path.GetFileName(f))).ToList();
-                    }
-                    catch
-                    {
-                        // Invalid regex, ignore the filter
-                    }
-                }
-
-                playableFiles = result.Select(f => f.StandardizePath()!).ToArray();
-            }
         }
         // An interrupted scan discovered nothing; it did not find nothing. Falling through to the
         // cache write below would persist "this resource has no playable files" — a valid cached

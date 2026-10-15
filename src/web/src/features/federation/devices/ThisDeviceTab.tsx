@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import type { DevicesSection } from "../switching";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { AiOutlineRight } from "react-icons/ai";
@@ -52,12 +52,13 @@ export default function ThisDeviceTab() {
   const { t } = useTranslation();
   const { data, busy, run, mounted, revealed, tabs } = useDevicesPage();
   const [editingName, setEditingName] = useState<string>();
+  const expectedName = useRef<string>();
   const { status, access, servers } = data;
   const target = t<string>("federation.management.self");
   const mode = access?.mode;
   const saveName = (name: string) =>
     void run(async () => {
-      await federationPeerApi.setName(name.trim() || null);
+      await federationPeerApi.setName(name.trim() || null, expectedName.current);
       if (mounted.current) setEditingName(undefined);
     });
 
@@ -98,7 +99,10 @@ export default function ThisDeviceTab() {
                 className={`${buttonClass} !px-2 !py-1 text-xs`}
                 disabled={busy}
                 type="button"
-                onClick={() => setEditingName(status.identity.name)}
+                onClick={() => {
+                  expectedName.current = status.identity.name;
+                  setEditingName(status.identity.name);
+                }}
               >
                 {t("federation.name.edit")}
               </button>

@@ -1,6 +1,13 @@
 import BApi from "@/sdk/BApi";
 import envConfig from "@/config/env";
 import { PropertyPool, ResourceAdditionalItem } from "@/sdk/constants";
+import type { ContentType } from "@/sdk/Api";
+import {
+  canReadSourceMetadata,
+  metadataReadError,
+  metadataReadOperations,
+  type ManagedMetadataStatus,
+} from "./metadata";
 
 // List and editor metadata must not expand every playable file or cover in a large resource.
 const resourceMetadataItems = (ResourceAdditionalItem.Properties |
@@ -17,6 +24,7 @@ export interface ManagementSource {
   errorCode?: string;
   error?: string;
   contractVersion: number;
+  metadata?: ManagedMetadataStatus;
 }
 export interface Envelope<T> {
   code?: number;
@@ -75,6 +83,18 @@ export async function getManagementSources(signal?: AbortSignal): Promise<Manage
   return body.sources;
 }
 
+export async function setMetadataSyncPaused(source: ManagementSource, paused: boolean) {
+  const response = await BApi.request({
+    path: `/federation/local/management/${encodeURIComponent(source.serverId)}/metadata/control`,
+    method: "POST",
+    type: "application/json" as ContentType,
+    format: "json",
+    body: { libraryEpoch: source.libraryEpoch, paused },
+  });
+  if ((response as Envelope<unknown>)?.code)
+    throw new Error((response as Envelope<unknown>).message || "Unable to update sync settings");
+}
+
 /** An immutable binding to the owner. No global SDK URL, selection or credentials are changed. */
 export function ownerClient(source: ManagementSource) {
   const owner = { ...source };
@@ -83,8 +103,13 @@ export function ownerClient(source: ManagementSource) {
     operation: Operation,
     input: RequestInput = {},
   ): Promise<Envelope<T>> {
-    if (!owner.available || !owner.libraryEpoch)
-      throw new Error(owner.error || "Device unavailable");
+    if (
+      !owner.libraryEpoch ||
+      (metadataReadOperations.has(operation)
+        ? !canReadSourceMetadata(owner)
+        : !owner.available || owner.metadata?.denied)
+    )
+      throw new Error(metadataReadError(owner));
     let result: Envelope<T>;
 
     if (owner.isLocal) {

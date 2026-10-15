@@ -565,5 +565,10 @@
   "federation.detail.sharedLocation": "{{owner}} · 共享内位置：{{path}}",
   "federation.detail.copySharedLocation": "复制共享位置",
   "federation.detail.locationCopied": "已复制设备名称和共享内位置。这不是本机文件路径。",
-  "federation.detail.locationCopyFailed": "复制失败，请手动选择共享位置复制。"
+  "federation.detail.locationCopyFailed": "复制失败，请手动选择共享位置复制。",
+  "federation.servers.name.edit": "修改设备名称",
+  "federation.servers.name.tip": "修改的是这台设备自身的名称。设备本身和其他已连接设备刷新后都会看到新名称，配对与路径映射保持不变。",
+  "federation.servers.name.reload": "重新读取当前名称",
+  "federation.error.DeviceNameChanged": "这台设备已在其他地方改名，请重新读取当前名称后再保存。",
+  "federation.error.DeviceNameEnvironmentControlled": "设备名称由 BAKABASE_NODE_NAME 指定，请先修改该设备的启动配置，再在这里改名。"
 }

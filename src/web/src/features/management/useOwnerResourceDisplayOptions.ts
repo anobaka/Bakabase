@@ -5,6 +5,7 @@ import { QueryClient, useQuery } from "@tanstack/react-query";
 
 import { ownerClient, sourceKey, type ManagementSource } from "./api";
 import { useResourceOwner } from "./resourceContext";
+import { canReadSourceMetadata } from "./metadata";
 
 export interface OwnerResourceDisplayOptions {
   uiResource?: Partial<BakabaseInsideWorldModelsConfigsUIOptionsUIResourceOptions>;
@@ -30,8 +31,12 @@ export function useOwnerResourceDisplayOptions() {
 
   return useQuery(
     {
-      queryKey: ["owner-resource-display-options", owner ? sourceKey(owner) : "local"],
-      enabled: !!owner && !owner.isLocal && owner.available,
+      queryKey: [
+        "owner-resource-display-options",
+        owner ? sourceKey(owner) : "local",
+        owner?.metadata?.data.activeGeneration,
+      ],
+      enabled: !!owner && !owner.isLocal && canReadSourceMetadata(owner),
       queryFn: async (): Promise<OwnerResourceDisplayOptions> => {
         const response = await ownerClient(owner!)<OwnerResourceDisplayOptions>(
           "resourceDisplayOptions",

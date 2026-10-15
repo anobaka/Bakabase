@@ -34,11 +34,14 @@ COPY src/libs/ ./src/libs/
 COPY src/apps/Bakabase.Service/ ./src/apps/Bakabase.Service/
 ARG TARGETARCH
 ARG BAKABASE_VERSION
+# Match the repository's .NET 9/C# 13 release compiler semantics. C# 14's
+# array-to-span overload preference breaks existing EF query expressions.
 RUN --mount=type=cache,target=/root/.nuget/packages \
     test -n "$BAKABASE_VERSION" || { echo "Use docker/source.sh to preserve the checkout's NBGV version." >&2; exit 1; }; \
     case "$TARGETARCH" in amd64) rid=linux-x64 ;; arm64) rid=linux-arm64 ;; *) exit 1 ;; esac && \
     dotnet publish src/apps/Bakabase.Service/Bakabase.Service.csproj \
       --configuration Release -p:RuntimeMode=DOCKER --self-contained false \
+      -p:LangVersion=13.0 \
       -p:CustomAfterMicrosoftCommonTargets=/src/SourceVersion.targets \
       -p:BakabaseResolvedVersion="$BAKABASE_VERSION" \
       -r "$rid" -o /publish

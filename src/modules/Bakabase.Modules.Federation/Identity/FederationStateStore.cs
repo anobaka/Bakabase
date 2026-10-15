@@ -62,6 +62,9 @@ public sealed class FederationStateStore(IFederationDataDirectory directory, INo
     public const int MaxDisplayNameLength = 64;
     public const string DisplayNameVariable = "BAKABASE_NODE_NAME";
 
+    public static bool IsDisplayNameEnvironmentControlled =>
+        Normalize(Environment.GetEnvironmentVariable(DisplayNameVariable)) != null;
+
     /// <summary>A headless host may name itself through the environment; otherwise the user's choice wins.</summary>
     private static string NameOf(FederationState state) =>
         Normalize(Environment.GetEnvironmentVariable(DisplayNameVariable)) ?? state.DisplayName ?? Environment.MachineName;
@@ -73,13 +76,32 @@ public sealed class FederationStateStore(IFederationDataDirectory directory, INo
             ? null : value;
     }
 
-    public Task SetDisplayNameAsync(string? name, CancellationToken ct = default)
+    public Task SetDisplayNameAsync(string? name, CancellationToken ct = default) =>
+        ChangeDisplayNameAsync(name, null, null, ct);
+
+    /// <summary>Changes only the display name, comparing the user's observed identity under the state-file gate.</summary>
+    public async Task<NodeIdentity> ChangeDisplayNameAsync(string? name, string? expectedName,
+        string? expectedLibraryEpoch, CancellationToken ct = default)
     {
         var value = Normalize(name);
         if (name?.Trim() is { Length: > 0 } && value == null)
             throw new FederationAccessException("InvalidDeviceName", 400,
                 $"Use a device name of at most {MaxDisplayNameLength} printable characters.");
-        return MutateAsync(state => { state.DisplayName = value; return true; }, ct);
+        await GetIdentityAsync(ct);
+        return await MutateAsync(state =>
+        {
+            if (IsDisplayNameEnvironmentControlled)
+                throw new FederationAccessException("DeviceNameEnvironmentControlled", 409,
+                    $"This device's name is controlled by {DisplayNameVariable}. Change its startup configuration first.");
+            if (expectedLibraryEpoch != null && state.LibraryEpoch != expectedLibraryEpoch)
+                throw new FederationAccessException("LibraryEpochChanged", 409,
+                    "This device's library changed. Refresh before renaming it.");
+            if (expectedName != null && !string.Equals(NameOf(state), expectedName, StringComparison.Ordinal))
+                throw new FederationAccessException("DeviceNameChanged", 409,
+                    "This device's name changed elsewhere. Reload its current name before saving.");
+            state.DisplayName = value;
+            return new NodeIdentity(state.NodeId!, state.LibraryEpoch!, NameOf(state));
+        }, ct);
     }
 
     public async Task<bool> IsSharingEnabledAsync(CancellationToken ct = default) =>

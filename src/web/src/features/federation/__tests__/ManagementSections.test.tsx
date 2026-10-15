@@ -60,6 +60,8 @@ vi.mock("../serverApi", () => ({
     cancelRequest: vi.fn(),
     forget: vi.fn(),
     setPathMappings: vi.fn(),
+    getDeviceName: vi.fn(),
+    setDeviceName: vi.fn(),
     open: vi.fn(),
   },
 }));
@@ -167,6 +169,31 @@ const addForm = () => {
 };
 
 describe("devices this one manages", () => {
+  it("shows the committed global name immediately and probes to refresh the connection cache", async () => {
+    listing = view({ servers: [server()] });
+    const snapshot = { name: "NAS", libraryEpoch: "epoch-one", environmentControlled: false };
+
+    vi.mocked(managedServerApi.getDeviceName).mockResolvedValue(snapshot);
+    vi.mocked(managedServerApi.setDeviceName).mockResolvedValue({
+      ...snapshot,
+      name: "Living room",
+    });
+    await renderServers();
+    const card = await screen.findByRole("article", { name: "NAS" });
+    const previousReads = listReads();
+
+    fireEvent.click(within(card).getByRole("button", { name: "federation.servers.name.edit" }));
+    fireEvent.change(await within(card).findByRole("textbox", { name: "federation.name.label" }), {
+      target: { value: "Living room" },
+    });
+    fireEvent.click(within(card).getByRole("button", { name: "federation.save" }));
+    await screen.findByRole("article", { name: "Living room" });
+    await waitFor(() => expect(listReads()).toBeGreaterThan(previousReads));
+    expect(managedServerApi.list).toHaveBeenLastCalledWith(true);
+    expect(managedServerApi.setDeviceName).toHaveBeenCalledWith("nas", snapshot, "Living room");
+    expect(managedServerApi.forget).not.toHaveBeenCalled();
+    expect(managedServerApi.setPathMappings).not.toHaveBeenCalled();
+  });
   it("lists each server with its state, and only warns about an unrestricted one", async () => {
     listing = view({
       servers: [

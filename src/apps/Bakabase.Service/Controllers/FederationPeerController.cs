@@ -38,7 +38,7 @@ public sealed record FederationBrowsingRequest(bool Enabled);
 public sealed record FederationSharingRequest(bool Enabled, bool EnablePairedRemoteAccess = false);
 /// <param name="ShareBack">Also let the other device read this library (turns sharing on), so one approval pairs both ways.</param>
 public sealed record FederationConnectRequest(string Address, string? Code = null, bool ShareBack = false);
-public sealed record FederationDeviceNameRequest(string? Name);
+public sealed record FederationDeviceNameRequest(string? Name, string? ExpectedName = null);
 public sealed record FederationClaimRequest(string RequestId);
 public sealed record FederationPeerEnabledRequest(bool Enabled);
 public sealed record FederationPathMappingsRequest(NodePathMapping[] Mappings, NodePathMapping[]? ExpectedMappings = null);
@@ -129,7 +129,7 @@ public sealed class FederationPeerController(FederationPeerService peers, NodePa
     [ProducesResponseType(typeof(FederationPeerChange), 200)]
     public async Task<IActionResult> Name([FromBody] FederationDeviceNameRequest request, CancellationToken ct)
     {
-        await store.SetDisplayNameAsync(request.Name, ct);
+        await store.ChangeDisplayNameAsync(request.Name, request.ExpectedName, null, ct);
         return FederationResult(new FederationPeerChange());
     }
 

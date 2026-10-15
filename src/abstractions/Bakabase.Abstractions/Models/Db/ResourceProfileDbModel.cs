@@ -7,6 +7,9 @@ public record ResourceProfileDbModel
 {
     public int Id { get; set; }
 
+    /// <summary>Null keeps the original inline search; otherwise this profile uses a named reusable scope.</summary>
+    public int? ResourceScopeId { get; set; }
+
     /// <summary>Null for this library; otherwise the stable identity of the resource owner.</summary>
     public string? SourceDeviceId { get; set; }
 

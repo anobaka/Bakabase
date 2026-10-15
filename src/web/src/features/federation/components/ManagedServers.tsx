@@ -31,6 +31,8 @@ import {
 } from "./common";
 import ConfirmDialog from "./ConfirmDialog";
 import ManagedServerPathMappings from "./ManagedServerPathMappings";
+import ManagedDeviceNameEditor from "./ManagedDeviceNameEditor";
+import { MetadataSyncStatusSection } from "@/features/management/MetadataSyncStatus";
 
 import { minutesUntil } from "@/core/serverTime";
 import { ManagedServerOutcome, ManagedServerState, RemoteAccessMode } from "@/sdk/constants";
@@ -423,6 +425,7 @@ export function ManagedServersPanel({
         <AiOutlineCloudServer aria-hidden />
         {t("federation.servers.title")}
       </Heading>
+      {servers.length > 0 && <MetadataSyncStatusSection />}
       {(error || notice) && (
         <div className="space-y-2">
           <ErrorNotice error={error} onDismiss={() => setError(undefined)} />
@@ -464,6 +467,7 @@ export function ManagedServersPanel({
                 // No reload: success navigates away, and a failure leaves the list as it was.
                 void run(() => openManagedServer(server.serverId, route), setError, false)
               }
+              onRenamed={() => void load({ probe: true, quiet: true })}
               onSaveMappings={(mappings) =>
                 run(async () => {
                   await managedServerApi.setPathMappings(server.serverId, mappings);
@@ -698,6 +702,7 @@ function ManagedServerCard({
   onOpen,
   onForget,
   onSaveMappings,
+  onRenamed,
 }: {
   server: ManagedServer;
   busy: boolean;
@@ -707,9 +712,13 @@ function ManagedServerCard({
   onOpen: (route?: string) => void;
   onForget: () => void;
   onSaveMappings: (mappings: ManagedServerPathMapping[]) => Promise<boolean>;
+  onRenamed: () => void;
 }) {
   const { t } = useTranslation();
-  const name = serverLabel(server);
+  const [renamed, setRenamed] = useState<string>();
+  const name = renamed ?? serverLabel(server);
+
+  useEffect(() => setRenamed(undefined), [server.name]);
 
   return (
     <article
@@ -754,6 +763,14 @@ function ManagedServerCard({
           {t("federation.servers.forget")}
         </button>
       </div>
+      <ManagedDeviceNameEditor
+        busy={busy}
+        serverId={server.serverId}
+        onSaved={(value) => {
+          setRenamed(value);
+          onRenamed();
+        }}
+      />
       <ManagedServerPathMappings busy={busy} server={server} onSave={onSaveMappings} />
     </article>
   );

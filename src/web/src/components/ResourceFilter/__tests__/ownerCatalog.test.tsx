@@ -67,6 +67,45 @@ beforeEach(() => {
 });
 
 describe("mixed-device filters reuse the normal property picker", () => {
+  it("retains owner-bound properties from a completed offline replica", async () => {
+    const offline: ManagementSource = {
+      ...remote,
+      available: false,
+      metadata: {
+        identity: { serverId: remote.serverId, libraryEpoch: remote.libraryEpoch },
+        name: remote.name,
+        denied: false,
+        data: {
+          activeGeneration: "complete",
+          resourceCount: 1,
+          activeSequence: 1,
+          stagedResourceCount: 0,
+        },
+        sync: { paused: false, isOffline: true },
+      },
+    };
+    const createPortal = vi.fn();
+    await createDefaultFilterConfig(createPortal, BApi, [
+      local,
+      offline,
+    ]).renderers.openPropertySelector(undefined, vi.fn());
+    const props = createPortal.mock.calls[0][1];
+    expect(
+      props.properties.some(
+        (p: any) => p.pool === PropertyPool.Custom && p.owner?.serverId === "remote",
+      ),
+    ).toBe(true);
+    expect(props.unavailableSources).toEqual([]);
+    request.mockClear();
+    await createDefaultFilterConfig(createPortal, BApi, [local, offline]).api.saveRecentFilter({
+      propertyId: 7,
+      propertyPool: PropertyPool.Custom,
+      operation: SearchOperation.In,
+      disabled: false,
+      owner: { serverId: offline.serverId, libraryEpoch: offline.libraryEpoch },
+    });
+    expect(request).not.toHaveBeenCalled();
+  });
   it("keeps same-number properties distinct and only shares non-owner builtins", async () => {
     const createPortal = vi.fn().mockReturnValue({ destroy: vi.fn() });
     const onSelect = vi.fn();

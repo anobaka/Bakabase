@@ -6,4 +6,8 @@ namespace Bakabase.Modules.RemoteAccess.Abstractions.Models;
 /// <see cref="RemoteAccessDefaults"/>.
 /// </summary>
 /// <param name="AppVersion">The application's own version string.</param>
-public record RemoteAccessHostInfo(string AppVersion);
+public record RemoteAccessHostInfo(string AppVersion)
+{
+    /// <summary>Resolved on demand so the host can read its current name without a constructor dependency cycle.</summary>
+    public Func<Task<string>>? GetDisplayNameAsync { get; init; }
+}

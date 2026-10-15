@@ -2,10 +2,8 @@
 
 import type { EnhancerDescriptor } from "@/components/EnhancerSelectorV2/models";
 import type { DestroyableProps } from "@/components/bakaui/types";
-import type {
-  BakabaseAbstractionsModelsDomainEnhancerFullOptions,
-  BakabaseServiceModelsViewResourceProfileViewModel,
-} from "@/sdk/Api";
+import type { BakabaseAbstractionsModelsDomainEnhancerFullOptions } from "@/sdk/Api";
+import type { ResourceProfile } from "../sourceProfiles";
 
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -17,8 +15,6 @@ import { useProfileModalSave } from "./useProfileModalSave";
 
 import { Button, Checkbox, Modal, Select, Chip } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
-
-type ResourceProfile = BakabaseServiceModelsViewResourceProfileViewModel;
 
 type Props = {
   profile: ResourceProfile;

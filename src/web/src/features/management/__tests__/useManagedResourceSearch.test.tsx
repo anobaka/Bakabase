@@ -46,6 +46,20 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("unified search state", () => {
+  it("retains displayed values while a saved remote edit is still waiting for replica refresh", async () => {
+    mocks.owner = mocks.sources[1];
+    const { result } = renderHook(useManagedResourceSearch);
+    await act(() => result.current.search({ page: 1, pageSize: 50 }));
+    const displayed = result.current.resources[0];
+    mocks.get.mockRejectedValueOnce(new Error("MetadataRefreshPending"));
+    await act(async () => {
+      await expect(result.current.reloadResources([1])).rejects.toThrow("MetadataRefreshPending");
+    });
+    expect(result.current.resources).toEqual([displayed]);
+    mocks.get.mockResolvedValueOnce({ code: 0, data: [{ id: 1, displayName: "saved value" }] });
+    await act(() => result.current.reloadResources([1]));
+    expect(result.current.resources[0].displayName).toBe("saved value");
+  });
   it("keeps all/one/no-device results when default empty filters are restored or mounted again", async () => {
     mocks.search.mockImplementation(async (owner: ManagementSource) => {
       const count = owner.isLocal ? 2 : 4;

@@ -31,6 +31,7 @@ import {
 } from "../components/common";
 import ConfirmDialog from "../components/ConfirmDialog";
 import ManagedServerPathMappings from "../components/ManagedServerPathMappings";
+import ManagedDeviceNameEditor from "../components/ManagedDeviceNameEditor";
 import { ManagedServerWarnings, stateBadgeClass } from "../components/ManagedServers";
 import PeerPathMappings from "../components/PeerPathMappings";
 import { federationPeerApi } from "../peerApi";
@@ -129,7 +130,7 @@ export interface DeviceMapPanelProps {
 /**
  * Details of what is selected on the map, with the actions the devices page offers for it —
  * the same endpoints, the same confirmations, the same words. Destructive actions are
- * confirmed first; nothing here changes another device's settings.
+ * confirmed first. A managed device can also be renamed globally through its own administrator API.
  */
 export default function DeviceMapPanel({
   graph,
@@ -1073,6 +1074,12 @@ function ManagementSection({ context, node }: { context: PanelContext; node: Map
                 {t("federation.servers.forget")}
               </button>
             </div>
+            <ManagedDeviceNameEditor
+              key={server.serverId}
+              busy={busy}
+              serverId={server.serverId}
+              onSaved={() => void run(() => managedServerApi.list(true), ["servers"])}
+            />
             <ManagedServerPathMappings
               busy={busy}
               className="pt-1"
@@ -1381,6 +1388,7 @@ function SelfDetails({ context }: { context: PanelContext }) {
   const { t } = useTranslation();
   const { graph, status, access, actions } = context;
   const [editing, setEditing] = useState<string>();
+  const [expectedName, setExpectedName] = useState<string>();
   const mode = access?.mode;
   const management =
     mode === undefined
@@ -1410,7 +1418,10 @@ function SelfDetails({ context }: { context: PanelContext }) {
               className={buttonClass}
               disabled={actions.busy}
               type="button"
-              onClick={() => setEditing(status.identity.name)}
+              onClick={() => {
+                setExpectedName(status.identity.name);
+                setEditing(status.identity.name);
+              }}
             >
               {t("federation.name.edit")}
             </button>
@@ -1422,7 +1433,7 @@ function SelfDetails({ context }: { context: PanelContext }) {
                 const name = editing.trim();
 
                 void actions.run(async () => {
-                  await federationPeerApi.setName(name || null);
+                  await federationPeerApi.setName(name || null, expectedName);
                   if (actions.mounted.current) setEditing(undefined);
                 }, ["sharing"]);
               }}
@@ -1449,7 +1460,7 @@ function SelfDetails({ context }: { context: PanelContext }) {
                   type="button"
                   onClick={() =>
                     void actions.run(async () => {
-                      await federationPeerApi.setName(null);
+                      await federationPeerApi.setName(null, expectedName);
                       if (actions.mounted.current) setEditing(undefined);
                     }, ["sharing"])
                   }

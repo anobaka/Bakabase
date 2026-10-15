@@ -121,6 +121,15 @@ namespace Bakabase.Service.Components
             // default knows the platform but not the kind.
             services.TryAddSingleton(sp => ServiceSelfDescription.Create(sp, AppService.RuntimeMode));
 
+            // The same current name must be advertised by discovery, pairing handshakes
+            // and metadata. Resolve lazily: the identity source itself uses remote access.
+            services.TryAddSingleton(sp => new Bakabase.Modules.RemoteAccess.Abstractions.Models.RemoteAccessHostInfo(
+                AppService.CoreVersion.ToString())
+            {
+                GetDisplayNameAsync = async () => (await sp.GetRequiredService<
+                    Bakabase.Modules.Federation.Identity.INodeIdentityProvider>().GetAsync()).Name
+            });
+
             // Remote access. Docker has always served whoever could reach the port, so
             // it keeps that as its default; a desktop install starts closed, which is a
             // behavior change for anyone who was quietly relying on LAN reachability.

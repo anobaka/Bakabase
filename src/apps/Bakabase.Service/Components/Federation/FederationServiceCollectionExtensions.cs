@@ -9,6 +9,9 @@ using Bakabase.Modules.RemoteAccess.Components.Discovery.Clients;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Bakabase.Service.Components.Federation.MetadataReplicas;
+using Bakabase.Service.Components.Federation.Processing;
+using System.IO;
 
 namespace Bakabase.Service.Components.Federation;
 
@@ -35,6 +38,21 @@ public static class FederationServiceCollectionExtensions
         services.AddScoped<FederationMediaService>();
         services.AddScoped<ResourceProfileSourceReader>();
         services.AddScoped<ManagedLibraryService>();
+        services.AddSingleton<MetadataSourceJournalGate>();
+        services.AddScoped<MetadataSourceJournal>();
+        services.AddScoped<MetadataReplicaProjection>();
+        services.AddScoped<MetadataSourceFeed>();
+        services.AddSingleton<MetadataReplicaRegistry>();
+        services.AddSingleton(sp => new MetadataReplicaStore(Path.Combine(
+            sp.GetRequiredService<IFederationDataDirectory>().Path, "metadata-replicas")));
+        services.AddSingleton<MetadataReplicaQuery>();
+        services.AddSingleton<MetadataReplicaCoordinator>();
+        services.AddScoped<ManagedMetadataReader>();
+        services.AddScoped<ResourceProcessingJobStore>();
+        services.AddSingleton<ResourceProcessingArtifacts>();
+        services.AddScoped<ResourceProcessingOwner>();
+        services.AddScoped<ResourceProcessingWorker>();
+        services.AddSingleton<ResourceProcessingCoordinator>();
         services.AddScoped<SourceResourceProfileService>();
         services.AddScoped<ISourceResourceProfilePlaybackService>(sp => sp.GetRequiredService<SourceResourceProfileService>());
         services.AddScoped<FederationDirectoryService>();

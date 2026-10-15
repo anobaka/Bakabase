@@ -5754,6 +5754,38 @@ export interface paths {
         patch: operations["ReadAllLog"];
         trace?: never;
     };
+    "/management/device-name": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetManagedDeviceName"];
+        put: operations["SetManagedDeviceName"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/federation/local/management/{serverId}/metadata/control": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ControlManagedMetadataSync"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/federation/local/management/resource-display-options": {
         parameters: {
             query?: never;
@@ -6058,6 +6090,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/management/library/metadata/head": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetManagedMetadataHead"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/management/library/metadata/page": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["GetManagedMetadataPage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/management/library/resources/{id}/covers": {
         parameters: {
             query?: never;
@@ -6132,6 +6196,166 @@ export interface paths {
         get: operations["GetManagedResourceChildren"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/management/resource-processing/owner/prepare": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PrepareManagedResourceProcessing"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/management/resource-processing/owner/{jobId}/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ApplyManagedResourceProcessing"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/management/resource-processing/owner/{jobId}/receipt": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["GetManagedResourceProcessingReceipt"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/management/resource-processing/owner/artifact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["UploadManagedResourceProcessingArtifact"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/management/resource-processing/owner/{jobId}/abandon": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AbandonManagedResourceProcessing"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/management/resource-processing/worker/queue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["QueueManagedResourceProcessing"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/management/resource-processing/worker/{jobId}/artifact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ReadManagedResourceProcessingArtifact"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/management/resource-processing/worker/{jobId}/ack": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AcknowledgeManagedResourceProcessing"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/management/resource-processing/worker/{jobId}/control": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ControlManagedResourceProcessingWorker"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/management/resource-processing/worker/{jobId}/abandon": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AbandonManagedResourceProcessingWorker"];
         delete?: never;
         options?: never;
         head?: never;
@@ -9206,6 +9430,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/resource-processing/jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetResourceProcessingJobs"];
+        put?: never;
+        post: operations["StartResourceProcessing"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource-processing/jobs/{jobId}/control": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ControlResourceProcessing"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/resource-profile": {
         parameters: {
             query?: never;
@@ -9492,6 +9748,70 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/resource-scope": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetResourceScopes"];
+        put?: never;
+        post: operations["AddResourceScope"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource-scope/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["UpdateResourceScope"];
+        post?: never;
+        delete: operations["DeleteResourceScope"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource-scope/profile/{profileId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["BindResourceProfileScope"];
+        trace?: never;
+    };
+    "/resource-scope/profile/{profileId}/rule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["UpdateResourceProfileRule"];
         trace?: never;
     };
     "/app/resource-usage": {
@@ -11070,7 +11390,19 @@ export interface components {
             /** Format: int32 */
             conflictVersion: number;
         };
+        /**
+         * Format: int32
+         * @description [0: Owner, 1: Local, 2: Managed]
+         * @enum {integer}
+         */
+        "Bakabase.Abstractions.Models.Domain.ResourceProcessingExecutionKind": 0 | 1 | 2;
+        "Bakabase.Abstractions.Models.Domain.ResourceProcessingExecutionTarget": {
+            kind: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProcessingExecutionKind"];
+            deviceId?: string;
+            libraryEpoch?: string;
+        };
         "Bakabase.Abstractions.Models.Domain.ResourceProfileEnhancerOptions": {
+            executionTarget?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProcessingExecutionTarget"];
             enhancers?: components["schemas"]["Bakabase.Abstractions.Models.Domain.EnhancerFullOptions"][];
         };
         "Bakabase.Abstractions.Models.Domain.ResourceProfileEvaluationInput": {
@@ -11081,6 +11413,7 @@ export interface components {
             matches: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfileResourceMatch"][];
         };
         "Bakabase.Abstractions.Models.Domain.ResourceProfilePlayableFileOptions": {
+            executionTarget?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProcessingExecutionTarget"];
             extensions?: string[];
             fileNamePattern?: string;
         };
@@ -11095,6 +11428,12 @@ export interface components {
             resourceId: number;
             profileIds: number[];
         };
+        /**
+         * Format: int32
+         * @description [1: NameTemplate, 2: Enhancers, 3: PlayableFiles, 4: Players, 5: Properties, 6: OpeningMode]
+         * @enum {integer}
+         */
+        "Bakabase.Abstractions.Models.Domain.ResourceProfileRuleKind": 1 | 2 | 3 | 4 | 5 | 6;
         "Bakabase.Abstractions.Models.Domain.ResourceProfileSearchRule": {
             /** Format: int32 */
             id: number;
@@ -15936,9 +16275,191 @@ export interface components {
             error?: string;
             /** Format: int32 */
             contractVersion: number;
+            metadata?: components["schemas"]["Bakabase.Service.Components.Federation.MetadataReplicas.ManagedMetadataStatus"];
         };
         "Bakabase.Service.Components.Federation.ManagedLibrarySources": {
             sources: components["schemas"]["Bakabase.Service.Components.Federation.ManagedLibrarySource"][];
+        };
+        "Bakabase.Service.Components.Federation.MetadataReplicas.ManagedMetadataStatus": {
+            identity: components["schemas"]["Bakabase.Service.Components.Federation.MetadataReplicas.ReplicaIdentity"];
+            name?: string;
+            data: components["schemas"]["Bakabase.Service.Components.Federation.MetadataReplicas.ReplicaStatus"];
+            sync: components["schemas"]["Bakabase.Service.Components.Federation.MetadataReplicas.ReplicaSyncState"];
+            denied: boolean;
+        };
+        "Bakabase.Service.Components.Federation.MetadataReplicas.MetadataPageRequest": {
+            checkpoint: components["schemas"]["Bakabase.Service.Components.Federation.MetadataReplicas.ReplicaCheckpoint"];
+            /** Format: int32 */
+            pageSize: number;
+        };
+        "Bakabase.Service.Components.Federation.MetadataReplicas.MetadataSourceManifest": {
+            identity: components["schemas"]["Bakabase.Service.Components.Federation.MetadataReplicas.ReplicaIdentity"];
+            start: components["schemas"]["Bakabase.Service.Components.Federation.MetadataReplicas.ReplicaCheckpoint"];
+            name?: string;
+            /** Format: int32 */
+            contractVersion: number;
+        };
+        "Bakabase.Service.Components.Federation.MetadataReplicas.ReplicaCheckpoint": {
+            generation: string;
+            /** Format: int64 */
+            sequence: number;
+            cursor?: string;
+            complete: boolean;
+            /** Format: int64 */
+            catalogRevision: number;
+        };
+        "Bakabase.Service.Components.Federation.MetadataReplicas.ReplicaIdentity": {
+            serverId: string;
+            libraryEpoch: string;
+        };
+        "Bakabase.Service.Components.Federation.MetadataReplicas.ReplicaStatus": {
+            checkpoint?: components["schemas"]["Bakabase.Service.Components.Federation.MetadataReplicas.ReplicaCheckpoint"];
+            activeGeneration?: string;
+            /** Format: int64 */
+            resourceCount: number;
+            /** Format: int64 */
+            activeSequence: number;
+            /** Format: int64 */
+            stagedResourceCount: number;
+        };
+        "Bakabase.Service.Components.Federation.MetadataReplicas.ReplicaSyncState": {
+            paused: boolean;
+            /** Format: date-time */
+            lastSyncedAtUtc?: string;
+            errorCode?: string;
+            error?: string;
+            isOffline: boolean;
+            refreshPending: boolean;
+        };
+        "Bakabase.Service.Components.Federation.Processing.ResourceProcessingAbandonRequest": {
+            token?: string;
+        };
+        "Bakabase.Service.Components.Federation.Processing.ResourceProcessingApply": {
+            token: string;
+            output: components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingOutput"];
+        };
+        "Bakabase.Service.Components.Federation.Processing.ResourceProcessingArtifact": {
+            hash: string;
+            fileName: string;
+            /** Format: int64 */
+            length: number;
+        };
+        "Bakabase.Service.Components.Federation.Processing.ResourceProcessingArtifactChunk": {
+            jobId: string;
+            token: string;
+            artifact: components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingArtifact"];
+            /** Format: int64 */
+            offset: number;
+            base64: string;
+        };
+        "Bakabase.Service.Components.Federation.Processing.ResourceProcessingArtifactRead": {
+            hash: string;
+            /** Format: int64 */
+            offset: number;
+        };
+        "Bakabase.Service.Components.Federation.Processing.ResourceProcessingControl": {
+            action: string;
+            /** Format: int64 */
+            expectedVersion: number;
+        };
+        "Bakabase.Service.Components.Federation.Processing.ResourceProcessingInput": {
+            jobId: string;
+            ownerId: string;
+            ownerEpoch: string;
+            /** Format: int32 */
+            resourceId: number;
+            /** Format: int64 */
+            expectedResourceRevision?: number;
+            ruleHash: string;
+            kind: components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingKind"];
+            playableFiles?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfilePlayableFileOptions"];
+            enhancer?: components["schemas"]["Bakabase.Abstractions.Models.Domain.EnhancerFullOptions"];
+        };
+        "Bakabase.Service.Components.Federation.Processing.ResourceProcessingJobView": {
+            id: string;
+            jobId: string;
+            role: string;
+            ownerId: string;
+            ownerEpoch: string;
+            /** Format: int32 */
+            resourceId: number;
+            kind: string;
+            state: string;
+            phase?: string;
+            /** Format: int64 */
+            processedCount: number;
+            /** Format: int64 */
+            totalCount?: number;
+            /** Format: int32 */
+            attempt: number;
+            pauseRequested: boolean;
+            cancelRequested: boolean;
+            errorCode?: string;
+            error?: string;
+            /** Format: date-time */
+            createdAtUtc: string;
+            /** Format: date-time */
+            updatedAtUtc: string;
+            /** Format: int64 */
+            version: number;
+            currentStepPhase?: string;
+            /** Format: int64 */
+            currentStepProcessedCount?: number;
+            /** Format: int64 */
+            currentStepTotalCount?: number;
+        };
+        /**
+         * Format: int32
+         * @description [0: PlayableFiles, 1: Enhancement]
+         * @enum {integer}
+         */
+        "Bakabase.Service.Components.Federation.Processing.ResourceProcessingKind": 0 | 1;
+        "Bakabase.Service.Components.Federation.Processing.ResourceProcessingOutput": {
+            kind: components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingKind"];
+            playableFiles: string[];
+            values: components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingValue"][];
+            artifacts: components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingArtifact"][];
+            /** Format: int64 */
+            processedCount: number;
+        };
+        "Bakabase.Service.Components.Federation.Processing.ResourceProcessingPrepared": {
+            input: components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingInput"];
+            token: string;
+            /** Format: int64 */
+            resourceRevision: number;
+            catalogGeneration: string;
+            resourceJson: string;
+        };
+        "Bakabase.Service.Components.Federation.Processing.ResourceProcessingReceipt": {
+            jobId: string;
+            /** Format: int64 */
+            resourceRevision: number;
+            resultHash: string;
+        };
+        "Bakabase.Service.Components.Federation.Processing.ResourceProcessingReceiptRequest": {
+            token: string;
+        };
+        "Bakabase.Service.Components.Federation.Processing.ResourceProcessingReceiptStatus": {
+            receipt?: components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingReceipt"];
+        };
+        "Bakabase.Service.Components.Federation.Processing.ResourceProcessingStart": {
+            /** Format: int32 */
+            profileId: number;
+            kind: components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingKind"];
+        };
+        "Bakabase.Service.Components.Federation.Processing.ResourceProcessingValue": {
+            /** Format: int32 */
+            target: number;
+            dynamicTarget?: string;
+            valueType: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.StandardValueType"];
+            serializedValue?: string;
+        };
+        "Bakabase.Service.Components.Federation.Processing.ResourceProcessingWorkerControl": {
+            action: string;
+        };
+        "Bakabase.Service.Components.Federation.Processing.ResourceProcessingWorkerResult": {
+            job: components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingJobView"];
+            output?: components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingOutput"];
         };
         "Bakabase.Service.Components.ServerData.ServerAppDataImport+Validation": {
             valid: boolean;
@@ -16035,6 +16556,7 @@ export interface components {
         };
         "Bakabase.Service.Controllers.FederationDeviceNameRequest": {
             name?: string;
+            expectedName?: string;
         };
         "Bakabase.Service.Controllers.FederationIdentityResetRequest": {
             asNewNode: boolean;
@@ -16064,6 +16586,16 @@ export interface components {
             enabled: boolean;
             enablePairedRemoteAccess: boolean;
         };
+        "Bakabase.Service.Controllers.ManagedDeviceNameInput": {
+            name?: string;
+            expectedName: string;
+            libraryEpoch: string;
+        };
+        "Bakabase.Service.Controllers.ManagedDeviceNameView": {
+            name: string;
+            libraryEpoch: string;
+            environmentControlled: boolean;
+        };
         "Bakabase.Service.Controllers.ManagedFileUploadInputModel": {
             fileName: string;
             base64: string;
@@ -16086,6 +16618,10 @@ export interface components {
             origin: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.DataOrigin"];
             key: string;
             explicitChoice: boolean;
+        };
+        "Bakabase.Service.Controllers.ManagedMetadataControlInput": {
+            libraryEpoch: string;
+            paused: boolean;
         };
         "Bakabase.Service.Controllers.ManagedResourceDisplayOptions": {
             uiResource: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIOptions+UIResourceOptions"];
@@ -16145,6 +16681,38 @@ export interface components {
             matchedRulesJson?: string;
             /** Format: date-time */
             evaluatedAt: string;
+        };
+        "Bakabase.Service.Controllers.ResourceProfileRuleInput": {
+            kind: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfileRuleKind"];
+            valueJson?: string;
+            /** Format: date-time */
+            expectedUpdatedAt: string;
+        };
+        "Bakabase.Service.Controllers.ResourceScopeBindInput": {
+            /** Format: int32 */
+            scopeId?: number;
+            /** Format: date-time */
+            expectedUpdatedAt: string;
+        };
+        "Bakabase.Service.Controllers.ResourceScopeInput": {
+            name: string;
+            search?: components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
+            sourceDeviceId?: string;
+            sourceLibraryEpoch?: string;
+            /** Format: int32 */
+            expectedRevision?: number;
+        };
+        "Bakabase.Service.Controllers.ResourceScopeView": {
+            /** Format: int32 */
+            id: number;
+            name: string;
+            search?: components["schemas"]["Bakabase.Service.Models.View.ResourceSearchViewModel"];
+            sourceDeviceId?: string;
+            sourceLibraryEpoch?: string;
+            /** Format: int32 */
+            revision: number;
+            /** Format: int32 */
+            ruleCount: number;
         };
         "Bakabase.Service.Controllers.SharedListImportInputModel": {
             rows: components["schemas"]["Bakabase.Service.Controllers.SharedListImportRow"][];
@@ -17088,6 +17656,8 @@ export interface components {
         "Bakabase.Service.Models.View.ResourceProfileViewModel": {
             /** Format: int32 */
             id: number;
+            /** Format: int32 */
+            resourceScopeId?: number;
             sourceDeviceId?: string;
             sourceLibraryEpoch?: string;
             openingMode?: string;
@@ -30199,6 +30769,84 @@ export interface operations {
             };
         };
     };
+    GetManagedDeviceName: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bakabase.Service.Controllers.ManagedDeviceNameView"];
+                    "application/json": components["schemas"]["Bakabase.Service.Controllers.ManagedDeviceNameView"];
+                    "text/json": components["schemas"]["Bakabase.Service.Controllers.ManagedDeviceNameView"];
+                };
+            };
+        };
+    };
+    SetManagedDeviceName: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.ManagedDeviceNameInput"];
+                "application/json": components["schemas"]["Bakabase.Service.Controllers.ManagedDeviceNameInput"];
+                "text/json": components["schemas"]["Bakabase.Service.Controllers.ManagedDeviceNameInput"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.ManagedDeviceNameInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bakabase.Service.Controllers.ManagedDeviceNameView"];
+                    "application/json": components["schemas"]["Bakabase.Service.Controllers.ManagedDeviceNameView"];
+                    "text/json": components["schemas"]["Bakabase.Service.Controllers.ManagedDeviceNameView"];
+                };
+            };
+        };
+    };
+    ControlManagedMetadataSync: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                serverId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.ManagedMetadataControlInput"];
+                "application/json": components["schemas"]["Bakabase.Service.Controllers.ManagedMetadataControlInput"];
+                "text/json": components["schemas"]["Bakabase.Service.Controllers.ManagedMetadataControlInput"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.ManagedMetadataControlInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     GetManagedResourceDisplayOptions: {
         parameters: {
             query?: never;
@@ -30780,6 +31428,53 @@ export interface operations {
             };
         };
     };
+    GetManagedMetadataHead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bakabase.Service.Components.Federation.MetadataReplicas.MetadataSourceManifest"];
+                    "application/json": components["schemas"]["Bakabase.Service.Components.Federation.MetadataReplicas.MetadataSourceManifest"];
+                    "text/json": components["schemas"]["Bakabase.Service.Components.Federation.MetadataReplicas.MetadataSourceManifest"];
+                };
+            };
+        };
+    };
+    GetManagedMetadataPage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Components.Federation.MetadataReplicas.MetadataPageRequest"];
+                "application/json": components["schemas"]["Bakabase.Service.Components.Federation.MetadataReplicas.MetadataPageRequest"];
+                "text/json": components["schemas"]["Bakabase.Service.Components.Federation.MetadataReplicas.MetadataPageRequest"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Components.Federation.MetadataReplicas.MetadataPageRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     GetManagedResourceCovers: {
         parameters: {
             query?: never;
@@ -30891,6 +31586,296 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    PrepareManagedResourceProcessing: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingInput"];
+                "application/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingInput"];
+                "text/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingInput"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingPrepared"];
+                    "application/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingPrepared"];
+                    "text/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingPrepared"];
+                };
+            };
+        };
+    };
+    ApplyManagedResourceProcessing: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                jobId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingApply"];
+                "application/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingApply"];
+                "text/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingApply"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingApply"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingReceipt"];
+                    "application/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingReceipt"];
+                    "text/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingReceipt"];
+                };
+            };
+        };
+    };
+    GetManagedResourceProcessingReceipt: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                jobId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingReceiptRequest"];
+                "application/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingReceiptRequest"];
+                "text/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingReceiptRequest"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingReceiptRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingReceiptStatus"];
+                    "application/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingReceiptStatus"];
+                    "text/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingReceiptStatus"];
+                };
+            };
+        };
+    };
+    UploadManagedResourceProcessingArtifact: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingArtifactChunk"];
+                "application/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingArtifactChunk"];
+                "text/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingArtifactChunk"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingArtifactChunk"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": number;
+                    "application/json": number;
+                    "text/json": number;
+                };
+            };
+        };
+    };
+    AbandonManagedResourceProcessing: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                jobId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingAbandonRequest"];
+                "application/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingAbandonRequest"];
+                "text/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingAbandonRequest"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingAbandonRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": boolean;
+                    "application/json": boolean;
+                    "text/json": boolean;
+                };
+            };
+        };
+    };
+    QueueManagedResourceProcessing: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingPrepared"];
+                "application/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingPrepared"];
+                "text/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingPrepared"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingPrepared"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingWorkerResult"];
+                    "application/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingWorkerResult"];
+                    "text/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingWorkerResult"];
+                };
+            };
+        };
+    };
+    ReadManagedResourceProcessingArtifact: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                jobId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingArtifactRead"];
+                "application/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingArtifactRead"];
+                "text/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingArtifactRead"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingArtifactRead"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingArtifactChunk"];
+                    "application/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingArtifactChunk"];
+                    "text/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingArtifactChunk"];
+                };
+            };
+        };
+    };
+    AcknowledgeManagedResourceProcessing: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                jobId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": boolean;
+                    "application/json": boolean;
+                    "text/json": boolean;
+                };
+            };
+        };
+    };
+    ControlManagedResourceProcessingWorker: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                jobId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingWorkerControl"];
+                "application/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingWorkerControl"];
+                "text/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingWorkerControl"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingWorkerControl"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": boolean;
+                    "application/json": boolean;
+                    "text/json": boolean;
+                };
+            };
+        };
+    };
+    AbandonManagedResourceProcessingWorker: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                jobId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": boolean;
+                    "application/json": boolean;
+                    "text/json": boolean;
+                };
             };
         };
     };
@@ -37433,6 +38418,91 @@ export interface operations {
             };
         };
     };
+    GetResourceProcessingJobs: {
+        parameters: {
+            query?: {
+                beforeId?: string;
+                take?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingJobView"][];
+                    "application/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingJobView"][];
+                    "text/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingJobView"][];
+                };
+            };
+        };
+    };
+    StartResourceProcessing: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingStart"];
+                "application/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingStart"];
+                "text/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingStart"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingStart"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingJobView"];
+                    "application/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingJobView"];
+                    "text/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingJobView"];
+                };
+            };
+        };
+    };
+    ControlResourceProcessing: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                jobId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingControl"];
+                "application/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingControl"];
+                "text/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingControl"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingControl"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingJobView"];
+                    "application/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingJobView"];
+                    "text/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingJobView"];
+                };
+            };
+        };
+    };
     GetAllResourceProfiles: {
         parameters: {
             query?: never;
@@ -37532,9 +38602,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceProfileViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceProfileViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceProfileViewModel]"];
                 };
             };
         };
@@ -38003,6 +39073,156 @@ export interface operations {
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Service.Models.View.ResourceProfilePreviewResource]"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Service.Models.View.ResourceProfilePreviewResource]"];
                 };
+            };
+        };
+    };
+    GetResourceScopes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bakabase.Service.Controllers.ResourceScopeView"][];
+                    "application/json": components["schemas"]["Bakabase.Service.Controllers.ResourceScopeView"][];
+                    "text/json": components["schemas"]["Bakabase.Service.Controllers.ResourceScopeView"][];
+                };
+            };
+        };
+    };
+    AddResourceScope: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.ResourceScopeInput"];
+                "application/json": components["schemas"]["Bakabase.Service.Controllers.ResourceScopeInput"];
+                "text/json": components["schemas"]["Bakabase.Service.Controllers.ResourceScopeInput"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.ResourceScopeInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UpdateResourceScope: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.ResourceScopeInput"];
+                "application/json": components["schemas"]["Bakabase.Service.Controllers.ResourceScopeInput"];
+                "text/json": components["schemas"]["Bakabase.Service.Controllers.ResourceScopeInput"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.ResourceScopeInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DeleteResourceScope: {
+        parameters: {
+            query?: {
+                expectedRevision?: number;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    BindResourceProfileScope: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                profileId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.ResourceScopeBindInput"];
+                "application/json": components["schemas"]["Bakabase.Service.Controllers.ResourceScopeBindInput"];
+                "text/json": components["schemas"]["Bakabase.Service.Controllers.ResourceScopeBindInput"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.ResourceScopeBindInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UpdateResourceProfileRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                profileId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.ResourceProfileRuleInput"];
+                "application/json": components["schemas"]["Bakabase.Service.Controllers.ResourceProfileRuleInput"];
+                "text/json": components["schemas"]["Bakabase.Service.Controllers.ResourceProfileRuleInput"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.ResourceProfileRuleInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

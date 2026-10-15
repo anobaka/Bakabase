@@ -1179,4 +1179,21 @@ Downloads: https://www.ffmpeg.org/</value>
   <data name="BTask_Process_CheckingStorage" xml:space="preserve">
     <value>Checking storage locations: {0}</value>
   </data>
+  <data name="BTask_Name_MetadataSync" xml:space="preserve">
+    <value>Synchronize library metadata</value>
+  </data>
+  <data name="BTask_Description_MetadataSync" xml:space="preserve">
+    <value>Keep managed libraries searchable on this device. Progress resumes from the last committed page.</value>
+  </data>
+  <data name="BTask_MessageOnInterruption_MetadataSync" xml:space="preserve">
+    <value>The next run resumes from the saved metadata checkpoint.</value>
+  </data>
+  <data name="BTask_Process_MetadataSync_Resources" xml:space="preserve">
+    <value>{0}: {1:N0} resources stored locally</value>
+  </data>
+
+  <data name="BTask_Name_ResourceProcessing" xml:space="preserve"><value>Resource processing across devices</value></data>
+  <data name="BTask_Description_ResourceProcessing" xml:space="preserve"><value>Run selected rules on the chosen device and save checked results to the resource owner.</value></data>
+  <data name="BTask_MessageOnInterruption_ResourceProcessing" xml:space="preserve"><value>Processing will resume from its saved position.</value></data>
+  <data name="BTask_Process_ResourceProcessing_Resources" xml:space="preserve"><value>Processed: {0} resources</value></data>
 </root>

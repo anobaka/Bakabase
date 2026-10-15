@@ -82,6 +82,10 @@ namespace Bakabase.Modules.Enhancer.Abstractions.Components
                     return new EnhancementResult { Logs = logCollector.GetLogs() };
                 }
             }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 var errorMessage =

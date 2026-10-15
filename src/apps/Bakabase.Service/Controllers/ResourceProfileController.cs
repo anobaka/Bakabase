@@ -88,7 +88,7 @@ public class ResourceProfileController(IResourceProfileService service, IPropert
 
     [HttpPut("{id:int}")]
     [SwaggerOperation(OperationId = "UpdateResourceProfile")]
-    public async Task<BaseResponse> Update(int id, [FromBody] ResourceProfileInputModel model)
+    public async Task<SingletonResponse<ResourceProfileViewModel>> Update(int id, [FromBody] ResourceProfileInputModel model)
     {
         var searchJson = model.Search != null
             ? JsonConvert.SerializeObject(model.Search.ToDbModel())
@@ -111,7 +111,7 @@ public class ResourceProfileController(IResourceProfileService service, IPropert
             model.SourceLibraryEpoch,
             model.OpeningMode);
 
-        return BaseResponseBuilder.Ok;
+        return new SingletonResponse<ResourceProfileViewModel>((await service.Get(id))!.ToViewModel(propertyLocalizer));
     }
 
     [HttpDelete("{id:int}")]

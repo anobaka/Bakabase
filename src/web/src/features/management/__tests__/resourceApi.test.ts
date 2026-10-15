@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import BApi from "@/sdk/BApi";
+import i18next from "i18next";
 import { ContentType } from "@/sdk/Api";
 import { PropertyPool, type ResourceAdditionalItem } from "@/sdk/constants";
 import {
@@ -11,7 +12,8 @@ import {
 } from "../resourceApi";
 import type { ManagementSource } from "../api";
 
-const { request } = vi.hoisted(() => ({ request: vi.fn() }));
+const { request, notice } = vi.hoisted(() => ({ request: vi.fn(), notice: vi.fn() }));
+vi.mock("react-hot-toast", () => ({ default: Object.assign(notice, { error: vi.fn() }) }));
 
 vi.mock("@/sdk/BApi", async () => {
   const { Api } = await import("@/sdk/Api");
@@ -30,10 +32,61 @@ const source = (serverId: string): ManagementSource => ({
 });
 
 beforeEach(() => {
+  vi.spyOn(i18next, "t").mockImplementation(((key: string) => key) as any);
+  notice.mockReset();
   request.mockReset().mockResolvedValue({ code: 0, data: [] });
 });
 
 describe("original resource UI owner-scoped SDK", () => {
+  it("reports a saved mutation awaiting fresh metadata without retrying the mutation", async () => {
+    request.mockResolvedValueOnce({ code: 0, metadataPending: true });
+    const owner = source("b");
+    const changed = vi.fn();
+    const unsubscribe = subscribeResourceOwnerChanges(owner, changed);
+    const api = createResourceApi(owner);
+
+    await api.resource.pinResource(7, { pin: true });
+    expect(request).toHaveBeenCalledTimes(1);
+    expect(notice).toHaveBeenCalledWith("management.metadata.savedRefreshing", {
+      id: "metadata-refresh-b",
+    });
+    expect(changed).toHaveBeenCalledWith([7]);
+    request.mockRejectedValueOnce(new Error("MetadataRefreshPending"));
+    await expect(api.resource.getResourcesByKeys({ ids: [7] })).rejects.toThrow(
+      "MetadataRefreshPending",
+    );
+    expect(request.mock.calls.map(([input]) => input.body.operation)).toEqual([
+      "resourcePin",
+      "resourceGet",
+    ]);
+    unsubscribe();
+  });
+  it("routes offline replica reads through the same owner endpoint without allowing writes or file access", async () => {
+    const owner = source("b");
+    owner.available = false;
+    owner.metadata = {
+      identity: { serverId: owner.serverId, libraryEpoch: owner.libraryEpoch },
+      name: owner.name,
+      denied: false,
+      data: {
+        activeGeneration: "complete",
+        resourceCount: 1,
+        activeSequence: 1,
+        stagedResourceCount: 0,
+      },
+      sync: { paused: false, isOffline: true },
+    };
+    const api = createResourceApi(owner);
+    await api.resource.searchResources({ page: 1, pageSize: 20 });
+    await api.property.getPropertiesByPool(PropertyPool.All);
+    expect(request.mock.calls.map(([input]) => input.body.operation)).toEqual([
+      "resourceSearch",
+      "properties",
+    ]);
+    await expect(api.resource.pinResource(7, { pin: true })).rejects.toThrow("unavailable");
+    await expect(api.resource.getResourcePlayableItems(7)).rejects.toThrow("unavailable");
+    expect(request).toHaveBeenCalledTimes(2);
+  });
   it("launches a native batch on the manager while binding all resource IDs to one immutable owner", async () => {
     const owner = source("b");
     const api = createResourceApi(owner);

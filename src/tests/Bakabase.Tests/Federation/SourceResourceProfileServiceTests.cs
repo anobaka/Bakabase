@@ -5,6 +5,7 @@ using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Services;
 using Bakabase.Modules.Federation.Contracts;
+using Bakabase.Modules.Federation.Identity;
 using Bakabase.Modules.Federation.Peers;
 using Bakabase.Modules.Federation.Security;
 using Bakabase.Modules.Federation.Transport;
@@ -12,6 +13,7 @@ using Bakabase.Modules.RemoteAccess.Abstractions.Models;
 using Bakabase.Modules.RemoteAccess.Abstractions.Services;
 using Bakabase.Service.Components.Federation;
 using Bakabase.Service.Models.View;
+using Bakabase.Service.Components.Federation.MetadataReplicas;
 using Bootstrap.Models.ResponseModels;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json;
@@ -21,6 +23,47 @@ namespace Bakabase.Tests.Federation;
 [TestClass]
 public sealed class SourceResourceProfileServiceTests
 {
+    [TestMethod]
+    public async Task Source_list_uses_validated_metadata_name_and_epoch_without_changing_the_connection()
+    {
+        using var directory = new SourceDirectory();
+        var state = new FederationStateStore(directory, directory);
+        var peers = new FederationPeerService(state, new NodeIdentityProvider(state), new(), TimeProvider.System);
+        var registry = new MetadataReplicaRegistry(directory);
+        var manager = new FakeManagedServerService();
+        var service = new SourceResourceProfileService(null!, peers, null!, null!, new(), manager, registry);
+        var original = FakeManagedServerService.Server;
+        var unverified = (await service.SourcesAsync(default)).Single();
+        Assert.AreEqual(original.Name, unverified.Name);
+        Assert.IsNull(unverified.LibraryEpoch);
+        Assert.IsFalse(unverified.Available);
+        await registry.PutAsync(new(original.ServerId, "verified-epoch", "Renamed source"), default);
+        var verified = (await service.SourcesAsync(default)).Single();
+        Assert.AreEqual(original.ServerId, verified.DeviceId);
+        Assert.AreEqual("Renamed source", verified.Name);
+        Assert.AreEqual("verified-epoch", verified.LibraryEpoch);
+        Assert.AreEqual("managed", verified.Kind);
+        Assert.IsTrue(verified.Available);
+        await registry.PutAsync(new(original.ServerId, "verified-epoch", "Renamed source", Denied: true), default);
+        var denied = (await service.SourcesAsync(default)).Single();
+        Assert.IsNull(denied.LibraryEpoch);
+        Assert.IsFalse(denied.Available);
+        await registry.PutAsync(new(original.ServerId, "", "Old source", ErrorCode: "ManagementUpdateRequired"), default);
+        Assert.IsNull((await service.SourcesAsync(default)).Single().LibraryEpoch);
+        // Listing is local and cannot replace pairing credentials or path mappings.
+        Assert.IsTrue(manager.Calls.All(c => c == "Get probe=False"));
+        Assert.IsNull(manager.LastMappings);
+    }
+
+    private sealed class SourceDirectory : IFederationDataDirectory, INodeIdSource, IDisposable
+    {
+        public string Path { get; } = System.IO.Path.Combine(System.IO.Path.GetTempPath(),
+            "bakabase-profile-source-list-" + Guid.NewGuid().ToString("N"));
+        public string Ensure() { Directory.CreateDirectory(Path); return Path; }
+        public Task<string> GetNodeIdAsync(CancellationToken cancellationToken = default) => Task.FromResult("manager");
+        public void Dispose() { if (Directory.Exists(Path)) Directory.Delete(Path, true); }
+    }
+
     [TestMethod]
     public async Task ManagedSourceEvaluatesOnlySearchAndIdsAndUsesTheViewersArbitraryApplication()
     {

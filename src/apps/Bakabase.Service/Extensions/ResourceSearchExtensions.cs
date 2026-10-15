@@ -580,13 +580,14 @@ public static class ResourceSearchExtensions
         return new ResourceProfileViewModel
         {
             Id = profile.Id,
+            ResourceScopeId = profile.ResourceScopeId,
             Name = profile.Name,
             SourceDeviceId = profile.SourceDeviceId,
             SourceLibraryEpoch = profile.SourceLibraryEpoch,
             OpeningMode = profile.OpeningMode,
             Search = profile.SourceDeviceId != null
                 ? ForeignProfileSearch(profile.SearchJson, propertyLocalizer)
-                : profile.Search.Group != null ? profile.Search.ToViewModel(propertyLocalizer) : null,
+                : profile.ResourceScopeId != null || profile.Search.Group != null ? profile.Search.ToViewModel(propertyLocalizer) : null,
             NameTemplate = profile.NameTemplate,
             EnhancerOptions = profile.EnhancerOptions,
             PlayableFileOptions = profile.PlayableFileOptions,

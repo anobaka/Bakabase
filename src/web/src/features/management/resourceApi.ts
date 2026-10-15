@@ -4,7 +4,9 @@ import type { ManagementSource } from "./api";
 import BApi from "@/sdk/BApi";
 import envConfig from "@/config/env";
 import { sourceKey } from "./api";
+import { canReadSourceMetadata, metadataReadError, metadataReadOperations } from "./metadata";
 import toast from "react-hot-toast";
+import i18next from "i18next";
 
 type OwnerChangeListener = (resourceIds?: readonly number[]) => void;
 const ownerChangeListeners = new Map<string, Set<OwnerChangeListener>>();
@@ -271,9 +273,9 @@ export function createResourceApi(
   const api = new ApiConstructor({ baseUrl: "" });
 
   api.request = async <T = any>(request: FullRequestParams): Promise<T> => {
-    if (!owner.available || !owner.libraryEpoch)
-      throw new Error(owner.error || "Device unavailable");
+    if (!owner.libraryEpoch || owner.metadata?.denied) throw new Error(metadataReadError(owner));
     if (request.type === "multipart/form-data") {
+      if (!owner.available) throw new Error(owner.error || "Device unavailable");
       const torrent = /^\/resource\/(\d+)\/acquisition-leads\/torrent$/.exec(request.path);
       const uploadId = torrent
         ? Number(torrent[1])
@@ -320,6 +322,7 @@ export function createResourceApi(
       request.method === "POST" &&
       ["/player/batch-play/candidates", "/player/batch-play"].includes(request.path)
     ) {
+      if (!owner.available) throw new Error(owner.error || "Device unavailable");
       const data = request.body as {
         resourceIds?: number[];
         playerKey?: string;
@@ -349,6 +352,7 @@ export function createResourceApi(
     }
 
     if (request.method === "GET" && request.path === "/resource/directory") {
+      if (!owner.available) throw new Error(owner.error || "Device unavailable");
       return BApi.request<T>({
         path: `/federation/local/management/${encodeURIComponent(owner.serverId)}/directory`,
         method: "POST",
@@ -361,6 +365,7 @@ export function createResourceApi(
     }
 
     if (request.method === "GET" && nativePlay) {
+      if (!owner.available) throw new Error(owner.error || "Device unavailable");
       return BApi.request<T>({
         path: `/federation/local/management/${encodeURIComponent(owner.serverId)}/play`,
         method: "POST",
@@ -384,6 +389,10 @@ export function createResourceApi(
 
     if (!route)
       throw new UnsupportedManagedResourceOperationError(`${request.method} ${request.path}`);
+    if (
+      metadataReadOperations.has(route.operation) ? !canReadSourceMetadata(owner) : !owner.available
+    )
+      throw new Error(metadataReadError(owner));
     const parameters = route.pattern.exec(request.path)!;
     let id: number | undefined;
 
@@ -430,6 +439,10 @@ export function createResourceApi(
       });
 
       if (mutation && !(response as any)?.code) {
+        if ((response as any)?.metadataPending)
+          toast(i18next.t("management.metadata.savedRefreshing"), {
+            id: `metadata-refresh-${owner.serverId}`,
+          });
         const resourceMutation = /^\/(?:cache\/)?resource\/\d+(?:\/|$)/.test(request.path);
 
         notifyResourceOwnerChanged(

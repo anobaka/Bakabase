@@ -88,6 +88,8 @@ public static class ManagedLibraryOperations
         RejectAmbiguousProperties(body);
         var (method, path) = request.Operation switch
         {
+            "deviceNameGet" => (HttpMethod.Get, "/management/device-name"),
+            "deviceNameSet" => (HttpMethod.Put, "/management/device-name"),
             "resourceDisplayOptions" => (HttpMethod.Get, "/federation/local/management/resource-display-options"),
             "resourceDisplayOptionsPatch" => (HttpMethod.Patch, "/federation/local/management/resource-display-options"),
             "getAllEnhancerDescriptors" => (HttpMethod.Get, "/enhancer/descriptor"),
@@ -206,6 +208,16 @@ public static class ManagedLibraryOperations
             page["page"] = index;
         }
         if (request.Operation == "resourceMappings") ValidIds(ReadIds(body));
+        if (request.Operation == "deviceNameSet")
+        {
+            if (body is not JObject name || name.Properties().Any(p => p.Name is not ("name" or "expectedName")) ||
+                name["expectedName"]?.Type != JTokenType.String ||
+                string.IsNullOrWhiteSpace(name["expectedName"]!.Value<string>()) ||
+                name["expectedName"]!.Value<string>()!.Length > 256 ||
+                name["name"]?.Type is not (JTokenType.String or JTokenType.Null))
+                throw Invalid("A new device name and its expected current name are required.");
+            name["libraryEpoch"] = request.LibraryEpoch;
+        }
         if (request.Operation == "resourceDisplayOptionsPatch" &&
             (body is not JObject display || display.Properties().Any(p => p.Name != "propertyValueScopePriority") ||
              display["propertyValueScopePriority"] is not JArray priorities || priorities.Count > 32 ||

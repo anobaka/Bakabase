@@ -175,6 +175,7 @@ namespace Bakabase.InsideWorld.Business.Components.Search
                         {
                             InternalProperty.Filename => (Func<Abstractions.Models.Domain.Resource, object?>) (r => r.FileName),
                             InternalProperty.DirectoryPath => r => r.Directory,
+                            InternalProperty.RootPath when candidatesOnly => r => r.Path,
                             InternalProperty.CreatedAt => r => r.CreatedAt,
                             // No files, no file times — mirrors the index, which does not record
                             // these for a resource without a path.

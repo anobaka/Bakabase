@@ -917,7 +917,7 @@ describe("device name", () => {
       target: { value: "  Study PC " },
     });
     fireEvent.click(nameForm().getByText("federation.save"));
-    await waitFor(() => expect(federationPeerApi.setName).toHaveBeenCalledWith("Study PC"));
+    await waitFor(() => expect(federationPeerApi.setName).toHaveBeenCalledWith("Study PC", "This PC"));
     await waitFor(() => expect(refresh).toHaveBeenCalled());
     expect(screen.queryByLabelText("federation.name.label")).not.toBeInTheDocument();
   });
@@ -925,7 +925,7 @@ describe("device name", () => {
     renderPage("/federation/devices");
     fireEvent.click(screen.getByText("federation.name.edit"));
     fireEvent.click(screen.getByText("federation.name.reset"));
-    await waitFor(() => expect(federationPeerApi.setName).toHaveBeenCalledWith(null));
+    await waitFor(() => expect(federationPeerApi.setName).toHaveBeenCalledWith(null, "This PC"));
   });
   it("keeps the edit open when the name is rejected", async () => {
     vi.mocked(federationPeerApi.setName).mockRejectedValueOnce(

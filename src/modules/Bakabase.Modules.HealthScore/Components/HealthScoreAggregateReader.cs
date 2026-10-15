@@ -1,5 +1,7 @@
 using Bakabase.Abstractions.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Bootstrap.Components.Orm;
 
 namespace Bakabase.Modules.HealthScore.Components;
 
@@ -22,17 +24,32 @@ internal sealed class HealthScoreAggregateReader<TDbContext> : IResourceHealthSc
 {
     private readonly ResourceHealthScoreOrm<TDbContext> _orm;
     private readonly HealthScoreProfileCache _profileCache;
+    private readonly IServiceScopeFactory _scopeFactory;
 
     public HealthScoreAggregateReader(
         ResourceHealthScoreOrm<TDbContext> orm,
-        HealthScoreProfileCache profileCache)
+        HealthScoreProfileCache profileCache,
+        IServiceScopeFactory scopeFactory)
     {
         _orm = orm;
         _profileCache = profileCache;
+        _scopeFactory = scopeFactory;
     }
 
     public decimal? GetAggregatedScore(int resourceId)
     {
+        if (PersistedReadScope.IsActive)
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<TDbContext>();
+            var scores = from row in db.ResourceHealthScores.AsNoTracking()
+                join profile in db.HealthScoreProfiles.AsNoTracking() on row.ProfileId equals profile.Id
+                where row.ResourceId == resourceId && profile.Enabled
+                select new { profile.Priority, row.Score };
+            // SQLite stores decimal as text; sort only this resource's bounded profile rows.
+            return scores.ToList().OrderByDescending(row => row.Priority).ThenBy(row => row.Score)
+                .Select(row => (decimal?)row.Score).FirstOrDefault();
+        }
         var rows = _orm.GetByResource(resourceId);
         if (rows.Count == 0) return null;
 

@@ -570,5 +570,10 @@
   "federation.detail.sharedLocation": "{{owner}} · Within share: {{path}}",
   "federation.detail.copySharedLocation": "Copy shared location",
   "federation.detail.locationCopied": "Copied the device name and location within its share. This is not a local file path.",
-  "federation.detail.locationCopyFailed": "Could not copy. Select the shared location and copy it manually."
+  "federation.detail.locationCopyFailed": "Could not copy. Select the shared location and copy it manually.",
+  "federation.servers.name.edit": "Rename device",
+  "federation.servers.name.tip": "Changes this device’s own name. The device itself and other connected devices will see the new name when they refresh. Pairing and path mappings stay the same.",
+  "federation.servers.name.reload": "Reload current name",
+  "federation.error.DeviceNameChanged": "This device was renamed elsewhere. Reload its current name before saving again.",
+  "federation.error.DeviceNameEnvironmentControlled": "This device’s name is set by BAKABASE_NODE_NAME. Change that device’s startup configuration before renaming it here."
 }
