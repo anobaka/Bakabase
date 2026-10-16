@@ -1,30 +1,38 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import type { MediaLibrary } from "./models";
-import type { InputProps } from "@heroui/react";
-import type { ButtonProps } from "@/components/bakaui";
+import type { OwnedCatalogItem } from "@/features/management/ownedCatalog";
 
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useEffect, useRef, useState } from "react";
-import { useUpdate } from "react-use";
-import { AiOutlinePlusCircle, AiOutlineProduct, AiOutlineSearch } from "react-icons/ai";
-import { MdOutlineDelete } from "react-icons/md";
-import { HiOutlineCollection } from "react-icons/hi";
-import { IoSettingsOutline } from "react-icons/io5";
 import { useNavigate } from "react-router-dom";
+import {
+  AiOutlineArrowRight,
+  AiOutlineEdit,
+  AiOutlineFolderOpen,
+  AiOutlineMore,
+  AiOutlinePlus,
+  AiOutlineReload,
+  AiOutlineSearch,
+} from "react-icons/ai";
+import { HiOutlineCollection } from "react-icons/hi";
+import { MdOutlineDelete } from "react-icons/md";
+
+import MediaLibraryEditor from "./components/MediaLibraryEditor";
+import styles from "./index.module.scss";
 
 import {
   Button,
-  Card,
-  CardBody,
+  Dropdown,
+  DropdownItem,
+  DropdownMenu,
+  DropdownTrigger,
   Input,
   Modal,
-  Tooltip,
-  ColorPicker,
-  toast,
-  Spinner,
 } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
+import { HelpCenterButton } from "@/components/HelpCenter";
 import {
   useOwnedCatalog,
   catalogItemKey,
@@ -33,448 +41,442 @@ import {
   CatalogOwnerMark,
   CatalogSourceStatus,
   catalogOwnerSearch,
-  type OwnedCatalogItem,
 } from "@/features/management/ownedCatalog";
+import { dashboardResourceSearch } from "@/pages/dashboard/dashboardSearch";
 import BApi from "@/sdk/BApi";
-import {
-  InternalProperty,
-  PropertyPool,
-  SearchOperation,
-  StandardValueType,
-} from "@/sdk/constants";
-import { buildColorValueString } from "@/components/bakaui/components/ColorPicker";
-import { EditableValue } from "@/components/EditableValue";
-import { MediaLibraryTerm } from "@/components/Chips/Terms";
-import { HelpCenterButton } from "@/components/HelpCenter";
-import { serializeStandardValue } from "@/components/StandardValue";
+import { usePendingSearchStore } from "@/stores/pendingSearch";
+
+type Library = OwnedCatalogItem<MediaLibrary>;
+type LibraryFilter = "all" | "withResources" | "empty";
 
 const MediaLibraryPage = () => {
   const { t } = useTranslation();
-  const { createPortal } = useBakabaseContext();
   const navigate = useNavigate();
-
+  const { createPortal } = useBakabaseContext();
+  const setPendingSearch = usePendingSearchStore((s) => s.setPendingSearch);
   const [mediaLibraries, setMediaLibraries] = useState<MediaLibrary[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [keyword, setKeyword] = useState("");
+  const [filter, setFilter] = useState<LibraryFilter>("all");
+  const [sort, setSort] = useState("name");
+  const [editor, setEditor] = useState<{ library?: Library }>();
+  const [highlightedKey, setHighlightedKey] = useState<string>();
   const catalog = useOwnedCatalog(mediaLibraries, (api) =>
     api.mediaLibraryV2.getAllMediaLibraryV2(),
   );
-  const allLibraries = [...catalog.items].sort(
-    (a, b) => a.name.localeCompare(b.name) || catalogItemKey(a).localeCompare(catalogItemKey(b)),
-  );
-  const [loading, setLoading] = useState(true);
-  const [highlightedId, setHighlightedId] = useState<number | null>(null);
-  const highlightTimerRef = useRef<ReturnType<typeof setTimeout>>();
-  const forceUpdate = useUpdate();
+  const sourcesRef = useRef(catalog.sources);
 
-  const loadMediaLibraries = async (): Promise<MediaLibrary[]> => {
+  sourcesRef.current = catalog.sources;
+  const loadRevision = useRef(0);
+  const loadMediaLibraries = useCallback(async () => {
+    const revision = ++loadRevision.current;
+
     setLoading(true);
     try {
-      const r = await BApi.mediaLibraryV2.getAllMediaLibraryV2();
-      const list = r.data ?? [];
+      const response = await BApi.mediaLibraryV2.getAllMediaLibraryV2();
 
-      setMediaLibraries(list);
+      if (response.code || !response.data) throw new Error(response.message);
+      if (revision !== loadRevision.current) return;
+      setMediaLibraries(response.data);
+      setLoadError(false);
 
-      return list;
+      return response.data;
+    } catch {
+      if (revision === loadRevision.current) setLoadError(true);
     } finally {
-      setLoading(false);
+      if (revision === loadRevision.current) setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    loadMediaLibraries();
   }, []);
 
-  const addMediaLibrary = async () => {
-    const numbers = mediaLibraries
-      .map((ml) => {
-        const match = ml.name.match(/(\d+)$/);
+  useEffect(() => {
+    void loadMediaLibraries();
 
-        return match ? parseInt(match[1], 10) : 0;
-      })
-      .filter((n) => !isNaN(n));
-    const no = numbers.length > 0 ? Math.max(...numbers) + 1 : 1;
-    const name = `${t("mediaLibrary.title")} ${no}`;
+    return () => {
+      loadRevision.current++;
+    };
+  }, [loadMediaLibraries]);
 
-    const oldIds = new Set(mediaLibraries.map((ml) => ml.id));
-
-    await BApi.mediaLibraryV2.addMediaLibraryV2({
-      name,
-      paths: [],
+  useEffect(() => {
+    if (!highlightedKey) return;
+    document.getElementById(`media-library-${highlightedKey}`)?.scrollIntoView?.({
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? "instant"
+        : "smooth",
+      block: "nearest",
     });
-    const newList = await loadMediaLibraries();
-    const newMl = newList.find((ml) => !oldIds.has(ml.id));
+    const timer = setTimeout(() => setHighlightedKey(undefined), 3000);
 
-    if (newMl) {
-      if (highlightTimerRef.current) {
-        clearTimeout(highlightTimerRef.current);
-      }
-      setHighlightedId(newMl.id);
-      highlightTimerRef.current = setTimeout(() => {
-        setHighlightedId(null);
-      }, 3000);
+    return () => clearTimeout(timer);
+  }, [highlightedKey]);
 
-      requestAnimationFrame(() => {
-        document.getElementById(`media-library-card-${newMl.id}`)?.scrollIntoView({
-          behavior: "smooth",
-          block: "nearest",
-        });
-      });
+  // A dialog can outlive the device connection it was opened from.
+  const currentItem = (library: Library): Library => ({
+    ...library,
+    owner:
+      library.owner && !library.owner.isLocal
+        ? (sourcesRef.current.find(
+            (source) =>
+              source.serverId === library.owner!.serverId &&
+              source.libraryEpoch === library.owner!.libraryEpoch,
+          ) ?? { ...library.owner, available: false })
+        : library.owner,
+  });
+
+  const saveLibrary = async (value: { name: string; color: string }) => {
+    const library = editor?.library ? currentItem(editor.library) : undefined;
+    const existingIds = new Set(mediaLibraries.map((item) => item.id));
+
+    if (library && !canEditCatalogItem(library)) {
+      throw new Error(t("management.catalog.ownerUnavailable"));
     }
+    const response = library
+      ? await catalogItemApi(library).mediaLibraryV2.patchMediaLibraryV2(library.id, value)
+      : await BApi.mediaLibraryV2.addMediaLibraryV2({ ...value, paths: [] });
+
+    if (response.code) throw new Error(response.message);
+    setKeyword("");
+    setFilter("all");
+    const updated = await loadMediaLibraries();
+    const savedLibrary = library ?? updated?.find((item) => !existingIds.has(item.id));
+
+    if (savedLibrary) {
+      setHighlightedKey(
+        catalogItemKey({
+          ...savedLibrary,
+          owner: library?.owner ?? sourcesRef.current.find((source) => source.isLocal),
+        }),
+      );
+    }
+    catalog.refresh();
   };
 
-  const deleteMediaLibrary = (ml: OwnedCatalogItem<MediaLibrary>) => {
+  const deleteLibrary = (library: Library) => {
     createPortal(Modal, {
       defaultVisible: true,
-      title: t("mediaLibrary.confirm.title"),
+      title: t("mediaLibrary.confirm.deleteTitle"),
       children: (
-        <div>
-          {t("mediaLibrary.confirm.delete")}
-          <br />
-          <span className="text-danger">{t("mediaLibrary.warning.irreversible")}</span>
+        <div className="space-y-3">
+          <p className="break-words">
+            {t("mediaLibrary.confirm.deleteNamed", { name: library.name })}
+          </p>
+          <p className="text-sm text-default-500">{t("mediaLibrary.confirm.deleteDescription")}</p>
+          <p className="text-sm text-danger">{t("mediaLibrary.warning.irreversible")}</p>
         </div>
       ),
       onOk: async () => {
-        await catalogItemApi(ml).mediaLibraryV2.deleteMediaLibraryV2(ml.id);
+        const current = currentItem(library);
+
+        if (!canEditCatalogItem(current)) throw new Error(t("management.catalog.ownerUnavailable"));
+        const response = await catalogItemApi(current).mediaLibraryV2.deleteMediaLibraryV2(
+          current.id,
+        );
+
+        if (response.code) throw new Error(response.message);
         await loadMediaLibraries();
         catalog.refresh();
       },
       footer: {
         actions: ["ok", "cancel"],
-        okProps: {
-          children: t("mediaLibrary.action.delete"),
-          color: "danger",
-          autoFocus: true,
-        },
-        cancelProps: {
-          children: t("mediaLibrary.action.cancel"),
-        },
+        okProps: { children: t("mediaLibrary.action.delete"), color: "danger" },
+        cancelProps: { children: t("mediaLibrary.action.cancel"), autoFocus: true },
       },
     });
   };
 
-  const searchResources = (ml: OwnedCatalogItem<MediaLibrary>) => {
-    createPortal(Modal, {
-      title: t("mediaLibrary.confirm.title"),
-      children: t("mediaLibrary.confirm.leavePage"),
-      defaultVisible: true,
-      onOk: async () => {
-        const valuePropertyResponse = await catalogItemApi(ml).resource.getFilterValueProperty({
-          propertyPool: PropertyPool.Internal,
-          propertyId: InternalProperty.MediaLibraryV2Multi,
-          operation: SearchOperation.In,
-        });
-        const searchForm = {
-          ...catalogOwnerSearch(ml.owner),
-          group: {
-            combinator: 1,
-            disabled: false,
-            filters: [
-              {
-                propertyPool: PropertyPool.Internal,
-                propertyId: InternalProperty.MediaLibraryV2Multi,
-                operation: SearchOperation.In,
-                dbValue: serializeStandardValue([ml.id.toString()], StandardValueType.ListString),
-                bizValue: serializeStandardValue([ml.name], StandardValueType.ListString),
-                valueProperty: valuePropertyResponse.data,
-                disabled: false,
-              },
-            ],
-          },
-          page: 1,
-          pageSize: 100,
-        };
-        const query = encodeURIComponent(JSON.stringify(searchForm));
-
-        navigate(`/resource?query=${query}`);
-      },
-      footer: {
-        actions: ["ok", "cancel"],
-        okProps: {
-          children: t("mediaLibrary.action.continue"),
-        },
-        cancelProps: {
-          children: t("mediaLibrary.action.cancel"),
-        },
-      },
+  const browse = (library: Library) => {
+    setPendingSearch({
+      ...dashboardResourceSearch({ libraryId: library.id }),
+      ...catalogOwnerSearch(library.owner),
     });
+    navigate("/resource");
   };
 
-  const renderEmptyState = () => {
-    return (
-      <div className="flex flex-col items-center justify-center grow py-16 px-8">
-        <div className="flex flex-col items-center gap-6 max-w-lg text-center">
-          {/* Icon */}
-          <div className="w-20 h-20 rounded-full bg-secondary/10 flex items-center justify-center">
-            <HiOutlineCollection className="text-4xl text-secondary" />
-          </div>
-
-          {/* Title with MediaLibraryTerm */}
-          <div className="space-y-2">
-            <h2 className="text-xl font-semibold flex items-center justify-center gap-2">
-              {t("mediaLibrary.emptyState.title")}
-            </h2>
-            <div className="text-default-500 text-sm leading-relaxed">
-              {t("mediaLibrary.emptyState.description")}
-            </div>
-          </div>
-
-          {/* Feature highlights */}
-          <div className="w-full bg-default-100 rounded-lg p-4 text-left space-y-3">
-            <div className="flex items-start gap-3">
-              <div className="w-6 h-6 rounded bg-secondary/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <span className="text-secondary text-xs font-bold">1</span>
-              </div>
-              <div className="text-sm text-default-600">
-                {t("mediaLibrary.emptyState.feature1")}
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="w-6 h-6 rounded bg-secondary/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <span className="text-secondary text-xs font-bold">2</span>
-              </div>
-              <div className="text-sm text-default-600">
-                {t("mediaLibrary.emptyState.feature2")}
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="w-6 h-6 rounded bg-secondary/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <span className="text-secondary text-xs font-bold">3</span>
-              </div>
-              <div className="text-sm text-default-600">
-                {t("mediaLibrary.emptyState.feature3")}
-              </div>
-            </div>
-          </div>
-
-          {/* Actions */}
-          <div className="flex flex-col items-center gap-3 w-full">
-            <Button
-              color="primary"
-              size="md"
-              startContent={<AiOutlinePlusCircle className="text-lg" />}
-              onPress={addMediaLibrary}
-            >
-              {t("mediaLibrary.action.createFirst")}
-            </Button>
-            <Button
-              color="default"
-              size="sm"
-              startContent={<IoSettingsOutline className="text-base" />}
-              variant="light"
-              onPress={() => navigate("/path-mark-config")}
-            >
-              {t("mediaLibrary.action.goToPathMarkConfig")}
-            </Button>
-            <HelpCenterButton label={t("helpCenter.entry.whatCanPathMarksDo")} topic="pathMark" />
-          </div>
-        </div>
-      </div>
+  const allLibraries = catalog.items;
+  const populatedCount = allLibraries.filter((library) => library.resourceCount > 0).length;
+  const counts = {
+    all: allLibraries.length,
+    withResources: populatedCount,
+    empty: allLibraries.length - populatedCount,
+  };
+  const normalizedKeyword = keyword.trim().toLocaleLowerCase();
+  const visibleLibraries = allLibraries
+    .filter(
+      (library) =>
+        library.name.toLocaleLowerCase().includes(normalizedKeyword) &&
+        (filter === "all" ||
+          (filter === "withResources" ? library.resourceCount > 0 : !library.resourceCount)),
+    )
+    .sort(
+      (a, b) =>
+        (sort === "resourceCount" ? (b.resourceCount ?? 0) - (a.resourceCount ?? 0) : 0) ||
+        a.name.localeCompare(b.name) ||
+        catalogItemKey(a).localeCompare(catalogItemKey(b)),
     );
+  const clearSearch = () => {
+    setKeyword("");
+    setFilter("all");
   };
-
-  const renderMediaLibraryCard = (ml: OwnedCatalogItem<MediaLibrary>) => {
-    const getCssVariable = (variableName: string) => {
-      if (typeof document === "undefined") return "";
-
-      return getComputedStyle(document.documentElement).getPropertyValue(variableName);
-    };
-    const textColor = getCssVariable("--theme-text") || "#222";
-    const libraryColor = ml.color ?? textColor;
-
-    const isHighlighted = (!ml.owner || ml.owner.isLocal) && highlightedId === ml.id;
-
-    return (
-      <Card
-        key={catalogItemKey(ml)}
-        className={`group hover:shadow-md hover:scale-[1.02] transition-all duration-300 ${isHighlighted ? "ring-2 ring-primary shadow-md" : ""}`}
-        id={ml.owner && !ml.owner.isLocal ? undefined : `media-library-card-${ml.id}`}
-        shadow="sm"
-      >
-        <CardBody className="p-4 flex flex-col gap-3">
-          {/* Header: Name + Color picker */}
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex min-w-0 flex-1 items-center gap-2">
-              <CatalogOwnerMark owner={ml.owner} />
-              {canEditCatalogItem(ml) ? (
-                <EditableValue<string, InputProps, ButtonProps & { value: string }>
-                  Editor={Input}
-                  Viewer={({ value, ...props }) => (
-                    <Button
-                      className="whitespace-break-spaces h-auto text-left font-medium text-base px-2 min-w-0"
-                      size="sm"
-                      style={{ color: libraryColor }}
-                      variant="light"
-                      {...props}
-                    >
-                      <span className="truncate">{value}</span>
-                    </Button>
-                  )}
-                  className="min-w-0"
-                  editorProps={{
-                    size: "sm",
-                    isRequired: true,
-                  }}
-                  trigger="viewer"
-                  value={ml.name}
-                  onSubmit={async (v) => {
-                    if (v == undefined || v.length == 0) {
-                      toast.danger(t("mediaLibrary.error.nameEmpty"));
-
-                      return;
-                    }
-                    const rsp = await catalogItemApi(ml).mediaLibraryV2.patchMediaLibraryV2(ml.id, {
-                      name: v,
-                    });
-
-                    if (!rsp.code) {
-                      ml.name = v;
-                      forceUpdate();
-                      catalog.refresh();
-                    }
-                  }}
-                />
-              ) : (
-                <span className="min-w-0 flex-1 truncate font-medium">{ml.name}</span>
-              )}
-            </div>
-
-            {canEditCatalogItem(ml) && (
-              <ColorPicker
-                color={libraryColor}
-                onChange={async (color) => {
-                  const strColor = buildColorValueString(color);
-
-                  await catalogItemApi(ml).mediaLibraryV2.patchMediaLibraryV2(ml.id, {
-                    color: strColor,
-                  });
-                  ml.color = strColor;
-                  forceUpdate();
-                  catalog.refresh();
-                }}
-              />
-            )}
-          </div>
-
-          {/* Stats: Large number + description */}
-          <div className="flex items-center justify-center gap-2 py-2 px-3 rounded-md bg-default-100/50">
-            <AiOutlineProduct className="text-base text-default-400" />
-            <span className="text-xl font-semibold text-foreground">
-              {(ml.resourceCount ?? 0).toLocaleString()}
-            </span>
-            <span className="text-sm text-default-500">{t("mediaLibrary.label.resources")}</span>
-          </div>
-
-          {/* Actions */}
-          <div className="flex items-center justify-between pt-2 mt-auto border-t border-default-100">
-            {/* Search button */}
-            {ml.resourceCount > 0 ? (
-              <Tooltip
-                content={t("mediaLibrary.action.searchResources")}
-                delay={500}
-                placement="top"
-              >
-                <Button
-                  isIconOnly
-                  color="default"
-                  size="sm"
-                  variant="flat"
-                  onPress={() => searchResources(ml)}
-                >
-                  <AiOutlineSearch className="text-base" />
-                </Button>
-              </Tooltip>
-            ) : (
-              <div />
-            )}
-
-            {/* Delete button */}
-            <Tooltip content={t("mediaLibrary.tooltip.delete")} placement="top">
-              <Button
-                isIconOnly
-                className="text-danger opacity-0 group-hover:opacity-100 transition-opacity"
-                isDisabled={!canEditCatalogItem(ml)}
-                radius="sm"
-                size="sm"
-                variant="light"
-                onPress={() => deleteMediaLibrary(ml)}
-              >
-                <MdOutlineDelete className="text-lg" />
-              </Button>
-            </Tooltip>
-          </div>
-        </CardBody>
-      </Card>
-    );
-  };
-
-  const renderContent = () => {
-    if (loading) {
-      return (
-        <div className="flex items-center justify-center grow py-16">
-          <Spinner size="lg" />
-        </div>
-      );
-    }
-
-    if (allLibraries.length === 0) {
-      return renderEmptyState();
-    }
-
-    return (
-      <div className="flex flex-col gap-4 mt-4 grow">
-        {/* Header info */}
-        <div className="flex items-center gap-2 text-sm text-default-500">
-          <MediaLibraryTerm />
-          <span>·</span>
-          <span>{t("mediaLibrary.label.listDescription")}</span>
-        </div>
-
-        {/* Media library cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
-          {allLibraries.map((ml) => renderMediaLibraryCard(ml))}
-        </div>
-      </div>
-    );
-  };
+  const initialLoading = (loading || catalog.loading) && allLibraries.length === 0;
 
   return (
-    <div className="h-full flex flex-col p-2">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold">{t("mediaLibrary.title")}</h1>
-        {allLibraries.length > 0 && (
+    <div className={styles.page}>
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0">
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-semibold tracking-tight">{t("mediaLibrary.title")}</h1>
+            {!initialLoading && !loadError && (
+              <span className="rounded-full bg-default-100 px-2.5 py-0.5 text-xs font-medium tabular-nums text-default-500">
+                {allLibraries.length}
+              </span>
+            )}
+          </div>
+          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-default-500">
+            {t("mediaLibrary.description")}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <HelpCenterButton concept="mediaLibrary" topic="pathMark" />
           <Button
             color="primary"
-            size="sm"
-            startContent={<AiOutlinePlusCircle className="text-lg" />}
-            onPress={addMediaLibrary}
+            startContent={<AiOutlinePlus aria-hidden className="text-lg" />}
+            onPress={() => setEditor({})}
           >
             {t("mediaLibrary.action.add")}
           </Button>
-        )}
-      </div>
+        </div>
+      </header>
 
       <CatalogSourceStatus {...catalog} />
-      {renderContent()}
+      {loadError && (
+        <div
+          className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-danger/20 bg-danger/5 p-4"
+          role="alert"
+        >
+          <p className="text-sm text-danger">{t("mediaLibrary.error.load")}</p>
+          <Button isLoading={loading} size="sm" variant="flat" onPress={loadMediaLibraries}>
+            {t("mediaLibrary.action.retry")}
+          </Button>
+        </div>
+      )}
 
-      {/* Path mark config hint */}
-      <div className="flex items-center justify-center gap-2 p-3 bg-default-50 rounded-lg">
-        <span className="text-sm text-default-500">
-          {t("mediaLibrary.label.pathMarkConfigHint")}
-        </span>
+      {(allLibraries.length > 0 || initialLoading) && (
+        <section aria-label={t("mediaLibrary.toolbar.label")} className={styles.toolbar}>
+          <div className="flex flex-wrap items-center gap-3">
+            <Input
+              isClearable
+              aria-label={t("mediaLibrary.search.label")}
+              className="min-w-0 flex-1 basis-52"
+              classNames={{ inputWrapper: "border border-default-200/70 bg-content1 shadow-none" }}
+              placeholder={t("mediaLibrary.search.placeholder")}
+              startContent={
+                <AiOutlineSearch aria-hidden className="shrink-0 text-lg text-default-400" />
+              }
+              value={keyword}
+              onClear={() => setKeyword("")}
+              onValueChange={setKeyword}
+            />
+            <select
+              aria-label={t("mediaLibrary.sort.label")}
+              className={styles.sort}
+              value={sort}
+              onChange={(event) => setSort(event.target.value)}
+            >
+              <option value="name">{t("mediaLibrary.sort.name")}</option>
+              <option value="resourceCount">{t("mediaLibrary.sort.resourceCount")}</option>
+            </select>
+            <Button
+              isIconOnly
+              aria-label={t("mediaLibrary.action.refresh")}
+              isLoading={loading || catalog.loading}
+              variant="light"
+              onPress={() => {
+                void loadMediaLibraries();
+                catalog.refresh();
+              }}
+            >
+              <AiOutlineReload aria-hidden className="text-lg" />
+            </Button>
+          </div>
+          <div
+            aria-label={t("mediaLibrary.filter.label")}
+            className="flex flex-wrap gap-1"
+            role="group"
+          >
+            {(["all", "withResources", "empty"] as const).map((value) => (
+              <Button
+                key={value}
+                aria-pressed={filter === value}
+                className="gap-2"
+                color={filter === value ? "primary" : "default"}
+                size="sm"
+                variant={filter === value ? "flat" : "light"}
+                onPress={() => setFilter(value)}
+              >
+                {t(`mediaLibrary.filter.${value}`)}
+                <span aria-hidden className="text-xs tabular-nums opacity-70">
+                  {counts[value]}
+                </span>
+              </Button>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <section aria-busy={loading || catalog.loading} aria-label={t("mediaLibrary.list.label")}>
+        {initialLoading ? (
+          <div aria-label={t("mediaLibrary.label.loading")} className={styles.grid} role="status">
+            {[0, 1, 2, 3, 4, 5].map((index) => (
+              <div key={index} className={styles.skeleton} />
+            ))}
+          </div>
+        ) : allLibraries.length === 0 && !loadError ? (
+          <div className={styles.empty}>
+            <div aria-hidden className={styles.emptyIcon}>
+              <HiOutlineCollection />
+            </div>
+            <h2 className="mt-6 text-xl font-semibold">{t("mediaLibrary.emptyState.title")}</h2>
+            <p className="mt-2 max-w-md text-sm leading-7 text-default-500">
+              {t("mediaLibrary.emptyState.description")}
+            </p>
+            <Button
+              className="mt-6"
+              color="primary"
+              startContent={<AiOutlinePlus aria-hidden />}
+              onPress={() => setEditor({})}
+            >
+              {t("mediaLibrary.action.createFirst")}
+            </Button>
+            <p className="mt-5 text-xs text-default-400">{t("mediaLibrary.emptyState.example")}</p>
+          </div>
+        ) : allLibraries.length > 0 && visibleLibraries.length === 0 ? (
+          <div className={styles.empty} role="status">
+            <AiOutlineSearch aria-hidden className="text-4xl text-default-300" />
+            <h2 className="mt-4 text-lg font-semibold">{t("mediaLibrary.search.empty.title")}</h2>
+            <p className="mt-2 text-sm text-default-500">
+              {t("mediaLibrary.search.empty.description")}
+            </p>
+            <Button className="mt-5" variant="flat" onPress={clearSearch}>
+              {t("mediaLibrary.action.clearSearch")}
+            </Button>
+          </div>
+        ) : (
+          <div className={styles.grid}>
+            {visibleLibraries.map((library) => (
+              <article
+                key={catalogItemKey(library)}
+                className={`${styles.card} ${highlightedKey === catalogItemKey(library) ? styles.highlighted : ""}`}
+                id={`media-library-${catalogItemKey(library)}`}
+                style={{ "--library-color": library.color || "#6366f1" } as CSSProperties}
+              >
+                <div className={styles.cardHeader}>
+                  <div aria-hidden className={styles.libraryIcon}>
+                    <HiOutlineCollection />
+                  </div>
+                  <Dropdown>
+                    <DropdownTrigger>
+                      <Button
+                        isIconOnly
+                        aria-label={t("mediaLibrary.action.manageNamed", { name: library.name })}
+                        className="text-default-500"
+                        isDisabled={!canEditCatalogItem(library)}
+                        size="sm"
+                        variant="light"
+                      >
+                        <AiOutlineMore aria-hidden className="text-xl" />
+                      </Button>
+                    </DropdownTrigger>
+                    <DropdownMenu
+                      aria-label={t("mediaLibrary.action.manageNamed", { name: library.name })}
+                    >
+                      <DropdownItem
+                        key="edit"
+                        startContent={<AiOutlineEdit aria-hidden />}
+                        onPress={() => setEditor({ library })}
+                      >
+                        {t("mediaLibrary.action.edit")}
+                      </DropdownItem>
+                      <DropdownItem
+                        key="delete"
+                        className="text-danger"
+                        color="danger"
+                        startContent={<MdOutlineDelete aria-hidden />}
+                        onPress={() => deleteLibrary(library)}
+                      >
+                        {t("mediaLibrary.action.delete")}
+                      </DropdownItem>
+                    </DropdownMenu>
+                  </Dropdown>
+                </div>
+                <div className={styles.cardContent}>
+                  <h2 className={styles.libraryName} title={library.name}>
+                    {library.name}
+                  </h2>
+                  <div className="flex min-h-5 items-center gap-2 text-xs text-default-400">
+                    <CatalogOwnerMark owner={library.owner} />
+                    <span>
+                      {library.resourceCount > 0
+                        ? t("mediaLibrary.card.collection")
+                        : t("mediaLibrary.card.empty")}
+                    </span>
+                  </div>
+                  <div className="mt-5 flex items-baseline gap-2">
+                    <span className="text-3xl font-semibold tracking-tight tabular-nums">
+                      {(library.resourceCount ?? 0).toLocaleString()}
+                    </span>
+                    <span className="whitespace-nowrap text-sm text-default-500">
+                      {t("mediaLibrary.label.resources")}
+                    </span>
+                  </div>
+                </div>
+                <div className={styles.cardFooter}>
+                  <Button
+                    aria-label={t("mediaLibrary.action.browseNamed", { name: library.name })}
+                    className="w-full justify-between bg-default-100/70 text-default-700"
+                    endContent={<AiOutlineArrowRight aria-hidden className={styles.browseArrow} />}
+                    variant="flat"
+                    onPress={() => browse(library)}
+                  >
+                    {t("mediaLibrary.action.browse")}
+                  </Button>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <aside className={styles.guide}>
+        <div aria-hidden className="rounded-xl bg-primary/10 p-3 text-xl text-primary">
+          <AiOutlineFolderOpen />
+        </div>
+        <div className="min-w-0 flex-1">
+          <h2 className="text-sm font-medium">{t("mediaLibrary.guide.title")}</h2>
+          <p className="mt-1 text-xs leading-6 text-default-500">
+            {t("mediaLibrary.guide.description")}
+          </p>
+        </div>
         <Button
-          color="secondary"
+          className="shrink-0"
+          endContent={<AiOutlineArrowRight aria-hidden />}
           size="sm"
-          variant="flat"
+          variant="light"
           onPress={() => navigate("/path-mark-config")}
         >
           {t("mediaLibrary.action.goToPathMarkConfig")}
         </Button>
         <HelpCenterButton topic="pathMark" />
-      </div>
+      </aside>
+
+      {editor && (
+        <MediaLibraryEditor
+          library={editor.library}
+          onClose={() => setEditor(undefined)}
+          onSave={saveLibrary}
+        />
+      )}
     </div>
   );
 };
-
-MediaLibraryPage.displayName = "MediaLibraryPage";
 
 export default MediaLibraryPage;
