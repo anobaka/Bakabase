@@ -2,17 +2,14 @@
 
 import type { MarkConfig } from "../types";
 import type { IProperty } from "@/components/Property/models";
-import type { PreviewResultsByPath, PathMarkPreviewResult } from "../hooks/usePreview";
-import type { PathMarkApplyScope } from "@/sdk/constants";
 
 import { useState, useEffect } from "react";
 import { EditOutlined } from "@ant-design/icons";
 
-import MatchModeSelector from "./MatchModeSelector";
-import PreviewResults from "./PreviewResults";
+import DynamicValueConfig from "./DynamicValueConfig";
 
-import { Button, Chip, Input, NumberInput, RadioGroup, Radio } from "@/components/bakaui";
-import { PathMatchMode, PropertyValueType, PropertyPool, PathMarkType } from "@/sdk/constants";
+import { Button, Chip, Input, RadioGroup, Radio } from "@/components/bakaui";
+import { PropertyValueType, PropertyPool, PathMarkType } from "@/sdk/constants";
 import PropertySelector from "@/components/PropertySelector";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import BApi from "@/sdk/BApi";
@@ -21,30 +18,11 @@ type Props = {
   config: MarkConfig;
   updateConfig: (updates: Partial<MarkConfig>) => void;
   t: (key: string) => string;
-  priority: number;
-  onPriorityChange: (priority: number) => void;
-  preview: {
-    loading: boolean;
-    results: PathMarkPreviewResult[];
-    resultsByPath?: PreviewResultsByPath[];
-    isMultiplePaths?: boolean;
-    error: string | null;
-    applyScope?: PathMarkApplyScope;
-  };
 };
 
-const PropertyMarkConfig = ({
-  config,
-  updateConfig,
-  t,
-  priority,
-  onPriorityChange,
-  preview,
-}: Props) => {
+const PropertyMarkConfig = ({ config, updateConfig, t }: Props) => {
   const { createPortal } = useBakabaseContext();
   const [selectedProperty, setSelectedProperty] = useState<IProperty | null>(null);
-  const hasValidValueLayer =
-    typeof config.valueLayer === "number" && Number.isFinite(config.valueLayer);
 
   // Load selected property info on mount if we have propertyId
   useEffect(() => {
@@ -87,45 +65,7 @@ const PropertyMarkConfig = ({
   };
 
   return (
-    <>
-      {/* Explanatory text */}
-      <div className="bg-primary-50 text-primary-700 rounded p-2 text-xs">
-        {t("pathMark.property.explanation")}
-      </div>
-
-      {/* Important note */}
-      <div className="bg-warning-50 text-warning-700 rounded p-2 text-xs">
-        {t("pathMark.property.importantNote")}
-      </div>
-
-      <MatchModeSelector
-        config={config}
-        markType={PathMarkType.Property}
-        t={t}
-        updateConfig={updateConfig}
-      />
-
-      {/* Preview Results - placed after apply scope (part of MatchModeSelector) */}
-      <PreviewResults
-        applyScope={preview.applyScope}
-        error={preview.error}
-        isMultiplePaths={preview.isMultiplePaths}
-        loading={preview.loading}
-        markType={PathMarkType.Property}
-        results={preview.results}
-        resultsByPath={preview.resultsByPath}
-        t={t}
-      />
-
-      <div className="border-t border-default-200 pt-2">
-        <span className="text-sm font-medium text-default-600">
-          {t("pathMarkConfig.label.propertySettings")}
-        </span>
-        <div className="text-xs text-default-400 mt-1">
-          {t("pathMark.property.configDescription")}
-        </div>
-      </div>
-
+    <div className="flex flex-col gap-4">
       {/* Property Selector */}
       <div className="flex flex-col gap-1">
         <span className="text-sm">{t("pathMarkConfig.label.targetProperty")}</span>
@@ -159,116 +99,33 @@ const PropertyMarkConfig = ({
         </div>
       </div>
 
-      {/* Value Type - Radio Group */}
-      <div className="flex flex-col gap-1">
-        <span className="text-sm font-medium">{t("pathMarkConfig.label.valueType")}</span>
-        <RadioGroup
-          orientation="horizontal"
-          size="sm"
-          value={String(config.valueType ?? PropertyValueType.Fixed)}
-          onValueChange={(value) => {
-            const valueType = Number(value) as PropertyValueType;
-
-            updateConfig({
-              valueType,
-              ...(valueType === PropertyValueType.Dynamic &&
-              !hasValidValueLayer &&
-              !config.valueRegex
-                ? { valueLayer: 0 }
-                : {}),
-            });
-          }}
-        >
-          <Radio value={String(PropertyValueType.Fixed)}>{t("pathMarkConfig.label.fixed")}</Radio>
-          <Radio value={String(PropertyValueType.Dynamic)}>
-            {t("pathMarkConfig.label.dynamic")}
-          </Radio>
-        </RadioGroup>
-      </div>
-
+      <RadioGroup
+        label={t("pathMarkConfig.label.valueType")}
+        orientation="horizontal"
+        size="sm"
+        value={String(config.valueType ?? PropertyValueType.Fixed)}
+        onValueChange={(value) => updateConfig({ valueType: Number(value) })}
+      >
+        <Radio value={String(PropertyValueType.Fixed)}>{t("pathMarkConfig.label.fixed")}</Radio>
+        <Radio value={String(PropertyValueType.Dynamic)}>{t("pathMarkConfig.label.dynamic")}</Radio>
+      </RadioGroup>
       {config.valueType === PropertyValueType.Fixed ? (
         <Input
           label={t("pathMarkConfig.label.fixedValue")}
           size="sm"
           value={config.fixedValue ?? ""}
-          onValueChange={(v) => updateConfig({ fixedValue: v })}
+          onValueChange={(value) => updateConfig({ fixedValue: value })}
         />
       ) : (
-        <>
-          {/* Value Match Mode - Radio Group */}
-          <div className="flex flex-col gap-1">
-            <span className="text-sm font-medium">
-              {t("pathMarkConfig.label.valueExtractionMode")}
-            </span>
-            <RadioGroup
-              orientation="horizontal"
-              size="sm"
-              value={String(config.valueMatchMode ?? PathMatchMode.Layer)}
-              onValueChange={(value) => {
-                const valueMatchMode = Number(value) as PathMatchMode;
-
-                updateConfig({
-                  valueMatchMode,
-                  ...(valueMatchMode === PathMatchMode.Layer && !hasValidValueLayer
-                    ? { valueLayer: 0 }
-                    : {}),
-                  ...(valueMatchMode === PathMatchMode.Layer
-                    ? { valueRegexMatchesResourcePath: undefined }
-                    : {}),
-                });
-              }}
-            >
-              <Radio value={String(PathMatchMode.Layer)}>{t("pathMarkConfig.label.layer")}</Radio>
-              <Radio value={String(PathMatchMode.Regex)}>{t("pathMarkConfig.label.regex")}</Radio>
-            </RadioGroup>
-          </div>
-
-          {config.valueMatchMode === PathMatchMode.Layer ? (
-            <NumberInput
-              description={t("pathMarkConfig.tip.zeroEqualsMatchedItem")}
-              errorMessage={
-                !hasValidValueLayer ? t("pathMarkConfig.error.valueLayerRequired") : undefined
-              }
-              isInvalid={!hasValidValueLayer}
-              label={t("pathMarkConfig.label.valueLayer")}
-              size="sm"
-              value={hasValidValueLayer ? config.valueLayer : undefined}
-              onValueChange={(v) =>
-                updateConfig({ valueLayer: Number.isFinite(v) ? v : undefined })
-              }
-            />
-          ) : (
-            <Input
-              errorMessage={
-                !config.valueRegex?.trim()
-                  ? t("pathMarkConfig.error.valueRegexRequired")
-                  : undefined
-              }
-              isInvalid={!config.valueRegex?.trim()}
-              label={t("pathMarkConfig.label.valueRegex")}
-              placeholder={t("pathMarkConfig.tip.regexExample")}
-              size="sm"
-              value={config.valueRegex ?? ""}
-              onValueChange={(v) => updateConfig({ valueRegex: v })}
-            />
-          )}
-        </>
-      )}
-
-      {/* Priority at the bottom */}
-      <div className="border-t border-default-200 pt-2">
-        <NumberInput
-          description={t("pathMark.priority.description")}
-          label={t("common.label.priority")}
-          size="sm"
-          value={priority}
-          onValueChange={(v) => onPriorityChange(v ?? 10)}
+        <DynamicValueConfig
+          config={config}
+          markType={PathMarkType.Property}
+          t={t}
+          updateConfig={updateConfig}
         />
-      </div>
-    </>
+      )}
+    </div>
   );
 };
-
-PropertyMarkConfig.displayName = "PropertyMarkConfig";
 
 export default PropertyMarkConfig;

@@ -1645,6 +1645,21 @@ export const PathMarkTypeLabel: Record<PathMarkType, string> = {
   [PathMarkType.MediaLibrary]: 'MediaLibrary'
 };
 
+export enum PathMarkValueBasePath {
+  MarkPath = 1,
+  ResourcePath = 2
+}
+
+export const pathMarkValueBasePaths = [
+  { label: 'MarkPath', value: PathMarkValueBasePath.MarkPath },
+  { label: 'ResourcePath', value: PathMarkValueBasePath.ResourcePath }
+] as const;
+
+export const PathMarkValueBasePathLabel: Record<PathMarkValueBasePath, string> = {
+  [PathMarkValueBasePath.MarkPath]: 'MarkPath',
+  [PathMarkValueBasePath.ResourcePath]: 'ResourcePath'
+};
+
 export enum PathMatchMode {
   Layer = 1,
   Regex = 2

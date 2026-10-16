@@ -5,9 +5,12 @@ import {
   PathMatchMode,
   PropertyValueType,
   PathMarkApplyScope,
+  PathMarkValueBasePath,
 } from "@/sdk/constants";
 
 type PropertyMarkCompatibilityConfig = {
+  valueBasePath?: PathMarkValueBasePath;
+  valueMatchMode?: PathMatchMode;
   matchMode?: PathMatchMode;
   layer?: number | null;
   regex?: string | null;
@@ -19,6 +22,8 @@ type PropertyMarkCompatibilityConfig = {
 };
 
 type RawMarkConfig = PropertyMarkCompatibilityConfig & {
+  valueMatchMode?: PathMatchMode;
+  valueBasePath?: PathMarkValueBasePath;
   pool?: MarkConfig["propertyPool"];
   propertyId?: number;
   fixedValue?: string;
@@ -47,6 +52,8 @@ export const normalizeLegacyPropertyMarkConfig = <T extends PropertyMarkCompatib
   const isLegacyV220PropertyMark =
     markType === PathMarkType.Property &&
     config.valueType === PropertyValueType.Dynamic &&
+    (config.valueBasePath ?? PathMarkValueBasePath.MarkPath) === PathMarkValueBasePath.MarkPath &&
+    config.valueMatchMode == null &&
     (config.applyScope ?? PathMarkApplyScope.MatchedOnly) === PathMarkApplyScope.MatchedOnly &&
     !hasLayer &&
     !hasRegex &&
@@ -89,10 +96,15 @@ export const parseMarkConfig = (configJson?: string, markType?: PathMarkType): M
       propertyId: config.propertyId,
       valueType: config.valueType ?? PropertyValueType.Fixed,
       fixedValue: config.fixedValue ?? "",
-      valueMatchMode:
-        config.valueRegexMatchesResourcePath || config.valueRegex
-          ? PathMatchMode.Regex
-          : PathMatchMode.Layer,
+      valueMatchMode: config.valueRegexMatchesResourcePath
+        ? PathMatchMode.Regex
+        : (config.valueMatchMode ??
+          (markType === PathMarkType.MediaLibrary
+            ? (config.matchMode ?? PathMatchMode.Layer)
+            : config.valueRegex
+              ? PathMatchMode.Regex
+              : PathMatchMode.Layer)),
+      valueBasePath: config.valueBasePath ?? PathMarkValueBasePath.MarkPath,
       valueLayer: config.valueLayer ?? (isNewMark ? 0 : undefined),
       valueRegex: config.valueRegex ?? "",
       valueRegexMatchesResourcePath: config.valueRegexMatchesResourcePath ?? false,
@@ -117,24 +129,36 @@ export const parseMarkConfig = (configJson?: string, markType?: PathMarkType): M
   }
 };
 
-export const hasValidPropertyValueExtractor = (
-  config: MarkConfig,
-  markType: PathMarkType,
-): boolean => {
-  if (markType !== PathMarkType.Property || config.valueType !== PropertyValueType.Dynamic) {
+export const hasValidValueExtractor = (config: MarkConfig, markType: PathMarkType): boolean => {
+  const valueType =
+    markType === PathMarkType.MediaLibrary ? config.mediaLibraryValueType : config.valueType;
+
+  if (markType === PathMarkType.Resource || valueType !== PropertyValueType.Dynamic) {
     return true;
   }
 
   if (config.valueMatchMode === PathMatchMode.Regex) {
-    return Boolean(config.valueRegex?.trim());
+    return Boolean(
+      (markType === PathMarkType.MediaLibrary
+        ? config.regexToMediaLibrary
+        : config.valueRegex
+      )?.trim(),
+    );
   }
+
+  const layer =
+    markType === PathMarkType.MediaLibrary ? config.layerToMediaLibrary : config.valueLayer;
 
   return (
     config.valueMatchMode === PathMatchMode.Layer &&
-    typeof config.valueLayer === "number" &&
-    Number.isFinite(config.valueLayer)
+    typeof layer === "number" &&
+    Number.isInteger(layer) &&
+    (config.valueBasePath !== PathMarkValueBasePath.ResourcePath || layer <= 0)
   );
 };
+
+// Kept for callers validating existing property-only forms.
+export const hasValidPropertyValueExtractor = hasValidValueExtractor;
 
 export const buildConfigJson = (config: MarkConfig, markType: PathMarkType): string => {
   if (markType === PathMarkType.Resource) {
@@ -154,16 +178,20 @@ export const buildConfigJson = (config: MarkConfig, markType: PathMarkType): str
       layer: config.layer,
       regex: config.regex,
       valueType: config.mediaLibraryValueType,
+      valueBasePath: config.valueBasePath ?? PathMarkValueBasePath.MarkPath,
+      valueMatchMode: config.valueMatchMode ?? config.matchMode,
       mediaLibraryId:
         config.mediaLibraryValueType === PropertyValueType.Fixed
           ? config.mediaLibraryId
           : undefined,
       layerToMediaLibrary:
-        config.mediaLibraryValueType === PropertyValueType.Dynamic
+        config.mediaLibraryValueType === PropertyValueType.Dynamic &&
+        (config.valueMatchMode ?? config.matchMode) === PathMatchMode.Layer
           ? config.layerToMediaLibrary
           : undefined,
       regexToMediaLibrary:
-        config.mediaLibraryValueType === PropertyValueType.Dynamic
+        config.mediaLibraryValueType === PropertyValueType.Dynamic &&
+        (config.valueMatchMode ?? config.matchMode) === PathMatchMode.Regex
           ? config.regexToMediaLibrary
           : undefined,
       applyScope: config.applyScope ?? PathMarkApplyScope.MatchedOnly,
@@ -177,6 +205,8 @@ export const buildConfigJson = (config: MarkConfig, markType: PathMarkType): str
       pool: config.propertyPool,
       propertyId: config.propertyId,
       valueType: config.valueType,
+      valueBasePath: config.valueBasePath ?? PathMarkValueBasePath.MarkPath,
+      valueMatchMode: config.valueMatchMode,
       fixedValue: config.fixedValue,
       valueLayer: config.valueMatchMode === PathMatchMode.Regex ? undefined : config.valueLayer,
       valueRegex: config.valueMatchMode === PathMatchMode.Regex ? config.valueRegex : undefined,

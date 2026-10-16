@@ -10667,6 +10667,7 @@ export interface components {
             resourceLayerIndex?: number;
             resourceSegmentName?: string;
             propertyValue?: string;
+            valueSourcePath?: string;
         };
         "Bakabase.Abstractions.Models.Domain.PathPropertyExtractor": {
             basePathType: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PathPropertyExtractorBasePathType"];

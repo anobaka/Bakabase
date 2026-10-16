@@ -708,6 +708,7 @@ export interface BakabaseAbstractionsModelsDomainPathMarkPreviewResult {
   resourceLayerIndex?: number;
   resourceSegmentName?: string;
   propertyValue?: string;
+  valueSourcePath?: string;
 }
 
 export interface BakabaseAbstractionsModelsDomainPathPropertyExtractor {

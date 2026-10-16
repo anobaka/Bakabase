@@ -12,6 +12,8 @@ public static class PropertyMarkConfigExtensions
     /// so runtime consumers must preserve the same meaning for already-migrated databases.
     /// </summary>
     public static bool UsesLegacyV220WildcardApplicability(this PropertyMarkConfig config) =>
+        config.ValueBasePath == PathMarkValueBasePath.MarkPath &&
+        config.ValueMatchMode == null &&
         config.ValueType == PropertyValueType.Dynamic &&
         config.Layer == null &&
         string.IsNullOrEmpty(config.Regex) &&
@@ -39,4 +41,9 @@ public static class PropertyMarkConfigExtensions
         (!string.IsNullOrEmpty(config.ValueRegex) &&
          config.UsesLegacyV220WildcardApplicability() &&
          config.MatchMode == PathMatchMode.Regex);
+
+    public static PathMatchMode GetEffectiveValueMatchMode(this PropertyMarkConfig config) =>
+        config.UsesResourceRelativeValueRegex()
+            ? PathMatchMode.Regex
+            : config.ValueMatchMode ?? (!string.IsNullOrEmpty(config.ValueRegex) ? PathMatchMode.Regex : PathMatchMode.Layer);
 }

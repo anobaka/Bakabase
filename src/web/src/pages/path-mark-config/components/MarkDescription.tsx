@@ -12,6 +12,7 @@ import {
   PropertyValueType,
   PathMatchMode,
   PathMarkApplyScope,
+  PathMarkValueBasePath,
 } from "@/sdk/constants";
 
 type Props = {
@@ -110,69 +111,36 @@ const MarkDescription = ({ mark, className, label, priority }: Props) => {
         parts.push(t("markDescription.invalid"));
       }
 
-      // For property marks - value info
-      if (mark.type === PathMarkType.Property) {
-        const valueType = config.valueType;
-
-        if (valueType === PropertyValueType.Fixed) {
-          const fixedValue = config.fixedValue;
-
-          if (fixedValue !== undefined && fixedValue !== null) {
-            parts.push(`="${fixedValue}"`);
-          }
-        } else if (valueType === PropertyValueType.Dynamic) {
-          // Dynamic mode: check valueLayer and valueRegex to determine extraction method
-          const valueLayer = config.valueLayer;
-          const valueRegex = config.valueRegex;
-
-          if (valueLayer !== undefined && valueLayer !== null) {
-            // Layer-based extraction
-            if (valueLayer === 0) {
-              parts.push(t("markDescription.valueLayer.current"));
-            } else if (valueLayer > 0) {
-              parts.push(
-                `${t("markDescription.valueFrom")}+${valueLayer}${t("markDescription.layer.suffix")}`,
-              );
-            } else {
-              parts.push(
-                `${t("markDescription.valueFrom")}${valueLayer}${t("markDescription.layer.suffix")}`,
-              );
-            }
-          } else if (valueRegex) {
-            // Regex-based extraction
-            parts.push(t("markDescription.valueRegex", { regex: valueRegex }));
-          }
-        }
-      }
-
-      // For media library marks - value info
-      if (mark.type === PathMarkType.MediaLibrary) {
+      if (mark.type === PathMarkType.Property || mark.type === PathMarkType.MediaLibrary) {
+        const isLibrary = mark.type === PathMarkType.MediaLibrary;
         const valueType = config.valueType ?? PropertyValueType.Fixed;
 
-        if (valueType === PropertyValueType.Fixed) {
-          // Fixed mode: library name is already shown in the label
+        if (valueType === PropertyValueType.Fixed && !isLibrary && config.fixedValue != null) {
+          parts.push(`="${config.fixedValue}"`);
         } else if (valueType === PropertyValueType.Dynamic) {
-          // Dynamic mode: check layerToMediaLibrary and regexToMediaLibrary
-          const layerToMediaLibrary = config.layerToMediaLibrary;
-          const regexToMediaLibrary = config.regexToMediaLibrary;
+          const prefix = isLibrary ? "→" : "=";
+          const legacyRegex = !isLibrary && config.valueRegexMatchesResourcePath;
+          const mode =
+            config.valueMatchMode ??
+            (isLibrary ? matchMode : config.valueRegex ? PathMatchMode.Regex : PathMatchMode.Layer);
+          const resourceBase = config.valueBasePath === PathMarkValueBasePath.ResourcePath;
+          const base = t(
+            resourceBase ? "markDescription.base.resource" : "markDescription.base.mark",
+          );
+          const valueRegex = isLibrary ? config.regexToMediaLibrary : config.valueRegex;
+          const valueLayer = isLibrary ? (config.layerToMediaLibrary ?? 0) : config.valueLayer;
 
-          if (layerToMediaLibrary !== undefined && layerToMediaLibrary !== null) {
-            // Layer-based extraction
-            if (layerToMediaLibrary === 0) {
-              parts.push(t("markDescription.mediaLibraryLayer.current"));
-            } else if (layerToMediaLibrary > 0) {
+          if (legacyRegex) {
+            parts.push(`${prefix}${t("markDescription.value.legacyRegex", { regex: valueRegex })}`);
+          } else if (mode === PathMatchMode.Regex && valueRegex) {
+            parts.push(`${prefix}${t("markDescription.value.regex", { base, regex: valueRegex })}`);
+          } else if (mode === PathMatchMode.Layer && Number.isInteger(valueLayer)) {
+            if (resourceBase && valueLayer > 0) parts.push(t("markDescription.invalid"));
+            else
               parts.push(
-                `${t("markDescription.mediaLibraryFrom")}+${layerToMediaLibrary}${t("markDescription.layer.suffix")}`,
+                `${prefix}${t(valueLayer === 0 ? "markDescription.value.self" : valueLayer > 0 ? "markDescription.value.descendant" : "markDescription.value.ancestor", { base, layer: Math.abs(valueLayer) })}`,
               );
-            } else {
-              parts.push(
-                `${t("markDescription.mediaLibraryFrom")}${layerToMediaLibrary}${t("markDescription.layer.suffix")}`,
-              );
-            }
-          } else if (regexToMediaLibrary) {
-            // Regex-based extraction
-            parts.push(t("markDescription.mediaLibraryRegex", { regex: regexToMediaLibrary }));
-          }
+          } else parts.push(t("markDescription.invalid"));
         }
       }
 

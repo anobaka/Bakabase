@@ -8,6 +8,9 @@ using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
+using Bakabase.Abstractions.Models.Db;
+using Bakabase.InsideWorld.Business;
+using Bootstrap.Components.Orm;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.Dto;
 using Bakabase.Abstractions.Models.Input;
@@ -527,9 +530,11 @@ public sealed class PathMarkReferenceValueRegressionTests
         ambiguousOptions.Choices!.Add(new ChoiceOptions {Label = "Decoy", Value = guidLabel});
         await propertyService.Put(ambiguousProperty);
 
-        var ambiguousMark = (await pathMarkService.Get(mark.Id))!;
+        // Simulate already-persisted corruption directly; normal saves reject invalid JSON.
+        var markOrm = _sp.GetRequiredService<FullMemoryCacheResourceService<BakabaseDbContext, PathMarkDbModel, int>>();
+        var ambiguousMark = (await markOrm.GetByKey(mark.Id))!;
         ambiguousMark.ConfigJson = "{";
-        await pathMarkService.Update(ambiguousMark);
+        await markOrm.Update(ambiguousMark);
         await pathMarkService.MarkAsSynced(mark.Id);
 
         var secondTriggerProperty = await AddProperty("Second partial-sync trigger", PropertyType.SingleLineText);
