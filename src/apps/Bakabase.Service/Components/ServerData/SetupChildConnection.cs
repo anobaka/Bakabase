@@ -100,6 +100,30 @@ public sealed class SetupChildConnection : IAsyncDisposable
         }
         finally { _setupReply = null; _setupGate.Release(); }
     }
+    public async Task RequestWorkspaceSwitchAsync(string id, bool commit)
+    {
+        await _setupGate.WaitAsync(Stopping);
+        try
+        {
+            _setupReply = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            Send(commit ? "workspace-switch-commit" : "workspace-switch-prepare", id);
+            await _setupReply.Task.WaitAsync(TimeSpan.FromSeconds(30), Stopping);
+        }
+        finally { _setupReply = null; _setupGate.Release(); }
+    }
+
+    public async Task ReserveRestartAsync(bool release = false)
+    {
+        await _setupGate.WaitAsync(Stopping);
+        try
+        {
+            _setupReply = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            Send("workspace-restart", release ? "release" : "reserve");
+            await _setupReply.Task.WaitAsync(TimeSpan.FromSeconds(30), Stopping);
+        }
+        finally { _setupReply = null; _setupGate.Release(); }
+    }
+
     public async Task<bool> TryProxyAsync(HttpContext context)
     {
         var path = context.Request.Path.Value;
@@ -191,6 +215,8 @@ public sealed class SetupChildConnection : IAsyncDisposable
             info.ArgumentList.Add(Assembly.GetEntryAssembly()!.Location);
         foreach (var argument in arguments.Where(a => !a.StartsWith(RoleArgument, StringComparison.Ordinal))) info.ArgumentList.Add(argument);
         info.ArgumentList.Add(RoleArgument + role);
+        if (arguments.Any(a => a.StartsWith(Bakabase.Infrastructures.Components.App.Profiles.DesktopProfileSelection.ArgumentPrefix, StringComparison.Ordinal)))
+            info.Environment.Remove(Bakabase.Infrastructures.Components.App.DefaultAppDataPathResolver.EnvVarName);
         info.Environment[PipeEnvironment] = pipeName;
         info.Environment[SecretEnvironment] = secret;
         return info;

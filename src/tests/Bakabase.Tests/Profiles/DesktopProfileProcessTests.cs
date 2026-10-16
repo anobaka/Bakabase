@@ -17,22 +17,48 @@ public class DesktopProfileProcessTests
     [TestCleanup] public void Cleanup() { if (Directory.Exists(_root)) Directory.Delete(_root, true); }
 
     [TestMethod]
-    public async Task Two_spaces_run_simultaneously_and_a_duplicate_hands_off_to_its_owner()
+    public async Task Independent_data_directory_guards_still_support_separate_headless_hosts()
     {
         var control = Path.Combine(_root, "control");
         var registry = new DesktopProfileRegistry(control, Path.Combine(control, "legacy"));
         var first = registry.Add("A", Path.Combine(_root, "A"), true);
         var second = registry.Add("B", Path.Combine(_root, "B"), true);
-        using var a = await InstanceProbe.StartAsync("profile", control, new Dictionary<string, string?> { ["BAKABASE_TEST_PROFILE_ID"] = first.Id });
+        using var a = await InstanceProbe.StartAsync("enter", Path.Combine(_root, "A"));
         Assert.AreEqual("ENTRY Entered", a.FirstLine);
-        StringAssert.Contains((await a.ReadLineAsync(TimeSpan.FromSeconds(5)))!, Path.Combine(_root, "A"));
-        using var b = await InstanceProbe.StartAsync("profile", control, new Dictionary<string, string?> { ["BAKABASE_TEST_PROFILE_ID"] = second.Id });
+        using var b = await InstanceProbe.StartAsync("enter", Path.Combine(_root, "B"));
         Assert.AreEqual("ENTRY Entered", b.FirstLine);
-        StringAssert.Contains((await b.ReadLineAsync(TimeSpan.FromSeconds(5)))!, Path.Combine(_root, "B"));
-        using var duplicate = await InstanceProbe.StartAsync("profile", control, new Dictionary<string, string?> { ["BAKABASE_TEST_PROFILE_ID"] = first.Id });
+        using var duplicate = await InstanceProbe.StartAsync("enter", Path.Combine(_root, "A"));
         Assert.AreEqual("ENTRY Refused", duplicate.FirstLine);
         Assert.AreEqual("ACTIVATED", await a.ReadLineAsync(TimeSpan.FromSeconds(5)));
         Assert.IsFalse(b.HasExited);
+    }
+
+    [TestMethod]
+    public async Task Desktop_reopens_active_workspace_even_when_default_storage_is_missing_then_releases_on_exit()
+    {
+        var control = Path.Combine(_root, "control");
+        var registry = new DesktopProfileRegistry(control, Path.Combine(control, "legacy"));
+        var active = registry.Add("Active", Path.Combine(_root, "active"), true);
+        var missing = registry.Add("Missing", Path.Combine(_root, "missing"), true);
+        registry.MarkInitialized(missing.Id);
+        registry.Update(missing.Id, missing.Name, true);
+        using var owner = await InstanceProbe.StartAsync("desktop", control,
+            new Dictionary<string, string?> { ["BAKABASE_TEST_PROFILE_ID"] = active.Id, ["BAKABASE_DATA_DIR"] = null });
+        Assert.AreEqual("DESKTOP Entered", owner.FirstLine);
+        Assert.AreEqual("PROFILE " + active.Id, await owner.ReadLineAsync(TimeSpan.FromSeconds(5)));
+        using var duplicate = await InstanceProbe.StartAsync("desktop", control,
+            new Dictionary<string, string?> { ["BAKABASE_TEST_PROFILE_ID"] = null, ["BAKABASE_DATA_DIR"] = null });
+        Assert.AreEqual("DESKTOP Activated", duplicate.FirstLine);
+        Assert.AreEqual("ACTIVATED SHOW", await owner.ReadLineAsync(TimeSpan.FromSeconds(5)));
+        Assert.IsFalse(Directory.Exists(Path.Combine(_root, "missing")), "Reopen must not touch the disconnected default.");
+        using var explicitLaunch = await InstanceProbe.StartAsync("desktop", control,
+            new Dictionary<string, string?> { ["BAKABASE_TEST_PROFILE_ID"] = missing.Id });
+        Assert.AreEqual("DESKTOP Activated", explicitLaunch.FirstLine);
+        Assert.AreEqual("ACTIVATED WORKSPACE:" + missing.Id, await owner.ReadLineAsync(TimeSpan.FromSeconds(5)));
+        owner.Stop();
+        using var reopened = await InstanceProbe.StartAsync("desktop", control,
+            new Dictionary<string, string?> { ["BAKABASE_TEST_PROFILE_ID"] = active.Id, ["BAKABASE_DATA_DIR"] = null });
+        Assert.AreEqual("DESKTOP Entered", reopened.FirstLine);
     }
 
     [TestMethod]

@@ -6,7 +6,7 @@ import { filterItems, normalizeQuery, useSettingsSearchMatch } from "../Settings
 
 import AppDataStorage, { getAppDataStorageItems } from "./AppDataStorage";
 
-import ProfilesSettings from "@/features/profiles/ProfilesSettings";
+import ProfilesSettings, { matchesProfilesSettings } from "@/features/profiles/ProfilesSettings";
 import { useDesktopProfiles } from "@/features/profiles/useDesktopProfiles";
 import { useIsPureClient, useRemoteAccessStore } from "@/stores/remoteAccess";
 
@@ -46,36 +46,27 @@ export default function StorageSettings({
   const sectionMatches =
     !normalizedQuery || [title, ...keywords].join(" ").toLowerCase().includes(normalizedQuery);
   const items = getAppDataStorageItems(appInfo, t);
-  const current = profiles.state?.profiles?.find((profile) => profile.isCurrent);
 
-  if (current) {
-    items.unshift({
-      id: "currentWorkspace",
-      label: t("profiles.currentSection"),
-      keywords: [current.name || t("profiles.original")],
-      render: () => (
-        <span className="text-sm font-medium">{current.name || t("profiles.original")}</span>
-      ),
-    });
+  if (profiles.localDesktop) {
+    const dataDirectory = items.find((item) => item.id === "appDataPath");
+
+    if (dataDirectory) dataDirectory.label = t("profiles.currentDirectory");
   }
   const primaryItems = filterItems(
     title,
-    items.filter((item) => item.id === "appDataPath" || item.id === "currentWorkspace"),
+    items.filter((item) => item.id === "appDataPath"),
     normalizedQuery,
     keywords,
   );
   const detailItems = filterItems(
     t("configuration.storage.details"),
-    items.filter((item) => item.id !== "appDataPath" && item.id !== "currentWorkspace"),
+    items.filter((item) => item.id !== "appDataPath"),
     sectionMatches ? "" : normalizedQuery,
   );
   const managementMatches =
     profiles.localDesktop &&
     (profiles.state?.available || profiles.error) &&
-    (sectionMatches ||
-      `${t("profiles.manageSection")} ${t("profiles.description")}`
-        .toLowerCase()
-        .includes(normalizedQuery));
+    (sectionMatches || matchesProfilesSettings(normalizedQuery, t, profiles.state?.profiles || []));
   const matched = primaryItems.length > 0 || detailItems.length > 0 || !!managementMatches;
 
   useSettingsSearchMatch("workspace-storage", matched);
@@ -98,14 +89,14 @@ export default function StorageSettings({
           {serverName && ` ${serverName}`}
         </p>
       )}
+      {managementMatches && (
+        <ProfilesSettings controller={profiles} query={sectionMatches ? "" : normalizedQuery} />
+      )}
       <AppDataStorage
         detailItems={detailItems}
         primaryItems={primaryItems}
         query={normalizedQuery}
       />
-      {managementMatches && (
-        <ProfilesSettings controller={profiles} query={sectionMatches ? "" : normalizedQuery} />
-      )}
     </section>
   );
 }

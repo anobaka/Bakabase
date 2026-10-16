@@ -10,7 +10,8 @@ public interface IDesktopProfileService
     DesktopProfileView Add(DesktopProfileAddInput input);
     DesktopProfileView Update(string id, DesktopProfileUpdateInput input);
     void Remove(string id);
-    Task OpenAsync(string id, bool closeCurrent);
+    Task<bool> OpenAsync(string id, bool closeCurrent);
+    Task CompleteOpenAsync(string id);
 }
 
 public sealed record DesktopProfileView(string Id, string Name, string DataDirectory, bool IsCurrent,

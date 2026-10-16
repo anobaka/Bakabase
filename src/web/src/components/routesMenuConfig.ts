@@ -565,14 +565,11 @@ export const routesMenuConfig: RouteMenuItem[] = [
     ],
   },
   {
-    // The endpoints behind these pages exist only in the desktop app's relay for a server
-    // it manages, so the group is filtered out of the menu everywhere else — see
-    // `pureClientOnly`. The routes stay registered regardless, because a bookmark can still
-    // land on one, and each page renders a notice rather than a broken screen. About the
-    // computer the window runs on, hence the name.
+    // The controlling desktop settings now live beside the top device switcher. Keep
+    // this relay-only route registered for that entry and existing bookmarks.
     name: "menu.client.thisComputer",
     icon: AiOutlineLaptop,
-    menu: true,
+    menu: false,
     pureClientOnly: true,
     children: [
       {

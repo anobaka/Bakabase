@@ -17,6 +17,7 @@ import {
 import { clientApi, LOCAL_SWITCHER_TARGET } from "@/core/clientApi";
 import { managedServerApi } from "@/features/federation/serverApi";
 import {
+  CONFIGURATION_ROUTE,
   devicesRoute,
   openConsoleTarget,
   openLocalView,
@@ -25,6 +26,7 @@ import {
 import { FederationError } from "@/features/federation/transport";
 import { ClientMode, ManagedServerState, ManagedServerStateLabel } from "@/sdk/constants";
 import { useRemoteAccessStore } from "@/stores/remoteAccess";
+import { Dropdown, DropdownItem, DropdownMenu, DropdownTrigger } from "@/components/bakaui";
 
 export interface SwitcherEntry {
   id: string;
@@ -136,12 +138,13 @@ const LocalSwitcher: React.FC<Props> = ({ collapsed }) => {
   return (
     <SwitcherView
       collapsed={collapsed}
+      controllerName={localName}
       currentName={localName}
       entries={entries}
       listError={listFailed ? t<string>("federation.switcher.listFailed") : undefined}
       managing={false}
+      onControllerSettings={() => navigate(CONFIGURATION_ROUTE)}
       onManageDevices={() => navigate(MANAGE_DEVICES_ROUTE)}
-      // Opening is the moment the states matter, and the probe is bounded server-side.
       onOpen={() => void load(true)}
       onSelect={(entry) => openManagedServer(entry.id)}
     />
@@ -153,6 +156,7 @@ const ConsoleSwitcher: React.FC<Props> = ({ collapsed }) => {
   const { t } = useTranslation();
   const serverName = useRemoteAccessStore((state) => state.serverName);
   const localName = useRemoteAccessStore((state) => state.localName);
+  const navigate = useNavigate();
   const [switcher, setSwitcher] = useState<ClientSwitcher>();
   const [listFailed, setListFailed] = useState(false);
 
@@ -197,11 +201,14 @@ const ConsoleSwitcher: React.FC<Props> = ({ collapsed }) => {
     <SwitcherView
       managing
       collapsed={collapsed}
+      controllerName={entries.find((entry) => entry.isLocal)?.name || localName}
       currentName={currentName}
       entries={entries}
       listError={listFailed ? t<string>("federation.switcher.listFailed") : undefined}
+      onControllerSettings={() => openLocalView(CONFIGURATION_ROUTE)}
       onManageDevices={() => openLocalView(MANAGE_DEVICES_ROUTE)}
       onOpen={() => void load()}
+      onPathMapping={() => navigate("/client-path-mapping")}
       onSelect={(entry) => openConsoleTarget(entry.id)}
     />
   );
@@ -230,41 +237,41 @@ const labelledStates = new Set<ManagedServerState>([
 const dotState = (state?: ManagedServerState): ManagedServerState =>
   typeof state === "number" && state in stateDotClass ? state : ManagedServerState.Unknown;
 
-const itemSelector = '[role="menuitem"]:not([disabled])';
-
 export const SwitcherView: React.FC<{
   collapsed: boolean;
   currentName: string;
+  controllerName?: string;
   /** The window shows another server: say so wherever the name appears. */
   managing: boolean;
   entries: SwitcherEntry[];
-  /** Set when the list of destinations could not be read; shown in the menu, with a retry. */
   listError?: string;
-  /** Called on every opening; also the retry after {@link listError}. */
   onOpen: () => void;
-  /** Resolves once navigation has been asked for; rejects with what went wrong. */
   onSelect: (entry: SwitcherEntry) => Promise<void>;
   onManageDevices: () => unknown;
+  onControllerSettings: () => unknown;
+  /** Only relays can edit the controlling app's mapping to the device currently shown. */
+  onPathMapping?: () => unknown;
 }> = ({
   collapsed,
   currentName,
+  controllerName,
   managing,
   entries,
   listError,
   onOpen,
   onSelect,
   onManageDevices,
+  onControllerSettings,
+  onPathMapping,
 }) => {
   const { t, i18n } = useTranslation();
   const [open, setOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [busyId, setBusyId] = useState<string>();
   const [error, setError] = useState<string>();
-  const wrapper = useRef<HTMLDivElement>(null);
-  const trigger = useRef<HTMLButtonElement>(null);
-  const menu = useRef<HTMLDivElement>(null);
+  const [settingsError, setSettingsError] = useState<string>();
+  const [settingsBusy, setSettingsBusy] = useState(false);
   const mounted = useRef(true);
-  /** Which end of the menu takes focus when it opens: ArrowUp on the button starts at the last. */
-  const focusFrom = useRef<"first" | "last">("first");
 
   useEffect(() => {
     mounted.current = true;
@@ -273,42 +280,6 @@ export const SwitcherView: React.FC<{
       mounted.current = false;
     };
   }, []);
-
-  const close = useCallback((refocus: boolean) => {
-    setOpen(false);
-    if (refocus) trigger.current?.focus();
-  }, []);
-
-  const show = (from: "first" | "last") => {
-    focusFrom.current = from;
-    setError(undefined);
-    setOpen(true);
-    onOpen();
-  };
-
-  useEffect(() => {
-    if (!open) return;
-    const onPointerDown = (event: MouseEvent) => {
-      if (!wrapper.current?.contains(event.target as Node)) close(false);
-    };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        close(true);
-      }
-    };
-
-    document.addEventListener("mousedown", onPointerDown);
-    document.addEventListener("keydown", onKeyDown);
-    const items = menu.current?.querySelectorAll<HTMLElement>(itemSelector);
-
-    (focusFrom.current === "last" ? items?.[items.length - 1] : items?.[0])?.focus();
-
-    return () => {
-      document.removeEventListener("mousedown", onPointerDown);
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, [open, close]);
 
   const describe = (cause: unknown) => {
     const key =
@@ -322,7 +293,7 @@ export const SwitcherView: React.FC<{
 
   const select = async (entry: SwitcherEntry) => {
     if (entry.isCurrent) {
-      close(true);
+      setOpen(false);
 
       return;
     }
@@ -330,8 +301,7 @@ export const SwitcherView: React.FC<{
     setError(undefined);
     try {
       await onSelect(entry);
-      // Navigation replaces this page; the busy state is left on so nothing else is
-      // clicked in the moment before it goes.
+      // Navigation replaces this page. Keep the selected entry busy until it does.
     } catch (cause) {
       if (!mounted.current) return;
       setBusyId(undefined);
@@ -349,198 +319,224 @@ export const SwitcherView: React.FC<{
     }
   };
 
-  /** Arrow keys walk the items, Home and End jump to either end — the WAI-ARIA menu pattern. */
-  const onMenuKeyDown = (event: React.KeyboardEvent) => {
-    const items = Array.from(menu.current?.querySelectorAll<HTMLElement>(itemSelector) ?? []);
-
-    if (!items.length) return;
-    const index = items.indexOf(document.activeElement as HTMLElement);
-    let next: number;
-
-    switch (event.key) {
-      case "ArrowDown":
-        next = index + 1;
-        break;
-      case "ArrowUp":
-        next = index < 0 ? items.length - 1 : index - 1;
-        break;
-      case "Home":
-        next = 0;
-        break;
-      case "End":
-        next = items.length - 1;
-        break;
-      default:
-        return;
+  const openSettings = async (pathMapping: boolean) => {
+    setSettingsBusy(true);
+    setSettingsError(undefined);
+    try {
+      await (pathMapping ? onPathMapping?.() : onControllerSettings());
+      if (mounted.current) setSettingsOpen(false);
+    } catch {
+      if (mounted.current) setSettingsError(t("federation.switcher.controllerSettingsFailed"));
+    } finally {
+      if (mounted.current) setSettingsBusy(false);
     }
-    event.preventDefault();
-    items[(next + items.length) % items.length]?.focus();
   };
 
   const busy = busyId !== undefined;
   const label = managing
     ? t("federation.switcher.managingName", { name: currentName })
     : currentName;
+  const controllerLabel = controllerName
+    ? t("federation.switcher.controllerSettingsNamed", { name: controllerName })
+    : t("federation.switcher.controllerSettings");
   const CurrentIcon = managing ? AiOutlineCloudServer : AiOutlineDesktop;
-  const itemClass =
-    "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm outline-none hover:bg-default-100 focus-visible:bg-default-100 focus-visible:ring-2 focus-visible:ring-primary/40 disabled:cursor-not-allowed disabled:opacity-50";
+  const settingsTrigger = (
+    <button
+      aria-label={controllerLabel}
+      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-default-500 outline-none transition hover:bg-default-100 hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary/50 disabled:opacity-50"
+      disabled={busy || settingsBusy}
+      title={controllerLabel}
+      type="button"
+      onClick={onPathMapping ? undefined : () => void openSettings(false)}
+    >
+      <AiOutlineSetting aria-hidden className="text-lg" />
+    </button>
+  );
 
   return (
     <div
-      ref={wrapper}
-      className="relative font-sans"
+      className={`flex min-w-0 items-center gap-1 font-sans ${collapsed ? "flex-col" : ""}`}
       data-testid="server-switcher"
-      // Tabbing out of an open menu closes it, as clicking outside does. Checked after the
-      // focus has moved, so the Tab still lands where it was going. Not while a switch is
-      // under way: disabling the focused item drops its focus, and the menu has to stay to
-      // say how the switch went.
-      onBlur={(event) => {
-        if (open && !busy && !wrapper.current?.contains(event.relatedTarget as Node | null))
-          close(false);
-      }}
     >
-      <button
-        ref={trigger}
-        aria-expanded={open}
-        aria-haspopup="menu"
-        aria-label={t("federation.switcher.label", { name: label })}
-        className={`flex items-center rounded-lg text-left outline-none transition hover:bg-default-100 focus-visible:ring-2 focus-visible:ring-primary/50 ${
-          collapsed ? "mx-auto h-9 w-9 justify-center" : "w-full gap-2 px-2 py-1"
-        } ${managing ? "bg-warning/10 text-warning-700 ring-1 ring-warning/50 dark:text-warning" : ""}`}
-        title={label}
-        type="button"
-        onClick={() => (open ? close(false) : show("first"))}
-        onKeyDown={(event) => {
-          if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
-          event.preventDefault();
-          const from = event.key === "ArrowUp" ? "last" : "first";
-
-          if (!open) {
-            show(from);
-          } else {
-            const items = menu.current?.querySelectorAll<HTMLElement>(itemSelector);
-
-            (from === "last" ? items?.[items.length - 1] : items?.[0])?.focus();
+      <Dropdown
+        disableAnimation
+        closeOnSelect={false}
+        isOpen={open}
+        placement={collapsed ? "right-start" : "bottom-start"}
+        onOpenChange={(next) => {
+          if (busy && !next) return;
+          setOpen(next);
+          if (next) {
+            setError(undefined);
+            onOpen();
           }
         }}
       >
-        {collapsed ? (
-          <span aria-hidden className="text-base font-semibold leading-none">
-            {Array.from(currentName)[0]?.toUpperCase() ?? "B"}
-          </span>
-        ) : (
-          <>
-            <CurrentIcon aria-hidden className="shrink-0 text-lg" />
-            <span className="min-w-0 flex-1">
-              {managing && (
-                <span className="block text-[11px] font-medium uppercase leading-4 tracking-wide">
-                  {t("federation.switcher.managing")}
+        <DropdownTrigger>
+          <button
+            aria-label={t("federation.switcher.label", { name: label })}
+            className={`flex min-w-0 items-center rounded-lg text-left outline-none transition hover:bg-default-100 focus-visible:ring-2 focus-visible:ring-primary/50 ${
+              collapsed ? "h-9 w-9 justify-center" : "flex-1 gap-2 px-2 py-1"
+            } ${managing ? "bg-warning/10 text-warning-700 ring-1 ring-warning/50 dark:text-warning" : ""}`}
+            title={label}
+            type="button"
+          >
+            {collapsed ? (
+              <span aria-hidden className="text-base font-semibold leading-none">
+                {Array.from(currentName)[0]?.toUpperCase() ?? "B"}
+              </span>
+            ) : (
+              <>
+                <CurrentIcon aria-hidden className="shrink-0 text-lg" />
+                <span className="min-w-0 flex-1">
+                  {managing && (
+                    <span className="block text-[11px] font-medium leading-4">
+                      {t("federation.switcher.managing")}
+                    </span>
+                  )}
+                  <span className="block truncate text-sm font-medium leading-5">
+                    {currentName}
+                  </span>
                 </span>
-              )}
-              <span className="block truncate text-sm font-medium leading-5">{currentName}</span>
-            </span>
-            <AiOutlineDown aria-hidden className="shrink-0 text-xs opacity-60" />
-          </>
-        )}
-      </button>
-      {open && (
-        <div
-          ref={menu}
+                <AiOutlineDown aria-hidden className="shrink-0 text-xs opacity-60" />
+              </>
+            )}
+          </button>
+        </DropdownTrigger>
+        <DropdownMenu
           aria-label={t("federation.switcher.menu")}
-          className={`absolute z-50 w-64 rounded-xl border border-default-200 bg-content1 p-1 text-left text-foreground shadow-lg outline-none ${
-            collapsed ? "left-full top-0 ml-3" : "left-0 top-full mt-1"
-          }`}
-          role="menu"
-          // Focusable itself so a click on its padding keeps focus inside, and open.
-          tabIndex={-1}
-          onKeyDown={onMenuKeyDown}
+          bottomContent={
+            <>
+              {entries.length === 1 && !listError && (
+                <p className="px-2 py-1 text-xs text-default-400">
+                  {t("federation.switcher.empty")}
+                </p>
+              )}
+              {listError && (
+                <p className="px-2 py-1 text-xs text-danger" role="alert">
+                  {listError}
+                </p>
+              )}
+              {error && (
+                <p className="px-2 py-1 text-xs text-danger" role="alert">
+                  {error}
+                </p>
+              )}
+            </>
+          }
+          className="w-64 font-sans text-left"
+          disabledKeys={busy ? [...entries.map((entry) => entry.id), "retry", "manage"] : []}
+          itemClasses={{ base: "px-2 py-2", title: "w-full min-w-0" }}
+          topContent={
+            <div className="px-2 pt-1.5 pb-1 text-xs text-default-500">
+              {collapsed && <p className="truncate pb-1 font-medium">{label}</p>}
+              {t("federation.switcher.switchTo")}
+            </div>
+          }
+          onAction={(key) => {
+            if (key === "retry") onOpen();
+            else if (key === "manage") void manageDevices();
+            else {
+              const entry = entries.find((item) => item.id === key);
+
+              if (entry) void select(entry);
+            }
+          }}
         >
-          {collapsed && (
-            // The collapsed button shows only an initial; the open menu says the rest.
-            <p className="truncate px-2 pb-1 pt-1.5 text-xs font-medium">{label}</p>
-          )}
-          <p className="px-2 pb-1 pt-1.5 text-[11px] font-medium uppercase tracking-wide text-default-400">
-            {t("federation.switcher.switchTo")}
-          </p>
           {entries.map((entry) => (
-            <button
+            <DropdownItem
               key={entry.id}
               aria-current={entry.isCurrent ? "true" : undefined}
-              className={itemClass}
-              disabled={busy}
-              role="menuitem"
-              type="button"
-              onClick={() => void select(entry)}
+              textValue={entry.name}
             >
-              {entry.isLocal ? (
-                <AiOutlineDesktop aria-hidden className="shrink-0" />
-              ) : (
-                <span
-                  aria-hidden
-                  className={`ml-[3px] mr-[3px] h-2 w-2 shrink-0 rounded-full ${
-                    stateDotClass[dotState(entry.state)]
-                  }`}
-                  data-state={ManagedServerStateLabel[dotState(entry.state)]}
-                  data-testid="server-state-dot"
-                />
-              )}
-              <span className="min-w-0 flex-1 truncate">{entry.name}</span>
-              {entry.isLocal && (
-                <span className="shrink-0 text-xs text-default-400">
-                  {t("federation.thisDevice")}
+              <span className="grid w-full grid-cols-[1rem_minmax(0,1fr)_auto_1rem] items-center gap-2 text-left">
+                <span aria-hidden className="flex h-4 w-4 items-center justify-center">
+                  {entry.isLocal ? (
+                    <AiOutlineDesktop className="h-4 w-4" />
+                  ) : (
+                    <span
+                      className={`h-2 w-2 rounded-full ${stateDotClass[dotState(entry.state)]}`}
+                      data-state={ManagedServerStateLabel[dotState(entry.state)]}
+                      data-testid="server-state-dot"
+                    />
+                  )}
                 </span>
-              )}
-              {!entry.isLocal && entry.state !== undefined && labelledStates.has(entry.state) && (
-                <span className="shrink-0 text-xs text-default-400">
-                  {t(`federation.servers.state.${entry.state}`)}
+                <span className="min-w-0 truncate">{entry.name}</span>
+                <span className="text-xs text-default-400">
+                  {busyId === entry.id
+                    ? t("federation.switcher.opening")
+                    : entry.isLocal
+                      ? t("federation.switcher.controller")
+                      : entry.state !== undefined && labelledStates.has(entry.state)
+                        ? t(`federation.servers.state.${entry.state}`)
+                        : null}
                 </span>
-              )}
-              {busyId === entry.id && (
-                <span className="shrink-0 text-xs text-default-400">
-                  {t("federation.switcher.opening")}
+                <span aria-hidden className="flex h-4 w-4 items-center justify-center">
+                  {entry.isCurrent && <AiOutlineCheck className="h-4 w-4 text-primary" />}
                 </span>
-              )}
-              {entry.isCurrent && <AiOutlineCheck aria-hidden className="shrink-0 text-primary" />}
-            </button>
+              </span>
+            </DropdownItem>
           ))}
-          {entries.length === 1 && !listError && (
-            <p className="px-2 py-1 text-xs text-default-400">{t("federation.switcher.empty")}</p>
-          )}
-          {listError && (
-            <div className="px-2 py-1" data-testid="server-switcher-list-error">
-              <p className="text-xs text-danger" role="alert">
-                {listError}
-              </p>
-              <button
-                className={`${itemClass} mt-1 !px-0 !py-0.5 text-xs text-primary`}
-                disabled={busy}
-                role="menuitem"
-                type="button"
-                onClick={onOpen}
-              >
-                {t("federation.retry")}
-              </button>
-            </div>
-          )}
-          <div className="my-1 h-px bg-default-200" role="separator" />
-          <button
-            className={itemClass}
-            disabled={busy}
-            role="menuitem"
-            type="button"
-            onClick={() => void manageDevices()}
+          {listError ? (
+            <DropdownItem key="retry" className="text-primary">
+              {t("federation.retry")}
+            </DropdownItem>
+          ) : null}
+          <DropdownItem
+            key="manage"
+            className="mt-1 border-t border-default-200 rounded-t-none"
+            textValue={t("federation.switcher.manageDevices")}
           >
-            <AiOutlineSetting aria-hidden className="shrink-0" />
-            <span className="min-w-0 flex-1 truncate">
-              {t("federation.switcher.manageDevices")}
+            <span className="grid grid-cols-[1rem_minmax(0,1fr)] items-center gap-2">
+              <AiOutlineSetting aria-hidden className="h-4 w-4" />
+              <span className="truncate">{t("federation.switcher.manageDevices")}</span>
             </span>
-          </button>
-          {error && (
-            <p className="px-2 py-1 text-xs text-danger" role="alert">
-              {error}
-            </p>
-          )}
-        </div>
+          </DropdownItem>
+        </DropdownMenu>
+      </Dropdown>
+      {onPathMapping ? (
+        <Dropdown
+          disableAnimation
+          closeOnSelect={false}
+          isOpen={settingsOpen}
+          placement={collapsed ? "right-start" : "bottom-end"}
+          onOpenChange={setSettingsOpen}
+        >
+          <DropdownTrigger>{settingsTrigger}</DropdownTrigger>
+          <DropdownMenu
+            aria-label={t("federation.switcher.controllerSettings")}
+            bottomContent={
+              settingsError && (
+                <p className="px-2 py-1 text-xs text-danger" role="alert">
+                  {settingsError}
+                </p>
+              )
+            }
+            className="w-64 font-sans text-left"
+            disabledKeys={settingsBusy ? ["mapping", "configuration"] : []}
+            topContent={
+              <p className="px-2 pt-1.5 pb-2 text-xs text-default-500">{controllerLabel}</p>
+            }
+            onAction={(key) => void openSettings(key === "mapping")}
+          >
+            <DropdownItem
+              key="mapping"
+              description={t("federation.switcher.pathMappingDescription", { name: currentName })}
+            >
+              {t("menu.client.pathMapping")}
+            </DropdownItem>
+            <DropdownItem key="configuration">
+              {t("federation.switcher.openControllerConfiguration")}
+            </DropdownItem>
+          </DropdownMenu>
+        </Dropdown>
+      ) : (
+        settingsTrigger
+      )}
+      {!onPathMapping && settingsError && (
+        <p className="text-xs text-danger" role="alert">
+          {settingsError}
+        </p>
       )}
     </div>
   );

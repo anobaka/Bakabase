@@ -5,6 +5,8 @@ import type { SettingItem } from "@/pages/configuration/components/SettingsSecti
 import { useTranslation } from "react-i18next";
 import { Radio, RadioGroup } from "@heroui/react";
 
+import NavigationCustomization from "../NavigationCustomization";
+
 import { CloseBehavior, startupPages } from "@/sdk/constants";
 import { useAppOptionsStore, useUiOptionsStore } from "@/stores/options";
 import BApi from "@/sdk/BApi";
@@ -23,6 +25,13 @@ const Functional: React.FC<FunctionalProps> = ({ applyPatches, query }) => {
   const uiOptions = useUiOptionsStore((state) => state.data);
 
   const functionSettings: SettingItem[] = [
+    {
+      id: "navigationLayout",
+      label: t("navigationEditor.open.label"),
+      tip: t<string>("configuration.functional.navigation.tip"),
+      keywords: ["navigation", "sidebar", "menu", "侧栏", "菜单", "布局", "显示", "隐藏"],
+      render: () => <NavigationCustomization />,
+    },
     {
       id: "showResourceUsage",
       label: t("configuration.functional.showResourceUsage"),

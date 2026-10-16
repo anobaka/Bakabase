@@ -1,6 +1,6 @@
 {
   "profiles.title": "Workspaces",
-  "profiles.description": "Each workspace keeps its own library, settings and device connections. Open several at once; switching closes the current window normally.",
+  "profiles.description": "A workspace stores Bakabase’s application data, including its library, settings, device connections, cache and logs. Each workspace’s data is isolated from the others. One workspace is usually all you need.",
   "profiles.original": "Original workspace",
   "profiles.addNew": "New workspace",
   "profiles.addExisting": "Add existing directory",
@@ -13,10 +13,7 @@
   "profiles.cancel": "Cancel",
   "profiles.current": "Current",
   "profiles.default": "Default",
-  "profiles.running": "Running",
   "profiles.unavailable": "Directory unavailable",
-  "profiles.open": "Open in new window",
-  "profiles.activate": "Show window",
   "profiles.switch": "Switch",
   "profiles.rename": "Rename",
   "profiles.makeDefault": "Make default",
@@ -24,11 +21,13 @@
   "profiles.removeConfirm": "Remove the registration for “{{name}}”? Its directory and all files will remain, and can be added again.",
   "profiles.environment": "The current directory was selected by a launch environment variable. Register it and make it the default to use it from an ordinary Bakabase launch.",
   "profiles.registerCurrent": "Register current directory",
-  "profiles.opened": "The selected workspace is open.",
   "profiles.switching": "Switching workspaces. This window will close normally.",
-  "profiles.upgrade": "These workspaces share this installation. Close its other workspace windows before updating.",
   "profiles.error.load": "Could not load workspaces.",
   "profiles.error.save": "The operation did not complete. Please retry.",
-  "profiles.currentSection": "Current workspace",
-  "profiles.manageSection": "Manage workspaces"
+  "profiles.manageSection": "Manage workspaces",
+  "profiles.select": "Select workspace",
+  "profiles.manage": "Manage",
+  "profiles.targetDirectory": "Target data directory",
+  "profiles.currentDirectory": "Current workspace data directory",
+  "profiles.switchHint": "Click Switch when ready. The directories below still belong to the current workspace."
 }

@@ -354,5 +354,11 @@
   "federation.servers.name.reload": "重新读取当前名称",
   "federation.error.DeviceNameChanged": "这台设备已在其他地方改名，请重新读取当前名称后再保存。",
   "federation.error.DeviceNameEnvironmentControlled": "设备名称由 BAKABASE_NODE_NAME 指定，请先修改该设备的启动配置，再在这里改名。",
-  "federation.map.source.identity": "无法读取设备身份，已取得的管理和数据同步关系仍会显示。"
+  "federation.map.source.identity": "无法读取设备身份，已取得的管理和数据同步关系仍会显示。",
+  "federation.switcher.controller": "控制端",
+  "federation.switcher.controllerSettings": "当前控制端设置",
+  "federation.switcher.controllerSettingsNamed": "当前控制端设置 · {{name}}",
+  "federation.switcher.openControllerConfiguration": "打开控制端配置",
+  "federation.switcher.pathMappingDescription": "设置此控制端如何访问 {{name}} 的文件。",
+  "federation.switcher.controllerSettingsFailed": "无法打开控制端设置，请重试。"
 }

@@ -16,6 +16,7 @@
   "configuration.thirdParty.validateCookie": "Validate cookie",
   "configuration.thirdParty.cookieValid": "Cookie is good",
   "configuration.thirdParty.invalidCookie": "Invalid cookie",
+  "configuration.functional.navigation.tip": "Arrange sidebar menus, groups and visibility. Devices connected to this service share the same layout.",
   "configuration.functional.title": "Functional configurations",
   "configuration.functional.startupPage": "Startup page",
   "configuration.functional.startupPage.default": "Default",

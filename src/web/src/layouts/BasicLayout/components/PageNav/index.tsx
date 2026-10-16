@@ -1,16 +1,11 @@
 "use client";
 
-import type { NavigationNode } from "./components/AntdMenu/navigationLayout";
-import type { BakabaseInsideWorldModelsConfigsUINavigationNode } from "@/sdk/Api";
-
-import React, { lazy, Suspense, useState } from "react";
+import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { MenuFoldOutlined, MenuUnfoldOutlined, MoonOutlined, SunOutlined } from "@ant-design/icons";
 import { AiOutlineQuestionCircle } from "react-icons/ai";
-import { MdOutlineDashboardCustomize } from "react-icons/md";
 
 import AntdMenu from "./components/AntdMenu";
-import { asideMenuConfig } from "./components/AntdMenu/menuConfig";
 import ServerSwitcher from "./components/ServerSwitcher";
 import styles from "./index.module.scss";
 
@@ -24,21 +19,8 @@ import { UiTheme } from "@/sdk/constants";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import NotificationCenter from "@/components/NotificationCenter";
 import DataSyncStatusIndicator from "@/features/data-sync/components/DataSyncStatusIndicator";
-import { useIsPureClient, useRemoteAccessStore } from "@/stores/remoteAccess";
-
-const NavigationEditor = lazy(() => import("./components/NavigationEditor"));
 
 const OptIconStyle = { fontSize: 20 };
-
-const navigationApiNode = (
-  node: NavigationNode,
-): BakabaseInsideWorldModelsConfigsUINavigationNode => ({
-  id: node.id,
-  kind: node.kind,
-  name: node.name,
-  hidden: node.hidden ?? false,
-  children: node.children?.map(navigationApiNode),
-});
 
 const Navigation = () => {
   const { t } = useTranslation();
@@ -48,13 +30,7 @@ const Navigation = () => {
   const isDarkMode = appOptions.uiTheme == UiTheme.Dark;
 
   const [helpVisible, setHelpVisible] = useState(false);
-  const [navigationEditorVisible, setNavigationEditorVisible] = useState(false);
   const isCollapsed = uiOptionsStore.data.isMenuCollapsed;
-  const isPureClient = useIsPureClient();
-  const isLocalNode =
-    useRemoteAccessStore(
-      (state) => state.initialized && (state.federationAvailable ?? state.isLocal),
-    ) && !isPureClient;
 
   return (
     <div className={`${styles.nav} ${isCollapsed ? `${styles.collapsed}` : ""}`}>
@@ -94,17 +70,6 @@ const Navigation = () => {
         <DataSyncStatusIndicator />
         <NotificationCenter />
         <LanguageSwitcher />
-        <Tooltip content={t("navigationEditor.open.label")}>
-          <Button
-            isIconOnly
-            aria-label={t<string>("navigationEditor.open.label")}
-            color="default"
-            variant="light"
-            onPress={() => setNavigationEditorVisible(true)}
-          >
-            <MdOutlineDashboardCustomize style={OptIconStyle} />
-          </Button>
-        </Tooltip>
         {/*
           The global doorway into the help center. Every other entry point is
           contextual (a "?" next to the feature it explains); this one is how you
@@ -141,32 +106,6 @@ const Navigation = () => {
 
       {helpVisible && (
         <HelpCenterModal visible={helpVisible} onClose={() => setHelpVisible(false)} />
-      )}
-      {navigationEditorVisible && (
-        <Suspense fallback={null}>
-          <NavigationEditor
-            isOpen
-            capabilities={{ isPureClient, isLocalNode: Boolean(isLocalNode) }}
-            catalog={asideMenuConfig}
-            savedLayout={uiOptionsStore.data.navigationLayout}
-            onClose={() => setNavigationEditorVisible(false)}
-            onSave={async (navigationLayout) => {
-              const payload = {
-                ...navigationLayout,
-                directoryAliases: navigationLayout.directoryAliases ?? {},
-                items: navigationLayout.items.map(navigationApiNode),
-              };
-              const response = await BApi.options.patchUiOptions({ navigationLayout: payload });
-
-              if (response.code)
-                throw new Error(
-                  response.message ?? t<string>("navigationEditor.saveFailed.description"),
-                );
-              // The hub also broadcasts this layout to other windows on this service.
-              uiOptionsStore.update({ navigationLayout: payload });
-            }}
-          />
-        </Suspense>
       )}
     </div>
   );

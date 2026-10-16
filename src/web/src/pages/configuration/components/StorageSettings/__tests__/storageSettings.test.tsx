@@ -49,11 +49,34 @@ vi.mock("@/components/FilePathValue", () => ({
   default: ({ path, description }: any) => <div title={description}>{path}</div>,
 }));
 vi.mock("@/components/bakaui", () => ({
-  Button: ({ children, onPress, isDisabled, type }: any) => (
-    <button disabled={isDisabled} type={type || "button"} onClick={onPress}>
+  Button: ({ children, onPress, isDisabled, type, ...props }: any) => (
+    <button
+      aria-label={props["aria-label"]}
+      disabled={isDisabled}
+      type={type || "button"}
+      onClick={onPress}
+    >
       {children}
     </button>
   ),
+  Select: ({ dataSource, selectedKeys, onSelectionChange, isDisabled, ...props }: any) => (
+    <select
+      aria-label={props["aria-label"]}
+      disabled={isDisabled}
+      value={(Array.from(selectedKeys)[0] as string) || ""}
+      onChange={(event) => onSelectionChange(new Set([event.target.value]))}
+    >
+      {dataSource.map((item: any) => (
+        <option key={item.value} value={item.value}>
+          {item.label}
+        </option>
+      ))}
+    </select>
+  ),
+  Dropdown: ({ children }: any) => <>{children}</>,
+  DropdownTrigger: ({ children }: any) => <>{children}</>,
+  DropdownMenu: () => null,
+  DropdownItem: () => null,
   Input: () => null,
   Chip: ({ children }: { children: ReactNode }) => <span>{children}</span>,
   Divider: () => <hr />,
@@ -128,12 +151,11 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("workspace and server storage settings", () => {
-  it("shows the current workspace and shared storage while details remain collapsed; all management actions remain available", async () => {
+  it("combines compact workspace selection with current storage while details remain collapsed", async () => {
     render(fixture());
-    const current = await screen.findByText("profiles.currentSection");
-
-    expect(current.parentElement?.parentElement).toHaveTextContent("Main library");
+    expect(await screen.findByRole("combobox", { name: "profiles.select" })).toHaveValue("main");
     expect(mocks.getProfiles).toHaveBeenCalledOnce();
+    expect(screen.getByText("profiles.currentDirectory")).toBeVisible();
     expect(screen.getByRole("button", { name: "configuration.storage.details" })).toHaveAttribute(
       "aria-expanded",
       "false",
@@ -143,9 +165,9 @@ describe("workspace and server storage settings", () => {
     expect(screen.getByRole("button", { name: "Move data" })).toBeVisible();
     const management = screen.getByRole("region", { name: "profiles.manageSection" });
 
-    for (const label of ["addNew", "addExisting", "open", "switch", "makeDefault", "remove"])
-      expect(within(management).getByRole("button", { name: `profiles.${label}` })).toBeVisible();
-    expect(within(management).getAllByRole("button", { name: "profiles.rename" })).toHaveLength(2);
+    expect(within(management).getByRole("button", { name: "profiles.rename" })).toBeVisible();
+    expect(within(management).getByRole("button", { name: "profiles.switch" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "profiles.open" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "configuration.storage.details" }));
     for (const path of [
       "/anchor",
@@ -157,6 +179,10 @@ describe("workspace and server storage settings", () => {
       expect(screen.getByText(path)).toBeVisible();
     expect(screen.getByText("Pending relocation gate")).toBeVisible();
     expect(screen.getByText("Legacy notice")).toBeVisible();
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "other" } });
+    expect(mocks.openProfile).not.toHaveBeenCalled();
+    expect(screen.getByText("/library")).toBeVisible();
+    expect(screen.getByText(/profiles.targetDirectory/)).toHaveTextContent("/sandbox");
     fireEvent.click(within(management).getByRole("button", { name: "profiles.switch" }));
     await waitFor(() =>
       expect(mocks.openProfile).toHaveBeenCalledWith("other", { closeCurrent: true }),
@@ -183,7 +209,7 @@ describe("workspace and server storage settings", () => {
       ).toBeVisible();
       expect(screen.getByText("/library")).toBeVisible();
       expect(screen.getByRole("button", { name: "Import data" })).toBeVisible();
-      expect(screen.queryByRole("button", { name: "profiles.addNew" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("combobox", { name: "profiles.select" })).not.toBeInTheDocument();
       if (mode === ClientMode.PureClient)
         expect(screen.getByText(/configuration.storage.serverDescription/)).toHaveTextContent(
           "NAS",
@@ -234,16 +260,16 @@ describe("workspace and server storage settings", () => {
 
     expect(mocks.getProfiles).not.toHaveBeenCalled();
     expect(screen.getByText("/library")).toBeVisible();
-    expect(screen.queryByRole("button", { name: "profiles.addNew" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: "profiles.select" })).not.toBeInTheDocument();
     mocks.context.context = "known";
     rerender(fixture());
-    expect(await screen.findByRole("button", { name: "profiles.addNew" })).toBeVisible();
+    expect(await screen.findByRole("combobox", { name: "profiles.select" })).toBeVisible();
     expect(mocks.getProfiles).toHaveBeenCalledOnce();
   });
 
   it("finds workspace management without unrelated storage rows", async () => {
     render(fixture("profiles.managesection"));
-    expect(await screen.findByRole("button", { name: "profiles.addNew" })).toBeVisible();
+    expect(await screen.findByRole("combobox", { name: "profiles.select" })).toBeVisible();
     expect(screen.queryByRole("button", { name: "Import data" })).not.toBeInTheDocument();
     expect(screen.queryByText("No settings matched")).not.toBeInTheDocument();
   });

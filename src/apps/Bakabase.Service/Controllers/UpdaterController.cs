@@ -57,50 +57,61 @@ namespace Bakabase.Service.Controllers
 
         [HttpPost("app/restart")]
         [SwaggerOperation(OperationId = "RestartAndUpdateApp")]
-        public BaseResponse RestartAndUpdateApp()
+        public async Task<BaseResponse> RestartAndUpdateApp()
         {
             if (_guiAdapter is NullGuiAdapter) return ServerUpdateResponse();
             // Validate the downloaded package before acknowledging the request. The response
             // must finish before stopping the web host; the shell then keeps a native progress
             // window visible while it releases tasks, database connections and the host.
-            var launchUpdater = _appUpdater.PrepareUpdateRestart(SetupChildConnection.Current?.ParentProcessId);
-            if (_guiAdapter is IUpdateRestartCoordinator coordinator)
+            var workspace = SetupChildConnection.Current;
+            if (workspace != null) await workspace.ReserveRestartAsync();
+            var reserved = false;
+            try
             {
-                if (!coordinator.TryReserveUpdateRestart(launchUpdater))
+                var launchUpdater = _appUpdater.PrepareUpdateRestart(workspace?.ParentProcessId);
+                if (_guiAdapter is IUpdateRestartCoordinator coordinator)
                 {
-                    Bakabase.Infrastructures.Components.App.Profiles.DesktopInstallationInstances.CancelUpdate();
-                    return BaseResponseBuilder.BuildBadRequest("Bakabase is already closing or updating.");
+                    if (!coordinator.TryReserveUpdateRestart(launchUpdater))
+                    {
+                        Bakabase.Infrastructures.Components.App.Profiles.DesktopInstallationInstances.CancelUpdate();
+                        return BaseResponseBuilder.BuildBadRequest("Bakabase is already closing or updating.");
+                    }
+
+                    Response.OnCompleted(() =>
+                    {
+                        coordinator.BeginReservedUpdateRestart();
+                        return Task.CompletedTask;
+                    });
+                    // OnCompleted is not guaranteed if the browser disconnects during the
+                    // response. The user already requested the update, so start the same
+                    // reserved path on abort too; the coordinator ignores a duplicate start.
+                    HttpContext.RequestAborted.Register(coordinator.BeginReservedUpdateRestart);
+                }
+                else
+                {
+                    if (_lifetime.ApplicationStopping.IsCancellationRequested)
+                    {
+                        Bakabase.Infrastructures.Components.App.Profiles.DesktopInstallationInstances.CancelUpdate();
+                        return BaseResponseBuilder.BuildBadRequest("Bakabase is already closing.");
+                    }
+
+                    // Headless host: its services stop before ApplicationStopped starts Velopack.
+                    _lifetime.ApplicationStopped.Register(launchUpdater);
+                    Response.OnCompleted(() =>
+                    {
+                        _lifetime.StopApplication();
+                        return Task.CompletedTask;
+                    });
+                    HttpContext.RequestAborted.Register(_lifetime.StopApplication);
                 }
 
-                Response.OnCompleted(() =>
-                {
-                    coordinator.BeginReservedUpdateRestart();
-                    return Task.CompletedTask;
-                });
-                // OnCompleted is not guaranteed if the browser disconnects during the
-                // response. The user already requested the update, so start the same
-                // reserved path on abort too; the coordinator ignores a duplicate start.
-                HttpContext.RequestAborted.Register(coordinator.BeginReservedUpdateRestart);
+                reserved = true;
+                return BaseResponseBuilder.Ok;
             }
-            else
+            finally
             {
-                if (_lifetime.ApplicationStopping.IsCancellationRequested)
-                {
-                    Bakabase.Infrastructures.Components.App.Profiles.DesktopInstallationInstances.CancelUpdate();
-                    return BaseResponseBuilder.BuildBadRequest("Bakabase is already closing.");
-                }
-
-                // Headless host: its services stop before ApplicationStopped starts Velopack.
-                _lifetime.ApplicationStopped.Register(launchUpdater);
-                Response.OnCompleted(() =>
-                {
-                    _lifetime.StopApplication();
-                    return Task.CompletedTask;
-                });
-                HttpContext.RequestAborted.Register(_lifetime.StopApplication);
+                if (!reserved && workspace != null) await workspace.ReserveRestartAsync(release: true);
             }
-
-            return BaseResponseBuilder.Ok;
         }
 
         private static BaseResponse ServerUpdateResponse() => BaseResponseBuilder.BuildBadRequest(

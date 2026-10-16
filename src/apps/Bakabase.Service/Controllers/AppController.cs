@@ -145,7 +145,7 @@ namespace Bakabase.Service.Controllers
         /// </summary>
         [HttpPost("restart")]
         [SwaggerOperation(OperationId = "RestartApp")]
-        public BaseResponse Restart()
+        public async Task<BaseResponse> Restart()
         {
             if (HttpContext.RequestServices.GetService(typeof(Bakabase.Infrastructures.Components.Gui.IGuiAdapter)) is NullGuiAdapter)
                 return BaseResponseBuilder.BuildBadRequest("Restart the standalone server using its process manager (for Docker: docker compose restart).");
@@ -155,6 +155,9 @@ namespace Bakabase.Service.Controllers
                 _logger.LogError("Cannot determine current process path; cannot restart.");
                 return BaseResponseBuilder.BuildBadRequest("Cannot determine current process path.");
             }
+
+            var workspace = SetupChildConnection.Current;
+            if (workspace != null) await workspace.ReserveRestartAsync();
 
             // Fire-and-forget so the HTTP response gets back to the FE first; then we spawn
             // and ask the host to stop. The brief delay is intentional — we want the response
@@ -176,6 +179,7 @@ namespace Bakabase.Service.Controllers
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Failed to spawn replacement process; keeping the current application running.");
+                    if (workspace != null) await workspace.ReserveRestartAsync(release: true);
                 }
             });
 

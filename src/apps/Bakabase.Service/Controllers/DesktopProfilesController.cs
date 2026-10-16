@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using System.Threading;
 using Bakabase.Abstractions.Components.App;
 using Bakabase.Modules.RemoteAccess.Abstractions.Components;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
@@ -42,5 +43,18 @@ public sealed class DesktopProfilesController : ControllerBase
     [RunsOnUserMachine(Reason = "Opening a workspace activates or launches a local desktop process.")]
     [SwaggerOperation(OperationId = "OpenDesktopProfile")]
     public async Task<BaseResponse> Open(string id, [FromBody] DesktopProfileOpenInput input)
-    { await Profiles.OpenAsync(id, input.CloseCurrent); return BaseResponseBuilder.Ok; }
+    {
+        var profiles = Profiles;
+        if (await profiles.OpenAsync(id, input.CloseCurrent))
+        {
+            var committed = 0;
+            Task Commit() => Interlocked.Exchange(ref committed, 1) == 0
+                ? profiles.CompleteOpenAsync(id) : Task.CompletedTask;
+            // Complete the response before stopping its host. A disconnected browser must
+            // not leave an accepted switch pending indefinitely.
+            Response.OnCompleted(Commit);
+            HttpContext.RequestAborted.Register(() => _ = Commit());
+        }
+        return BaseResponseBuilder.Ok;
+    }
 }

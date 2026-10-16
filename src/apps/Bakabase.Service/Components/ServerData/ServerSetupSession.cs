@@ -90,12 +90,12 @@ public sealed class ServerSetupSession : IDisposable
     }
 
     private ServerSetupSession(string currentPath, ImportProgressStore monitoring, string mode, string? anchorPath = null,
-        IUserStoragePolicy? storage = null)
+        IUserStoragePolicy? storage = null, bool? pathFixed = null)
     {
         _currentPath = Canonical(currentPath);
         _storage = storage ?? new UserStoragePolicy(() => _currentPath);
         _anchor = Canonical(anchorPath ?? currentPath);
-        _pathFixed = InContainer || AppDataLocator.IsEnvironmentOverride;
+        _pathFixed = InContainer || (pathFixed ?? AppDataLocator.IsEnvironmentOverride);
         _isDocker = InContainer;
         _monitoring = monitoring;
         _saved = new Saved(NewToken());
@@ -103,13 +103,13 @@ public sealed class ServerSetupSession : IDisposable
     }
 
     public static ServerSetupSession ForImport(string currentPath, ImportProgressStore monitoring, string? anchorPath = null,
-        IUserStoragePolicy? storage = null) => new(currentPath, monitoring, "import", anchorPath, storage);
+        IUserStoragePolicy? storage = null, bool? pathFixed = null) => new(currentPath, monitoring, "import", anchorPath, storage, pathFixed);
 
-    public static ServerSetupSession ForRelocation(string anchorPath, string currentPath, ImportProgressStore monitoring)
+    public static ServerSetupSession ForRelocation(string anchorPath, string currentPath, ImportProgressStore monitoring, bool? pathFixed = null)
     {
-        if (InContainer || AppDataLocator.IsEnvironmentOverride)
+        if (InContainer || (pathFixed ?? AppDataLocator.IsEnvironmentOverride))
             throw new IOException("This data path is fixed by the deployment. Change its mount or BAKABASE_DATA_DIR instead.");
-        return new(currentPath, monitoring, "relocate", anchorPath);
+        return new(currentPath, monitoring, "relocate", anchorPath, pathFixed: pathFixed);
     }
 
     public static bool InContainer => string.Equals(Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER"),
@@ -264,7 +264,7 @@ public sealed class ServerSetupSession : IDisposable
         {
             var operation = Operation(request);
             target = string.IsNullOrWhiteSpace(request.TargetPath) ? _currentPath : Canonical(request.TargetPath);
-            Bakabase.Infrastructures.Components.App.Profiles.DesktopProfileSelection.EnsureDataTargetAllowed(target);
+            Bakabase.Infrastructures.Components.App.Profiles.DesktopProfileSelection.EnsureDataTargetAllowed(target, _currentPath);
             _storage.EnsurePathAllowed(target, UserStoragePurpose.Setup);
             if (!string.IsNullOrWhiteSpace(request.SourcePath))
                 _storage.EnsurePathAllowed(request.SourcePath, UserStoragePurpose.Setup);

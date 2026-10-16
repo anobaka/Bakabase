@@ -358,5 +358,11 @@
   "federation.servers.name.reload": "Reload current name",
   "federation.error.DeviceNameChanged": "This device was renamed elsewhere. Reload its current name before saving again.",
   "federation.error.DeviceNameEnvironmentControlled": "This device’s name is set by BAKABASE_NODE_NAME. Change that device’s startup configuration before renaming it here.",
-  "federation.map.source.identity": "The device identity could not be read. Management and data sync remain listed where available."
+  "federation.map.source.identity": "The device identity could not be read. Management and data sync remain listed where available.",
+  "federation.switcher.controller": "Controller",
+  "federation.switcher.controllerSettings": "Current controller settings",
+  "federation.switcher.controllerSettingsNamed": "Current controller settings · {{name}}",
+  "federation.switcher.openControllerConfiguration": "Open controller configuration",
+  "federation.switcher.pathMappingDescription": "Set how this controller accesses files on {{name}}.",
+  "federation.switcher.controllerSettingsFailed": "Could not open the controller settings. Please retry."
 }

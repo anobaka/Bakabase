@@ -25,65 +25,123 @@ internal sealed class DesktopSetupBootstrap : IDisposable
     private string? _pendingToolLink;
     private readonly SemaphoreSlim _toolForwarding = new(1);
 
+    private DesktopWorkspaceRunner? _workspaces;
+    private CancellationTokenSource? _currentStartup;
+    private string CurrentAnchor => _workspaces?.Current.AnchorDirectory ?? AppDataLocator.ResolveAnchor();
+
     public async Task<bool> RunAsync(string[] args)
     {
         var initialLink = DesktopToolLink.FromArguments(args);
         if (initialLink != null) Interlocked.CompareExchange(ref _pendingToolLink, initialLink, null);
         try { if (await TryActivateExistingAsync(args, activationMessage: _pendingToolLink)) return false; }
-        catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidOperationException)
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidOperationException) { }
+        var initial = new DesktopWorkspaceContext(DesktopProfileSelection.CurrentId, AppDataLocator.ResolveAnchor(),
+            AppDataLocator.IsEnvironmentOverride, args.Where(arg => DesktopToolLink.GetRoute(arg) == null).ToArray());
+        _workspaces = new DesktopWorkspaceRunner(initial);
+        _workspaces.RestoredAfterFailure += error => Dispatcher.UIThread.Post(() => EnsureWindow().ShowError(
+            "The selected workspace could not be opened. Your previous workspace has been reopened.\n\n" + error.Message));
+        using var activation = ActivationServer.Start(DesktopWorkspaceSession.Channel(DesktopProfileRegistry.ForCurrentUser().RootDirectory),
+            message => Dispatcher.UIThread.Post(() => HandleDesktopActivation(message)));
+        _running = Task.Run(() => _workspaces.RunAsync(RunWorkspaceAsync, _stopping.Token));
+        try { Environment.ExitCode = await _running; }
+        catch (OperationCanceledException) when (_stopping.IsCancellationRequested) { }
+        catch (Exception error)
         {
-            // Directory resolution failures belong to the coordinator's normal error
-            // window below; the best-effort duplicate check must not bypass that UI.
+            Environment.ExitCode = 1;
+            Console.Error.WriteLine($"Desktop setup coordinator failed: {error}");
+            EnsureWindow().ShowError(error.Message);
+            try { await _window!.ClosedTask.WaitAsync(_stopping.Token); }
+            catch (OperationCanceledException) when (_stopping.IsCancellationRequested) { }
         }
+        return false;
+    }
+
+    private async Task<int> RunWorkspaceAsync(DesktopWorkspaceContext workspace, CancellationToken token)
+    {
+        using var startup = CancellationTokenSource.CreateLinkedTokenSource(token);
+        _currentStartup = startup;
+        _businessWasReady = false;
+        _businessReady = false;
         var options = new SetupCoordinatorOptions
         {
-            Addresses = ["http://127.0.0.1:0"],
-            // A navigation is consumed by this coordinator once, never replayed after a
-            // maintenance operation or interpreted as host configuration in the child.
-            Arguments = args.Where(arg => DesktopToolLink.GetRoute(arg) == null).ToArray(),
-            IsDesktop = true,
-            OnControlAcquired = () => ActivationServer.Start(SetupActivationChannel(AppDataLocator.ResolveAnchor()),
-                message => Dispatcher.UIThread.Post(() =>
-                {
-                    if (DesktopToolLink.GetRoute(message) != null) AcceptToolLink(message);
-                    else if (message == ActivationChannel.ShowMessage) Reopen();
-                })),
+            Addresses = ["http://127.0.0.1:0"], Arguments = workspace.Arguments, IsDesktop = true,
+            AnchorDirectory = workspace.AnchorDirectory, EnvironmentOverride = workspace.EnvironmentOverride,
+            RecoverStartupFailureExternally = true,
+            PrepareWorkspaceSwitch = PrepareWorkspaceSwitch,
+            ReserveRestart = release => _workspaces!.ReserveRestart(release),
+            BeforeSetup = () => _workspaces!.BeginSetup(),
+            SetupRejected = () => { if (_businessReady) _workspaces!.Ready(); },
+            OnControlAcquired = () => ActivationServer.Start(SetupActivationChannel(workspace.AnchorDirectory),
+                message => Dispatcher.UIThread.Post(() => HandleDesktopActivation(message))),
             OnSetupUrl = ShowSetupAsync,
-            OnBusinessUnavailable = () => _businessReady = false,
+            OnBusinessUnavailable = () => { _businessReady = false; _workspaces!.Unavailable(); },
             DirectoryPicker = () => _window?.PickDirectoryAsync() ?? Task.FromResult<string?>(null),
             OnBusinessReady = address =>
             {
                 _businessReady = true;
                 Dispatcher.UIThread.Post(() =>
                 {
+                    if (startup.IsCancellationRequested || !ReferenceEquals(_currentStartup, startup)) return;
                     _businessWasReady = true;
-                    _window?.ContinueStartup();
-                    _window = null;
+                    _window?.ContinueStartup(); _window = null;
+                    _workspaces!.Ready();
                     _ = ForwardPendingToolLinkAsync();
                 });
             }
         };
-        // The coordinator must never capture Avalonia's context: Main disposes us after
-        // that dispatcher stops. Native callbacks explicitly marshal to the UI thread.
-        _running = Task.Run(() => SetupProcessCoordinator.RunAsync(options, _stopping.Token));
-        try
+        try { return await SetupProcessCoordinator.RunAsync(options, startup.Token); }
+        finally { _currentStartup = null; }
+    }
+
+    private Action? PrepareWorkspaceSwitch(string id, bool commit)
+    {
+        var runner = _workspaces ?? throw new InvalidOperationException("The desktop workspace coordinator is not ready.");
+        if (runner.Current.ProfileId == id) { Dispatcher.UIThread.Post(Reopen); return null; }
+        if (commit) return runner.PrepareCommit(id);
+        var profile = DesktopProfileRegistry.ForCurrentUser().Get(id);
+        var target = AppDataLocator.ResolveEffectiveDataDirectory(profile.AnchorDirectory);
+        var args = runner.Current.Arguments.Where(arg => !arg.StartsWith(DesktopProfileSelection.ArgumentPrefix, StringComparison.Ordinal) &&
+            !arg.StartsWith(RestartHandoff.PredecessorPidSwitch + "=", StringComparison.Ordinal)).Append(DesktopProfileSelection.ArgumentPrefix + id).ToArray();
+        runner.PrepareSwitch(new(id, profile.AnchorDirectory, false, args), () =>
         {
-            Environment.ExitCode = await _running;
-        }
-        catch (OperationCanceledException) when (_stopping.IsCancellationRequested)
+            if (_window?.ClosedTask.IsCompleted == false || ServerSetupSession.Current?.Submitted == true ||
+                ServerAppDataImport.ReadPending(AppDataLocator.ResolveEffectiveDataDirectory(CurrentAnchor)) != null ||
+                ServerAppDataRelocation.ReadPending(CurrentAnchor) != null)
+                throw new InvalidOperationException("Finish or close Setup before switching workspaces.");
+            if (!Directory.Exists(target) && !profile.RequiresSetup)
+                throw new DirectoryNotFoundException("Reconnect this workspace's storage before opening it.");
+            // Permission/lock failures are detected while the original host is still open.
+            var claim = DataDirectoryLock.TryAcquire(target);
+            using var data = claim.Lock ?? throw new IOException("The selected workspace cannot be opened: " + claim.Status, claim.Error);
+            if (IsLocked(Path.Combine(profile.AnchorDirectory, SetupProcessCoordinator.LockFileName)))
+                throw new IOException("The selected workspace is already in use. Close its older instance before switching.");
+        });
+        return null;
+    }
+
+    private static bool IsLocked(string path)
+    {
+        try { using var probe = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite); return false; }
+        catch (FileNotFoundException) { return false; }
+        catch (DirectoryNotFoundException) { return false; }
+        catch (IOException) { return true; }
+    }
+
+    private void HandleDesktopActivation(string message)
+    {
+        if (DesktopToolLink.GetRoute(message) != null) { AcceptToolLink(message); return; }
+        if (message.StartsWith(DesktopWorkspaceSession.SwitchPrefix, StringComparison.Ordinal))
         {
-            // Closing the first-run window cancels setup without creating a library.
+            var id = message[DesktopWorkspaceSession.SwitchPrefix.Length..];
+            try { PrepareWorkspaceSwitch(id, false); PrepareWorkspaceSwitch(id, true)?.Invoke(); }
+            catch (Exception error)
+            {
+                Console.Error.WriteLine($"Could not switch workspace: {error.Message}");
+                if (_window?.ClosedTask.IsCompleted == false) Reopen();
+                else EnsureWindow().ShowError(error.Message);
+            }
         }
-        catch (Exception e)
-        {
-            Environment.ExitCode = 1;
-            Console.Error.WriteLine($"Desktop setup coordinator failed: {e}");
-            EnsureWindow().ShowError(e.Message);
-            try { await _window!.ClosedTask.WaitAsync(_stopping.Token); }
-            catch (OperationCanceledException) when (_stopping.IsCancellationRequested) { }
-        }
-        // This process must never proceed into the shell's host factory / AppService.
-        return false;
+        else if (message == ActivationChannel.ShowMessage) Reopen();
     }
 
     internal static async Task<bool> TryActivateExistingAsync(string[] args, string? anchor = null,
@@ -126,6 +184,7 @@ internal sealed class DesktopSetupBootstrap : IDisposable
     private async Task ShowSetupAsync(string url)
     {
         _stopping.Token.ThrowIfCancellationRequested();
+        _workspaces?.Busy();
         await Dispatcher.UIThread.InvokeAsync(() =>
         {
             if (_stopping.IsCancellationRequested) return;
@@ -144,7 +203,8 @@ internal sealed class DesktopSetupBootstrap : IDisposable
             {
                 // An established instance may close the setup window while its supervised
                 // operation continues. Before first readiness, closing means cancel launch.
-                if (!_businessWasReady && window.Cancelled.IsCancellationRequested) _stopping.Cancel();
+                if (!_businessWasReady && window.Cancelled.IsCancellationRequested) _currentStartup?.Cancel();
+                else if (_businessReady) _workspaces?.Ready();
             };
             _window = window;
         }
@@ -173,16 +233,9 @@ internal sealed class DesktopSetupBootstrap : IDisposable
         {
             var link = protocol.Uri.OriginalString;
             if (DesktopToolLink.GetRoute(link) == null) return;
-            var defaultId = DesktopProfileRegistry.ForCurrentUser().Read().DefaultId;
-            if (DesktopProfileSelection.CurrentId != defaultId)
-            {
-                // macOS may deliver the URL to an already-running named space. External
-                // links always target the configured default, never an arbitrary active space.
-                var launch = DesktopProfileSelection.CreateStartInfo(defaultId);
-                launch.ArgumentList.Add(link);
-                using var process = System.Diagnostics.Process.Start(launch);
-            }
-            else AcceptToolLink(link);
+            // Tool links always belong to the currently active workspace. They cannot
+            // create another desktop or unexpectedly replace the user's current context.
+            AcceptToolLink(link);
             return;
         }
         if (e.Kind != ActivationKind.Reopen) return;
@@ -213,7 +266,7 @@ internal sealed class DesktopSetupBootstrap : IDisposable
         {
             try
             {
-                var data = AppDataLocator.ResolveEffectiveDataDirectory(AppDataLocator.ResolveAnchor());
+                var data = AppDataLocator.ResolveEffectiveDataDirectory(CurrentAnchor);
                 var channel = ActivationChannel.GetName(DataDirectoryIdentity.Normalize(data));
                 await ActivationChannel.TrySendAsync(channel, ActivationChannel.ShowMessage, SingleInstanceGuard.HandOffTimeout);
             }
@@ -228,7 +281,7 @@ internal sealed class DesktopSetupBootstrap : IDisposable
         {
             while (!_stopping.IsCancellationRequested && _businessReady && Volatile.Read(ref _pendingToolLink) is { } link)
             {
-                var data = AppDataLocator.ResolveEffectiveDataDirectory(AppDataLocator.ResolveAnchor());
+                var data = AppDataLocator.ResolveEffectiveDataDirectory(CurrentAnchor);
                 var channel = ActivationChannel.GetName(DataDirectoryIdentity.Normalize(data));
                 if (!await ActivationChannel.TrySendAsync(channel, link, SingleInstanceGuard.HandOffTimeout))
                     return; // Maintenance may have stopped the child; next readiness retries.

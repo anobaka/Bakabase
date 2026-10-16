@@ -16,6 +16,7 @@
   "configuration.thirdParty.validateCookie": "验证 Cookie",
   "configuration.thirdParty.cookieValid": "Cookie 有效",
   "configuration.thirdParty.invalidCookie": "无效的 Cookie",
+  "configuration.functional.navigation.tip": "调整侧栏菜单的顺序、分组和显示状态。同一服务的设备共用这份菜单布局。",
   "configuration.functional.title": "功能配置",
   "configuration.functional.startupPage": "启动页面",
   "configuration.functional.startupPage.default": "默认",

@@ -18,6 +18,15 @@ public sealed class SetupCoordinatorOptions
     public string[] Addresses { get; init; } = ["http://127.0.0.1:34567"];
     public string[] Arguments { get; init; } = [];
     public bool IsDesktop { get; init; }
+    // A desktop coordinator survives workspace switches, but never changes a running
+    // business process's anchor. Every new child resolves its own --profile argument.
+    public string? AnchorDirectory { get; init; }
+    public bool? EnvironmentOverride { get; init; }
+    public bool RecoverStartupFailureExternally { get; init; }
+    public Func<string, bool, Action?>? PrepareWorkspaceSwitch { get; init; }
+    public Action<bool>? ReserveRestart { get; init; }
+    public Action? BeforeSetup { get; init; }
+    public Action? SetupRejected { get; init; }
     public Func<string, Task>? OnSetupUrl { get; init; }
     public Func<Task<string?>>? DirectoryPicker { get; init; }
     public Action<string>? OnBusinessReady { get; init; }
@@ -39,7 +48,7 @@ public static class SetupProcessCoordinator
 
     public static async Task<int> RunAsync(SetupCoordinatorOptions options, CancellationToken cancellationToken = default)
     {
-        var anchor = AppDataLocator.ResolveAnchor();
+        var anchor = options.AnchorDirectory ?? AppDataLocator.ResolveAnchor();
         Directory.CreateDirectory(anchor);
         var lockPath = Path.Combine(anchor, LockFileName);
         if (new FileInfo(lockPath).LinkTarget != null) throw new IOException("Setup control lock cannot be a symbolic link.");
@@ -64,7 +73,7 @@ public static class SetupProcessCoordinator
         Task? refreshTask = null;
         var request = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
         _request = id => request.TrySetResult(id);
-        var pathFixed = AppDataLocator.IsEnvironmentOverride || ServerSetupSession.InContainer;
+        var pathFixed = (options.EnvironmentOverride ?? AppDataLocator.IsEnvironmentOverride) || ServerSetupSession.InContainer;
         string DataPath() => AppDataLocator.ResolveEffectiveDataDirectory(anchor);
         async Task Refresh()
         {
@@ -148,7 +157,7 @@ public static class SetupProcessCoordinator
                 }
                 if (needsWorker)
                 {
-                    child = await Child.Start("worker", options.Arguments, SetupAddress!, BeforeBind, null, null, lifetime.Token);
+                    child = await Child.Start("worker", options.Arguments, SetupAddress!, BeforeBind, null, null, null, null, options.IsDesktop, lifetime.Token);
                     var exit = await child.Process.WaitForExitAsync(lifetime.Token).ContinueWith(_ => child.Process.ExitCode,
                         lifetime.Token, TaskContinuationOptions.OnlyOnRanToCompletion, TaskScheduler.Default);
                     var reason = child.Error;
@@ -171,18 +180,23 @@ public static class SetupProcessCoordinator
                         if (!businessReady) throw new IOException("Wait for the application to finish starting before opening Setup.");
                         if (ServerAppDataImport.ReadPending(DataPath()) != null || ServerAppDataRelocation.ReadPending(anchor) != null)
                             throw new IOException("Finish the current data operation before starting another.");
-                        lock (ServerSetupSession.OperationGate)
+                        options.BeforeSetup?.Invoke();
+                        try
                         {
-                            ServerSetupSession.Current?.Dispose();
-                            ServerSetupSession.Current = mode == "relocate"
-                                ? ServerSetupSession.ForRelocation(anchor, DataPath(), monitor)
-                                : ServerSetupSession.ForImport(DataPath(), monitor, anchor);
+                            lock (ServerSetupSession.OperationGate)
+                            {
+                                ServerSetupSession.Current?.Dispose();
+                                ServerSetupSession.Current = mode == "relocate"
+                                    ? ServerSetupSession.ForRelocation(anchor, DataPath(), monitor, pathFixed)
+                                    : ServerSetupSession.ForImport(DataPath(), monitor, anchor, pathFixed: pathFixed);
+                            }
+                            var token = ServerSetupSession.Current.Token;
+                            var setupUrl = (options.IsDesktop ? SetupAddress : "") + ImportProgressServer.SetupPath;
+                            if (options.OnSetupUrl != null) await options.OnSetupUrl(setupUrl + "#setupToken=" + token);
+                            return JsonSerializer.Serialize(new { setupToken = token, setupUrl });
                         }
-                        var token = ServerSetupSession.Current.Token;
-                        var setupUrl = (options.IsDesktop ? SetupAddress : "") + ImportProgressServer.SetupPath;
-                        if (options.OnSetupUrl != null) await options.OnSetupUrl(setupUrl + "#setupToken=" + token);
-                        return JsonSerializer.Serialize(new { setupToken = token, setupUrl });
-                    }, lifetime.Token);
+                        catch { options.SetupRejected?.Invoke(); throw; }
+                    }, options.PrepareWorkspaceSwitch, options.ReserveRestart, options.IsDesktop, lifetime.Token);
                 child.MaintenanceRequested = id => request.TrySetResult(id);
                 var exited = child.Process.WaitForExitAsync(lifetime.Token);
                 var completed = await Task.WhenAny(exited, request.Task);
@@ -193,6 +207,8 @@ public static class SetupProcessCoordinator
                     var exit = child.Process.ExitCode;
                     var error = child.Error;
                     await child.DisposeAsync(); child = null;
+                    if (options.RecoverStartupFailureExternally && (exit != 0 || error != null))
+                        throw new IOException(error ?? $"The workspace process exited before startup completed (code {exit}).");
                     if (exit == 0) return 0;
                     if (!tracking) return exit;
                     SaveFailure(error ?? $"Business startup exited unexpectedly (code {exit}). Restart Setup after resolving the error.");
@@ -233,6 +249,7 @@ public static class SetupProcessCoordinator
             options.OnBusinessUnavailable?.Invoke();
             Console.Error.WriteLine($"Setup transition failed: {error}");
             if (child != null) { await child.DisposeAsync(); child = null; }
+            if (options.RecoverStartupFailureExternally) throw;
             // Includes failure before a worker can authenticate/connect. Do not abandon the UI.
             try { SaveFailure(error.Message); }
             catch (Exception failure) when (failure is IOException or UnauthorizedAccessException)
@@ -275,17 +292,20 @@ public static class SetupProcessCoordinator
         private readonly StreamWriter _writer;
         private readonly object _gate = new();
         private readonly CancellationTokenSource _reading = new();
+        private readonly bool _gracefulOnly;
         public Process Process { get; }
         public string? Error { get; private set; }
         public Action<string>? MaintenanceRequested { get; set; }
-        private Child(Process process, NamedPipeServerStream pipe)
+        private bool _ready;
+        private Child(Process process, NamedPipeServerStream pipe, bool gracefulOnly)
         {
-            Process = process; _pipe = pipe;
+            Process = process; _pipe = pipe; _gracefulOnly = gracefulOnly;
             _reader = new StreamReader(pipe, Encoding.UTF8, false, 4096, true);
             _writer = new StreamWriter(pipe, new UTF8Encoding(false), 4096, true);
         }
         public static async Task<Child> Start(string role, string[] arguments, string setupAddress,
-            Func<Task> beforeBind, Action<string>? ready, Func<string, Task<string>>? createSetup, CancellationToken token)
+            Func<Task> beforeBind, Action<string>? ready, Func<string, Task<string>>? createSetup,
+            Func<string, bool, Action?>? workspaceSwitch, Action<bool>? reserveRestart, bool gracefulOnly, CancellationToken token)
         {
             var name = "bk" + Guid.NewGuid().ToString("N")[..16];
             var secret = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
@@ -293,7 +313,7 @@ public static class SetupProcessCoordinator
                 PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
             var process = Process.Start(SetupChildConnection.ChildStartInfo(role, arguments, name, secret))
                           ?? throw new IOException("Cannot start the Setup child process.");
-            var child = new Child(process, pipe);
+            var child = new Child(process, pipe, gracefulOnly);
             Console.WriteLine($"Setup {role} process: {process.Id}");
             try
             {
@@ -311,14 +331,15 @@ public static class SetupProcessCoordinator
                     throw new IOException("Setup child authentication failed.");
                 if (role == "business") RelaySecret = secret;
                 child.Send("accepted", setupAddress, MonitorUrl, Environment.ProcessId);
-                _ = child.Receive(beforeBind, ready, createSetup);
+                _ = child.Receive(beforeBind, ready, createSetup, workspaceSwitch, reserveRestart);
                 return child;
             }
             catch { await child.DisposeAsync(); throw; }
         }
         public void Send(string type, string? value = null, string? monitorUrl = null, int? parentProcessId = null)
         { lock (_gate) { if (!_pipe.IsConnected) throw new IOException("Setup child is not connected."); _writer.WriteLine(JsonSerializer.Serialize(new SetupChildConnection.Message(type, value, monitorUrl, parentProcessId), SetupChildConnection.Json)); } }
-        private async Task Receive(Func<Task> beforeBind, Action<string>? ready, Func<string, Task<string>>? createSetup)
+        private async Task Receive(Func<Task> beforeBind, Action<string>? ready, Func<string, Task<string>>? createSetup,
+            Func<string, bool, Action?>? workspaceSwitch, Action<bool>? reserveRestart)
         {
             try
             {
@@ -327,10 +348,32 @@ public static class SetupProcessCoordinator
                     switch (message.Type)
                     {
                         case "binding": await beforeBind(); Send("bind"); break;
-                        case "ready": ready?.Invoke(message.Value!); break;
-                        case "fatal": Error = message.Value; break;
+                        case "ready": _ready = true; ready?.Invoke(message.Value!); break;
+                        case "fatal":
+                            Error = message.Value;
+                            if (_gracefulOnly && !_ready) Send("stop");
+                            break;
                         case "commit": ServerSetupSession.Current?.SignalCommitted(message.Value); break;
                         case "maintenance": MaintenanceRequested?.Invoke(message.Value!); break;
+                        case "workspace-switch-prepare":
+                        case "workspace-switch-commit":
+                            try
+                            {
+                                if (workspaceSwitch == null) throw new InvalidOperationException("Workspace switching is only available in the desktop application.");
+                                var commit = workspaceSwitch(message.Value!, message.Type == "workspace-switch-commit");
+                                Send("setup-result", "accepted");
+                                commit?.Invoke();
+                            }
+                            catch (Exception e) { Send("setup-error", e.Message); }
+                            break;
+                        case "workspace-restart":
+                            try
+                            {
+                                reserveRestart?.Invoke(message.Value == "release");
+                                Send("setup-result", "accepted");
+                            }
+                            catch (Exception e) { Send("setup-error", e.Message); }
+                            break;
                         case "setup":
                             try { Send("setup-result", await createSetup!(message.Value!)); }
                             catch (Exception e) { Send("setup-error", e.Message); }
@@ -346,7 +389,15 @@ public static class SetupProcessCoordinator
             {
                 try { Send("stop"); } catch (IOException) { }
                 try { await Process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(15)); }
-                catch (TimeoutException) { Process.Kill(entireProcessTree: true); await Process.WaitForExitAsync(); }
+                catch (TimeoutException)
+                {
+                    if (_gracefulOnly)
+                    {
+                        Console.Error.WriteLine("Desktop shutdown is still pending. The next workspace will not start until this process exits.");
+                        await Process.WaitForExitAsync();
+                    }
+                    else { Process.Kill(entireProcessTree: true); await Process.WaitForExitAsync(); }
+                }
             }
             _reading.Cancel(); await _pipe.DisposeAsync(); Process.Dispose();
         }

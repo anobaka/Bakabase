@@ -1,17 +1,54 @@
+import type { TFunction } from "i18next";
 import type { BakabaseAbstractionsComponentsAppDesktopProfileView } from "@/sdk/Api";
 import type { DesktopProfilesController } from "./useDesktopProfiles";
 
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { FolderOpenOutlined, PlusOutlined } from "@ant-design/icons";
+import { MoreOutlined } from "@ant-design/icons";
 
 import BApi from "@/sdk/BApi";
-import { useSettingsSearchMatch } from "@/pages/configuration/components/SettingsSection";
-import { Button, Input } from "@/components/bakaui";
+import {
+  SettingsRows,
+  useSettingsSearchMatch,
+} from "@/pages/configuration/components/SettingsSection";
+import {
+  Button,
+  Dropdown,
+  DropdownItem,
+  DropdownMenu,
+  DropdownTrigger,
+  Input,
+  Select,
+} from "@/components/bakaui";
 import { FileSystemSelectorModal } from "@/components/FileSystemSelector";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 
-/** Local desktop launch settings; unavailable on headless hosts and managed-device relays. */
+type Profile = BakabaseAbstractionsComponentsAppDesktopProfileView;
+
+export function matchesProfilesSettings(
+  query: string | undefined,
+  t: TFunction,
+  profiles: Profile[] = [],
+) {
+  return (
+    !query ||
+    [
+      t("profiles.title"),
+      t("profiles.description"),
+      t("profiles.manageSection"),
+      t("profiles.select"),
+      t("profiles.switch"),
+      t("profiles.rename"),
+      ...profiles.map((profile) => profile.name),
+      "profiles workspaces appdata",
+    ]
+      .join(" ")
+      .toLowerCase()
+      .includes(query.trim().toLowerCase())
+  );
+}
+
+/** Local desktop workspace switching; storage remains independent of this catalog. */
 export default function ProfilesSettings({
   query,
   controller,
@@ -22,20 +59,23 @@ export default function ProfilesSettings({
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const { state, error: loadError, localDesktop, load } = controller;
+  const [selectedId, setSelectedId] = useState<string>();
   const [busy, setBusy] = useState(false);
+  const [switching, setSwitching] = useState(false);
   const [error, setError] = useState<string>();
   const [notice, setNotice] = useState<string>();
   const [adding, setAdding] = useState<"new" | "existing">();
   const [name, setName] = useState("");
   const [directory, setDirectory] = useState("");
-  const [renaming, setRenaming] = useState<string>();
+  const [renaming, setRenaming] = useState<Profile>();
   const [rename, setRename] = useState("");
-  const [removing, setRemoving] = useState<BakabaseAbstractionsComponentsAppDesktopProfileView>();
-  const matches =
-    !query ||
-    `${t("profiles.title")} ${t("profiles.description")} ${t("profiles.manageSection")} profiles workspaces appdata`
-      .toLowerCase()
-      .includes(query.trim().toLowerCase());
+  const [removing, setRemoving] = useState<Profile>();
+  const profiles = state?.profiles || [];
+  const selected =
+    profiles.find((profile) => profile.id === selectedId) ??
+    profiles.find((profile) => profile.isCurrent);
+  const matches = matchesProfilesSettings(query, t, profiles);
+  const editing = !!adding || !!renaming || !!removing;
 
   useSettingsSearchMatch(
     "desktop-profiles",
@@ -43,11 +83,13 @@ export default function ProfilesSettings({
   );
   if (!state?.available)
     return localDesktop && loadError && matches ? (
-      <p className="text-danger" role="alert">
+      <p className="px-4 py-3 text-danger" role="alert">
         {loadError}
       </p>
     ) : null;
   if (!matches) return null;
+
+  const label = (profile: Profile) => profile.name || t("profiles.original");
   const run = async (
     action: () => Promise<{ code?: number; message?: string | null }>,
     after?: () => void,
@@ -67,69 +109,162 @@ export default function ProfilesSettings({
       setBusy(false);
     }
   };
-  const label = (profile: BakabaseAbstractionsComponentsAppDesktopProfileView) =>
-    profile.name || t("profiles.original");
-  const open = (
-    profile: BakabaseAbstractionsComponentsAppDesktopProfileView,
-    closeCurrent = false,
-  ) => {
-    if (!profile.id) return;
-    void run(
-      () => BApi.app.openDesktopProfile(profile.id!, { closeCurrent }),
-      () => {
-        setNotice(t(closeCurrent ? "profiles.switching" : "profiles.opened"));
-      },
-    );
+  const switchWorkspace = async () => {
+    if (!selected?.id || selected.isCurrent || !selected.isAvailable || busy) return;
+    setBusy(true);
+    setSwitching(true);
+    setError(undefined);
+    setNotice(undefined);
+    try {
+      const result = await BApi.app.openDesktopProfile(selected.id, { closeCurrent: true });
+
+      if (result.code) throw new Error(result.message || t("profiles.error.save"));
+      // Keep switching disabled until this workspace closes; no follow-up catalog read
+      // should race shutdown and turn a successful handoff into a misleading error.
+      setNotice(t("profiles.switching"));
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : t("profiles.error.save"));
+      setBusy(false);
+      setSwitching(false);
+    }
+  };
+  const beginAdding = (kind: "new" | "existing", path = "") => {
+    setAdding(kind);
+    setName("");
+    setDirectory(path);
+    setError(undefined);
+    setNotice(undefined);
   };
 
-  return (
-    <section aria-label={t("profiles.manageSection")} className="border-t border-default-200 p-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h3 className="text-sm font-medium">{t("profiles.manageSection")}</h3>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            isDisabled={busy}
-            size="sm"
-            startContent={<PlusOutlined />}
-            variant="flat"
-            onPress={() => {
-              setAdding("new");
-              setName("");
-              setDirectory("");
+  const controls = (
+    <>
+      <div className="flex flex-wrap items-center gap-2">
+        <Select
+          disallowEmptySelection
+          aria-label={t("profiles.select")}
+          className="min-w-48 max-w-sm flex-1"
+          dataSource={profiles
+            .filter((profile) => profile.id)
+            .map((profile) => ({
+              value: profile.id!,
+              label: [
+                label(profile),
+                profile.isCurrent && t("profiles.current"),
+                profile.isDefault && t("profiles.default"),
+                !profile.isAvailable && t("profiles.unavailable"),
+              ]
+                .filter(Boolean)
+                .join(" · "),
+              textValue: label(profile),
+              description: profile.dataDirectory || undefined,
+            }))}
+          isDisabled={busy || editing}
+          placeholder={t("profiles.select")}
+          selectedKeys={selected?.id ? [selected.id] : []}
+          size="sm"
+          onSelectionChange={(keys) => {
+            if (keys === "all") return;
+            const next = Array.from(keys)[0];
+
+            if (next !== undefined) setSelectedId(String(next));
+            setError(undefined);
+            setNotice(undefined);
+          }}
+        />
+        <Button
+          isDisabled={busy || editing || !selected?.id}
+          size="sm"
+          variant="light"
+          onPress={() => {
+            if (!selected) return;
+            setRenaming(selected);
+            setRename(label(selected));
+          }}
+        >
+          {t("profiles.rename")}
+        </Button>
+        <Button
+          color="primary"
+          isDisabled={busy || editing || !selected?.isAvailable || selected.isCurrent}
+          isLoading={switching}
+          size="sm"
+          onPress={() => void switchWorkspace()}
+        >
+          {t("profiles.switch")}
+        </Button>
+        <Dropdown isDisabled={busy || editing} placement="bottom-end">
+          <DropdownTrigger>
+            <Button
+              aria-label={t("profiles.manageSection")}
+              isDisabled={busy || editing}
+              size="sm"
+              startContent={<MoreOutlined />}
+              variant="light"
+            >
+              {t("profiles.manage")}
+            </Button>
+          </DropdownTrigger>
+          <DropdownMenu
+            aria-label={t("profiles.manageSection")}
+            disabledKeys={[
+              ...(!selected?.id || selected.isDefault ? ["default"] : []),
+              ...(!selected?.id || selected.isCurrent || selected.isRunning || profiles.length < 2
+                ? ["remove"]
+                : []),
+            ]}
+            onAction={(key) => {
+              switch (key) {
+                case "new":
+                  beginAdding("new");
+                  break;
+                case "existing":
+                  beginAdding("existing");
+                  break;
+                case "default":
+                  if (selected?.id)
+                    void run(() =>
+                      BApi.app.updateDesktopProfile(selected.id!, {
+                        name: label(selected),
+                        makeDefault: true,
+                      }),
+                    );
+                  break;
+                case "remove":
+                  if (selected?.id) setRemoving(selected);
+                  break;
+              }
             }}
           >
-            {t("profiles.addNew")}
-          </Button>
-          <Button
-            isDisabled={busy}
-            size="sm"
-            startContent={<FolderOpenOutlined />}
-            variant="flat"
-            onPress={() => {
-              setAdding("existing");
-              setName("");
-              setDirectory("");
-            }}
-          >
-            {t("profiles.addExisting")}
-          </Button>
-        </div>
+            <DropdownItem key="new">{t("profiles.addNew")}</DropdownItem>
+            <DropdownItem key="existing">{t("profiles.addExisting")}</DropdownItem>
+            <DropdownItem key="default" showDivider>
+              {t("profiles.makeDefault")}
+            </DropdownItem>
+            <DropdownItem key="remove" className="text-danger" color="danger">
+              {t("profiles.remove")}
+            </DropdownItem>
+          </DropdownMenu>
+        </Dropdown>
       </div>
+      {selected && !selected.isCurrent && (
+        <div className="mt-2 text-xs text-default-500">
+          <p className="break-all">
+            {t("profiles.targetDirectory")}: {selected.dataDirectory}
+          </p>
+          <p className={selected.isAvailable ? "mt-1" : "mt-1 text-warning"}>
+            {t(selected.isAvailable ? "profiles.switchHint" : "profiles.unavailable")}
+          </p>
+        </div>
+      )}
       {state.environmentOverride && (
         <div className="mt-3 rounded-lg bg-warning-50 p-3 text-sm text-warning-700">
           <p>{t("profiles.environment")}</p>
           <Button
             className="mt-2"
-            isDisabled={busy}
+            isDisabled={busy || editing}
             size="sm"
             variant="flat"
-            onPress={() => {
-              setAdding("existing");
-              setName("");
-              setDirectory(state.currentDirectory || "");
-            }}
+            onPress={() => beginAdding("existing", state.currentDirectory || "")}
           >
             {t("profiles.registerCurrent")}
           </Button>
@@ -141,13 +276,13 @@ export default function ProfilesSettings({
         </p>
       )}
       {notice && (
-        <p className="mt-3 text-sm text-success" role="status">
+        <p className="mt-3 text-sm text-default-500" role="status">
           {notice}
         </p>
       )}
       {adding && (
         <form
-          className="my-3 space-y-3 rounded-lg border border-default-200 p-3"
+          className="mt-3 space-y-3 rounded-lg border border-default-200 p-3"
           onSubmit={(event) => {
             event.preventDefault();
             void run(
@@ -219,135 +354,46 @@ export default function ProfilesSettings({
           </div>
         </form>
       )}
-      <ul className="mt-3 divide-y divide-default-100">
-        {(state.profiles || []).map((profile) => (
-          <li key={profile.id} className="flex flex-wrap items-center gap-3 py-3">
-            <div className="min-w-0 flex-1 basis-60">
-              <div className="flex flex-wrap items-center gap-2 text-sm font-medium">
-                {label(profile)}
-                {profile.isCurrent && (
-                  <span className="rounded bg-primary-50 px-2 py-0.5 text-xs text-primary">
-                    {t("profiles.current")}
-                  </span>
-                )}
-                {profile.isDefault && (
-                  <span className="text-xs font-normal text-default-500">
-                    {t("profiles.default")}
-                  </span>
-                )}
-                {!profile.isCurrent && profile.isRunning && (
-                  <span className="text-xs text-success">{t("profiles.running")}</span>
-                )}
-                {!profile.isAvailable && (
-                  <span className="text-xs text-warning">{t("profiles.unavailable")}</span>
-                )}
-              </div>
-              <p className="mt-1 break-all text-xs text-default-500">{profile.dataDirectory}</p>
-              {renaming === profile.id && (
-                <form
-                  className="mt-2 flex items-center gap-2"
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    void run(
-                      () =>
-                        BApi.app.updateDesktopProfile(profile.id!, {
-                          name: rename.trim(),
-                          makeDefault: false,
-                        }),
-                      () => setRenaming(undefined),
-                    );
-                  }}
-                >
-                  <Input
-                    aria-label={t("profiles.name")}
-                    isDisabled={busy}
-                    maxLength={100}
-                    size="sm"
-                    value={rename}
-                    onValueChange={setRename}
-                  />
-                  <Button isDisabled={busy || !rename.trim()} size="sm" type="submit">
-                    {t("profiles.save")}
-                  </Button>
-                  <Button
-                    isDisabled={busy}
-                    size="sm"
-                    type="button"
-                    variant="light"
-                    onPress={() => setRenaming(undefined)}
-                  >
-                    {t("profiles.cancel")}
-                  </Button>
-                </form>
-              )}
-            </div>
-            <div className="flex flex-wrap gap-1">
-              {!profile.isCurrent && (
-                <Button
-                  isDisabled={busy || !profile.isAvailable}
-                  size="sm"
-                  variant="flat"
-                  onPress={() => open(profile)}
-                >
-                  {t(profile.isRunning ? "profiles.activate" : "profiles.open")}
-                </Button>
-              )}
-              {!profile.isCurrent && (
-                <Button
-                  isDisabled={busy || !profile.isAvailable}
-                  size="sm"
-                  variant="light"
-                  onPress={() => open(profile, true)}
-                >
-                  {t("profiles.switch")}
-                </Button>
-              )}
-              <Button
-                isDisabled={busy}
-                size="sm"
-                variant="light"
-                onPress={() => {
-                  setRenaming(profile.id!);
-                  setRename(label(profile));
-                }}
-              >
-                {t("profiles.rename")}
-              </Button>
-              {!profile.isDefault && (
-                <Button
-                  isDisabled={busy}
-                  size="sm"
-                  variant="light"
-                  onPress={() =>
-                    void run(() =>
-                      BApi.app.updateDesktopProfile(profile.id!, {
-                        name: label(profile),
-                        makeDefault: true,
-                      }),
-                    )
-                  }
-                >
-                  {t("profiles.makeDefault")}
-                </Button>
-              )}
-              {!profile.isCurrent && !profile.isRunning && (
-                <Button
-                  color="danger"
-                  isDisabled={busy || (state.profiles?.length ?? 0) < 2}
-                  size="sm"
-                  variant="light"
-                  onPress={() => setRemoving(profile)}
-                >
-                  {t("profiles.remove")}
-                </Button>
-              )}
-            </div>
-          </li>
-        ))}
-      </ul>
+      {renaming && (
+        <form
+          className="mt-3 flex max-w-lg items-center gap-2"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void run(
+              () =>
+                BApi.app.updateDesktopProfile(renaming.id!, {
+                  name: rename.trim(),
+                  makeDefault: false,
+                }),
+              () => setRenaming(undefined),
+            );
+          }}
+        >
+          <Input
+            aria-label={t("profiles.name")}
+            isDisabled={busy}
+            maxLength={100}
+            size="sm"
+            value={rename}
+            onValueChange={setRename}
+          />
+          <Button isDisabled={busy || !rename.trim()} size="sm" type="submit">
+            {t("profiles.save")}
+          </Button>
+          <Button
+            isDisabled={busy}
+            size="sm"
+            type="button"
+            variant="light"
+            onPress={() => setRenaming(undefined)}
+          >
+            {t("profiles.cancel")}
+          </Button>
+        </form>
+      )}
       {removing && (
         <div
-          className="mt-2 rounded-lg border border-warning-200 bg-warning-50 p-3 text-sm"
+          className="mt-3 rounded-lg border border-warning-200 bg-warning-50 p-3 text-sm"
           role="alert"
         >
           <p>{t("profiles.removeConfirm", { name: label(removing) })}</p>
@@ -359,7 +405,10 @@ export default function ProfilesSettings({
               onPress={() =>
                 void run(
                   () => BApi.app.removeDesktopProfile(removing.id!),
-                  () => setRemoving(undefined),
+                  () => {
+                    setRemoving(undefined);
+                    setSelectedId(undefined);
+                  },
                 )
               }
             >
@@ -376,7 +425,14 @@ export default function ProfilesSettings({
           </div>
         </div>
       )}
-      <p className="mt-2 text-xs text-default-500">{t("profiles.upgrade")}</p>
+    </>
+  );
+
+  return (
+    <section aria-label={t("profiles.manageSection")}>
+      <SettingsRows
+        items={[{ id: "workspace", label: t("profiles.select"), render: () => controls }]}
+      />
     </section>
   );
 }

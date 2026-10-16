@@ -51,6 +51,31 @@ class Program
         // line (Run ends in Environment.Exit for them), so installing the handler after it costs
         // no coverage of a real launch.
         CrashHandler.Install();
+        // Reopening the desktop activates its current workspace before resolving any
+        // default/explicit data directory (the default may be on disconnected storage).
+        var restartHandoff = RestartHandoff.WaitForPredecessor(args);
+        DesktopWorkspaceSession? desktopSession = null;
+        if (!args.Any(arg => arg.StartsWith(SetupChildConnection.RoleArgument, StringComparison.Ordinal)))
+        {
+            var registryDirectory = DesktopProfileRegistry.ForCurrentUser().RootDirectory;
+            desktopSession = DesktopWorkspaceSession.TryAcquire(registryDirectory);
+            if (desktopSession == null && RestartHandoff.TryReadPredecessorPid(args) != null)
+            {
+                var deadline = DateTime.UtcNow.AddSeconds(30);
+                while (desktopSession == null && DateTime.UtcNow < deadline)
+                { Thread.Sleep(100); desktopSession = DesktopWorkspaceSession.TryAcquire(registryDirectory); }
+            }
+            if (desktopSession == null)
+            {
+                var link = DesktopToolLink.FromArguments(args);
+                var requested = DesktopProfileSelection.ParseId(args);
+                var message = link ?? (requested == null ? ActivationChannel.ShowMessage : DesktopWorkspaceSession.SwitchPrefix + requested);
+                if (!DesktopWorkspaceSession.ActivateAsync(registryDirectory, message).GetAwaiter().GetResult())
+                { Environment.ExitCode = 1; Console.Error.WriteLine("The current workspace is starting or closing. Wait and open Bakabase again."); }
+                return;
+            }
+        }
+        using var desktopLease = desktopSession;
         DesktopProfileSelection.Initialize(args);
 
         // Internal child roles are authenticated by the coordinator before any directory
@@ -67,8 +92,6 @@ class Program
         // single-instance guard refuses whoever finds the data directory still locked. Wait
         // here, ahead of everything that reaches that check, for the process that spawned us to
         // be gone. Does nothing on an ordinary launch.
-        var restartHandoff = RestartHandoff.WaitForPredecessor(args);
-
         if (connection == null)
         {
             using var coordinator = new DesktopSetupBootstrap();
@@ -88,8 +111,8 @@ class Program
         // the static constructor below creates it and opens a log file in it, and the shell
         // would go on to run a pending relocation and show a tray icon. A second launch on
         // the same directory asks the running one to show its window and ends here, having
-        // written nothing. A launch on a different directory (BAKABASE_DATA_DIR) is its own
-        // instance and carries on.
+        // written nothing. Desktop admission above has already guaranteed that this
+        // authenticated child is the only active workspace for the current user.
         if (!SingleInstanceGuard.EnterOrHandOff())
         {
             DisposeConnection(connection);
