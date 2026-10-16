@@ -47,6 +47,48 @@ describe("device appearance", () => {
     expect(screen.getByTitle("Device: NAS renamed").style.backgroundColor).toBe("rgb(17, 34, 51)");
   });
 
+  it("opens the picker with the same automatic purple as its dot", () => {
+    render(<DeviceColorEditor name="NAS" serverId="device-11" />);
+    const dot = screen.getByTitle("Device: NAS");
+    const expected = deviceColor("device-11");
+
+    expect(dot).toHaveStyle({ backgroundColor: expected });
+    fireEvent.click(screen.getByRole("button", { name: "deviceAppearance.editFor" }));
+    expect(screen.getByLabelText("deviceAppearance.editFor")).toHaveValue(expected);
+    expect(save).not.toHaveBeenCalled();
+  });
+
+  it("tracks loaded options until edited, preserves a draft on hub updates and discards it on cancel", () => {
+    render(<DeviceColorEditor name="NAS" serverId="device-11" />);
+    fireEvent.click(screen.getByRole("button", { name: "deviceAppearance.editFor" }));
+    const input = screen.getByLabelText("deviceAppearance.editFor");
+
+    act(() => useUiOptionsStore.getState().update({ deviceColors: { "device-11": "#112233" } }));
+    expect(input).toHaveValue("#112233");
+    fireEvent.change(input, { target: { value: "#abcdef" } });
+    act(() => useUiOptionsStore.getState().update({ deviceColors: { "device-11": "#445566" } }));
+    expect(input).toHaveValue("#abcdef");
+    fireEvent.click(screen.getByRole("button", { name: "federation.cancel" }));
+    fireEvent.click(screen.getByRole("button", { name: "deviceAppearance.editFor" }));
+    expect(screen.getByLabelText("deviceAppearance.editFor")).toHaveValue("#445566");
+    expect(save).not.toHaveBeenCalled();
+  });
+
+  it("restores the automatic preview in embedded mode and still follows later preferences", async () => {
+    act(() => useUiOptionsStore.getState().update({ deviceColors: { "device-11": "#123456" } }));
+    render(<DeviceColorEditor embedded name="NAS" serverId="device-11" />);
+    expect(screen.getByLabelText("deviceAppearance.editFor")).toHaveValue("#123456");
+    fireEvent.click(screen.getByRole("button", { name: "deviceAppearance.automatic" }));
+    await waitFor(() =>
+      expect(screen.getByLabelText("deviceAppearance.editFor")).toHaveValue(
+        deviceColor("device-11"),
+      ),
+    );
+    act(() => useUiOptionsStore.getState().update({ deviceColors: { "device-11": "#789abc" } }));
+    expect(screen.getByLabelText("deviceAppearance.editFor")).toHaveValue("#789abc");
+    expect(save).toHaveBeenCalledWith("device-11", { color: undefined });
+  });
+
   it("saves one device without replacing another's preference and can restore automatic", async () => {
     act(() => useUiOptionsStore.getState().update({ deviceColors: { "owner-b": "#123456" } }));
     render(<DeviceColorEditor name="NAS" serverId="owner-a" />);

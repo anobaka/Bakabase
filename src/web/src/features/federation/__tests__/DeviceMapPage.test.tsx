@@ -102,6 +102,7 @@ vi.mock("../switching", async (importOriginal) => ({
 }));
 vi.mock("@/sdk/BApi", () => ({
   default: {
+    management: { getManagedDeviceName: vi.fn(), setManagedDeviceName: vi.fn() },
     options: {},
     remoteAccess: {
       getRemoteAccessSettings: vi.fn(),
@@ -637,18 +638,30 @@ describe("device map: acting on a device", () => {
   });
 
   it("renames this device", async () => {
-    vi.mocked(federationPeerApi.setName).mockResolvedValue(undefined);
+    vi.mocked(BApi.management.getManagedDeviceName).mockResolvedValue({
+      name: "Studio PC",
+      libraryEpoch: "local-epoch",
+      environmentControlled: false,
+    });
+    vi.mocked(BApi.management.setManagedDeviceName).mockResolvedValue({
+      name: "Den",
+      libraryEpoch: "local-epoch",
+      environmentControlled: false,
+    });
     renderPage();
     await loaded();
-    fireEvent.click(screen.getByRole("button", { name: "federation.name.edit" }));
-    fireEvent.change(screen.getByLabelText("federation.name.label"), {
+    fireEvent.click(screen.getByRole("button", { name: "deviceAppearance.editMetadata" }));
+    fireEvent.change(await screen.findByLabelText("federation.name.label"), {
       target: { value: "  Den  " },
     });
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "federation.save" }));
+      fireEvent.click(screen.getByRole("button", { name: "deviceAppearance.saveName" }));
     });
 
-    expect(federationPeerApi.setName).toHaveBeenCalledWith("Den", "Studio PC");
+    expect(BApi.management.setManagedDeviceName).toHaveBeenCalledWith(
+      { name: "Den", expectedName: "Studio PC", libraryEpoch: "local-epoch" },
+      { showErrorToast: false },
+    );
   });
 });
 

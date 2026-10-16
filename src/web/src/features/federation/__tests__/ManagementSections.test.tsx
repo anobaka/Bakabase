@@ -181,11 +181,11 @@ describe("devices this one manages", () => {
     const card = await screen.findByRole("article", { name: "NAS" });
     const previousReads = listReads();
 
-    fireEvent.click(within(card).getByRole("button", { name: "federation.servers.name.edit" }));
+    fireEvent.click(within(card).getByRole("button", { name: "deviceAppearance.editMetadata" }));
     fireEvent.change(await within(card).findByRole("textbox", { name: "federation.name.label" }), {
       target: { value: "Living room" },
     });
-    fireEvent.click(within(card).getByRole("button", { name: "federation.save" }));
+    fireEvent.click(within(card).getByRole("button", { name: "deviceAppearance.saveName" }));
     await screen.findByRole("article", { name: "Living room" });
     await waitFor(() => expect(listReads()).toBeGreaterThan(previousReads));
     expect(managedServerApi.list).toHaveBeenLastCalledWith(true);

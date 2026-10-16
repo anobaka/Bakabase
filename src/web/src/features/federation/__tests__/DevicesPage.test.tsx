@@ -44,6 +44,7 @@ vi.mock("../serverApi", () => ({
 vi.mock("@/sdk/BApi", () => ({
   default: {
     options: {},
+    management: { getManagedDeviceName: vi.fn(), setManagedDeviceName: vi.fn() },
     remoteAccess: {
       getRemoteAccessSettings: vi.fn().mockResolvedValue({
         code: 0,
@@ -68,6 +69,16 @@ const status: FederationStatus = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(BApi.management.getManagedDeviceName).mockResolvedValue({
+    name: "This PC",
+    libraryEpoch: "epoch",
+    environmentControlled: false,
+  });
+  vi.mocked(BApi.management.setManagedDeviceName).mockImplementation(async (input) => ({
+    name: input.name ?? "Computer",
+    libraryEpoch: "epoch",
+    environmentControlled: false,
+  }));
   localStorage.clear();
   vi.mocked(useFederationStatus).mockReturnValue({
     status,
@@ -350,30 +361,39 @@ describe("device name", () => {
     const refresh = withStatus({});
 
     renderPage("/federation/devices");
-    fireEvent.click(screen.getByText("federation.name.edit"));
-    fireEvent.change(screen.getByLabelText("federation.name.label"), {
+    fireEvent.click(screen.getByText("deviceAppearance.editMetadata"));
+    fireEvent.change(await screen.findByLabelText("federation.name.label"), {
       target: { value: "  Study PC " },
     });
-    fireEvent.click(nameForm().getByText("federation.save"));
+    fireEvent.click(nameForm().getByText("deviceAppearance.saveName"));
     await waitFor(() =>
-      expect(federationPeerApi.setName).toHaveBeenCalledWith("Study PC", "This PC"),
+      expect(BApi.management.setManagedDeviceName).toHaveBeenCalledWith(
+        { name: "Study PC", expectedName: "This PC", libraryEpoch: "epoch" },
+        { showErrorToast: false },
+      ),
     );
     await waitFor(() => expect(refresh).toHaveBeenCalled());
-    expect(screen.queryByLabelText("federation.name.label")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("federation.name.label")).toHaveValue("Study PC");
   });
   it("resets to the computer name", async () => {
     renderPage("/federation/devices");
-    fireEvent.click(screen.getByText("federation.name.edit"));
-    fireEvent.click(screen.getByText("federation.name.reset"));
-    await waitFor(() => expect(federationPeerApi.setName).toHaveBeenCalledWith(null, "This PC"));
+    fireEvent.click(screen.getByText("deviceAppearance.editMetadata"));
+    fireEvent.click(await screen.findByText("federation.name.reset"));
+    await waitFor(() =>
+      expect(BApi.management.setManagedDeviceName).toHaveBeenCalledWith(
+        { name: undefined, expectedName: "This PC", libraryEpoch: "epoch" },
+        { showErrorToast: false },
+      ),
+    );
   });
   it("keeps the edit open when the name is rejected", async () => {
-    vi.mocked(federationPeerApi.setName).mockRejectedValueOnce(
+    vi.mocked(BApi.management.setManagedDeviceName).mockRejectedValueOnce(
       new FederationError("InvalidDeviceName", "Bad name", 400),
     );
     renderPage("/federation/devices");
-    fireEvent.click(screen.getByText("federation.name.edit"));
-    fireEvent.click(nameForm().getByText("federation.save"));
+    fireEvent.click(screen.getByText("deviceAppearance.editMetadata"));
+    await screen.findByLabelText("federation.name.label");
+    fireEvent.click(nameForm().getByText("deviceAppearance.saveName"));
     expect(await screen.findByText("Bad name")).toBeInTheDocument();
     expect(screen.getByLabelText("federation.name.label")).toHaveValue("This PC");
   });

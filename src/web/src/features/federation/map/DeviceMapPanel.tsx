@@ -26,9 +26,7 @@ import {
 } from "../components/common";
 import ConfirmDialog from "../components/ConfirmDialog";
 import ManagedServerPathMappings from "../components/ManagedServerPathMappings";
-import ManagedDeviceNameEditor from "../components/ManagedDeviceNameEditor";
 import { ManagedServerWarnings, stateBadgeClass } from "../components/ManagedServers";
-import { federationPeerApi } from "../peerApi";
 import { managedServerApi } from "../serverApi";
 import { devicesRoute, openManagedServer } from "../switching";
 import { FederationError } from "../transport";
@@ -48,6 +46,7 @@ import { edgeKindLabel, issueLabel, namesakeDescription, nodeName, nodeSummary }
 import { usePanelActions } from "./usePanelActions";
 import { useEscapeKey } from "./useEscapeKey";
 
+import DeviceMetadataEditor from "@/features/management/DeviceMetadataEditor";
 import BApi from "@/sdk/BApi";
 import { ManagedServerOutcome, ManagedServerState, RemoteAccessMode } from "@/sdk/constants";
 import { minutesUntil, parseServerTime } from "@/core/serverTime";
@@ -674,9 +673,10 @@ function ManagementSection({ context, node }: { context: PanelContext; node: Map
                 {t("federation.servers.forget")}
               </button>
             </div>
-            <ManagedDeviceNameEditor
+            <DeviceMetadataEditor
               key={server.serverId}
               busy={busy}
+              name={name}
               serverId={server.serverId}
               onSaved={() => void run(() => managedServerApi.list(true), ["servers"])}
             />
@@ -991,8 +991,6 @@ function ManageForm({
 function SelfDetails({ context }: { context: PanelContext }) {
   const { t } = useTranslation();
   const { graph, status, access, actions } = context;
-  const [editing, setEditing] = useState<string>();
-  const [expectedName, setExpectedName] = useState<string>();
   const mode = access?.mode;
   const management =
     mode === undefined
@@ -1015,71 +1013,14 @@ function SelfDetails({ context }: { context: PanelContext }) {
     <div className="space-y-4">
       {status && (
         <section className={sectionClass}>
-          {editing === undefined ? (
-            <button
-              className={buttonClass}
-              disabled={actions.busy}
-              type="button"
-              onClick={() => {
-                setExpectedName(status.identity.name);
-                setEditing(status.identity.name);
-              }}
-            >
-              {t("federation.name.edit")}
-            </button>
-          ) : (
-            <form
-              className="space-y-2"
-              onSubmit={(event) => {
-                event.preventDefault();
-                const name = editing.trim();
-
-                void actions.run(async () => {
-                  await federationPeerApi.setName(name || null, expectedName);
-                  if (actions.mounted.current) setEditing(undefined);
-                }, ["identity"]);
-              }}
-            >
-              <label className="block space-y-1 text-sm">
-                <span>{t("federation.name.label")}</span>
-                <input
-                  // eslint-disable-next-line jsx-a11y/no-autofocus
-                  autoFocus
-                  className={fieldClass}
-                  maxLength={64}
-                  value={editing}
-                  onChange={(event) => setEditing(event.target.value)}
-                />
-              </label>
-              <p className="text-xs text-default-500">{t("federation.name.tip")}</p>
-              <div className="flex flex-wrap gap-2">
-                <button className={primaryClass} disabled={actions.busy} type="submit">
-                  {t("federation.save")}
-                </button>
-                <button
-                  className={buttonClass}
-                  disabled={actions.busy}
-                  type="button"
-                  onClick={() =>
-                    void actions.run(async () => {
-                      await federationPeerApi.setName(null, expectedName);
-                      if (actions.mounted.current) setEditing(undefined);
-                    }, ["identity"])
-                  }
-                >
-                  {t("federation.name.reset")}
-                </button>
-                <button
-                  className={buttonClass}
-                  disabled={actions.busy}
-                  type="button"
-                  onClick={() => setEditing(undefined)}
-                >
-                  {t("federation.cancel")}
-                </button>
-              </div>
-            </form>
-          )}
+          <DeviceMetadataEditor
+            key={status.identity.nodeId}
+            local
+            busy={actions.busy}
+            name={status.identity.name}
+            serverId={status.identity.nodeId}
+            onSaved={() => void actions.run(async () => undefined, ["identity"])}
+          />
         </section>
       )}
       <section className={sectionClass}>

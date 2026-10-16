@@ -31,11 +31,10 @@ import {
 } from "./common";
 import ConfirmDialog from "./ConfirmDialog";
 import ManagedServerPathMappings from "./ManagedServerPathMappings";
-import ManagedDeviceNameEditor from "./ManagedDeviceNameEditor";
 
+import DeviceMetadataEditor from "@/features/management/DeviceMetadataEditor";
 import { MetadataSyncStatusSection } from "@/features/management/MetadataSyncStatus";
 import DeviceDot from "@/features/management/DeviceDot";
-import DeviceColorEditor from "@/features/management/DeviceColorEditor";
 import { minutesUntil } from "@/core/serverTime";
 import { ManagedServerOutcome, ManagedServerState, RemoteAccessMode } from "@/sdk/constants";
 
@@ -774,15 +773,16 @@ function ManagedServerCard({
           {t("federation.servers.forget")}
         </button>
       </div>
-      <ManagedDeviceNameEditor
+      <DeviceMetadataEditor
+        key={server.serverId}
         busy={busy}
+        name={name}
         serverId={server.serverId}
         onSaved={(value) => {
           setRenamed(value);
           onRenamed();
         }}
       />
-      <DeviceColorEditor key={server.serverId} name={name} serverId={server.serverId} />
       <ManagedServerPathMappings busy={busy} server={server} onSave={onSaveMappings} />
     </article>
   );

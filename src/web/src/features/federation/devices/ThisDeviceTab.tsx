@@ -1,23 +1,14 @@
 import type { ReactNode } from "react";
 import type { DevicesSection } from "../switching";
 
-import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { AiOutlineRight } from "react-icons/ai";
 
-import {
-  buttonClass,
-  ErrorNotice,
-  fieldClass,
-  focusHeadingClass,
-  panelClass,
-  primaryClass,
-} from "../components/common";
+import { ErrorNotice, focusHeadingClass, panelClass } from "../components/common";
 import AddressList from "../components/AddressList";
 import AdvertisedAddress from "../components/AdvertisedAddress";
 import { revealClass } from "../hooks/useSectionReveal";
-import { federationPeerApi } from "../peerApi";
 import { devicesRoute } from "../switching";
 
 import { useDevicesPage } from "./context";
@@ -26,7 +17,7 @@ import { dataSyncWaiting, troubledServers } from "./selectors";
 
 import { RemoteAccessMode } from "@/sdk/constants";
 import DeviceDot from "@/features/management/DeviceDot";
-import DeviceColorEditor from "@/features/management/DeviceColorEditor";
+import DeviceMetadataEditor from "@/features/management/DeviceMetadataEditor";
 
 const ADDRESSES_TITLE_ID = "device-addresses-title";
 
@@ -52,17 +43,10 @@ function RowLink({ to, children }: { to: DevicesSection; children: ReactNode }) 
  */
 export default function ThisDeviceTab() {
   const { t } = useTranslation();
-  const { data, busy, run, mounted, revealed, tabs } = useDevicesPage();
-  const [editingName, setEditingName] = useState<string>();
-  const expectedName = useRef<string>();
+  const { data, busy, revealed, tabs } = useDevicesPage();
   const { status, access, servers } = data;
   const target = t<string>("federation.management.self");
   const mode = access?.mode;
-  const saveName = (name: string) =>
-    void run(async () => {
-      await federationPeerApi.setName(name.trim() || null, expectedName.current);
-      if (mounted.current) setEditingName(undefined);
-    });
 
   const waitingManage = access?.pendingRequests ?? [];
   const troubled = troubledServers(data);
@@ -88,71 +72,21 @@ export default function ThisDeviceTab() {
       {status && (
         // The tab's heading already says whose name this is.
         <section data-focus-section className={`${panelClass} space-y-2`}>
-          {editingName === undefined ? (
-            <div className="flex flex-wrap items-center gap-2">
-              <h3
-                className={`flex items-center gap-2 text-lg font-semibold ${focusHeadingClass}`}
-                tabIndex={-1}
-              >
-                <DeviceDot name={status.identity.name} serverId={status.identity.nodeId} />
-                {status.identity.name}
-              </h3>
-              <button
-                className={`${buttonClass} !px-2 !py-1 text-xs`}
-                disabled={busy}
-                type="button"
-                onClick={() => {
-                  expectedName.current = status.identity.name;
-                  setEditingName(status.identity.name);
-                }}
-              >
-                {t("federation.name.edit")}
-              </button>
-              <DeviceColorEditor name={status.identity.name} serverId={status.identity.nodeId} />
-            </div>
-          ) : (
-            <form
-              className="space-y-2"
-              onSubmit={(event) => {
-                event.preventDefault();
-                saveName(editingName);
-              }}
-            >
-              <label className="block space-y-1 text-sm">
-                <span>{t("federation.name.label")}</span>
-                <input
-                  // eslint-disable-next-line jsx-a11y/no-autofocus
-                  autoFocus
-                  className={fieldClass}
-                  maxLength={64}
-                  value={editingName}
-                  onChange={(event) => setEditingName(event.target.value)}
-                />
-              </label>
-              <p className="text-xs text-default-500">{t("federation.name.tip")}</p>
-              <div className="flex flex-wrap gap-2">
-                <button className={primaryClass} disabled={busy} type="submit">
-                  {t("federation.save")}
-                </button>
-                <button
-                  className={buttonClass}
-                  disabled={busy}
-                  type="button"
-                  onClick={() => saveName("")}
-                >
-                  {t("federation.name.reset")}
-                </button>
-                <button
-                  className={buttonClass}
-                  disabled={busy}
-                  type="button"
-                  onClick={() => setEditingName(undefined)}
-                >
-                  {t("federation.cancel")}
-                </button>
-              </div>
-            </form>
-          )}
+          <h3
+            className={`flex items-center gap-2 text-lg font-semibold ${focusHeadingClass}`}
+            tabIndex={-1}
+          >
+            <DeviceDot name={status.identity.name} serverId={status.identity.nodeId} />
+            {status.identity.name}
+          </h3>
+          <DeviceMetadataEditor
+            key={status.identity.nodeId}
+            local
+            busy={busy}
+            name={status.identity.name}
+            serverId={status.identity.nodeId}
+            onSaved={() => void data.reload(["identity"])}
+          />
         </section>
       )}
       {/* A place a link lands on (`addresses`), named by the list's title in every state. */}

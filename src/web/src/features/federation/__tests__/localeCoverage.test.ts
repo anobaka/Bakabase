@@ -47,7 +47,8 @@ const sources = import.meta.glob<string>(
     "../components/common.tsx",
     "../components/ConfirmDialog.tsx",
     "../components/ManagedServers.tsx",
-    "../components/ManagedDeviceNameEditor.tsx",
+    "../../management/DeviceMetadataEditor.tsx",
+    "../../management/DeviceColorEditor.tsx",
     "../components/ManagementAccess.tsx",
     "../../../layouts/BasicLayout/components/PageNav/components/ServerSwitcher/index.tsx",
     "../../../pages/client-path-mapping/index.tsx",
@@ -64,7 +65,7 @@ const sources = import.meta.glob<string>(
 
 /** Namespaces these screens draw from; a quoted string under one of them is a key. */
 const keyPattern =
-  /["'`]((?:federation|clientPathMapping|configuration\.remoteAccess|log)\.[A-Za-z0-9_.]*[A-Za-z0-9_])["'`]/g;
+  /["'`]((?:federation|deviceAppearance|clientPathMapping|configuration\.remoteAccess|log)\.[A-Za-z0-9_.]*[A-Za-z0-9_])["'`]/g;
 
 const staticKeys = (source: string) => Array.from(source.matchAll(keyPattern), (match) => match[1]);
 
@@ -157,7 +158,7 @@ describe("locales for the multi-device management screens", () => {
   ).sort();
 
   it("reads keys out of every listed component", () => {
-    expect(Object.keys(sources)).toHaveLength(22);
+    expect(Object.keys(sources)).toHaveLength(23);
     for (const [path, source] of Object.entries(sources)) {
       expect(staticKeys(source).length, path).toBeGreaterThan(0);
     }
