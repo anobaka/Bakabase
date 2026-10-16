@@ -313,6 +313,25 @@ public partial class AvaloniaGuiAdapter : GuiAdapter, ITrayIconController, IUpda
         _mainWindow?.SetServerSwitchMenu(menu);
     }
 
+    /// <summary>Capture on the UI thread before resolving another device's address.</summary>
+    internal string? GetMainWebViewUrl()
+    {
+        if (!Dispatcher.UIThread.CheckAccess() || _mainWindow == null || _isShuttingDown)
+        {
+            return null;
+        }
+
+        try
+        {
+            return _mainWindow.FindControl<NativeWebViewHost>("WebView")?.GetCurrentUrl();
+        }
+        catch (Exception error)
+        {
+            Serilog.Log.Warning(error, "Could not read the main window's current page");
+            return null;
+        }
+    }
+
     private void NavigateMainWebViewCore(string url, bool bringToFront)
     {
         if (_mainWindow == null || _isShuttingDown)

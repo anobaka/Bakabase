@@ -90,6 +90,14 @@ management does not require navigating to another device's SPA.
 - **Switching is a navigation.** The SPA asks for a URL (`/federation/local/servers/{id}/open`
   locally, `/client/switcher/{id}/open` inside a relay) and assigns `location`. The tray menu
   (`IMainViewSwitcher`) is the way back when the target's UI is too old to have a switcher.
+  Device-menu and tray switches carry only the current SPA pathname through
+  `#/device-switch?path=...`, preserving the relay ticket outside the fragment. The target
+  resolves that path against its own visible menu after reading its context and navigation
+  settings. A detail page lands on its menu root; an unavailable menu lands on the dashboard.
+  Never carry resource IDs, owner IDs, filters or other source query parameters to another
+  device. Failed context/settings reads offer retry instead of pretending the menu is absent.
+  Explicit links to controller settings, device management or other named pages keep their
+  requested destination. Older UIs safely send the unknown handoff route to their dashboard.
 - **A server is its install identity, not its address.** A relay forwards, and signs, nothing
   until its server's address has answered the pairing handshake (`/remote-access/server-info`)
   with that server's `ServerId` (`UpstreamIdentity`, with `RemoteConsoleManager` as the

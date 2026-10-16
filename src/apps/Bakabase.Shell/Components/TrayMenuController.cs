@@ -394,6 +394,10 @@ internal sealed class TrayMenuController : IDisposable
                 return;
             }
 
+            // Both tray and fallback window-menu clicks arrive on the UI thread. Read the
+            // native WebView here, never from the thread-pool relay resolver below.
+            var currentUrl = _gui.GetMainWebViewUrl();
+
             // Task.Run: the implementation may do its synchronous part (starting a relay) before
             // its first await, and none of that belongs on the UI thread.
             var url = await Task.Run(() => switcher.ResolveUrlAsync(targetId, cts.Token), cts.Token);
@@ -410,7 +414,7 @@ internal sealed class TrayMenuController : IDisposable
                 return;
             }
 
-            _gui.NavigateMainWebView(url, bringToFront: true);
+            _gui.NavigateMainWebView(DeviceSwitchNavigation.ForCurrentMenu(url, currentUrl), bringToFront: true);
         }
         catch (OperationCanceledException) when (cts.IsCancellationRequested)
         {

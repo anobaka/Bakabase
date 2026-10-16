@@ -364,5 +364,8 @@
   "federation.switcher.controllerSettingsNamed": "Current controller settings · {{name}}",
   "federation.switcher.openControllerConfiguration": "Open controller configuration",
   "federation.switcher.pathMappingDescription": "Set how this controller accesses files on {{name}}.",
-  "federation.switcher.controllerSettingsFailed": "Could not open the controller settings. Please retry."
+  "federation.switcher.controllerSettingsFailed": "Could not open the controller settings. Please retry.",
+  "federation.switcher.resolvingDestination": "Opening this menu on the selected device…",
+  "federation.switcher.destinationFailed": "Could not load this device’s menu settings. Retry, or open its home page.",
+  "federation.switcher.goHome": "Open home page"
 }

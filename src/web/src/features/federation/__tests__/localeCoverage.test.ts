@@ -37,6 +37,7 @@ const cn = merge(
 const sources = import.meta.glob<string>(
   [
     "../DevicesPage.tsx",
+    "../DeviceSwitchPage.tsx",
     "../devices/sections.ts",
     "../devices/DevicesNav.tsx",
     "../devices/ThisDeviceTab.tsx",
@@ -156,7 +157,7 @@ describe("locales for the multi-device management screens", () => {
   ).sort();
 
   it("reads keys out of every listed component", () => {
-    expect(Object.keys(sources)).toHaveLength(21);
+    expect(Object.keys(sources)).toHaveLength(22);
     for (const [path, source] of Object.entries(sources)) {
       expect(staticKeys(source).length, path).toBeGreaterThan(0);
     }

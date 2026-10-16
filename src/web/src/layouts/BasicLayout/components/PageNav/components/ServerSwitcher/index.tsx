@@ -4,7 +4,7 @@ import type { ClientSwitcher } from "@/core/clientApi";
 import type { ManagedServersView } from "@/features/federation/types";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   AiOutlineCheck,
@@ -24,6 +24,7 @@ import {
   openManagedServer,
 } from "@/features/federation/switching";
 import { FederationError } from "@/features/federation/transport";
+import { deviceSwitchRoute } from "@/features/federation/deviceSwitchRoute";
 import { ClientMode, ManagedServerState, ManagedServerStateLabel } from "@/sdk/constants";
 import { useRemoteAccessStore } from "@/stores/remoteAccess";
 import { Dropdown, DropdownItem, DropdownMenu, DropdownTrigger } from "@/components/bakaui";
@@ -90,6 +91,7 @@ const BrandLink: React.FC<Props> = ({ collapsed }) => (
 const LocalSwitcher: React.FC<Props> = ({ collapsed }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const serverName = useRemoteAccessStore((state) => state.serverName);
   const [view, setView] = useState<ManagedServersView>();
   const [listFailed, setListFailed] = useState(false);
@@ -146,7 +148,7 @@ const LocalSwitcher: React.FC<Props> = ({ collapsed }) => {
       onControllerSettings={() => navigate(CONFIGURATION_ROUTE)}
       onManageDevices={() => navigate(MANAGE_DEVICES_ROUTE)}
       onOpen={() => void load(true)}
-      onSelect={(entry) => openManagedServer(entry.id)}
+      onSelect={(entry) => openManagedServer(entry.id, deviceSwitchRoute(pathname))}
     />
   );
 };
@@ -157,6 +159,7 @@ const ConsoleSwitcher: React.FC<Props> = ({ collapsed }) => {
   const serverName = useRemoteAccessStore((state) => state.serverName);
   const localName = useRemoteAccessStore((state) => state.localName);
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const [switcher, setSwitcher] = useState<ClientSwitcher>();
   const [listFailed, setListFailed] = useState(false);
 
@@ -209,7 +212,7 @@ const ConsoleSwitcher: React.FC<Props> = ({ collapsed }) => {
       onManageDevices={() => openLocalView(MANAGE_DEVICES_ROUTE)}
       onOpen={() => void load()}
       onPathMapping={() => navigate("/client-path-mapping")}
-      onSelect={(entry) => openConsoleTarget(entry.id)}
+      onSelect={(entry) => openConsoleTarget(entry.id, deviceSwitchRoute(pathname))}
     />
   );
 };

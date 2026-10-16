@@ -74,9 +74,9 @@ function LocationProbe() {
   return <p data-testid="location">{`${location.pathname}${location.search}`}</p>;
 }
 
-const renderSwitcher = (collapsed = false) =>
+const renderSwitcher = (collapsed = false, initialEntry = "/resource") =>
   render(
-    <MemoryRouter initialEntries={["/resource"]}>
+    <MemoryRouter initialEntries={[initialEntry]}>
       <ServerSwitcher collapsed={collapsed} />
       <Routes>
         <Route element={<LocationProbe />} path="*" />
@@ -152,7 +152,7 @@ describe("this device's own window", () => {
         url: "http://127.0.0.1:34650/?__bakabase_switch=token",
       }),
     ];
-    renderSwitcher();
+    renderSwitcher(false, "/resource?owner=mac&resourceId=123#selection");
     expect(within(trigger()).getByText("Desk")).toBeInTheDocument();
     expect(screen.queryByText("federation.switcher.managing")).not.toBeInTheDocument();
     await waitFor(() => expect(requestsTo("GET", "/federation/local/servers")).toHaveLength(1));
@@ -186,7 +186,9 @@ describe("this device's own window", () => {
       fireEvent.click(within(menu).getByRole("menuitem", { name: /NAS/ }));
     });
     await waitFor(() =>
-      expect(assign).toHaveBeenCalledWith("http://127.0.0.1:34650/?__bakabase_switch=token"),
+      expect(assign).toHaveBeenCalledWith(
+        "http://127.0.0.1:34650/?__bakabase_switch=token#/device-switch?path=%2Fresource",
+      ),
     );
     expect(
       JSON.parse(String(requestsTo("POST", "/federation/local/servers/nas/open")[0][1]?.body)),
@@ -508,7 +510,7 @@ describe("the console (the desktop app showing a managed server)", () => {
         data: { url: "http://127.0.0.1:34651/?__bakabase_switch=abc" },
       }),
     );
-    renderSwitcher();
+    renderSwitcher(false, "/custom-property?owner=nas&propertyId=12");
     const menu = await openMenu();
     const studio = await within(menu).findByRole("menuitem", { name: /Studio/ });
 
@@ -523,7 +525,9 @@ describe("the console (the desktop app showing a managed server)", () => {
       fireEvent.click(studio);
     });
     await waitFor(() =>
-      expect(assign).toHaveBeenCalledWith("http://127.0.0.1:34651/?__bakabase_switch=abc"),
+      expect(assign).toHaveBeenCalledWith(
+        "http://127.0.0.1:34651/?__bakabase_switch=abc#/device-switch?path=%2Fcustom-property",
+      ),
     );
   });
 
@@ -737,7 +741,7 @@ describe("the console (the desktop app showing a managed server)", () => {
         data: { url: "http://localhost:34567/" },
       }),
     ];
-    renderSwitcher();
+    renderSwitcher(false, "/data-sync?deviceId=nas");
     const menu = await openMenu();
     const local = within(menu).getByRole("menuitem", { name: /Desk/ });
 
@@ -748,7 +752,11 @@ describe("the console (the desktop app showing a managed server)", () => {
     await act(async () => {
       fireEvent.click(local);
     });
-    await waitFor(() => expect(assign).toHaveBeenCalledWith("http://localhost:34567/"));
+    await waitFor(() =>
+      expect(assign).toHaveBeenCalledWith(
+        "http://localhost:34567/#/device-switch?path=%2Fdata-sync",
+      ),
+    );
   });
 
   it("still says which server it is managing when the menu is collapsed", async () => {

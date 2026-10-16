@@ -300,6 +300,23 @@ public class ConsoleIntegrationContractTests
     }
 
     [TestMethod]
+    public async Task Native_menu_handoff_survives_relay_ticket_without_forwarding_source_parameters()
+    {
+        var desk = await Server("server-desk", "Desk");
+        await _console.AddManagedAsync(desk);
+        var target = await _console.Get<IMainViewSwitcher>().ResolveUrlAsync(desk.ServerId);
+        Assert.IsNotNull(target);
+        var url = DeviceSwitchNavigation.ForCurrentMenu(target, "http://localhost:34568/#/resource/42?node=source&epoch=private");
+        var landing = await ConsoleHarness.NavigateAsync(url, "cross-site");
+        Assert.AreEqual(HttpStatusCode.OK, landing.StatusCode);
+        var next = await ConsoleHarness.ContinuationOfAsync(landing, new Uri(url).Fragment);
+        Assert.AreEqual($"http://127.0.0.1:{ConsoleHarness.PortOf(url)}/#/device-switch?path=%2Fresource%2F42", next);
+        Assert.IsFalse(next.Contains("epoch", StringComparison.Ordinal));
+        Assert.IsFalse(next.Contains("node=", StringComparison.Ordinal));
+        Assert.IsFalse(next.Contains(RelayNavigationTokens.QueryName, StringComparison.Ordinal));
+    }
+
+    [TestMethod]
     public async Task Opening_lands_on_the_page_asked_for_and_reaches_the_server_signed_without_cookie_or_ticket()
     {
         var desk = await Server("server-desk", "Desk");
