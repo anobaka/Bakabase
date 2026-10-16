@@ -1,0 +1,208 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  width: 100%;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 28px;
+}
+
+.toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sort {
+  min-width: 150px;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid hsl(var(--heroui-default-200) / 0.7);
+  border-radius: 12px;
+  background: hsl(var(--heroui-content1));
+  color: hsl(var(--heroui-foreground));
+  font-size: 13px;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid hsl(var(--heroui-focus));
+    outline-offset: 2px;
+  }
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr));
+  gap: 20px;
+}
+
+.card {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid hsl(var(--heroui-default-200) / 0.65);
+  border-radius: 18px;
+  background: hsl(var(--heroui-content1));
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+
+  &:hover,
+  &:focus-within {
+    border-color: color-mix(in srgb, var(--library-color) 55%, hsl(var(--heroui-default-200)));
+    box-shadow: 0 5px 20px hsl(var(--heroui-foreground) / 0.04);
+  }
+}
+
+.cardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 20px 20px 14px;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--library-color) 9%, transparent),
+    transparent 85%
+  );
+}
+
+.libraryIcon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border: 1px solid color-mix(in srgb, var(--library-color) 25%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--library-color) 12%, hsl(var(--heroui-content1)));
+  color: var(--library-color);
+  font-size: 25px;
+}
+
+.cardContent {
+  padding: 0 20px 20px;
+}
+
+.libraryName {
+  margin-bottom: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.6;
+}
+
+.cardFooter {
+  padding: 0 16px 16px;
+}
+
+.browseArrow {
+  transition: transform 160ms ease;
+
+  .card:hover & {
+    transform: translateX(3px);
+  }
+}
+
+.highlighted {
+  border-color: hsl(var(--heroui-primary));
+  box-shadow: 0 0 0 2px hsl(var(--heroui-primary) / 0.15);
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 330px;
+  padding: 48px 20px;
+  border: 1px dashed hsl(var(--heroui-default-200));
+  border-radius: 20px;
+  background: hsl(var(--heroui-content1));
+  text-align: center;
+}
+
+.emptyIcon {
+  display: grid;
+  place-items: center;
+  width: 76px;
+  height: 76px;
+  border: 1px solid hsl(var(--heroui-primary) / 0.15);
+  border-radius: 23px;
+  background: hsl(var(--heroui-primary) / 0.08);
+  color: hsl(var(--heroui-primary));
+  font-size: 36px;
+  transform: rotate(-6deg);
+
+  svg {
+    transform: rotate(6deg);
+  }
+}
+
+.guide {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  border: 1px solid hsl(var(--heroui-default-200) / 0.5);
+  border-radius: 16px;
+  background: hsl(var(--heroui-default-50) / 0.5);
+}
+
+.skeleton {
+  height: 264px;
+  border-radius: 18px;
+  background: linear-gradient(
+    100deg,
+    hsl(var(--heroui-default-100)) 20%,
+    hsl(var(--heroui-default-200) / 0.6) 40%,
+    hsl(var(--heroui-default-100)) 60%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.8s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .page {
+    gap: 20px;
+    padding: 20px 16px;
+  }
+  .grid {
+    gap: 16px;
+  }
+  .guide {
+    gap: 12px;
+    padding: 16px;
+  }
+  .guide > div:nth-child(2) {
+    flex-basis: calc(100% - 64px);
+  }
+}
+
+@media (min-width: 641px) and (max-width: 900px) {
+  .page {
+    padding: 24px 20px;
+  }
+
+  .grid {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+    gap: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .browseArrow {
+    transition: none;
+  }
+  .skeleton {
+    animation: none;
+  }
+}
