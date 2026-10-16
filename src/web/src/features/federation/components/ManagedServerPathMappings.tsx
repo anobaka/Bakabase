@@ -1,7 +1,10 @@
 import type { ManagedServer, ManagedServerPathMapping } from "../types";
+import type { ManagedMappingTreeLoader } from "./ManagedMappingTree";
 
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+
+import { notifyPathMappingsSaved } from "../managedPathMappingTarget";
 
 import { buttonClass, ErrorNotice, fieldClass, primaryClass } from "./common";
 import ManagedMappingTree from "./ManagedMappingTree";
@@ -20,26 +23,41 @@ import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContext
  * files and open folders here. Shown on the server's card on the devices page and in its
  * panel on the device map.
  */
-type Props = {
-  server: ManagedServer;
+export type ManagedPathMappingSnapshot = Pick<
+  ManagedServer,
+  "serverId" | "name" | "pairedAt" | "pathMappings"
+>;
+
+export type ManagedPathMappingEditorProps = {
+  server: ManagedPathMappingSnapshot;
   busy: boolean;
   onSave: (
     mappings: ManagedServerPathMapping[],
     expectedMappings?: ManagedServerPathMapping[],
   ) => Promise<boolean>;
   className?: string;
+  /** Expanded forms (including dialogs) use the same editor and draft as device management. */
+  expanded?: boolean;
+  loadTree?: ManagedMappingTreeLoader;
+  /** Undefined uses the host folder selector; false disables it for a remote host. */
+  chooseLocal?: false | ((path: string, onSelected: (path: string) => void) => void);
+  targetKind?: "manager" | "relay";
 };
-export default function ManagedServerPathMappings(props: Props) {
+export default function ManagedServerPathMappings(props: ManagedPathMappingEditorProps) {
   return (
     <ManagedMappingEditor key={`${props.server.serverId}:${props.server.pairedAt}`} {...props} />
   );
 }
-function ManagedMappingEditor({
+export function ManagedMappingEditor({
   server,
   busy,
   onSave,
   className = "border-t border-default-200 pt-3",
-}: Props) {
+  expanded = false,
+  loadTree,
+  chooseLocal,
+  targetKind = "manager",
+}: ManagedPathMappingEditorProps) {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const [mappings, setMappings] = useState(server.pathMappings);
@@ -116,6 +134,7 @@ function ManagedMappingEditor({
         setDirty(false);
         setReview(undefined);
         clearDraft();
+        notifyPathMappingsSaved({ serverId: server.serverId, kind: targetKind });
       }
     } catch (failure) {
       if (mounted.current)
@@ -146,14 +165,8 @@ function ManagedMappingEditor({
     (storedDraft.pairedAt !== server.pairedAt ||
       !sameMappings(storedDraft.baseMappings, server.pathMappings));
 
-  return (
-    <details className={className} onToggle={(event) => setOpened(event.currentTarget.open)}>
-      <summary className="cursor-pointer text-sm font-medium">
-        {t("federation.servers.mappings.title")}
-        {server.pathMappings.length > 0 && (
-          <span className="ml-2 text-xs text-default-500">{server.pathMappings.length}</span>
-        )}
-      </summary>
+  const body = (
+    <>
       <p className="mt-2 text-xs text-default-500">{t("federation.servers.mappings.tip")}</p>
       <ErrorNotice error={error} />
       {storedDraft && !dirty && (
@@ -199,8 +212,9 @@ function ManagedMappingEditor({
         </div>
       )}
       <ManagedMappingTree
-        active={opened}
+        active={expanded || opened}
         busy={disabled}
+        loadPage={loadTree}
         mappings={mappings}
         serverId={server.serverId}
         onSelect={(node) => {
@@ -254,29 +268,33 @@ function ManagedMappingEditor({
               />
             </label>
             <div className="flex gap-1 self-end">
-              <button
-                aria-label={t("federation.managedMappings.chooseLocal")}
-                className={buttonClass}
-                disabled={disabled}
-                type="button"
-                onClick={() =>
-                  createPortal(FileSystemSelectorModal, {
-                    targetType: "folder",
-                    startPath: mapping.localPath || undefined,
-                    defaultSelectedPath: mapping.localPath || undefined,
-                    onSelected: (entry) => {
+              {chooseLocal !== false && (
+                <button
+                  aria-label={t("federation.managedMappings.chooseLocal")}
+                  className={buttonClass}
+                  disabled={disabled}
+                  type="button"
+                  onClick={() => {
+                    const selected = (path: string) => {
                       if (mounted.current)
                         edit((rows) =>
-                          rows.map((row, i) =>
-                            i === index ? { ...row, localPath: entry.path } : row,
-                          ),
+                          rows.map((row, i) => (i === index ? { ...row, localPath: path } : row)),
                         );
-                    },
-                  })
-                }
-              >
-                {t("federation.managedMappings.chooseLocal")}
-              </button>
+                    };
+
+                    if (chooseLocal) chooseLocal(mapping.localPath, selected);
+                    else
+                      createPortal(FileSystemSelectorModal, {
+                        targetType: "folder",
+                        startPath: mapping.localPath || undefined,
+                        defaultSelectedPath: mapping.localPath || undefined,
+                        onSelected: (entry) => selected(entry.path),
+                      });
+                  }}
+                >
+                  {t("federation.managedMappings.chooseLocal")}
+                </button>
+              )}
               <button
                 aria-label={t("federation.servers.mappings.remove")}
                 className={`${buttonClass} self-end`}
@@ -352,6 +370,20 @@ function ManagedMappingEditor({
           </div>
         </section>
       )}
+    </>
+  );
+
+  return expanded ? (
+    <div className={className}>{body}</div>
+  ) : (
+    <details className={className} onToggle={(event) => setOpened(event.currentTarget.open)}>
+      <summary className="cursor-pointer text-sm font-medium">
+        {t("federation.servers.mappings.title")}
+        {server.pathMappings.length > 0 && (
+          <span className="ml-2 text-xs text-default-500">{server.pathMappings.length}</span>
+        )}
+      </summary>
+      {body}
     </details>
   );
 }

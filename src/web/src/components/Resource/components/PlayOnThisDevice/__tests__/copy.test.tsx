@@ -6,6 +6,7 @@ import PlayOnThisDevice from "..";
 const mocks = vi.hoisted(() => ({ success: vi.fn(), danger: vi.fn(), markPlayed: vi.fn() }));
 
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
+vi.mock("@/features/playback/RemotePathMappingHint", () => ({ default: () => null }));
 vi.mock("@/sdk/BApi", () => ({
   default: {
     file: {

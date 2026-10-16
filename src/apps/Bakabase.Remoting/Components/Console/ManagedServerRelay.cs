@@ -164,6 +164,13 @@ public sealed class ManagedServerRelay(string serverId, int port, ManagedServerR
         services.AddSingleton(dependencies.IdentityPolicy);
         services.AddSingleton(dependencies.Connector);
         services.AddSingleton<IRelayUnavailablePage, ConsoleUnavailablePageWriter>();
+        services.AddHttpClient<ConsolePathMappingTree>()
+            .ConfigurePrimaryHttpMessageHandler(sp =>
+                UpstreamConnections.CreateHandler(sp.GetRequiredService<UpstreamIdentity>(), TimeSpan.FromSeconds(10),
+                    dependencies.Connector))
+            .AddHttpMessageHandler(sp => new UpstreamIdentityHandler(sp.GetRequiredService<UpstreamIdentity>()))
+            .AddHttpMessageHandler(sp => new DeviceSigningHandler(
+                sp.GetRequiredService<IClientCredentialProvider>(), sp.GetRequiredService<ServerClock>()));
 
         // Instances rather than factories over the app's container, so this container
         // never disposes something the app still owns.

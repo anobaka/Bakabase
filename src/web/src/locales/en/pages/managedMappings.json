@@ -24,5 +24,9 @@
   "federation.managedMappings.useCurrent": "Discard edits and use current configuration",
   "federation.error.MappingTreeBusy": "The folder tree is being prepared. Try again shortly.",
   "federation.error.MappingTreeExpired": "The folder tree expired. Refresh it to continue.",
-  "federation.error.ManagementUpdateRequired": "Update the other device to use this feature. You can still enter path mappings manually."
+  "federation.error.ManagementUpdateRequired": "Update the other device to use this feature. You can still enter path mappings manually.",
+  "federation.error.MappingTreeUnavailable": "Resource directories could not be read. Check the device connection and try again.",
+  "federation.error.InvalidMappingTreeResponse": "The device returned incomplete or oversized directory data. Refresh or update that device and try again.",
+  "federation.error.InvalidMappingTreeRequest": "The directory request is invalid. Refresh the directory tree and try again.",
+  "federation.error.InvalidPathMappings": "The path mappings are invalid. Check the entries and save again."
 }

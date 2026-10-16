@@ -30,6 +30,8 @@ export interface MediaPlayerProps extends React.HTMLAttributes<HTMLElement> {
   /** Supplied by the resource action owner, which knows the viewing device's launch capability. */
   onOpenAlternative?: (filePath: string) => void | Promise<void>;
   canOpenAlternative?: (filePath: string) => boolean;
+  /** Contextual resource actions remain available even when these bytes cannot be previewed. */
+  renderFooterExtra?: (filePath: string) => React.ReactNode;
   renderOperations?: (
     filePath: string,
     mediaType: MediaType,

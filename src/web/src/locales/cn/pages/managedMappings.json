@@ -24,5 +24,9 @@
   "federation.managedMappings.useCurrent": "放弃编辑，使用当前配置",
   "federation.error.MappingTreeBusy": "目录树正在生成，请稍后重试。",
   "federation.error.MappingTreeExpired": "目录树已过期，请刷新目录树。",
-  "federation.error.ManagementUpdateRequired": "对方版本暂不支持此功能，请更新对方。你仍可手动填写路径映射。"
+  "federation.error.ManagementUpdateRequired": "对方版本暂不支持此功能，请更新对方。你仍可手动填写路径映射。",
+  "federation.error.MappingTreeUnavailable": "暂时无法读取资源目录，请检查设备连接后重试。",
+  "federation.error.InvalidMappingTreeResponse": "对方返回的目录数据不完整或超出限制，请刷新或更新对方后重试。",
+  "federation.error.InvalidMappingTreeRequest": "目录查询无效，请刷新目录树后重试。",
+  "federation.error.InvalidPathMappings": "路径映射格式无效，请检查输入后重新保存。"
 }

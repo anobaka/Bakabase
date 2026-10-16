@@ -18,6 +18,13 @@ export interface ClientPathMapping {
   localPath: string;
 }
 
+/** Owned resource-directory metadata, never directories on the controlling computer. */
+export interface ClientPathMappingTreePage {
+  libraryEpoch: string;
+  nodes: { serverPath: string; name: string; resourceCount: number; hasChildren: boolean }[];
+  nextCursor?: string | null;
+}
+
 export interface ClientKnownServer {
   serverId: string;
   serverName?: string;
@@ -127,13 +134,35 @@ const post = <T>(path: string, body?: unknown) =>
   call<T>(path, { method: "POST", body: body === undefined ? undefined : JSON.stringify(body) });
 
 export const clientApi = {
-  status: () => call<ClientStatus>("/status"),
+  status: (signal?: AbortSignal) => call<ClientStatus>("/status", { signal }),
 
-  setPathMappings: (serverId: string, mappings: ClientPathMapping[]) =>
+  setPathMappings: (
+    serverId: string,
+    mappings: ClientPathMapping[],
+    expectedMappings?: ClientPathMapping[],
+  ) =>
     call<{ changed: boolean }>(`/servers/${encodeURIComponent(serverId)}/path-mappings`, {
       method: "PUT",
-      body: JSON.stringify({ mappings }),
+      body: JSON.stringify({ mappings, expectedMappings }),
     }),
+
+  /** The active relay target only; other server IDs are refused by the desktop host. */
+  mappingTree: (
+    serverId: string,
+    request: { parent?: string; cursor?: string; libraryEpoch?: string } = {},
+    signal?: AbortSignal,
+  ) => {
+    const query = new URLSearchParams({ limit: "200" });
+
+    if (request.parent) query.set("parent", request.parent);
+    if (request.cursor) query.set("cursor", request.cursor);
+    if (request.libraryEpoch) query.set("libraryEpoch", request.libraryEpoch);
+
+    return call<ClientPathMappingTreePage>(
+      `/servers/${encodeURIComponent(serverId)}/path-mapping-tree?${query}`,
+      { signal },
+    );
+  },
 
   /** Where else this window can go: this device, and every other server it manages. */
   switcher: {

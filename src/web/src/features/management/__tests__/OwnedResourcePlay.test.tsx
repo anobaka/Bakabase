@@ -57,6 +57,14 @@ vi.mock("@/components/ContextProvider/BakabaseContextProvider", () => ({
   useBakabaseContext: () => ({ createWindow: fixture.window }),
 }));
 vi.mock("@/components/MediaPlayer", () => ({ default: () => null }));
+vi.mock("@/features/playback/RemotePathMappingHint", () => ({
+  default: ({ filePath, source, active = true }: any) =>
+    active ? (
+      <span data-source={source?.serverId} data-testid="mapping-hint">
+        {filePath}
+      </span>
+    ) : null,
+}));
 vi.mock("@/components/Window/bounds", () => ({
   initialWindowBounds: () => ({ x: 30, y: 30, width: 800, height: 600 }),
 }));
@@ -124,6 +132,7 @@ describe("playback bound to a managed resource owner", () => {
   it("discovers only on click and opens the owner's configured files in the ordinary web player", async () => {
     show();
     expect(fixture.request).not.toHaveBeenCalled();
+    expect(screen.queryByTestId("mapping-hint")).toBeNull();
     await clickPlay();
     expect(fixture.request).toHaveBeenCalledWith("resourceBrowserFiles", {
       id: 42,
@@ -145,6 +154,9 @@ describe("playback bound to a managed resource owner", () => {
     }
     expect(props.defaultActiveIndex).toBe(0);
     expect(props.onOpenAlternative).toBeUndefined();
+    const hint = props.renderFooterExtra("/album/movie.mkv");
+
+    expect(hint.props).toMatchObject({ source, filePath: "/album/movie.mkv", compact: true });
     expect(fixture.native).not.toHaveBeenCalled();
   });
   it("keeps browser defaults even when the manager has a native bridge", async () => {
@@ -185,6 +197,8 @@ describe("playback bound to a managed resource owner", () => {
     show();
     await clickPlay();
     expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByTestId("mapping-hint")).toHaveTextContent("/album/cover.jpg");
+    expect(screen.getByTestId("mapping-hint")).toHaveAttribute("data-source", "owner-a");
     expect(fixture.native).not.toHaveBeenCalled();
     expect(fixture.window).not.toHaveBeenCalled();
     fireEvent.click(screen.getByText("resource.openingRules.browser"));

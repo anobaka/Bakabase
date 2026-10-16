@@ -37,6 +37,7 @@ const MediaPlayer = forwardRef<MediaPlayerRef, MediaPlayerProps>(
       entries: propEntries,
       interval = 3000,
       renderOperations,
+      renderFooterExtra,
       autoPlay = false,
       resourceScope = false,
       initialScope = "resource",
@@ -287,6 +288,7 @@ const MediaPlayer = forwardRef<MediaPlayerRef, MediaPlayerProps>(
             playableEntries={playableEntries}
             playing={playing}
             previewStates={previewStates}
+            renderFooterExtra={renderFooterExtra}
             renderOperations={renderOperations}
             onEntryClick={(entry) => {
               const index = playableEntries.findIndex((item) => item.path === entry.path);

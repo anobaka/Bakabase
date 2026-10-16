@@ -15,6 +15,7 @@ vi.mock("./components/MediaPlayerLayout", () => ({
   default: (props: any) => (
     <div>
       <span>{props.activeEntry.path}</span>
+      {props.renderFooterExtra?.(props.activeEntry.playPath || props.activeEntry.path)}
       <input aria-label="filter" />
       <button onClick={props.onNextEntry}>Next</button>
     </div>
@@ -34,6 +35,22 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 describe("media player initialization", () => {
+  it("passes footer context to each selected file without forwarding the callback to the DOM", () => {
+    const entries = [entry("/a.jpg"), entry("/b.jpg")];
+
+    const { container } = render(
+      <MediaPlayer
+        defaultActiveIndex={0}
+        entries={entries}
+        renderFooterExtra={(path) => <span data-testid="footer-context">{path}</span>}
+      />,
+    );
+
+    expect(screen.getByTestId("footer-context")).toHaveTextContent("/a.jpg");
+    fireEvent.click(screen.getByText("Next"));
+    expect(screen.getByTestId("footer-context")).toHaveTextContent("/b.jpg");
+    expect(container.firstChild).not.toHaveAttribute("renderFooterExtra");
+  });
   it("keeps a supplied initial index instead of resetting it after initialization", async () => {
     const entries = [entry("/a.ass"), entry("/movie.mkv")];
 

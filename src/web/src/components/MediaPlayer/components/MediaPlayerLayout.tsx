@@ -22,6 +22,7 @@ interface MediaPlayerLayoutProps {
   previewStates?: Record<string, MediaPreviewState>;
   onPreviewStateChange?: (path: string, state: MediaPreviewState) => void;
   onOpenAlternative?: (path: string) => void | Promise<void>;
+  renderFooterExtra?: (filePath: string) => React.ReactNode;
   getMediaType: (entry: BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntry) => MediaType;
   renderOperations?: (
     filePath: string,
@@ -62,6 +63,7 @@ const MediaPlayerLayout: React.FC<MediaPlayerLayoutProps> = ({
   progress,
   getMediaType,
   renderOperations,
+  renderFooterExtra,
   onEntryClick,
   onToggleCollapse,
   onPrevEntry,
@@ -107,6 +109,7 @@ const MediaPlayerLayout: React.FC<MediaPlayerLayoutProps> = ({
         playableEntries={playableEntries}
         playing={playing}
         progress={progress}
+        renderFooterExtra={renderFooterExtra}
         renderOperations={renderOperations}
         onLoad={onLoad}
         onNextEntry={onNextEntry}

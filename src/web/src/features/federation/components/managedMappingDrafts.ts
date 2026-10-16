@@ -52,7 +52,7 @@ export function readMappingDraft(serverId: string): ManagedMappingDraft | undefi
 }
 
 export function writeMappingDraft(
-  server: ManagedServer,
+  server: Pick<ManagedServer, "serverId" | "pairedAt">,
   mappings: ManagedServerPathMapping[],
   baseMappings: ManagedServerPathMapping[],
 ) {

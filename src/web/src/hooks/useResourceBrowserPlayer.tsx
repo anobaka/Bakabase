@@ -15,6 +15,7 @@ import { initialWindowBounds } from "@/components/Window/bounds";
 import { MEDIA_PLAYER_WINDOW_PERSISTENCE_KEY } from "@/components/Window/persistence";
 import { useResourceOwner } from "@/features/management/resourceContext";
 import { ownerClient } from "@/features/management/api";
+import RemotePathMappingHint from "@/features/playback/RemotePathMappingHint";
 import ResourceBrowserWindow, {
   type ResourceBrowserFilesPage,
 } from "@/features/management/ResourceBrowserWindow";
@@ -191,6 +192,9 @@ export const useResourceBrowserPlayer = () => {
           configuredPaths: candidatesKnown ? locatedPaths : undefined,
           onOpenAlternative: options.onOpenAlternative,
           canOpenAlternative: options.canOpenAlternative,
+          renderFooterExtra: (filePath: string) => (
+            <RemotePathMappingHint compact filePath={filePath} source={owner} />
+          ),
           renderOperations: (): any => {},
         },
         {

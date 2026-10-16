@@ -1,4 +1,5 @@
 using Bakabase.Remoting.Abstractions.Models;
+using Bakabase.Modules.RemoteAccess.Abstractions.Models;
 
 namespace Bakabase.Remoting.Components.Connection;
 
@@ -114,7 +115,7 @@ public sealed class ActiveConnection(IClientConnectionStore store) : IUpstreamTa
     /// still mapping.
     /// </remarks>
     public async Task<bool> SetPathMappingsAsync(string serverId, IEnumerable<ClientPathMapping> mappings,
-        CancellationToken ct = default) =>
+        CancellationToken ct = default, IReadOnlyList<ClientPathMapping>? expectedMappings = null) =>
         await store.MutateAsync(data =>
         {
             var server = data.Servers.FirstOrDefault(s =>
@@ -125,8 +126,14 @@ public sealed class ActiveConnection(IClientConnectionStore store) : IUpstreamTa
                 return false;
             }
 
+            if (expectedMappings != null && !server.PathMappings
+                    .Select(m => (m.ServerPath, m.LocalPath))
+                    .SequenceEqual(expectedMappings.Select(m => (m.ServerPath, m.LocalPath))))
+                throw new ManagedPathMappingsChangedException();
+
             server.PathMappings = mappings
                 .Where(m => !string.IsNullOrWhiteSpace(m.ServerPath) && !string.IsNullOrWhiteSpace(m.LocalPath))
+                .Select(m => new ClientPathMapping {ServerPath = m.ServerPath.Trim(), LocalPath = m.LocalPath.Trim()})
                 .ToList();
 
             return true;

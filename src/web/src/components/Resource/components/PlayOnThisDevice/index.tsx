@@ -3,6 +3,7 @@
 import type { DevicePlatform } from "./playerSchemes";
 import type { DestroyableProps } from "@/components/bakaui/types";
 import type { Resource as ResourceModel } from "@/core/models/Resource";
+import type { ManagementSource } from "@/features/management/api";
 
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -22,12 +23,16 @@ import { Button, Chip, Modal, Select, toast } from "@/components/bakaui";
 import { copyTextToClipboard } from "@/core/clipboard";
 import { useResourceApi, useResourceOwner } from "@/features/management/resourceContext";
 import { managedMediaUrl } from "@/features/management/playback";
+import { createResourceApi } from "@/features/management/resourceApi";
+import RemotePathMappingHint from "@/features/playback/RemotePathMappingHint";
 import { DataOrigin, MediaType } from "@/sdk/constants";
 
 const platformOptions: DevicePlatform[] = ["android", "ios", "windows", "macos", "linux"];
 
 type Props = DestroyableProps & {
   resource: ResourceModel;
+  /** Captured before a detached chooser leaves the resource owner's React tree. */
+  source?: ManagementSource;
   filePath: string;
   isMixed?: boolean;
   onPlayVideos?: () => void;
@@ -41,6 +46,7 @@ type Props = DestroyableProps & {
 
 const PlayOnThisDevice = ({
   resource,
+  source: providedSource,
   filePath,
   isMixed = false,
   onPlayVideos,
@@ -50,8 +56,13 @@ const PlayOnThisDevice = ({
   unavailableReason,
   offerDesktopGuidance = false,
 }: Props) => {
-  const BApi = useResourceApi();
-  const source = useResourceOwner();
+  const inheritedApi = useResourceApi();
+  const contextSource = useResourceOwner();
+  const source = providedSource ?? contextSource;
+  const BApi = useMemo(
+    () => (providedSource ? createResourceApi(providedSource, resource.id) : inheritedApi),
+    [providedSource, resource.id, inheritedApi],
+  );
   const { t } = useTranslation();
   const [copyFeedback, setCopyFeedback] = useState<string>();
   const [platform, setPlatform] = useState<DevicePlatform>(preferredDevicePlatform);
@@ -200,6 +211,7 @@ const PlayOnThisDevice = ({
           )
         )}
         {!onPlayNative && offerDesktopGuidance && <DesktopPlaybackGuideButton />}
+        <RemotePathMappingHint filePath={filePath} source={source} />
         <details className="rounded-lg border border-default-200 px-3 py-2">
           <summary className="cursor-pointer text-sm text-foreground-500">
             {t("resource.playOnThisDevice.moreOptions")}

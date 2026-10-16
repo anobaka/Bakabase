@@ -14,6 +14,7 @@ import MediaPlayer from "@/components/MediaPlayer";
 import { Button } from "@/components/bakaui";
 import { IwFsType } from "@/sdk/constants";
 import { selectInitialMediaIndex } from "@/components/MediaPlayer/media";
+import RemotePathMappingHint from "@/features/playback/RemotePathMappingHint";
 
 export type ResourceBrowserFilesPage = {
   items: PlayableItem[];
@@ -104,10 +105,13 @@ export default function ResourceBrowserWindow({
       <div className="min-h-0 flex-1">
         <MediaPlayer
           key={`${scope}-${page.offset}`}
-          entries={entries}
-          defaultActiveIndex={activeIndex}
-          onOpenAlternative={options.onOpenAlternative}
           canOpenAlternative={options.canOpenAlternative}
+          defaultActiveIndex={activeIndex}
+          entries={entries}
+          renderFooterExtra={(filePath) => (
+            <RemotePathMappingHint compact filePath={filePath} source={source} />
+          )}
+          onOpenAlternative={options.onOpenAlternative}
         />
       </div>
       {(page.hasMore || page.offset > 0 || error) && (
@@ -121,18 +125,18 @@ export default function ResourceBrowserWindow({
             {page.offset + 1}–{page.offset + page.items.length}
           </span>
           <Button
+            isDisabled={loading || page.offset === 0}
             size="sm"
             variant="light"
-            isDisabled={loading || page.offset === 0}
             onPress={() => void changePage(Math.max(0, page.offset - 100))}
           >
             {t("management.previous")}
           </Button>
           <Button
+            isDisabled={loading || !page.hasMore}
+            isLoading={loading}
             size="sm"
             variant="light"
-            isLoading={loading}
-            isDisabled={loading || !page.hasMore}
             onPress={() => void changePage(page.nextOffset!)}
           >
             {t("management.next")}

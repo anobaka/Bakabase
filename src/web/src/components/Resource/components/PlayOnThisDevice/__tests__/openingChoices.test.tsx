@@ -16,6 +16,13 @@ vi.mock("@/sdk/BApi", () => ({
     resource: { markResourceAsPlayed: vi.fn() },
   },
 }));
+vi.mock("@/features/playback/RemotePathMappingHint", () => ({
+  default: ({ filePath, source }: any) => (
+    <span data-source={source?.serverId} data-testid="mapping-hint">
+      {filePath}
+    </span>
+  ),
+}));
 vi.mock("@/components/bakaui", () => ({
   Modal: ({ children }: any) => <div role="dialog">{children}</div>,
   Button: ({ children, onPress }: any) => <button onClick={onPress}>{children}</button>,
@@ -51,6 +58,19 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("one-time opening alternatives", () => {
+  it("preserves the captured resource owner for an in-place mapping hint", () => {
+    render(
+      <PlayOnThisDevice
+        filePath="/album/001.jpg"
+        resource={{ id: 42 } as any}
+        source={{ serverId: "owner-a", libraryEpoch: "epoch-a", isLocal: false } as any}
+        onPlayInBrowser={mocks.browser}
+      />,
+    );
+    expect(screen.getByTestId("mapping-hint")).toHaveTextContent("/album/001.jpg");
+    expect(screen.getByTestId("mapping-hint")).toHaveAttribute("data-source", "owner-a");
+    expect(mocks.browser).not.toHaveBeenCalled();
+  });
   it("explains an unavailable configured player and allows a one-time alternative", () => {
     render(
       <PlayOnThisDevice

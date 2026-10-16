@@ -1,14 +1,19 @@
 "use client";
 
 import type { ClientPathMapping, ClientStatus } from "@/core/clientApi";
+import type { ManagedPathMappingSnapshot } from "@/features/federation/components/ManagedServerPathMappings";
 
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
-import { AiOutlineDelete, AiOutlinePlus } from "react-icons/ai";
 
 import { clientApi } from "@/core/clientApi";
-import { Button, Input } from "@/components/bakaui";
+import ManagedServerPathMappings from "@/features/federation/components/ManagedServerPathMappings";
+import { ErrorNotice } from "@/features/federation/components/common";
+import {
+  mappingTreeLoader,
+  saveManagedPathMappings,
+} from "@/features/federation/managedPathMappingTarget";
 import { useIsPureClient } from "@/stores/remoteAccess";
 
 /**
@@ -24,7 +29,7 @@ const ClientPathMappingPage = () => {
   const isPureClient = useIsPureClient();
 
   const [status, setStatus] = useState<ClientStatus>();
-  const [rows, setRows] = useState<ClientPathMapping[]>([]);
+  const [error, setError] = useState<Error>();
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
@@ -32,9 +37,9 @@ const ClientPathMappingPage = () => {
       const fresh = await clientApi.status();
 
       setStatus(fresh);
-      setRows(fresh.servers.find((s) => s.isActive)?.pathMappings ?? []);
-    } catch {
-      setStatus(undefined);
+      setError(undefined);
+    } catch (failure) {
+      setError(failure instanceof Error ? failure : new Error(String(failure)));
     }
   }, []);
 
@@ -53,23 +58,44 @@ const ClientPathMappingPage = () => {
   const active = status?.servers.find((s) => s.isActive);
 
   if (!active) {
-    return <div className="p-4 text-sm text-foreground-400">{t("clientPathMapping.noServer")}</div>;
+    return (
+      <div className="p-4 text-sm text-foreground-400">
+        <ErrorNotice error={error} onRetry={() => void load()} />
+        {!error && t("clientPathMapping.noServer")}
+      </div>
+    );
   }
 
-  const update = (index: number, patch: Partial<ClientPathMapping>) =>
-    setRows((current) => current.map((r, i) => (i === index ? { ...r, ...patch } : r)));
-
-  const save = async () => {
+  const snapshot: ManagedPathMappingSnapshot = {
+    serverId: active.serverId,
+    name: active.serverName,
+    pairedAt: active.pairedAt,
+    pathMappings: active.pathMappings,
+  };
+  const save = async (rows: ClientPathMapping[], expectedMappings?: ClientPathMapping[]) => {
+    if (!expectedMappings) return false;
     setSaving(true);
     try {
-      // Sent whole rather than merged: a row the user deleted has to disappear, and an
-      // append-only save would leave it mapping.
-      await clientApi.setPathMappings(
-        active.serverId,
-        rows.filter((r) => r.serverPath.trim() && r.localPath.trim()),
+      await saveManagedPathMappings(
+        { kind: "relay", serverId: active.serverId },
+        rows,
+        expectedMappings,
+      );
+      setStatus(
+        (current) =>
+          current && {
+            ...current,
+            servers: current.servers.map((server) =>
+              server.serverId === active.serverId ? { ...server, pathMappings: rows } : server,
+            ),
+          },
       );
       toast.success(t("common.success.saved"));
+
+      return true;
+    } catch (failure) {
       await load();
+      throw failure;
     } finally {
       setSaving(false);
     }
@@ -84,48 +110,18 @@ const ClientPathMappingPage = () => {
         <span className="text-xs text-foreground-400">{t("clientPathMapping.description")}</span>
       </div>
 
-      <div className="flex flex-col gap-2">
-        {rows.map((row, index) => (
-          <div key={index} className="flex items-end gap-2">
-            <Input
-              className="max-w-[360px]"
-              label={index === 0 ? t("clientPathMapping.serverPath") : undefined}
-              placeholder="/data/media"
-              value={row.serverPath}
-              onValueChange={(v) => update(index, { serverPath: v })}
-            />
-            <Input
-              className="max-w-[360px]"
-              label={index === 0 ? t("clientPathMapping.localPath") : undefined}
-              placeholder="Z:\media"
-              value={row.localPath}
-              onValueChange={(v) => update(index, { localPath: v })}
-            />
-            <Button
-              isIconOnly
-              color="danger"
-              variant="light"
-              onPress={() => setRows((current) => current.filter((_, i) => i !== index))}
-            >
-              <AiOutlineDelete />
-            </Button>
-          </div>
-        ))}
-
-        <div className="flex gap-2">
-          <Button
-            size="sm"
-            startContent={<AiOutlinePlus />}
-            variant="flat"
-            onPress={() => setRows((current) => [...current, { serverPath: "", localPath: "" }])}
-          >
-            {t("clientPathMapping.add")}
-          </Button>
-          <Button color="primary" isLoading={saving} size="sm" onPress={save}>
-            {t("common.action.save")}
-          </Button>
-        </div>
-      </div>
+      <ErrorNotice error={error} onRetry={() => void load()} />
+      <p className="text-xs text-default-500">{t("federation.managedMappings.relayLocalPath")}</p>
+      <ManagedServerPathMappings
+        expanded
+        busy={saving}
+        chooseLocal={false}
+        className=""
+        loadTree={mappingTreeLoader({ kind: "relay", serverId: active.serverId })}
+        server={snapshot}
+        targetKind="relay"
+        onSave={save}
+      />
 
       <div className="flex flex-col gap-1">
         <span className="text-sm font-medium">{t("clientPathMapping.canRunHere")}</span>
