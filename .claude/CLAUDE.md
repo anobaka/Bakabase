@@ -39,6 +39,10 @@ Updating is handled by Velopack; there is no updater project in this repo.
 
 ## Common Commands
 
+Before creating local test, build or acceptance artifacts, follow
+[the local development storage rule](rules/local-artifacts.md). On Anobaka's
+Mac, large outputs and command-scoped temporary files belong on ssd1.
+
 ```bash
 # Frontend
 cd Bakabase/src/web && yarn dev          # Start dev server
