@@ -203,6 +203,31 @@ public class DevicePlaybackPreferencesStoreTests
     }
 
     [TestMethod]
+    public async Task A_cancelled_read_does_not_block_later_reads_or_writes()
+    {
+        var store = Store();
+        await store.WriteAsync(Preferences());
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        Func<Task> read = () => store.ReadAsync(cancellation.Token);
+        await read.Should().ThrowAsync<OperationCanceledException>();
+        (await Store().ReadAsync().WaitAsync(TimeSpan.FromSeconds(5))).Should().Be(Preferences());
+        await Store().WriteAsync(Preferences("updated")).WaitAsync(TimeSpan.FromSeconds(5));
+        (await store.ReadAsync()).Should().Be(Preferences("updated"));
+    }
+
+    [TestMethod]
+    public async Task An_invalid_read_does_not_block_an_explicit_repair_write()
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
+        await File.WriteAllTextAsync(FilePath, "{invalid");
+        (await Store().ReadAsync()).Should().Be(DevicePlaybackPreferences.CreateDefault());
+        (await File.ReadAllTextAsync(FilePath)).Should().Be("{invalid");
+        await Store().WriteAsync(Preferences()).WaitAsync(TimeSpan.FromSeconds(5));
+        (await Store().ReadAsync()).Should().Be(Preferences());
+    }
+
+    [TestMethod]
     public async Task A_failed_atomic_rename_removes_its_temporary_file_and_preserves_the_obstruction()
     {
         Directory.CreateDirectory(FilePath);

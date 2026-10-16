@@ -19,9 +19,10 @@ public sealed class DevicePlaybackPreferencesStore(IOptions<PlayerModuleOptions>
         PropertyNameCaseInsensitive = false
     };
 
-    // Separate relay containers may have separate stores over the same file. A
-    // path-scoped gate protects their writes; the atomic rename protects readers.
-    private static readonly ConcurrentDictionary<string, SemaphoreSlim> WriteGates = new(
+    // Separate relay containers may have separate stores over the same file.
+    // Keep this installation's readers closed before Windows replaces the file,
+    // and retain atomic replacement for other readers outside these containers.
+    private static readonly ConcurrentDictionary<string, SemaphoreSlim> FileGates = new(
         OperatingSystem.IsWindows() || OperatingSystem.IsMacOS()
             ? StringComparer.OrdinalIgnoreCase
             : StringComparer.Ordinal);
@@ -31,16 +32,26 @@ public sealed class DevicePlaybackPreferencesStore(IOptions<PlayerModuleOptions>
         try
         {
             var path = ResolvePath();
-            if (path == null || !File.Exists(path)) return DevicePlaybackPreferences.CreateDefault();
+            if (path == null) return DevicePlaybackPreferences.CreateDefault();
+            var gate = FileGates.GetOrAdd(path, _ => new SemaphoreSlim(1, 1));
+            await gate.WaitAsync(ct);
+            try
+            {
+                if (!File.Exists(path)) return DevicePlaybackPreferences.CreateDefault();
 
-            await using var stream = new FileStream(path, FileMode.Open, FileAccess.Read,
-                FileShare.ReadWrite | FileShare.Delete, 4096, FileOptions.Asynchronous);
-            if (stream.Length > MaximumFileSize) return DevicePlaybackPreferences.CreateDefault();
+                await using var stream = new FileStream(path, FileMode.Open, FileAccess.Read,
+                    FileShare.ReadWrite | FileShare.Delete, 4096, FileOptions.Asynchronous);
+                if (stream.Length > MaximumFileSize) return DevicePlaybackPreferences.CreateDefault();
 
-            var preferences = await JsonSerializer.DeserializeAsync<DevicePlaybackPreferences>(stream, Json, ct);
-            if (preferences == null) return DevicePlaybackPreferences.CreateDefault();
-            preferences.Validate();
-            return preferences;
+                var preferences = await JsonSerializer.DeserializeAsync<DevicePlaybackPreferences>(stream, Json, ct);
+                if (preferences == null) return DevicePlaybackPreferences.CreateDefault();
+                preferences.Validate();
+                return preferences;
+            }
+            finally
+            {
+                gate.Release();
+            }
         }
         catch (Exception e) when (e is JsonException or IOException or UnauthorizedAccessException or ArgumentException)
         {
@@ -56,7 +67,7 @@ public sealed class DevicePlaybackPreferencesStore(IOptions<PlayerModuleOptions>
         preferences.Validate();
         var path = ResolvePath() ??
                    throw new InvalidOperationException("The device playback preferences location is unavailable.");
-        var gate = WriteGates.GetOrAdd(path, _ => new SemaphoreSlim(1, 1));
+        var gate = FileGates.GetOrAdd(path, _ => new SemaphoreSlim(1, 1));
 
         await gate.WaitAsync(ct);
         string? temporary = null;
