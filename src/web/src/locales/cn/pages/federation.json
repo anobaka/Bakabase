@@ -363,5 +363,7 @@
   "federation.switcher.controllerSettingsFailed": "无法打开控制端设置，请重试。",
   "federation.switcher.resolvingDestination": "正在目标设备打开当前菜单…",
   "federation.switcher.destinationFailed": "无法读取此设备的菜单设置。请重试，或前往它的首页。",
-  "federation.switcher.goHome": "前往首页"
+  "federation.switcher.goHome": "前往首页",
+  "federation.managedMappings.dialog.title": "{{name}} · 路径映射",
+  "federation.managedMappings.relayLocalPath": "本机路径指运行当前一体版的电脑上的路径，请输入这台电脑可访问的完整路径。路径映射不会共享或复制文件。"
 }

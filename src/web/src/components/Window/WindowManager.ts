@@ -1,14 +1,16 @@
 import type { WindowState } from "./types";
 
+import { WINDOW_Z_INDEX_MAX, WINDOW_Z_INDEX_MIN } from "./layers";
+
 // Global window manager for tracking all instances and magnetic snapping
 export class WindowManager {
   private static instance: WindowManager;
   private windows: Map<string, WindowState> = new Map();
   private listeners: Set<(windows: WindowState[]) => void> = new Set();
   private snapThreshold = 20; // pixels
-  private minZIndex = 1000;
-  private maxZIndex = 2000;
-  private currentMaxZIndex = 1000;
+  private minZIndex = WINDOW_Z_INDEX_MIN;
+  private maxZIndex = WINDOW_Z_INDEX_MAX;
+  private currentMaxZIndex = WINDOW_Z_INDEX_MIN;
 
   static getInstance(): WindowManager {
     if (!WindowManager.instance) {

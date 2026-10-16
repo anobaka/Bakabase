@@ -181,11 +181,50 @@ public static class ConsoleEndpoints
 
                 var input = await ReadAsync<PathMappingsInput>(context);
 
-                await WriteAsync(context, new
+                if (input?.Mappings == null || input.Mappings.Any(mapping => mapping == null) ||
+                    input.ExpectedMappings?.Any(mapping => mapping == null) == true)
                 {
-                    changed = await connection.SetPathMappingsAsync(serverId, input?.Mappings ?? [],
-                        context.RequestAborted)
-                });
+                    await RefuseAsync(context, HttpStatusCode.BadRequest, "InvalidPathMappings");
+                    return;
+                }
+
+                try
+                {
+                    await WriteAsync(context, new
+                    {
+                        changed = await connection.SetPathMappingsAsync(serverId, input.Mappings,
+                            context.RequestAborted, input.ExpectedMappings)
+                    });
+                }
+                catch (ManagedPathMappingsChangedException)
+                {
+                    await RefuseAsync(context, HttpStatusCode.Conflict, "PathMappingsChanged");
+                }
+            });
+
+        // This reads owned resource metadata from this relay's already authenticated upstream.
+        // It never lists this computer's directories or reaches another managed connection.
+        endpoints.MapGet($"{Prefix}/servers/{{serverId}}/path-mapping-tree",
+            async (HttpContext context, string serverId, ConsoleRelayContext relay, ConsolePathMappingTree tree) =>
+            {
+                if (!string.Equals(serverId, relay.ServerId, StringComparison.Ordinal))
+                {
+                    await RefuseAsync(context, HttpStatusCode.NotFound, "UnknownServer");
+                    return;
+                }
+
+                var query = context.Request.Query;
+                if (query.Any(entry => entry.Value.Count != 1 || entry.Key is not ("parent" or "cursor" or "limit" or "libraryEpoch")) ||
+                    query.TryGetValue("limit", out var rawLimit) && !int.TryParse(rawLimit, out _))
+                {
+                    await RefuseAsync(context, HttpStatusCode.UnprocessableEntity, "InvalidMappingTreeRequest");
+                    return;
+                }
+                var limit = query.TryGetValue("limit", out rawLimit) ? int.Parse(rawLimit!) : 200;
+                var response = await tree.ReadAsync(query["parent"], query["cursor"], limit,
+                    query["libraryEpoch"], context.RequestAborted);
+                if (response.Page != null) await WriteAsync(context, response.Page);
+                else await RefuseAsync(context, (HttpStatusCode)response.StatusCode, response.Reason!);
             });
 
         foreach (var (method, pattern) in ManagedByHostRoutes)
@@ -265,5 +304,5 @@ public static class ConsoleEndpoints
 
     private sealed record OpenInput(string? Path);
 
-    private sealed record PathMappingsInput(List<ClientPathMapping>? Mappings);
+    private sealed record PathMappingsInput(List<ClientPathMapping>? Mappings, List<ClientPathMapping>? ExpectedMappings);
 }

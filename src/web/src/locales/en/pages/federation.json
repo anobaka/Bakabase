@@ -367,5 +367,7 @@
   "federation.switcher.controllerSettingsFailed": "Could not open the controller settings. Please retry.",
   "federation.switcher.resolvingDestination": "Opening this menu on the selected device…",
   "federation.switcher.destinationFailed": "Could not load this device’s menu settings. Retry, or open its home page.",
-  "federation.switcher.goHome": "Open home page"
+  "federation.switcher.goHome": "Open home page",
+  "federation.managedMappings.dialog.title": "{{name}} · Path mapping",
+  "federation.managedMappings.relayLocalPath": "The local path is on the computer running this desktop app. Enter a full path that computer can access. Mapping does not share or copy files."
 }
