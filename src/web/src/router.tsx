@@ -3,7 +3,7 @@ import type { RouteMenuItem } from "@/components/routesMenuConfig";
 import type { ReactNode } from "react";
 
 import { useRoutes, Navigate, useLocation } from "react-router-dom";
-import { useEffect, Suspense } from "react";
+import { useEffect, Suspense, lazy } from "react";
 
 import BakabaseContextProvider from "./components/ContextProvider/BakabaseContextProvider";
 
@@ -12,6 +12,9 @@ import BasicLayout from "@/layouts/BasicLayout";
 import BlankLayout from "@/layouts/BlankLayout";
 import { buildLogger } from "@/components/utils";
 import { trackPageView } from "@/services/Analytics";
+import { DEVICE_SWITCH_ROUTE } from "@/features/federation/deviceSwitchRoute";
+
+const DeviceSwitchPage = lazy(() => import("@/features/federation/DeviceSwitchPage"));
 
 const log = buildLogger("App");
 
@@ -71,7 +74,24 @@ export default function AppRouter() {
 
   const routes = flattenRoutes(routesMenuConfig);
 
+  routes.push({
+    path: DEVICE_SWITCH_ROUTE,
+    element: (
+      <Suspense fallback={null}>
+        <DeviceSwitchPage />
+      </Suspense>
+    ),
+  });
+
   routes.push({ path: "*", element: <Navigate replace to="/" /> });
 
-  return <BakabaseContextProvider>{useRoutes(routes)}</BakabaseContextProvider>;
+  const content = useRoutes(routes);
+
+  // The landing reads its own bounded context/options requests. The normal provider
+  // waits for app startup and would hide the landing's failure and retry controls.
+  return location.pathname.replace(/\/+$/, "").toLowerCase() === DEVICE_SWITCH_ROUTE ? (
+    content
+  ) : (
+    <BakabaseContextProvider>{content}</BakabaseContextProvider>
+  );
 }

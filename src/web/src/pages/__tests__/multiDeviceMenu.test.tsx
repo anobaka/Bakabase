@@ -11,8 +11,8 @@ import { ClientMode } from "@/sdk/constants";
 import { useRemoteAccessStore } from "@/stores/remoteAccess";
 
 /*
- * The multi-device mode (「多设备互联」, "Multi-device") is one menu group: the merged library, the devices
- * page, the device map, data sync and downloads. Library pages require the server's
+ * The multi-device mode (「多设备互联」, "Multi-device") is one menu group: the devices page, the device map, data sync
+ * and downloads. Management pages require the server's
  * capability; data sync and downloads remain available in browsers and managed windows.
  */
 
@@ -56,12 +56,11 @@ const flatten = (items: RouteMenuItem[]): RouteMenuItem[] =>
   items.flatMap((item) => [item, ...flatten(item.children ?? [])]);
 
 describe("the multi-device menu group", () => {
-  it("ends with downloads after the library, the devices page and the device map", () => {
+  it("ends with downloads after the devices page, the device map and data sync", () => {
     const group = routesMenuConfig.find((route) => route.name === "federation.mode");
 
     expect(group?.localNodeOnly).toBeFalsy();
     expect(group?.children?.map((route) => [route.name, route.path, route.localNodeOnly])).toEqual([
-      ["federation.title", "/federation", true],
       ["federation.devices.title", "/federation/devices", true],
       ["federation.map.title", "/federation/map", true],
       ["menu.dataSync", "/data-sync", undefined],
@@ -72,7 +71,7 @@ describe("the multi-device menu group", () => {
       .map((route) => route.path)
       .filter((path) => path?.startsWith("/federation"));
 
-    expect(paths).toEqual(["/federation", "/federation/devices", "/federation/map"]);
+    expect(paths).toEqual(["/federation/devices", "/federation/map"]);
     expect(
       flatten(routesMenuConfig).filter((route) => route.path === "/other-devices"),
     ).toHaveLength(1);
@@ -98,7 +97,7 @@ describe("the multi-device menu group", () => {
 
     expect(await screen.findAllByText("federation.map.title")).not.toHaveLength(0);
     expect(screen.getAllByText("federation.devices.title")).not.toHaveLength(0);
-    expect(screen.getAllByText("federation.title")).not.toHaveLength(0);
+    expect(screen.queryAllByText("federation.title")).toHaveLength(0);
     expect(screen.getAllByText("menu.otherDevices")).not.toHaveLength(0);
   });
 
@@ -119,7 +118,7 @@ describe("the multi-device menu group", () => {
     expect(screen.getAllByText("menu.dataSync")).not.toHaveLength(0);
   });
 
-  it("keeps data sync but hides local library pages in a relay or desktop LAN browser", () => {
+  it("keeps data sync but hides management pages in a relay or desktop LAN browser", () => {
     for (const state of [
       { isLocal: false, clientMode: ClientMode.PureClient },
       { isLocal: false, clientMode: ClientMode.RemoteBrowser },

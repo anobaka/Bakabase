@@ -2,6 +2,7 @@ import type { ReferenceProperty } from "@/components/Property/referenceValues";
 import type { SearchForm } from "@/pages/resource/models";
 
 import { useEffect, useMemo, useState } from "react";
+import { useResourceOwnerKey } from "@/features/management/resourceContext";
 
 import { createChoiceResourceCountsStore } from "./choiceResourceCountsStore";
 
@@ -12,11 +13,15 @@ import {
 
 /** Resource-count display and availability policies belong to the filter using the options. */
 export function useFilterChoiceCounts(property: ReferenceProperty, search?: SearchForm) {
+  const ownerKey = useResourceOwnerKey();
   const globalUsage = useReferenceValueResourceCounts(property);
-  const hasCriteria = JSON.stringify(referenceValueCountsCriteria(search)) !== "{}";
+  const hasCriteria =
+    !!search?.owner ||
+    search?.deviceIds != null ||
+    JSON.stringify(referenceValueCountsCriteria(search)) !== "{}";
   const filteredUsage = useReferenceValueResourceCounts(hasCriteria ? property : undefined, search);
   const usage = hasCriteria ? filteredUsage : globalUsage;
-  const propertyKey = `${property.pool}:${property.id}:${property.type}`;
+  const propertyKey = `${ownerKey}:${property.pool}:${property.id}:${property.type}`;
   const [retained, setRetained] = useState<{
     key: string;
     counts?: Record<string, number>;

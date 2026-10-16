@@ -1,5 +1,7 @@
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.DataSync;
+using Bakabase.InsideWorld.Business.Components.DataSync.Runtime;
+using Microsoft.Extensions.DependencyInjection;
 using Bakabase.Modules.DataSync.Abstractions;
 using Bakabase.Modules.DataSync.Services;
 
@@ -162,8 +164,10 @@ public class ConvertAndCopyOnceTests
     /// <summary>A copy once from <paramref name="source"/>, approved there, its snapshot staged and started.</summary>
     private static async Task CopyOnceAsync(SyncWorld world, SyncHost reader, SyncHost source, bool start = true)
     {
-        var created = await reader.CallAsync(s => s.CreateCopyOnceAsync(
-            new DataSyncCopyOnceInput(source.NodeId, null, null, [.. DataSyncKindIds.All]), true, default));
+        // Historical pending copy state is still readable; no public entry point can create it.
+        var created = await reader.Node.Services.GetRequiredService<DataSyncLinkService>().CreateAsync(
+            new DataSyncLinkCreate(source.NodeId, null, null, DataSyncLinkMode.Off, [.. DataSyncKindIds.All],
+                CopyOnce: true), true, default);
         Assert.IsNull(created.Problem, created.Problem?.Code.ToString());
         if (created.RequestId is { } requestId)
         {

@@ -35,7 +35,7 @@ const LIVE_POLL_MS = 5000;
 /**
  * Otherwise still re-read, often enough that a new request, or a mode changed from another
  * window, shows up on its own. Whatever the mode: "off" is exactly what something else on
- * the page (the sharing panel) or elsewhere (the settings page) may have just changed.
+ * the page (the device map) or elsewhere (the settings page) may have just changed.
  */
 const IDLE_POLL_MS = 15_000;
 /** How often expiries are counted down on screen. */
@@ -349,7 +349,7 @@ export function ManagementAccessPanel({
       action: options.contextChanged
         ? async () => {
             await action();
-            // The mode shows elsewhere too — the sharing panel, the play buttons.
+            // The mode shows elsewhere too — the device map, the play buttons.
             await latest.current.reloadContext?.();
             latest.current.onChanged?.();
           }

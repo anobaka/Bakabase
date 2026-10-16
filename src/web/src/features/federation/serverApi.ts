@@ -5,8 +5,15 @@ import type {
   ManagedServerProbe,
   ManagedServersView,
 } from "./types";
+import type { ManagedMappingTreePage } from "./components/managedMappingTypes";
 
-import { federationRequest, jsonBody } from "./transport";
+import { FederationError, federationRequest, jsonBody } from "./transport";
+
+export interface ManagedDeviceName {
+  name: string;
+  libraryEpoch: string;
+  environmentControlled: boolean;
+}
 
 const prefix = "/servers";
 const server = (serverId: string) => `${prefix}/${encodeURIComponent(serverId)}`;
@@ -51,10 +58,65 @@ export const managedServerApi = {
   /** Asks the server to revoke this device (best effort), then deletes the key here. */
   forget: (serverId: string) =>
     federationRequest<{ changed: boolean }>(server(serverId), { method: "DELETE" }),
-  setPathMappings: (serverId: string, mappings: ManagedServerPathMapping[]) =>
+  /** Reads the owner's effective name and captures its library incarnation before editing. */
+  getDeviceName: async (serverId: string, signal?: AbortSignal) => {
+    const { sources } = await federationRequest<{
+      sources: {
+        serverId: string;
+        libraryEpoch?: string;
+        available: boolean;
+        errorCode?: string;
+        error?: string;
+      }[];
+    }>("/management/sources", { signal });
+    const owner = sources.find((source) => source.serverId === serverId);
+
+    if (!owner?.available || !owner.libraryEpoch)
+      throw new FederationError(
+        owner?.errorCode ?? "ManagedSourceUnavailable",
+        owner?.error ?? "",
+        503,
+      );
+
+    return federationRequest<ManagedDeviceName>(
+      `/management/${encodeURIComponent(serverId)}/request`,
+      jsonBody({ libraryEpoch: owner.libraryEpoch, operation: "deviceNameGet" }, "POST", signal),
+    );
+  },
+  /** A global rename on that device, not an alias in this one's connection list. */
+  setDeviceName: (serverId: string, snapshot: ManagedDeviceName, name: string | null) =>
+    federationRequest<ManagedDeviceName>(
+      `/management/${encodeURIComponent(serverId)}/request`,
+      jsonBody({
+        libraryEpoch: snapshot.libraryEpoch,
+        operation: "deviceNameSet",
+        body: { name, expectedName: snapshot.name },
+      }),
+    ),
+  mappingTree: (
+    serverId: string,
+    options: { parent?: string; cursor?: string; libraryEpoch?: string } = {},
+    signal?: AbortSignal,
+  ) => {
+    const query = new URLSearchParams({ limit: "200" });
+
+    if (options.parent !== undefined) query.set("parent", options.parent);
+    if (options.cursor) query.set("cursor", options.cursor);
+    if (options.libraryEpoch) query.set("libraryEpoch", options.libraryEpoch);
+
+    return federationRequest<ManagedMappingTreePage>(
+      `${server(serverId)}/path-mapping-tree?${query}`,
+      { signal },
+    );
+  },
+  setPathMappings: (
+    serverId: string,
+    mappings: ManagedServerPathMapping[],
+    expectedMappings?: ManagedServerPathMapping[],
+  ) =>
     federationRequest<{ changed: boolean }>(
       `${server(serverId)}/path-mappings`,
-      jsonBody({ mappings }, "PUT"),
+      jsonBody({ mappings, expectedMappings }, "PUT"),
     ),
   /**
    * Starts the server's relay if needed and answers where the window should go.

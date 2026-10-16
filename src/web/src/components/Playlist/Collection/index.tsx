@@ -13,8 +13,10 @@ import BatchPlayButton from "@/components/Playlist/components/BatchPlayButton";
 import PlaylistDetail from "@/components/Playlist/Detail/index";
 import { Button, Modal, Input } from "@/components/bakaui";
 import { PlaylistItemType, IwFsType } from "@/sdk/constants";
-import BApi from "@/sdk/BApi";
+import { useResourceApi, useResourceOwner } from "@/features/management/resourceContext";
+import ManagedPlaylistWindow from "@/features/management/ManagedPlaylistWindow";
 import MediaPlayer from "@/components/MediaPlayer";
+import { MEDIA_PLAYER_WINDOW_PERSISTENCE_KEY } from "@/components/Window/persistence";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 
 type PlayList =
@@ -24,6 +26,8 @@ type Props = {
   addingResourceId?: number;
 };
 const Collection = ({ addingResourceId }: Props) => {
+  const BApi = useResourceApi();
+  const owner = useResourceOwner();
   const [playlists, setPlaylists] = useState<PlayList[]>([]);
 
   const { t } = useTranslation();
@@ -31,13 +35,13 @@ const Collection = ({ addingResourceId }: Props) => {
 
   useEffect(() => {
     loadPlaylists();
-  }, []);
+  }, [BApi]);
 
   const loadPlaylists = useCallback(() => {
     BApi.playlist.getAllPlaylists().then((a) => {
       setPlaylists(a.data || []);
     });
-  }, []);
+  }, [BApi]);
 
   return (
     <div className="w-full">
@@ -124,6 +128,22 @@ const Collection = ({ addingResourceId }: Props) => {
                         size="sm"
                         variant="light"
                         onPress={() => {
+                          if (owner && !owner.isLocal) {
+                            createWindow(
+                              ManagedPlaylistWindow,
+                              {
+                                source: { ...owner },
+                                items: (pl.items ?? []).map((item) => ({ ...item })),
+                                interval: pl.interval,
+                              },
+                              {
+                                title: `${pl.name} · ${owner.name}`,
+                                persistenceKey: MEDIA_PLAYER_WINDOW_PERSISTENCE_KEY,
+                                persistent: true,
+                              },
+                            );
+                            return;
+                          }
                           BApi.playlist.getPlaylistFiles(pl.id).then((a) => {
                             if (a.data) {
                               if (a.data.length > 0) {
@@ -161,6 +181,7 @@ const Collection = ({ addingResourceId }: Props) => {
                                   },
                                   {
                                     title: pl.name,
+                                    persistenceKey: MEDIA_PLAYER_WINDOW_PERSISTENCE_KEY,
                                     persistent: true,
                                   },
                                 );

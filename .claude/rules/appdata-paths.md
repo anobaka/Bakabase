@@ -94,8 +94,9 @@ A data directory has exactly one running owner. The guard
 `BAKABASE_DATA_DIR` and the anchor redirect, normalised (full path, links
 resolved, case-folded on Windows/macOS) — never on the executable or a fixed
 name, so a second launch on the same directory hands off to the running
-window and exits, while a launch on a different directory is its own
-instance.
+window and exits, while headless hosts on different directories retain independent ownership.
+The desktop adds a per-user session gate and switches workspaces serially; it
+does not use independent directory locks as permission to open multiple windows.
 
 - The entry point takes the lock **before** `AppService` is touched: nothing
   may create, migrate, log to or relocate the directory first. A refused
@@ -151,3 +152,83 @@ process proves nothing about two.
 The end-to-end scripts in [`src/tests/upgrade-tests/`](../../src/tests/upgrade-tests/)
 are a manual regression guard for this rule — run them before a release if
 you've touched anything in this list.
+
+## Desktop workspaces (Profiles)
+
+The desktop app resolves an optional `--profile=<registered ID>` before anything
+reads `AppDataAnchor`. First check the user-level desktop session: a normal
+repeat launch activates the current workspace without resolving a disconnected
+default directory. With no live desktop, use the catalog's default profile. An
+existing `BAKABASE_DATA_DIR` launcher retains its prior semantics; opening a
+registered profile explicitly removes that inherited override. Do not set the
+environment variable to select profiles: Setup would treat the path as fixed.
+
+`DesktopProfileRegistry` stores launch control in the platform default anchor's
+**sibling** `<default-anchor>.profiles`, independent of environment overrides and
+all importable libraries. It is not an options/configuration directory. Its
+`profiles.json` is atomically written under an exclusive cross-process lock;
+Unix directories/files are private to the user. Named profile anchors live in
+`anchors/<id>` and use the existing `.redirect` mechanism. Never import or move
+that catalog as part of a library. Setup rejects targets containing these
+controls or another registered space. The historical default anchor is not
+moved or rewritten merely by enabling Profiles.
+
+Registering an existing directory does not import, copy or reset its identity.
+A new space requires an empty directory and runs the same first-launch Setup;
+only initialization creates its new identity. Removing a registration never
+deletes its data or browser state. Dedupe by `DataDirectoryIdentity`, not display
+path; the existing effective-directory lock remains the final ownership guard.
+One desktop coordinator owns the per-user `.desktop-workspace.lock` for its
+whole lifetime. Workspace switching validates the target while the old host is
+usable, acknowledges the HTTP request, gracefully stops the old child, waits for
+its exit and only then starts the target. No active database is replaced and no
+desktop child is force-killed for a switch. Failed or cancelled target startup
+reopens the previous workspace. Setup/maintenance, switching and restart/update
+reservations are mutually exclusive, including across tabs and URL activations.
+The old `closeCurrent=false` input no longer permits a parallel workspace.
+
+The surviving coordinator never initializes AppService or changes AppDataAnchor:
+pass the current anchor and environment-override status explicitly to Setup, and
+pass `--profile` to fresh children. Restarts, Setup children, native browser state
+and updater relaunches must preserve the current profile ID. Desktop URL schemes
+cannot supply IDs, paths or arbitrary actions; valid tool links activate the
+currently running workspace, or the default when no desktop is running.
+
+Only desktop coordinators register an installation lease. Upgrading refuses if
+another coordinator from the **same installation** remains open, and reserves
+its launch gate while the updating child winds down. A durable update ticket
+then tracks the updater by PID plus process start time, so the gap after the
+child/coordinator exits remains blocked. A changed loaded build clears the
+ticket; a failed update clears only after its owner, coordinator and updater
+have all exited. A spawn-before-PID-write crash falls back to detecting that
+installation’s exact updater executable. Do not count business or
+worker children as separate user instances, and never terminate another space
+or a different installation to perform an update.
+
+Windows WebView2 and Linux WebKit use each space's anchor for browser state.
+macOS 14+ uses WKWebsiteDataStore's public identifier API; older macOS versions
+use a nonpersistent store for named spaces so credentials cannot leak between
+spaces. The unchanged default space retains its historical browser store.
+
+### Profile and federation acceptance workflow
+
+Prefer fresh isolated local headless hosts plus one desktop workspace for the
+first multi-device acceptance pass. Desktop profiles switch; they do not run
+simultaneously. Each initialized profile is a logical server with a distinct
+device identity, data directory, browser store and independently selected port.
+Pair the profiles normally, then verify directional management, catalog/resource
+sync, merged local search and owner-routed edits. Reopen the same profile to
+verify activation, and restart/switch profiles to verify stable identities and
+ports. Never clone a live library just to obtain a second test identity.
+
+`Profiles/DesktopProfileProcessTests` runs real separate processes against only
+temporary registries/directories: one desktop session, duplicate activation,
+exclusive-lock probing and installation update exclusion. `DesktopWorkspaceRunnerTests`
+checks real-process A → B → A transitions, failed-start recovery and Setup/update
+reservation races. `DesktopProfileUpdateTicketTests`
+checks update handoff races and failed-update recovery. Keep these distinct from
+production-host protocol tests: an isolated headless host validates federation,
+not native desktop UI or the Windows installer. Use Anobaka-Home (or another
+Windows machine) for the final native upgrade, tray/WebView, mapped local-player
+and retained-pairing acceptance after the local passes. Report explicitly which
+of those native Windows checks have actually been performed.

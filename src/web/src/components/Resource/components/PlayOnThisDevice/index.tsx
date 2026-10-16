@@ -8,65 +8,75 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AiOutlineCopy, AiOutlinePlayCircle } from "react-icons/ai";
 
-import { detectPlatform, schemesForPlatform } from "./playerSchemes";
+import { DesktopPlaybackGuideButton } from "../PlayControl/DesktopPlaybackGuide";
+import { pathMediaType } from "../PlayControl/playbackPolicy";
+
+import {
+  preferredDevicePlatform,
+  PlatformPreferenceKey,
+  isNativePlayerMediaType,
+  schemesForPlatform,
+} from "./playerSchemes";
 
 import { Button, Chip, Modal, Select, toast } from "@/components/bakaui";
 import { copyTextToClipboard } from "@/core/clipboard";
-import BApi from "@/sdk/BApi";
-
-const PlatformPreferenceKey = "bakabase-remote-platform";
-
-type Props = DestroyableProps & {
-  resource: ResourceModel;
-  /** Absolute path of the file to play, as the server knows it. */
-  filePath: string;
-  /** Opens the file in the built-in browser player instead. */
-  onPlayInBrowser: () => void;
-};
+import { useResourceApi, useResourceOwner } from "@/features/management/resourceContext";
+import { managedMediaUrl } from "@/features/management/playback";
+import { DataOrigin, MediaType } from "@/sdk/constants";
 
 const platformOptions: DevicePlatform[] = ["android", "ios", "windows", "macos", "linux"];
 
-const PlayOnThisDevice = ({ resource, filePath, onPlayInBrowser, onDestroyed }: Props) => {
+type Props = DestroyableProps & {
+  resource: ResourceModel;
+  filePath: string;
+  isMixed?: boolean;
+  onPlayVideos?: () => void;
+  onPlayInBrowser: () => void;
+  /** The desktop/relay's existing configured-player action, never a browser URI handler. */
+  onPlayNative?: () => void;
+  unavailableReason?: string;
+  /** Only offer guidance after an actual file candidate has been discovered. */
+  offerDesktopGuidance?: boolean;
+};
+
+const PlayOnThisDevice = ({
+  resource,
+  filePath,
+  isMixed = false,
+  onPlayVideos,
+  onPlayInBrowser,
+  onPlayNative,
+  onDestroyed,
+  unavailableReason,
+  offerDesktopGuidance = false,
+}: Props) => {
+  const BApi = useResourceApi();
+  const source = useResourceOwner();
   const { t } = useTranslation();
   const [copyFeedback, setCopyFeedback] = useState<string>();
-
-  const [platform, setPlatform] = useState<DevicePlatform>(() => {
-    const stored = localStorage.getItem(PlatformPreferenceKey) as DevicePlatform | null;
-
-    if (stored && platformOptions.includes(stored)) {
-      return stored;
-    }
-
-    const detected = detectPlatform();
-
-    return detected === "unknown" ? "windows" : detected;
-  });
-
-  /**
-   * Absolute because the link leaves the browser: a native player has no page to
-   * resolve a relative URL against.
-   */
-  const streamUrl = useMemo(
-    () => new URL(BApi.file.getRawFileUrl({ fullname: filePath }), window.location.origin).href,
-    [filePath],
+  const [platform, setPlatform] = useState<DevicePlatform>(preferredDevicePlatform);
+  const mediaType = useMemo(
+    () => (isMixed ? MediaType.Unknown : pathMediaType(filePath)),
+    [filePath, isMixed],
   );
-
-  const schemes = useMemo(() => schemesForPlatform(platform), [platform]);
-
+  const nativePlaybackSupported = isNativePlayerMediaType(mediaType);
+  const streamUrl = useMemo(
+    () =>
+      new URL(
+        source && !source.isLocal
+          ? managedMediaUrl(source, resource.id, { origin: DataOrigin.FileSystem, key: filePath })
+          : BApi.file.getRawFileUrl({ fullname: filePath }),
+        window.location.origin,
+      ).href,
+    [BApi, source, resource.id, filePath],
+  );
+  const schemes = useMemo(() => schemesForPlatform(platform, mediaType), [platform, mediaType]);
   const title = resource.displayName ?? filePath.split(/[/\\]/).pop() ?? "";
-
-  const recordPlay = () => {
-    // Fire and forget: the hand-off is a navigation, and history must not delay
-    // or block it. The server only learns that playback was started, not how it
-    // went — nothing about a native player is observable from here.
+  const openIn = (build: (url: string, title: string, mediaType: MediaType) => string) => {
     BApi.resource.markResourceAsPlayed(resource.id, { item: filePath }).catch(() => {});
+    // Keep custom protocol navigation within the click gesture.
+    window.location.href = build(streamUrl, title, mediaType);
   };
-
-  const openIn = (build: (url: string, title: string) => string) => {
-    recordPlay();
-    window.location.href = build(streamUrl, title);
-  };
-
   const copyStreamUrl = async () => {
     setCopyFeedback(undefined);
     try {
@@ -83,114 +93,165 @@ const PlayOnThisDevice = ({ resource, filePath, onPlayInBrowser, onDestroyed }: 
     <Modal
       defaultVisible
       footer={false}
-      size="lg"
+      size="md"
       title={t("resource.playOnThisDevice.title")}
       onDestroyed={onDestroyed}
     >
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-3">
+        {unavailableReason && (
+          <p className="rounded-lg bg-warning-50 p-3 text-sm text-warning-700" role="alert">
+            {unavailableReason}
+          </p>
+        )}
+        <Button
+          fullWidth
+          color="primary"
+          startContent={<AiOutlinePlayCircle />}
+          onPress={() => {
+            onPlayInBrowser();
+            onDestroyed?.();
+          }}
+        >
+          {t(
+            nativePlaybackSupported
+              ? "resource.playOnThisDevice.playInBrowser"
+              : "resource.playOnThisDevice.viewInBrowser",
+          )}
+        </Button>
+        {onPlayVideos && (
           <Button
             fullWidth
-            color="primary"
-            startContent={<AiOutlinePlayCircle />}
+            variant="flat"
             onPress={() => {
-              onPlayInBrowser();
+              onPlayVideos();
               onDestroyed?.();
             }}
           >
-            {t("resource.playOnThisDevice.playInBrowser")}
+            {t("resource.playback.playVideos")}
           </Button>
-          <div className="text-xs text-foreground-400">
-            {t("resource.playOnThisDevice.playInBrowserHint")}
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-sm font-medium">
-              {t("resource.playOnThisDevice.nativePlayers")}
-            </span>
-            <Select
-              className="w-[160px]"
-              dataSource={platformOptions.map((p) => ({
-                label: t(`resource.playOnThisDevice.platform.${p}`),
-                value: p,
-              }))}
-              multiple={false}
-              selectedKeys={[platform]}
-              size="sm"
-              onSelectionChange={(keys) => {
-                const value = Array.from(keys)[0]?.toString() as DevicePlatform | undefined;
-
-                if (value) {
-                  setPlatform(value);
-                  localStorage.setItem(PlatformPreferenceKey, value);
-                }
-              }}
-            />
-          </div>
-
-          <div className="text-xs text-foreground-400">
-            {t("resource.playOnThisDevice.nativePlayersHint")}
-          </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            {schemes.map((scheme) => (
-              <Button
-                key={scheme.id}
-                className="justify-start"
-                size="sm"
-                variant="flat"
-                onPress={() => openIn(scheme.build)}
-              >
-                <span className="truncate">{scheme.name}</span>
-                {scheme.needsSetup && (
-                  <Chip color="warning" size="sm" variant="flat">
-                    {t("resource.playOnThisDevice.needsSetup")}
-                  </Chip>
-                )}
-                {scheme.unofficial && (
-                  <Chip size="sm" variant="flat">
-                    {t("resource.playOnThisDevice.unofficial")}
-                  </Chip>
-                )}
-              </Button>
-            ))}
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <label className="flex flex-col gap-1 text-sm">
-            <span>{t("resource.playOnThisDevice.streamUrl")}</span>
-            <textarea
-              readOnly
-              className="w-full resize-none rounded-lg border border-default-200 bg-default-100 p-2 font-mono text-xs"
-              rows={3}
-              value={streamUrl}
-              onFocus={(event) => event.currentTarget.select()}
-            />
-          </label>
+        )}
+        {onPlayNative ? (
           <Button
             fullWidth
-            size="sm"
-            startContent={<AiOutlineCopy />}
-            variant="light"
-            onPress={copyStreamUrl}
+            variant="flat"
+            onPress={() => {
+              onPlayNative();
+              onDestroyed?.();
+            }}
           >
-            {t("resource.playOnThisDevice.copyStreamUrl")}
+            {t("resource.playOnThisDevice.desktopPlayer")}
           </Button>
-          <div aria-live="polite" className="text-xs">
-            {copyFeedback}
+        ) : (
+          !isMixed &&
+          nativePlaybackSupported && (
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-sm font-medium">
+                  {t("resource.playOnThisDevice.nativePlayers")}
+                </span>
+                <Select
+                  className="w-[140px]"
+                  dataSource={platformOptions.map((p) => ({
+                    label: t(`resource.playOnThisDevice.platform.${p}`),
+                    value: p,
+                  }))}
+                  multiple={false}
+                  placeholder={t("resource.playOnThisDevice.choosePlatform")}
+                  selectedKeys={platform === "unknown" ? [] : [platform]}
+                  size="sm"
+                  onSelectionChange={(keys) => {
+                    const value = Array.from(keys)[0]?.toString() as DevicePlatform | undefined;
+
+                    if (value) {
+                      setPlatform(value);
+                      try {
+                        localStorage.setItem(PlatformPreferenceKey, value);
+                      } catch {
+                        /* Best-effort system fallback. */
+                      }
+                    }
+                  }}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {schemes.map((scheme) => (
+                  <Button
+                    key={scheme.id}
+                    className="justify-start"
+                    size="sm"
+                    variant="flat"
+                    onPress={() => openIn(scheme.build)}
+                  >
+                    <span className="truncate">{scheme.name}</span>
+                    {scheme.needsSetup && (
+                      <Chip color="warning" size="sm" variant="flat">
+                        {t("resource.playOnThisDevice.needsSetup")}
+                      </Chip>
+                    )}
+                    {scheme.unofficial && (
+                      <Chip size="sm" variant="flat">
+                        {t("resource.playOnThisDevice.unofficial")}
+                      </Chip>
+                    )}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )
+        )}
+        {!onPlayNative && offerDesktopGuidance && <DesktopPlaybackGuideButton />}
+        <details className="rounded-lg border border-default-200 px-3 py-2">
+          <summary className="cursor-pointer text-sm text-foreground-500">
+            {t("resource.playOnThisDevice.moreOptions")}
+          </summary>
+          <div className="flex flex-col gap-2 pt-3">
+            <p className="text-xs text-foreground-400">
+              {t(
+                isMixed
+                  ? "resource.playback.mixedHint"
+                  : nativePlaybackSupported
+                    ? "resource.playOnThisDevice.nativePlayersHint"
+                    : "resource.playOnThisDevice.fileBrowserHint",
+              )}
+            </p>
+            {!isMixed && (
+              <>
+                <label className="flex flex-col gap-1 text-sm">
+                  <span>
+                    {t(
+                      nativePlaybackSupported
+                        ? "resource.playOnThisDevice.streamUrl"
+                        : "resource.playOnThisDevice.fileUrl",
+                    )}
+                  </span>
+                  <textarea
+                    readOnly
+                    className="w-full resize-none rounded-lg border border-default-200 bg-default-100 p-2 font-mono text-xs"
+                    rows={2}
+                    value={streamUrl}
+                    onFocus={(event) => event.currentTarget.select()}
+                  />
+                </label>
+                <Button
+                  fullWidth
+                  size="sm"
+                  startContent={<AiOutlineCopy />}
+                  variant="light"
+                  onPress={copyStreamUrl}
+                >
+                  {t("resource.playOnThisDevice.copyStreamUrl")}
+                </Button>
+                <div aria-live="polite" className="text-xs">
+                  {copyFeedback}
+                </div>
+              </>
+            )}
           </div>
-          <div className="text-xs text-foreground-400">
-            {t("resource.playOnThisDevice.copyStreamUrlHint")}
-          </div>
-        </div>
+        </details>
       </div>
     </Modal>
   );
 };
 
 PlayOnThisDevice.displayName = "PlayOnThisDevice";
-
 export default PlayOnThisDevice;

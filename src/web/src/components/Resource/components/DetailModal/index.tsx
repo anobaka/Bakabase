@@ -11,9 +11,7 @@ import {
   FolderOpenOutlined,
   LayoutOutlined,
   LoadingOutlined,
-  PlayCircleOutlined,
   ProfileOutlined,
-  QuestionCircleOutlined,
   ReloadOutlined,
   SettingOutlined,
   WarningOutlined,
@@ -36,7 +34,6 @@ import CustomPropertiesEmptyState from "./CustomPropertiesEmptyState";
 import DetailTimestamp from "./DetailTimestamp";
 
 import AcquisitionPanel from "@/components/Resource/components/AcquisitionPanel";
-
 import ResourceCover from "@/components/Resource/components/ResourceCover";
 import DataCardAssociationPanel from "@/components/DataCardAssociationPanel";
 
@@ -56,14 +53,17 @@ import {
 
 import type { DestroyableProps } from "@/components/bakaui/types";
 
-import BApi from "@/sdk/BApi";
+import {
+  ResourceOwnerProvider,
+  useResourceApi,
+  useResourceOwner,
+} from "@/features/management/resourceContext";
 import { PropertyPool, ReservedProperty, ResourceAdditionalItem } from "@/sdk/constants";
 import { convertFromApiValue } from "@/components/StandardValue/helpers";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import PropertyValueScopePicker from "@/components/Resource/components/DetailModal/PropertyValueScopePicker";
 import PlayControl from "@/components/Resource/components/PlayControl";
-
-import type { PlayControlPortalProps } from "@/components/Resource/components/PlayControl";
+import { ResourceDetailPlaybackButton as PlayControlPortal } from "@/components/Resource/components/PlayControl/PlaybackButtons";
 
 import CustomPropertySortModal from "@/components/CustomPropertySortModal";
 import AiTranslateModal from "@/components/Resource/components/DetailModal/AiTranslateModal";
@@ -81,48 +81,13 @@ import { useOpenResourceDirectory } from "@/hooks/useOpenResourceDirectory";
 type ColumnCount = 1 | 2 | 3;
 const PROPERTIES_COLUMNS_KEY = "bakabase:properties:columns";
 
-const PlayControlPortal = ({
-  status,
-  sources,
-  onPlaySource,
-  onNotFound,
-  triggerFsDiscovery,
-  fsDiscoveryStatus,
-}: PlayControlPortalProps) => {
-  const { t } = useTranslation();
-
-  React.useEffect(() => {
-    if (fsDiscoveryStatus === "idle") triggerFsDiscovery();
-  }, [fsDiscoveryStatus, triggerFsDiscovery]);
-
-  const mainSource = sources[0];
-
-  return (
-    <Tooltip content={t("common.action.play")}>
-      <Button
-        isIconOnly
-        color="primary"
-        isDisabled={status === "loading" || status === "idle"}
-        onPress={() => (mainSource ? onPlaySource(mainSource.source) : onNotFound())}
-      >
-        {status === "loading" || status === "idle" ? (
-          <LoadingOutlined spin className="text-lg" />
-        ) : status === "not-found" ? (
-          <QuestionCircleOutlined className="text-lg text-warning" />
-        ) : (
-          <PlayCircleOutlined className="text-lg" />
-        )}
-      </Button>
-    </Tooltip>
-  );
-};
-
 interface Props extends DestroyableProps {
   id: number;
   initialResource?: ResourceModel;
   onRemoved?: () => void;
 }
 const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
+  const BApi = useResourceApi();
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const folderAction = useOpenResourceDirectory();
@@ -574,4 +539,15 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
 
 DetailModal.displayName = "DetailModal";
 
-export default DetailModal;
+export default function OwnedDetailModal(props: Props) {
+  const inheritedOwner = useResourceOwner();
+
+  return (
+    <ResourceOwnerProvider
+      source={props.initialResource?.owner ?? inheritedOwner}
+      resourceId={props.id}
+    >
+      <DetailModal {...props} />
+    </ResourceOwnerProvider>
+  );
+}

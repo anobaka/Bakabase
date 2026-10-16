@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Service.Services;
@@ -32,23 +33,26 @@ public class ResourceDiscoveryController(ResourceDiscoveryService discoveryServi
         Response.Headers["Connection"] = "keep-alive";
         Response.Headers["X-Accel-Buffering"] = "no"; // Disable nginx buffering
 
-        // Flush immediately so client receives headers and triggers onopen
-        await Response.Body.FlushAsync();
-
         var connectionId = discoveryService.RegisterConnection(Response);
 
         try
         {
-            // Keep connection alive until client disconnects
             var ct = HttpContext.RequestAborted;
+            // An empty flush starts Kestrel's response, but a relay may hold those
+            // headers until body data arrives. Send a complete SSE comment now:
+            // the browser waits for onopen before submitting its first discovery.
+            // Register first so an immediate subscription cannot lose its result.
+            await discoveryService.SendHeartbeatAsync(connectionId, ct);
+
+            // Keep connection alive until client disconnects. Use the same writer
+            // as discovery results so heartbeats cannot split an event's payload.
             while (!ct.IsCancellationRequested)
             {
                 await Task.Delay(30000, ct); // 30 second heartbeat
-                await Response.WriteAsync(": heartbeat\n\n", cancellationToken: ct);
-                await Response.Body.FlushAsync(ct);
+                await discoveryService.SendHeartbeatAsync(connectionId, ct);
             }
         }
-        catch (TaskCanceledException)
+        catch (OperationCanceledException) when (HttpContext.RequestAborted.IsCancellationRequested)
         {
             // Client disconnected, this is expected
         }

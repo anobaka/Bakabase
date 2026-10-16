@@ -143,12 +143,11 @@ public class ApplyBTaskTests
     {
         var key = SyncKey.New().Value;
         await _f.ApplyAsync(_link, _peer, (Item, _peer.Record([key], _peer.Next(), Content("Genre"), "a0")));
-        var logId = (await _f.HistoryAsync()).Single().Id;
         using var stop = new CancellationTokenSource();
         await stop.CancelAsync();
 
         await Assert.ThrowsExceptionAsync<OperationCanceledException>(() =>
-            _f.Runner.RunUndoAsync(logId, _f.Args("DataSyncUndo:" + logId, stop.Token)));
+            _f.Runner.RunAutoSyncAsync(_link.Id, _f.Pull(_peer), _f.Args(DataSyncTaskIds.Apply, stop.Token)));
 
         Assert.IsTrue(_f.Kind.Definitions.Values.Any(d => d.Name == "Genre"));
         Assert.IsNull((await _f.HistoryAsync()).Single().UndoneAtUtc);

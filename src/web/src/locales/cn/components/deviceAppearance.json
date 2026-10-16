@@ -1,0 +1,16 @@
+{
+  "deviceAppearance.device": "设备：{{name}}",
+  "deviceAppearance.source": "来源设备：{{name}}",
+  "deviceAppearance.color": "标识颜色",
+  "deviceAppearance.editFor": "{{name}} 的标识颜色",
+  "deviceAppearance.scope": "用于当前服务中的资源、属性和同步状态，各浏览器共用。不会修改设备名称或数据。",
+  "deviceAppearance.automatic": "恢复自动颜色",
+  "deviceAppearance.failed": "无法保存颜色，请重试。",
+  "deviceAppearance.editMetadata": "编辑设备信息",
+  "deviceAppearance.detailsFor": "{{name}} 的设备信息",
+  "deviceAppearance.saveName": "保存名称",
+  "deviceAppearance.saveColor": "保存颜色",
+  "deviceAppearance.nameSaved": "名称已保存。",
+  "deviceAppearance.colorSaved": "颜色已保存。",
+  "deviceAppearance.close": "关闭"
+}

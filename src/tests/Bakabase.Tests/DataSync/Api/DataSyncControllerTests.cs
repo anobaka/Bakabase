@@ -92,8 +92,8 @@ public class DataSyncControllerTests
         ("inbox preview", async c => (await c.PreviewInboxItem(1, default)).Data),
         ("entities", async c => (await c.GetEntities(DataSyncKindIds.CustomProperty, default)).Data),
         ("history", async c => (await c.GetHistory(default)).Data),
+        ("history page", async c => (await c.GetHistoryPage(ct: default)).Data),
         ("history entry", async c => (await c.GetHistoryEntry(1, default)).Data),
-        ("undo preview", async c => (await c.PreviewUndo(1, default)).Data),
         ("restore", async c => (await c.GetRestore(default)).Data),
     ];
 
@@ -132,7 +132,6 @@ public class DataSyncControllerTests
                     false), default)).Data!.Problem),
                 ("entity setting", async c => (await c.SetEntitySync(DataSyncKindIds.CustomProperty, "12",
                     new DataSyncEntitySyncInput(DataSyncEntitySyncState.Detached, null, null, null), default)).Data!.Problem),
-                ("undo", async c => (await c.Undo(1, default)).Data!.Problem),
                 ("restore", async c => (await c.ChooseRestore(new DataSyncRestoreChoiceInputModel
                     { Choice = DataSyncRestoreChoice.ThisDeviceWins }, default)).Data!.Problem),
             };
@@ -170,23 +169,15 @@ public class DataSyncControllerTests
         Assert.AreEqual(DataSyncTaskIds.Fetch, (await h.CallAsync(Callers.Loopback,
             c => c.SyncNow(new DataSyncSyncNowInputModel(), default))).Data!.TaskId);
         Assert.IsNull((await h.CallAsync(Callers.Loopback, c => c.RevokeReader("node-nas", default))).Data);
-        Assert.IsNull((await h.CallAsync(Callers.Loopback, c => c.CreateInvitation(default))).Data!.Problem);
         Assert.IsNull((await h.CallAsync(Callers.Loopback, c => c.RejectRequest("req-in-1", default))).Data);
 
         // Link actions that neither stop nor reset a link: create, change, pause and resume.
-        Assert.IsNull((await h.CallAsync(Callers.Loopback, c => c.CreateLink(new DataSyncLinkCreateInput("node-x", null,
-            null, DataSyncLinkMode.Follow, AllKinds), default))).Data!.Problem);
+        Assert.IsNull((await h.CallAsync(Callers.Loopback, c => c.CreateLink(new DataSyncLinkCreateInput("node-x", null, DataSyncLinkMode.Follow, AllKinds), default))).Data!.Problem);
         Assert.IsNull((await h.CallAsync(Callers.Loopback, c => c.UpdateLink(1,
             new DataSyncLinkUpdateInput(DataSyncLinkMode.Follow, null), default))).Data!.Problem);
         Assert.IsNull((await h.CallAsync(Callers.Loopback, c => c.PauseLink(1, default))).Data!.Problem);
         Assert.IsNull((await h.CallAsync(Callers.Loopback, c => c.ResumeLink(1, new DataSyncLinkResumeInputModel(),
             default))).Data!.Problem);
-
-        // Copy once is not gated: the fetch is asynchronous.
-        var copy = (await h.CallAsync(Callers.Loopback, c => c.CreateCopyOnce(new DataSyncCopyOnceInput("node-den",
-            null, null, AllKinds), default))).Data!;
-        Assert.IsNull(copy.Problem);
-        Assert.AreEqual(DataSyncLinkState.AwaitingReview, h.Store.All().Single(l => l.PeerNodeId == "node-den").State);
 
         // A first sync's Start never waits for the gate: its task does.
         Assert.AreEqual(DataSyncProblemCode.NothingToReview, (await h.CallAsync(Callers.Loopback,
@@ -300,16 +291,11 @@ public class DataSyncControllerTests
         var linkCount = h.Store.All().Count;
         var browser = Callers.UnpairedUnrestricted;
 
-        var link = (await h.CallAsync(browser, c => c.CreateLink(new DataSyncLinkCreateInput("node-newpc", null, null,
+        var link = (await h.CallAsync(browser, c => c.CreateLink(new DataSyncLinkCreateInput("node-newpc", null,
             DataSyncLinkMode.TwoWay, AllKinds), default))).Data!;
         Assert.AreEqual(DataSyncProblemCode.NotAllowedOnThisDevice, link.Problem?.Code);
-        var copy = (await h.CallAsync(browser, c => c.CreateCopyOnce(new DataSyncCopyOnceInput(null,
-            "192.168.1.40:34567", "48213705", AllKinds), default))).Data!;
-        Assert.AreEqual(DataSyncProblemCode.NotAllowedOnThisDevice, copy.Problem?.Code);
         Assert.AreEqual(DataSyncProblemCode.NotAllowedOnThisDevice, (await h.CallAsync(browser,
             c => c.SetSharing(new DataSyncSharingInput(true, true), default))).Data?.Code);
-        Assert.AreEqual(DataSyncProblemCode.NotAllowedOnThisDevice, (await h.CallAsync(browser,
-            c => c.CreateInvitation(default))).Data!.Problem?.Code);
         Assert.AreEqual(DataSyncProblemCode.NotAllowedOnThisDevice, (await h.CallAsync(browser,
             c => c.ApproveRequest("req-in-1", new DataSyncApproveInput(true, null), default))).Data!.Problem?.Code);
 
@@ -351,8 +337,7 @@ public class DataSyncControllerTests
         foreach (var caller in new[] { Callers.Loopback, Callers.Paired })
         {
             await using var h = await WorldAsync();
-            var result = (await h.CallAsync(caller, c => c.CreateLink(new DataSyncLinkCreateInput("node-newpc", null,
-                null, DataSyncLinkMode.TwoWay, AllKinds), default))).Data!;
+            var result = (await h.CallAsync(caller, c => c.CreateLink(new DataSyncLinkCreateInput("node-newpc", null, DataSyncLinkMode.TwoWay, AllKinds), default))).Data!;
 
             Assert.IsNull(result.Problem);
             Assert.AreEqual(DataSyncLinkState.AwaitingAccess, result.Link!.State);
@@ -422,7 +407,7 @@ public class DataSyncControllerTests
         await using var h = await WorldAsync();
         h.Grants.Outbound.Add("node-den");
         var result = (await h.CallAsync(Callers.UnpairedUnrestricted, c => c.CreateLink(
-            new DataSyncLinkCreateInput("node-den", null, null, DataSyncLinkMode.Follow, AllKinds), default))).Data!;
+            new DataSyncLinkCreateInput("node-den", null, DataSyncLinkMode.Follow, AllKinds), default))).Data!;
 
         Assert.IsNull(result.Problem);
         Assert.AreEqual(DataSyncLinkState.AwaitingReview, result.Link!.State);
@@ -444,31 +429,16 @@ public class DataSyncControllerTests
     }
 
     [TestMethod]
-    public async Task With_remote_access_off_no_code_or_approval_is_given()
+    public async Task With_remote_access_off_no_approval_is_given()
     {
-        // G36: a device nobody can reach can neither hand out a code nor approve a request.
+        // G36: a device nobody can reach cannot approve a request.
         await using var h = await WorldAsync();
         h.Grants.RemoteAccessMode = RemoteAccessMode.Disabled;
 
         Assert.AreEqual(DataSyncProblemCode.RemoteAccessOff, (await h.CallAsync(Callers.Loopback,
-            c => c.CreateInvitation(default))).Data!.Problem?.Code);
-        Assert.AreEqual(DataSyncProblemCode.RemoteAccessOff, (await h.CallAsync(Callers.Loopback,
             c => c.ApproveRequest("req-in-1", new DataSyncApproveInput(true, null), default))).Data!.Problem?.Code);
         Assert.AreEqual(0, h.Grants.Changes.Count);
 
-        h.Grants.RemoteAccessMode = RemoteAccessMode.Enabled;
-        h.Grants.SharingEnabled = false;
-        Assert.AreEqual(DataSyncProblemCode.SharingOff, (await h.CallAsync(Callers.Loopback,
-            c => c.CreateInvitation(default))).Data!.Problem?.Code);
-    }
-
-    [TestMethod]
-    public async Task A_refusal_of_the_federation_side_comes_back_as_it_is()
-    {
-        await using var h = await WorldAsync();
-        h.Grants.Refuse = new DataSyncProblem(DataSyncProblemCode.InvitationInvalid, "expired");
-        Assert.AreEqual(DataSyncProblemCode.InvitationInvalid, (await h.CallAsync(Callers.Loopback,
-            c => c.CreateInvitation(default))).Data!.Problem?.Code);
     }
 
     [TestMethod]
@@ -1117,7 +1087,7 @@ public class DataSyncControllerTests
     // ---- entity settings (§6.6) --------------------------------------------------------------------------------
 
     [TestMethod]
-    public async Task An_entity_setting_applies_at_once_under_the_gate_and_is_undoable()
+    public async Task An_entity_setting_applies_at_once_under_the_gate_and_is_recorded()
     {
         await using var h = await DataSyncApiHarness.CreateAsync();
         var genre = await h.AddPropertyAsync("Genre", PropertyType.MultipleChoice);
@@ -1141,11 +1111,6 @@ public class DataSyncControllerTests
         var log = h.Store.History.Single(l => l.Kind == DataSyncHistoryKind.EntitySetting);
         StringAssert.Contains(log.PreImageJson, "\"entitySettings\"");
         Assert.AreEqual("Genre", DataSyncHistoryJson.ReadItems(log.ResultJson).Single().Name);
-        Assert.AreEqual(DataSyncTaskIds.Undo(log.Id), (await h.CallAsync(Callers.Loopback,
-            c => c.Undo(log.Id, default))).Data!.TaskId, "undoable");
-        Assert.AreEqual(DataSyncProblemCode.ApplyInProgress,
-            (await h.CallAsync(Callers.Loopback, c => c.Undo(log.Id, default))).Data!.Problem?.Code, "one at a time");
-
         Assert.AreEqual(DataSyncProblemCode.DecisionsInvalid, (await h.CallAsync(Callers.Loopback,
             c => c.SetEntitySync(DataSyncKindIds.ExtensionGroup, "3", new DataSyncEntitySyncInput(null, true, null, null),
                 default))).Data!.Problem?.Code, "extension groups have no \"definition only\"");
@@ -1157,29 +1122,30 @@ public class DataSyncControllerTests
                 new DataSyncEntitySyncInput(DataSyncEntitySyncState.LocalOnly, null, null, null), default))).Data!.Problem?.Code);
     }
 
-    // ---- history and undo --------------------------------------------------------------------------------------
+    // ---- read-only history --------------------------------------------------------------------------------------
 
     [TestMethod]
-    public async Task Undo_is_checked_before_it_is_enqueued()
+    public async Task History_keeps_old_undo_records_without_exposing_a_write_operation()
     {
         await using var h = await WorldAsync();
+        var undoneAt = h.Clock.UtcNow;
+        var oldEntryId = h.Store.AddHistory(new DataSyncApplyLogDbModel
+        {
+            Kind = DataSyncHistoryKind.AutoSync, AppliedAtUtc = undoneAt.AddMinutes(-1), UndoneAtUtc = undoneAt,
+            SummaryJson = "{}", ResultJson = "[]", PreImageJson = "{}",
+        });
         h.Store.AddHistory(new DataSyncApplyLogDbModel
         {
-            Kind = DataSyncHistoryKind.Undo, AppliedAtUtc = h.Clock.UtcNow, SummaryJson = "{}",
-            ResultJson = "[]", PreImageJson = "{}", UndoOfLogId = 1,
+            Kind = DataSyncHistoryKind.Undo, AppliedAtUtc = undoneAt, SummaryJson = "{}",
+            ResultJson = "[]", PreImageJson = "{}", UndoOfLogId = oldEntryId,
         });
 
         var entries = (await h.CallAsync(Callers.Loopback, c => c.GetHistory(default))).Data!;
-        Assert.AreEqual(DataSyncUndoState.Available, entries.Single(e => e.Id == 1).UndoState);
         Assert.AreEqual(2, entries.Single(e => e.Id == 1).Counts.Updated);
-        Assert.AreEqual(DataSyncUndoState.Expired, entries.Single(e => e.Id == 2).UndoState, "there is no redo");
-
-        Assert.AreEqual(DataSyncProblemCode.UndoNotAvailable, (await h.CallAsync(Callers.Loopback,
-            c => c.Undo(2, default))).Data!.Problem?.Code);
-        Assert.AreEqual(DataSyncProblemCode.UndoNotAvailable, (await h.CallAsync(Callers.Loopback,
-            c => c.PreviewUndo(404, default))).Data!.Problem?.Code);
-        Assert.AreEqual(DataSyncProblemCode.UndoNotAvailable, (await h.CallAsync(Callers.Loopback,
-            c => c.Undo(1, default))).Data!.Problem?.Code, "the planner finds nothing it could take back");
+        Assert.AreEqual(undoneAt, entries.Single(e => e.Id == oldEntryId).UndoneAt);
+        Assert.AreEqual(DataSyncHistoryKind.Undo, entries.Single(e => e.Id == oldEntryId + 1).Kind);
+        var detail = (await h.CallAsync(Callers.Loopback, c => c.GetHistoryEntry(1, default))).Data!;
+        Assert.AreEqual(entries.Single(e => e.Id == 1), detail.Entry);
     }
 
     // ---- restore (§9.5) ----------------------------------------------------------------------------------------
@@ -1242,8 +1208,6 @@ public class DataSyncControllerTests
         h.Store.Edit(1, l => l.CounterpartJson = "{\"mode\":\"twoWay\",\"firstContactCompleted\":true,\"kinds\":[]}");
         var answers = new List<(string, object?)>();
         foreach (var (name, call) in Reads()) answers.Add((name, await h.CallAsync(Callers.Loopback, call)));
-        answers.Add(("invitation", (await h.CallAsync(Callers.Loopback,
-            c => c.CreateInvitation(default))).Data));
         answers.Add(("approval", (await h.CallAsync(Callers.Loopback,
             c => c.ApproveRequest("req-in-1", new DataSyncApproveInput(true, null), default))).Data));
 

@@ -17,6 +17,11 @@ namespace Bakabase.InsideWorld.Models.Configs
 
         public bool IsMenuCollapsed { get; set; }
 
+        public UINavigationLayout? NavigationLayout { get; set; }
+
+        /// <summary>Device display preferences on this server; never part of shared definitions.</summary>
+        public Dictionary<string, string> DeviceColors { get; set; } = new(StringComparer.Ordinal);
+
         public bool ShowResourceUsage { get; set; } = true;
 
         public bool HideResourceCovers { get; set; }
@@ -159,6 +164,11 @@ namespace Bakabase.InsideWorld.Models.Configs
             public bool InlineDisplayName { get; set; }
             public bool AutoSelectFirstPlayableFile { get; set; }
             public List<string> DisplayOperations { get; set; } = [];
+            /// <summary>
+            /// Whether to show the complete cover operations menu. Null preserves the
+            /// legacy DisplayOperations aggregate/default behavior until explicitly set.
+            /// </summary>
+            public bool? ShowAggregateOperations { get; set; }
             public bool HideResourceBorder { get; set; }
             public bool HideHealthScore { get; set; }
             public List<CustomContextMenuItem> CustomContextMenuItems { get; set; } = [];

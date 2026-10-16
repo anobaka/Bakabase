@@ -177,6 +177,37 @@ public sealed class LocalFilePlayableItemProviderCacheTests
     }
 
     [TestMethod]
+    public async Task Discovery_MissingDirectoryFailsWithoutCachingEmpty_AndCanRetry()
+    {
+        var resource = await SeedResource("Disconnected", "a.mp4");
+        await AddPlayableProfile("mp4");
+        Directory.Delete(resource.Path!, true);
+
+        await Assert.ThrowsAsync<IOException>(() =>
+            Provider().GetPlayableItemsAsync(resource, CancellationToken.None));
+        Assert.IsFalse((await GetCacheRow(resource.Id))?.CachedTypes.HasFlag(ResourceCacheType.PlayableFiles) == true);
+
+        Directory.CreateDirectory(resource.Path!);
+        await File.WriteAllTextAsync(Path.Combine(resource.Path!, "a.mp4"), "x");
+        var retry = await Provider().GetPlayableItemsAsync(resource, CancellationToken.None);
+        Assert.AreEqual(1, retry.Items.Count);
+        Assert.IsTrue((await GetCacheRow(resource.Id))?.CachedTypes.HasFlag(ResourceCacheType.PlayableFiles) == true);
+    }
+
+    [TestMethod]
+    public async Task Discovery_MissingSingleFileFailsWithoutCachingPlayableCandidate()
+    {
+        var resource = await SeedResource("Disconnected");
+        resource.Path = Path.Combine(resource.Path!, "missing.mp4");
+        resource.IsFile = true;
+        await AddPlayableProfile("mp4");
+
+        await Assert.ThrowsExactlyAsync<FileNotFoundException>(() =>
+            Provider().GetPlayableItemsAsync(resource, CancellationToken.None));
+        Assert.IsFalse((await GetCacheRow(resource.Id))?.CachedTypes.HasFlag(ResourceCacheType.PlayableFiles) == true);
+    }
+
+    [TestMethod]
     public async Task RefreshResourceCache_RediscoversPlayableFiles_OverStaleEmptyCache()
     {
         // Regression: a resource was cached as "no playable files" (flag set, paths null) — e.g.

@@ -30,18 +30,18 @@ public class DbSetClassificationTests
         Assert.AreEqual(0, unclassified.Count, $"Unclassified DbSets: {string.Join(", ", unclassified)}. {Rule}");
         var stale = DataSyncDbSetClassification.All.Keys.Except(DbSets).ToList();
         Assert.AreEqual(0, stale.Count, $"Classified but not a DbSet: {string.Join(", ", stale)}.");
-        Assert.AreEqual(84, DbSets.Count);
-        Assert.AreEqual(84, DataSyncDbSetClassification.All.Count);
+        Assert.AreEqual(88, DbSets.Count);
+        Assert.AreEqual(DbSets.Count, DataSyncDbSetClassification.All.Count);
     }
 
     [TestMethod]
-    public void The_counts_follow_Appendix_A()
+    public void The_classification_includes_device_local_management_state()
     {
         var byClass = DataSyncDbSetClassification.All.Values.GroupBy(c => c.Class)
             .ToDictionary(g => g.Key, g => g.Count());
         Assert.AreEqual(2, byClass[DataSyncTableClass.Synced]);
         Assert.AreEqual(31, byClass[DataSyncTableClass.LibraryData]);
-        Assert.AreEqual(51, byClass[DataSyncTableClass.NeverSync], "43 existing + 8 data sync tables");
+        Assert.AreEqual(55, byClass[DataSyncTableClass.NeverSync]);
         Assert.IsTrue(DataSyncDbSetClassification.All.Values.All(c => !string.IsNullOrWhiteSpace(c.Reason)));
         Assert.IsTrue(DataSyncDbSetClassification.All.All(e => e.Key == e.Value.DbSetName));
     }
@@ -70,6 +70,21 @@ public class DbSetClassificationTests
 
         Assert.AreEqual(DataSyncTableClass.NeverSync, DataSyncDbSetClassification.Get("Passwords")!.Class);
         Assert.AreEqual(DataSyncTableClass.NeverSync, DataSyncDbSetClassification.Get("AiProviders")!.Class);
+    }
+
+    [TestMethod]
+    public void Management_scopes_jobs_and_source_journal_never_enter_definition_sync()
+    {
+        foreach (var dbSet in new[]
+                 {
+                     nameof(BakabaseDbContext.ResourceScopes), nameof(BakabaseDbContext.ResourceProcessingJobs),
+                     nameof(BakabaseDbContext.MetadataSourceClocks), nameof(BakabaseDbContext.MetadataSourceChanges)
+                 })
+        {
+            var classification = DataSyncDbSetClassification.Get(dbSet)!;
+            Assert.AreEqual(DataSyncTableClass.NeverSync, classification.Class, dbSet);
+            Assert.IsNull(classification.Kind, dbSet);
+        }
     }
 
     [TestMethod]

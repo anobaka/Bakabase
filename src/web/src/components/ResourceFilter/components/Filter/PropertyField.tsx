@@ -11,6 +11,7 @@ import { useFilterConfig } from "../../context/FilterContext";
 import { Button, Tooltip } from "@/components/bakaui";
 import { PropertyPool, ResourceProperty } from "@/sdk/constants";
 import PropertyTypeIcon from "@/components/Property/components/PropertyTypeIcon";
+import DeviceDot from "@/features/management/DeviceDot";
 
 export interface PropertyFieldProps {
   /** Current property. Used for display and as current selection in selector. */
@@ -38,7 +39,13 @@ const PropertyField = ({ property, isReadonly, onSelect, onCancel }: PropertyFie
 
   const handlePress = () => {
     config.renderers.openPropertySelector(
-      property ? { id: property.id, pool: property.pool } : undefined,
+      property
+        ? {
+            id: property.id,
+            pool: property.pool,
+            ...(property.owner ? { owner: property.owner } : {}),
+          }
+        : undefined,
       (selectedProperty, availableOperations) => {
         onSelect?.(selectedProperty, availableOperations);
       },
@@ -54,6 +61,9 @@ const PropertyField = ({ property, isReadonly, onSelect, onCancel }: PropertyFie
         </span>
       )}
       <span className="min-w-0 break-words">{displayText}</span>
+      {property?.owner && (
+        <DeviceDot isSource name={property.owner.name} serverId={property.owner.serverId} />
+      )}
     </>
   );
 

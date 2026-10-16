@@ -235,4 +235,5 @@ public sealed record ManagedServerDiscoveryView(IReadOnlyList<ManagedServerCandi
 public sealed record ManagedServersView(
     bool Available,
     IReadOnlyList<ManagedServerView> Servers,
-    IReadOnlyList<ManagedServerPendingRequestView> Requests);
+    IReadOnlyList<ManagedServerPendingRequestView> Requests,
+    bool CanOpenDesktopView = false);

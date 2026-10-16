@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
+
 import { getEntryMediaType, selectInitialMediaIndex } from "./media";
+
 import { IwFsType, MediaType } from "@/sdk/constants";
 import en from "@/locales/en/components/mediaPlayer.json";
 import cn from "@/locales/cn/components/mediaPlayer.json";
@@ -9,6 +11,7 @@ const entry = (path: string) => ({
   name: path.split("/").pop()!,
   passwordsForDecompressing: [],
 });
+
 describe("browser player file selection", () => {
   it("honors a located playable file before alphabetically earlier subtitles, NFO and covers", () => {
     const files = [
@@ -18,6 +21,7 @@ describe("browser player file selection", () => {
       entry("/film/sample.mkv"),
       entry("/film/main.mkv"),
     ];
+
     expect(selectInitialMediaIndex(files, ["/film/main.mkv"])).toBe(4);
     expect(selectInitialMediaIndex(files)).toBe(3);
     expect(selectInitialMediaIndex(files, ["/film/a.nfo"])).toBe(1);
@@ -39,6 +43,14 @@ describe("browser player file selection", () => {
   it("recognizes uppercase subtitle and NFO files as text", () => {
     for (const extension of ["ASS", "SSA", "NFO", "SRT", "VTT"])
       expect(getEntryMediaType(entry(`/film/info.${extension}`))).toBe(MediaType.Text);
+  });
+  it("keeps literal POSIX backslashes distinct from nested folders", () => {
+    expect(
+      selectInitialMediaIndex(
+        [entry("/film/a/b.jpg"), entry("/film/a\\b.jpg")],
+        ["/film/a\\b.jpg"],
+      ),
+    ).toBe(1);
   });
   it("supplies the same nonempty translated player/window/text keys in both languages", () => {
     expect(Object.keys(cn).sort()).toEqual(Object.keys(en).sort());

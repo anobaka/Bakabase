@@ -28,7 +28,7 @@ const isSection = (value?: string): value is MultiDeviceHelpSectionId =>
 /**
  * Using Bakabase on several devices of one network: every device is its own server with
  * its own storage, and a computer can reach the others in two ways — the merged
- * read-only library, and switching its window to a device it manages.
+ * resources from managed devices, and switching its window to a device it manages.
  */
 const MultiDeviceTopic = ({ section, onNavigate }: HelpTopicContentProps) => {
   const { t } = useTranslation();

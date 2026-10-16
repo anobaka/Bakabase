@@ -12,6 +12,8 @@ import { useResourceOptionsStore } from "@/stores/options";
 import { usePendingSearchStore } from "@/stores/pendingSearch";
 import { FilterDisplayMode } from "@/sdk/constants";
 import BApi from "@/sdk/BApi.tsx";
+import { ResourceSourcesProvider } from "@/features/management/resourceSourcesContext";
+import { useManagementSources } from "@/features/management/useManagementSources";
 import ResourceTabContent from "@/pages/resource/components/ResourceTabContent";
 import RecentlyPlayedDrawer from "@/pages/resource/components/RecentlyPlayedDrawer";
 import SearchSummary from "@/pages/resource/components/SearchSummary";
@@ -22,7 +24,7 @@ type SearchForm = components["schemas"]["Bakabase.Service.Models.Input.ResourceS
 
 const MaxMountedTabs = 10;
 
-const ResourcePage = () => {
+const LocalResourcePage = () => {
   const { t } = useTranslation();
   const [savedSearches, setSavedSearches] = useState<IdName<string>[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -418,8 +420,8 @@ const ResourcePage = () => {
                   <ResourceTabContent
                     activated={isActive}
                     searchId={s.id}
-                    searchName={getDisplayName(s, ss.indexOf(s))}
                     searchInNewTab={searchInNewTab}
+                    searchName={getDisplayName(s, ss.indexOf(s))}
                     onOpenRecentlyPlayed={handleOpenRecentlyPlayed}
                     onSearchFormChange={handleSearchFormChange}
                   />
@@ -435,6 +437,16 @@ const ResourcePage = () => {
         onClose={() => setRecentlyPlayedOpen(false)}
       />
     </div>
+  );
+};
+
+/** The same resource page renders local and managed resources; only the data scope changes. */
+const ResourcePage = () => {
+  const management = useManagementSources();
+  return (
+    <ResourceSourcesProvider value={management}>
+      <LocalResourcePage />
+    </ResourceSourcesProvider>
   );
 };
 

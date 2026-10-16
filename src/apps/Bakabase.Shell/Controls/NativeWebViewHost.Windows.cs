@@ -168,7 +168,7 @@ public partial class NativeWebViewHost
             try
             {
                 var settings = _winWebView!.GetType().GetProperty("Settings")?.GetValue(_winWebView);
-                settings?.GetType().GetProperty("UserAgent")?.SetValue(settings, WebViewUserAgent.Windows);
+                settings?.GetType().GetProperty("UserAgent")?.SetValue(settings, PresentationUserAgent(WebViewUserAgent.Windows));
             }
             catch (Exception ex)
             {

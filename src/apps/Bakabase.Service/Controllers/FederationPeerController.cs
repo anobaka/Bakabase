@@ -29,19 +29,9 @@ using Swashbuckle.AspNetCore.Annotations;
 
 namespace Bakabase.Service.Controllers;
 
-/// <param name="ReachableAddresses">Where other devices can reach this one while it shares; shown next to its code.</param>
-public sealed record FederationPeerStatusResponse(NodeIdentity Identity, bool SharingEnabled,
-    RemoteAccessMode RemoteAccessMode, bool RequirePairing, IReadOnlyList<FederationPeerView> Peers,
-    IReadOnlyList<NodePairingRequestView> Requests, bool BrowsingEnabled = false,
-    IReadOnlyList<string>? ReachableAddresses = null);
-public sealed record FederationBrowsingRequest(bool Enabled);
-public sealed record FederationSharingRequest(bool Enabled, bool EnablePairedRemoteAccess = false);
-/// <param name="ShareBack">Also let the other device read this library (turns sharing on), so one approval pairs both ways.</param>
-public sealed record FederationConnectRequest(string Address, string? Code = null, bool ShareBack = false);
-public sealed record FederationDeviceNameRequest(string? Name);
-public sealed record FederationClaimRequest(string RequestId);
-public sealed record FederationPeerEnabledRequest(bool Enabled);
-public sealed record FederationPathMappingsRequest(NodePathMapping[] Mappings, NodePathMapping[]? ExpectedMappings = null);
+public sealed record FederationPeerStatusResponse(NodeIdentity Identity,
+    RemoteAccessMode RemoteAccessMode, bool RequirePairing, IReadOnlyList<string> ReachableAddresses);
+public sealed record FederationDeviceNameRequest(string? Name, string? ExpectedName = null);
 /// <param name="AsNewNode">A new node rather than a new library generation of this one.</param>
 /// <param name="ReplaceInstallIdentity">
 /// With <paramref name="AsNewNode"/>: a copied installation, which also takes a new install
@@ -54,74 +44,19 @@ public sealed record FederationPeerChange(bool Changed = true);
 [ApiController]
 [Route("federation/local/peers")]
 [FederationEndpoint(FederationEndpointKind.Local)]
-public sealed class FederationPeerController(FederationPeerService peers, NodePairingClient pairing,
-    INodeIdentityProvider identity, NodeGrantService grants, NodePairingRateLimiter rateLimiter,
-    INodePeerDiscovery discovery, INodeTransport transport, PeerSessionFactory sessions,
-    IRemoteAccessService remoteAccess, IBOptionsManager<RemoteAccessOptions> remoteOptions,
-    TimeProvider timeProvider, FederationPairingFlow flow, FederationStateStore store) : FederationControllerBase
+public sealed class FederationPeerController(FederationPeerService peers,
+    INodeIdentityProvider identity, NodeGrantService grants, IRemoteAccessService remoteAccess,
+    TimeProvider timeProvider, FederationStateStore store) : FederationControllerBase
 {
     [HttpGet]
     [SwaggerOperation(OperationId = "GetFederationPeers")]
     [ProducesResponseType(typeof(FederationPeerStatusResponse), 200)]
-    public async Task<IActionResult> Status([FromServices] FederationBrowsingControl browsing, CancellationToken ct)
+    public async Task<IActionResult> Status(CancellationToken ct)
     {
-        var status = await peers.GetStatusAsync(ct);
-        var mode = remoteAccess.GetEffectiveMode();
-        return FederationResult(new FederationPeerStatusResponse(status.Identity, status.SharingEnabled,
-            mode, remoteAccess.GetRequirePairing(), status.Peers.Select(peer =>
-                peer with { ConnectionState = peer.Enabled ? sessions.GetConnectionState(peer.NodeId) : "Disabled" }).ToArray(),
-            status.Requests, await browsing.IsEnabledAsync(ct),
-            status.SharingEnabled && mode != RemoteAccessMode.Disabled
-                // Published ports and HTTPS proxies can have different reachability on the same host.
-                ? remoteAccess.GetReachableAddresses().Select(a => a.Url)
-                    .Distinct(StringComparer.OrdinalIgnoreCase).ToArray()
-                : []));
-    }
-
-    [HttpPut("browsing")]
-    [SwaggerOperation(OperationId = "SetFederationBrowsing")]
-    [ProducesResponseType(typeof(FederationPeerChange), 200)]
-    public async Task<IActionResult> Browsing([FromBody] FederationBrowsingRequest request,
-        [FromServices] FederationBrowsingControl browsing, CancellationToken ct)
-    {
-        await browsing.SetEnabledAsync(request.Enabled, ct);
-        return FederationResult(new FederationPeerChange());
-    }
-
-    [HttpPut("sharing")]
-    [SwaggerOperation(OperationId = "SetFederationSharing")]
-    [ProducesResponseType(typeof(FederationPeerChange), 200)]
-    public async Task<IActionResult> Sharing([FromBody] FederationSharingRequest request, CancellationToken ct)
-    {
-        await SetSharingAsync(request.Enabled, request.EnablePairedRemoteAccess, ct);
-        return FederationResult(new FederationPeerChange());
-    }
-
-    private async Task SetSharingAsync(bool enabled, bool enablePairedRemoteAccess, CancellationToken ct)
-    {
-        if (enabled && enablePairedRemoteAccess)
-        {
-            // Only the explicit sharing wizard action changes legacy remote-access settings.
-            // Capture the existing settings before initializing either identity: the
-            // legacy file watcher can briefly publish defaults during its own write.
-            var configured = remoteOptions.Value;
-            var allowLiveTranscode = configured.AllowLiveTranscode;
-            var legacyServerId = configured.ServerId;
-            if (string.IsNullOrWhiteSpace(legacyServerId))
-                legacyServerId = await remoteAccess.GetOrCreateServerIdAsync();
-            await identity.GetAsync(ct);
-            await remoteOptions.SaveAsync(new RemoteAccessOptions
-            {
-                // A node reset before its install's identity was replaced with it has a
-                // different NodeId; never replace the existing legacy server identity with it.
-                ServerId = legacyServerId,
-                AllowLiveTranscode = allowLiveTranscode,
-                AdvertisedAddress = configured.AdvertisedAddress,
-                RequirePairing = true,
-                Mode = RemoteAccessMode.Enabled
-            });
-        }
-        await peers.SetSharingAsync(enabled, ct);
+        var node = await identity.GetAsync(ct);
+        return FederationResult(new FederationPeerStatusResponse(node, remoteAccess.GetEffectiveMode(),
+            remoteAccess.GetRequirePairing(), remoteAccess.GetReachableAddresses().Select(a => a.Url)
+                .Distinct(StringComparer.OrdinalIgnoreCase).ToArray()));
     }
 
     [HttpPut("name")]
@@ -129,176 +64,15 @@ public sealed class FederationPeerController(FederationPeerService peers, NodePa
     [ProducesResponseType(typeof(FederationPeerChange), 200)]
     public async Task<IActionResult> Name([FromBody] FederationDeviceNameRequest request, CancellationToken ct)
     {
-        await store.SetDisplayNameAsync(request.Name, ct);
+        await store.ChangeDisplayNameAsync(request.Name, request.ExpectedName, null, ct);
         return FederationResult(new FederationPeerChange());
-    }
-
-    [HttpPost("invite")]
-    [SwaggerOperation(OperationId = "CreateFederationInvitation")]
-    [ProducesResponseType(typeof(NodeInvitation), 200)]
-    public async Task<IActionResult> Invite(CancellationToken ct)
-    {
-        RequireRemoteAccess();
-        return FederationResult(await peers.IssueInvitationAsync(ct));
-    }
-
-    [HttpGet("discover")]
-    [SwaggerOperation(OperationId = "DiscoverFederationPeers")]
-    [ProducesResponseType(typeof(NodeDiscoveryCandidate[]), 200)]
-    public async Task<IActionResult> Discover(CancellationToken ct) =>
-        FederationResult(await discovery.DiscoverAsync(ct));
-
-    [HttpPost("connect")]
-    [SwaggerOperation(OperationId = "ConnectFederationPeer")]
-    [ProducesResponseType(typeof(NodePairingOutcome), 200)]
-    public async Task<IActionResult> Connect([FromBody] FederationConnectRequest request, CancellationToken ct)
-    {
-        // A mistyped address is refused before sharing back switches anything on.
-        FederationHttpClient.NormalizeAddress(request.Address);
-        IReadOnlyList<string>? shareBack = null;
-        if (request.ShareBack)
-        {
-            // Sharing back is an explicit choice on this form; make this device reachable for it,
-            // without replacing a remote-access mode the user already opened further.
-            if (!await store.IsSharingEnabledAsync(ct) || remoteAccess.GetEffectiveMode() == RemoteAccessMode.Disabled)
-                await SetSharingAsync(true, remoteAccess.GetEffectiveMode() == RemoteAccessMode.Disabled, ct);
-            shareBack = flow.GetShareBackAddresses(request.Address);
-            if (shareBack.Count == 0)
-                throw new FederationAccessException("NoReachableAddress", 409,
-                    "This device has no network address the other device could use to read it back.");
-        }
-        var outcome = await pairing.ConnectAsync(request.Address, request.Code, ct, shareBack);
-        if (outcome.Outcome == "granted") await flow.OnOutboundGrantedAsync(ct);
-        return FederationResult(outcome);
-    }
-
-    [HttpPost("claim")]
-    [SwaggerOperation(OperationId = "ClaimFederationPairing")]
-    [ProducesResponseType(typeof(NodePairingOutcome), 200)]
-    public async Task<IActionResult> Claim([FromBody] FederationClaimRequest request, CancellationToken ct)
-    {
-        var outcome = await pairing.ClaimAsync(request.RequestId, ct);
-        if (outcome.Outcome == "granted") await flow.OnOutboundGrantedAsync(ct);
-        return FederationResult(outcome);
-    }
-
-    [HttpPost("requests/{id}/approve")]
-    [SwaggerOperation(OperationId = "ApproveFederationPairing")]
-    [ProducesResponseType(typeof(FederationPeerChange), 200)]
-    public async Task<IActionResult> Approve(string id, CancellationToken ct)
-    {
-        RequireRemoteAccess();
-        flow.ReadBack(await peers.ApproveAsync(id, ct));
-        return FederationResult(new FederationPeerChange());
-    }
-
-    [HttpPost("requests/{id}/reject")]
-    [SwaggerOperation(OperationId = "RejectFederationPairing")]
-    [ProducesResponseType(typeof(FederationPeerChange), 200)]
-    public async Task<IActionResult> Reject(string id, CancellationToken ct)
-    {
-        await peers.RejectAsync(id, ct);
-        return FederationResult(new FederationPeerChange());
-    }
-
-    [HttpDelete("requests/{id}")]
-    [SwaggerOperation(OperationId = "CancelFederationPairing")]
-    [ProducesResponseType(typeof(FederationPeerChange), 200)]
-    public async Task<IActionResult> Cancel(string id, CancellationToken ct)
-    {
-        await peers.CancelOutgoingAsync(id, ct);
-        return FederationResult(new FederationPeerChange());
-    }
-
-    [HttpDelete("grants/{grantId}")]
-    [SwaggerOperation(OperationId = "RevokeFederationGrant")]
-    [ProducesResponseType(typeof(FederationPeerChange), 200)]
-    public async Task<IActionResult> Revoke(string grantId, CancellationToken ct)
-    {
-        await peers.RevokeAsync(grantId, ct);
-        return FederationResult(new FederationPeerChange());
-    }
-
-    [HttpDelete("{nodeId}")]
-    [SwaggerOperation(OperationId = "RemoveFederationPeer")]
-    [ProducesResponseType(typeof(FederationPeerChange), 200)]
-    public async Task<IActionResult> Remove(string nodeId, CancellationToken ct)
-    {
-        await peers.RemovePeerAsync(nodeId, ct);
-        await ForgetDataSyncLinksAsync(nodeId, ct);
-        return FederationResult(new FederationPeerChange());
-    }
-
-    /// <summary>
-    /// Removing a device ends definitions sync with it in both directions, as its confirmation says: the grants went
-    /// with the peer, and this device's own links to it are reset as <c>DELETE /data-sync/links/{id}</c> resets one —
-    /// every definition kept, the link, its bases and what waited on it forgotten. Left alone, a link would find its
-    /// access gone on its next pull and blame the removed device for no longer sharing, and the map would draw that
-    /// device again. Resolved per request: a host without data sync has no links to reset.
-    /// </summary>
-    private async Task ForgetDataSyncLinksAsync(string nodeId, CancellationToken ct)
-    {
-        if (HttpContext?.RequestServices.GetService<IDataSyncService>() is not { } dataSync) return;
-        foreach (var link in (await dataSync.GetLinksAsync(ct))
-                 .Where(l => string.Equals(l.PeerNodeId, nodeId, StringComparison.Ordinal)))
-        {
-            // Busy only when an apply held the gate for longer than a request waits; the link then shows that its
-            // access is gone, and resetting it by hand ("Stop") still works.
-            if (await dataSync.ResetLinkAsync(link.Id, ct) is { Code: not DataSyncProblemCode.LinkNotFound } problem)
-            {
-                HttpContext.RequestServices.GetService<ILogger<FederationPeerController>>()?.LogWarning(
-                    "The data sync link {LinkId} to the removed device {NodeId} stays: {Problem}", link.Id, nodeId,
-                    problem.Code);
-            }
-        }
-    }
-
-    [HttpDelete("{nodeId}/outbound")]
-    [SwaggerOperation(OperationId = "ForgetFederationPeer")]
-    [ProducesResponseType(typeof(FederationPeerChange), 200)]
-    public async Task<IActionResult> Forget(string nodeId, CancellationToken ct)
-    {
-        await peers.ForgetOutboundAsync(nodeId, ct);
-        return FederationResult(new FederationPeerChange());
-    }
-
-    [HttpPut("{nodeId}/enabled")]
-    [SwaggerOperation(OperationId = "SetFederationPeerEnabled")]
-    [ProducesResponseType(typeof(FederationPeerChange), 200)]
-    public async Task<IActionResult> Enable(string nodeId, [FromBody] FederationPeerEnabledRequest request,
-        CancellationToken ct)
-    {
-        await peers.SetEnabledAsync(nodeId, request.Enabled, ct);
-        return FederationResult(new FederationPeerChange());
-    }
-
-    [HttpPut("{nodeId}/path-mappings")]
-    [SwaggerOperation(OperationId = "SetFederationPathMappings")]
-    [ProducesResponseType(typeof(FederationPeerChange), 200)]
-    public async Task<IActionResult> Mappings(string nodeId, [FromBody] FederationPathMappingsRequest request,
-        CancellationToken ct)
-    {
-        await peers.SetPathMappingsAsync(nodeId, request.Mappings ?? [], ct, request.ExpectedMappings);
-        return FederationResult(new FederationPeerChange());
-    }
-
-    [HttpGet("{nodeId}/mapping-roots")]
-    [SwaggerOperation(OperationId = "GetFederationMappingRoots")]
-    [ProducesResponseType(typeof(MappingRoot[]), 200)]
-    public async Task<IActionResult> MappingRoots(string nodeId, CancellationToken ct)
-    {
-        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        deadline.CancelAfter(TimeSpan.FromSeconds(8));
-        using var response = await transport.SendAsync(nodeId, HttpMethod.Get,
-            "/federation/v1/export/mapping-roots", cancellationToken: deadline.Token);
-        return FederationResult(await FederationHttpClient.ReadEnvelopeAsync<MappingRoot[]>(response, deadline.Token));
     }
 
     [HttpPost("identity/reset")]
     [SwaggerOperation(OperationId = "ResetFederationIdentity")]
     [ProducesResponseType(typeof(NodeIdentity), 200)]
     public async Task<IActionResult> Reset([FromBody] FederationIdentityResetRequest request,
-        [FromServices] FederationBrowsingControl browsing, [FromServices] IRemoteDeviceService remoteDevices,
+        [FromServices] IRemoteDeviceService remoteDevices,
         [FromServices] RemoteConnectionRegistry connections, CancellationToken ct)
     {
         // A new install identity comes only with a new node: asked for alone, it would be
@@ -320,7 +94,7 @@ public sealed class FederationPeerController(FederationPeerService peers, NodePa
             // tried again. Here only — each
             // key came with the copy and is the original's as well, so asking a server to revoke
             // it would cut the original off too (see server-switching.md, "Trust is explicit and
-            // pairwise"). Only the desktop app manages servers; a headless one has nothing to forget.
+            // pairwise"). Both desktop and headless hosts own this same connection store.
             if (HttpContext?.RequestServices.GetService<IManagedServerService>() is { } managedServers)
             {
                 try
@@ -347,8 +121,6 @@ public sealed class FederationPeerController(FederationPeerService peers, NodePa
         // its identity and its paired devices — nothing about them was lost.
         else if (request.AsNewNode) node = await peers.ResetAsNewNodeAsync(ct: ct);
         else node = await peers.RotateLibraryEpochAsync(ct);
-        // Old local tickets and reads must not survive changing this library's identity either.
-        await browsing.SetEnabledAsync(false, CancellationToken.None);
         return FederationResult(node);
     }
 
@@ -369,64 +141,6 @@ public sealed class FederationPeerController(FederationPeerService peers, NodePa
         return FederationResult(info);
     }
 
-    [HttpPost("~/federation/v1/pair/code")]
-    [FederationEndpoint(FederationEndpointKind.Public)]
-    [SwaggerOperation(OperationId = "ExchangeFederationInvitation")]
-    [ProducesResponseType(typeof(NodePairExchange), 200)]
-    public async Task<IActionResult> PairCode([FromBody] NodePairCodeRequest request, CancellationToken ct)
-    {
-        CheckRate();
-        var exchange = await peers.ExchangeCodeAsync(request, RemoteAddress, ct);
-        if (exchange.Outcome == "granted") flow.ReadBack(request.NodeId);
-        return FederationResult(exchange);
-    }
-
-    /// <summary>
-    /// Where a library request is allowed or rejected — the devices page's Library sharing tab,
-    /// at the requests waiting there. The anchor is part of the page's contract
-    /// (<c>DevicesAnchor</c> in the web's <c>switching.ts</c>); never rename it.
-    /// </summary>
-    internal const string SharingRequestRoute = "/federation/devices?section=sharing-requests";
-
-    [HttpPost("~/federation/v1/pair/request")]
-    [FederationEndpoint(FederationEndpointKind.Public)]
-    [SwaggerOperation(OperationId = "RequestFederationPairing")]
-    [ProducesResponseType(typeof(NodePairExchange), 200)]
-    public async Task<IActionResult> PairRequest([FromBody] NodePairRequest request,
-        [FromServices] INotificationService notifications, [FromServices] IBakabaseLocalizer localizer,
-        CancellationToken ct)
-    {
-        CheckRate();
-        var (exchange, created) = await peers.SubmitPairingRequestAsync(request, RemoteAddress, ct);
-        if (created)
-        {
-            try
-            {
-                // Approval needs a person at this device while the request is still fresh.
-                await notifications.CreateAsync(new NotificationCreationInputModel
-                {
-                    Source = "Federation",
-                    Title = localizer["Federation_PairingRequest_Title", request.NodeName.Trim()],
-                    Body = localizer["Federation_PairingRequest_Body", RemoteAddress ?? "?"],
-                    PayloadJson = JsonSerializer.Serialize(new { route = SharingRequestRoute }),
-                    Severity = AppNotificationSeverity.Warning
-                });
-            }
-            catch (Exception)
-            {
-                // A notification is a convenience; the request itself is stored.
-            }
-        }
-        return FederationResult(exchange);
-    }
-
-    [HttpPost("~/federation/v1/pair/claim")]
-    [FederationEndpoint(FederationEndpointKind.Public)]
-    [SwaggerOperation(OperationId = "ClaimFederationNodeGrant")]
-    [ProducesResponseType(typeof(NodePairExchange), 200)]
-    public async Task<IActionResult> PairClaim([FromBody] NodePairClaimRequest request, CancellationToken ct) =>
-        FederationResult(await peers.ClaimPairingAsync(request, ct));
-
     [HttpPost("~/federation/v1/export/handshake")]
     [FederationEndpoint(FederationEndpointKind.Export, Scope = FederationScopes.Any)]
     [SwaggerOperation(OperationId = "VerifyFederationNode")]
@@ -438,25 +152,4 @@ public sealed class FederationPeerController(FederationPeerService peers, NodePa
         return FederationResult(await grants.CreateHandshakeAsync(principal.GrantId, request.Challenge, ct));
     }
 
-    private void RequireRemoteAccess()
-    {
-        if (remoteAccess.GetEffectiveMode() == RemoteAccessMode.Disabled)
-            throw new FederationAccessException("RemoteAccessDisabled", 403, "Enable paired remote access before sharing this library.");
-    }
-
-    private string? RemoteAddress
-    {
-        get
-        {
-            var address = HttpContext.Connection.RemoteIpAddress;
-            if (address?.IsIPv4MappedToIPv6 == true) address = address.MapToIPv4();
-            return address?.ToString();
-        }
-    }
-
-    private void CheckRate()
-    {
-        if (!rateLimiter.TryTake(RemoteAddress ?? "unknown"))
-            throw new FederationAccessException("PairingRateLimited", 429, "Too many pairing requests. Try again in a minute.");
-    }
 }

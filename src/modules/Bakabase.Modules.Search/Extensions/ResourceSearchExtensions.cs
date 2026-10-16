@@ -1,4 +1,4 @@
-﻿using Bakabase.Abstractions.Extensions;
+using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Property;
@@ -20,6 +20,8 @@ public static class ResourceSearchExtensions
     {
         return new ResourceSearchDbModel
         {
+            Owner = model.Owner,
+            DeviceIds = model.DeviceIds,
             Group = model.Group?.ToDbModel(),
             Keyword = null, // Keyword is handled separately during search
             Tags = model.Tags,
@@ -62,6 +64,9 @@ public static class ResourceSearchExtensions
         this ResourceSearchDbModel dbModel,
         Dictionary<PropertyPool, Dictionary<int, Abstractions.Models.Domain.Property>>? propertyMap)
     {
+        if (dbModel.Owner != null || dbModel.DeviceIds != null ||
+            dbModel.Group?.ExtractFilters().Any(filter => filter.Owner != null) == true)
+            throw new ArgumentException("Device-scoped search criteria must be resolved for their owner before execution.");
         ResourceSearchFilterGroup? group = null;
 
         if (dbModel.Group != null && propertyMap != null)
@@ -88,6 +93,7 @@ public static class ResourceSearchExtensions
 
         return new ResourceSearchFilterDbModel
         {
+            Owner = model.Owner,
             Value = model.DbValue?.SerializeAsStandardValue(asType.GetDbValueType()),
             Operation = model.Operation,
             PropertyId = model.PropertyId,

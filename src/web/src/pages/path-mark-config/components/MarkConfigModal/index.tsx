@@ -1,25 +1,59 @@
 "use client";
 
+import type { ReactNode } from "react";
 import type { BakabaseAbstractionsModelsDomainPathMark } from "@/sdk/Api";
 import type { MarkConfigModalProps } from "./types";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import { SaveOutlined, SyncOutlined, DownOutlined } from "@ant-design/icons";
+import { SaveOutlined, SyncOutlined } from "@ant-design/icons";
 
-import { parseMarkConfig, buildConfigJson, hasValidPropertyValueExtractor } from "./utils";
+import {
+  parseMarkConfig,
+  buildConfigJson,
+  hasValidValueExtractor as hasValidValueExtractorConfig,
+} from "./utils";
 import ResourceMarkConfig from "./components/ResourceMarkConfig";
 import PropertyMarkConfig from "./components/PropertyMarkConfig";
 import MediaLibraryMarkConfig from "./components/MediaLibraryMarkConfig";
+import MatchModeSelector from "./components/MatchModeSelector";
+import PreviewResults from "./components/PreviewResults";
 import { usePreview } from "./hooks/usePreview";
 
 import { PathMarkType, PathMarkApplyScope } from "@/sdk/constants";
-import { Modal, Switch, DurationInput, Button, toast } from "@/components/bakaui";
+import { Modal, Switch, DurationInput, NumberInput, Button, toast } from "@/components/bakaui";
 import { ResourceTerm, PropertyTerm, MediaLibraryTerm } from "@/components/Chips/Terms";
 import { HelpCenterButton } from "@/components/HelpCenter";
 import BApi from "@/sdk/BApi";
 
-const DEFAULT_EXPIRES_IN_SECONDS = 3600; // 1 hour
+const DEFAULT_EXPIRES_IN_SECONDS = 3600;
+
+const ConfigSection = ({
+  number,
+  title,
+  description,
+  children,
+}: {
+  number: string;
+  title: string;
+  description?: string;
+  children: ReactNode;
+}) => (
+  <section className="rounded-2xl border border-default-200 bg-content1 p-4 sm:p-5">
+    <div className="mb-4 flex items-start gap-3">
+      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary-50 text-xs font-semibold text-primary-600">
+        {number}
+      </span>
+      <div>
+        <h3 className="text-sm font-semibold text-default-800">{title}</h3>
+        {description && (
+          <p className="mt-1 text-xs leading-relaxed text-default-500">{description}</p>
+        )}
+      </div>
+    </div>
+    {children}
+  </section>
+);
 
 const MarkConfigModal = ({
   mark,
@@ -30,58 +64,27 @@ const MarkConfigModal = ({
   onDestroyed,
 }: MarkConfigModalProps) => {
   const { t } = useTranslation();
+  const [config, setConfig] = useState(() => {
+    const initial = parseMarkConfig(mark?.configJson, markType);
 
-  const initialConfig = parseMarkConfig(mark?.configJson, markType);
+    if (!mark && markType === PathMarkType.MediaLibrary)
+      initial.applyScope = PathMarkApplyScope.MatchedAndSubdirectories;
 
-  // For new MediaLibrary marks, default applyScope to MatchedAndSubdirectories
-  if (!mark && markType === PathMarkType.MediaLibrary) {
-    initialConfig.applyScope = PathMarkApplyScope.MatchedAndSubdirectories;
-  }
+    return initial;
+  });
   const [priority, setPriority] = useState(mark?.priority ?? 10);
-  const [config, setConfig] = useState(initialConfig);
-  const [enableExpiration, setEnableExpiration] = useState(
-    mark?.expiresInSeconds != null && mark.expiresInSeconds > 0,
-  );
+  const [enableExpiration, setEnableExpiration] = useState((mark?.expiresInSeconds ?? 0) > 0);
   const [expiresInSeconds, setExpiresInSeconds] = useState(
     mark?.expiresInSeconds ?? DEFAULT_EXPIRES_IN_SECONDS,
   );
   const [syncing, setSyncing] = useState(false);
-  const [showScrollIndicator, setShowScrollIndicator] = useState(false);
-  const contentRef = useRef<HTMLDivElement>(null);
-
-  const preview = usePreview(rootPath, markType, config, 500, rootPaths);
-  const hasValidValueExtractor = hasValidPropertyValueExtractor(config, markType);
-
-  // Check if content is scrollable and update scroll indicator
-  useEffect(() => {
-    const checkScrollable = () => {
-      const el = contentRef.current;
-
-      if (el) {
-        const isScrollable = el.scrollHeight > el.clientHeight;
-        const isAtBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 10;
-
-        setShowScrollIndicator(isScrollable && !isAtBottom);
-      }
-    };
-
-    checkScrollable();
-
-    const el = contentRef.current;
-
-    if (el) {
-      el.addEventListener("scroll", checkScrollable);
-      // Also check on resize
-      const resizeObserver = new ResizeObserver(checkScrollable);
-
-      resizeObserver.observe(el);
-
-      return () => {
-        el.removeEventListener("scroll", checkScrollable);
-        resizeObserver.disconnect();
-      };
-    }
-  }, [config, enableExpiration]);
+  const paths = rootPaths?.length
+    ? rootPaths
+    : [rootPath ?? mark?.path].filter((path): path is string => Boolean(path));
+  const pathCount = paths.length;
+  const preview = usePreview(rootPath ?? mark?.path, markType, config, 500, rootPaths);
+  const hasValidValueExtractor = hasValidValueExtractorConfig(config, markType);
+  const isResource = markType === PathMarkType.Resource;
 
   const handleSave = useCallback(async () => {
     if (!hasValidValueExtractor) return false;
@@ -112,7 +115,7 @@ const MarkConfigModal = ({
     try {
       await BApi.pathMark.startPathMarkSync([mark.id]);
       toast.success(t("pathMarkConfig.success.syncStarted"));
-    } catch (e) {
+    } catch {
       toast.danger(t("pathMarkConfig.error.syncFailed"));
     } finally {
       setSyncing(false);
@@ -123,29 +126,14 @@ const MarkConfigModal = ({
     setConfig((prev) => ({ ...prev, ...updates }));
   }, []);
 
-  const scrollToBottom = () => {
-    contentRef.current?.scrollTo({
-      top: contentRef.current.scrollHeight,
-      behavior: "smooth",
-    });
-  };
-
-  // Determine paths count for title
-  const pathCount = rootPaths?.length ?? (rootPath ? 1 : 0);
-
-  // Prepare preview data for child components
-  const previewData = {
-    loading: preview.loading,
-    results: preview.results,
-    resultsByPath: preview.resultsByPath,
-    isMultiplePaths: preview.isMultiplePaths,
-    error: preview.error,
-    applyScope: preview.applyScope,
-  };
-
   return (
     <Modal
       defaultVisible
+      classNames={{
+        header: "border-b border-default-200",
+        footer: "border-t border-default-200",
+        body: "bg-default-50/60",
+      }}
       footer={{
         actions: ["cancel", "ok"],
         okProps: {
@@ -160,13 +148,13 @@ const MarkConfigModal = ({
             size="sm"
             startContent={<SyncOutlined />}
             variant="flat"
-            onClick={handleSyncNow}
+            onPress={handleSyncNow}
           >
-            {t("pathMarkConfig.action.syncNow")}
+            {t("pathMarkConfig.action.syncSaved")}
           </Button>
         ) : undefined,
       }}
-      size="3xl"
+      size="6xl"
       title={
         <span className="flex items-center gap-1 whitespace-nowrap">
           <Trans
@@ -195,98 +183,135 @@ const MarkConfigModal = ({
       onDestroyed={onDestroyed}
       onOk={handleSave}
     >
-      <div className="relative overflow-hidden">
-        <div
-          ref={contentRef}
-          className="flex flex-col gap-2 max-h-[60vh] overflow-y-auto overflow-x-hidden pr-1"
-        >
-          {/* Type-specific configuration */}
-          {markType === PathMarkType.Resource ? (
-            <ResourceMarkConfig
-              config={config}
-              preview={previewData}
-              priority={priority}
-              t={t}
-              updateConfig={updateConfig}
-              onPriorityChange={setPriority}
-            />
-          ) : markType === PathMarkType.Property ? (
-            <PropertyMarkConfig
-              config={config}
-              preview={previewData}
-              priority={priority}
-              t={t}
-              updateConfig={updateConfig}
-              onPriorityChange={setPriority}
-            />
-          ) : markType === PathMarkType.MediaLibrary ? (
-            <MediaLibraryMarkConfig
-              config={config}
-              preview={previewData}
-              priority={priority}
-              t={t}
-              updateConfig={updateConfig}
-              onPriorityChange={setPriority}
-            />
-          ) : null}
-
-          {/* Expiration Configuration */}
-          <div className="border-t border-default-200 pt-3 mt-2">
-            <div className="flex items-center gap-2 mb-1">
-              <Switch
-                isSelected={enableExpiration}
-                size="sm"
-                onValueChange={(checked) => {
-                  setEnableExpiration(checked);
-                  if (checked && expiresInSeconds <= 0) {
-                    setExpiresInSeconds(DEFAULT_EXPIRES_IN_SECONDS);
-                  }
-                }}
-              />
-              <span className="text-sm font-medium">{t("pathMarkConfig.label.scheduledSync")}</span>
-            </div>
-            <div className="text-xs text-default-400 ml-10 mb-2">
-              {t("pathMarkConfig.tip.expirationDescription")}
-            </div>
-            {enableExpiration && (
-              <div className="ml-10">
-                <DurationInput
-                  minValue={60}
-                  size="sm"
-                  value={expiresInSeconds}
-                  onChange={setExpiresInSeconds}
-                />
+      <div className="py-3">
+        <div className="mb-4 rounded-xl border border-default-200 bg-content1 px-4 py-3">
+          <div className="mb-1 text-[11px] font-medium uppercase tracking-wider text-default-400">
+            {t("pathMarkConfig.layout.markPath")}
+          </div>
+          <div className="max-h-20 overflow-y-auto">
+            {paths.map((path) => (
+              <div key={path} className="break-all font-mono text-xs text-default-700">
+                {path}
               </div>
-            )}
+            ))}
           </div>
         </div>
-
-        {/* Scroll indicator */}
-        {showScrollIndicator && (
-          <div
-            className="absolute bottom-0 left-0 right-0 flex justify-center items-center py-1 bg-gradient-to-t from-background to-transparent cursor-pointer hover:from-primary-50 transition-colors"
-            role="button"
-            tabIndex={0}
-            onClick={scrollToBottom}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                scrollToBottom();
-              }
-            }}
-          >
-            <div className="flex items-center gap-1 text-xs text-primary-500 animate-bounce">
-              <DownOutlined />
-              <span>{t("pathMarkConfig.label.scrollForMore")}</span>
-              <DownOutlined />
-            </div>
+        <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1.12fr)_minmax(0,.88fr)]">
+          <div className="flex min-w-0 flex-col gap-4">
+            <ConfigSection
+              description={t(
+                isResource
+                  ? "pathMark.resource.explanation"
+                  : "pathMarkConfig.layout.matchDescription",
+              )}
+              number="01"
+              title={t("pathMarkConfig.layout.matchTitle")}
+            >
+              <div className="flex flex-col gap-4">
+                <MatchModeSelector
+                  config={config}
+                  markType={markType}
+                  t={t}
+                  updateConfig={updateConfig}
+                />
+              </div>
+            </ConfigSection>
+            <ConfigSection
+              description={t(
+                isResource
+                  ? "pathMarkConfig.layout.filtersDescription"
+                  : "pathMarkConfig.layout.valueDescription",
+              )}
+              number="02"
+              title={t(
+                isResource
+                  ? "pathMarkConfig.label.resourceFilters"
+                  : "pathMarkConfig.layout.valueTitle",
+              )}
+            >
+              {isResource ? (
+                <ResourceMarkConfig config={config} t={t} updateConfig={updateConfig} />
+              ) : markType === PathMarkType.Property ? (
+                <PropertyMarkConfig config={config} t={t} updateConfig={updateConfig} />
+              ) : (
+                <MediaLibraryMarkConfig config={config} t={t} updateConfig={updateConfig} />
+              )}
+            </ConfigSection>
+            <details className="rounded-2xl border border-default-200 bg-content1 p-4">
+              <summary className="cursor-pointer text-sm font-medium text-default-600">
+                {t("pathMarkConfig.layout.advanced")}
+              </summary>
+              <div className="mt-4 flex flex-col gap-4">
+                <NumberInput
+                  description={t("pathMark.priority.description")}
+                  label={t("common.label.priority")}
+                  size="sm"
+                  value={priority}
+                  onValueChange={(value) => setPriority(value ?? 10)}
+                />
+                {isResource && (
+                  <Switch
+                    isSelected={config.isResourceBoundary ?? false}
+                    size="sm"
+                    onValueChange={(value) => updateConfig({ isResourceBoundary: value })}
+                  >
+                    <span className="text-sm">{t("pathMark.resource.isResourceBoundary")}</span>
+                  </Switch>
+                )}
+                {isResource && (
+                  <p className="text-xs text-default-500">
+                    {t("pathMark.resource.isResourceBoundary.description")}
+                  </p>
+                )}
+                <Switch
+                  isSelected={enableExpiration}
+                  size="sm"
+                  onValueChange={(value) => {
+                    setEnableExpiration(value);
+                    if (value && expiresInSeconds <= 0)
+                      setExpiresInSeconds(DEFAULT_EXPIRES_IN_SECONDS);
+                  }}
+                >
+                  {t("pathMarkConfig.label.scheduledSync")}
+                </Switch>
+                <p className="text-xs leading-relaxed text-default-500">
+                  {t("pathMarkConfig.tip.expirationDescription")}
+                </p>
+                {enableExpiration && (
+                  <DurationInput
+                    minValue={60}
+                    size="sm"
+                    value={expiresInSeconds}
+                    onChange={setExpiresInSeconds}
+                  />
+                )}
+              </div>
+            </details>
           </div>
-        )}
+          <aside className="min-w-0 lg:sticky lg:top-0">
+            <ConfigSection
+              description={t(
+                isResource
+                  ? "pathMarkConfig.layout.resourcePreviewDescription"
+                  : "pathMarkConfig.layout.valuePreviewDescription",
+              )}
+              number="03"
+              title={t("pathMarkConfig.layout.previewTitle")}
+            >
+              <PreviewResults
+                {...preview}
+                error={
+                  !hasValidValueExtractor ? t("pathMarkConfig.value.fixValidation") : preview.error
+                }
+                markType={markType}
+                t={t}
+              />
+            </ConfigSection>
+          </aside>
+        </div>
       </div>
     </Modal>
   );
 };
-
-MarkConfigModal.displayName = "MarkConfigModal";
 
 export default MarkConfigModal;

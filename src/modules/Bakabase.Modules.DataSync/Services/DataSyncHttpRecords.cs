@@ -61,15 +61,12 @@ public sealed record DataSyncLinkView(int Id, string PeerNodeId, string PeerName
     DateTime? StartAnywayAt = null, bool FullReconciliationRunning = false);
 
 /// <param name="Mode">Follow or TwoWay.</param>
-public sealed record DataSyncLinkCreateInput(string? PeerNodeId, string? Address, string? Code, DataSyncLinkMode Mode,
+public sealed record DataSyncLinkCreateInput(string? PeerNodeId, string? Address, DataSyncLinkMode Mode,
     IReadOnlyList<string> Kinds);
 
 public sealed record DataSyncLinkUpdateInput(DataSyncLinkMode? Mode, IReadOnlyList<string>? Kinds);
 
 public sealed record DataSyncLinkResult(DataSyncLinkView? Link, string? RequestId, DataSyncProblem? Problem);
-
-/// <summary>Copy once to a known peer, or to a device reached by address and code (the link row starts AwaitingAccess, Mode Off).</summary>
-public sealed record DataSyncCopyOnceInput(string? PeerNodeId, string? Address, string? Code, IReadOnlyList<string> Kinds);
 
 public sealed record DataSyncTaskStart(string? TaskId, DataSyncProblem? Problem);
 
@@ -100,8 +97,6 @@ public sealed record DataSyncReaderView(string NodeId, string Name, DateTime? La
 
 
 public sealed record DataSyncInvitationView(string Code, DateTime ExpiresAt, IReadOnlyList<string> Addresses);
-
-public sealed record DataSyncInvitationResult(DataSyncInvitationView? Invitation, DataSyncProblem? Problem);
 
 // The first sync (§8.3): a preview of the ordinary merge over the staged snapshot, then Start.
 
@@ -213,27 +208,15 @@ public sealed record DataSyncRestoreView(bool Pending, DataSyncPauseReason? Reas
 
 // History (v3.1 §9.3, adapted).
 
-public enum DataSyncUndoState { Available = 1, Undone = 2, Expired = 3 }
-
-public enum DataSyncUndoAction { Remove = 1, Revert = 2, RemoveAliases = 3, Recreate = 4, Exclude = 5 }
-
-public enum DataSyncUndoBlock { ChangedSinceImport = 1, InUse = 2, AddedOptionsInUse = 3, Missing = 4 }
-
 public sealed record DataSyncHistoryCounts(int Created, int Updated, int Linked, int Unchanged, int Skipped,
     int ChangedSinceReview, int ChangedDuringApply, int Held, int Deleted, int TypeChanged, int Reordered, int Resolved);
 
 public sealed record DataSyncHistoryEntry(int Id, DateTime AppliedAt, DataSyncHistoryKind Kind, int? LinkId,
-    string? PeerNodeId, string? PeerName, DataSyncHistoryCounts Counts, DataSyncUndoState UndoState, DateTime? UndoneAt);
+    string? PeerNodeId, string? PeerName, DataSyncHistoryCounts Counts, DateTime? UndoneAt);
+
+public sealed record DataSyncHistoryPage(IReadOnlyList<DataSyncHistoryEntry> Entries, int? NextBeforeId);
 
 public sealed record DataSyncHistoryItem(string ItemId, string Kind, string Name, DataSyncItemOutcome Outcome,
     DataSyncItemAction Action, string? LocalKey, DataSyncPlanItemType Type);
 
 public sealed record DataSyncHistoryDetail(DataSyncHistoryEntry Entry, IReadOnlyList<DataSyncHistoryItem> Items);
-
-/// <param name="RecreatedGetsNewId">A deleted definition this undo re-creates gets a new local id (§8.11).</param>
-public sealed record DataSyncUndoPreviewItem(string Kind, string LocalKey, string Name, DataSyncUndoAction Action,
-    DataSyncUndoBlock? Blocked, int? ValueCount, bool SettingsMayReferenceIt, bool RecreatedGetsNewId);
-
-/// <remarks>The dialog names the backup folder from <c>AppInfo.BackupPath</c> (see <see cref="DataSyncOverview"/>).</remarks>
-public sealed record DataSyncUndoPreview(bool CanUndo, IReadOnlyList<DataSyncUndoPreviewItem> Items,
-    DataSyncProblem? Problem);

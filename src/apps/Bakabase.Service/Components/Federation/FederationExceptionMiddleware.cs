@@ -26,7 +26,7 @@ public sealed class FederationExceptionMiddleware(RequestDelegate next)
             await context.Response.WriteAsJsonAsync(new
             {
                 code = e.Code, message = e.Message, retryable = e.Retryable,
-                field = e.Field, nodeId = e.NodeId, omittedNodes = e.OmittedNodes
+                field = e.Field, nodeId = e.NodeId
             }, FederationJson.Options, context.RequestAborted);
         }
         catch (FederationAccessException e)

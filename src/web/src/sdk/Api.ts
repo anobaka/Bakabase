@@ -14,6 +14,39 @@ const log = buildLogger("BApi");
  * ---------------------------------------------------------------
  */
 
+export interface BakabaseAbstractionsComponentsAppDesktopProfileAddInput {
+  name: string;
+  directory: string;
+  create: boolean;
+}
+
+export interface BakabaseAbstractionsComponentsAppDesktopProfileOpenInput {
+  closeCurrent: boolean;
+}
+
+export interface BakabaseAbstractionsComponentsAppDesktopProfileUpdateInput {
+  name: string;
+  makeDefault: boolean;
+}
+
+export interface BakabaseAbstractionsComponentsAppDesktopProfileView {
+  id: string;
+  name: string;
+  dataDirectory: string;
+  isCurrent: boolean;
+  isDefault: boolean;
+  isRunning: boolean;
+  isAvailable: boolean;
+}
+
+export interface BakabaseAbstractionsComponentsAppDesktopProfilesView {
+  available: boolean;
+  currentId?: string;
+  environmentOverride: boolean;
+  currentDirectory?: string;
+  profiles: BakabaseAbstractionsComponentsAppDesktopProfileView[];
+}
+
 export interface BakabaseAbstractionsComponentsConfigurationResourceMoveDestination {
   id: string;
   path: string;
@@ -529,6 +562,7 @@ export interface BakabaseAbstractionsModelsDomainMediaLibraryPlayer {
   extensions?: string[];
   executablePath: string;
   command: string;
+  supportsHttp?: boolean;
 }
 
 export interface BakabaseAbstractionsModelsDomainMediaLibraryResourceMapping {
@@ -674,6 +708,7 @@ export interface BakabaseAbstractionsModelsDomainPathMarkPreviewResult {
   resourceLayerIndex?: number;
   resourceSegmentName?: string;
   propertyValue?: string;
+  valueSourcePath?: string;
 }
 
 export interface BakabaseAbstractionsModelsDomainPathPropertyExtractor {
@@ -898,11 +933,35 @@ export interface BakabaseAbstractionsModelsDomainResourceMoveConflictResolution 
   conflictVersion: number;
 }
 
+/**
+ * [0: Owner, 1: Local, 2: Managed]
+ * @format int32
+ */
+export type BakabaseAbstractionsModelsDomainResourceProcessingExecutionKind = 0 | 1 | 2;
+
+export interface BakabaseAbstractionsModelsDomainResourceProcessingExecutionTarget {
+  /** [0: Owner, 1: Local, 2: Managed] */
+  kind: BakabaseAbstractionsModelsDomainResourceProcessingExecutionKind;
+  deviceId?: string;
+  libraryEpoch?: string;
+}
+
 export interface BakabaseAbstractionsModelsDomainResourceProfileEnhancerOptions {
+  executionTarget?: BakabaseAbstractionsModelsDomainResourceProcessingExecutionTarget;
   enhancers?: BakabaseAbstractionsModelsDomainEnhancerFullOptions[];
 }
 
+export interface BakabaseAbstractionsModelsDomainResourceProfileEvaluationInput {
+  resourceIds: number[];
+  profiles: BakabaseAbstractionsModelsDomainResourceProfileSearchRule[];
+}
+
+export interface BakabaseAbstractionsModelsDomainResourceProfileEvaluationResult {
+  matches: BakabaseAbstractionsModelsDomainResourceProfileResourceMatch[];
+}
+
 export interface BakabaseAbstractionsModelsDomainResourceProfilePlayableFileOptions {
+  executionTarget?: BakabaseAbstractionsModelsDomainResourceProcessingExecutionTarget;
   extensions?: string[];
   fileNamePattern?: string;
 }
@@ -913,6 +972,24 @@ export interface BakabaseAbstractionsModelsDomainResourceProfilePlayerOptions {
 
 export interface BakabaseAbstractionsModelsDomainResourceProfilePropertyOptions {
   properties?: BakabaseAbstractionsModelsDomainPropertyKeyWithScopePriority[];
+}
+
+export interface BakabaseAbstractionsModelsDomainResourceProfileResourceMatch {
+  /** @format int32 */
+  resourceId: number;
+  profileIds: number[];
+}
+
+/**
+ * [1: NameTemplate, 2: Enhancers, 3: PlayableFiles, 4: Players, 5: Properties, 6: OpeningMode]
+ * @format int32
+ */
+export type BakabaseAbstractionsModelsDomainResourceProfileRuleKind = 1 | 2 | 3 | 4 | 5 | 6;
+
+export interface BakabaseAbstractionsModelsDomainResourceProfileSearchRule {
+  /** @format int32 */
+  id: number;
+  searchJson?: string;
 }
 
 export interface BakabaseAbstractionsModelsDomainResourceSearch {
@@ -926,12 +1003,15 @@ export interface BakabaseAbstractionsModelsDomainResourceSearch {
   pageSize: number;
   /** @format int32 */
   skipCount: number;
+  owner?: BakabaseAbstractionsModelsDomainResourceSearchOwner;
+  deviceIds?: string[];
   group?: BakabaseAbstractionsModelsDomainResourceSearchFilterGroup;
   orders?: BakabaseAbstractionsModelsInputResourceSearchOrderInputModel[];
   tags?: BakabaseAbstractionsModelsDomainConstantsResourceTag[];
 }
 
 export interface BakabaseAbstractionsModelsDomainResourceSearchFilter {
+  owner?: BakabaseAbstractionsModelsDomainResourceSearchOwner;
   /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
   propertyPool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
   /** @format int32 */
@@ -949,6 +1029,11 @@ export interface BakabaseAbstractionsModelsDomainResourceSearchFilterGroup {
   groups?: BakabaseAbstractionsModelsDomainResourceSearchFilterGroup[];
   filters?: BakabaseAbstractionsModelsDomainResourceSearchFilter[];
   disabled: boolean;
+}
+
+export interface BakabaseAbstractionsModelsDomainResourceSearchOwner {
+  serverId: string;
+  libraryEpoch: string;
 }
 
 export interface BakabaseAbstractionsModelsDomainResourceSourceLink {
@@ -1191,6 +1276,28 @@ export interface BakabaseAbstractionsModelsInputResourceTransferInputModelItem {
   deleteSourceResource: boolean;
 }
 
+export interface BakabaseAbstractionsModelsInputThirdPartyContentTrackerDailyHistoryInputModel {
+  /**
+   * @minLength 1
+   * @maxLength 100
+   */
+  domainKey: string;
+  /** @maxLength 500 */
+  filter?: string;
+  /**
+   * @minLength 1
+   * @maxLength 10
+   */
+  centerDay: string;
+  /**
+   * @minLength 1
+   * @maxLength 100
+   */
+  timeZoneId: string;
+  /** @maxItems 1000 */
+  excludeContentIds: string[];
+}
+
 export interface BakabaseAbstractionsModelsInputThirdPartyContentTrackerMarkViewedInputModel {
   /**
    * @minLength 1
@@ -1210,6 +1317,22 @@ export interface BakabaseAbstractionsModelsInputThirdPartyContentTrackerMarkView
   contentId: string;
   /** @format date-time */
   updatedAt?: string;
+}
+
+export interface BakabaseAbstractionsModelsInputThirdPartyContentTrackerPageBoundariesInputModel {
+  /**
+   * @minLength 1
+   * @maxLength 100
+   */
+  domainKey: string;
+  /** @maxLength 500 */
+  filter?: string;
+  /** @format date-time */
+  oldestUpdatedAt: string;
+  /** @format date-time */
+  newestUpdatedAt: string;
+  /** @maxItems 1000 */
+  excludeContentIds: string[];
 }
 
 export interface BakabaseAbstractionsModelsInputThirdPartyContentTrackerQueryInputModel {
@@ -1363,10 +1486,30 @@ export interface BakabaseAbstractionsModelsViewResourceMovePreviewViewModelMarkE
   mediaLibraryName?: string;
 }
 
+export interface BakabaseAbstractionsModelsViewThirdPartyContentTrackerDailyHistoryDayViewModel {
+  date: string;
+  /** @format int32 */
+  count: number;
+}
+
+export interface BakabaseAbstractionsModelsViewThirdPartyContentTrackerDailyHistoryViewModel {
+  days: BakabaseAbstractionsModelsViewThirdPartyContentTrackerDailyHistoryDayViewModel[];
+}
+
 export interface BakabaseAbstractionsModelsViewThirdPartyContentTrackerNearestViewModel {
   contentId: string;
   /** @format date-time */
   viewedAt: string;
+}
+
+export interface BakabaseAbstractionsModelsViewThirdPartyContentTrackerPageBoundariesViewModel {
+  older?: BakabaseAbstractionsModelsViewThirdPartyContentTrackerPageBoundaryViewModel;
+  newer?: BakabaseAbstractionsModelsViewThirdPartyContentTrackerPageBoundaryViewModel;
+}
+
+export interface BakabaseAbstractionsModelsViewThirdPartyContentTrackerPageBoundaryViewModel {
+  contentId: string;
+  updatedAt: string;
 }
 
 export interface BakabaseAbstractionsModelsViewThirdPartyContentTrackerStatusViewModel {
@@ -2171,6 +2314,7 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputU
   /** [0: Default, 1: Resource] */
   startupPage?: BakabaseInsideWorldModelsConstantsStartupPage;
   isMenuCollapsed?: boolean;
+  navigationLayout?: BakabaseInsideWorldModelsConfigsUINavigationLayout;
   showResourceUsage?: boolean;
   hideResourceCovers?: boolean;
   resourceDetailLayout?: BakabaseInsideWorldModelsConfigsUIOptionsResourceDetailLayoutConfig;
@@ -2749,11 +2893,29 @@ export interface BakabaseInsideWorldModelsConfigsThirdPartyOptionsSimpleSearchEn
   urlTemplate: string;
 }
 
+export interface BakabaseInsideWorldModelsConfigsUINavigationLayout {
+  /** @format int32 */
+  version: number;
+  items: BakabaseInsideWorldModelsConfigsUINavigationNode[];
+  knownCatalogIds: string[];
+  directoryAliases: Record<string, string>;
+}
+
+export interface BakabaseInsideWorldModelsConfigsUINavigationNode {
+  id: string;
+  kind: string;
+  name?: string;
+  hidden: boolean;
+  children?: BakabaseInsideWorldModelsConfigsUINavigationNode[];
+}
+
 export interface BakabaseInsideWorldModelsConfigsUIOptions {
   resource: BakabaseInsideWorldModelsConfigsUIOptionsUIResourceOptions;
   /** [0: Default, 1: Resource] */
   startupPage: BakabaseInsideWorldModelsConstantsStartupPage;
   isMenuCollapsed: boolean;
+  navigationLayout?: BakabaseInsideWorldModelsConfigsUINavigationLayout;
+  deviceColors: Record<string, string>;
   showResourceUsage: boolean;
   hideResourceCovers: boolean;
   resourceDetailLayout?: BakabaseInsideWorldModelsConfigsUIOptionsResourceDetailLayoutConfig;
@@ -2820,6 +2982,7 @@ export interface BakabaseInsideWorldModelsConfigsUIOptionsUIResourceOptions {
   inlineDisplayName: boolean;
   autoSelectFirstPlayableFile: boolean;
   displayOperations: string[];
+  showAggregateOperations?: boolean;
   hideResourceBorder: boolean;
   hideHealthScore: boolean;
   customContextMenuItems: BakabaseInsideWorldModelsConfigsUIOptionsCustomContextMenuItem[];
@@ -4586,13 +4749,6 @@ export interface BakabaseModulesDataSyncServicesDataSyncApproveInput {
   kinds?: string[];
 }
 
-export interface BakabaseModulesDataSyncServicesDataSyncCopyOnceInput {
-  peerNodeId?: string;
-  address?: string;
-  code?: string;
-  kinds: string[];
-}
-
 export interface BakabaseModulesDataSyncServicesDataSyncEntityStatusView {
   localKey: string;
   syncKey: string;
@@ -4699,8 +4855,6 @@ export interface BakabaseModulesDataSyncServicesDataSyncHistoryEntry {
   peerNodeId?: string;
   peerName?: string;
   counts: BakabaseModulesDataSyncServicesDataSyncHistoryCounts;
-  /** [1: Available, 2: Undone, 3: Expired] */
-  undoState: BakabaseModulesDataSyncServicesDataSyncUndoState;
   /** @format date-time */
   undoneAt?: string;
 }
@@ -4716,6 +4870,12 @@ export interface BakabaseModulesDataSyncServicesDataSyncHistoryItem {
   localKey?: string;
   /** [1: Create, 2: Update, 3: Unchanged, 4: Link, 5: NeedsDecision, 6: Held] */
   type: BakabaseModulesDataSyncPlanningDataSyncPlanItemType;
+}
+
+export interface BakabaseModulesDataSyncServicesDataSyncHistoryPage {
+  entries: BakabaseModulesDataSyncServicesDataSyncHistoryEntry[];
+  /** @format int32 */
+  nextBeforeId?: number;
 }
 
 export interface BakabaseModulesDataSyncServicesDataSyncInboxItemView {
@@ -4758,18 +4918,6 @@ export interface BakabaseModulesDataSyncServicesDataSyncInboxPage {
   openTotal: number;
 }
 
-export interface BakabaseModulesDataSyncServicesDataSyncInvitationResult {
-  invitation?: BakabaseModulesDataSyncServicesDataSyncInvitationView;
-  problem?: BakabaseModulesDataSyncServicesDataSyncProblem;
-}
-
-export interface BakabaseModulesDataSyncServicesDataSyncInvitationView {
-  code: string;
-  /** @format date-time */
-  expiresAt: string;
-  addresses: string[];
-}
-
 export interface BakabaseModulesDataSyncServicesDataSyncKindCount {
   kind: string;
   /** @format int32 */
@@ -4779,7 +4927,6 @@ export interface BakabaseModulesDataSyncServicesDataSyncKindCount {
 export interface BakabaseModulesDataSyncServicesDataSyncLinkCreateInput {
   peerNodeId?: string;
   address?: string;
-  code?: string;
   /** [0: Off, 1: Follow, 2: TwoWay] */
   mode: BakabaseModulesDataSyncDataSyncLinkMode;
   kinds: string[];
@@ -5072,44 +5219,6 @@ export interface BakabaseModulesDataSyncServicesDataSyncTaskStart {
   problem?: BakabaseModulesDataSyncServicesDataSyncProblem;
 }
 
-/**
- * [1: Remove, 2: Revert, 3: RemoveAliases, 4: Recreate, 5: Exclude]
- * @format int32
- */
-export type BakabaseModulesDataSyncServicesDataSyncUndoAction = 1 | 2 | 3 | 4 | 5;
-
-/**
- * [1: ChangedSinceImport, 2: InUse, 3: AddedOptionsInUse, 4: Missing]
- * @format int32
- */
-export type BakabaseModulesDataSyncServicesDataSyncUndoBlock = 1 | 2 | 3 | 4;
-
-export interface BakabaseModulesDataSyncServicesDataSyncUndoPreview {
-  canUndo: boolean;
-  items: BakabaseModulesDataSyncServicesDataSyncUndoPreviewItem[];
-  problem?: BakabaseModulesDataSyncServicesDataSyncProblem;
-}
-
-export interface BakabaseModulesDataSyncServicesDataSyncUndoPreviewItem {
-  kind: string;
-  localKey: string;
-  name: string;
-  /** [1: Remove, 2: Revert, 3: RemoveAliases, 4: Recreate, 5: Exclude] */
-  action: BakabaseModulesDataSyncServicesDataSyncUndoAction;
-  /** [1: ChangedSinceImport, 2: InUse, 3: AddedOptionsInUse, 4: Missing] */
-  blocked?: BakabaseModulesDataSyncServicesDataSyncUndoBlock;
-  /** @format int32 */
-  valueCount?: number;
-  settingsMayReferenceIt: boolean;
-  recreatedGetsNewId: boolean;
-}
-
-/**
- * [1: Available, 2: Undone, 3: Expired]
- * @format int32
- */
-export type BakabaseModulesDataSyncServicesDataSyncUndoState = 1 | 2 | 3;
-
 export interface BakabaseModulesDataSyncWireDataSyncFeedCounterpart {
   mode: string;
   firstContactCompleted: boolean;
@@ -5250,91 +5359,6 @@ export type BakabaseModulesEnhancerModelsDomainConstantsEnhancerId =
  */
 export type BakabaseModulesEnhancerModelsDomainConstantsEnhancerTag = 1 | 2;
 
-export interface BakabaseModulesFederationContractsCommonLibraryQuery {
-  /** @format int32 */
-  queryContractVersion: number;
-  text?: string;
-  fileAvailability?: string;
-  sourceKinds?: number[];
-  sort: string;
-  [key: string]: any;
-}
-
-export interface BakabaseModulesFederationContractsFederatedQueryPage {
-  sessionId: string;
-  items: BakabaseModulesFederationContractsFederatedResourceSummary[];
-  nextCursor?: string;
-  /** @format int64 */
-  expiresInMs: number;
-  participants: BakabaseModulesFederationContractsQueryParticipant[];
-  omittedNodes: BakabaseModulesFederationContractsQueryOmittedNode[];
-  /** @format int64 */
-  totalWithinParticipants: number;
-  coverageComplete: boolean;
-}
-
-export interface BakabaseModulesFederationContractsFederatedResourceSummary {
-  ref: BakabaseModulesFederationContractsResourceRef;
-  ownerLabel: string;
-  title?: string;
-  displayName: string;
-  fileName?: string;
-  sourceKinds: number[];
-  fileAvailability: string;
-  normalizedSortKey?: string;
-  coverAsset?: string;
-  playbackCapabilities: string[];
-}
-
-export interface BakabaseModulesFederationContractsLocalFederatedQuery {
-  nodeIds: string[];
-  query: BakabaseModulesFederationContractsCommonLibraryQuery;
-  /** @format int32 */
-  pageSize: number;
-  [key: string]: any;
-}
-
-export interface BakabaseModulesFederationContractsNodeExportQuery {
-  expectedLibraryEpoch: string;
-  query: BakabaseModulesFederationContractsCommonLibraryQuery;
-  /** @format int32 */
-  blockSize: number;
-  [key: string]: any;
-}
-
-export interface BakabaseModulesFederationContractsNodeQueryBlock {
-  snapshotId: string;
-  nodeId: string;
-  libraryEpoch: string;
-  queryHash: string;
-  /** @format int64 */
-  totalCount: number;
-  /** @format int32 */
-  offset: number;
-  items: BakabaseModulesFederationContractsFederatedResourceSummary[];
-  nextCursor?: string;
-  /** @format int64 */
-  expiresInMs: number;
-  /** @format date-time */
-  captureStartedAt: string;
-  /** @format date-time */
-  captureCompletedAt: string;
-  consistency: string;
-}
-
-export interface BakabaseModulesFederationContractsQueryOmittedNode {
-  nodeId: string;
-  code: string;
-  retryable: boolean;
-}
-
-export interface BakabaseModulesFederationContractsQueryParticipant {
-  nodeId: string;
-  libraryEpoch: string;
-  /** @format int64 */
-  totalCount: number;
-}
-
 export interface BakabaseModulesFederationContractsResourceRef {
   nodeId: string;
   libraryEpoch: string;
@@ -5346,132 +5370,6 @@ export interface BakabaseModulesFederationIdentityNodeIdentity {
   nodeId: string;
   libraryEpoch: string;
   name: string;
-}
-
-export interface BakabaseModulesFederationMediaAssetRef {
-  resourceRef: BakabaseModulesFederationContractsResourceRef;
-  assetId: string;
-}
-
-export interface BakabaseModulesFederationMediaFederatedAsset {
-  assetId: string;
-  kind: string;
-  fileName: string;
-  contentType: string;
-  sourceRootId?: string;
-  relativePath?: string;
-  /** @format date-time */
-  expiresAt: string;
-}
-
-export interface BakabaseModulesFederationMediaFederatedCollection {
-  name: string;
-  color?: string;
-}
-
-export interface BakabaseModulesFederationMediaFederatedExternalIdentity {
-  provider: string;
-  externalId: string;
-}
-
-export interface BakabaseModulesFederationMediaFederatedProperty {
-  label: string;
-  type: string;
-  value?: any;
-  /** @format int32 */
-  scope: number;
-}
-
-export interface BakabaseModulesFederationMediaFederatedResourceDetail {
-  ref: BakabaseModulesFederationContractsResourceRef;
-  ownerLabel: string;
-  displayName: string;
-  fileName?: string;
-  availability: string;
-  properties: BakabaseModulesFederationMediaFederatedProperty[];
-  sources: BakabaseModulesFederationMediaFederatedSource[];
-  externalIdentities: BakabaseModulesFederationMediaFederatedExternalIdentity[];
-  collections: BakabaseModulesFederationMediaFederatedCollection[];
-  assets: BakabaseModulesFederationMediaFederatedAsset[];
-  unavailableReason?: string;
-  directoryAccess?: BakabaseModulesFederationMediaFederationDirectoryAccess;
-  location?: BakabaseModulesFederationMediaFederatedResourceLocation;
-}
-
-export interface BakabaseModulesFederationMediaFederatedResourceLocation {
-  sourceRootId: string;
-  relativePath: string;
-  isDirectory: boolean;
-}
-
-export interface BakabaseModulesFederationMediaFederatedSource {
-  /** @format int32 */
-  kind: number;
-  label?: string;
-  url?: string;
-}
-
-export interface BakabaseModulesFederationMediaFederationDirectoryAccess {
-  canOpen: boolean;
-  reason?: string;
-}
-
-export interface BakabaseModulesFederationMediaMappingRoot {
-  sourceRootId: string;
-  name: string;
-}
-
-export interface BakabaseModulesFederationMediaOpenResourceDirectoryRequest {
-  resourceRef: BakabaseModulesFederationContractsResourceRef;
-}
-
-export interface BakabaseModulesFederationMediaOpenResourceDirectoryResponse {
-  opened: boolean;
-}
-
-export interface BakabaseModulesFederationMediaPlaybackSessionRequest {
-  assetRef: BakabaseModulesFederationMediaAssetRef;
-  mode: string;
-}
-
-export interface BakabaseModulesFederationMediaPlaybackSessionResponse {
-  url?: string;
-  contentType: string;
-  launched: boolean;
-  /** @format date-time */
-  expiresAt: string;
-}
-
-export interface BakabaseModulesFederationMediaResourceLocationRequest {
-  resourceRef: BakabaseModulesFederationContractsResourceRef;
-}
-
-export interface BakabaseModulesFederationMediaResourceLocationResponse {
-  ref: BakabaseModulesFederationContractsResourceRef;
-  location?: BakabaseModulesFederationMediaFederatedResourceLocation;
-}
-
-export interface BakabaseModulesFederationMediaResourceResolveRequest {
-  refs: BakabaseModulesFederationContractsResourceRef[];
-}
-
-export interface BakabaseModulesFederationMediaResourceResolveResponse {
-  resources: BakabaseModulesFederationMediaFederatedResourceDetail[];
-}
-
-export interface BakabaseModulesFederationPeersFederationPeerView {
-  nodeId: string;
-  label: string;
-  address?: string;
-  enabled: boolean;
-  connectionState: string;
-  outboundGrant?: BakabaseModulesFederationPeersNodeGrantSummary;
-  inboundGrant?: BakabaseModulesFederationPeersNodeGrantSummary;
-  pathMappings: BakabaseModulesFederationPeersNodePathMapping[];
-  /** [0: Unknown, 1: Desktop, 2: Headless] */
-  kind?: BakabaseModulesRemoteAccessAbstractionsModelsServerKind;
-  /** [0: Unknown, 1: Windows, 2: MacOS, 3: Linux, 4: Android, 5: IOS] */
-  platform?: BakabaseModulesRemoteAccessAbstractionsModelsRemoteDevicePlatform;
 }
 
 export interface BakabaseModulesFederationPeersNodeCredentials {
@@ -5503,25 +5401,6 @@ export interface BakabaseModulesFederationPeersNodeDataSyncPairRequest {
   reciprocal?: BakabaseModulesFederationPeersNodeReciprocalOffer;
 }
 
-export interface BakabaseModulesFederationPeersNodeDiscoveryCandidate {
-  nodeId: string;
-  name: string;
-  address: string;
-  /** [0: Unknown, 1: Desktop, 2: Headless] */
-  kind?: BakabaseModulesRemoteAccessAbstractionsModelsServerKind;
-  /** [0: Unknown, 1: Windows, 2: MacOS, 3: Linux, 4: Android, 5: IOS] */
-  platform?: BakabaseModulesRemoteAccessAbstractionsModelsRemoteDevicePlatform;
-  /** @format int32 */
-  dataSyncContractVersion?: number;
-  sharesDefinitions?: boolean;
-}
-
-export interface BakabaseModulesFederationPeersNodeGrantSummary {
-  grantId: string;
-  /** @format int64 */
-  revision: number;
-}
-
 export interface BakabaseModulesFederationPeersNodeHandshakeRequest {
   challenge: string;
 }
@@ -5540,13 +5419,6 @@ export interface BakabaseModulesFederationPeersNodeInfo {
   protocolVersion: number;
   /** @format date-time */
   serverTimeUtc: string;
-  /** @format int32 */
-  queryContractVersion: number;
-  supportedFilters: string[];
-  supportedSorts: string[];
-  supportedAssetKinds: string[];
-  /** @format int32 */
-  maxBatchSize: number;
   kind?: string;
   platform?: string;
   /** @format int32 */
@@ -5556,25 +5428,10 @@ export interface BakabaseModulesFederationPeersNodeInfo {
   sharesDefinitions?: boolean;
 }
 
-export interface BakabaseModulesFederationPeersNodeInvitation {
-  code: string;
-  /** @format date-time */
-  expiresAt: string;
-}
-
 export interface BakabaseModulesFederationPeersNodePairClaimRequest {
   requestId: string;
   nodeId: string;
   claimSecret: string;
-}
-
-export interface BakabaseModulesFederationPeersNodePairCodeRequest {
-  nodeId: string;
-  nodeName: string;
-  code: string;
-  transactionId: string;
-  claimSecret: string;
-  reciprocal?: BakabaseModulesFederationPeersNodeReciprocalOffer;
 }
 
 export interface BakabaseModulesFederationPeersNodePairExchange {
@@ -5584,39 +5441,6 @@ export interface BakabaseModulesFederationPeersNodePairExchange {
   expiresAt: string;
   credentials?: BakabaseModulesFederationPeersNodeCredentials;
   readBack?: string;
-}
-
-export interface BakabaseModulesFederationPeersNodePairRequest {
-  nodeId: string;
-  nodeName: string;
-  transactionId: string;
-  claimSecret: string;
-  reciprocal?: BakabaseModulesFederationPeersNodeReciprocalOffer;
-}
-
-export interface BakabaseModulesFederationPeersNodePairingOutcome {
-  outcome: string;
-  requestId?: string;
-  peerNodeId?: string;
-  message?: string;
-}
-
-export interface BakabaseModulesFederationPeersNodePairingRequestView {
-  requestId: string;
-  nodeId: string;
-  nodeName: string;
-  direction: string;
-  status: string;
-  /** @format date-time */
-  expiresAt: string;
-  remoteAddress?: string;
-  replacesExistingAccess: boolean;
-  offersReciprocalAccess: boolean;
-}
-
-export interface BakabaseModulesFederationPeersNodePathMapping {
-  sourceRootId: string;
-  localPath: string;
 }
 
 export interface BakabaseModulesFederationPeersNodeReciprocalOffer {
@@ -5782,6 +5606,10 @@ export interface BakabaseModulesPlayerAbstractionsComponentsBatchPlayResourceFil
 export interface BakabaseModulesPlayerAbstractionsComponentsBatchPlayResourceSnapshot {
   resources: BakabaseModulesPlayerAbstractionsComponentsBatchPlayResourceFiles[];
   configuredPlayers: BakabaseAbstractionsModelsDomainMediaLibraryPlayer[];
+  playerOptionsByResourceId?: Record<
+    string,
+    BakabaseAbstractionsModelsDomainResourceProfilePlayerOptions
+  >;
 }
 
 export interface BakabaseModulesPlayerAbstractionsModelsDomainBatchPlayCandidate {
@@ -5792,6 +5620,7 @@ export interface BakabaseModulesPlayerAbstractionsModelsDomainBatchPlayCandidate
   executablePath: string;
   /** [0: None, 1: PlaylistFile, 2: MultiFileArguments] */
   capabilities: BakabaseModulesPlayerAbstractionsModelsDomainConstantsBatchPlayCapability;
+  supportsHttp: boolean;
   commandTemplate?: string;
   capabilitiesAssumed: boolean;
   supportedExtensions?: string[];
@@ -5852,6 +5681,21 @@ export type BakabaseModulesPlayerAbstractionsModelsDomainConstantsBatchPlayFileS
  * @format int32
  */
 export type BakabaseModulesPlayerAbstractionsModelsDomainConstantsBatchPlayLaunchMethod = 1 | 2;
+
+export interface BakabaseModulesPlayerAbstractionsModelsDomainDevicePlaybackChoice {
+  mode: string;
+  nativeSchemeId?: string;
+}
+
+export interface BakabaseModulesPlayerAbstractionsModelsDomainDevicePlaybackPreferences {
+  /** @format int32 */
+  version: number;
+  image: BakabaseModulesPlayerAbstractionsModelsDomainDevicePlaybackChoice;
+  text: BakabaseModulesPlayerAbstractionsModelsDomainDevicePlaybackChoice;
+  audio: BakabaseModulesPlayerAbstractionsModelsDomainDevicePlaybackChoice;
+  video: BakabaseModulesPlayerAbstractionsModelsDomainDevicePlaybackChoice;
+  other: BakabaseModulesPlayerAbstractionsModelsDomainDevicePlaybackChoice;
+}
 
 export interface BakabaseModulesPlayerAbstractionsModelsInputBatchPlayCandidatesInputModel {
   resourceIds: number[];
@@ -6228,6 +6072,7 @@ export interface BakabaseModulesRemoteAccessAbstractionsModelsManagedServersView
   available: boolean;
   servers: BakabaseModulesRemoteAccessAbstractionsModelsManagedServerView[];
   requests: BakabaseModulesRemoteAccessAbstractionsModelsManagedServerPendingRequestView[];
+  canOpenDesktopView: boolean;
 }
 
 /**
@@ -6266,6 +6111,8 @@ export type BakabaseModulesRemoteAccessAbstractionsModelsRemoteDevicePlatform =
 export type BakabaseModulesRemoteAccessAbstractionsModelsServerKind = 0 | 1 | 2;
 
 export interface BakabaseModulesSearchModelsDbResourceSearchDbModel {
+  owner?: BakabaseAbstractionsModelsDomainResourceSearchOwner;
+  deviceIds?: string[];
   group?: BakabaseModulesSearchModelsDbResourceSearchFilterGroupDbModel;
   orders?: BakabaseAbstractionsModelsInputResourceSearchOrderInputModel[];
   keyword?: string;
@@ -6277,6 +6124,7 @@ export interface BakabaseModulesSearchModelsDbResourceSearchDbModel {
 }
 
 export interface BakabaseModulesSearchModelsDbResourceSearchFilterDbModel {
+  owner?: BakabaseAbstractionsModelsDomainResourceSearchOwner;
   /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
   propertyPool?: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
   /** @format int32 */
@@ -6713,6 +6561,337 @@ export interface BakabaseServiceComponentsAcquisitionSharedListPreviewRow {
   alreadyKnown: boolean;
 }
 
+export interface BakabaseServiceComponentsDataSyncSyncActivityDevice {
+  id: string;
+  name: string;
+}
+
+export interface BakabaseServiceComponentsDataSyncSyncActivityPage {
+  items: BakabaseServiceComponentsDataSyncSyncActivityRow[];
+  /** @format int32 */
+  total: number;
+  /** @format int32 */
+  nextOffset?: number;
+  devices: BakabaseServiceComponentsDataSyncSyncActivityDevice[];
+  dataTypes: string[];
+}
+
+export interface BakabaseServiceComponentsDataSyncSyncActivityRow {
+  id: string;
+  engine: string;
+  dataType: string;
+  state: string;
+  phase: string;
+  source: BakabaseServiceComponentsDataSyncSyncActivityDevice;
+  destination: BakabaseServiceComponentsDataSyncSyncActivityDevice;
+  /** @format date-time */
+  lastSuccessAtUtc?: string;
+  /** @format int64 */
+  itemCount?: number;
+  errorCode?: string;
+  error?: string;
+  cachedDataAvailable: boolean;
+  /** @format int32 */
+  linkId?: number;
+  libraryEpoch?: string;
+  worker?: BakabaseServiceComponentsDataSyncSyncActivityDevice;
+  job?: BakabaseServiceComponentsFederationProcessingResourceProcessingJobView;
+  /** @format int32 */
+  pendingDecisions: number;
+}
+
+export interface BakabaseServiceComponentsFederationManagedLibraryInfo {
+  serverId: string;
+  name: string;
+  libraryEpoch: string;
+  /** @format int32 */
+  contractVersion: number;
+}
+
+export interface BakabaseServiceComponentsFederationManagedLibraryMappingTreeNode {
+  serverPath: string;
+  name: string;
+  /** @format int64 */
+  resourceCount: number;
+  hasChildren: boolean;
+}
+
+export interface BakabaseServiceComponentsFederationManagedLibraryMappingTreePage {
+  libraryEpoch: string;
+  nodes: BakabaseServiceComponentsFederationManagedLibraryMappingTreeNode[];
+  nextCursor?: string;
+}
+
+export interface BakabaseServiceComponentsFederationManagedLibraryRequest {
+  libraryEpoch: string;
+  operation: string;
+  /** @format int32 */
+  id?: number;
+  ids?: number[];
+  body?: NewtonsoftJsonLinqJToken;
+  query?: Record<string, string[]>;
+}
+
+export interface BakabaseServiceComponentsFederationManagedLibrarySource {
+  serverId: string;
+  name?: string;
+  libraryEpoch?: string;
+  isLocal: boolean;
+  available: boolean;
+  errorCode?: string;
+  error?: string;
+  /** @format int32 */
+  contractVersion: number;
+  metadata?: BakabaseServiceComponentsFederationMetadataReplicasManagedMetadataStatus;
+}
+
+export interface BakabaseServiceComponentsFederationManagedLibrarySources {
+  sources: BakabaseServiceComponentsFederationManagedLibrarySource[];
+}
+
+export interface BakabaseServiceComponentsFederationMetadataReplicasManagedMetadataStatus {
+  identity: BakabaseServiceComponentsFederationMetadataReplicasReplicaIdentity;
+  name?: string;
+  data: BakabaseServiceComponentsFederationMetadataReplicasReplicaStatus;
+  sync: BakabaseServiceComponentsFederationMetadataReplicasReplicaSyncState;
+  denied: boolean;
+  activePhase?: string;
+}
+
+export interface BakabaseServiceComponentsFederationMetadataReplicasMetadataPageRequest {
+  checkpoint: BakabaseServiceComponentsFederationMetadataReplicasReplicaCheckpoint;
+  /** @format int32 */
+  pageSize: number;
+}
+
+export interface BakabaseServiceComponentsFederationMetadataReplicasMetadataSourceManifest {
+  identity: BakabaseServiceComponentsFederationMetadataReplicasReplicaIdentity;
+  start: BakabaseServiceComponentsFederationMetadataReplicasReplicaCheckpoint;
+  name?: string;
+  /** @format int32 */
+  contractVersion: number;
+}
+
+export interface BakabaseServiceComponentsFederationMetadataReplicasMetadataSyncActivity {
+  /** @format int64 */
+  id: number;
+  serverId: string;
+  name?: string;
+  libraryEpoch?: string;
+  /** @format date-time */
+  startedAtUtc: string;
+  /** @format date-time */
+  updatedAtUtc: string;
+  state: string;
+  phase: string;
+  /** @format int64 */
+  processedCount: number;
+  /** @format int64 */
+  resourceCount: number;
+  errorCode?: string;
+  error?: string;
+}
+
+export interface BakabaseServiceComponentsFederationMetadataReplicasMetadataSyncActivityPage {
+  entries: BakabaseServiceComponentsFederationMetadataReplicasMetadataSyncActivity[];
+  /** @format int64 */
+  nextBeforeId?: number;
+}
+
+export interface BakabaseServiceComponentsFederationMetadataReplicasReplicaCheckpoint {
+  generation: string;
+  /** @format int64 */
+  sequence: number;
+  cursor?: string;
+  complete: boolean;
+  /** @format int64 */
+  catalogRevision: number;
+}
+
+export interface BakabaseServiceComponentsFederationMetadataReplicasReplicaIdentity {
+  serverId: string;
+  libraryEpoch: string;
+}
+
+export interface BakabaseServiceComponentsFederationMetadataReplicasReplicaStatus {
+  checkpoint?: BakabaseServiceComponentsFederationMetadataReplicasReplicaCheckpoint;
+  activeGeneration?: string;
+  /** @format int64 */
+  resourceCount: number;
+  /** @format int64 */
+  activeSequence: number;
+  /** @format int64 */
+  stagedResourceCount: number;
+}
+
+export interface BakabaseServiceComponentsFederationMetadataReplicasReplicaSyncState {
+  paused: boolean;
+  /** @format date-time */
+  lastSyncedAtUtc?: string;
+  errorCode?: string;
+  error?: string;
+  isOffline: boolean;
+  refreshPending: boolean;
+  catchupPending: boolean;
+}
+
+export interface BakabaseServiceComponentsFederationProcessingResourceProcessingAbandonRequest {
+  token?: string;
+}
+
+export interface BakabaseServiceComponentsFederationProcessingResourceProcessingApply {
+  token: string;
+  output: BakabaseServiceComponentsFederationProcessingResourceProcessingOutput;
+}
+
+export interface BakabaseServiceComponentsFederationProcessingResourceProcessingArtifact {
+  hash: string;
+  fileName: string;
+  /** @format int64 */
+  length: number;
+}
+
+export interface BakabaseServiceComponentsFederationProcessingResourceProcessingArtifactChunk {
+  jobId: string;
+  token: string;
+  artifact: BakabaseServiceComponentsFederationProcessingResourceProcessingArtifact;
+  /** @format int64 */
+  offset: number;
+  base64: string;
+}
+
+export interface BakabaseServiceComponentsFederationProcessingResourceProcessingArtifactRead {
+  hash: string;
+  /** @format int64 */
+  offset: number;
+}
+
+export interface BakabaseServiceComponentsFederationProcessingResourceProcessingControl {
+  action: string;
+  /** @format int64 */
+  expectedVersion: number;
+}
+
+export interface BakabaseServiceComponentsFederationProcessingResourceProcessingInput {
+  jobId: string;
+  ownerId: string;
+  ownerEpoch: string;
+  /** @format int32 */
+  resourceId: number;
+  /** @format int64 */
+  expectedResourceRevision?: number;
+  ruleHash: string;
+  /** [0: PlayableFiles, 1: Enhancement] */
+  kind: BakabaseServiceComponentsFederationProcessingResourceProcessingKind;
+  playableFiles?: BakabaseAbstractionsModelsDomainResourceProfilePlayableFileOptions;
+  enhancer?: BakabaseAbstractionsModelsDomainEnhancerFullOptions;
+}
+
+export interface BakabaseServiceComponentsFederationProcessingResourceProcessingJobView {
+  id: string;
+  jobId: string;
+  role: string;
+  ownerId: string;
+  ownerEpoch: string;
+  /** @format int32 */
+  resourceId: number;
+  kind: string;
+  state: string;
+  phase?: string;
+  /** @format int64 */
+  processedCount: number;
+  /** @format int64 */
+  totalCount?: number;
+  /** @format int32 */
+  attempt: number;
+  pauseRequested: boolean;
+  cancelRequested: boolean;
+  errorCode?: string;
+  error?: string;
+  /** @format date-time */
+  createdAtUtc: string;
+  /** @format date-time */
+  updatedAtUtc: string;
+  /** @format int64 */
+  version: number;
+  currentStepPhase?: string;
+  /** @format int64 */
+  currentStepProcessedCount?: number;
+  /** @format int64 */
+  currentStepTotalCount?: number;
+}
+
+/**
+ * [0: PlayableFiles, 1: Enhancement]
+ * @format int32
+ */
+export type BakabaseServiceComponentsFederationProcessingResourceProcessingKind = 0 | 1;
+
+export interface BakabaseServiceComponentsFederationProcessingResourceProcessingOutput {
+  /** [0: PlayableFiles, 1: Enhancement] */
+  kind: BakabaseServiceComponentsFederationProcessingResourceProcessingKind;
+  playableFiles: string[];
+  values: BakabaseServiceComponentsFederationProcessingResourceProcessingValue[];
+  artifacts: BakabaseServiceComponentsFederationProcessingResourceProcessingArtifact[];
+  /** @format int64 */
+  processedCount: number;
+}
+
+export interface BakabaseServiceComponentsFederationProcessingResourceProcessingPrepared {
+  input: BakabaseServiceComponentsFederationProcessingResourceProcessingInput;
+  token: string;
+  /** @format int64 */
+  resourceRevision: number;
+  catalogGeneration: string;
+  resourceJson: string;
+}
+
+export interface BakabaseServiceComponentsFederationProcessingResourceProcessingReceipt {
+  jobId: string;
+  /** @format int64 */
+  resourceRevision: number;
+  resultHash: string;
+}
+
+export interface BakabaseServiceComponentsFederationProcessingResourceProcessingReceiptRequest {
+  token: string;
+}
+
+export interface BakabaseServiceComponentsFederationProcessingResourceProcessingReceiptStatus {
+  receipt?: BakabaseServiceComponentsFederationProcessingResourceProcessingReceipt;
+}
+
+/**
+ * [0: Manager, 1: Owner, 2: Worker]
+ * @format int32
+ */
+export type BakabaseServiceComponentsFederationProcessingResourceProcessingRole = 0 | 1 | 2;
+
+export interface BakabaseServiceComponentsFederationProcessingResourceProcessingStart {
+  /** @format int32 */
+  profileId: number;
+  /** [0: PlayableFiles, 1: Enhancement] */
+  kind: BakabaseServiceComponentsFederationProcessingResourceProcessingKind;
+}
+
+export interface BakabaseServiceComponentsFederationProcessingResourceProcessingValue {
+  /** @format int32 */
+  target: number;
+  dynamicTarget?: string;
+  /** [1: String, 2: ListString, 3: Decimal, 4: Link, 5: Boolean, 6: DateTime, 7: Time, 8: ListListString, 9: ListTag] */
+  valueType: BakabaseAbstractionsModelsDomainConstantsStandardValueType;
+  serializedValue?: string;
+}
+
+export interface BakabaseServiceComponentsFederationProcessingResourceProcessingWorkerControl {
+  action: string;
+}
+
+export interface BakabaseServiceComponentsFederationProcessingResourceProcessingWorkerResult {
+  job: BakabaseServiceComponentsFederationProcessingResourceProcessingJobView;
+  output?: BakabaseServiceComponentsFederationProcessingResourceProcessingOutput;
+}
+
 export interface BakabaseServiceComponentsServerDataServerAppDataImportValidation {
   valid: boolean;
   error?: string;
@@ -6816,22 +6995,9 @@ export interface BakabaseServiceControllersEnsureMappingsInput {
   mediaLibraryIds: number[];
 }
 
-export interface BakabaseServiceControllersFederationBrowsingRequest {
-  enabled: boolean;
-}
-
-export interface BakabaseServiceControllersFederationClaimRequest {
-  requestId: string;
-}
-
-export interface BakabaseServiceControllersFederationConnectRequest {
-  address: string;
-  code?: string;
-  shareBack: boolean;
-}
-
 export interface BakabaseServiceControllersFederationDeviceNameRequest {
   name?: string;
+  expectedName?: string;
 }
 
 export interface BakabaseServiceControllersFederationIdentityResetRequest {
@@ -6839,34 +7005,71 @@ export interface BakabaseServiceControllersFederationIdentityResetRequest {
   replaceInstallIdentity: boolean;
 }
 
-export interface BakabaseServiceControllersFederationPathMappingsRequest {
-  mappings: BakabaseModulesFederationPeersNodePathMapping[];
-  expectedMappings?: BakabaseModulesFederationPeersNodePathMapping[];
-}
-
 export interface BakabaseServiceControllersFederationPeerChange {
   changed: boolean;
 }
 
-export interface BakabaseServiceControllersFederationPeerEnabledRequest {
-  enabled: boolean;
-}
-
 export interface BakabaseServiceControllersFederationPeerStatusResponse {
   identity: BakabaseModulesFederationIdentityNodeIdentity;
-  sharingEnabled: boolean;
   /** [0: Disabled, 1: Enabled, 2: Unrestricted] */
   remoteAccessMode: BakabaseAbstractionsModelsDomainConstantsRemoteAccessMode;
   requirePairing: boolean;
-  peers: BakabaseModulesFederationPeersFederationPeerView[];
-  requests: BakabaseModulesFederationPeersNodePairingRequestView[];
-  browsingEnabled: boolean;
-  reachableAddresses?: string[];
+  reachableAddresses: string[];
 }
 
-export interface BakabaseServiceControllersFederationSharingRequest {
-  enabled: boolean;
-  enablePairedRemoteAccess: boolean;
+export interface BakabaseServiceControllersManagedDeviceNameInput {
+  name?: string;
+  expectedName: string;
+  libraryEpoch: string;
+}
+
+export interface BakabaseServiceControllersManagedDeviceNameView {
+  name: string;
+  libraryEpoch: string;
+  environmentControlled: boolean;
+}
+
+export interface BakabaseServiceControllersManagedFileUploadInputModel {
+  fileName: string;
+  base64: string;
+}
+
+export interface BakabaseServiceControllersManagedLibraryBatchRequest {
+  libraryEpoch: string;
+  resourceIds: number[];
+  playerKey?: string;
+  /** [1: FirstFilePerResource, 2: AllFiles] */
+  fileSelectionMode: BakabaseModulesPlayerAbstractionsModelsDomainConstantsBatchPlayFileSelectionMode;
+}
+
+export interface BakabaseServiceControllersManagedLibraryDirectoryRequest {
+  libraryEpoch: string;
+  /** @format int32 */
+  resourceId: number;
+}
+
+export interface BakabaseServiceControllersManagedLibraryPlayRequest {
+  libraryEpoch: string;
+  /** @format int32 */
+  resourceId: number;
+  /** [1: Manual, 2: FileSystem, 3: Steam, 4: DLsite, 5: ExHentai, 6: ExternalIdentity] */
+  origin: BakabaseAbstractionsModelsDomainConstantsDataOrigin;
+  key: string;
+  explicitChoice: boolean;
+}
+
+export interface BakabaseServiceControllersManagedMetadataControlInput {
+  libraryEpoch: string;
+  paused: boolean;
+}
+
+export interface BakabaseServiceControllersManagedResourceDisplayOptions {
+  uiResource: BakabaseInsideWorldModelsConfigsUIOptionsUIResourceOptions;
+  propertyValueScopePriority: BakabaseAbstractionsModelsDomainConstantsPropertyValueScope[];
+}
+
+export interface BakabaseServiceControllersManagedResourceDisplayOptionsPatch {
+  propertyValueScopePriority: BakabaseAbstractionsModelsDomainConstantsPropertyValueScope[];
 }
 
 export interface BakabaseServiceControllersManagedServerAddressRequest {
@@ -6884,6 +7087,7 @@ export interface BakabaseServiceControllersManagedServerPairRequest {
 
 export interface BakabaseServiceControllersManagedServerPathMappingsRequest {
   mappings?: BakabaseModulesRemoteAccessAbstractionsModelsManagedServerPathMapping[];
+  expectedMappings?: BakabaseModulesRemoteAccessAbstractionsModelsManagedServerPathMapping[];
 }
 
 export interface BakabaseServiceControllersMediaLibraryStatistics {
@@ -6934,6 +7138,43 @@ export interface BakabaseServiceControllersResourceHealthScoreRowViewModel {
   matchedRulesJson?: string;
   /** @format date-time */
   evaluatedAt: string;
+}
+
+export interface BakabaseServiceControllersResourceProfileRuleInput {
+  /** [1: NameTemplate, 2: Enhancers, 3: PlayableFiles, 4: Players, 5: Properties, 6: OpeningMode] */
+  kind: BakabaseAbstractionsModelsDomainResourceProfileRuleKind;
+  valueJson?: string;
+  /** @format date-time */
+  expectedUpdatedAt: string;
+}
+
+export interface BakabaseServiceControllersResourceScopeBindInput {
+  /** @format int32 */
+  scopeId?: number;
+  /** @format date-time */
+  expectedUpdatedAt: string;
+}
+
+export interface BakabaseServiceControllersResourceScopeInput {
+  name: string;
+  search?: BakabaseServiceModelsInputResourceSearchInputModel;
+  sourceDeviceId?: string;
+  sourceLibraryEpoch?: string;
+  /** @format int32 */
+  expectedRevision?: number;
+}
+
+export interface BakabaseServiceControllersResourceScopeView {
+  /** @format int32 */
+  id: number;
+  name: string;
+  search?: BakabaseServiceModelsViewResourceSearchViewModel;
+  sourceDeviceId?: string;
+  sourceLibraryEpoch?: string;
+  /** @format int32 */
+  revision: number;
+  /** @format int32 */
+  ruleCount: number;
 }
 
 export interface BakabaseServiceControllersSharedListImportInputModel {
@@ -7062,6 +7303,10 @@ export interface BakabaseServiceModelsInputDecompressionInputModelItem {
   deleteAfterDecompression: boolean;
   moveToParent: boolean;
   overwriteExistFiles: boolean;
+}
+
+export interface BakabaseServiceModelsInputDeviceColorInput {
+  color?: string;
 }
 
 export interface BakabaseServiceModelsInputExHentaiDownloadTaskAddInputModel {
@@ -7219,6 +7464,9 @@ export interface BakabaseServiceModelsInputResourcePlaceholderItemInputModel {
 }
 
 export interface BakabaseServiceModelsInputResourceProfileInputModel {
+  sourceDeviceId?: string;
+  sourceLibraryEpoch?: string;
+  openingMode?: string;
   name: string;
   search?: BakabaseServiceModelsInputResourceSearchInputModel;
   nameTemplate?: string;
@@ -7230,6 +7478,12 @@ export interface BakabaseServiceModelsInputResourceProfileInputModel {
   priority: number;
 }
 
+export interface BakabaseServiceModelsInputResourceProfileOpeningInputModel {
+  sourceDeviceId?: string;
+  libraryEpoch?: string;
+  resourceIds: number[];
+}
+
 export interface BakabaseServiceModelsInputResourceSearchFilterGroupInputModel {
   /** [1: And, 2: Or] */
   combinator: BakabaseAbstractionsModelsDomainConstantsSearchCombinator;
@@ -7239,6 +7493,7 @@ export interface BakabaseServiceModelsInputResourceSearchFilterGroupInputModel {
 }
 
 export interface BakabaseServiceModelsInputResourceSearchFilterInputModel {
+  owner?: BakabaseAbstractionsModelsDomainResourceSearchOwner;
   /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
   propertyPool?: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
   /** @format int32 */
@@ -7250,6 +7505,8 @@ export interface BakabaseServiceModelsInputResourceSearchFilterInputModel {
 }
 
 export interface BakabaseServiceModelsInputResourceSearchInputModel {
+  owner?: BakabaseAbstractionsModelsDomainResourceSearchOwner;
+  deviceIds?: string[];
   group?: BakabaseServiceModelsInputResourceSearchFilterGroupInputModel;
   orders?: BakabaseAbstractionsModelsInputResourceSearchOrderInputModel[];
   keyword?: string;
@@ -8025,9 +8282,47 @@ export interface BakabaseServiceModelsViewResourcePlaceholderResultViewModel {
   error?: string;
 }
 
+export interface BakabaseServiceModelsViewResourceProfileOpeningResourceViewModel {
+  /** @format int32 */
+  resourceId: number;
+  openingMode?: string;
+  profileIds: number[];
+}
+
+export interface BakabaseServiceModelsViewResourceProfileOpeningViewModel {
+  openingMode?: string;
+  profileIds: number[];
+}
+
+export interface BakabaseServiceModelsViewResourceProfilePreviewResource {
+  /** @format int32 */
+  id: number;
+  path?: string;
+  displayName?: string;
+}
+
+export interface BakabaseServiceModelsViewResourceProfileSourceInfo {
+  deviceId: string;
+  name: string;
+  libraryEpoch: string;
+}
+
+export interface BakabaseServiceModelsViewResourceProfileSourceViewModel {
+  deviceId: string;
+  name: string;
+  libraryEpoch?: string;
+  available: boolean;
+  kind: string;
+}
+
 export interface BakabaseServiceModelsViewResourceProfileViewModel {
   /** @format int32 */
   id: number;
+  /** @format int32 */
+  resourceScopeId?: number;
+  sourceDeviceId?: string;
+  sourceLibraryEpoch?: string;
+  openingMode?: string;
   name: string;
   search?: BakabaseServiceModelsViewResourceSearchViewModel;
   nameTemplate?: string;
@@ -8052,6 +8347,7 @@ export interface BakabaseServiceModelsViewResourceSearchFilterGroupViewModel {
 }
 
 export interface BakabaseServiceModelsViewResourceSearchFilterViewModel {
+  owner?: BakabaseAbstractionsModelsDomainResourceSearchOwner;
   /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
   propertyPool?: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
   /** @format int32 */
@@ -8067,6 +8363,8 @@ export interface BakabaseServiceModelsViewResourceSearchFilterViewModel {
 }
 
 export interface BakabaseServiceModelsViewResourceSearchViewModel {
+  owner?: BakabaseAbstractionsModelsDomainResourceSearchOwner;
+  deviceIds?: string[];
   group?: BakabaseServiceModelsViewResourceSearchFilterGroupViewModel;
   orders?: BakabaseAbstractionsModelsInputResourceSearchOrderInputModel[];
   keyword?: string;
@@ -8753,6 +9051,20 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModels
   data?: BakabaseServiceModelsViewResourcePlaceholderResultViewModel[];
 }
 
+export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewResourceProfileOpeningResourceViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewResourceProfileOpeningResourceViewModel[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewResourceProfileSourceViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewResourceProfileSourceViewModel[];
+}
+
 export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewResourceProfileViewModel {
   /** @format int32 */
   code: number;
@@ -8945,6 +9257,19 @@ export interface BootstrapModelsResponseModelsSearchResponse1BakabaseServiceMode
   pageSize: number;
 }
 
+export interface BootstrapModelsResponseModelsSearchResponse1BakabaseServiceModelsViewResourceProfilePreviewResource {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewResourceProfilePreviewResource[];
+  /** @format int32 */
+  totalCount: number;
+  /** @format int32 */
+  pageIndex: number;
+  /** @format int32 */
+  pageSize: number;
+}
+
 export interface BootstrapModelsResponseModelsSearchResponse1BootstrapComponentsLoggingLogServiceModelsEntitiesLog {
   /** @format int32 */
   code: number;
@@ -8956,6 +9281,20 @@ export interface BootstrapModelsResponseModelsSearchResponse1BootstrapComponents
   pageIndex: number;
   /** @format int32 */
   pageSize: number;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsComponentsAppDesktopProfileView {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseAbstractionsComponentsAppDesktopProfileView;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsComponentsAppDesktopProfilesView {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseAbstractionsComponentsAppDesktopProfilesView;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsComponentsConfigurationResourceMovePanelOptions {
@@ -9064,6 +9403,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstract
   data?: BakabaseAbstractionsModelsDomainResourceFileSystemCache;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainResourceProfileEvaluationResult {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseAbstractionsModelsDomainResourceProfileEvaluationResult;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainResourceProfilePlayerOptions {
   /** @format int32 */
   code: number;
@@ -9134,11 +9480,25 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstract
   data?: BakabaseAbstractionsModelsViewResourceMovePreviewViewModel;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsViewThirdPartyContentTrackerDailyHistoryViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseAbstractionsModelsViewThirdPartyContentTrackerDailyHistoryViewModel;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsViewThirdPartyContentTrackerNearestViewModel {
   /** @format int32 */
   code: number;
   message?: string;
   data?: BakabaseAbstractionsModelsViewThirdPartyContentTrackerNearestViewModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsViewThirdPartyContentTrackerPageBoundariesViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseAbstractionsModelsViewThirdPartyContentTrackerPageBoundariesViewModel;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsServicesPlaceholderResourceResult {
@@ -9631,18 +9991,18 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesD
   data?: BakabaseModulesDataSyncServicesDataSyncHistoryDetail;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncHistoryPage {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesDataSyncServicesDataSyncHistoryPage;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncInboxPage {
   /** @format int32 */
   code: number;
   message?: string;
   data?: BakabaseModulesDataSyncServicesDataSyncInboxPage;
-}
-
-export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncInvitationResult {
-  /** @format int32 */
-  code: number;
-  message?: string;
-  data?: BakabaseModulesDataSyncServicesDataSyncInvitationResult;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncLinkResult {
@@ -9694,13 +10054,6 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesD
   data?: BakabaseModulesDataSyncServicesDataSyncTaskStart;
 }
 
-export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncUndoPreview {
-  /** @format int32 */
-  code: number;
-  message?: string;
-  data?: BakabaseModulesDataSyncServicesDataSyncUndoPreview;
-}
-
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesHealthScoreModelsViewHealthScoreProfileViewModel {
   /** @format int32 */
   code: number;
@@ -9727,6 +10080,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesP
   code: number;
   message?: string;
   data?: BakabaseModulesPlayerAbstractionsModelsDomainBatchPlayResult;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesPlayerAbstractionsModelsDomainDevicePlaybackPreferences {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesPlayerAbstractionsModelsDomainDevicePlaybackPreferences;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesPresetsAbstractionsModelsMediaLibraryTemplatePresetDataPool {
@@ -9853,6 +10213,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceC
   code: number;
   message?: string;
   data?: BakabaseServiceControllersCollectionRulePreview;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceControllersManagedResourceDisplayOptions {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceControllersManagedResourceDisplayOptions;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceControllersMediaLibraryStatistics {
@@ -10030,6 +10397,20 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceM
   data?: BakabaseServiceModelsViewResourceMoveContextViewModel;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewResourceProfileOpeningViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewResourceProfileOpeningViewModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewResourceProfileSourceInfo {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewResourceProfileSourceInfo;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewResourceProfileViewModel {
   /** @format int32 */
   code: number;
@@ -10168,6 +10549,8 @@ export interface BootstrapModelsResponseModelsSingletonResponse1SystemString {
  * @format int32
  */
 export type MicrosoftExtensionsLoggingLogLevel = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+
+export type NewtonsoftJsonLinqJToken = NewtonsoftJsonLinqJToken[];
 
 export type SystemEnum = object;
 
@@ -12370,6 +12753,55 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Resource
+     * @name PutSavedSearchCriteria
+     * @request PUT:/resource/saved-search/criteria
+     */
+    putSavedSearchCriteria: (
+      data: BakabaseServiceModelsInputResourceSearchInputModel,
+      query?: {
+        id?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/saved-search/criteria`,
+        method: "PUT",
+        query: query,
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for putSavedSearchCriteria
+     * @name putSavedSearchCriteriaUrl
+     */
+    putSavedSearchCriteriaUrl: (query?: {
+        id?: string;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource/saved-search/criteria`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Resource
      * @name SearchResources
      * @request POST:/resource/search
      */
@@ -12808,6 +13240,8 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         /** [1: Manual, 2: FileSystem, 3: Steam, 4: DLsite, 5: ExHentai, 6: ExternalIdentity] */
         origin?: BakabaseAbstractionsModelsDomainConstantsDataOrigin;
         key?: string;
+        /** @default false */
+        explicitChoice?: boolean;
       },
       params: RequestParams = {},
     ) =>
@@ -15708,6 +16142,129 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     /**
      * No description
      *
+     * @tags DesktopProfiles
+     * @name GetDesktopProfiles
+     * @request GET:/app/profiles
+     */
+    getDesktopProfiles: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsComponentsAppDesktopProfilesView,
+        any
+      >({
+        path: `/app/profiles`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getDesktopProfiles
+     * @name getDesktopProfilesUrl
+     */
+    getDesktopProfilesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/app/profiles`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags DesktopProfiles
+     * @name AddDesktopProfile
+     * @request POST:/app/profiles
+     */
+    addDesktopProfile: (
+      data: BakabaseAbstractionsComponentsAppDesktopProfileAddInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsComponentsAppDesktopProfileView,
+        any
+      >({
+        path: `/app/profiles`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for addDesktopProfile
+     * @name addDesktopProfileUrl
+     */
+    addDesktopProfileUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/app/profiles`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags DesktopProfiles
+     * @name UpdateDesktopProfile
+     * @request PUT:/app/profiles/{id}
+     */
+    updateDesktopProfile: (
+      id: string,
+      data: BakabaseAbstractionsComponentsAppDesktopProfileUpdateInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsComponentsAppDesktopProfileView,
+        any
+      >({
+        path: `/app/profiles/${id}`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DesktopProfiles
+     * @name RemoveDesktopProfile
+     * @request DELETE:/app/profiles/{id}
+     */
+    removeDesktopProfile: (id: string, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/app/profiles/${id}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DesktopProfiles
+     * @name OpenDesktopProfile
+     * @request POST:/app/profiles/{id}/open
+     */
+    openDesktopProfile: (
+      id: string,
+      data: BakabaseAbstractionsComponentsAppDesktopProfileOpenInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/app/profiles/${id}/open`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
      * @tags ResourceUsage
      * @name GetResourceUsage
      * @request GET:/app/resource-usage
@@ -16874,13 +17431,20 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name GetCollectionMemberships
      * @request GET:/collection/{id}/memberships
      */
-    getCollectionMemberships: (id: number, params: RequestParams = {}) =>
+    getCollectionMemberships: (
+      id: number,
+      query?: {
+        resourceIds?: number[];
+      },
+      params: RequestParams = {},
+    ) =>
       this.request<
         BootstrapModelsResponseModelsListResponse1BakabaseModulesCollectionAbstractionsModelsDomainCollectionMember,
         any
       >({
         path: `/collection/${id}/memberships`,
         method: "GET",
+        query: query,
         format: "json",
         ...params,
       }),
@@ -18876,40 +19440,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags DataSync
-     * @name CreateDataSyncCopyOnce
-     * @request POST:/data-sync/copy-once
-     */
-    createDataSyncCopyOnce: (
-      data: BakabaseModulesDataSyncServicesDataSyncCopyOnceInput,
-      params: RequestParams = {},
-    ) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncLinkResult,
-        any
-      >({
-        path: `/data-sync/copy-once`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for createDataSyncCopyOnce
-     * @name createDataSyncCopyOnceUrl
-     */
-    createDataSyncCopyOnceUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/data-sync/copy-once`;
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags DataSync
      * @name GetDataSyncFirstSync
      * @request GET:/data-sync/links/{id}/first-sync
      */
@@ -19083,35 +19613,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         format: "json",
         ...params,
       }),
-
-    /**
-     * No description
-     *
-     * @tags DataSync
-     * @name CreateDataSyncInvitation
-     * @request POST:/data-sync/invitations
-     */
-    createDataSyncInvitation: (params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncInvitationResult,
-        any
-      >({
-        path: `/data-sync/invitations`,
-        method: "POST",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for createDataSyncInvitation
-     * @name createDataSyncInvitationUrl
-     */
-    createDataSyncInvitationUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/data-sync/invitations`;
-
-      return baseUrl + path;
-    },
 
     /**
      * No description
@@ -19347,6 +19848,69 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags DataSync
+     * @name GetDataSyncHistoryPage
+     * @request GET:/data-sync/history/page
+     */
+    getDataSyncHistoryPage: (
+      query?: {
+        /** @format int32 */
+        beforeId?: number;
+        /**
+         * @format int32
+         * @default 50
+         */
+        take?: number;
+        peerNodeId?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncHistoryPage,
+        any
+      >({
+        path: `/data-sync/history/page`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getDataSyncHistoryPage
+     * @name getDataSyncHistoryPageUrl
+     */
+    getDataSyncHistoryPageUrl: (query?: {
+        /** @format int32 */
+        beforeId?: number;
+        /**
+         * @format int32
+         * @default 50
+         */
+        take?: number;
+        peerNodeId?: string;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/data-sync/history/page`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags DataSync
      * @name GetDataSyncHistoryEntry
      * @request GET:/data-sync/history/{id}
      */
@@ -19357,42 +19921,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       >({
         path: `/data-sync/history/${id}`,
         method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags DataSync
-     * @name PreviewDataSyncUndo
-     * @request GET:/data-sync/history/{id}/undo-preview
-     */
-    previewDataSyncUndo: (id: number, params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncUndoPreview,
-        any
-      >({
-        path: `/data-sync/history/${id}/undo-preview`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags DataSync
-     * @name UndoDataSync
-     * @request POST:/data-sync/history/{id}/undo
-     */
-    undoDataSync: (id: number, params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDataSyncServicesDataSyncTaskStart,
-        any
-      >({
-        path: `/data-sync/history/${id}/undo`,
-        method: "POST",
         format: "json",
         ...params,
       }),
@@ -19456,6 +19984,199 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     chooseDataSyncRestoreUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/data-sync/restore`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags SyncActivity
+     * @name GetSyncActivity
+     * @request GET:/data-sync/activity
+     */
+    getSyncActivity: (
+      query?: {
+        dataType?: string;
+        deviceId?: string;
+        state?: string;
+        /**
+         * @format int32
+         * @default 0
+         */
+        offset?: number;
+        /**
+         * @format int32
+         * @default 50
+         */
+        take?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseServiceComponentsDataSyncSyncActivityPage, any>({
+        path: `/data-sync/activity`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getSyncActivity
+     * @name getSyncActivityUrl
+     */
+    getSyncActivityUrl: (query?: {
+        dataType?: string;
+        deviceId?: string;
+        state?: string;
+        /**
+         * @format int32
+         * @default 0
+         */
+        offset?: number;
+        /**
+         * @format int32
+         * @default 50
+         */
+        take?: number;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/data-sync/activity`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags SyncActivity
+     * @name GetMetadataSyncHistory
+     * @request GET:/data-sync/activity/metadata-history
+     */
+    getMetadataSyncHistory: (
+      query?: {
+        serverId?: string;
+        /** @format int64 */
+        beforeId?: number;
+        /**
+         * @format int32
+         * @default 30
+         */
+        take?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BakabaseServiceComponentsFederationMetadataReplicasMetadataSyncActivityPage,
+        any
+      >({
+        path: `/data-sync/activity/metadata-history`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getMetadataSyncHistory
+     * @name getMetadataSyncHistoryUrl
+     */
+    getMetadataSyncHistoryUrl: (query?: {
+        serverId?: string;
+        /** @format int64 */
+        beforeId?: number;
+        /**
+         * @format int32
+         * @default 30
+         */
+        take?: number;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/data-sync/activity/metadata-history`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags SyncActivity
+     * @name GetSyncProcessingHistory
+     * @request GET:/data-sync/activity/processing-history
+     */
+    getSyncProcessingHistory: (
+      query?: {
+        /** [0: Manager, 1: Owner, 2: Worker] */
+        role?: BakabaseServiceComponentsFederationProcessingResourceProcessingRole;
+        beforeId?: string;
+        /**
+         * @format int32
+         * @default 30
+         */
+        take?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseServiceComponentsFederationProcessingResourceProcessingJobView[], any>({
+        path: `/data-sync/activity/processing-history`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getSyncProcessingHistory
+     * @name getSyncProcessingHistoryUrl
+     */
+    getSyncProcessingHistoryUrl: (query?: {
+        /** [0: Manager, 1: Owner, 2: Worker] */
+        role?: BakabaseServiceComponentsFederationProcessingResourceProcessingRole;
+        beforeId?: string;
+        /**
+         * @format int32
+         * @default 30
+         */
+        take?: number;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/data-sync/activity/processing-history`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
 
       return baseUrl + path;
     },
@@ -19712,391 +20433,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     /**
      * No description
      *
-     * @tags FederationExport
-     * @name CreateFederationExportQuery
-     * @request POST:/federation/v1/export/queries
-     */
-    createFederationExportQuery: (
-      data: BakabaseModulesFederationContractsNodeExportQuery,
-      params: RequestParams = {},
-    ) =>
-      this.request<BakabaseModulesFederationContractsNodeQueryBlock, any>({
-        path: `/federation/v1/export/queries`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for createFederationExportQuery
-     * @name createFederationExportQueryUrl
-     */
-    createFederationExportQueryUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/federation/v1/export/queries`;
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags FederationExport
-     * @name ReadFederationExportQuery
-     * @request GET:/federation/v1/export/queries/{id}/pages
-     */
-    readFederationExportQuery: (
-      id: string,
-      query?: {
-        cursor?: string;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<BakabaseModulesFederationContractsNodeQueryBlock, any>({
-        path: `/federation/v1/export/queries/${id}/pages`,
-        method: "GET",
-        query: query,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags FederationExport
-     * @name ValidateFederationExportQuery
-     * @request POST:/federation/v1/export/queries/{id}/validate
-     */
-    validateFederationExportQuery: (id: string, params: RequestParams = {}) =>
-      this.request<void, any>({
-        path: `/federation/v1/export/queries/${id}/validate`,
-        method: "POST",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags FederationExport
-     * @name ReleaseFederationExportQuery
-     * @request DELETE:/federation/v1/export/queries/{id}
-     */
-    releaseFederationExportQuery: (id: string, params: RequestParams = {}) =>
-      this.request<void, any>({
-        path: `/federation/v1/export/queries/${id}`,
-        method: "DELETE",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags FederationExport
-     * @name ResolveFederationExportResources
-     * @request POST:/federation/v1/export/resources/resolve
-     */
-    resolveFederationExportResources: (
-      data: BakabaseModulesFederationMediaResourceResolveRequest,
-      params: RequestParams = {},
-    ) =>
-      this.request<BakabaseModulesFederationMediaResourceResolveResponse, any>({
-        path: `/federation/v1/export/resources/resolve`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for resolveFederationExportResources
-     * @name resolveFederationExportResourcesUrl
-     */
-    resolveFederationExportResourcesUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/federation/v1/export/resources/resolve`;
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags FederationExport
-     * @name LocateFederationExportResource
-     * @request POST:/federation/v1/export/resources/location
-     */
-    locateFederationExportResource: (
-      data: BakabaseModulesFederationMediaResourceLocationRequest,
-      params: RequestParams = {},
-    ) =>
-      this.request<BakabaseModulesFederationMediaResourceLocationResponse, any>({
-        path: `/federation/v1/export/resources/location`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for locateFederationExportResource
-     * @name locateFederationExportResourceUrl
-     */
-    locateFederationExportResourceUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/federation/v1/export/resources/location`;
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags FederationExport
-     * @name GetFederationExportMappingRoots
-     * @request GET:/federation/v1/export/mapping-roots
-     */
-    getFederationExportMappingRoots: (params: RequestParams = {}) =>
-      this.request<BakabaseModulesFederationMediaMappingRoot[], any>({
-        path: `/federation/v1/export/mapping-roots`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for getFederationExportMappingRoots
-     * @name getFederationExportMappingRootsUrl
-     */
-    getFederationExportMappingRootsUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/federation/v1/export/mapping-roots`;
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags FederationExport
-     * @name ReadFederationExportAsset
-     * @request GET:/federation/v1/export/assets/{assetId}
-     */
-    readFederationExportAsset: (assetId: string, params: RequestParams = {}) =>
-      this.request<void, any>({
-        path: `/federation/v1/export/assets/${assetId}`,
-        method: "GET",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags FederationExport
-     * @name InspectFederationExportAsset
-     * @request HEAD:/federation/v1/export/assets/{assetId}
-     */
-    inspectFederationExportAsset: (assetId: string, params: RequestParams = {}) =>
-      this.request<void, any>({
-        path: `/federation/v1/export/assets/${assetId}`,
-        method: "HEAD",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags FederationLocal
-     * @name CreateFederatedLibraryQuery
-     * @request POST:/federation/local/queries
-     */
-    createFederatedLibraryQuery: (
-      data: BakabaseModulesFederationContractsLocalFederatedQuery,
-      params: RequestParams = {},
-    ) =>
-      this.request<BakabaseModulesFederationContractsFederatedQueryPage, any>({
-        path: `/federation/local/queries`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for createFederatedLibraryQuery
-     * @name createFederatedLibraryQueryUrl
-     */
-    createFederatedLibraryQueryUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/federation/local/queries`;
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags FederationLocal
-     * @name ReadFederatedLibraryQuery
-     * @request GET:/federation/local/queries/{id}/pages
-     */
-    readFederatedLibraryQuery: (
-      id: string,
-      query?: {
-        cursor?: string;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<BakabaseModulesFederationContractsFederatedQueryPage, any>({
-        path: `/federation/local/queries/${id}/pages`,
-        method: "GET",
-        query: query,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags FederationLocal
-     * @name ReleaseFederatedLibraryQuery
-     * @request DELETE:/federation/local/queries/{id}
-     */
-    releaseFederatedLibraryQuery: (id: string, params: RequestParams = {}) =>
-      this.request<void, any>({
-        path: `/federation/local/queries/${id}`,
-        method: "DELETE",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags FederationMedia
-     * @name ResolveFederatedResources
-     * @request POST:/federation/local/resources/resolve
-     */
-    resolveFederatedResources: (
-      data: BakabaseModulesFederationMediaResourceResolveRequest,
-      params: RequestParams = {},
-    ) =>
-      this.request<BakabaseModulesFederationMediaResourceResolveResponse, any>({
-        path: `/federation/local/resources/resolve`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for resolveFederatedResources
-     * @name resolveFederatedResourcesUrl
-     */
-    resolveFederatedResourcesUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/federation/local/resources/resolve`;
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags FederationMedia
-     * @name OpenFederatedResourceDirectory
-     * @request POST:/federation/local/resources/open-directory
-     */
-    openFederatedResourceDirectory: (
-      data: BakabaseModulesFederationMediaOpenResourceDirectoryRequest,
-      params: RequestParams = {},
-    ) =>
-      this.request<BakabaseModulesFederationMediaOpenResourceDirectoryResponse, any>({
-        path: `/federation/local/resources/open-directory`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for openFederatedResourceDirectory
-     * @name openFederatedResourceDirectoryUrl
-     */
-    openFederatedResourceDirectoryUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/federation/local/resources/open-directory`;
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags FederationMedia
-     * @name CreateFederatedPlaybackSession
-     * @request POST:/federation/local/playback-sessions
-     */
-    createFederatedPlaybackSession: (
-      data: BakabaseModulesFederationMediaPlaybackSessionRequest,
-      params: RequestParams = {},
-    ) =>
-      this.request<BakabaseModulesFederationMediaPlaybackSessionResponse, any>({
-        path: `/federation/local/playback-sessions`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for createFederatedPlaybackSession
-     * @name createFederatedPlaybackSessionUrl
-     */
-    createFederatedPlaybackSessionUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/federation/local/playback-sessions`;
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags FederationMedia
-     * @name ReadFederatedMediaSession
-     * @request GET:/federation/local/media/{ticketId}
-     */
-    readFederatedMediaSession: (ticketId: string, params: RequestParams = {}) =>
-      this.request<void, any>({
-        path: `/federation/local/media/${ticketId}`,
-        method: "GET",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags FederationMedia
-     * @name InspectFederatedMediaSession
-     * @request HEAD:/federation/local/media/{ticketId}
-     */
-    inspectFederatedMediaSession: (ticketId: string, params: RequestParams = {}) =>
-      this.request<void, any>({
-        path: `/federation/local/media/${ticketId}`,
-        method: "HEAD",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
      * @tags FederationPeer
      * @name GetFederationPeers
      * @request GET:/federation/local/peers
@@ -20116,68 +20452,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getFederationPeersUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/federation/local/peers`;
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags FederationPeer
-     * @name SetFederationBrowsing
-     * @request PUT:/federation/local/peers/browsing
-     */
-    setFederationBrowsing: (
-      data: BakabaseServiceControllersFederationBrowsingRequest,
-      params: RequestParams = {},
-    ) =>
-      this.request<BakabaseServiceControllersFederationPeerChange, any>({
-        path: `/federation/local/peers/browsing`,
-        method: "PUT",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for setFederationBrowsing
-     * @name setFederationBrowsingUrl
-     */
-    setFederationBrowsingUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/federation/local/peers/browsing`;
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags FederationPeer
-     * @name SetFederationSharing
-     * @request PUT:/federation/local/peers/sharing
-     */
-    setFederationSharing: (
-      data: BakabaseServiceControllersFederationSharingRequest,
-      params: RequestParams = {},
-    ) =>
-      this.request<BakabaseServiceControllersFederationPeerChange, any>({
-        path: `/federation/local/peers/sharing`,
-        method: "PUT",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for setFederationSharing
-     * @name setFederationSharingUrl
-     */
-    setFederationSharingUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/federation/local/peers/sharing`;
 
       return baseUrl + path;
     },
@@ -20212,267 +20486,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
       return baseUrl + path;
     },
-
-    /**
-     * No description
-     *
-     * @tags FederationPeer
-     * @name CreateFederationInvitation
-     * @request POST:/federation/local/peers/invite
-     */
-    createFederationInvitation: (params: RequestParams = {}) =>
-      this.request<BakabaseModulesFederationPeersNodeInvitation, any>({
-        path: `/federation/local/peers/invite`,
-        method: "POST",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for createFederationInvitation
-     * @name createFederationInvitationUrl
-     */
-    createFederationInvitationUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/federation/local/peers/invite`;
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags FederationPeer
-     * @name DiscoverFederationPeers
-     * @request GET:/federation/local/peers/discover
-     */
-    discoverFederationPeers: (params: RequestParams = {}) =>
-      this.request<BakabaseModulesFederationPeersNodeDiscoveryCandidate[], any>({
-        path: `/federation/local/peers/discover`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for discoverFederationPeers
-     * @name discoverFederationPeersUrl
-     */
-    discoverFederationPeersUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/federation/local/peers/discover`;
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags FederationPeer
-     * @name ConnectFederationPeer
-     * @request POST:/federation/local/peers/connect
-     */
-    connectFederationPeer: (
-      data: BakabaseServiceControllersFederationConnectRequest,
-      params: RequestParams = {},
-    ) =>
-      this.request<BakabaseModulesFederationPeersNodePairingOutcome, any>({
-        path: `/federation/local/peers/connect`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for connectFederationPeer
-     * @name connectFederationPeerUrl
-     */
-    connectFederationPeerUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/federation/local/peers/connect`;
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags FederationPeer
-     * @name ClaimFederationPairing
-     * @request POST:/federation/local/peers/claim
-     */
-    claimFederationPairing: (
-      data: BakabaseServiceControllersFederationClaimRequest,
-      params: RequestParams = {},
-    ) =>
-      this.request<BakabaseModulesFederationPeersNodePairingOutcome, any>({
-        path: `/federation/local/peers/claim`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for claimFederationPairing
-     * @name claimFederationPairingUrl
-     */
-    claimFederationPairingUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/federation/local/peers/claim`;
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags FederationPeer
-     * @name ApproveFederationPairing
-     * @request POST:/federation/local/peers/requests/{id}/approve
-     */
-    approveFederationPairing: (id: string, params: RequestParams = {}) =>
-      this.request<BakabaseServiceControllersFederationPeerChange, any>({
-        path: `/federation/local/peers/requests/${id}/approve`,
-        method: "POST",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags FederationPeer
-     * @name RejectFederationPairing
-     * @request POST:/federation/local/peers/requests/{id}/reject
-     */
-    rejectFederationPairing: (id: string, params: RequestParams = {}) =>
-      this.request<BakabaseServiceControllersFederationPeerChange, any>({
-        path: `/federation/local/peers/requests/${id}/reject`,
-        method: "POST",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags FederationPeer
-     * @name CancelFederationPairing
-     * @request DELETE:/federation/local/peers/requests/{id}
-     */
-    cancelFederationPairing: (id: string, params: RequestParams = {}) =>
-      this.request<BakabaseServiceControllersFederationPeerChange, any>({
-        path: `/federation/local/peers/requests/${id}`,
-        method: "DELETE",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags FederationPeer
-     * @name RevokeFederationGrant
-     * @request DELETE:/federation/local/peers/grants/{grantId}
-     */
-    revokeFederationGrant: (grantId: string, params: RequestParams = {}) =>
-      this.request<BakabaseServiceControllersFederationPeerChange, any>({
-        path: `/federation/local/peers/grants/${grantId}`,
-        method: "DELETE",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags FederationPeer
-     * @name RemoveFederationPeer
-     * @request DELETE:/federation/local/peers/{nodeId}
-     */
-    removeFederationPeer: (nodeId: string, params: RequestParams = {}) =>
-      this.request<BakabaseServiceControllersFederationPeerChange, any>({
-        path: `/federation/local/peers/${nodeId}`,
-        method: "DELETE",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags FederationPeer
-     * @name ForgetFederationPeer
-     * @request DELETE:/federation/local/peers/{nodeId}/outbound
-     */
-    forgetFederationPeer: (nodeId: string, params: RequestParams = {}) =>
-      this.request<BakabaseServiceControllersFederationPeerChange, any>({
-        path: `/federation/local/peers/${nodeId}/outbound`,
-        method: "DELETE",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags FederationPeer
-     * @name SetFederationPeerEnabled
-     * @request PUT:/federation/local/peers/{nodeId}/enabled
-     */
-    setFederationPeerEnabled: (
-      nodeId: string,
-      data: BakabaseServiceControllersFederationPeerEnabledRequest,
-      params: RequestParams = {},
-    ) =>
-      this.request<BakabaseServiceControllersFederationPeerChange, any>({
-        path: `/federation/local/peers/${nodeId}/enabled`,
-        method: "PUT",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags FederationPeer
-     * @name SetFederationPathMappings
-     * @request PUT:/federation/local/peers/{nodeId}/path-mappings
-     */
-    setFederationPathMappings: (
-      nodeId: string,
-      data: BakabaseServiceControllersFederationPathMappingsRequest,
-      params: RequestParams = {},
-    ) =>
-      this.request<BakabaseServiceControllersFederationPeerChange, any>({
-        path: `/federation/local/peers/${nodeId}/path-mappings`,
-        method: "PUT",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags FederationPeer
-     * @name GetFederationMappingRoots
-     * @request GET:/federation/local/peers/{nodeId}/mapping-roots
-     */
-    getFederationMappingRoots: (nodeId: string, params: RequestParams = {}) =>
-      this.request<BakabaseModulesFederationMediaMappingRoot[], any>({
-        path: `/federation/local/peers/${nodeId}/mapping-roots`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
 
     /**
      * No description
@@ -20527,99 +20540,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getFederationNodeInfoUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/federation/v1/info`;
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags FederationPeer
-     * @name ExchangeFederationInvitation
-     * @request POST:/federation/v1/pair/code
-     */
-    exchangeFederationInvitation: (
-      data: BakabaseModulesFederationPeersNodePairCodeRequest,
-      params: RequestParams = {},
-    ) =>
-      this.request<BakabaseModulesFederationPeersNodePairExchange, any>({
-        path: `/federation/v1/pair/code`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for exchangeFederationInvitation
-     * @name exchangeFederationInvitationUrl
-     */
-    exchangeFederationInvitationUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/federation/v1/pair/code`;
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags FederationPeer
-     * @name RequestFederationPairing
-     * @request POST:/federation/v1/pair/request
-     */
-    requestFederationPairing: (
-      data: BakabaseModulesFederationPeersNodePairRequest,
-      params: RequestParams = {},
-    ) =>
-      this.request<BakabaseModulesFederationPeersNodePairExchange, any>({
-        path: `/federation/v1/pair/request`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for requestFederationPairing
-     * @name requestFederationPairingUrl
-     */
-    requestFederationPairingUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/federation/v1/pair/request`;
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags FederationPeer
-     * @name ClaimFederationNodeGrant
-     * @request POST:/federation/v1/pair/claim
-     */
-    claimFederationNodeGrant: (
-      data: BakabaseModulesFederationPeersNodePairClaimRequest,
-      params: RequestParams = {},
-    ) =>
-      this.request<BakabaseModulesFederationPeersNodePairExchange, any>({
-        path: `/federation/v1/pair/claim`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for claimFederationNodeGrant
-     * @name claimFederationNodeGrantUrl
-     */
-    claimFederationNodeGrantUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/federation/v1/pair/claim`;
 
       return baseUrl + path;
     },
@@ -20857,6 +20777,436 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         method: "POST",
         body: data,
         type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ManagedLibrary
+     * @name ControlManagedMetadataSync
+     * @request POST:/federation/local/management/{serverId}/metadata/control
+     */
+    controlManagedMetadataSync: (
+      serverId: string,
+      data: BakabaseServiceControllersManagedMetadataControlInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/federation/local/management/${serverId}/metadata/control`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ManagedLibrary
+     * @name GetManagedResourceDisplayOptions
+     * @request GET:/federation/local/management/resource-display-options
+     */
+    getManagedResourceDisplayOptions: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceControllersManagedResourceDisplayOptions,
+        any
+      >({
+        path: `/federation/local/management/resource-display-options`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getManagedResourceDisplayOptions
+     * @name getManagedResourceDisplayOptionsUrl
+     */
+    getManagedResourceDisplayOptionsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/local/management/resource-display-options`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ManagedLibrary
+     * @name PatchManagedResourceDisplayOptions
+     * @request PATCH:/federation/local/management/resource-display-options
+     */
+    patchManagedResourceDisplayOptions: (
+      data: BakabaseServiceControllersManagedResourceDisplayOptionsPatch,
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/federation/local/management/resource-display-options`,
+        method: "PATCH",
+        body: data,
+        type: ContentType.Json,
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for patchManagedResourceDisplayOptions
+     * @name patchManagedResourceDisplayOptionsUrl
+     */
+    patchManagedResourceDisplayOptionsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/local/management/resource-display-options`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ManagedLibrary
+     * @name GetManagedLibrarySources
+     * @request GET:/federation/local/management/sources
+     */
+    getManagedLibrarySources: (params: RequestParams = {}) =>
+      this.request<BakabaseServiceComponentsFederationManagedLibrarySources, any>({
+        path: `/federation/local/management/sources`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getManagedLibrarySources
+     * @name getManagedLibrarySourcesUrl
+     */
+    getManagedLibrarySourcesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/federation/local/management/sources`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ManagedLibrary
+     * @name RequestManagedLibrary
+     * @request POST:/federation/local/management/{serverId}/request
+     */
+    requestManagedLibrary: (
+      serverId: string,
+      data: BakabaseServiceComponentsFederationManagedLibraryRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/federation/local/management/${serverId}/request`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ManagedLibrary
+     * @name UploadManagedLibraryFile
+     * @request POST:/federation/local/management/{serverId}/upload
+     */
+    uploadManagedLibraryFile: (
+      serverId: string,
+      data: BakabaseServiceComponentsFederationManagedLibraryRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/federation/local/management/${serverId}/upload`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ManagedLibraryCover
+     * @name GetManagedLibraryCover
+     * @request GET:/federation/local/management/{serverId}/cover
+     */
+    getManagedLibraryCover: (
+      serverId: string,
+      query?: {
+        libraryEpoch?: string;
+        /** @format int32 */
+        resourceId?: number;
+        /**
+         * @format int32
+         * @default 0
+         */
+        index?: number;
+        /** @format int32 */
+        w?: number;
+        /** @format int32 */
+        h?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/federation/local/management/${serverId}/cover`,
+        method: "GET",
+        query: query,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ManagedLibraryCover
+     * @name InspectManagedLibraryCover
+     * @request HEAD:/federation/local/management/{serverId}/cover
+     */
+    inspectManagedLibraryCover: (
+      serverId: string,
+      query?: {
+        libraryEpoch?: string;
+        /** @format int32 */
+        resourceId?: number;
+        /**
+         * @format int32
+         * @default 0
+         */
+        index?: number;
+        /** @format int32 */
+        w?: number;
+        /** @format int32 */
+        h?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/federation/local/management/${serverId}/cover`,
+        method: "HEAD",
+        query: query,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ManagedLibraryCover
+     * @name GetManagedLibraryAsset
+     * @request GET:/federation/local/management/{serverId}/asset
+     */
+    getManagedLibraryAsset: (
+      serverId: string,
+      query?: {
+        libraryEpoch?: string;
+        /** @format int32 */
+        resourceId?: number;
+        key?: string;
+        /** @default false */
+        thumbnail?: boolean;
+        /** @format int32 */
+        w?: number;
+        /** @format int32 */
+        h?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/federation/local/management/${serverId}/asset`,
+        method: "GET",
+        query: query,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ManagedLibraryCover
+     * @name InspectManagedLibraryAsset
+     * @request HEAD:/federation/local/management/{serverId}/asset
+     */
+    inspectManagedLibraryAsset: (
+      serverId: string,
+      query?: {
+        libraryEpoch?: string;
+        /** @format int32 */
+        resourceId?: number;
+        key?: string;
+        /** @default false */
+        thumbnail?: boolean;
+        /** @format int32 */
+        w?: number;
+        /** @format int32 */
+        h?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/federation/local/management/${serverId}/asset`,
+        method: "HEAD",
+        query: query,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ManagedLibraryPlayback
+     * @name GetManagedLibraryBatchPlayCandidates
+     * @request POST:/federation/local/management/{serverId}/batch-play/candidates
+     */
+    getManagedLibraryBatchPlayCandidates: (
+      serverId: string,
+      data: BakabaseServiceControllersManagedLibraryBatchRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/federation/local/management/${serverId}/batch-play/candidates`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ManagedLibraryPlayback
+     * @name BatchPlayManagedLibraryResources
+     * @request POST:/federation/local/management/{serverId}/batch-play
+     */
+    batchPlayManagedLibraryResources: (
+      serverId: string,
+      data: BakabaseServiceControllersManagedLibraryBatchRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/federation/local/management/${serverId}/batch-play`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ManagedLibraryPlayback
+     * @name PlayManagedLibraryResource
+     * @request POST:/federation/local/management/{serverId}/play
+     */
+    playManagedLibraryResource: (
+      serverId: string,
+      data: BakabaseServiceControllersManagedLibraryPlayRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/federation/local/management/${serverId}/play`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ManagedLibraryPlayback
+     * @name OpenManagedLibraryResourceDirectory
+     * @request POST:/federation/local/management/{serverId}/directory
+     */
+    openManagedLibraryResourceDirectory: (
+      serverId: string,
+      data: BakabaseServiceControllersManagedLibraryDirectoryRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/federation/local/management/${serverId}/directory`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ManagedLibraryPlayback
+     * @name StreamManagedLibraryMedia
+     * @request GET:/federation/local/management/{serverId}/media
+     */
+    streamManagedLibraryMedia: (
+      serverId: string,
+      query?: {
+        libraryEpoch?: string;
+        /** @format int32 */
+        resourceId?: number;
+        /** [1: Manual, 2: FileSystem, 3: Steam, 4: DLsite, 5: ExHentai, 6: ExternalIdentity] */
+        origin?: BakabaseAbstractionsModelsDomainConstantsDataOrigin;
+        key?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/federation/local/management/${serverId}/media`,
+        method: "GET",
+        query: query,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ManagedLibraryPlayback
+     * @name InspectManagedLibraryMedia
+     * @request HEAD:/federation/local/management/{serverId}/media
+     */
+    inspectManagedLibraryMedia: (
+      serverId: string,
+      query?: {
+        libraryEpoch?: string;
+        /** @format int32 */
+        resourceId?: number;
+        /** [1: Manual, 2: FileSystem, 3: Steam, 4: DLsite, 5: ExHentai, 6: ExternalIdentity] */
+        origin?: BakabaseAbstractionsModelsDomainConstantsDataOrigin;
+        key?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/federation/local/management/${serverId}/media`,
+        method: "HEAD",
+        query: query,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ManagedServerMappingTree
+     * @name GetManagedServerPathMappingTree
+     * @request GET:/federation/local/servers/{serverId}/path-mapping-tree
+     */
+    getManagedServerPathMappingTree: (
+      serverId: string,
+      query?: {
+        parent?: string;
+        cursor?: string;
+        /**
+         * @format int32
+         * @default 200
+         */
+        limit?: number;
+        libraryEpoch?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseServiceComponentsFederationManagedLibraryMappingTreePage, any>({
+        path: `/federation/local/servers/${serverId}/path-mapping-tree`,
+        method: "GET",
+        query: query,
         format: "json",
         ...params,
       }),
@@ -22051,7 +22401,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       data: BakabaseServiceModelsInputResourceProfileInputModel,
       params: RequestParams = {},
     ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewResourceProfileViewModel,
+        any
+      >({
         path: `/resource-profile/${id}`,
         method: "PUT",
         body: data,
@@ -22108,6 +22461,363 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/resource-profile/by-resource/${resourceId}/bind-property`,
         method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ResourceProfile
+     * @name EvaluateResourceProfileSearches
+     * @request POST:/resource-profile/evaluate
+     */
+    evaluateResourceProfileSearches: (
+      data: BakabaseAbstractionsModelsDomainResourceProfileEvaluationInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainResourceProfileEvaluationResult,
+        any
+      >({
+        path: `/resource-profile/evaluate`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for evaluateResourceProfileSearches
+     * @name evaluateResourceProfileSearchesUrl
+     */
+    evaluateResourceProfileSearchesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource-profile/evaluate`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ResourceProfile
+     * @name ResolveResourceProfileSearch
+     * @request POST:/resource-profile/search/resolve
+     */
+    resolveResourceProfileSearch: (
+      data: BakabaseServiceModelsInputResourceSearchInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewResourceSearchViewModel,
+        any
+      >({
+        path: `/resource-profile/search/resolve`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for resolveResourceProfileSearch
+     * @name resolveResourceProfileSearchUrl
+     */
+    resolveResourceProfileSearchUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource-profile/search/resolve`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ResourceProfileSourceData
+     * @name GetResourceProfileSourceInfo
+     * @request GET:/resource-profile/source-info
+     */
+    getResourceProfileSourceInfo: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewResourceProfileSourceInfo,
+        any
+      >({
+        path: `/resource-profile/source-info`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getResourceProfileSourceInfo
+     * @name getResourceProfileSourceInfoUrl
+     */
+    getResourceProfileSourceInfoUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource-profile/source-info`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ResourceProfileSourceData
+     * @name GetResourceProfileSearchProperties
+     * @request GET:/resource-profile/search/properties
+     */
+    getResourceProfileSearchProperties: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesPropertyModelsViewPropertyViewModel,
+        any
+      >({
+        path: `/resource-profile/search/properties`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getResourceProfileSearchProperties
+     * @name getResourceProfileSearchPropertiesUrl
+     */
+    getResourceProfileSearchPropertiesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource-profile/search/properties`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ResourceProfileSourceData
+     * @name GetResourceProfileSearchFilterValue
+     * @request POST:/resource-profile/search/filter-value
+     */
+    getResourceProfileSearchFilterValue: (
+      data: BakabaseServiceModelsInputResourceSearchFilterInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesPropertyModelsViewPropertyViewModel,
+        any
+      >({
+        path: `/resource-profile/search/filter-value`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getResourceProfileSearchFilterValue
+     * @name getResourceProfileSearchFilterValueUrl
+     */
+    getResourceProfileSearchFilterValueUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource-profile/search/filter-value`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ResourceProfileSourceData
+     * @name PreviewResourceProfileSearch
+     * @request POST:/resource-profile/preview
+     */
+    previewResourceProfileSearch: (
+      data: BakabaseServiceModelsInputResourceSearchInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSearchResponse1BakabaseServiceModelsViewResourceProfilePreviewResource,
+        any
+      >({
+        path: `/resource-profile/preview`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for previewResourceProfileSearch
+     * @name previewResourceProfileSearchUrl
+     */
+    previewResourceProfileSearchUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource-profile/preview`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ResourceProfileSources
+     * @name GetResourceProfileSources
+     * @request GET:/resource-profile/sources
+     */
+    getResourceProfileSources: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewResourceProfileSourceViewModel,
+        any
+      >({
+        path: `/resource-profile/sources`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getResourceProfileSources
+     * @name getResourceProfileSourcesUrl
+     */
+    getResourceProfileSourcesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource-profile/sources`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ResourceProfileSources
+     * @name GetConnectedResourceProfileSourceInfo
+     * @request GET:/resource-profile/sources/{deviceId}/info
+     */
+    getConnectedResourceProfileSourceInfo: (
+      deviceId: string,
+      query?: {
+        libraryEpoch?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewResourceProfileSourceInfo,
+        any
+      >({
+        path: `/resource-profile/sources/${deviceId}/info`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ResourceProfileSources
+     * @name GetSourceResourceProfileProperties
+     * @request GET:/resource-profile/sources/{deviceId}/properties
+     */
+    getSourceResourceProfileProperties: (
+      deviceId: string,
+      query?: {
+        libraryEpoch?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesPropertyModelsViewPropertyViewModel,
+        any
+      >({
+        path: `/resource-profile/sources/${deviceId}/properties`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ResourceProfileSources
+     * @name GetSourceResourceProfileFilterValue
+     * @request POST:/resource-profile/sources/{deviceId}/filter-value
+     */
+    getSourceResourceProfileFilterValue: (
+      deviceId: string,
+      data: BakabaseServiceModelsInputResourceSearchFilterInputModel,
+      query?: {
+        libraryEpoch?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesPropertyModelsViewPropertyViewModel,
+        any
+      >({
+        path: `/resource-profile/sources/${deviceId}/filter-value`,
+        method: "POST",
+        query: query,
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ResourceProfileSources
+     * @name ResolveSourceResourceProfileSearch
+     * @request POST:/resource-profile/sources/{deviceId}/search/resolve
+     */
+    resolveSourceResourceProfileSearch: (
+      deviceId: string,
+      data: BakabaseServiceModelsInputResourceSearchInputModel,
+      query?: {
+        libraryEpoch?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewResourceSearchViewModel,
+        any
+      >({
+        path: `/resource-profile/sources/${deviceId}/search/resolve`,
+        method: "POST",
+        query: query,
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ResourceProfileSources
+     * @name PreviewSourceResourceProfileSearch
+     * @request POST:/resource-profile/sources/{deviceId}/preview
+     */
+    previewSourceResourceProfileSearch: (
+      deviceId: string,
+      data: BakabaseServiceModelsInputResourceSearchInputModel,
+      query?: {
+        libraryEpoch?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSearchResponse1BakabaseServiceModelsViewResourceProfilePreviewResource,
+        any
+      >({
+        path: `/resource-profile/sources/${deviceId}/preview`,
+        method: "POST",
+        query: query,
         body: data,
         type: ContentType.Json,
         format: "json",
@@ -24537,6 +25247,740 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       return baseUrl + path;
     },
   };
+  management = {
+    /**
+     * No description
+     *
+     * @tags ManagedDeviceName
+     * @name GetManagedDeviceName
+     * @request GET:/management/device-name
+     */
+    getManagedDeviceName: (params: RequestParams = {}) =>
+      this.request<BakabaseServiceControllersManagedDeviceNameView, any>({
+        path: `/management/device-name`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getManagedDeviceName
+     * @name getManagedDeviceNameUrl
+     */
+    getManagedDeviceNameUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/management/device-name`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ManagedDeviceName
+     * @name SetManagedDeviceName
+     * @request PUT:/management/device-name
+     */
+    setManagedDeviceName: (
+      data: BakabaseServiceControllersManagedDeviceNameInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseServiceControllersManagedDeviceNameView, any>({
+        path: `/management/device-name`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for setManagedDeviceName
+     * @name setManagedDeviceNameUrl
+     */
+    setManagedDeviceNameUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/management/device-name`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ManagedLibraryBrowserFiles
+     * @name GetManagedResourceBrowserFiles
+     * @request GET:/management/library/resources/{id}/browser-files
+     */
+    getManagedResourceBrowserFiles: (
+      id: number,
+      query?: {
+        /**
+         * @format int32
+         * @default 0
+         */
+        offset?: number;
+        /**
+         * @format int32
+         * @default 100
+         */
+        pageSize?: number;
+        /** @default "configured" */
+        scope?: string;
+        initialPath?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/management/library/resources/${id}/browser-files`,
+        method: "GET",
+        query: query,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ManagedLibraryBrowserFiles
+     * @name PlayManagedResourceBrowserFile
+     * @request GET:/management/library/resources/{id}/media
+     */
+    playManagedResourceBrowserFile: (
+      id: number,
+      query?: {
+        key?: string;
+        /** [1: Manual, 2: FileSystem, 3: Steam, 4: DLsite, 5: ExHentai, 6: ExternalIdentity] */
+        origin?: BakabaseAbstractionsModelsDomainConstantsDataOrigin;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/management/library/resources/${id}/media`,
+        method: "GET",
+        query: query,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ManagedLibraryBrowserFiles
+     * @name ValidateManagedResourceNativeFallback
+     * @request GET:/management/library/resources/{id}/native-fallback
+     */
+    validateManagedResourceNativeFallback: (
+      id: number,
+      query?: {
+        key?: string;
+        /** [1: Manual, 2: FileSystem, 3: Steam, 4: DLsite, 5: ExHentai, 6: ExternalIdentity] */
+        origin?: BakabaseAbstractionsModelsDomainConstantsDataOrigin;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/management/library/resources/${id}/native-fallback`,
+        method: "GET",
+        query: query,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ManagedLibraryInfo
+     * @name GetManagedLibraryInfo
+     * @request GET:/management/library/info
+     */
+    getManagedLibraryInfo: (params: RequestParams = {}) =>
+      this.request<BakabaseServiceComponentsFederationManagedLibraryInfo, any>({
+        path: `/management/library/info`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getManagedLibraryInfo
+     * @name getManagedLibraryInfoUrl
+     */
+    getManagedLibraryInfoUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/management/library/info`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ManagedLibraryMapping
+     * @name GetOwnedResourcePathMappingTree
+     * @request GET:/management/library/path-mapping-tree
+     */
+    getOwnedResourcePathMappingTree: (
+      query?: {
+        parent?: string;
+        cursor?: string;
+        /**
+         * @format int32
+         * @default 200
+         */
+        limit?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseServiceComponentsFederationManagedLibraryMappingTreePage, any>({
+        path: `/management/library/path-mapping-tree`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getOwnedResourcePathMappingTree
+     * @name getOwnedResourcePathMappingTreeUrl
+     */
+    getOwnedResourcePathMappingTreeUrl: (query?: {
+        parent?: string;
+        cursor?: string;
+        /**
+         * @format int32
+         * @default 200
+         */
+        limit?: number;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/management/library/path-mapping-tree`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ManagedLibrarySearch
+     * @name PreviewManagedCustomPropertyConversion
+     * @request POST:/management/library/custom-properties/{id}/conversion-preview
+     */
+    previewManagedCustomPropertyConversion: (
+      id: number,
+      query?: {
+        /** [1: SingleLineText, 2: MultilineText, 3: SingleChoice, 4: MultipleChoice, 5: Number, 6: Percentage, 7: Rating, 8: Boolean, 9: Link, 10: Attachment, 11: Date, 12: DateTime, 13: Time, 14: Formula, 15: Multilevel, 16: Tags] */
+        targetType?: BakabaseAbstractionsModelsDomainConstantsPropertyType;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/management/library/custom-properties/${id}/conversion-preview`,
+        method: "POST",
+        query: query,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ManagedLibrarySearch
+     * @name SearchManagedResourcePaths
+     * @request GET:/management/library/resource-paths
+     */
+    searchManagedResourcePaths: (
+      query?: {
+        keyword?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/management/library/resource-paths`,
+        method: "GET",
+        query: query,
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for searchManagedResourcePaths
+     * @name searchManagedResourcePathsUrl
+     */
+    searchManagedResourcePathsUrl: (query?: {
+        keyword?: string;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/management/library/resource-paths`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ManagedLibraryUpload
+     * @name UploadManagedResourceAttachment
+     * @request POST:/management/library/resources/{id}/attachment
+     */
+    uploadManagedResourceAttachment: (
+      id: number,
+      data: BakabaseServiceControllersManagedFileUploadInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/management/library/resources/${id}/attachment`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ManagedLibraryUpload
+     * @name UploadManagedResourceTorrent
+     * @request POST:/management/library/resources/{id}/torrent
+     */
+    uploadManagedResourceTorrent: (
+      id: number,
+      data: BakabaseServiceControllersManagedFileUploadInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/management/library/resources/${id}/torrent`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ManagedMetadata
+     * @name GetManagedMetadataHead
+     * @request GET:/management/library/metadata/head
+     */
+    getManagedMetadataHead: (params: RequestParams = {}) =>
+      this.request<BakabaseServiceComponentsFederationMetadataReplicasMetadataSourceManifest, any>({
+        path: `/management/library/metadata/head`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getManagedMetadataHead
+     * @name getManagedMetadataHeadUrl
+     */
+    getManagedMetadataHeadUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/management/library/metadata/head`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ManagedMetadata
+     * @name GetManagedMetadataPage
+     * @request POST:/management/library/metadata/page
+     */
+    getManagedMetadataPage: (
+      data: BakabaseServiceComponentsFederationMetadataReplicasMetadataPageRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/management/library/metadata/page`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getManagedMetadataPage
+     * @name getManagedMetadataPageUrl
+     */
+    getManagedMetadataPageUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/management/library/metadata/page`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ManagedResourceAssets
+     * @name GetManagedResourceCovers
+     * @request GET:/management/library/resources/{id}/covers
+     */
+    getManagedResourceCovers: (id: number, params: RequestParams = {}) =>
+      this.request<void, any>({
+        path: `/management/library/resources/${id}/covers`,
+        method: "GET",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ManagedResourceAssets
+     * @name GetManagedResourceCover
+     * @request GET:/management/library/resources/{id}/cover
+     */
+    getManagedResourceCover: (
+      id: number,
+      query?: {
+        /**
+         * @format int32
+         * @default 0
+         */
+        index?: number;
+        /** @format int32 */
+        w?: number;
+        /** @format int32 */
+        h?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/management/library/resources/${id}/cover`,
+        method: "GET",
+        query: query,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ManagedResourceAssets
+     * @name GetManagedResourceAsset
+     * @request GET:/management/library/resources/{id}/asset
+     */
+    getManagedResourceAsset: (
+      id: number,
+      query?: {
+        key?: string;
+        /** @default false */
+        thumbnail?: boolean;
+        /** @format int32 */
+        w?: number;
+        /** @format int32 */
+        h?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/management/library/resources/${id}/asset`,
+        method: "GET",
+        query: query,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ManagedResourceAssets
+     * @name GetManagedResourcePreviewerItems
+     * @request GET:/management/library/resources/{id}/previewer
+     */
+    getManagedResourcePreviewerItems: (id: number, params: RequestParams = {}) =>
+      this.request<void, any>({
+        path: `/management/library/resources/${id}/previewer`,
+        method: "GET",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ManagedResourceAssets
+     * @name GetManagedResourceChildren
+     * @request GET:/management/library/resources/{id}/children
+     */
+    getManagedResourceChildren: (
+      id: number,
+      query?: {
+        root?: string;
+        /** @default false */
+        showHiddenFiles?: boolean;
+        cursor?: string;
+        /**
+         * @format int32
+         * @default 100
+         */
+        pageSize?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/management/library/resources/${id}/children`,
+        method: "GET",
+        query: query,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ManagedResourceProcessing
+     * @name PrepareManagedResourceProcessing
+     * @request POST:/management/resource-processing/owner/prepare
+     */
+    prepareManagedResourceProcessing: (
+      data: BakabaseServiceComponentsFederationProcessingResourceProcessingInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseServiceComponentsFederationProcessingResourceProcessingPrepared, any>({
+        path: `/management/resource-processing/owner/prepare`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for prepareManagedResourceProcessing
+     * @name prepareManagedResourceProcessingUrl
+     */
+    prepareManagedResourceProcessingUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/management/resource-processing/owner/prepare`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ManagedResourceProcessing
+     * @name ApplyManagedResourceProcessing
+     * @request POST:/management/resource-processing/owner/{jobId}/apply
+     */
+    applyManagedResourceProcessing: (
+      jobId: string,
+      data: BakabaseServiceComponentsFederationProcessingResourceProcessingApply,
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseServiceComponentsFederationProcessingResourceProcessingReceipt, any>({
+        path: `/management/resource-processing/owner/${jobId}/apply`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ManagedResourceProcessing
+     * @name GetManagedResourceProcessingReceipt
+     * @request POST:/management/resource-processing/owner/{jobId}/receipt
+     */
+    getManagedResourceProcessingReceipt: (
+      jobId: string,
+      data: BakabaseServiceComponentsFederationProcessingResourceProcessingReceiptRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BakabaseServiceComponentsFederationProcessingResourceProcessingReceiptStatus,
+        any
+      >({
+        path: `/management/resource-processing/owner/${jobId}/receipt`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ManagedResourceProcessing
+     * @name UploadManagedResourceProcessingArtifact
+     * @request POST:/management/resource-processing/owner/artifact
+     */
+    uploadManagedResourceProcessingArtifact: (
+      data: BakabaseServiceComponentsFederationProcessingResourceProcessingArtifactChunk,
+      params: RequestParams = {},
+    ) =>
+      this.request<number, any>({
+        path: `/management/resource-processing/owner/artifact`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for uploadManagedResourceProcessingArtifact
+     * @name uploadManagedResourceProcessingArtifactUrl
+     */
+    uploadManagedResourceProcessingArtifactUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/management/resource-processing/owner/artifact`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ManagedResourceProcessing
+     * @name AbandonManagedResourceProcessing
+     * @request POST:/management/resource-processing/owner/{jobId}/abandon
+     */
+    abandonManagedResourceProcessing: (
+      jobId: string,
+      data: BakabaseServiceComponentsFederationProcessingResourceProcessingAbandonRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<boolean, any>({
+        path: `/management/resource-processing/owner/${jobId}/abandon`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ManagedResourceProcessing
+     * @name QueueManagedResourceProcessing
+     * @request POST:/management/resource-processing/worker/queue
+     */
+    queueManagedResourceProcessing: (
+      data: BakabaseServiceComponentsFederationProcessingResourceProcessingPrepared,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BakabaseServiceComponentsFederationProcessingResourceProcessingWorkerResult,
+        any
+      >({
+        path: `/management/resource-processing/worker/queue`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for queueManagedResourceProcessing
+     * @name queueManagedResourceProcessingUrl
+     */
+    queueManagedResourceProcessingUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/management/resource-processing/worker/queue`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ManagedResourceProcessing
+     * @name ReadManagedResourceProcessingArtifact
+     * @request POST:/management/resource-processing/worker/{jobId}/artifact
+     */
+    readManagedResourceProcessingArtifact: (
+      jobId: string,
+      data: BakabaseServiceComponentsFederationProcessingResourceProcessingArtifactRead,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BakabaseServiceComponentsFederationProcessingResourceProcessingArtifactChunk,
+        any
+      >({
+        path: `/management/resource-processing/worker/${jobId}/artifact`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ManagedResourceProcessing
+     * @name AcknowledgeManagedResourceProcessing
+     * @request POST:/management/resource-processing/worker/{jobId}/ack
+     */
+    acknowledgeManagedResourceProcessing: (jobId: string, params: RequestParams = {}) =>
+      this.request<boolean, any>({
+        path: `/management/resource-processing/worker/${jobId}/ack`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ManagedResourceProcessing
+     * @name ControlManagedResourceProcessingWorker
+     * @request POST:/management/resource-processing/worker/{jobId}/control
+     */
+    controlManagedResourceProcessingWorker: (
+      jobId: string,
+      data: BakabaseServiceComponentsFederationProcessingResourceProcessingWorkerControl,
+      params: RequestParams = {},
+    ) =>
+      this.request<boolean, any>({
+        path: `/management/resource-processing/worker/${jobId}/control`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ManagedResourceProcessing
+     * @name AbandonManagedResourceProcessingWorker
+     * @request POST:/management/resource-processing/worker/{jobId}/abandon
+     */
+    abandonManagedResourceProcessingWorker: (jobId: string, params: RequestParams = {}) =>
+      this.request<boolean, any>({
+        path: `/management/resource-processing/worker/${jobId}/abandon`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+  };
   mediaLibraryResourceMapping = {
     /**
      * No description
@@ -25669,6 +27113,27 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
       return baseUrl + path;
     },
+
+    /**
+     * No description
+     *
+     * @tags Options
+     * @name SetDeviceColor
+     * @request PUT:/options/ui/device-colors/{serverId}
+     */
+    setDeviceColor: (
+      serverId: string,
+      data: BakabaseServiceModelsInputDeviceColorInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/options/ui/device-colors/${serverId}`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
 
     /**
      * No description
@@ -28233,6 +29698,66 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Player
+     * @name GetDevicePlaybackPreferences
+     * @request GET:/player/device-playback/preferences
+     */
+    getDevicePlaybackPreferences: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesPlayerAbstractionsModelsDomainDevicePlaybackPreferences,
+        any
+      >({
+        path: `/player/device-playback/preferences`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getDevicePlaybackPreferences
+     * @name getDevicePlaybackPreferencesUrl
+     */
+    getDevicePlaybackPreferencesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/player/device-playback/preferences`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Player
+     * @name SetDevicePlaybackPreferences
+     * @request PUT:/player/device-playback/preferences
+     */
+    setDevicePlaybackPreferences: (
+      data: BakabaseModulesPlayerAbstractionsModelsDomainDevicePlaybackPreferences,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/player/device-playback/preferences`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for setDevicePlaybackPreferences
+     * @name setDevicePlaybackPreferencesUrl
+     */
+    setDevicePlaybackPreferencesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/player/device-playback/preferences`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Player
      * @name GetBatchPlayResourceSnapshot
      * @request POST:/player/batch-play/resource-snapshot
      */
@@ -28390,6 +29915,95 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         format: "json",
         ...params,
       }),
+
+    /**
+     * No description
+     *
+     * @tags ResourceProfileOpening
+     * @name GetResourceProfileOpeningBehavior
+     * @request GET:/player/resource-profile
+     */
+    getResourceProfileOpeningBehavior: (
+      query?: {
+        /** @format int32 */
+        resourceId?: number;
+        sourceDeviceId?: string;
+        libraryEpoch?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewResourceProfileOpeningViewModel,
+        any
+      >({
+        path: `/player/resource-profile`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getResourceProfileOpeningBehavior
+     * @name getResourceProfileOpeningBehaviorUrl
+     */
+    getResourceProfileOpeningBehaviorUrl: (query?: {
+        /** @format int32 */
+        resourceId?: number;
+        sourceDeviceId?: string;
+        libraryEpoch?: string;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/player/resource-profile`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ResourceProfileOpening
+     * @name GetResourceProfileOpeningBehaviors
+     * @request POST:/player/resource-profiles
+     */
+    getResourceProfileOpeningBehaviors: (
+      data: BakabaseServiceModelsInputResourceProfileOpeningInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewResourceProfileOpeningResourceViewModel,
+        any
+      >({
+        path: `/player/resource-profiles`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getResourceProfileOpeningBehaviors
+     * @name getResourceProfileOpeningBehaviorsUrl
+     */
+    getResourceProfileOpeningBehaviorsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/player/resource-profiles`;
+
+      return baseUrl + path;
+    },
   };
   playHistory = {
     /**
@@ -30127,6 +31741,254 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       return baseUrl + path;
     },
   };
+  resourceProcessing = {
+    /**
+     * No description
+     *
+     * @tags ResourceProcessing
+     * @name GetResourceProcessingJobs
+     * @request GET:/resource-processing/jobs
+     */
+    getResourceProcessingJobs: (
+      query?: {
+        beforeId?: string;
+        /**
+         * @format int32
+         * @default 30
+         */
+        take?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseServiceComponentsFederationProcessingResourceProcessingJobView[], any>({
+        path: `/resource-processing/jobs`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getResourceProcessingJobs
+     * @name getResourceProcessingJobsUrl
+     */
+    getResourceProcessingJobsUrl: (query?: {
+        beforeId?: string;
+        /**
+         * @format int32
+         * @default 30
+         */
+        take?: number;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource-processing/jobs`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ResourceProcessing
+     * @name StartResourceProcessing
+     * @request POST:/resource-processing/jobs
+     */
+    startResourceProcessing: (
+      data: BakabaseServiceComponentsFederationProcessingResourceProcessingStart,
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseServiceComponentsFederationProcessingResourceProcessingJobView, any>({
+        path: `/resource-processing/jobs`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for startResourceProcessing
+     * @name startResourceProcessingUrl
+     */
+    startResourceProcessingUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource-processing/jobs`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ResourceProcessing
+     * @name ControlResourceProcessing
+     * @request POST:/resource-processing/jobs/{jobId}/control
+     */
+    controlResourceProcessing: (
+      jobId: string,
+      data: BakabaseServiceComponentsFederationProcessingResourceProcessingControl,
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseServiceComponentsFederationProcessingResourceProcessingJobView, any>({
+        path: `/resource-processing/jobs/${jobId}/control`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+  };
+  resourceScope = {
+    /**
+     * No description
+     *
+     * @tags ResourceScope
+     * @name GetResourceScopes
+     * @request GET:/resource-scope
+     */
+    getResourceScopes: (params: RequestParams = {}) =>
+      this.request<BakabaseServiceControllersResourceScopeView[], any>({
+        path: `/resource-scope`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getResourceScopes
+     * @name getResourceScopesUrl
+     */
+    getResourceScopesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource-scope`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ResourceScope
+     * @name AddResourceScope
+     * @request POST:/resource-scope
+     */
+    addResourceScope: (
+      data: BakabaseServiceControllersResourceScopeInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/resource-scope`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for addResourceScope
+     * @name addResourceScopeUrl
+     */
+    addResourceScopeUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource-scope`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ResourceScope
+     * @name UpdateResourceScope
+     * @request PUT:/resource-scope/{id}
+     */
+    updateResourceScope: (
+      id: number,
+      data: BakabaseServiceControllersResourceScopeInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/resource-scope/${id}`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ResourceScope
+     * @name DeleteResourceScope
+     * @request DELETE:/resource-scope/{id}
+     */
+    deleteResourceScope: (
+      id: number,
+      query?: {
+        /** @format int32 */
+        expectedRevision?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/resource-scope/${id}`,
+        method: "DELETE",
+        query: query,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ResourceScope
+     * @name BindResourceProfileScope
+     * @request PATCH:/resource-scope/profile/{profileId}
+     */
+    bindResourceProfileScope: (
+      profileId: number,
+      data: BakabaseServiceControllersResourceScopeBindInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/resource-scope/profile/${profileId}`,
+        method: "PATCH",
+        body: data,
+        type: ContentType.Json,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ResourceScope
+     * @name UpdateResourceProfileRule
+     * @request PATCH:/resource-scope/profile/{profileId}/rule
+     */
+    updateResourceProfileRule: (
+      profileId: number,
+      data: BakabaseServiceControllersResourceProfileRuleInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/resource-scope/profile/${profileId}/rule`,
+        method: "PATCH",
+        body: data,
+        type: ContentType.Json,
+        ...params,
+      }),
+  };
   source = {
     /**
      * No description
@@ -31099,6 +32961,74 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ThirdPartyContentTracker
+     * @name FindThirdPartyContentPageBoundaries
+     * @request POST:/third-party-content-tracker/page-boundaries
+     */
+    findThirdPartyContentPageBoundaries: (
+      data: BakabaseAbstractionsModelsInputThirdPartyContentTrackerPageBoundariesInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsViewThirdPartyContentTrackerPageBoundariesViewModel,
+        any
+      >({
+        path: `/third-party-content-tracker/page-boundaries`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for findThirdPartyContentPageBoundaries
+     * @name findThirdPartyContentPageBoundariesUrl
+     */
+    findThirdPartyContentPageBoundariesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/third-party-content-tracker/page-boundaries`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ThirdPartyContentTracker
+     * @name GetThirdPartyContentDailyHistory
+     * @request POST:/third-party-content-tracker/daily-history
+     */
+    getThirdPartyContentDailyHistory: (
+      data: BakabaseAbstractionsModelsInputThirdPartyContentTrackerDailyHistoryInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsViewThirdPartyContentTrackerDailyHistoryViewModel,
+        any
+      >({
+        path: `/third-party-content-tracker/daily-history`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getThirdPartyContentDailyHistory
+     * @name getThirdPartyContentDailyHistoryUrl
+     */
+    getThirdPartyContentDailyHistoryUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/third-party-content-tracker/daily-history`;
 
       return baseUrl + path;
     },

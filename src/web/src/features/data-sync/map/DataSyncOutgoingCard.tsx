@@ -7,6 +7,8 @@ import { dataSyncApi } from "../api";
 import { minutesLeft } from "../times";
 import { smallButtonClass } from "../components/common";
 
+import { Button } from "@/components/bakaui";
+
 /*
  * This device's own request to read another device's definitions: waiting, with [Cancel], or
  * ended — rejected or expired — with [Dismiss]. Nothing the reader filed vanishes by itself
@@ -55,33 +57,37 @@ export default function DataSyncOutgoingCard({
       <div className="flex flex-wrap gap-2">
         {waiting
           ? requestId && (
-              <button
+              <Button
                 className={smallButtonClass}
                 data-testid="data-sync-outgoing-cancel"
                 disabled={actions.busy}
+                size="sm"
                 type="button"
+                variant="bordered"
                 onClick={() =>
                   void actions.run(
                     () => dataSyncApi.cancelRequest(requestId),
-                    ["dataSync", "sharing"],
+                    ["dataSync", "identity"],
                   )
                 }
               >
                 {t("dataSync.outgoing.cancel")}
-              </button>
+              </Button>
             )
           : linkId !== undefined && (
-              <button
+              <Button
                 className={smallButtonClass}
                 data-testid="data-sync-outgoing-dismiss"
                 disabled={actions.busy}
+                size="sm"
                 type="button"
+                variant="bordered"
                 onClick={() =>
-                  void actions.run(() => dataSyncApi.resetLink(linkId), ["dataSync", "sharing"])
+                  void actions.run(() => dataSyncApi.resetLink(linkId), ["dataSync", "identity"])
                 }
               >
                 {t("dataSync.link.dismiss")}
-              </button>
+              </Button>
             )}
       </div>
     </article>

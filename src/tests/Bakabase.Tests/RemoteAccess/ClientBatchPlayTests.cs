@@ -10,6 +10,7 @@ using Bakabase.Remoting.Components.BatchPlay;
 using Bakabase.Remoting.Components.Connection;
 using Bakabase.Remoting.Components.UserMachine;
 using Bakabase.Modules.Player.Abstractions.Components;
+using Bakabase.Modules.Player.Abstractions.Models.Domain;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -81,6 +82,23 @@ public class ClientBatchPlayTests
 
     private ClientBatchPlayFileResolver Resolver() => new(_connection, new StubLoopback());
 
+    [TestMethod]
+    public void UnifiedBatchStreamingCarriesItsSelectedOwnerEpoch()
+    {
+        var resolver = new ClientBatchPlayFileResolver(_connection, new StubLoopback(), new() {LibraryEpoch = "source-epoch"});
+        StringAssert.Contains(resolver.Resolve("/movie.mkv")!, "managedLibraryEpoch=source-epoch");
+        Assert.IsFalse(Resolver().Resolve("/movie.mkv")!.Contains("managedLibraryEpoch"));
+    }
+
+    [TestMethod]
+    public async Task AnEpochBoundBatchCannotFallBackToAnUnverifiedLegacySnapshot()
+    {
+        _upstream.BatchPlayResources = new BatchPlayResourceSnapshot([], []);
+        var source = new UpstreamBatchPlayResourceSource(_upstream, new NoInstalledPlayers(),
+            NullLogger<UpstreamBatchPlayResourceSource>.Instance, owner: new() {LibraryEpoch = "source-epoch"});
+        await Assert.ThrowsExactlyAsync<InvalidOperationException>(() => source.GetSnapshotAsync([42], default));
+    }
+
     // ---- resolving files ----
 
     [TestMethod]
@@ -109,17 +127,34 @@ public class ClientBatchPlayTests
     }
 
     [TestMethod]
-    public void Nothing_is_ever_unresolvable_on_a_client()
+    public void UnmappedMediaCanStreamButProgramsAndOtherFilesNeedMapping()
     {
         // Not paired at all, so there are no mappings whatsoever — still a URL, because
         // the forwarding layer can reach anything the server can.
         Assert.IsNotNull(Resolver().Resolve("/anywhere/at/all.mkv"));
+        Assert.IsNull(Resolver().Resolve("/anywhere/game.exe"));
+        Assert.IsNull(Resolver().Resolve("/anywhere/cover.jpg"));
+        Assert.IsNull(Resolver().Resolve("/anywhere/archive.zip"));
+    }
+
+    [TestMethod]
+    public async Task AMappedNonMediaFileStillUsesItsAccessiblePath()
+    {
+        var directory = await WithLibraryAt("/media");
+        var file = Path.Combine(directory, "game.exe");
+        await File.WriteAllTextAsync(file, "program");
+        Assert.AreEqual(file, Resolver().Resolve("/media/game.exe"));
     }
 
     // ---- reading the library ----
 
     private UpstreamBatchPlayResourceSource ResourceSource() =>
-        new(_upstream, NullLogger<UpstreamBatchPlayResourceSource>.Instance);
+        new(_upstream, new NoInstalledPlayers(), NullLogger<UpstreamBatchPlayResourceSource>.Instance);
+
+    private sealed class NoInstalledPlayers : IPlayerExecutableLocator
+    {
+        public IReadOnlyList<string> Locate(KnownPlayerDefinition definition) => [];
+    }
 
     [TestMethod]
     public async Task A_server_that_cannot_be_asked_fails_the_batch_play_rather_than_emptying_it()

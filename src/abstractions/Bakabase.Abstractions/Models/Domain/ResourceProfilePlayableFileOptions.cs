@@ -5,6 +5,7 @@ namespace Bakabase.Abstractions.Models.Domain;
 /// </summary>
 public class ResourceProfilePlayableFileOptions
 {
+    public ResourceProcessingExecutionTarget? ExecutionTarget { get; set; }
     /// <summary>
     /// 支持的扩展名列表
     /// </summary>

@@ -120,25 +120,20 @@ public class DataSyncCliTests
         StringAssert.Contains(output, "\"readBackGranted\": false");
 
         var refusing = new StubApi();
-        refusing.Answers["POST invitations"] = """{"invitation":null,"problem":{"code":28,"detail":null}}""";
-        var refused = await RunAsync(refusing, null, "invite");
+        refusing.Answers["POST requests/r1/approve"] = """{"createdLink":null,"problem":{"code":28,"detail":null}}""";
+        var refused = await RunAsync(refusing, null, "approve", "r1");
         Assert.AreEqual(1, refused.Exit);
         StringAssert.Contains(refused.Error, "Refused: RemoteAccessOff");
     }
 
     [TestMethod]
-    public async Task A_code_is_printed_with_the_addresses_to_use_it_at()
+    public async Task One_time_invitations_are_not_a_cli_command()
     {
-        var api = new StubApi();
-        api.Answers["POST invitations"] = """
-            {"invitation":{"code":"48213705","expiresAt":"2026-09-01 08:10:00.000","addresses":["http://192.168.1.20:5000"]},
-             "problem":null}
-            """;
-        var (exit, output, _, _) = await RunAsync(api, null, "invite");
-
-        Assert.AreEqual(0, exit);
-        StringAssert.Contains(output, "\"code\": \"48213705\"");
-        StringAssert.Contains(output, "\"http://192.168.1.20:5000\"");
+        var (exit, output, error, api) = await RunAsync(new StubApi(), null, "invite");
+        Assert.AreEqual(2, exit);
+        Assert.AreEqual(0, api.Requests.Count);
+        Assert.IsFalse(output.Contains("code"));
+        Assert.IsFalse(error.Contains("One-time code"));
     }
 
     [TestMethod]

@@ -13,7 +13,7 @@ namespace Bakabase.Service.Components.Federation;
 /// <summary>Global fail-closed check: endpoint metadata and the early gate must agree.</summary>
 /// <remarks>
 /// An Export action must also declare the grant scope it serves, and the caller's grant must be of that scope
-/// (<see cref="FederationScopes.Any"/> admits either). The early gate already keeps each scope to its routes by
+/// (<see cref="FederationScopes.Any"/> admits the retained definitions scope). The early gate keeps it to its routes by
 /// path; this makes an Export action added later without a scope unreachable rather than open to every grant.
 /// </remarks>
 public sealed class FederationLocalAccessFilter : IAsyncAuthorizationFilter, IOrderedFilter

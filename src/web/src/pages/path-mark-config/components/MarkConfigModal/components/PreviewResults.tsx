@@ -4,7 +4,6 @@ import type { PreviewResultsByPath, PathMarkPreviewResult } from "../hooks/usePr
 
 import { Spinner, Chip } from "@/components/bakaui";
 import { PathMarkType, PathMarkApplyScope } from "@/sdk/constants";
-import { ResourceTerm } from "@/components/Chips/Terms";
 
 type Props = {
   loading: boolean;
@@ -27,169 +26,102 @@ const PreviewResults = ({
   t,
   applyScope,
 }: Props) => {
-  const showSubdirectoriesSuffix = applyScope === PathMarkApplyScope.MatchedAndSubdirectories;
-
-  if (loading) {
-    return (
-      <div className="flex items-center gap-2 text-sm text-default-500 py-2">
-        <Spinner size="sm" />
-        <span>{t("pathMarkConfig.status.loadingPreview")}</span>
+  const isResource = markType === PathMarkType.Resource;
+  const renderResult = (result: PathMarkPreviewResult, index: number) => (
+    <div
+      key={`${result.path}-${index}`}
+      className="rounded-xl border border-default-200 bg-default-50/60 p-3"
+    >
+      <div className="mb-1 text-[11px] font-medium text-default-400">
+        {t(
+          isResource ? "pathMarkConfig.preview.matchedPath" : "pathMarkConfig.preview.resourcePath",
+        )}
       </div>
-    );
-  }
-
-  if (error) {
-    return <div className="text-sm text-danger py-2">{error}</div>;
-  }
-
-  if (results.length === 0) {
-    return (
-      <div className="bg-warning-50 text-warning-600 rounded p-2 text-xs">
-        {t("pathMarkConfig.warning.noMatches")}
+      <div className="break-all text-xs font-medium leading-relaxed text-default-700">
+        {result.path}
       </div>
-    );
-  }
-
-  const renderSubdirectoriesSuffix = () => {
-    if (!showSubdirectoriesSuffix) return null;
-
-    return (
-      <span className="text-primary-500 italic ml-1">
-        {t("pathMarkConfig.label.andAllSubdirectories")}
-      </span>
-    );
-  };
-
-  const renderResult = (result: PathMarkPreviewResult, idx: number) => {
-    const pathSegments = result.path.split(/[/\\]/).filter(Boolean);
-    const separator = result.path.includes("/") ? "/" : "\\";
-
-    // For Resource type: highlight the resource layer in the path
-    if (
-      markType === PathMarkType.Resource &&
-      result.resourceLayerIndex !== null &&
-      result.resourceLayerIndex !== undefined
-    ) {
-      return (
-        <div key={idx} className="text-xs text-default-600 break-all">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="flex items-center gap-0.5 flex-wrap">
-              {pathSegments.map((segment, segIdx) => {
-                const isResourceLayer = segIdx === result.resourceLayerIndex;
-
-                return (
-                  <span key={segIdx} className="flex items-center gap-0.5">
-                    {segIdx > 0 && <span className="text-default-400">{separator}</span>}
-                    {isResourceLayer ? (
-                      <span className="flex items-center gap-1">
-                        <Chip className="font-semibold" color="success" size="sm" variant="flat">
-                          <ResourceTerm size="sm" />
-                        </Chip>
-                        <span>{segment}</span>
-                      </span>
-                    ) : (
-                      <span>{segment}</span>
-                    )}
-                  </span>
-                );
-              })}
-              {renderSubdirectoriesSuffix()}
-            </span>
-          </div>
+      {isResource ? (
+        <div className="mt-2 text-xs text-primary-600">
+          {result.resourceSegmentName && (
+            <Chip color="success" size="sm" variant="flat">
+              {result.resourceSegmentName}
+            </Chip>
+          )}
+          {applyScope === PathMarkApplyScope.MatchedAndSubdirectories && (
+            <span className="ml-1">{t("pathMarkConfig.label.andAllSubdirectories")}</span>
+          )}
         </div>
-      );
-    }
-
-    // For Property type: show path and property value prominently
-    if (markType === PathMarkType.Property) {
-      return (
-        <div key={idx} className="text-xs text-default-600 break-all">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="break-all">
-              {result.path}
-              {renderSubdirectoriesSuffix()}
-            </span>
-            {result.propertyValue !== null && result.propertyValue !== undefined && (
-              <Chip className="flex-shrink-0" color="primary" size="sm" variant="flat">
-                <span className="font-semibold">
-                  {t("pathMarkConfig.label.propertyValue")}:{" "}
-                  <span className="font-bold">{result.propertyValue}</span>
-                </span>
-              </Chip>
-            )}
-          </div>
-        </div>
-      );
-    }
-
-    // For MediaLibrary type: show path and media library value
-    if (markType === PathMarkType.MediaLibrary) {
-      return (
-        <div key={idx} className="text-xs text-default-600 break-all">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="break-all">
-              {result.path}
-              {renderSubdirectoriesSuffix()}
-            </span>
-            {result.propertyValue !== null && result.propertyValue !== undefined && (
-              <Chip className="flex-shrink-0" color="secondary" size="sm" variant="flat">
-                <span className="font-semibold">
-                  {t("common.label.mediaLibrary")}:{" "}
-                  <span className="font-bold">{result.propertyValue}</span>
-                </span>
-              </Chip>
-            )}
-          </div>
-        </div>
-      );
-    }
-
-    // Fallback: show path only
-    return (
-      <div key={idx} className="text-xs text-default-600 break-all">
-        <span>
-          {result.path}
-          {renderSubdirectoriesSuffix()}
-        </span>
-      </div>
-    );
-  };
-
-  // Show grouped results when multiple paths
-  if (isMultiplePaths && resultsByPath && resultsByPath.length > 0) {
-    return (
-      <div className="bg-default-100 rounded p-2">
-        <div className="text-xs text-default-500 mb-1">
-          {t("pathMarkConfig.label.previewMatches")}:
-        </div>
-        <div className="flex flex-col gap-2 max-h-48 overflow-y-auto">
-          {resultsByPath.map((group, groupIdx) => (
-            <div key={groupIdx} className="border-l-2 border-primary-200 pl-2">
-              <div className="text-xs text-primary-600 font-medium mb-1 break-all">
-                {group.path}
+      ) : (
+        <>
+          {result.valueSourcePath && (
+            <div className="mt-3 border-t border-default-200 pt-2">
+              <div className="text-[11px] text-default-400">
+                {t("pathMarkConfig.preview.valueSource")}
               </div>
-              <div className="flex flex-col gap-1">
-                {group.results.map((result, idx) => renderResult(result, idx))}
+              <div className="mt-1 break-all font-mono text-[11px] leading-relaxed text-default-500">
+                {result.valueSourcePath}
               </div>
             </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
+          )}
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className="text-xs text-default-400">
+              {t(
+                markType === PathMarkType.MediaLibrary
+                  ? "common.label.mediaLibrary"
+                  : "pathMarkConfig.label.propertyValue",
+              )}
+            </span>
+            {result.propertyValue !== null && result.propertyValue !== undefined ? (
+              <Chip
+                color={markType === PathMarkType.MediaLibrary ? "secondary" : "primary"}
+                size="sm"
+                variant="flat"
+              >
+                {result.propertyValue}
+              </Chip>
+            ) : (
+              <span className="text-xs text-default-400">
+                {t("pathMarkConfig.preview.noValue")}
+              </span>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
 
   return (
-    <div className="bg-default-100 rounded p-2">
-      <div className="text-xs text-default-500 mb-1">
-        {t("pathMarkConfig.label.previewMatches")}:
-      </div>
-      <div className="flex flex-col gap-1 max-h-32 overflow-y-auto">
-        {results.map((result, idx) => renderResult(result, idx))}
-      </div>
+    <div aria-busy={loading} aria-live="polite">
+      {loading ? (
+        <div className="flex min-h-40 items-center justify-center gap-2 text-sm text-default-500">
+          <Spinner size="sm" />
+          {t("pathMarkConfig.status.loadingPreview")}
+        </div>
+      ) : error ? (
+        <div
+          className="rounded-xl bg-danger-50 p-3 text-xs leading-relaxed text-danger"
+          role="alert"
+        >
+          {t(error)}
+        </div>
+      ) : results.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-default-300 px-4 py-8 text-center text-xs leading-relaxed text-default-500">
+          {t("pathMarkConfig.warning.noMatches")}
+        </div>
+      ) : (
+        <div className="flex max-h-[58vh] flex-col gap-3 overflow-y-auto pr-1">
+          {isMultiplePaths && resultsByPath?.length
+            ? resultsByPath.map((group) => (
+                <div key={group.path} className="flex flex-col gap-2">
+                  <div className="break-all text-xs font-medium text-default-400">{group.path}</div>
+                  {group.results.map(renderResult)}
+                </div>
+              ))
+            : results.map(renderResult)}
+        </div>
+      )}
     </div>
   );
 };
-
-PreviewResults.displayName = "PreviewResults";
 
 export default PreviewResults;

@@ -1,7 +1,7 @@
 "use client";
 
 import type { BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntry } from "@/sdk/Api";
-import type { MediaPlayerEntry } from "../types";
+import type { MediaPlayerEntry, MediaPreviewState } from "../types";
 import type { MediaType } from "@/sdk/constants";
 
 import React from "react";
@@ -19,6 +19,9 @@ interface MediaPlayerLayoutProps {
   currentInitialized: boolean;
   autoPlay?: boolean;
   progress?: number;
+  previewStates?: Record<string, MediaPreviewState>;
+  onPreviewStateChange?: (path: string, state: MediaPreviewState) => void;
+  onOpenAlternative?: (path: string) => void | Promise<void>;
   getMediaType: (entry: BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntry) => MediaType;
   renderOperations?: (
     filePath: string,
@@ -72,17 +75,25 @@ const MediaPlayerLayout: React.FC<MediaPlayerLayoutProps> = ({
   onVideoStart,
   onVideoProgress,
   onWheel,
+  previewStates,
+  onPreviewStateChange,
+  onOpenAlternative,
 }) => {
   const mediaType = getMediaType(activeEntry);
 
   return (
-    <div className="w-full h-full bg-black/90 flex flex-row" tabIndex={-1} onWheel={onWheel}>
+    <div
+      className="w-full min-h-0 flex-1 bg-black/90 flex flex-row"
+      tabIndex={-1}
+      onWheel={onWheel}
+    >
       <ThumbnailPanel
         activeIndex={activeIndex}
         collapsed={leftPanelCollapsed}
         entries={entries}
         getMediaType={getMediaType}
         playableEntries={playableEntries}
+        previewStates={previewStates}
         onEntryClick={onEntryClick}
         onToggleCollapse={onToggleCollapse}
       />
@@ -99,7 +110,9 @@ const MediaPlayerLayout: React.FC<MediaPlayerLayoutProps> = ({
         renderOperations={renderOperations}
         onLoad={onLoad}
         onNextEntry={onNextEntry}
+        onOpenAlternative={onOpenAlternative}
         onPrevEntry={onPrevEntry}
+        onPreviewStateChange={onPreviewStateChange}
         onVideoEnded={onVideoEnded}
         onVideoPause={onVideoPause}
         onVideoPlay={onVideoPlay}

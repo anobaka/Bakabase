@@ -14,7 +14,8 @@ import { GrResources } from "react-icons/gr";
 import { Button } from "@/components/bakaui";
 import { PlaylistItemType } from "@/sdk/constants";
 import DragHandle from "@/components/DragHandle";
-import BApi from "@/sdk/BApi";
+import { useResourceApi, useResourceOwner } from "@/features/management/resourceContext";
+import { useOpenResourceDirectory } from "@/hooks/useOpenResourceDirectory";
 
 type PlayListItem =
   components["schemas"]["Bakabase.InsideWorld.Business.Components.PlayList.Models.Domain.PlayListItem"];
@@ -51,6 +52,9 @@ const SortableDragHandle = SortableHandle(() => <DragHandle />);
 
 export default SortableElement<SortablePlaylistItemProps>(
   ({ item, resource, onRemove }: SortablePlaylistItemProps) => {
+    const BApi = useResourceApi();
+    const owner = useResourceOwner();
+    const folderAction = useOpenResourceDirectory();
     const { t } = useTranslation();
     const renderResourceName = useCallback((): ReactNode => {
       if (resource?.displayName) {
@@ -62,12 +66,16 @@ export default SortableElement<SortablePlaylistItemProps>(
 
     const handleOpenFile = useCallback(() => {
       if (resource) {
+        if (owner && !owner.isLocal) {
+          folderAction.open(resource);
+          return;
+        }
         BApi.tool.openFileOrDirectory({
           path: item.file ?? resource.path,
           openInDirectory: item.file ? true : resource.isFile,
         });
       }
-    }, [item.file, resource]);
+    }, [item.file, resource, owner, BApi, folderAction.open]);
 
     const handleRemove = useCallback(() => {
       onRemove(item);
@@ -91,7 +99,12 @@ export default SortableElement<SortablePlaylistItemProps>(
           <Button
             // color={"primary"}
             isIconOnly
-            disabled={!resource && item.type === PlaylistItemType.Resource}
+            isDisabled={!resource}
+            title={
+              !resource && owner && !owner.isLocal
+                ? t<string>("management.playlist.fileItems")
+                : undefined
+            }
             size="sm"
             variant={"light"}
             onPress={handleOpenFile}

@@ -47,6 +47,7 @@ using Bootstrap.Components.Orm;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Bakabase.Service.Components.RemoteAccess;
 
 namespace Bakabase.Service.Controllers
 {
@@ -186,6 +187,9 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "PatchUIOptions")]
         public async Task<BaseResponse> PatchUIOptions([FromBody] UIOptionsPatchRequestModel model)
         {
+            if (model.NavigationLayout?.Validate() is { } navigationError)
+                return BaseResponseBuilder.BuildBadRequest(navigationError);
+
             await _bakabaseOptionsManager.Get<UIOptions>().SaveAsync(options =>
             {
                 if (model.Resource != null)
@@ -201,6 +205,11 @@ namespace Bakabase.Service.Controllers
                 if (model.IsMenuCollapsed.HasValue)
                 {
                     options.IsMenuCollapsed = model.IsMenuCollapsed.Value;
+                }
+
+                if (model.NavigationLayout != null)
+                {
+                    options.NavigationLayout = model.NavigationLayout;
                 }
 
                 if (model.HideResourceCovers.HasValue)
@@ -225,6 +234,29 @@ namespace Bakabase.Service.Controllers
 
             });
             return BaseResponseBuilder.Ok;
+        }
+
+        [HttpPut("ui/device-colors/{serverId}")]
+        [RemoteAccessible]
+        [SwaggerOperation(OperationId = "SetDeviceColor")]
+        public async Task<BaseResponse> SetDeviceColor(string serverId, [FromBody] DeviceColorInput model)
+        {
+            if (!DeviceColorInput.IsValidDeviceId(serverId) || model == null || !model.IsValid())
+                return BaseResponseBuilder.BuildBadRequest("Choose a valid device and a six-digit RGB color.");
+
+            var limitReached = false;
+            await _bakabaseOptionsManager.Get<UIOptions>().SaveAsync(options =>
+            {
+                options.DeviceColors ??= new(StringComparer.Ordinal);
+                if (model.Color == null)
+                    options.DeviceColors.Remove(serverId);
+                else if (options.DeviceColors.ContainsKey(serverId) || options.DeviceColors.Count < 512)
+                    options.DeviceColors[serverId] = model.Color.ToLowerInvariant();
+                else limitReached = true;
+            });
+            return limitReached
+                ? BaseResponseBuilder.BuildBadRequest("The saved device color limit has been reached.")
+                : BaseResponseBuilder.Ok;
         }
 
         [HttpDelete("ui/resource-detail-layout")]

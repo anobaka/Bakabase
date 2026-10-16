@@ -62,6 +62,9 @@ public sealed class FederationStateStore(IFederationDataDirectory directory, INo
     public const int MaxDisplayNameLength = 64;
     public const string DisplayNameVariable = "BAKABASE_NODE_NAME";
 
+    public static bool IsDisplayNameEnvironmentControlled =>
+        Normalize(Environment.GetEnvironmentVariable(DisplayNameVariable)) != null;
+
     /// <summary>A headless host may name itself through the environment; otherwise the user's choice wins.</summary>
     private static string NameOf(FederationState state) =>
         Normalize(Environment.GetEnvironmentVariable(DisplayNameVariable)) ?? state.DisplayName ?? Environment.MachineName;
@@ -73,34 +76,37 @@ public sealed class FederationStateStore(IFederationDataDirectory directory, INo
             ? null : value;
     }
 
-    public Task SetDisplayNameAsync(string? name, CancellationToken ct = default)
+    public Task SetDisplayNameAsync(string? name, CancellationToken ct = default) =>
+        ChangeDisplayNameAsync(name, null, null, ct);
+
+    /// <summary>Changes only the display name, comparing the user's observed identity under the state-file gate.</summary>
+    public async Task<NodeIdentity> ChangeDisplayNameAsync(string? name, string? expectedName,
+        string? expectedLibraryEpoch, CancellationToken ct = default)
     {
         var value = Normalize(name);
         if (name?.Trim() is { Length: > 0 } && value == null)
             throw new FederationAccessException("InvalidDeviceName", 400,
                 $"Use a device name of at most {MaxDisplayNameLength} printable characters.");
-        return MutateAsync(state => { state.DisplayName = value; return true; }, ct);
+        await GetIdentityAsync(ct);
+        return await MutateAsync(state =>
+        {
+            if (IsDisplayNameEnvironmentControlled)
+                throw new FederationAccessException("DeviceNameEnvironmentControlled", 409,
+                    $"This device's name is controlled by {DisplayNameVariable}. Change its startup configuration first.");
+            if (expectedLibraryEpoch != null && state.LibraryEpoch != expectedLibraryEpoch)
+                throw new FederationAccessException("LibraryEpochChanged", 409,
+                    "This device's library changed. Refresh before renaming it.");
+            if (expectedName != null && !string.Equals(NameOf(state), expectedName, StringComparison.Ordinal))
+                throw new FederationAccessException("DeviceNameChanged", 409,
+                    "This device's name changed elsewhere. Reload its current name before saving.");
+            state.DisplayName = value;
+            return new NodeIdentity(state.NodeId!, state.LibraryEpoch!, NameOf(state));
+        }, ct);
     }
-
-    public async Task<bool> IsSharingEnabledAsync(CancellationToken ct = default) =>
-        (await ReadAsync(ct)).SharingEnabled;
 
     /// <summary>Whether devices this one approved may read its definitions (<c>datasync.read</c>).</summary>
     public async Task<bool> IsDataSyncSharingEnabledAsync(CancellationToken ct = default) =>
         (await ReadAsync(ct)).DataSyncSharingEnabled;
-
-    /// <summary>Both sharing switches from one read, as the node gate checks them before authentication (§7.3).</summary>
-    public async Task<FederationSharingSwitches> GetSharingSwitchesAsync(CancellationToken ct = default)
-    {
-        var state = await ReadAsync(ct);
-        return new FederationSharingSwitches(state.SharingEnabled, state.DataSyncSharingEnabled);
-    }
-
-    public async Task<bool> IsBrowsingEnabledAsync(CancellationToken ct = default) =>
-        (await ReadAsync(ct)).BrowsingEnabled;
-
-    public Task SetBrowsingEnabledAsync(bool enabled, CancellationToken ct = default) =>
-        MutateAsync(state => { state.BrowsingEnabled = enabled; return true; }, ct);
 
     /// <summary>Only the explicit local clone/reset command may replace unreadable node state.</summary>
     /// <param name="inheritHostIdentity">
@@ -155,8 +161,7 @@ public sealed class FederationStateStore(IFederationDataDirectory directory, INo
                 (state.NodeId == null) != (state.LibraryEpoch == null) ||
                 state.NodeId != null && (!NodeRequestSignature.IsIdentifier(state.NodeId) ||
                                         !NodeRequestSignature.IsIdentifier(state.LibraryEpoch!)) ||
-                state.Peers == null || state.InboundGrants == null || state.OutboundGrants == null ||
-                state.IncomingRequests == null || state.OutgoingRequests == null)
+                state.Peers == null)
                 throw new JsonException("Invalid node state schema.");
             // Added for data sync: absent from older files, so missing or null is simply empty.
             state.InboundDataSyncGrants ??= new(StringComparer.Ordinal);
@@ -200,7 +205,3 @@ public sealed class FederationStateStore(IFederationDataDirectory directory, INo
     private static FederationState Clone(FederationState state) =>
         JsonSerializer.Deserialize<FederationState>(JsonSerializer.SerializeToUtf8Bytes(state, Json), Json)!;
 }
-
-/// <param name="Library">Library sharing: <c>library.read</c> grants may read.</param>
-/// <param name="DataSync">Definitions sharing: <c>datasync.read</c> grants may read.</param>
-public readonly record struct FederationSharingSwitches(bool Library, bool DataSync);

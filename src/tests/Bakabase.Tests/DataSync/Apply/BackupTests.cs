@@ -133,7 +133,7 @@ public class BackupTests
     }
 
     [TestMethod]
-    public async Task A_conversion_and_the_lossy_undo_that_converts_it_back_are_both_backed_up()
+    public async Task A_conversion_is_backed_up_even_when_lossless()
     {
         var key = SyncKey.New().Value;
         var v1 = _peer.Next();
@@ -143,13 +143,9 @@ public class BackupTests
         await _f.ApplyAsync(_link, _peer,
             (Item, _peer.Record([key], _peer.Next(v1), Content("Genre", ("a", "Rock")).With(type: "Single"), "a0")));
 
-        var logId = await _f.ResolveAsync((await _f.OpenItemsAsync()).Single(), DataSyncInboxAction.Convert, backup: true);
+        await _f.ResolveAsync((await _f.OpenItemsAsync()).Single(), DataSyncInboxAction.Convert, backup: true);
         Assert.AreEqual(1, Backups().Length, "a conversion is backed up even when lossless, as its card says");
 
-        _f.Kind.Lossy[localKey] = 4;
-        _f.Clock.Advance(TimeSpan.FromSeconds(2));
-        await _f.UndoAsync(logId!.Value);
-        Assert.AreEqual(2, Backups().Length, "converting back is lossy too (product must-fix 18)");
-        Assert.AreEqual("Multiple", _f.Kind[localKey].Type);
+        Assert.AreEqual("Single", _f.Kind[localKey].Type);
     }
 }

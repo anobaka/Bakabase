@@ -123,6 +123,29 @@ public class BatchPlayServiceTests
     }
 
     [TestMethod]
+    public async Task Candidates_ExplicitLocalExtensionsOverrideTheDiscoveryCatalog()
+    {
+        SeedResourceWithFiles(1, "custom.smoke-custom");
+        _locator.Set("PotPlayer", @"C:\Program Files\DAUM\PotPlayer\PotPlayerMini64.exe");
+        var service = CreateService();
+        (await service.GetCandidatesAsync([1], CancellationToken.None)).Single()
+            .MatchedResourceCount.Should().Be(0, "discovery only knows the built-in supported extensions");
+
+        _profileService.SetPlayerOptions(1, new ResourceProfilePlayerOptions
+        {
+            Players = [new MediaLibraryPlayer
+            {
+                ExecutablePath = @"C:\Program Files\DAUM\PotPlayer\PotPlayerMini64.exe",
+                Extensions = ["smoke-custom"], Command = "{0}"
+            }]
+        });
+        var configured = (await service.GetCandidatesAsync([1], CancellationToken.None)).Single();
+        configured.Type.Should().Be(BatchPlayCandidateType.ProfilePlayer);
+        configured.MatchedResourceCount.Should().Be(1,
+            "an explicit locally saved rule can use an extension the built-in catalog does not know");
+    }
+
+    [TestMethod]
     public async Task Candidates_SameExecutableInProfileAndDiscovery_IsDeduplicated()
     {
         const string vlcPath = @"C:\Program Files\VideoLAN\VLC\vlc.exe";

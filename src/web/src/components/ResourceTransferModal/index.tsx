@@ -30,7 +30,7 @@ import {
 } from "@/components/bakaui";
 import Resource from "@/components/Resource";
 import ToResourceSelector from "@/components/ResourceTransferModal/ToResourceSelector";
-import BApi from "@/sdk/BApi";
+import { useResourceApi } from "@/features/management/resourceContext";
 import { buildLogger, standardizePath } from "@/components/utils";
 import { ResourceAdditionalItem } from "@/sdk/constants";
 import AnimatedArrow from "@/components/AnimatedArrow";
@@ -112,6 +112,7 @@ const validateInputModel = (inputModel: RecursivePartial<InputModel>): InputMode
 };
 const ResourceTransferModal = ({ fromResources, onDestroyed }: Props) => {
   const { t } = useTranslation();
+  const BApi = useResourceApi();
   const [page, setPage] = useState(1);
 
   const [resources, setResources] = useState<ResourceModel[]>([]);

@@ -1,8 +1,10 @@
 using System.Net;
 using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.Abstractions.Services;
 using Bakabase.Remoting.Components.Connection;
 using Bakabase.Remoting.Components.Paths;
 using Bakabase.Modules.Player.Components;
+using Bakabase.Modules.Player.Abstractions.Models.Domain;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
@@ -44,7 +46,8 @@ public sealed class LocalPlayback(
     LocalPlayerResolver players,
     IShellOpener shell,
     ILoopbackAddressProvider loopback,
-    ILogger<LocalPlayback> logger)
+    ILogger<LocalPlayback> logger,
+    ISourceResourceProfilePlaybackService? profiles = null)
 {
     /// <summary>
     /// Plays one item and tells the server it happened.
@@ -53,7 +56,8 @@ public sealed class LocalPlayback(
     /// Writes its own response either way, so a caller that gets false has nothing left
     /// to do — the reason it failed is already on the wire and only this method knows it.
     /// </remarks>
-    public async Task<bool> PlayAsync(HttpContext context, int resourceId, DataOrigin origin, string key)
+    public async Task<bool> PlayAsync(HttpContext context, int resourceId, DataOrigin origin, string key,
+        ResolvedPlayer? selectedPlayer = null, bool explicitChoice = false)
     {
         if (string.IsNullOrWhiteSpace(key))
         {
@@ -61,13 +65,13 @@ public sealed class LocalPlayback(
             return false;
         }
 
+        explicitChoice |= context.Request.Query["explicitChoice"] == "true";
+
         var played = origin switch
         {
-            DataOrigin.FileSystem or DataOrigin.Manual => await PlayFileAsync(context, resourceId, key),
+            DataOrigin.FileSystem or DataOrigin.Manual => await PlayFileAsync(context, resourceId, key, selectedPlayer, explicitChoice),
             DataOrigin.Steam => await LaunchUriAsync(context, SteamUri(key)),
-            DataOrigin.DLsite => await LaunchUriAsync(context,
-                $"https://www.dlsite.com/maniax/work/=/product_id/{Uri.EscapeDataString(key)}.html"),
-            DataOrigin.ExHentai => await LaunchUriAsync(context, $"https://exhentai.org/g/{key.TrimStart('/')}"),
+            DataOrigin.DLsite or DataOrigin.ExHentai => await DownloadOriginAsync(context),
             _ => await UnsupportedAsync(context, origin)
         };
 
@@ -79,14 +83,16 @@ public sealed class LocalPlayback(
         // The server owns play history, so it is told after the fact — in the same
         // "{origin}:{key}" shape it writes when it plays something itself, or the two
         // halves would record the same event differently.
-        await upstream.MarkPlayedAsync(resourceId, $"{origin}:{key}", context.RequestAborted);
+        await upstream.MarkPlayedForEpochAsync(resourceId, $"{origin}:{key}",
+            context.Request.Query["managedLibraryEpoch"].FirstOrDefault(), context.RequestAborted);
 
         await UserMachineResponse.WriteAsync(context, HttpStatusCode.OK, null);
 
         return true;
     }
 
-    private async Task<bool> PlayFileAsync(HttpContext context, int resourceId, string serverPath)
+    private async Task<bool> PlayFileAsync(HttpContext context, int resourceId, string serverPath,
+        ResolvedPlayer? selectedPlayer, bool explicitChoice)
     {
         var mapped = ClientPathMapper.Map(serverPath, connection.Server?.PathMappings ?? []);
 
@@ -94,10 +100,42 @@ public sealed class LocalPlayback(
         // it already lives on. Mapped-but-missing means a stale mount, and streaming is
         // the honest fallback there too.
         var onDisk = mapped.Mapped && File.Exists(mapped.LocalPath);
+        if (!onDisk && !PlayerFileCapabilities.CanStream(serverPath))
+        {
+            await UserMachineResponse.WriteAsync(context, HttpStatusCode.Conflict,
+                "This file needs an accessible local path. Connect its shared folder and configure a path mapping on this device before opening it. HTTP playback is available for audio and video only.");
+            return false;
+        }
         var target = onDisk ? mapped.LocalPath! : loopback.BuildRawFileUrl(serverPath);
 
-        var options = await upstream.GetEffectivePlayerOptionsAsync(resourceId, context.RequestAborted);
-        var player = players.Resolve(options, serverPath);
+        ResolvedPlayer player;
+        try
+        {
+            var localOptions = selectedPlayer == null && profiles != null && connection.Server != null
+                ? (await profiles.ResolveAsync(connection.Server.ServerId,
+                    context.Request.Query["managedLibraryEpoch"].FirstOrDefault(), resourceId,
+                    context.RequestAborted)).PlayerOptions
+                : null;
+            if (selectedPlayer == null && localOptions != null)
+                selectedPlayer = LocalPlayerResolver.ResolveLocal(localOptions, serverPath, requireHttp: !onDisk);
+            var options = selectedPlayer == null
+                ? await upstream.GetEffectivePlayerOptionsAsync(resourceId, context.RequestAborted)
+                : null;
+            player = selectedPlayer ?? players.Resolve(options, serverPath, requireHttp: !onDisk,
+                explicitChoice: explicitChoice);
+            if (player.SupportedExtensions != null &&
+                !player.SupportedExtensions.Contains(PlayerFileCapabilities.Extension(serverPath), StringComparer.OrdinalIgnoreCase))
+                throw new InvalidOperationException("The selected player does not support this file type. Choose another application.");
+            if (!onDisk && selectedPlayer != null && player.IsSystemDefault)
+                throw new InvalidOperationException("The system default application needs a local file path. Configure a path mapping or choose a player that supports HTTP media.");
+            if (!onDisk && !player.IsSystemDefault && !player.SupportsHttp)
+                throw new InvalidOperationException("The selected player cannot open HTTP media. Configure a path mapping or choose another player.");
+        }
+        catch (Exception e) when (e is InvalidOperationException or HttpRequestException or System.Text.Json.JsonException or IOException)
+        {
+            await UserMachineResponse.WriteAsync(context, HttpStatusCode.Conflict, e.Message);
+            return false;
+        }
 
         if (!onDisk && player.IsSystemDefault)
         {
@@ -105,7 +143,7 @@ public sealed class LocalPlayback(
             // URL: what answers for http is a browser, and a browser meets a video stream
             // with a download prompt. That is not playback, and returning OK for it left
             // the user with a download and no explanation.
-            var installed = players.ResolveInstalled(serverPath);
+            var installed = players.ResolveInstalled(serverPath, requireHttp: true);
 
             if (installed == null)
             {
@@ -178,6 +216,14 @@ public sealed class LocalPlayback(
     /// </summary>
     public static string? SteamUri(string key) =>
         key.Length > 0 && key.All(char.IsAsciiDigit) ? $"steam://rungameid/{key}" : null;
+
+    private static async Task<bool> DownloadOriginAsync(HttpContext context)
+    {
+        await UserMachineResponse.WriteAsync(context, HttpStatusCode.BadRequest,
+            "Play the downloaded files from this resource. Refresh its playable files; opening the original website is a separate action.");
+
+        return false;
+    }
 
     private static async Task<bool> UnsupportedAsync(HttpContext context, DataOrigin origin)
     {

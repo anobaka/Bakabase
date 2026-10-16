@@ -87,7 +87,7 @@ internal sealed class FakeManagedServerService : IManagedServerService
     }
 
     public Task<bool> SetPathMappingsAsync(string serverId, IReadOnlyList<ManagedServerPathMapping> mappings,
-        CancellationToken ct = default)
+        CancellationToken ct = default, IReadOnlyList<ManagedServerPathMapping>? expectedMappings = null)
     {
         Calls.Enqueue($"Map {serverId} {mappings.Count}");
         LastMappings = mappings;

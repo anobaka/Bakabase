@@ -80,7 +80,7 @@ class Smoke:
         node["starts"] += 1
         # A restart must not read the last start's signal; the host deletes it too, but only once it runs.
         (node["directory"] / "ready").unlink(missing_ok=True)
-        log = (self.root / f"{label}-{node['starts']}.log").open("w")
+        log = (self.root / f"{label}-{node['starts']}.log").open("w", encoding="utf-8")
         node["log"] = log
         node["process"] = subprocess.Popen(
             [self.dotnet, str(self.bin / "Bakabase.Federation.TestHost.dll"), str(node["port"]),
@@ -140,7 +140,7 @@ class Smoke:
                 self.nodes[label]["log"].flush()
         for log in self.root.glob("*.log"):
             shutil.copyfile(log, self.results / log.name)
-        (self.results / "cli.txt").write_text("\n".join(self.cli_log))
+        (self.results / "cli.txt").write_text("\n".join(self.cli_log), encoding="utf-8")
         if not keep:
             shutil.rmtree(self.root, ignore_errors=True)
 
@@ -185,7 +185,7 @@ class Smoke:
         command = [self.dotnet, str(self.bin / "Bakabase.Service.dll"), "federation", "datasync", *arguments,
                    "--port", str(node["port"])]
         # In the host's own environment, as `docker exec` runs it inside the container.
-        result = subprocess.run(command, capture_output=True, text=True, timeout=60, cwd=self.repo,
+        result = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", timeout=60, cwd=self.repo,
                                 env={**os.environ, **node["extra"]})
         self.cli_log.append(f"$ federation datasync {' '.join(arguments)}   # {node['label']}, "
                             f"exit {result.returncode}\n{result.stdout}{result.stderr}")
@@ -261,7 +261,8 @@ class Smoke:
                 }
             except Exception as error:  # evidence must never hide the failure that asked for it
                 snapshot = {"error": repr(error)}
-            (self.results / f"{name}-{label}.json").write_text(json.dumps(snapshot, indent=2, ensure_ascii=False))
+            (self.results / f"{name}-{label}.json").write_text(
+                json.dumps(snapshot, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
 # ---- fixture data -------------------------------------------------------------------------------
@@ -333,7 +334,7 @@ def run(dotnet, deadline, results, keep=False):
     report = {"passed": True, "seconds": round(time.monotonic() - started, 1),
               "nodes": {label: {"nodeId": node["id"], "name": node["name"], "desktop": node["desktop"]}
                         for label, node in smoke.nodes.items()}}
-    (results / "result.json").write_text(json.dumps(report, indent=2))
+    (results / "result.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
     print(json.dumps(report), flush=True)
 
 

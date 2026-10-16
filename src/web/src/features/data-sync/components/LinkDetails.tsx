@@ -14,7 +14,9 @@ import { DataSyncErrorNotice, linkButtonClass, smallButtonClass, syncText } from
 import SyncRuleDrawing from "./SyncRuleDrawing";
 
 import { DataSyncLinkMode, DataSyncLinkState } from "@/sdk/constants";
+import DeviceColorEditor from "@/features/management/DeviceColorEditor";
 import { DismissButton } from "@/features/federation/components/common";
+import { Button } from "@/components/bakaui";
 
 /*
  * The details of one device, beside the diagram: the rule editor, then the way to its history,
@@ -32,7 +34,6 @@ export interface LinkDetailsProps {
   headingRef: Ref<HTMLHeadingElement>;
   closable: boolean;
   onClose: () => void;
-  onCreateCode: () => void;
   /** Opens the list of definitions and how each syncs, on those not synced whole. */
   onShowDefinitions: () => void;
   /** Shows the history with this device alone, and takes the reader there. */
@@ -52,7 +53,6 @@ export default function LinkDetails({
   headingRef,
   closable,
   onClose,
-  onCreateCode,
   onShowDefinitions,
   onShowHistory,
   onDismissMessage,
@@ -109,6 +109,7 @@ export default function LinkDetails({
             </p>
           )}
         </div>
+        <DeviceColorEditor name={name} serverId={peer.nodeId} />
         {closable && (
           <button
             aria-label={t("dataSync.close")}
@@ -151,7 +152,6 @@ export default function LinkDetails({
           remoteAccessMode={remoteAccessMode}
           selfName={selfName}
           sharingEnabled={sharingEnabled}
-          onCreateCode={onCreateCode}
         />
       )}
 
@@ -183,25 +183,29 @@ export default function LinkDetails({
           )}
           <div className="flex flex-wrap gap-2 pt-1">
             {reads && (
-              <button
+              <Button
                 className={smallButtonClass}
                 data-testid="data-sync-stop-reading"
                 disabled={actions.busy}
+                size="sm"
                 type="button"
+                variant="bordered"
                 onClick={stopReading}
               >
                 {t("dataSync.link.stopReading.button", { name })}
-              </button>
+              </Button>
             )}
-            <button
+            <Button
               className={smallButtonClass}
               data-testid="data-sync-reset"
               disabled={actions.busy}
+              size="sm"
               type="button"
+              variant="bordered"
               onClick={reset}
             >
               {t("dataSync.link.reset.button")}
-            </button>
+            </Button>
           </div>
         </div>
       )}

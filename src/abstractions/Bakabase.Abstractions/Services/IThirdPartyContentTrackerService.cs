@@ -42,4 +42,18 @@ public interface IThirdPartyContentTrackerService
         string domainKey,
         string? filter,
         string targetContentId);
+
+    Task<ThirdPartyContentTrackerPageBoundariesViewModel> FindPageBoundaries(
+        string domainKey,
+        string? filter,
+        DateTime oldestUpdatedAt,
+        DateTime newestUpdatedAt,
+        IReadOnlyCollection<string> excludeContentIds);
+
+    Task<ThirdPartyContentTrackerDailyHistoryViewModel> GetDailyHistory(
+        string domainKey,
+        string? filter,
+        string centerDay,
+        string timeZoneId,
+        IReadOnlyCollection<string> excludeContentIds);
 }

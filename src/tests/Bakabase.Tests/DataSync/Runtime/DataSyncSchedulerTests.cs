@@ -108,7 +108,6 @@ public class DataSyncSchedulerTests
         Assert.AreEqual(BTaskStatus.NotStarted, h.Status(DataSyncTaskIds.Fetch), "the due link started nothing");
         Assert.IsNull(h.Status(DataSyncTaskIds.Apply), "the staged pull enqueued nothing");
         Assert.IsNull(await h.Launcher.EnqueueApplyAsync());
-        Assert.IsNull(await h.Launcher.EnqueueUndoAsync(3));
         Assert.IsNull(await h.Scheduler.SyncNowAsync(null, default));
         Assert.AreEqual(BTaskStatus.NotStarted, h.Status(DataSyncTaskIds.Fetch));
     }

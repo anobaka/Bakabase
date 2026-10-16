@@ -13,6 +13,8 @@ public record CollectionMemberPage(
 
 public interface ICollectionService
 {
+    const int MaximumMembershipLookupSize = 500;
+
     Task<List<ResourceCollection>> GetAll(bool withProgress = false, CancellationToken ct = default);
 
     Task<ResourceCollection?> Get(int id, bool withProgress = false, CancellationToken ct = default);
@@ -25,6 +27,10 @@ public interface ICollectionService
 
     /// <summary>Every member, written-down and rule-matched alike, deduplicated.</summary>
     Task<List<CollectionMember>> GetMembers(int id, CancellationToken ct = default);
+
+    /// <summary>Membership state for one bounded page of resources; never loads every member.</summary>
+    Task<List<CollectionMember>> GetMembers(int id, IReadOnlyCollection<int> resourceIds,
+        CancellationToken ct = default);
 
     Task<CollectionMemberPage> SearchMembers(int id, CollectionMemberFilter filter, int pageIndex,
         int pageSize, CancellationToken ct = default);

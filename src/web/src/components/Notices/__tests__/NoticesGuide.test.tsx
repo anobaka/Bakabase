@@ -206,10 +206,10 @@ describe("the guide a notice opens", () => {
     await click("notices.item.multiDevice.action");
     expect(dialogs()).toEqual(["helpCenter.title"]);
 
-    // The multi-device overview's link to the multi-device library.
-    await click("helpCenter.multiDevice.open.library");
+    // The multi-device overview's link to the resource list.
+    await click("helpCenter.multiDevice.open.resources");
 
-    expect(api.navigate).toHaveBeenCalledWith("/federation");
+    expect(api.navigate).toHaveBeenCalledWith("/resource");
     // Neither the other notice nor the release notes open over the page the reader went to.
     expect(dialogs()).toEqual([]);
     expect(noticeOnScreen()).toBeNull();

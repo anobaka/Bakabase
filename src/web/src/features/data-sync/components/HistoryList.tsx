@@ -15,21 +15,16 @@ import {
 } from "react-icons/ai";
 
 import { dataSyncApi } from "../api";
-import { historyCounts, historyKindName, isUndoable } from "../historyModels";
-import { listedTasks } from "../hooks/useDataSyncTask";
-import { useTaskFollower } from "../hooks/useTaskFollower";
+import { historyCounts, historyKindName } from "../historyModels";
 import { localDateTime, timeAgo } from "../times";
 
-import UndoDialog from "./UndoDialog";
 import {
   DataSyncErrorNotice,
-  fieldClass,
   linkButtonClass,
   panelClass,
   SectionHeading,
   smallButtonClass,
   syncText,
-  taskFailureText,
 } from "./common";
 
 import {
@@ -37,19 +32,17 @@ import {
   DataSyncItemActionLabel,
   DataSyncItemOutcome,
   DataSyncItemOutcomeLabel,
-  DataSyncUndoState,
 } from "@/sdk/constants";
+import { Button, Select } from "@/components/bakaui";
 
 /*
  * The history (spec §11.3): every entry — a first sync, a copy, an automatic sync, the reader's
- * own decisions, an undo, a restore — with what it did, its details, and Undo while it can still
- * be undone. It can show one device's entries alone, which is where a link's details send the
- * reader for its history (spec §11.2).
+ * own decisions, a restore, or a historical undo — with what it did and its details. It can show
+ * one device's entries alone, which is where a link's details send the reader (spec §11.2).
  */
 
-/** How often the history is read again, and how often while an undo runs. */
+/** Keep audit entries current without following write tasks. */
 export const HISTORY_POLL_MS = 30_000;
-export const HISTORY_LIVE_POLL_MS = 3_000;
 
 const kindIcons: Record<DataSyncHistoryKind, IconType> = {
   [DataSyncHistoryKind.FirstLink]: AiOutlineLink,
@@ -63,82 +56,61 @@ const kindIcons: Record<DataSyncHistoryKind, IconType> = {
 
 export interface HistoryListProps {
   version: number;
-  /** The devices, for the mode an undone change syncs out through. */
+  /** Known devices, for the history filter. */
   peers?: SyncPeer[];
   /** The device whose entries alone are shown (its node id), or every device's. */
   peer?: string;
   onPeerChange?: (peer?: string) => void;
-  onChanged: () => void;
   now?: number;
 }
 
 const HistoryList = forwardRef<HTMLHeadingElement, HistoryListProps>(function HistoryList(
-  { version, peers, peer, onPeerChange, onChanged, now },
+  { version, peers, peer, onPeerChange, now },
   heading,
 ) {
   const { t } = useTranslation();
+  const [beforeId, setBeforeId] = useState<number>();
+  const [hasMore, setHasMore] = useState(false);
   const [all, setEntries] = useState<DataSyncHistoryEntry[]>();
   const [error, setError] = useState<Error>();
   const [open, setOpen] = useState<number>();
   const [details, setDetails] = useState<Record<number, DataSyncHistoryDetail | Error>>({});
-  const [undoing, setUndoing] = useState<DataSyncHistoryEntry>();
-  // What the task list showed as the undo dialog opened: a retried undo reuses its task id.
-  const listedAtOpen = useRef<ReadonlyMap<string, string>>(new Map());
-  const [runErrors, setRunErrors] = useState<Map<number, string>>(new Map());
-  const say = (ids: number[], text?: string) =>
-    setRunErrors((current) => {
-      const errors = new Map(current);
-
-      for (const id of ids)
-        if (text) errors.set(id, text);
-        else errors.delete(id);
-
-      return errors;
-    });
-
+  const requestVersion = useRef(0);
   const load = useCallback(async () => {
-    try {
-      const next = await dataSyncApi.history();
+    const attempt = ++requestVersion.current;
 
+    try {
+      const next = await dataSyncApi.history({ beforeId, peerNodeId: peer, take: 50 });
+
+      if (attempt !== requestVersion.current) return;
       setEntries(next);
+      setHasMore(next.length === 50);
       setError(undefined);
 
       return next;
     } catch (cause) {
+      if (attempt !== requestVersion.current) return;
       setError(cause instanceof Error ? cause : new Error(String(cause)));
     }
-  }, []);
+  }, [beforeId, peer]);
 
-  // An undo whose task failed says so on its row. One that is over is read again: an entry that
-  // can still be undone then undid nothing — every step was refused.
-  const follower = useTaskFollower<number>({
-    onOver: async (ids) => {
-      const next = await load();
-
-      say(
-        ids.filter((id) => next?.some((entry) => entry.id === id && isUndoable(entry))),
-        t("dataSync.history.undoNothing"),
-      );
-    },
-    onFailed: (ids, task) => say(ids, taskFailureText(t, task, t("dataSync.history.undoFailed"))),
-  });
+  useEffect(() => {
+    setBeforeId(undefined);
+    setOpen(undefined);
+    setDetails({});
+  }, [peer]);
 
   useEffect(() => {
     void load();
   }, [load, version]);
 
-  const live = follower.running.size > 0;
-
   useEffect(() => {
-    const timer = setInterval(
-      () => {
-        if (typeof document === "undefined" || !document.hidden) void load();
-      },
-      live ? HISTORY_LIVE_POLL_MS : HISTORY_POLL_MS,
-    );
+    const timer = setInterval(() => {
+      if (typeof document === "undefined" || !document.hidden) void load();
+    }, HISTORY_POLL_MS);
 
     return () => clearInterval(timer);
-  }, [live, load]);
+  }, [load]);
 
   const toggle = async (entry: DataSyncHistoryEntry) => {
     if (open === entry.id) {
@@ -160,20 +132,18 @@ const HistoryList = forwardRef<HTMLHeadingElement, HistoryListProps>(function Hi
     }
   };
 
-  const modeOf = (entry: DataSyncHistoryEntry) =>
-    entry.linkId != null ? peers?.find((item) => item.linkId === entry.linkId)?.mode : undefined;
-
   // The devices the history names, for its filter: each once, by name.
   const devices = useMemo(() => {
     const byId = new Map<string, string>();
 
+    for (const device of peers ?? []) byId.set(device.nodeId, device.name);
     for (const entry of all ?? [])
       if (entry.peerNodeId) byId.set(entry.peerNodeId, entry.peerName ?? entry.peerNodeId);
 
     return Array.from(byId, ([nodeId, name]) => ({ nodeId, name })).sort((a, b) =>
       a.name.localeCompare(b.name),
     );
-  }, [all]);
+  }, [all, peers]);
   const entries = peer ? all?.filter((entry) => entry.peerNodeId === peer) : all;
   const peerName =
     devices.find((device) => device.nodeId === peer)?.name ??
@@ -191,25 +161,26 @@ const HistoryList = forwardRef<HTMLHeadingElement, HistoryListProps>(function Hi
         title={t("dataSync.history.title")}
       >
         {onPeerChange && (devices.length > 1 || peer) ? (
-          <select
+          <Select
+            disallowEmptySelection
             aria-label={t("dataSync.history.filter.device")}
-            className={`${fieldClass} w-auto py-1 text-xs`}
+            className="w-full sm:w-48"
             data-testid="data-sync-history-filter-device"
-            value={peer ?? ""}
+            dataSource={[
+              { value: "", label: t("dataSync.history.filter.allDevices") },
+              ...devices.map((device) => ({ value: device.nodeId, label: device.name })),
+              ...(peer && !devices.some((device) => device.nodeId === peer)
+                ? [{ value: peer, label: peerName ?? t("dataSync.otherDevice") }]
+                : []),
+            ]}
+            selectedKeys={[peer ?? ""]}
+            size="sm"
+            variant="bordered"
             onChange={(event) => onPeerChange(event.target.value || undefined)}
-          >
-            <option value="">{t("dataSync.history.filter.allDevices")}</option>
-            {devices.map((device) => (
-              <option key={device.nodeId} value={device.nodeId}>
-                {device.name}
-              </option>
-            ))}
-            {peer && !devices.some((device) => device.nodeId === peer) && (
-              <option value={peer}>{peerName ?? t("dataSync.otherDevice")}</option>
-            )}
-          </select>
+          />
         ) : null}
       </SectionHeading>
+      <p className="text-xs text-default-500">{t("dataSync.history.auditOnly")}</p>
       <DataSyncErrorNotice error={error} onRetry={() => void load()} />
       {!entries && !error && (
         <p className="text-sm text-default-500" role="status">
@@ -230,8 +201,6 @@ const HistoryList = forwardRef<HTMLHeadingElement, HistoryListProps>(function Hi
             const kind = historyKindName(entry.kind);
             const counts = historyCounts(entry.counts);
             const detail = details[entry.id];
-            // Undoing until its task is over, unless the entry already says it is undone.
-            const busy = follower.running.has(entry.id) && isUndoable(entry);
 
             return (
               <li
@@ -253,37 +222,13 @@ const HistoryList = forwardRef<HTMLHeadingElement, HistoryListProps>(function Hi
                     {timeAgo(t, entry.appliedAt, now)}
                   </span>
                   <span className="ml-auto flex flex-wrap items-center gap-2">
-                    {entry.undoState === DataSyncUndoState.Undone && (
+                    {entry.undoneAt && (
                       <span
                         className="text-xs text-default-500"
                         data-testid="data-sync-history-undone"
                       >
                         {t("dataSync.history.undone", { time: localDateTime(entry.undoneAt) })}
                       </span>
-                    )}
-                    {entry.undoState === DataSyncUndoState.Expired &&
-                      entry.kind !== DataSyncHistoryKind.Undo && (
-                        <span className="text-xs text-default-500">
-                          {t("dataSync.history.expired")}
-                        </span>
-                      )}
-                    {busy && (
-                      <span className="text-xs text-primary-700" role="status">
-                        {t("dataSync.history.undoing")}
-                      </span>
-                    )}
-                    {isUndoable(entry) && !busy && (
-                      <button
-                        className={smallButtonClass}
-                        data-testid="data-sync-history-undo"
-                        type="button"
-                        onClick={() => {
-                          listedAtOpen.current = listedTasks();
-                          setUndoing(entry);
-                        }}
-                      >
-                        {t("dataSync.undo.button")}
-                      </button>
                     )}
                     <button
                       aria-expanded={open === entry.id}
@@ -305,11 +250,6 @@ const HistoryList = forwardRef<HTMLHeadingElement, HistoryListProps>(function Hi
                     {counts
                       .map(({ key, count }) => t(`dataSync.history.count.${key}`, { count }))
                       .join(" · ")}
-                  </p>
-                )}
-                {runErrors.get(entry.id) && (
-                  <p className="text-xs text-danger-700" role="alert">
-                    {runErrors.get(entry.id)}
                   </p>
                 )}
                 {open === entry.id && (
@@ -348,19 +288,39 @@ const HistoryList = forwardRef<HTMLHeadingElement, HistoryListProps>(function Hi
           })}
         </ul>
       )}
-      {undoing && (
-        <UndoDialog
-          entry={undoing}
-          linkMode={modeOf(undoing)}
-          onClose={() => setUndoing(undefined)}
-          onStarted={(taskId) => {
-            setUndoing(undefined);
-            say([undoing.id]);
-            if (taskId) follower.follow([undoing.id], taskId, listedAtOpen.current.get(taskId));
-            onChanged();
-            void load();
-          }}
-        />
+      {(beforeId !== undefined || hasMore) && (
+        <div className="flex justify-end gap-2">
+          {beforeId !== undefined && (
+            <Button
+              className={smallButtonClass}
+              size="sm"
+              type="button"
+              variant="bordered"
+              onClick={() => {
+                setBeforeId(undefined);
+                setOpen(undefined);
+                setDetails({});
+              }}
+            >
+              {t("dataSync.activity.newest")}
+            </Button>
+          )}
+          {hasMore && (
+            <Button
+              className={smallButtonClass}
+              size="sm"
+              type="button"
+              variant="bordered"
+              onClick={() => {
+                setBeforeId(all?.at(-1)?.id);
+                setOpen(undefined);
+                setDetails({});
+              }}
+            >
+              {t("dataSync.activity.older")}
+            </Button>
+          )}
+        </div>
       )}
     </section>
   );

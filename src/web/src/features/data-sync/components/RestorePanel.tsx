@@ -14,6 +14,7 @@ import DataSyncHelp from "./DataSyncHelp";
 
 import { MessageError } from "@/features/federation/components/common";
 import { DataSyncPauseReason, DataSyncRestoreChoice } from "@/sdk/constants";
+import { Button } from "@/components/bakaui";
 
 /*
  * "My configuration wins" (spec §9.5): this device's data looks older than what the other
@@ -151,9 +152,15 @@ export default function RestorePanel({
         data-testid="data-sync-restore-pending"
       >
         <span>{t("dataSync.restore.pending")}</span>
-        <button className={buttonClass} type="button" onClick={() => setLater(false)}>
+        <Button
+          className={buttonClass}
+          size="sm"
+          type="button"
+          variant="bordered"
+          onClick={() => setLater(false)}
+        >
           {t("dataSync.restore.decide")}
-        </button>
+        </Button>
       </p>
     );
 
@@ -247,15 +254,17 @@ function RestoreChoice({
   return (
     <div className="flex flex-col gap-2 rounded-lg border border-default-200 bg-content1 p-3">
       <p className="text-xs text-default-500">{description}</p>
-      <button
+      <Button
         className={`${primary ? primaryClass : buttonClass} mt-auto`}
         data-testid={testId}
         disabled={busy}
+        size="sm"
         type="button"
+        variant="bordered"
         onClick={onChoose}
       >
         {title}
-      </button>
+      </Button>
     </div>
   );
 }

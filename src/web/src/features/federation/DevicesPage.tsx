@@ -1,4 +1,3 @@
-import type { PairingRequest, SharingCandidate } from "./types";
 import type { DevicesPageContextValue } from "./devices/context";
 import type { DevicesAnchor } from "./switching";
 
@@ -18,7 +17,7 @@ import ConfirmDialog from "./components/ConfirmDialog";
 import { REVEAL_HIGHLIGHT_MS, useSectionReveal } from "./hooks/useSectionReveal";
 import { useDevicesData } from "./hooks/useDevicesData";
 import { federationPeerApi } from "./peerApi";
-import { FederationError, isAbort } from "./transport";
+import { FederationError } from "./transport";
 import ManagementAccessSection from "./components/ManagementAccess";
 import { DevicesPageContext } from "./devices/context";
 import DevicesNav from "./devices/DevicesNav";
@@ -27,10 +26,6 @@ import { useSectionFocusKeeper } from "./devices/useSectionFocusKeeper";
 
 import { useCanAdministerShownServer } from "@/stores/remoteAccess";
 
-/** How often outgoing requests are claimed while the page is visible. */
-const CLAIM_POLL_MS = 4000;
-/** A request whose claim failed (e.g. its device is unreachable) is left alone this long. */
-const CLAIM_BACKOFF_MS = 30_000;
 /**
  * What a place brought into view keeps between itself and the sticky feedback above it
  * (`scrollOffsetClass`), in pixels.
@@ -43,11 +38,6 @@ interface Confirmation {
   warning?: string;
   action: () => Promise<unknown>;
 }
-
-const isAwaitingOutgoing = (request: PairingRequest, at: number) =>
-  request.direction === "outgoing" &&
-  request.status === "awaitingApproval" &&
-  Date.parse(request.expiresAt) > at;
 
 /**
  * Changes with every navigation that lands on the management section — the notification
@@ -97,14 +87,14 @@ function ShownServerManagement() {
 }
 
 /**
- * This device's own devices page, in sections: this device, management, library sharing
+ * This device's own devices page, in sections: this device, management, data sync
  * and advanced (see `devices/sections.ts`). Everything is read once here and handed to the
  * tab shown, so switching tabs never waits and every tab's count stays live in the nav.
  */
 function Devices() {
   const { t } = useTranslation();
   const data = useDevicesData();
-  const { status, sharingError: loadError, sharingLoading: loading, refreshSharing } = data;
+  const { identityError: loadError, identityLoading: loading } = data;
   const [params] = useSearchParams();
   const { key: locationKey } = useLocation();
   const sectionParam = params.get("section");
@@ -125,24 +115,14 @@ function Devices() {
     [],
   );
   const notice = noticeAt?.locationKey === locationKey ? noticeAt.text : undefined;
-  const [address, setAddress] = useState("");
-  const [code, setCode] = useState("");
-  const [shareBack, setShareBack] = useState(true);
-  const [configureRemote, setConfigureRemote] = useState<boolean>();
-  const [invite, setInvite] = useState<{ code: string; expiresAt: string }>();
-  const [discovered, setDiscovered] = useState<SharingCandidate[]>();
   const [confirmation, setConfirmation] = useState<Confirmation>();
   const [confirmationError, setConfirmationError] = useState<Error>();
   const [now, setNow] = useState(Date.now());
   const [revealed, setRevealed] = useState<DevicesAnchor | null>(null);
-  const claimBackoff = useRef(new Map<string, number>());
   const pageRef = useRef<HTMLDivElement>(null);
   const feedbackRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
-  const latest = useRef({ status, refreshSharing, t });
-
-  latest.current = { status, refreshSharing, t };
 
   useEffect(() => {
     mounted.current = true;
@@ -156,13 +136,13 @@ function Devices() {
 
   useSectionFocusKeeper(panelRef, headingRef);
 
-  // A corrupt sharing state never produces a status, so its recovery cannot live behind one.
+  // A corrupt identity state never produces a status, so its recovery cannot live behind one.
   const sharingStateUnavailable =
     loadError instanceof FederationError && loadError.code === "SharingStateUnavailable";
   const pageLoadError = sharingStateUnavailable ? undefined : loadError;
   const feedbackShown = !!(pageLoadError || error || notice);
 
-  // The sticky feedback can stand where a link or the nav brings a place (a sharing load
+  // The sticky feedback can stand where a link or the nav brings a place (an identity load
   // error survives tab changes): every such place keeps its height clear through
   // `--devices-scroll-offset` (`scrollOffsetClass`). Set before the effects below bring
   // anything into view, and kept as its text wraps.
@@ -241,14 +221,14 @@ function Devices() {
       await operation();
       // Turning sharing on can turn remote access on as well: both are read again, and data
       // sync, which removing a device ends too.
-      if (mounted.current) await data.reload(["sharing", "access", "dataSync"]);
+      if (mounted.current) await data.reload(["identity", "access", "dataSync"]);
 
       return true;
     } catch (cause) {
       if (mounted.current) {
         onError(cause instanceof Error ? cause : new Error(String(cause)));
         if (cause instanceof FederationError && cause.code === "PathMappingsChanged")
-          await data.reload(["sharing"]);
+          await data.reload(["identity"]);
       }
 
       return false;
@@ -257,73 +237,6 @@ function Devices() {
       if (mounted.current) setBusy(false);
     }
   };
-
-  // The server also claims approved requests in the background, so an outgoing request can
-  // be decided between two refreshes without this page's own claim ever seeing it.
-  const outgoingSeen = useRef(new Map<string, string>());
-
-  useEffect(() => {
-    const seen = outgoingSeen.current;
-
-    for (const request of status?.requests ?? []) {
-      if (request.direction !== "outgoing") continue;
-      if (
-        seen.get(request.requestId) === "awaitingApproval" &&
-        (request.status === "granted" || request.status === "rejected")
-      ) {
-        setNotice(t(`federation.pair.${request.status}`));
-        if (request.status === "granted") setCode("");
-      }
-      seen.set(request.requestId, request.status);
-    }
-  }, [status?.requests]);
-
-  // Claims outgoing requests in the background. It reads the latest render through a ref so
-  // a status change never restarts it, and it never touches the busy flag, action errors or
-  // the user's inputs: it only reports a request that has just been decided, then re-reads
-  // status quietly. Status itself is re-read on its own by the page's data.
-  useEffect(() => {
-    const controller = new AbortController();
-    let claiming = false;
-
-    const claimPending = async () => {
-      if (claiming || document.hidden || busyRef.current) return;
-      const at = Date.now();
-      const due = (latest.current.status?.requests ?? []).filter(
-        (request) =>
-          isAwaitingOutgoing(request, at) &&
-          (claimBackoff.current.get(request.requestId) ?? 0) <= at,
-      );
-
-      if (!due.length) return;
-      claiming = true;
-      try {
-        for (const request of due) {
-          try {
-            const result = await federationPeerApi.claim(request.requestId, controller.signal);
-
-            claimBackoff.current.delete(request.requestId);
-            if (controller.signal.aborted) return;
-            if (result.outcome === "granted" || result.outcome === "rejected")
-              setNotice(latest.current.t(`federation.pair.${result.outcome}`));
-          } catch (cause) {
-            if (controller.signal.aborted || isAbort(cause)) return;
-            // An unreachable device would otherwise be hit (and time out) on every tick.
-            claimBackoff.current.set(request.requestId, Date.now() + CLAIM_BACKOFF_MS);
-          }
-        }
-        if (!controller.signal.aborted) await latest.current.refreshSharing({ quiet: true });
-      } finally {
-        claiming = false;
-      }
-    };
-    const claimTimer = setInterval(() => void claimPending(), CLAIM_POLL_MS);
-
-    return () => {
-      controller.abort();
-      clearInterval(claimTimer);
-    };
-  }, []);
 
   const confirm = (
     title: string,
@@ -346,21 +259,6 @@ function Devices() {
     setNotice,
     now,
     mounted,
-    claimBackoff,
-    sharingForm: {
-      address,
-      setAddress,
-      code,
-      setCode,
-      shareBack,
-      setShareBack,
-      configureRemote,
-      setConfigureRemote,
-      invite,
-      setInvite,
-      discovered,
-      setDiscovered,
-    },
     tab,
     anchor,
     locationKey,
@@ -400,9 +298,6 @@ function Devices() {
           <Link className={buttonClass} to="/federation/map">
             {t("federation.map.title")}
           </Link>
-          <Link className={buttonClass} to="/federation">
-            {t("federation.title")}
-          </Link>
         </div>
       </header>
       {sharingStateUnavailable && (
@@ -420,7 +315,7 @@ function Devices() {
               className={buttonClass}
               disabled={loading || busy}
               type="button"
-              onClick={() => void data.reload(["sharing"])}
+              onClick={() => void data.reload(["identity"])}
             >
               {t("federation.retry")}
             </button>
@@ -433,9 +328,8 @@ function Devices() {
                   t("federation.recovery.reset"),
                   t("federation.recovery.confirm"),
                   async () => {
-                    // Only the sharing state was lost: the install keeps its identity.
+                    // Only the identity state was lost: the install keeps its identity.
                     await federationPeerApi.resetIdentity(true, false);
-                    if (mounted.current) setInvite(undefined);
                   },
                 )
               }
@@ -457,7 +351,7 @@ function Devices() {
                 className="sticky top-0 z-10 -mx-1 space-y-2 bg-background/95 px-1 py-1 backdrop-blur"
                 data-testid="federation-feedback"
               >
-                <ErrorNotice error={pageLoadError} onRetry={() => void data.reload(["sharing"])} />
+                <ErrorNotice error={pageLoadError} onRetry={() => void data.reload(["identity"])} />
                 <ErrorNotice error={error} onDismiss={() => setError(undefined)} />
                 {notice && (
                   <div

@@ -18,6 +18,7 @@ public record BatchPlayCandidate
     public required string DisplayName { get; init; }
     public required string ExecutablePath { get; init; }
     public BatchPlayCapability Capabilities { get; init; }
+    public bool SupportsHttp { get; init; }
 
     /// <summary>
     /// Launch command template of a profile-configured player ("{0}" is the

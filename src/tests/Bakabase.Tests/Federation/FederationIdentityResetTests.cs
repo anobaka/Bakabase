@@ -3,7 +3,6 @@ using Bakabase.Abstractions.Models.Domain.Options;
 using Bakabase.Modules.Federation.Identity;
 using Bakabase.Modules.Federation.Media;
 using Bakabase.Modules.Federation.Peers;
-using Bakabase.Modules.Federation.Queries;
 using Bakabase.Modules.Federation.Security;
 using Bakabase.Modules.RemoteAccess.Abstractions.Components;
 using Bakabase.Modules.RemoteAccess.Abstractions.Models;
@@ -25,7 +24,7 @@ namespace Bakabase.Tests.Federation;
 
 /// <summary>
 /// "Make this a new device" on an installation whose data directory was copied from
-/// another computer: the copy must stop answering as that computer — for library sharing and
+/// another computer: the copy must stop answering as that computer — for definitions sync and
 /// for remote access alike — or each takes the other for itself. It stops managing the servers
 /// the original manages too, here only: their keys are the original's as well.
 /// </summary>
@@ -216,8 +215,6 @@ public sealed class FederationIdentityResetTests
             System.IO.Path.Combine(System.IO.Path.GetTempPath(), "federation-identity-reset-" + Guid.NewGuid().ToString("N"));
 
         private readonly GrantLeaseRegistry _leases = new();
-        private readonly FederatedQueryCoordinator _queries = new(null!);
-        private readonly FederationBrowsingControl _browsing;
         private readonly FederationPeerController _controller;
 
         public RemoteAccessOptions Options { get; }
@@ -240,9 +237,7 @@ public sealed class FederationIdentityResetTests
             Identity = new NodeIdentityProvider(store);
             var peers = new FederationPeerService(store, Identity, _leases, TimeProvider.System);
             Devices = new RemoteDeviceService(new RemoteDeviceStore(this));
-            _browsing = new FederationBrowsingControl(store, _queries, new FederationMediaSessions());
-            _controller = new FederationPeerController(peers, null!, Identity, null!, null!, null!, null!, null!,
-                RemoteAccess, manager, TimeProvider.System, null!, store);
+            _controller = new FederationPeerController(peers, Identity, null!, RemoteAccess, TimeProvider.System, store);
         }
 
         string IFederationDataDirectory.Path => System.IO.Path.Combine(_root, "federation");
@@ -277,14 +272,12 @@ public sealed class FederationIdentityResetTests
                 ? new ControllerContext()
                 : new ControllerContext { HttpContext = new DefaultHttpContext { RequestServices = services } };
 
-            return _controller.Reset(new FederationIdentityResetRequest(asNewNode, replaceInstallIdentity), _browsing,
+            return _controller.Reset(new FederationIdentityResetRequest(asNewNode, replaceInstallIdentity),
                 Devices, Connections, default);
         }
 
         public void Dispose()
         {
-            _browsing.Dispose();
-            _queries.Dispose();
             _leases.Dispose();
             if (Directory.Exists(_root)) Directory.Delete(_root, true);
         }

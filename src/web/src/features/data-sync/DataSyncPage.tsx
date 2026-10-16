@@ -35,8 +35,8 @@ import {
 } from "./components/common";
 import EntitySyncList from "./components/EntitySyncList";
 import HistoryList from "./components/HistoryList";
+import SyncActivityCenter from "./components/SyncActivityCenter";
 import InboxList from "./components/InboxList";
-import InvitationDialog from "./components/InvitationDialog";
 import LinkDetails from "./components/LinkDetails";
 import NotAvailableNotice from "./components/NotAvailableNotice";
 import RequestsList from "./components/RequestsList";
@@ -51,6 +51,7 @@ import { useEscapeKey } from "@/features/federation/map/useEscapeKey";
 import { useMediaQuery } from "@/features/federation/map/useMediaQuery";
 import HelpCenterButton from "@/components/HelpCenter/HelpCenterButton";
 import { RemoteAccessMode } from "@/sdk/constants";
+import { Button } from "@/components/bakaui";
 
 /**
  * The data sync page, under System: every device this one syncs definitions with, drawn first,
@@ -122,13 +123,13 @@ function DataSync() {
   const [wizard, setWizard] = useState(false);
   // A device the wizard made a link to: shown once the page lists it.
   const [showWhenListed, setShowWhenListed] = useState<string>();
-  const [invitationFor, setInvitationFor] = useState<{ name?: string }>();
   const [definitions, setDefinitions] = useState<{ open: boolean; onlyApart: boolean }>({
     open: false,
     onlyApart: false,
   });
   // The history shows one device's entries alone once a link's details asked for them.
   const [historyPeer, setHistoryPeer] = useState<string>();
+  const [inboxFilter, setInboxFilter] = useState<{ peer: string; kind: string }>();
   const historyHeading = useRef<HTMLHeadingElement>(null);
   const page = useRef<HTMLDivElement>(null);
   const heading = useRef<HTMLHeadingElement>(null);
@@ -349,34 +350,40 @@ function DataSync() {
           )}
         </div>
         <div className="flex flex-wrap gap-2">
-          <button
+          <Button
             className={buttonClass}
             disabled={actions.busy}
+            size="sm"
             type="button"
+            variant="bordered"
             onClick={() => void data.reload()}
           >
             <AiOutlineReload aria-hidden />
             {t("dataSync.refresh")}
-          </button>
+          </Button>
           {peers.some((peer) => peer.linkId !== undefined) && (
-            <button
+            <Button
               className={buttonClass}
               data-testid="data-sync-sync-all"
               disabled={actions.busy}
+              size="sm"
               type="button"
+              variant="bordered"
               onClick={() => void actions.run(() => dataSyncApi.syncNow(), ["dataSync"])}
             >
               {t("dataSync.link.syncAll")}
-            </button>
+            </Button>
           )}
-          <button
+          <Button
             className={primaryClass}
             data-testid="data-sync-open-wizard"
+            size="sm"
             type="button"
+            variant="bordered"
             onClick={() => setWizard(true)}
           >
             {t("dataSync.wizard.open")}
-          </button>
+          </Button>
         </div>
       </header>
 
@@ -408,6 +415,19 @@ function DataSync() {
           )}
         </div>
       )}
+
+      <SyncActivityCenter
+        version={data.version}
+        onDefinitionHistory={showHistory}
+        onReviewDefinitions={(peer, kind) => {
+          setInboxFilter({ peer, kind });
+          setTimeout(() =>
+            document
+              .querySelector('[data-testid="data-sync-inbox"]')
+              ?.scrollIntoView?.({ block: "start", behavior: "smooth" }),
+          );
+        }}
+      />
 
       <div
         ref={layoutRef}
@@ -488,7 +508,6 @@ function DataSync() {
                 selfName={selfName}
                 sharingEnabled={sharingEnabled}
                 onClose={close}
-                onCreateCode={() => setInvitationFor({ name: selected.name })}
                 onDismissMessage={dismiss}
                 onShowDefinitions={showDefinitions}
                 onShowHistory={() => showHistory(selected.nodeId)}
@@ -510,8 +529,9 @@ function DataSync() {
       </div>
 
       <InboxList
-        focus={query.tab === "inbox"}
-        initialPeer={query.peer}
+        focus={query.tab === "inbox" || !!inboxFilter}
+        initialKind={inboxFilter?.kind}
+        initialPeer={inboxFilter?.peer ?? query.peer}
         peers={peers}
         version={data.version}
         onChanged={() => void data.reload()}
@@ -532,7 +552,6 @@ function DataSync() {
           peer={historyPeer}
           peers={peers}
           version={data.version}
-          onChanged={() => void data.reload()}
           onPeerChange={setHistoryPeer}
         />
       )}
@@ -543,7 +562,6 @@ function DataSync() {
           canManage={canManage}
           overview={overview}
           readers={peers.flatMap((peer) => (peer.reader ? [peer.reader] : []))}
-          onCreateCode={() => setInvitationFor({})}
         />
       )}
 
@@ -555,14 +573,16 @@ function DataSync() {
           data-testid="data-sync-definitions"
         >
           <SectionHeading id="data-sync-definitions" title={t("dataSync.entity.title")}>
-            <button
+            <Button
               aria-expanded={definitions.open}
               className={buttonClass}
+              size="sm"
               type="button"
+              variant="bordered"
               onClick={() => setDefinitions((current) => ({ ...current, open: !current.open }))}
             >
               {t(definitions.open ? "dataSync.entity.hide" : "dataSync.entity.show")}
-            </button>
+            </Button>
           </SectionHeading>
           <p className="text-xs text-default-500">{t("dataSync.entity.intro")}</p>
           {definitions.open && (
@@ -603,13 +623,6 @@ function DataSync() {
           returnFocus={reviewReturnFocus}
           onChanged={() => void data.reload()}
           onClose={closeReview}
-        />
-      )}
-      {invitationFor && (
-        <InvitationDialog
-          actions={actions}
-          forName={invitationFor.name}
-          onClose={() => setInvitationFor(undefined)}
         />
       )}
     </div>

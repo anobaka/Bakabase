@@ -77,8 +77,16 @@ public class CollectionController(
     /// <summary>Every membership with its state, for the grid's chips and right-click actions.</summary>
     [HttpGet("{id:int}/memberships")]
     [SwaggerOperation(OperationId = "GetCollectionMemberships")]
-    public async Task<ListResponse<CollectionMember>> GetMemberships(int id) =>
-        new(await service.GetMembers(id));
+    public async Task<ListResponse<CollectionMember>> GetMemberships(int id, [FromQuery] int[]? resourceIds = null)
+    {
+        if (resourceIds is {Length: > 0})
+        {
+            if (resourceIds.Length > ICollectionService.MaximumMembershipLookupSize || resourceIds.Any(resourceId => resourceId <= 0))
+                return ListResponseBuilder<CollectionMember>.BuildBadRequest("Request at most 500 positive resource IDs.");
+            return new(await service.GetMembers(id, resourceIds));
+        }
+        return new(await service.GetMembers(id));
+    }
 
     [HttpPost("{id:int}/members")]
     [SwaggerOperation(OperationId = "AddCollectionMembers")]

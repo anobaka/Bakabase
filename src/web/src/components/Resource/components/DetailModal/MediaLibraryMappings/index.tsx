@@ -9,7 +9,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { PlusOutlined, DeleteOutlined, LinkOutlined } from "@ant-design/icons";
 
-import BApi from "@/sdk/BApi";
+import { useResourceApi } from "@/features/management/resourceContext";
 import {
   Button,
   Chip,
@@ -37,6 +37,7 @@ const MediaLibraryMappings: React.FC<Props> = ({
   onMappingsChange,
   compact = false,
 }) => {
+  const BApi = useResourceApi();
   const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [mappings, setMappings] = useState<MappingWithLibrary[]>([]);

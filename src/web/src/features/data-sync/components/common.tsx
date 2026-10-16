@@ -9,20 +9,27 @@ import { useTranslation } from "react-i18next";
 import { DataSyncProblemError, DataSyncRequestError } from "../api";
 
 import ConfirmDialog from "@/features/federation/components/ConfirmDialog";
-import { buttonClass, DismissButton, MessageError } from "@/features/federation/components/common";
+import {
+  buttonClass as federationButtonClass,
+  primaryClass as federationPrimaryClass,
+  DismissButton,
+  MessageError,
+} from "@/features/federation/components/common";
 import { DataSyncProblemCodeLabel } from "@/sdk/constants";
+import { Button } from "@/components/bakaui";
 
 /*
  * Pieces every data sync surface shares. The classes are the multi-device pages' own, so data
  * sync reads as part of the same mode.
  */
 
-export {
-  buttonClass,
-  fieldClass,
-  panelClass,
-  primaryClass,
-} from "@/features/federation/components/common";
+export { fieldClass, panelClass } from "@/features/federation/components/common";
+
+// Action labels can include long device names; keep them readable on narrow screens.
+const actionLayoutClass = "h-auto min-h-8 min-w-0 max-w-full whitespace-normal";
+
+export const buttonClass = `${federationButtonClass} ${actionLayoutClass}`;
+export const primaryClass = `${federationPrimaryClass} ${actionLayoutClass}`;
 
 /**
  * Data sync's colour for words — labels on arrows, the mode on a line, kind chips, a device's
@@ -34,8 +41,7 @@ export const syncText = "text-secondary-600";
 export const syncFill = "fill-secondary-600";
 
 /** A small button inside a sentence or a card. */
-export const smallButtonClass =
-  "inline-flex items-center justify-center gap-1.5 rounded-md border border-default-300 px-2 py-1 text-xs font-medium transition hover:bg-default-100 disabled:cursor-not-allowed disabled:opacity-50";
+export const smallButtonClass = `${actionLayoutClass} inline-flex items-center justify-center gap-1.5 rounded-md border border-default-300 px-2 py-1 text-xs font-medium transition hover:bg-default-100 disabled:cursor-not-allowed disabled:opacity-50`;
 export const linkButtonClass = "text-xs text-primary-700 underline disabled:opacity-50";
 
 /**
@@ -178,9 +184,15 @@ export function DataSyncErrorNotice({
         </details>
       )}
       {onRetry && (
-        <button className={`${buttonClass} mt-2`} type="button" onClick={onRetry}>
+        <Button
+          className={`${buttonClass} mt-2`}
+          size="sm"
+          type="button"
+          variant="bordered"
+          onClick={onRetry}
+        >
           {t("dataSync.retry")}
-        </button>
+        </Button>
       )}
     </div>
   );

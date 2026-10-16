@@ -1,6 +1,7 @@
 import type * as Api from "../api";
 import type { MockInstance } from "vitest";
 
+import userEvent from "@testing-library/user-event";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -65,7 +66,6 @@ vi.mock("../api", async (importOriginal) => ({
     entities: vi.fn(async () => []),
     updateLink: vi.fn(async () => ({})),
     setSharing: vi.fn(async () => undefined),
-    createInvitation: vi.fn(),
     syncNow: vi.fn(async () => ({})),
     inbox: vi.fn(async () => ({ items: [], total: 0, openTotal: 0 })),
     history: vi.fn(async () => []),
@@ -75,6 +75,10 @@ vi.mock("../api", async (importOriginal) => ({
     firstSync: vi.fn(),
   },
 }));
+vi.mock("../components/SyncActivityCenter", () => ({
+  default: () => <div data-testid="sync-activity-center" />,
+}));
+vi.mock("@/features/management/DeviceColorEditor", () => ({ default: () => null }));
 vi.mock("@/sdk/BApi", () => ({
   default: {
     app: { getAppInfo: vi.fn(async () => ({ code: 0, data: { backupPath: "/data/backups" } })) },
@@ -682,7 +686,9 @@ describe("the page", () => {
     await loaded();
 
     await waitFor(() => expect(screen.getByTestId("data-sync-inbox")).toBeInTheDocument());
-    expect(screen.getByTestId("data-sync-inbox-filter-device")).toHaveValue("node-nas");
+    expect(screen.getByRole("button", { name: /dataSync.inbox.filter.device/ })).toHaveTextContent(
+      "NAS",
+    );
     expect(screen.getAllByTestId("data-sync-inbox-card")).toHaveLength(1);
   });
 
@@ -723,13 +729,18 @@ describe("the page", () => {
       "data-entry",
       "1",
     );
-    expect(within(history).getByTestId("data-sync-history-filter-device")).toHaveValue("node-nas");
+    expect(
+      within(history).getByRole("button", { name: /dataSync.history.filter.device/ }),
+    ).toHaveTextContent("NAS");
     expect(within(history).getByRole("heading", { name: "dataSync.history.title" })).toHaveFocus();
 
     // Every device's again, from the filter.
-    fireEvent.change(within(history).getByTestId("data-sync-history-filter-device"), {
-      target: { value: "" },
-    });
+    await userEvent.click(
+      within(history).getByRole("button", { name: /dataSync.history.filter.device/ }),
+    );
+    await userEvent.click(
+      await screen.findByRole("option", { name: "dataSync.history.filter.allDevices" }),
+    );
     expect(within(history).getAllByTestId("data-sync-history-entry")).toHaveLength(2);
   });
 });

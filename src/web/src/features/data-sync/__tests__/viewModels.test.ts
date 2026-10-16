@@ -41,11 +41,9 @@ import {
   inboxChoices,
   recentlyResolved,
 } from "../inboxModels";
-import { isUndoable, undoGroups } from "../historyModels";
 
 import {
   candidate,
-  historyEntry,
   inboxItem,
   inboxPayload,
   keyT,
@@ -60,7 +58,6 @@ import {
 import {
   DataSyncEntitySyncState,
   DataSyncHeldReason,
-  DataSyncHistoryKind,
   DataSyncInboxAction,
   DataSyncInboxClosure,
   DataSyncInboxItemType,
@@ -70,9 +67,6 @@ import {
   DataSyncNaturalMatch,
   DataSyncPauseReason,
   DataSyncStatusLevel,
-  DataSyncUndoAction,
-  DataSyncUndoBlock,
-  DataSyncUndoState,
   RemoteAccessMode,
 } from "@/sdk/constants";
 
@@ -854,41 +848,5 @@ describe("needs you", () => {
         NOW,
       ).map((item) => item.id),
     ).toEqual([2, 1]);
-  });
-});
-
-// ---- the history ---------------------------------------------------------------------------------
-
-describe("the history", () => {
-  it("undoes every kind but an undo, while it can", () => {
-    expect(isUndoable(historyEntry(1, DataSyncHistoryKind.AutoSync))).toBe(true);
-    expect(isUndoable(historyEntry(2, DataSyncHistoryKind.Resolution))).toBe(true);
-    expect(isUndoable(historyEntry(3, DataSyncHistoryKind.Undo))).toBe(false);
-    expect(
-      isUndoable(
-        historyEntry(4, DataSyncHistoryKind.AutoSync, { undoState: DataSyncUndoState.Expired }),
-      ),
-    ).toBe(false);
-  });
-
-  it("groups an undo preview by what happens, blocked rows kept", () => {
-    const row = (localKey: string, action: DataSyncUndoAction, blocked?: DataSyncUndoBlock) => ({
-      kind: "customProperty",
-      localKey,
-      name: localKey,
-      action,
-      blocked,
-      settingsMayReferenceIt: false,
-      recreatedGetsNewId: false,
-    });
-    const groups = undoGroups([
-      row("a", DataSyncUndoAction.Remove),
-      row("b", DataSyncUndoAction.Revert, DataSyncUndoBlock.ChangedSinceImport),
-      row("c", DataSyncUndoAction.Recreate),
-      row("d", DataSyncUndoAction.RemoveAliases),
-    ]);
-
-    expect(Array.from(groups.keys())).toEqual(["remove", "recreate", "unlink", "keep"]);
-    expect(groups.get("keep")?.map((item) => item.localKey)).toEqual(["b"]);
   });
 });

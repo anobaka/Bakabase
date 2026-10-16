@@ -17,6 +17,6 @@
         <Menu Name="ServerSwitchBar" DockPanel.Dock="Top" IsVisible="False">
             <MenuItem Name="ServerSwitchRoot" />
         </Menu>
-        <controls:NativeWebViewHost Name="WebView" />
+        <controls:NativeWebViewHost Name="WebView" IsApplicationView="True" />
     </DockPanel>
 </Window>

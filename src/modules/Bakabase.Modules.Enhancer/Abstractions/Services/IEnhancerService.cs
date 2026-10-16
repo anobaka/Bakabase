@@ -20,6 +20,14 @@ public interface IEnhancerService
     Task ApplyEnhancementsToResources(Dictionary<int, HashSet<int>> resourceIdEnhancerIdsMap,
         List<Enhancement> enhancements, CancellationToken ct);
 
+    /// <summary>Apply owner-validated, pinned target mappings without resolving worker/local profiles.</summary>
+    Task ApplyPreparedEnhancementsToResource(int resourceId, EnhancerFullOptions options,
+        List<Enhancement> enhancements, CancellationToken ct) => throw new NotSupportedException();
+
+    /// <summary>Pure post-processing of computed values; does not write resource metadata.</summary>
+    Task ProcessComputedValuesAsync(List<EnhancementRawValue> values, EnhancerFullOptions options,
+        int resourceId, CancellationToken ct) => Task.CompletedTask;
+
     /// <summary>
     /// Deletes the applied-but-empty enhancement records of the given resources, so their enhancers
     /// run again next round. An enhancer that found nothing still records a result, and an applied

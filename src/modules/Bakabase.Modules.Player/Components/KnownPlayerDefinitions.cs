@@ -23,6 +23,7 @@ public static class KnownPlayerDefinitions
         DisplayName = "PotPlayer",
         ExecutableNames = ["PotPlayerMini64.exe", "PotPlayer64.exe", "PotPlayerMini.exe", "PotPlayer.exe"],
         Capabilities = BatchPlayCapability.PlaylistFile,
+        SupportsHttp = true,
         SupportedExtensions = AvExtensions,
         RegistryHints =
         [
@@ -43,6 +44,7 @@ public static class KnownPlayerDefinitions
         ExecutableNames = ["vlc.exe"],
         MacAppBundleExecutables = ["VLC.app/Contents/MacOS/VLC"],
         Capabilities = BatchPlayCapability.PlaylistFile | BatchPlayCapability.MultiFileArguments,
+        SupportsHttp = true,
         SupportedExtensions = AvExtensions,
         RegistryHints =
         [
@@ -67,6 +69,7 @@ public static class KnownPlayerDefinitions
         // inherited stdin can take precedence over the stream URL.
         ArgumentPrefix = "--no-stdin",
         Capabilities = BatchPlayCapability.MultiFileArguments,
+        SupportsHttp = true,
         SupportedExtensions = AvExtensions,
     };
 
@@ -76,6 +79,7 @@ public static class KnownPlayerDefinitions
         DisplayName = "mpv",
         ExecutableNames = ["mpv.exe"],
         Capabilities = BatchPlayCapability.PlaylistFile | BatchPlayCapability.MultiFileArguments,
+        SupportsHttp = true,
         SupportedExtensions = AvExtensions,
         CandidateDirectories =
         [
@@ -90,6 +94,7 @@ public static class KnownPlayerDefinitions
         DisplayName = "MPC-HC",
         ExecutableNames = ["mpc-hc64.exe", "mpc-hc.exe"],
         Capabilities = BatchPlayCapability.PlaylistFile | BatchPlayCapability.MultiFileArguments,
+        SupportsHttp = true,
         SupportedExtensions = AvExtensions,
         RegistryHints =
         [
@@ -109,6 +114,7 @@ public static class KnownPlayerDefinitions
         DisplayName = "MPC-BE",
         ExecutableNames = ["mpc-be64.exe", "mpc-be.exe"],
         Capabilities = BatchPlayCapability.PlaylistFile | BatchPlayCapability.MultiFileArguments,
+        SupportsHttp = true,
         SupportedExtensions = AvExtensions,
         RegistryHints =
         [
@@ -128,6 +134,7 @@ public static class KnownPlayerDefinitions
         DisplayName = "foobar2000",
         ExecutableNames = ["foobar2000.exe"],
         Capabilities = BatchPlayCapability.PlaylistFile | BatchPlayCapability.MultiFileArguments,
+        SupportsHttp = true,
         SupportedExtensions = AudioOnlyExtensions,
         CandidateDirectories =
         [

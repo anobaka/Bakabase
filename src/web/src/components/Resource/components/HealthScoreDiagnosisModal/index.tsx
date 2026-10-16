@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 
 import { Chip, Modal, Spinner } from "@/components/bakaui";
 import HealthScoreBadge from "@/components/HealthScoreBadge";
-import BApi from "@/sdk/BApi";
+import { useResourceApi } from "@/features/management/resourceContext";
 
 interface MatchedRule {
   ruleId: number;
@@ -34,6 +34,7 @@ interface Props {
 }
 
 export const HealthScoreDiagnosisModal = ({ resourceId, onClose, onDestroyed }: Props) => {
+  const BApi = useResourceApi();
   const { t } = useTranslation();
   const [rows, setRows] = useState<DiagnosisRow[]>();
   const [profiles, setProfiles] = useState<Record<number, ProfileSummary>>({});

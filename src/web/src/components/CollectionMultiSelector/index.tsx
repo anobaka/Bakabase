@@ -12,7 +12,7 @@ import {
   UndoOutlined,
 } from "@ant-design/icons";
 
-import BApi from "@/sdk/BApi";
+import { useResourceApi } from "@/features/management/resourceContext";
 import { Button, Modal, Spinner, Tooltip, toast } from "@/components/bakaui";
 
 type Props = {
@@ -36,6 +36,7 @@ enum Membership {
  */
 const CollectionMultiSelector = ({ resourceIds, onSubmit, onDestroyed }: Props) => {
   const { t } = useTranslation();
+  const BApi = useResourceApi();
 
   const [visible, setVisible] = useState(true);
   const [loading, setLoading] = useState(true);

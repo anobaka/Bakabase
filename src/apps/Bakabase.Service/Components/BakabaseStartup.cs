@@ -1,4 +1,5 @@
 ﻿using System;
+using Bakabase.Modules.RemoteAccess.Components.Management;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Service.Components.ServerData;
 using Bakabase.Abstractions.Components.Localization;
@@ -120,6 +121,15 @@ namespace Bakabase.Service.Components
             // default knows the platform but not the kind.
             services.TryAddSingleton(sp => ServiceSelfDescription.Create(sp, AppService.RuntimeMode));
 
+            // The same current name must be advertised by discovery, pairing handshakes
+            // and metadata. Resolve lazily: the identity source itself uses remote access.
+            services.TryAddSingleton(sp => new Bakabase.Modules.RemoteAccess.Abstractions.Models.RemoteAccessHostInfo(
+                AppService.CoreVersion.ToString())
+            {
+                GetDisplayNameAsync = async () => (await sp.GetRequiredService<
+                    Bakabase.Modules.Federation.Identity.INodeIdentityProvider>().GetAsync()).Name
+            });
+
             // Remote access. Docker has always served whoever could reach the port, so
             // it keeps that as its default; a desktop install starts closed, which is a
             // behavior change for anyone who was quietly relying on LAN reachability.
@@ -129,7 +139,8 @@ namespace Bakabase.Service.Components
                 AppService.CoreVersion.ToString());
             services.AddSingleton<IListeningAddressProvider, AppContextListeningAddressProvider>();
             services.AddSingleton<IRemoteAccessDataDirectory, AppServiceRemoteAccessDataDirectory>();
-            services.AddFederatedLibrary();
+            services.AddManagedServerConnections();
+            services.AddMultiDeviceServices();
             services.AddDataSyncServiceComponents();
 
             // Which pages CORS, the cross-site guard and the framing headers trust, for the
@@ -375,7 +386,6 @@ namespace Bakabase.Service.Components
             app.UseMiddleware<FederationAccessMiddleware>();
             app.UseMiddleware<RemoteAccessMiddleware>();
             app.UseMiddleware<FederationAdministrationMiddleware>();
-            app.UseMiddleware<FederationBrowsingMiddleware>();
             // After the loopback bypass above: narrows what a page on another site can
             // make this computer's browser do here, showing this UI in a frame included.
             app.UseMiddleware<LoopbackCrossSiteGuard>();

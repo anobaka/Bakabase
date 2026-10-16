@@ -11,7 +11,7 @@ public sealed class FederationEndpointAttribute(FederationEndpointKind kind) : A
     public FederationEndpointKind Kind { get; } = kind;
 
     /// <summary>
-    /// Export endpoints only: the grant scope that may reach the action — <see cref="FederationScopes.LibraryRead"/>,
+    /// Export endpoints only: the grant scope that may reach the action —
     /// <see cref="FederationScopes.DataSyncRead"/>, or <see cref="FederationScopes.Any"/> for the handshake.
     /// Every Export action declares one; Local and Public endpoints declare none.
     /// </summary>

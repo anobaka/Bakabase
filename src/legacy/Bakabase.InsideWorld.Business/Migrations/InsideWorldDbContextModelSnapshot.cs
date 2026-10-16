@@ -903,6 +903,9 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.Property<string>("NameTemplate")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("OpeningMode")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("PlayableFileSettingsJson")
                         .HasColumnType("TEXT");
 
@@ -915,7 +918,16 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.Property<string>("PropertiesJson")
                         .HasColumnType("TEXT");
 
+                    b.Property<int?>("ResourceScopeId")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("SearchJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SourceDeviceId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SourceLibraryEpoch")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("UpdatedAt")
@@ -925,7 +937,43 @@ namespace Bakabase.InsideWorld.Business.Migrations
 
                     b.HasIndex("Priority");
 
+                    b.HasIndex("ResourceScopeId");
+
                     b.ToTable("ResourceProfiles");
+                });
+
+            modelBuilder.Entity("Bakabase.Abstractions.Models.Db.ResourceScopeDbModel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Revision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("SearchJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SourceDeviceId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SourceLibraryEpoch")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ResourceScopes");
                 });
 
             modelBuilder.Entity("Bakabase.Abstractions.Models.Db.ResourceSourceLinkDbModel", b =>
@@ -1501,6 +1549,41 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.ToTable("SpecialTexts");
                 });
 
+            modelBuilder.Entity("Bakabase.InsideWorld.Business.Models.Db.MetadataSourceChangeDbModel", b =>
+                {
+                    b.Property<int>("ResourceId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("Revision")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("ResourceId");
+
+                    b.HasIndex("Revision");
+
+                    b.ToTable("MetadataSourceChanges");
+                });
+
+            modelBuilder.Entity("Bakabase.InsideWorld.Business.Models.Db.MetadataSourceClockDbModel", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Generation")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("Revision")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("MetadataSourceClocks", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_MetadataSourceClocks_Singleton", "Id = 1");
+                        });
+                });
+
             modelBuilder.Entity("Bakabase.InsideWorld.Business.Models.Db.ResourceCacheDbModel", b =>
                 {
                     b.Property<int>("ResourceId")
@@ -1522,6 +1605,110 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.HasKey("ResourceId");
 
                     b.ToTable("ResourceCaches");
+                });
+
+            modelBuilder.Entity("Bakabase.InsideWorld.Business.Models.Db.ResourceProcessingJobDbModel", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Attempt")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("CancelRequested")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CurrentStepPhase")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("CurrentStepProcessedCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long?>("CurrentStepTotalCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Error")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ErrorCode")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("InputJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("JobId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OwnerEpoch")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OwnerId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("PauseRequested")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Phase")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("ProcessedCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("RequesterId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ResourceId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("ResourceRevision")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ResultJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RuleHash")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("TotalCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("JobId");
+
+                    b.HasIndex("OwnerId", "OwnerEpoch", "ResourceId");
+
+                    b.HasIndex("Role", "State", "UpdatedAtUtc");
+
+                    b.ToTable("ResourceProcessingJobs");
                 });
 
             modelBuilder.Entity("Bakabase.Modules.AI.Models.Db.AiFeatureConfigDbModel", b =>
@@ -3540,6 +3727,14 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.HasIndex("WorkflowDefinitionId");
 
                     b.ToTable("WorkflowRuns");
+                });
+
+            modelBuilder.Entity("Bakabase.Abstractions.Models.Db.ResourceProfileDbModel", b =>
+                {
+                    b.HasOne("Bakabase.Abstractions.Models.Db.ResourceScopeDbModel", null)
+                        .WithMany()
+                        .HasForeignKey("ResourceScopeId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("Bakabase.InsideWorld.Business.Components.CollectionMemo.Models.Db.CollectionMemoRangeDbModel", b =>

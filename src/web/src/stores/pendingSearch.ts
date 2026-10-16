@@ -1,8 +1,10 @@
+import type { SearchForm as ResourceSearchForm } from "@/pages/resource/models";
 import type { components } from "@/sdk/BApi2";
 
 import { create } from "zustand";
 
-type SearchForm = components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
+type SearchForm = components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"] &
+  Pick<ResourceSearchForm, "owner" | "deviceIds">;
 
 interface PendingSearchState {
   /** Pending search to be applied when navigating to resource page */

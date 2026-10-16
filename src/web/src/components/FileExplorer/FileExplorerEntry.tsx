@@ -37,6 +37,7 @@ import {
 import { buildLogger, humanFileSize, standardizePath, uuidv4 } from "@/components/utils";
 import FileSystemEntryIcon from "@/components/FileSystemEntryIcon";
 import MediaPlayer from "@/components/MediaPlayer";
+import { MEDIA_PLAYER_WINDOW_PERSISTENCE_KEY } from "@/components/Window/persistence";
 import BApi from "@/sdk/BApi";
 import { localizeBTask } from "@/core/bTaskLocalization";
 import "./FileExplorerEntry.scss";
@@ -606,6 +607,7 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
       },
       {
         title: entry.meaningfulName || entry.name,
+        persistenceKey: MEDIA_PLAYER_WINDOW_PERSISTENCE_KEY,
         persistent: true,
       },
     );

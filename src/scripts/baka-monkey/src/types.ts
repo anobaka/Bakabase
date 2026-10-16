@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 
 export interface ContentInfo {
   id: string | null;
+  /** Original site publication/update time; unknown stays null, never the visit time. */
   updateTime: Date | null;
 }
 
@@ -85,6 +86,8 @@ export interface SiteConfig {
   extractFilter: (url: string) => string | null;
   findContents: (doc: Document) => HTMLElement[];
   extractContentInfo: (element: HTMLElement) => ContentInfo;
+  /** Some sites expose the original publication date without a time of day. */
+  contentTimePrecision?: 'day' | 'minute';
   onMarkViewed: (markVisibleFn: () => void) => void;
 
   /**

@@ -8,8 +8,10 @@ import toast from "react-hot-toast";
 import { AiOutlineSearch } from "react-icons/ai";
 
 import Dependency from "./components/Dependency";
+import StorageSettings from "./components/StorageSettings";
 
 import "./index.scss";
+
 import AppInfo from "@/pages/configuration/components/AppInfo";
 import ContactUs from "@/pages/configuration/components/ContactUs";
 import Functional from "@/pages/configuration/components/Functional";
@@ -78,6 +80,7 @@ const ConfigurationPage: React.FC = () => {
             <Others applyPatches={applyPatches} query={query} />
             <RemoteAccess query={query} />
             <AppInfo appInfo={appInfo} applyPatches={applyPatches} query={query} />
+            <StorageSettings appInfo={appInfo} query={query} />
             <Development query={query} />
             <ContactUs query={query} />
 

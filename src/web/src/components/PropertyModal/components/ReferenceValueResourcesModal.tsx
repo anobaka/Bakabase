@@ -13,6 +13,8 @@ import { usePendingSearchStore } from "@/stores/pendingSearch";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { buildReferenceValueSearch } from "@/components/Property/referenceValues";
 import { resourceChangedChannel } from "@/services/ResourceChangedChannel";
+import { useResourceOwner } from "@/features/management/resourceContext";
+import { subscribeResourceOwnerChanges } from "@/features/management/resourceApi";
 
 type Props = DestroyableProps & { property: ReferenceProperty; value: string; label?: string };
 
@@ -22,6 +24,7 @@ export default function ReferenceValueResourcesModal({
   label,
   onDestroyed,
 }: Props) {
+  const owner = useResourceOwner();
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { closeAllModals } = useBakabaseContext();
@@ -50,16 +53,20 @@ export default function ReferenceValueResourcesModal({
 
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>;
-    const unsubscribe = resourceChangedChannel.subscribe(() => {
+    const onChanged = () => {
       clearTimeout(timer);
       timer = setTimeout(() => setRevision((value) => value + 1), 1000);
-    });
+    };
+    const unsubscribe =
+      owner && !owner.isLocal
+        ? subscribeResourceOwnerChanges(owner, onChanged)
+        : resourceChangedChannel.subscribe(onChanged);
 
     return () => {
       unsubscribe();
       clearTimeout(timer);
     };
-  }, []);
+  }, [owner]);
 
   useEffect(() => {
     if (!loading && response) {
@@ -88,7 +95,7 @@ export default function ReferenceValueResourcesModal({
             size="sm"
             variant="flat"
             onPress={() => {
-              setPendingSearch(searchForm);
+              setPendingSearch({ ...searchForm, ...(owner ? { owner } : {}) });
               closeAllModals();
               navigate("/resource");
             }}

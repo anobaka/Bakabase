@@ -92,10 +92,6 @@ public sealed class DataSyncPairingOverHttpTests
         var peer = (await desk.Grants.GetPeersAsync(false, default)).Single();
         Assert.AreEqual(("node-nas", "NAS", nas.Address, true, true), (peer.NodeId, peer.Name, peer.Address, peer.WeMayRead, peer.TheyMayRead));
 
-        // Neither device has library access to the other.
-        Assert.IsTrue((await desk.Peers.GetStatusAsync()).Peers.All(p => p.InboundGrant == null && p.OutboundGrant == null));
-        Assert.IsTrue((await nas.Peers.GetStatusAsync()).Peers.All(p => p.InboundGrant == null && p.OutboundGrant == null));
-
         // Approving again reads nothing back and reports no failure: the NAS already reads the desk. Data sync hears
         // of that access again, which changes nothing for a link it already has.
         var again = await nas.Grants.ApproveAsync(request.RequestId, readBack: true, default);
@@ -267,17 +263,15 @@ public sealed class DataSyncPairingOverHttpTests
         Assert.AreEqual(FederationScopes.DataSyncRead, session.Scope);
         Assert.IsTrue(session.Info.SharesDefinitions);
         Assert.AreEqual("Online", desk.Sessions.GetConnectionState("node-nas", FederationScopes.DataSyncRead));
-        Assert.AreEqual("NodeNotAuthorized", (await Assert.ThrowsExactlyAsync<Bakabase.Modules.Federation.Security.FederationAccessException>(
-            () => desk.Sessions.GetAsync("node-nas"))).ErrorCode);
+        await Assert.ThrowsExactlyAsync<ArgumentOutOfRangeException>(() => desk.Sessions.GetAsync("node-nas", "library.read"));
 
         // The feed answers, a library route does not.
         using (var head = await desk.Transport.SendAsync(session, HttpMethod.Get, "/federation/v1/export/datasync/head"))
             Assert.AreEqual(HttpStatusCode.OK, head.StatusCode);
-        await nas.Peers.SetSharingAsync(true);
         using (var library = await desk.Transport.SendAsync(session, HttpMethod.Get, "/federation/v1/export/mapping-roots"))
         {
             Assert.AreEqual(HttpStatusCode.Forbidden, library.StatusCode);
-            Assert.AreEqual("ScopeNotGranted", await CodeAsync(library));
+            Assert.AreEqual("NodeRouteForbidden", await CodeAsync(library));
         }
         using (var invalid = await desk.Transport.SendAsync(session, HttpMethod.Get,
                    "/federation/v1/export/datasync/head?since=customProperty:-1"))
@@ -320,9 +314,7 @@ public sealed class DataSyncPairingOverHttpTests
             new DataSyncAccessRequestInput(null, target.Address, code, DataSyncRequestIntent.Follow), default);
 
         Assert.AreEqual(DataSyncPeerErrorCode.PeerSharingOff, (await Peer(Ask(nas))).Code, "Nothing shared: info says no.");
-        await nas.Peers.SetSharingAsync(true);
-        Assert.AreEqual(DataSyncPeerErrorCode.PeerSharingOff, (await Peer(Ask(nas))).Code, "Only the library shared.");
-        await old.Peers.SetSharingAsync(true);
+        await old.Peers.SetDataSyncSharingAsync(true);
         Assert.AreEqual(DataSyncPeerErrorCode.PeerTooOld, (await Peer(Ask(old))).Code);
         await nas.Grants.SetSharingEnabledAsync(true, false, default);
         nas.Remote.Mode = RemoteAccessMode.Disabled;

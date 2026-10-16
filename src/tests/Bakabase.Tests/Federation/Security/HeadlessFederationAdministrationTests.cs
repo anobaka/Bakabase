@@ -3,7 +3,6 @@ using System.Text.Json;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Federation.Media;
 using Bakabase.Modules.Federation.Contracts;
-using Bakabase.Modules.Federation.Queries;
 using Bakabase.Modules.Federation.Security;
 using Bakabase.Modules.RemoteAccess.Abstractions.Models;
 using Bakabase.Modules.RemoteAccess.Abstractions.Services;
@@ -176,18 +175,7 @@ public sealed class HeadlessFederationAdministrationTests
         Assert.IsFalse(data.GetProperty("cookieCaptureAvailable").GetBoolean());
     }
 
-    [TestMethod]
-    public async Task Headless_local_media_never_launches_a_player_or_file_manager()
-    {
-        var controller = new FederationMediaController(null!, null!, null!, null!,
-            new ServerSelfDescription(() => ServerKind.Headless));
-        var player = await Assert.ThrowsExactlyAsync<FederationQueryException>(() =>
-            controller.Prepare(new PlaybackSessionRequest(null!, "player"), default));
-        Assert.AreEqual("PlayerUnavailable", player.Code);
-        var directory = await Assert.ThrowsExactlyAsync<FederationQueryException>(() =>
-            controller.OpenDirectory(new OpenResourceDirectoryRequest(null!), null!, default));
-        Assert.AreEqual("OpenDirectoryUnavailable", directory.Code);
-    }
+
 }
 
 [ApiController]

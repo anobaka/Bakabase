@@ -25,7 +25,7 @@ import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContext
 import { recipeLabel } from "@/pages/acquisition/recipeLabels";
 import WorkflowSummary from "@/components/Workflow/WorkflowSummary";
 import WorkflowDiagnostics from "@/components/Workflow/WorkflowDiagnostics";
-import BApi from "@/sdk/BApi";
+import { useResourceApi, useResourceOwner } from "@/features/management/resourceContext";
 import { AcquisitionLeadKind } from "@/sdk/constants";
 
 type Page = components["schemas"]["Bakabase.Service.Models.View.AcquisitionCandidatePageViewModel"];
@@ -51,6 +51,9 @@ const KIND_LABELS: Partial<Record<AcquisitionLeadKind, string>> = {
 
 /** A task-oriented acquisition module for resources without a local path. */
 const AcquisitionPanel: React.FC<Props> = ({ resource, onChanged, onNavigate }) => {
+  const BApi = useResourceApi();
+  const owner = useResourceOwner();
+  const isRemoteOwner = !!owner && !owner.isLocal;
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const navigate = useNavigate();
@@ -89,6 +92,7 @@ const AcquisitionPanel: React.FC<Props> = ({ resource, onChanged, onNavigate }) 
 
   const refresh = () => setRevision((value) => value + 1);
   const openPage = (path: string) => {
+    if (isRemoteOwner) return;
     onNavigate?.();
     navigate(path);
   };
@@ -132,6 +136,7 @@ const AcquisitionPanel: React.FC<Props> = ({ resource, onChanged, onNavigate }) 
     BApi.resource.materializeResource(resource.id, { path, mergeIfOccupied });
 
   const linkLocalFolder = () => {
+    if (isRemoteOwner) return;
     createPortal(FileSystemSelectorModal, {
       targetType: "folder",
       onSelected: async (e: any) => {
@@ -290,6 +295,10 @@ const AcquisitionPanel: React.FC<Props> = ({ resource, onChanged, onNavigate }) 
                   size="sm"
                   startContent={<AiOutlineApartment aria-hidden className="text-base" />}
                   variant="light"
+                  isDisabled={isRemoteOwner}
+                  title={
+                    isRemoteOwner ? t<string>("management.resource.configureOnOwner") : undefined
+                  }
                   onPress={() => openPage(`/workflows/editor?id=${selected.definitionId}`)}
                 >
                   {t<string>("acquisition.recipes.open")}
@@ -365,6 +374,10 @@ const AcquisitionPanel: React.FC<Props> = ({ resource, onChanged, onNavigate }) 
                 size="sm"
                 startContent={<AiOutlineUnorderedList aria-hidden className="text-base" />}
                 variant="flat"
+                isDisabled={isRemoteOwner}
+                title={
+                  isRemoteOwner ? t<string>("management.resource.configureOnOwner") : undefined
+                }
                 onPress={() => openPage("/acquisitions?tab=live")}
               >
                 {t<string>("acquisition.overview.viewTask")}
@@ -398,7 +411,7 @@ const AcquisitionPanel: React.FC<Props> = ({ resource, onChanged, onNavigate }) 
         </div>
         <div className="flex flex-col items-start gap-2">
           <Button
-            isDisabled={pending != null || activeTask}
+            isDisabled={isRemoteOwner || pending != null || activeTask}
             size="sm"
             startContent={<AiOutlineFolderOpen aria-hidden className="text-base" />}
             variant="flat"
@@ -407,7 +420,11 @@ const AcquisitionPanel: React.FC<Props> = ({ resource, onChanged, onNavigate }) 
             {t<string>("acquisition.action.linkLocalFolder")}
           </Button>
           <p className="text-xs leading-relaxed text-default-500">
-            {t<string>("acquisition.leads.linkLocalHint")}
+            {t<string>(
+              isRemoteOwner
+                ? "management.resource.configureOnOwner"
+                : "acquisition.leads.linkLocalHint",
+            )}
           </p>
         </div>
       </div>

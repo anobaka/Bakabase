@@ -108,9 +108,9 @@ vi.mock("@/components/HelpCenter/HelpCenterModal", () => ({
         type="button"
         onClick={() => {
           if (onNavigate) {
-            onNavigate("/federation");
+            onNavigate("/resource");
           } else {
-            window.location.hash = "/federation";
+            window.location.hash = "/resource";
             onClose();
           }
         }}
@@ -441,7 +441,7 @@ describe("going to a page from the notices", () => {
 
     await click("link in help");
 
-    expect(api.navigate).toHaveBeenCalledWith("/federation");
+    expect(api.navigate).toHaveBeenCalledWith("/resource");
     // Neither the other notice nor the release notes open over the page the user went to.
     expect(dialogs()).toEqual([]);
     expect(noticeOnScreen()).toBeNull();

@@ -172,6 +172,34 @@ public partial class ResolutionTests
         Assert.IsNull(logId);
     }
 
+    [TestMethod]
+    public async Task A_batch_applies_reviewed_conflicts_but_keeps_a_changed_definition_for_another_review()
+    {
+        var inputs = new List<DataSyncResolveInput>();
+        var localKeys = new List<string>();
+        for (var i = 0; i < 2; i++)
+        {
+            var key = SyncKey.New().Value;
+            var first = _peer.Next();
+            await _f.ApplyAsync(_link, _peer, (Item, _peer.Record([key], first, Content("Genre" + i), "a" + i)));
+            var localKey = _f.Kind.KeyOf("Genre" + i);
+            localKeys.Add(localKey);
+            _f.Kind.Definitions[localKey] = _f.Kind[localKey].With(name: "Style" + i);
+            await _f.ApplyAsync(_link, _peer, (Item, _peer.Record([key], _peer.Next(first), Content("Kind" + i), "a" + i)));
+            var item = (await _f.OpenItemsAsync()).Single(x => x.SyncKey == key);
+            inputs.Add(new(item.Id, DataSyncInboxAction.UseRemote, item.Token, null, null, null, null));
+        }
+        _f.Kind.Definitions[localKeys[1]] = _f.Kind[localKeys[1]].With(name: "Edited after preview");
+        await _f.Runner.RunResolutionsAsync(inputs, new DataSyncApplyOptions(false), _f.Args("DataSyncResolve:selected"));
+        Assert.AreEqual("Kind0", _f.Kind[localKeys[0]].Name);
+        Assert.AreEqual("Edited after preview", _f.Kind[localKeys[1]].Name);
+        var items = await _f.ItemsAsync();
+        Assert.AreEqual(DataSyncInboxClosure.ResolvedHere, items.Single(x => x.Id == inputs[0].ItemId).Closure);
+        var changed = items.Single(x => x.Id == inputs[1].ItemId);
+        Assert.IsNull(changed.ClosedAtUtc);
+        Assert.AreNotEqual(inputs[1].Token, changed.Token);
+    }
+
     #endregion
 
     #region TypeChange
@@ -981,35 +1009,6 @@ public partial class ResolutionTests
         Assert.AreEqual(0, (await _f.OpenItemsAsync()).Count, "it went on after Resume");
         CollectionAssert.AreEquivalent(new[] { "Kind0", "Kind1", "Kind2" },
             _f.Kind.Definitions.Values.Select(d => d.Name).ToArray());
-    }
-
-    [TestMethod]
-    public async Task A_paused_undo_never_waits_inside_its_transaction()
-    {
-        // One apply that renamed two definitions: undoing it takes two steps in one transaction.
-        var (genre, mood) = (SyncKey.New().Value, SyncKey.New().Value);
-        var (g1, m1) = (_peer.Next(), _peer.Next());
-        await _f.ApplyAsync(_link, _peer, (Item, _peer.Record([genre], g1, Content("Genre", ("a", "Rock")), "a0")),
-            (Item, _peer.Record([mood], m1, Content("Mood", ("c", "Calm")), "a1")));
-        await _f.ApplyAsync(_link, _peer, (Item, _peer.Record([genre], _peer.Next(g1), Content("Genres", ("a", "Rock")), "a0")),
-            (Item, _peer.Record([mood], _peer.Next(m1), Content("Moods", ("c", "Calm")), "a1")));
-        var logId = (await _f.HistoryAsync()).Last().Id;
-        var pause = new PauseTokenSource();
-        _f.Kind.FailOn = _ =>
-        {
-            pause.Pause();
-            return null;
-        };
-
-        // Asked to pause at its first write, the undo still finishes: inside the transaction only a stop counts.
-        var undone = await Task.Run(() => _f.Runner.RunUndoAsync(logId, _f.Args("DataSyncUndo:" + logId, pause: pause.Token)))
-            .WaitAsync(TimeSpan.FromSeconds(30));
-        _f.Kind.FailOn = null;
-        pause.Resume();
-
-        Assert.IsNotNull(undone);
-        CollectionAssert.AreEquivalent(new[] { "Genre", "Mood" }, _f.Kind.Definitions.Values.Select(d => d.Name).ToArray());
-        Assert.IsTrue(await _f.TryTakeWriteLockAsync(TimeSpan.FromSeconds(1)));
     }
 
     #endregion

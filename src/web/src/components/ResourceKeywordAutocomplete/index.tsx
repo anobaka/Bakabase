@@ -7,7 +7,9 @@ import { useTranslation } from "react-i18next";
 import { useDebounce } from "react-use";
 
 import { Autocomplete, AutocompleteItem } from "@/components/bakaui";
-import BApi from "@/sdk/BApi";
+import { useResourceApi, useResourceOwner } from "@/features/management/resourceContext";
+import { useResourceSources } from "@/features/management/resourceSourcesContext";
+import { createResourceApi } from "@/features/management/resourceApi";
 
 export interface ResourceKeywordAutocompleteProps
   extends Omit<
@@ -31,30 +33,56 @@ export default function ResourceKeywordAutocomplete({
   ...autocompleteProps
 }: ResourceKeywordAutocompleteProps) {
   const { t } = useTranslation();
+  const api = useResourceApi();
+  const owner = useResourceOwner();
+  const sources = useResourceSources()?.sources;
   const [isLoading, setIsLoading] = useState(false);
   const [candidates, setCandidates] = useState<string[]>([]);
   const lastSearchedRef = useRef<string | undefined>(undefined);
+  const sequence = useRef(0);
 
   const searchKeywords = useCallback(
-    (prefix: string) => {
+    async (prefix: string) => {
+      const current = ++sequence.current;
       setIsLoading(true);
 
       if (prefix && prefix.length > 0) {
-        BApi.resource
-          .getResourceSearchKeywordRecommendation({
-            keyword: prefix,
-            maxCount: maxResults,
-          })
-          .then((ret) => {
-            setCandidates(ret.data ?? []);
-          })
-          .finally(() => setIsLoading(false));
+        try {
+          const clients =
+            !owner && sources?.some((source) => !source.isLocal)
+              ? sources
+                  .filter((source) => source.available)
+                  .map((source) => createResourceApi(source))
+              : [api];
+          const suggestions = new Set<string>();
+
+          for (let offset = 0; offset < clients.length; offset += 4) {
+            const results = await Promise.allSettled(
+              clients
+                .slice(offset, offset + 4)
+                .map((client) =>
+                  client.resource.getResourceSearchKeywordRecommendation({
+                    keyword: prefix,
+                    maxCount: maxResults,
+                  }),
+                ),
+            );
+
+            if (current !== sequence.current) return;
+            for (const result of results)
+              if (result.status === "fulfilled")
+                for (const value of result.value.data ?? []) suggestions.add(value);
+          }
+          if (current === sequence.current) setCandidates([...suggestions].slice(0, maxResults));
+        } finally {
+          if (current === sequence.current) setIsLoading(false);
+        }
       } else {
         setCandidates([]);
         setIsLoading(false);
       }
     },
-    [maxResults],
+    [maxResults, api, owner, sources],
   );
 
   useDebounce(

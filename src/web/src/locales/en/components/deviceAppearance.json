@@ -1,0 +1,16 @@
+{
+  "deviceAppearance.device": "Device: {{name}}",
+  "deviceAppearance.source": "Source device: {{name}}",
+  "deviceAppearance.color": "Device color",
+  "deviceAppearance.editFor": "Color for {{name}}",
+  "deviceAppearance.scope": "Used for resources, properties and sync status on this server, across browsers. Does not change device names or data.",
+  "deviceAppearance.automatic": "Use automatic color",
+  "deviceAppearance.failed": "Could not save the color. Please try again.",
+  "deviceAppearance.editMetadata": "Edit device information",
+  "deviceAppearance.detailsFor": "Device information for {{name}}",
+  "deviceAppearance.saveName": "Save name",
+  "deviceAppearance.saveColor": "Save color",
+  "deviceAppearance.nameSaved": "Name saved.",
+  "deviceAppearance.colorSaved": "Color saved.",
+  "deviceAppearance.close": "Close"
+}

@@ -75,13 +75,11 @@ public static class DataSyncServiceCollectionExtensions
         // engine's order planner.
         services.AddExtensionGroupDataSyncKind(ExtensionGroupCodec.Instance);
 
-        // Apply, undo and restore (§8.10, §8.11, §9.2, §9.5): the runner is process-wide and opens a scope per attempt.
+        // Apply and restore (§8.10, §9.2, §9.5): the runner is process-wide and opens a scope per attempt.
         services.TryAddSingleton<DataSyncTaskRegistry>();
         services.TryAddSingleton<IDataSyncTaskRegistry>(sp => sp.GetRequiredService<DataSyncTaskRegistry>());
         services.TryAddSingleton<DataSyncBackup>(sp => new DataSyncBackup(sp.GetRequiredService<IDataSyncDataDirectory>(),
             sp.GetService<TimeProvider>()));
-        services.TryAddSingleton<DataSyncUndoPlanner>(sp =>
-            new DataSyncUndoPlanner(sp.GetRequiredService<IServiceScopeFactory>()));
         services.TryAddSingleton<DataSyncApplyRunner>(sp => new DataSyncApplyRunner(sp,
             sp.GetRequiredService<IServiceScopeFactory>(), sp.GetRequiredService<DataSyncGate>(),
             sp.GetRequiredService<DataSyncActorGuard>(), sp.GetRequiredService<DataSyncActorWatermarkFile>(),

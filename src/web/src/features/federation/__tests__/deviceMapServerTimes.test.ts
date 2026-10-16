@@ -2,14 +2,7 @@ import { afterAll, describe, expect, it } from "vitest";
 
 import { buildDeviceGraph } from "../map/graph";
 
-import {
-  access,
-  managementRequestIn,
-  managementRequestOut,
-  servers,
-  sharingRequest,
-  status,
-} from "./deviceMapFixtures";
+import { access, managementRequestIn, managementRequestOut, servers } from "./deviceMapFixtures";
 
 /*
  * The device map east of UTC, where most of its users are.
@@ -69,17 +62,6 @@ describe("device map: times the server writes without a zone", () => {
     const now = Date.UTC(2026, 8, 24, 8, 40);
     const graph = buildDeviceGraph(
       {
-        status: status({
-          requests: [
-            // Library sharing writes offsets (System.Text.Json, DateTimeOffset).
-            sharingRequest("asker", "incoming", {
-              expiresAt: new Date(now + 10 * MINUTE).toISOString(),
-            }),
-            sharingRequest("late", "incoming", {
-              expiresAt: "2026-09-24T16:39:00+08:00",
-            }),
-          ],
-        }),
         servers: servers({
           requests: [managementRequestOut("out", { expiresAt: naked(now + 10 * MINUTE) })],
         }),
@@ -87,9 +69,6 @@ describe("device map: times the server writes without a zone", () => {
       now,
     );
 
-    expect(graph.edges.map((edge) => edge.id).sort()).toEqual([
-      "management:server-request:out",
-      "sharing:sharing-request:incoming-asker",
-    ]);
+    expect(graph.edges.map((edge) => edge.id).sort()).toEqual(["management:server-request:out"]);
   });
 });

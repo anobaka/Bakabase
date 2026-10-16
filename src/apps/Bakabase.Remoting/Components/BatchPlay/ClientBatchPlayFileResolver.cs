@@ -3,6 +3,7 @@ using Bakabase.Remoting.Components.Connection;
 using Bakabase.Remoting.Components.Paths;
 using Bakabase.Remoting.Components.UserMachine;
 using Bakabase.Modules.Player.Abstractions.Components;
+using Bakabase.Modules.Player.Components;
 
 namespace Bakabase.Remoting.Components.BatchPlay;
 
@@ -17,22 +18,23 @@ namespace Bakabase.Remoting.Components.BatchPlay;
 /// through this client, which signs and relays it.
 /// </para>
 /// <para>
-/// So this never answers null, and batch play never reports files as missing on a client.
-/// That is the honest answer: the file exists, it is just not on this computer, and the
-/// user asked to play it rather than to be told where it isn't.
+/// Streaming is available for media only. Programs and other file kinds still need a
+/// mapped file; returning an HTTP URL cannot supply their working folder or dependencies.
 /// </para>
 /// </remarks>
 public sealed class ClientBatchPlayFileResolver(
     ActiveConnection connection,
-    ILoopbackAddressProvider loopback) : IBatchPlayFileResolver
+    ILoopbackAddressProvider loopback, ManagedBatchPlayContext? owner = null) : IBatchPlayFileResolver
 {
     public string? Resolve(string path)
     {
         var mapped = ClientPathMapper.Map(path, connection.Server?.PathMappings ?? []);
 
-        return mapped.Mapped && File.Exists(mapped.LocalPath)
-            ? ToOsSafePath(mapped.LocalPath!)
-            : loopback.BuildRawFileUrl(path);
+        if (mapped.Mapped && File.Exists(mapped.LocalPath)) return ToOsSafePath(mapped.LocalPath!);
+        if (!PlayerFileCapabilities.CanStream(path)) return null;
+        var url = loopback.BuildRawFileUrl(path);
+        return string.IsNullOrEmpty(owner?.LibraryEpoch) ? url : url +
+            (url.Contains('?') ? "&" : "?") + "managedLibraryEpoch=" + Uri.EscapeDataString(owner.LibraryEpoch);
     }
 
     private static string ToOsSafePath(string path) =>

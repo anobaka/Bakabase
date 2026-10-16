@@ -271,6 +271,7 @@ public class PathMarkService<TDbContext>(
     public async Task<PathMark> Add(PathMark mark)
     {
         storage.EnsurePathAllowed(mark.Path);
+        PathMarkValueConfigValidator.Validate(mark.Type, mark.ConfigJson);
         using (MiniProfiler.Current.Step("PathMarkService.Add"))
         {
             using (MiniProfiler.Current.Step("Prepare"))
@@ -307,7 +308,11 @@ public class PathMarkService<TDbContext>(
 
     public async Task<List<PathMark>> AddRange(List<PathMark> marks)
     {
-        foreach (var mark in marks) storage.EnsurePathAllowed(mark.Path);
+        foreach (var mark in marks)
+        {
+            storage.EnsurePathAllowed(mark.Path);
+            PathMarkValueConfigValidator.Validate(mark.Type, mark.ConfigJson);
+        }
         using (MiniProfiler.Current.Step($"PathMarkService.AddRange ({marks.Count} marks)"))
         {
             using (MiniProfiler.Current.Step("Prepare"))
@@ -341,6 +346,7 @@ public class PathMarkService<TDbContext>(
     public async Task Update(PathMark mark)
     {
         storage.EnsurePathAllowed(mark.Path);
+        PathMarkValueConfigValidator.Validate(mark.Type, mark.ConfigJson);
         mark.Path = mark.Path.StandardizePath()!;
         mark.UpdatedAt = DateTime.UtcNow;
 
@@ -544,6 +550,9 @@ public class PathMarkService<TDbContext>(
         CancellationToken ct = default)
     {
         var rootPath = request.Path.StandardizePath()!;
+        storage.EnsurePathAllowed(rootPath);
+        PathMarkValueConfigValidator.Validate(request.Type, request.ConfigJson);
+        ct.ThrowIfCancellationRequested();
         var results = new List<PathMarkPreviewResult>();
 
         if (!Directory.Exists(rootPath))
@@ -562,10 +571,9 @@ public class PathMarkService<TDbContext>(
         List<string>? extensions = null;
 
         PropertyValueType? valueType = null;
-        object? fixedValue = null;
         int? valueLayer = null;
-        string? valueRegex = null;
         PropertyMarkConfig? propertyConfig = null;
+        MediaLibraryMarkConfig? mediaLibraryConfig = null;
         CustomProperty? propertyValueDefinition = null;
         IStandardValueService? propertyValueConverter = null;
 
@@ -592,9 +600,7 @@ public class PathMarkService<TDbContext>(
                 propertyConfig = config;
                 (matchMode, layer, regex, applyScope) = config.GetEffectiveApplicability();
                 valueType = config.ValueType;
-                fixedValue = config.FixedValue;
                 valueLayer = config.ValueLayer;
-                valueRegex = config.ValueRegex;
                 if (config.Pool == PropertyPool.Custom &&
                     config.UsesResourceRelativeValueRegex() &&
                     !string.IsNullOrEmpty(config.ValueRegex))
@@ -610,32 +616,28 @@ public class PathMarkService<TDbContext>(
                 var config = JsonConvert.DeserializeObject<MediaLibraryMarkConfig>(request.ConfigJson);
                 if (config == null) return results;
 
+                mediaLibraryConfig = config;
                 matchMode = config.MatchMode;
                 layer = config.Layer;
                 regex = config.Regex;
                 applyScope = config.ApplyScope;
                 valueType = config.ValueType;
-                fixedValue = config.MediaLibraryId; // For Fixed, the value is MediaLibraryId
                 valueLayer = config.LayerToMediaLibrary;
-                valueRegex = config.RegexToMediaLibrary;
                 break;
             }
             default:
                 return results;
         }
 
-        // Step 3: Get matched paths using common logic
-        var matchedPaths = GetMatchingPaths(rootPath, matchMode, layer, regex, ct, applyScope, fsTypeFilter,
-            extensions);
-        if (request.Type == PathMarkType.Property && matchMode == PathMatchMode.Layer && layer != -1 &&
-            applyScope == PathMarkApplyScope.MatchedAndSubdirectories)
-        {
-            foreach (var match in matchedPaths.Where(Directory.Exists).ToList())
-            {
-                ct.ThrowIfCancellationRequested();
-                matchedPaths.AddRange(GetAllEntries(match, fsTypeFilter, extensions, ct));
-            }
-        }
+        // Resource discovery keeps its existing preview. Value marks use bounded examples,
+        // including descendant paths whenever extraction depends on the concrete resource.
+        var matchedPaths = request.Type == PathMarkType.Resource
+            ? GetMatchingPaths(rootPath, matchMode, layer, regex, ct, applyScope, fsTypeFilter, extensions)
+            : GetValuePreviewPaths(rootPath, matchMode, layer, regex, applyScope, valueType, valueLayer,
+                propertyConfig?.ValueBasePath ?? mediaLibraryConfig!.ValueBasePath,
+                propertyConfig?.GetEffectiveValueMatchMode() ?? mediaLibraryConfig!.GetEffectiveValueMatchMode(),
+                propertyConfig?.UsesResourceRelativeValueRegex() == true, ct);
+        var valueContext = new SyncContext();
 
         var rootSegments = rootPath.Split(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar },
             StringSplitOptions.RemoveEmptyEntries);
@@ -643,6 +645,7 @@ public class PathMarkService<TDbContext>(
         // Step 4: Build results based on mark type
         foreach (var matchedPath in matchedPaths)
         {
+            ct.ThrowIfCancellationRequested();
             var matchedSegments = matchedPath.Split(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar },
                 StringSplitOptions.RemoveEmptyEntries);
 
@@ -654,23 +657,26 @@ public class PathMarkService<TDbContext>(
                 (result.ResourceLayerIndex, result.ResourceSegmentName) = CalculateResourceLayerInfo(
                     rootPath, matchedPath, rootSegments, matchedSegments, matchMode, layer, regex);
             }
-            else if (request.Type == PathMarkType.Property)
+            else
             {
-                result.PropertyValue = await CalculatePropertyMarkValue(
-                    rootPath, matchedPath, rootSegments, matchedSegments,
-                    propertyConfig!, propertyValueDefinition, propertyValueConverter);
-            }
-            else if (request.Type == PathMarkType.MediaLibrary)
-            {
-                result.PropertyValue = CalculatePropertyValue(
-                    rootPath, matchedPath, rootSegments, matchedSegments,
-                    valueType, fixedValue, valueLayer, valueRegex);
+                var extracted = request.Type == PathMarkType.Property
+                    ? await CalculatePropertyMarkValue(rootPath, matchedPath, propertyConfig!,
+                        propertyValueDefinition, propertyValueConverter, valueContext)
+                    : CalculateMediaLibraryValue(rootPath, matchedPath, mediaLibraryConfig!, valueContext);
+                result.PropertyValue = extracted.Value;
+                // Ancestor selection does not authorize reading or exposing an unmounted path.
+                result.ValueSourcePath = extracted.SourcePath != null && storage.IsPathAllowed(extracted.SourcePath)
+                    ? extracted.SourcePath
+                    : null;
             }
 
             results.Add(result);
         }
 
-        return results;
+        return request.Type == PathMarkType.Resource
+            ? results
+            : results.OrderByDescending(r => r.PropertyValue != null)
+                .ThenByDescending(r => File.Exists(r.Path)).ToList();
     }
 
     private async Task<List<string>?> ResolveExtensions(List<string>? extensions, List<int>? extensionGroupIds)
@@ -817,149 +823,107 @@ public class PathMarkService<TDbContext>(
         return (resourceLayerIndex, resourceSegmentName);
     }
 
-    /// <summary>
-    /// Calculate a property-mark value independently from its applicability selector.
-    /// </summary>
-    private async Task<string?> CalculatePropertyMarkValue(
-        string rootPath, string matchedPath, string[] rootSegments, string[] matchedSegments,
-        PropertyMarkConfig config, CustomProperty? customProperty, IStandardValueService? valueConverter)
+    private async Task<PathMarkExtractedValue> CalculatePropertyMarkValue(
+        string rootPath, string matchedPath, PropertyMarkConfig config,
+        CustomProperty? customProperty, IStandardValueService? valueConverter, SyncContext ctx)
     {
-        if (config.ValueType == PropertyValueType.Fixed)
-        {
-            return config.FixedValue?.ToString();
-        }
-
-        if (config.ValueType != PropertyValueType.Dynamic)
-        {
-            return null;
-        }
+        if (config.ValueType == PropertyValueType.Fixed) return new(config.FixedValue?.ToString(), null);
+        if (config.ValueType != PropertyValueType.Dynamic) return default;
 
         if (config.UsesResourceRelativeValueRegex())
         {
             if (string.IsNullOrEmpty(config.ValueRegex) || customProperty == null || valueConverter == null)
-            {
-                return null;
-            }
-
+                return default;
             var relativePath = matchedPath.Length <= rootPath.Length
                 ? string.Empty
                 : matchedPath[rootPath.Length..]
                     .TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
             var values = Regex.Matches(relativePath, config.ValueRegex)
                 .SelectMany(match => match.Groups.Values.Skip(1).Select(group => group.Value))
-                .Where(value => !string.IsNullOrEmpty(value))
-                .Distinct()
-                .ToList();
+                .Where(value => !string.IsNullOrEmpty(value)).Distinct().ToList();
             var bizValue = values.Count == 0
                 ? null
-                : await valueConverter.Convert(
-                    values, StandardValueType.ListString, customProperty.Type.GetBizValueType());
-
-            return bizValue?.SerializeAsStandardValue(customProperty.Type.GetBizValueType());
+                : await valueConverter.Convert(values, StandardValueType.ListString, customProperty.Type.GetBizValueType());
+            return new(bizValue?.SerializeAsStandardValue(customProperty.Type.GetBizValueType()), matchedPath);
         }
-
-        // Modern property regex extraction is intentionally mark-relative. It remains independent
-        // from the applicability selector, which may use a layer at the same time.
-        if (!string.IsNullOrEmpty(config.ValueRegex))
-        {
-            var markDirectoryName = Path.GetFileName(rootPath);
-            var regex = new Regex(config.ValueRegex, RegexOptions.IgnoreCase);
-            var match = regex.Match(markDirectoryName);
-            if (match.Success && match.Groups.Count > 1)
-            {
-                return match.Groups[1].Value;
-            }
-            if (match.Success)
-            {
-                return match.Value;
-            }
-
-            return null;
-        }
-
-        if (!config.ValueLayer.HasValue)
-        {
-            return null;
-        }
-
-        var layer = config.ValueLayer.Value;
-        if (layer == 0)
-        {
-            return Path.GetFileName(rootPath);
-        }
-
-        // Positive = forward from root, negative = backward
-        var targetIndex = rootSegments.Length + layer - 1;
-        if (targetIndex >= 0 && targetIndex < matchedSegments.Length)
-        {
-            return matchedSegments[targetIndex];
-        }
-        return null;
+        if (config.GetEffectiveValueMatchMode() == PathMatchMode.Layer && !config.ValueLayer.HasValue)
+            return default;
+        return PathMarkDynamicValueExtractor.Extract(rootPath, matchedPath, config.ValueBasePath,
+            config.GetEffectiveValueMatchMode(), config.ValueLayer, config.ValueRegex, ctx);
     }
 
-    /// <summary>
-    /// Calculate media-library mark values using the existing extraction semantics.
-    /// </summary>
-    private string? CalculatePropertyValue(
-        string rootPath, string matchedPath, string[] rootSegments, string[] matchedSegments,
-        PropertyValueType? valueType, object? fixedValue, int? valueLayer, string? valueRegex)
+    private static PathMarkExtractedValue CalculateMediaLibraryValue(
+        string rootPath, string matchedPath, MediaLibraryMarkConfig config, SyncContext ctx) =>
+        config.ValueType switch
+        {
+            PropertyValueType.Fixed => new(config.MediaLibraryId?.ToString(), null),
+            PropertyValueType.Dynamic => PathMarkDynamicValueExtractor.Extract(rootPath, matchedPath,
+                config.ValueBasePath, config.GetEffectiveValueMatchMode(), config.LayerToMediaLibrary,
+                config.RegexToMediaLibrary, ctx, true),
+            _ => default
+        };
+
+    private List<string> GetValuePreviewPaths(
+        string rootPath, PathMatchMode matchMode, int? layer, string? pattern, PathMarkApplyScope? applyScope,
+        PropertyValueType? valueType, int? valueLayer, PathMarkValueBasePath basePath, PathMatchMode valueMode,
+        bool legacyResourceRegex, CancellationToken ct)
     {
-        if (valueType == PropertyValueType.Fixed)
-        {
-            return fixedValue?.ToString();
-        }
+        const int resultLimit = 50;
+        const int visitLimit = 200;
+        var results = new List<string>();
+        var visitedPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var visited = 0;
+        var includeDescendants = applyScope == PathMarkApplyScope.MatchedAndSubdirectories;
+        var dependsOnResource = valueType == PropertyValueType.Dynamic &&
+            (basePath == PathMarkValueBasePath.ResourcePath || legacyResourceRegex);
+        var maxDepth = matchMode == PathMatchMode.Layer && layer is >= 0 && (!includeDescendants || !dependsOnResource)
+            ? includeDescendants && valueMode == PathMatchMode.Layer && valueType == PropertyValueType.Dynamic
+                ? Math.Max(layer.Value, valueLayer ?? 0)
+                : layer.Value
+            : int.MaxValue;
+        var regex = matchMode == PathMatchMode.Regex && !string.IsNullOrEmpty(pattern)
+            ? new Regex(pattern, RegexOptions.IgnoreCase)
+            : null;
 
-        if (valueType != PropertyValueType.Dynamic)
+        void Visit(string path, int depth, bool ancestorMatched)
         {
-            return null;
-        }
-
-        // Dynamic value extraction
-        if (valueLayer.HasValue)
-        {
-            var layer = valueLayer.Value;
-            // 0 = matched item itself
-            if (layer == 0)
+            ct.ThrowIfCancellationRequested();
+            if (results.Count >= resultLimit || visited >= visitLimit) return;
+            visited++;
+            if (!storage.IsPathAllowed(path)) return;
+            try
             {
-                var relativePath = matchedPath.Substring(rootPath.Length)
+                var directory = Directory.Exists(path);
+                FileSystemInfo info = directory ? new DirectoryInfo(path) : new FileInfo(path);
+                var resolved = info.LinkTarget == null ? info.FullName : info.ResolveLinkTarget(true)?.FullName;
+                if (resolved == null || !storage.IsPathAllowed(resolved)) return;
+                var normalized = path.StandardizePath()!;
+                var relative = depth == 0 ? string.Empty : normalized[rootPath.Length..]
                     .TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-                var fileName = Path.GetFileName(relativePath);
-                if (!string.IsNullOrEmpty(fileName))
+                var matched = matchMode == PathMatchMode.Layer && layer.HasValue
+                    ? includeDescendants ? depth >= layer.Value : depth == layer.Value
+                    : regex?.IsMatch(relative) == true || (includeDescendants && ancestorMatched);
+                if (matched) results.Add(normalized);
+                if (depth >= maxDepth || !directory || !visitedPaths.Add(resolved)) return;
+                foreach (var entry in Directory.EnumerateFileSystemEntries(path))
                 {
-                    return fileName;
-                }
-                return relativePath.Split(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar },
-                    StringSplitOptions.RemoveEmptyEntries).LastOrDefault();
-            }
-            else
-            {
-                // Positive = forward from root, negative = backward
-                var targetIndex = rootSegments.Length + layer - 1;
-                if (targetIndex >= 0 && targetIndex < matchedSegments.Length)
-                {
-                    return matchedSegments[targetIndex];
+                    ct.ThrowIfCancellationRequested();
+                    if (results.Count >= resultLimit || visited >= visitLimit) break;
+                    Visit(entry, depth + 1, matched);
                 }
             }
-        }
-        else if (!string.IsNullOrEmpty(valueRegex))
-        {
-            var relativePath = matchedPath.Substring(rootPath.Length)
-                .TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-            var regex = new Regex(valueRegex, RegexOptions.IgnoreCase);
-            var match = regex.Match(relativePath);
-            if (match.Success && match.Groups.Count > 1)
+            catch (IOException)
             {
-                return match.Groups[1].Value;
+                // Missing or unreadable branches should not discard accessible preview examples.
             }
-            if (match.Success)
+            catch (UnauthorizedAccessException)
             {
-                return match.Value;
             }
         }
 
-        return null;
+        Visit(rootPath, 0, false);
+        return results.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
     }
-
 
     private static bool MatchesEntry(bool directory, string path, PathFilterFsType? filter, List<string>? extensions) =>
         directory ? filter is null or PathFilterFsType.Directory :

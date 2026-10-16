@@ -124,8 +124,10 @@ module.exports = async function firstLaunch({ browser, config }) {
     assert.equal(response.status, 200);
     const listing = await response.json();
     // A fresh desktop install manages nothing, and has nothing it could manage from before.
-    assert.deepEqual(listing, { available: true, servers: [], requests: [] },
-      'The first-launch fixture did not start as a fresh desktop install');
+    assert.equal(listing.available, true);
+    assert.equal(listing.canOpenDesktopView, true);
+    assert.deepEqual(listing.servers, [], 'A fresh desktop install must not manage another device');
+    assert.deepEqual(listing.requests, [], 'A fresh desktop install must have no pending requests');
     assert.equal(findFile(spec.directory, path.join('remote-access', 'managed', 'connection.json')), null,
       'A fresh install wrote a managed-server store before managing anything');
     await assertNoAnalytics(spec.base);

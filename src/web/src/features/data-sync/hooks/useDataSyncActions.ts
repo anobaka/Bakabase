@@ -1,7 +1,7 @@
 import type { Confirmation, PanelActions } from "@/features/federation/map/usePanelActions";
 
 /** What an action asks to be read again once it is done. */
-export type DataSyncRefresh = "dataSync" | "sharing";
+export type DataSyncRefresh = "dataSync" | "identity";
 
 export type DataSyncConfirmation = Confirmation;
 

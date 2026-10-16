@@ -1,30 +1,23 @@
 import type { ReactNode } from "react";
 import type { DevicesSection } from "../switching";
 
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { AiOutlineRight } from "react-icons/ai";
 
-import {
-  buttonClass,
-  ErrorNotice,
-  fieldClass,
-  focusHeadingClass,
-  panelClass,
-  primaryClass,
-} from "../components/common";
+import { ErrorNotice, focusHeadingClass, panelClass } from "../components/common";
 import AddressList from "../components/AddressList";
 import AdvertisedAddress from "../components/AdvertisedAddress";
 import { revealClass } from "../hooks/useSectionReveal";
-import { federationPeerApi } from "../peerApi";
 import { devicesRoute } from "../switching";
 
 import { useDevicesPage } from "./context";
 import TabHeading from "./TabHeading";
-import { dataSyncWaiting, troubledServers, waitingSharingRequests } from "./selectors";
+import { dataSyncWaiting, troubledServers } from "./selectors";
 
 import { RemoteAccessMode } from "@/sdk/constants";
+import DeviceDot from "@/features/management/DeviceDot";
+import DeviceMetadataEditor from "@/features/management/DeviceMetadataEditor";
 
 const ADDRESSES_TITLE_ID = "device-addresses-title";
 
@@ -45,29 +38,21 @@ function RowLink({ to, children }: { to: DevicesSection; children: ReactNode }) 
 
 /**
  * The device tab: what this device is called, the address another device types, what is
- * waiting for an answer here, and the way to add another device — manage it, or browse it.
+ * waiting for an answer here, and the way to add another device — manage it, or synchronize definitions.
  * The everyday questions; everything they lead to is decided in the other tabs.
  */
 export default function ThisDeviceTab() {
   const { t } = useTranslation();
-  const { data, busy, run, mounted, revealed, tabs } = useDevicesPage();
-  const [editingName, setEditingName] = useState<string>();
+  const { data, busy, revealed, tabs } = useDevicesPage();
   const { status, access, servers } = data;
   const target = t<string>("federation.management.self");
   const mode = access?.mode;
-  const saveName = (name: string) =>
-    void run(async () => {
-      await federationPeerApi.setName(name.trim() || null);
-      if (mounted.current) setEditingName(undefined);
-    });
 
   const waitingManage = access?.pendingRequests ?? [];
-  const waitingBrowse = waitingSharingRequests(data);
   const troubled = troubledServers(data);
   const waitingSync = dataSyncWaiting(data);
   const unrestricted = mode === RemoteAccessMode.Unrestricted;
-  const waiting =
-    waitingManage.length + waitingBrowse.length + troubled.length + waitingSync > 0 || unrestricted;
+  const waiting = waitingManage.length + troubled.length + waitingSync > 0 || unrestricted;
   const choosers = tabs.flatMap((tab) =>
     tab.chooser && !tab.chooser.hidden?.(data) ? [tab.chooser] : [],
   );
@@ -80,8 +65,6 @@ export default function ThisDeviceTab() {
         : access.requirePairing
           ? "paired"
           : "open";
-  const inbound = (status?.peers ?? []).filter((peer) => peer.inboundGrant).length;
-  const outbound = (status?.peers ?? []).filter((peer) => peer.outboundGrant).length;
 
   return (
     <>
@@ -89,63 +72,21 @@ export default function ThisDeviceTab() {
       {status && (
         // The tab's heading already says whose name this is.
         <section data-focus-section className={`${panelClass} space-y-2`}>
-          {editingName === undefined ? (
-            <div className="flex flex-wrap items-center gap-2">
-              <h3 className={`text-lg font-semibold ${focusHeadingClass}`} tabIndex={-1}>
-                {status.identity.name}
-              </h3>
-              <button
-                className={`${buttonClass} !px-2 !py-1 text-xs`}
-                disabled={busy}
-                type="button"
-                onClick={() => setEditingName(status.identity.name)}
-              >
-                {t("federation.name.edit")}
-              </button>
-            </div>
-          ) : (
-            <form
-              className="space-y-2"
-              onSubmit={(event) => {
-                event.preventDefault();
-                saveName(editingName);
-              }}
-            >
-              <label className="block space-y-1 text-sm">
-                <span>{t("federation.name.label")}</span>
-                <input
-                  // eslint-disable-next-line jsx-a11y/no-autofocus
-                  autoFocus
-                  className={fieldClass}
-                  maxLength={64}
-                  value={editingName}
-                  onChange={(event) => setEditingName(event.target.value)}
-                />
-              </label>
-              <p className="text-xs text-default-500">{t("federation.name.tip")}</p>
-              <div className="flex flex-wrap gap-2">
-                <button className={primaryClass} disabled={busy} type="submit">
-                  {t("federation.save")}
-                </button>
-                <button
-                  className={buttonClass}
-                  disabled={busy}
-                  type="button"
-                  onClick={() => saveName("")}
-                >
-                  {t("federation.name.reset")}
-                </button>
-                <button
-                  className={buttonClass}
-                  disabled={busy}
-                  type="button"
-                  onClick={() => setEditingName(undefined)}
-                >
-                  {t("federation.cancel")}
-                </button>
-              </div>
-            </form>
-          )}
+          <h3
+            className={`flex items-center gap-2 text-lg font-semibold ${focusHeadingClass}`}
+            tabIndex={-1}
+          >
+            <DeviceDot name={status.identity.name} serverId={status.identity.nodeId} />
+            {status.identity.name}
+          </h3>
+          <DeviceMetadataEditor
+            key={status.identity.nodeId}
+            local
+            busy={busy}
+            name={status.identity.name}
+            serverId={status.identity.nodeId}
+            onSaved={() => void data.reload(["identity"])}
+          />
         </section>
       )}
       {/* A place a link lands on (`addresses`), named by the list's title in every state. */}
@@ -193,11 +134,6 @@ export default function ThisDeviceTab() {
             {waitingManage.map((request) => (
               <RowLink key={`manage:${request.id}`} to="management">
                 <span>{t("federation.devices.waiting.manage", { name: request.deviceName })}</span>
-              </RowLink>
-            ))}
-            {waitingBrowse.map((request) => (
-              <RowLink key={`browse:${request.requestId}`} to="sharing-requests">
-                <span>{t("federation.devices.waiting.browse", { name: request.nodeName })}</span>
               </RowLink>
             ))}
             {troubled.map((server) => (
@@ -268,33 +204,6 @@ export default function ThisDeviceTab() {
             <RowLink to="servers">
               <span className="text-default-500">{t("federation.map.panel.self.manages")}</span>
               <span className="ml-auto">{servers.servers.length}</span>
-            </RowLink>
-          )}
-          {status && (
-            <RowLink to="share">
-              <span className="text-default-500">{t("federation.devices.status.sharing")}</span>
-              {/* The row's label names the switch; its value is only on or off. */}
-              <span className="ml-auto">
-                {t(
-                  status.sharingEnabled
-                    ? "federation.devices.status.on"
-                    : "federation.devices.status.off",
-                )}{" "}
-                · {t("federation.map.panel.self.sharesWith")} {inbound}
-              </span>
-            </RowLink>
-          )}
-          {status && (
-            <RowLink to="browsing">
-              <span className="text-default-500">{t("federation.devices.status.browsing")}</span>
-              <span className="ml-auto">
-                {t(
-                  status.browsingEnabled
-                    ? "federation.devices.status.on"
-                    : "federation.devices.status.off",
-                )}{" "}
-                · {t("federation.map.panel.self.browses")} {outbound}
-              </span>
             </RowLink>
           )}
         </ul>

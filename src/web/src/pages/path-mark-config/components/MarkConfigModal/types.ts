@@ -7,6 +7,7 @@ import type {
   PathFilterFsType,
   PropertyPool,
   PathMarkApplyScope,
+  PathMarkValueBasePath,
 } from "@/sdk/constants";
 
 export type MarkConfigModalProps = {
@@ -30,6 +31,7 @@ export interface MarkConfig {
   valueType?: PropertyValueType;
   fixedValue?: string;
   valueMatchMode?: PathMatchMode;
+  valueBasePath?: PathMarkValueBasePath;
   valueLayer?: number;
   valueRegex?: string;
   valueRegexMatchesResourcePath?: boolean;

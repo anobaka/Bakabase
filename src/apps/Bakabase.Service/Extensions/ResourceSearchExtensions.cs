@@ -1,3 +1,5 @@
+using System;
+using Newtonsoft.Json;
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -102,6 +104,7 @@ public static class ResourceSearchExtensions
     {
         return new ResourceSearchFilterDbModel
         {
+            Owner = model.Owner,
             Value = model.DbValue,
             Operation = model.Operation,
             PropertyId = model.PropertyId,
@@ -125,6 +128,8 @@ public static class ResourceSearchExtensions
     {
         return new ResourceSearchDbModel
         {
+            Owner = model.Owner,
+            DeviceIds = model.DeviceIds,
             Group = model.Group?.ToDbModel(),
             Keyword = model.Keyword,
             Orders = model.Orders,
@@ -197,6 +202,9 @@ public static class ResourceSearchExtensions
     public static async Task<ResourceSearch> ToDomainModel(this ResourceSearchInputModel model,
         IPropertyService propertyService)
     {
+        if (model.Owner != null || model.DeviceIds != null ||
+            model.Group?.ExtractFilters().Any(f => f.Owner != null) == true)
+            throw new ArgumentException("Device-scoped search criteria must be resolved for their owner before execution.");
         var validFilters = model.Group?.ExtractFilters().Where(f => f.IsValid()) ?? [];
         var propertyPools =
             validFilters.Aggregate<ResourceSearchFilterInputModel, PropertyPool>(default,
@@ -274,6 +282,7 @@ public static class ResourceSearchExtensions
     {
         var filter = new ResourceSearchFilterViewModel
         {
+            Owner = model.Owner,
             PropertyId = model.PropertyId,
             PropertyPool = model.PropertyPool,
             Operation = model.Operation,
@@ -281,7 +290,7 @@ public static class ResourceSearchExtensions
             Disabled = model.Disabled
         };
 
-        if (property != null)
+        if (property != null && model.Owner == null)
         {
             var psh = PropertySystem.Property.TryGetSearchHandler(property.Type);
             if (psh != null)
@@ -340,13 +349,19 @@ public static class ResourceSearchExtensions
         IPropertyService propertyService, IPropertyLocalizer propertyLocalizer, IResourceService? resourceService = null)
     {
         var modelsArray = models.ToArray();
-        var validFilters = modelsArray.SelectMany(m => m.Group?.ExtractFilters() ?? []).ToList();
+        // Foreign IDs are opaque until their owner resolves them. In particular, a
+        // remote parent-resource ID must not be read as a coincident local resource.
+        var validFilters = modelsArray.Where(m => m.Owner == null)
+            .SelectMany(m => m.Group?.ExtractFilters() ?? [])
+            .Where(f => f.Owner == null && f.PropertyPool.HasValue && f.PropertyId.HasValue).ToList();
         var propertyPools =
             validFilters.Aggregate<ResourceSearchFilterDbModel, PropertyPool>(default,
                 (current, f) => current | f.PropertyPool!.Value);
 
-        var propertyMap = (await propertyService.GetProperties(propertyPools)).GroupBy(d => d.Pool)
-            .ToDictionary(d => d.Key, d => d.ToDictionary(a => a.Id, a => a));
+        var propertyMap = propertyPools == 0
+            ? new Dictionary<PropertyPool, Dictionary<int, Property>>()
+            : (await propertyService.GetProperties(propertyPools)).GroupBy(d => d.Pool)
+                .ToDictionary(d => d.Key, d => d.ToDictionary(a => a.Id, a => a));
 
         // Build ParentResource property with choices if needed
         Property? parentResourcePropertyWithChoices = null;
@@ -373,10 +388,12 @@ public static class ResourceSearchExtensions
         {
             var viewModel = new ResourceSearchViewModel
             {
+                Owner = model.Owner,
+                DeviceIds = model.DeviceIds,
                 Keyword = model.Keyword,
                 PageSize = model.PageSize,
                 Page = model.Page,
-                Group = model.Group?.ToViewModel(propertyMap, propertyLocalizer),
+                Group = model.Group?.ToViewModel(model.Owner == null ? propertyMap : new Dictionary<PropertyPool, Dictionary<int, Property>>(), propertyLocalizer),
                 Orders = model.Orders,
                 Tags = model.Tags
             };
@@ -405,6 +422,7 @@ public static class ResourceSearchExtensions
 
         var filter = new ResourceSearchFilterViewModel
         {
+            Owner = domainModel.Owner,
             PropertyId = domainModel.PropertyId,
             PropertyPool = domainModel.PropertyPool,
             Operation = domainModel.Operation,
@@ -439,6 +457,8 @@ public static class ResourceSearchExtensions
     {
         return new ResourceSearchViewModel
         {
+            Owner = domainModel.Owner,
+            DeviceIds = domainModel.DeviceIds,
             Group = domainModel.Group?.ToViewModel(propertyLocalizer),
             Keyword = null,
             Orders = domainModel.Orders,
@@ -466,8 +486,10 @@ public static class ResourceSearchExtensions
             return domainModel.ToViewModel(propertyLocalizer);
         }
 
-        var propertyMap = (await propertyService.GetProperties(propertyPools)).GroupBy(d => d.Pool)
-            .ToDictionary(d => d.Key, d => d.ToDictionary(a => a.Id, a => a));
+        var propertyMap = propertyPools == 0
+            ? new Dictionary<PropertyPool, Dictionary<int, Property>>()
+            : (await propertyService.GetProperties(propertyPools)).GroupBy(d => d.Pool)
+                .ToDictionary(d => d.Key, d => d.ToDictionary(a => a.Id, a => a));
 
         // Build ParentResource property with choices if needed
         if (propertyMap.TryGetValue(PropertyPool.Internal, out var internalProps) &&
@@ -489,6 +511,8 @@ public static class ResourceSearchExtensions
 
         return new ResourceSearchViewModel
         {
+            Owner = domainModel.Owner,
+            DeviceIds = domainModel.DeviceIds,
             Group = domainModel.Group?.ToViewModel(propertyMap, propertyLocalizer),
             Keyword = null,
             Orders = domainModel.Orders,
@@ -521,6 +545,7 @@ public static class ResourceSearchExtensions
 
         var filter = new ResourceSearchFilterViewModel
         {
+            Owner = domainModel.Owner,
             PropertyId = domainModel.PropertyId,
             PropertyPool = domainModel.PropertyPool,
             Operation = domainModel.Operation,
@@ -536,14 +561,33 @@ public static class ResourceSearchExtensions
         return filter;
     }
 
+    private static ResourceSearchViewModel? ForeignProfileSearch(string? json, IPropertyLocalizer localizer)
+    {
+        if (string.IsNullOrEmpty(json)) return null;
+        var search = JsonConvert.DeserializeObject<ResourceSearchDbModel>(json);
+        return search == null ? null : new ResourceSearchViewModel
+        {
+            Owner = search.Owner,
+            DeviceIds = search.DeviceIds,
+            Group = search.Group?.ToViewModel(new Dictionary<PropertyPool, Dictionary<int, Property>>(), localizer),
+            Orders = search.Orders, Keyword = search.Keyword, Page = search.Page, PageSize = search.PageSize, Tags = search.Tags
+        };
+    }
+
     public static ResourceProfileViewModel ToViewModel(this ResourceProfile profile,
         IPropertyLocalizer propertyLocalizer)
     {
         return new ResourceProfileViewModel
         {
             Id = profile.Id,
+            ResourceScopeId = profile.ResourceScopeId,
             Name = profile.Name,
-            Search = profile.Search.Group != null ? profile.Search.ToViewModel(propertyLocalizer) : null,
+            SourceDeviceId = profile.SourceDeviceId,
+            SourceLibraryEpoch = profile.SourceLibraryEpoch,
+            OpeningMode = profile.OpeningMode,
+            Search = profile.SourceDeviceId != null
+                ? ForeignProfileSearch(profile.SearchJson, propertyLocalizer)
+                : profile.ResourceScopeId != null || profile.Search.Group != null ? profile.Search.ToViewModel(propertyLocalizer) : null,
             NameTemplate = profile.NameTemplate,
             EnhancerOptions = profile.EnhancerOptions,
             PlayableFileOptions = profile.PlayableFileOptions,

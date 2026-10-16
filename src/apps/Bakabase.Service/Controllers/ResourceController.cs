@@ -189,6 +189,25 @@ public class ResourceController(
         return BaseResponseBuilder.Ok;
     }
 
+    // A unified query belongs to the viewing server. Saving it must not execute
+    // foreign property IDs against this server or alter an owner's saved tabs.
+    [HttpPut("saved-search/criteria")]
+    [SwaggerOperation(OperationId = "PutSavedSearchCriteria")]
+    public async Task<BaseResponse> PutSavedSearchCriteria([FromBody] ResourceSearchInputModel model, string? id = null)
+    {
+        model.StandardPageable();
+        if (id != null && resourceOptionsManager.Value.SavedSearches.All(search => search.Id != id))
+            return BaseResponseBuilder.BuildBadRequest($"Can't find search with id: {id}");
+        var criteria = model.ToDbModel();
+        await resourceOptionsManager.SaveAsync(options =>
+        {
+            options.LastSearchV2 = criteria;
+            var search = options.SavedSearches.FirstOrDefault(search => search.Id == id);
+            if (search != null) search.Search = criteria;
+        });
+        return BaseResponseBuilder.Ok;
+    }
+
     [HttpGet("saved-search")]
     [SwaggerOperation(OperationId = "GetSavedSearch")]
     [RemoteAccessible]
@@ -571,7 +590,7 @@ public class ResourceController(
     [RunsOnUserMachine(Reason = "A player starts on the machine you are sitting at.")]
     [HttpGet("{resourceId}/play-item")]
     [SwaggerOperation(OperationId = "PlayResourceItem")]
-    public async Task<BaseResponse> PlayItem(int resourceId, DataOrigin origin, string key)
+    public async Task<BaseResponse> PlayItem(int resourceId, DataOrigin origin, string key, bool explicitChoice = false)
     {
         return await service.PlayItem(resourceId, origin, key);
     }

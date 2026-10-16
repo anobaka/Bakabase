@@ -2858,22 +2858,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/data-sync/copy-once": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["CreateDataSyncCopyOnce"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/data-sync/links/{id}/first-sync": {
         parameters: {
             query?: never;
@@ -2986,22 +2970,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/data-sync/invitations": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["CreateDataSyncInvitation"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/data-sync/inbox": {
         parameters: {
             query?: never;
@@ -3098,6 +3066,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/data-sync/history/page": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetDataSyncHistoryPage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/data-sync/history/{id}": {
         parameters: {
             query?: never;
@@ -3108,38 +3092,6 @@ export interface paths {
         get: operations["GetDataSyncHistoryEntry"];
         put?: never;
         post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/data-sync/history/{id}/undo-preview": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["PreviewDataSyncUndo"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/data-sync/history/{id}/undo": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["UndoDataSync"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3220,6 +3172,54 @@ export interface paths {
         get: operations["GetDeploymentPaths"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/app/profiles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetDesktopProfiles"];
+        put?: never;
+        post: operations["AddDesktopProfile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/app/profiles/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["UpdateDesktopProfile"];
+        post?: never;
+        delete: operations["RemoveDesktopProfile"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/app/profiles/{id}/open": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["OpenDesktopProfile"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4010,246 +4010,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/federation/v1/export/queries": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["CreateFederationExportQuery"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/v1/export/queries/{id}/pages": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["ReadFederationExportQuery"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/v1/export/queries/{id}/validate": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["ValidateFederationExportQuery"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/v1/export/queries/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete: operations["ReleaseFederationExportQuery"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/v1/export/resources/resolve": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["ResolveFederationExportResources"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/v1/export/resources/location": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["LocateFederationExportResource"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/v1/export/mapping-roots": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["GetFederationExportMappingRoots"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/v1/export/assets/{assetId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["ReadFederationExportAsset"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head: operations["InspectFederationExportAsset"];
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/local/queries": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["CreateFederatedLibraryQuery"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/local/queries/{id}/pages": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["ReadFederatedLibraryQuery"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/local/queries/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete: operations["ReleaseFederatedLibraryQuery"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/local/resources/resolve": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["ResolveFederatedResources"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/local/resources/open-directory": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["OpenFederatedResourceDirectory"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/local/playback-sessions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["CreateFederatedPlaybackSession"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/local/media/{ticketId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["ReadFederatedMediaSession"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head: operations["InspectFederatedMediaSession"];
-        patch?: never;
-        trace?: never;
-    };
     "/federation/local/peers": {
         parameters: {
             query?: never;
@@ -4266,38 +4026,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/federation/local/peers/browsing": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put: operations["SetFederationBrowsing"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/local/peers/sharing": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put: operations["SetFederationSharing"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/federation/local/peers/name": {
         parameters: {
             query?: never;
@@ -4307,214 +4035,6 @@ export interface paths {
         };
         get?: never;
         put: operations["SetFederationDeviceName"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/local/peers/invite": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["CreateFederationInvitation"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/local/peers/discover": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["DiscoverFederationPeers"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/local/peers/connect": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["ConnectFederationPeer"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/local/peers/claim": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["ClaimFederationPairing"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/local/peers/requests/{id}/approve": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["ApproveFederationPairing"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/local/peers/requests/{id}/reject": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["RejectFederationPairing"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/local/peers/requests/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete: operations["CancelFederationPairing"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/local/peers/grants/{grantId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete: operations["RevokeFederationGrant"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/local/peers/{nodeId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete: operations["RemoveFederationPeer"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/local/peers/{nodeId}/outbound": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete: operations["ForgetFederationPeer"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/local/peers/{nodeId}/enabled": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put: operations["SetFederationPeerEnabled"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/local/peers/{nodeId}/path-mappings": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put: operations["SetFederationPathMappings"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/local/peers/{nodeId}/mapping-roots": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["GetFederationMappingRoots"];
-        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -4548,54 +4068,6 @@ export interface paths {
         get: operations["GetFederationNodeInfo"];
         put?: never;
         post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/v1/pair/code": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["ExchangeFederationInvitation"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/v1/pair/request": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["RequestFederationPairing"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/federation/v1/pair/claim": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["ClaimFederationNodeGrant"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5626,6 +5098,646 @@ export interface paths {
         patch: operations["ReadAllLog"];
         trace?: never;
     };
+    "/management/device-name": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetManagedDeviceName"];
+        put: operations["SetManagedDeviceName"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/federation/local/management/{serverId}/metadata/control": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ControlManagedMetadataSync"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/federation/local/management/resource-display-options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetManagedResourceDisplayOptions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["PatchManagedResourceDisplayOptions"];
+        trace?: never;
+    };
+    "/federation/local/management/sources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetManagedLibrarySources"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/federation/local/management/{serverId}/request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["RequestManagedLibrary"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/federation/local/management/{serverId}/upload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["UploadManagedLibraryFile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/management/library/resources/{id}/browser-files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetManagedResourceBrowserFiles"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/management/library/resources/{id}/media": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PlayManagedResourceBrowserFile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/management/library/resources/{id}/native-fallback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ValidateManagedResourceNativeFallback"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/federation/local/management/{serverId}/cover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetManagedLibraryCover"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head: operations["InspectManagedLibraryCover"];
+        patch?: never;
+        trace?: never;
+    };
+    "/federation/local/management/{serverId}/asset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetManagedLibraryAsset"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head: operations["InspectManagedLibraryAsset"];
+        patch?: never;
+        trace?: never;
+    };
+    "/management/library/info": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetManagedLibraryInfo"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/management/library/path-mapping-tree": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetOwnedResourcePathMappingTree"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/federation/local/management/{serverId}/batch-play/candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["GetManagedLibraryBatchPlayCandidates"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/federation/local/management/{serverId}/batch-play": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["BatchPlayManagedLibraryResources"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/federation/local/management/{serverId}/play": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PlayManagedLibraryResource"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/federation/local/management/{serverId}/directory": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["OpenManagedLibraryResourceDirectory"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/federation/local/management/{serverId}/media": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["StreamManagedLibraryMedia"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head: operations["InspectManagedLibraryMedia"];
+        patch?: never;
+        trace?: never;
+    };
+    "/management/library/custom-properties/{id}/conversion-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PreviewManagedCustomPropertyConversion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/management/library/resource-paths": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SearchManagedResourcePaths"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/management/library/resources/{id}/attachment": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["UploadManagedResourceAttachment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/management/library/resources/{id}/torrent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["UploadManagedResourceTorrent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/management/library/metadata/head": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetManagedMetadataHead"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/management/library/metadata/page": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["GetManagedMetadataPage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/management/library/resources/{id}/covers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetManagedResourceCovers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/management/library/resources/{id}/cover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetManagedResourceCover"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/management/library/resources/{id}/asset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetManagedResourceAsset"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/management/library/resources/{id}/previewer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetManagedResourcePreviewerItems"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/management/library/resources/{id}/children": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetManagedResourceChildren"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/management/resource-processing/owner/prepare": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PrepareManagedResourceProcessing"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/management/resource-processing/owner/{jobId}/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ApplyManagedResourceProcessing"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/management/resource-processing/owner/{jobId}/receipt": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["GetManagedResourceProcessingReceipt"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/management/resource-processing/owner/artifact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["UploadManagedResourceProcessingArtifact"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/management/resource-processing/owner/{jobId}/abandon": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AbandonManagedResourceProcessing"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/management/resource-processing/worker/queue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["QueueManagedResourceProcessing"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/management/resource-processing/worker/{jobId}/artifact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ReadManagedResourceProcessingArtifact"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/management/resource-processing/worker/{jobId}/ack": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AcknowledgeManagedResourceProcessing"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/management/resource-processing/worker/{jobId}/control": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ControlManagedResourceProcessingWorker"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/management/resource-processing/worker/{jobId}/abandon": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AbandonManagedResourceProcessingWorker"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/federation/local/servers/{serverId}/path-mapping-tree": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetManagedServerPathMappingTree"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/media-library-resource-mapping": {
         parameters: {
             query?: never;
@@ -6068,6 +6180,22 @@ export interface paths {
         options?: never;
         head?: never;
         patch: operations["PatchUIOptions"];
+        trace?: never;
+    };
+    "/options/ui/device-colors/{serverId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["SetDeviceColor"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/options/ui/resource-detail-layout": {
@@ -6950,6 +7078,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/player/device-playback/preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetDevicePlaybackPreferences"];
+        put: operations["SetDevicePlaybackPreferences"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/player/batch-play/resource-snapshot": {
         parameters: {
             query?: never;
@@ -7791,6 +7935,22 @@ export interface paths {
         };
         get?: never;
         put: operations["PutSavedSearchDisplayMode"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource/saved-search/criteria": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["PutSavedSearchCriteria"];
         post?: never;
         delete?: never;
         options?: never;
@@ -8662,6 +8822,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/resource-processing/jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetResourceProcessingJobs"];
+        put?: never;
+        post: operations["StartResourceProcessing"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource-processing/jobs/{jobId}/control": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ControlResourceProcessing"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/resource-profile": {
         parameters: {
             query?: never;
@@ -8724,6 +8916,294 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/resource-profile/evaluate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["EvaluateResourceProfileSearches"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource-profile/search/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ResolveResourceProfileSearch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/player/resource-profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetResourceProfileOpeningBehavior"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/player/resource-profiles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["GetResourceProfileOpeningBehaviors"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource-profile/source-info": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetResourceProfileSourceInfo"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource-profile/search/properties": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetResourceProfileSearchProperties"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource-profile/search/filter-value": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["GetResourceProfileSearchFilterValue"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource-profile/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PreviewResourceProfileSearch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource-profile/sources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetResourceProfileSources"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource-profile/sources/{deviceId}/info": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetConnectedResourceProfileSourceInfo"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource-profile/sources/{deviceId}/properties": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetSourceResourceProfileProperties"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource-profile/sources/{deviceId}/filter-value": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["GetSourceResourceProfileFilterValue"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource-profile/sources/{deviceId}/search/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ResolveSourceResourceProfileSearch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource-profile/sources/{deviceId}/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PreviewSourceResourceProfileSearch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource-scope": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetResourceScopes"];
+        put?: never;
+        post: operations["AddResourceScope"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource-scope/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["UpdateResourceScope"];
+        post?: never;
+        delete: operations["DeleteResourceScope"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource-scope/profile/{profileId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["BindResourceProfileScope"];
+        trace?: never;
+    };
+    "/resource-scope/profile/{profileId}/rule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["UpdateResourceProfileRule"];
         trace?: never;
     };
     "/app/resource-usage": {
@@ -8910,6 +9390,54 @@ export interface paths {
             cookie?: never;
         };
         get: operations["GetSubscriptionProviders"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/data-sync/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetSyncActivity"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/data-sync/activity/metadata-history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetMetadataSyncHistory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/data-sync/activity/processing-history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetSyncProcessingHistory"];
         put?: never;
         post?: never;
         delete?: never;
@@ -9152,6 +9680,38 @@ export interface paths {
         get: operations["FindNearestViewedContent"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/third-party-content-tracker/page-boundaries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["FindThirdPartyContentPageBoundaries"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/third-party-content-tracker/daily-history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["GetThirdPartyContentDailyHistory"];
         delete?: never;
         options?: never;
         head?: never;
@@ -9562,6 +10122,34 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        "Bakabase.Abstractions.Components.App.DesktopProfileAddInput": {
+            name: string;
+            directory: string;
+            create: boolean;
+        };
+        "Bakabase.Abstractions.Components.App.DesktopProfileOpenInput": {
+            closeCurrent: boolean;
+        };
+        "Bakabase.Abstractions.Components.App.DesktopProfileUpdateInput": {
+            name: string;
+            makeDefault: boolean;
+        };
+        "Bakabase.Abstractions.Components.App.DesktopProfileView": {
+            id: string;
+            name: string;
+            dataDirectory: string;
+            isCurrent: boolean;
+            isDefault: boolean;
+            isRunning: boolean;
+            isAvailable: boolean;
+        };
+        "Bakabase.Abstractions.Components.App.DesktopProfilesView": {
+            available: boolean;
+            currentId?: string;
+            environmentOverride: boolean;
+            currentDirectory?: string;
+            profiles: components["schemas"]["Bakabase.Abstractions.Components.App.DesktopProfileView"][];
+        };
         "Bakabase.Abstractions.Components.Configuration.ResourceMoveDestination": {
             id: string;
             path: string;
@@ -9985,6 +10573,7 @@ export interface components {
             extensions?: string[];
             executablePath: string;
             command: string;
+            supportsHttp?: boolean;
         };
         "Bakabase.Abstractions.Models.Domain.MediaLibraryResourceMapping": {
             /** Format: int32 */
@@ -10110,6 +10699,7 @@ export interface components {
             resourceLayerIndex?: number;
             resourceSegmentName?: string;
             propertyValue?: string;
+            valueSourcePath?: string;
         };
         "Bakabase.Abstractions.Models.Domain.PathPropertyExtractor": {
             basePathType: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PathPropertyExtractorBasePathType"];
@@ -10301,10 +10891,30 @@ export interface components {
             /** Format: int32 */
             conflictVersion: number;
         };
+        /**
+         * Format: int32
+         * @description [0: Owner, 1: Local, 2: Managed]
+         * @enum {integer}
+         */
+        "Bakabase.Abstractions.Models.Domain.ResourceProcessingExecutionKind": 0 | 1 | 2;
+        "Bakabase.Abstractions.Models.Domain.ResourceProcessingExecutionTarget": {
+            kind: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProcessingExecutionKind"];
+            deviceId?: string;
+            libraryEpoch?: string;
+        };
         "Bakabase.Abstractions.Models.Domain.ResourceProfileEnhancerOptions": {
+            executionTarget?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProcessingExecutionTarget"];
             enhancers?: components["schemas"]["Bakabase.Abstractions.Models.Domain.EnhancerFullOptions"][];
         };
+        "Bakabase.Abstractions.Models.Domain.ResourceProfileEvaluationInput": {
+            resourceIds: number[];
+            profiles: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfileSearchRule"][];
+        };
+        "Bakabase.Abstractions.Models.Domain.ResourceProfileEvaluationResult": {
+            matches: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfileResourceMatch"][];
+        };
         "Bakabase.Abstractions.Models.Domain.ResourceProfilePlayableFileOptions": {
+            executionTarget?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProcessingExecutionTarget"];
             extensions?: string[];
             fileNamePattern?: string;
         };
@@ -10314,6 +10924,22 @@ export interface components {
         "Bakabase.Abstractions.Models.Domain.ResourceProfilePropertyOptions": {
             properties?: components["schemas"]["Bakabase.Abstractions.Models.Domain.PropertyKeyWithScopePriority"][];
         };
+        "Bakabase.Abstractions.Models.Domain.ResourceProfileResourceMatch": {
+            /** Format: int32 */
+            resourceId: number;
+            profileIds: number[];
+        };
+        /**
+         * Format: int32
+         * @description [1: NameTemplate, 2: Enhancers, 3: PlayableFiles, 4: Players, 5: Properties, 6: OpeningMode]
+         * @enum {integer}
+         */
+        "Bakabase.Abstractions.Models.Domain.ResourceProfileRuleKind": 1 | 2 | 3 | 4 | 5 | 6;
+        "Bakabase.Abstractions.Models.Domain.ResourceProfileSearchRule": {
+            /** Format: int32 */
+            id: number;
+            searchJson?: string;
+        };
         "Bakabase.Abstractions.Models.Domain.ResourceSearch": {
             /** Format: int32 */
             pageIndex: number;
@@ -10321,11 +10947,14 @@ export interface components {
             pageSize: number;
             /** Format: int32 */
             readonly skipCount: number;
+            owner?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceSearchOwner"];
+            deviceIds?: string[];
             group?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceSearchFilterGroup"];
             orders?: components["schemas"]["Bakabase.Abstractions.Models.Input.ResourceSearchOrderInputModel"][];
             tags?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceTag"][];
         };
         "Bakabase.Abstractions.Models.Domain.ResourceSearchFilter": {
+            owner?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceSearchOwner"];
             propertyPool: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyPool"];
             /** Format: int32 */
             propertyId: number;
@@ -10339,6 +10968,10 @@ export interface components {
             groups?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceSearchFilterGroup"][];
             filters?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceSearchFilter"][];
             disabled: boolean;
+        };
+        "Bakabase.Abstractions.Models.Domain.ResourceSearchOwner": {
+            serverId: string;
+            libraryEpoch: string;
         };
         "Bakabase.Abstractions.Models.Domain.ResourceSourceLink": {
             /** Format: int32 */
@@ -10531,6 +11164,13 @@ export interface components {
             keepMediaLibrary: boolean;
             deleteSourceResource: boolean;
         };
+        "Bakabase.Abstractions.Models.Input.ThirdPartyContentTrackerDailyHistoryInputModel": {
+            domainKey: string;
+            filter?: string;
+            centerDay: string;
+            timeZoneId: string;
+            excludeContentIds: string[];
+        };
         "Bakabase.Abstractions.Models.Input.ThirdPartyContentTrackerMarkViewedInputModel": {
             domainKey: string;
             filter?: string;
@@ -10540,6 +11180,15 @@ export interface components {
             contentId: string;
             /** Format: date-time */
             updatedAt?: string;
+        };
+        "Bakabase.Abstractions.Models.Input.ThirdPartyContentTrackerPageBoundariesInputModel": {
+            domainKey: string;
+            filter?: string;
+            /** Format: date-time */
+            oldestUpdatedAt: string;
+            /** Format: date-time */
+            newestUpdatedAt: string;
+            excludeContentIds: string[];
         };
         "Bakabase.Abstractions.Models.Input.ThirdPartyContentTrackerQueryInputModel": {
             domainKey: string;
@@ -10676,10 +11325,26 @@ export interface components {
             isDynamic: boolean;
             mediaLibraryName?: string;
         };
+        "Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerDailyHistoryDayViewModel": {
+            date: string;
+            /** Format: int32 */
+            count: number;
+        };
+        "Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerDailyHistoryViewModel": {
+            days: components["schemas"]["Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerDailyHistoryDayViewModel"][];
+        };
         "Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerNearestViewModel": {
             contentId: string;
             /** Format: date-time */
             viewedAt: string;
+        };
+        "Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerPageBoundariesViewModel": {
+            older?: components["schemas"]["Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerPageBoundaryViewModel"];
+            newer?: components["schemas"]["Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerPageBoundaryViewModel"];
+        };
+        "Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerPageBoundaryViewModel": {
+            contentId: string;
+            updatedAt: string;
         };
         "Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerStatusViewModel": {
             contentId: string;
@@ -11400,6 +12065,7 @@ export interface components {
             resource?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIOptions+UIResourceOptions"];
             startupPage?: components["schemas"]["Bakabase.InsideWorld.Models.Constants.StartupPage"];
             isMenuCollapsed?: boolean;
+            navigationLayout?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UINavigationLayout"];
             showResourceUsage?: boolean;
             hideResourceCovers?: boolean;
             resourceDetailLayout?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIOptions+ResourceDetailLayoutConfig"];
@@ -11874,10 +12540,30 @@ export interface components {
             name: string;
             urlTemplate: string;
         };
+        "Bakabase.InsideWorld.Models.Configs.UINavigationLayout": {
+            /** Format: int32 */
+            version: number;
+            items: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UINavigationNode"][];
+            knownCatalogIds: string[];
+            directoryAliases: {
+                [key: string]: string;
+            };
+        };
+        "Bakabase.InsideWorld.Models.Configs.UINavigationNode": {
+            id: string;
+            kind: string;
+            name?: string;
+            hidden: boolean;
+            children?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UINavigationNode"][];
+        };
         "Bakabase.InsideWorld.Models.Configs.UIOptions": {
             resource: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIOptions+UIResourceOptions"];
             startupPage: components["schemas"]["Bakabase.InsideWorld.Models.Constants.StartupPage"];
             isMenuCollapsed: boolean;
+            navigationLayout?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UINavigationLayout"];
+            deviceColors: {
+                [key: string]: string;
+            };
             showResourceUsage: boolean;
             hideResourceCovers: boolean;
             resourceDetailLayout?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIOptions+ResourceDetailLayoutConfig"];
@@ -11937,6 +12623,7 @@ export interface components {
             inlineDisplayName: boolean;
             autoSelectFirstPlayableFile: boolean;
             displayOperations: string[];
+            showAggregateOperations?: boolean;
             hideResourceBorder: boolean;
             hideHealthScore: boolean;
             customContextMenuItems: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIOptions+CustomContextMenuItem"][];
@@ -13383,12 +14070,6 @@ export interface components {
             receiveBack: boolean;
             kinds?: string[];
         };
-        "Bakabase.Modules.DataSync.Services.DataSyncCopyOnceInput": {
-            peerNodeId?: string;
-            address?: string;
-            code?: string;
-            kinds: string[];
-        };
         "Bakabase.Modules.DataSync.Services.DataSyncEntityStatusView": {
             localKey: string;
             syncKey: string;
@@ -13481,7 +14162,6 @@ export interface components {
             peerNodeId?: string;
             peerName?: string;
             counts: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncHistoryCounts"];
-            undoState: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncUndoState"];
             /** Format: date-time */
             undoneAt?: string;
         };
@@ -13493,6 +14173,11 @@ export interface components {
             action: components["schemas"]["Bakabase.Modules.DataSync.Planning.DataSyncItemAction"];
             localKey?: string;
             type: components["schemas"]["Bakabase.Modules.DataSync.Planning.DataSyncPlanItemType"];
+        };
+        "Bakabase.Modules.DataSync.Services.DataSyncHistoryPage": {
+            entries: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncHistoryEntry"][];
+            /** Format: int32 */
+            nextBeforeId?: number;
         };
         "Bakabase.Modules.DataSync.Services.DataSyncInboxItemView": {
             /** Format: int64 */
@@ -13527,16 +14212,6 @@ export interface components {
             /** Format: int32 */
             openTotal: number;
         };
-        "Bakabase.Modules.DataSync.Services.DataSyncInvitationResult": {
-            invitation?: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncInvitationView"];
-            problem?: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncProblem"];
-        };
-        "Bakabase.Modules.DataSync.Services.DataSyncInvitationView": {
-            code: string;
-            /** Format: date-time */
-            expiresAt: string;
-            addresses: string[];
-        };
         "Bakabase.Modules.DataSync.Services.DataSyncKindCount": {
             kind: string;
             /** Format: int32 */
@@ -13545,7 +14220,6 @@ export interface components {
         "Bakabase.Modules.DataSync.Services.DataSyncLinkCreateInput": {
             peerNodeId?: string;
             address?: string;
-            code?: string;
             mode: components["schemas"]["Bakabase.Modules.DataSync.DataSyncLinkMode"];
             kinds: string[];
         };
@@ -13776,40 +14450,6 @@ export interface components {
             taskId?: string;
             problem?: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncProblem"];
         };
-        /**
-         * Format: int32
-         * @description [1: Remove, 2: Revert, 3: RemoveAliases, 4: Recreate, 5: Exclude]
-         * @enum {integer}
-         */
-        "Bakabase.Modules.DataSync.Services.DataSyncUndoAction": 1 | 2 | 3 | 4 | 5;
-        /**
-         * Format: int32
-         * @description [1: ChangedSinceImport, 2: InUse, 3: AddedOptionsInUse, 4: Missing]
-         * @enum {integer}
-         */
-        "Bakabase.Modules.DataSync.Services.DataSyncUndoBlock": 1 | 2 | 3 | 4;
-        "Bakabase.Modules.DataSync.Services.DataSyncUndoPreview": {
-            canUndo: boolean;
-            items: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncUndoPreviewItem"][];
-            problem?: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncProblem"];
-        };
-        "Bakabase.Modules.DataSync.Services.DataSyncUndoPreviewItem": {
-            kind: string;
-            localKey: string;
-            name: string;
-            action: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncUndoAction"];
-            blocked?: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncUndoBlock"];
-            /** Format: int32 */
-            valueCount?: number;
-            settingsMayReferenceIt: boolean;
-            recreatedGetsNewId: boolean;
-        };
-        /**
-         * Format: int32
-         * @description [1: Available, 2: Undone, 3: Expired]
-         * @enum {integer}
-         */
-        "Bakabase.Modules.DataSync.Services.DataSyncUndoState": 1 | 2 | 3;
         "Bakabase.Modules.DataSync.Wire.DataSyncFeedCounterpart": {
             mode: string;
             firstContactCompleted: boolean;
@@ -13927,86 +14567,6 @@ export interface components {
          * @enum {integer}
          */
         "Bakabase.Modules.Enhancer.Models.Domain.Constants.EnhancerTag": 1 | 2;
-        "Bakabase.Modules.Federation.Contracts.CommonLibraryQuery": {
-            /** Format: int32 */
-            queryContractVersion: number;
-            text?: string;
-            fileAvailability?: string;
-            sourceKinds?: number[];
-            sort: string;
-        } & {
-            [key: string]: unknown;
-        };
-        "Bakabase.Modules.Federation.Contracts.FederatedQueryPage": {
-            sessionId: string;
-            items: components["schemas"]["Bakabase.Modules.Federation.Contracts.FederatedResourceSummary"][];
-            nextCursor?: string;
-            /** Format: int64 */
-            expiresInMs: number;
-            participants: components["schemas"]["Bakabase.Modules.Federation.Contracts.QueryParticipant"][];
-            omittedNodes: components["schemas"]["Bakabase.Modules.Federation.Contracts.QueryOmittedNode"][];
-            /** Format: int64 */
-            totalWithinParticipants: number;
-            coverageComplete: boolean;
-        };
-        "Bakabase.Modules.Federation.Contracts.FederatedResourceSummary": {
-            ref: components["schemas"]["Bakabase.Modules.Federation.Contracts.ResourceRef"];
-            ownerLabel: string;
-            title?: string;
-            displayName: string;
-            fileName?: string;
-            sourceKinds: number[];
-            fileAvailability: string;
-            normalizedSortKey?: string;
-            coverAsset?: string;
-            playbackCapabilities: string[];
-        };
-        "Bakabase.Modules.Federation.Contracts.LocalFederatedQuery": {
-            nodeIds: string[];
-            query: components["schemas"]["Bakabase.Modules.Federation.Contracts.CommonLibraryQuery"];
-            /** Format: int32 */
-            pageSize: number;
-        } & {
-            [key: string]: unknown;
-        };
-        "Bakabase.Modules.Federation.Contracts.NodeExportQuery": {
-            expectedLibraryEpoch: string;
-            query: components["schemas"]["Bakabase.Modules.Federation.Contracts.CommonLibraryQuery"];
-            /** Format: int32 */
-            blockSize: number;
-        } & {
-            [key: string]: unknown;
-        };
-        "Bakabase.Modules.Federation.Contracts.NodeQueryBlock": {
-            snapshotId: string;
-            nodeId: string;
-            libraryEpoch: string;
-            queryHash: string;
-            /** Format: int64 */
-            totalCount: number;
-            /** Format: int32 */
-            offset: number;
-            items: components["schemas"]["Bakabase.Modules.Federation.Contracts.FederatedResourceSummary"][];
-            nextCursor?: string;
-            /** Format: int64 */
-            expiresInMs: number;
-            /** Format: date-time */
-            captureStartedAt: string;
-            /** Format: date-time */
-            captureCompletedAt: string;
-            consistency: string;
-        };
-        "Bakabase.Modules.Federation.Contracts.QueryOmittedNode": {
-            nodeId: string;
-            code: string;
-            retryable: boolean;
-        };
-        "Bakabase.Modules.Federation.Contracts.QueryParticipant": {
-            nodeId: string;
-            libraryEpoch: string;
-            /** Format: int64 */
-            totalCount: number;
-        };
         "Bakabase.Modules.Federation.Contracts.ResourceRef": {
             nodeId: string;
             libraryEpoch: string;
@@ -14017,111 +14577,6 @@ export interface components {
             nodeId: string;
             libraryEpoch: string;
             name: string;
-        };
-        "Bakabase.Modules.Federation.Media.AssetRef": {
-            resourceRef: components["schemas"]["Bakabase.Modules.Federation.Contracts.ResourceRef"];
-            assetId: string;
-        };
-        "Bakabase.Modules.Federation.Media.FederatedAsset": {
-            assetId: string;
-            kind: string;
-            fileName: string;
-            contentType: string;
-            sourceRootId?: string;
-            relativePath?: string;
-            /** Format: date-time */
-            expiresAt: string;
-        };
-        "Bakabase.Modules.Federation.Media.FederatedCollection": {
-            name: string;
-            color?: string;
-        };
-        "Bakabase.Modules.Federation.Media.FederatedExternalIdentity": {
-            provider: string;
-            externalId: string;
-        };
-        "Bakabase.Modules.Federation.Media.FederatedProperty": {
-            label: string;
-            type: string;
-            value?: unknown;
-            /** Format: int32 */
-            scope: number;
-        };
-        "Bakabase.Modules.Federation.Media.FederatedResourceDetail": {
-            ref: components["schemas"]["Bakabase.Modules.Federation.Contracts.ResourceRef"];
-            ownerLabel: string;
-            displayName: string;
-            fileName?: string;
-            availability: string;
-            properties: components["schemas"]["Bakabase.Modules.Federation.Media.FederatedProperty"][];
-            sources: components["schemas"]["Bakabase.Modules.Federation.Media.FederatedSource"][];
-            externalIdentities: components["schemas"]["Bakabase.Modules.Federation.Media.FederatedExternalIdentity"][];
-            collections: components["schemas"]["Bakabase.Modules.Federation.Media.FederatedCollection"][];
-            assets: components["schemas"]["Bakabase.Modules.Federation.Media.FederatedAsset"][];
-            unavailableReason?: string;
-            directoryAccess?: components["schemas"]["Bakabase.Modules.Federation.Media.FederationDirectoryAccess"];
-            location?: components["schemas"]["Bakabase.Modules.Federation.Media.FederatedResourceLocation"];
-        };
-        "Bakabase.Modules.Federation.Media.FederatedResourceLocation": {
-            sourceRootId: string;
-            relativePath: string;
-            isDirectory: boolean;
-        };
-        "Bakabase.Modules.Federation.Media.FederatedSource": {
-            /** Format: int32 */
-            kind: number;
-            label?: string;
-            url?: string;
-        };
-        "Bakabase.Modules.Federation.Media.FederationDirectoryAccess": {
-            canOpen: boolean;
-            reason?: string;
-        };
-        "Bakabase.Modules.Federation.Media.MappingRoot": {
-            sourceRootId: string;
-            name: string;
-        };
-        "Bakabase.Modules.Federation.Media.OpenResourceDirectoryRequest": {
-            resourceRef: components["schemas"]["Bakabase.Modules.Federation.Contracts.ResourceRef"];
-        };
-        "Bakabase.Modules.Federation.Media.OpenResourceDirectoryResponse": {
-            opened: boolean;
-        };
-        "Bakabase.Modules.Federation.Media.PlaybackSessionRequest": {
-            assetRef: components["schemas"]["Bakabase.Modules.Federation.Media.AssetRef"];
-            mode: string;
-        };
-        "Bakabase.Modules.Federation.Media.PlaybackSessionResponse": {
-            url?: string;
-            contentType: string;
-            launched: boolean;
-            /** Format: date-time */
-            expiresAt: string;
-        };
-        "Bakabase.Modules.Federation.Media.ResourceLocationRequest": {
-            resourceRef: components["schemas"]["Bakabase.Modules.Federation.Contracts.ResourceRef"];
-        };
-        "Bakabase.Modules.Federation.Media.ResourceLocationResponse": {
-            ref: components["schemas"]["Bakabase.Modules.Federation.Contracts.ResourceRef"];
-            location?: components["schemas"]["Bakabase.Modules.Federation.Media.FederatedResourceLocation"];
-        };
-        "Bakabase.Modules.Federation.Media.ResourceResolveRequest": {
-            refs: components["schemas"]["Bakabase.Modules.Federation.Contracts.ResourceRef"][];
-        };
-        "Bakabase.Modules.Federation.Media.ResourceResolveResponse": {
-            resources: components["schemas"]["Bakabase.Modules.Federation.Media.FederatedResourceDetail"][];
-        };
-        "Bakabase.Modules.Federation.Peers.FederationPeerView": {
-            nodeId: string;
-            label: string;
-            address?: string;
-            enabled: boolean;
-            connectionState: string;
-            outboundGrant?: components["schemas"]["Bakabase.Modules.Federation.Peers.NodeGrantSummary"];
-            inboundGrant?: components["schemas"]["Bakabase.Modules.Federation.Peers.NodeGrantSummary"];
-            pathMappings: components["schemas"]["Bakabase.Modules.Federation.Peers.NodePathMapping"][];
-            kind?: components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ServerKind"];
-            platform?: components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.RemoteDevicePlatform"];
         };
         "Bakabase.Modules.Federation.Peers.NodeCredentials": {
             grantId: string;
@@ -14149,21 +14604,6 @@ export interface components {
             intent: string;
             reciprocal?: components["schemas"]["Bakabase.Modules.Federation.Peers.NodeReciprocalOffer"];
         };
-        "Bakabase.Modules.Federation.Peers.NodeDiscoveryCandidate": {
-            nodeId: string;
-            name: string;
-            address: string;
-            kind?: components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ServerKind"];
-            platform?: components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.RemoteDevicePlatform"];
-            /** Format: int32 */
-            dataSyncContractVersion?: number;
-            sharesDefinitions?: boolean;
-        };
-        "Bakabase.Modules.Federation.Peers.NodeGrantSummary": {
-            grantId: string;
-            /** Format: int64 */
-            revision: number;
-        };
         "Bakabase.Modules.Federation.Peers.NodeHandshakeRequest": {
             challenge: string;
         };
@@ -14180,13 +14620,6 @@ export interface components {
             protocolVersion: number;
             /** Format: date-time */
             serverTimeUtc: string;
-            /** Format: int32 */
-            queryContractVersion: number;
-            supportedFilters: string[];
-            supportedSorts: string[];
-            supportedAssetKinds: string[];
-            /** Format: int32 */
-            maxBatchSize: number;
             kind?: string;
             platform?: string;
             /** Format: int32 */
@@ -14195,23 +14628,10 @@ export interface components {
             dataSyncMinimumPeerContract?: number;
             sharesDefinitions?: boolean;
         };
-        "Bakabase.Modules.Federation.Peers.NodeInvitation": {
-            code: string;
-            /** Format: date-time */
-            expiresAt: string;
-        };
         "Bakabase.Modules.Federation.Peers.NodePairClaimRequest": {
             requestId: string;
             nodeId: string;
             claimSecret: string;
-        };
-        "Bakabase.Modules.Federation.Peers.NodePairCodeRequest": {
-            nodeId: string;
-            nodeName: string;
-            code: string;
-            transactionId: string;
-            claimSecret: string;
-            reciprocal?: components["schemas"]["Bakabase.Modules.Federation.Peers.NodeReciprocalOffer"];
         };
         "Bakabase.Modules.Federation.Peers.NodePairExchange": {
             outcome: string;
@@ -14220,35 +14640,6 @@ export interface components {
             expiresAt: string;
             credentials?: components["schemas"]["Bakabase.Modules.Federation.Peers.NodeCredentials"];
             readBack?: string;
-        };
-        "Bakabase.Modules.Federation.Peers.NodePairRequest": {
-            nodeId: string;
-            nodeName: string;
-            transactionId: string;
-            claimSecret: string;
-            reciprocal?: components["schemas"]["Bakabase.Modules.Federation.Peers.NodeReciprocalOffer"];
-        };
-        "Bakabase.Modules.Federation.Peers.NodePairingOutcome": {
-            outcome: string;
-            requestId?: string;
-            peerNodeId?: string;
-            message?: string;
-        };
-        "Bakabase.Modules.Federation.Peers.NodePairingRequestView": {
-            requestId: string;
-            nodeId: string;
-            nodeName: string;
-            direction: string;
-            status: string;
-            /** Format: date-time */
-            expiresAt: string;
-            remoteAddress?: string;
-            replacesExistingAccess: boolean;
-            offersReciprocalAccess: boolean;
-        };
-        "Bakabase.Modules.Federation.Peers.NodePathMapping": {
-            sourceRootId: string;
-            localPath: string;
         };
         "Bakabase.Modules.Federation.Peers.NodeReciprocalOffer": {
             addresses: string[];
@@ -14386,6 +14777,9 @@ export interface components {
         "Bakabase.Modules.Player.Abstractions.Components.BatchPlayResourceSnapshot": {
             resources: components["schemas"]["Bakabase.Modules.Player.Abstractions.Components.BatchPlayResourceFiles"][];
             configuredPlayers: components["schemas"]["Bakabase.Abstractions.Models.Domain.MediaLibraryPlayer"][];
+            playerOptionsByResourceId?: {
+                [key: string]: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfilePlayerOptions"];
+            };
         };
         "Bakabase.Modules.Player.Abstractions.Models.Domain.BatchPlayCandidate": {
             key: string;
@@ -14393,6 +14787,7 @@ export interface components {
             displayName: string;
             executablePath: string;
             capabilities: components["schemas"]["Bakabase.Modules.Player.Abstractions.Models.Domain.Constants.BatchPlayCapability"];
+            supportsHttp: boolean;
             commandTemplate?: string;
             capabilitiesAssumed: boolean;
             supportedExtensions?: string[];
@@ -14447,6 +14842,19 @@ export interface components {
          * @enum {integer}
          */
         "Bakabase.Modules.Player.Abstractions.Models.Domain.Constants.BatchPlayLaunchMethod": 1 | 2;
+        "Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackChoice": {
+            mode: string;
+            nativeSchemeId?: string;
+        };
+        "Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackPreferences": {
+            /** Format: int32 */
+            version: number;
+            image: components["schemas"]["Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackChoice"];
+            text: components["schemas"]["Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackChoice"];
+            audio: components["schemas"]["Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackChoice"];
+            video: components["schemas"]["Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackChoice"];
+            other: components["schemas"]["Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackChoice"];
+        };
         "Bakabase.Modules.Player.Abstractions.Models.Input.BatchPlayCandidatesInputModel": {
             resourceIds: number[];
         };
@@ -14676,6 +15084,7 @@ export interface components {
             available: boolean;
             servers: components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerView"][];
             requests: components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerPendingRequestView"][];
+            canOpenDesktopView: boolean;
         };
         /**
          * Format: int32
@@ -14702,6 +15111,8 @@ export interface components {
          */
         "Bakabase.Modules.RemoteAccess.Abstractions.Models.ServerKind": 0 | 1 | 2;
         "Bakabase.Modules.Search.Models.Db.ResourceSearchDbModel": {
+            owner?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceSearchOwner"];
+            deviceIds?: string[];
             group?: components["schemas"]["Bakabase.Modules.Search.Models.Db.ResourceSearchFilterGroupDbModel"];
             orders?: components["schemas"]["Bakabase.Abstractions.Models.Input.ResourceSearchOrderInputModel"][];
             keyword?: string;
@@ -14712,6 +15123,7 @@ export interface components {
             tags?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceTag"][];
         };
         "Bakabase.Modules.Search.Models.Db.ResourceSearchFilterDbModel": {
+            owner?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceSearchOwner"];
             propertyPool?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyPool"];
             /** Format: int32 */
             propertyId?: number;
@@ -15056,6 +15468,300 @@ export interface components {
             lineNumber: number;
             alreadyKnown: boolean;
         };
+        "Bakabase.Service.Components.DataSync.SyncActivityDevice": {
+            id: string;
+            name: string;
+        };
+        "Bakabase.Service.Components.DataSync.SyncActivityPage": {
+            items: components["schemas"]["Bakabase.Service.Components.DataSync.SyncActivityRow"][];
+            /** Format: int32 */
+            total: number;
+            /** Format: int32 */
+            nextOffset?: number;
+            devices: components["schemas"]["Bakabase.Service.Components.DataSync.SyncActivityDevice"][];
+            dataTypes: string[];
+        };
+        "Bakabase.Service.Components.DataSync.SyncActivityRow": {
+            id: string;
+            engine: string;
+            dataType: string;
+            state: string;
+            phase: string;
+            source: components["schemas"]["Bakabase.Service.Components.DataSync.SyncActivityDevice"];
+            destination: components["schemas"]["Bakabase.Service.Components.DataSync.SyncActivityDevice"];
+            /** Format: date-time */
+            lastSuccessAtUtc?: string;
+            /** Format: int64 */
+            itemCount?: number;
+            errorCode?: string;
+            error?: string;
+            cachedDataAvailable: boolean;
+            /** Format: int32 */
+            linkId?: number;
+            libraryEpoch?: string;
+            worker?: components["schemas"]["Bakabase.Service.Components.DataSync.SyncActivityDevice"];
+            job?: components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingJobView"];
+            /** Format: int32 */
+            pendingDecisions: number;
+        };
+        "Bakabase.Service.Components.Federation.ManagedLibraryInfo": {
+            serverId: string;
+            name: string;
+            libraryEpoch: string;
+            /** Format: int32 */
+            contractVersion: number;
+        };
+        "Bakabase.Service.Components.Federation.ManagedLibraryMappingTreeNode": {
+            serverPath: string;
+            name: string;
+            /** Format: int64 */
+            resourceCount: number;
+            hasChildren: boolean;
+        };
+        "Bakabase.Service.Components.Federation.ManagedLibraryMappingTreePage": {
+            libraryEpoch: string;
+            nodes: components["schemas"]["Bakabase.Service.Components.Federation.ManagedLibraryMappingTreeNode"][];
+            nextCursor?: string;
+        };
+        "Bakabase.Service.Components.Federation.ManagedLibraryRequest": {
+            libraryEpoch: string;
+            operation: string;
+            /** Format: int32 */
+            id?: number;
+            ids?: number[];
+            body?: components["schemas"]["Newtonsoft.Json.Linq.JToken"];
+            query?: {
+                [key: string]: string[];
+            };
+        };
+        "Bakabase.Service.Components.Federation.ManagedLibrarySource": {
+            serverId: string;
+            name?: string;
+            libraryEpoch?: string;
+            isLocal: boolean;
+            available: boolean;
+            errorCode?: string;
+            error?: string;
+            /** Format: int32 */
+            contractVersion: number;
+            metadata?: components["schemas"]["Bakabase.Service.Components.Federation.MetadataReplicas.ManagedMetadataStatus"];
+        };
+        "Bakabase.Service.Components.Federation.ManagedLibrarySources": {
+            sources: components["schemas"]["Bakabase.Service.Components.Federation.ManagedLibrarySource"][];
+        };
+        "Bakabase.Service.Components.Federation.MetadataReplicas.ManagedMetadataStatus": {
+            identity: components["schemas"]["Bakabase.Service.Components.Federation.MetadataReplicas.ReplicaIdentity"];
+            name?: string;
+            data: components["schemas"]["Bakabase.Service.Components.Federation.MetadataReplicas.ReplicaStatus"];
+            sync: components["schemas"]["Bakabase.Service.Components.Federation.MetadataReplicas.ReplicaSyncState"];
+            denied: boolean;
+            activePhase?: string;
+        };
+        "Bakabase.Service.Components.Federation.MetadataReplicas.MetadataPageRequest": {
+            checkpoint: components["schemas"]["Bakabase.Service.Components.Federation.MetadataReplicas.ReplicaCheckpoint"];
+            /** Format: int32 */
+            pageSize: number;
+        };
+        "Bakabase.Service.Components.Federation.MetadataReplicas.MetadataSourceManifest": {
+            identity: components["schemas"]["Bakabase.Service.Components.Federation.MetadataReplicas.ReplicaIdentity"];
+            start: components["schemas"]["Bakabase.Service.Components.Federation.MetadataReplicas.ReplicaCheckpoint"];
+            name?: string;
+            /** Format: int32 */
+            contractVersion: number;
+        };
+        "Bakabase.Service.Components.Federation.MetadataReplicas.MetadataSyncActivity": {
+            /** Format: int64 */
+            id: number;
+            serverId: string;
+            name?: string;
+            libraryEpoch?: string;
+            /** Format: date-time */
+            startedAtUtc: string;
+            /** Format: date-time */
+            updatedAtUtc: string;
+            state: string;
+            phase: string;
+            /** Format: int64 */
+            processedCount: number;
+            /** Format: int64 */
+            resourceCount: number;
+            errorCode?: string;
+            error?: string;
+        };
+        "Bakabase.Service.Components.Federation.MetadataReplicas.MetadataSyncActivityPage": {
+            entries: components["schemas"]["Bakabase.Service.Components.Federation.MetadataReplicas.MetadataSyncActivity"][];
+            /** Format: int64 */
+            nextBeforeId?: number;
+        };
+        "Bakabase.Service.Components.Federation.MetadataReplicas.ReplicaCheckpoint": {
+            generation: string;
+            /** Format: int64 */
+            sequence: number;
+            cursor?: string;
+            complete: boolean;
+            /** Format: int64 */
+            catalogRevision: number;
+        };
+        "Bakabase.Service.Components.Federation.MetadataReplicas.ReplicaIdentity": {
+            serverId: string;
+            libraryEpoch: string;
+        };
+        "Bakabase.Service.Components.Federation.MetadataReplicas.ReplicaStatus": {
+            checkpoint?: components["schemas"]["Bakabase.Service.Components.Federation.MetadataReplicas.ReplicaCheckpoint"];
+            activeGeneration?: string;
+            /** Format: int64 */
+            resourceCount: number;
+            /** Format: int64 */
+            activeSequence: number;
+            /** Format: int64 */
+            stagedResourceCount: number;
+        };
+        "Bakabase.Service.Components.Federation.MetadataReplicas.ReplicaSyncState": {
+            paused: boolean;
+            /** Format: date-time */
+            lastSyncedAtUtc?: string;
+            errorCode?: string;
+            error?: string;
+            isOffline: boolean;
+            refreshPending: boolean;
+            catchupPending: boolean;
+        };
+        "Bakabase.Service.Components.Federation.Processing.ResourceProcessingAbandonRequest": {
+            token?: string;
+        };
+        "Bakabase.Service.Components.Federation.Processing.ResourceProcessingApply": {
+            token: string;
+            output: components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingOutput"];
+        };
+        "Bakabase.Service.Components.Federation.Processing.ResourceProcessingArtifact": {
+            hash: string;
+            fileName: string;
+            /** Format: int64 */
+            length: number;
+        };
+        "Bakabase.Service.Components.Federation.Processing.ResourceProcessingArtifactChunk": {
+            jobId: string;
+            token: string;
+            artifact: components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingArtifact"];
+            /** Format: int64 */
+            offset: number;
+            base64: string;
+        };
+        "Bakabase.Service.Components.Federation.Processing.ResourceProcessingArtifactRead": {
+            hash: string;
+            /** Format: int64 */
+            offset: number;
+        };
+        "Bakabase.Service.Components.Federation.Processing.ResourceProcessingControl": {
+            action: string;
+            /** Format: int64 */
+            expectedVersion: number;
+        };
+        "Bakabase.Service.Components.Federation.Processing.ResourceProcessingInput": {
+            jobId: string;
+            ownerId: string;
+            ownerEpoch: string;
+            /** Format: int32 */
+            resourceId: number;
+            /** Format: int64 */
+            expectedResourceRevision?: number;
+            ruleHash: string;
+            kind: components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingKind"];
+            playableFiles?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfilePlayableFileOptions"];
+            enhancer?: components["schemas"]["Bakabase.Abstractions.Models.Domain.EnhancerFullOptions"];
+        };
+        "Bakabase.Service.Components.Federation.Processing.ResourceProcessingJobView": {
+            id: string;
+            jobId: string;
+            role: string;
+            ownerId: string;
+            ownerEpoch: string;
+            /** Format: int32 */
+            resourceId: number;
+            kind: string;
+            state: string;
+            phase?: string;
+            /** Format: int64 */
+            processedCount: number;
+            /** Format: int64 */
+            totalCount?: number;
+            /** Format: int32 */
+            attempt: number;
+            pauseRequested: boolean;
+            cancelRequested: boolean;
+            errorCode?: string;
+            error?: string;
+            /** Format: date-time */
+            createdAtUtc: string;
+            /** Format: date-time */
+            updatedAtUtc: string;
+            /** Format: int64 */
+            version: number;
+            currentStepPhase?: string;
+            /** Format: int64 */
+            currentStepProcessedCount?: number;
+            /** Format: int64 */
+            currentStepTotalCount?: number;
+        };
+        /**
+         * Format: int32
+         * @description [0: PlayableFiles, 1: Enhancement]
+         * @enum {integer}
+         */
+        "Bakabase.Service.Components.Federation.Processing.ResourceProcessingKind": 0 | 1;
+        "Bakabase.Service.Components.Federation.Processing.ResourceProcessingOutput": {
+            kind: components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingKind"];
+            playableFiles: string[];
+            values: components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingValue"][];
+            artifacts: components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingArtifact"][];
+            /** Format: int64 */
+            processedCount: number;
+        };
+        "Bakabase.Service.Components.Federation.Processing.ResourceProcessingPrepared": {
+            input: components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingInput"];
+            token: string;
+            /** Format: int64 */
+            resourceRevision: number;
+            catalogGeneration: string;
+            resourceJson: string;
+        };
+        "Bakabase.Service.Components.Federation.Processing.ResourceProcessingReceipt": {
+            jobId: string;
+            /** Format: int64 */
+            resourceRevision: number;
+            resultHash: string;
+        };
+        "Bakabase.Service.Components.Federation.Processing.ResourceProcessingReceiptRequest": {
+            token: string;
+        };
+        "Bakabase.Service.Components.Federation.Processing.ResourceProcessingReceiptStatus": {
+            receipt?: components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingReceipt"];
+        };
+        /**
+         * Format: int32
+         * @description [0: Manager, 1: Owner, 2: Worker]
+         * @enum {integer}
+         */
+        "Bakabase.Service.Components.Federation.Processing.ResourceProcessingRole": 0 | 1 | 2;
+        "Bakabase.Service.Components.Federation.Processing.ResourceProcessingStart": {
+            /** Format: int32 */
+            profileId: number;
+            kind: components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingKind"];
+        };
+        "Bakabase.Service.Components.Federation.Processing.ResourceProcessingValue": {
+            /** Format: int32 */
+            target: number;
+            dynamicTarget?: string;
+            valueType: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.StandardValueType"];
+            serializedValue?: string;
+        };
+        "Bakabase.Service.Components.Federation.Processing.ResourceProcessingWorkerControl": {
+            action: string;
+        };
+        "Bakabase.Service.Components.Federation.Processing.ResourceProcessingWorkerResult": {
+            job: components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingJobView"];
+            output?: components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingOutput"];
+        };
         "Bakabase.Service.Components.ServerData.ServerAppDataImport+Validation": {
             valid: boolean;
             error?: string;
@@ -15138,47 +15844,66 @@ export interface components {
             resourceId: number;
             mediaLibraryIds: number[];
         };
-        "Bakabase.Service.Controllers.FederationBrowsingRequest": {
-            enabled: boolean;
-        };
-        "Bakabase.Service.Controllers.FederationClaimRequest": {
-            requestId: string;
-        };
-        "Bakabase.Service.Controllers.FederationConnectRequest": {
-            address: string;
-            code?: string;
-            shareBack: boolean;
-        };
         "Bakabase.Service.Controllers.FederationDeviceNameRequest": {
             name?: string;
+            expectedName?: string;
         };
         "Bakabase.Service.Controllers.FederationIdentityResetRequest": {
             asNewNode: boolean;
             replaceInstallIdentity: boolean;
         };
-        "Bakabase.Service.Controllers.FederationPathMappingsRequest": {
-            mappings: components["schemas"]["Bakabase.Modules.Federation.Peers.NodePathMapping"][];
-            expectedMappings?: components["schemas"]["Bakabase.Modules.Federation.Peers.NodePathMapping"][];
-        };
         "Bakabase.Service.Controllers.FederationPeerChange": {
             changed: boolean;
         };
-        "Bakabase.Service.Controllers.FederationPeerEnabledRequest": {
-            enabled: boolean;
-        };
         "Bakabase.Service.Controllers.FederationPeerStatusResponse": {
             identity: components["schemas"]["Bakabase.Modules.Federation.Identity.NodeIdentity"];
-            sharingEnabled: boolean;
             remoteAccessMode: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.RemoteAccessMode"];
             requirePairing: boolean;
-            peers: components["schemas"]["Bakabase.Modules.Federation.Peers.FederationPeerView"][];
-            requests: components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairingRequestView"][];
-            browsingEnabled: boolean;
-            reachableAddresses?: string[];
+            reachableAddresses: string[];
         };
-        "Bakabase.Service.Controllers.FederationSharingRequest": {
-            enabled: boolean;
-            enablePairedRemoteAccess: boolean;
+        "Bakabase.Service.Controllers.ManagedDeviceNameInput": {
+            name?: string;
+            expectedName: string;
+            libraryEpoch: string;
+        };
+        "Bakabase.Service.Controllers.ManagedDeviceNameView": {
+            name: string;
+            libraryEpoch: string;
+            environmentControlled: boolean;
+        };
+        "Bakabase.Service.Controllers.ManagedFileUploadInputModel": {
+            fileName: string;
+            base64: string;
+        };
+        "Bakabase.Service.Controllers.ManagedLibraryBatchRequest": {
+            libraryEpoch: string;
+            resourceIds: number[];
+            playerKey?: string;
+            fileSelectionMode: components["schemas"]["Bakabase.Modules.Player.Abstractions.Models.Domain.Constants.BatchPlayFileSelectionMode"];
+        };
+        "Bakabase.Service.Controllers.ManagedLibraryDirectoryRequest": {
+            libraryEpoch: string;
+            /** Format: int32 */
+            resourceId: number;
+        };
+        "Bakabase.Service.Controllers.ManagedLibraryPlayRequest": {
+            libraryEpoch: string;
+            /** Format: int32 */
+            resourceId: number;
+            origin: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.DataOrigin"];
+            key: string;
+            explicitChoice: boolean;
+        };
+        "Bakabase.Service.Controllers.ManagedMetadataControlInput": {
+            libraryEpoch: string;
+            paused: boolean;
+        };
+        "Bakabase.Service.Controllers.ManagedResourceDisplayOptions": {
+            uiResource: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIOptions+UIResourceOptions"];
+            propertyValueScopePriority: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyValueScope"][];
+        };
+        "Bakabase.Service.Controllers.ManagedResourceDisplayOptionsPatch": {
+            propertyValueScopePriority: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyValueScope"][];
         };
         "Bakabase.Service.Controllers.ManagedServerAddressRequest": {
             address: string;
@@ -15192,6 +15917,7 @@ export interface components {
         };
         "Bakabase.Service.Controllers.ManagedServerPathMappingsRequest": {
             mappings?: components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerPathMapping"][];
+            expectedMappings?: components["schemas"]["Bakabase.Modules.RemoteAccess.Abstractions.Models.ManagedServerPathMapping"][];
         };
         "Bakabase.Service.Controllers.MediaLibraryStatistics": {
             /** Format: int32 */
@@ -15231,6 +15957,38 @@ export interface components {
             matchedRulesJson?: string;
             /** Format: date-time */
             evaluatedAt: string;
+        };
+        "Bakabase.Service.Controllers.ResourceProfileRuleInput": {
+            kind: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfileRuleKind"];
+            valueJson?: string;
+            /** Format: date-time */
+            expectedUpdatedAt: string;
+        };
+        "Bakabase.Service.Controllers.ResourceScopeBindInput": {
+            /** Format: int32 */
+            scopeId?: number;
+            /** Format: date-time */
+            expectedUpdatedAt: string;
+        };
+        "Bakabase.Service.Controllers.ResourceScopeInput": {
+            name: string;
+            search?: components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
+            sourceDeviceId?: string;
+            sourceLibraryEpoch?: string;
+            /** Format: int32 */
+            expectedRevision?: number;
+        };
+        "Bakabase.Service.Controllers.ResourceScopeView": {
+            /** Format: int32 */
+            id: number;
+            name: string;
+            search?: components["schemas"]["Bakabase.Service.Models.View.ResourceSearchViewModel"];
+            sourceDeviceId?: string;
+            sourceLibraryEpoch?: string;
+            /** Format: int32 */
+            revision: number;
+            /** Format: int32 */
+            ruleCount: number;
         };
         "Bakabase.Service.Controllers.SharedListImportInputModel": {
             rows: components["schemas"]["Bakabase.Service.Controllers.SharedListImportRow"][];
@@ -15336,6 +16094,9 @@ export interface components {
             deleteAfterDecompression: boolean;
             moveToParent: boolean;
             overwriteExistFiles: boolean;
+        };
+        "Bakabase.Service.Models.Input.DeviceColorInput": {
+            color?: string;
         };
         "Bakabase.Service.Models.Input.ExHentaiDownloadTaskAddInputModel": {
             type: components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloaders.ExHentai.ExHentaiDownloadTaskType"];
@@ -15453,6 +16214,9 @@ export interface components {
             sharedUrl?: string;
         };
         "Bakabase.Service.Models.Input.ResourceProfileInputModel": {
+            sourceDeviceId?: string;
+            sourceLibraryEpoch?: string;
+            openingMode?: string;
             name: string;
             search?: components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
             nameTemplate?: string;
@@ -15463,6 +16227,11 @@ export interface components {
             /** Format: int32 */
             priority: number;
         };
+        "Bakabase.Service.Models.Input.ResourceProfileOpeningInputModel": {
+            sourceDeviceId?: string;
+            libraryEpoch?: string;
+            resourceIds: number[];
+        };
         "Bakabase.Service.Models.Input.ResourceSearchFilterGroupInputModel": {
             combinator: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.SearchCombinator"];
             groups?: components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchFilterGroupInputModel"][];
@@ -15470,6 +16239,7 @@ export interface components {
             disabled: boolean;
         };
         "Bakabase.Service.Models.Input.ResourceSearchFilterInputModel": {
+            owner?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceSearchOwner"];
             propertyPool?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyPool"];
             /** Format: int32 */
             propertyId?: number;
@@ -15478,6 +16248,8 @@ export interface components {
             disabled: boolean;
         };
         "Bakabase.Service.Models.Input.ResourceSearchInputModel": {
+            owner?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceSearchOwner"];
+            deviceIds?: string[];
             group?: components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchFilterGroupInputModel"];
             orders?: components["schemas"]["Bakabase.Abstractions.Models.Input.ResourceSearchOrderInputModel"][];
             keyword?: string;
@@ -16132,9 +16904,42 @@ export interface components {
             name?: string;
             error?: string;
         };
+        "Bakabase.Service.Models.View.ResourceProfileOpeningResourceViewModel": {
+            /** Format: int32 */
+            resourceId: number;
+            openingMode?: string;
+            profileIds: number[];
+        };
+        "Bakabase.Service.Models.View.ResourceProfileOpeningViewModel": {
+            openingMode?: string;
+            profileIds: number[];
+        };
+        "Bakabase.Service.Models.View.ResourceProfilePreviewResource": {
+            /** Format: int32 */
+            id: number;
+            path?: string;
+            displayName?: string;
+        };
+        "Bakabase.Service.Models.View.ResourceProfileSourceInfo": {
+            deviceId: string;
+            name: string;
+            libraryEpoch: string;
+        };
+        "Bakabase.Service.Models.View.ResourceProfileSourceViewModel": {
+            deviceId: string;
+            name: string;
+            libraryEpoch?: string;
+            available: boolean;
+            kind: string;
+        };
         "Bakabase.Service.Models.View.ResourceProfileViewModel": {
             /** Format: int32 */
             id: number;
+            /** Format: int32 */
+            resourceScopeId?: number;
+            sourceDeviceId?: string;
+            sourceLibraryEpoch?: string;
+            openingMode?: string;
             name: string;
             search?: components["schemas"]["Bakabase.Service.Models.View.ResourceSearchViewModel"];
             nameTemplate?: string;
@@ -16156,6 +16961,7 @@ export interface components {
             disabled: boolean;
         };
         "Bakabase.Service.Models.View.ResourceSearchFilterViewModel": {
+            owner?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceSearchOwner"];
             propertyPool?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyPool"];
             /** Format: int32 */
             propertyId?: number;
@@ -16168,6 +16974,8 @@ export interface components {
             valueProperty?: components["schemas"]["Bakabase.Modules.Property.Models.View.PropertyViewModel"];
         };
         "Bakabase.Service.Models.View.ResourceSearchViewModel": {
+            owner?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceSearchOwner"];
+            deviceIds?: string[];
             group?: components["schemas"]["Bakabase.Service.Models.View.ResourceSearchFilterGroupViewModel"];
             orders?: components["schemas"]["Bakabase.Abstractions.Models.Input.ResourceSearchOrderInputModel"][];
             keyword?: string;
@@ -16757,6 +17565,18 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Models.View.ResourcePlaceholderResultViewModel"][];
         };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.ResourceProfileOpeningResourceViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Models.View.ResourceProfileOpeningResourceViewModel"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.ResourceProfileSourceViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Models.View.ResourceProfileSourceViewModel"][];
+        };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.ResourceProfileViewModel]": {
             /** Format: int32 */
             code: number;
@@ -16931,6 +17751,18 @@ export interface components {
             /** Format: int32 */
             pageSize: number;
         };
+        "Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Service.Models.View.ResourceProfilePreviewResource]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Models.View.ResourceProfilePreviewResource"][];
+            /** Format: int32 */
+            totalCount: number;
+            /** Format: int32 */
+            pageIndex: number;
+            /** Format: int32 */
+            pageSize: number;
+        };
         "Bootstrap.Models.ResponseModels.SearchResponse`1[Bootstrap.Components.Logging.LogService.Models.Entities.Log]": {
             /** Format: int32 */
             code: number;
@@ -16942,6 +17774,18 @@ export interface components {
             pageIndex: number;
             /** Format: int32 */
             pageSize: number;
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Components.App.DesktopProfileView]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Abstractions.Components.App.DesktopProfileView"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Components.App.DesktopProfilesView]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Abstractions.Components.App.DesktopProfilesView"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Components.Configuration.ResourceMovePanelOptions]": {
             /** Format: int32 */
@@ -17033,6 +17877,12 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceFileSystemCache"];
         };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.ResourceProfileEvaluationResult]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfileEvaluationResult"];
+        };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.ResourceProfilePlayerOptions]": {
             /** Format: int32 */
             code: number;
@@ -17093,11 +17943,23 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Abstractions.Models.View.ResourceMovePreviewViewModel"];
         };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerDailyHistoryViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerDailyHistoryViewModel"];
+        };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerNearestViewModel]": {
             /** Format: int32 */
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerNearestViewModel"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerPageBoundariesViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerPageBoundariesViewModel"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Services.PlaceholderResourceResult]": {
             /** Format: int32 */
@@ -17519,17 +18381,17 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncHistoryDetail"];
         };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncHistoryPage]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncHistoryPage"];
+        };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncInboxPage]": {
             /** Format: int32 */
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncInboxPage"];
-        };
-        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncInvitationResult]": {
-            /** Format: int32 */
-            code: number;
-            message?: string;
-            data?: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncInvitationResult"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncLinkResult]": {
             /** Format: int32 */
@@ -17573,12 +18435,6 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncTaskStart"];
         };
-        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncUndoPreview]": {
-            /** Format: int32 */
-            code: number;
-            message?: string;
-            data?: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncUndoPreview"];
-        };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.HealthScore.Models.View.HealthScoreProfileViewModel]": {
             /** Format: int32 */
             code: number;
@@ -17602,6 +18458,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Modules.Player.Abstractions.Models.Domain.BatchPlayResult"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackPreferences]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackPreferences"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Presets.Abstractions.Models.MediaLibraryTemplatePresetDataPool]": {
             /** Format: int32 */
@@ -17710,6 +18572,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Controllers.CollectionRulePreview"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Controllers.ManagedResourceDisplayOptions]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Controllers.ManagedResourceDisplayOptions"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Controllers.MediaLibraryStatistics]": {
             /** Format: int32 */
@@ -17861,6 +18729,18 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Models.View.ResourceMoveContextViewModel"];
         };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceProfileOpeningViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Models.View.ResourceProfileOpeningViewModel"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceProfileSourceInfo]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Models.View.ResourceProfileSourceInfo"];
+        };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceProfileViewModel]": {
             /** Format: int32 */
             code: number;
@@ -17994,6 +18874,7 @@ export interface components {
          * @enum {integer}
          */
         "Microsoft.Extensions.Logging.LogLevel": 0 | 1 | 2 | 3 | 4 | 5 | 6;
+        "Newtonsoft.Json.Linq.JToken": components["schemas"]["Newtonsoft.Json.Linq.JToken"][];
         "System.Enum": Record<string, never>;
         "System.IntPtr": Record<string, never>;
         "System.ModuleHandle": {
@@ -21886,7 +22767,9 @@ export interface operations {
     };
     GetCollectionMemberships: {
         parameters: {
-            query?: never;
+            query?: {
+                resourceIds?: number[];
+            };
             header?: never;
             path: {
                 id: number;
@@ -24016,35 +24899,6 @@ export interface operations {
             };
         };
     };
-    CreateDataSyncCopyOnce: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncCopyOnceInput"];
-                "application/json": components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncCopyOnceInput"];
-                "text/json": components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncCopyOnceInput"];
-                "application/*+json": components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncCopyOnceInput"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncLinkResult]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncLinkResult]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncLinkResult]"];
-                };
-            };
-        };
-    };
     GetDataSyncFirstSync: {
         parameters: {
             query?: never;
@@ -24247,28 +25101,6 @@ export interface operations {
             };
         };
     };
-    CreateDataSyncInvitation: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncInvitationResult]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncInvitationResult]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncInvitationResult]"];
-                };
-            };
-        };
-    };
     GetDataSyncInbox: {
         parameters: {
             query?: {
@@ -24428,6 +25260,32 @@ export interface operations {
             };
         };
     };
+    GetDataSyncHistoryPage: {
+        parameters: {
+            query?: {
+                beforeId?: number;
+                take?: number;
+                peerNodeId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncHistoryPage]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncHistoryPage]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncHistoryPage]"];
+                };
+            };
+        };
+    };
     GetDataSyncHistoryEntry: {
         parameters: {
             query?: never;
@@ -24448,54 +25306,6 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncHistoryDetail]"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncHistoryDetail]"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncHistoryDetail]"];
-                };
-            };
-        };
-    };
-    PreviewDataSyncUndo: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncUndoPreview]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncUndoPreview]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncUndoPreview]"];
-                };
-            };
-        };
-    };
-    UndoDataSync: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncTaskStart]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncTaskStart]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.DataSync.Services.DataSyncTaskStart]"];
                 };
             };
         };
@@ -24646,6 +25456,143 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.DeploymentPathsViewModel]"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.DeploymentPathsViewModel]"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.DeploymentPathsViewModel]"];
+                };
+            };
+        };
+    };
+    GetDesktopProfiles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Components.App.DesktopProfilesView]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Components.App.DesktopProfilesView]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Components.App.DesktopProfilesView]"];
+                };
+            };
+        };
+    };
+    AddDesktopProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Abstractions.Components.App.DesktopProfileAddInput"];
+                "application/json": components["schemas"]["Bakabase.Abstractions.Components.App.DesktopProfileAddInput"];
+                "text/json": components["schemas"]["Bakabase.Abstractions.Components.App.DesktopProfileAddInput"];
+                "application/*+json": components["schemas"]["Bakabase.Abstractions.Components.App.DesktopProfileAddInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Components.App.DesktopProfileView]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Components.App.DesktopProfileView]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Components.App.DesktopProfileView]"];
+                };
+            };
+        };
+    };
+    UpdateDesktopProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Abstractions.Components.App.DesktopProfileUpdateInput"];
+                "application/json": components["schemas"]["Bakabase.Abstractions.Components.App.DesktopProfileUpdateInput"];
+                "text/json": components["schemas"]["Bakabase.Abstractions.Components.App.DesktopProfileUpdateInput"];
+                "application/*+json": components["schemas"]["Bakabase.Abstractions.Components.App.DesktopProfileUpdateInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Components.App.DesktopProfileView]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Components.App.DesktopProfileView]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Components.App.DesktopProfileView]"];
+                };
+            };
+        };
+    };
+    RemoveDesktopProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    OpenDesktopProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Abstractions.Components.App.DesktopProfileOpenInput"];
+                "application/json": components["schemas"]["Bakabase.Abstractions.Components.App.DesktopProfileOpenInput"];
+                "text/json": components["schemas"]["Bakabase.Abstractions.Components.App.DesktopProfileOpenInput"];
+                "application/*+json": components["schemas"]["Bakabase.Abstractions.Components.App.DesktopProfileOpenInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                 };
             };
         };
@@ -26227,423 +27174,6 @@ export interface operations {
             };
         };
     };
-    CreateFederationExportQuery: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Federation.Contracts.NodeExportQuery"];
-                "application/json": components["schemas"]["Bakabase.Modules.Federation.Contracts.NodeExportQuery"];
-                "text/json": components["schemas"]["Bakabase.Modules.Federation.Contracts.NodeExportQuery"];
-                "application/*+json": components["schemas"]["Bakabase.Modules.Federation.Contracts.NodeExportQuery"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bakabase.Modules.Federation.Contracts.NodeQueryBlock"];
-                    "application/json": components["schemas"]["Bakabase.Modules.Federation.Contracts.NodeQueryBlock"];
-                    "text/json": components["schemas"]["Bakabase.Modules.Federation.Contracts.NodeQueryBlock"];
-                };
-            };
-        };
-    };
-    ReadFederationExportQuery: {
-        parameters: {
-            query?: {
-                cursor?: string;
-            };
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bakabase.Modules.Federation.Contracts.NodeQueryBlock"];
-                    "application/json": components["schemas"]["Bakabase.Modules.Federation.Contracts.NodeQueryBlock"];
-                    "text/json": components["schemas"]["Bakabase.Modules.Federation.Contracts.NodeQueryBlock"];
-                };
-            };
-        };
-    };
-    ValidateFederationExportQuery: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ReleaseFederationExportQuery: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ResolveFederationExportResources: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Federation.Media.ResourceResolveRequest"];
-                "application/json": components["schemas"]["Bakabase.Modules.Federation.Media.ResourceResolveRequest"];
-                "text/json": components["schemas"]["Bakabase.Modules.Federation.Media.ResourceResolveRequest"];
-                "application/*+json": components["schemas"]["Bakabase.Modules.Federation.Media.ResourceResolveRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bakabase.Modules.Federation.Media.ResourceResolveResponse"];
-                    "application/json": components["schemas"]["Bakabase.Modules.Federation.Media.ResourceResolveResponse"];
-                    "text/json": components["schemas"]["Bakabase.Modules.Federation.Media.ResourceResolveResponse"];
-                };
-            };
-        };
-    };
-    LocateFederationExportResource: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Federation.Media.ResourceLocationRequest"];
-                "application/json": components["schemas"]["Bakabase.Modules.Federation.Media.ResourceLocationRequest"];
-                "text/json": components["schemas"]["Bakabase.Modules.Federation.Media.ResourceLocationRequest"];
-                "application/*+json": components["schemas"]["Bakabase.Modules.Federation.Media.ResourceLocationRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bakabase.Modules.Federation.Media.ResourceLocationResponse"];
-                    "application/json": components["schemas"]["Bakabase.Modules.Federation.Media.ResourceLocationResponse"];
-                    "text/json": components["schemas"]["Bakabase.Modules.Federation.Media.ResourceLocationResponse"];
-                };
-            };
-        };
-    };
-    GetFederationExportMappingRoots: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bakabase.Modules.Federation.Media.MappingRoot"][];
-                    "application/json": components["schemas"]["Bakabase.Modules.Federation.Media.MappingRoot"][];
-                    "text/json": components["schemas"]["Bakabase.Modules.Federation.Media.MappingRoot"][];
-                };
-            };
-        };
-    };
-    ReadFederationExportAsset: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                assetId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    InspectFederationExportAsset: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                assetId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    CreateFederatedLibraryQuery: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Federation.Contracts.LocalFederatedQuery"];
-                "application/json": components["schemas"]["Bakabase.Modules.Federation.Contracts.LocalFederatedQuery"];
-                "text/json": components["schemas"]["Bakabase.Modules.Federation.Contracts.LocalFederatedQuery"];
-                "application/*+json": components["schemas"]["Bakabase.Modules.Federation.Contracts.LocalFederatedQuery"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bakabase.Modules.Federation.Contracts.FederatedQueryPage"];
-                    "application/json": components["schemas"]["Bakabase.Modules.Federation.Contracts.FederatedQueryPage"];
-                    "text/json": components["schemas"]["Bakabase.Modules.Federation.Contracts.FederatedQueryPage"];
-                };
-            };
-        };
-    };
-    ReadFederatedLibraryQuery: {
-        parameters: {
-            query?: {
-                cursor?: string;
-            };
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bakabase.Modules.Federation.Contracts.FederatedQueryPage"];
-                    "application/json": components["schemas"]["Bakabase.Modules.Federation.Contracts.FederatedQueryPage"];
-                    "text/json": components["schemas"]["Bakabase.Modules.Federation.Contracts.FederatedQueryPage"];
-                };
-            };
-        };
-    };
-    ReleaseFederatedLibraryQuery: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ResolveFederatedResources: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Federation.Media.ResourceResolveRequest"];
-                "application/json": components["schemas"]["Bakabase.Modules.Federation.Media.ResourceResolveRequest"];
-                "text/json": components["schemas"]["Bakabase.Modules.Federation.Media.ResourceResolveRequest"];
-                "application/*+json": components["schemas"]["Bakabase.Modules.Federation.Media.ResourceResolveRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bakabase.Modules.Federation.Media.ResourceResolveResponse"];
-                    "application/json": components["schemas"]["Bakabase.Modules.Federation.Media.ResourceResolveResponse"];
-                    "text/json": components["schemas"]["Bakabase.Modules.Federation.Media.ResourceResolveResponse"];
-                };
-            };
-        };
-    };
-    OpenFederatedResourceDirectory: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Federation.Media.OpenResourceDirectoryRequest"];
-                "application/json": components["schemas"]["Bakabase.Modules.Federation.Media.OpenResourceDirectoryRequest"];
-                "text/json": components["schemas"]["Bakabase.Modules.Federation.Media.OpenResourceDirectoryRequest"];
-                "application/*+json": components["schemas"]["Bakabase.Modules.Federation.Media.OpenResourceDirectoryRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bakabase.Modules.Federation.Media.OpenResourceDirectoryResponse"];
-                    "application/json": components["schemas"]["Bakabase.Modules.Federation.Media.OpenResourceDirectoryResponse"];
-                    "text/json": components["schemas"]["Bakabase.Modules.Federation.Media.OpenResourceDirectoryResponse"];
-                };
-            };
-        };
-    };
-    CreateFederatedPlaybackSession: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Federation.Media.PlaybackSessionRequest"];
-                "application/json": components["schemas"]["Bakabase.Modules.Federation.Media.PlaybackSessionRequest"];
-                "text/json": components["schemas"]["Bakabase.Modules.Federation.Media.PlaybackSessionRequest"];
-                "application/*+json": components["schemas"]["Bakabase.Modules.Federation.Media.PlaybackSessionRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bakabase.Modules.Federation.Media.PlaybackSessionResponse"];
-                    "application/json": components["schemas"]["Bakabase.Modules.Federation.Media.PlaybackSessionResponse"];
-                    "text/json": components["schemas"]["Bakabase.Modules.Federation.Media.PlaybackSessionResponse"];
-                };
-            };
-        };
-    };
-    ReadFederatedMediaSession: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                ticketId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    InspectFederatedMediaSession: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                ticketId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
     GetFederationPeers: {
         parameters: {
             query?: never;
@@ -26662,64 +27192,6 @@ export interface operations {
                     "text/plain": components["schemas"]["Bakabase.Service.Controllers.FederationPeerStatusResponse"];
                     "application/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerStatusResponse"];
                     "text/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerStatusResponse"];
-                };
-            };
-        };
-    };
-    SetFederationBrowsing: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.FederationBrowsingRequest"];
-                "application/json": components["schemas"]["Bakabase.Service.Controllers.FederationBrowsingRequest"];
-                "text/json": components["schemas"]["Bakabase.Service.Controllers.FederationBrowsingRequest"];
-                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.FederationBrowsingRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
-                    "application/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
-                    "text/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
-                };
-            };
-        };
-    };
-    SetFederationSharing: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.FederationSharingRequest"];
-                "application/json": components["schemas"]["Bakabase.Service.Controllers.FederationSharingRequest"];
-                "text/json": components["schemas"]["Bakabase.Service.Controllers.FederationSharingRequest"];
-                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.FederationSharingRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
-                    "application/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
-                    "text/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
                 };
             };
         };
@@ -26749,338 +27221,6 @@ export interface operations {
                     "text/plain": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
                     "application/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
                     "text/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
-                };
-            };
-        };
-    };
-    CreateFederationInvitation: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bakabase.Modules.Federation.Peers.NodeInvitation"];
-                    "application/json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodeInvitation"];
-                    "text/json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodeInvitation"];
-                };
-            };
-        };
-    };
-    DiscoverFederationPeers: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bakabase.Modules.Federation.Peers.NodeDiscoveryCandidate"][];
-                    "application/json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodeDiscoveryCandidate"][];
-                    "text/json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodeDiscoveryCandidate"][];
-                };
-            };
-        };
-    };
-    ConnectFederationPeer: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.FederationConnectRequest"];
-                "application/json": components["schemas"]["Bakabase.Service.Controllers.FederationConnectRequest"];
-                "text/json": components["schemas"]["Bakabase.Service.Controllers.FederationConnectRequest"];
-                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.FederationConnectRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairingOutcome"];
-                    "application/json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairingOutcome"];
-                    "text/json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairingOutcome"];
-                };
-            };
-        };
-    };
-    ClaimFederationPairing: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.FederationClaimRequest"];
-                "application/json": components["schemas"]["Bakabase.Service.Controllers.FederationClaimRequest"];
-                "text/json": components["schemas"]["Bakabase.Service.Controllers.FederationClaimRequest"];
-                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.FederationClaimRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairingOutcome"];
-                    "application/json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairingOutcome"];
-                    "text/json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairingOutcome"];
-                };
-            };
-        };
-    };
-    ApproveFederationPairing: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
-                    "application/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
-                    "text/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
-                };
-            };
-        };
-    };
-    RejectFederationPairing: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
-                    "application/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
-                    "text/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
-                };
-            };
-        };
-    };
-    CancelFederationPairing: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
-                    "application/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
-                    "text/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
-                };
-            };
-        };
-    };
-    RevokeFederationGrant: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                grantId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
-                    "application/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
-                    "text/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
-                };
-            };
-        };
-    };
-    RemoveFederationPeer: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                nodeId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
-                    "application/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
-                    "text/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
-                };
-            };
-        };
-    };
-    ForgetFederationPeer: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                nodeId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
-                    "application/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
-                    "text/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
-                };
-            };
-        };
-    };
-    SetFederationPeerEnabled: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                nodeId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerEnabledRequest"];
-                "application/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerEnabledRequest"];
-                "text/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerEnabledRequest"];
-                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerEnabledRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
-                    "application/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
-                    "text/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
-                };
-            };
-        };
-    };
-    SetFederationPathMappings: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                nodeId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.FederationPathMappingsRequest"];
-                "application/json": components["schemas"]["Bakabase.Service.Controllers.FederationPathMappingsRequest"];
-                "text/json": components["schemas"]["Bakabase.Service.Controllers.FederationPathMappingsRequest"];
-                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.FederationPathMappingsRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
-                    "application/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
-                    "text/json": components["schemas"]["Bakabase.Service.Controllers.FederationPeerChange"];
-                };
-            };
-        };
-    };
-    GetFederationMappingRoots: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                nodeId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bakabase.Modules.Federation.Media.MappingRoot"][];
-                    "application/json": components["schemas"]["Bakabase.Modules.Federation.Media.MappingRoot"][];
-                    "text/json": components["schemas"]["Bakabase.Modules.Federation.Media.MappingRoot"][];
                 };
             };
         };
@@ -27132,93 +27272,6 @@ export interface operations {
                     "text/plain": components["schemas"]["Bakabase.Modules.Federation.Peers.NodeInfo"];
                     "application/json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodeInfo"];
                     "text/json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodeInfo"];
-                };
-            };
-        };
-    };
-    ExchangeFederationInvitation: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairCodeRequest"];
-                "application/json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairCodeRequest"];
-                "text/json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairCodeRequest"];
-                "application/*+json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairCodeRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairExchange"];
-                    "application/json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairExchange"];
-                    "text/json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairExchange"];
-                };
-            };
-        };
-    };
-    RequestFederationPairing: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairRequest"];
-                "application/json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairRequest"];
-                "text/json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairRequest"];
-                "application/*+json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairExchange"];
-                    "application/json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairExchange"];
-                    "text/json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairExchange"];
-                };
-            };
-        };
-    };
-    ClaimFederationNodeGrant: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairClaimRequest"];
-                "application/json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairClaimRequest"];
-                "text/json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairClaimRequest"];
-                "application/*+json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairClaimRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairExchange"];
-                    "application/json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairExchange"];
-                    "text/json": components["schemas"]["Bakabase.Modules.Federation.Peers.NodePairExchange"];
                 };
             };
         };
@@ -28971,6 +29024,1171 @@ export interface operations {
             };
         };
     };
+    GetManagedDeviceName: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bakabase.Service.Controllers.ManagedDeviceNameView"];
+                    "application/json": components["schemas"]["Bakabase.Service.Controllers.ManagedDeviceNameView"];
+                    "text/json": components["schemas"]["Bakabase.Service.Controllers.ManagedDeviceNameView"];
+                };
+            };
+        };
+    };
+    SetManagedDeviceName: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.ManagedDeviceNameInput"];
+                "application/json": components["schemas"]["Bakabase.Service.Controllers.ManagedDeviceNameInput"];
+                "text/json": components["schemas"]["Bakabase.Service.Controllers.ManagedDeviceNameInput"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.ManagedDeviceNameInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bakabase.Service.Controllers.ManagedDeviceNameView"];
+                    "application/json": components["schemas"]["Bakabase.Service.Controllers.ManagedDeviceNameView"];
+                    "text/json": components["schemas"]["Bakabase.Service.Controllers.ManagedDeviceNameView"];
+                };
+            };
+        };
+    };
+    ControlManagedMetadataSync: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                serverId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.ManagedMetadataControlInput"];
+                "application/json": components["schemas"]["Bakabase.Service.Controllers.ManagedMetadataControlInput"];
+                "text/json": components["schemas"]["Bakabase.Service.Controllers.ManagedMetadataControlInput"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.ManagedMetadataControlInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GetManagedResourceDisplayOptions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Controllers.ManagedResourceDisplayOptions]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Controllers.ManagedResourceDisplayOptions]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Controllers.ManagedResourceDisplayOptions]"];
+                };
+            };
+        };
+    };
+    PatchManagedResourceDisplayOptions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.ManagedResourceDisplayOptionsPatch"];
+                "application/json": components["schemas"]["Bakabase.Service.Controllers.ManagedResourceDisplayOptionsPatch"];
+                "text/json": components["schemas"]["Bakabase.Service.Controllers.ManagedResourceDisplayOptionsPatch"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.ManagedResourceDisplayOptionsPatch"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GetManagedLibrarySources: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bakabase.Service.Components.Federation.ManagedLibrarySources"];
+                    "application/json": components["schemas"]["Bakabase.Service.Components.Federation.ManagedLibrarySources"];
+                    "text/json": components["schemas"]["Bakabase.Service.Components.Federation.ManagedLibrarySources"];
+                };
+            };
+        };
+    };
+    RequestManagedLibrary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                serverId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Components.Federation.ManagedLibraryRequest"];
+                "application/json": components["schemas"]["Bakabase.Service.Components.Federation.ManagedLibraryRequest"];
+                "text/json": components["schemas"]["Bakabase.Service.Components.Federation.ManagedLibraryRequest"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Components.Federation.ManagedLibraryRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UploadManagedLibraryFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                serverId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Components.Federation.ManagedLibraryRequest"];
+                "application/json": components["schemas"]["Bakabase.Service.Components.Federation.ManagedLibraryRequest"];
+                "text/json": components["schemas"]["Bakabase.Service.Components.Federation.ManagedLibraryRequest"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Components.Federation.ManagedLibraryRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GetManagedResourceBrowserFiles: {
+        parameters: {
+            query?: {
+                offset?: number;
+                pageSize?: number;
+                scope?: string;
+                initialPath?: string;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlayManagedResourceBrowserFile: {
+        parameters: {
+            query?: {
+                key?: string;
+                /** @description [1: Manual, 2: FileSystem, 3: Steam, 4: DLsite, 5: ExHentai, 6: ExternalIdentity] */
+                origin?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.DataOrigin"];
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ValidateManagedResourceNativeFallback: {
+        parameters: {
+            query?: {
+                key?: string;
+                /** @description [1: Manual, 2: FileSystem, 3: Steam, 4: DLsite, 5: ExHentai, 6: ExternalIdentity] */
+                origin?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.DataOrigin"];
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GetManagedLibraryCover: {
+        parameters: {
+            query?: {
+                libraryEpoch?: string;
+                resourceId?: number;
+                index?: number;
+                w?: number;
+                h?: number;
+            };
+            header?: never;
+            path: {
+                serverId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    InspectManagedLibraryCover: {
+        parameters: {
+            query?: {
+                libraryEpoch?: string;
+                resourceId?: number;
+                index?: number;
+                w?: number;
+                h?: number;
+            };
+            header?: never;
+            path: {
+                serverId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GetManagedLibraryAsset: {
+        parameters: {
+            query?: {
+                libraryEpoch?: string;
+                resourceId?: number;
+                key?: string;
+                thumbnail?: boolean;
+                w?: number;
+                h?: number;
+            };
+            header?: never;
+            path: {
+                serverId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    InspectManagedLibraryAsset: {
+        parameters: {
+            query?: {
+                libraryEpoch?: string;
+                resourceId?: number;
+                key?: string;
+                thumbnail?: boolean;
+                w?: number;
+                h?: number;
+            };
+            header?: never;
+            path: {
+                serverId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GetManagedLibraryInfo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bakabase.Service.Components.Federation.ManagedLibraryInfo"];
+                    "application/json": components["schemas"]["Bakabase.Service.Components.Federation.ManagedLibraryInfo"];
+                    "text/json": components["schemas"]["Bakabase.Service.Components.Federation.ManagedLibraryInfo"];
+                };
+            };
+        };
+    };
+    GetOwnedResourcePathMappingTree: {
+        parameters: {
+            query?: {
+                parent?: string;
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bakabase.Service.Components.Federation.ManagedLibraryMappingTreePage"];
+                    "application/json": components["schemas"]["Bakabase.Service.Components.Federation.ManagedLibraryMappingTreePage"];
+                    "text/json": components["schemas"]["Bakabase.Service.Components.Federation.ManagedLibraryMappingTreePage"];
+                };
+            };
+        };
+    };
+    GetManagedLibraryBatchPlayCandidates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                serverId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.ManagedLibraryBatchRequest"];
+                "application/json": components["schemas"]["Bakabase.Service.Controllers.ManagedLibraryBatchRequest"];
+                "text/json": components["schemas"]["Bakabase.Service.Controllers.ManagedLibraryBatchRequest"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.ManagedLibraryBatchRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    BatchPlayManagedLibraryResources: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                serverId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.ManagedLibraryBatchRequest"];
+                "application/json": components["schemas"]["Bakabase.Service.Controllers.ManagedLibraryBatchRequest"];
+                "text/json": components["schemas"]["Bakabase.Service.Controllers.ManagedLibraryBatchRequest"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.ManagedLibraryBatchRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlayManagedLibraryResource: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                serverId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.ManagedLibraryPlayRequest"];
+                "application/json": components["schemas"]["Bakabase.Service.Controllers.ManagedLibraryPlayRequest"];
+                "text/json": components["schemas"]["Bakabase.Service.Controllers.ManagedLibraryPlayRequest"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.ManagedLibraryPlayRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OpenManagedLibraryResourceDirectory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                serverId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.ManagedLibraryDirectoryRequest"];
+                "application/json": components["schemas"]["Bakabase.Service.Controllers.ManagedLibraryDirectoryRequest"];
+                "text/json": components["schemas"]["Bakabase.Service.Controllers.ManagedLibraryDirectoryRequest"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.ManagedLibraryDirectoryRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StreamManagedLibraryMedia: {
+        parameters: {
+            query?: {
+                libraryEpoch?: string;
+                resourceId?: number;
+                /** @description [1: Manual, 2: FileSystem, 3: Steam, 4: DLsite, 5: ExHentai, 6: ExternalIdentity] */
+                origin?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.DataOrigin"];
+                key?: string;
+            };
+            header?: never;
+            path: {
+                serverId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    InspectManagedLibraryMedia: {
+        parameters: {
+            query?: {
+                libraryEpoch?: string;
+                resourceId?: number;
+                /** @description [1: Manual, 2: FileSystem, 3: Steam, 4: DLsite, 5: ExHentai, 6: ExternalIdentity] */
+                origin?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.DataOrigin"];
+                key?: string;
+            };
+            header?: never;
+            path: {
+                serverId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PreviewManagedCustomPropertyConversion: {
+        parameters: {
+            query?: {
+                /** @description [1: SingleLineText, 2: MultilineText, 3: SingleChoice, 4: MultipleChoice, 5: Number, 6: Percentage, 7: Rating, 8: Boolean, 9: Link, 10: Attachment, 11: Date, 12: DateTime, 13: Time, 14: Formula, 15: Multilevel, 16: Tags] */
+                targetType?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyType"];
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SearchManagedResourcePaths: {
+        parameters: {
+            query?: {
+                keyword?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UploadManagedResourceAttachment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.ManagedFileUploadInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Controllers.ManagedFileUploadInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Controllers.ManagedFileUploadInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.ManagedFileUploadInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UploadManagedResourceTorrent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.ManagedFileUploadInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Controllers.ManagedFileUploadInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Controllers.ManagedFileUploadInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.ManagedFileUploadInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GetManagedMetadataHead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bakabase.Service.Components.Federation.MetadataReplicas.MetadataSourceManifest"];
+                    "application/json": components["schemas"]["Bakabase.Service.Components.Federation.MetadataReplicas.MetadataSourceManifest"];
+                    "text/json": components["schemas"]["Bakabase.Service.Components.Federation.MetadataReplicas.MetadataSourceManifest"];
+                };
+            };
+        };
+    };
+    GetManagedMetadataPage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Components.Federation.MetadataReplicas.MetadataPageRequest"];
+                "application/json": components["schemas"]["Bakabase.Service.Components.Federation.MetadataReplicas.MetadataPageRequest"];
+                "text/json": components["schemas"]["Bakabase.Service.Components.Federation.MetadataReplicas.MetadataPageRequest"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Components.Federation.MetadataReplicas.MetadataPageRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GetManagedResourceCovers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GetManagedResourceCover: {
+        parameters: {
+            query?: {
+                index?: number;
+                w?: number;
+                h?: number;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GetManagedResourceAsset: {
+        parameters: {
+            query?: {
+                key?: string;
+                thumbnail?: boolean;
+                w?: number;
+                h?: number;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GetManagedResourcePreviewerItems: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GetManagedResourceChildren: {
+        parameters: {
+            query?: {
+                root?: string;
+                showHiddenFiles?: boolean;
+                cursor?: string;
+                pageSize?: number;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PrepareManagedResourceProcessing: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingInput"];
+                "application/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingInput"];
+                "text/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingInput"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingPrepared"];
+                    "application/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingPrepared"];
+                    "text/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingPrepared"];
+                };
+            };
+        };
+    };
+    ApplyManagedResourceProcessing: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                jobId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingApply"];
+                "application/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingApply"];
+                "text/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingApply"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingApply"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingReceipt"];
+                    "application/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingReceipt"];
+                    "text/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingReceipt"];
+                };
+            };
+        };
+    };
+    GetManagedResourceProcessingReceipt: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                jobId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingReceiptRequest"];
+                "application/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingReceiptRequest"];
+                "text/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingReceiptRequest"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingReceiptRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingReceiptStatus"];
+                    "application/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingReceiptStatus"];
+                    "text/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingReceiptStatus"];
+                };
+            };
+        };
+    };
+    UploadManagedResourceProcessingArtifact: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingArtifactChunk"];
+                "application/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingArtifactChunk"];
+                "text/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingArtifactChunk"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingArtifactChunk"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": number;
+                    "application/json": number;
+                    "text/json": number;
+                };
+            };
+        };
+    };
+    AbandonManagedResourceProcessing: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                jobId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingAbandonRequest"];
+                "application/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingAbandonRequest"];
+                "text/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingAbandonRequest"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingAbandonRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": boolean;
+                    "application/json": boolean;
+                    "text/json": boolean;
+                };
+            };
+        };
+    };
+    QueueManagedResourceProcessing: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingPrepared"];
+                "application/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingPrepared"];
+                "text/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingPrepared"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingPrepared"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingWorkerResult"];
+                    "application/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingWorkerResult"];
+                    "text/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingWorkerResult"];
+                };
+            };
+        };
+    };
+    ReadManagedResourceProcessingArtifact: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                jobId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingArtifactRead"];
+                "application/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingArtifactRead"];
+                "text/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingArtifactRead"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingArtifactRead"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingArtifactChunk"];
+                    "application/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingArtifactChunk"];
+                    "text/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingArtifactChunk"];
+                };
+            };
+        };
+    };
+    AcknowledgeManagedResourceProcessing: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                jobId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": boolean;
+                    "application/json": boolean;
+                    "text/json": boolean;
+                };
+            };
+        };
+    };
+    ControlManagedResourceProcessingWorker: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                jobId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingWorkerControl"];
+                "application/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingWorkerControl"];
+                "text/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingWorkerControl"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingWorkerControl"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": boolean;
+                    "application/json": boolean;
+                    "text/json": boolean;
+                };
+            };
+        };
+    };
+    AbandonManagedResourceProcessingWorker: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                jobId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": boolean;
+                    "application/json": boolean;
+                    "text/json": boolean;
+                };
+            };
+        };
+    };
+    GetManagedServerPathMappingTree: {
+        parameters: {
+            query?: {
+                parent?: string;
+                cursor?: string;
+                limit?: number;
+                libraryEpoch?: string;
+            };
+            header?: never;
+            path: {
+                serverId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bakabase.Service.Components.Federation.ManagedLibraryMappingTreePage"];
+                    "application/json": components["schemas"]["Bakabase.Service.Components.Federation.ManagedLibraryMappingTreePage"];
+                    "text/json": components["schemas"]["Bakabase.Service.Components.Federation.ManagedLibraryMappingTreePage"];
+                };
+            };
+        };
+    };
     GetAllMediaLibraryResourceMappings: {
         parameters: {
             query?: never;
@@ -30058,6 +31276,37 @@ export interface operations {
                 "application/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.UIOptionsPatchRequestModel"];
                 "text/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.UIOptionsPatchRequestModel"];
                 "application/*+json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.UIOptionsPatchRequestModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    SetDeviceColor: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                serverId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.DeviceColorInput"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.DeviceColorInput"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.DeviceColorInput"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.DeviceColorInput"];
             };
         };
         responses: {
@@ -32246,6 +33495,57 @@ export interface operations {
             };
         };
     };
+    GetDevicePlaybackPreferences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackPreferences]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackPreferences]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackPreferences]"];
+                };
+            };
+        };
+    };
+    SetDevicePlaybackPreferences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackPreferences"];
+                "application/json": components["schemas"]["Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackPreferences"];
+                "text/json": components["schemas"]["Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackPreferences"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.Player.Abstractions.Models.Domain.DevicePlaybackPreferences"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
     GetBatchPlayResourceSnapshot: {
         parameters: {
             query?: never;
@@ -33854,6 +35154,37 @@ export interface operations {
             };
         };
     };
+    PutSavedSearchCriteria: {
+        parameters: {
+            query?: {
+                id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
     SearchResources: {
         parameters: {
             query?: {
@@ -34248,6 +35579,7 @@ export interface operations {
                 /** @description [1: Manual, 2: FileSystem, 3: Steam, 4: DLsite, 5: ExHentai, 6: ExternalIdentity] */
                 origin?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.DataOrigin"];
                 key?: string;
+                explicitChoice?: boolean;
             };
             header?: never;
             path: {
@@ -35427,6 +36759,91 @@ export interface operations {
             };
         };
     };
+    GetResourceProcessingJobs: {
+        parameters: {
+            query?: {
+                beforeId?: string;
+                take?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingJobView"][];
+                    "application/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingJobView"][];
+                    "text/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingJobView"][];
+                };
+            };
+        };
+    };
+    StartResourceProcessing: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingStart"];
+                "application/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingStart"];
+                "text/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingStart"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingStart"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingJobView"];
+                    "application/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingJobView"];
+                    "text/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingJobView"];
+                };
+            };
+        };
+    };
+    ControlResourceProcessing: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                jobId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingControl"];
+                "application/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingControl"];
+                "text/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingControl"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingControl"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingJobView"];
+                    "application/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingJobView"];
+                    "text/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingJobView"];
+                };
+            };
+        };
+    };
     GetAllResourceProfiles: {
         parameters: {
             query?: never;
@@ -35526,9 +36943,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceProfileViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceProfileViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceProfileViewModel]"];
                 };
             };
         };
@@ -35609,6 +37026,544 @@ export interface operations {
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                 };
+            };
+        };
+    };
+    EvaluateResourceProfileSearches: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfileEvaluationInput"];
+                "application/json": components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfileEvaluationInput"];
+                "text/json": components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfileEvaluationInput"];
+                "application/*+json": components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfileEvaluationInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.ResourceProfileEvaluationResult]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.ResourceProfileEvaluationResult]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.ResourceProfileEvaluationResult]"];
+                };
+            };
+        };
+    };
+    ResolveResourceProfileSearch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceSearchViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceSearchViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceSearchViewModel]"];
+                };
+            };
+        };
+    };
+    GetResourceProfileOpeningBehavior: {
+        parameters: {
+            query?: {
+                resourceId?: number;
+                sourceDeviceId?: string;
+                libraryEpoch?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceProfileOpeningViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceProfileOpeningViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceProfileOpeningViewModel]"];
+                };
+            };
+        };
+    };
+    GetResourceProfileOpeningBehaviors: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceProfileOpeningInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceProfileOpeningInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceProfileOpeningInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceProfileOpeningInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.ResourceProfileOpeningResourceViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.ResourceProfileOpeningResourceViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.ResourceProfileOpeningResourceViewModel]"];
+                };
+            };
+        };
+    };
+    GetResourceProfileSourceInfo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceProfileSourceInfo]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceProfileSourceInfo]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceProfileSourceInfo]"];
+                };
+            };
+        };
+    };
+    GetResourceProfileSearchProperties: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Property.Models.View.PropertyViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Property.Models.View.PropertyViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Property.Models.View.PropertyViewModel]"];
+                };
+            };
+        };
+    };
+    GetResourceProfileSearchFilterValue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchFilterInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchFilterInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchFilterInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchFilterInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Property.Models.View.PropertyViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Property.Models.View.PropertyViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Property.Models.View.PropertyViewModel]"];
+                };
+            };
+        };
+    };
+    PreviewResourceProfileSearch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Service.Models.View.ResourceProfilePreviewResource]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Service.Models.View.ResourceProfilePreviewResource]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Service.Models.View.ResourceProfilePreviewResource]"];
+                };
+            };
+        };
+    };
+    GetResourceProfileSources: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.ResourceProfileSourceViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.ResourceProfileSourceViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.ResourceProfileSourceViewModel]"];
+                };
+            };
+        };
+    };
+    GetConnectedResourceProfileSourceInfo: {
+        parameters: {
+            query?: {
+                libraryEpoch?: string;
+            };
+            header?: never;
+            path: {
+                deviceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceProfileSourceInfo]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceProfileSourceInfo]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceProfileSourceInfo]"];
+                };
+            };
+        };
+    };
+    GetSourceResourceProfileProperties: {
+        parameters: {
+            query?: {
+                libraryEpoch?: string;
+            };
+            header?: never;
+            path: {
+                deviceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Property.Models.View.PropertyViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Property.Models.View.PropertyViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Property.Models.View.PropertyViewModel]"];
+                };
+            };
+        };
+    };
+    GetSourceResourceProfileFilterValue: {
+        parameters: {
+            query?: {
+                libraryEpoch?: string;
+            };
+            header?: never;
+            path: {
+                deviceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchFilterInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchFilterInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchFilterInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchFilterInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Property.Models.View.PropertyViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Property.Models.View.PropertyViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Property.Models.View.PropertyViewModel]"];
+                };
+            };
+        };
+    };
+    ResolveSourceResourceProfileSearch: {
+        parameters: {
+            query?: {
+                libraryEpoch?: string;
+            };
+            header?: never;
+            path: {
+                deviceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceSearchViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceSearchViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceSearchViewModel]"];
+                };
+            };
+        };
+    };
+    PreviewSourceResourceProfileSearch: {
+        parameters: {
+            query?: {
+                libraryEpoch?: string;
+            };
+            header?: never;
+            path: {
+                deviceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Service.Models.View.ResourceProfilePreviewResource]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Service.Models.View.ResourceProfilePreviewResource]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Service.Models.View.ResourceProfilePreviewResource]"];
+                };
+            };
+        };
+    };
+    GetResourceScopes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bakabase.Service.Controllers.ResourceScopeView"][];
+                    "application/json": components["schemas"]["Bakabase.Service.Controllers.ResourceScopeView"][];
+                    "text/json": components["schemas"]["Bakabase.Service.Controllers.ResourceScopeView"][];
+                };
+            };
+        };
+    };
+    AddResourceScope: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.ResourceScopeInput"];
+                "application/json": components["schemas"]["Bakabase.Service.Controllers.ResourceScopeInput"];
+                "text/json": components["schemas"]["Bakabase.Service.Controllers.ResourceScopeInput"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.ResourceScopeInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UpdateResourceScope: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.ResourceScopeInput"];
+                "application/json": components["schemas"]["Bakabase.Service.Controllers.ResourceScopeInput"];
+                "text/json": components["schemas"]["Bakabase.Service.Controllers.ResourceScopeInput"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.ResourceScopeInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DeleteResourceScope: {
+        parameters: {
+            query?: {
+                expectedRevision?: number;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    BindResourceProfileScope: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                profileId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.ResourceScopeBindInput"];
+                "application/json": components["schemas"]["Bakabase.Service.Controllers.ResourceScopeBindInput"];
+                "text/json": components["schemas"]["Bakabase.Service.Controllers.ResourceScopeBindInput"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.ResourceScopeBindInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UpdateResourceProfileRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                profileId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.ResourceProfileRuleInput"];
+                "application/json": components["schemas"]["Bakabase.Service.Controllers.ResourceProfileRuleInput"];
+                "text/json": components["schemas"]["Bakabase.Service.Controllers.ResourceProfileRuleInput"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.ResourceProfileRuleInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -36045,6 +38000,87 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Subscription.Abstractions.Models.View.SubscriptionProviderViewModel]"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Subscription.Abstractions.Models.View.SubscriptionProviderViewModel]"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Subscription.Abstractions.Models.View.SubscriptionProviderViewModel]"];
+                };
+            };
+        };
+    };
+    GetSyncActivity: {
+        parameters: {
+            query?: {
+                dataType?: string;
+                deviceId?: string;
+                state?: string;
+                offset?: number;
+                take?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bakabase.Service.Components.DataSync.SyncActivityPage"];
+                    "application/json": components["schemas"]["Bakabase.Service.Components.DataSync.SyncActivityPage"];
+                    "text/json": components["schemas"]["Bakabase.Service.Components.DataSync.SyncActivityPage"];
+                };
+            };
+        };
+    };
+    GetMetadataSyncHistory: {
+        parameters: {
+            query?: {
+                serverId?: string;
+                beforeId?: number;
+                take?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bakabase.Service.Components.Federation.MetadataReplicas.MetadataSyncActivityPage"];
+                    "application/json": components["schemas"]["Bakabase.Service.Components.Federation.MetadataReplicas.MetadataSyncActivityPage"];
+                    "text/json": components["schemas"]["Bakabase.Service.Components.Federation.MetadataReplicas.MetadataSyncActivityPage"];
+                };
+            };
+        };
+    };
+    GetSyncProcessingHistory: {
+        parameters: {
+            query?: {
+                /** @description [0: Manager, 1: Owner, 2: Worker] */
+                role?: components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingRole"];
+                beforeId?: string;
+                take?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingJobView"][];
+                    "application/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingJobView"][];
+                    "text/json": components["schemas"]["Bakabase.Service.Components.Federation.Processing.ResourceProcessingJobView"][];
                 };
             };
         };
@@ -36532,6 +38568,64 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerNearestViewModel]"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerNearestViewModel]"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerNearestViewModel]"];
+                };
+            };
+        };
+    };
+    FindThirdPartyContentPageBoundaries: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Abstractions.Models.Input.ThirdPartyContentTrackerPageBoundariesInputModel"];
+                "application/json": components["schemas"]["Bakabase.Abstractions.Models.Input.ThirdPartyContentTrackerPageBoundariesInputModel"];
+                "text/json": components["schemas"]["Bakabase.Abstractions.Models.Input.ThirdPartyContentTrackerPageBoundariesInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Abstractions.Models.Input.ThirdPartyContentTrackerPageBoundariesInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerPageBoundariesViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerPageBoundariesViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerPageBoundariesViewModel]"];
+                };
+            };
+        };
+    };
+    GetThirdPartyContentDailyHistory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Abstractions.Models.Input.ThirdPartyContentTrackerDailyHistoryInputModel"];
+                "application/json": components["schemas"]["Bakabase.Abstractions.Models.Input.ThirdPartyContentTrackerDailyHistoryInputModel"];
+                "text/json": components["schemas"]["Bakabase.Abstractions.Models.Input.ThirdPartyContentTrackerDailyHistoryInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Abstractions.Models.Input.ThirdPartyContentTrackerDailyHistoryInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerDailyHistoryViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerDailyHistoryViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerDailyHistoryViewModel]"];
                 };
             };
         };

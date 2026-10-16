@@ -29,10 +29,17 @@ public class UserMachineEndpointCatalogTests
 {
     private static readonly string[] Expected =
     [
+        "DELETE /app/profiles/{id}",
+        "POST /app/profiles",
+        "POST /app/profiles/{id}/open",
+        "PUT /app/profiles/{id}",
         "GET /file/icon",
         "GET /file/recycle-bin",
         "GET /gui/url",
+        "GET /player/device-playback/preferences",
+        "PUT /player/device-playback/preferences",
         "GET /player/playlist/{playlistId:int}/batch-play/candidates",
+        "GET /player/resource-profile",
         "GET /resource/directory",
         "GET /resource/play/random",
         "GET /resource/{resourceId}/play",
@@ -42,9 +49,14 @@ public class UserMachineEndpointCatalogTests
         "GET /tool/open-file",
         "POST /aigc/artifacts/{id:int}/open",
         "POST /dlsite-work/{workId}/launch",
+        "POST /federation/local/management/{serverId}/play",
+        "POST /federation/local/management/{serverId}/directory",
+        "POST /federation/local/management/{serverId}/batch-play/candidates",
+        "POST /federation/local/management/{serverId}/batch-play",
         "POST /player/batch-play",
         "POST /player/batch-play/candidates",
         "POST /player/playlist/{playlistId:int}/batch-play",
+        "POST /player/resource-profiles",
         "POST /tool/cookie-capture",
     ];
 

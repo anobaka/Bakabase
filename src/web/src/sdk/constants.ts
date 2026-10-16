@@ -1117,6 +1117,51 @@ export const CategoryResourceDisplayNameSegmentTypeLabel: Record<CategoryResourc
   [CategoryResourceDisplayNameSegmentType.RightWrapper]: 'RightWrapper'
 };
 
+export enum ResourceProcessingExecutionKind {
+  Owner = 0,
+  Local = 1,
+  Managed = 2
+}
+
+export const resourceProcessingExecutionKinds = [
+  { label: 'Owner', value: ResourceProcessingExecutionKind.Owner },
+  { label: 'Local', value: ResourceProcessingExecutionKind.Local },
+  { label: 'Managed', value: ResourceProcessingExecutionKind.Managed }
+] as const;
+
+export const ResourceProcessingExecutionKindLabel: Record<ResourceProcessingExecutionKind, string> = {
+  [ResourceProcessingExecutionKind.Owner]: 'Owner',
+  [ResourceProcessingExecutionKind.Local]: 'Local',
+  [ResourceProcessingExecutionKind.Managed]: 'Managed'
+};
+
+export enum ResourceProfileRuleKind {
+  NameTemplate = 1,
+  Enhancers = 2,
+  PlayableFiles = 3,
+  Players = 4,
+  Properties = 5,
+  OpeningMode = 6
+}
+
+export const resourceProfileRuleKinds = [
+  { label: 'NameTemplate', value: ResourceProfileRuleKind.NameTemplate },
+  { label: 'Enhancers', value: ResourceProfileRuleKind.Enhancers },
+  { label: 'PlayableFiles', value: ResourceProfileRuleKind.PlayableFiles },
+  { label: 'Players', value: ResourceProfileRuleKind.Players },
+  { label: 'Properties', value: ResourceProfileRuleKind.Properties },
+  { label: 'OpeningMode', value: ResourceProfileRuleKind.OpeningMode }
+] as const;
+
+export const ResourceProfileRuleKindLabel: Record<ResourceProfileRuleKind, string> = {
+  [ResourceProfileRuleKind.NameTemplate]: 'NameTemplate',
+  [ResourceProfileRuleKind.Enhancers]: 'Enhancers',
+  [ResourceProfileRuleKind.PlayableFiles]: 'PlayableFiles',
+  [ResourceProfileRuleKind.Players]: 'Players',
+  [ResourceProfileRuleKind.Properties]: 'Properties',
+  [ResourceProfileRuleKind.OpeningMode]: 'OpeningMode'
+};
+
 export enum ResolverConfigFieldType {
   String = 1,
   Password = 2,
@@ -1598,6 +1643,21 @@ export const PathMarkTypeLabel: Record<PathMarkType, string> = {
   [PathMarkType.Resource]: 'Resource',
   [PathMarkType.Property]: 'Property',
   [PathMarkType.MediaLibrary]: 'MediaLibrary'
+};
+
+export enum PathMarkValueBasePath {
+  MarkPath = 1,
+  ResourcePath = 2
+}
+
+export const pathMarkValueBasePaths = [
+  { label: 'MarkPath', value: PathMarkValueBasePath.MarkPath },
+  { label: 'ResourcePath', value: PathMarkValueBasePath.ResourcePath }
+] as const;
+
+export const PathMarkValueBasePathLabel: Record<PathMarkValueBasePath, string> = {
+  [PathMarkValueBasePath.MarkPath]: 'MarkPath',
+  [PathMarkValueBasePath.ResourcePath]: 'ResourcePath'
 };
 
 export enum PathMatchMode {
@@ -4585,6 +4645,99 @@ export const NullValueBehaviorLabel: Record<NullValueBehavior, string> = {
   [NullValueBehavior.Pass]: 'Pass'
 };
 
+export enum ServerHandshakeOutcome {
+  Ok = 0,
+  Unreachable = 1,
+  NotBakabase = 2,
+  ClientTooOld = 3,
+  ServerTooOld = 4,
+  RemoteAccessDisabled = 5,
+  SelfAddress = 6,
+  InvalidAddress = 7,
+  PortMissing = 8,
+  ProxyFakeAddress = 9
+}
+
+export const serverHandshakeOutcomes = [
+  { label: 'Ok', value: ServerHandshakeOutcome.Ok },
+  { label: 'Unreachable', value: ServerHandshakeOutcome.Unreachable },
+  { label: 'NotBakabase', value: ServerHandshakeOutcome.NotBakabase },
+  { label: 'ClientTooOld', value: ServerHandshakeOutcome.ClientTooOld },
+  { label: 'ServerTooOld', value: ServerHandshakeOutcome.ServerTooOld },
+  { label: 'RemoteAccessDisabled', value: ServerHandshakeOutcome.RemoteAccessDisabled },
+  { label: 'SelfAddress', value: ServerHandshakeOutcome.SelfAddress },
+  { label: 'InvalidAddress', value: ServerHandshakeOutcome.InvalidAddress },
+  { label: 'PortMissing', value: ServerHandshakeOutcome.PortMissing },
+  { label: 'ProxyFakeAddress', value: ServerHandshakeOutcome.ProxyFakeAddress }
+] as const;
+
+export const ServerHandshakeOutcomeLabel: Record<ServerHandshakeOutcome, string> = {
+  [ServerHandshakeOutcome.Ok]: 'Ok',
+  [ServerHandshakeOutcome.Unreachable]: 'Unreachable',
+  [ServerHandshakeOutcome.NotBakabase]: 'NotBakabase',
+  [ServerHandshakeOutcome.ClientTooOld]: 'ClientTooOld',
+  [ServerHandshakeOutcome.ServerTooOld]: 'ServerTooOld',
+  [ServerHandshakeOutcome.RemoteAccessDisabled]: 'RemoteAccessDisabled',
+  [ServerHandshakeOutcome.SelfAddress]: 'SelfAddress',
+  [ServerHandshakeOutcome.InvalidAddress]: 'InvalidAddress',
+  [ServerHandshakeOutcome.PortMissing]: 'PortMissing',
+  [ServerHandshakeOutcome.ProxyFakeAddress]: 'ProxyFakeAddress'
+};
+
+export enum UpstreamIdentityVerdict {
+  Confirmed = 1,
+  WrongServer = 2,
+  ThisDevice = 3,
+  Unconfirmed = 4,
+  SameIdentity = 5
+}
+
+export const upstreamIdentityVerdicts = [
+  { label: 'Confirmed', value: UpstreamIdentityVerdict.Confirmed },
+  { label: 'WrongServer', value: UpstreamIdentityVerdict.WrongServer },
+  { label: 'ThisDevice', value: UpstreamIdentityVerdict.ThisDevice },
+  { label: 'Unconfirmed', value: UpstreamIdentityVerdict.Unconfirmed },
+  { label: 'SameIdentity', value: UpstreamIdentityVerdict.SameIdentity }
+] as const;
+
+export const UpstreamIdentityVerdictLabel: Record<UpstreamIdentityVerdict, string> = {
+  [UpstreamIdentityVerdict.Confirmed]: 'Confirmed',
+  [UpstreamIdentityVerdict.WrongServer]: 'WrongServer',
+  [UpstreamIdentityVerdict.ThisDevice]: 'ThisDevice',
+  [UpstreamIdentityVerdict.Unconfirmed]: 'Unconfirmed',
+  [UpstreamIdentityVerdict.SameIdentity]: 'SameIdentity'
+};
+
+export enum ClientPairingOutcome {
+  Paired = 0,
+  Unreachable = 1,
+  CodeRejected = 2,
+  AwaitingApproval = 3,
+  RequestRejected = 4,
+  TooManyAttempts = 5,
+  PairingUnsupported = 6
+}
+
+export const clientPairingOutcomes = [
+  { label: 'Paired', value: ClientPairingOutcome.Paired },
+  { label: 'Unreachable', value: ClientPairingOutcome.Unreachable },
+  { label: 'CodeRejected', value: ClientPairingOutcome.CodeRejected },
+  { label: 'AwaitingApproval', value: ClientPairingOutcome.AwaitingApproval },
+  { label: 'RequestRejected', value: ClientPairingOutcome.RequestRejected },
+  { label: 'TooManyAttempts', value: ClientPairingOutcome.TooManyAttempts },
+  { label: 'PairingUnsupported', value: ClientPairingOutcome.PairingUnsupported }
+] as const;
+
+export const ClientPairingOutcomeLabel: Record<ClientPairingOutcome, string> = {
+  [ClientPairingOutcome.Paired]: 'Paired',
+  [ClientPairingOutcome.Unreachable]: 'Unreachable',
+  [ClientPairingOutcome.CodeRejected]: 'CodeRejected',
+  [ClientPairingOutcome.AwaitingApproval]: 'AwaitingApproval',
+  [ClientPairingOutcome.RequestRejected]: 'RequestRejected',
+  [ClientPairingOutcome.TooManyAttempts]: 'TooManyAttempts',
+  [ClientPairingOutcome.PairingUnsupported]: 'PairingUnsupported'
+};
+
 export enum RemoteAddressProblem {
   None = 0,
   Invalid = 1,
@@ -4859,24 +5012,15 @@ export const FederationEndpointKindLabel: Record<FederationEndpointKind, string>
 };
 
 export enum FederationSharingRequirement {
-  Library = 0,
-  DataSync = 1,
-  Either = 2,
-  GrantScope = 3
+  DataSync = 0
 }
 
 export const federationSharingRequirements = [
-  { label: 'Library', value: FederationSharingRequirement.Library },
-  { label: 'DataSync', value: FederationSharingRequirement.DataSync },
-  { label: 'Either', value: FederationSharingRequirement.Either },
-  { label: 'GrantScope', value: FederationSharingRequirement.GrantScope }
+  { label: 'DataSync', value: FederationSharingRequirement.DataSync }
 ] as const;
 
 export const FederationSharingRequirementLabel: Record<FederationSharingRequirement, string> = {
-  [FederationSharingRequirement.Library]: 'Library',
-  [FederationSharingRequirement.DataSync]: 'DataSync',
-  [FederationSharingRequirement.Either]: 'Either',
-  [FederationSharingRequirement.GrantScope]: 'GrantScope'
+  [FederationSharingRequirement.DataSync]: 'DataSync'
 };
 
 export enum DataSyncVvRelation {
@@ -5579,69 +5723,6 @@ export const DataSyncFirstSyncActionLabel: Record<DataSyncFirstSyncAction, strin
   [DataSyncFirstSyncAction.Skip]: 'Skip',
   [DataSyncFirstSyncAction.Link]: 'Link',
   [DataSyncFirstSyncAction.KeepBoth]: 'KeepBoth'
-};
-
-export enum DataSyncUndoState {
-  Available = 1,
-  Undone = 2,
-  Expired = 3
-}
-
-export const dataSyncUndoStates = [
-  { label: 'Available', value: DataSyncUndoState.Available },
-  { label: 'Undone', value: DataSyncUndoState.Undone },
-  { label: 'Expired', value: DataSyncUndoState.Expired }
-] as const;
-
-export const DataSyncUndoStateLabel: Record<DataSyncUndoState, string> = {
-  [DataSyncUndoState.Available]: 'Available',
-  [DataSyncUndoState.Undone]: 'Undone',
-  [DataSyncUndoState.Expired]: 'Expired'
-};
-
-export enum DataSyncUndoAction {
-  Remove = 1,
-  Revert = 2,
-  RemoveAliases = 3,
-  Recreate = 4,
-  Exclude = 5
-}
-
-export const dataSyncUndoActions = [
-  { label: 'Remove', value: DataSyncUndoAction.Remove },
-  { label: 'Revert', value: DataSyncUndoAction.Revert },
-  { label: 'RemoveAliases', value: DataSyncUndoAction.RemoveAliases },
-  { label: 'Recreate', value: DataSyncUndoAction.Recreate },
-  { label: 'Exclude', value: DataSyncUndoAction.Exclude }
-] as const;
-
-export const DataSyncUndoActionLabel: Record<DataSyncUndoAction, string> = {
-  [DataSyncUndoAction.Remove]: 'Remove',
-  [DataSyncUndoAction.Revert]: 'Revert',
-  [DataSyncUndoAction.RemoveAliases]: 'RemoveAliases',
-  [DataSyncUndoAction.Recreate]: 'Recreate',
-  [DataSyncUndoAction.Exclude]: 'Exclude'
-};
-
-export enum DataSyncUndoBlock {
-  ChangedSinceImport = 1,
-  InUse = 2,
-  AddedOptionsInUse = 3,
-  Missing = 4
-}
-
-export const dataSyncUndoBlocks = [
-  { label: 'ChangedSinceImport', value: DataSyncUndoBlock.ChangedSinceImport },
-  { label: 'InUse', value: DataSyncUndoBlock.InUse },
-  { label: 'AddedOptionsInUse', value: DataSyncUndoBlock.AddedOptionsInUse },
-  { label: 'Missing', value: DataSyncUndoBlock.Missing }
-] as const;
-
-export const DataSyncUndoBlockLabel: Record<DataSyncUndoBlock, string> = {
-  [DataSyncUndoBlock.ChangedSinceImport]: 'ChangedSinceImport',
-  [DataSyncUndoBlock.InUse]: 'InUse',
-  [DataSyncUndoBlock.AddedOptionsInUse]: 'AddedOptionsInUse',
-  [DataSyncUndoBlock.Missing]: 'Missing'
 };
 
 export enum DataSyncProblemCode {

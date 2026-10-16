@@ -1,15 +1,28 @@
 import type { PropsWithChildren } from "react";
 import type { ReferenceProperty } from "@/components/Property/referenceValues";
 import type { SearchForm } from "@/pages/resource/models";
+import type BApi from "@/sdk/BApi";
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 
-import BApi from "@/sdk/BApi";
+import {
+  useResourceApi,
+  useResourceOwner,
+  useResourceOwnerKey,
+} from "@/features/management/resourceContext";
+import {
+  createResourceApi,
+  subscribeResourceOwnerChanges,
+} from "@/features/management/resourceApi";
+import { useResourceSources } from "@/features/management/resourceSourcesContext";
+import { compileResourceQuery } from "@/features/management/resourceQuery";
 import { ContentType } from "@/sdk/Api";
 import { InternalProperty, PropertyPool } from "@/sdk/constants";
 import { isReferenceValueType } from "@/components/Property/PropertySystem";
 import { toSearchInputModel } from "@/components/ResourceFilter/utils/toInputModel";
 import { resourceChangedChannel } from "@/services/ResourceChangedChannel";
+import { canReadSourceMetadata, sourceSearchRevision } from "@/features/management/metadata";
+import { mediaLibraryChoiceValue } from "@/features/management/mediaLibraryFilter";
 
 type CountsResponse = { counts: Record<string, number>; isReady: boolean };
 const pending = new Map<string, Promise<CountsResponse>>();
@@ -34,32 +47,57 @@ export function referenceValueCountsCriteria(search?: SearchForm) {
   return { group, keyword, tags };
 }
 
-function loadCounts(key: string, property: ReferenceProperty, criteria: object) {
+function loadCounts(key: string, load: () => Promise<CountsResponse>) {
   let request = pending.get(key);
 
   if (!request) {
-    request = BApi.request<{ code?: number; data?: CountsResponse; message?: string }, unknown>({
-      path: `/property/pool/${property.pool}/id/${property.id}/value-resource-counts`,
-      method: "POST",
-      type: ContentType.Json,
-      body: criteria,
-      format: "json",
-    })
-      .then((response) => {
-        if (response.code || !response.data)
-          throw new Error(response.message || "Failed to load resource counts");
-
-        return response.data;
-      })
-      .finally(() => pending.delete(key));
+    request = load().finally(() => pending.delete(key));
     pending.set(key, request);
   }
 
   return request;
 }
 
+async function requestCounts(property: ReferenceProperty, criteria: object, api: typeof BApi) {
+  const response = await api.request<
+    { code?: number; data?: CountsResponse; message?: string },
+    unknown
+  >({
+    path: `/property/pool/${property.pool}/id/${property.id}/value-resource-counts`,
+    method: "POST",
+    type: ContentType.Json,
+    body: criteria,
+    format: "json",
+  });
+
+  if (response.code || !response.data)
+    throw new Error(response.message || "Failed to load resource counts");
+
+  return response.data;
+}
+
 /** One request per property, with shared in-flight requests and debounced criteria. */
 export function useReferenceValueResourceCounts(property?: ReferenceProperty, search?: SearchForm) {
+  const api = useResourceApi();
+  const owner = useResourceOwner();
+  const ownerKey = useResourceOwnerKey();
+  const sources = useResourceSources()?.sources;
+  const unifiedMediaLibraries =
+    !!property?.unifiedMediaLibraries &&
+    property.pool === PropertyPool.Internal &&
+    property.id === InternalProperty.MediaLibraryV2Multi;
+  // The aggregate catalog reports unavailable sources separately. Count only
+  // readable catalogs, including complete snapshots of offline devices.
+  const countedSources = owner
+    ? [owner]
+    : unifiedMediaLibraries
+      ? (sources ?? []).filter(canReadSourceMetadata)
+      : sources?.some((source) => !source.isLocal)
+        ? sources
+        : undefined;
+  const sourcesKey = countedSources
+    ? JSON.stringify(countedSources.map(sourceSearchRevision))
+    : ownerKey;
   const enabled =
     !!property?.id &&
     property.type != undefined &&
@@ -69,8 +107,12 @@ export function useReferenceValueResourceCounts(property?: ReferenceProperty, se
       [InternalProperty.ParentResource, InternalProperty.MediaLibraryV2].includes(property.id)
     );
   const criteria = JSON.stringify(referenceValueCountsCriteria(search));
-  const propertyKey = enabled ? `${property.pool}:${property.id}:${property.type}` : "";
-  const key = enabled ? `${propertyKey}:${criteria}` : "";
+  const propertyKey = enabled
+    ? `${sourcesKey}:${property.pool}:${property.id}:${property.type}:${unifiedMediaLibraries}`
+    : "";
+  const key = enabled
+    ? `${propertyKey}:${criteria}:${JSON.stringify([search?.owner?.serverId, search?.owner?.libraryEpoch, search?.deviceIds])}`
+    : "";
   const [refreshRequest, setRefreshRequest] = useState({
     revision: 0,
     debouncePropertyKey: "",
@@ -86,13 +128,22 @@ export function useReferenceValueResourceCounts(property?: ReferenceProperty, se
   useEffect(() => {
     if (!enabled) return;
 
-    return resourceChangedChannel.subscribe(() => {
+    const onChanged = () => {
       // Mark the counts stale immediately; the request effect coalesces bursts.
       setRefreshRequest(({ revision }) => ({
         revision: revision + 1,
         debouncePropertyKey: propertyKey,
       }));
-    });
+    };
+
+    const unsubscribe = [
+      ...(!owner || owner.isLocal ? [resourceChangedChannel.subscribe(onChanged)] : []),
+      ...(countedSources ?? [])
+        .filter((source) => !source.isLocal)
+        .map((source) => subscribeResourceOwnerChanges(source, onChanged)),
+    ];
+
+    return () => unsubscribe.forEach((stop) => stop());
   }, [enabled, propertyKey]);
 
   useEffect(() => {
@@ -103,7 +154,52 @@ export function useReferenceValueResourceCounts(property?: ReferenceProperty, se
     let timer: ReturnType<typeof setTimeout>;
     const run = async () => {
       try {
-        const response = await loadCounts(key, property, JSON.parse(criteria));
+        const response = await loadCounts(key, async () => {
+          if (!countedSources) return requestCounts(property, JSON.parse(criteria), api);
+          const responses: CountsResponse[] = [];
+
+          for (let index = 0; index < countedSources.length; index += 4) {
+            responses.push(
+              ...(await Promise.all(
+                countedSources.slice(index, index + 4).map(async (source) => {
+                  const compiled = compileResourceQuery(
+                    { ...search, owner: owner ?? search?.owner, page: 1, pageSize: 100 },
+                    source,
+                  );
+
+                  if (!compiled) return { counts: {}, isReady: true };
+                  if (!canReadSourceMetadata(source))
+                    throw new Error(source.error || "Device unavailable");
+
+                  const result = await requestCounts(
+                    property,
+                    referenceValueCountsCriteria(compiled),
+                    createResourceApi(source),
+                  );
+
+                  return unifiedMediaLibraries
+                    ? {
+                        ...result,
+                        counts: Object.fromEntries(
+                          Object.entries(result.counts).map(([value, count]) => [
+                            mediaLibraryChoiceValue(source, value),
+                            count,
+                          ]),
+                        ),
+                      }
+                    : result;
+                }),
+              )),
+            );
+          }
+          const counts: Record<string, number> = {};
+
+          for (const result of responses)
+            for (const [value, count] of Object.entries(result.counts))
+              counts[value] = (counts[value] ?? 0) + count;
+
+          return { counts, isReady: responses.every((result) => result.isReady) };
+        });
 
         if (cancelled) return;
         if (response.isReady) {

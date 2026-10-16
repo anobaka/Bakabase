@@ -59,18 +59,10 @@ internal sealed class DataSyncTestNetwork : HttpMessageHandler
                        throw new FederationAccessException("NodeRouteForbidden", 403, "Outside the protocol.");
             var required = FederationRoutePolicy.RequiredSharing(kind, request.Method.Method, path) ??
                            throw new FederationAccessException("NodeRouteForbidden", 403, "Outside the protocol.");
-            var switches = await node.Store.GetSharingSwitchesAsync(ct);
-            if (required == FederationSharingRequirement.Library && !switches.Library ||
-                required is FederationSharingRequirement.Either or FederationSharingRequirement.GrantScope &&
-                !switches.Library && !switches.DataSync)
-                throw new FederationAccessException("SharingDisabled", 403, "Sharing is disabled.");
-            if (required == FederationSharingRequirement.DataSync && !switches.DataSync)
+            if (!await node.Store.IsDataSyncSharingEnabledAsync(ct))
                 throw NodeGrantService.DataSyncSharingDisabled();
             object value;
             if (path == "/federation/v1/info") value = await node.InfoAsync(ct);
-            else if (path == "/federation/v1/pair/code") value = await node.Peers.ExchangeCodeAsync(Body<NodePairCodeRequest>(), node.Address, ct);
-            else if (path == "/federation/v1/pair/request") value = await node.Peers.RequestPairingAsync(Body<NodePairRequest>(), node.Address, ct);
-            else if (path == "/federation/v1/pair/claim") value = await node.Peers.ClaimPairingAsync(Body<NodePairClaimRequest>(), ct);
             else if (path == "/federation/v1/pair/datasync/request")
                 value = (await node.Peers.SubmitDataSyncRequestAsync(Body<NodeDataSyncPairRequest>(), node.Address, ct)).Exchange;
             else if (path == "/federation/v1/pair/datasync/code")
@@ -179,15 +171,6 @@ internal sealed class DataSyncTestNode : IFederationDataDirectory, INodeIdSource
             };
     }
 
-    /// <summary>A library grant from this node to <paramref name="reader"/>, made the way a person makes one.</summary>
-    public async Task<NodeCredentials> GrantLibraryAsync(DataSyncTestNode reader)
-    {
-        await Peers.SetSharingAsync(true);
-        var code = (await Peers.IssueInvitationAsync()).Code;
-        Assert.AreEqual("granted", (await reader.Pairing.ConnectAsync("http://" + Id, code)).Outcome);
-        return reader.Outbound(Id)!;
-    }
-
     /// <summary>A <c>datasync.read</c> grant from this node to <paramref name="reader"/>, by request and approval.</summary>
     public async Task<NodeCredentials> GrantDataSyncAsync(DataSyncTestNode reader, string intent = NodeDataSyncIntents.Follow)
     {
@@ -220,10 +203,6 @@ internal static class DataSyncTestStateExtensions
 
     public static JsonElement Peer(this DataSyncTestNode node, string nodeId) =>
         node.ReadState().GetProperty("peers").GetProperty(nodeId);
-
-    /// <summary>This node's library credentials for <paramref name="nodeId"/>, as stored.</summary>
-    public static NodeCredentials? Outbound(this DataSyncTestNode node, string nodeId) =>
-        Read(node, "outboundGrants", nodeId);
 
     /// <summary>This node's datasync credentials for <paramref name="nodeId"/>, as stored.</summary>
     public static NodeCredentials? OutboundDataSync(this DataSyncTestNode node, string nodeId) =>

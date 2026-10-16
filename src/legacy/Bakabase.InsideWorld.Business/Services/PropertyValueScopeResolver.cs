@@ -73,7 +73,7 @@ public class PropertyValueScopeResolver(IBOptions<ResourceOptions> resourceOptio
     // Expands the configured global priority into a full ordered scope list: every scope appears
     // exactly once; scopes missing from the configuration are appended, Manual first. An empty
     // configuration yields every scope in declaration order. Mirrors the frontend valueScopePriority.
-    private static List<PropertyValueScope> NormalizeGlobalPriority(IEnumerable<PropertyValueScope>? configuredPriority)
+    internal static List<PropertyValueScope> NormalizeGlobalPriority(IEnumerable<PropertyValueScope>? configuredPriority)
     {
         var allScopes = Enum.GetValues<PropertyValueScope>();
         var ordered = configuredPriority?.ToList() is { Count: > 0 } configured ? configured : allScopes.ToList();
@@ -102,7 +102,7 @@ public class PropertyValueScopeResolver(IBOptions<ResourceOptions> resourceOptio
     // priorities it fully replaces the profile/global order; an entry with FallbackOnEmpty == false
     // truncates the chain there. Otherwise profile scopes lead, followed by remaining global scopes.
     // Mirrors the frontend buildEffectiveScopePriority.
-    private static IReadOnlyList<PropertyValueScope> BuildEffectiveScopePriority(
+    internal static IReadOnlyList<PropertyValueScope> BuildEffectiveScopePriority(
         IReadOnlyList<PropertyValueScope> globalPriority, PropertyValueScopePreference? preference,
         PropertyValueScope[]? profilePriority)
     {

@@ -16,6 +16,7 @@
   "configuration.thirdParty.validateCookie": "验证 Cookie",
   "configuration.thirdParty.cookieValid": "Cookie 有效",
   "configuration.thirdParty.invalidCookie": "无效的 Cookie",
+  "configuration.functional.navigation.tip": "调整侧栏菜单的顺序、分组和显示状态。同一服务的设备共用这份菜单布局。",
   "configuration.functional.title": "功能配置",
   "configuration.functional.startupPage": "启动页面",
   "configuration.functional.startupPage.default": "默认",
@@ -435,5 +436,9 @@
   "configuration.dependency.videoPurpose": "生成视频封面、预览和转码。",
   "configuration.dependency.archivePurpose": "读取、解压和处理压缩文件。",
   "configuration.dependency.localePurpose": "为旧版 Windows 应用提供兼容的语言环境。",
-  "configuration.dependency.loadingComponents": "正在加载组件…"
+  "configuration.dependency.loadingComponents": "正在加载组件…",
+  "configuration.storage.title": "数据与存储",
+  "configuration.storage.title.server": "服务器数据与存储",
+  "configuration.storage.details": "存储详情",
+  "configuration.storage.serverDescription": "以下目录属于当前管理的服务器。"
 }

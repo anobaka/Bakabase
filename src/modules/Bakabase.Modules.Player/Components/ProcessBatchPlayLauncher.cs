@@ -8,6 +8,7 @@ public class ProcessBatchPlayLauncher(ILogger<ProcessBatchPlayLauncher> logger) 
 {
     public Task LaunchAsync(string executablePath, string arguments, CancellationToken ct)
     {
+        ct.ThrowIfCancellationRequested();
         // .lnk shortcuts are only launchable through the shell; a direct
         // CreateProcess on them fails with "not a valid Win32 application".
         var useShellExecute = Path.GetExtension(executablePath)

@@ -7,6 +7,22 @@ function isListModeTr(el: HTMLElement): boolean {
   return el.tagName === 'TR';
 }
 
+/** The author column/image-wall footer exposes the original post date, without a time. */
+export function extractSoulplusPostDate(element: HTMLElement): Date | null {
+  const dateElement = isListModeTr(element)
+    ? element.querySelector('td.tal.y-style .f10.gray2')
+    : element.querySelector('.section-intro table tr td:last-child');
+  const text = dateElement?.textContent?.trim() ?? '';
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text);
+  if (!match) return null;
+  const [year, month, day] = match.slice(1).map(Number);
+  const calendarDate = new Date(`${text}T00:00:00Z`);
+  if (year < 1 || !Number.isFinite(calendarDate.getTime()) || calendarDate.getUTCFullYear() !== year ||
+    calendarDate.getUTCMonth() + 1 !== month || calendarDate.getUTCDate() !== day) return null;
+  // Keep the site's date in its own timezone; midnight is a day anchor, not a known posting time.
+  return new Date(`${text}T00:00:00+08:00`);
+}
+
 function findPostCover(element: HTMLElement): HTMLElement | null {
   // List mode rows show no thumbnail; only the image wall has a cover.
   if (isListModeTr(element)) return null;
@@ -16,6 +32,7 @@ function findPostCover(element: HTMLElement): HTMLElement | null {
 export const soulplusConfig: SiteConfig = {
   key: 'soulplus',
   domains: ['north-plus.net'],
+  contentTimePrecision: 'day',
 
   extractFilter: () => null,
 
@@ -37,7 +54,7 @@ export const soulplusConfig: SiteConfig = {
   extractContentInfo: (element) => {
     const url = extractPostUrl(element);
     if (!url) return { id: null, updateTime: null };
-    return { id: url, updateTime: null };
+    return { id: url, updateTime: extractSoulplusPostDate(element) };
   },
 
   onMarkViewed: (markVisibleFn) => {

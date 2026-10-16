@@ -17,7 +17,7 @@ import { sharingNeeded, twoWayConfirmation } from "../viewModels";
 
 import DataSyncDialog from "./DataSyncDialog";
 import InlineConfirmation from "./InlineConfirmation";
-import { buttonClass, DataSyncErrorNotice, fieldClass, primaryClass } from "./common";
+import { buttonClass, DataSyncErrorNotice, primaryClass } from "./common";
 
 import {
   DataSyncFirstSyncAction,
@@ -28,6 +28,7 @@ import {
   DataSyncProblemCodeLabel,
   RemoteAccessMode,
 } from "@/sdk/constants";
+import { Button, Checkbox, Select } from "@/components/bakaui";
 
 /*
  * A first sync (spec §8.3): what the other device's definitions would do here — the ordinary
@@ -198,29 +199,39 @@ export default function FirstSyncPreview({
           <div className="flex w-full flex-wrap items-center justify-between gap-2">
             <p className="text-xs text-default-500">{t("dataSync.review.safe")}</p>
             <div className="flex gap-2">
-              <button
+              <Button
                 className={buttonClass}
                 disabled={actions.busy}
+                size="sm"
                 type="button"
+                variant="bordered"
                 onClick={onClose}
               >
                 {t("dataSync.review.later")}
-              </button>
-              <button
+              </Button>
+              <Button
                 className={primaryClass}
                 data-testid="data-sync-review-start"
                 disabled={actions.busy}
+                size="sm"
                 type="button"
+                variant="bordered"
                 onClick={start}
               >
                 {t("dataSync.review.start")}
-              </button>
+              </Button>
             </div>
           </div>
         ) : (
-          <button className={buttonClass} type="button" onClick={onClose}>
+          <Button
+            className={buttonClass}
+            size="sm"
+            type="button"
+            variant="bordered"
+            onClick={onClose}
+          >
             {phase === "done" ? t("dataSync.done") : t("dataSync.close")}
-          </button>
+          </Button>
         )
       }
       returnFocus={returnFocus}
@@ -343,6 +354,7 @@ function PreviewGroups({
   ) => void;
 }) {
   const { t } = useTranslation();
+  const [container, setContainer] = useState<HTMLDivElement | null>(null);
   const same = entries.filter((entry) => entry.outcome === DataSyncPreviewOutcome.Unchanged).length;
   const shown = groups.filter((outcome) => entries.some((entry) => entry.outcome === outcome));
 
@@ -354,7 +366,7 @@ function PreviewGroups({
     );
 
   return (
-    <div className="space-y-3">
+    <div ref={setContainer} className="space-y-3">
       {shown.map((outcome) => {
         const label = DataSyncPreviewOutcomeLabel[outcome];
         const mine = entries.filter((entry) => entry.outcome === outcome);
@@ -389,11 +401,28 @@ function PreviewGroups({
                       </span>
                     </span>
                     {asks ? (
-                      <select
+                      <Select
+                        disallowEmptySelection
                         aria-label={t("dataSync.review.choice.label", { entity: entry.name })}
-                        className={fieldClass}
-                        disabled={disabled}
-                        value={choice?.localKey ?? (choice ? "keepBoth" : "")}
+                        dataSource={[
+                          { value: "", label: t("dataSync.review.choice.leaveOut") },
+                          ...(entry.candidates ?? [])
+                            .filter((candidate) => candidate.updatable)
+                            .map((candidate) => ({
+                              value: candidate.localKey,
+                              label: t("dataSync.review.choice.link", { target: candidate.name }),
+                            })),
+                          { value: "keepBoth", label: t("dataSync.review.choice.keepBoth") },
+                        ]}
+                        isDisabled={disabled}
+                        popoverProps={{
+                          // Keep nested choices inside this modal's accessibility boundary.
+                          portalContainer:
+                            container?.closest<HTMLElement>('[role="dialog"]') ?? undefined,
+                        }}
+                        selectedKeys={[choice?.localKey ?? (choice ? "keepBoth" : "")]}
+                        size="sm"
+                        variant="bordered"
                         onChange={(event) => {
                           const value = event.target.value;
 
@@ -406,36 +435,27 @@ function PreviewGroups({
                                 : { action: DataSyncFirstSyncAction.Link, localKey: value },
                           );
                         }}
-                      >
-                        <option value="">{t("dataSync.review.choice.leaveOut")}</option>
-                        {(entry.candidates ?? [])
-                          .filter((candidate) => candidate.updatable)
-                          .map((candidate) => (
-                            <option key={candidate.localKey} value={candidate.localKey}>
-                              {t("dataSync.review.choice.link", { target: candidate.name })}
-                            </option>
-                          ))}
-                        <option value="keepBoth">{t("dataSync.review.choice.keepBoth")}</option>
-                      </select>
+                      />
                     ) : (
                       skippable.has(outcome) && (
-                        <label className="flex items-center gap-1 text-xs">
-                          <input
-                            checked={choice?.action === DataSyncFirstSyncAction.Skip}
-                            data-testid="data-sync-review-skip"
-                            disabled={disabled}
-                            type="checkbox"
-                            onChange={(event) =>
-                              onChoose(
-                                entry,
-                                event.target.checked
-                                  ? { action: DataSyncFirstSyncAction.Skip }
-                                  : undefined,
-                              )
-                            }
-                          />
+                        <Checkbox
+                          classNames={{ base: "m-0 max-w-full p-0", label: "text-xs" }}
+                          color="secondary"
+                          data-testid="data-sync-review-skip"
+                          isDisabled={disabled}
+                          isSelected={choice?.action === DataSyncFirstSyncAction.Skip}
+                          size="sm"
+                          onChange={(event) =>
+                            onChoose(
+                              entry,
+                              event.target.checked
+                                ? { action: DataSyncFirstSyncAction.Skip }
+                                : undefined,
+                            )
+                          }
+                        >
                           {t("dataSync.review.skip")}
-                        </label>
+                        </Checkbox>
                       )
                     )}
                   </li>
@@ -512,40 +532,46 @@ function CopyOnceFollowUp({
     <div className="space-y-2" data-testid="data-sync-review-follow-up">
       <DataSyncErrorNotice error={actions.error} onDismiss={() => actions.setError(undefined)} />
       <div className="flex flex-wrap gap-2">
-        <button
+        <Button
           className={buttonClass}
           data-testid="data-sync-review-keep-receiving"
           disabled={actions.busy}
+          size="sm"
           type="button"
+          variant="bordered"
           onClick={() =>
             then(() => dataSyncApi.updateLink(linkId, { mode: DataSyncLinkMode.Follow }))
           }
         >
           {t("dataSync.review.keepReceiving", { name })}
-        </button>
+        </Button>
         {canManage && (
-          <button
+          <Button
             ref={keepInStepButton}
             aria-expanded={!!actions.confirmation}
             className={buttonClass}
             data-testid="data-sync-review-keep-in-step"
             disabled={actions.busy}
+            size="sm"
             type="button"
+            variant="bordered"
             onClick={keepInStep}
           >
             {t("dataSync.mode.twoWay")}
-          </button>
+          </Button>
         )}
         {peerNodeId && (
-          <button
+          <Button
             className={buttonClass}
             data-testid="data-sync-review-stop-reading"
             disabled={actions.busy}
+            size="sm"
             type="button"
+            variant="bordered"
             onClick={() => then(() => dataSyncApi.forgetAccess(peerNodeId))}
           >
             {t("dataSync.link.stopReading.button", { name })}
-          </button>
+          </Button>
         )}
       </div>
       {actions.confirmation && (

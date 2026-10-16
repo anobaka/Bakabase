@@ -1,20 +1,4 @@
-import type {
-  BakabaseModulesFederationContractsCommonLibraryQuery,
-  BakabaseModulesFederationContractsFederatedQueryPage,
-  BakabaseModulesFederationContractsFederatedResourceSummary,
-  BakabaseModulesFederationContractsLocalFederatedQuery,
-  BakabaseModulesFederationContractsQueryOmittedNode,
-  BakabaseModulesFederationContractsResourceRef,
-  BakabaseModulesFederationMediaFederatedAsset,
-  BakabaseModulesFederationMediaFederatedProperty,
-  BakabaseModulesFederationMediaFederatedResourceDetail,
-  BakabaseModulesFederationMediaPlaybackSessionResponse,
-  BakabaseModulesFederationPeersFederationPeerView,
-  BakabaseModulesFederationPeersNodePairingOutcome,
-  BakabaseModulesFederationPeersNodePairingRequestView,
-  BakabaseModulesFederationPeersNodePathMapping,
-  BakabaseServiceControllersFederationPeerStatusResponse,
-} from "@/sdk/Api";
+import type { BakabaseServiceControllersFederationPeerStatusResponse } from "@/sdk/Api";
 import type {
   ManagedServerOutcome,
   ManagedServerState,
@@ -23,44 +7,12 @@ import type {
   ServerKind,
 } from "@/sdk/constants";
 
-/** Generated wire DTOs remain tied to the backend; only supported input choices are narrowed here. */
-export type ResourceRef = BakabaseModulesFederationContractsResourceRef;
-export type CommonLibraryQuery = Pick<
-  BakabaseModulesFederationContractsCommonLibraryQuery,
-  "text" | "sourceKinds"
-> & {
-  queryContractVersion: 1;
-  fileAvailability?: "Any" | "HasFile" | "MetadataOnly";
-  sort: "NameAsc" | "NameDesc";
-};
-export type LocalFederatedQuery = Pick<
-  BakabaseModulesFederationContractsLocalFederatedQuery,
-  "nodeIds" | "pageSize"
-> & { query: CommonLibraryQuery };
-export type FederatedResourceSummary = BakabaseModulesFederationContractsFederatedResourceSummary;
-export type OmittedNode = BakabaseModulesFederationContractsQueryOmittedNode;
-export type FederatedQueryPage = BakabaseModulesFederationContractsFederatedQueryPage;
-export type PathMapping = BakabaseModulesFederationPeersNodePathMapping;
-export type Peer = BakabaseModulesFederationPeersFederationPeerView;
-export type PairingRequest = BakabaseModulesFederationPeersNodePairingRequestView;
+export interface ResourceRef {
+  nodeId: string;
+  libraryEpoch: string;
+  resourceId: number;
+}
 export type FederationStatus = BakabaseServiceControllersFederationPeerStatusResponse;
-export type PairingResult = BakabaseModulesFederationPeersNodePairingOutcome;
-export type FederatedAsset = BakabaseModulesFederationMediaFederatedAsset;
-export type FederatedResourceDetail = Omit<
-  BakabaseModulesFederationMediaFederatedResourceDetail,
-  "properties"
-> & {
-  properties: (Omit<BakabaseModulesFederationMediaFederatedProperty, "value"> & {
-    value?: unknown;
-  })[];
-};
-export type PlaybackSession = BakabaseModulesFederationMediaPlaybackSessionResponse;
-
-/**
- * A peer's {@link Peer.connectionState} — and the error code library sharing refuses with — when
- * its address led into a proxy on this computer: a name the proxy took over in fake-IP or TUN
- * mode, or one of the proxy's own addresses. Nothing was sent; the fix is on this computer.
- */
 export const PROXY_FAKE_ADDRESS = "ProxyFakeAddress";
 
 /*
@@ -145,8 +97,10 @@ export interface ManagedServerPendingRequest {
 }
 
 export interface ManagedServersView {
-  /** False where nothing can be managed from here (a headless server). */
+  /** Whether this device can establish management relationships. */
   available: boolean;
+  /** Desktop relays are separate from headless management capability. Older desktop servers omit it. */
+  canOpenDesktopView?: boolean;
   servers: ManagedServer[];
   requests: ManagedServerPendingRequest[];
 }
@@ -188,23 +142,7 @@ export interface ManagedServerCandidate {
   platform?: RemoteDevicePlatform | null;
 }
 
-/** A device sharing its library on this network, found by library sharing's discovery. */
-export interface SharingCandidate {
-  nodeId: string;
-  name: string;
-  address: string;
-  /** What its node info says it is, if it says; older devices do not. */
-  kind?: ServerKind | null;
-  platform?: RemoteDevicePlatform | null;
-}
-
 export interface ManagedServerDiscovery {
   /** Never this installation itself. */
   servers: ManagedServerCandidate[];
 }
-
-export const resourceKey = (ref: ResourceRef) =>
-  JSON.stringify([ref.nodeId, ref.libraryEpoch, ref.resourceId]);
-
-/** Never resolve a ref against the current device just because its numeric ID exists here. */
-export const sameResource = (a: ResourceRef, b: ResourceRef) => resourceKey(a) === resourceKey(b);

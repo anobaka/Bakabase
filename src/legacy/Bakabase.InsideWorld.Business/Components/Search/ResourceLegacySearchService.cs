@@ -58,7 +58,29 @@ namespace Bakabase.InsideWorld.Business.Components.Search
             return resourceIds;
         }
 
-        private async Task PreparePropertyDbValues(ResourceSearchContext context, ResourceSearchFilterGroup? group)
+        public async Task<IReadOnlyList<HashSet<int>?>> SearchManyAsync(List<Abstractions.Models.Domain.Resource> candidates,
+            IReadOnlyList<ResourceSearch> searches)
+        {
+            var context = new ResourceSearchContext(candidates);
+            await PreparePropertyDbValues(context, new ResourceSearchFilterGroup
+            {
+                Groups = searches.Select(s => s.Group).OfType<ResourceSearchFilterGroup>().ToList()
+            }, candidatesOnly: true);
+            return searches.Select(search =>
+            {
+                var ids = SearchResourceIds(search.Group, context);
+                if (search.Tags?.Length > 0)
+                {
+                    ids ??= context.AllResourceIds.ToHashSet();
+                    ids.RemoveWhere(id => search.Tags.Any(tag =>
+                        context.ResourcesPool![id].Tags?.Contains(tag) != true));
+                }
+                return ids;
+            }).ToArray();
+        }
+
+        private async Task PreparePropertyDbValues(ResourceSearchContext context, ResourceSearchFilterGroup? group,
+            bool candidatesOnly = false)
         {
             if (group != null)
             {
@@ -89,7 +111,7 @@ namespace Bakabase.InsideWorld.Business.Components.Search
                                 if (ids != null) allFilterMediaLibraryIds.UnionWith(ids);
                             }
 
-                            if (hasNullCheckOperation)
+                            if (hasNullCheckOperation || candidatesOnly)
                             {
                                 // For IsNull/IsNotNull operations, we need mappings for all resources in the pool
                                 var allResourceIds = context.ResourcesPool.Keys.ToArray();
@@ -153,6 +175,7 @@ namespace Bakabase.InsideWorld.Business.Components.Search
                         {
                             InternalProperty.Filename => (Func<Abstractions.Models.Domain.Resource, object?>) (r => r.FileName),
                             InternalProperty.DirectoryPath => r => r.Directory,
+                            InternalProperty.RootPath when candidatesOnly => r => r.Path,
                             InternalProperty.CreatedAt => r => r.CreatedAt,
                             // No files, no file times — mirrors the index, which does not record
                             // these for a resource without a path.
@@ -164,6 +187,9 @@ namespace Bakabase.InsideWorld.Business.Components.Search
                             InternalProperty.PlayedAt => r => r.PlayedAt,
                             InternalProperty.HasLocalPath => r => r.HasLocalPath,
                             InternalProperty.CollectionMulti => r => resourceCollectionMap?.GetValueOrDefault(r.Id),
+                            InternalProperty.Source when candidatesOnly => r => r.SourceLinks?
+                                .Select(link => ((int)link.Source).ToString()).Distinct().ToList(),
+                            InternalProperty.HealthScore when candidatesOnly => r => r.HealthScore,
                             _ => null
                         });
                         context.PropertyValueMap[PropertyPool.Internal] = getValue.Where(x => x.Value != null)
@@ -201,7 +227,8 @@ namespace Bakabase.InsideWorld.Business.Components.Search
                         var propertyIds = filters.Where(x => x.PropertyPool == PropertyPool.Custom)
                             .Select(d => d.PropertyId).ToHashSet();
                         var cpValues =
-                            (await _customPropertyValueService.GetAll(x => propertyIds.Contains(x.PropertyId),
+                            (await _customPropertyValueService.GetAll(x => propertyIds.Contains(x.PropertyId) &&
+                                context.AllResourceIds.Contains(x.ResourceId),
                                 CustomPropertyValueAdditionalItem.None, false)).GroupBy(d => d.PropertyId)
                             .ToDictionary(d => d.Key,
                                 d => d.GroupBy(x => x.ResourceId)

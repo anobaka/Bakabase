@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
@@ -31,7 +32,7 @@ namespace Bakabase.InsideWorld.Business.Components.Search.Index;
 /// <summary>
 /// 资源搜索倒排索引服务实现
 /// </summary>
-public class ResourceSearchIndexService : IResourceSearchIndexService
+public class ResourceSearchIndexService : IResourceSearchIndexService, IResourceSearchIndexExportService
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<ResourceSearchIndexService> _logger;
@@ -206,6 +207,61 @@ public class ResourceSearchIndexService : IResourceSearchIndexService
 
         using var registration = ct.Register(() => completion.TrySetCanceled(ct));
         await completion.Task;
+    }
+
+    public async Task<IReadOnlyDictionary<int, IReadOnlyList<ResourceSearchIndexEntry>>> ReadIndexEntriesAsync(
+        int[] resourceIds, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(resourceIds);
+        if (resourceIds.Length > IResourceSearchIndexExportService.MaximumResourceCount ||
+            resourceIds.Any(id => id <= 0))
+            throw new ArgumentOutOfRangeException(nameof(resourceIds), "Index export accepts at most 100 positive resource IDs.");
+        ct.ThrowIfCancellationRequested();
+        if (ResourceMetadataReadScope.ResourceIds != null)
+        {
+            // Journal revisions describe committed database rows, not event delivery. Build
+            // this bounded page using the same descriptors without changing the global index.
+            var detached = new Dictionary<int, HashSet<IndexKey>>();
+            await UpdateResourcesIndexAsync(resourceIds.Distinct().ToArray(), ct, detached);
+            return detached.ToDictionary(pair => pair.Key,
+                pair => (IReadOnlyList<ResourceSearchIndexEntry>)pair.Value.Select(key =>
+                    new ResourceSearchIndexEntry(key.Pool, key.PropertyId, key.ValueKey, key.RangeValue)).ToArray());
+        }
+        // Never wait for the FIFO barrier while holding the gate needed by its writer.
+        await WaitForPendingUpdatesAsync(ct);
+        await _mutationGate.WaitAsync(ct);
+        try
+        {
+            if (!IsReady)
+                throw new InvalidOperationException("The resource search index is not ready for metadata export.");
+
+            var result = new Dictionary<int, IReadOnlyList<ResourceSearchIndexEntry>>();
+            long encodedBytes = 2;
+            foreach (var id in resourceIds.Distinct())
+            {
+                ct.ThrowIfCancellationRequested();
+                if (!_index.ResourceIndexKeys.TryGetValue(id, out var keys)) continue;
+                encodedBytes += 32;
+                var entries = new List<ResourceSearchIndexEntry>();
+                foreach (var key in keys)
+                {
+                    ct.ThrowIfCancellationRequested();
+                    // Six JSON escape bytes per UTF-8 byte is a conservative ceiling;
+                    // fixed overhead covers the property keys, numeric IDs and typed range.
+                    // Check before allocating/copying to keep one pathological value bounded.
+                    encodedBytes += 128L + 6L * Encoding.UTF8.GetByteCount(key.ValueKey);
+                    if (encodedBytes > IResourceSearchIndexExportService.MaximumEncodedBytes)
+                        throw new ResourceSearchIndexExportBudgetException();
+                    entries.Add(new ResourceSearchIndexEntry(key.Pool, key.PropertyId, key.ValueKey, key.RangeValue));
+                }
+                result[id] = entries.AsReadOnly();
+            }
+            return result;
+        }
+        finally
+        {
+            _mutationGate.Release();
+        }
     }
 
     private void EnqueueOperations(IndexOperationType type, IEnumerable<int> resourceIds)
@@ -514,10 +570,12 @@ public class ResourceSearchIndexService : IResourceSearchIndexService
 
     #region Index Update Methods
 
-    private async Task UpdateResourcesIndexAsync(int[] resourceIds, CancellationToken ct)
+    private async Task UpdateResourcesIndexAsync(int[] resourceIds, CancellationToken ct,
+        Dictionary<int, HashSet<IndexKey>>? export = null)
     {
         using var scope = _scopeFactory.CreateScope();
         var resourceIdSet = resourceIds.ToHashSet();
+        var exportBudget = new DetachedIndexBudget();
 
         try
         {
@@ -569,14 +627,14 @@ public class ResourceSearchIndexService : IResourceSearchIndexService
             {
                 ct.ThrowIfCancellationRequested();
 
-                // 1. Clear old index
-                RemoveResourceFromIndex(resourceId);
-
-                // 2. Build new index
-                var indexKeys = new HashSet<IndexKey>();
-                // Register the live key set before adding entries so a retry can remove
-                // everything written by a partially completed attempt.
-                _index.ResourceIndexKeys[resourceId] = indexKeys;
+                if (export != null && !dbResourceMap.ContainsKey(resourceId)) continue;
+                // Export has no side effects on the index or its readiness/version.
+                if (export == null) RemoveResourceFromIndex(resourceId);
+                HashSet<IndexKey> indexKeys = export == null ? new HashSet<IndexKey>() : new DetachedIndexKeys(exportBudget);
+                if (export == null)
+                    _index.ResourceIndexKeys[resourceId] = indexKeys;
+                else
+                    export[resourceId] = indexKeys;
 
                 // Index internal properties
                 var dbModel = dbResourceMap.GetValueOrDefault(resourceId);
@@ -615,7 +673,8 @@ public class ResourceSearchIndexService : IResourceSearchIndexService
                     }
                 }
 
-                // 3. Mark the resource as fully indexed
+                // 3. Mark the resource as fully indexed (never for a detached export).
+                if (export != null) continue;
                 lock (_index.AllResourceIdsLock)
                 {
                     _index.AllResourceIds.Add(resourceId);
@@ -642,32 +701,38 @@ public class ResourceSearchIndexService : IResourceSearchIndexService
             return;
         }
 
-        // Remove from value index
+        // Writers share the mutation gate. Readers may retain a bucket while
+        // snapshotting it, so keep the existing bucket lock during removal.
         foreach (var key in indexKeys)
         {
-            if (_index.ValueIndex.TryGetValue(key.Pool, out var poolIndex) &&
+            if (key.RangeValue != null)
+            {
+                if (_index.RangeIndex.TryGetValue(key.Pool, out var rangePool) &&
+                    rangePool.TryGetValue(key.PropertyId, out var ranges))
+                {
+                    lock (ranges)
+                    {
+                        if (ranges.TryGetValue(key.RangeValue, out var ids))
+                        {
+                            ids.Remove(resourceId);
+                            if (ids.Count == 0) ranges.Remove(key.RangeValue);
+                        }
+                        if (ranges.Count == 0) rangePool.TryRemove(key.PropertyId, out _);
+                    }
+                    if (rangePool.IsEmpty) _index.RangeIndex.TryRemove(key.Pool, out _);
+                }
+            }
+            else if (_index.ValueIndex.TryGetValue(key.Pool, out var poolIndex) &&
                 poolIndex.TryGetValue(key.PropertyId, out var propIndex) &&
                 propIndex.TryGetValue(key.ValueKey, out var resourceIds))
             {
                 lock (resourceIds)
                 {
                     resourceIds.Remove(resourceId);
+                    if (resourceIds.Count == 0) propIndex.TryRemove(key.ValueKey, out _);
                 }
-            }
-        }
-
-        // Remove from range index (by checking all pools/properties - less efficient but necessary)
-        foreach (var (pool, poolIndex) in _index.RangeIndex)
-        {
-            foreach (var (propId, sortedList) in poolIndex)
-            {
-                lock (sortedList)
-                {
-                    foreach (var (_, resourceIds) in sortedList)
-                    {
-                        resourceIds.Remove(resourceId);
-                    }
-                }
+                if (propIndex.IsEmpty) poolIndex.TryRemove(key.PropertyId, out _);
+                if (poolIndex.IsEmpty) _index.ValueIndex.TryRemove(key.Pool, out _);
             }
         }
 
@@ -903,18 +968,24 @@ public class ResourceSearchIndexService : IResourceSearchIndexService
         if (string.IsNullOrEmpty(value)) return;
 
         var normalizedValue = NormalizeValue(value);
-        var key = new IndexKey(pool, propertyId, normalizedValue);
-
+        if (indexKeys is DetachedIndexKeys detached)
+        {
+            detached.Capture(new IndexKey(pool, propertyId, normalizedValue));
+            return;
+        }
         var poolIndex = _index.ValueIndex.GetOrAdd(pool, _ => new());
         var propIndex = poolIndex.GetOrAdd(propertyId, _ => new());
-        var resourceIds = propIndex.GetOrAdd(normalizedValue, _ => new HashSet<int>());
+        var resourceIds = propIndex.GetOrAdd(normalizedValue, key => new ValueIndexBucket(key));
 
         lock (resourceIds)
         {
             resourceIds.Add(resourceId);
         }
 
-        indexKeys.Add(key);
+        // Share a canonical string only within this bucket's lifetime. User
+        // paths/text must not enter the process-global, non-collectible intern pool.
+        var canonicalValue = (resourceIds as ValueIndexBucket)?.ValueKey ?? normalizedValue;
+        indexKeys.Add(new IndexKey(pool, propertyId, canonicalValue));
     }
 
     private void AddToRangeIndex(
@@ -924,6 +995,11 @@ public class ResourceSearchIndexService : IResourceSearchIndexService
         int resourceId,
         HashSet<IndexKey> indexKeys)
     {
+        if (indexKeys is DetachedIndexKeys detached)
+        {
+            detached.Capture(new IndexKey(pool, propertyId, string.Empty, value));
+            return;
+        }
         var poolIndex = _index.RangeIndex.GetOrAdd(pool, _ => new());
         var sortedList = poolIndex.GetOrAdd(propertyId, _ => new SortedList<IComparable, HashSet<int>>());
 
@@ -938,17 +1014,36 @@ public class ResourceSearchIndexService : IResourceSearchIndexService
         }
 
         // Also create index key for range values (for cleanup)
-        var key = new IndexKey(pool, propertyId, $"range:{value}");
+        var key = new IndexKey(pool, propertyId, string.Empty, value);
         indexKeys.Add(key);
     }
 
     private static string NormalizeValue(string value)
     {
         // Trim and lowercase for case-insensitive matching
-        var normalized = value.Trim().ToLowerInvariant();
+        return value.Trim().ToLowerInvariant();
+    }
 
-        // Use string interning for common values to save memory
-        return string.IsInterned(normalized) ?? string.Intern(normalized);
+    private sealed class DetachedIndexBudget
+    {
+        public long Bytes = 2;
+    }
+
+    private sealed class DetachedIndexKeys(DetachedIndexBudget budget) : HashSet<IndexKey>
+    {
+        public void Capture(IndexKey key)
+        {
+            if (Contains(key)) return;
+            budget.Bytes += 128L + 6L * Encoding.UTF8.GetByteCount(key.ValueKey);
+            if (budget.Bytes > IResourceSearchIndexExportService.MaximumEncodedBytes)
+                throw new ResourceSearchIndexExportBudgetException();
+            Add(key);
+        }
+    }
+
+    private sealed class ValueIndexBucket(string valueKey) : HashSet<int>
+    {
+        public string ValueKey { get; } = valueKey;
     }
 
     #endregion
@@ -1291,10 +1386,12 @@ public class ResourceSearchIndexService : IResourceSearchIndexService
         // that enumerates them concurrently throws "Collection was modified
         // during enumeration". Snapshot under the same lock so the descriptor
         // works against a read-only copy.
-        Dictionary<string, HashSet<int>>? propValueIndexSnapshot = null;
+        // In a ready index, an absent bucket means no values, not an unsupported
+        // filter. In particular an AND range filter must not become unconstrained
+        // after its last indexed value is removed.
+        var propValueIndexSnapshot = new Dictionary<string, HashSet<int>>(propValueIndex?.Count ?? 0);
         if (propValueIndex != null)
         {
-            propValueIndexSnapshot = new Dictionary<string, HashSet<int>>(propValueIndex.Count);
             foreach (var kv in propValueIndex)
             {
                 HashSet<int> snapshot;
@@ -1310,7 +1407,7 @@ public class ResourceSearchIndexService : IResourceSearchIndexService
         var poolRangeIndex = _index.RangeIndex.GetValueOrDefault(filter.PropertyPool);
         var propRangeIndex = poolRangeIndex?.GetValueOrDefault(filter.PropertyId);
 
-        List<KeyValuePair<IComparable, HashSet<int>>>? rangeIndexList = null;
+        List<KeyValuePair<IComparable, HashSet<int>>>? rangeIndexList = [];
         if (propRangeIndex != null)
         {
             lock (propRangeIndex)
@@ -1323,6 +1420,12 @@ public class ResourceSearchIndexService : IResourceSearchIndexService
                     .ToList();
             }
         }
+
+        // Without any range values, NotEquals uses the value index's complement,
+        // as a fresh index did before empty buckets were pruned. Comparisons must
+        // keep an empty range snapshot so they cannot become unconstrained.
+        if (filter.Operation == SearchOperation.NotEquals && rangeIndexList.Count == 0)
+            rangeIndexList = null;
 
         // Get all resource IDs
         HashSet<int> allResourceIds;

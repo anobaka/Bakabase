@@ -12,7 +12,6 @@ import type { BangumiSubjectType } from "@/sdk/constants";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useEffect, useState } from "react";
-import { useUpdate } from "react-use";
 import _ from "lodash";
 
 import TranslationOptionsSection from "../TranslationOptionsSection";
@@ -31,7 +30,7 @@ import {
   propertyValueScopes,
   RegexEnhancerTarget,
 } from "@/sdk/constants";
-import BApi from "@/sdk/BApi";
+import { useResourceApi } from "@/features/management/resourceContext";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import {
   ExHentaiConfigPanel,
@@ -74,6 +73,7 @@ const sanitizeOptions = (opts?: EnhancerFullOptions): EnhancerFullOptions => {
 
 type Props = {
   enhancer: EnhancerDescriptor;
+  propertyCatalog?: IProperty[];
   options?: EnhancerFullOptions;
   onSubmit?: (options: EnhancerFullOptions) => Promise<any>;
   /** When true, hide property binding and target config columns (managed by outer panel) */
@@ -86,10 +86,11 @@ export default function EnhancerOptionsModal({
   onSubmit,
   onDestroyed,
   hideBindingAndConfig,
+  propertyCatalog,
 }: Props) {
+  const BApi = useResourceApi();
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
-  const forceUpdate = useUpdate();
   const navigate = useNavigate();
 
   const [options, setOptions] = useState<EnhancerFullOptions>(sanitizeOptions(propsOptions));
@@ -107,7 +108,8 @@ export default function EnhancerOptionsModal({
   }, []);
 
   const loadAllProperties = async () => {
-    const psr = (await BApi.property.getPropertiesByPool(PropertyPool.All)).data || [];
+    const psr =
+      propertyCatalog ?? (await BApi.property.getPropertiesByPool(PropertyPool.All)).data ?? [];
     const ps = _.mapValues(
       _.groupBy(psr, (x) => x.pool),
       (v) => _.keyBy(v, (x) => x.id),
@@ -150,38 +152,78 @@ export default function EnhancerOptionsModal({
               <div>{t<string>("enhancer.options.keywordProperty.tip")}</div>
             </div>
           </div>
-          <Button
-            color={"primary"}
-            size="sm"
-            variant={"light"}
-            onPress={async () => {
-              createPortal(PropertySelector, {
-                v2: true,
-                pool: PropertyPool.All,
-                multiple: false,
-                isDisabled: (p) =>
-                  p.pool == PropertyPool.Internal && p.id != InternalProperty.Filename,
-                onSubmit: async (selection) => {
-                  const p = selection[0];
+          {propertyCatalog ? (
+            <Select
+              aria-label={t<string>("enhancer.options.keywordProperty.label")}
+              dataSource={propertyCatalog
+                .filter(
+                  (property) =>
+                    property.pool !== PropertyPool.Internal ||
+                    property.id === InternalProperty.Filename,
+                )
+                .map((property) => ({
+                  value: `${property.pool}:${property.id}`,
+                  label: property.name,
+                }))}
+              selectedKeys={
+                options.keywordProperty
+                  ? [`${options.keywordProperty.pool}:${options.keywordProperty.id}`]
+                  : []
+              }
+              onSelectionChange={(keys) => {
+                const property = propertyCatalog.find(
+                  (item) => `${item.pool}:${item.id}` === [...keys][0],
+                );
 
-                  if (p) {
-                    setOptions({
-                      ...options,
-                      keywordProperty: { pool: p.pool, id: p.id, scope: PropertyValueScope.Manual },
-                    });
-                  }
+                if (property)
+                  setOptions({
+                    ...options,
+                    keywordProperty: {
+                      pool: property.pool,
+                      id: property.id,
+                      scope: PropertyValueScope.Manual,
+                    },
+                  });
+              }}
+            />
+          ) : (
+            <Button
+              color={"primary"}
+              size="sm"
+              variant={"light"}
+              onPress={async () => {
+                createPortal(PropertySelector, {
+                  v2: true,
+                  pool: PropertyPool.All,
+                  multiple: false,
+                  isDisabled: (p) =>
+                    p.pool == PropertyPool.Internal && p.id != InternalProperty.Filename,
+                  onSubmit: async (selection) => {
+                    const p = selection[0];
 
-                  return Promise.resolve();
-                },
-              });
-            }}
-          >
-            {currentProperty ? (
-              <BriefProperty property={currentProperty} />
-            ) : (
-              t<string>("enhancer.options.selectProperty.action")
-            )}
-          </Button>
+                    if (p) {
+                      setOptions({
+                        ...options,
+                        keywordProperty: {
+                          pool: p.pool,
+                          id: p.id,
+                          scope: PropertyValueScope.Manual,
+                        },
+                      });
+                    }
+
+                    return Promise.resolve();
+                  },
+                });
+              }}
+            >
+              {currentProperty ? (
+                <BriefProperty property={currentProperty} />
+              ) : (
+                t<string>("enhancer.options.selectProperty.action")
+              )}
+            </Button>
+          )}
           <Select
             className={"w-auto"}
             dataSource={propertyValueScopes.map((e) => ({

@@ -9,26 +9,21 @@ import type {
   PropertyValueScopePreference,
 } from "@/core/models/Resource";
 import type { TagValue } from "@/components/StandardValue/models";
-import type {
-  PlayControlPortalProps,
-  PlayControlRef,
-} from "@/components/Resource/components/PlayControl";
+import type { PlayControlRef } from "@/components/Resource/components/PlayControl";
 import type { PropertyType } from "@/sdk/constants";
+import type { OwnerResourceSelection } from "@/features/management/resourceSelection";
+import type { ManagementSource } from "@/features/management/api";
 
 import React, { useCallback, useImperativeHandle, useMemo, useReducer, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ApartmentOutlined,
   CheckCircleFilled,
-  FolderOpenOutlined,
   HistoryOutlined,
-  LoadingOutlined,
-  PlayCircleOutlined,
   PushpinOutlined,
-  QuestionCircleOutlined,
   StopOutlined,
 } from "@ant-design/icons";
-import { AiOutlineCloudDownload, AiOutlineFolderOpen, AiOutlinePlayCircle } from "react-icons/ai";
+import { AiOutlineCloudDownload, AiOutlineFolderOpen } from "react-icons/ai";
 import moment from "moment";
 
 import StandardValueRenderer from "../StandardValue/ValueRenderer";
@@ -41,8 +36,13 @@ import "./index.css";
 import ResourceDetailModal from "@/components/Resource/components/DetailModal";
 import HealthScoreDiagnosisModal from "@/components/Resource/components/HealthScoreDiagnosisModal";
 import HealthScoreBadge from "@/components/HealthScoreBadge";
-import BApi from "@/sdk/BApi";
+import {
+  ResourceOwnerProvider,
+  useResourceApi,
+  useResourceOwner,
+} from "@/features/management/resourceContext";
 import ResourceCover from "@/components/Resource/components/ResourceCover";
+import { useOwnerResourceDisplayOptions } from "@/features/management/useOwnerResourceDisplayOptions";
 import Operations from "@/components/Resource/components/Operations";
 import { getKnownMoveBlockReason } from "@/components/Resource/resourceMoveEligibility";
 import { useMoveReasonText } from "@/components/ResourceMovePanel/messages";
@@ -57,7 +57,6 @@ import {
 } from "@/stores/resourceMovePanel";
 import { BTaskStopButton } from "@/components/BTask";
 import {
-  DataOrigin,
   PropertyPool,
   PropertyValueScope,
   propertyValueScopes,
@@ -71,228 +70,10 @@ import {
 } from "@/sdk/constants";
 import { useResourceOptionsStore, useUiOptionsStore } from "@/stores/options";
 import PlayControl from "@/components/Resource/components/PlayControl";
+import { ResourceCardPlaybackButton as PlayButton } from "@/components/Resource/components/PlayControl/PlaybackButtons";
 import ResourceContextMenu from "@/components/Resource/components/ContextMenu";
 import ResourceSourceIcon from "@/components/Resource/components/ResourceSourceIcon";
-import { SteamIcon, DLsiteIcon, ExHentaiIcon } from "@/components/SourceIcons";
 import { autoBackgroundColor } from "@/components/utils"; // adjust the path as needed
-
-/** Render a DataOrigin-specific icon for playable items */
-const renderSourceIcon = (origin: DataOrigin, className: string): React.ReactNode => {
-  switch (origin) {
-    case DataOrigin.Steam:
-      return <SteamIcon className={className} />;
-    case DataOrigin.DLsite:
-      return <DLsiteIcon className={className} />;
-    case DataOrigin.ExHentai:
-      return <ExHentaiIcon className={className} />;
-    case DataOrigin.FileSystem:
-    default:
-      return <PlayCircleOutlined className={className} />;
-  }
-};
-
-/**
- * Variant of renderSourceIcon used as the *main* play-button trigger:
- * brand icons get a small green play-circle overlaid bottom-right so the
- * affordance is unmistakable. FileSystem is already a play icon, so it's
- * returned as-is.
- */
-const renderPlayButtonMainIcon = (origin: DataOrigin, className: string): React.ReactNode => {
-  if (origin === DataOrigin.FileSystem) {
-    return renderSourceIcon(origin, className);
-  }
-
-  return (
-    <span className={`relative inline-flex items-center justify-center ${className}`}>
-      {renderSourceIcon(origin, "")}
-      <AiOutlinePlayCircle
-        className="absolute right-0 bottom-0 text-success bg-content1 rounded-full"
-        style={{ fontSize: "0.625em" }}
-      />
-    </span>
-  );
-};
-
-type MenuEntry = {
-  key: string;
-  type: "source" | "openFolder" | "notFound";
-  source?: DataOrigin;
-  icon: React.ReactNode;
-  label: string;
-  onClick: () => void;
-  isLoading?: boolean;
-  isDisabled?: boolean;
-};
-
-// PlayButton component defined outside Resource to maintain stable reference
-const PlayButton: React.FC<PlayControlPortalProps> = ({
-  status,
-  sources,
-  hasPath,
-  isFile,
-  fsDiscoveryStatus,
-  onPlaySource,
-  onOpenFolder,
-  openFolderLabel,
-  onNotFound,
-  triggerFsDiscovery,
-}) => {
-  const { t } = useTranslation();
-
-  const fsTriggeredRef = React.useRef(false);
-
-  const iconClass = "text-2xl";
-  const buttonClass = "!p-0";
-
-  // Build menu entries. Sources are ordered: non-FileSystem first, FileSystem last.
-  const entries: MenuEntry[] = React.useMemo(() => {
-    if (status === "idle" || status === "loading") return [];
-
-    const result: MenuEntry[] = [];
-
-    for (const { source } of sources) {
-      const isFs = source === DataOrigin.FileSystem;
-
-      result.push({
-        key: `source-${source}`,
-        type: "source",
-        source,
-        icon:
-          isFs && fsDiscoveryStatus === "loading" ? (
-            <LoadingOutlined spin />
-          ) : (
-            renderSourceIcon(source, "text-base")
-          ),
-        label: t("resource.playControl.menu.openVia", {
-          source: t(`resource.source.${DataOrigin[source]}`),
-        }),
-        onClick: () => onPlaySource(source),
-      });
-    }
-
-    // If FileSystem has no items yet but discovery is pending/idle, add a loading entry
-    const hasFsSource = sources.some((s) => s.source === DataOrigin.FileSystem);
-
-    if (!hasFsSource && fsDiscoveryStatus !== "ready") {
-      result.push({
-        key: "source-fs-loading",
-        type: "source",
-        source: DataOrigin.FileSystem,
-        icon: <LoadingOutlined spin />,
-        label: t("resource.playControl.tooltip.discoveringFiles"),
-        onClick: () => {},
-        isDisabled: true,
-        isLoading: true,
-      });
-    }
-
-    if (hasPath) {
-      result.push({
-        key: "openFolder",
-        type: "openFolder",
-        icon: <FolderOpenOutlined className="text-base" />,
-        label: openFolderLabel,
-        onClick: onOpenFolder,
-      });
-    }
-
-    if (sources.length === 0 && fsDiscoveryStatus === "ready") {
-      result.push({
-        key: "notFound",
-        type: "notFound",
-        icon: <QuestionCircleOutlined className="text-base text-warning" />,
-        label: t("resource.playControl.tooltip.notFound"),
-        onClick: onNotFound,
-      });
-    }
-
-    return result;
-  }, [
-    status,
-    sources,
-    fsDiscoveryStatus,
-    hasPath,
-    t,
-    onPlaySource,
-    onOpenFolder,
-    openFolderLabel,
-    onNotFound,
-  ]);
-
-  // Trigger FS discovery when FS button is visible
-  const fsIsVisible = entries.some((e) => e.source === DataOrigin.FileSystem);
-
-  React.useEffect(() => {
-    if (fsIsVisible && fsDiscoveryStatus === "idle" && !fsTriggeredRef.current) {
-      fsTriggeredRef.current = true;
-      triggerFsDiscovery();
-    }
-  }, [fsIsVisible, fsDiscoveryStatus, triggerFsDiscovery]);
-
-  React.useEffect(() => {
-    if (fsDiscoveryStatus === "idle") {
-      fsTriggeredRef.current = false;
-    }
-  }, [fsDiscoveryStatus]);
-
-  // Overall loading/idle — no items yet, possibly discovering
-  if (status === "idle" || status === "loading") {
-    return (
-      <div className="hidden group-hover/cover:flex absolute left-0 bottom-0 z-[1]">
-        <Button isDisabled isIconOnly className={buttonClass}>
-          <LoadingOutlined spin className={iconClass} />
-        </Button>
-      </div>
-    );
-  }
-
-  const mainEntry = entries[0];
-
-  if (!mainEntry) return null;
-
-  // Dropdown entries = all entries except the main one (which is the trigger button)
-  const dropdownEntries = entries.slice(1).filter((e) => !e.isDisabled);
-
-  return (
-    <div className="hidden group-hover/cover:flex group-focus-within/cover:flex has-[[data-bakabase-tooltip-open]]:flex absolute left-0 bottom-0 z-[1] group/play">
-      <Tooltip content={mainEntry.label}>
-        <Button
-          isIconOnly
-          className={buttonClass}
-          isDisabled={mainEntry.isDisabled}
-          onPress={mainEntry.onClick}
-        >
-          {mainEntry.isLoading ? (
-            <LoadingOutlined spin className={iconClass} />
-          ) : mainEntry.type === "openFolder" ? (
-            <AiOutlineFolderOpen className={iconClass} />
-          ) : (
-            renderPlayButtonMainIcon(mainEntry.source ?? DataOrigin.FileSystem, iconClass)
-          )}
-        </Button>
-      </Tooltip>
-
-      {dropdownEntries.length > 0 && (
-        <div className="hidden group-hover/play:block group-focus-within/play:block absolute left-full top-0 pl-1 z-10">
-          <div className="flex flex-col gap-0.5 bg-content1 rounded-lg shadow-medium p-1 min-w-max">
-            {dropdownEntries.map((entry) => (
-              <Button
-                key={entry.key}
-                className="justify-start gap-2 px-2"
-                size="sm"
-                startContent={entry.icon}
-                variant="light"
-                onPress={entry.onClick}
-              >
-                {entry.label}
-              </Button>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
 
 export interface IResourceHandler {
   id: number;
@@ -336,6 +117,9 @@ type Props = {
   selectedResources?: ResourceModel[];
   selectedResourceIdsRef?: React.RefObject<number[]>;
   selectedResourcesRef?: React.RefObject<ResourceModel[]>;
+  selectedResourceGroups?: OwnerResourceSelection[];
+  onSelectedResourceGroupChanged?: (owner: ManagementSource | undefined, ids: number[]) => any;
+  onResourceGroupDeleted?: (owner: ManagementSource | undefined, ids: number[]) => any;
   onSelectedResourcesChanged?: (ids: number[]) => any;
   /** Called after resources are deleted so the parent can prune them from the list. */
   onResourcesDeleted?: (ids: number[]) => any;
@@ -345,6 +129,10 @@ type Props = {
 };
 
 const Resource = React.forwardRef((props: Props, ref) => {
+  const BApi = useResourceApi();
+  const owner = useResourceOwner();
+  const ownerDisplayOptions = useOwnerResourceDisplayOptions();
+  const isRemoteOwner = !!owner && !owner.isLocal;
   const {
     resource,
     sourceTabId,
@@ -375,10 +163,14 @@ const Resource = React.forwardRef((props: Props, ref) => {
   // so the virtualized grid doesn't re-render them on task pushes.
   const moveReasonText = useMoveReasonText();
   const moveBlockReason = getKnownMoveBlockReason(resource);
-  const movePanelEnabled = useResourceMovePanelStore((state) => state.panelEnabled);
-  const movingTask = useBTasksStore(selectResourceMovingTask(resource.id));
-  const moveReservation = useResourceMovePanelStore(
-    selectPanelResourceReservation(resource.id, resource.path),
+  const movePanelEnabled = useResourceMovePanelStore(
+    (state) => !isRemoteOwner && state.panelEnabled,
+  );
+  const movingTask = useBTasksStore((state) =>
+    isRemoteOwner ? undefined : selectResourceMovingTask(resource.id)(state),
+  );
+  const moveReservation = useResourceMovePanelStore((state) =>
+    isRemoteOwner ? undefined : selectPanelResourceReservation(resource.id, resource.path)(state),
   );
   const moveLocked = !!movingTask || !!moveReservation;
   const moveStatus =
@@ -411,7 +203,9 @@ const Resource = React.forwardRef((props: Props, ref) => {
   );
 
   const valueScopePriority = useMemo<PropertyValueScope[]>(() => {
-    const configured = propertyValueScopePriority;
+    const configured = isRemoteOwner
+      ? ownerDisplayOptions.data?.propertyValueScopePriority
+      : propertyValueScopePriority;
     const vsp =
       configured && configured.length > 0
         ? configured.slice()
@@ -428,7 +222,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
     }
 
     return vsp;
-  }, [propertyValueScopePriority]);
+  }, [propertyValueScopePriority, isRemoteOwner, ownerDisplayOptions.data]);
 
   const scopePreferenceMap = useMemo(() => {
     const map = new Map<string, PropertyValueScopePreference>();
@@ -451,7 +245,9 @@ const Resource = React.forwardRef((props: Props, ref) => {
     };
   }, []);
 
-  const displayPropertyKeys = displayProperties ?? [];
+  const displayPropertyKeys = isRemoteOwner
+    ? (ownerDisplayOptions.data?.uiResource?.displayProperties ?? [])
+    : (displayProperties ?? []);
 
   // Discovery happens automatically via SSE now
 
@@ -500,7 +296,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
   }, [resource, disableCoverClick]);
 
   const renderCover = () => {
-    const elementId = `resource-${resource.id}`;
+    const elementId = `resource-${owner?.serverId ?? "local"}-${resource.id}`;
 
     return (
       <div
@@ -525,9 +321,9 @@ const Resource = React.forwardRef((props: Props, ref) => {
           {movePanelEnabled && moveBlockReason && (
             <Tooltip content={moveReasonText(moveBlockReason)}>
               <span
+                aria-label={moveReasonText(moveBlockReason)}
                 className="inline-flex items-center justify-center w-6 h-6 rounded bg-default-100/90 text-warning"
                 title={moveReasonText(moveBlockReason)}
-                aria-label={moveReasonText(moveBlockReason)}
               >
                 <StopOutlined />
               </span>
@@ -953,6 +749,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
             : ""
       }`}
       data-id={resource.id}
+      data-resource-owner={owner?.serverId}
       style={style}
       onClickCapture={(e) => {
         if (moveLocked) {
@@ -1036,6 +833,9 @@ const Resource = React.forwardRef((props: Props, ref) => {
             : [resource.id]
         }
         selectedResourceIds={selectedResourceIds}
+        selectedResourceGroups={props.selectedResourceGroups}
+        onSelectedResourceGroupChanged={props.onSelectedResourceGroupChanged}
+        onResourceGroupDeleted={props.onResourceGroupDeleted}
         selectedResources={selectedResources}
         sourceTabId={sourceTabId}
         sourceTabName={sourceTabName}
@@ -1050,7 +850,17 @@ const Resource = React.forwardRef((props: Props, ref) => {
     </div>
   );
 });
-const ResourceMemo = React.memo(Resource);
+const ResourceWithOwner = React.forwardRef((props: Props, ref) => {
+  const inheritedOwner = useResourceOwner();
+  const source = props.resource.owner ?? inheritedOwner;
+
+  return (
+    <ResourceOwnerProvider source={source} resourceId={props.resource.id}>
+      <Resource {...props} ref={ref} />
+    </ResourceOwnerProvider>
+  );
+});
+const ResourceMemo = React.memo(ResourceWithOwner);
 
 ResourceMemo.displayName = "Resource";
 

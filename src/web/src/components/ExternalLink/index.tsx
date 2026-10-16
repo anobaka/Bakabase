@@ -12,10 +12,15 @@ import { browserExternalUrl, openExternalUrl } from "@/utils/openExternalUrl";
 
 type Props = {
   href: string;
+  /** A known browser surface may use a local desktop host without sharing its window. */
+  forceBrowser?: boolean;
 } & Omit<LinkProps, "href" | "onPress">;
 
-const ExternalLink = ({ href, children, size, ...otherProps }: Props) => {
-  const inBrowser = useRemoteAccessStore((state) => state.clientMode === ClientMode.RemoteBrowser);
+const ExternalLink = ({ href, children, size, forceBrowser = false, ...otherProps }: Props) => {
+  const browserMode = useRemoteAccessStore(
+    (state) => state.clientMode === ClientMode.RemoteBrowser,
+  );
+  const inBrowser = forceBrowser || browserMode;
   const browserHref = inBrowser ? browserExternalUrl(href) : undefined;
 
   return (

@@ -10,6 +10,7 @@ import { startHeartbeat, isConnected, getConnectionState, onConnectionChange } f
 import { isCoverOverlayEnabled, onSettingsChange } from './settings';
 import { t } from './i18n';
 import type { TaskSummaryTarget } from './taskSummary';
+import { applyQueriedContentStatus, buildBrowsingPage, canAutoMarkContent, validContentDate } from './browsingHistory';
 
 interface MarkerEntry {
   id: string;
@@ -22,6 +23,7 @@ interface MarkerEntry {
   coverContainer: HTMLElement | null;
   /** Whether this content was already viewed *before* the current page load. */
   visitedBefore: boolean;
+  updateTime: Date | null;
 }
 
 const DEFAULT_STATUS: ContentStatus = {
@@ -81,6 +83,8 @@ export function App({ siteConfigs }: { siteConfigs: SiteConfig[] }) {
   const [coverOverlayEnabled, setCoverOverlayEnabled] = useState(false);
   const statusMapRef = useRef(new Map<string, ContentStatus>());
   const statusBaseUrlRef = useRef(getApiBaseUrl());
+  const statusGenerationRef = useRef(getApiAddressGeneration());
+  const apiGeneration = getApiAddressGeneration();
   // downloadKey (== adapter.extractUrl) -> backend state, or null when the backend
   // knows nothing about it (queried, never downloaded, not queued).
   const downloadStatesRef = useRef(new Map<string, DownloadTaskState | null>());
@@ -90,7 +94,9 @@ export function App({ siteConfigs }: { siteConfigs: SiteConfig[] }) {
   // Ids that were already viewed when first queried this page load. Marking an
   // item viewed during the current visit does NOT add it here, so the "visited
   // before" frame only appears on revisits — the first visit stays untouched.
-  const visitedBeforeRef = useRef(new Set<string>());
+  const priorViewStatesRef = useRef(new Map<string, boolean>());
+  const markingIdsRef = useRef(new Set<string>());
+  const markVisibleRef = useRef(() => {});
   const siteConfig = useMemo(() => {
     const hostname = window.location.hostname;
     return siteConfigs.find((c) => c.domains.some((d) => hostname.includes(d))) ?? null;
@@ -137,8 +143,8 @@ export function App({ siteConfigs }: { siteConfigs: SiteConfig[] }) {
         ? ensureCoverContainer(element, siteConfig.coverOverlay)
         : null;
 
-      const visitedBefore = visitedBeforeRef.current.has(info.id);
-      entries.push({ id: info.id, element, container, status, downloadState, coverContainer, visitedBefore });
+      const visitedBefore = priorViewStatesRef.current.get(info.id) === true;
+      entries.push({ id: info.id, element, container, status, downloadState, coverContainer, visitedBefore, updateTime: validContentDate(info.updateTime) });
     }
 
     setMarkers(entries);
@@ -204,19 +210,18 @@ export function App({ siteConfigs }: { siteConfigs: SiteConfig[] }) {
       data: { domainKey: siteConfig.key, filter, contentIds },
       onSuccess: (result: any) => {
         if (baseUrl !== getApiBaseUrl() || generation !== getApiAddressGeneration()) return;
-        if (!result.data) return;
+        if (result.code !== 0 || !Array.isArray(result.data)) return;
         for (const item of result.data) {
-          statusMapRef.current.set(item.contentId, {
+          applyQueriedContentStatus(statusMapRef.current, priorViewStatesRef.current, item.contentId, {
             isViewed: item.isViewed,
             hasUpdate: item.hasUpdate,
             viewedAt: item.viewedAt ? new Date(item.viewedAt) : null,
             updatedAt: item.updatedAt ? new Date(item.updatedAt) : null,
           });
-          // Snapshot the "already viewed" state at query time, before any
-          // mark-viewed this session flips it.
-          if (item.isViewed) visitedBeforeRef.current.add(item.contentId);
         }
         scanAndRender();
+        // The site's timer may have fired while history was still unresolved.
+        markVisibleRef.current();
       },
     });
   }, [siteConfig, scanAndRender]);
@@ -235,13 +240,15 @@ export function App({ siteConfigs }: { siteConfigs: SiteConfig[] }) {
   }, [siteConfig]);
 
   useEffect(() => {
-    if (statusBaseUrlRef.current === connection.baseUrl) return;
+    if (statusBaseUrlRef.current === connection.baseUrl && statusGenerationRef.current === apiGeneration) return;
     statusBaseUrlRef.current = connection.baseUrl;
+    statusGenerationRef.current = apiGeneration;
     statusMapRef.current.clear();
     downloadStatesRef.current.clear();
-    visitedBeforeRef.current.clear();
+    priorViewStatesRef.current.clear();
+    markingIdsRef.current.clear();
     scanAndRender();
-  }, [connection.baseUrl, scanAndRender]);
+  }, [connection.baseUrl, apiGeneration, scanAndRender]);
 
   // The initial scan can happen before the health probe succeeds. Retry unresolved
   // items on recovery, including a saved address change, without a page reload.
@@ -252,7 +259,7 @@ export function App({ siteConfigs }: { siteConfigs: SiteConfig[] }) {
       .filter((id): id is string => !!id && !statusMapRef.current.has(id));
     queryStatus([...new Set(ids)]);
     queryDownloadStates(collectNewDownloadKeys(elements));
-  }, [connected, connection.baseUrl, siteConfig, queryStatus, queryDownloadStates, collectNewDownloadKeys]);
+  }, [connected, connection.baseUrl, apiGeneration, siteConfig, queryStatus, queryDownloadStates, collectNewDownloadKeys]);
 
   // The download list changed for this item (added or removed). Re-ask the backend
   // instead of guessing: the answer carries the new task ids, which the next click
@@ -278,10 +285,11 @@ export function App({ siteConfigs }: { siteConfigs: SiteConfig[] }) {
       if (!info.id) continue;
 
       const status = statusMapRef.current.get(info.id);
-      if (status?.isViewed) continue;
+      const contentDate = validContentDate(info.updateTime);
+      if (!canAutoMarkContent(status, priorViewStatesRef.current.has(info.id), contentDate) || markingIdsRef.current.has(info.id)) continue;
       if (!isElementInViewport(element)) continue;
 
-      visibleUnviewed.push({ contentId: info.id, updatedAt: info.updateTime });
+      visibleUnviewed.push({ contentId: info.id, updatedAt: contentDate });
     }
 
     if (visibleUnviewed.length === 0) return;
@@ -289,6 +297,11 @@ export function App({ siteConfigs }: { siteConfigs: SiteConfig[] }) {
     const filter = siteConfig.extractFilter(window.location.href);
     const baseUrl = getApiBaseUrl();
     const generation = getApiAddressGeneration();
+    for (const item of visibleUnviewed) markingIdsRef.current.add(item.contentId);
+    const clearPending = () => {
+      if (baseUrl !== getApiBaseUrl() || generation !== getApiAddressGeneration()) return;
+      for (const item of visibleUnviewed) markingIdsRef.current.delete(item.contentId);
+    };
     httpRequest({
       method: 'POST',
       url: `${baseUrl}/third-party-content-tracker/mark-viewed`,
@@ -300,8 +313,10 @@ export function App({ siteConfigs }: { siteConfigs: SiteConfig[] }) {
           updatedAt: i.updatedAt?.toISOString() ?? null,
         })),
       },
-      onSuccess: () => {
+      onSuccess: (result: any) => {
         if (baseUrl !== getApiBaseUrl() || generation !== getApiAddressGeneration()) return;
+        clearPending();
+        if (result.code !== 0) return;
         for (const item of visibleUnviewed) {
           const existing = statusMapRef.current.get(item.contentId);
           if (existing) {
@@ -320,8 +335,15 @@ export function App({ siteConfigs }: { siteConfigs: SiteConfig[] }) {
         }
         scanAndRender();
       },
+      onError: clearPending,
     });
   }, [siteConfig, scanAndRender]);
+  markVisibleRef.current = markVisibleAsViewed;
+
+  const browsingPage = useMemo(() => siteConfig && ['exhentai', 'soulplus'].includes(siteConfig.key)
+    ? buildBrowsingPage(markers.map(({ id, updateTime }) => ({ id, updateTime })), priorViewStatesRef.current,
+      siteConfig.extractFilter(window.location.href), siteConfig.contentTimePrecision ?? 'minute')
+    : undefined, [siteConfig, markers]);
 
   // Initial scan + scroll listener
   useEffect(() => {
@@ -414,6 +436,7 @@ export function App({ siteConfigs }: { siteConfigs: SiteConfig[] }) {
         siteKey={siteConfig?.key}
         coverOverlay={siteConfig?.coverOverlay}
         taskSummaryTarget={taskSummaryTarget}
+        browsingPage={browsingPage}
         connection={connection}
       />
       {(connected || __DEV__) && siteConfig && markers.flatMap((m) => {

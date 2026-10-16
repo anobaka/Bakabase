@@ -1,3 +1,4 @@
+import type { ManagementSource } from "@/features/management/api";
 import type {
   DataOrigin,
   DataStatus,
@@ -136,6 +137,8 @@ export type ResourceSourceLink = {
 };
 
 export type Resource = {
+  /** Immutable owner for a resource loaded in the unified library. IDs remain owner-local. */
+  owner?: ManagementSource;
   id: number;
   mediaLibraryId: number;
   categoryId: number;

@@ -244,14 +244,14 @@ describe("the dashboard's first-run welcome", () => {
     // An upgraded install records no baseline: its unread notices wait behind the welcome.
     expect(api.captureNoticeBaseline).not.toHaveBeenCalled();
 
-    // The multi-device overview, and its link to the multi-device library.
+    // The multi-device overview, and its link to the resource list.
     await click("helpCenter.topic.multiDevice");
-    await click("helpCenter.multiDevice.open.library");
+    await click("helpCenter.multiDevice.open.resources");
 
     // Nothing that waited opens over the page the reader went to.
     expect(dialogs()).toEqual([]);
     expect(noticeOnScreen()).toBeNull();
-    expect(api.navigate).toHaveBeenCalledWith("/federation");
+    expect(api.navigate).toHaveBeenCalledWith("/resource");
     // The welcome is done; the notices are not read, so the next launch shows them.
     expect(localStorage.getItem(GETTING_STARTED_FIRST_RUN_KEY)).toBe("true");
     expect(api.markNoticesRead).not.toHaveBeenCalled();

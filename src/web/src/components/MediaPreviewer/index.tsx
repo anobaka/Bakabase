@@ -8,7 +8,8 @@ import ReactPlayer from "react-player";
 import { MdAccessTime } from "react-icons/md";
 
 import "./index.scss";
-import BApi from "@/sdk/BApi";
+import { useResourceApi, useResourceOwner } from "@/features/management/resourceContext";
+import { managedResourceAssetUrl } from "@/features/management/resourceApi";
 import { MediaType } from "@/sdk/constants";
 import envConfig from "@/config/env";
 
@@ -37,9 +38,15 @@ interface IProps {
 }
 
 const MediaPreviewer = (props: IProps) => {
+  const BApi = useResourceApi();
+  const owner = useResourceOwner();
   const { t } = useTranslation();
 
   const { resourceId } = props;
+  const mediaUrl = (path: string) =>
+    owner && !owner.isLocal
+      ? managedResourceAssetUrl(owner, resourceId, path)
+      : `${envConfig.apiEndpoint}/file/play?fullname=${encodeURIComponent(path)}`;
 
   const [items, setItems] = useState<IItem[]>([]);
   const itemsRef = useRef(items);
@@ -178,7 +185,7 @@ const MediaPreviewer = (props: IProps) => {
 
   // Check playability when currentItem changes to a video
   useEffect(() => {
-    if (!currentItem || currentItem.type !== MediaType.Video) {
+    if (!currentItem || currentItem.type !== MediaType.Video || (owner && !owner.isLocal)) {
       setPlayabilityError(null);
 
       return;
@@ -244,7 +251,7 @@ const MediaPreviewer = (props: IProps) => {
           return (
             <img
               alt=""
-              src={`${envConfig.apiEndpoint}/file/play?fullname=${encodeURIComponent(currentItem.filePath)}`}
+              src={mediaUrl(currentItem.filePath)}
               onLoad={() => {
                 clearTimeout(autoPlayTimeoutRef.current);
                 if (
@@ -269,7 +276,7 @@ const MediaPreviewer = (props: IProps) => {
               controls={false}
               height={mediaRef.current?.clientHeight}
               playing={playing}
-              src={`${envConfig.apiEndpoint}/file/play?fullname=${encodeURIComponent(currentItem.filePath)}`}
+              src={mediaUrl(currentItem.filePath)}
               width={mediaRef.current?.clientWidth}
               onCanPlay={() => {
                 if (!videoInitializedRef.current && reactPlayerRef.current) {

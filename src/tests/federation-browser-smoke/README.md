@@ -1,102 +1,64 @@
-# Federation browser, first-launch, server-switching and data sync smoke test
+# Multi-device browser smoke tests
 
-This test starts two isolated HTTP processes: production Service pipelines with 57 fixture resources each. The "unified" Service is composed as the desktop app's `UnifiedHost` composes it — the server plus the relay manager (`AddRemoteConsole`) and the recorded window origin — so it can manage the "source" Service through a per-server loopback relay; the relays it starts live in its process. A third, "first-launch", is a second desktop-composed Service with no resources — a fresh desktop install — that the browser stage starts when its turn comes, checks and stops again. It uses the actual built frontend and Chromium. It does **not** test an installed Avalonia package, the tray's switcher menu, platform file dialogs, OS folder/player launch, auto-updating, or installer coexistence; those remain native release checks.
+This suite runs the production frontend against independent temporary Service hosts.
+The unified host composes the same server and management relay as the desktop app;
+the source host is headless. It never opens an installed application or launches a
+native player. The separate fresh-install fixture checks first-launch behavior.
 
-No user installation, saved connection, existing signing key or browser profile is accessed. Discovery is never started. All test processes — relays included — are stopped and temporary data is removed on success or failure.
-
-**Nothing leaves the machine.** The shipped `appsettings.json` carries live Clarity, GA4, PostHog and Sentry ids and anonymous tracking is on by default, and the fixtures serve the production frontend, which starts those SDKs with whatever `/app/analytics-info` hands it. So:
-
-- The test host blanks every `Analytics:*` key — the known ones and whatever the shipped settings files put under `Analytics` — and sets `App:EnableAnonymousDataTracking` to false, as environment variables that win over those files (`Bakabase.Federation.TestHost/FixtureAnalytics.cs`). A host whose effective configuration still has any of them set never reports ready. `run.py` passes the same settings, and the browser stage and `federation-smoke/run.py` check `/app/analytics-info` of every Service before any page loads.
-- The browser is confined as a second line (`network.cjs`): each context refuses every request outside the fixtures' origins and the relay port range (`127.0.0.1:34650`–`34905`, the relay manager's default), and Chromium is launched with `--host-resolver-rules` under which no name but `localhost` and `127.0.0.1` resolves — which also covers WebSockets and preconnects, which routes cannot refuse. Every refused attempt is recorded once (origin and path, never the query) in the report as `blockedRequests`, and a stage fails when any page tried to reach an address off this machine. A WebSocket has two witnesses, because Playwright alone announces one only once its handshake was sent or it failed, and forgets it when its page navigates — so a socket whose page moved on or closed before the refused lookup came back used to be refused and never recorded. Every frame of every page now reports each socket as it is made (an init script subclasses `WebSocket`, reports through a binding, then opens it exactly as the browser's own class does), and Playwright's report still covers a worker's. A stage reads the record only after every open page's reports are in (`assertStayedLocal` makes one last binding call per page, answered after all earlier ones). Each run first proves this on a canary page: a fetch, a beacon, an image and WebSockets to `.invalid` addresses must all be refused and recorded — including a socket whose page navigates on at once, one whose page is closed at once and one in a frame, which must be in the record without any waiting, and one in a worker.
-
-## Run
-
-Use .NET 9, Node 20 or newer, Python 3, and the repository's Yarn version. Build the frontend with its normal dependencies:
-
-```sh
-cd src/web
-corepack yarn install --immutable
-corepack yarn build
-cd ../..
-```
-
-Install the browser dependency in this test directory, separately from production dependencies:
-
-```sh
+```bash
 cd src/tests/federation-browser-smoke
 npm ci --ignore-scripts
-npx playwright install chromium
-# Linux runners may need: npx playwright install --with-deps chromium
+npx playwright install --with-deps --only-shell chromium
 cd ../../..
-python3 src/tests/federation-browser-smoke/run.py --results-directory /tmp/bakabase-browser-results
+python3 src/tests/federation-browser-smoke/run.py \
+  --dotnet /absolute/path/to/dotnet --node /absolute/path/to/node \
+  --results-directory /absolute/path/to/results
 ```
 
-The runner builds the test host, starts it on two free loopback ports, waits for their ready files, and invokes `browser.cjs`, which runs the federation stage, then `first-launch.cjs`, `switching.cjs` and last `data-sync.cjs`. Options:
+Build `src/web` first, or use `--web-root` for an existing production build. The runner
+builds the test host unless `--no-build` is supplied. CI downloads the exact shared
+host and frontend artifacts and retains its existing required-check gates.
 
-- `--dotnet /absolute/path/to/dotnet` and `--node /absolute/path/to/node` select runtimes.
-- `--no-build` reuses the already-built Debug/net9.0 test host.
-- `--web-root /absolute/path/to/dist` selects a production frontend build.
-- `--timeout 480` bounds fixture startup plus browser work in seconds (the default; data sync's stage runs last and waits on real sync cycles).
-- `--keep-fixtures` retains temporary databases and **disposable test credentials** for debugging after stopping the processes. Do not publish that directory; normal runs delete it.
+The stages run in this order:
 
-`result.json` records assertions or a failed status, including build failures; `browser.log` records the browser outcome. Each `*-host.log` (the first-launch fixture's included, once it has started) retains the process exit code, readiness, recognized failure categories, exception types and stack method names before fixture deletion. These summaries omit raw messages, ready payloads, paths and arguments because those may contain test credentials. When a run fails, each Service's `*-requests.jsonl` is kept too — the evidence of what reached which server and how it answered — rewritten to the recorder's own fields. Screenshots (`switching-a-manages-b.png`, `switching-b-console.png` and `switching-back-on-a.png` among them) are retained in the results directory. No node grant key and no managed-server device key is included in the report or a kept request log.
+1. **First launch:** a new desktop data directory manages no other devices, opens its
+   startup-notice baseline, records shipped notices and shows no upgrade-only notice.
+2. **Management and server switching:** A pairs with B through the Devices page,
+   switches to B through the signed relay and returns home. HTTP and WebSocket checks
+   validate the correct origin, signer, replay protection and rejection of cross-origin
+   host-only requests. Path mappings stay on A. Device-map layout and keyboard focus
+   are checked at desktop widths and with a crowded map. The stage leaves A managing B.
+3. **Resource profiles:** A creates a local profile for B through the existing filter
+   and player editors. Colliding property IDs resolve against B, preview matches only
+   B's resources, and local player arguments stay on A. No executable is launched;
+   temporary profiles and properties are removed before data-sync tests.
+4. **Management path mappings:** a closed editor sends no tree request. Opening it
+   reads a bounded owned-path tree, selecting a directory uses its actual server path,
+   and editing does not save automatically. A draft survives reload, restores its
+   values and is cleared on a successful save. A draft whose baseline changed cannot
+   overwrite another saved edit without review; choosing the current mapping keeps it.
+   The original management pairing and mappings are restored after the stage.
+5. **Data sync:** a two-way request starts on the device map and is approved through
+   B's signed relay. First-sync review, definitions convergence, conflicts, resolution,
+   hub updates, keyboard focus and narrow layouts are exercised. A LAN browser's
+   restricted sharing controls are checked independently of administrator pairing.
 
-The test host takes these optional, test-only environment variables, all set by `run.py`:
+The retired read-only resource page, grants, playback sessions and mapping editor
+are not exercised or retained. Unified resources, management, and data sync are the
+supported surfaces.
 
-- `BAKABASE_FEDERATION_TEST_DESKTOP_WINDOW` (unified and first-launch): compose the relay manager as `UnifiedHost` does and record this address — the harness browser's origin for the host — as the window's origin, the one "back to this device" returns to. Readiness waits for the window's origin to be recorded.
-- `BAKABASE_FEDERATION_TEST_REQUEST_LOG` (unified and source): an outermost observer writes each request's method, path, `Sec-Fetch-Site`/`Dest`, its `Origin`, whether it is a WebSocket handshake, whether it carried a switch ticket or a cookie, what its device signature verifies as against that host's own paired devices (its own nonce cache, so the server's is never consumed), and the status and refusal header the host answered with. Never any other header, queries, bodies or keys, and a media ticket in a path is replaced by `{ticket}`; the file is deleted with the fixture unless the run failed.
-- `BAKABASE_FEDERATION_TEST_SERVER_NAME` (every Service): the name the server gives itself in `server-info` and discovery — and so the name every pairing records and every switcher shows — in place of `Environment.MachineName`, which all fixtures on one machine share. `run.py` names them `fixture-<role>`, so a check by name can tell A from B.
-- `BAKABASE_NODE_NAME` (every Service, a production variable): the same name as a node — what library sharing and data sync call the device — so data sync's pages and the device map name A and B apart too.
-- `BAKABASE_FEDERATION_TEST_LAN_PORT` (source): a second port the host listens on, on loopback like the first, whose callers it takes for a browser on another device — an outermost filter gives every request on it the address `192.0.2.10` (TEST-NET-1) before any of the server's own middleware, so the remote-access gate, the loopback guards and every endpoint judge it as a LAN browser's. Nothing listens beyond this machine. The browser stage is told its address as the source's `lan`.
-- `BAKABASE_FEDERATION_TEST_WEB_ROOT`: the production frontend, served after the Service's own pipeline — as a release build's `UseSpa` is — so the request gates, `frame-ancestors` included, apply to the UI's own document.
+`network.cjs` confines Chromium to the fixture listeners and the management relay
+range, blocks external HTTP/WebSocket traffic, and proves the containment before any
+page is opened. Fixtures explicitly disable all analytics. Timeouts stop only owned
+process groups; temporary data is removed unless `--keep-fixtures` is supplied. Failure
+artifacts contain screenshots and allowlisted diagnostics without pairing credentials.
 
-Every fixture gives other devices its own `127.0.0.1` port as the address to reach it (next to a code, in a two-way offer another device reads it back through): it listens on nothing else, where the production service would name each of the machine's addresses.
+Offline runner tests:
 
-Runner failure handling can be checked without starting .NET or a browser:
-
-```sh
-python3 -m unittest discover -s src/tests/federation-browser-smoke -p 'test_*.py'
+```bash
+python3 -m unittest discover -s src/tests/federation-browser-smoke -p 'test*.py'
+node --test src/tests/federation-browser-smoke/first-launch.test.cjs
 ```
 
-## What it verifies
-
-1. Entering the source's address in the unified host's devices page (Library sharing, opened by `?section=connect`) starts nothing; the form for servers to manage is in another tab and not on the page. A fresh read-only request remains pending until approved through the source device UI, where its notification's link (`?section=sharing-requests`) leads. No reverse grant appears, no path is bound, and the local library identity stays unchanged.
-2. Browsing is turned on by gaining read access. A combined query returns both libraries, remote detail preserves the full owner/epoch/resource identity, and an unmapped directory cannot be opened.
-3. Audio metadata loads from a controlled same-origin URL under `localhost`. Disabling browsing from another window clears active results and media while retaining pairings and sharing settings.
-4. Recovery navigation (`?section=identity`) opens "After copying or restoring data" in the Advanced tab, where each action is offered only once its case is chosen. "Revoke all library access" (restored from a backup) keeps the node ID and outbound connections while changing its library generation; "Make this a new device" (copied) changes both IDs and clears connections. Both leave sharing and browsing disabled. This tests the reset controls, not a full manual AppData restore.
-5. First launch (`first-launch.cjs`): a desktop install started for the first time — its own data directory — reports ready managing nothing (`/federation/local/servers` lists no server and no request, and there is no managed-server store). It is also the startup notices' fresh-install rule through the app's own host start-up: the first start opened the notice baseline (`UI.Notices.BaselinePending` in `configs/ui.json`, read before any page loads); then its window, on the devices page, records every upgrade-only notice it ships with as read (`ReadIds` is `multi-device`, the baseline closed) and, once the page is idle, shows no notice.
-6. Server switching (`switching.cjs`), with the unified host as this computer (A) and the source as the server it manages (B):
-   - **Pair by code.** B's own machine issues a pairing code (host-only); entered with B's address in A's devices page (the Management tab's add form, `?section=add-server`), it pairs A with B. The listing carries no key and no path mapping yet; A's store holds the device ID B now lists and its key, mode `0600`; the page's Refresh, which also probes the managed servers, reports B online.
-   - **Switch.** The switcher at the top of the menu sends the window to `127.0.0.1:<relay port>`. The switch is followed document by document: the ticketed navigation must be served the landing page, and the landing page's own navigation, without the ticket, must be served too — a missing or refused ticket fails there with the relay's answer (e.g. `HTTP 400 (ForeignCaller)`), not as a timeout on UI text. Exactly one ticketed navigation happens, the ticket is gone from the URL and from the window's history (read over CDP), and the switcher says "Managing" with B's name, which is not A's. The page's `/client/status` says `console` with B's server and the paired device ID and no key; `/client/switcher` lists this device and B as current. Every request B receives from the window or the relay — B's UI document included — verifies on B as the paired device's signature, with no ticket and no cookie (a cookie set on the relay origin is not forwarded).
-   - **Switch to a route.** Back on A, A's own page asks `/federation/local/servers/{id}/open` for B at `/#/configuration` and sends the window there. The route is the fragment, which the browser never sends, so only the landing page's `+ location.hash` can carry it on: the window must end on the relay at `#/configuration`, after exactly one ticketed navigation and with no ticket left.
-   - **Full control.** Turning on "Allow live transcoding for other devices" in B's own settings page (where the routed switch landed), through the relay, changes B's setting as read from B's own API — a write no read-only sharing grant can make — and B saw it as a signed `PUT`. B's own UI keeps its hub through the relay as a WebSocket: the change is pushed to it live (an `OptionsChanged` frame with `allowLiveTranscode: true` on the relay page's `/hub/ui` socket), and B recorded every hub handshake of that page as signed by the managed device, naming B's own origin — the relay forwards a request it admitted from its own page that way — and answered 101. A's own UI likewise negotiated and upgraded its hub from its window origin.
-   - **This computer's actions.** A path mapping added in A's UI (B's library folder → a folder that does not exist on A) is what A's relay applies: B's "open folder" request (`/resource/directory?id=1`, sent from B's page) is answered by the relay with the locally mapped path, after the relay itself asked B for the resource's path; an unmapped `/tool/open-file` is answered `PathNotMapped`. Neither reaches B. No folder or program is opened: the relay's container has no seam for a recording shell opener without a product change, so the handler is driven to the point where the missing local folder stops it.
-   - **Back.** The switcher returns the window to A's recorded origin (`localhost:<port>`), where a `localStorage` value set before switching is still there — neither visible to B's page nor replaced by what B's page stored under the same key.
-   - **Stop and re-pair.** "Stop managing" asks B to revoke the device (a signed `DELETE`, after which B no longer lists it) and deletes the key. Adding B's address without a code files a request shown as waiting; approving it in B's own devices page is collected by A in the background and noticed by A's page without a reload; B reappears and switching works again, now signed by the new device.
-   - **Containment.** From the relay page, no-cors `POST /remote-access/pairing/code`, a no-cors `GET /file/icon` (runs on this machine) and an `<iframe>` of A's UI — against both `127.0.0.1:<A>` (same site) and `localhost:<A>` (cross site) — are each answered 403 `HostOnly` by A according to A's own request log (the frame with `frame-ancestors 'self'`), and A's pairing code is unchanged. `/client/log`, `/client/log/open`, `/client/app/info` and `/client/app/open` on the relay answer 404. A navigation into the relay started by a page on A's origin is refused (400 `ForeignCaller`) without a ticket and with every ticket already spent.
-
-   - **Hubs.** Chromium — and so WebView2 — sends no fetch metadata on a WebSocket handshake, only `Host`, `Upgrade` and `Origin`, so both guards judge a handshake by its `Origin`. The relay page opens `ws://127.0.0.1:<A>/hub/ui` and `ws://localhost:<A>/hub/ui` and, should either open, speaks SignalR's handshake and asks for the initial data: neither may open or bring back a single message, Playwright must report each answered 403, and A's own log must show exactly one handshake each, naming the relay's origin, answered 403 `HostOnly` (the report keeps what fetch metadata it carried: none). And a page on A's origin — in both of its address forms — and an opaque `about:blank` page each open `ws://127.0.0.1:<relay>/hub/ui`: the relay must answer 400 and B must receive nothing at all.
-
-   - **Device map.** A's `/#/federation/map` draws B with one management line from A to B (`data-out` active, `data-in` none), as many management lines as A's listing has managed servers, A itself as the desktop app, and B as a headless server — what B's `server-info` says it is (A says desktop app, B headless, checked at the start of the stage); selecting B opens its details with "Open in this window" (screenshot `device-map.png`). Below 1536 px the details take a column beside the map, which is laid out again for the width left: at this window's 1440 px, and again at the desktop app's smallest 1280 px (`device-map-1280.png`), the details must not overlap the map's region, no device may be under them (sampled with `elementFromPoint`), the selected B must be in view, and the page must not scroll sideways. Then, from the keyboard only, the details keep the keyboard through actions that take away what they show: Chromium moves focus off a button disabled while its action runs, to the page's body, before anything is read again. A stops managing B from the map (Enter on "Stop managing", Enter on Confirm): once A's listing no longer has B, focus is on the details' heading (`device-map-after-forget.png`). A asks to manage B again from its devices page, and B approves on its own map (Enter on the request's card, on Approve, on Confirm): the approval answers the id of the device it lets in, which B lists under that id once A has collected its key in the background; B's details move from the request to that device, keep what approving said, and have the keyboard on their heading (`device-map-after-approve.png`). Enter on that message's own × takes the message away, and the keyboard is on the heading again, not the page's body. A manages B again at the end. Last, thirteen more devices pair with A through A's own pairing API (a code minted on A, exchanged under a name of their own; all revoked afterwards), so that at 1280 px A's map is drawn while the details are closed and listed while they stand beside it — each rendering replacing every control of the other. From the keyboard, Enter on a device's card and Escape in the details, then Enter on its relationship and the details' own ×, must each end with the keyboard on that card or relationship drawn again; a pointer on the card must leave the keyboard on the same device in the list, and Escape there, on the map, on its card drawn again — never on the page's body (`device-map-crowded-open.png`, `device-map-crowded-closed.png`).
-
-   Both Services run on one machine, so B treats the relay as a loopback caller and does not itself enforce the device signature; B's request log verifies each signature with B's own authenticator instead — what B enforces from another machine. That enforcement path stays covered by the RemoteAccess unit tests. A fixture has no screen, so A announces a first-device pairing code at start as a headless server does; the containment check compares A's code before and after rather than expecting none.
-7. Data sync (`data-sync.cjs`), with A managing B as server switching left it; B is headless and shares its definitions, and has one of its own ("Genre"):
-   - **Started on the map.** On A's `/#/federation/map`, B's details offer data sync with it ("Sync with fixture-source…"); choosing "Keep in step both ways" asks first — both ways turns A's own sharing on — and files the request: A's listing has it waiting, B's details show it with Cancel, and the sync line to B is drawn waiting (`data-in` pending).
-   - **A browser on another device.** B is switched to Unrestricted and opened on its LAN-caller port, which B takes for a caller on another machine (its `/remote-access/context` says not local). `/data-sync` opens and lists A's request, but with Reject only: no Approve, no approval options, no sharing switch and no "Create a code", and the overview says this caller may not manage sharing; a `POST /data-sync/invitations` from that page answers `NotAllowedOnThisDevice` (`data-sync-lan-unrestricted.png`). Outside Unrestricted mode (with pairing not required, so the page opens at all) a fresh page shows the not-available notice and asks nothing of `/data-sync`; the window around it is refused only host-only surfaces (`data-sync-lan-not-available.png`). B's remote access is put back afterwards, waiting until B keeps answering with it.
-   - **Approved in the switched window.** A's page shows B waiting; A's page opens B's `/data-sync?tab=requests` through `/federation/local/servers/{id}/open`, which lands on the relay. There B's own page lists A's request with "also receive back" ticked; approving it (confirmed) makes B's link to A, read back at once, and B's page draws A. B's request log shows the approval arrived signed as the device A manages B with — a paired caller may approve (`data-sync-relay-approved.png`).
-   - **First sync.** A's `/data-sync?link={id}&review=1` previews the first sync with B's "Genre" new here; "Start" ends in "Now in step with fixture-source", and A has "Genre". Both links reach Active.
-   - **A conflict.** Both devices are paused, A renames "Genre" to "Genres" and B to "Style", and both resume: B's pull opens a field conflict on B, and A's opens one on A while A's link view says B has one decision waiting there.
-   - **The map's line.** After a reload (B's card now stands for the node A reads, no longer only the server it manages), the sync line to B is drawn both ways (`data-in` and `data-out` active, `data-kind` sync). Enter on it from the keyboard puts the keyboard on the details' heading; the section says "1 needs you" and "fixture-source has 1 change waiting for a decision", with both arrows pressed (`data-sync-map.png`).
-   - **Decided on the page.** On A's `/data-sync` the diagram draws B with its open-items bubble; the conflict's card, with "Keep this device's" chosen, is applied and leaves, and A's item closes with that action. B's next pull closes B's own item as resolved on fixture-unified and renames B's property to "Genres"; A then reads that nothing waits on B any more (`data-sync-page.png`).
-   - **The rule editor from the keyboard**, at 1440 px and again at 1280 px: Enter on the line, Enter on the receive arrow, Enter on the confirmation ("Stop receiving from fixture-source?") stops A receiving; Enter on the arrow again resumes the last mode at once. The arrow is disabled while each action runs, which moves Chromium's focus to the page's body; each time the keyboard must end in the details, never on the body (`data-sync-map-1440.png`, `data-sync-map-1280.png`).
-   - **B's side, in the switched window.** B's own `/data-sync`, read again through the relay, draws A and lists history entries naming fixture-unified (`data-sync-relay-history.png`).
-   - **Hub pushes.** Throughout, the map's window counts the `GetIncrementalData` frames its hub brings for data sync: `DataSyncStatus` after the changes above and `DataSyncApplied` for what the first sync wrote must both have arrived (by key only; the frames carry the server's state).
-   - **375 px.** With the window's navigation folded (as on a phone; put back afterwards), A's `/data-sync` lists the diagram instead of drawing it; choosing B opens the details stacked under the diagram, full width and never over it, with the rule editor drawn vertically, and nothing scrolls sideways (`data-sync-375.png`).
-   Every wait polls, with no fixed sleeps; a wait for a sync asks for it again every few seconds, since asking while a fetch is under way only marks the link due.
-
-### Not covered here
-
-- **The tray's switcher** (`IMainViewSwitcher` in the shell): no Avalonia shell runs, so switching is only ever driven from the SPA's own switcher and `/open` URLs. A native release check.
-- **A switch between two relays** — from one managed server's page straight to another's, the same-site navigation between two relay ports. Only one server is managed here.
-
-This complements `RelayPipelineTests`, `run-compatibility.py`, `federation-smoke/run.py` and the `RemoteAccess/Console` unit tests; it adds the real browser approval transition, a fresh desktop install's first launch, and the switch between two real servers' own UIs that unit and HTTP-only tests cannot cover.
+The native tray switcher, Windows installer and an actual external player window are
+outside this browser fixture and remain desktop acceptance checks.

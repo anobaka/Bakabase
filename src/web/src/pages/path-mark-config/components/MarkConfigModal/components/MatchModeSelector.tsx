@@ -58,7 +58,7 @@ const MatchModeSelector = ({ config, updateConfig, t, markType }: Props) => {
       {isLayerMode ? (
         <NumberInput
           description={t("pathMark.layer.description")}
-          label={t("pathMarkConfig.label.layer")}
+          label={t("pathMarkConfig.label.matchLayer")}
           size="sm"
           value={config.layer ?? 0}
           onChange={(e) =>

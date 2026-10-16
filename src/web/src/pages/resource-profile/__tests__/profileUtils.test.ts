@@ -94,6 +94,9 @@ describe("resource profile request boundaries", () => {
     expect(input).toEqual({
       name: "Books",
       priority: -10,
+      sourceDeviceId: null,
+      sourceLibraryEpoch: null,
+      openingMode: null,
       search: null,
       nameTemplate: null,
       enhancerOptions: null,

@@ -5,4 +5,5 @@ public record MediaLibraryPlayerDbModel
     public HashSet<string>? Extensions { get; set; }
     public string ExecutablePath { get; set; } = null!;
     public string Command { get; set; } = "{0}";
+    public bool? SupportsHttp { get; set; }
 }

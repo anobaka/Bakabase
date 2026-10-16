@@ -30,7 +30,6 @@ import {
   DataSyncLinkState,
   DataSyncRequestIntent,
   DataSyncStatusLevel,
-  DataSyncUndoState,
   RemoteAccessMode,
 } from "@/sdk/constants";
 
@@ -347,7 +346,6 @@ export const historyEntry = (
   peerNodeId: "node-nas",
   peerName: "NAS",
   counts: historyCountsOf({ created: 1, updated: 2 }),
-  undoState: DataSyncUndoState.Available,
   ...patch,
 });
 

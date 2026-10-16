@@ -1,4 +1,6 @@
-import type { ComponentProps, ReactNode } from "react";
+import type { ComponentProps, ReactElement, ReactNode } from "react";
+import type { ManagementSource } from "@/features/management/api";
+import type DeviceFilter from "../DeviceFilter";
 import type { ResourceFilterControllerProps } from "@/components/ResourceFilter/components/ResourceFilterController";
 import type { SearchFilterGroup } from "@/components/ResourceFilter/models";
 import type { SearchForm } from "@/pages/resource/models";
@@ -16,6 +18,10 @@ import { FilterDisplayMode, PropertyPool, SearchOperation } from "@/sdk/constant
 
 const state = vi.hoisted(() => ({
   controller: undefined as ResourceFilterControllerProps | undefined,
+  sources: [] as ManagementSource[],
+}));
+vi.mock("@/features/management/resourceSourcesContext", () => ({
+  useResourceSources: () => ({ sources: state.sources }),
 }));
 vi.mock("@/components/bakaui", async () => ({
   ...(await vi.importActual("@heroui/react")),
@@ -51,6 +57,7 @@ let host: HTMLDivElement;
 beforeEach(() => {
   (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
   state.controller = undefined;
+  state.sources = [];
   host = document.createElement("div");
   document.body.append(host);
   root = createRoot(host);
@@ -111,6 +118,31 @@ async function render(
 }
 
 describe("restored resource filter mode", () => {
+  it("places device scope in the controller condition region and searches only with deviceIds", async () => {
+    state.sources = ["local", "remote"].map((serverId) => ({
+      serverId,
+      name: serverId,
+      libraryEpoch: `${serverId}-epoch`,
+      isLocal: serverId === "local",
+      available: true,
+      contractVersion: 1,
+    }));
+    const searchForm = form(structuredClone(plainGroup));
+    const onSearch = vi.fn().mockResolvedValue(undefined);
+    await render(searchForm, { onSearch });
+    const prefix = state.controller!.filterGroupsPrefix as ReactElement<
+      ComponentProps<typeof DeviceFilter>
+    >;
+
+    expect(prefix.props.sources).toEqual(state.sources);
+    await act(async () => prefix.props.onChange(["remote"]));
+    expect(onSearch).toHaveBeenCalledExactlyOnceWith(
+      { ...searchForm, page: 1, owner: undefined, deviceIds: ["remote"] },
+      false,
+    );
+    expect(state.controller!.group).toBe(searchForm.group);
+  });
+
   it.each(advancedCases)(
     "reveals %s on first render without changing the query",
     async (_, group) => {
@@ -120,6 +152,7 @@ describe("restored resource filter mode", () => {
       const onSearchFormLiveChange = vi.fn();
       await render(searchForm, { onSearch, onSearchFormLiveChange });
       expect(state.controller!.filterDisplayMode).toBe(FilterDisplayMode.Advanced);
+      expect(state.controller!.filterGroupsPrefix).toBeUndefined();
       expect(state.controller!.group).toBe(searchForm.group);
       expect(searchForm).toEqual(original);
       expect(onSearchFormLiveChange).toHaveBeenLastCalledWith(original);

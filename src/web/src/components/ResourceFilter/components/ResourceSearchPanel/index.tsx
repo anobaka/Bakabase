@@ -14,6 +14,8 @@ import FilterGroup from "../FilterGroup";
 import FilterAddPopoverContent from "../FilterAddPopoverContent";
 import { FilterProvider } from "../../context/FilterContext";
 import { createDefaultFilterConfig } from "../../presets/DefaultFilterPreset";
+import { useResourceApi, useResourceOwner } from "@/features/management/resourceContext";
+import { useResourceSources } from "@/features/management/resourceSourcesContext";
 import { GroupCombinator } from "../../models";
 
 import { Button, Chip, Input, Popover } from "@/components/bakaui";
@@ -229,7 +231,13 @@ const ResourceSearchPanelInner = ({
  */
 const ResourceSearchPanel = (props: ResourceSearchPanelProps) => {
   const { createPortal } = useBakabaseContext();
-  const filterConfig = useMemo(() => createDefaultFilterConfig(createPortal), [createPortal]);
+  const api = useResourceApi();
+  const owner = useResourceOwner();
+  const sources = useResourceSources()?.sources;
+  const filterConfig = useMemo(
+    () => createDefaultFilterConfig(createPortal, api, sources, owner),
+    [createPortal, api, sources, owner],
+  );
 
   return (
     <FilterProvider config={filterConfig}>

@@ -21,9 +21,15 @@ import {
 } from "@ant-design/icons";
 import { HiOutlineCollection } from "react-icons/hi";
 import React, { useCallback, useEffect, useState } from "react";
+import type { OwnerResourceSelection } from "@/features/management/resourceSelection";
+import type { ManagementSource } from "@/features/management/api";
+import { ResourceOwnerProvider, useResourceOwner } from "@/features/management/resourceContext";
+import { sameResourceOwner } from "@/features/management/resourceIdentity";
+import { useOwnerResourceDisplayOptions } from "@/features/management/useOwnerResourceDisplayOptions";
 
 import PropertyValuePanel from "./PropertyValuePanel";
 import BatchPlayMenuItems from "./BatchPlayMenuItems";
+import PlaybackMenuItems from "./PlaybackMenuItems";
 
 import MediaLibraryMultiSelector from "@/components/MediaLibraryMultiSelector";
 import CollectionMultiSelector from "@/components/CollectionMultiSelector";
@@ -37,7 +43,7 @@ import ResourceEnhancementsModal from "@/components/Resource/components/Resource
 import { PlaylistCollection } from "@/components/Playlist";
 import { Modal, Tooltip, toast } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-import BApi from "@/sdk/BApi";
+import { useResourceApi } from "@/features/management/resourceContext";
 import BulkPropertyEditor from "@/components/Resource/components/BulkPropertyEditor";
 import DeleteResourceConfirmContent from "@/components/Resource/components/DeleteResourceConfirmContent";
 import { useUiOptionsStore } from "@/stores/options";
@@ -54,6 +60,9 @@ type Props = {
   onSelectedResourcesChanged?: (ids: number[]) => any;
   /** Called after resources are deleted so the parent can prune them from the list. */
   onResourcesDeleted?: (ids: number[]) => any;
+  selectedResourceGroups?: OwnerResourceSelection[];
+  onSelectedResourceGroupChanged?: (owner: ManagementSource | undefined, ids: number[]) => any;
+  onResourceGroupDeleted?: (owner: ManagementSource | undefined, ids: number[]) => any;
 };
 
 // ============================================================================
@@ -75,6 +84,7 @@ const PropertyQuickSetItem = ({
   onAddPreset?: (dbValue: string) => void;
   onRemovePreset?: (dbValue: string) => void;
 }) => {
+  const BApi = useResourceApi();
   const { t } = useTranslation();
 
   const menuLabel = t<string>("resource.contextMenu.setPropertyValue", { property: property.name });
@@ -141,19 +151,27 @@ const ContextMenuItems = ({
   onSelectedResourcesChanged,
   onResourcesDeleted,
 }: Props) => {
+  const BApi = useResourceApi();
+  const owner = useResourceOwner();
+  const isRemoteOwner = !!owner && !owner.isLocal;
+  const ownerDisplayOptions = useOwnerResourceDisplayOptions();
   const { t } = useTranslation();
   const moveReasonText = useMoveReasonText();
   const moveResources = [
     ...(selectedResources ?? []),
     ...(contextResource ? [contextResource] : []),
   ];
-  const moveDisabledReason = getSelectionMoveBlockReasons(moveResourceIds, moveResources)
-    .map(moveReasonText)
-    .join(" ");
+  const moveDisabledReason = isRemoteOwner
+    ? t<string>("management.resource.moveOnOwner")
+    : getSelectionMoveBlockReasons(moveResourceIds, moveResources).map(moveReasonText).join(" ");
   const { createPortal } = useBakabaseContext();
   const folderAction = useOpenResourceDirectory();
   const uiOptionsStore = useUiOptionsStore();
-  const customContextMenuItems = uiOptionsStore.data?.resource?.customContextMenuItems ?? [];
+  // Presets reference the resource owner's property/value vocabulary.
+  const customContextMenuItems =
+    (isRemoteOwner
+      ? ownerDisplayOptions.data?.uiResource?.customContextMenuItems
+      : uiOptionsStore.data?.resource?.customContextMenuItems) ?? [];
   const resourceName = contextResource?.displayName || contextResource?.fileName;
 
   const [propertyMap, setPropertyMap] = useState<Record<number, Record<number, IProperty>>>({});
@@ -185,7 +203,7 @@ const ContextMenuItems = ({
     };
 
     loadProperties();
-  }, [customContextMenuItems.length]);
+  }, [customContextMenuItems.length, BApi]);
 
   return (
     <>
@@ -212,38 +230,46 @@ const ContextMenuItems = ({
             presetValues={item.presetValues ?? []}
             property={property}
             selectedResourceIds={selectedResourceIds}
-            onAddPreset={(dbValue) => {
-              const currentPresets = item.presetValues ?? [];
+            onAddPreset={
+              isRemoteOwner
+                ? undefined
+                : (dbValue) => {
+                    const currentPresets = item.presetValues ?? [];
 
-              if (!currentPresets.includes(dbValue)) {
-                const newItems = [...customContextMenuItems];
+                    if (!currentPresets.includes(dbValue)) {
+                      const newItems = [...customContextMenuItems];
 
-                newItems[itemIndex] = {
-                  ...newItems[itemIndex],
-                  presetValues: [...currentPresets, dbValue],
-                };
-                uiOptionsStore.patch({
-                  resource: {
-                    ...uiOptionsStore.data?.resource,
-                    customContextMenuItems: newItems,
-                  },
-                });
-              }
-            }}
-            onRemovePreset={(dbValue) => {
-              const newItems = [...customContextMenuItems];
+                      newItems[itemIndex] = {
+                        ...newItems[itemIndex],
+                        presetValues: [...currentPresets, dbValue],
+                      };
+                      uiOptionsStore.patch({
+                        resource: {
+                          ...uiOptionsStore.data?.resource,
+                          customContextMenuItems: newItems,
+                        },
+                      });
+                    }
+                  }
+            }
+            onRemovePreset={
+              isRemoteOwner
+                ? undefined
+                : (dbValue) => {
+                    const newItems = [...customContextMenuItems];
 
-              newItems[itemIndex] = {
-                ...newItems[itemIndex],
-                presetValues: (item.presetValues ?? []).filter((v: string) => v !== dbValue),
-              };
-              uiOptionsStore.patch({
-                resource: {
-                  ...uiOptionsStore.data?.resource,
-                  customContextMenuItems: newItems,
-                },
-              });
-            }}
+                    newItems[itemIndex] = {
+                      ...newItems[itemIndex],
+                      presetValues: (item.presetValues ?? []).filter((v: string) => v !== dbValue),
+                    };
+                    uiOptionsStore.patch({
+                      resource: {
+                        ...uiOptionsStore.data?.resource,
+                        customContextMenuItems: newItems,
+                      },
+                    });
+                  }
+            }
             onSelectedResourcesChanged={onSelectedResourcesChanged}
           />
         );
@@ -265,6 +291,12 @@ const ContextMenuItems = ({
           </div>
         </MenuItem>
       )}
+
+      {selectedResourceIds.length === 1 &&
+        contextResource?.path &&
+        contextResource.id === selectedResourceIds[0] && (
+          <PlaybackMenuItems resource={contextResource} />
+        )}
 
       {/* Single-resource actions (mirrored from cover buttons) */}
       {selectedResourceIds.length === 1 &&
@@ -545,4 +577,65 @@ const ContextMenuItems = ({
 
 ContextMenuItems.displayName = "ContextMenuItems";
 
-export default ContextMenuItems;
+export default function OwnerContextMenuItems(props: Props) {
+  const { t } = useTranslation();
+  const currentOwner = useResourceOwner();
+  const groups = (props.selectedResourceGroups ?? []).map((group) => ({
+    ...group,
+    ids: group.ids.slice(),
+    resources: group.resources.slice(),
+  }));
+
+  if (props.contextResource && groups.length) {
+    let current = groups.find((group) => sameResourceOwner(group.owner, currentOwner));
+
+    if (!current) {
+      current = { owner: currentOwner, ids: [], resources: [] };
+      groups.push(current);
+    }
+    if (!current.ids.includes(props.contextResource.id)) {
+      current.ids.push(props.contextResource.id);
+      current.resources.push(props.contextResource);
+    }
+  }
+  if (groups.length <= 1) return <ContextMenuItems {...props} />;
+
+  // Different devices have unrelated custom-property and collection IDs. Make
+  // the target explicit rather than applying one device's schema to every row.
+  return (
+    <>
+      <MenuHeader className="resource-context-menu__summary">
+        {t("management.selection.byDevice", {
+          count: groups.reduce((sum, group) => sum + group.ids.length, 0),
+        })}
+      </MenuHeader>
+      {groups.map((group) => (
+        <SubMenu
+          key={group.owner?.serverId ?? "local"}
+          label={`${group.owner?.name ?? t("management.thisDevice")} · ${group.ids.length}`}
+          menuClassName="resource-context-menu resource-context-menu--submenu"
+          overflow="auto"
+        >
+          <ResourceOwnerProvider source={group.owner} resourceId={group.resources[0]?.id}>
+            <ContextMenuItems
+              {...props}
+              selectedResourceGroups={undefined}
+              selectedResourceIds={group.ids}
+              selectedResources={group.resources}
+              contextResource={
+                sameResourceOwner(group.owner, currentOwner)
+                  ? props.contextResource
+                  : group.resources[0]
+              }
+              moveResourceIds={group.ids}
+              onSelectedResourcesChanged={(ids) =>
+                props.onSelectedResourceGroupChanged?.(group.owner, ids)
+              }
+              onResourcesDeleted={(ids) => props.onResourceGroupDeleted?.(group.owner, ids)}
+            />
+          </ResourceOwnerProvider>
+        </SubMenu>
+      ))}
+    </>
+  );
+}

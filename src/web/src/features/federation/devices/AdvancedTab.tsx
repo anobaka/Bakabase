@@ -19,7 +19,7 @@ type IdentityCase = "copied" | "restored";
  */
 export default function AdvancedTab() {
   const { t } = useTranslation();
-  const { data, busy, confirm, mounted, sharingForm, revealed } = useDevicesPage();
+  const { data, busy, confirm, mounted, revealed } = useDevicesPage();
   const [chosen, setChosen] = useState<IdentityCase>();
   const [copied, setCopied] = useState<boolean>();
   const copyTimer = useRef<ReturnType<typeof setTimeout>>();
@@ -50,7 +50,6 @@ export default function AdvancedTab() {
           // here: the page's own re-read after an action leaves it out.
           await federationPeerApi.resetIdentity(true, true);
           if (mounted.current) {
-            sharingForm.setInvite(undefined);
             await data.reload(["servers"]);
           }
         })
@@ -59,7 +58,6 @@ export default function AdvancedTab() {
           t("federation.identity.restoreConfirm"),
           async () => {
             await federationPeerApi.resetIdentity(false);
-            if (mounted.current) sharingForm.setInvite(undefined);
           },
           t("federation.identity.restoreWarning"),
         );

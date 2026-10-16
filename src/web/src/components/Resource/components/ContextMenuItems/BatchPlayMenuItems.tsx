@@ -16,7 +16,7 @@ import {
 
 import { toast } from "@/components/bakaui";
 import { buildLogger } from "@/components/utils";
-import BApi from "@/sdk/BApi";
+import { useResourceApi } from "@/features/management/resourceContext";
 import { BatchPlayFileSelectionMode } from "@/sdk/constants";
 
 const log = buildLogger("BatchPlayMenuItems");
@@ -32,10 +32,12 @@ type Props = {
  * last picked player is tagged instead of getting a duplicate top-level item.
  */
 const BatchPlayMenuItems = ({ selectedResourceIds }: Props) => {
+  const BApi = useResourceApi();
   const { t } = useTranslation();
 
   const [candidates, setCandidates] = useState<BatchPlayCandidate[]>();
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string>();
   const [lastPlayer, setLastPlayer] = useState(() => readLastPlayer(localStorage));
   const [includeAllFiles, setIncludeAllFiles] = useState(() => readIncludeAllFiles(localStorage));
 
@@ -43,10 +45,12 @@ const BatchPlayMenuItems = ({ selectedResourceIds }: Props) => {
   // the menu stays mounted across openings, so invalidate on change.
   useEffect(() => {
     setCandidates(undefined);
-  }, [selectedResourceIds]);
+    setError(undefined);
+  }, [selectedResourceIds, BApi]);
 
   const loadCandidates = useCallback(async () => {
     setLoading(true);
+    setError(undefined);
     try {
       const rsp = await BApi.player.getBatchPlayCandidates({ resourceIds: selectedResourceIds });
 
@@ -54,11 +58,12 @@ const BatchPlayMenuItems = ({ selectedResourceIds }: Props) => {
         setCandidates(rsp.data ?? []);
       }
     } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
       log("Failed to load batch play candidates", e);
     } finally {
       setLoading(false);
     }
-  }, [selectedResourceIds]);
+  }, [selectedResourceIds, BApi]);
 
   const play = useCallback(
     async (playerKey: string) => {
@@ -118,7 +123,21 @@ const BatchPlayMenuItems = ({ selectedResourceIds }: Props) => {
         }
       }}
     >
-      {loading || candidates === undefined ? (
+      {error ? (
+        <>
+          <MenuItem disabled className="max-w-80 whitespace-normal text-xs">
+            {error}
+          </MenuItem>
+          <MenuItem
+            onClick={(event) => {
+              event.keepOpen = true;
+              void loadCandidates();
+            }}
+          >
+            {t("management.retry")}
+          </MenuItem>
+        </>
+      ) : loading || candidates === undefined ? (
         <MenuItem disabled>{t<string>("resource.contextMenu.batchPlay.scanning")}</MenuItem>
       ) : candidates.length === 0 ? (
         <>

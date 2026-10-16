@@ -12,10 +12,17 @@ import {
   setCoverOverlayEnabled,
   isTaskSummaryVisible,
   setTaskSummaryVisible,
+  isBrowsingHistoryOlderVisible,
+  setBrowsingHistoryOlderVisible,
+  isBrowsingHistoryNewerVisible,
+  setBrowsingHistoryNewerVisible,
+  isBrowsingHistoryChartVisible,
+  setBrowsingHistoryChartVisible,
   onSettingsChange,
 } from '../settings';
 import type { CoverOverlayConfig } from '../types';
 import type { TaskSummaryTarget } from '../taskSummary';
+import type { BrowsingPage } from '../browsingHistory';
 import {
   AUTO_TIMEZONE,
   getBrowserTimeZone,
@@ -25,6 +32,7 @@ import {
 } from '../timezone';
 import { showToast } from './Toast';
 import { TaskSummaryPanel } from './TaskSummaryPanel';
+import { BrowsingHistoryPanel } from './BrowsingHistoryPanel';
 import { t, getLocale, setLocale, onLocaleChange, describeRequestError, type Locale } from '../i18n';
 
 const localeOptions: { key: Locale; label: string }[] = [
@@ -46,18 +54,23 @@ export function SettingsPanel({
   siteKey,
   coverOverlay,
   taskSummaryTarget,
+  browsingPage,
   connection,
 }: {
   siteKey?: string;
   /** Present when the current site can turn its covers into one big action button. */
   coverOverlay?: CoverOverlayConfig;
   taskSummaryTarget?: TaskSummaryTarget;
+  browsingPage?: BrowsingPage;
   connection: ConnectionState;
 }) {
   const { connected, error: connectionError } = connection;
   const [markersVisible, setMarkersVisible] = useState(() => getStoredValue(MARKERS_VISIBLE_KEY, true));
   const [coverOverlayOn, setCoverOverlayOn] = useState(() => (siteKey ? isCoverOverlayEnabled(siteKey) : false));
   const [taskSummaryVisible, setTaskSummaryVisibleState] = useState(() => (siteKey ? isTaskSummaryVisible(siteKey) : true));
+  const [showOlderHistory, setShowOlderHistory] = useState(() => (siteKey ? isBrowsingHistoryOlderVisible(siteKey) : true));
+  const [showNewerHistory, setShowNewerHistory] = useState(() => (siteKey ? isBrowsingHistoryNewerVisible(siteKey) : false));
+  const [showHistoryChart, setShowHistoryChart] = useState(() => (siteKey ? isBrowsingHistoryChartVisible(siteKey) : true));
   const [apiUrl, setApiUrl] = useState(() => getApiBaseUrl());
   const [apiUrlError, setApiUrlError] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
@@ -73,7 +86,12 @@ export function SettingsPanel({
   useEffect(() => onLocaleChange(() => forceUpdate((n) => n + 1)), []);
 
   useEffect(() => {
-    const sync = () => setTaskSummaryVisibleState(siteKey ? isTaskSummaryVisible(siteKey) : true);
+    const sync = () => {
+      setTaskSummaryVisibleState(siteKey ? isTaskSummaryVisible(siteKey) : true);
+      setShowOlderHistory(siteKey ? isBrowsingHistoryOlderVisible(siteKey) : true);
+      setShowNewerHistory(siteKey ? isBrowsingHistoryNewerVisible(siteKey) : false);
+      setShowHistoryChart(siteKey ? isBrowsingHistoryChartVisible(siteKey) : true);
+    };
     sync();
     return onSettingsChange(sync);
   }, [siteKey]);
@@ -162,6 +180,16 @@ export function SettingsPanel({
 
   return (
     <div style={{ position: 'fixed', bottom: 20, right: 20, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, zIndex: 10000 }}>
+      {siteKey && browsingPage && (
+        <BrowsingHistoryPanel
+          siteKey={siteKey}
+          page={browsingPage}
+          connection={connection}
+          showOlder={showOlderHistory}
+          showNewer={showNewerHistory}
+          showChart={showHistoryChart}
+        />
+      )}
       {siteKey && taskSummaryTarget && taskSummaryVisible && (
         <TaskSummaryPanel
           siteKey={siteKey}
@@ -234,6 +262,34 @@ export function SettingsPanel({
               >
                 {taskSummaryVisible ? t('taskSummary.hide') : t('taskSummary.show')}
               </Button>
+            )}
+            {siteKey && browsingPage && (
+              <div title={t('browsingHistory.description')} style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={showHistoryChart}
+                    onChange={(event) => setBrowsingHistoryChartVisible(siteKey, event.currentTarget.checked)}
+                  />
+                  <span>{t('browsingHistory.showChart')}</span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={showOlderHistory}
+                    onChange={(event) => setBrowsingHistoryOlderVisible(siteKey, event.currentTarget.checked)}
+                  />
+                  <span>{t('browsingHistory.showOlder')}</span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={showNewerHistory}
+                    onChange={(event) => setBrowsingHistoryNewerVisible(siteKey, event.currentTarget.checked)}
+                  />
+                  <span>{t('browsingHistory.showNewer')}</span>
+                </label>
+              </div>
             )}
             {coverOverlay && siteKey && (
               <div className="flex flex-col gap-1">

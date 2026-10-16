@@ -41,11 +41,7 @@ const Dot = ({ className }: { className: string }) => (
 export default function DeviceMapLegend({ graph }: { graph: DeviceGraph }) {
   const { t } = useTranslation();
   const shown = new Set(graph.edges.map((edge) => edge.kind));
-  const kinds: MapEdgeKind[] = [
-    "sharing",
-    "management",
-    ...(shown.has("sync") ? (["sync"] as const) : []),
-  ];
+  const kinds: MapEdgeKind[] = ["management", ...(shown.has("sync") ? (["sync"] as const) : [])];
 
   return (
     <ul

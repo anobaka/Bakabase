@@ -3,7 +3,7 @@
 
 Build Bakabase.Federation.TestHost first. Run with --dotnet /path/to/dotnet.
 Only temporary fixture directories are used. --keep leaves the three hosts for manual UI checks.
-After the library checks, datasync.py runs data sync across three more hosts within the same
+After management checks, datasync.py runs data sync across three more hosts within the same
 deadline (--skip-datasync leaves it out).
 """
 import argparse
@@ -70,7 +70,7 @@ def run(args):
         for label in ("a", "b", "c"):
             directory = root / label
             port = free_port()
-            log = (root / f"{label}.log").open("w")
+            log = (root / f"{label}.log").open("w", encoding="utf-8")
             streams.append(log)
             process = subprocess.Popen([args.dotnet, str(dll), str(port), str(directory), "257"],
                                        cwd=repo, stdout=log, stderr=subprocess.STDOUT)
@@ -95,152 +95,91 @@ def run(args):
                 f"A fixture would report to analytics: {configured or 'anonymous tracking on'}"
             node["status"] = request(node["base"], "/federation/local/peers")
             node["id"] = node["status"]["identity"]["nodeId"]
-            assert node["status"]["browsingEnabled"] is False, "New installations must not opt into federation browsing"
-            disabled = request(node["base"], "/federation/local/queries", "POST",
-                               {"nodeIds": [node["id"]], "query": {}}, expected=403)
-            assert disabled["code"] == "BrowsingDisabled"
-            request(node["base"], "/federation/local/peers/browsing", "PUT", {"enabled": True})
+            node["epoch"] = node["status"]["identity"]["libraryEpoch"]
+            assert "sharingEnabled" not in node["status"] and "peers" not in node["status"]
+            page = request(node["base"], "/resource/search?saveSearch=false", "POST", {"page": 1, "pageSize": 20})
+            assert page["totalCount"] == 257
         assert len({node["id"] for node in nodes}) == 3
         a, b, c = nodes
 
-        def pair(reader, source):
-            invite = request(source["base"], "/federation/local/peers/invite", "POST")
-            result = request(reader["base"], "/federation/local/peers/connect", "POST",
-                             {"address": source["base"], "code": invite["code"]})
-            assert result["outcome"] == "granted", result["outcome"]
+        def pair(manager, owner):
+            code = request(owner["base"], "/remote-access/pairing/code", "POST")["data"]["code"]
+            outcome = request(manager["base"], "/federation/local/servers/pair", "POST",
+                              {"address": owner["base"], "code": code})
+            assert outcome["outcome"] == 0, outcome["outcome"]
+            assert outcome["serverId"] == owner["id"]
 
-        def query(node, ids, page_size=50, **filters):
-            return request(node["base"], "/federation/local/queries", "POST",
-                           {"nodeIds": ids, "pageSize": page_size, "query": filters})
+        def operation(manager, owner, operation, **fields):
+            return request(manager["base"], f'/federation/local/management/{owner["id"]}/request', "POST",
+                           {"libraryEpoch": owner["epoch"], "operation": operation, **fields}, expected=(200, 409, 503))
 
-        def release(node, page):
-            request(node["base"], f'/federation/local/queries/{page["sessionId"]}', "DELETE", expected=204)
-
-        pending = request(a["base"], "/federation/local/peers/connect", "POST", {"address": b["base"]})
-        assert pending["outcome"] == "awaitingApproval"
-        pair(a, b)  # Supplying a code must complete this same pending transaction.
+        pair(a, b)
         pair(b, c)
-        direct = query(a, [b["id"]])
-        assert direct["totalWithinParticipants"] == 257, "B must not recursively export C"
-        assert {item["ref"]["nodeId"] for item in direct["items"]} == {b["id"]}
-        release(a, direct)
-        no_transitive = request(a["base"], "/federation/local/queries", "POST",
-                                {"nodeIds": [c["id"]], "query": {}}, expected=503)
-        assert no_transitive["code"] == "PeerUnavailable"
-        pair(a, c)
-        pair(b, a)
-        print("PASS: pending pairing completed by code, directed/reverse pairing and no transitive export", flush=True)
+        listing = request(a["base"], "/federation/local/servers")
+        assert [server["serverId"] for server in listing["servers"]] == [b["id"]], "Management is directional and not transitive"
+        assert request(c["base"], "/federation/local/servers")["servers"] == []
+        assert listing["servers"][0]["pathMappings"] == [], "Pairing must not invent a path mapping"
 
-        first = query(a, [node["id"] for node in nodes])
-        assert first["coverageComplete"] and first["totalWithinParticipants"] == 771
-        collected = list(first["items"])
-        page = first
-        replay_path = None
-        while page["nextCursor"]:
-            path = f'/federation/local/queries/{page["sessionId"]}/pages?cursor=' + urllib.parse.quote(page["nextCursor"])
-            page = request(a["base"], path)
-            replay = request(a["base"], path)
-            assert replay["items"] == page["items"] and replay["nextCursor"] == page["nextCursor"]
-            replay_path = path
-            collected.extend(page["items"])
-        assert len(collected) == 771
-        refs = [(item["ref"]["nodeId"], item["ref"]["libraryEpoch"], item["ref"]["resourceId"]) for item in collected]
-        assert len(set(refs)) == 771
-        assert collected == sorted(collected, key=lambda item: (item["normalizedSortKey"], item["ref"]["nodeId"],
-                                                                 item["ref"]["libraryEpoch"], item["ref"]["resourceId"]))
-        assert sum(item["ref"]["resourceId"] == 1 for item in collected) == 3
-        release(a, first)
-        bad = request(a["base"], "/federation/local/queries", "POST",
-                      {"nodeIds": [a["id"]], "query": {"unsupportedFilter": True}}, expected=422)
-        assert bad["code"] == "UnsupportedQuery"
-        print("PASS: 771 rows, identical local IDs, deterministic multi-block pagination and replay, strict filters", flush=True)
+        # Resource metadata is pulled to the manager and searched there, still scoped to its owner.
+        end = min(time.monotonic() + 60, REQUEST_DEADLINE)
+        while True:
+            page = operation(a, b, "resourceSearch", body={"page": 1, "pageSize": 20})
+            if page.get("totalCount") == 257 and len(page.get("data", [])) == 20:
+                break
+            if time.monotonic() > end:
+                raise AssertionError(f"Managed metadata did not become searchable: {page.get('code')}")
+            time.sleep(0.2)
+        print("PASS: explicit directional management pairing and owner-scoped local metadata search", flush=True)
 
-        remote_ref = next(item["ref"] for item in collected if item["ref"]["nodeId"] == b["id"] and item["ref"]["resourceId"] == 1)
-        detail = request(a["base"], "/federation/local/resources/resolve", "POST", {"refs": [remote_ref]})["resources"][0]
-        assert detail["displayName"] == "Shared title" and detail["assets"]
-        asset = detail["assets"][0]
-        assert "path" not in asset and "key" not in json.dumps(detail).lower()
-        ticket = request(a["base"], "/federation/local/playback-sessions", "POST",
-                         {"assetRef": {"resourceRef": remote_ref, "assetId": asset["assetId"]}, "mode": "preview"})
-        media_path = urllib.parse.urlsplit(ticket["url"]).path
-        status, headers, content = request(a["base"], media_path, headers={"Range": "bytes=0-63"}, expected=206, raw=True)
+        tree_path = f'/federation/local/servers/{b["id"]}/path-mapping-tree'
+        tree = request(a["base"], tree_path)
+        assert tree["libraryEpoch"] == b["epoch"]
+        assert sum(item["resourceCount"] for item in tree["nodes"]) == 1, "B must not export C replica paths"
+        assert len(tree["nodes"]) <= 200 and tree.get("nextCursor") is None
+        directory = tree["nodes"][0]
+        assert directory["serverPath"] and not directory.get("sourceRootId")
+        children = request(a["base"], tree_path + "?" + urllib.parse.urlencode({
+            "parent": directory["serverPath"], "libraryEpoch": b["epoch"], "limit": 200}))
+        assert len(children["nodes"]) <= 200
+        mappings_path = f'/federation/local/servers/{b["id"]}/path-mappings'
+        mapping = {"serverPath": str(b["directory"]), "localPath": str(a["directory"])}
+        request(a["base"], mappings_path, "PUT", {"mappings": [mapping], "expectedMappings": []})
+        conflict = request(a["base"], mappings_path, "PUT", {"mappings": [], "expectedMappings": []}, expected=409)
+        assert conflict["code"] == "PathMappingsChanged"
+        assert request(a["base"], "/federation/local/servers")["servers"][0]["pathMappings"] == [mapping]
+        request(a["base"], mappings_path, "PUT", {"mappings": [], "expectedMappings": [mapping]})
+        print("PASS: owned path tree, actual prefixes, bounded pages and concurrent mapping edit protection", flush=True)
+
+        media_path = f'/federation/local/management/{b["id"]}/media?' + urllib.parse.urlencode({
+            "libraryEpoch": b["epoch"], "resourceId": 1, "origin": 2, "key": str(b["directory"] / "fixture.wav")})
+        _, _, content = request(a["base"], media_path, headers={"Range": "bytes=0-63"}, expected=206, raw=True)
         assert len(content) == 64 and content[:4] == b"RIFF"
-        _, head_headers, content = request(a["base"], media_path, method="HEAD", raw=True)
-        assert not content and int(head_headers["Content-Length"]) == 16044
-        _, invalid_headers, _ = request(a["base"], media_path, headers={"Range": "bytes=999999-"}, expected=416, raw=True)
-        assert "Content-Range" in invalid_headers
-        print("PASS: authenticated media proxy, HEAD, byte range, unsatisfiable range", flush=True)
+        _, headers, content = request(a["base"], media_path, method="HEAD", raw=True)
+        assert not content and int(headers["Content-Length"]) == 16044
+        request(a["base"], media_path, headers={"Range": "bytes=999999-"}, expected=416, raw=True)
+        print("PASS: authenticated management media, HEAD and byte ranges", flush=True)
 
-        # Loopback and legacy Unrestricted are deliberately not node-export credentials.
-        request(b["base"], "/remote-access/mode", "PUT", {"mode": 2})
-        request(b["base"], "/federation/v1/export/mapping-roots", expected=401)
+        for path, method in (("/federation/local/queries", "POST"),
+                             ("/federation/local/peers/invite", "POST"),
+                             ("/federation/v1/export/mapping-roots", "GET")):
+            request(a["base"], path, method, {} if method == "POST" else None, expected=(403, 404))
+        request(a["base"], "/federation/local/servers", expected=403, headers={"Origin": "https://evil.example"})
+        request(a["base"], "/federation/local/servers", expected=403, headers={"Host": "evil.example"})
         request(b["base"], "/resource/search", "POST", {}, expected=403,
                 headers={"Authorization": "Bakabase-Node malformed"})
-        request(a["base"], "/federation/local/peers", expected=403, headers={"Origin": "https://evil.example"})
-        request(a["base"], "/federation/local/peers", expected=403, headers={"Host": "evil.example"})
-        print("PASS: new grants cannot enter legacy API; loopback/Unrestricted export and Host/Origin checks", flush=True)
-
-        # An already cached page and media ticket must stop working when the source revokes its grant.
-        active = query(a, [a["id"], b["id"]], 7)
-        cursor_path = f'/federation/local/queries/{active["sessionId"]}/pages?cursor=' + urllib.parse.quote(active["nextCursor"])
-        request(a["base"], cursor_path)
-        source_status = request(b["base"], "/federation/local/peers")
-        grant = next(peer["inboundGrant"]["grantId"] for peer in source_status["peers"] if peer["nodeId"] == a["id"])
-        request(b["base"], f"/federation/local/peers/grants/{grant}", "DELETE")
-        request(a["base"], cursor_path, expected=(401, 403, 409, 410, 502, 503))
-        request(a["base"], media_path, expected=(401, 403, 409, 410))
-        release(a, active)
-        pair(a, b)
-        # Old incarnation references never resolve to a new row with the same int ID.
-        request(b["base"], "/federation/local/peers/identity/reset", "POST", {"asNewNode": False})
-        request(a["base"], "/federation/local/resources/resolve", "POST", {"refs": [remote_ref]}, expected=(401, 403, 409))
-        restored_status = request(b["base"], "/federation/local/peers")
-        assert restored_status["identity"]["nodeId"] == b["id"]
-        assert restored_status["identity"]["libraryEpoch"] != remote_ref["libraryEpoch"]
-        assert not restored_status["sharingEnabled"] and not restored_status["browsingEnabled"]
-        invite_denied = request(b["base"], "/federation/local/peers/invite", "POST", expected=403)
-        assert invite_denied["code"] == "SharingDisabled"
-        request(b["base"], "/federation/local/peers/sharing", "PUT", {"enabled": True})
-        request(a["base"], "/federation/local/resources/resolve", "POST", {"refs": [remote_ref]}, expected=(401, 403, 409))
-        pair(a, b)
-        print("PASS: source revocation invalidates cached pages and streams; epoch rotation invalidates old references", flush=True)
-
-        # Local browsing opt-out releases existing local sessions, but does not revoke
-        # a separately granted peer's permission to read this node's shared library.
-        request(b["base"], "/federation/local/peers/browsing", "PUT", {"enabled": True})
-        pair(b, a)
-        active = query(a, [a["id"]], 7)
-        active_path = f'/federation/local/queries/{active["sessionId"]}/pages?cursor=' + urllib.parse.quote(active["nextCursor"])
-        local_ref = next(item["ref"] for item in collected if item["ref"]["nodeId"] == a["id"] and item["ref"]["resourceId"] == 1)
-        local_detail = request(a["base"], "/federation/local/resources/resolve", "POST", {"refs": [local_ref]})["resources"][0]
-        local_ticket = request(a["base"], "/federation/local/playback-sessions", "POST",
-                               {"assetRef": {"resourceRef": local_ref, "assetId": local_detail["assets"][0]["assetId"]}, "mode": "preview"})
-        local_media = urllib.parse.urlsplit(local_ticket["url"]).path
-        request(a["base"], "/federation/local/peers/browsing", "PUT", {"enabled": False})
-        for path in (active_path, local_media):
-            denied = request(a["base"], path, expected=403)
-            assert denied["code"] == "BrowsingDisabled"
-        still_shared = query(b, [a["id"]])
-        assert still_shared["totalWithinParticipants"] == 257
-        release(b, still_shared)
-        request(a["base"], "/federation/local/peers/browsing", "PUT", {"enabled": True})
-        request(a["base"], active_path, expected=410)
-        request(a["base"], local_media, expected=(401, 403, 410))
-        print("PASS: browsing is opt-in; opt-out releases local sessions without disabling source sharing", flush=True)
+        print("PASS: retired read-only endpoints are unavailable; management retains origin and signature gates", flush=True)
 
         processes[1].terminate()
         processes[1].wait(timeout=10)
-        partial = query(a, [node["id"] for node in nodes])
-        assert partial["totalWithinParticipants"] == 514 and not partial["coverageComplete"]
-        assert any(node["nodeId"] == b["id"] for node in partial["omittedNodes"])
-        release(a, partial)
-        # Read operations above did not update source play history.
+        # The manager's synchronized metadata remains searchable after the owner goes offline.
+        offline = operation(a, b, "resourceSearch", body={"page": 1, "pageSize": 20})
+        assert offline["totalCount"] == 257 and len(offline["data"]) == 20
         database = next(b["directory"].rglob("bakabase_insideworld*.db"))
         with closing(sqlite3.connect(database)) as connection:
             assert connection.execute('select count(*) from ResourcesV2 where PlayedAt is not null').fetchone()[0] == 0
-        print("PASS: offline source is explicitly omitted; other libraries work; remote PlayedAt stays unchanged", flush=True)
-        report = {"passed": True, "resources": 771, "nodes": [{"url": n["base"], "nodeId": n["id"], "pid": n["pid"]} for n in nodes]}
-        (results / "result.json").write_text(json.dumps(report, indent=2))
+        print("PASS: local replica search survives owner outage; reads do not update owner play history", flush=True)
+        report = {"passed": True, "ownedResourcesPerDevice": 257, "managementPairings": 2, "nodes": [{"url": n["base"], "nodeId": n["id"], "pid": n["pid"]} for n in nodes]}
+        (results / "result.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
         print(json.dumps(report), flush=True)
     finally:
         if not args.keep:

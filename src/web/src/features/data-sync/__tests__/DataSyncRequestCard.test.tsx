@@ -171,21 +171,21 @@ describe("a request to read this device's definitions", () => {
     const options = screen.getByTestId("data-sync-request-options");
     const receiveBack = within(options).getByTestId("data-sync-request-receive-back");
 
-    expect(receiveBack).toBeChecked();
+    expect(within(receiveBack).getByRole("checkbox")).toBeChecked();
     const kinds = within(options).getAllByTestId("data-sync-request-kind");
 
     expect(kinds.map((kind) => kind.dataset.kind)).toEqual(["customProperty", "extensionGroup"]);
     fireEvent.click(kinds[0]);
     // The last kind stays on.
     fireEvent.click(kinds[1]);
-    expect(kinds[1]).toBeChecked();
+    expect(within(kinds[1]).getByRole("checkbox")).toBeChecked();
 
     fireEvent.click(screen.getByTestId("data-sync-request-approve"));
     expect(confirmation()).toMatchObject({
       title: "dataSync.request.approveTitle New PC",
       description: "dataSync.request.twoWay New PC",
       warning: "dataSync.request.from 192.168.1.40",
-      refresh: ["dataSync", "sharing"],
+      refresh: ["dataSync", "identity"],
     });
     expect(dataSyncApi.approveRequest).not.toHaveBeenCalled();
     await act(() => confirmation().action() as Promise<void>);

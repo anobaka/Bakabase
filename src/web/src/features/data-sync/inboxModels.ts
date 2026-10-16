@@ -322,6 +322,10 @@ export const exactCandidate = (item: Item) => {
 /** A bulk action is offered once there are several of its kind to decide. */
 export const BULK_MINIMUM = 2;
 
+/** A selection is tied to the reviewed decisions, not just a reusable card ID. */
+export const inboxCardRevision = (card: InboxCardModel) =>
+  JSON.stringify(card.items.map((item) => [item.id, item.token, item.allowedActions]));
+
 /**
  * The bulk actions the open cards allow (§9.1): link all exact matches and skip all link
  * suggestions; delete all here and keep all on this device for deletions; and, for conflicts,
@@ -331,6 +335,7 @@ export const BULK_MINIMUM = 2;
 export const inboxBulks = (
   cards: readonly InboxCardModel[],
   backupBeforeDestructive: boolean,
+  minimum = BULK_MINIMUM,
 ): InboxBulk[] => {
   const items = cards.flatMap((card) => card.items);
   const bulks: InboxBulk[] = [];
@@ -340,7 +345,7 @@ export const inboxBulks = (
     count: number,
     extra: Partial<InboxBulk> = {},
   ) => {
-    if (count >= BULK_MINIMUM)
+    if (count >= minimum)
       bulks.push({
         id,
         count,
@@ -421,14 +426,27 @@ export const inboxBulks = (
       }),
     );
 
+  const keepableConflicts = conflicts.filter((card) =>
+    card.items.every((item) => allows(item, DataSyncInboxAction.KeepLocal)),
+  );
+
   add(
     "keepLocalAll",
-    conflicts.flatMap((card) => whole(card)),
-    conflicts.length,
+    keepableConflicts.flatMap((card) => whole(card)),
+    keepableConflicts.length,
   );
   for (const peer of peersOf(conflicts.flatMap((card) => card.items))) {
-    const ofPeer = conflicts.filter((card) =>
-      card.items.some((item) => item.peerNodeId === peer.nodeId),
+    const ofPeer = conflicts.filter(
+      (card) =>
+        card.items.some((item) => item.peerNodeId === peer.nodeId) &&
+        card.items.every((item) =>
+          allows(
+            item,
+            item.peerNodeId === peer.nodeId
+              ? DataSyncInboxAction.UseRemote
+              : DataSyncInboxAction.KeepLocal,
+          ),
+        ),
     );
 
     add(

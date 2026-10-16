@@ -26,9 +26,8 @@ namespace Bakabase.Tests.DataSync;
 /// §12 (product must-fix 15), the part this device's engine answers for: with the marker seeded into a
 /// <c>Passwords</c> row, <c>AiProviders.ApiKey</c>, a third-party cookie option and the network proxy password, a
 /// full reconciliation of every kind through the real feed (head, manifest, every page's bytes), an auto sync, an
-/// inbox resolution and an undo leave the marker nowhere: not in the pages, the head or the manifest, not in any
-/// data sync table (history details and inbox payloads included), not in the data sync folder, not in an undo
-/// preview, and not in the Information-level log output. The test temp root never appears either.
+/// inbox resolution leave the marker nowhere: not in the pages, the head or the manifest, not in any
+/// data sync table (history details and inbox payloads included), not in the data sync folder, not in the Information-level log output. The test temp root never appears either.
 /// </summary>
 /// <remarks>
 /// Federation's <c>state.json</c>, the remote-access and managed-connection keys, pairing by request, code and
@@ -56,7 +55,7 @@ public partial class SecretCanaryTests
         f.Kind.Add(Content("Mood", ("m", "Calm")));
         await f.RefreshAsync();
 
-        // An auto sync, a conflict resolved, and the resolution undone.
+        // An auto sync and a conflict resolved.
         var peer = new DataSyncPeer("PC-1");
         var link = await f.LinkAsync(peer);
         var key = SyncKey.New().Value;
@@ -72,10 +71,6 @@ public partial class SecretCanaryTests
         var item = (await f.OpenItemsAsync()).Single();
         var resolution = await f.ResolveAsync(item, DataSyncInboxAction.UseRemote);
         Assert.IsNotNull(resolution);
-        var preview = await f.Services.GetRequiredService<DataSyncUndoPlanner>().PreviewAsync(resolution.Value, default);
-        f.Clock.Advance(TimeSpan.FromSeconds(1));
-        Assert.IsNotNull(await f.UndoAsync(resolution.Value));
-
         // A full reconciliation of every kind through the real feed, as a reader reads it.
         var feed = f.Services.GetRequiredService<IDataSyncFeedSource>();
         var reader = DataSyncFeedFixture.Reader();
@@ -97,7 +92,6 @@ public partial class SecretCanaryTests
             ["head"] = JsonSerializer.Serialize(head),
             ["manifest"] = JsonSerializer.Serialize(manifest),
             ["outcomes"] = JsonSerializer.Serialize(outcomes),
-            ["undo preview"] = JsonSerializer.Serialize(preview),
             ["tables"] = await DataSyncTablesAsync(f),
             ["folder"] = FolderText(f.Directory.Path),
             ["log"] = logs.Text,

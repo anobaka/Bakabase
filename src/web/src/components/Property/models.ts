@@ -1,6 +1,7 @@
 import type { PropertyPool, StandardValueType } from "@/sdk/constants";
 import type { PropertyType } from "@/sdk/constants";
 import type { MultilevelData } from "@/components/StandardValue/models";
+import type { ManagementSource } from "@/features/management/api";
 
 // Re-export type-safe utilities from PropertySystem
 export {
@@ -44,6 +45,10 @@ export type {
  * For type-safe property handling, use TypedProperty<T> from PropertySystem.
  */
 export interface IProperty {
+  /** UI catalog provenance; never used as a replacement for an owner's numeric ID. */
+  owner?: ManagementSource;
+  /** Synthetic library choices include an explicit device and data-directory identity. */
+  unifiedMediaLibraries?: boolean;
   id: number;
   dbValueType: StandardValueType;
   bizValueType: StandardValueType;

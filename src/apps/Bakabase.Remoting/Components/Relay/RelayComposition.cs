@@ -33,10 +33,12 @@ namespace Bakabase.Remoting.Components.Relay;
 /// </param>
 /// <param name="AppVersion">This program's version, reported by the context endpoint.</param>
 /// <param name="TempPlaylistDirectory">Where batch play writes playlists for a local player.</param>
+/// <param name="DevicePlaybackPreferencesFile">This device's effective AppData preference file, resolved lazily.</param>
 public sealed record RelayEnvironment(
     Func<IServiceProvider, int> ResolvePort,
     string AppVersion,
-    Func<IServiceProvider, string> TempPlaylistDirectory);
+    Func<IServiceProvider, string> TempPlaylistDirectory,
+    Func<IServiceProvider, string?>? DevicePlaybackPreferencesFile = null);
 
 /// <summary>
 /// The relay: a loopback listener an embedded browser talks to, which signs and forwards
@@ -152,6 +154,16 @@ public static class RelayComposition
         services.AddSingleton<IUserMachineHandler, PlayItemHandler>();
         services.AddSingleton<IUserMachineHandler, PlayResourceHandler>();
         services.AddSingleton<IUserMachineHandler, PlayRandomResourceHandler>();
+        services.AddSingleton<IUserMachineHandler>(new DesktopProfileMutationHandler("DELETE /app/profiles/{id}"));
+        services.AddSingleton<IUserMachineHandler>(new DesktopProfileMutationHandler("POST /app/profiles"));
+        services.AddSingleton<IUserMachineHandler>(new DesktopProfileMutationHandler("POST /app/profiles/{id}/open"));
+        services.AddSingleton<IUserMachineHandler>(new DesktopProfileMutationHandler("PUT /app/profiles/{id}"));
+        services.AddSingleton<IUserMachineHandler, NestedManagementPlayHandler>();
+        services.AddSingleton<IUserMachineHandler, NestedManagementDirectoryHandler>();
+        services.AddSingleton<IUserMachineHandler, NestedManagementBatchCandidatesHandler>();
+        services.AddSingleton<IUserMachineHandler, NestedManagementBatchPlayHandler>();
+        services.AddSingleton<IUserMachineHandler, ResourceProfilePlaybackHandler>();
+        services.AddSingleton<IUserMachineHandler, ResourceProfilesPlaybackHandler>();
 
         // Batch play runs the server's own orchestration in this process, with the
         // library read over HTTP and the files resolved against this machine. Registered
@@ -159,13 +171,21 @@ public static class RelayComposition
         // fills in what nobody claimed.
         services.TryAddScoped<IBatchPlayResourceSource, UpstreamBatchPlayResourceSource>();
         services.TryAddScoped<IBatchPlayPlaylistSource, UpstreamBatchPlayPlaylistSource>();
-        services.TryAddSingleton<IBatchPlayFileResolver>(sp => new ClientBatchPlayFileResolver(
-            sp.GetRequiredService<ActiveConnection>(), sp.GetRequiredService<ILoopbackAddressProvider>()));
+        services.TryAddScoped<ManagedBatchPlayContext>();
+        services.TryAddScoped<IBatchPlayFileResolver>(sp => new ClientBatchPlayFileResolver(
+            sp.GetRequiredService<ActiveConnection>(), sp.GetRequiredService<ILoopbackAddressProvider>(),
+            sp.GetRequiredService<ManagedBatchPlayContext>()));
         services.AddPlayerModule();
 
         services.AddSingleton<IConfigureOptions<PlayerModuleOptions>>(sp =>
             new ConfigureOptions<PlayerModuleOptions>(o =>
-                o.TempPlaylistDirectory = environment.TempPlaylistDirectory(sp)));
+            {
+                o.TempPlaylistDirectory = environment.TempPlaylistDirectory(sp);
+                o.DevicePlaybackPreferencesFile = () => environment.DevicePlaybackPreferencesFile?.Invoke(sp);
+            }));
+
+        services.AddSingleton<IUserMachineHandler, GetDevicePlaybackPreferencesHandler>();
+        services.AddSingleton<IUserMachineHandler, SetDevicePlaybackPreferencesHandler>();
 
         services.AddSingleton<IUserMachineHandler, BatchPlayCandidatesHandler>();
         services.AddSingleton<IUserMachineHandler, BatchPlayResourcesHandler>();

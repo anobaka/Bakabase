@@ -424,7 +424,6 @@
   "otherDevices.intro": "在电脑上管理媒体库，用手机随时浏览，或部署到 NAS。选择适合你的设备的版本，接入多设备互联。",
   "otherDevices.unavailable": "暂时无法获取移动端下载信息，请稍后重试。桌面版下载和 Docker 部署入口仍可使用。",
   "otherDevices.retry": "重新获取",
-  "otherDevices.canShare": "支持共享媒体库",
   "otherDevices.desktop.title": "桌面一体版",
   "otherDevices.desktop.subtitle": "管理、浏览与共享，一次安装",
   "otherDevices.desktop.intro": "完整的 Bakabase 应用：管理本机媒体库、浏览其他设备的共享内容，也能在同一窗口管理 Docker 等服务端。",
@@ -437,7 +436,7 @@
   "otherDevices.mobile.title": "移动端",
   "otherDevices.mobile.subtitle": "在手机和平板上随身浏览",
   "otherDevices.mobile.intro": "连接已开启远程访问的桌面一体版或 Docker 服务端，在手机或平板上浏览和播放媒体库。",
-  "otherDevices.mobile.noSharing": "移动端暂不支持对外共享媒体库。需要共享本机内容时，请使用桌面一体版或 Docker 服务端。",
+  "otherDevices.mobile.noSharing": "移动端可连接服务器使用资源，不作为管理其他设备的服务器。",
   "otherDevices.mobile.androidQrHint": "手机扫码下载 APK（大多数手机选 arm64-v8a），下载后直接安装。",
   "otherDevices.mobile.iosSourceHint": "扫码或复制 SideStore 源地址，在 SideStore 中添加一次，之后的更新会自动到达。",
   "otherDevices.mobile.sidestoreSource": "SideStore 源",
@@ -477,5 +476,6 @@
   "filePath.dockerVolume": "保存在 Docker 卷中。",
   "filePath.containerStorage": "保存在容器内部，未映射宿主机文件夹。",
   "filePath.hostPathUnavailable": "未提供宿主机路径映射，当前显示容器内路径。",
-  "filePath.copyFailed": "复制失败，请选中路径后手动复制。"
+  "filePath.copyFailed": "复制失败，请选中路径后手动复制。",
+  "otherDevices.canManage": "支持多设备管理"
 }

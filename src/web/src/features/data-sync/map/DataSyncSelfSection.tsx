@@ -1,17 +1,16 @@
 import type { DataSyncMapView } from "../api";
 import type { DataSyncDialogActions } from "../hooks/useDataSyncActions";
 
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
 import { DATA_SYNC_ROUTE, dataSyncInboxRoute } from "../routes";
 import { useCanManageDefinitionSharing } from "../hooks/useCanManageDefinitionSharing";
 import { useDataSyncStore } from "../stores/dataSync";
-import InvitationDialog from "../components/InvitationDialog";
 import DataSyncHelp from "../components/DataSyncHelp";
 import { buttonClass, StatusDot, syncText, toneText } from "../components/common";
-import SharingControls, { openCodeFirst } from "../components/SharingControls";
+import SharingControls from "../components/SharingControls";
 import { overallStatus, readLane, receiveLane, syncPeersOf } from "../viewModels";
 
 import { useWordedActions } from "./useWordedActions";
@@ -22,7 +21,7 @@ import { RemoteAccessMode } from "@/sdk/constants";
 /*
  * This device's side of data sync, in the device map's details when this device is shown
  * (spec §11.1, hook H-map-self): how it is, whether devices it approves may read its
- * definitions, how many it receives from and how many read it, a one-time code, and the way to
+ * definitions, how many it receives from and how many read it, and the way to
  * the page. Everything goes through the map's actions.
  */
 
@@ -43,7 +42,6 @@ export default function DataSyncSelfSection({
   const overview = useDataSyncStore((state) => state.overview);
   const status = useDataSyncStore((state) => state.status);
   const load = useDataSyncStore((state) => state.load);
-  const [code, setCode] = useState(false);
 
   // The overview is this device's own side; read once when the section is first shown without it.
   useEffect(() => {
@@ -100,22 +98,11 @@ export default function DataSyncSelfSection({
             {t("dataSync.status.NeedsYou", { count: openItems })}
           </Link>
         )}
-        {canManage && (
-          <button
-            className={buttonClass}
-            data-testid="data-sync-self-code"
-            disabled={actions.busy}
-            type="button"
-            onClick={() => openCodeFirst(t, actions, own, () => setCode(true))}
-          >
-            {t("dataSync.invitation.button")}
-          </button>
-        )}
+
         <Link className={buttonClass} to={DATA_SYNC_ROUTE}>
           {t("dataSync.link.openPage")}
         </Link>
       </div>
-      {code && <InvitationDialog actions={actions} now={now} onClose={() => setCode(false)} />}
     </section>
   );
 }

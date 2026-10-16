@@ -19,7 +19,8 @@ public record BatchPlayResourceFiles(int ResourceId, List<string> Files);
 /// </param>
 public record BatchPlayResourceSnapshot(
     List<BatchPlayResourceFiles> Resources,
-    List<MediaLibraryPlayer> ConfiguredPlayers);
+    List<MediaLibraryPlayer> ConfiguredPlayers,
+    Dictionary<int, ResourceProfilePlayerOptions?>? PlayerOptionsByResourceId = null);
 
 /// <summary>
 /// Port through which the player module reads resources.

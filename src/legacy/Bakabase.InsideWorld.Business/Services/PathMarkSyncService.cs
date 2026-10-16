@@ -368,13 +368,15 @@ public class PathMarkSyncService : ScopedService
     {
         var config = JsonConvert.DeserializeObject<PropertyMarkConfig>(mark.ConfigJson);
         if (config == null) return;
+        PathMarkValueConfigValidator.Validate(config);
 
         // Only support Custom properties for now
         if (config.Pool != PropertyPool.Custom) return;
 
         if (config.ValueType == PropertyValueType.Dynamic &&
             ((config.ValueRegexMatchesResourcePath && string.IsNullOrEmpty(config.ValueRegex)) ||
-             (string.IsNullOrEmpty(config.ValueRegex) && !config.ValueLayer.HasValue)))
+             (config.GetEffectiveValueMatchMode() == PathMatchMode.Regex && string.IsNullOrEmpty(config.ValueRegex)) ||
+             (config.GetEffectiveValueMatchMode() == PathMatchMode.Layer && !config.ValueLayer.HasValue)))
         {
             // An incomplete regex extractor must never silently turn into layer 0. Besides being
             // surprising for modern marks, that fallback could overwrite an entire migrated tree.
@@ -458,6 +460,7 @@ public class PathMarkSyncService : ScopedService
     {
         var config = JsonConvert.DeserializeObject<MediaLibraryMarkConfig>(mark.ConfigJson);
         if (config == null) return Task.CompletedTask;
+        PathMarkValueConfigValidator.Validate(config);
 
         // MediaLibrary effects use PropertyPool.Internal and PropertyId = 25 (MediaLibraryV2Multi)
         const int mediaLibraryPropertyId = 25;
@@ -474,7 +477,7 @@ public class PathMarkSyncService : ScopedService
         var valueType = config.ValueType;
         var valueLayer = config.LayerToMediaLibrary;
         var needsPerResourceExtraction =
-            valueType == PropertyValueType.Dynamic && valueLayer.HasValue && valueLayer.Value > 0;
+            valueType == PropertyValueType.Dynamic && MediaLibraryDynamicValueDependsOnResource(config);
 
         // For fixed values
         int? sharedMediaLibraryId = null;
@@ -487,8 +490,8 @@ public class PathMarkSyncService : ScopedService
         }
         else if (!needsPerResourceExtraction)
         {
-            sharedMediaLibraryName = ExtractDynamicValue(mark.Path, null, config.MatchMode, valueLayer,
-                config.RegexToMediaLibrary, ctx);
+            sharedMediaLibraryName = ExtractDynamicValue(mark.Path, null, config.ValueBasePath, config.GetEffectiveValueMatchMode(), valueLayer,
+                config.RegexToMediaLibrary, ctx, true);
             if (string.IsNullOrEmpty(sharedMediaLibraryName)) return Task.CompletedTask;
             if (!ctx.MediaLibraryCache.TryGetValue(sharedMediaLibraryName, out var id)) return Task.CompletedTask;
             sharedMediaLibraryId = id;
@@ -501,8 +504,8 @@ public class PathMarkSyncService : ScopedService
             int mediaLibraryId;
             if (needsPerResourceExtraction)
             {
-                var name = ExtractDynamicValue(mark.Path, resource.Path, config.MatchMode, valueLayer,
-                    config.RegexToMediaLibrary, ctx);
+                var name = ExtractDynamicValue(mark.Path, resource.Path, config.ValueBasePath, config.GetEffectiveValueMatchMode(), valueLayer,
+                    config.RegexToMediaLibrary, ctx, true);
                 if (string.IsNullOrEmpty(name)) continue;
                 if (!ctx.MediaLibraryCache.TryGetValue(name, out mediaLibraryId)) continue;
             }
@@ -1258,19 +1261,15 @@ public class PathMarkSyncService : ScopedService
         if (onProcessChange != null) await onProcessChange(process);
     }
 
-    /// <summary>
-    /// Positive layer extraction and legacy resource-relative regex extraction need the concrete
-    /// resource path; mark-relative layers and modern regex extraction are shared by every resource.
-    /// </summary>
     private static bool PropertyDynamicValueDependsOnResource(PropertyMarkConfig config) =>
         config.UsesResourceRelativeValueRegex() ||
-        (string.IsNullOrEmpty(config.ValueRegex) && config.ValueLayer is > 0);
+        config.ValueBasePath == PathMarkValueBasePath.ResourcePath ||
+        (config.GetEffectiveValueMatchMode() == PathMatchMode.Layer && config.ValueLayer is > 0);
 
-    /// <summary>
-    /// Property value extraction has its own selector. It must not inherit the applicability
-    /// MatchMode: a property may cover resources by layer while extracting a regex capture,
-    /// which is also the explicit shape emitted by the corrected V220 converter.
-    /// </summary>
+    private static bool MediaLibraryDynamicValueDependsOnResource(MediaLibraryMarkConfig config) =>
+        config.ValueBasePath == PathMarkValueBasePath.ResourcePath ||
+        (config.GetEffectiveValueMatchMode() == PathMatchMode.Layer && config.LayerToMediaLibrary is > 0);
+
     private object? ExtractPropertyDynamicValue(
         string markPath,
         string? resourcePath,
@@ -1281,11 +1280,10 @@ public class PathMarkSyncService : ScopedService
             ? string.IsNullOrEmpty(config.ValueRegex) || customProperty == null
                 ? null
                 : ExtractResourceRelativeRegexValue(markPath, resourcePath, config.ValueRegex, customProperty, ctx)
-            : !string.IsNullOrEmpty(config.ValueRegex)
-                ? ExtractMarkDirectoryRegexValue(markPath, config.ValueRegex, ctx)
-                : config.ValueLayer.HasValue
-                    ? ExtractDynamicValue(markPath, resourcePath, PathMatchMode.Layer, config.ValueLayer, null, ctx)
-                    : null;
+            : config.GetEffectiveValueMatchMode() == PathMatchMode.Layer && !config.ValueLayer.HasValue
+                ? null
+                : ExtractDynamicValue(markPath, resourcePath, config.ValueBasePath,
+                    config.GetEffectiveValueMatchMode(), config.ValueLayer, config.ValueRegex, ctx);
 
     private static object? ExtractResourceRelativeRegexValue(
         string markPath,
@@ -1339,84 +1337,17 @@ public class PathMarkSyncService : ScopedService
             .ToList();
     }
 
-    private static string? ExtractMarkDirectoryRegexValue(string markPath, string valueRegex, SyncContext ctx)
-    {
-        var markDirectoryName = Path.GetFileName(ctx.GetStandardizedPath(markPath));
-        var match = ctx.GetOrCreateRegex(valueRegex).Match(markDirectoryName);
-        return match.Success ? match.Groups.Count > 1 ? match.Groups[1].Value : match.Value : null;
-    }
-
-    /// <summary>
-    /// Low-level extractor retained for media-library marks, whose existing behavior selects
-    /// the extraction strategy through their applicability MatchMode.
-    /// </summary>
-    private string? ExtractDynamicValue(
+    private static string? ExtractDynamicValue(
         string markPath,
         string? resourcePath,
-        PathMatchMode matchMode,
+        PathMarkValueBasePath basePath,
+        PathMatchMode valueMode,
         int? valueLayer,
         string? valueRegex,
-        SyncContext ctx)
-    {
-        var markSegments = ctx.GetPathSegments(markPath);
-
-        if (matchMode == PathMatchMode.Layer)
-        {
-            var layer = valueLayer ?? 0;
-
-            if (layer == 0)
-            {
-                var targetIndex = markSegments.Length - 1;
-                if (targetIndex < 0) return null;
-                return markSegments[targetIndex];
-            }
-            else if (layer < 0)
-            {
-                var targetIndex = markSegments.Length - 1 + layer;
-                if (targetIndex < 0 || targetIndex >= markSegments.Length)
-                {
-                    return null;
-                }
-
-                return markSegments[targetIndex];
-            }
-            else
-            {
-                if (string.IsNullOrEmpty(resourcePath)) return null;
-
-                var resourceSegments = ctx.GetPathSegments(resourcePath);
-                var targetIndex = markSegments.Length + layer - 1;
-                if (targetIndex < 0 || targetIndex >= resourceSegments.Length)
-                {
-                    return null;
-                }
-
-                return resourceSegments[targetIndex];
-            }
-        }
-        else if (matchMode == PathMatchMode.Regex && !string.IsNullOrEmpty(valueRegex))
-        {
-            var normalizedMarkPath = ctx.GetStandardizedPath(markPath);
-            var markDirectoryName = Path.GetFileName(normalizedMarkPath);
-            try
-            {
-                var regex = ctx.GetOrCreateRegex(valueRegex);
-                var match = regex.Match(markDirectoryName);
-                if (match.Success)
-                {
-                    return match.Groups.Count > 1 ? match.Groups[1].Value : match.Value;
-                }
-
-                return null;
-            }
-            catch
-            {
-                return markDirectoryName;
-            }
-        }
-
-        return null;
-    }
+        SyncContext ctx,
+        bool invalidRegexUsesSourceName = false) =>
+        PathMarkDynamicValueExtractor.Extract(markPath, resourcePath, basePath, valueMode, valueLayer, valueRegex,
+            ctx, invalidRegexUsesSourceName).Value;
 
     private async Task PreCreateDynamicMediaLibraries(List<PathMark> mediaLibraryMarks, SyncContext ctx,
         CancellationToken ct)
@@ -1443,9 +1374,8 @@ public class PathMarkSyncService : ScopedService
             var config = JsonConvert.DeserializeObject<MediaLibraryMarkConfig>(mark.ConfigJson);
             if (config == null || config.ValueType != PropertyValueType.Dynamic) continue;
 
-            var valueLayer = config.LayerToMediaLibrary ?? 0;
-
-            if (valueLayer > 0)
+            PathMarkValueConfigValidator.Validate(config);
+            if (MediaLibraryDynamicValueDependsOnResource(config))
             {
                 var matchedResources = ctx.AllResources
                     .Where(r => ctx.IsPathUnderParent(r.Path, mark.Path))
@@ -1457,10 +1387,11 @@ public class PathMarkSyncService : ScopedService
                     var mediaLibraryName = ExtractDynamicValue(
                         mark.Path,
                         resource.Path,
-                        config.MatchMode,
+                        config.ValueBasePath,
+                        config.GetEffectiveValueMatchMode(),
                         config.LayerToMediaLibrary,
                         config.RegexToMediaLibrary,
-                        ctx);
+                        ctx, true);
 
                     if (!string.IsNullOrEmpty(mediaLibraryName) &&
                         !ctx.MediaLibraryCache.ContainsKey(mediaLibraryName))
@@ -1474,10 +1405,11 @@ public class PathMarkSyncService : ScopedService
                 var mediaLibraryName = ExtractDynamicValue(
                     mark.Path,
                     null,
-                    config.MatchMode,
+                    config.ValueBasePath,
+                    config.GetEffectiveValueMatchMode(),
                     config.LayerToMediaLibrary,
                     config.RegexToMediaLibrary,
-                    ctx);
+                    ctx, true);
 
                 if (!string.IsNullOrEmpty(mediaLibraryName) && !ctx.MediaLibraryCache.ContainsKey(mediaLibraryName))
                 {
@@ -1579,41 +1511,23 @@ public class PathMarkSyncService : ScopedService
         bool includeSubdirectories, SyncContext ctx)
     {
         var regex = ctx.GetOrCreateRegex(pattern);
-
-        var matchedResources = resources.Where(r =>
+        return resources.Where(resource =>
         {
-            var standardizedPath = ctx.GetStandardizedPath(r.Path);
-            var relativePath = standardizedPath.Substring(rootPath.Length)
+            var path = ctx.GetStandardizedPath(resource.Path);
+            var relative = path[rootPath.Length..]
                 .TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-            return regex.IsMatch(relativePath);
-        }).ToList();
+            if (regex.IsMatch(relative)) return true;
+            if (!includeSubdirectories) return false;
 
-        if (!includeSubdirectories)
-        {
-            return matchedResources;
-        }
-
-        var matchedPaths = matchedResources.Select(r => ctx.GetStandardizedPath(r.Path))
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var result = new List<Resource>(matchedResources);
-
-        foreach (var resource in resources)
-        {
-            var resourcePath = ctx.GetStandardizedPath(resource.Path);
-            if (matchedPaths.Contains(resourcePath)) continue;
-
-            foreach (var matchedPath in matchedPaths)
+            // The matching ancestor need not be a managed resource. Its descendant resources
+            // still inherit this mark, without walking the filesystem or creating extra effects.
+            for (var separator = relative.LastIndexOf('/'); separator >= 0; separator = relative.LastIndexOf('/'))
             {
-                if (ctx.IsPathUnderParent(resourcePath, matchedPath) &&
-                    !resourcePath.Equals(matchedPath, StringComparison.OrdinalIgnoreCase))
-                {
-                    result.Add(resource);
-                    break;
-                }
+                relative = relative[..separator];
+                if (regex.IsMatch(relative)) return true;
             }
-        }
-
-        return result;
+            return regex.IsMatch(string.Empty);
+        }).ToList();
     }
 
     #endregion

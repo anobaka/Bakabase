@@ -65,6 +65,14 @@ public class BakabaseCollectionService(
         return await ruleIndex.MembersAsync(collectionId, collection?.RuleSearchJson, profiles, ct);
     }
 
+    protected override async Task<IReadOnlyList<int>> RuleMatchedResourceIds(int collectionId,
+        IReadOnlyCollection<int> resourceIds, CancellationToken ct)
+    {
+        var collection = await Orm.GetByKey(collectionId, false);
+        return await ruleIndex.MatchingCandidatesAsync(collectionId, collection?.RuleSearchJson,
+            resourceIds, profiles, ct);
+    }
+
     protected override async Task<HashSet<int>> AcquiringResourceIds(IReadOnlyCollection<int> resourceIds,
         CancellationToken ct)
     {

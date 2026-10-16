@@ -6,9 +6,8 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Bakabase.Modules.Federation.Tests.Security;
 
 /// <summary>
-/// <c>datasync.read</c> as a grant of its own (§7.1): its switch and leases, its lifecycle next to library access
-/// (the §7.1.4 table, row by row), and its pairing by request, by code and by read-back (§7.2). A state file an older
-/// build reads without ever seeing it is <see cref="Identity.FederationStateVersionSkewTests"/>.
+/// <c>datasync.read</c>: switches, leases and lifecycle; pairing by request, code and read-back.
+/// Existing state preservation is covered by <see cref="Identity.FederationRetirementStateTests"/>.
 /// </summary>
 [TestClass]
 public sealed class DataSyncScopeTests
@@ -16,266 +15,6 @@ public sealed class DataSyncScopeTests
     private const string LibraryQuery = "/federation/v1/export/queries";
 
     // ---- principals and switches (§7.1.2) -------------------------------------------------------------------------
-
-    [TestMethod]
-    public async Task APrincipalCarriesItsGrantsScopeAndTheHandshakeSaysWhichOne()
-    {
-        using var network = new DataSyncTestNetwork();
-        var source = network.Add("source");
-        var library = await source.GrantLibraryAsync(network.Add("library-reader"));
-        var dataSync = await source.GrantDataSyncAsync(network.Add("datasync-reader"));
-
-        Assert.AreEqual(FederationScopes.LibraryRead, (await Authenticate(source, library)).Scope);
-        Assert.AreEqual(FederationScopes.DataSyncRead, (await Authenticate(source, dataSync)).Scope);
-        await source.Grants.CreateHandshakeAsync(library.GrantId, NodeRequestSignature.RandomToken());
-        await source.Grants.CreateHandshakeAsync(dataSync.GrantId, NodeRequestSignature.RandomToken());
-        Assert.AreEqual("GrantRevoked", (await Assert.ThrowsExactlyAsync<FederationAccessException>(() =>
-            source.Grants.CreateHandshakeAsync("unknown-grant", NodeRequestSignature.RandomToken()))).ErrorCode);
-    }
-
-    /// <summary>G28: the library's export services refuse a datasync grant themselves, behind the gate.</summary>
-    [TestMethod]
-    public async Task TheLibraryExportServicesRefuseADataSyncGrantAsScopeNotGranted()
-    {
-        using var network = new DataSyncTestNetwork();
-        var source = network.Add("source");
-        var library = await source.GrantLibraryAsync(network.Add("library-reader"));
-        var dataSync = await source.GrantDataSyncAsync(network.Add("datasync-reader"));
-
-        var refused = await Assert.ThrowsExactlyAsync<FederationAccessException>(() =>
-            source.Grants.ValidateAsync(dataSync.GrantId, dataSync.LibraryEpoch));
-        Assert.AreEqual("ScopeNotGranted", refused.ErrorCode);
-        Assert.AreEqual(403, refused.StatusCode);
-        Assert.AreEqual(FederationScopes.LibraryRead,
-            (await source.Grants.ValidateAsync(library.GrantId, library.LibraryEpoch)).Scope);
-    }
-
-    [TestMethod]
-    public async Task EachGrantAnswersOnlyToItsOwnSwitch()
-    {
-        using var network = new DataSyncTestNetwork();
-        var source = network.Add("source");
-        var library = await source.GrantLibraryAsync(network.Add("library-reader"));
-        var dataSync = await source.GrantDataSyncAsync(network.Add("datasync-reader"));
-
-        await source.Peers.SetSharingAsync(false);
-        Assert.AreEqual("SharingDisabled", await ErrorOf(Authenticate(source, library)));
-        Assert.AreEqual(FederationScopes.DataSyncRead, (await Authenticate(source, dataSync)).Scope);
-
-        await source.Peers.SetSharingAsync(true);
-        await source.Peers.SetDataSyncSharingAsync(false);
-        Assert.AreEqual("DataSyncSharingDisabled", await ErrorOf(Authenticate(source, dataSync)));
-        Assert.AreEqual(FederationScopes.LibraryRead, (await Authenticate(source, library)).Scope);
-
-        // With nothing shared, an unknown grant is told so, as before there were two kinds.
-        await source.Peers.SetSharingAsync(false);
-        Assert.AreEqual("SharingDisabled", await ErrorOf(source.Grants.CreateHandshakeAsync("unknown-grant",
-            NodeRequestSignature.RandomToken())));
-    }
-
-    // ---- the switch and leases (§7.1.3) ---------------------------------------------------------------------------
-
-    [TestMethod]
-    public async Task LeasesArePerGrantSoOneSwitchNeverCancelsTheOthersReads()
-    {
-        using var network = new DataSyncTestNetwork();
-        var source = network.Add("source");
-        var library = await source.GrantLibraryAsync(network.Add("library-reader"));
-        var dataSync = await source.GrantDataSyncAsync(network.Add("datasync-reader"));
-        var libraryLease = source.Leases.GetCancellationToken(library.GrantId);
-        var dataSyncLease = source.Leases.GetCancellationToken(dataSync.GrantId);
-        var outbound = source.Leases.GetCancellationToken(GrantLeaseRegistry.OutboundKey("some-outbound-grant"));
-
-        await source.Peers.SetSharingAsync(false);
-        Assert.IsTrue(libraryLease.IsCancellationRequested);
-        Assert.IsFalse(dataSyncLease.IsCancellationRequested, "Library sharing off never touches a definitions read.");
-
-        await source.Peers.SetSharingAsync(true);
-        libraryLease = source.Leases.GetCancellationToken(library.GrantId);
-        Assert.IsFalse(libraryLease.IsCancellationRequested);
-        await source.Peers.SetDataSyncSharingAsync(false);
-        Assert.IsTrue(dataSyncLease.IsCancellationRequested);
-        Assert.IsFalse(libraryLease.IsCancellationRequested, "Definitions sharing off never touches a library read.");
-        await source.Peers.SetDataSyncSharingAsync(true);
-        Assert.IsFalse(source.Leases.GetCancellationToken(dataSync.GrantId).IsCancellationRequested);
-        Assert.IsFalse(outbound.IsCancellationRequested);
-    }
-
-    /// <summary>
-    /// The remote-mode monitor cancels every inbound lease when remote access is closed and resumes them all on any
-    /// other change. A resumed lease never re-opens a switched-off scope: the switch is checked on every read.
-    /// </summary>
-    [TestMethod]
-    public async Task TheRemoteModeMonitorCancelsBothAndItsResumeNeverReopensASwitchedOffScope()
-    {
-        using var network = new DataSyncTestNetwork();
-        var source = network.Add("source");
-        var library = await source.GrantLibraryAsync(network.Add("library-reader"));
-        var dataSync = await source.GrantDataSyncAsync(network.Add("datasync-reader"));
-        var libraryLease = source.Leases.GetCancellationToken(library.GrantId);
-        var dataSyncLease = source.Leases.GetCancellationToken(dataSync.GrantId);
-
-        source.Leases.CancelInbound();
-        Assert.IsTrue(libraryLease.IsCancellationRequested);
-        Assert.IsTrue(dataSyncLease.IsCancellationRequested);
-        Assert.AreEqual("GrantRevoked", await ErrorOf(Authenticate(source, dataSync)));
-
-        await source.Peers.SetDataSyncSharingAsync(false);
-        source.Leases.Resume();
-        Assert.AreEqual(FederationScopes.LibraryRead, (await Authenticate(source, library)).Scope);
-        Assert.AreEqual("DataSyncSharingDisabled", await ErrorOf(Authenticate(source, dataSync)));
-        await source.Peers.SetDataSyncSharingAsync(true);
-        Assert.AreEqual(FederationScopes.DataSyncRead, (await Authenticate(source, dataSync)).Scope);
-    }
-
-    // ---- lifecycle (§7.1.4), row by row ---------------------------------------------------------------------------
-
-    [TestMethod]
-    public async Task RevokeAsyncRevokesExactlyTheGrantItNamesOfEitherKind()
-    {
-        using var network = new DataSyncTestNetwork();
-        var source = network.Add("source");
-        var reader = network.Add("reader");
-        var library = await source.GrantLibraryAsync(reader);
-        var dataSync = await source.GrantDataSyncAsync(reader);
-        var dataSyncLease = source.Leases.GetCancellationToken(dataSync.GrantId);
-
-        await source.Peers.RevokeAsync(dataSync.GrantId);
-        Assert.IsTrue(dataSyncLease.IsCancellationRequested);
-        Assert.AreEqual("GrantRevoked", await ErrorOf(Authenticate(source, dataSync)));
-        Assert.AreEqual(FederationScopes.LibraryRead, (await Authenticate(source, library)).Scope);
-
-        dataSync = await source.GrantDataSyncAsync(reader);
-        await source.Peers.RevokeAsync(library.GrantId);
-        Assert.AreEqual("GrantRevoked", await ErrorOf(Authenticate(source, library)));
-        Assert.AreEqual(FederationScopes.DataSyncRead, (await Authenticate(source, dataSync)).Scope);
-    }
-
-    [TestMethod]
-    public async Task RevokeDataSyncAsyncEndsTheSubjectsDataSyncGrantsOnly()
-    {
-        using var network = new DataSyncTestNetwork();
-        var source = network.Add("source");
-        var reader = network.Add("reader");
-        var other = network.Add("other");
-        var library = await source.GrantLibraryAsync(reader);
-        var dataSync = await source.GrantDataSyncAsync(reader);
-        var otherDataSync = await source.GrantDataSyncAsync(other);
-        var lease = source.Leases.GetCancellationToken(dataSync.GrantId);
-
-        await source.Peers.RevokeDataSyncAsync("reader");
-
-        Assert.IsTrue(lease.IsCancellationRequested);
-        Assert.AreEqual("GrantRevoked", await ErrorOf(Authenticate(source, dataSync)));
-        Assert.AreEqual(FederationScopes.LibraryRead, (await Authenticate(source, library)).Scope);
-        Assert.AreEqual(FederationScopes.DataSyncRead, (await Authenticate(source, otherDataSync)).Scope);
-        var view = (await source.Peers.GetStatusAsync()).Peers.Single(p => p.NodeId == "reader");
-        Assert.AreEqual(library.GrantId, view.InboundGrant?.GrantId);
-    }
-
-    /// <summary>G26 and G27: approving one kind of access neither issues nor revokes the other.</summary>
-    [TestMethod]
-    public async Task ApprovingOneKindNeverIssuesOrRevokesTheOther()
-    {
-        using var network = new DataSyncTestNetwork();
-        var source = network.Add("source");
-        var reader = network.Add("reader");
-        var library = await source.GrantLibraryAsync(reader);
-        var dataSync = await source.GrantDataSyncAsync(reader);
-
-        // A second datasync approval replaces the datasync grant only.
-        var replaced = await source.GrantDataSyncAsync(reader);
-        Assert.AreNotEqual(dataSync.GrantId, replaced.GrantId);
-        Assert.AreEqual("GrantRevoked", await ErrorOf(Authenticate(source, dataSync)));
-        Assert.AreEqual(FederationScopes.LibraryRead, (await Authenticate(source, library)).Scope);
-
-        // A second library approval replaces the library grant only.
-        var libraryAgain = await source.GrantLibraryAsync(reader);
-        Assert.AreEqual("GrantRevoked", await ErrorOf(Authenticate(source, library)));
-        Assert.AreEqual(FederationScopes.LibraryRead, (await Authenticate(source, libraryAgain)).Scope);
-        Assert.AreEqual(FederationScopes.DataSyncRead, (await Authenticate(source, replaced)).Scope);
-
-        var state = source.ReadState();
-        Assert.AreEqual(2, state.GetProperty("inboundGrants").EnumerateObject().Count());
-        Assert.AreEqual(2, state.GetProperty("inboundDataSyncGrants").EnumerateObject().Count());
-    }
-
-    [TestMethod]
-    public async Task ADataSyncApprovalAddsAnUnknownPeerButNeverRenamesAKnownOne()
-    {
-        using var network = new DataSyncTestNetwork();
-        var source = network.Add("source");
-        var reader = network.Add("reader");
-        await reader.Store.SetDisplayNameAsync("Reader PC");
-        await source.GrantDataSyncAsync(reader);
-        Assert.AreEqual("Reader PC", (await source.Peers.GetStatusAsync()).Peers.Single().Label);
-
-        // A request under the same NodeId claiming another name leaves the known name as it is.
-        await reader.Store.SetDisplayNameAsync("Someone else");
-        await source.GrantDataSyncAsync(reader);
-        Assert.AreEqual("Reader PC", (await source.Peers.GetStatusAsync()).Peers.Single().Label);
-        // Unlike a library approval, which follows the requester's name (F69).
-        await source.GrantLibraryAsync(reader);
-        Assert.AreEqual("Someone else", (await source.Peers.GetStatusAsync()).Peers.Single().Label);
-    }
-
-    [TestMethod]
-    public async Task RemovingAPeerEndsBothKindsBothWaysWithEveryRequestAndCode()
-    {
-        using var network = new DataSyncTestNetwork();
-        var source = network.Add("source");
-        var reader = network.Add("reader");
-        await source.GrantLibraryAsync(reader);
-        await source.GrantDataSyncAsync(reader);
-        await reader.GrantDataSyncAsync(source);
-        await reader.GrantLibraryAsync(source);
-        await source.Peers.CreateDataSyncReciprocalInvitationAsync("reader");
-        // A waiting request each way.
-        await reader.Pairing.ConnectDataSyncAsync("http://source", null, NodeDataSyncIntents.TwoWay,
-            DataSyncTestNetwork.Contract, ["http://reader"]);
-        await source.Pairing.ConnectDataSyncAsync("http://reader", null, NodeDataSyncIntents.Follow,
-            DataSyncTestNetwork.Contract);
-        var outboundDataSync = source.OutboundDataSync("reader")!;
-        var outboundLease = source.Leases.GetCancellationToken(GrantLeaseRegistry.OutboundKey(outboundDataSync.GrantId));
-
-        await source.Peers.RemovePeerAsync("reader");
-
-        Assert.IsTrue(outboundLease.IsCancellationRequested);
-        var state = source.ReadState();
-        Assert.IsFalse(state.GetProperty("peers").TryGetProperty("reader", out _));
-        Assert.IsFalse(state.GetProperty("outboundGrants").TryGetProperty("reader", out _));
-        Assert.IsFalse(state.GetProperty("outboundDataSyncGrants").TryGetProperty("reader", out _));
-        Assert.IsTrue(state.GetProperty("inboundGrants").EnumerateObject().All(g => g.Value.GetProperty("revoked").GetBoolean()));
-        Assert.IsTrue(state.GetProperty("inboundDataSyncGrants").EnumerateObject().All(g => g.Value.GetProperty("revoked").GetBoolean()));
-        Assert.AreEqual(0, state.GetProperty("incomingDataSyncRequests").GetArrayLength());
-        Assert.AreEqual(0, state.GetProperty("outgoingDataSyncRequests").GetArrayLength());
-        Assert.AreEqual(0, state.GetProperty("dataSyncReciprocalInvitations").GetArrayLength());
-    }
-
-    [TestMethod]
-    public async Task ForgettingOneKindOfOutboundAccessLeavesTheOtherAndTheBrowsingSwitch()
-    {
-        using var network = new DataSyncTestNetwork();
-        var source = network.Add("source");
-        var reader = network.Add("reader");
-        await source.GrantLibraryAsync(reader);
-        await source.GrantDataSyncAsync(reader);
-
-        // "Done — stop reading X": datasync credentials go; library access and Enabled stay.
-        await reader.Peers.ForgetOutboundDataSyncAsync("source");
-        Assert.IsNull(reader.OutboundDataSync("source"));
-        Assert.IsNotNull(reader.Outbound("source"));
-        Assert.IsTrue(reader.Peer("source").GetProperty("enabled").GetBoolean());
-
-        // "Stop browsing": library credentials go and Enabled turns off; datasync access stays.
-        await source.GrantDataSyncAsync(reader);
-        await reader.Peers.ForgetOutboundAsync("source");
-        Assert.IsNull(reader.Outbound("source"));
-        Assert.IsNotNull(reader.OutboundDataSync("source"));
-        Assert.IsFalse(reader.Peer("source").GetProperty("enabled").GetBoolean());
-        var view = (await reader.Peers.GetStatusAsync()).Peers.Single();
-        Assert.IsNull(view.OutboundGrant);
-    }
 
     [TestMethod]
     public async Task RotatingTheLibraryEpochEndsDefinitionsAccessToo()
@@ -330,7 +69,7 @@ public sealed class DataSyncScopeTests
 
     /// <summary>G5 on the service: a request is filed apart from library requests and claimed on its own route.</summary>
     [TestMethod]
-    public async Task ARequestIsFiledApartFromLibraryRequestsAndClaimedByTheLoop()
+    public async Task ADefinitionsRequestIsClaimedByTheLoop()
     {
         using var network = new DataSyncTestNetwork();
         var source = network.Add("source");
@@ -341,7 +80,6 @@ public sealed class DataSyncScopeTests
             DataSyncTestNetwork.Contract);
         Assert.AreEqual("awaitingApproval", pending.Outcome);
         Assert.AreEqual("source", pending.PeerNodeId);
-        Assert.AreEqual(0, (await source.Peers.GetStatusAsync()).Requests.Count, "Library requests never see it.");
         var incoming = (await source.Peers.GetDataSyncStatusAsync()).Requests.Single();
         Assert.AreEqual(("incoming", "reader", NodeDataSyncIntents.TwoWay), (incoming.Direction, incoming.NodeId, incoming.Intent));
         Assert.AreEqual(0, (await reader.Pairing.ClaimPendingDataSyncAsync()).Count);
@@ -350,35 +88,12 @@ public sealed class DataSyncScopeTests
         Assert.AreEqual(("reader", NodeDataSyncIntents.TwoWay, false), (approval.NodeId, approval.Intent, approval.HasReciprocal));
         CollectionAssert.AreEqual(new[] { "source" }, (await reader.Pairing.ClaimPendingDataSyncAsync()).ToArray());
         Assert.AreEqual(0, (await reader.Pairing.ClaimPendingDataSyncAsync()).Count, "Claimed once.");
-        Assert.IsNull(reader.Outbound("source"));
         Assert.AreEqual(approval.NodeId, reader.OutboundDataSync("source")!.SubjectNodeId);
         Assert.IsTrue(network.Requests.Any(r => r.EndsWith("/federation/v1/pair/datasync/claim")));
         Assert.IsFalse(network.Requests.Any(r => r.EndsWith("/federation/v1/pair/request") || r.EndsWith("/federation/v1/pair/claim")));
     }
 
     /// <summary>G24 and G25: a code is redeemed only on its own kind's route and is not used up on the other.</summary>
-    [TestMethod]
-    public async Task CodesNeverCrossBetweenLibraryAndDefinitions()
-    {
-        using var network = new DataSyncTestNetwork();
-        var source = network.Add("source");
-        var reader = network.Add("reader");
-        await source.Peers.SetSharingAsync(true);
-        await source.Peers.SetDataSyncSharingAsync(true);
-        var libraryCode = (await source.Peers.IssueInvitationAsync()).Code;
-        var dataSyncCode = (await source.Peers.IssueDataSyncInvitationAsync()).Code;
-
-        Assert.AreEqual("InvalidPairingCode", await ErrorOf(reader.Pairing.ConnectDataSyncAsync("http://source",
-            libraryCode, NodeDataSyncIntents.Follow, DataSyncTestNetwork.Contract)));
-        Assert.AreEqual("InvalidPairingCode", await ErrorOf(reader.Pairing.ConnectAsync("http://source", dataSyncCode)));
-
-        Assert.AreEqual("granted", (await reader.Pairing.ConnectAsync("http://source", libraryCode)).Outcome);
-        Assert.AreEqual("granted", (await reader.Pairing.ConnectDataSyncAsync("http://source", dataSyncCode,
-            NodeDataSyncIntents.Follow, DataSyncTestNetwork.Contract)).Outcome);
-        Assert.IsNotNull(reader.Outbound("source"));
-        Assert.IsNotNull(reader.OutboundDataSync("source"));
-        Assert.AreNotEqual(reader.Outbound("source")!.GrantId, reader.OutboundDataSync("source")!.GrantId);
-    }
 
     [TestMethod]
     public async Task ACodeCountsItsWrongAttemptsAndIsSingleUse()
@@ -460,9 +175,6 @@ public sealed class DataSyncScopeTests
         CollectionAssert.AreEqual(new[] { "approver" }, (await initiator.Pairing.ClaimPendingDataSyncAsync()).ToArray());
         Assert.IsNotNull(initiator.OutboundDataSync("approver"));
         Assert.IsNotNull(approver.OutboundDataSync("initiator"));
-        // Neither side gained library access.
-        Assert.IsNull(initiator.Outbound("approver"));
-        Assert.IsNull(approver.Outbound("initiator"));
     }
 
     /// <summary>
@@ -658,10 +370,7 @@ public sealed class DataSyncScopeTests
         Assert.AreEqual("ThisTooOld", await ErrorOf(Ask()));
         source.MinimumPeerContract = 1;
         await source.Peers.SetDataSyncSharingAsync(false);
-        await source.Peers.SetSharingAsync(true);
-        Assert.AreEqual("PeerSharingOff", await ErrorOf(Ask()));
-        await source.Peers.SetSharingAsync(false);
-        Assert.AreEqual("SharingDisabled", await ErrorOf(Ask()), "With nothing shared, info itself answers no.");
+        Assert.AreEqual("DataSyncSharingDisabled", await ErrorOf(Ask()), "With definitions sharing disabled, info itself answers no.");
 
         Assert.IsFalse(network.Requests.Any(r => r.Contains("/pair/")));
         Assert.AreEqual(0, reader.ReadState().GetProperty("outgoingDataSyncRequests").GetArrayLength());
@@ -697,8 +406,6 @@ public sealed class DataSyncScopeTests
         Assert.AreEqual("DataSyncSharingDisabled", await ErrorOf(source.Peers.SubmitDataSyncRequestAsync(Request(6))));
         Assert.AreEqual("DataSyncSharingDisabled", await ErrorOf(source.Peers.IssueDataSyncInvitationAsync()));
         Assert.AreEqual("DataSyncSharingDisabled", await ErrorOf(source.Peers.CreateDataSyncReciprocalInvitationAsync("reader-1")));
-        // Library pairing is not what datasync sharing gates.
-        Assert.AreEqual("SharingDisabled", await ErrorOf(source.Peers.IssueInvitationAsync()));
     }
 
     // ---- helpers ------------------------------------------------------------------------------------------------------

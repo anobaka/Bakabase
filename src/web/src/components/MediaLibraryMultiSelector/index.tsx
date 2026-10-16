@@ -12,7 +12,7 @@ import {
 } from "@ant-design/icons";
 
 import { buildLogger } from "@/components/utils";
-import BApi from "@/sdk/BApi";
+import { useResourceApi } from "@/features/management/resourceContext";
 import { Button, Modal, Spinner, Tooltip } from "@/components/bakaui";
 
 const log = buildLogger("MediaLibraryMultiSelector");
@@ -36,6 +36,7 @@ enum AssociationState {
 
 const MediaLibraryMultiSelector = (props: Props) => {
   const { t } = useTranslation();
+  const BApi = useResourceApi();
   const { resourceIds, onSubmit } = props;
 
   const [visible, setVisible] = useState(true);

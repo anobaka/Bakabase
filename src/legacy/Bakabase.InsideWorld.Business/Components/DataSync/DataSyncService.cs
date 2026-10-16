@@ -40,14 +40,12 @@ namespace Bakabase.InsideWorld.Business.Components.DataSync;
 /// </para>
 /// <para>
 /// <b>Access</b> (§7.1.5): the controller decides whether the caller may create or widen definitions access; where only
-/// this facade knows whether a call will send a request or mint a reciprocal code (links, copy once) it passes that
+/// this facade knows whether a call will send a request or mint a reciprocal code (links) it passes that
 /// word on, and the link service refuses exactly those calls.
 /// </para>
 /// </remarks>
 public sealed class DataSyncService : IDataSyncService
 {
-    /// <summary>History older than this cannot be undone (§4.6, §8.11).</summary>
-    public static readonly TimeSpan UndoRetention = TimeSpan.FromDays(30);
 
     private static readonly DataSyncProblem Busy = new(DataSyncProblemCode.Busy, null);
 
@@ -176,7 +174,7 @@ public sealed class DataSyncService : IDataSyncService
         if (input.Mode is not (DataSyncLinkMode.Follow or DataSyncLinkMode.TwoWay))
             return LinkProblem(DataSyncProblemCode.DecisionsInvalid, "mode");
         return await ToLinkResultAsync(await Links.CreateAsync(new DataSyncLinkCreate(input.PeerNodeId, input.Address,
-            input.Code, input.Mode, input.Kinds), callerMayCreateAccess, ct), ct);
+            null, input.Mode, input.Kinds), callerMayCreateAccess, ct), ct);
     }
 
     /// <summary>Mode and kinds (§8.1); gated only for Off, which stops the link.</summary>
@@ -245,21 +243,6 @@ public sealed class DataSyncService : IDataSyncService
         return null;
     }
 
-    /// <summary>
-    /// Copy once (§8.1): a link row whose mode stays Off, previewed and started like a first sync. The fetch is
-    /// asynchronous, so the answer names the link and its snapshot follows when staged (not gated).
-    /// </summary>
-    public async Task<DataSyncLinkResult> CreateCopyOnceAsync(DataSyncCopyOnceInput input, bool callerMayCreateAccess,
-        CancellationToken ct)
-    {
-        var change = await Links.CreateAsync(new DataSyncLinkCreate(input.PeerNodeId, input.Address, input.Code,
-            DataSyncLinkMode.Off, input.Kinds, CopyOnce: true), callerMayCreateAccess, ct);
-        // Fetch now rather than on the next tick; a link waiting for access fetches once it is granted.
-        if (change is { Problem: null, Link.State: DataSyncLinkState.AwaitingReview })
-            await _services.GetRequiredService<DataSyncScheduler>().SyncNowAsync(change.Link.Id, ct);
-        return await ToLinkResultAsync(change, ct);
-    }
-
     // ---- first sync --------------------------------------------------------------------------------------------
 
     public Task<DataSyncFirstSyncPreview> GetFirstSyncAsync(int linkId, CancellationToken ct) =>
@@ -269,7 +252,7 @@ public sealed class DataSyncService : IDataSyncService
         CancellationToken ct) =>
         new DataSyncFirstSync(_services).StartAsync(linkId, input, ct);
 
-    // ---- requests, readers, invitations -----------------------------------------------------------------------
+    // ---- requests, readers -----------------------------------------------------------------------
 
     public async Task<IReadOnlyList<DataSyncAccessRequestView>> GetRequestsAsync(CancellationToken ct) =>
         (await Grants.GetRequestsAsync(ct)).Select(r => r with { ExpiresAt = DataSyncViews.Utc(r.ExpiresAt) })
@@ -397,27 +380,6 @@ public sealed class DataSyncService : IDataSyncService
         return null;
     }
 
-    /// <summary>
-    /// A code, which grants one way (§7.2.3). It needs both switches, so a code that cannot work is never shown (G36).
-    /// </summary>
-    public async Task<DataSyncInvitationResult> CreateInvitationAsync(CancellationToken ct)
-    {
-        if (!await Grants.IsSharingEnabledAsync(ct))
-            return new DataSyncInvitationResult(null, new DataSyncProblem(DataSyncProblemCode.SharingOff, null));
-        if (await Grants.GetRemoteAccessModeAsync(ct) == RemoteAccessMode.Disabled)
-            return new DataSyncInvitationResult(null, new DataSyncProblem(DataSyncProblemCode.RemoteAccessOff, null));
-        try
-        {
-            var invitation = await Grants.CreateInvitationAsync(ct);
-            return new DataSyncInvitationResult(invitation with { ExpiresAt = DataSyncViews.Utc(invitation.ExpiresAt) },
-                null);
-        }
-        catch (DataSyncProblemException e)
-        {
-            return new DataSyncInvitationResult(null, e.Problem);
-        }
-    }
-
     // ---- the inbox ---------------------------------------------------------------------------------------------
 
     public Task<DataSyncInboxPage> GetInboxAsync(DataSyncInboxQuery query, CancellationToken ct) =>
@@ -448,71 +410,31 @@ public sealed class DataSyncService : IDataSyncService
             : await new DataSyncEntitySettings(_services).SetAsync(kind, localKey, input, gate, ct);
     }
 
-    // ---- history and undo --------------------------------------------------------------------------------------
+    // ---- history --------------------------------------------------------------------------------------
 
     public async Task<IReadOnlyList<DataSyncHistoryEntry>> GetHistoryAsync(CancellationToken ct)
     {
-        var now = Now;
         return (await Store.GetHistoryAsync(ct)).OrderByDescending(l => l.AppliedAtUtc).ThenByDescending(l => l.Id)
-            .Select(l => ToEntry(l, now)).ToList();
+            .Select(l => ToEntry(l)).ToList();
+    }
+
+    public async Task<DataSyncHistoryPage> GetHistoryPageAsync(int? beforeId, int take, string? peerNodeId, CancellationToken ct)
+    {
+        take = Math.Clamp(take, 1, 100);
+        var rows = await Store.GetHistoryAsync(ct, beforeId, take + 1, peerNodeId);
+        var entries = rows.Take(take).Select(row => ToEntry(row)).ToArray();
+        return new(entries, rows.Count > take ? entries[^1].Id : null);
     }
 
     public async Task<DataSyncHistoryDetail?> GetHistoryEntryAsync(int id, CancellationToken ct)
     {
         var log = await Store.GetHistoryEntryAsync(id, ct);
-        return log is null ? null : new DataSyncHistoryDetail(ToEntry(log, Now), DataSyncHistoryJson.ReadItems(log.ResultJson));
+        return log is null ? null : new DataSyncHistoryDetail(ToEntry(log), DataSyncHistoryJson.ReadItems(log.ResultJson));
     }
 
-    /// <summary>
-    /// What undoing an entry would do (§8.11); never gated. An undo, an entry already undone and one past retention
-    /// cannot be undone; everything else is previewed read-only by the undo planner.
-    /// </summary>
-    public async Task<DataSyncUndoPreview> PreviewUndoAsync(int id, CancellationToken ct)
-    {
-        var log = await Store.GetHistoryEntryAsync(id, ct);
-        if (UndoRefusal(log) is { } refusal) return new DataSyncUndoPreview(false, [], refusal);
-        return await _services.GetRequiredService<DataSyncUndoPlanner>().PreviewAsync(id, ct);
-    }
-
-    /// <summary>The check and the enqueue, under the gate: <c>DataSyncUndo:{logId}</c>, retried after an Error.</summary>
-    public async Task<DataSyncTaskStart> StartUndoAsync(int id, CancellationToken ct)
-    {
-        await using var gate = await EnterGateAsync(ct);
-        if (gate is null) return new DataSyncTaskStart(null, Busy);
-        var log = await Store.GetHistoryEntryAsync(id, ct);
-        if (UndoRefusal(log) is { } refusal) return new DataSyncTaskStart(null, refusal);
-        if (await _services.GetRequiredService<DataSyncUndoPlanner>().PreviewAsync(id, ct) is { CanUndo: false } preview)
-        {
-            return new DataSyncTaskStart(null,
-                preview.Problem ?? new DataSyncProblem(DataSyncProblemCode.UndoNotAvailable, null));
-        }
-
-        var attempt = await Launcher.EnqueueUndoAsync(id);
-        return attempt is null
-            ? new DataSyncTaskStart(null, new DataSyncProblem(DataSyncProblemCode.ApplyInProgress, null))
-            : new DataSyncTaskStart(attempt.TaskId, null);
-    }
-
-    private DataSyncProblem? UndoRefusal(DataSyncApplyLogDbModel? log) => log switch
-    {
-        null => new DataSyncProblem(DataSyncProblemCode.UndoNotAvailable, "notFound"),
-        { UndoneAtUtc: not null } => new DataSyncProblem(DataSyncProblemCode.UndoNotAvailable, "undone"),
-        { Kind: DataSyncHistoryKind.Undo } => new DataSyncProblem(DataSyncProblemCode.UndoNotAvailable, "undo"),
-        _ when Now - DataSyncViews.Utc(log.AppliedAtUtc) > UndoRetention =>
-            new DataSyncProblem(DataSyncProblemCode.UndoNotAvailable, "expired"),
-        _ => null,
-    };
-
-    private static DataSyncHistoryEntry ToEntry(DataSyncApplyLogDbModel log, DateTime now)
-    {
-        var state = log.UndoneAtUtc is not null ? DataSyncUndoState.Undone
-            : log.Kind == DataSyncHistoryKind.Undo || now - DataSyncViews.Utc(log.AppliedAtUtc) > UndoRetention
-                ? DataSyncUndoState.Expired
-                : DataSyncUndoState.Available;
-        return new DataSyncHistoryEntry(log.Id, DataSyncViews.Utc(log.AppliedAtUtc), log.Kind, log.LinkId,
-            log.PeerNodeId, log.PeerName, DataSyncHistoryJson.ReadCounts(log.SummaryJson, log.ResultJson), state,
-            DataSyncViews.Utc(log.UndoneAtUtc));
-    }
+    private static DataSyncHistoryEntry ToEntry(DataSyncApplyLogDbModel log) =>
+        new(log.Id, DataSyncViews.Utc(log.AppliedAtUtc), log.Kind, log.LinkId, log.PeerNodeId, log.PeerName,
+            DataSyncHistoryJson.ReadCounts(log.SummaryJson, log.ResultJson), DataSyncViews.Utc(log.UndoneAtUtc));
 
     // ---- restore -----------------------------------------------------------------------------------------------
 

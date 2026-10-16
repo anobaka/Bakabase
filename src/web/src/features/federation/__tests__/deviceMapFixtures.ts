@@ -8,8 +8,6 @@ import type {
   ManagedServer,
   ManagedServerPendingRequest,
   ManagedServersView,
-  PairingRequest,
-  Peer,
 } from "../types";
 
 import {
@@ -24,42 +22,10 @@ import {
 export const inTenMinutes = () => new Date(Date.now() + 10 * 60_000).toISOString();
 export const aMinuteAgo = () => new Date(Date.now() - 60_000).toISOString();
 
-export const grant = (grantId: string) => ({ grantId, revision: 1 });
-
-export const peer = (nodeId: string, overrides: Partial<Peer> = {}): Peer => ({
-  nodeId,
-  label: nodeId.toUpperCase(),
-  address: `http://192.168.1.${nodeId.length + 10}:34567`,
-  enabled: true,
-  connectionState: "Online",
-  pathMappings: [],
-  ...overrides,
-});
-
-export const sharingRequest = (
-  nodeId: string,
-  direction: "incoming" | "outgoing",
-  overrides: Partial<PairingRequest> = {},
-): PairingRequest => ({
-  requestId: `${direction}-${nodeId}`,
-  nodeId,
-  nodeName: nodeId.toUpperCase(),
-  direction,
-  status: "awaitingApproval",
-  expiresAt: inTenMinutes(),
-  replacesExistingAccess: false,
-  offersReciprocalAccess: false,
-  ...overrides,
-});
-
 export const status = (overrides: Partial<FederationStatus> = {}): FederationStatus => ({
   identity: { nodeId: "self-node", libraryEpoch: "epoch", name: "Studio PC" },
-  sharingEnabled: true,
   remoteAccessMode: RemoteAccessMode.Enabled,
   requirePairing: true,
-  peers: [],
-  requests: [],
-  browsingEnabled: true,
   reachableAddresses: ["http://192.168.1.2:34567"],
   ...overrides,
 });

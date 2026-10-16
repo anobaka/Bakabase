@@ -14,7 +14,7 @@ import { FaMagnet } from "react-icons/fa";
 
 import { MAX_SOURCE_LENGTH, sourceMethods, validateAcquisitionSource } from "./sourcePicker";
 
-import BApi from "@/sdk/BApi";
+import { useResourceApi } from "@/features/management/resourceContext";
 import { AcquisitionLeadKind, AcquisitionLeadOrigin } from "@/sdk/constants";
 import { Button, Chip, Input, Modal, Textarea } from "@/components/bakaui";
 
@@ -34,6 +34,7 @@ const icons = {
 const k = (key: string) => `acquisition.sourcePicker.${key}`;
 
 const AddSourceModal = ({ resourceId, onAdded, onDestroyed }: Props) => {
+  const BApi = useResourceApi();
   const { t } = useTranslation();
   const [visible, setVisible] = useState(true);
   const [kind, setKind] = useState<SourceKind>();

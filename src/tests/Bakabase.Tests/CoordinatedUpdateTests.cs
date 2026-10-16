@@ -7,8 +7,10 @@ namespace Bakabase.Tests;
 [TestClass]
 public sealed class CoordinatedUpdateTests
 {
-    [TestMethod]
-    public void UpdateWaitsForTheCoordinatorBeforeReplacingTheSharedRelease()
+    [DataTestMethod]
+    [DataRow(null)]
+    [DataRow("0123456789abcdef0123456789abcdef")]
+    public void UpdateWaitsForTheCoordinatorBeforeReplacingTheSharedRelease(string? profileId)
     {
         var root = Path.Combine(Path.GetTempPath(), "bakabase-update-handoff-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
@@ -21,7 +23,7 @@ public sealed class CoordinatedUpdateTests
             var process = new RecordingProcess();
             var locator = new RecordingLocator(root, update, process);
             var parentPid = Environment.ProcessId + 1;
-            var launch = AppUpdater.PrepareCoordinatedUpdate(locator, package, parentPid);
+            var launch = AppUpdater.PrepareCoordinatedUpdate(locator, package, parentPid, profileId);
             Assert.IsNull(process.Arguments, "Preparing a validated restart must not start the updater early.");
             launch();
 
@@ -33,6 +35,8 @@ public sealed class CoordinatedUpdateTests
             Assert.IsFalse(arguments.Contains("--norestart"));
             Assert.IsFalse(arguments.Any(a => a.StartsWith("--bakabase-role=")),
                 "The updater must relaunch the public coordinator entry, not an unauthenticated child role.");
+            Assert.AreEqual(profileId != null, arguments.Contains("--profile=" + profileId),
+                "An update must reopen the initiating data space even when another space is the default.");
             Assert.IsFalse(process.Exited);
         }
         finally { Directory.Delete(root, true); }

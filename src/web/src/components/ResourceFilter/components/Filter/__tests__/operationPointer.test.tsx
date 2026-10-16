@@ -39,7 +39,11 @@ vi.mock("@/components/Property/components/PropertyValueRenderer", () => ({
 }));
 vi.mock("@/i18n", () => ({ getEnumKey: (type: string, name: string) => `${type}.${name}` }));
 vi.mock("@/components/utils", () => ({ buildLogger: () => () => {} }));
-vi.mock("@/sdk/BApi", () => ({ default: {} }));
+vi.mock("@/sdk/BApi", async () => {
+  const { Api } = await import("@/sdk/Api");
+
+  return { default: new Api() };
+});
 
 const title: IProperty = {
   id: 100,

@@ -14,7 +14,10 @@ export interface IMenuItem {
   localNodeOnly?: boolean;
 }
 
-function extractMenu(config: RouteMenuItem[]): IMenuItem[] {
+export function extractMenu(
+  config: RouteMenuItem[],
+  inherited: Pick<IMenuItem, "pureClientOnly" | "localNodeOnly"> = {},
+): IMenuItem[] {
   return config
     .filter((r) => r.menu !== false) // Only include menu: true or undefined (default true)
     .map((r) => {
@@ -24,11 +27,11 @@ function extractMenu(config: RouteMenuItem[]): IMenuItem[] {
         icon: r.icon,
         isBeta: r.isBeta,
         isDeprecated: r.isDeprecated,
-        pureClientOnly: r.pureClientOnly,
-        localNodeOnly: r.localNodeOnly,
+        pureClientOnly: r.pureClientOnly || inherited.pureClientOnly,
+        localNodeOnly: r.localNodeOnly || inherited.localNodeOnly,
       };
 
-      if (r.children) item.children = extractMenu(r.children);
+      if (r.children) item.children = extractMenu(r.children, item);
 
       return item;
     });

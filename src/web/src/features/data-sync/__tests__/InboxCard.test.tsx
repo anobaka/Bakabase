@@ -113,8 +113,7 @@ const actionNames = () =>
   screen
     .getAllByTestId("data-sync-inbox-action")
     .map((button) => button.getAttribute("data-action"));
-const radio = (label: string) =>
-  screen.getByText(label, { selector: "label" }).querySelector("input")!;
+const radio = (label: string) => screen.getByRole("radio", { name: label });
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -270,7 +269,7 @@ describe("cards of one item", () => {
     );
     expect(actionNames()).toEqual(["Convert", "Detach", "KeepLocalType"]);
     // Lossy: backed up first by default, and asked.
-    expect(screen.getByTestId("data-sync-backup")).toBeChecked();
+    expect(within(screen.getByTestId("data-sync-backup")).getByRole("checkbox")).toBeChecked();
     fireEvent.click(action("Convert"));
     const [batch, confirmation] = onResolve.mock.calls[0];
 
@@ -295,7 +294,7 @@ describe("cards of one item", () => {
     expect(actionNames()).toEqual(["DeleteHere", "KeepHereOnly", "RestoreEverywhere"]);
     const box = screen.getByTestId("data-sync-backup");
 
-    expect(box).toBeChecked();
+    expect(within(box).getByRole("checkbox")).toBeChecked();
     expect(box.parentElement).toHaveTextContent("dataSync.inbox.backup 50 MB /data/backups");
     fireEvent.click(box);
     fireEvent.click(action("DeleteHere"));
@@ -612,6 +611,7 @@ describe("the list of what needs you", () => {
       "dataSync.inbox.partial 4 7000",
     );
     // A page never ends inside a definition: every card shown is whole, and so are its bulks.
+    fireEvent.click(screen.getByLabelText("dataSync.selection.allVisible"));
     expect(document.querySelector('[data-bulk="keepLocalAll"]')).not.toBeNull();
   });
 
@@ -651,9 +651,11 @@ describe("the list of what needs you", () => {
     renderList();
     await waitFor(() => expect(screen.getAllByTestId("data-sync-inbox-card")).toHaveLength(3));
 
+    fireEvent.click(screen.getByLabelText("dataSync.selection.allVisible"));
+
     const bulk = within(screen.getByTestId("data-sync-inbox-bulk"));
 
-    expect(bulk.getByTestId("data-sync-backup")).toBeChecked();
+    expect(within(bulk.getByTestId("data-sync-backup")).getByRole("checkbox")).toBeChecked();
     await waitFor(() =>
       expect(bulk.getByTestId("data-sync-backup").parentElement).toHaveTextContent(
         "dataSync.inbox.backup 50 MB /data/backups",
@@ -674,6 +676,62 @@ describe("the list of what needs you", () => {
       ],
       backupBeforeDestructive: true,
     });
+  });
+
+  it("previews only selected definitions but includes all devices' conflicts for each", async () => {
+    serve([
+      nameConflict(1),
+      nameConflict(2, { peerNodeId: "node-laptop", peerName: "Laptop" }),
+      nameConflict(3, { localKey: "20", payload: inboxPayload({ entityName: "Other" }) }),
+    ]);
+    renderList();
+    await waitFor(() => expect(screen.getAllByTestId("data-sync-inbox-card")).toHaveLength(2));
+    expect(screen.queryByTestId("data-sync-inbox-bulk")).toBeNull();
+    fireEvent.click(screen.getByLabelText("dataSync.selection.item 作者"));
+    fireEvent.click(screen.getByRole("button", { name: "dataSync.inbox.bulk.useRemoteAll 1 NAS" }));
+    const dialog = screen.getByRole("alertdialog");
+
+    expect(dialog).toHaveTextContent("作者 (NAS, Laptop)");
+    expect(dialog).not.toHaveTextContent("Other");
+    expect(dataSyncApi.resolve).not.toHaveBeenCalled();
+    await act(async () => {
+      fireEvent.click(within(dialog).getByText("federation.confirm"));
+    });
+    expect(dataSyncApi.resolve).toHaveBeenCalledWith({
+      items: [
+        { itemId: 1, action: A.UseRemote, token: "token-1" },
+        { itemId: 2, action: A.KeepLocal, token: "token-2" },
+      ],
+      backupBeforeDestructive: true,
+    });
+  });
+
+  it("does not replace reviewed tokens after a conflicting update and requires a new selection", async () => {
+    serve([nameConflict(1)]);
+    renderList();
+    fireEvent.click(await screen.findByLabelText("dataSync.selection.item 作者"));
+    fireEvent.click(screen.getByRole("button", { name: "dataSync.inbox.bulk.useRemoteAll 1 NAS" }));
+    serve([nameConflict(1, { token: "new-token" })]);
+    vi.mocked(dataSyncApi.resolve).mockResolvedValueOnce({
+      problem: { code: DataSyncProblemCode.InboxItemChanged },
+    });
+    await act(async () => {
+      fireEvent.click(within(screen.getByRole("alertdialog")).getByText("federation.confirm"));
+    });
+    expect(vi.mocked(dataSyncApi.resolve).mock.calls[0][0].items[0].token).toBe("token-1");
+    await waitFor(() =>
+      expect(screen.getByLabelText("dataSync.selection.item 作者")).not.toBeChecked(),
+    );
+    expect(screen.getByRole("alertdialog")).toHaveTextContent("dataSync.problem.InboxItemChanged");
+    expect(dataSyncApi.resolve).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not offer bulk choices that any selected conflict disallows", async () => {
+    serve([nameConflict(1, { allowedActions: [A.Detach] })]);
+    renderList();
+    fireEvent.click(await screen.findByLabelText("dataSync.selection.item 作者"));
+    expect(screen.queryByTestId("data-sync-inbox-bulk")).toBeNull();
+    expect(screen.getByText("dataSync.selection.individual")).toBeInTheDocument();
   });
 
   it("keeps what was decided in the last week under Recently resolved", async () => {
@@ -959,7 +1017,9 @@ describe("the list of what needs you", () => {
         "dataSync.link.decideThere NAS dataSync.link.switchNeedsManagement NAS federation.mode federation.devices.title federation.devices.tab.manage",
       ),
     );
-    expect(screen.getByTestId("data-sync-inbox-filter-device")).toHaveValue("node-nas");
+    expect(screen.getByRole("button", { name: /dataSync.inbox.filter.device/ })).toHaveTextContent(
+      "NAS",
+    );
     expect(screen.getByTestId("data-sync-inbox-empty")).toBeInTheDocument();
   });
 });

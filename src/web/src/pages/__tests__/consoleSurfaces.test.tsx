@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import type { IMenuItem } from "@/layouts/BasicLayout/components/PageNav/components/AntdMenu/menuConfig";
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -71,13 +71,12 @@ afterEach(() => {
   useRemoteAccessStore.setState(initialState, true);
 });
 
-describe("the menu group about this computer", () => {
-  it("in the console, holds this computer's path mappings", async () => {
+describe("the former menu group about this computer", () => {
+  it("is absent in the console now that settings are beside the device switcher", () => {
     pureClient("console");
     renderIn(<AntdMenu collapsed={false} />);
-    fireEvent.click(screen.getAllByText("menu.client.thisComputer")[0]);
-    // The menu renders an item more than once (it measures for overflow); presence is enough.
-    expect(await screen.findAllByText("menu.client.pathMapping")).not.toHaveLength(0);
+    expect(screen.queryAllByText("menu.client.thisComputer")).toHaveLength(0);
+    expect(screen.queryAllByText("menu.client.pathMapping")).toHaveLength(0);
   });
 
   it("is absent from this device's own window", () => {
@@ -92,9 +91,10 @@ describe("the menu group about this computer", () => {
 });
 
 describe("the route config the menu is built from", () => {
-  it("keeps the group to managed servers and holds only this computer's path mappings", () => {
+  it("preserves the relay path-mapping route without publishing a second settings menu", () => {
     const group = routesMenuConfig.find((route) => route.name === "menu.client.thisComputer");
 
+    expect(group?.menu).toBe(false);
     expect(group?.pureClientOnly).toBe(true);
     expect(group?.children?.map((route) => route.path)).toEqual(["/client-path-mapping"]);
   });

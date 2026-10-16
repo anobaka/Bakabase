@@ -46,7 +46,7 @@ public static class DataSyncDbSetClassification
 
         Add(DataSyncTableClass.NeverSync, "Future kind (P1 vocabulary)", null, "AliasesV2", "TextTypes", "TextEntries");
         Add(DataSyncTableClass.NeverSync, "Future kind (P4)", null,
-            "MediaLibrariesV2", "ResourceProfiles", "SourceMetadataMappings");
+            "MediaLibrariesV2", "ResourceProfiles", "ResourceScopes", "SourceMetadataMappings");
         Add(DataSyncTableClass.NeverSync, "Future kind (P5)", null,
             "HealthScoreProfiles", "DataCardTypes", "ComparisonPlans", "ComparisonRules", "Collections");
         Add(DataSyncTableClass.NeverSync, "Device paths (never)", null, "PathMarks");
@@ -57,14 +57,15 @@ public static class DataSyncDbSetClassification
         Add(DataSyncTableClass.NeverSync, "Device task or runtime state", null,
             "DownloadTasks", "DownloadTaskFiles", "DownloadRecords", "DownloadResults", "DownloadResultOwners",
             "DownloadResultProcessing", "PostParserTasks", "AcquisitionLeads", "AcquisitionTasks", "BulkModifications",
-            "WorkflowRuns", "SubscriptionSnapshots", "FileRenameEntries", "Notifications");
+            "WorkflowRuns", "SubscriptionSnapshots", "FileRenameEntries", "Notifications", "ResourceProcessingJobs");
         Add(DataSyncTableClass.NeverSync, "Device logs and history", null,
             "LlmUsageLogs", "LlmCallCacheEntries", "ChatConversations", "ChatMessages", "AigcGenerationRuns",
             "AigcArtifacts");
         Add(DataSyncTableClass.NeverSync, "Deprecated or dormant", null, "SpecialTexts", "MediaLibraryTemplates");
         Add(DataSyncTableClass.NeverSync, SyncStateReason, null,
             "DataSyncEntities", "DataSyncKeyAliases", "DataSyncApplyLogs", "DataSyncLinks", "DataSyncPeerBases",
-            "DataSyncInboxItems", "DataSyncLocalStates", "DataSyncReaders");
+            "DataSyncInboxItems", "DataSyncLocalStates", "DataSyncReaders",
+            "MetadataSourceClocks", "MetadataSourceChanges");
 
         return all;
     }

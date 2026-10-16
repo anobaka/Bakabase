@@ -29,13 +29,19 @@ Bakabase.App (all-in-one entry) → Bakabase.Shell            → abstractions
 The shell references no host, and the Service never references `Bakabase.Remoting`:
 the all-in-one composes its relays next to its in-process server (one slim container
 and 127.0.0.1 port per managed server), and the Service reaches them only through
-`IManagedServerService`, which a headless server does not register. The release
+`IManagedServerService`. Pairing, signed owner requests and connection storage live in
+`Bakabase.Modules.RemoteAccess` and are registered by both desktop and headless hosts;
+the desktop adapter adds its UI relays and native playback. The release
 contract (`src/scripts/check-release-contract.py`) enforces these edges. See
 `.claude/rules/server-switching.md`.
 
 Updating is handled by Velopack; there is no updater project in this repo.
 
 ## Common Commands
+
+Before creating local test, build or acceptance artifacts, follow
+[the local development storage rule](rules/local-artifacts.md). On Anobaka's
+Mac, large outputs and command-scoped temporary files belong on ssd1.
 
 ```bash
 # Frontend

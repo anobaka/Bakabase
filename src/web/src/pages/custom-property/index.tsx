@@ -17,6 +17,16 @@ import {
 import PropertySummary from "./components/PropertySummary";
 import TypeConversionRuleOverviewDialog from "./components/TypeConversionRuleOverviewDialog";
 
+import { ResourceOwnerProvider } from "@/features/management/resourceContext";
+import {
+  useOwnedCatalog,
+  catalogItemKey,
+  catalogItemApi,
+  canEditCatalogItem,
+  CatalogOwnerMark,
+  CatalogSourceStatus,
+  type OwnedCatalogItem,
+} from "@/features/management/ownedCatalog";
 import PropertyModal from "@/components/PropertyModal";
 import { propertyHasOptions } from "@/features/data-sync/components/EntitySyncList";
 import {
@@ -46,6 +56,29 @@ const CustomPropertyPage = () => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const [properties, setProperties] = useState<IProperty[]>([]);
+  const catalog = useOwnedCatalog(properties, (api) =>
+    api.customProperty.getAllCustomProperties({
+      additionalItems: CustomPropertyAdditionalItem.ValueCount,
+    }),
+  );
+  const allProperties = useMemo(
+    () =>
+      [...catalog.items].sort(
+        (a, b) =>
+          (a.order ?? 0) - (b.order ?? 0) ||
+          a.name.localeCompare(b.name) ||
+          catalogItemKey(a).localeCompare(catalogItemKey(b)),
+      ),
+    [catalog.items],
+  );
+  const [editing, setEditing] = useState<OwnedCatalogItem<IProperty>>();
+  const editingSource = editing?.owner
+    ? (catalog.sources.find(
+        (source) =>
+          source.serverId === editing.owner!.serverId &&
+          source.libraryEpoch === editing.owner!.libraryEpoch,
+      ) ?? { ...editing.owner, available: false })
+    : undefined;
   const [keyword, setKeyword] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [loading, setLoading] = useState(true);
@@ -68,11 +101,6 @@ const CustomPropertyPage = () => {
       const next = (rsp.data ?? []) as IProperty[];
 
       setProperties(next.sort((a, b) => (a.order ?? 0) - (b.order ?? 0)));
-      setTypeFilter((current) =>
-        current === "all" || next.some((property) => String(property.type) === current)
-          ? current
-          : "all",
-      );
     } catch {
       setLoadFailed(true);
     } finally {
@@ -83,12 +111,16 @@ const CustomPropertyPage = () => {
   useEffect(() => {
     void loadProperties();
   }, [loadProperties]);
-  const dataSync = useDefinitionSync("customProperty", loadProperties);
+  const reload = useCallback(async () => {
+    await loadProperties();
+    catalog.refresh();
+  }, [loadProperties, catalog.refresh]);
+  const dataSync = useDefinitionSync("customProperty", reload);
 
   const typeOptions = useMemo(() => {
     const counts = new Map<PropertyType, number>();
 
-    for (const property of properties)
+    for (const property of allProperties)
       counts.set(property.type, (counts.get(property.type) ?? 0) + 1);
 
     return [
@@ -100,20 +132,27 @@ const CustomPropertyPage = () => {
           label: `${t(`PropertyType.${PropertyType[type]}`)} (${count})`,
         })),
     ];
-  }, [properties, t]);
+  }, [allProperties, t]);
   const query = keyword.trim().toLocaleLowerCase();
-  const filteredProperties = properties.filter(
+  const filteredProperties = allProperties.filter(
     (property) =>
       property.name.toLocaleLowerCase().includes(query) &&
       (typeFilter === "all" || String(property.type) === typeFilter),
   );
   const hasFilters = query.length > 0 || typeFilter !== "all";
 
-  const openEditor = (property?: IProperty) => {
+  const openEditor = (property?: OwnedCatalogItem<IProperty>) => {
+    if (property && !canEditCatalogItem(property)) return;
+    if (property?.owner && !property.owner.isLocal) {
+      setEditing(property);
+
+      return;
+    }
     // Type conversion persists before the editor closes, including when the outer form is cancelled.
     createPortal(PropertyModal, { value: property, onDestroyed: loadProperties });
   };
-  const deleteProperty = (property: IProperty) => {
+  const deleteProperty = (property: OwnedCatalogItem<IProperty>) => {
+    if (!canEditCatalogItem(property)) return;
     createPortal(Modal, {
       defaultVisible: true,
       title: t<string>("customProperty.confirm.deleteTitle", { name: property.name }),
@@ -124,16 +163,29 @@ const CustomPropertyPage = () => {
         cancelProps: { children: t<string>("common.action.cancel") },
       },
       onOk: async () => {
-        const response = await BApi.customProperty.removeCustomProperty(property.id);
+        const response = await catalogItemApi(property).customProperty.removeCustomProperty(
+          property.id,
+        );
 
         if (response.code) throw new Error(response.message ?? t("customProperty.error.delete"));
-        await loadProperties();
+        await reload();
       },
     });
   };
 
   return (
     <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-6 pb-6">
+      {editing && (
+        <ResourceOwnerProvider key={catalogItemKey(editing)} source={editingSource}>
+          <PropertyModal
+            value={editing}
+            onDestroyed={() => {
+              setEditing(undefined);
+              void reload();
+            }}
+          />
+        </ResourceOwnerProvider>
+      )}
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           <h1 className="text-xl font-semibold text-default-900">
@@ -174,8 +226,8 @@ const CustomPropertyPage = () => {
                 setMoreOpen(false);
                 if (key === "sort")
                   createPortal(CustomPropertySortModal, {
-                    properties,
-                    onDestroyed: loadProperties,
+                    properties: allProperties,
+                    onDestroyed: reload,
                   });
                 else if (key === "conversion") createPortal(TypeConversionRuleOverviewDialog, {});
               }}
@@ -191,6 +243,7 @@ const CustomPropertyPage = () => {
         </div>
       </header>
       {dataSync.host}
+      <CatalogSourceStatus {...catalog} />
       <div className="flex flex-wrap items-center gap-3">
         <Input
           isClearable
@@ -216,7 +269,7 @@ const CustomPropertyPage = () => {
         <span className="text-xs text-default-500 sm:ml-auto" role="status">
           {t<string>("customProperty.resultCount", {
             count: filteredProperties.length,
-            total: properties.length,
+            total: allProperties.length,
           })}
         </span>
       </div>
@@ -224,7 +277,7 @@ const CustomPropertyPage = () => {
         <div className="flex min-h-52 items-center justify-center">
           <Spinner label={t<string>("common.state.loading")} size="sm" />
         </div>
-      ) : loadFailed ? (
+      ) : loadFailed && allProperties.length === 0 ? (
         <div className="flex min-h-52 flex-col items-center justify-center gap-3 text-default-500">
           <p>{t<string>("customProperty.error.load")}</p>
           <Button size="sm" variant="flat" onPress={loadProperties}>
@@ -276,29 +329,37 @@ const CustomPropertyPage = () => {
           <ul className="divide-y divide-default-100">
             {filteredProperties.map((property) => (
               <li
-                key={property.id}
+                key={catalogItemKey(property)}
                 className="group grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-5 gap-y-2 px-4 py-4 transition-colors hover:bg-default-50/60 focus-within:bg-default-50/60 lg:grid-cols-[minmax(200px,1.2fr)_minmax(160px,1.5fr)_4rem_4.5rem]"
               >
                 <div className="min-w-0">
-                  <button
-                    className="max-w-full rounded text-left text-sm font-medium text-default-800 [overflow-wrap:anywhere] hover:text-primary focus-visible:outline-2 focus-visible:outline-primary"
-                    type="button"
-                    onClick={() => openEditor(property)}
-                  >
-                    {property.name}
-                  </button>
+                  <div className="flex min-w-0 items-center gap-2">
+                    <button
+                      className="min-w-0 rounded text-left text-sm font-medium text-default-800 [overflow-wrap:anywhere] hover:text-primary focus-visible:outline-2 focus-visible:outline-primary"
+                      disabled={!canEditCatalogItem(property)}
+                      type="button"
+                      onClick={() => openEditor(property)}
+                    >
+                      {property.name}
+                    </button>
+                    <CatalogOwnerMark owner={property.owner} />
+                  </div>
                   <div className="mt-1.5 flex flex-wrap items-center gap-3 text-default-500">
                     <PropertyTypeIcon type={property.type} />
                     <span className="text-xs tabular-nums lg:hidden">
-                      {t<string>("customProperty.valueCount", { count: property.valueCount ?? 0 })}
+                      {property.valueCount == null
+                        ? "—"
+                        : t<string>("customProperty.valueCount", { count: property.valueCount })}
                     </span>
-                    <DefinitionSyncRow
-                      kind="customProperty"
-                      localKey={String(property.id)}
-                      name={property.name}
-                      offersDefinitionOnly={propertyHasOptions(property.type)}
-                      sync={dataSync}
-                    />
+                    {(!property.owner || property.owner.isLocal) && (
+                      <DefinitionSyncRow
+                        kind="customProperty"
+                        localKey={String(property.id)}
+                        name={property.name}
+                        offersDefinitionOnly={propertyHasOptions(property.type)}
+                        sync={dataSync}
+                      />
+                    )}
                   </div>
                 </div>
                 <div className="col-span-2 row-start-2 min-w-0 lg:col-span-1 lg:row-auto">
@@ -314,6 +375,7 @@ const CustomPropertyPage = () => {
                       aria-label={t<string>("customProperty.action.editNamed", {
                         name: property.name,
                       })}
+                      isDisabled={!canEditCatalogItem(property)}
                       size="sm"
                       variant="light"
                       onPress={() => openEditor(property)}
@@ -328,6 +390,7 @@ const CustomPropertyPage = () => {
                         name: property.name,
                       })}
                       className="text-default-400 hover:text-danger"
+                      isDisabled={!canEditCatalogItem(property)}
                       size="sm"
                       variant="light"
                       onPress={() => deleteProperty(property)}

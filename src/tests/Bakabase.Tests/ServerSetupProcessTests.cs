@@ -50,6 +50,59 @@ public class ServerSetupProcessTests
     }
 
     [TestMethod]
+    public void Named_workspace_children_discard_the_coordinators_old_environment_override()
+    {
+        var previous = Environment.GetEnvironmentVariable("BAKABASE_DATA_DIR");
+        try
+        {
+            Environment.SetEnvironmentVariable("BAKABASE_DATA_DIR", Path.Combine(_root, "old-environment"));
+            var named = SetupChildConnection.ChildStartInfo("business", ["--profile=default"], "private-pipe", new string('A', 64));
+            Assert.IsFalse(named.Environment.ContainsKey("BAKABASE_DATA_DIR"));
+            var legacy = SetupChildConnection.ChildStartInfo("business", [], "private-pipe", new string('A', 64));
+            Assert.AreEqual(Path.Combine(_root, "old-environment"), legacy.Environment["BAKABASE_DATA_DIR"]);
+        }
+        finally { Environment.SetEnvironmentVariable("BAKABASE_DATA_DIR", previous); }
+    }
+
+    [TestMethod]
+    public async Task Reused_desktop_coordinator_initializes_Setup_only_at_the_explicit_new_workspace_anchor()
+    {
+        var previous = Environment.GetEnvironmentVariable("BAKABASE_DATA_DIR");
+        var oldDirectory = Path.Combine(_root, "old-environment");
+        var anchor = Path.Combine(_root, "next-anchor");
+        var data = Path.Combine(_root, "next-data");
+        Directory.CreateDirectory(anchor);
+        Bakabase.Infrastructures.Components.App.AnchorRedirect.Write(anchor, data);
+        using var stopping = new System.Threading.CancellationTokenSource();
+        var opened = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        Task<int>? running = null;
+        try
+        {
+            Environment.SetEnvironmentVariable("BAKABASE_DATA_DIR", oldDirectory);
+            running = SetupProcessCoordinator.RunAsync(new SetupCoordinatorOptions
+            {
+                IsDesktop = true, AnchorDirectory = anchor, EnvironmentOverride = false,
+                RecoverStartupFailureExternally = true,
+                OnSetupUrl = _ => { opened.TrySetResult(); return Task.CompletedTask; }
+            }, stopping.Token);
+            await opened.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            var status = ServerSetupSession.Current!.Read();
+            Assert.AreEqual(ServerSetupSession.Canonical(data), status.CurrentPath);
+            Assert.IsTrue(status.CanChooseTargetPath, "The original coordinator ENV must not fix another workspace's directory.");
+            Assert.IsFalse(Directory.Exists(oldDirectory));
+            Assert.IsTrue(File.Exists(Path.Combine(anchor, ServerSetupSession.FileName)));
+        }
+        finally
+        {
+            stopping.Cancel();
+            if (running != null) await running.WaitAsync(TimeSpan.FromSeconds(10));
+            Environment.SetEnvironmentVariable("BAKABASE_DATA_DIR", previous);
+        }
+        using var unlocked = DataDirectoryLock.TryAcquire(data).Lock;
+        Assert.IsNotNull(unlocked);
+    }
+
+    [TestMethod]
     public void PassiveParentCanFollowWorkerProgressWithoutBecomingItsWriter()
     {
         using var writer = new ImportProgressStore(_root);

@@ -22,7 +22,9 @@ public sealed class TampermonkeyServiceTests
     private const string Metadata = """
         // ==UserScript==
         // @name         Bakabase integration
+        // @namespace    https://bakabase.example/userscripts
         // @version      2.1.0
+        // @match        https://exhentai.org/*
         // @grant        GM_getValue
         // @grant        GM_setValue
         // @updateURL    https://cdn-public.anobaka.com/app/bakabase/scripts/bakabase.user.js
@@ -48,7 +50,7 @@ public sealed class TampermonkeyServiceTests
     [DataRow("http://192.168.3.23:34567/", "http://192.168.3.23:34567")]
     [DataRow("https://bakabase.example:443/", "https://bakabase.example")]
     [DataRow("http://127.0.0.1:34568", "http://127.0.0.1:34568")]
-    public async Task CompiledScriptIsSeededBeforeTheBundleWithoutChangingDistributionOrStoredChoices(
+    public async Task CompiledScriptIsSeededBeforeTheBundleAndUpdatesFromTheCanonicalOrigin(
         string requestedEndpoint, string expectedEndpoint)
     {
         using var source = new SourceHandler(CompiledScript);
@@ -60,8 +62,9 @@ public sealed class TampermonkeyServiceTests
         Assert.IsFalse(CompiledScript.Contains("DEFAULT_API_URL", StringComparison.Ordinal));
         var metadataEnd = script.IndexOf("// ==/UserScript==", StringComparison.Ordinal) + "// ==/UserScript==".Length;
         var connectLine = $"// @connect      {new Uri(expectedEndpoint).Host}\n";
-        Assert.AreEqual(Metadata, script[..metadataEnd].Replace(connectLine, string.Empty),
-            "The original metadata must stay first, with only the installed server added to @connect.");
+        Assert.AreEqual(Metadata.Replace(TampermonkeyService.ScriptCdnUrl, UpdateUrl(expectedEndpoint)),
+            script[..metadataEnd].Replace(connectLine, string.Empty),
+            "Identity, matching and grants stay intact while the installed server supplies updates.");
         StringAssert.Contains(script[..metadataEnd], connectLine);
         Assert.IsTrue(script.EndsWith("\n" + Bundle, StringComparison.Ordinal), "The compiled bundle must remain intact.");
         var beforeBundle = script[metadataEnd..^Bundle.Length];
@@ -97,7 +100,7 @@ public sealed class TampermonkeyServiceTests
     [DataRow("https://bakabase.example:8443", "bakabase.example")]
     [DataRow("http://[::1]:34568", "[::1]")]
     [DataRow("https://\u4f8b\u5b50.example:8443", "xn--fsqu00a.example")]
-    public async Task InstallDeclaresTheServerHostWithoutRemovingWildcardOrDistributionMetadata(string endpoint, string host)
+    public async Task InstallDeclaresTheServerHostAndLocalUpdatesWithoutRemovingWildcard(string endpoint, string host)
     {
         var template = CompiledScript.Replace("// ==/UserScript==", "// @connect *\n// ==/UserScript==");
         using var source = new SourceHandler(template);
@@ -108,8 +111,9 @@ public sealed class TampermonkeyServiceTests
         var metadata = script[..script.IndexOf("// ==/UserScript==", StringComparison.Ordinal)];
         StringAssert.Contains(metadata, $"// @connect      {host}\n");
         StringAssert.Contains(metadata, "// @connect *\n");
-        StringAssert.Contains(metadata, $"// @updateURL    {TampermonkeyService.ScriptCdnUrl}");
-        StringAssert.Contains(metadata, $"// @downloadURL  {TampermonkeyService.ScriptCdnUrl}");
+        Assert.IsTrue(TampermonkeyService.TryNormalizeOrigin(endpoint, out var origin));
+        StringAssert.Contains(metadata, $"// @updateURL    {UpdateUrl(origin!)}");
+        StringAssert.Contains(metadata, $"// @downloadURL  {UpdateUrl(origin!)}");
     }
 
     [TestMethod]
@@ -121,7 +125,8 @@ public sealed class TampermonkeyServiceTests
         var script = await Service(source).GetScript("http://192.168.3.23:34567", scriptFile: null);
 
         Assert.IsNotNull(script);
-        Assert.IsTrue(script.StartsWith(template[..template.IndexOf(Bundle, StringComparison.Ordinal)], StringComparison.Ordinal));
+        Assert.IsTrue(script.StartsWith(template[..template.IndexOf(Bundle, StringComparison.Ordinal)]
+            .Replace(TampermonkeyService.ScriptCdnUrl, UpdateUrl("http://192.168.3.23:34567")), StringComparison.Ordinal));
         Assert.AreEqual(1, Regex.Matches(script, @"@connect\s+192\.168\.3\.23").Count);
     }
 
@@ -221,8 +226,8 @@ public sealed class TampermonkeyServiceTests
             StringAssert.Contains(script, "if (!GM_getValue('api_base_url', ''))");
             StringAssert.Contains(script, "if (!GM_getValue('locale', ''))");
             StringAssert.Contains(script, "GM_setValue('locale', \"zh\");");
-            StringAssert.Contains(script, $"// @updateURL    {TampermonkeyService.ScriptCdnUrl}");
-            StringAssert.Contains(script, $"// @downloadURL  {TampermonkeyService.ScriptCdnUrl}");
+            StringAssert.Contains(script, $"// @updateURL    {UpdateUrl("http://192.168.3.23:34567")}");
+            StringAssert.Contains(script, $"// @downloadURL  {UpdateUrl("http://192.168.3.23:34567")}");
             Assert.IsTrue(script.EndsWith("\n" + Bundle, StringComparison.Ordinal));
             Assert.AreEqual(localBuild, await File.ReadAllTextAsync(path), "Configuration is injected in memory; the asset stays read-only.");
             Assert.AreEqual(0, source.Requests.Count);
@@ -285,6 +290,67 @@ public sealed class TampermonkeyServiceTests
             File.Delete(path);
         }
     }
+
+    [TestMethod]
+    public async Task UpdateUrlsAreRewrittenOnlyInsideMetadataAndPreserveTheCompiledBody()
+    {
+        var bundle = Bundle + $"\n// @updateURL {TampermonkeyService.ScriptCdnUrl}\n" +
+                     $"const sourceUrl = '{TampermonkeyService.ScriptCdnUrl}';";
+        using var source = new SourceHandler(Metadata + "\n" + bundle);
+        var script = await Service(source).GetScript("https://bakabase.example:8443/", scriptFile: null);
+
+        Assert.IsNotNull(script);
+        Assert.IsTrue(script.EndsWith("\n" + bundle, StringComparison.Ordinal));
+        var metadata = script[..script.IndexOf("// ==/UserScript==", StringComparison.Ordinal)];
+        Assert.AreEqual(2, Regex.Matches(metadata, Regex.Escape(UpdateUrl("https://bakabase.example:8443"))).Count);
+        StringAssert.Contains(metadata, "// @namespace    https://bakabase.example/userscripts");
+        StringAssert.Contains(metadata, "// @match        https://exhentai.org/*");
+        CollectionAssert.AreEqual(new[] {TampermonkeyService.ScriptCdnUrl}, source.Requests);
+    }
+
+    [TestMethod]
+    public async Task MissingUpdateMetadataIsAddedWithoutChangingIdentityOrStoredPreferences()
+    {
+        var template = CompiledScript.Replace($"// @updateURL    {TampermonkeyService.ScriptCdnUrl}\n", "")
+            .Replace($"// @downloadURL  {TampermonkeyService.ScriptCdnUrl}\n", "");
+        using var source = new SourceHandler(template);
+        var script = await Service(source).GetScript("http://localhost:34567", scriptFile: null);
+
+        Assert.IsNotNull(script);
+        StringAssert.Contains(script, "// @updateURL " + UpdateUrl("http://localhost:34567"));
+        StringAssert.Contains(script, "// @downloadURL " + UpdateUrl("http://localhost:34567"));
+        StringAssert.Contains(script, "if (!GM_getValue('api_base_url', ''))");
+        StringAssert.Contains(script, "if (!GM_getValue('locale', ''))");
+        Assert.IsTrue(script.EndsWith("\n" + Bundle, StringComparison.Ordinal));
+    }
+
+    [TestMethod]
+    public async Task UpdatedScriptKeepsTheSameIdentityAndOnlySeedsEmptyStoredChoices()
+    {
+        using var firstSource = new SourceHandler(CompiledScript);
+        using var nextSource = new SourceHandler(CompiledScript.Replace("// @version      2.1.0", "// @version      2.1.4"));
+        var first = await Service(firstSource, "zh-CN").GetScript("https://bakabase.example:8443", scriptFile: null);
+        var next = await Service(nextSource, "en-US").GetScript("https://bakabase.example:8443", scriptFile: null);
+
+        Assert.IsNotNull(first);
+        Assert.IsNotNull(next);
+        foreach (var field in new[] {"name", "namespace", "match", "grant", "updateURL", "downloadURL"})
+            Assert.AreEqual(Regex.Match(first, @"(?m)^// @" + field + @"\s+[^\r\n]+").Value,
+                Regex.Match(next, @"(?m)^// @" + field + @"\s+[^\r\n]+").Value);
+        var bootstrap = next[next.IndexOf("// ==/UserScript==", StringComparison.Ordinal)..^Bundle.Length];
+        foreach (var key in new[] {"api_base_url", "locale"})
+        {
+            var guard = bootstrap.IndexOf($"if (!GM_getValue('{key}', ''))", StringComparison.Ordinal);
+            var writes = Regex.Matches(bootstrap, $@"GM_setValue\('{key}',");
+            Assert.AreEqual(1, writes.Count);
+            Assert.IsTrue(guard >= 0 && guard < writes[0].Index,
+                "An update must retain a previously stored custom API address or language.");
+        }
+        Assert.IsTrue(next.EndsWith("\n" + Bundle, StringComparison.Ordinal));
+    }
+
+    private static string UpdateUrl(string origin) =>
+        $"{origin}/Tampermonkey/script/bakabase.user.js?apiEndpoint={Uri.EscapeDataString(origin)}";
 
     private static TampermonkeyService Service(SourceHandler source, string language = "zh-CN") => new(null!,
         new AppContext {ApiEndpoint = "http://172.20.0.2:34567"}, new Factory(source),

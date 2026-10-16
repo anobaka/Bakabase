@@ -50,6 +50,26 @@ public class ManagedServerRelayTests
     }
 
     [TestMethod]
+    public async Task SourceProfileReadsAreFixedReadOperationsSignedForOnlyTheVerifiedDevice()
+    {
+        var (device, _) = await _console.AddManagedAsync(_desk);
+        var body = "{\"resourceIds\":[42],\"profiles\":[{\"id\":3,\"searchJson\":null}]}";
+        await _console.Manager.ReadResourceProfileSourceAsync(_desk.ServerId, "evaluate", body, "library-1");
+        var received = _desk.Requests.Single(r => r.Path == "/resource-profile/evaluate");
+        Assert.AreEqual("POST", received.Method);
+        Assert.AreEqual("libraryEpoch=library-1", received.Query);
+        Assert.AreEqual(device, received.DeviceId);
+        Assert.IsTrue(received.SignatureValid);
+        Assert.IsFalse(_nas.Requests.Any(r => r.Path.StartsWith("/resource-profile")));
+        await Assert.ThrowsExceptionAsync<ArgumentException>(() =>
+            _console.Manager.ReadResourceProfileSourceAsync(_desk.ServerId, "../gui/url", null));
+        await Assert.ThrowsExceptionAsync<ArgumentException>(() =>
+            _console.Manager.ReadResourceProfileSourceAsync(_desk.ServerId, "properties", null, "bad&epoch"));
+        await Assert.ThrowsExceptionAsync<ArgumentException>(() =>
+            _console.Manager.ReadResourceProfileSourceAsync(_desk.ServerId, "evaluate", new string('x', 1024 * 1024 + 1)));
+    }
+
+    [TestMethod]
     public async Task Two_servers_run_at_once_each_signed_with_its_own_key()
     {
         var (deskDevice, _) = await _console.AddManagedAsync(_desk);

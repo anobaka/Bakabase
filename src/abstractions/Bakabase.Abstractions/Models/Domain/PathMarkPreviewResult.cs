@@ -25,4 +25,7 @@ public class PathMarkPreviewResult
     /// For Property type: the extracted property value
     /// </summary>
     public string? PropertyValue { get; set; }
+
+    /// <summary>The selected layer path, or regex source path, for a dynamic value.</summary>
+    public string? ValueSourcePath { get; set; }
 }

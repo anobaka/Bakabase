@@ -16,6 +16,7 @@
   "configuration.thirdParty.validateCookie": "Validate cookie",
   "configuration.thirdParty.cookieValid": "Cookie is good",
   "configuration.thirdParty.invalidCookie": "Invalid cookie",
+  "configuration.functional.navigation.tip": "Arrange sidebar menus, groups and visibility. Devices connected to this service share the same layout.",
   "configuration.functional.title": "Functional configurations",
   "configuration.functional.startupPage": "Startup page",
   "configuration.functional.startupPage.default": "Default",
@@ -435,5 +436,9 @@
   "configuration.dependency.videoPurpose": "Video covers, previews and transcoding.",
   "configuration.dependency.archivePurpose": "Read, extract and process archives.",
   "configuration.dependency.localePurpose": "Locale compatibility for older Windows applications.",
-  "configuration.dependency.loadingComponents": "Loading components…"
+  "configuration.dependency.loadingComponents": "Loading components…",
+  "configuration.storage.title": "Data and storage",
+  "configuration.storage.title.server": "Server data and storage",
+  "configuration.storage.details": "Storage details",
+  "configuration.storage.serverDescription": "These directories belong to the server you are managing."
 }

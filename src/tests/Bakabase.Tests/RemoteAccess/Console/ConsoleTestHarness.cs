@@ -515,6 +515,9 @@ internal sealed class FakeServer : IAsyncDisposable
     /// </summary>
     public bool RemoteAccessOff { get; set; }
 
+    /// <summary>An optional real endpoint, behind this stand-in server's identity and signature checks.</summary>
+    public Func<HttpContext, Task<bool>>? HandleRequest { get; set; }
+
     public sealed record Received(string Method, string Path, string Query, string? DeviceId, bool? SignatureValid,
         string? Cookie = null, string? Origin = null);
 
@@ -733,6 +736,8 @@ internal sealed class FakeServer : IAsyncDisposable
                 await IssueAsync(context);
                 return;
         }
+
+        if (HandleRequest != null && await HandleRequest(context)) return;
 
         if (path == "/hub/echo" && context.WebSockets.IsWebSocketRequest)
         {

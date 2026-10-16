@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Button, Input, toast } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import MediaPlayer from "@/components/MediaPlayer";
+import { MEDIA_PLAYER_WINDOW_PERSISTENCE_KEY } from "@/components/Window/persistence";
 import { selectInitialMediaIndex } from "@/components/MediaPlayer/media";
 import { IwFsType } from "@/sdk/constants";
 import BApi from "@/sdk/BApi";
@@ -56,7 +57,11 @@ const MediaPlayerTest = () => {
             createWindow(
               MediaPlayer,
               { entries, defaultActiveIndex: selectInitialMediaIndex(entries) },
-              { title: t("mediaPlayer.title"), persistent: true },
+              {
+                title: t("mediaPlayer.title"),
+                persistent: true,
+                persistenceKey: MEDIA_PLAYER_WINDOW_PERSISTENCE_KEY,
+              },
             )
           }
         >

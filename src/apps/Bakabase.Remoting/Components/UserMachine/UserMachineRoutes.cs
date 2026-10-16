@@ -36,9 +36,17 @@ public static class UserMachineRoutes
 {
     public static readonly ImmutableArray<UserMachineRoute> All =
     [
+        // A remote device's page must never alter/open this desktop's data spaces.
+        // Explicit refusal handlers direct the user back to this app's own view.
+        new("DELETE", "/app/profiles/{id}"),
+        new("POST", "/app/profiles"),
+        new("POST", "/app/profiles/{id}/open"),
+        new("PUT", "/app/profiles/{id}"),
         new("GET", "/file/icon"),
         new("GET", "/file/recycle-bin"),
         new("GET", "/gui/url"),
+        new("GET", "/player/device-playback/preferences"),
+        new("GET", "/player/resource-profile"),
         new("GET", "/player/playlist/{playlistId:int}/batch-play/candidates"),
         new("GET", "/resource/directory"),
         new("GET", "/resource/play/random"),
@@ -49,10 +57,18 @@ public static class UserMachineRoutes
         new("GET", "/tool/open-file"),
         new("POST", "/aigc/artifacts/{id:int}/open"),
         new("POST", "/dlsite-work/{workId}/launch"),
+        // Never forward a request to launch a player through another manager.
+        // Unified management is opened in this app's own UI, not a managed device's relay.
+        new("POST", "/federation/local/management/{serverId}/play"),
+        new("POST", "/federation/local/management/{serverId}/directory"),
+        new("POST", "/federation/local/management/{serverId}/batch-play/candidates"),
+        new("POST", "/federation/local/management/{serverId}/batch-play"),
         new("POST", "/player/batch-play"),
+        new("POST", "/player/resource-profiles"),
         new("POST", "/player/batch-play/candidates"),
         new("POST", "/player/playlist/{playlistId:int}/batch-play"),
-        new("POST", "/tool/cookie-capture")
+        new("POST", "/tool/cookie-capture"),
+        new("PUT", "/player/device-playback/preferences")
     ];
 
     private static readonly ImmutableHashSet<string> Keys =

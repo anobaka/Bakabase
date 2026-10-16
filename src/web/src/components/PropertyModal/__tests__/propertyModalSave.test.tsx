@@ -105,11 +105,14 @@ afterEach(async () => {
   vi.unstubAllGlobals();
 });
 
-async function open(value: ComponentProps<typeof PropertyModal>["value"]) {
+async function open(
+  value: ComponentProps<typeof PropertyModal>["value"],
+  extra: Partial<ComponentProps<typeof PropertyModal>> = {},
+) {
   await act(async () => {
     root.render(
       <HeroUIProvider disableAnimation>
-        <PropertyModal value={value} onSaved={saved} />
+        <PropertyModal value={value} onSaved={saved} {...extra} />
       </HeroUIProvider>,
     );
   });
@@ -149,6 +152,28 @@ function savedOptions() {
 }
 
 describe("property configuration save and cancel", () => {
+  it("saves a managed definition only through its captured owner callback", async () => {
+    const ownerSave = vi.fn().mockResolvedValue({ id: 10, name: "Foreign title" });
+    const dialog = await open(
+      { id: 10, name: "Title", type: PropertyType.SingleLineText },
+      { ownerScoped: true, saveProperty: ownerSave },
+    );
+
+    await setInput(
+      dialog.querySelector<HTMLInputElement>(
+        'input[placeholder="property.editor.namePlaceholder"]',
+      )!,
+      "Foreign title",
+    );
+    await click(button("property.editor.save", dialog));
+    expect(ownerSave).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 10, name: "Foreign title" }),
+    );
+    expect(save).not.toHaveBeenCalled();
+    expect(add).not.toHaveBeenCalled();
+    expect(counts).not.toHaveBeenCalled();
+  });
+
   it("saves multiple default choices selected through the real dropdown as UUIDs in a JSON array", async () => {
     const dialog = await open({
       id: 10,

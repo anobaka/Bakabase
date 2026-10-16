@@ -17,8 +17,8 @@ export function browserExternalUrl(value: string): string | undefined {
  * Call directly from a click/press handler: opening synchronously preserves browser
  * user activation. Desktop windows and managed-server relays keep their OS opener.
  */
-export function openExternalUrl(url: string): void {
-  if (useRemoteAccessStore.getState().clientMode !== ClientMode.RemoteBrowser) {
+export function openExternalUrl(url: string, forceBrowser = false): void {
+  if (!forceBrowser && useRemoteAccessStore.getState().clientMode !== ClientMode.RemoteBrowser) {
     void BApi.gui.openUrlInDefaultBrowser({ url });
 
     return;

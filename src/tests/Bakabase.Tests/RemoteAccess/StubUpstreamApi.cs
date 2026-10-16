@@ -19,6 +19,8 @@ public sealed class StubUpstreamApi : IUpstreamApi
 {
     public UpstreamResource? Resource;
     public ResourceProfilePlayerOptions? PlayerOptions;
+    public Exception? PlayerOptionsFailure;
+    public int PlayerOptionsReadCount;
     public string? ArtifactPath;
     public List<PlayableItem>? PlayableItems;
     public UpstreamRandomPick? RandomPick;
@@ -30,7 +32,12 @@ public sealed class StubUpstreamApi : IUpstreamApi
         Task.FromResult(Resource);
 
     public Task<ResourceProfilePlayerOptions?> GetEffectivePlayerOptionsAsync(int id,
-        CancellationToken ct = default) => Task.FromResult(PlayerOptions);
+        CancellationToken ct = default)
+    {
+        PlayerOptionsReadCount++;
+        return PlayerOptionsFailure == null ? Task.FromResult(PlayerOptions) :
+            Task.FromException<ResourceProfilePlayerOptions?>(PlayerOptionsFailure);
+    }
 
     public Task MarkPlayedAsync(int id, string item, CancellationToken ct = default)
     {

@@ -9,19 +9,27 @@ import { useNavigate } from "react-router-dom";
 import { InfoCircleOutlined, RightOutlined, SettingOutlined } from "@ant-design/icons";
 
 import { Button, Chip, Modal, Spinner } from "@/components/bakaui";
-import BApi from "@/sdk/BApi";
+import { useResourceApi, useResourceOwner } from "@/features/management/resourceContext";
 
 type Props = {
   resourceId: number;
+  hasPath?: boolean;
 } & DestroyableProps;
 
-const NoPlayableFilesModal = ({ resourceId, onDestroyed }: Props) => {
+const NoPlayableFilesModal = ({ resourceId, hasPath = true, onDestroyed }: Props) => {
+  const BApi = useResourceApi();
+  const owner = useResourceOwner();
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [profiles, setProfiles] = useState<BakabaseServiceModelsViewResourceProfileViewModel[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!hasPath) {
+      setLoading(false);
+
+      return;
+    }
     const loadProfiles = async () => {
       setLoading(true);
       try {
@@ -37,10 +45,14 @@ const NoPlayableFilesModal = ({ resourceId, onDestroyed }: Props) => {
     };
 
     loadProfiles();
-  }, [resourceId]);
+  }, [resourceId, hasPath]);
 
   const handleNavigateToProfile = (profileId?: number) => {
     onDestroyed?.();
+    if (owner && !owner.isLocal) {
+      navigate(`/resource-profile?sourceDeviceId=${encodeURIComponent(`node:${owner.serverId}:${owner.libraryEpoch}`)}`);
+      return;
+    }
     if (profileId) {
       navigate(`/resource-profile?highlight=${profileId}`);
     } else {
@@ -53,80 +65,88 @@ const NoPlayableFilesModal = ({ resourceId, onDestroyed }: Props) => {
       defaultVisible
       footer={{ actions: ["ok"] }}
       size="lg"
-      title={t("resource.playControl.noPlayableFiles.title")}
+      title={t(
+        hasPath
+          ? "resource.playControl.noPlayableFiles.title"
+          : "resource.playbackActions.filesNotBound",
+      )}
       onDestroyed={onDestroyed}
     >
-      <div className="flex flex-col gap-6">
-        <div>
-          <div className="text-sm mb-2">
-            {t("resource.playControl.noPlayableFiles.description")}
-          </div>
-        </div>
-
-        <div>
-          <div className="font-medium mb-2">
-            {t("resource.playControl.noPlayableFiles.tips.title")}
-          </div>
-          <ul className="list-disc pl-5 text-sm space-y-1">
-            <li>{t("resource.playControl.noPlayableFiles.tips.noFile")}</li>
-            <li>{t("resource.playControl.noPlayableFiles.tips.extension")}</li>
-          </ul>
-        </div>
-
-        <div>
-          <div className="font-medium mb-2">
-            {t("resource.playControl.noPlayableFiles.action.title")}
-          </div>
-          <div className="text-sm mb-3">
-            <InfoCircleOutlined className="mr-1" />
-            {t("resource.playControl.noPlayableFiles.action.description")}
-          </div>
-
-          {loading ? (
-            <div className="flex items-center gap-2">
-              <Spinner size="sm" />
-              <span className="text-sm text-default-500">{t("common.state.loading")}</span>
+      {!hasPath ? (
+        <p className="text-sm">{t("resource.playbackActions.filesNotBoundHint")}</p>
+      ) : (
+        <div className="flex flex-col gap-6">
+          <div>
+            <div className="text-sm mb-2">
+              {t("resource.playControl.noPlayableFiles.description")}
             </div>
-          ) : profiles.length > 0 ? (
-            <div className="flex flex-col gap-2">
-              <div className="text-sm text-default-500 mb-1">
-                {t("resource.playControl.noPlayableFiles.matchingProfiles")}
+          </div>
+
+          <div>
+            <div className="font-medium mb-2">
+              {t("resource.playControl.noPlayableFiles.tips.title")}
+            </div>
+            <ul className="list-disc pl-5 text-sm space-y-1">
+              <li>{t("resource.playControl.noPlayableFiles.tips.noFile")}</li>
+              <li>{t("resource.playControl.noPlayableFiles.tips.extension")}</li>
+            </ul>
+          </div>
+
+          <div>
+            <div className="font-medium mb-2">
+              {t("resource.playControl.noPlayableFiles.action.title")}
+            </div>
+            <div className="text-sm mb-3">
+              <InfoCircleOutlined className="mr-1" />
+              {t("resource.playControl.noPlayableFiles.action.description")}
+            </div>
+
+            {loading ? (
+              <div className="flex items-center gap-2">
+                <Spinner size="sm" />
+                <span className="text-sm text-default-500">{t("common.state.loading")}</span>
               </div>
-              <div className="flex flex-wrap gap-2">
-                {profiles.map((profile) => (
-                  <Chip
-                    key={profile.id}
-                    className="cursor-pointer"
-                    color="primary"
-                    endContent={<RightOutlined className="text-xs" />}
-                    size="sm"
-                    variant="flat"
-                    onClick={() => handleNavigateToProfile(profile.id)}
-                  >
-                    {profile.name}
-                  </Chip>
-                ))}
+            ) : profiles.length > 0 ? (
+              <div className="flex flex-col gap-2">
+                <div className="text-sm text-default-500 mb-1">
+                  {t("resource.playControl.noPlayableFiles.matchingProfiles")}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {profiles.map((profile) => (
+                    <Chip
+                      key={profile.id}
+                      className="cursor-pointer"
+                      color="primary"
+                      endContent={<RightOutlined className="text-xs" />}
+                      size="sm"
+                      variant="flat"
+                      onClick={() => handleNavigateToProfile(profile.id)}
+                    >
+                      {profile.name}
+                    </Chip>
+                  ))}
+                </div>
               </div>
-            </div>
-          ) : (
-            <div className="text-sm text-default-500">
-              {t("resource.playControl.noPlayableFiles.noMatchingProfiles")}
-            </div>
-          )}
+            ) : (
+              <div className="text-sm text-default-500">
+                {t("resource.playControl.noPlayableFiles.noMatchingProfiles")}
+              </div>
+            )}
 
-          <div className="mt-4">
-            <Button
-              color="primary"
-              size="sm"
-              startContent={<SettingOutlined />}
-              variant="flat"
-              onPress={() => handleNavigateToProfile()}
-            >
-              {t("resource.playControl.noPlayableFiles.action.settings")}
-            </Button>
+            <div className="mt-4">
+              <Button
+                color="primary"
+                size="sm"
+                startContent={<SettingOutlined />}
+                variant="flat"
+                onPress={() => handleNavigateToProfile()}
+              >
+                {t("resource.playControl.noPlayableFiles.action.settings")}
+              </Button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </Modal>
   );
 };

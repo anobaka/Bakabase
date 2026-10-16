@@ -4,18 +4,20 @@ import { useEffect, useState, useRef, useMemo, useCallback } from "react";
 
 import { resourceDiscoveryChannel, type DiscoveryData } from "@/services/ResourceDiscoveryChannel";
 import { DataOrigin, DataStatus, ResourceDataType } from "@/sdk/constants";
+import { useResourceApi, useResourceOwner } from "@/features/management/resourceContext";
 
 export type OriginGroup = {
   origin: DataOrigin;
   items: PlayableItem[];
   status: DataStatus;
+  error?: string;
 };
 
 export type PlayableItemResolutionState = {
   /** Groups ordered by fixed display order */
   groups: OriginGroup[];
   /** Overall status */
-  overallStatus: "ready" | "loading" | "not-found";
+  overallStatus: "ready" | "loading" | "not-found" | "failed";
   /** Trigger SSE discovery for a specific origin */
   triggerDiscovery: (origin: DataOrigin) => void;
 };
@@ -31,96 +33,181 @@ export type PlayableItemResolutionCallbacks = {
 };
 
 // Fixed display order for origins
-const ORIGIN_ORDER: DataOrigin[] = [
-  DataOrigin.Steam,
-  DataOrigin.DLsite,
-  DataOrigin.ExHentai,
-  DataOrigin.FileSystem,
-];
+const ORIGIN_ORDER: DataOrigin[] = [DataOrigin.Steam, DataOrigin.FileSystem];
 
 export function usePlayableItemResolution(
   resource: Resource,
   callbacks?: PlayableItemResolutionCallbacks,
 ): PlayableItemResolutionState {
+  const api = useResourceApi();
+  const source = useResourceOwner();
+  const remote = source && !source.isLocal ? source : undefined;
+  const identity = useMemo(
+    () => ({ id: resource.id, reloadToken: resource.reloadToken, path: resource.path, remote }),
+    [resource.id, resource.reloadToken, resource.path, remote],
+  );
+  const latestIdentity = useRef(identity);
+
+  latestIdentity.current = identity;
   // Get playableItem-related dataStates
   const piStates = useMemo(
-    () => resource.dataStates?.filter((s) => s.dataType === ResourceDataType.PlayableItem) ?? [],
+    () =>
+      resource.dataStates?.filter(
+        (s) => s.dataType === ResourceDataType.PlayableItem && ORIGIN_ORDER.includes(s.origin),
+      ) ?? [],
     [resource.dataStates],
   );
 
-  // SSE-discovered items per origin
-  const [sseItems, setSseItems] = useState<Map<DataOrigin, { items: PlayableItem[] }>>(new Map());
-  const subscribedRef = useRef(new Set<DataOrigin>());
-  const [manualTriggers, setManualTriggers] = useState<Set<DataOrigin>>(new Set());
+  // Each origin owns an independent attempt. Retrying one source must neither
+  // restart other sources nor let the previous attempt overwrite its result.
+  const [sseItems, setSseItems] = useState(() => ({
+    owner: identity,
+    items: new Map<
+      DataOrigin,
+      { items: PlayableItem[]; status: DataStatus; error?: string; attempt: number }
+    >(),
+  }));
+  const [manualTriggers, setManualTriggers] = useState(() => ({
+    owner: identity,
+    attempts: new Map<DataOrigin, number>(),
+  }));
+  const [remoteResult, setRemoteResult] = useState<{
+    owner: typeof identity;
+    items: PlayableItem[];
+    error?: string;
+  }>();
 
-  const triggerDiscovery = useCallback((origin: DataOrigin) => {
-    setManualTriggers((prev) => {
-      const next = new Set(prev);
-
-      next.add(origin);
-
-      return next;
-    });
-  }, []);
-
-  // Origins that need auto-discovery (NotStarted) OR have been manually triggered
-  const originsToDiscover = useMemo(() => {
-    if (piStates.length === 0) return [];
-    const autoOrigins = piStates
-      .filter((s) => s.status === DataStatus.NotStarted)
-      .map((s) => s.origin);
-    // Merge with manual triggers
-    const all = new Set([...autoOrigins, ...manualTriggers]);
-
-    return Array.from(all);
-  }, [piStates, manualTriggers]);
-
-  // SSE subscription
   useEffect(() => {
-    const unsubscribes: (() => void)[] = [];
+    if (!remote) return;
+    let cancelled = false;
 
-    for (const origin of originsToDiscover) {
-      if (subscribedRef.current.has(origin)) continue;
-      subscribedRef.current.add(origin);
-
-      callbacks?.onDiscoveryStart?.(resource.id, origin);
-
-      resourceDiscoveryChannel
-        .subscribe(resource.id, origin, ResourceDataType.PlayableItem, (data, error) => {
-          callbacks?.onDiscoveryComplete?.(resource.id, origin, data, error);
-          // Record completion even when the backend returns no items or an error,
-          // otherwise folder-only resources would stay in NotStarted forever.
-          setSseItems((prev) => {
-            const next = new Map(prev);
-
-            next.set(origin, {
-              items: data?.playableItems ?? [],
-            });
-
-            return next;
-          });
-        })
-        .then((unsub) => unsubscribes.push(unsub));
-    }
+    setRemoteResult(undefined);
+    void api.resource
+      .getResourcePlayableItems(resource.id)
+      .then((result) => {
+        if (!cancelled) setRemoteResult({ owner: identity, items: result.data ?? [] });
+      })
+      .catch((error) => {
+        if (!cancelled) setRemoteResult({ owner: identity, items: [], error: String(error) });
+      });
 
     return () => {
-      unsubscribes.forEach((fn) => fn());
-      subscribedRef.current = new Set();
+      cancelled = true;
     };
-  }, [resource.id, resource.reloadToken, originsToDiscover.join(",")]);
+  }, [api, remote, identity, manualTriggers]);
+  const subscriptions = useRef(
+    new Map<
+      DataOrigin,
+      {
+        attempt: number;
+        active: boolean;
+        unsubscribe?: () => void;
+      }
+    >(),
+  );
+  const latestCallbacks = useRef(callbacks);
 
-  // Reset when the resource changes, or when it is force-refreshed (reloadToken bump).
-  // A cache rebuild can change the playable files at the same path, so we must drop the
-  // previously discovered SSE items — otherwise a stale (often empty) result keeps
-  // overriding the freshly returned backend items and the control stays "open folder".
+  latestCallbacks.current = callbacks;
+
+  const triggerDiscovery = useCallback(
+    (origin: DataOrigin) => {
+      if (!ORIGIN_ORDER.includes(origin)) return;
+      setManualTriggers((prev) => {
+        const attempts = new Map(prev.owner === identity ? prev.attempts : []);
+
+        attempts.set(origin, (attempts.get(origin) ?? 0) + 1);
+
+        return { owner: identity, attempts };
+      });
+    },
+    [identity],
+  );
+
+  useEffect(
+    () => () => {
+      for (const subscription of subscriptions.current.values()) {
+        subscription.active = false;
+        subscription.unsubscribe?.();
+      }
+      subscriptions.current.clear();
+    },
+    [identity],
+  );
+
   useEffect(() => {
-    setSseItems(new Map());
-    subscribedRef.current = new Set();
-    setManualTriggers(new Set());
-  }, [resource.id, resource.reloadToken]);
+    if (remote) return;
+    for (const state of piStates) {
+      const origin = state.origin;
+      const attempt =
+        manualTriggers.owner === identity ? (manualTriggers.attempts.get(origin) ?? 0) : 0;
+
+      if (attempt === 0 && state.status !== DataStatus.NotStarted) continue;
+      const previous = subscriptions.current.get(origin);
+
+      if (previous?.attempt === attempt) continue;
+      if (previous) {
+        previous.active = false;
+        previous.unsubscribe?.();
+      }
+      const subscription: { attempt: number; active: boolean; unsubscribe?: () => void } = {
+        attempt,
+        active: true,
+      };
+
+      subscriptions.current.set(origin, subscription);
+      latestCallbacks.current?.onDiscoveryStart?.(resource.id, origin);
+
+      const complete = (data: DiscoveryData | null, error?: string) => {
+        if (!subscription.active || latestIdentity.current !== identity) return;
+        latestCallbacks.current?.onDiscoveryComplete?.(resource.id, origin, data, error);
+        setSseItems((prev) => {
+          if (!subscription.active || latestIdentity.current !== identity) return prev;
+          const next = new Map(prev.owner === identity ? prev.items : []);
+
+          next.set(origin, {
+            items: data?.playableItems?.filter((item) => item.origin === origin) ?? [],
+            status: data && !error ? DataStatus.Ready : DataStatus.Failed,
+            error,
+            attempt,
+          });
+
+          return { owner: identity, items: next };
+        });
+      };
+
+      resourceDiscoveryChannel
+        .subscribe(resource.id, origin, ResourceDataType.PlayableItem, complete)
+        .then((unsubscribe) => {
+          if (subscription.active && latestIdentity.current === identity)
+            subscription.unsubscribe = unsubscribe;
+          else unsubscribe();
+        })
+        .catch((error) => complete(null, error instanceof Error ? error.message : String(error)));
+    }
+  }, [identity, piStates, manualTriggers, remote]);
 
   // Build groups
   const groups = useMemo((): OriginGroup[] => {
+    if (remote) {
+      const result = remoteResult?.owner === identity ? remoteResult : undefined;
+      const origins = ORIGIN_ORDER.filter(
+        (origin) =>
+          piStates.some((state) => state.origin === origin) ||
+          result?.items.some((item) => item.origin === origin) ||
+          (origin === DataOrigin.FileSystem && resource.hasLocalPath),
+      );
+
+      return origins.map((origin) => ({
+        origin,
+        items: result?.items.filter((item) => item.origin === origin) ?? [],
+        status: !result
+          ? DataStatus.NotStarted
+          : result.error
+            ? DataStatus.Failed
+            : DataStatus.Ready,
+        error: result?.error,
+      }));
+    }
     if (piStates.length === 0) return [];
 
     // Backend items grouped by origin
@@ -141,8 +228,15 @@ export function usePlayableItemResolution(
       if (!state) continue; // This origin doesn't apply
 
       // SSE items override backend items for this origin
-      const sseData = sseItems.get(origin);
-      const items = sseData?.items ?? backendItemsByOrigin.get(origin) ?? [];
+      const sseData = sseItems.owner === identity ? sseItems.items.get(origin) : undefined;
+      const attempt =
+        manualTriggers.owner === identity ? (manualTriggers.attempts.get(origin) ?? 0) : 0;
+      const pendingRetry = attempt > (sseData?.attempt ?? 0);
+      const status = pendingRetry ? DataStatus.NotStarted : (sseData?.status ?? state.status);
+      const items =
+        status === DataStatus.Ready
+          ? (sseData?.items ?? backendItemsByOrigin.get(origin) ?? [])
+          : [];
 
       // Always include applicable origins. The consumer (PlayControl) filters
       // `sources` by items.length > 0, and having an empty-but-Ready group is
@@ -150,17 +244,28 @@ export function usePlayableItemResolution(
       result.push({
         origin,
         items,
-        status: sseData ? DataStatus.Ready : state.status,
+        status,
+        error: pendingRetry ? undefined : sseData?.error,
       });
     }
 
     return result;
-  }, [piStates, resource.playableItems, sseItems]);
+  }, [
+    piStates,
+    resource.playableItems,
+    sseItems,
+    identity,
+    manualTriggers,
+    remote,
+    remoteResult,
+    resource.hasLocalPath,
+  ]);
 
-  const overallStatus = useMemo((): "ready" | "loading" | "not-found" => {
-    if (piStates.length === 0) return "not-found";
+  const overallStatus = useMemo((): "ready" | "loading" | "not-found" | "failed" => {
+    if (groups.length === 0) return "not-found";
     if (groups.some((g) => g.items.length > 0)) return "ready";
     if (groups.some((g) => g.status === DataStatus.NotStarted)) return "loading";
+    if (groups.some((g) => g.status === DataStatus.Failed)) return "failed";
 
     return "not-found";
   }, [piStates, groups]);

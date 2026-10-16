@@ -26,6 +26,9 @@ public record KnownPlayerDefinition
 
     public BatchPlayCapability Capabilities { get; init; }
 
+    /// <summary>Accepts HTTP(S) media URLs as file arguments.</summary>
+    public bool SupportsHttp { get; init; }
+
     /// <summary>
     /// File extensions (with leading dot) this player is a sensible target
     /// for. Null means no filtering. Used to annotate candidates with how

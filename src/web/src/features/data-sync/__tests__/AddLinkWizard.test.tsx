@@ -37,7 +37,6 @@ vi.mock("../api", async (importOriginal) => ({
   dataSyncApi: {
     peers: vi.fn(),
     createLink: vi.fn(),
-    copyOnce: vi.fn(),
     setSharing: vi.fn(async () => undefined),
     revokeReader: vi.fn(),
   },
@@ -219,30 +218,7 @@ describe("sync with another device", () => {
     ]);
   });
 
-  it("copies once from a device it reads already, closing before its first sync opens", async () => {
-    vi.mocked(dataSyncApi.copyOnce).mockResolvedValue({
-      link: link(21, "node-read", "Read PC", {
-        mode: DataSyncLinkMode.Off,
-        state: DataSyncLinkState.AwaitingReview,
-      }),
-    });
-    const onClose = open();
-
-    await pick("node-read");
-    fireEvent.click(screen.getByTestId("data-sync-copy-once"));
-    await confirm();
-
-    expect(dataSyncApi.copyOnce).toHaveBeenCalledWith({
-      peerNodeId: "node-read",
-      kinds: ["customProperty", "extensionGroup"],
-    });
-    expect(onClose).toHaveBeenCalledWith({
-      nodeId: "node-read",
-      notice: "dataSync.wizard.ready Read PC",
-    });
-  });
-
-  it("reaches a device by address and code where this window may create access", async () => {
+  it("requests access to a device by address without a code where this window may create access", async () => {
     vi.mocked(dataSyncApi.createLink).mockResolvedValue({
       link: link(22, "node-far", "Far PC", { state: DataSyncLinkState.AwaitingReview }),
     });
@@ -252,18 +228,13 @@ describe("sync with another device", () => {
     fireEvent.change(screen.getByLabelText("dataSync.wizard.address"), {
       target: { value: "10.0.0.5:34567" },
     });
-    fireEvent.change(screen.getByLabelText("dataSync.wizard.code"), {
-      target: { value: "1234abcd5678" },
-    });
-    // Digits only, eight of them.
-    expect(screen.getByLabelText("dataSync.wizard.code")).toHaveValue("12345678");
+    expect(screen.queryByLabelText("dataSync.wizard.code")).toBeNull();
     fireEvent.click(screen.getByTestId("data-sync-wizard-next"));
     fireEvent.click(screen.getByTestId("data-sync-mode-follow"));
     await confirm();
 
     expect(dataSyncApi.createLink).toHaveBeenCalledWith({
       address: "10.0.0.5:34567",
-      code: "12345678",
       mode: DataSyncLinkMode.Follow,
       kinds: ["customProperty", "extensionGroup"],
     });
@@ -273,7 +244,7 @@ describe("sync with another device", () => {
     });
   });
 
-  it("offers neither asking nor an address and code where this window may not create access", async () => {
+  it("offers neither asking nor an address where this window may not create access", async () => {
     open(false);
     await waitFor(() => expect(option("node-new")).not.toBeNull());
 

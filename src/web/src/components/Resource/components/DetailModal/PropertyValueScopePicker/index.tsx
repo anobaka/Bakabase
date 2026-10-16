@@ -18,7 +18,11 @@ import { useResourceOptionsStore } from "@/stores/options";
 import { Button, Chip, Modal, Table, Tooltip } from "@/components/bakaui";
 import { PropertyPool, PropertyValueScope, propertyValueScopes } from "@/sdk/constants";
 import { buildLogger } from "@/components/utils";
-import BApi from "@/sdk/BApi";
+import { useResourceApi, useResourceOwner } from "@/features/management/resourceContext";
+import {
+  patchOwnerResourceScopePriority,
+  useOwnerResourceDisplayOptions,
+} from "@/features/management/useOwnerResourceDisplayOptions";
 import PropertyValueRenderer from "@/components/Property/components/PropertyValueRenderer";
 import { serializeStandardValue } from "@/components/StandardValue/helpers";
 
@@ -30,11 +34,18 @@ type PropertyMap = { [key in PropertyPool]?: Record<number, IProperty> };
 
 const log = buildLogger("PropertyValueScopePicker");
 const PropertyValueScopePicker = (props: Props) => {
+  const BApi = useResourceApi();
+  const owner = useResourceOwner();
+  const ownerOptions = useOwnerResourceDisplayOptions();
   const { t } = useTranslation();
 
   const { resource } = props;
 
   const resourceOptions = useResourceOptionsStore((state) => state.data);
+  const configuredPriority =
+    (owner && !owner.isLocal
+      ? ownerOptions.data?.propertyValueScopePriority
+      : resourceOptions.propertyValueScopePriority) ?? [];
 
   const [propertyMap, setPropertyMap] = useState<PropertyMap>({});
 
@@ -67,7 +78,7 @@ const PropertyValueScopePicker = (props: Props) => {
       <TableColumn key="property">{t<string>("Property")}</TableColumn>,
       <TableColumn key="display-value">{t<string>("Display value")}</TableColumn>,
       ...visibleScopes.map((scope) => {
-        const priority = resourceOptions.propertyValueScopePriority ?? [];
+        const priority = configuredPriority;
         const index = priority.findIndex((p) => p == scope);
 
         return (
@@ -78,9 +89,8 @@ const PropertyValueScopePicker = (props: Props) => {
                 const arr: PropertyValueScope[] =
                   index > -1 ? priority.filter((p) => p != scope) : [...priority, scope];
 
-                BApi.options.patchResourceOptions({
-                  propertyValueScopePriority: arr,
-                });
+                if (owner && !owner.isLocal) void patchOwnerResourceScopePriority(owner, arr);
+                else BApi.options.patchResourceOptions({ propertyValueScopePriority: arr });
               }}
             >
               {t<string>(`PropertyValueScope.${PropertyValueScope[scope]}`)}
@@ -115,7 +125,7 @@ const PropertyValueScopePicker = (props: Props) => {
   const renderRows = () => {
     const ps: ResourceModel["properties"] = resource.properties ?? {};
     const rows: any[] = [];
-    const priority = resourceOptions.propertyValueScopePriority ?? [];
+    const priority = configuredPriority;
 
     Object.keys(ps).forEach((pool) => {
       const propertyValueMap: Record<number, Property> = ps[pool]!;

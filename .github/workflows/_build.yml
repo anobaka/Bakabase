@@ -175,7 +175,9 @@ jobs:
       - name: Build Bakabase project
         # Container artifacts must use the fixed shared runtime in Dockerfile;
         # embedding a net9.0 runtime would bypass its ARM64 compatibility fix.
-        run: dotnet publish -p:RuntimeMode=${{ matrix.runtimeMode }} ${{matrix.csproj}} --self-contained ${{ matrix.runtimeMode != 'DOCKER' }} -r ${{ matrix.rid }} -o ./publish
+        # Keep C# 13 semantics across desktop and container builds. Docker uses SDK 10
+        # for the ARM64 fix, but C# 14 array-to-span overloads break existing EF queries.
+        run: dotnet publish -p:LangVersion=13.0 -p:RuntimeMode=${{ matrix.runtimeMode }} ${{matrix.csproj}} --self-contained ${{ matrix.runtimeMode != 'DOCKER' }} -r ${{ matrix.rid }} -o ./publish
       - name: Wait for frontend artifact
         id: frontend-artifact
         env:

@@ -44,13 +44,24 @@ function extractGalleryLink(element: HTMLElement, mode: ViewMode): HTMLAnchorEle
   }
 }
 
-function extractUpdateTime(element: HTMLElement, mode: ViewMode, galleryId: string): Date | null {
-  // All modes have a posted_{id} element we can use
-  const postedEl = document.getElementById(`posted_${galleryId}`);
-  if (postedEl) {
-    const text = postedEl.textContent?.trim() ?? '';
-    if (text) return new Date(text.replace(' ', 'T') + ':00Z');
-  }
+/** ExHentai's posted timestamps are UTC, never the time at which we visited the page. */
+function parsePostedTime(text: string): Date | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?$/.exec(text.trim());
+  if (!match) return null;
+  const [year, month, day, hour, minute, second = 0] = match.slice(1).map((part) => Number(part ?? 0));
+  const date = new Date(`${match[1]}-${match[2]}-${match[3]}T${match[4]}:${match[5]}:${match[6] ?? '00'}Z`);
+  if (year < 1 || !Number.isFinite(date.getTime()) || date.getUTCFullYear() !== year ||
+    date.getUTCMonth() + 1 !== month || date.getUTCDate() !== day || date.getUTCHours() !== hour ||
+    date.getUTCMinutes() !== minute || date.getUTCSeconds() !== second) return null;
+  return date;
+}
+
+export function extractExhentaiContentDate(element: HTMLElement, mode: ViewMode, galleryId: string): Date | null {
+  // Read this item's posted element, so another row/document cannot supply its date.
+  if (!/^\d+$/.test(galleryId)) return null;
+  const postedEl = element.querySelector(`[id="posted_${galleryId}"]`);
+  const postedDate = parsePostedTime(postedEl?.textContent ?? '');
+  if (postedDate) return postedDate;
 
   // Fallback: parse from mode-specific location
   let dateText = '';
@@ -76,8 +87,7 @@ function extractUpdateTime(element: HTMLElement, mode: ViewMode, galleryId: stri
       break;
     }
   }
-  if (dateText) return new Date(dateText.replace(' ', 'T') + ':00Z');
-  return null;
+  return parsePostedTime(dateText);
 }
 
 // Cell holding the gallery thumbnail, per view mode. Minimal shows no thumbnail,
@@ -130,7 +140,7 @@ export const exhentaiConfig: SiteConfig = {
     const galleryId = u.pathname.split('/g/')[1]?.split('/')[0] || '';
     if (!galleryId) return { id: null, updateTime: null };
 
-    const updateTime = extractUpdateTime(element, mode, galleryId);
+    const updateTime = extractExhentaiContentDate(element, mode, galleryId);
     return { id: galleryId, updateTime };
   },
 

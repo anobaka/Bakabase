@@ -48,9 +48,16 @@ interface WindowOptions {
   minWidth?: number;                       // Minimum width (default: 400)
   minHeight?: number;                      // Minimum height (default: 300)
   persistent?: boolean;                    // Keep alive across route changes
+  persistenceKey?: string;                 // Remember user-adjusted normal bounds in this browser
   renderHeaderActions?: () => React.ReactNode;  // Custom header buttons
 }
 ```
+
+`persistenceKey` is independent of route persistence: it remembers only completed user
+drags/resizes in local browser storage. Maximizing, minimizing, viewport fitting and
+automatic multi-window cascade offsets never overwrite that preference. Saved geometry
+is validated and fitted to the current viewport when reopening. All MediaPlayer opening
+paths share the `MEDIA_PLAYER_WINDOW_PERSISTENCE_KEY` exported by `persistence.ts`.
 
 ### Custom Header Actions
 

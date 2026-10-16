@@ -3,31 +3,6 @@ using Bakabase.Modules.RemoteAccess.Abstractions.Models;
 
 namespace Bakabase.Modules.Federation.Peers;
 
-public sealed record NodePathMapping(string SourceRootId, string LocalPath);
-public sealed record NodeGrantSummary(string GrantId, long Revision);
-/// <param name="Kind">
-/// What kind of install it is, as its last verified handshake said — for showing. Null until one
-/// did, and for peers too old to say.
-/// </param>
-/// <param name="Platform">What it runs on, as its last verified handshake said.</param>
-/// <param name="OutboundGrant">This device's library read access to the peer; library access only.</param>
-/// <param name="InboundGrant">The peer's library read access to this device; library access only.</param>
-public sealed record FederationPeerView(string NodeId, string Label, string? Address, bool Enabled,
-    string ConnectionState, NodeGrantSummary? OutboundGrant, NodeGrantSummary? InboundGrant,
-    IReadOnlyList<NodePathMapping> PathMappings, ServerKind? Kind = null, RemoteDevicePlatform? Platform = null);
-/// <param name="RemoteAddress">Where an incoming request came from; the claimed NodeId and name are unproven.</param>
-/// <param name="ReplacesExistingAccess">Approving would replace a live grant already held under this NodeId.</param>
-/// <param name="OffersReciprocalAccess">Approving also lets this device read the requester's library.</param>
-public sealed record NodePairingRequestView(string RequestId, string NodeId, string NodeName,
-    string Direction, string Status, DateTimeOffset ExpiresAt, string? RemoteAddress = null,
-    bool ReplacesExistingAccess = false, bool OffersReciprocalAccess = false);
-/// <param name="SharingEnabled">Library sharing.</param>
-/// <param name="DataSyncSharingEnabled">Whether devices this one approved may read its definitions.</param>
-public sealed record FederationPeerStatus(NodeIdentity Identity, bool SharingEnabled,
-    IReadOnlyList<FederationPeerView> Peers, IReadOnlyList<NodePairingRequestView> Requests,
-    bool DataSyncSharingEnabled = false);
-public sealed record NodePairingOutcome(string Outcome, string? RequestId = null, string? PeerNodeId = null,
-    string? Message = null);
 public sealed record NodeInvitation(string Code, DateTimeOffset ExpiresAt);
 
 /// <summary>Credentials for exactly one direction. Never return this from a local UI API.</summary>
@@ -37,12 +12,6 @@ public sealed record NodeCredentials(string GrantId, string SubjectNodeId, strin
 public sealed record NodeInfo(string NodeId, string LibraryEpoch, string Name, int ProtocolVersion,
     DateTimeOffset ServerTimeUtc)
 {
-    public int QueryContractVersion { get; init; } = 1;
-    public string[] SupportedFilters { get; init; } = ["text", "fileAvailability", "sourceKinds"];
-    public string[] SupportedSorts { get; init; } = ["NameAsc", "NameDesc"];
-    public string[] SupportedAssetKinds { get; init; } = ["image", "audio", "video"];
-    public int MaxBatchSize { get; init; } = 200;
-
     /// <summary>
     /// Optional, added later, for showing only: what kind of install this is, as a word
     /// (<see cref="ServerSelfDescriptionWords"/>) so a later kind never breaks an older reader.
@@ -78,14 +47,10 @@ public sealed record NodeInfo(string NodeId, string LibraryEpoch, string Name, i
 }
 
 /// <summary>
-/// Offered by a requester that also shares its own library: where the source can reach it and a
-/// single-use code that grants the source read access back, so one approval pairs both ways.
+/// Offered by a requester that also shares its definitions: where the source can reach it and a
+/// single-use code for reciprocal definitions access.
 /// </summary>
 public sealed record NodeReciprocalOffer(string[] Addresses, string Code);
-public sealed record NodePairCodeRequest(string NodeId, string NodeName, string Code, string TransactionId,
-    string ClaimSecret, NodeReciprocalOffer? Reciprocal = null);
-public sealed record NodePairRequest(string NodeId, string NodeName, string TransactionId, string ClaimSecret,
-    NodeReciprocalOffer? Reciprocal = null);
 /// <summary>
 /// A request for a <c>datasync.read</c> grant (<c>pair/datasync/request</c>). A separate route and
 /// record from the library's, so an older node refuses it instead of filing a library request.
@@ -188,23 +153,13 @@ internal sealed class FederationState
     public int SchemaVersion { get; set; } = 1;
     public string? NodeId { get; set; }
     public string? LibraryEpoch { get; set; }
-    public bool SharingEnabled { get; set; }
-    public bool BrowsingEnabled { get; set; }
     public Dictionary<string, StoredPeer> Peers { get; set; } = new(StringComparer.Ordinal);
-    public Dictionary<string, StoredGrant> InboundGrants { get; set; } = new(StringComparer.Ordinal);
-    public Dictionary<string, NodeCredentials> OutboundGrants { get; set; } = new(StringComparer.Ordinal);
-    public List<StoredPairRequest> IncomingRequests { get; set; } = [];
-    public List<StoredOutgoingRequest> OutgoingRequests { get; set; } = [];
-    public StoredInvitation? Invitation { get; set; }
-    public List<StoredReciprocalInvitation> ReciprocalInvitations { get; set; } = [];
     /// <summary>User-chosen name shown to other devices; the machine name otherwise.</summary>
     public string? DisplayName { get; set; }
 
-    // Data sync (datasync.read) state. Kept apart from the library collections above, so an older
-    // build, which ignores unknown members, can never read a datasync grant, request or code as a
-    // library one. Missing (or null) in older files; FederationStateStore reads that as empty.
+    // Persisted definition-sync credentials and requests retain their existing wire identity.
     public bool DataSyncSharingEnabled { get; set; }
-    /// <summary>By grant id; grant ids never collide with <see cref="InboundGrants"/>.</summary>
+    /// <summary>By grant id.</summary>
     public Dictionary<string, StoredGrant> InboundDataSyncGrants { get; set; } = new(StringComparer.Ordinal);
     /// <summary>By the peer's node id.</summary>
     public Dictionary<string, NodeCredentials> OutboundDataSyncGrants { get; set; } = new(StringComparer.Ordinal);
@@ -213,13 +168,7 @@ internal sealed class FederationState
     public StoredInvitation? DataSyncInvitation { get; set; }
     public List<StoredReciprocalInvitation> DataSyncReciprocalInvitations { get; set; } = [];
 
-    /// <summary>
-    /// Whether library routing belongs to this peer: a library grant in either direction. Data sync never writes
-    /// such a peer's label, address, library epoch, kind, platform or browsing switch (§7.1.1), so a definitions
-    /// pairing, even one approved for a device claiming this NodeId, can never redirect library browsing.
-    /// </summary>
-    public bool HasLibraryGrant(string nodeId) => OutboundGrants.ContainsKey(nodeId) ||
-        InboundGrants.Values.Any(g => !g.Revoked && g.Credentials.SubjectNodeId == nodeId);
+
 }
 
 internal sealed class StoredReciprocalInvitation
@@ -238,11 +187,8 @@ internal sealed class StoredPeer
     public RemoteDevicePlatform? Platform { get; set; }
     public string? Address { get; set; }
     public string? LibraryEpoch { get; set; }
-    public bool Enabled { get; set; } = true;
-    public List<NodePathMapping> PathMappings { get; set; } = [];
     /// <summary>
-    /// Where data sync reaches this peer; data sync connects to <c>DataSyncAddress ?? Address</c> and relocates
-    /// only this. Library code never reads it.
+    /// Where data sync reaches this peer; data sync connects to <c>DataSyncAddress ?? Address</c>.
     /// </summary>
     public string? DataSyncAddress { get; set; }
     /// <summary>

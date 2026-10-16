@@ -193,7 +193,7 @@ public class ApplyBTaskTests
     }
 
     [TestMethod]
-    public async Task A_second_restore_choice_and_a_retried_undo_after_an_Error_both_run()
+    public async Task A_second_restore_choice_runs_in_the_same_process()
     {
         await using var h = await DataSyncRuntimeHarness.CreateAsync(daemon: true);
 
@@ -206,14 +206,6 @@ public class ApplyBTaskTests
         CollectionAssert.AreEqual(
             new[] {(DataSyncRestoreChoice.ThisDeviceWins, (int?) null), (DataSyncRestoreChoice.OthersWin, (int?) 4)},
             h.Runner.Restores.ToArray());
-
-        h.Runner.UndoErrors.Enqueue(new InvalidOperationException("boom"));
-        var undoId = DataSyncTaskIds.Undo(7);
-        Assert.IsNotNull(await h.Launcher.EnqueueUndoAsync(7));
-        await h.WaitForStatusAsync(undoId, BTaskStatus.Error);
-        Assert.IsNotNull(await h.Launcher.EnqueueUndoAsync(7), "an undo can be retried after an Error");
-        await h.WaitForStatusAsync(undoId, BTaskStatus.Completed);
-        CollectionAssert.AreEqual(new[] {7, 7}, h.Runner.Undos.ToArray());
     }
 
     /// <summary>
@@ -234,11 +226,11 @@ public class ApplyBTaskTests
                 new DataSyncViews(scope.ServiceProvider).IsSyncing(taskId)));
         };
 
-        Assert.IsNotNull(await h.Launcher.EnqueueUndoAsync(7));
-        await h.WaitForStatusAsync(DataSyncTaskIds.Undo(7), BTaskStatus.Completed);
-        h.Runner.UndoErrors.Enqueue(new InvalidOperationException("boom"));
-        Assert.IsNotNull(await h.Launcher.EnqueueUndoAsync(8));
-        await h.WaitForStatusAsync(DataSyncTaskIds.Undo(8), BTaskStatus.Error);
+        Assert.IsNotNull(await h.Launcher.EnqueueRestoreAsync(DataSyncRestoreChoice.ThisDeviceWins, null));
+        await h.WaitForStatusAsync(DataSyncTaskIds.Restore, BTaskStatus.Completed);
+        h.Runner.RestoreError = new InvalidOperationException("boom");
+        Assert.IsNotNull(await h.Launcher.EnqueueRestoreAsync(DataSyncRestoreChoice.OthersWin, null));
+        await h.WaitForStatusAsync(DataSyncTaskIds.Restore, BTaskStatus.Error);
         await h.Btm.Start(DataSyncTaskIds.Fetch);
         await DataSyncRuntimeHarness.WaitUntilAsync(() => h.Observer.Events.Contains("ended:" + DataSyncTaskIds.Fetch),
             "the fetch cycle's end was heard");
@@ -246,8 +238,8 @@ public class ApplyBTaskTests
         CollectionAssert.AreEqual(
             new[]
             {
-                (DataSyncTaskIds.Undo(7), true, false),
-                (DataSyncTaskIds.Undo(8), true, false),
+                (DataSyncTaskIds.Restore, true, false),
+                (DataSyncTaskIds.Restore, true, false),
                 (DataSyncTaskIds.Fetch, true, false),
             },
             seen.ToArray(), "heard while the task was still running, and left out of the status");

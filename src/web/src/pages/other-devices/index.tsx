@@ -96,7 +96,7 @@ const OtherDevicesPage = () => {
                 macOS · Intel / Apple Silicon
               </Chip>
               <Chip color="primary" size="sm" variant="flat">
-                {t<string>("otherDevices.canShare")}
+                {t<string>("otherDevices.canManage")}
               </Chip>
             </div>
           </div>
@@ -171,7 +171,7 @@ const OtherDevicesPage = () => {
                   NAS / Linux · x64
                 </Chip>
                 <Chip color="primary" size="sm" variant="flat">
-                  {t<string>("otherDevices.canShare")}
+                  {t<string>("otherDevices.canManage")}
                 </Chip>
               </div>
             </div>

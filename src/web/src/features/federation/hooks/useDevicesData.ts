@@ -1,18 +1,16 @@
 import type { BakabaseServiceModelsViewRemoteAccessSettingsViewModel as RemoteAccessSettings } from "@/sdk/Api";
 import type { ManagedServerCandidate, ManagedServersView } from "../types";
-import type { SharingCandidate } from "../map/graph";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { federationPeerApi } from "../peerApi";
 import { managedServerApi } from "../serverApi";
 import { isAbort } from "../transport";
 import { MessageError } from "../components/common";
 
 import { useFederationStatus } from "./useFederationStatus";
 
+import { dataSyncApi, type DataSyncPeerCandidate } from "@/features/data-sync/api";
 import BApi from "@/sdk/BApi";
-import { millisecondsUntil } from "@/core/serverTime";
 import { useDataSyncMap } from "@/features/data-sync/map/useDataSyncMap";
 import { useDataSyncStore } from "@/features/data-sync/stores/dataSync";
 import { useRemoteAccessStore } from "@/stores/remoteAccess";
@@ -35,12 +33,12 @@ const SERVERS_IDLE_POLL_MS = 30_000;
 /** Failures show beside the map; a toast from the shared client would say it twice. */
 const inline = { showErrorToast: false } as const;
 
-export type MapSource = "sharing" | "servers" | "access" | "dataSync";
+export type MapSource = "identity" | "servers" | "access" | "dataSync";
 
 export interface DiscoveryState {
   running: boolean;
   /** Set once a search has finished. */
-  sharing?: SharingCandidate[];
+  dataSync?: DataSyncPeerCandidate[];
   management?: ManagedServerCandidate[];
   error?: Error;
 }
@@ -52,24 +50,18 @@ const asError = (cause: unknown, fallback = "") => {
   return new MessageError(body?.message || fallback);
 };
 
-/** Library sharing's status, re-read quietly on a timer. */
-function useSharing() {
+/** Device identity status, re-read quietly on a timer. */
+function useIdentity() {
   const federation = useFederationStatus();
-  const { status, refresh } = federation;
-  const live = (status?.requests ?? []).some(
-    (request) => request.status === "awaitingApproval" && millisecondsUntil(request.expiresAt) > 0,
-  );
+  const { refresh } = federation;
 
   useEffect(() => {
-    const timer = setInterval(
-      () => {
-        if (!document.hidden) void refresh({ quiet: true });
-      },
-      live ? LIVE_POLL_MS : IDLE_POLL_MS,
-    );
+    const timer = setInterval(() => {
+      if (!document.hidden) void refresh({ quiet: true });
+    }, IDLE_POLL_MS);
 
     return () => clearInterval(timer);
-  }, [live, refresh]);
+  }, [refresh]);
 
   return federation;
 }
@@ -180,7 +172,7 @@ function useManagementAccess() {
 }
 
 export function useDevicesData() {
-  const sharing = useSharing();
+  const identity = useIdentity();
   const servers = useManagedServers();
   const access = useManagementAccess();
   // Data sync's own reader, on the same schedule (features/data-sync/map).
@@ -193,36 +185,36 @@ export function useDevicesData() {
   useEffect(() => () => search.current?.abort(), []);
 
   const serversAvailable = servers.view?.available;
-  const refreshSharing = sharing.refresh;
+  const refreshIdentity = identity.refresh;
   const loadServers = servers.load;
   const loadAccess = access.load;
   const loadDataSync = dataSync.load;
 
   /** Re-reads what an action may have changed, without a loading state. */
   const reload = useCallback(
-    async (sources: MapSource[] = ["sharing", "servers", "access", "dataSync"]) => {
+    async (sources: MapSource[] = ["identity", "servers", "access", "dataSync"]) => {
       await Promise.all([
-        sources.includes("sharing") ? refreshSharing({ quiet: false }) : undefined,
+        sources.includes("identity") ? refreshIdentity({ quiet: false }) : undefined,
         sources.includes("servers") ? loadServers({ quiet: true }) : undefined,
         sources.includes("access") ? loadAccess({ quiet: true }) : undefined,
         sources.includes("dataSync") ? loadDataSync({ withOverview: true }) : undefined,
       ]);
     },
-    [refreshSharing, loadServers, loadAccess, loadDataSync],
+    [refreshIdentity, loadServers, loadAccess, loadDataSync],
   );
 
   /** "Check status": everything again, managed servers asked how they are. */
   const refreshAll = useCallback(async () => {
     await Promise.all([
-      refreshSharing(),
+      refreshIdentity(),
       loadServers({ probe: true }),
       loadAccess(),
       loadDataSync({ withOverview: true }),
     ]);
-  }, [refreshSharing, loadServers, loadAccess, loadDataSync]);
+  }, [refreshIdentity, loadServers, loadAccess, loadDataSync]);
 
   /**
-   * Both kinds of looking around — sharing discovery lists devices that share their library,
+   * Look for definitions synchronization peers and management beacons independently,
    * the remote-access beacons list every server that could be managed. A few seconds each,
    * side by side; one that fails leaves the other's answer.
    */
@@ -233,7 +225,7 @@ export function useDevicesData() {
     search.current = controller;
     setDiscovery((previous) => ({ ...previous, running: true, error: undefined }));
     const [found, beacons] = await Promise.allSettled([
-      federationPeerApi.discover(controller.signal),
+      dataSyncApi.peers(true),
       serversAvailable === false
         ? Promise.resolve(undefined)
         : managedServerApi.discover(controller.signal),
@@ -249,7 +241,7 @@ export function useDevicesData() {
 
     setDiscovery({
       running: false,
-      sharing: found.status === "fulfilled" ? found.value : [],
+      dataSync: found.status === "fulfilled" ? found.value : [],
       management: beacons.status === "fulfilled" ? (beacons.value?.servers ?? []) : [],
       // Only a search that found nothing because every way of looking failed is an error.
       error: failures.length === attempted ? asError(failures[0].reason) : undefined,
@@ -257,11 +249,11 @@ export function useDevicesData() {
   }, [serversAvailable]);
 
   return {
-    status: sharing.status,
-    sharingError: sharing.error,
-    sharingLoading: sharing.loading,
-    /** Reads library sharing's status again; `quiet` keeps the last good one on a failure. */
-    refreshSharing,
+    status: identity.status,
+    identityError: identity.error,
+    identityLoading: identity.loading,
+    /** Reads device identity status again; `quiet` keeps the last good one on a failure. */
+    refreshIdentity,
     servers: servers.view,
     serversError: servers.error,
     serversLoading: servers.loading,

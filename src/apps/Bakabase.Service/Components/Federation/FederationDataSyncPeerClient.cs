@@ -27,7 +27,7 @@ namespace Bakabase.Service.Components.Federation;
 /// <remarks>
 /// <para>
 /// It pulls only from the node it is asked about, and only with a grant this device holds for that node directly
-/// (§7.7, D03): nothing here can read one node through another, and a library grant never counts.
+/// (§7.7, D03): nothing here can read one node through another, and other credentials never substitute for a definitions grant.
 /// </para>
 /// <para>
 /// Head and manifest are shallow and read as the federation envelope; they are checked before data sync sees them.

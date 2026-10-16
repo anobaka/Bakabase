@@ -27,6 +27,8 @@ import type { Resource as ResourceModel } from "@/core/models/Resource";
 import FallbackCover from "@/components/Resource/components/ResourceCover/components/FallbackCover.tsx";
 import { useCoverResolution } from "@/hooks/useCoverResolution";
 import BusinessConstants from "@/components/BusinessConstants";
+import { useResourceOwner } from "@/features/management/resourceContext";
+import { managedResourceCoverUrl } from "@/features/management/resourceApi";
 
 type TooltipPlacement =
   | "top"
@@ -57,6 +59,7 @@ export interface IResourceCoverRef {
 }
 
 const ResourceCover = React.forwardRef((props: Props, ref) => {
+  const source = useResourceOwner();
   const {
     resource,
     onClick: propsOnClick,
@@ -72,9 +75,10 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
   const log = buildLogger(`ResourceCover:${resource.id}|${resource.path}`);
 
   const forceUpdate = useUpdate();
+  const [reloadKey, setReloadKey] = useState(0);
 
   // Use cover resolution hook which handles SSE discovery internally
-  const coverResolution = useCoverResolution(resource);
+  const coverResolution = useCoverResolution(resource, undefined, reloadKey);
 
   const [previewerVisible, setPreviewerVisible] = useState(false);
   const previewerHoverTimerRef = useRef<any>();
@@ -89,7 +93,6 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
   });
 
   const [failureUrls, setFailureUrls] = useState<Set<string>>(new Set());
-  const [reloadKey, setReloadKey] = useState(0);
 
   const stableApiEndpoints = useMemo(
     () => appContext.apiEndpoints,
@@ -100,6 +103,21 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
   const urls = useMemo(() => {
     if (coverResolution.status === "loading") {
       return null;
+    }
+    if (source && !source.isLocal) {
+      const bust =
+        reloadKey > 0 || resource.reloadToken ? `&v=${resource.reloadToken ?? 0}.${reloadKey}` : "";
+
+      return (coverResolution.covers ?? []).map(
+        (_, index) =>
+          managedResourceCoverUrl(
+            source,
+            resource.id,
+            index,
+            BusinessConstants.MaxCoverSize,
+            BusinessConstants.MaxCoverSize,
+          ) + bust,
+      );
     }
 
     // The endpoints pushed by the server are rewritten to localhost, so spreading
@@ -141,6 +159,8 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
     // Starts out assuming local and flips once the server answers, so the URLs
     // have to be rebuilt when it does.
     isRemoteClient,
+    source,
+    resource.id,
   ]);
 
   useUpdateEffect(() => {

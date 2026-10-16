@@ -17,6 +17,11 @@ const { getAllCollections, navigate, createPortal, chooseColor } = vi.hoisted(()
   chooseColor: vi.fn(),
 }));
 
+vi.mock("@/features/management/DeviceDot", () => ({ default: () => null }));
+vi.mock("@/features/management/useManagementSources", () => ({
+  useManagementSources: () => ({ sources: [], refresh: () => {}, loading: false }),
+}));
+
 vi.mock("@/sdk/BApi", () => ({
   default: { collection: { getAllCollections } },
 }));

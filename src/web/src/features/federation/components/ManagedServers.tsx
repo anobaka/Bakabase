@@ -9,6 +9,7 @@ import type {
 } from "../types";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { AiOutlineCloudServer, AiOutlineLoading3Quarters, AiOutlinePlus } from "react-icons/ai";
 
@@ -31,6 +32,9 @@ import {
 import ConfirmDialog from "./ConfirmDialog";
 import ManagedServerPathMappings from "./ManagedServerPathMappings";
 
+import DeviceMetadataEditor from "@/features/management/DeviceMetadataEditor";
+import { MetadataSyncStatusSection } from "@/features/management/MetadataSyncStatus";
+import DeviceDot from "@/features/management/DeviceDot";
 import { minutesUntil } from "@/core/serverTime";
 import { ManagedServerOutcome, ManagedServerState, RemoteAccessMode } from "@/sdk/constants";
 
@@ -188,9 +192,8 @@ export default function ManagedServersSection({
 }
 
 /**
- * Kept apart from the read-only library sharing on purpose: this is the other device's
- * administrator access, with its own pairing, and nothing here grants or uses a sharing
- * permission.
+ * Administrator relationships and their local path mappings. Definitions synchronization
+ * remains separately authorized and never implies management access.
  */
 export function ManagedServersPanel({
   source,
@@ -422,6 +425,7 @@ export function ManagedServersPanel({
         <AiOutlineCloudServer aria-hidden />
         {t("federation.servers.title")}
       </Heading>
+      {servers.length > 0 && <MetadataSyncStatusSection />}
       {(error || notice) && (
         <div className="space-y-2">
           <ErrorNotice error={error} onDismiss={() => setError(undefined)} />
@@ -449,6 +453,7 @@ export function ManagedServersPanel({
             <ManagedServerCard
               key={server.serverId}
               busy={busy}
+              canOpenDesktopView={view?.canOpenDesktopView !== false}
               headingLevel={SubHeading}
               server={server}
               onForget={() =>
@@ -462,9 +467,14 @@ export function ManagedServersPanel({
                 // No reload: success navigates away, and a failure leaves the list as it was.
                 void run(() => openManagedServer(server.serverId, route), setError, false)
               }
-              onSaveMappings={(mappings) =>
+              onRenamed={() => void load({ probe: true, quiet: true })}
+              onSaveMappings={(mappings, expectedMappings) =>
                 run(async () => {
-                  await managedServerApi.setPathMappings(server.serverId, mappings);
+                  await managedServerApi.setPathMappings(
+                    server.serverId,
+                    mappings,
+                    expectedMappings,
+                  );
                   if (mounted.current) setNotice(t("federation.servers.mappings.saved"));
                 })
               }
@@ -692,20 +702,30 @@ function ManagedServerCard({
   server,
   busy,
   headingLevel: Title = "h3",
+  canOpenDesktopView = true,
   onOpen,
   onForget,
   onSaveMappings,
+  onRenamed,
 }: {
   server: ManagedServer;
   busy: boolean;
   headingLevel?: "h3" | "h4";
+  canOpenDesktopView?: boolean;
   /** Shows the server in this window, on one of its own routes when given one. */
   onOpen: (route?: string) => void;
   onForget: () => void;
-  onSaveMappings: (mappings: ManagedServerPathMapping[]) => Promise<boolean>;
+  onSaveMappings: (
+    mappings: ManagedServerPathMapping[],
+    expectedMappings?: ManagedServerPathMapping[],
+  ) => Promise<boolean>;
+  onRenamed: () => void;
 }) {
   const { t } = useTranslation();
-  const name = serverLabel(server);
+  const [renamed, setRenamed] = useState<string>();
+  const name = renamed ?? serverLabel(server);
+
+  useEffect(() => setRenamed(undefined), [server.name]);
 
   return (
     <article
@@ -715,7 +735,10 @@ function ManagedServerCard({
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <Title className="font-semibold">{name}</Title>
+          <Title className="flex items-center gap-2 font-semibold">
+            <DeviceDot name={name} serverId={server.serverId} />
+            {name}
+          </Title>
           <p className="mt-1 break-all text-xs text-default-500">
             {server.address}
             {server.appVersion ? ` · v${server.appVersion}` : ""}
@@ -725,11 +748,22 @@ function ManagedServerCard({
           {t(`federation.servers.state.${server.state}`)}
         </span>
       </div>
-      <ManagedServerWarnings busy={busy} name={name} server={server} onOpen={onOpen} />
+      <ManagedServerWarnings
+        busy={busy}
+        canOpenDesktopView={canOpenDesktopView}
+        name={name}
+        server={server}
+        onOpen={onOpen}
+      />
       <div className="flex flex-wrap items-center gap-2">
-        <button className={primaryClass} disabled={busy} type="button" onClick={() => onOpen()}>
-          {t("federation.servers.open")}
-        </button>
+        <Link className={primaryClass} to="/resource">
+          {t("management.manageResources")}
+        </Link>
+        {canOpenDesktopView && (
+          <button className={buttonClass} disabled={busy} type="button" onClick={() => onOpen()}>
+            {t("federation.servers.open")}
+          </button>
+        )}
         <button
           className={`${buttonClass} text-danger`}
           disabled={busy}
@@ -739,6 +773,16 @@ function ManagedServerCard({
           {t("federation.servers.forget")}
         </button>
       </div>
+      <DeviceMetadataEditor
+        key={server.serverId}
+        busy={busy}
+        name={name}
+        serverId={server.serverId}
+        onSaved={(value) => {
+          setRenamed(value);
+          onRenamed();
+        }}
+      />
       <ManagedServerPathMappings busy={busy} server={server} onSave={onSaveMappings} />
     </article>
   );
@@ -770,6 +814,7 @@ export function ManagedServerWarnings({
   busy,
   onOpen,
   where = "devices",
+  canOpenDesktopView = true,
 }: {
   server: ManagedServer;
   name: string;
@@ -781,6 +826,7 @@ export function ManagedServerWarnings({
    * devices page's search below the card, or the map's at its top and its panel.
    */
   where?: "devices" | "map";
+  canOpenDesktopView?: boolean;
 }) {
   const { t } = useTranslation();
 
@@ -804,14 +850,16 @@ export function ManagedServerWarnings({
               pairing: t("configuration.remoteAccess.requirePairing.label"),
             })}
           </p>
-          <button
-            className={buttonClass}
-            disabled={busy}
-            type="button"
-            onClick={() => onOpen(CONFIGURATION_ROUTE)}
-          >
-            {t("federation.servers.openConfiguration", { page: t("menu.configuration") })}
-          </button>
+          {canOpenDesktopView && (
+            <button
+              className={buttonClass}
+              disabled={busy}
+              type="button"
+              onClick={() => onOpen(CONFIGURATION_ROUTE)}
+            >
+              {t("federation.servers.openConfiguration", { page: t("menu.configuration") })}
+            </button>
+          )}
         </div>
       )}
       {server.state === ManagedServerState.Revoked && (

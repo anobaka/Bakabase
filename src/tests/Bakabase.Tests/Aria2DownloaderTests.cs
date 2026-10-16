@@ -358,7 +358,7 @@ public sealed class Aria2DownloaderTests
         public async ValueTask DisposeAsync()
         {
             await _stopping.CancelAsync();
-            _listener.Stop();
+            // Close also stops listening; Stop followed by Close removes the endpoint twice on Unix.
             _listener.Close();
             await _requests;
             await Task.WhenAll(_handlers);

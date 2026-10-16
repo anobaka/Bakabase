@@ -1,14 +1,11 @@
-import type { ReactNode } from "react";
 import type { DataSyncMapView } from "../api";
 import type { DataSyncDialogActions } from "../hooks/useDataSyncActions";
 import type { SyncRuleDrawingProps } from "../components/SyncRuleDrawing";
 
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useCanManageDefinitionSharing } from "../hooks/useCanManageDefinitionSharing";
 import { useDataSyncStore } from "../stores/dataSync";
-import InvitationDialog from "../components/InvitationDialog";
 
 import { useWordedActions } from "./useWordedActions";
 
@@ -27,18 +24,16 @@ export interface DataSyncMapHost {
 
 /**
  * What every data sync section on the device map shares: the map's actions with data sync's
- * failures in data sync's words, this device's side as the rule editor needs it, and a one-time
- * code for a device, opened from the editor.
+ * failures in data sync's words, this device's side as the rule editor needs it, and the rule editor configuration.
  */
 export function useMapEditor({ actions: hostActions, view, selfName, now }: DataSyncMapHost) {
   const { t } = useTranslation();
   const actions = useWordedActions(hostActions);
   const canManageHere = useCanManageDefinitionSharing();
   const overview = useDataSyncStore((state) => state.overview);
-  const [codeFor, setCodeFor] = useState<{ name: string }>();
   const canManage = canManageHere && (overview?.canManageSharing ?? true);
 
-  const editor: Omit<SyncRuleDrawingProps, "peer" | "onCreateCode"> = {
+  const editor: Omit<SyncRuleDrawingProps, "peer"> = {
     actions,
     canManage,
     sharingEnabled: view?.sharingEnabled ?? overview?.sharingEnabled ?? false,
@@ -50,21 +45,9 @@ export function useMapEditor({ actions: hostActions, view, selfName, now }: Data
     now,
   };
 
-  const invitation: ReactNode = codeFor ? (
-    <InvitationDialog
-      actions={actions}
-      forName={codeFor.name}
-      now={now}
-      onClose={() => setCodeFor(undefined)}
-    />
-  ) : null;
-
   return {
     actions,
     canManage,
     editor,
-    /** Opens a one-time code for the device of this name. */
-    createCode: (name: string) => setCodeFor({ name }),
-    invitation,
   };
 }

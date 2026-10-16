@@ -37,20 +37,21 @@ const cn = merge(
 const sources = import.meta.glob<string>(
   [
     "../DevicesPage.tsx",
+    "../DeviceSwitchPage.tsx",
     "../devices/sections.ts",
     "../devices/DevicesNav.tsx",
     "../devices/ThisDeviceTab.tsx",
     "../devices/ManageTab.tsx",
-    "../devices/SharingTab.tsx",
     "../devices/AdvancedTab.tsx",
     "../components/AddressList.tsx",
     "../components/common.tsx",
     "../components/ConfirmDialog.tsx",
     "../components/ManagedServers.tsx",
+    "../../management/DeviceMetadataEditor.tsx",
+    "../../management/DeviceColorEditor.tsx",
     "../components/ManagementAccess.tsx",
     "../../../layouts/BasicLayout/components/PageNav/components/ServerSwitcher/index.tsx",
     "../../../pages/client-path-mapping/index.tsx",
-    "../components/PeerPathMappings.tsx",
     "../components/ManagedServerPathMappings.tsx",
     "../DeviceMapPage.tsx",
     "../map/DeviceMapCanvas.tsx",
@@ -64,7 +65,7 @@ const sources = import.meta.glob<string>(
 
 /** Namespaces these screens draw from; a quoted string under one of them is a key. */
 const keyPattern =
-  /["'`]((?:federation|clientPathMapping|configuration\.remoteAccess|log)\.[A-Za-z0-9_.]*[A-Za-z0-9_])["'`]/g;
+  /["'`]((?:federation|deviceAppearance|clientPathMapping|configuration\.remoteAccess|log)\.[A-Za-z0-9_.]*[A-Za-z0-9_])["'`]/g;
 
 const staticKeys = (source: string) => Array.from(source.matchAll(keyPattern), (match) => match[1]);
 
@@ -117,7 +118,6 @@ const dynamicKeys = [
   "menu.client.pathMapping",
   // The multi-device menu group (routesMenuConfig) and its pages.
   "federation.mode",
-  "federation.title",
   "federation.devices.title",
   "federation.map.title",
   // The device map's words for what it draws (map/describe.ts, the canvas and the legend).
@@ -126,7 +126,7 @@ const dynamicKeys = [
   ...mapIssues.map((issue) => `federation.map.issue.${issue}`),
   ...mapEdgeKinds.map((kind) => `federation.map.edge.${kind}`),
   ...mapEdgeKinds.map((kind) => `federation.map.legend.${kind}`),
-  ...(["sharing", "management", "sync"] as const).flatMap((kind) =>
+  ...(["management", "sync"] as const).flatMap((kind) =>
     ["in", "out"].flatMap((direction) =>
       ["active", "pending"].map(
         (status) => `federation.map.direction.${kind}.${direction}.${status}`,
@@ -136,30 +136,16 @@ const dynamicKeys = [
   // `federation.map.${kind}.mode.${mode}` — a relationship's mode, which only data sync has —
   // and `federation.map.attention.${kind}.${direction}` for each direction that can break.
   ...["twoWay", "follow"].map((mode) => `federation.map.sync.mode.${mode}`),
-  "federation.map.attention.sharing.in",
   "federation.map.attention.management.out",
   "federation.map.attention.sync.in",
   // This device's counts in the map's panel.
-  ...["sharesWith", "browses", "manages", "managedBy"].map(
-    (key) => `federation.map.panel.self.${key}`,
-  ),
+  ...["manages", "managedBy"].map((key) => `federation.map.panel.self.${key}`),
   // "After copying or restoring data": each case says what it clears, keeps and needs after.
   ...(["copied", "restored"] as const).flatMap((identityCase) =>
     ["title", "removes", "keeps", "after"].map(
       (part) => `federation.identity.${identityCase}.${part}`,
     ),
   ),
-  // `federation.pair.${outcome}` after a sharing request, and `federation.connection.${state}`.
-  ...["awaitingApproval", "granted", "rejected"].map((outcome) => `federation.pair.${outcome}`),
-  ...[
-    "Online",
-    "Offline",
-    "Unknown",
-    "IdentityConflict",
-    "Unauthorized",
-    "Incompatible",
-    "ProxyFakeAddress",
-  ].map((state) => `federation.connection.${state}`),
 ];
 
 /** The placeholders a text uses; one language may name the same one twice, the other once. */
@@ -172,7 +158,7 @@ describe("locales for the multi-device management screens", () => {
   ).sort();
 
   it("reads keys out of every listed component", () => {
-    expect(Object.keys(sources)).toHaveLength(22);
+    expect(Object.keys(sources)).toHaveLength(23);
     for (const [path, source] of Object.entries(sources)) {
       expect(staticKeys(source).length, path).toBeGreaterThan(0);
     }
@@ -194,24 +180,14 @@ describe("locales for the multi-device management screens", () => {
         "federation.map.panel.matchedByName",
         "federation.map.panel.manageTip",
         "federation.map.empty.body",
-        "federation.mappings.changedDuringReview",
         "federation.servers.mappings.save",
         "federation.devices.nav.pendingManage",
         "federation.devices.addresses.more",
-        "federation.devices.chooser.browse.desc",
         "federation.identity.restoreWarning",
         "federation.recovery.reset",
-        "federation.sharing.enableRemote",
-        "federation.sharing.enableRemoteConfirm",
-        "federation.browsing.open",
         "federation.devices.id.copy",
         // A decided incoming request says what this device did; a new code is said by name.
-        "federation.requests.incomingGranted",
-        "federation.requests.incomingRejected",
-        "federation.sharing.codeLabel",
         "federation.management.code.label",
-        "federation.devices.status.on",
-        "federation.devices.status.off",
       ]),
     );
   });
@@ -224,28 +200,12 @@ describe("locales for the multi-device management screens", () => {
     expect(placeholders(cn[key]), key).toEqual(placeholders(en[key]));
   });
 
-  it.each([
-    "federation.devices.nav.pendingManage",
-    "federation.devices.nav.pendingShare",
-    "federation.devices.addresses.more",
-  ])("%s has an English form for one", (key) => {
-    // i18next picks `_one` for a count of one in English; Chinese has no such form.
-    expect(en[`${key}_one`], key).toEqual(expect.any(String));
-    expect(placeholders(en[`${key}_one`])).toEqual(placeholders(en[key]));
-  });
-
-  it.each([
-    ["English", en],
-    ["Chinese", cn],
-  ])(
-    "names the managed-server fields apart from library sharing's in %s",
-    (_, locale: Resources) => {
-      // The desktop app's devices page has both forms, one above the other. A field named
-      // like another is the same field to a screen reader and to a label-based lookup.
-      expect(locale["federation.servers.add.address"]).not.toEqual(
-        locale["federation.pair.address"],
-      );
-      expect(locale["federation.servers.add.code"]).not.toEqual(locale["federation.pair.code"]);
+  it.each(["federation.devices.nav.pendingManage", "federation.devices.addresses.more"])(
+    "%s has an English form for one",
+    (key) => {
+      // i18next picks `_one` for a count of one in English; Chinese has no such form.
+      expect(en[`${key}_one`], key).toEqual(expect.any(String));
+      expect(placeholders(en[`${key}_one`])).toEqual(placeholders(en[key]));
     },
   );
 
@@ -260,4 +220,33 @@ describe("locales for the multi-device management screens", () => {
       "setting",
     ]);
   });
+
+  it.each([
+    {
+      locale: en,
+      resources: "Resources → All devices",
+      browser: "browser",
+      desktop: "desktop app",
+    },
+    { locale: cn, resources: "资源 → 所有设备", browser: "浏览器", desktop: "一体版" },
+  ])(
+    "guides desktop and headless managers to the same resource workspace",
+    ({ locale, resources, browser, desktop }) => {
+      for (const key of [
+        "federation.devices.tabIntro.manage",
+        "federation.servers.paired",
+        "federation.servers.add.description",
+        "federation.map.panel.manageTip",
+      ]) {
+        expect(locale[key]).toContain(resources);
+      }
+      expect(locale["federation.devices.tabIntro.manage"]).toContain(desktop);
+      for (const key of [
+        "federation.servers.add.description",
+        "federation.error.ManagedServerRemoteAccessDisabled",
+      ]) {
+        expect(locale[key]).toContain(browser);
+      }
+    },
+  );
 });

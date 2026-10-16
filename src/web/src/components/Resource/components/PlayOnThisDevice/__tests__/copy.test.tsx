@@ -18,6 +18,7 @@ vi.mock("@/components/bakaui", () => ({
   Modal: ({ children }: any) => <div role="dialog">{children}</div>,
   Button: ({ children, onPress }: any) => <button onClick={onPress}>{children}</button>,
   Chip: ({ children }: any) => <span>{children}</span>,
+  Checkbox: () => null,
   Select: () => null,
   toast: { success: mocks.success, danger: mocks.danger },
 }));

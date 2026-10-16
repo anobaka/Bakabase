@@ -29,7 +29,6 @@ import {
   DataSyncLinkState,
   DataSyncProblemCode,
   DataSyncRequestIntent,
-  RemoteAccessMode,
 } from "@/sdk/constants";
 
 vi.mock("react-i18next", () => ({
@@ -69,14 +68,12 @@ vi.mock("../api", async (importOriginal) => ({
     overview: vi.fn(),
     createLink: vi.fn(async () => ({})),
     updateLink: vi.fn(async () => ({})),
-    copyOnce: vi.fn(async () => ({})),
     resetLink: vi.fn(async () => undefined),
     cancelRequest: vi.fn(async () => undefined),
     approveRequest: vi.fn(async () => ({ readBackGranted: false })),
     rejectRequest: vi.fn(async () => undefined),
     setSharing: vi.fn(async () => undefined),
     revokeReader: vi.fn(async () => undefined),
-    createInvitation: vi.fn(),
   },
 }));
 
@@ -404,22 +401,6 @@ describe("data sync in the device map's details", () => {
 
     expect(container).toBeEmptyDOMElement();
   });
-
-  it("opens a code for the device from the editor", async () => {
-    section(
-      mapNode({
-        sources: {
-          sync: mapPeer("nas", "NAS", { peerMayReadUs: false }),
-          syncRequests: [],
-        },
-      }),
-    );
-
-    fireEvent.click(screen.getByText("dataSync.invitation.createFor NAS"));
-    expect(await screen.findByTestId("data-sync-invitation")).toHaveTextContent(
-      "dataSync.invitation.createFor NAS",
-    );
-  });
 });
 
 describe("data sync for a device found nearby", () => {
@@ -431,7 +412,7 @@ describe("data sync for a device found nearby", () => {
           node={{
             name: "Garage",
             sources: {
-              sharingCandidate: {
+              dataSyncCandidate: {
                 nodeId: "garage",
                 address: "http://192.168.1.70:34567",
                 sharesDefinitions,
@@ -508,26 +489,6 @@ describe("this device's data sync, in the device map's details", () => {
       "href",
       "/data-sync",
     );
-  });
-
-  it("offers a code that turns on what it needs first, never a disabled button", async () => {
-    await self(mapView({ sharingEnabled: false, remoteAccessMode: RemoteAccessMode.Disabled }));
-
-    expect(screen.getByTestId("data-sync-self-code")).not.toBeDisabled();
-    fireEvent.click(screen.getByTestId("data-sync-self-code"));
-    expect(screen.queryByTestId("data-sync-invitation-create")).toBeNull();
-    expect(confirmation()).toMatchObject({
-      title: "dataSync.sharing.onTitle",
-      description: "dataSync.invitation.turnOnFirst",
-      warning: "dataSync.twoWay.turnsOnSharing dataSync.sharing.remoteAccess",
-    });
-    await act(() => confirmation().action() as Promise<void>);
-    expect(dataSyncApi.setSharing).toHaveBeenCalledWith({
-      enabled: true,
-      enablePairedRemoteAccess: true,
-    });
-    // Then the code dialog opens.
-    expect(screen.getByTestId("data-sync-invitation-create")).toBeInTheDocument();
   });
 
   it("shows the page's sharing controls, turning sharing off from any window", async () => {

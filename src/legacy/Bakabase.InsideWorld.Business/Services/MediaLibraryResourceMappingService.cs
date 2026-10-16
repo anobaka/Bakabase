@@ -70,8 +70,13 @@ public class MediaLibraryResourceMappingService<TDbContext>(
     public Task<HashSet<int>> GetMediaLibraryIdsByResourceId(int resourceId)
         => indexService.GetByKey2Async(resourceId);
 
-    public Task<Dictionary<int, HashSet<int>>> GetMediaLibraryIdsByResourceIds(IEnumerable<int> resourceIds)
-        => indexService.GetByKey2sAsync(resourceIds);
+    public async Task<Dictionary<int, HashSet<int>>> GetMediaLibraryIdsByResourceIds(IEnumerable<int> resourceIds)
+    {
+        if (!PersistedReadScope.IsActive) return await indexService.GetByKey2sAsync(resourceIds);
+        var ids = resourceIds.Distinct().ToArray();
+        return (await orm.GetAll(row => Enumerable.Contains(ids, row.ResourceId)))
+            .GroupBy(row => row.ResourceId).ToDictionary(g => g.Key, g => g.Select(row => row.MediaLibraryId).ToHashSet());
+    }
 
     #endregion
 

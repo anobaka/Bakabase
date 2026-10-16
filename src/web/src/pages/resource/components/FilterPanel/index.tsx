@@ -9,15 +9,18 @@ import { AiOutlineExport, AiOutlineFilter, AiOutlinePlus, AiOutlineSearch } from
 import { MdPlaylistPlay } from "react-icons/md";
 import { HistoryOutlined } from "@ant-design/icons";
 
-import { ReferenceValueSearchProvider } from "@/hooks/useReferenceValueResourceCounts";
-
 import OrderSelector from "./OrderSelector";
 import ShortcutsButton from "./ShortcutsButton";
 import { requiresAdvancedFilterMode } from "./utils";
+import DeviceFilter, { shouldShowDeviceFilter } from "./DeviceFilter";
 
+import { ReferenceValueSearchProvider } from "@/hooks/useReferenceValueResourceCounts";
 import { FilterDisplayMode } from "@/sdk/constants";
 import { PlaylistCollection } from "@/components/Playlist";
 import { Button, Checkbox, Popover, Spinner, Tooltip } from "@/components/bakaui";
+import { useResourceSources } from "@/features/management/resourceSourcesContext";
+import { MetadataSyncStatus } from "@/features/management/MetadataSyncStatus";
+import { normalizeQueryOwner, resolveQuerySources } from "@/features/management/resourceQuery";
 import MiscellaneousOptions from "@/pages/resource/components/FilterPanel/MiscellaneousOptions";
 import CreatePlaceholderResourcesModal from "@/components/Resource/components/CreatePlaceholderResourcesModal";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
@@ -26,6 +29,7 @@ import { buildLogger, useTraceUpdate } from "@/components/utils.tsx";
 
 interface IProps {
   selectedResourceIds?: number[];
+  selectedResourceCount?: number;
   maxResourceColCount?: number;
   searchForm?: SearchForm;
   onSearch?: (form: Partial<SearchForm>, newTab: boolean) => Promise<any>;
@@ -44,6 +48,7 @@ const MinResourceColCount = 3;
 const DefaultResourceColCount = 6;
 const DefaultMaxResourceColCount = 10;
 const AutoSearchDebounceMs = 1000;
+const ToolbarButtonClassName = "h-7 w-7 min-w-7";
 
 const defaultSearchForm = (): SearchForm => ({
   page: 1,
@@ -79,11 +84,16 @@ const FilterPanel = (props: IProps) => {
   });
 
   const { t } = useTranslation();
+  const sourceContext = useResourceSources();
+  const sources = sourceContext?.sources ?? [];
+  const selectedCount = props.selectedResourceCount ?? selectedResourceIds?.length ?? 0;
   const { createPortal } = useBakabaseContext();
 
   const [selectedAll, setSelectedAll] = useState(false);
 
-  const [searchForm, setSearchForm] = useState<SearchForm>(propsSearchForm || defaultSearchForm());
+  const [searchForm, setSearchForm] = useState<SearchForm>(
+    normalizeQueryOwner(propsSearchForm || defaultSearchForm()),
+  );
   const [searching, setSearching] = useState(false);
   const [filterMode, setFilterMode] = useState<FilterDisplayMode>(() =>
     requiresAdvancedFilterMode(propsSearchForm?.group)
@@ -123,7 +133,7 @@ const FilterPanel = (props: IProps) => {
   };
 
   useUpdateEffect(() => {
-    setSearchForm(propsSearchForm || defaultSearchForm());
+    setSearchForm(normalizeQueryOwner(propsSearchForm || defaultSearchForm()));
     // Restoring a query changes presentation only: never flatten or discard its conditions.
     if (requiresAdvancedFilterMode(propsSearchForm?.group)) {
       setFilterMode(FilterDisplayMode.Advanced);
@@ -186,16 +196,19 @@ const FilterPanel = (props: IProps) => {
       className="flex h-full min-h-0 min-w-0 flex-col"
     >
       <header className="flex shrink-0 flex-col gap-3 pb-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="flex items-center gap-2 text-sm font-semibold">
-            <AiOutlineFilter aria-hidden className="text-base text-primary" />
-            {t("resource.search.panelTitle")}
+        <div className="flex min-w-0 flex-wrap items-center justify-between gap-1">
+          <h2 className="flex min-w-0 items-center gap-1.5 text-sm font-semibold">
+            <AiOutlineFilter aria-hidden className="shrink-0 text-base text-primary" />
+            <span className="truncate" title={t("resource.search.panelTitle")}>
+              {t("resource.search.panelTitle")}
+            </span>
           </h2>
-          <div className="flex items-center gap-1">
+          <div className="flex shrink-0 items-center gap-0.5">
             <Tooltip content={t<string>("resource.unmaterialized.tip")}>
               <Button
                 isIconOnly
                 aria-label={t("resource.unmaterialized.action.open")}
+                className={ToolbarButtonClassName}
                 color="default"
                 size="sm"
                 variant="light"
@@ -208,13 +221,14 @@ const FilterPanel = (props: IProps) => {
                 <AiOutlinePlus aria-hidden className="text-lg" />
               </Button>
             </Tooltip>
-            <ShortcutsButton />
+            <ShortcutsButton className={ToolbarButtonClassName} />
             <Popover
               className="min-w-[160px]"
               trigger={
                 <Button
                   isIconOnly
                   aria-label={t("resource.search.playlists")}
+                  className={ToolbarButtonClassName}
                   color={"default"}
                   size={"sm"}
                   variant={"light"}
@@ -229,6 +243,7 @@ const FilterPanel = (props: IProps) => {
               <Button
                 isIconOnly
                 aria-label={t("resource.search.recentlyPlayed")}
+                className={ToolbarButtonClassName}
                 color={"default"}
                 size={"sm"}
                 variant={"light"}
@@ -237,7 +252,18 @@ const FilterPanel = (props: IProps) => {
                 <HistoryOutlined className={"text-base"} />
               </Button>
             </Tooltip>
-            <MiscellaneousOptions rearrangeResources={rearrangeResources} />
+            {sourceContext && (
+              <MetadataSyncStatus
+                className={ToolbarButtonClassName}
+                presentation="popover"
+                sources={resolveQuerySources(searchForm, sources)}
+                onRefresh={sourceContext.refresh}
+              />
+            )}
+            <MiscellaneousOptions
+              className={ToolbarButtonClassName}
+              rearrangeResources={rearrangeResources}
+            />
           </div>
         </div>
       </header>
@@ -250,6 +276,22 @@ const FilterPanel = (props: IProps) => {
             showRecentFilters
             showTags
             filterDisplayMode={filterMode}
+            filterGroupsPrefix={
+              shouldShowDeviceFilter(sources, searchForm) ? (
+                <DeviceFilter
+                  deviceIds={searchForm.deviceIds}
+                  owner={searchForm.owner}
+                  sources={sources}
+                  onChange={(deviceIds) => {
+                    const next = { ...searchForm, owner: undefined, deviceIds, page: 1 };
+
+                    setSearchForm(next);
+                    cancelPendingAutoSearch();
+                    void search(next);
+                  }}
+                />
+              ) : undefined
+            }
             filterLayout="vertical"
             group={searchForm.group}
             keyword={searchForm.keyword}
@@ -342,7 +384,7 @@ const FilterPanel = (props: IProps) => {
             }
           >
             <Checkbox
-              isSelected={selectedAll && selectedResourceIds && selectedResourceIds?.length > 0}
+              isSelected={selectedAll && selectedCount > 0}
               size={"sm"}
               onValueChange={(isSelected) => {
                 onSelectAllChange(isSelected);
@@ -351,7 +393,7 @@ const FilterPanel = (props: IProps) => {
             >
               {selectedAll
                 ? t<string>("resource.search.selectedCount", {
-                    count: selectedResourceIds?.length,
+                    count: selectedCount,
                   })
                 : t<string>("resource.search.selectAll")}
             </Checkbox>

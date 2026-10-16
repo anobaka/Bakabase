@@ -1,16 +1,82 @@
-# Server Switching (managing other servers from the desktop app)
+# Device Management and Desktop Server Switching
 
 Every PC install is the all-in-one desktop app. It always runs its own server, and its main
 window can switch to another server it manages — a NAS, or another PC's all-in-one — and
-control it fully, as the removed thin client did. Headless servers (Docker/NAS) never
-manage anything; they are only ever managed.
+control it fully, as the removed thin client did. Headless servers (Docker/NAS and directly
+hosted Service) can also manage explicitly paired devices through the unified management
+workspace. They have no desktop relay or native program launcher.
+
+## Unified management
+
+- Pairing, signed requests, verified server identity and persistent connections live in
+  `Bakabase.Modules.RemoteAccess/Components/Management`. `RemoteConsoleManager` is the
+  desktop adapter; existing connection files, keys, path mappings and relay ports are preserved.
+- `/federation/local/management` serves the local manager UI. It uses paired administrator
+  connections, never definitions-sync grants. A manages B only after B authorizes it;
+  neither reciprocal management nor access to devices managed by B is implied.
+- Resource, property and media-library operations are named allowlisted operations, bound
+  to `(serverId, libraryEpoch, owner-local ID)`. Editing B writes B. Source-scoped resource
+  profiles configured on A stay on A. Never replace the global frontend SDK endpoint or
+  merge different owners' numeric IDs.
+- Managed resource metadata is pulled into one disk SQLite replica per owner and library
+  epoch (`Components/Federation/MetadataReplicas`). Search and metadata reads use that local
+  replica; files and mutations still go to their owner. Replicas never enter local resource
+  tables or get exported as this device's resources. There is no offline write queue.
+  Unavailable sources remain visible and their last complete snapshot is searchable; confirmed
+  revoked or changed identities are denied. Unknown ordinary write outcomes are never retried.
+- Initial sync pages catalogs, resources and a catch-up journal. Checkpoint and page contents
+  commit together. A new generation stages alongside the previous complete snapshot; partial
+  sync is never an empty successful library. Source dirty rows are durable, transactionally
+  maintained and bounded by resource IDs (including tombstones), not edit count. Triggers are
+  activated only when a manager first requests metadata, preserving standalone startup costs.
+  Queries run the existing property descriptor algebra in bounded partitions and keep matches
+  on disk; never hydrate all resource properties into another whole-library memory index.
+- Before dispatching an ordinary managed write, persist a refresh barrier and hold that owner's
+  sync gate. Subsequent metadata reads catch up or report `MetadataRefreshPending`; never show
+  stale cached values as a successful read after a save. This barrier does not invent optimistic
+  concurrency for old owner APIs: ordinary edits keep their existing owner-side semantics.
+  Device names, shared scope/rule editors and processing results have explicit compare-and-swap
+  checks. Device renaming preserves identity, grants, pairings and path mappings.
+- `ManagedServersView.available` means management is available. Only
+  `canOpenDesktopView` permits desktop view switching. Native managed-resource playback
+  reuses the desktop's existing `LocalPlayback` and source-scoped ResourceProfiles; browser
+  media is streamed through the manager using owner-discovered candidates.
+
+## Synced items in ordinary pages
+
+Resource metadata and catalogs are rendered in the existing resource, custom-property,
+media-library, extension-group and collection pages. Reuse the original cards, table rows,
+filters and editors; do not add per-device sections, a separate remote-data view or a reduced
+editor. Ownership is item metadata. The common `DeviceDot` marks foreign items, using the
+viewing server's `UIOptions.DeviceColors`; an unset color remains stable by device ID.
+Native ordering and filtering mix all owners. An equal numeric ID or name never merges items:
+React keys, selections, deep links and mutation targets include server ID and library epoch.
+
+`features/management/ownedCatalog` augments native local lists with completed replica catalogs,
+with bounded source fan-out and stale-response guards. Catalog revision changes refresh catalog
+rows even without a resource sequence change. Offline replicas remain readable, edits need the
+owner online, and revoked/changed-owner rows cease to be actionable. Only local custom-property
+and extension-group rows query definitions-sync status by local ID. A definition imported by
+that protocol belongs to the receiving device; sync provenance is separate from ownership.
+
+Editors use the captured `ResourceOwnerProvider` / owner SDK and named operation allowlist,
+never a global endpoint override. Ordinary type conversion and option-use checks run on the
+same owner as the property being edited. Property order is stored per owner; the existing sort
+editor chooses that owner before saving. Owner-specific collection/library search links pin
+both device and epoch. Collection member flag reads are limited to the displayed page's IDs.
+Collection replica summaries omit acquisition settings and subscription configuration: full
+online editors read the owner model before a full PUT so a color or settings edit cannot erase
+unsynced fields. Offline views do not invent missing configuration values.
+
+The following relay rules describe the optional desktop full-view fallback. Daily library
+management does not require navigating to another device's SPA.
 
 ## How it works
 
-- **The other server's own UI, not ours.** The window shows the target's own SPA bundle, so
+- **Full-view switching uses the other server's own UI.** The window shows the target's own SPA bundle, so
   UI and API always match whatever version the target runs. This device's bundle could not
-  drive another server's API anyway: the SPA is same-origin by construction, and request
-  signing cannot happen in a page.
+  drive arbitrary versions of another server's API: unified management instead negotiates a
+  bounded contract and signs the owner's requests in the manager server, never in the page.
 - **One relay per managed server.** `Bakabase.Remoting` composes, for each server, a slim
   `WebApplication` with its own container, bound to `127.0.0.1` on a port that stays the same
   for that server across launches (browser storage is keyed by origin). It signs every
@@ -20,10 +86,18 @@ manage anything; they are only ever managed.
 - **Never in the Service.** The relays live next to the in-process server, not inside its
   container or pipeline — the user-machine dispatcher would otherwise intercept the local
   server's own play and open routes. The Service reaches them only through
-  `IManagedServerService` (resolved optionally), and headless builds register none.
+  `IManagedServerService`; headless builds register the shared connection core without relays.
 - **Switching is a navigation.** The SPA asks for a URL (`/federation/local/servers/{id}/open`
   locally, `/client/switcher/{id}/open` inside a relay) and assigns `location`. The tray menu
   (`IMainViewSwitcher`) is the way back when the target's UI is too old to have a switcher.
+  Device-menu and tray switches carry only the current SPA pathname through
+  `#/device-switch?path=...`, preserving the relay ticket outside the fragment. The target
+  resolves that path against its own visible menu after reading its context and navigation
+  settings. A detail page lands on its menu root; an unavailable menu lands on the dashboard.
+  Never carry resource IDs, owner IDs, filters or other source query parameters to another
+  device. Failed context/settings reads offer retry instead of pretending the menu is absent.
+  Explicit links to controller settings, device management or other named pages keep their
+  requested destination. Older UIs safely send the unknown handoff route to their dashboard.
 - **A server is its install identity, not its address.** A relay forwards, and signs, nothing
   until its server's address has answered the pairing handshake (`/remote-access/server-info`)
   with that server's `ServerId` (`UpstreamIdentity`, with `RemoteConsoleManager` as the
@@ -102,7 +176,7 @@ manage anything; they are only ever managed.
   waits on the network or the disk.
 - **Management is legacy paired-device access.** Pairing uses `/remote-access/pair/*` with a
   code or an approved request, exactly as the removed thin client did, and grants full control
-  of the target. It is unrelated to federation grants, which stay read-only. Approving a request
+  of the target. It is unrelated to definitions-sync grants, which only permit reading definitions. Approving a request
   (`pairing/requests/{id}/approve`) answers the id the device will be listed under once it has
   collected its key — never the key — so the page that approved it can find it.
 - **A filed request is collected in the background.** The manager claims it every few seconds
@@ -120,18 +194,52 @@ manage anything; they are only ever managed.
   last answer as itself, like `mode` and `appVersion`: never from whoever answers at its
   address instead, and never a reason to refuse a handshake — a value this app does not know,
   as a number or a name, reads as nothing.
-- **Finding servers to manage uses the remote-access beacons**, not library sharing:
+- **Finding servers to manage uses the remote-access beacons**:
   `GET /federation/local/servers/discover` (UDP probe + mDNS, ~3 s, on request only) lists
   every server answering them, minus this machine's own answers (loopback or any address of its
   interfaces, `ThisMachine`; over mDNS, only a host whose every advertised address is — another
   machine can advertise a VPN or virtual adapter's address this one holds too, and is offered
   at one it does not) and marked when already managed. Another machine answering with
   this install's own id is listed, never hidden behind this machine's answer: it is a copy of
-  this data directory, and adding it says so (`SameIdentity`). Library
-  sharing's discovery only lists servers that opted into sharing, which says nothing about
-  whether a server can be managed.
+  this data directory, and adding it says so (`SameIdentity`). No extra resource-sharing switch
+  is required. Definitions discovery is separate and does not imply management access.
 
 ## Invariants — do not weaken
+
+- **Source-specific resource profiles belong to the viewing device.** A profile with
+  `SourceDeviceId` is saved through that device's normal ResourceProfile editor; its full
+  player executable, arguments and extension rules never travel to the source. In this
+  player options and opening mode are evaluated on the viewing device. Enhancement and
+  playable-file rules may also name an explicit execution device; resulting metadata still
+  belongs to the resource owner. Rules can share a named `ResourceScope`; resolve the current
+  scope's search before matching, never its profile's old inline fallback. Each rule block is
+  saved independently with a version guard, retaining existing effective-profile precedence.
+  Searches use the source's resources and property vocabulary, pinned by `SourceLibraryEpoch`;
+  never hydrate its integer IDs against this device's database. Local profiles have no
+  source ID and retain their existing behavior. A managed page may read its resources'
+  effective opening modes through the relay, but configuration navigates home. No standalone
+  per-kind player override store is used. Explicit local player configurations may name any
+  application; the known-player relocation rules apply only to inherited remote players.
+  Neither this matching API nor a definitions grant grants reciprocal access or
+  synchronizes profile configuration to the source.
+
+- **Cross-device processing is explicit, resumable work.** `Components/Federation/Processing`
+  separates coordinator, owner and worker rows in the main DB; these rows are never full-memory
+  cached, journaled as resources, or definition-synced. A manager selects one of its saved rules
+  and scans matching resource IDs in bounded keyset pages. The owner prepares one resource and
+  enhancer step; the worker computes using its own explicit owner-to-worker path mapping.
+  Management is directional: A coordinating B does not require B to manage A. A third worker C
+  must be explicitly managed by A and have its own mapping/connection to B.
+  No arbitrary command, player program or executable config is part of this protocol.
+- **Apply only checked results.** Pin owner epoch, source revision, property catalog and rule
+  hash. Check the manager's current rule/scope before applying; the owner checks its revision
+  and catalog under the same transaction that writes normal metadata and the idempotent receipt.
+  Dependent enhancers prepare fresh data after their predecessor commits. On a lost response,
+  read the receipt before retransferring files or retrying apply. Attachments are bounded,
+  content-addressed chunks outside JSON and installed through the owner's file manager.
+  Worker-local paths/IDs never become owner attachment paths/IDs. Compact completed payloads
+  and clean temporary files after durable acknowledgement. A stopped job retains its checkpoint;
+  conflict requires a new run with the current data rather than an automatic overwrite.
 
 - **Keys stay in the store.** Device keys live in `AppData/remote-access/managed/connection.json`
   (mode 0600 on Unix), never in `[Options]`, never in a DTO, log line or `/client` response.
@@ -217,8 +325,8 @@ manage anything; they are only ever managed.
   and node as they were, and every server still managed, key and relay. The store edits a copy
   and holds it only once the file is in place (`ClientConnectionStore.MutateAsync`), so no later
   write — a path mapping, a relay noting an answer — saves a reset that was refused (only the
-  filed requests are already dropped). A headless server manages nothing and composes no
-  `IManagedServerService`, so `federation new-identity` has nothing to forget there. Until
+  filed requests are already dropped). Headless servers have the same outbound connection
+  store and must also forget its credentials locally when changing identity. Until
   the copy is made a new device, revoking that device on a server, or "stop managing" on
   either install (which asks the server to revoke it), ends management from both.
 - **Warn, never reconfigure.** A target in `RemoteAccessMode.Unrestricted` is flagged in the UI;
@@ -237,8 +345,7 @@ manage anything; they are only ever managed.
   own name from such an address is this device through another door — a reverse proxy or port forward on another host, the router's
   public address looping back — and stays `ThisDevice`: the reset would unpair every device
   for nothing (a copy on a machine of the same name reads as this device too, refused all the
-  same). Library sharing cannot tell those two apart (a node's name is in its data
-  directory), so its `SameIdentity` names both. Only that action replaces the `ServerId`: the
+  same). Only that action replaces the `ServerId`: the
   recovery of an unreadable federation state replaces the node alone, with an id of its own.
   Whether an address is this machine's is judged by its host — an address its interfaces hold,
   or a name resolving only to such addresses — and, where a lookup runs out of time, reads as

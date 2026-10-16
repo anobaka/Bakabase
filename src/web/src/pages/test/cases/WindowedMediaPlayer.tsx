@@ -6,6 +6,7 @@ import React, { useEffect, useState } from "react";
 
 import { Button, Spinner, toast } from "@/components/bakaui";
 import MediaPlayer from "@/components/MediaPlayer";
+import { MEDIA_PLAYER_WINDOW_PERSISTENCE_KEY } from "@/components/Window/persistence";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { IwFsType } from "@/sdk/constants";
 import BApi from "@/sdk/BApi";
@@ -81,6 +82,7 @@ const WindowedMediaPlayerTest = () => {
       },
       {
         title: `Media Player ${instanceId}`,
+        persistenceKey: MEDIA_PLAYER_WINDOW_PERSISTENCE_KEY,
         persistent: true,
         afterClose: () => {
           setWindowCount((prev) => Math.max(0, prev - 1));
@@ -112,6 +114,7 @@ const WindowedMediaPlayerTest = () => {
           },
           {
             title: `Media Player ${instanceId}`,
+            persistenceKey: MEDIA_PLAYER_WINDOW_PERSISTENCE_KEY,
             persistent: true,
             afterClose: () => {
               setWindowCount((prev) => Math.max(0, prev - 1));

@@ -31,12 +31,6 @@ export const edgeStyles: Record<
   MapEdgeKind,
   { stroke: string; fill: string; text: string; width: number }
 > = {
-  sharing: {
-    stroke: "stroke-primary",
-    fill: "fill-primary",
-    text: "text-primary",
-    width: 2,
-  },
   management: {
     stroke: "stroke-warning",
     fill: "fill-warning",
@@ -53,8 +47,7 @@ export const edgeStyles: Record<
 };
 
 /**
- * What each kind means, drawn small enough to sit on a line: an eye for browsing a library,
- * a key for full control, two turning arrows for sync. Centred on (0, 0), about 12 across.
+ * What each kind means, drawn small enough to sit on a line: a key for full control, two turning arrows for sync. Centred on (0, 0), about 12 across.
  */
 export const KindBadgeGlyph = ({ kind, className }: { kind: MapEdgeKind; className: string }) => {
   const common = {
@@ -64,13 +57,6 @@ export const KindBadgeGlyph = ({ kind, className }: { kind: MapEdgeKind; classNa
     strokeLinejoin: "round" as const,
   };
 
-  if (kind === "sharing")
-    return (
-      <g aria-hidden>
-        <path {...common} d="M-5.8 0 C-3.6 -3.6 3.6 -3.6 5.8 0 C3.6 3.6 -3.6 3.6 -5.8 0 Z" />
-        <circle {...common} r={1.7} />
-      </g>
-    );
   if (kind === "management")
     return (
       <g aria-hidden>

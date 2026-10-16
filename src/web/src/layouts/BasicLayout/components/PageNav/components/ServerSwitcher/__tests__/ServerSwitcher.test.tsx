@@ -74,9 +74,9 @@ function LocationProbe() {
   return <p data-testid="location">{`${location.pathname}${location.search}`}</p>;
 }
 
-const renderSwitcher = (collapsed = false) =>
+const renderSwitcher = (collapsed = false, initialEntry = "/resource") =>
   render(
-    <MemoryRouter initialEntries={["/resource"]}>
+    <MemoryRouter initialEntries={[initialEntry]}>
       <ServerSwitcher collapsed={collapsed} />
       <Routes>
         <Route element={<LocationProbe />} path="*" />
@@ -152,7 +152,7 @@ describe("this device's own window", () => {
         url: "http://127.0.0.1:34650/?__bakabase_switch=token",
       }),
     ];
-    renderSwitcher();
+    renderSwitcher(false, "/resource?owner=mac&resourceId=123#selection");
     expect(within(trigger()).getByText("Desk")).toBeInTheDocument();
     expect(screen.queryByText("federation.switcher.managing")).not.toBeInTheDocument();
     await waitFor(() => expect(requestsTo("GET", "/federation/local/servers")).toHaveLength(1));
@@ -166,7 +166,7 @@ describe("this device's own window", () => {
     const items = within(menu).getAllByRole("menuitem");
 
     expect(items[0]).toHaveTextContent("Desk");
-    expect(items[0]).toHaveTextContent("federation.thisDevice");
+    expect(items[0]).toHaveTextContent("federation.switcher.controller");
     expect(items[0]).toHaveAttribute("aria-current", "true");
     await waitFor(() =>
       expect(within(menu).getByRole("menuitem", { name: /NAS/ })).toHaveTextContent(
@@ -186,7 +186,9 @@ describe("this device's own window", () => {
       fireEvent.click(within(menu).getByRole("menuitem", { name: /NAS/ }));
     });
     await waitFor(() =>
-      expect(assign).toHaveBeenCalledWith("http://127.0.0.1:34650/?__bakabase_switch=token"),
+      expect(assign).toHaveBeenCalledWith(
+        "http://127.0.0.1:34650/?__bakabase_switch=token#/device-switch?path=%2Fresource",
+      ),
     );
     expect(
       JSON.parse(String(requestsTo("POST", "/federation/local/servers/nas/open")[0][1]?.body)),
@@ -207,9 +209,23 @@ describe("this device's own window", () => {
     renderSwitcher();
     const menu = await openMenu();
 
-    expect(within(menu).getByText("federation.switcher.empty")).toBeInTheDocument();
+    expect(within(menu.parentElement!).getByText("federation.switcher.empty")).toBeInTheDocument();
     fireEvent.click(within(menu).getAllByRole("menuitem")[0]);
-    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole("menu")).not.toBeInTheDocument());
+    expect(assign).not.toHaveBeenCalled();
+    expect(fetchMock.mock.calls.some(([, init]) => init?.method === "POST")).toBe(false);
+  });
+
+  it("opens this controller's configuration directly from the settings button", async () => {
+    routes = [
+      on("GET", "/federation/local/servers", { available: true, servers: [], requests: [] }),
+    ];
+    renderSwitcher();
+    fireEvent.click(
+      screen.getByRole("button", { name: "federation.switcher.controllerSettingsNamed" }),
+    );
+    expect(screen.getByTestId("location")).toHaveTextContent("/configuration");
+    await act(async () => {});
     expect(assign).not.toHaveBeenCalled();
     expect(fetchMock.mock.calls.some(([, init]) => init?.method === "POST")).toBe(false);
   });
@@ -253,16 +269,18 @@ describe("this device's own window", () => {
 
     // This device is still offered; the failure is said where the servers would be.
     expect(within(menu).getAllByRole("menuitem")[0]).toHaveTextContent("Desk");
-    expect(await within(menu).findByRole("alert")).toHaveTextContent(
+    expect(await within(menu.parentElement!).findByRole("alert")).toHaveTextContent(
       "federation.switcher.listFailed",
     );
-    expect(within(menu).queryByText("federation.switcher.empty")).not.toBeInTheDocument();
+    expect(
+      within(menu.parentElement!).queryByText("federation.switcher.empty"),
+    ).not.toBeInTheDocument();
     fail = false;
     await act(async () => {
       fireEvent.click(within(menu).getByRole("menuitem", { name: "federation.retry" }));
     });
     expect(await within(menu).findByRole("menuitem", { name: /NAS/ })).toBeInTheDocument();
-    expect(within(menu).queryByRole("alert")).not.toBeInTheDocument();
+    expect(within(menu.parentElement!).queryByRole("alert")).not.toBeInTheDocument();
   });
 
   it("walks the menu with the keyboard and closes when focus leaves it", async () => {
@@ -330,7 +348,7 @@ describe("this device's own window", () => {
     await act(async () => {
       fireEvent.click(await within(menu).findByRole("menuitem", { name: /NAS/ }));
     });
-    expect(await within(menu).findByRole("alert")).toHaveTextContent(
+    expect(await within(menu.parentElement!).findByRole("alert")).toHaveTextContent(
       "federation.switcher.openFailed",
     );
     expect(assign).not.toHaveBeenCalled();
@@ -363,7 +381,7 @@ describe("this device's own window", () => {
     await act(async () => {
       fireEvent.click(await within(menu).findByRole("menuitem", { name: /NAS/ }));
     });
-    expect(await within(menu).findByRole("alert")).toHaveTextContent(
+    expect(await within(menu.parentElement!).findByRole("alert")).toHaveTextContent(
       "federation.error.RelayUnavailable",
     );
     expect(assign).not.toHaveBeenCalled();
@@ -379,11 +397,12 @@ describe("this device's own window", () => {
       }),
     ];
     renderSwitcher();
+    trigger().focus();
     await openMenu();
     expect(trigger()).toHaveAttribute("aria-expanded", "true");
-    fireEvent.keyDown(document, { key: "Escape" });
-    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
-    expect(trigger()).toHaveFocus();
+    fireEvent.keyDown(screen.getByRole("menu"), { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("menu")).not.toBeInTheDocument());
+    await waitFor(() => expect(trigger()).toHaveFocus());
   });
 
   it("stays a menu when collapsed, showing the initial", async () => {
@@ -405,6 +424,23 @@ describe("this device's own window", () => {
     const menu = await openMenu();
 
     expect(await within(menu).findByRole("menuitem", { name: /NAS/ })).toBeInTheDocument();
+  });
+
+  it("does not offer desktop view switching on a headless manager", async () => {
+    routes = [
+      on("GET", "/federation/local/servers", {
+        available: true,
+        canOpenDesktopView: false,
+        servers: [server()],
+        requests: [],
+      }),
+    ];
+    renderSwitcher();
+    await waitFor(() => expect(requestsTo("GET", "/federation/local/servers")).toHaveLength(1));
+    expect(screen.getByRole("link", { name: "Bakabase" })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "federation.switcher.label" }),
+    ).not.toBeInTheDocument();
   });
 
   it("keeps the plain brand link where nothing can be managed", async () => {
@@ -474,7 +510,7 @@ describe("the console (the desktop app showing a managed server)", () => {
         data: { url: "http://127.0.0.1:34651/?__bakabase_switch=abc" },
       }),
     );
-    renderSwitcher();
+    renderSwitcher(false, "/custom-property?owner=nas&propertyId=12");
     const menu = await openMenu();
     const studio = await within(menu).findByRole("menuitem", { name: /Studio/ });
 
@@ -483,13 +519,15 @@ describe("the console (the desktop app showing a managed server)", () => {
       "true",
     );
     expect(within(menu).getByRole("menuitem", { name: /Desk/ })).toHaveTextContent(
-      "federation.thisDevice",
+      "federation.switcher.controller",
     );
     await act(async () => {
       fireEvent.click(studio);
     });
     await waitFor(() =>
-      expect(assign).toHaveBeenCalledWith("http://127.0.0.1:34651/?__bakabase_switch=abc"),
+      expect(assign).toHaveBeenCalledWith(
+        "http://127.0.0.1:34651/?__bakabase_switch=abc#/device-switch?path=%2Fcustom-property",
+      ),
     );
   });
 
@@ -601,6 +639,76 @@ describe("the console (the desktop app showing a managed server)", () => {
     }
   });
 
+  it.each([false, true])(
+    "opens controller settings on its own origin, never the managed server's configuration (collapsed: %s)",
+    async (collapsed) => {
+      routes.push(
+        on("POST", "/client/switcher/local/open", {
+          code: 0,
+          data: { url: "http://localhost:34567/" },
+        }),
+      );
+      renderSwitcher(collapsed);
+      await act(async () =>
+        fireEvent.click(
+          screen.getByRole("button", { name: "federation.switcher.controllerSettingsNamed" }),
+        ),
+      );
+      const menu = screen.getByRole("menu");
+
+      expect(
+        within(menu).getByRole("menuitem", { name: /menu.client.pathMapping/ }),
+      ).toBeInTheDocument();
+      await act(async () =>
+        fireEvent.click(
+          within(menu).getByRole("menuitem", {
+            name: "federation.switcher.openControllerConfiguration",
+          }),
+        ),
+      );
+      await waitFor(() =>
+        expect(assign).toHaveBeenCalledWith("http://localhost:34567/#/configuration"),
+      );
+      expect(screen.getByTestId("location")).toHaveTextContent("/resource");
+      expect(requestsTo("POST", "/client/switcher/local/open")).toHaveLength(1);
+    },
+  );
+
+  it("keeps the active-server path mapping in the controlling desktop relay", async () => {
+    renderSwitcher();
+    await act(async () =>
+      fireEvent.click(
+        screen.getByRole("button", { name: "federation.switcher.controllerSettingsNamed" }),
+      ),
+    );
+    await act(async () =>
+      fireEvent.click(screen.getByRole("menuitem", { name: /menu.client.pathMapping/ })),
+    );
+    expect(screen.getByTestId("location")).toHaveTextContent("/client-path-mapping");
+    expect(assign).not.toHaveBeenCalled();
+    expect(fetchMock.mock.calls.some(([, init]) => init?.method === "POST")).toBe(false);
+  });
+
+  it("keeps settings open with an error when returning to the controller fails", async () => {
+    routes.push(on("POST", "/client/switcher/local/open", { code: 500 }, 500));
+    renderSwitcher();
+    await act(async () =>
+      fireEvent.click(
+        screen.getByRole("button", { name: "federation.switcher.controllerSettingsNamed" }),
+      ),
+    );
+    await act(async () =>
+      fireEvent.click(
+        screen.getByRole("menuitem", { name: "federation.switcher.openControllerConfiguration" }),
+      ),
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "federation.switcher.controllerSettingsFailed",
+    );
+    expect(screen.getByTestId("location")).toHaveTextContent("/resource");
+    expect(assign).not.toHaveBeenCalled();
+  });
+
   it("goes back to this device's own devices page for management", async () => {
     routes.push(
       on("POST", "/client/switcher/local/open", {
@@ -633,18 +741,22 @@ describe("the console (the desktop app showing a managed server)", () => {
         data: { url: "http://localhost:34567/" },
       }),
     ];
-    renderSwitcher();
+    renderSwitcher(false, "/data-sync?deviceId=nas");
     const menu = await openMenu();
     const local = within(menu).getByRole("menuitem", { name: /Desk/ });
 
     // Not silent: the menu says the list is missing, and still offers the way back.
-    expect(await within(menu).findByRole("alert")).toHaveTextContent(
+    expect(await within(menu.parentElement!).findByRole("alert")).toHaveTextContent(
       "federation.switcher.listFailed",
     );
     await act(async () => {
       fireEvent.click(local);
     });
-    await waitFor(() => expect(assign).toHaveBeenCalledWith("http://localhost:34567/"));
+    await waitFor(() =>
+      expect(assign).toHaveBeenCalledWith(
+        "http://localhost:34567/#/device-switch?path=%2Fdata-sync",
+      ),
+    );
   });
 
   it("still says which server it is managing when the menu is collapsed", async () => {
@@ -656,7 +768,9 @@ describe("the console (the desktop app showing a managed server)", () => {
     const menu = await openMenu();
 
     // The open menu spells out what the collapsed button can only abbreviate.
-    expect(within(menu).getByText("federation.switcher.managingName")).toBeInTheDocument();
+    expect(
+      within(menu.parentElement!).getByText("federation.switcher.managingName"),
+    ).toBeInTheDocument();
     expect(await within(menu).findByRole("menuitem", { name: /Studio/ })).toBeInTheDocument();
   });
 
@@ -670,7 +784,7 @@ describe("the console (the desktop app showing a managed server)", () => {
     await act(async () => {
       fireEvent.click(await within(menu).findByRole("menuitem", { name: /Studio/ }));
     });
-    expect(await within(menu).findByRole("alert")).toBeInTheDocument();
+    expect(await within(menu.parentElement!).findByRole("alert")).toBeInTheDocument();
     expect(assign).not.toHaveBeenCalled();
   });
 
@@ -685,7 +799,7 @@ describe("the console (the desktop app showing a managed server)", () => {
     await act(async () => {
       fireEvent.click(await within(menu).findByRole("menuitem", { name: /Studio/ }));
     });
-    expect(await within(menu).findByRole("alert")).toHaveTextContent(
+    expect(await within(menu.parentElement!).findByRole("alert")).toHaveTextContent(
       "federation.error.RelayUnavailable",
     );
     expect(assign).not.toHaveBeenCalled();
@@ -700,7 +814,7 @@ describe("the console (the desktop app showing a managed server)", () => {
     await act(async () => {
       fireEvent.click(await within(menu).findByRole("menuitem", { name: /Studio/ }));
     });
-    expect(await within(menu).findByRole("alert")).toHaveTextContent(
+    expect(await within(menu.parentElement!).findByRole("alert")).toHaveTextContent(
       "federation.switcher.openFailed",
     );
   });

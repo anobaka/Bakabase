@@ -58,7 +58,7 @@ internal sealed class SyncWorld
     public async Task LinkAsync(SyncHost reader, SyncHost source, DataSyncLinkMode mode)
     {
         var created = await reader.CallAsync(s => s.CreateLinkAsync(
-            new DataSyncLinkCreateInput(source.NodeId, null, null, mode, [.. DataSyncKindIds.All]), true, default));
+            new DataSyncLinkCreateInput(source.NodeId, null, mode, [.. DataSyncKindIds.All]), true, default));
         Assert.IsNull(created.Problem, $"{reader} → {source}: {created.Problem?.Code} {created.Problem?.Detail}");
         if (created.RequestId is { } requestId)
         {

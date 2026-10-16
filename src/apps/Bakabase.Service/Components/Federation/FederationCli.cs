@@ -9,8 +9,8 @@ using Bakabase.Service.Components.DataSync;
 namespace Bakabase.Service.Components.Federation;
 
 /// <summary>
-/// Manages sharing of a running headless instance from its own machine, where the Devices page is
-/// unreachable: <c>docker exec &lt;container&gt; dotnet Bakabase.Service.dll federation invite</c>.
+/// Manages identity and definitions sync of a running headless instance from its own machine, where the Devices page is
+/// unreachable: <c>docker exec &lt;container&gt; dotnet Bakabase.Service.dll federation status</c>.
 /// It only calls the instance's loopback-only management API, so it needs no extra permission model:
 /// whoever can run a command inside the container already administers it.
 /// </summary>
@@ -21,15 +21,10 @@ public static class FederationCli
     private const string Usage =
         """
         Usage: dotnet Bakabase.Service.dll federation <command> [--port <port>]
-          status              Show sharing, devices and pending requests
-          share on|off        Turn read-only sharing of this library on or off
-          invite              Create a one-time code for another device
-          approve <requestId> Approve a pending request (lets that device read this library)
-          reject <requestId>  Reject a pending request
-          revoke <grantId>    Stop a device from reading this library
+          status              Show this device identity and access settings
           new-identity        For a copy of another installation's data: make this a new device
-                              (devices paired to manage it and library sharing are dropped;
-                              library data is kept)
+                              (incoming management, saved managed servers and definitions access are dropped
+                              locally; the original installation and library data are kept)
           datasync <command>  Definitions sharing (run 'federation datasync' for its commands)
         The port defaults to API_LISTENING_PORTS, ASPNETCORE_HTTP_PORTS, then 8080.
         """;
@@ -53,14 +48,8 @@ public static class FederationCli
             var response = (arguments[0], arguments.Count) switch
             {
                 ("status", 1) => await http.GetAsync(""),
-                ("share", 2) when arguments[1] is "on" or "off" =>
-                    await http.PutAsJsonAsync("sharing", new { enabled = arguments[1] == "on" }),
-                ("invite", 1) => await http.PostAsync("invite", null),
-                ("approve", 2) => await http.PostAsync($"requests/{Uri.EscapeDataString(arguments[1])}/approve", null),
-                ("reject", 2) => await http.PostAsync($"requests/{Uri.EscapeDataString(arguments[1])}/reject", null),
-                ("revoke", 2) => await http.DeleteAsync($"grants/{Uri.EscapeDataString(arguments[1])}"),
-                // The devices page's "Make this a new device", which a headless server's
-                // own UI — only ever reached from another device — cannot offer.
+                // Use the running host's same reset path: it also forgets outbound managed
+                // connections locally without revoking credentials used by the original copy.
                 ("new-identity", 1) => await http.PostAsJsonAsync("identity/reset",
                     new { asNewNode = true, replaceInstallIdentity = true }),
                 _ => null

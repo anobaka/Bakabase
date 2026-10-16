@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import toast from "../../../../bakaui/components/Toast";
 
 import { Button, Modal, Tooltip } from "@/components/bakaui";
-import BApi from "@/sdk/BApi.tsx";
+import { useResourceApi } from "@/features/management/resourceContext";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider.tsx";
 import { useUiOptionsStore } from "@/stores/options";
 import NameCover from "./NameCover";
@@ -25,6 +25,7 @@ const priorities = [
 ] as const;
 
 const FallbackCover = ({ id, name, afterClearingCache }: Props) => {
+  const BApi = useResourceApi();
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const useNameAsCover = useUiOptionsStore(

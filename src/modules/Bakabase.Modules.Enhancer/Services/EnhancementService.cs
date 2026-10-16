@@ -168,7 +168,10 @@ namespace Bakabase.Modules.Enhancer.Services
                     e.ResourceId)).Where(x => x.Scope.HasValue).ToList();
             var scopes = keys.Select(d => d.Scope).ToHashSet();
             var resourceIds = keys.Select(d => d.ResourceId).ToHashSet();
-            await using var tran = await DbContext.Database.BeginTransactionAsync();
+            // A distributed owner apply wraps deletion, replacement values and its receipt in one
+            // transaction. Preserve that outer transaction; ordinary callers still get our own.
+            await using var tran = DbContext.Database.CurrentTransaction == null
+                ? await DbContext.Database.BeginTransactionAsync() : null;
             await base.RemoveRange(enhancements);
             if (removeGeneratedCustomPropertyValues)
             {
@@ -180,7 +183,7 @@ namespace Bakabase.Modules.Enhancer.Services
                 await CustomPropertyValueService.RemoveRange(cpValues);
             }
 
-            await tran.CommitAsync();
+            if (tran != null) await tran.CommitAsync();
             return BaseResponseBuilder.Ok;
         }
     }

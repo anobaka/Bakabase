@@ -73,6 +73,41 @@ export const SettingsSearchResults: React.FC<{
   );
 };
 
+/** Shared with full-width settings panels that do not use the label/value row layout. */
+export const useSettingsSearchMatch = (id: string, matched: boolean) => {
+  const report = useContext(MatchReportContext);
+
+  useEffect(() => {
+    report?.(id, matched);
+
+    return () => report?.(id, false);
+  }, [report, id, matched]);
+};
+
+/** Shared row layout for settings that group rows inside expandable subsections. */
+export const SettingsRows = ({ items }: { items: SettingItem[] }) => (
+  <div className="divide-y divide-default-200/60 dark:divide-default-100/60">
+    {items.map((item) => (
+      <div
+        key={item.id}
+        className="grid gap-x-4 gap-y-1 px-4 py-2.5 items-center hover:bg-[var(--bakaui-overlap-background)] grid-cols-1 sm:grid-cols-[minmax(140px,220px)_1fr]"
+      >
+        <div className="flex items-center gap-1 text-sm text-foreground-600">
+          {item.label}
+          {item.tip && (
+            <Tooltip className="max-w-[300px]" color="secondary" content={item.tip} placement="top">
+              <span className="inline-flex">
+                <AiOutlineQuestionCircle className="text-base" />
+              </span>
+            </Tooltip>
+          )}
+        </div>
+        <div className="min-w-0">{item.render()}</div>
+      </div>
+    ))}
+  </div>
+);
+
 interface Props {
   /** Already translated. */
   title: string;
@@ -87,12 +122,9 @@ interface Props {
 
 const SettingsSection: React.FC<Props> = ({ title, items, query = "", keywords, header }) => {
   const visible = filterItems(title, items, query, keywords);
-  const report = useContext(MatchReportContext);
   const matched = visible.length > 0;
 
-  useEffect(() => {
-    report?.(title, matched);
-  }, [report, title, matched]);
+  useSettingsSearchMatch(title, matched);
 
   if (!matched) {
     return null;
@@ -104,31 +136,7 @@ const SettingsSection: React.FC<Props> = ({ title, items, query = "", keywords, 
         {title}
       </h2>
       {header && <div className="px-4 pt-3">{header}</div>}
-      <div className="divide-y divide-default-200/60 dark:divide-default-100/60">
-        {visible.map((item) => (
-          <div
-            key={item.id}
-            className="grid gap-x-4 gap-y-1 px-4 py-2.5 items-center hover:bg-[var(--bakaui-overlap-background)] grid-cols-1 sm:grid-cols-[minmax(140px,220px)_1fr]"
-          >
-            <div className="flex items-center gap-1 text-sm text-foreground-600">
-              {item.label}
-              {item.tip && (
-                <Tooltip
-                  className="max-w-[300px]"
-                  color="secondary"
-                  content={item.tip}
-                  placement="top"
-                >
-                  <span className="inline-flex">
-                    <AiOutlineQuestionCircle className="text-base" />
-                  </span>
-                </Tooltip>
-              )}
-            </div>
-            <div className="min-w-0">{item.render()}</div>
-          </div>
-        ))}
-      </div>
+      <SettingsRows items={visible} />
     </section>
   );
 };

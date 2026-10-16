@@ -4,6 +4,8 @@ import { useEffect, useState, useRef, useMemo } from "react";
 
 import { resourceDiscoveryChannel, type DiscoveryData } from "@/services/ResourceDiscoveryChannel";
 import { DataOrigin, DataStatus, ResourceDataType } from "@/sdk/constants";
+import { useResourceOwner } from "@/features/management/resourceContext";
+import { ownerClient } from "@/features/management/api";
 
 export type CoverResolutionState = {
   /** Best available covers (by provider priority) */
@@ -35,7 +37,36 @@ const COVER_PRIORITY: DataOrigin[] = [
 export function useCoverResolution(
   resource: Resource,
   callbacks?: CoverResolutionCallbacks,
+  refreshKey = 0,
 ): CoverResolutionState {
+  const source = useResourceOwner();
+  const remote = source && !source.isLocal ? source : undefined;
+  const [remoteCovers, setRemoteCovers] = useState<CoverResolutionState>({
+    covers: null,
+    status: "loading",
+  });
+
+  useEffect(() => {
+    if (!remote) return;
+    let cancelled = false;
+
+    setRemoteCovers({ covers: resource.covers ?? null, status: "loading" });
+    void ownerClient(remote)<string[]>("resourceCovers", { id: resource.id })
+      .then((result) => {
+        if (!cancelled)
+          setRemoteCovers({
+            covers: result.data ?? null,
+            status: result.data?.length ? "ready" : "not-found",
+          });
+      })
+      .catch(() => {
+        if (!cancelled) setRemoteCovers({ covers: null, status: "not-found" });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [remote, resource.id, resource.reloadToken, refreshKey]);
   // Get cover-related dataStates
   const coverStates = useMemo(
     () => resource.dataStates?.filter((s) => s.dataType === ResourceDataType.Cover) ?? [],
@@ -64,6 +95,7 @@ export function useCoverResolution(
 
   // SSE subscription effect
   useEffect(() => {
+    if (remote) return;
     const unsubscribes: (() => void)[] = [];
 
     for (const origin of originsToDiscover) {
@@ -93,7 +125,7 @@ export function useCoverResolution(
       unsubscribes.forEach((fn) => fn());
       subscribedRef.current = new Set();
     };
-  }, [resource.id, originsToDiscover.join(",")]);
+  }, [resource.id, originsToDiscover.join(","), remote]);
 
   // Reset SSE covers when resource changes
   useEffect(() => {
@@ -136,5 +168,5 @@ export function useCoverResolution(
     return { covers: null, status: "not-found" };
   }, [coverStates, resource.covers, sseCovers, finishedOrigins]);
 
-  return result;
+  return remote ? remoteCovers : result;
 }

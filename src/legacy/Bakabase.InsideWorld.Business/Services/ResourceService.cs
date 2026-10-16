@@ -302,6 +302,15 @@ namespace Bakabase.InsideWorld.Business.Services
 
         public async Task<int[]> GetAllIds(ResourceSearch model)
         {
+            if (ResourceMetadataReadScope.ResourceIds is { } candidates)
+            {
+                // Rule matching during an export never scans the library or consults the
+                // asynchronously updated global search index.
+                var ids = candidates.ToArray();
+                var resources = await GetByKeys(ids);
+                var matches = await _legacySearchService.SearchManyAsync(resources, [model]);
+                return (matches[0] ?? resources.Select(r => r.Id).ToHashSet()).ToArray();
+            }
             HashSet<int>? resourceIds = null;
 
             // Try to use inverted index first for property filters
@@ -957,8 +966,8 @@ namespace Bakabase.InsideWorld.Business.Services
         /// Gets the scope priority map for sorting property values.
         /// </summary>
         private Dictionary<int, int> GetScopePriorityMap() =>
-            _optionsManager.Value.PropertyValueScopePriority.Cast<int>()
-                .Select((x, i) => (Scope: x, Index: i)).ToDictionary(d => d.Scope, d => d.Index);
+            BuildScopePriorityMap(PropertyValueScopeResolver.NormalizeGlobalPriority(
+                _optionsManager.Value.PropertyValueScopePriority).ToArray());
 
         private static Dictionary<int, int> BuildScopePriorityMap(PropertyValueScope[] scopes) =>
             scopes.Cast<int>().Select((x, i) => (Scope: x, Index: i)).ToDictionary(d => d.Scope, d => d.Index);
@@ -984,12 +993,16 @@ namespace Bakabase.InsideWorld.Business.Services
             Dictionary<(int Pool, int Id), Dictionary<int, int>>? perPropertyMaps = null;
             if (propertyOptions?.Properties != null)
             {
+                var globalPriority = globalScopePriorityMap.OrderBy(p => p.Value)
+                    .Select(p => (PropertyValueScope)p.Key).ToArray();
                 foreach (var prop in propertyOptions.Properties)
                 {
                     if (prop.ScopePriority is { Length: > 0 })
                     {
                         perPropertyMaps ??= new Dictionary<(int Pool, int Id), Dictionary<int, int>>();
-                        perPropertyMaps[((int)prop.Pool, prop.Id)] = BuildScopePriorityMap(prop.ScopePriority);
+                        perPropertyMaps[((int)prop.Pool, prop.Id)] = BuildScopePriorityMap(
+                            PropertyValueScopeResolver.BuildEffectiveScopePriority(globalPriority, null,
+                                prop.ScopePriority).ToArray());
                     }
                 }
             }
@@ -1400,7 +1413,8 @@ namespace Bakabase.InsideWorld.Business.Services
                 x.Scope == (int) PropertyValueScope.Manual && x.ResourceId == id);
             var currentCovers = rpv?.CoverPaths ?? [];
             var index = currentCovers.Count;
-            var image = await Image.LoadAsync(new MemoryStream(imageBytes));
+            using var input = new MemoryStream(imageBytes, writable: false);
+            using var image = await Image.LoadAsync(input);
             var outputFilePath = _fileManager.GetManualCoverPath(id, index);
             Directory.CreateDirectory(Path.GetDirectoryName(outputFilePath)!);
             await image.SaveAsJpegAsync(outputFilePath);

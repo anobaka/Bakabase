@@ -4,7 +4,7 @@ import type { DeviceId } from "./devices";
 
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { AiOutlineEye, AiOutlineSearch } from "react-icons/ai";
+import { AiOutlineSearch } from "react-icons/ai";
 
 import { HOME_DEVICE, deviceNameKey, deviceStyle, devices, mdk } from "./devices";
 import { MediaIcon, MockWindow } from "./MockWindow";
@@ -24,8 +24,7 @@ const items: { id: string; device: DeviceId }[] = [
 /**
  * The multi-device library in miniature: flip the search scope from this device to all
  * devices and the other devices' resources join the same list, each tagged with the
- * device it lives on. The labels are the real page's own (`federation.*`), so the
- * picture uses the words the reader will find there.
+ * device it lives on.
  */
 const LibraryMockup = () => {
   const { t } = useTranslation();
@@ -35,19 +34,11 @@ const LibraryMockup = () => {
 
   return (
     <figure className="flex flex-col gap-2" data-testid="multi-device-library-mockup">
-      <MockWindow
-        badge={
-          <span className="flex shrink-0 items-center gap-1 rounded-full bg-default-200 px-2 py-0.5 text-[11px] text-default-600">
-            <AiOutlineEye aria-hidden />
-            {t("federation.readOnly")}
-          </span>
-        }
-        title={t("federation.title")}
-      >
+      <MockWindow title={t(mdk("browse.mock.title"))}>
         <div className="flex flex-col gap-3 p-3">
           <div className="flex flex-wrap items-center gap-2">
             <div
-              aria-label={t("federation.scope.label")}
+              aria-label={t(mdk("browse.mock.scope.label"))}
               className="inline-flex rounded-lg bg-default-100 p-0.5"
               role="group"
             >
@@ -64,7 +55,7 @@ const LibraryMockup = () => {
                   type="button"
                   onClick={() => setScope(id)}
                 >
-                  {t(`federation.scope.${id}`)}
+                  {t(mdk(`browse.mock.scope.${id}`))}
                 </button>
               ))}
             </div>
@@ -105,7 +96,7 @@ const LibraryMockup = () => {
           </ul>
 
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-default-100 pt-2 text-[11px] text-default-500">
-            <span>{t("federation.coverage")}</span>
+            <span>{t(mdk("browse.mock.devices"))}</span>
             {searched.map((id) => (
               <span key={id} className="flex items-center gap-1">
                 <span aria-hidden className={`h-2 w-2 rounded-full ${deviceStyle(id).dot}`} />

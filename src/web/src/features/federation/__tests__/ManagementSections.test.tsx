@@ -13,7 +13,6 @@ import ManagedServersSection from "../components/ManagedServers";
 import ManagementAccessSection from "../components/ManagementAccess";
 import { FederationAccess } from "../components/common";
 import { managedServerApi } from "../serverApi";
-import { federationPeerApi } from "../peerApi";
 import { FederationError } from "../transport";
 
 import BApi from "@/sdk/BApi";
@@ -60,18 +59,20 @@ vi.mock("../serverApi", () => ({
     cancelRequest: vi.fn(),
     forget: vi.fn(),
     setPathMappings: vi.fn(),
+    mappingTree: vi.fn().mockResolvedValue({ nodes: [] }),
+    getDeviceName: vi.fn(),
+    setDeviceName: vi.fn(),
     open: vi.fn(),
   },
 }));
-// Library sharing's discovery cannot see a server that does not share its library — the
-// usual one to manage. Mocked only so a test fails loudly if the section reaches for it.
-vi.mock("../peerApi", () => ({ federationPeerApi: { discover: vi.fn() } }));
+
 vi.mock("@/core/clientApi", () => ({
   LOCAL_SWITCHER_TARGET: "local",
   clientApi: { switcher: { list: vi.fn(), open: vi.fn() } },
 }));
 vi.mock("@/sdk/BApi", () => ({
   default: {
+    options: {},
     remoteAccess: {
       getRemoteAccessSettings: vi.fn(),
       setRemoteAccessMode: vi.fn(),
@@ -167,6 +168,31 @@ const addForm = () => {
 };
 
 describe("devices this one manages", () => {
+  it("shows the committed global name immediately and probes to refresh the connection cache", async () => {
+    listing = view({ servers: [server()] });
+    const snapshot = { name: "NAS", libraryEpoch: "epoch-one", environmentControlled: false };
+
+    vi.mocked(managedServerApi.getDeviceName).mockResolvedValue(snapshot);
+    vi.mocked(managedServerApi.setDeviceName).mockResolvedValue({
+      ...snapshot,
+      name: "Living room",
+    });
+    await renderServers();
+    const card = await screen.findByRole("article", { name: "NAS" });
+    const previousReads = listReads();
+
+    fireEvent.click(within(card).getByRole("button", { name: "deviceAppearance.editMetadata" }));
+    fireEvent.change(await within(card).findByRole("textbox", { name: "federation.name.label" }), {
+      target: { value: "Living room" },
+    });
+    fireEvent.click(within(card).getByRole("button", { name: "deviceAppearance.saveName" }));
+    await screen.findByRole("article", { name: "Living room" });
+    await waitFor(() => expect(listReads()).toBeGreaterThan(previousReads));
+    expect(managedServerApi.list).toHaveBeenLastCalledWith(true);
+    expect(managedServerApi.setDeviceName).toHaveBeenCalledWith("nas", snapshot, "Living room");
+    expect(managedServerApi.forget).not.toHaveBeenCalled();
+    expect(managedServerApi.setPathMappings).not.toHaveBeenCalled();
+  });
   it("lists each server with its state, and only warns about an unrestricted one", async () => {
     listing = view({
       servers: [
@@ -665,9 +691,11 @@ describe("devices this one manages", () => {
     });
     fireEvent.click(save);
     await waitFor(() =>
-      expect(managedServerApi.setPathMappings).toHaveBeenCalledWith("nas", [
-        { serverPath: "D:\\Media", localPath: "/Volumes/Media" },
-      ]),
+      expect(managedServerApi.setPathMappings).toHaveBeenCalledWith(
+        "nas",
+        [{ serverPath: "D:\\Media", localPath: "/Volumes/Media" }],
+        [{ serverPath: "/data/old", localPath: "/Volumes/Old" }],
+      ),
     );
     expect(await screen.findByText("federation.servers.mappings.saved")).toBeInTheDocument();
   });
@@ -732,8 +760,6 @@ describe("devices this one manages", () => {
     expect(addForm().address).toHaveValue("http://192.168.1.9:34567");
     expect(screen.getByRole("button", { name: "federation.servers.add.discover" })).toBeEnabled();
     expect(managedServerApi.discover).toHaveBeenCalledOnce();
-    // Not library sharing's discovery, which cannot see a server that does not share.
-    expect(federationPeerApi.discover).not.toHaveBeenCalled();
     expect(managedServerApi.pair).not.toHaveBeenCalled();
   });
 
@@ -1212,3 +1238,8 @@ describe("multi-device pages inside the console", () => {
     expect(screen.queryByText("federation.console.localOnly")).not.toBeInTheDocument();
   });
 });
+
+vi.mock("@/components/ContextProvider/BakabaseContextProvider", () => ({
+  useBakabaseContext: () => ({ createPortal: vi.fn() }),
+}));
+vi.mock("@/components/FileSystemSelector", () => ({ FileSystemSelectorModal: () => null }));

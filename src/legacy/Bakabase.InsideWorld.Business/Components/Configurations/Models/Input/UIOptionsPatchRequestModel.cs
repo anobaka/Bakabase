@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using Bakabase.InsideWorld.Models.Constants;
+using Bakabase.InsideWorld.Models.Configs;
 using static Bakabase.InsideWorld.Models.Configs.UIOptions;
 
 namespace Bakabase.InsideWorld.Business.Components.Configurations.Models.Input
@@ -9,6 +10,7 @@ namespace Bakabase.InsideWorld.Business.Components.Configurations.Models.Input
         public UIResourceOptions? Resource { get; set; }
         public StartupPage? StartupPage { get; set; }
         public bool? IsMenuCollapsed { get; set; }
+        public UINavigationLayout? NavigationLayout { get; set; }
         public bool? ShowResourceUsage { get; set; }
         public bool? HideResourceCovers { get; set; }
         public ResourceDetailLayoutConfig? ResourceDetailLayout { get; set; }

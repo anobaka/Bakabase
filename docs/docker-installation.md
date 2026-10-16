@@ -240,36 +240,22 @@ macOS 原生源码服务部署见[本机服务端部署](server-deployment.md)�
 2. 在电脑的一体版中打开“多设备互联 → 设备与分享 → 管理”，填写 `http://服务器IP:34567`，使用服务端生成的管理配对码完成配对。首次配对可按下方说明从容器日志取得配对码；已有其他已配对设备时，也可以提交请求，再从有管理权限的设备批准。
 3. 配对完成后，使用一体版左侧顶部的设备下拉菜单进入这台服务端的界面。
 
-若要求配对且尚无任何已配对设备，无界面服务端会在启动日志中输出首台设备的配对码，可通过 `docker compose logs server` 查看。管理配对允许完整管理；下方的媒体库分享只授予资源的只读访问，两者分别建立授权。
+若要求配对且尚无任何已配对设备，无界面服务端会在启动日志中输出首台设备的配对码，可通过 `docker compose logs server` 查看。管理配对允许完整管理，方向独立：A 管理 B 不代表 B 可以管理 A。
 
-## 向其他设备分享媒体库
+## 在服务端管理其他设备
 
-服务端浏览器现在也提供“多设备互联”，包括多设备资源库、设备与分享、设备地图和数据同步。可在“设备与分享 → 资源库分享”中启用分享、生成分享码或添加要浏览的设备；数据同步也位于同一菜单下。页面遵循服务端的远程访问设置：无限制模式允许管理员直接使用，要求配对时仍须通过已配对设备访问。服务端可以浏览和分享资源，但不能像桌面客户端一样切换窗口去管理其他服务端；媒体在浏览器中预览，不会在服务端启动播放器或文件管理器。
+Docker 服务端同样可以作为管理者。在“多设备互联 → 设备与分享 → 管理”添加设备并完成管理配对后，即可在原有资源列表内搜索、查看和管理对方资源。设备筛选位于资源筛选区，其他设备的资源保留各自归属。首次资源元数据同步完成后在本机搜索；编辑与文件读取仍交给资源所属设备，不复制媒体文件。更多说明见[统一多设备管理](multi-device-management.md)。
 
-容器的媒体库分享管理可以在容器内执行：
+“路径映射”也在已添加设备的管理条目中，可按目录树将目标设备路径映射为当前服务端能够读取的路径。Docker 内填写容器可见的挂载路径；映射不会创建挂载或授予文件权限。原有映射保持有效。浏览器使用网页播放器或复制可用路径，服务端不会启动宿主机的播放器或文件管理器。
+
+“数据同步”独立处理自定义属性、选项和扩展名分组等定义，不因管理配对而自动开启。需要通过命令行检查设备身份或管理定义同步时，可使用：
 
 ```sh
 docker compose exec server dotnet Bakabase.Service.dll federation status
-docker compose exec server dotnet Bakabase.Service.dll federation share on
-docker compose exec server dotnet Bakabase.Service.dll federation invite
+docker compose exec server dotnet Bakabase.Service.dll federation datasync status
 ```
 
-在另一台设备的“多设备互联 → 设备与分享 → 资源库分享”中填写服务端地址和输出的一次性分享码。也可以不填分享码，先提交连接请求，再使用 `federation status` 查看请求 ID，通过 `federation approve 请求ID` 批准。
-
-需要在每次启动时开启分享并输出新分享码时，在 Compose 中增加：
-
-```yaml
-    environment:
-      API_LISTENING_PORTS: "34567"
-      BAKABASE_DATA_DIR: /data
-      BAKABASE_NODE_NAME: 我的媒体库
-      BAKABASE_FEDERATION_SHARING: "true"
-    command: ["--federation-invite-on-start"]
-```
-
-分享码在启动日志中显示，并有有效期；过期后可执行 `federation invite` 生成新的分享码。保留 `BAKABASE_FEDERATION_SHARING=true` 会在下次启动时重新开启分享；要持续关闭分享，应先移除该环境变量，再执行 `federation share off`。
-
-浏览器直接访问服务端和分享给其他设备的联合浏览分别处理权限；分享开关不替代远程访问设置。移动端目前可浏览其他设备的媒体库，暂不支持向其他设备分享自己的媒体库。更多说明见[联合媒体库](multi-device-library-implementation.md)。
+未配置 `BAKABASE_NODE_NAME` 时可在设备页面改名；设置了该环境变量时名称由启动配置控制，需要在那里修改。定义同步的启动设置为 `BAKABASE_DATASYNC_SHARING=true`，只在明确需要每次启动都发布定义时配置；它不授予资源管理权限。旧的只读资源库分享及其开关、分享码、CLI 已删除。
 
 ## 更新
 

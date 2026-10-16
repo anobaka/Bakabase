@@ -1,4 +1,6 @@
 using Bakabase.Infrastructures.Components.Gui;
+using Bakabase.Abstractions.Components.App;
+using Bakabase.Infrastructures.Components.App.Profiles;
 using Bakabase.Infrastructures.Components.SystemService;
 using Bakabase.Remoting.Components.Console;
 using Bakabase.Service.Components;
@@ -27,7 +29,11 @@ internal sealed class UnifiedHost(IGuiAdapter guiAdapter, ISystemService systemS
     : BakabaseHost(guiAdapter, systemService)
 {
     protected override IHostBuilder CreateHostBuilder(params string[] args) =>
-        base.CreateHostBuilder(args).ConfigureServices(services => services.AddRemoteConsole());
+        base.CreateHostBuilder(args).ConfigureServices(services =>
+        {
+            services.AddRemoteConsole();
+            services.AddSingleton<IDesktopProfileService, DesktopProfileService>();
+        });
 
     /// <summary>
     /// Also records where the main window is about to open, which is the one fact nothing
@@ -37,6 +43,8 @@ internal sealed class UnifiedHost(IGuiAdapter guiAdapter, ISystemService systemS
     protected override string OverrideFeAddress(string feAddress)
     {
         var address = base.OverrideFeAddress(feAddress);
+        if (DesktopProfileSelection.CurrentId is { } profileId)
+            DesktopProfileRegistry.ForCurrentUser().MarkInitialized(profileId);
 
         try
         {

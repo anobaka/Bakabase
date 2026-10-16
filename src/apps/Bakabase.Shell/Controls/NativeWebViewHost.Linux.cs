@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using Bakabase.Infrastructures.Components.App;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
@@ -22,7 +24,17 @@ public partial class NativeWebViewHost
         _linuxScrolledWindow = Gtk.gtk_scrolled_window_new(IntPtr.Zero, IntPtr.Zero);
 
         // Create WebKitGTK WebView
-        _linuxWebView = WebKitGtk.webkit_web_view_new();
+        if (WindowsUserDataDirectory != null || AppDataAnchor.Current.AnchorDirectory != null || AppDataLocator.IsEnvironmentOverride)
+        {
+            var directory = WindowsUserDataDirectory ?? Path.Combine(AppDataLocator.ResolveAnchor(), "WebKit");
+            Directory.CreateDirectory(directory);
+            var manager = WebKitGtk.webkit_website_data_manager_new("base-data-directory", Path.Combine(directory, "data"),
+                "base-cache-directory", Path.Combine(directory, "cache"), IntPtr.Zero);
+            var context = WebKitGtk.webkit_web_context_new_with_website_data_manager(manager);
+            try { _linuxWebView = WebKitGtk.webkit_web_view_new_with_context(context); }
+            finally { WebKitGtk.g_object_unref(context); WebKitGtk.g_object_unref(manager); }
+        }
+        else _linuxWebView = WebKitGtk.webkit_web_view_new();
         Gtk.gtk_container_add(_linuxScrolledWindow, _linuxWebView);
 
         // Realize the widget hierarchy to create the underlying X11 window
@@ -57,7 +69,7 @@ public partial class NativeWebViewHost
         var settings = WebKitGtk.webkit_web_view_get_settings(_linuxWebView);
         if (settings != IntPtr.Zero)
         {
-            WebKitGtk.webkit_settings_set_user_agent(settings, WebViewUserAgent.Linux);
+            WebKitGtk.webkit_settings_set_user_agent(settings, PresentationUserAgent(WebViewUserAgent.Linux));
         }
 
         _initialized = true;
@@ -221,6 +233,19 @@ public partial class NativeWebViewHost
 
         [DllImport(WebKitLib)]
         public static extern IntPtr webkit_web_view_new();
+
+        [DllImport(WebKitLib, CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
+        public static extern IntPtr webkit_website_data_manager_new(string dataProperty, string dataDirectory,
+            string cacheProperty, string cacheDirectory, IntPtr end);
+
+        [DllImport(WebKitLib)]
+        public static extern IntPtr webkit_web_context_new_with_website_data_manager(IntPtr manager);
+
+        [DllImport(WebKitLib)]
+        public static extern IntPtr webkit_web_view_new_with_context(IntPtr context);
+
+        [DllImport("libgobject-2.0.so.0")]
+        public static extern void g_object_unref(IntPtr instance);
 
         [DllImport(WebKitLib, CharSet = CharSet.Ansi)]
         public static extern void webkit_web_view_load_uri(IntPtr webView, string uri);

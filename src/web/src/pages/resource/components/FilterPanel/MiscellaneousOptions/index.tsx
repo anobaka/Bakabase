@@ -7,19 +7,11 @@ import {
   AppstoreAddOutlined,
   CloseOutlined,
   DatabaseOutlined,
-  DeleteOutlined,
-  ExportOutlined,
-  FireOutlined,
-  FolderOpenOutlined,
   FullscreenOutlined,
   LayoutOutlined,
   PlayCircleOutlined,
-  ProductOutlined,
-  PushpinOutlined,
-  VideoCameraAddOutlined,
   ZoomInOutlined,
 } from "@ant-design/icons";
-import { AiOutlinePicture } from "react-icons/ai";
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -40,6 +32,7 @@ import {
   Tabs,
 } from "@/components/bakaui";
 import { CoverFit, PropertyPool } from "@/sdk/constants";
+import CoverOperationsSettings from "@/components/Resource/components/Operations/CoverOperationsSettings";
 import QuickSetPropertyConfig from "@/components/Resource/components/QuickSetPropertyConfig";
 import ResourceDetailLayoutConfigModal from "@/components/ResourceDetailLayoutConfigModal";
 import {
@@ -55,6 +48,7 @@ import BriefProperty from "@/components/Chips/Property/BriefProperty";
 import { cssVariableGroups } from "@/cons/uiStyleVariables";
 
 type Props = {
+  className?: string;
   rearrangeResources?: () => any;
 };
 
@@ -64,7 +58,7 @@ const MinResourceColCount = 3;
 const DefaultResourceColCount = 6;
 const MaxResourceColCount = 12;
 
-const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
+const MiscellaneousOptions = ({ rearrangeResources, className }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const uiOptionsStore = useUiOptionsStore();
@@ -353,80 +347,7 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
 
       <Divider />
 
-      <div className={"flex flex-col gap-2"}>
-        <div className={"text-sm font-medium"}>{t<string>("resource.display.operations")}</div>
-        <div className={"flex flex-wrap gap-2"}>
-          {[
-            {
-              key: "aggregate",
-              icon: <ProductOutlined className="text-base" />,
-              label: t<string>("resource.display.aggregateButton"),
-              defaultOn: true,
-            },
-            {
-              key: "pin",
-              icon: <PushpinOutlined className="text-base" />,
-              label: t<string>("resource.display.pinUnpin"),
-            },
-            {
-              key: "openFolder",
-              icon: <FolderOpenOutlined className="text-base" />,
-              label: t<string>("resource.display.openFolder"),
-            },
-            {
-              key: "enhancements",
-              icon: <FireOutlined className="text-base" />,
-              label: t<string>("resource.display.enhancements"),
-            },
-            {
-              key: "preview",
-              icon: <AiOutlinePicture className="text-base" />,
-              label: t<string>("resource.display.preview"),
-            },
-            {
-              key: "addToPlaylist",
-              icon: <VideoCameraAddOutlined className="text-base" />,
-              label: t<string>("resource.display.addToPlaylist"),
-            },
-            {
-              key: "move",
-              icon: <ExportOutlined className="text-base" />,
-              label: t<string>("resource.operation.move"),
-            },
-            {
-              key: "delete",
-              icon: <DeleteOutlined className="text-base" />,
-              label: t<string>("common.action.delete"),
-              isDanger: true,
-            },
-          ].map(({ key, icon, label, defaultOn, isDanger }) => (
-            <Checkbox
-              key={key}
-              isSelected={
-                resourceUiOptions?.displayOperations?.includes(key) ??
-                (defaultOn &&
-                  (!resourceUiOptions?.displayOperations ||
-                    resourceUiOptions?.displayOperations.length === 0))
-              }
-              size="sm"
-              onValueChange={(checked) => {
-                const current = resourceUiOptions?.displayOperations ?? [];
-
-                patchOptions({
-                  displayOperations: checked
-                    ? [...current.filter((op: string) => op !== key), key]
-                    : current.filter((op: string) => op !== key),
-                });
-              }}
-            >
-              <div className={`flex items-center gap-1 ${isDanger ? "text-danger" : ""}`}>
-                {icon}
-                {label}
-              </div>
-            </Checkbox>
-          ))}
-        </div>
-      </div>
+      <CoverOperationsSettings options={resourceUiOptions} onChange={patchOptions} />
 
       <Divider />
 
@@ -576,6 +497,8 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
       <Button
         isIconOnly
         aria-label={t("resource.display.title")}
+        className={className}
+        title={t("resource.display.title")}
         size={"sm"}
         variant={"light"}
         onPress={() => setVisible(true)}

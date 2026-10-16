@@ -5,16 +5,18 @@ import type { CollectionModel } from "@/stores/collections";
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import BApi from "@/sdk/BApi";
+import { useResourceApi } from "@/features/management/resourceContext";
 import { Button, Checkbox, Input, NumberInput, Textarea, toast } from "@/components/bakaui";
 
 type Props = {
   collection: CollectionModel;
   onSaved: () => void;
+  configurationAvailable?: boolean;
 };
 
-const SettingsTab: React.FC<Props> = ({ collection, onSaved }) => {
+const SettingsTab: React.FC<Props> = ({ collection, onSaved, configurationAvailable = true }) => {
   const { t } = useTranslation();
+  const BApi = useResourceApi();
   const [draft, setDraft] = useState<CollectionModel>({ ...collection });
   const [saving, setSaving] = useState(false);
 
@@ -64,22 +66,26 @@ const SettingsTab: React.FC<Props> = ({ collection, onSaved }) => {
         value={draft.order ?? 0}
         onValueChange={(v) => setDraft({ ...draft, order: Number(v ?? 0) })}
       />
-      <Checkbox
-        isSelected={draft.autoAcquire ?? false}
-        onValueChange={(v) => setDraft({ ...draft, autoAcquire: v })}
-      >
-        <div className="flex flex-col">
-          <span>{t<string>("collection.label.autoAcquire")}</span>
-          <span className="text-xs text-default-500">
-            {t<string>("collection.label.autoAcquireDescription")}
-          </span>
+      {configurationAvailable && (
+        <Checkbox
+          isSelected={draft.autoAcquire ?? false}
+          onValueChange={(v) => setDraft({ ...draft, autoAcquire: v })}
+        >
+          <div className="flex flex-col">
+            <span>{t<string>("collection.label.autoAcquire")}</span>
+            <span className="text-xs text-default-500">
+              {t<string>("collection.label.autoAcquireDescription")}
+            </span>
+          </div>
+        </Checkbox>
+      )}
+      {configurationAvailable && (
+        <div>
+          <Button color="primary" isLoading={saving} onPress={save}>
+            {t<string>("collection.action.save")}
+          </Button>
         </div>
-      </Checkbox>
-      <div>
-        <Button color="primary" isLoading={saving} onPress={save}>
-          {t<string>("collection.action.save")}
-        </Button>
-      </div>
+      )}
     </div>
   );
 };

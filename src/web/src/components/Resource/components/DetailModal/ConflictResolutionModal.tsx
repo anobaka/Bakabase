@@ -8,7 +8,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { WarningOutlined, DeleteOutlined, MergeCellsOutlined } from "@ant-design/icons";
 
-import BApi from "@/sdk/BApi";
+import { useResourceApi } from "@/features/management/resourceContext";
 import { Button, Chip, Modal, Radio, RadioGroup, Spinner, toast } from "@/components/bakaui";
 import {
   PropertyValueScopeLabel,
@@ -26,6 +26,7 @@ type Props = {
 } & DestroyableProps;
 
 const ConflictResolutionModal = ({ resourceId, onResolved, onDestroyed }: Props) => {
+  const BApi = useResourceApi();
   const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);

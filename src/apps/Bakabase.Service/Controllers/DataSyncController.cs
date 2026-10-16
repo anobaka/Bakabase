@@ -26,9 +26,9 @@ namespace Bakabase.Service.Controllers;
 /// The remote-access gate admits an unpaired Unrestricted browser to everything, which is too wide for granting
 /// access: such a browser must not mint a node credential that outlives a later switch to RequirePairing. So every
 /// action that creates or widens definitions access also requires this device's own window or a paired device
-/// (§7.1.5). Where the action always does (sharing on, approving, a code, asking for access again), it otherwise
+/// (§7.1.5). Where the action always does (sharing on, approving, asking for access again), it otherwise
 /// answers <see cref="DataSyncProblemCode.NotAllowedOnThisDevice"/> without calling the service. Where only the
-/// service knows whether it will send a request or mint a reciprocal code (links, copy once), the controller passes
+/// service knows whether it will send a request or mint a reciprocal code (links), the controller passes
 /// who is asking and the service refuses exactly those calls. Reducing access (reject, revoke, cancel, sharing off,
 /// pause) stays open to every caller the gate admits, so access can always be shut off from wherever a person is.
 /// </para>
@@ -148,16 +148,6 @@ public class DataSyncController(IDataSyncService service) : Controller
     public async Task<SingletonResponse<DataSyncProblem>> ForgetAccess(string nodeId, CancellationToken ct) =>
         new(await service.ForgetAccessAsync(nodeId, ct));
 
-    /// <summary>
-    /// Creates access when it sends a request. Whether it will depends on access this device already holds, which only
-    /// the service knows, so it decides for this caller.
-    /// </summary>
-    [HttpPost("copy-once")]
-    [SwaggerOperation(OperationId = "CreateDataSyncCopyOnce")]
-    public async Task<SingletonResponse<DataSyncLinkResult>> CreateCopyOnce([FromBody] DataSyncCopyOnceInput input,
-        CancellationToken ct) =>
-        new(await service.CreateCopyOnceAsync(input, MayCreateAccess, ct));
-
     /// <summary>A first sync's preview, a read-only merge; never gated.</summary>
     [HttpGet("links/{id:int}/first-sync")]
     [SwaggerOperation(OperationId = "GetDataSyncFirstSync")]
@@ -207,12 +197,6 @@ public class DataSyncController(IDataSyncService service) : Controller
     public async Task<SingletonResponse<DataSyncProblem>> RevokeReader(string nodeId, CancellationToken ct) =>
         new(await service.RevokeReaderAsync(nodeId, ct));
 
-    /// <summary>Creates access: a one-time code another device can redeem to read this one (one way).</summary>
-    [HttpPost("invitations")]
-    [SwaggerOperation(OperationId = "CreateDataSyncInvitation")]
-    public async Task<SingletonResponse<DataSyncInvitationResult>> CreateInvitation(CancellationToken ct) =>
-        new(MayCreateAccess ? await service.CreateInvitationAsync(ct) : new DataSyncInvitationResult(null, NotAllowed));
-
     /// <summary>
     /// "Needs you"; never gated. Open items first, by definition, then closed ones, newest first: with
     /// <paramref name="openOnly"/> false, the closed items start at <c>skip = openTotal</c>. A page never ends inside a
@@ -257,20 +241,16 @@ public class DataSyncController(IDataSyncService service) : Controller
     public async Task<ListResponse<DataSyncHistoryEntry>> GetHistory(CancellationToken ct) =>
         new(await service.GetHistoryAsync(ct));
 
+    [HttpGet("history/page")]
+    [SwaggerOperation(OperationId = "GetDataSyncHistoryPage")]
+    public async Task<SingletonResponse<DataSyncHistoryPage>> GetHistoryPage([FromQuery] int? beforeId = null,
+        [FromQuery] int take = 50, [FromQuery] string? peerNodeId = null, CancellationToken ct = default) =>
+        new(await service.GetHistoryPageAsync(beforeId, take, peerNodeId, ct));
+
     [HttpGet("history/{id:int}")]
     [SwaggerOperation(OperationId = "GetDataSyncHistoryEntry")]
     public async Task<SingletonResponse<DataSyncHistoryDetail>> GetHistoryEntry(int id, CancellationToken ct) =>
         new(await service.GetHistoryEntryAsync(id, ct));
-
-    [HttpGet("history/{id:int}/undo-preview")]
-    [SwaggerOperation(OperationId = "PreviewDataSyncUndo")]
-    public async Task<SingletonResponse<DataSyncUndoPreview>> PreviewUndo(int id, CancellationToken ct) =>
-        new(await service.PreviewUndoAsync(id, ct));
-
-    [HttpPost("history/{id:int}/undo")]
-    [SwaggerOperation(OperationId = "UndoDataSync")]
-    public async Task<SingletonResponse<DataSyncTaskStart>> Undo(int id, CancellationToken ct) =>
-        new(await service.StartUndoAsync(id, ct));
 
     [HttpGet("restore")]
     [SwaggerOperation(OperationId = "GetDataSyncRestore")]

@@ -14,6 +14,7 @@ import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContext
 import { usePendingSearchStore } from "@/stores/pendingSearch";
 import { SearchCombinator, SearchOperation, PropertyPool, InternalProperty } from "@/sdk/constants";
 import { useResourceSearch } from "@/hooks/useResourceSearch";
+import { useResourceOwner } from "@/features/management/resourceContext";
 
 const log = buildLogger("ChildrenModal");
 
@@ -30,6 +31,7 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({
   resourceDisplayName,
   onDestroyed,
 }) => {
+  const owner = useResourceOwner();
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
@@ -41,6 +43,7 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({
 
   const handleShowInNewTab = () => {
     const searchModel = {
+      ...(owner ? { owner, deviceIds: [owner.serverId] } : {}),
       group: {
         combinator: SearchCombinator.And,
         disabled: false,

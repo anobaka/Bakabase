@@ -78,7 +78,7 @@ export default function AddressList({
   addresses: readonly RemoteAccessAddress[] | undefined;
   /** Whom the addresses reach, as the sentences name it: "this device" or a server's name. */
   target: string;
-  context: "device" | "manage" | "sharing";
+  context: "device" | "manage";
   variant?: "full" | "compact";
   /** Remote access is off: nobody can reach any of them, and the list says so. */
   remoteOff?: boolean;

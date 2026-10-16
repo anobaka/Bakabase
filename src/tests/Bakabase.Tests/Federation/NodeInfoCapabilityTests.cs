@@ -62,7 +62,7 @@ public sealed class NodeInfoCapabilityTests
         await using var nas = await DataSyncNodeHost.StartAsync("node-nas", "NAS");
         await using var old = await DataSyncNodeHost.StartAsync("node-old", "Old NAS", dataSync: false);
         await nas.Grants.SetSharingEnabledAsync(true, false, default);
-        await old.Peers.SetSharingAsync(true);
+        await old.Peers.SetDataSyncSharingAsync(true);
 
         var discovery = new FederationNodeDiscovery(new FixedServers(nas.Address, old.Address),
             desk.Services.GetRequiredService<INodeIdentityProvider>());

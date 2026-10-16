@@ -27,9 +27,15 @@ public class LabelKeyCrossCheckTests
         foreach (var s in new[] { "\ud801", "\udc28", "\udc28\ud801" })
             Assert.AreEqual(s, DataSyncLabelKey.Fold(s, true));
         Assert.AreEqual("A\ud801B", DataSyncLabelKey.Fold("a\ud801b", true), "only the letters around it fold");
-        // A surrogate pair is one character: the Deseret pair folds, the halves alone do not.
-        Assert.AreEqual(DataSyncLabelKey.Fold("\U00010428", true), DataSyncLabelKey.Fold("\U00010400", true));
-        Assert.IsTrue(StringComparer.OrdinalIgnoreCase.Equals("\U00010428", "\U00010400"));
+        // A valid pair follows the runtime comparer, whose supplementary-character
+        // casing can differ between Windows NLS and ICU. Never merge labels it keeps apart.
+        const string lower = "\U00010428", upper = "\U00010400";
+        var comparer = StringComparer.OrdinalIgnoreCase;
+        var lowerKey = DataSyncLabelKey.Fold(lower, true);
+        var upperKey = DataSyncLabelKey.Fold(upper, true);
+        Assert.AreEqual(comparer.Equals(lower, upper), StringComparer.Ordinal.Equals(lowerKey, upperKey));
+        Assert.IsTrue(comparer.Equals(lower, lowerKey), "the lower-case key must stay in its label class");
+        Assert.IsTrue(comparer.Equals(upper, upperKey), "the upper-case key must stay in its label class");
     }
 
     [TestMethod]

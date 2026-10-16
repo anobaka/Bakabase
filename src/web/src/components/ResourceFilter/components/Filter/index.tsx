@@ -19,6 +19,12 @@ import { isCompactValueType } from "./utils";
 
 import { FilterDisplayMode, PropertyType, SearchOperation } from "@/sdk/constants";
 import { buildLogger } from "@/components/utils";
+import { useResourceOwner } from "@/features/management/resourceContext";
+import { useResourceSources } from "@/features/management/resourceSourcesContext";
+import {
+  hasQualifiedMediaLibraryChoices,
+  isMediaLibraryFilter,
+} from "@/features/management/mediaLibraryFilter";
 
 export type FilterLayout = "horizontal" | "vertical";
 
@@ -59,6 +65,37 @@ const Filter = ({
   const config = useFilterConfig();
   const { t } = useTranslation();
   const [filter, setFilter] = useState<SearchFilter>(propsFilter);
+  const viewOwner = useResourceOwner();
+  const sources = useResourceSources()?.sources;
+  // Default and restored filters may already contain a native property before sources arrive.
+  // Upgrade their editor only, keeping numeric values/owner semantics until the user edits.
+  const unifiedMediaLibraries =
+    !viewOwner &&
+    isMediaLibraryFilter(filter) &&
+    (!!filter.valueProperty?.unifiedMediaLibraries ||
+      !!sources?.some((source) => !source.isLocal) ||
+      hasQualifiedMediaLibraryChoices({ filters: [filter] }) ||
+      (!!filter.owner &&
+        !!sources &&
+        !sources.some(
+          (source) =>
+            source.serverId === filter.owner?.serverId &&
+            source.libraryEpoch === filter.owner?.libraryEpoch,
+        )));
+  const legacyLibraryOwner = filter.owner
+    ? (sources?.find(
+        (source) =>
+          source.serverId === filter.owner?.serverId &&
+          source.libraryEpoch === filter.owner?.libraryEpoch,
+      ) ??
+      filter.valueProperty?.owner ?? {
+        ...filter.owner,
+        name: filter.owner.serverId,
+        isLocal: false,
+        available: false,
+        contractVersion: 1,
+      })
+    : undefined;
 
   // Keep the existing operation visible in both modes; Simple opens inline value editors.
   const isSimpleMode = filterDisplayMode === FilterDisplayMode.Simple;
@@ -81,15 +118,33 @@ const Filter = ({
   useEffect(() => {
     if (!filter.propertyPool || !filter.propertyId || !filter.operation) return;
     if (filter.property && filter.valueProperty) return;
-    config.api.getValueProperty(filter).then((p) => {
-      if (!p) return;
-      setFilter((prev) => ({
-        ...prev,
-        property: prev.property ?? p,
-        valueProperty: p,
-      }));
-    });
+    let cancelled = false;
+
+    // An operation may change only the editor's type (SingleChoice In uses a
+    // MultipleChoice editor). Keep that separate from the original property.
+    Promise.all([
+      filter.property ? Promise.resolve(filter.property) : config.api.getProperty?.(filter),
+      filter.valueProperty
+        ? Promise.resolve(filter.valueProperty)
+        : config.api.getValueProperty(filter),
+    ])
+      .then(([property, valueProperty]) => {
+        if (cancelled || !valueProperty || (!property && config.api.getProperty)) return;
+        setFilter((prev) => ({
+          ...prev,
+          property: property ?? valueProperty,
+          valueProperty,
+        }));
+      })
+      .catch((error) => log("Failed to restore filter property", error));
+
+    return () => {
+      cancelled = true;
+    };
   }, [
+    config.api,
+    filter.owner?.serverId,
+    filter.owner?.libraryEpoch,
     filter.propertyPool,
     filter.propertyId,
     filter.operation,
@@ -139,6 +194,7 @@ const Filter = ({
         : {
             id: filter.propertyId,
             pool: filter.propertyPool!,
+            ...(filter.owner ? { owner: filter.owner } : {}),
           },
       (property, availableOperations) => {
         handlePropertySelect(property, availableOperations);
@@ -161,6 +217,9 @@ const Filter = ({
       dbValue: undefined,
       bizValue: undefined,
       property,
+      owner: property.owner
+        ? { serverId: property.owner.serverId, libraryEpoch: property.owner.libraryEpoch }
+        : undefined,
       availableOperations,
       operation,
     };
@@ -169,6 +228,19 @@ const Filter = ({
   };
 
   const refreshValue = (filter: SearchFilter) => {
+    if (
+      unifiedMediaLibraries &&
+      (filter.operation === SearchOperation.IsNull ||
+        filter.operation === SearchOperation.IsNotNull)
+    ) {
+      filter = {
+        ...filter,
+        owner: undefined,
+        property: filter.property
+          ? { ...filter.property, owner: undefined, unifiedMediaLibraries: true }
+          : undefined,
+      };
+    }
     if (!filter.propertyPool || !filter.propertyId || !filter.operation) {
       filter.valueProperty = undefined;
       filter.dbValue = undefined;
@@ -211,7 +283,9 @@ const Filter = ({
     // For text/number inputs, isEditing makes them always show the input field
 
     const valueElement = config.renderers.renderValueInput(
-      filter.valueProperty,
+      unifiedMediaLibraries
+        ? { ...filter.valueProperty, unifiedMediaLibraries: true, owner: legacyLibraryOwner }
+        : filter.valueProperty,
       filter.dbValue,
       filter.bizValue,
       (dbValue, bizValue) => {
@@ -219,6 +293,19 @@ const Filter = ({
           ...filter,
           dbValue: dbValue,
           bizValue: bizValue,
+          ...(unifiedMediaLibraries
+            ? {
+                owner: undefined,
+                property: filter.property
+                  ? { ...filter.property, owner: undefined, unifiedMediaLibraries: true }
+                  : undefined,
+                valueProperty: {
+                  ...filter.valueProperty!,
+                  owner: undefined,
+                  unifiedMediaLibraries: true,
+                },
+              }
+            : {}),
         });
       },
       {
@@ -271,7 +358,11 @@ const Filter = ({
         <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
           <PropertyField
             isReadonly={isReadonly || isSimpleMode}
-            property={filter.property}
+            property={
+              unifiedMediaLibraries && filter.property
+                ? { ...filter.property, owner: undefined }
+                : filter.property
+            }
             onCancel={onCancelNewFilter}
             onSelect={handlePropertySelect}
           />

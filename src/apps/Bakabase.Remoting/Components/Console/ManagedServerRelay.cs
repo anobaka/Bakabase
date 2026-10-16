@@ -1,6 +1,9 @@
 using System.Net;
 using Bakabase.Infrastructures.Components.App;
+using Bakabase.Abstractions.Services;
 using Bakabase.Infrastructures.Components.Gui;
+using Bakabase.Modules.Player.Abstractions.Services;
+using Bakabase.Modules.Player.Services;
 using Bakabase.Modules.RemoteAccess.Components;
 using Bakabase.Remoting.Components.Connection;
 using Bakabase.Remoting.Components.Forwarding;
@@ -33,6 +36,7 @@ namespace Bakabase.Remoting.Components.Console;
 /// </param>
 /// <param name="IdentityPolicy">How often the relay asks, and how long it waits.</param>
 /// <param name="Connector">How the relay connects to its server: the console's, so tests can put a network under both.</param>
+/// <param name="DevicePlaybackPreferencesStore">This desktop's own choices, shared across every relay.</param>
 public sealed record ManagedServerRelayDependencies(
     ManagedServerStore ManagedStore,
     RelayNavigationTokens Tokens,
@@ -44,7 +48,9 @@ public sealed record ManagedServerRelayDependencies(
     IGuiAdapter? GuiAdapter,
     IUpstreamIdentityVerifier IdentityVerifier,
     UpstreamIdentityPolicy IdentityPolicy,
-    DualStackConnector Connector);
+    DualStackConnector Connector,
+    IDevicePlaybackPreferencesStore? DevicePlaybackPreferencesStore = null,
+    IServiceScopeFactory? LocalServiceScopes = null);
 
 /// <summary>
 /// One managed server's relay: a loopback listener, with a container of its own, that
@@ -171,13 +177,25 @@ public sealed class ManagedServerRelay(string serverId, int port, ManagedServerR
             services.AddSingleton(dependencies.GuiAdapter);
         }
 
+        if (dependencies.DevicePlaybackPreferencesStore != null)
+        {
+            services.AddSingleton(dependencies.DevicePlaybackPreferencesStore);
+        }
+
+        if (dependencies.LocalServiceScopes != null)
+            services.AddSingleton<ISourceResourceProfilePlaybackService>(
+                new HostSourceResourceProfiles(dependencies.LocalServiceScopes));
+
         services.AddRelayCore(new RelayEnvironment(
             _ => Port,
             dependencies.Context.AppVersion,
             // This app's own temp directory: batch play runs here, on the machine the
             // player is on, whichever server the playlist came from.
             _ => dependencies.AppService?.RequestAppDataDirectory("temp", "playlists") ??
-                 Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "Bakabase", "playlists")).FullName));
+                 Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "Bakabase", "playlists")).FullName,
+            _ => dependencies.AppService is { } appService
+                ? Path.Combine(appService.RequestAppDataDirectory("configs"), DevicePlaybackPreferencesStore.FileName)
+                : null));
     }
 
     public async ValueTask DisposeAsync()

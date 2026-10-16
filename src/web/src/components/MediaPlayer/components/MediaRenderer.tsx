@@ -1,12 +1,15 @@
 "use client";
 
-import type { MediaPlayerEntry } from "../types";
+import type { MediaPlayerEntry, MediaPreviewState } from "../types";
+
 import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+
 import { MediaType } from "@/sdk/constants";
 import { Spinner } from "@/components/bakaui";
 import TextReader from "@/components/TextReader";
 import envConfig from "@/config/env";
+import { DesktopPlaybackGuideButton } from "@/components/Resource/components/PlayControl/DesktopPlaybackGuide";
 
 export interface MediaRendererRef {
   getImageRef: () => HTMLImageElement | null;
@@ -31,6 +34,8 @@ interface MediaRendererProps {
     loadedSeconds: number;
   }) => void;
   onPlayabilityError?: (error: string) => void;
+  onPreviewStateChange?: (path: string, state: MediaPreviewState) => void;
+  onOpenAlternative?: (path: string) => void | Promise<void>;
 }
 export const MEDIA_LOAD_TIMEOUT = 20_000;
 
@@ -50,6 +55,8 @@ const MediaRenderer = forwardRef<MediaRendererRef, MediaRendererProps>((props, r
     onVideoStart,
     onVideoProgress,
     onPlayabilityError,
+    onPreviewStateChange,
+    onOpenAlternative,
   } = props;
   const { t } = useTranslation();
   const image = useRef<HTMLImageElement>(null);
@@ -57,10 +64,16 @@ const MediaRenderer = forwardRef<MediaRendererRef, MediaRendererProps>((props, r
   const [status, setStatus] = useState<"loading" | "ready" | "buffering" | "error">("loading");
   const [errorKey, setErrorKey] = useState("mediaPlayer.media.failed");
   const [attempt, setAttempt] = useState(0);
+  const [mediaMetadataReceived, setMediaMetadataReceived] = useState(false);
+  const [openingAlternative, setOpeningAlternative] = useState(false);
+  const [alternativeFailed, setAlternativeFailed] = useState(false);
   const path = entry.playPath || entry.path;
   const isMedia = mediaType === MediaType.Video || mediaType === MediaType.Audio;
   const needsLoad = isMedia || mediaType === MediaType.Image;
-  const source = `${envConfig.apiEndpoint}/file/play?fullname=${encodeURIComponent(path)}`;
+  const supportsPreview = needsLoad || mediaType === MediaType.Text;
+  const source =
+    entry.mediaUrl ?? `${envConfig.apiEndpoint}/file/play?fullname=${encodeURIComponent(path)}`;
+
   useImperativeHandle(ref, () => ({
     getImageRef: () => image.current,
     getPlayerRef: () => media.current,
@@ -68,7 +81,21 @@ const MediaRenderer = forwardRef<MediaRendererRef, MediaRendererProps>((props, r
 
   useEffect(() => {
     setStatus("loading");
-  }, [path, mediaType, attempt]);
+    setAlternativeFailed(false);
+    setMediaMetadataReceived(false);
+  }, [path, source, mediaType, attempt]);
+  useEffect(() => {
+    onPreviewStateChange?.(
+      path,
+      !supportsPreview
+        ? "unavailable"
+        : status === "error"
+          ? "failed"
+          : status === "ready"
+            ? "ready"
+            : "loading",
+    );
+  }, [path, supportsPreview, status, onPreviewStateChange]);
   useEffect(() => {
     if (!needsLoad || (status !== "loading" && status !== "buffering")) return;
     const timer = setTimeout(() => {
@@ -76,13 +103,16 @@ const MediaRenderer = forwardRef<MediaRendererRef, MediaRendererProps>((props, r
       setStatus("error");
       onPlayabilityError?.(t("mediaPlayer.media.timeout"));
     }, MEDIA_LOAD_TIMEOUT);
+
     return () => clearTimeout(timer);
   }, [path, mediaType, attempt, status, needsLoad, t]);
 
   useEffect(() => {
     const element = media.current;
+
     if (!element || !isMedia || status === "error") return;
     let cancelled = false;
+
     if (playing && element.paused) {
       void element.play()?.catch((error: DOMException) => {
         if (cancelled || media.current !== element) return;
@@ -91,9 +121,11 @@ const MediaRenderer = forwardRef<MediaRendererRef, MediaRendererProps>((props, r
         else {
           setErrorKey("mediaPlayer.media.unsupported");
           setStatus("error");
+          onPlayabilityError?.(t("mediaPlayer.media.unsupported"));
         }
       });
     } else if (!playing && !element.paused) element.pause();
+
     return () => {
       cancelled = true;
     };
@@ -101,8 +133,10 @@ const MediaRenderer = forwardRef<MediaRendererRef, MediaRendererProps>((props, r
 
   const ready = () => {
     setStatus("ready");
+    if (isMedia) setMediaMetadataReceived(true);
     onLoad();
     const element = media.current;
+
     if (element instanceof HTMLVideoElement)
       onVideoReady?.(element.videoWidth, element.videoHeight);
   };
@@ -116,6 +150,7 @@ const MediaRenderer = forwardRef<MediaRendererRef, MediaRendererProps>((props, r
           : code === 4
             ? "mediaPlayer.media.unsupported"
             : "mediaPlayer.media.failed";
+
     setErrorKey(key);
     setStatus("error");
     onPlayabilityError?.(t(key));
@@ -140,11 +175,13 @@ const MediaRenderer = forwardRef<MediaRendererRef, MediaRendererProps>((props, r
     onSeeked: () => onVideoSeek?.(),
     onTimeUpdate: () => {
       const element = media.current;
+
       if (!element) return;
       const duration = Number.isFinite(element.duration) ? element.duration : 0;
       const loaded = element.buffered.length
         ? element.buffered.end(element.buffered.length - 1)
         : 0;
+
       onVideoProgress?.({
         played: duration ? element.currentTime / duration : 0,
         playedSeconds: element.currentTime,
@@ -154,8 +191,49 @@ const MediaRenderer = forwardRef<MediaRendererRef, MediaRendererProps>((props, r
     },
   };
 
+  const alternative = onOpenAlternative && (
+    <div className="media-player-alternative">
+      <button
+        className="media-player-button"
+        disabled={openingAlternative}
+        onClick={async () => {
+          setOpeningAlternative(true);
+          setAlternativeFailed(false);
+          try {
+            await onOpenAlternative(path);
+          } catch {
+            setAlternativeFailed(true);
+          } finally {
+            setOpeningAlternative(false);
+          }
+        }}
+      >
+        {t("mediaPlayer.preview.chooseAlternative")}
+      </button>
+      {alternativeFailed && (
+        <p className="media-player-hint" role="alert">
+          {t("mediaPlayer.preview.alternativeFailed")}
+        </p>
+      )}
+    </div>
+  );
+
   if (mediaType === MediaType.Text)
-    return <TextReader key={path} file={path} onLoad={onLoad} onError={onPlayabilityError} />;
+    return (
+      <div className="media-player-text-preview">
+        <TextReader
+          key={source}
+          file={path}
+          sourceUrl={entry.mediaUrl}
+          onError={(error) => {
+            setStatus("error");
+            onPlayabilityError?.(error);
+          }}
+          onLoad={ready}
+        />
+        {status === "error" && alternative}
+      </div>
+    );
   if (!needsLoad)
     return (
       <div className="media-player-empty">
@@ -163,6 +241,8 @@ const MediaRenderer = forwardRef<MediaRendererRef, MediaRendererProps>((props, r
         <strong>{t("mediaPlayer.unsupported")}</strong>
         <span className="media-player-hint">{t("mediaPlayer.unsupportedDescription")}</span>
         <code>{entry.ext || entry.name}</code>
+        {alternative}
+        <DesktopPlaybackGuideButton />
       </div>
     );
   if (status === "error")
@@ -182,6 +262,12 @@ const MediaRenderer = forwardRef<MediaRendererRef, MediaRendererProps>((props, r
         >
           {t("mediaPlayer.retry")}
         </button>
+        {alternative}
+        {/* Code 4 can also mean an initial HTTP 403/404/500. Only suggest player
+            compatibility after this attempt delivered actual media metadata. */}
+        {mediaMetadataReceived && errorKey === "mediaPlayer.media.decode" && (
+          <DesktopPlaybackGuideButton />
+        )}
       </div>
     );
 
@@ -194,17 +280,17 @@ const MediaRenderer = forwardRef<MediaRendererRef, MediaRendererProps>((props, r
           ref={image}
           alt={entry.name}
           src={source}
-          onLoad={ready}
           onError={failed}
+          onLoad={ready}
         />
       ) : mediaType === MediaType.Video ? (
         <video
           key={`${path}:${attempt}`}
           ref={media as React.RefObject<HTMLVideoElement>}
-          src={source}
           controls
           playsInline
           preload="metadata"
+          src={source}
           {...events}
           aria-label={entry.name}
         />
@@ -215,9 +301,9 @@ const MediaRenderer = forwardRef<MediaRendererRef, MediaRendererProps>((props, r
           <audio
             key={`${path}:${attempt}`}
             ref={media as React.RefObject<HTMLAudioElement>}
-            src={source}
             controls
             preload="metadata"
+            src={source}
             {...events}
             aria-label={entry.name}
           />
@@ -235,5 +321,6 @@ const MediaRenderer = forwardRef<MediaRendererRef, MediaRendererProps>((props, r
   );
   /* eslint-enable jsx-a11y/media-has-caption */
 });
+
 MediaRenderer.displayName = "MediaRenderer";
 export default MediaRenderer;

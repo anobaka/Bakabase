@@ -23,7 +23,6 @@ describe("where a devices page link lands", () => {
     ["no-such-section", "device", null, false],
     ["device", "device", null, true],
     ["manage", "manage", null, true],
-    ["sharing", "sharing", null, true],
     // Data sync's summary; everything else about it is on /data-sync.
     ["sync", "sync", null, true],
     ["advanced", "advanced", null, true],
@@ -34,11 +33,7 @@ describe("where a devices page link lands", () => {
     // The Service's "wants to manage this device" notification, the help and the map.
     ["management", "manage", "management", true],
     // The library while the Multi-device library is off, and its empty state.
-    ["browsing", "sharing", "browsing", true],
-    ["connect", "sharing", "connect", true],
-    ["share", "sharing", "share", true],
     // The Service's "wants to browse this device" notification.
-    ["sharing-requests", "sharing", "sharing-requests", true],
     // The configuration page's recovery link.
     ["identity", "advanced", "identity", true],
   ])("%s → the %s tab, at %s", (value, tab, anchor, explicit) => {
@@ -61,7 +56,6 @@ describe("where a devices page link lands", () => {
     ["sync", "/federation/devices?section=sync"],
     ["servers", "/federation/devices?section=servers"],
     ["management", "/federation/devices?section=management"],
-    ["sharing-requests", "/federation/devices?section=sharing-requests"],
     ["identity", "/federation/devices?section=identity"],
   ] as const)("devicesRoute(%s) is %s", (section, route) => {
     expect(devicesRoute(section)).toBe(route);
@@ -74,13 +68,7 @@ describe("the data sync tab", () => {
     ({ dataSyncStatus: patch && syncStatus(patch) }) as unknown as DevicesData;
 
   it("stands before Advanced", () => {
-    expect(devicesTabs.map((tab) => tab.id)).toEqual([
-      "device",
-      "manage",
-      "sharing",
-      "sync",
-      "advanced",
-    ]);
+    expect(devicesTabs.map((tab) => tab.id)).toEqual(["device", "manage", "sync", "advanced"]);
   });
 
   it("counts decisions, first syncs to review and requests to answer, and nothing else", () => {

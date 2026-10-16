@@ -1,9 +1,17 @@
-# Multi-device Library (Federation)
+# Multi-device Identity, Definitions Transport and Devices UI
 
-Every desktop install (and a headless NAS/Docker Service) can share its own library
-**read-only** with devices it authorizes, and browse other devices' libraries. There is no
-central server and no database replication: each node answers for its own resources and the
-current device merges results.
+Desktop and headless Service hosts can manage explicitly paired devices through the ordinary
+resource list. Management owns resource access, local metadata replicas, path mappings and
+cross-device processing; see `server-switching.md`. Definitions sync is a separate, directional
+`datasync.read` protocol; see `data-sync.md`. Neither permission implies the other.
+
+The former read-only shared-library feature was removed during beta, with no compatibility
+endpoints, sharing switch, grants, library discovery, query coordinator or media leases.
+Do not reintroduce those surfaces. Existing management pairings, mappings and metadata replicas
+are untouched. `federation/state.json` still owns the install's NodeId, LibraryEpoch, DisplayName,
+definitions grants, requests and peer addresses: removing the old feature must not regenerate
+that identity or erase peers that definitions sync still uses. Unknown retired JSON fields are
+ignored and disappear on a normal atomic save, not migrated into administrator rights.
 
 ## Where things live
 
@@ -11,49 +19,39 @@ current device merges results.
 |---|---|
 | Identity, grants, pairing, persisted state (`AppData/federation/state.json`) | `src/modules/Bakabase.Modules.Federation/{Identity,Peers,Security}` |
 | Outbound HTTP, per-peer verified sessions, address relocation | `.../Federation/Transport` |
-| Frozen snapshots, k-way merge, cursors | `.../Federation/Queries` |
-| Asset leases, path boundary | `.../Federation/Media` |
-| Host adapters, access middleware, media proxy, pairing flow, NAS CLI | `src/apps/Bakabase.Service/Components/Federation/` |
+| Shared media MIME/path boundaries (used by management) | `.../Federation/Media` |
+| Host adapters, access middleware, management streaming, definitions pairing flow, NAS CLI | `src/apps/Bakabase.Service/Components/Federation/` |
 | Endpoints | `src/apps/Bakabase.Service/Controllers/Federation*.cs` |
 | UI | `src/web/src/features/federation/` |
 | Device map (`/federation/map`) | `src/web/src/features/federation/map/`, `DeviceMapPage.tsx` |
 | Data sync (definitions kept in step over `datasync.read` grants) | see `data-sync.md`; its node side is `src/apps/Bakabase.Service/Controllers/{DataSyncNodeController,FederationDataSyncPairingController}.cs`, `src/apps/Bakabase.Service/Components/Federation/{FederationDataSync*,DataSyncNodeInfoContributor}.cs` and `src/modules/Bakabase.Modules.Federation/Peers/FederationScopes.cs` |
 | Devices page (`/federation/devices`) | `DevicesPage.tsx`, `src/web/src/features/federation/devices/` |
 | Both pages' data (one hook) | `src/web/src/features/federation/hooks/useDevicesData.ts` |
-| Design history | `docs/multi-device-library-execution-plan.md` |
+| Current management design | `docs/multi-device-management.md` |
 
-The whole multi-server mode — sharing, management, and data sync — is named
+The whole multi-server mode — management and data sync — is named
 「多设备互联」 / "Multi-device" in the UI (`federation.mode`, the menu group, the help topic
 `multiDevice`). Route and id names stay `federation`.
 
 ## The devices page
 
-`/federation/devices` is split by capability into tabs, the same kinds of trust the map
-draws: **本机 / This device** (name, the address to type, what waits here, "add another
-device"), **管理 / Management** (full control: devices this one manages, who may manage this
-one), **资源库分享 / Library sharing** (read-only: libraries this device browses, sharing its
-own), **数据同步 / Data sync** (a summary — its status, definitions sharing, how many devices
-this one receives from and how many read it — and the way to `/data-sync`, where all of it is
-decided) and **高级 / Advanced** (device ID, "after copying or restoring data"). The registry
-is `devices/sections.ts`; the nav is links, not a tablist (Back and copied links work). A
-device known only through data sync (a definitions grant, no library access either way) is in
-neither library sharing list.
+`/federation/devices` has four tabs: **本机 / This device** (name and reachable addresses),
+**管理 / Management** (devices this one manages and who may manage this one), **数据同步 /
+Data sync** (definitions status and the way to `/data-sync`) and **高级 / Advanced** (device
+ID and copied/restored-data recovery). The registry is `devices/sections.ts`; navigation uses
+links so Back and copied URLs work.
 
-- **`?section=` is a contract.** A value is a tab id or a place inside a tab, and a place
-  implies its tab (`resolveSection`). Producers: the Service's notifications (`management`,
-  `sharing-requests`), the window's switcher (`servers`), the configuration page
-  (`identity`), the map (`device`, `management`, `share`, `sharing`), the library (`sharing`,
-  `connect`, `browsing`), the help (`management`, `add-server`, `sharing`), the device tab's
-  "waiting for you" (`sync`). Never rename one;
-  `devicesSections.test.ts` pins them. A place is revealed (scrolled to, focused, marked
-  2.5 s) once what it waits for has loaded, again for every navigation; a place that is not
-  there (a request decided meanwhile) and a bare tab focus the tab's heading instead.
-- **One read for the page.** The page reads sharing, managed servers, remote access and data
-  sync's `/data-sync/map` once (`useDevicesData`, shared with the map) and mounts only the tab
-  shown, so switching tabs never waits and the nav's counts stay live. The data sync tab's
-  count is what waits on this device (decisions, first syncs to review, requests to answer),
-  from the status the hub keeps current. The management sections still read their own data
-  where the rest of the page is not available (a managed window, a LAN browser).
+- **`?section=` is a contract.** Tabs are `device`, `manage`, `sync`, `advanced`; supported
+  places are `addresses`, `servers`, `add-server`, `management`, `identity`. Producers include
+  notifications, configuration, the switcher, help and the device map. A place implies its
+  tab (`resolveSection`), then scrolls, focuses and highlights for 2.5 s after loading, once
+  per navigation. A missing place and a bare tab focus the heading. Unknown values use the
+  device tab without moving focus. Retired sharing anchors are not aliases.
+- **One read for the page.** `useDevicesData` reads identity, managed servers, remote access
+  and `/data-sync/map` once for both device surfaces. Only the shown tab mounts. Independent
+  source failures do not erase other data; counts stay live. The Data sync count is what waits
+  on this device (decisions, first sync review, requests), from hub-updated status. Management
+  sections still load their own data when embedded outside these pages.
 - **Focus** follows the map's rules (`devices/useSectionFocusKeeper.ts`): when an action takes
   away the control that had the keyboard, focus goes to the heading of the part it was in;
   a pointer press or focus moved elsewhere is never pulled back — nor the focus a click gives
@@ -61,7 +59,7 @@ neither library sharing list.
   so removing a row clicked with the mouse neither moves focus nor scrolls. Every heading
   focus can go to shows a ring from the keyboard (`focusHeadingClass`), and every place a
   link lands on is named by its heading (`aria-labelledby`). A form behind a button that
-  it replaces ("+ 添加要管理的设备", "+ 添加要浏览的设备") takes the keyboard into its first
+  it replaces ("+ 添加要管理的设备") takes the keyboard into its first
   field when opened from that button (`hooks/useFocusOnOpen.ts`). The Management add form
   stays open while a managed server is WrongServer or Revoked: their tips name its search.
 - **Layout** is measured on the page's container (`@container`, `@3xl:`), never the window:
@@ -87,25 +85,19 @@ neither library sharing list.
   keep explicit/browser/deployment sources first and prefer matching subnets within each source.
   Until settings arrive the list says loading or why it failed; "no address found" is only
   for an empty successful response.
-- **Words.** 配对/配对码 only for management, 分享码 only for library sharing, 浏览 for what
-  sharing allows, 允许 (never 批准) for letting a device in, 添加 (never 连接) for putting a
-  device in a list, 多设备资源库 for the merged library. Never shown: 节点, 代际, 设备身份, 旧接口,
-  新分享协议, 联合浏览, 授权 as a noun. Server texts that send the reader to the page (the relay's
-  unavailable page and refusals, notifications, the CLI) name its current places:
-  设备与分享 → 管理 → 谁可以管理本机, → 资源库分享, → 高级 → 复制或恢复数据后 → 设为新设备.
-  A text that sends the reader to **another** device, or that another device shows, names
-  the Devices page and its tab. A NAS or Docker administrator can now use the same page;
-  配置 → 远程访问 and the `federation` CLI remain alternative management surfaces. A management
-  request's notification names only 配置 → 远程访问 besides its link. A requester's name is
-  its own claim wherever it is shown (一台自称 {{name}} 的设备…), and a decided incoming
-  request says what this device did (`federation.requests.incoming*`), never the
-  requester's `federation.pair.*` outcome.
+- **Words.** 配对/配对码 describes management; definitions access uses data sync's own
+  wording. Use 允许 (never 批准) for letting a device in and 添加 (never 连接) for adding one
+  to a list. Never show 节点, 代际, 旧接口 or 联合浏览. Server messages name the current places:
+  设备与分享 → 管理 → 谁可以管理本机, or → 高级 → 复制或恢复数据后 → 设为新设备.
+  A message aimed at another device names the page and tab. NAS/Docker operators use the
+  same management UI; 配置 → 远程访问 remains available. A requester's name is its own claim
+  wherever shown (一台自称 {{name}} 的设备…), not an authenticated device identity.
 
 ## The device map
 
 `/federation/map` draws this device in the middle and every relationship it knows of as a
-spoke: library sharing (arrow towards the device that may browse), management (arrow from the
-manager), pending requests dashed, devices found nearby as outlines. It reads the listings the
+spoke: management (arrow from the manager), data sync (arrow toward the receiving device),
+pending requests dashed, devices found nearby as outlines. It reads the listings the
 devices page reads — `/federation/local/peers`, `/federation/local/servers`,
 `/remote-access/settings` and data sync's `/data-sync/map` (below) — and both discoveries on
 request, and acts through the same endpoints and confirmations.
@@ -125,16 +117,16 @@ request, and acts through the same endpoints and confirmations.
   against an id. Two devices of one name that stay apart — an id on either side, or a name
   more than one device has — each say they **may be the same device** as the other
   (`MapNode.namesakes`, the panel's note, with a way to the other): said on both, never drawn
-  as one. Not where what they said of themselves rules it out — a headless server never
-  manages anything, a phone is not a desktop app, another OS is another machine — and never
+  as one. Not where what they said of themselves rules it out — another OS is another
+  machine — and never
   for a request's claim, which says whom it claims to be instead. The note names each other
-  record by what it is to this device — the device that manages this one, the one sharing its
-  library, one found nearby… — and its address, else its platform (`namesakeDescription`), in
+  record by what it is to this device — the device that manages this one, the one supplying
+  definitions, one found nearby… — and its address, else its platform (`namesakeDescription`), in
   its text and so in its button's accessible name; two pairings that still read alike add when
   each was paired. Merging decides where a line is drawn, never which identity an action goes
   to.
-- **A request someone else filed is a claim.** Incoming sharing and management requests get
-  their own node (`sharing-request:` / `manager-request:`), marked unverified on the card, in
+- **A request someone else filed is a claim.** Incoming data sync and management requests get
+  their own node (`sync-request:` / `manager-request:`), marked unverified on the card, in
   its accessible name and in the panel — never merged into a trusted device and never the
   source of a kind or platform. Two claims from one address under one name are one node; when
   a claim names a device this one knows, the panel sets that device's known address against
@@ -146,8 +138,7 @@ request, and acts through the same endpoints and confirmations.
   server by its id, and it must be seen there.
 - **The way back to a moved server is confirmed, never remembered.** A managed server whose
   address answers as another install is offered pairing again only at an address that answered
-  as that server just now: each place it was last seen — its own beacon, where library sharing
-  reaches the same install — is probed (`managedServerApi.probe`) and must answer with the
+  as that server just now: each candidate address found for that install is probed (`managedServerApi.probe`) and must answer with the
   server's own id, and is asked again right before pairing. A place that is the server's own
   address under another spelling — every loopback name, and each address this device answers on
   (`sameMachine`, `ownHostsOf`) — is never asked, and not shown as the device's address. A
@@ -205,8 +196,7 @@ request, and acts through the same endpoints and confirmations.
   Older installs leave them out and read as unknown, an unknown value reads as nothing, and
   nothing is decided on them. The map takes a device's kind from its peer's verified
   handshake, then the managed server's last probe, then what answered nearby, then a
-  managing pairing's platform (desktop app or phone) — never from a request. This device is
-  the desktop app when it can manage servers.
+  managing pairing's platform (desktop app or phone) — never from a request. Management availability never implies a desktop app: headless servers manage devices too.
 - **Server times are UTC even without a zone.** `/remote-access/settings` writes Newtonsoft's
   naked `yyyy-MM-dd HH:mm:ss.fff`; read every server time through `parseServerTime` /
   `millisecondsUntil` (`@/core/serverTime`), never `Date.parse` — east of UTC it drops live
@@ -240,9 +230,9 @@ request, and acts through the same endpoints and confirmations.
   `syncNeedsYouThere`.
 - **Definitions requests follow the request rules above.** A request this device filed comes on
   its device's own record (`DataSyncMapPeer.Request`), which finds or creates its `peer:{nodeId}`
-  node at step 3, like a library request, so a link to a device that is not a peer yet still has
+  node at step 3, so a link to a device that is not a peer yet still has
   a node, and one that ended stays with its outcome and Dismiss (which resets the link). An incoming one is a claim: its own unverified
-  `sync-request:{id}` node, deduplicated like `sharing-request:` nodes and never merged into a
+  `sync-request:{id}` node, deduplicated like management claims and never merged into a
   trusted device; its panel shows the request card only, never the rule editor.
 - **The data sync sections of the panel act through the map.** They live in
   `features/data-sync/map/` and import nothing from the map: every action goes through the
@@ -256,12 +246,10 @@ request, and acts through the same endpoints and confirmations.
 
 ## Invariants — do not weaken
 
-- **The federated view is read-only.** Through `/federation/*` a device browses, searches, views
-  and plays other devices' resources; it never edits, deletes, moves or runs tasks on them.
-  Managing another server is a different feature with a different credential: the desktop app
-  switches its window to that server's own UI through a signed loopback relay using the legacy
-  `Bakabase-Device` pairing (see `server-switching.md`). Never route management through the node
-  protocol, and never let an admin device key travel on `/federation/v1`.
+- **Management and definitions have separate credentials.** Paired managers use
+  `Bakabase-Device` signatures and owner-scoped management APIs. The only retained node scope
+  is `datasync.read`; its `Bakabase-Node` credentials must never acquire management rights.
+  Management resource and media APIs retain their own identity, epoch, path and capability checks.
 
 - **Two interfaces, never mixed.** `/federation/local/*` is for this device's own UI: real
   loopback socket + loopback `Host` + matching `Origin` (`FederationAccessMiddleware.IsLocalCaller`)
@@ -283,9 +271,7 @@ request, and acts through the same endpoints and confirmations.
   never create it (`NotAllowedOnThisDevice`) — until it pairs, which on an Unrestricted server
   any LAN caller can do (it may approve pairing requests there), so the rule refuses only
   callers that have not paired; on an Enabled server an unpaired caller cannot pair itself
-  (see `data-sync.md`, "Who may create or widen access"). Library grants stay on
-  the authorized `/federation/local/*` interface and the CLI; `/data-sync` has no path to them
-  (`DataSyncGrantBoundaryTests`).
+  (see `data-sync.md`, "Who may create or widen access").
 - **A node credential is never a legacy principal.** It must not reach options, resource
   writes, `/hub/ui`, file APIs or legacy pairing. Never map it to `IsPaired`.
 - **Default deny.** Every new federation action needs an exact entry in
@@ -295,35 +281,31 @@ request, and acts through the same endpoints and confirmations.
   another. Two-way pairing is two grants orchestrated by one flow (a single-use reciprocal code
   bound to the requester's NodeId), not one symmetric grant. A reciprocal datasync code is the
   requester's consent to be read back, and goes when that consent does: revoking the device,
-  forgetting it ("Done — stop reading X"), removing the peer or an identity reset drop it, and
+  forgetting it ("Done — stop reading X") or an identity reset drop it, and
   so does withdrawing the request unless another two-way request to that device stands — a
   stale copy of the request approved later reads nothing back.
-- **Grants have scopes.** A grant is `library.read` (the whole library, read-only; every grant
-  made before data sync) or `datasync.read` (the definitions data sync publishes); `*` is only
-  ever an endpoint's declaration (the handshake), never a grant's. The two are **separate
-  grants** in separate `state.json` collections, approved, revoked and lease-cancelled on their
-  own, behind their own switches (`SharingEnabled`, `DataSyncSharingEnabled`); neither ever
-  implies the other, and approving one never touches the other. Definitions pair on their own
-  routes (`pair/datasync/{request|code|claim}`), so an older node refuses them instead of
-  taking them for library requests, and a code of one scope is never accepted on the other's
-  route. Definitions pairing never rewrites a library peer's `Label`, `Address`,
-  `LibraryEpoch`, `Kind`, `Platform` or `Enabled` (it keeps its own `DataSyncAddress`). The
-  gate checks per route: `FederationRoutePolicy.RequiredSharing` names the switch the route
-  needs, checked before authentication (`info` answers when either is on). After
-  authentication the middleware checks the principal's scope against the route's: a library
-  grant on `export/datasync/*`, or a definitions grant on any other Export route, gets 403
-  `ScopeNotGranted` (gate rows G6–G9). Behind it, every Export action declares its scope on
-  `FederationEndpointAttribute.Scope`, and `FederationLocalAccessFilter` is the fail-closed
-  backstop (403 `FederationEndpointDenied`) for an Export action that declares no scope, or
-  one whose scope the principal's does not match. Library export services also require
-  `library.read` in `NodeGrantService.ValidateAsync` (`ScopeNotGranted`).
-  `EveryExportActionDeclaresAScope` and the generated per-action matrix in
-  `FederationGateTests` pin it.
+- **Definitions grants are explicit.** Only `datasync.read` grants are valid; `*` is an
+  endpoint declaration for the handshake, never a grant. The `DataSyncSharingEnabled` switch
+  gates `info`, definitions pairing and every export before authentication. Definitions pair
+  only on `pair/datasync/{request|code|claim}`. Export permits only the handshake and
+  `export/datasync/{head|manifest|changes}`; everything else is denied before MVC routing.
+  Every Export action declares its scope on `FederationEndpointAttribute`, and
+  `FederationLocalAccessFilter` fails closed for absent/mismatched scope metadata.
+  `EveryExportActionDeclaresAScope` and the per-action gate matrix pin this boundary.
+  Verified sessions use `DataSyncAddress`, with the saved `Address` as a fallback. Preserve
+  these addresses and peer identity during retirement; they do not confer resource access.
+- **Identity reset is deliberate.** Restoring this device rotates its library epoch, disables
+  definitions sharing and revokes inbound definitions access, without dropping outgoing
+  management pairings or mappings. Making a copied install a new device first forgets its
+  outbound managed credentials locally, then replaces the install/node identity and removes
+  inbound management and definitions access. It sends no revoke to servers using the original
+  copy's keys. Corrupt-state recovery remains explicit; never silently replace an unreadable
+  state at ordinary startup.
 - **Local actions stay local.** Playing and opening folders happen on the viewing device with its
   own player configuration. Never launch a program named by a peer; on macOS, packages are only
   revealed (`open -R`), never opened.
-- **Peer input is untrusted.** Wire DTOs are validated and budgeted (`QueryProtocol`,
-  `FederationMediaSessions.Remember`, `MediaPathBoundary`). Removed enum values (e.g. old
+- **Peer input is untrusted.** Wire DTOs, metadata pages, mapping trees and media paths are validated and budgeted.
+  `MediaPathBoundary` remains shared by management media access. Removed enum values (e.g. old
   `ResourceSource` members) must be filtered before they reach the wire, or peers reject whole blocks.
 - **A typed address is read one way, for both features** (`RemoteAddressInput`, behind
   `FederationHttpClient.NormalizeAddress` and `ServerConnector`): full-width `：．。` and digits
@@ -331,8 +313,8 @@ request, and acts through the same endpoints and confirmations.
   guessed, since the desktop app's port can change at launch and a Docker server's is its
   own — while `http(s)://` keeps its scheme's port, for a reverse proxy. Anything that is not
   an http(s) host and port is `InvalidAddress`; both are answered before anything is sent.
-- **No silent widening or truncation.** Unsupported filters are rejected, partial coverage is
-  reported per node, budget overruns fail explicitly.
+- **No silent widening or truncation.** Unsupported filters are rejected, unavailable metadata sources are
+  reported explicitly, and budget overruns fail rather than returning a truncated success.
 - **Proxies are bypassed** (`UseProxy = false`), matching the desktop app's relays.
 - **Connections race IPv4 and IPv6.** Every outbound connection to another device — peer
   requests, discovery, the desktop app's relays and probes — opens through
@@ -345,7 +327,7 @@ request, and acts through the same endpoints and confirmations.
   connector from its composition — a `DualStackConnector` service for `AddFederationPeers` and
   `FederationNodeDiscovery`, `RemoteConsoleOptions.Connector` for the desktop app's — and the
   wiring is tested through the real handlers over a name that resolves IPv6-first to a dropped
-  address (`PeerConnectionTests`, `FederationNodeDiscoveryTests`, `ConsoleNetworkTests`).
+  address (`DataSyncPeerClientTests`, `FederationNodeDiscoveryTests`, `ConsoleNetworkTests`).
 - **A proxy's addresses are dialled only for a domain.** 198.18.0.0/15 (`ProxyFakeAddresses`:
   what Clash/Mihomo, Surge, sing-box and Shadowrocket answer names with in fake-IP or TUN mode;
   reserved, never a LAN address) typed, or the resolver's first answer for a name only the LAN
@@ -359,7 +341,7 @@ request, and acts through the same endpoints and confirmations.
   addresses all failed while the system resolver gave a proxy's address
   (`LanHostResolution.ProxyAddress`); those attempts get at most `ProxiedLanConnectLimit`
   (750 ms) of the connector's own, so a hang is still said to be the proxy's within a caller's
-  budget (the probe's 2 s). Library sharing says `ProxyFakeAddress` (503; also the peer's
+  budget (the probe's 2 s). Definitions transport says `ProxyFakeAddress` (503; also the peer's
   connection state, and it starts relocation like `NodeUnreachable`), server switching
   `ManagedServerOutcome.ProxyFakeAddress`; both tell the user to set `.local` names and LAN
   addresses to DIRECT or use the IP — for a domain, to set that domain to DIRECT
@@ -401,21 +383,22 @@ after any DTO/endpoint change.
 
 ## Headless (NAS/Docker)
 
-`BAKABASE_FEDERATION_SHARING=true` turns sharing on at startup; `BAKABASE_NODE_NAME` names the
-node; `--federation-invite-on-start` prints a one-time code. The running instance is managed with
-`docker exec <c> dotnet Bakabase.Service.dll federation <status|share on|off|invite|approve|reject|revoke|new-identity>`,
-which only calls its loopback API. `new-identity` is the devices page's "Make this a new device"
-(Advanced → After copying or restoring data), for a copied data directory. The headless
-server's browser UI also offers Multi-device → Devices and sharing and the read-only merged
-library/map to administrators. Data sync is a child of Multi-device in every window, including
-a desktop relay; relay windows still direct library/map access back to their local device. Data sync's counterparts —
-`BAKABASE_DATASYNC_SHARING=true` (definitions sharing on at every start) and
-`federation datasync <command>` — are in `data-sync.md` ("Headless").
+`BAKABASE_NODE_NAME` overrides the device name while set; otherwise the UI can change the
+saved display name. An environment-controlled name requires changing startup configuration. The loopback CLI retains
+`docker exec <c> dotnet Bakabase.Service.dll federation <status|new-identity|datasync ...>`.
+`new-identity` matches Advanced → After copying or restoring data → Make this a new device.
+There is no library share/invite CLI or startup switch.
+
+The browser UI offers the ordinary Resources page, Devices and sharing, Device map and Data
+sync. Both desktop and headless hosts can manage paired devices; only desktop hosts can open
+another device's whole view in a local relay or launch a native player. A browser uses streamed
+media. `BAKABASE_DATASYNC_SHARING=true` and `federation datasync <command>` control definitions
+only; see `data-sync.md`.
 
 ## Tests
 
-- `src/tests/Bakabase.Modules.Federation.Tests` — protocol, pairing, security, queries (fast).
-- `src/tests/Bakabase.Tests/Federation` — real middleware/controllers, media, gate matrix.
+- `src/tests/Bakabase.Modules.Federation.Tests` — identity, definitions pairing, direct transport and security (fast).
+- `src/tests/Bakabase.Tests/Federation` — management and data sync controllers, media and retired-route gate matrix.
 - `src/tests/federation-smoke/run.py` + `Bakabase.Federation.TestHost` — three real processes;
   then `datasync.py`, data sync across three more (two desktops and a headless server).
 - Frontend: `yarn vitest run src/features/federation`.

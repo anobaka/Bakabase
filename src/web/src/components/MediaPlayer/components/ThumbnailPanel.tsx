@@ -1,12 +1,15 @@
 "use client";
 import type { ListRowProps } from "react-virtualized";
 import type { BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntry } from "@/sdk/Api";
-import type { MediaPlayerEntry } from "../types";
+import type { MediaPlayerEntry, MediaPreviewState } from "../types";
+
 import React, { useMemo, useRef, useState } from "react";
 import { TbLayoutSidebarLeftCollapse, TbLayoutSidebarLeftExpand, TbSearch } from "react-icons/tb";
 import { AutoSizer, List } from "react-virtualized";
 import { useTranslation } from "react-i18next";
+
 import ThumbnailPanelItem from "./ThumbnailPanelItem";
+
 import { MediaType } from "@/sdk/constants";
 import envConfig from "@/config/env";
 
@@ -18,6 +21,7 @@ interface ThumbnailPanelProps {
   onToggleCollapse: () => void;
   onEntryClick: (entry: BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntry) => void;
   getMediaType: (entry: BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntry) => MediaType;
+  previewStates?: Record<string, MediaPreviewState>;
 }
 const ThumbnailPanel = ({
   entries,
@@ -27,6 +31,7 @@ const ThumbnailPanel = ({
   onToggleCollapse,
   onEntryClick,
   getMediaType,
+  previewStates,
 }: ThumbnailPanelProps) => {
   const { t } = useTranslation();
   const [search, setSearch] = useState("");
@@ -47,30 +52,35 @@ const ThumbnailPanel = ({
     entries.some((entry) => getMediaType(entry) === type),
   );
   const getThumbnailUrl = (entry: MediaPlayerEntry) =>
-    getMediaType(entry) === MediaType.Image
-      ? `${envConfig.apiEndpoint}/tool/thumbnail?path=${encodeURIComponent(entry.playPath || entry.path)}&w=96&h=96`
-      : null;
+    entry.thumbnailUrl !== undefined
+      ? entry.thumbnailUrl
+      : getMediaType(entry) === MediaType.Image
+        ? `${envConfig.apiEndpoint}/tool/thumbnail?path=${encodeURIComponent(entry.playPath || entry.path)}&w=96&h=96`
+        : null;
   const renderRow = ({ index, key, style }: ListRowProps) => {
     const entry = visible[index];
+
     return (
       <div key={key} style={style}>
         <ThumbnailPanelItem
-          entry={entry}
-          index={index}
           activeIndex={activeIndex}
-          isActive={entry.path === activePath}
+          activeThumbnailRef={null}
+          entry={entry}
           getMediaType={getMediaType}
           getThumbnailUrl={getThumbnailUrl}
+          index={index}
+          isActive={entry.path === activePath}
+          previewState={previewStates?.[entry.playPath || entry.path]}
           onEntryClick={onEntryClick}
-          activeThumbnailRef={null}
         />
       </div>
     );
   };
+
   return (
     <aside
-      className={`media-player-sidebar ${collapsed ? "is-collapsed" : ""}`}
       aria-label={t("mediaPlayer.files")}
+      className={`media-player-sidebar ${collapsed ? "is-collapsed" : ""}`}
     >
       <div className="media-player-sidebar-heading">
         {!collapsed && (
@@ -79,9 +89,9 @@ const ThumbnailPanel = ({
           </strong>
         )}
         <button
+          aria-label={t(collapsed ? "mediaPlayer.expandFiles" : "mediaPlayer.collapseFiles")}
           className="media-player-icon-button"
           title={t(collapsed ? "mediaPlayer.expandFiles" : "mediaPlayer.collapseFiles")}
-          aria-label={t(collapsed ? "mediaPlayer.expandFiles" : "mediaPlayer.collapseFiles")}
           onClick={onToggleCollapse}
         >
           {collapsed ? (
@@ -96,8 +106,8 @@ const ThumbnailPanel = ({
           <label className="media-player-search">
             <TbSearch size={16} />
             <input
-              placeholder={t("mediaPlayer.searchFiles")}
               aria-label={t("mediaPlayer.searchFiles")}
+              placeholder={t("mediaPlayer.searchFiles")}
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
@@ -124,9 +134,9 @@ const ThumbnailPanel = ({
             </div>
           )}
           <div
+            aria-label={t("mediaPlayer.files")}
             className="media-player-file-list"
             role="listbox"
-            aria-label={t("mediaPlayer.files")}
           >
             {visible.length ? (
               <AutoSizer>
@@ -134,12 +144,12 @@ const ThumbnailPanel = ({
                   <List
                     ref={list}
                     height={height}
-                    width={width}
+                    overscanRowCount={5}
                     rowCount={visible.length}
                     rowHeight={72}
                     rowRenderer={renderRow}
-                    overscanRowCount={5}
                     scrollToIndex={activeVisibleIndex >= 0 ? activeVisibleIndex : undefined}
+                    width={width}
                   />
                 )}
               </AutoSizer>
@@ -154,4 +164,5 @@ const ThumbnailPanel = ({
     </aside>
   );
 };
+
 export default ThumbnailPanel;

@@ -20,17 +20,17 @@ public sealed record ManagedServerAddressRequest(string Address);
 /// <param name="Code">A pairing code shown on the other server; without one a request is filed for it to approve.</param>
 public sealed record ManagedServerPairRequest(string Address, string? Code = null);
 /// <param name="Mappings">The whole table, replacing the previous one. Null or absent clears it, as an empty list does.</param>
-public sealed record ManagedServerPathMappingsRequest(ManagedServerPathMapping[]? Mappings = null);
+public sealed record ManagedServerPathMappingsRequest(ManagedServerPathMapping[]? Mappings = null,
+    ManagedServerPathMapping[]? ExpectedMappings = null);
 /// <param name="Path">A path on the server's own UI to land on; its root when absent.</param>
 public sealed record ManagedServerOpenRequest(string? Path = null);
 
 /// <summary>
-/// Servers this device manages in full, shown in its own window through a local relay.
+/// Servers this device manages through explicitly paired directional connections.
 /// </summary>
 /// <remarks>
-/// Local-only, like every <c>/federation/local</c> route. The work is done by whatever
-/// host composed the relays — the desktop app — so on a headless server the listing says
-/// management is unavailable and everything else refuses.
+/// Local-only, like every <c>/federation/local</c> route. Desktop and headless hosts share
+/// management connections; only the desktop additionally provides a local UI relay.
 /// </remarks>
 [ApiController]
 [Route("federation/local/servers")]
@@ -53,7 +53,7 @@ public sealed class FederationServerController : FederationControllerBase
 
     /// <summary>
     /// Servers on this network that could be managed from here, found by their remote-access
-    /// beacons — not by library sharing, which a server that can be managed usually has off.
+    /// beacons. Discovery does not establish trust or grant management access.
     /// </summary>
     [HttpGet("discover")]
     [SwaggerOperation(OperationId = "DiscoverManagedServers")]
@@ -89,9 +89,19 @@ public sealed class FederationServerController : FederationControllerBase
     [SwaggerOperation(OperationId = "SetManagedServerPathMappings")]
     [ProducesResponseType(typeof(FederationPeerChange), 200)]
     public async Task<IActionResult> PathMappings(string serverId,
-        [FromBody] ManagedServerPathMappingsRequest request, CancellationToken ct) =>
-        FederationResult(new FederationPeerChange(
-            await Required.SetPathMappingsAsync(serverId, request.Mappings ?? [], ct)));
+        [FromBody] ManagedServerPathMappingsRequest request, CancellationToken ct)
+    {
+        try
+        {
+            return FederationResult(new FederationPeerChange(
+                await Required.SetPathMappingsAsync(serverId, request.Mappings ?? [], ct, request.ExpectedMappings)));
+        }
+        catch (ManagedPathMappingsChangedException)
+        {
+            throw new FederationAccessException("PathMappingsChanged", 409,
+                "The saved path mappings changed. Reload them before saving this edit.");
+        }
+    }
 
     [HttpPost("{serverId}/open")]
     [SwaggerOperation(OperationId = "OpenManagedServer")]
@@ -104,6 +114,11 @@ public sealed class FederationServerController : FederationControllerBase
         try
         {
             opened = await Required.OpenAsync(serverId, request?.Path, ct);
+        }
+        catch (NotSupportedException)
+        {
+            throw new FederationAccessException("RelayUnavailable", 409,
+                "This server manages resources in its own interface and has no desktop window relay.");
         }
         catch (IOException)
         {

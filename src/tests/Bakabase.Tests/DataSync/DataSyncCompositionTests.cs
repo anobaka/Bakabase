@@ -41,7 +41,7 @@ public class DataSyncCompositionTests
                      typeof(DataSyncScheduler), typeof(DataSyncFetcher), typeof(DataSyncLinkService),
                      typeof(DataSyncTaskLauncher), typeof(DataSyncApplyTask), typeof(DataSyncGrantEventsHandler),
                      typeof(DataSyncNotifier), typeof(DataSyncHubPublisher), typeof(DataSyncRetention),
-                     typeof(DataSyncUndoPlanner), typeof(DataSyncRefreshCoordinator),
+                     typeof(DataSyncRefreshCoordinator),
                  })
         {
             Assert.IsNotNull(s.GetRequiredService(singleton), singleton.Name);

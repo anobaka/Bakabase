@@ -16,7 +16,7 @@ import { Button, Card, CardBody, Tooltip, Modal } from "@/components/bakaui";
 import { PropertyPool } from "@/sdk/constants";
 import PropertyPoolIcon from "@/components/Property/components/PropertyPoolIcon";
 import PropertyTypeIcon from "@/components/Property/components/PropertyTypeIcon";
-import BApi from "@/sdk/BApi.tsx";
+import { useResourceApi } from "@/features/management/resourceContext";
 
 type Props = {
   property: IProperty;
@@ -52,6 +52,7 @@ const V2 = ({
   ...props
 }: Props) => {
   const { t } = useTranslation();
+  const BApi = useResourceApi();
 
   const { createPortal } = useBakabaseContext();
 

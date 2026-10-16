@@ -10,165 +10,7 @@ public sealed class NodePairingClient(FederationStateStore store, INodeIdentityP
     FederationHttpClient http, TimeProvider timeProvider, GrantLeaseRegistry leases,
     FederationPeerService? peers = null)
 {
-    /// <param name="shareBackAddresses">
-    /// When set, this node (which must be sharing) offers the target read access back through a
-    /// code bound to the target's NodeId, reachable at these addresses; one approval pairs both ways.
-    /// </param>
-    /// <param name="expectedNodeId">Refuse to send a code to an address that is not this node.</param>
-    public async Task<NodePairingOutcome> ConnectAsync(string address, string? code, CancellationToken ct = default,
-        IReadOnlyList<string>? shareBackAddresses = null, string? expectedNodeId = null)
-    {
-        var normalized = FederationHttpClient.NormalizeAddress(address);
-        var local = await identity.GetAsync(ct);
-        var info = await http.PublicAsync<NodeInfo>(normalized, HttpMethod.Get, "/federation/v1/info", null, ct);
-        PeerSessionFactory.ValidateInfo(info, expectedNodeId);
-        // This node's own id from an address that is not this machine's: a copy of this data
-        // directory, or this node reached through another door — a reverse proxy, a port forward,
-        // the router's public address — which nothing here tells apart (the name a node gives is
-        // its data directory's, copied with it), so the words cover both.
-        if (info.NodeId == local.NodeId)
-            throw await ThisMachine.ReachedByAsync(new Uri(normalized), ct)
-                ? new FederationAccessException("SelfAddress", 400, "This address belongs to this node.")
-                : new FederationAccessException("SameIdentity", 409,
-                    "The node at this address has this node's identity: the address leads back to this node, or " +
-                    "that node's data directory was copied from here.");
-        NodeReciprocalOffer? offer = null;
-        if (shareBackAddresses is { Count: > 0 })
-        {
-            if (peers == null) throw new InvalidOperationException("Sharing back needs the local peer service.");
-            offer = new NodeReciprocalOffer(shareBackAddresses.Take(8).ToArray(),
-                await peers.CreateReciprocalInvitationAsync(info.NodeId, ct));
-        }
-
-        // Persist the claim secret BEFORE dispatch. If the response is lost or this
-        // process exits, the peer can safely re-deliver the same grant to this claimant.
-        var created = false;
-        var pending = await store.MutateAsync(state =>
-        {
-            var now = timeProvider.GetUtcNow();
-            state.OutgoingRequests.RemoveAll(r => r.ExpiresAt <= now);
-            var existing = state.OutgoingRequests.FirstOrDefault(r => r.NodeId == info.NodeId &&
-                r.Address == normalized && r.LibraryEpoch == info.LibraryEpoch && r.Status == "awaitingApproval");
-            if (existing != null) return existing;
-            created = true;
-            if (state.OutgoingRequests.Count >= 64)
-                throw new FederationAccessException("PairingBusy", 429, "Too many pairing transactions are pending.");
-            var request = new StoredOutgoingRequest
-            {
-                RequestId = NodeRequestSignature.RandomToken(18),
-                Address = normalized,
-                NodeId = info.NodeId,
-                NodeName = info.Name,
-                LibraryEpoch = info.LibraryEpoch,
-                ClaimSecret = NodeRequestSignature.RandomToken(),
-                ExpiresAt = now + FederationPeerService.PairingLifetime
-            };
-            state.OutgoingRequests.Add(request);
-            return request;
-        }, ct);
-
-        NodePairExchange exchange;
-        try
-        {
-            exchange = string.IsNullOrWhiteSpace(code)
-                ? await http.PublicAsync<NodePairExchange>(normalized, HttpMethod.Post, "/federation/v1/pair/request",
-                    new NodePairRequest(local.NodeId, local.Name, pending.RequestId, pending.ClaimSecret, offer), ct)
-                : await http.PublicAsync<NodePairExchange>(normalized, HttpMethod.Post, "/federation/v1/pair/code",
-                    new NodePairCodeRequest(local.NodeId, local.Name, code, pending.RequestId, pending.ClaimSecret,
-                        offer), ct);
-        }
-        catch (FederationAccessException e) when (e.ErrorCode == "InvalidPairingCode")
-        {
-            // The source kept nothing for a new transaction; an existing one stays pending on both sides.
-            if (created)
-                await store.MutateAsync(state => state.OutgoingRequests.RemoveAll(r => r.RequestId == pending.RequestId), ct);
-            throw;
-        }
-        return await SaveExchangeAsync(local, pending, exchange, ct);
-    }
-
-    /// <summary>Claims every outgoing request still waiting, so grants land without the UI polling.</summary>
-    /// <returns>Whether any request was granted.</returns>
-    public async Task<bool> ClaimPendingAsync(CancellationToken ct = default)
-    {
-        var now = timeProvider.GetUtcNow();
-        var pending = (await store.ReadAsync(ct)).OutgoingRequests
-            .Where(r => r.Status == "awaitingApproval" && r.ExpiresAt > now).Select(r => r.RequestId).ToArray();
-        var granted = false;
-        foreach (var requestId in pending)
-        {
-            try { granted |= (await ClaimAsync(requestId, ct)).Outcome == "granted"; }
-            catch (FederationAccessException) { /* Offline or rejected; the next round retries until expiry. */ }
-        }
-        return granted;
-    }
-
-    public async Task<NodePairingOutcome> ClaimAsync(string requestId, CancellationToken ct = default)
-    {
-        var state = await store.ReadAsync(ct);
-        var pending = state.OutgoingRequests.FirstOrDefault(r => r.RequestId == requestId &&
-            r.ExpiresAt > timeProvider.GetUtcNow()) ?? throw new FederationAccessException("PairingExpired", 410,
-            "The local pairing transaction expired. Start a new connection.");
-        var local = await identity.GetAsync(ct);
-        var info = await http.PublicAsync<NodeInfo>(pending.Address, HttpMethod.Get, "/federation/v1/info", null, ct);
-        PeerSessionFactory.ValidateInfo(info, pending.NodeId, pending.LibraryEpoch);
-        var exchange = await http.PublicAsync<NodePairExchange>(pending.Address, HttpMethod.Post,
-            "/federation/v1/pair/claim", new NodePairClaimRequest(requestId, local.NodeId, pending.ClaimSecret), ct);
-        return await SaveExchangeAsync(local, pending, exchange, ct);
-    }
-
-    private async Task<NodePairingOutcome> SaveExchangeAsync(NodeIdentity local, StoredOutgoingRequest pending,
-        NodePairExchange exchange, CancellationToken ct)
-    {
-        ValidateExchange(local, pending, exchange);
-        var replacedGrantId = await store.MutateAsync(state =>
-        {
-            if (state.NodeId != local.NodeId)
-                throw new FederationAccessException("IdentityConflict", 409, "The local node identity changed during pairing.");
-            var request = state.OutgoingRequests.FirstOrDefault(r => r.RequestId == pending.RequestId);
-            if (request == null)
-                throw new FederationAccessException("PairingExpired", 410, "The pairing transaction was removed before it finished.");
-            request.Status = exchange.Outcome;
-            // Never extend a local transaction based on an untrusted wall clock.
-            string? replacedGrantId = null;
-            if (exchange.Outcome == "granted")
-            {
-                var old = state.OutboundGrants.GetValueOrDefault(pending.NodeId);
-                var oldAddress = state.Peers.GetValueOrDefault(pending.NodeId)?.Address;
-                if (old != null && (old != exchange.Credentials || oldAddress != pending.Address))
-                    replacedGrantId = old.GrantId;
-                state.OutboundGrants[pending.NodeId] = exchange.Credentials!;
-                if (!state.Peers.TryGetValue(pending.NodeId, out var peer))
-                    state.Peers[pending.NodeId] = peer = new StoredPeer { NodeId = pending.NodeId };
-                peer.Label = pending.NodeName;
-                peer.Address = pending.Address;
-                peer.LibraryEpoch = pending.LibraryEpoch;
-                peer.Enabled = true;
-            }
-            return replacedGrantId;
-        }, ct);
-        if (replacedGrantId != null) leases.Revoke(GrantLeaseRegistry.OutboundKey(replacedGrantId));
-        if (exchange.Outcome == "granted")
-            leases.Resume(GrantLeaseRegistry.OutboundKey(exchange.Credentials!.GrantId));
-        return new NodePairingOutcome(exchange.Outcome, exchange.RequestId, pending.NodeId);
-    }
-
-    // ---- Definitions access (datasync.read, §7.2.2) --------------------------------------------------------------
-
-    /// <summary>
-    /// Asks the device at <paramref name="address"/> for <c>datasync.read</c>, by request or by a datasync code, on the
-    /// datasync pairing routes (never the library's). Refuses before sending anything when the peer's <c>/info</c>
-    /// says it cannot take part: <c>PeerTooOld</c>, <c>ThisTooOld</c> or <c>PeerSharingOff</c>. This device's own
-    /// refusals on the way carry codes no peer answers: <c>LocalPairingBusy</c> (too many of its own requests or
-    /// codes waiting) and <c>LocalDataSyncSharingDisabled</c> (two-way, with its own sharing off).
-    /// </summary>
-    /// <param name="intent"><see cref="NodeDataSyncIntents.Follow"/> or <see cref="NodeDataSyncIntents.TwoWay"/>.</param>
-    /// <param name="contract">This build's data sync contract, which the peer's must meet and accept.</param>
-    /// <param name="reciprocalAddresses">
-    /// Two-way only: where the peer can reach this device, offered with a single-use datasync code bound to the
-    /// peer's NodeId, so its approval can read this device back. This device must be sharing its definitions.
-    /// </param>
-    /// <param name="expectedNodeId">Refuse to send a code to an address that is not this node.</param>
+    /// <summary>Pairs definitions access; optional reciprocal access remains a separate grant.</summary>
     public async Task<NodeDataSyncPairingOutcome> ConnectDataSyncAsync(string address, string? code, string intent,
         NodeDataSyncContract contract, IReadOnlyList<string>? reciprocalAddresses = null,
         string? expectedNodeId = null, CancellationToken ct = default)
@@ -201,7 +43,7 @@ public sealed class NodePairingClient(FederationStateStore store, INodeIdentityP
             offer = new NodeReciprocalOffer(reciprocalAddresses.Take(8).ToArray(), reciprocalCode);
         }
 
-        // Persist the claim secret BEFORE dispatch, as for library access.
+        // Persist the claim secret before dispatch so an interrupted request can be claimed again.
         var created = false;
         var pending = await store.MutateAsync(state =>
         {
@@ -254,11 +96,6 @@ public sealed class NodePairingClient(FederationStateStore store, INodeIdentityP
         return WithDataSyncReadBack(await SaveDataSyncExchangeAsync(local, pending, exchange, ct), exchange);
     }
 
-    /// <summary>
-    /// Claims every datasync request still waiting, next to <see cref="ClaimPendingAsync"/>, so grants land without
-    /// the UI polling.
-    /// </summary>
-    /// <returns>The node ids whose grant this call obtained.</returns>
     public async Task<IReadOnlyList<string>> ClaimPendingDataSyncAsync(CancellationToken ct = default) =>
         (await ClaimPendingDataSyncOutcomesAsync(ct)).Select(o => o.PeerNodeId).ToArray();
 
@@ -328,12 +165,7 @@ public sealed class NodePairingClient(FederationStateStore store, INodeIdentityP
                 "The other device does not let devices read its definitions.");
     }
 
-    /// <summary>
-    /// <see cref="SaveExchangeAsync"/> for definitions access: the same checks, then <c>OutboundDataSyncGrants</c>
-    /// and the peer's data sync address. It follows the routing rule of §7.1.1: a peer with library access in either
-    /// direction keeps its label, address, library epoch, kind, platform and browsing switch; one without gets empty
-    /// ones filled so the device map can show it. Nothing here ever changes <c>Enabled</c>.
-    /// </summary>
+    /// <summary>Save the new grant atomically with the verified definitions address.</summary>
     private async Task<NodeDataSyncPairingOutcome> SaveDataSyncExchangeAsync(NodeIdentity local,
         StoredOutgoingRequest pending, NodePairExchange exchange, CancellationToken ct)
     {
@@ -359,12 +191,9 @@ public sealed class NodePairingClient(FederationStateStore store, INodeIdentityP
                 peer.DataSyncAddress = pending.Address;
                 // A verified address replaces what the peer merely offered.
                 peer.DataSyncOfferedAddresses = null;
-                if (!state.HasLibraryGrant(pending.NodeId))
-                {
-                    if (peer.Label.Length == 0) peer.Label = pending.NodeName;
-                    peer.Address ??= pending.Address;
-                    peer.LibraryEpoch ??= pending.LibraryEpoch;
-                }
+                if (peer.Label.Length == 0) peer.Label = pending.NodeName;
+                peer.Address ??= pending.Address;
+                peer.LibraryEpoch ??= pending.LibraryEpoch;
             }
             return replacedGrantId;
         }, ct);
@@ -374,7 +203,7 @@ public sealed class NodePairingClient(FederationStateStore store, INodeIdentityP
         return new NodeDataSyncPairingOutcome(exchange.Outcome, exchange.RequestId, pending.NodeId, pending.NodeName);
     }
 
-    /// <summary>What a peer's pairing answer must be before anything is stored, for either kind of access.</summary>
+    /// <summary>What a peer's pairing answer must be before a definitions grant is stored.</summary>
     private static void ValidateExchange(NodeIdentity local, StoredOutgoingRequest pending, NodePairExchange exchange)
     {
         if (exchange.RequestId != pending.RequestId ||

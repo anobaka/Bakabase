@@ -78,6 +78,7 @@ module.exports = async function serverSwitching({ browser, config, artifacts }) 
   const report = { fixtureScope: 'Unified host composed like UnifiedHost (server + relay manager), without Avalonia' };
   const pageErrors = [];
   let blocked = { external: [], loopback: [] };
+  let win;
   try {
     // The two hosts and the relay port range; nothing else, loopback or not.
     blocked = await confine(context, url => hostOrigins.has(url.origin) || relayPort(url.href) !== null);
@@ -143,13 +144,32 @@ module.exports = async function serverSwitching({ browser, config, artifacts }) 
     // The UI names servers, never ids: a check by name proves B only if A is called something else.
     assert.notEqual(bInfo.name, aInfo.name, 'The fixtures share a server name, so no check by name can tell them apart');
 
+    // Switching resolves the destination's menu using its saved language before normal
+    // page providers mount. Fresh desktop and headless hosts must both expose and persist it.
+    for (const [role, host] of [['desktop', unified], ['headless', source]]) {
+      const app = await envelope(host.base + '/options/app');
+      assert.ok(['en-US', 'zh-CN'].includes(app.language), `${role} did not initialize its language`);
+      await until(() => {
+        try {
+          const saved = JSON.parse(fs.readFileSync(path.join(host.directory, 'app.json'), 'utf8').replace(/^\uFEFF/, ''));
+          return field(field(saved, 'App'), 'Language');
+        } catch (error) {
+          // The options writer can be finishing its version save; only a partial JSON
+          // write is retryable. Missing files and other I/O failures remain failures.
+          if (!(error instanceof SyntaxError)) throw error;
+          return undefined;
+        }
+      }, language => language === app.language, `${role} to persist its initialized language`);
+    }
+    report.freshHostLanguagePersisted = true;
+
     // (a) Pair A with B by code through A's devices page, as a person would: B's own machine
     // issues the code (a code is bearer access, so only B's loopback can ask for one), and A's
     // window enters it with B's address.
     const initial = await managedServers();
     assert.equal(initial.available, true, 'The unified fixture did not compose the relay manager');
     assert.deepEqual(initial.servers, [], 'The unified fixture managed a server before it was paired with one');
-    const win = await context.newPage();
+    win = await context.newPage();
     // The window's WebSockets — A's own UI's hub, then B's through the relay, then the probes.
     const winSockets = watchSockets(win, {
       // B telling every UI of its own, over its hub, that live transcoding is now allowed.
@@ -203,7 +223,9 @@ module.exports = async function serverSwitching({ browser, config, artifacts }) 
 
     // (b) The switcher at the top of the menu sends this window to B's relay.
     const switcher = win.getByTestId('server-switcher');
-    const trigger = switcher.locator('button[aria-haspopup="menu"]');
+    // The first-run guide temporarily hides the header from the accessibility tree;
+    // its device identity still needs checking before that guide is dismissed below.
+    const trigger = switcher.getByRole('button', { name: exactly('federation.switcher.label'), includeHidden: true });
     const tickets = [];
     win.on('request', request => {
       if (request.isNavigationRequest() && request.url().includes(TICKET)) tickets.push(request.url());
@@ -224,11 +246,13 @@ module.exports = async function serverSwitching({ browser, config, artifacts }) 
     };
     const pick = async local => {
       await trigger.click();
-      const items = switcher.getByRole('menu').getByRole('menuitem')
-        .filter({ hasNotText: containing('federation.switcher.manageDevices') });
-      const item = local
-        ? items.filter({ hasText: containing('federation.thisDevice') })
-        : items.filter({ hasNotText: containing('federation.thisDevice') });
+      // HeroUI portals the menu outside the trigger's subtree and labels it with the
+      // trigger. The controller's relay menu uses the real machine name, while the
+      // source fixture has its own stable name.
+      const menu = win.getByRole('menu', { name: exactly('federation.switcher.label') });
+      const item = menu.getByRole('menuitem').filter({
+        hasText: local ? containing('federation.switcher.controller') : new RegExp(escape(bInfo.name)),
+      });
       // The list fills in once the menu has asked for it.
       await item.first().waitFor();
       assert.equal(await item.count(), 1);
@@ -346,8 +370,11 @@ module.exports = async function serverSwitching({ browser, config, artifacts }) 
     // Full control of B through its own UI: a settings write no federated grant can make.
     assert.equal((await settingsOf(source)).allowLiveTranscode, false);
     const controlMark = received().length;
-    await win.getByPlaceholder(exactly('configuration.search.placeholder')).fill(
-      locales[0]['configuration.remoteAccess.liveTranscode.label']);
+    // Search using the label this destination actually renders. Its initialized
+    // language need not be the browser's locale or this fixture's English names.
+    const transcodeLabel = win.getByText(exactly('configuration.remoteAccess.liveTranscode.label'));
+    await transcodeLabel.waitFor();
+    await win.getByPlaceholder(exactly('configuration.search.placeholder')).fill(await transcodeLabel.innerText());
     const row = win.locator('div.grid').filter({ hasText: exactly('configuration.remoteAccess.liveTranscode.label') })
       .filter({ has: win.getByRole('switch') });
     // The row exists once B's remote-access settings have been read (it is hidden while off).
@@ -855,6 +882,19 @@ module.exports = async function serverSwitching({ browser, config, artifacts }) 
     report.blockedRequests = blocked;
     report.passed = true;
     return report;
+  } catch (error) {
+    if (win && !win.isClosed()) {
+      await win.screenshot({ path: artifacts('switching-failure.png'), fullPage: true }).catch(() => {});
+      const controls = await win.getByTestId('server-switcher').locator('button').evaluateAll(buttons =>
+        buttons.map(button => ({
+          label: button.getAttribute('aria-label'),
+          popup: button.getAttribute('aria-haspopup'),
+          expanded: button.getAttribute('aria-expanded'),
+          title: button.getAttribute('title'),
+        }))).catch(() => []);
+      fs.writeFileSync(artifacts('switching-failure-controls.json'), JSON.stringify(controls, null, 2));
+    }
+    throw error;
   } finally {
     if (blocked.external.length) console.error('Server switching: refused requests off this machine', blocked.external);
     await context.close();

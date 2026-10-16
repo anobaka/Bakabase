@@ -8,7 +8,6 @@ import type { DestroyableProps } from "@/components/bakaui/types";
 import type { BakabaseAbstractionsModelsDomainEnhancerFullOptions } from "@/sdk/Api";
 import type { PropertyRow, SourceState } from "./utils";
 import type { IProperty } from "@/components/Property/models";
-import type { PropertyPool } from "@/sdk/constants";
 
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
@@ -58,9 +57,15 @@ import {
   TableHeader,
   TableRow,
   Tooltip,
+  Select,
 } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
-import { CoverSelectOrder, EnhancerId, EnhancerTargetOptionsItem } from "@/sdk/constants";
+import {
+  CoverSelectOrder,
+  EnhancerId,
+  EnhancerTargetOptionsItem,
+  PropertyPool,
+} from "@/sdk/constants";
 import BriefEnhancer from "@/components/Chips/Enhancer/BriefEnhancer";
 import EnhancerIcon from "@/components/EnhancerIcon";
 import PropertyTypeIcon from "@/components/Property/components/PropertyTypeIcon";
@@ -73,11 +78,14 @@ type ApiEnhancerOptions = BakabaseAbstractionsModelsDomainEnhancerFullOptions;
 
 type Props = {
   enhancerOptions?: ApiEnhancerOptions[];
+  /** Explicit resource-owner catalog; never resolves foreign IDs against the executor. */
+  propertyCatalog?: IProperty[];
   onSubmit?: (options: ApiEnhancerOptions[]) => any;
 } & DestroyableProps;
 
 const EnhancementConfigPanel = ({
   enhancerOptions: propEnhancerOptions,
+  propertyCatalog,
   onSubmit,
   onDestroyed,
 }: Props) => {
@@ -124,7 +132,11 @@ const EnhancementConfigPanel = ({
       }
       const pools = [...propertyIds.keys()];
 
-      if (pools.length > 0) {
+      if (propertyCatalog) {
+        setPropertyCache(
+          new Map(propertyCatalog.map((property) => [`${property.pool}:${property.id}`, property])),
+        );
+      } else if (pools.length > 0) {
         Promise.all(pools.map((pool) => BApi.property.getPropertiesByPool(pool))).then(
           (results) => {
             const cache = new Map<string, IProperty>();
@@ -349,6 +361,7 @@ const EnhancementConfigPanel = ({
       enhancer: dynamicOnlyEnhancer,
       options: optionsForModal,
       hideBindingAndConfig: true,
+      propertyCatalog,
       onSubmit: async (newOptions: EnhancerFullOptions) => {
         setEnhancerLevelConfigs((prev) => {
           const next = new Map(prev);
@@ -602,19 +615,48 @@ const EnhancementConfigPanel = ({
         {/* Bound property */}
         <TableCell>
           <div className="flex items-center gap-1">
-            <PropertyMatcher
-              isClearable
-              matchedProperty={boundProperty}
-              name={prop.propertyName}
-              type={prop.propertyType}
-              onValueChanged={(p) => {
-                if (p) {
-                  bindPropertyToRow(prop, p);
-                } else {
-                  unbindPropertyFromRow(prop);
-                }
-              }}
-            />
+            {propertyCatalog ? (
+              <Select
+                aria-label={t<string>("enhancer.options.selectProperty.action")}
+                className="min-w-44"
+                dataSource={propertyCatalog
+                  .filter(
+                    (property) =>
+                      property.type === prop.propertyType &&
+                      (property.pool === PropertyPool.Reserved ||
+                        property.pool === PropertyPool.Custom),
+                  )
+                  .map((property) => ({
+                    value: `${property.pool}:${property.id}`,
+                    label: property.name,
+                  }))}
+                selectedKeys={binding ? [`${binding.pool}:${binding.id}`] : []}
+                size="sm"
+                onSelectionChange={(keys) => {
+                  const key = [...keys][0];
+                  const property = propertyCatalog.find(
+                    (item) => `${item.pool}:${item.id}` === key,
+                  );
+
+                  if (property) bindPropertyToRow(prop, property);
+                  else unbindPropertyFromRow(prop);
+                }}
+              />
+            ) : (
+              <PropertyMatcher
+                isClearable
+                matchedProperty={boundProperty}
+                name={prop.propertyName}
+                type={prop.propertyType}
+                onValueChanged={(p) => {
+                  if (p) {
+                    bindPropertyToRow(prop, p);
+                  } else {
+                    unbindPropertyFromRow(prop);
+                  }
+                }}
+              />
+            )}
             {unbound && (
               <Tooltip content={t<string>("enhancementConfig.unboundWarning")}>
                 <span className="flex items-center">
@@ -635,7 +677,11 @@ const EnhancementConfigPanel = ({
         <div className="flex justify-between items-center w-full">
           <Button
             color="secondary"
+            isDisabled={propertyCatalog !== undefined}
             startContent={<ExperimentOutlined />}
+            title={
+              propertyCatalog ? t<string>("resourceProfile.execution.validateViaTask") : undefined
+            }
             variant="flat"
             onPress={handleValidate}
           >

@@ -1,4 +1,5 @@
 using Bakabase.Infrastructures.Components.App;
+using Bakabase.Infrastructures.Components.App.Profiles;
 using Bakabase.Infrastructures.Components.App.SingleInstance;
 using Bakabase.Infrastructures.Components.Configurations.App;
 
@@ -24,6 +25,43 @@ var verb = args[0];
 
 switch (verb)
 {
+    case "desktop" when args.Length == 2:
+    {
+        var registry = new DesktopProfileRegistry(args[1], Path.Combine(args[1], "legacy"));
+        using var session = DesktopWorkspaceSession.TryAcquire(registry.RootDirectory);
+        var requested = Environment.GetEnvironmentVariable("BAKABASE_TEST_PROFILE_ID");
+        if (session == null)
+        {
+            var activated = await DesktopWorkspaceSession.ActivateAsync(registry.RootDirectory,
+                requested == null ? ActivationChannel.ShowMessage : DesktopWorkspaceSession.SwitchPrefix + requested);
+            Console.Out.WriteLine(activated ? "DESKTOP Activated" : "DESKTOP Unavailable");
+            return activated ? 0 : 1;
+        }
+        DesktopProfileSelection.Initialize(requested == null ? [] : [DesktopProfileSelection.ArgumentPrefix + requested], registry);
+        using var activation = ActivationServer.Start(DesktopWorkspaceSession.Channel(registry.RootDirectory), message =>
+        { Console.Out.WriteLine("ACTIVATED " + message); Console.Out.Flush(); });
+        Console.Out.WriteLine("DESKTOP Entered");
+        Console.Out.WriteLine("PROFILE " + DesktopProfileSelection.CurrentId);
+        Console.Out.Flush();
+        WaitForStdinToClose();
+        return 0;
+    }
+    case "profile" when args.Length == 2:
+    {
+        var registry = new DesktopProfileRegistry(args[1], Path.Combine(args[1], "legacy"));
+        var id = Environment.GetEnvironmentVariable("BAKABASE_TEST_PROFILE_ID") ?? "default";
+        DesktopProfileSelection.Initialize([DesktopProfileSelection.ArgumentPrefix + id], registry);
+        return Enter(AppDataLocator.ResolveEffectiveDataDirectory(),
+            () => Console.Out.WriteLine($"APPJSON {AppOptionsManager.GetAppOptionsFilePath()}"));
+    }
+    case "installation" when args.Length == 2:
+    {
+        using var lease = new DesktopInstallationInstances(args[1]).Register(Environment.ProcessId);
+        Console.Out.WriteLine($"INSTALLATION {Environment.ProcessId}");
+        Console.Out.Flush();
+        WaitForStdinToClose();
+        return 0;
+    }
     case "hold" when args.Length == 2:
     {
         var attempt = DataDirectoryLock.TryAcquire(args[1]);

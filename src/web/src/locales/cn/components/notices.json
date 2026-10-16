@@ -14,7 +14,7 @@
   "notices.topic.readOnly": "此窗口无法将通知标为已读，请在通知所属的设备上打开此列表。",
   "notices.item.multiDevice.title": "多设备互联：在多台设备间使用 Bakabase",
   "notices.item.multiDevice.body": "现在，每台运行桌面端的电脑都自带一个 Bakabase 服务器，局域网内的设备之间可以互相访问。",
-  "notices.item.multiDevice.point.library": "多设备资源库会同时搜索本机和向本机分享的设备，把所有资源列在一处。",
+  "notices.item.multiDevice.point.library": "已添加设备的资源会显示在同一个资源列表中，资源元数据同步到本机后即可在本机搜索，并按设备筛选。",
   "notices.item.multiDevice.point.switch": "把窗口切换到你管理的 NAS 或另一台电脑，像坐在它面前一样控制它。",
   "notices.item.multiDevice.action": "查看多设备互联指南"
 }

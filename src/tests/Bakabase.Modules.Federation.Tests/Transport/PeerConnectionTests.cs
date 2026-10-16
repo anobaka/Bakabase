@@ -13,7 +13,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Bakabase.Modules.Federation.Tests.Transport;
 
 /// <summary>
-/// How library sharing connects to a peer, through the client <c>AddFederationPeers</c>
+/// How definitions sync connects to a peer, through the client <c>AddFederationPeers</c>
 /// composes: a name's IPv4 address is not held up behind an IPv6 one that drops everything (a
 /// Windows computer name resolves IPv6-first, and a Bakabase server listens on IPv4 only), and
 /// a peer that is switched off is reported after the 2 s a connection gets once resolved.

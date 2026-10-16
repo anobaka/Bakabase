@@ -174,7 +174,7 @@ public partial class AvaloniaGuiAdapter : GuiAdapter, ITrayIconController, IUpda
             }
 
             _mainWindow.Show();
-            _mainWindow.Title = title;
+            _mainWindow.Title = Bakabase.Infrastructures.Components.App.Profiles.DesktopProfileSelection.WindowTitle(title);
 
             var webView = _mainWindow.FindControl<NativeWebViewHost>("WebView")!;
             webView.Navigate(url);
@@ -217,7 +217,7 @@ public partial class AvaloniaGuiAdapter : GuiAdapter, ITrayIconController, IUpda
     {
         if (_mainWindow != null)
         {
-            _mainWindow.Title = title;
+            _mainWindow.Title = Bakabase.Infrastructures.Components.App.Profiles.DesktopProfileSelection.WindowTitle(title);
         }
     }
 
@@ -311,6 +311,25 @@ public partial class AvaloniaGuiAdapter : GuiAdapter, ITrayIconController, IUpda
     {
         _serverSwitchMenu = menu;
         _mainWindow?.SetServerSwitchMenu(menu);
+    }
+
+    /// <summary>Capture on the UI thread before resolving another device's address.</summary>
+    internal string? GetMainWebViewUrl()
+    {
+        if (!Dispatcher.UIThread.CheckAccess() || _mainWindow == null || _isShuttingDown)
+        {
+            return null;
+        }
+
+        try
+        {
+            return _mainWindow.FindControl<NativeWebViewHost>("WebView")?.GetCurrentUrl();
+        }
+        catch (Exception error)
+        {
+            Serilog.Log.Warning(error, "Could not read the main window's current page");
+            return null;
+        }
     }
 
     private void NavigateMainWebViewCore(string url, bool bringToFront)

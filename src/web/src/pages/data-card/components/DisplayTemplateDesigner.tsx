@@ -14,7 +14,7 @@ import {
   MinusCircleOutlined,
 } from "@ant-design/icons";
 
-import BApi from "@/sdk/BApi";
+import { useResourceApi } from "@/features/management/resourceContext";
 import { Chip, Input, Modal } from "@/components/bakaui";
 
 interface LayoutItem {
@@ -50,6 +50,7 @@ const DisplayTemplateDesigner = ({
   onDestroyed,
 }: DisplayTemplateDesignerProps) => {
   const { t } = useTranslation();
+  const BApi = useResourceApi();
 
   const [cols, setCols] = useState(initial?.cols || 6);
   const [rows, setRows] = useState(initial?.rows || 4);

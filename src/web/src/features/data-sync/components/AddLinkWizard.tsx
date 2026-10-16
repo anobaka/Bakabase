@@ -10,23 +10,24 @@ import { dataSyncApi } from "../api";
 import { useDataSyncActions } from "../hooks/useDataSyncActions";
 import { candidateStatus, isPickable, newSyncPeer } from "../viewModels";
 
-import { buttonClass, DataSyncErrorNotice, fieldClass, primaryClass } from "./common";
+import { buttonClass, DataSyncErrorNotice, primaryClass } from "./common";
 import DataSyncDialog from "./DataSyncDialog";
 import InlineConfirmation from "./InlineConfirmation";
 import SyncRuleDrawing from "./SyncRuleDrawing";
 
 import { DataSyncLinkState } from "@/sdk/constants";
+import { Button, Input, Checkbox } from "@/components/bakaui";
 
 /*
  * "Sync with another device" (spec §11.2): choose the device, then the rule editor for it — the
  * same one the page and the map show. A device this window cannot read yet is asked for access,
  * which only this device's own window or a device paired with it may do (§7.1.5); anywhere else
- * such devices are shown but cannot be picked, and the way in by address and code is not offered.
- * Once a link or copy is made the wizard closes, and the page shows the device and says what came
+ * such devices are shown but cannot be picked, and the way in by address is not offered.
+ * Once a link is made the wizard closes, and the page shows the device and says what came
  * of it.
  */
 
-/** What the page is told once a link or copy is made. */
+/** What the page is told once a link is made. */
 export interface AddLinkCreated {
   nodeId?: string;
   notice: string;
@@ -70,7 +71,6 @@ export default function AddLinkWizard({
   const [chosen, setChosen] = useState<DataSyncPeerCandidate>();
   const [byAddress, setByAddress] = useState(false);
   const [address, setAddress] = useState("");
-  const [code, setCode] = useState("");
   // The device the rule editor is shown for: the second step.
   const [peer, setPeer] = useState<SyncPeer>();
 
@@ -95,7 +95,7 @@ export default function AddLinkWizard({
     };
   }, []);
 
-  const addressReady = address.trim().length > 0 && /^\d{8}$/.test(code.trim());
+  const addressReady = address.trim().length > 0;
 
   const created = ({ link, requestId }: DataSyncLinkResult) => {
     const name = link?.peerName ?? peer?.name ?? "";
@@ -164,39 +164,30 @@ export default function AddLinkWizard({
       </ul>
       {canManage && (
         <div className="space-y-2 rounded-lg border border-default-200 p-2.5">
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              checked={byAddress}
-              data-testid="data-sync-wizard-by-address"
-              type="checkbox"
-              onChange={(event) => {
-                setByAddress(event.target.checked);
-                setChosen(undefined);
-              }}
-            />
+          <Checkbox
+            classNames={{ base: "m-0 max-w-full p-0", label: "text-xs" }}
+            color="secondary"
+            data-testid="data-sync-wizard-by-address"
+            isSelected={byAddress}
+            size="sm"
+            onChange={(event) => {
+              setByAddress(event.target.checked);
+              setChosen(undefined);
+            }}
+          >
             {t("dataSync.wizard.byAddress")}
-          </label>
+          </Checkbox>
           {byAddress && (
-            <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_10rem]">
+            <div className="space-y-2">
               <label className="space-y-1 text-xs" htmlFor={`${id}-address`}>
                 <span>{t("dataSync.wizard.address")}</span>
-                <input
-                  className={fieldClass}
+                <Input
                   id={`${id}-address`}
                   placeholder="192.168.1.10:34567"
+                  size="sm"
                   value={address}
+                  variant="bordered"
                   onChange={(event) => setAddress(event.target.value)}
-                />
-              </label>
-              <label className="space-y-1 text-xs" htmlFor={`${id}-code`}>
-                <span>{t("dataSync.wizard.code")}</span>
-                <input
-                  className={fieldClass}
-                  id={`${id}-code`}
-                  inputMode="numeric"
-                  maxLength={8}
-                  value={code}
-                  onChange={(event) => setCode(event.target.value.replace(/\D/g, ""))}
                 />
               </label>
             </div>
@@ -209,10 +200,12 @@ export default function AddLinkWizard({
   );
 
   const footer = peer ? (
-    <button
+    <Button
       className={buttonClass}
       disabled={actions.busy}
+      size="sm"
       type="button"
+      variant="bordered"
       onClick={() => {
         actions.reset();
         actions.cancelConfirmation();
@@ -220,27 +213,33 @@ export default function AddLinkWizard({
       }}
     >
       {t("dataSync.wizard.back")}
-    </button>
+    </Button>
   ) : (
     <>
-      <button className={buttonClass} type="button" onClick={() => onClose()}>
+      <Button
+        className={buttonClass}
+        size="sm"
+        type="button"
+        variant="bordered"
+        onClick={() => onClose()}
+      >
         {t("dataSync.cancel")}
-      </button>
-      <button
+      </Button>
+      <Button
         className={primaryClass}
         data-testid="data-sync-wizard-next"
         disabled={byAddress ? !addressReady : !chosen}
+        size="sm"
         type="button"
+        variant="bordered"
         onClick={() =>
           setPeer(
-            byAddress
-              ? { ...newSyncPeer("", address.trim(), address.trim()), code: code.trim() }
-              : peerOfCandidate(chosen!),
+            byAddress ? newSyncPeer("", address.trim(), address.trim()) : peerOfCandidate(chosen!),
           )
         }
       >
         {t("dataSync.wizard.next")}
-      </button>
+      </Button>
     </>
   );
 

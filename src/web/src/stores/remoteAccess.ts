@@ -60,6 +60,7 @@ interface IRemoteAccessState {
   /** Explicit access to the shown server's federation UI; absent on older servers and relays. */
   federationAvailable?: boolean;
   serverName?: string;
+  serverId?: string;
   /** Bumped after a candidate was accepted, so an already visible address list can refresh. */
   addressCandidatesRevision: number;
   /**
@@ -154,6 +155,7 @@ export const useRemoteAccessStore = create<IRemoteAccessState>((set) => ({
           cookieCaptureAvailable: data.cookieCaptureAvailable ?? isLocal,
           federationAvailable: data.federationAvailable,
           serverName: data.serverName ?? undefined,
+          serverId: data.serverId ?? undefined,
           ...(clientMode === ClientMode.PureClient
             ? {}
             : { clientHost: undefined, localName: undefined, ownDeviceId: undefined }),

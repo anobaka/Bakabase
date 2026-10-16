@@ -40,6 +40,12 @@ public class PropertyMarkConfig
     /// </summary>
     public PropertyValueType ValueType { get; set; }
 
+    /// <summary>Dynamic value origin. Missing fields retain mark-relative extraction.</summary>
+    public PathMarkValueBasePath ValueBasePath { get; set; } = PathMarkValueBasePath.MarkPath;
+
+    /// <summary>Dynamic extraction mode, independent of applicability. Null preserves legacy inference.</summary>
+    public PathMatchMode? ValueMatchMode { get; set; }
+
     /// <summary>
     /// Fixed 模式：直接的属性值
     /// Dynamic 模式：null
@@ -47,22 +53,16 @@ public class PropertyMarkConfig
     public object? FixedValue { get; set; }
 
     /// <summary>
-    /// Dynamic 模式：从哪一层获取目录名作为值
-    ///
-    /// Layer 语义（与 FilterByLayer 一致）：
-    /// - 0 = 标记路径本身的目录名
-    /// - 负数（如 -1, -2）= 向上：标记路径的父目录（-1=父，-2=祖父，以此类推）
-    /// - 正数（如 1, 2）= 向下：标记路径的子目录（基于资源路径确定具体子目录）
-    ///
-    /// 当 ValueLayer &gt; 0 时，由于可能存在多个子目录，需要根据资源路径来确定使用哪个值。
-    /// 例如：标记路径 /data/media，ValueLayer = 1，资源路径 /data/media/movies/a.mp4
-    /// 则提取的值为 "movies"
+    /// Dynamic layer relative to ValueBasePath: 0 selects that path's name (including a file extension),
+    /// negative values select ancestors (-1 = parent). With MarkPath, positive values select the
+    /// resource's branch at that depth below the mark. ResourcePath does not support positive layers.
     /// </summary>
     public int? ValueLayer { get; set; }
 
     /// <summary>
-    /// Dynamic 模式：正则提取（可选）
-    /// 对标记路径的目录名应用正则表达式
+    /// Dynamic regex applied to the selected base path's file or directory name.
+    /// Uses the first capture group, or the entire match when no capture exists.
+    /// ValueRegexMatchesResourcePath preserves legacy full resource-relative path extraction instead.
     /// </summary>
     public string? ValueRegex { get; set; }
 

@@ -8,7 +8,7 @@ import { useTranslation } from "react-i18next";
 import { AiOutlineCheckCircle, AiOutlineCloseCircle, AiOutlineSwap } from "react-icons/ai";
 
 import { Modal, Textarea, toast } from "@/components/bakaui";
-import BApi from "@/sdk/BApi";
+import { useResourceApi } from "@/features/management/resourceContext";
 
 type PlaceholderResult =
   components["schemas"]["Bakabase.Service.Models.View.ResourcePlaceholderResultViewModel"];
@@ -27,6 +27,7 @@ interface Props extends DestroyableProps {
  * worth reading.
  */
 const CreatePlaceholderResourcesModal: React.FC<Props> = ({ onCreated, onDestroyed }) => {
+  const BApi = useResourceApi();
   const { t } = useTranslation();
   const [text, setText] = useState("");
   const [results, setResults] = useState<PlaceholderResult[] | undefined>();

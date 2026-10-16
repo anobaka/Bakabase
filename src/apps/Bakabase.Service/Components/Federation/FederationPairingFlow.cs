@@ -19,18 +19,11 @@ namespace Bakabase.Service.Components.Federation;
 
 /// <summary>
 /// The parts of pairing that should not depend on a page staying open: claiming approved
-/// requests, reading back a device that offered it, and turning browsing on once this device
-/// can read another one.
+/// requests and reading back a device that offered it.
 /// </summary>
-/// <remarks>
-/// Definitions access (<c>datasync.read</c>) goes through the same loop: its requests are claimed next to the
-/// library's, and a device that offered to be read back is read back with a datasync code. Whenever this device
-/// obtains or grants definitions access, the data sync runtime hears of it (<see cref="IDataSyncGrantEvents"/>), so
-/// its links react within seconds; the federation module itself never calls data sync. The events are resolved when
-/// raised, not when this flow is built: the runtime that handles them reaches definitions access through this flow.
-/// </remarks>
+/// <remarks>Successful grants notify the definitions-sync runtime, independent of the current page.</remarks>
 public sealed class FederationPairingFlow(NodePairingClient pairing, FederationPeerService peers,
-    FederationBrowsingControl browsing, IRemoteAccessService remoteAccess, ILogger<FederationPairingFlow> logger,
+    IRemoteAccessService remoteAccess, ILogger<FederationPairingFlow> logger,
     IServiceProvider? services = null)
     : BackgroundService
 {
@@ -39,12 +32,6 @@ public sealed class FederationPairingFlow(NodePairingClient pairing, FederationP
     /// <summary>This build's data sync contract, which a peer's must meet before this device asks it for anything.</summary>
     public static readonly NodeDataSyncContract DataSyncContractOfThisBuild =
         new(DataSyncContract.Version, DataSyncContract.MinimumPeerVersion);
-
-    /// <summary>After this device obtained read access, browsing is what the user is here for.</summary>
-    public async Task OnOutboundGrantedAsync(CancellationToken ct)
-    {
-        if (!await browsing.IsEnabledAsync(ct)) await browsing.SetEnabledAsync(true, ct);
-    }
 
     /// <summary>
     /// The local addresses a device on <paramref name="target"/>'s network can use to reach this one,
@@ -64,41 +51,6 @@ public sealed class FederationPairingFlow(NodePairingClient pairing, FederationP
             .Take(8)
             .ToArray();
     }
-
-    /// <summary>Connects back to a device this node just granted, if it offered read access in return.</summary>
-    public void ReadBack(string nodeId) => _ = Task.Run(async () =>
-    {
-        using var budget = new CancellationTokenSource(ReadBackBudget);
-        var ct = budget.Token;
-        try
-        {
-            var offer = await peers.TakeReciprocalOfferAsync(nodeId, ct);
-            if (offer == null) return;
-            foreach (var address in offer.Addresses)
-            {
-                try
-                {
-                    var outcome = await pairing.ConnectAsync(address, offer.Code, ct, expectedNodeId: nodeId);
-                    if (outcome.Outcome == "granted") await OnOutboundGrantedAsync(ct);
-                    return;
-                }
-                catch (FederationAccessException e)
-                {
-                    logger.LogInformation("Reading back {NodeId} at {Address} failed: {Code}", nodeId, address, e.ErrorCode);
-                }
-                catch (OperationCanceledException) when (!ct.IsCancellationRequested)
-                {
-                    // The browser may reach this entry while the peer cannot. A per-request
-                    // deadline must leave the remaining candidates a chance to connect.
-                    logger.LogInformation("Reading back {NodeId} at {Address} timed out", nodeId, address);
-                }
-            }
-        }
-        catch (Exception e)
-        {
-            logger.LogWarning(e, "Reading back {NodeId} failed", nodeId);
-        }
-    });
 
     /// <summary>
     /// How long a read-back may take in all. Each of the (at most eight) addresses a device offers is tried in turn,
@@ -209,21 +161,10 @@ public sealed class FederationPairingFlow(NodePairingClient pairing, FederationP
     }
 
     /// <summary>
-    /// One round of the claim loop: this device's waiting library requests, then its waiting definitions requests,
-    /// each on its own route. A definitions grant claimed here is told to data sync at once.
+    /// Claims waiting definitions requests and informs the sync runtime when a grant arrives.
     /// </summary>
     public async Task ClaimPendingAsync(CancellationToken ct)
     {
-        try
-        {
-            if (await pairing.ClaimPendingAsync(ct)) await OnOutboundGrantedAsync(ct);
-        }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
-        catch (Exception e)
-        {
-            // Unreadable sharing state is reported by the Devices page; keep retrying quietly.
-            logger.LogDebug(e, "Claiming pending pairing requests failed");
-        }
         try
         {
             foreach (var outcome in await pairing.ClaimPendingDataSyncOutcomesAsync(ct))

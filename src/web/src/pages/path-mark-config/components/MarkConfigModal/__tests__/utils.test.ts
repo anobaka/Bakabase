@@ -12,6 +12,7 @@ import {
   PathMarkType,
   PathMatchMode,
   PropertyValueType,
+  PathMarkValueBasePath,
 } from "@/sdk/constants";
 
 const legacyPropertyConfig = {
@@ -236,5 +237,131 @@ describe("legacy V220 property mark compatibility", () => {
       ),
     ).toBe(true);
     expect(hasValidPropertyValueExtractor(missingLayer, PathMarkType.MediaLibrary)).toBe(true);
+  });
+});
+
+describe("explicit value anchors", () => {
+  it.each([PathMarkType.Property, PathMarkType.MediaLibrary])(
+    "defaults older configs to the mark path (type %s)",
+    (markType) => {
+      const config = parseMarkConfig(
+        JSON.stringify({
+          matchMode: PathMatchMode.Layer,
+          layer: 1,
+          valueType: PropertyValueType.Dynamic,
+          valueLayer: 0,
+        }),
+        markType,
+      );
+
+      expect(config.valueBasePath).toBe(PathMarkValueBasePath.MarkPath);
+      expect(JSON.parse(buildConfigJson(config, markType)).valueBasePath).toBe(
+        PathMarkValueBasePath.MarkPath,
+      );
+    },
+  );
+
+  it("preserves the old media-library regex mode even when a default layer is stored", () => {
+    const config = parseMarkConfig(
+      JSON.stringify({
+        matchMode: PathMatchMode.Regex,
+        regex: ".*",
+        valueType: PropertyValueType.Dynamic,
+        layerToMediaLibrary: 0,
+        regexToMediaLibrary: "(library)",
+      }),
+      PathMarkType.MediaLibrary,
+    );
+
+    expect(config.valueMatchMode).toBe(PathMatchMode.Regex);
+    const saved = JSON.parse(buildConfigJson(config, PathMarkType.MediaLibrary));
+
+    expect(saved).toMatchObject({
+      valueMatchMode: PathMatchMode.Regex,
+      regexToMediaLibrary: "(library)",
+    });
+    expect(saved).not.toHaveProperty("layerToMediaLibrary");
+  });
+
+  it.each([PathMarkType.Property, PathMarkType.MediaLibrary])(
+    "keeps matching independent of the anchor and extraction mode (type %s)",
+    (markType) => {
+      const config = parseMarkConfig(undefined, markType);
+      const matching = {
+        matchMode: PathMatchMode.Layer,
+        layer: 1,
+        applyScope: PathMarkApplyScope.MatchedAndSubdirectories,
+      };
+      const saved = JSON.parse(
+        buildConfigJson(
+          {
+            ...config,
+            ...matching,
+            valueType: PropertyValueType.Dynamic,
+            mediaLibraryValueType: PropertyValueType.Dynamic,
+            valueBasePath: PathMarkValueBasePath.ResourcePath,
+            valueMatchMode: PathMatchMode.Regex,
+            valueRegex: "(name)",
+            regexToMediaLibrary: "(name)",
+            valueLayer: 1,
+            layerToMediaLibrary: 1,
+          },
+          markType,
+        ),
+      );
+
+      expect(saved).toMatchObject({
+        ...matching,
+        valueBasePath: PathMarkValueBasePath.ResourcePath,
+        valueMatchMode: PathMatchMode.Regex,
+      });
+      expect(saved).not.toHaveProperty("valueLayer");
+      expect(saved).not.toHaveProperty("layerToMediaLibrary");
+    },
+  );
+
+  it.each([PathMarkType.Property, PathMarkType.MediaLibrary])(
+    "rejects positive resource layers without rejecting regex with an inactive layer (type %s)",
+    (markType) => {
+      const config = {
+        ...parseMarkConfig(undefined, markType),
+        valueType: PropertyValueType.Dynamic,
+        mediaLibraryValueType: PropertyValueType.Dynamic,
+        valueBasePath: PathMarkValueBasePath.ResourcePath,
+        valueMatchMode: PathMatchMode.Layer,
+        valueLayer: 1,
+        layerToMediaLibrary: 1,
+      };
+
+      expect(hasValidPropertyValueExtractor(config, markType)).toBe(false);
+      expect(
+        hasValidPropertyValueExtractor(
+          { ...config, valueLayer: -1, layerToMediaLibrary: -1 },
+          markType,
+        ),
+      ).toBe(true);
+      expect(
+        hasValidPropertyValueExtractor(
+          {
+            ...config,
+            valueMatchMode: PathMatchMode.Regex,
+            valueRegex: "(name)",
+            regexToMediaLibrary: "(name)",
+          },
+          markType,
+        ),
+      ).toBe(true);
+    },
+  );
+
+  it("does not reinterpret an explicit modern selectorless config as migrated wildcard applicability", () => {
+    for (const explicit of [
+      { valueBasePath: PathMarkValueBasePath.ResourcePath },
+      { valueMatchMode: PathMatchMode.Layer },
+    ]) {
+      const raw = { ...legacyPropertyConfig, ...explicit };
+
+      expect(normalizeLegacyPropertyMarkConfig(raw, PathMarkType.Property)).toEqual(raw);
+    }
   });
 });

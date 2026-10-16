@@ -92,12 +92,28 @@ public static class ResourceProfileExtensions
         return dropped;
     }
 
+    /// <summary>Each option block independently follows ordinary profile priority; an empty player list explicitly uses the system default.</summary>
+    public static ResourceProfileOpeningOptions ResolveOpeningOptions(this IEnumerable<ResourceProfile> profiles)
+    {
+        var ordered = profiles.OrderByDescending(p => p.Priority).ThenBy(p => p.Id).ToArray();
+        return new ResourceProfileOpeningOptions
+        {
+            ProfileIds = ordered.Select(p => p.Id).ToArray(),
+            OpeningMode = ordered.FirstOrDefault(p => p.OpeningMode != null)?.OpeningMode,
+            PlayerOptions = ordered.FirstOrDefault(p => p.PlayerOptions != null)?.PlayerOptions
+        };
+    }
+
     public static ResourceProfileDbModel ToDbModel(this ResourceProfile model, string? searchJson)
     {
         return new ResourceProfileDbModel
         {
             Id = model.Id,
+            ResourceScopeId = model.ResourceScopeId,
             Name = model.Name,
+            SourceDeviceId = model.SourceDeviceId,
+            SourceLibraryEpoch = model.SourceLibraryEpoch,
+            OpeningMode = model.OpeningMode,
             SearchJson = searchJson,
             NameTemplate = model.NameTemplate,
             EnhancerSettingsJson = model.EnhancerOptions != null
@@ -123,7 +139,12 @@ public static class ResourceProfileExtensions
         var domain = new ResourceProfile
         {
             Id = dbModel.Id,
+            ResourceScopeId = dbModel.ResourceScopeId,
             Name = dbModel.Name,
+            SourceDeviceId = dbModel.SourceDeviceId,
+            SourceLibraryEpoch = dbModel.SourceLibraryEpoch,
+            OpeningMode = dbModel.OpeningMode,
+            SearchJson = dbModel.SearchJson,
             NameTemplate = dbModel.NameTemplate,
             Priority = dbModel.Priority,
             CreatedAt = dbModel.CreatedAt,

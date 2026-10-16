@@ -98,7 +98,6 @@ public interface IDataSyncApplyRunner
     Task<int?> RunResolutionsAsync(IReadOnlyList<DataSyncResolveInput> resolutions, DataSyncApplyOptions options,
         BTaskArgs args);
 
-    Task<int?> RunUndoAsync(int applyLogId, BTaskArgs args);
 
     /// <summary>linkId: a restore suspected through one link only (§5.6); null: every link.</summary>
     Task<int?> RunRestoreAsync(DataSyncRestoreChoice choice, int? linkId, BTaskArgs args);

@@ -28,6 +28,7 @@ import {
 
 const mocks = vi.hoisted(() => ({
   create: vi.fn(),
+  request: vi.fn(),
   search: vi.fn(),
   portal: vi.fn(),
   toast: vi.fn(),
@@ -36,6 +37,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("@/sdk/BApi", () => ({
   default: {
+    request: mocks.request,
     resourceProfile: { addResourceProfile: mocks.create },
     resource: { searchResources: mocks.search },
   },
@@ -44,6 +46,20 @@ vi.mock("@/components/bakaui", async () => ({
   ...(await vi.importActual("@heroui/react")),
   Modal: (props: ModalProps) => <SharedModal disableAnimation {...props} />,
   toast: { danger: mocks.toast },
+  Select: ({ label, dataSource, selectedKeys, onSelectionChange, isDisabled }: any) => (
+    <select
+      aria-label={label}
+      disabled={isDisabled}
+      value={[...selectedKeys][0]}
+      onChange={(e) => onSelectionChange(new Set([e.target.value]))}
+    >
+      {dataSource.map((item: any) => (
+        <option key={item.value} value={item.value}>
+          {item.label}
+        </option>
+      ))}
+    </select>
+  ),
 }));
 vi.mock("@/components/Resource/components/DetailModal", () => ({ default: () => null }));
 vi.mock("@/components/ContextProvider/BakabaseContextProvider", () => ({
@@ -131,6 +147,33 @@ afterEach(async () => {
 });
 
 describe("resource profile basic information", () => {
+  it("pins the chosen source library before creating a local profile for remote resources", async () => {
+    const created = profile({ id: 19, name: "Mac videos" });
+
+    mocks.request.mockResolvedValue({
+      code: 0,
+      data: { deviceId: "mac", libraryEpoch: "epoch-1", name: "Mac server" },
+    });
+    mocks.create.mockResolvedValue({ code: 0, data: created });
+    await render(
+      <ResourceProfileModal
+        defaultSourceDeviceId="mac"
+        sources={[{ deviceId: "mac", name: "Mac server", kind: "managed", available: true }]}
+      />,
+    );
+    await type("resourceProfile.label.name", "Mac videos");
+    await click(button("resourceProfile.basic.createAndConfigure"));
+    expect(mocks.request).toHaveBeenCalledWith(
+      expect.objectContaining({ path: "/resource-profile/sources/mac/info" }),
+    );
+    expect(mocks.create).toHaveBeenCalledWith({
+      name: "Mac videos",
+      priority: 0,
+      sourceDeviceId: "mac",
+      sourceLibraryEpoch: "epoch-1",
+    });
+  });
+
   it("creates a trimmed profile and passes the actual returned VM to onSaved after success", async () => {
     const pending = deferred();
 

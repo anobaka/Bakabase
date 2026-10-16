@@ -9,17 +9,13 @@ import type {
   ManagedServerCandidate,
   ManagedServerPendingRequest,
   ManagedServersView,
-  PairingRequest,
-  Peer,
-  SharingCandidate,
 } from "../types";
 import type {
+  DataSyncPeerCandidate,
   DataSyncMapPeer,
   DataSyncMapRequest,
   DataSyncMapView,
 } from "@/features/data-sync/api";
-
-import { PROXY_FAKE_ADDRESS } from "../types";
 
 import {
   ManagedServerState,
@@ -36,36 +32,10 @@ import {
 } from "@/features/data-sync/map/mapAdapter";
 
 /*
- * The device map's model: every device this one knows of, and every relationship between
- * this device and another, built from the three listings the multi-device pages already
- * read. Pure, so the picture can be tested apart from how it is drawn.
- *
- * Every relationship this device knows of has this device at one end — its own sharing
- * grants, the servers it manages, the devices that manage it — so the map is a star: this
- * device in the middle, one spoke per relationship kind to each other device.
- *
- * The listings name devices by several identities. Library sharing's NodeId is the install's
- * remote-access ServerId unless the node was deliberately reset (`FederationNodeIdSource`), so
- * a sharing peer, a managed server and a server found by its beacon that carry the same id are
- * the same install, and are one device on the map. Records are merged only on evidence:
- * - the same install id, first and always;
- * - where one side carries no install id at all — a device that manages this one, a request
- *   filed before servers said who they are — the same address (never one that answers as
- *   another server);
- * - a name, only where neither side carries an install id: the same name on the same host,
- *   or — for a device that manages this one, which carries no address either — a name exactly
- *   one other device has, and the panel says it was recognised by name.
- * Two records whose ids are both known and differ are two devices, wherever they answer. A
- * name is never enough against an id: two devices of one name that are not merged each say
- * they may be the same device as the other, unless what they said of themselves rules it out.
- *
- * A request someone else filed — to browse this library, to manage this device, to read its
- * definitions — carries only the requester's claims (a name, an id). It is never merged into a
- * device this one trusts and lends it nothing: it gets its own node, marked unverified, which
- * says whom it claims to be.
- *
- * Merging only decides where a relationship is drawn. Every action still goes to the record
- * it belongs to, by that record's own identity.
+ * Device management and definitions synchronization share one map. Trusted records join
+ * only by install identity, or by weaker evidence when neither side has an identity.
+ * Incoming requests always stay on unverified nodes and never borrow a trusted device's
+ * capabilities. Every action still addresses the owning record by its own identity.
  */
 
 /** What another device is, as far as this device can tell. `unknown` is never guessed at. */
@@ -79,9 +49,6 @@ export type MapPresence = (typeof mapPresences)[number];
 export const mapIssues = [
   "wrongServer",
   "revoked",
-  "identityConflict",
-  "unauthorized",
-  "incompatible",
   "unrestricted",
   "requestEnded",
   // Data sync (features/data-sync/map): what does not work receiving its definitions, changes
@@ -98,37 +65,27 @@ export const mapIssues = [
 export type MapIssue = (typeof mapIssues)[number];
 
 /**
- * - `sharing` — read-only library sharing (federation grants).
  * - `management` — full control through remote-access pairing.
  * - `sync` — data sync of user-defined definitions: towards the device that receives them.
  */
-export const mapEdgeKinds = ["sharing", "management", "sync"] as const;
+export const mapEdgeKinds = ["management", "sync"] as const;
 export type MapEdgeKind = (typeof mapEdgeKinds)[number];
 
 export type MapDirectionStatus = "none" | "active" | "pending";
 
-export type { SharingCandidate };
-
 export interface MapNodeSources {
-  /** Its library-sharing record here. */
-  peer?: Peer;
   /** This device manages it. */
   server?: ManagedServer;
   /** It manages this device: its pairing(s) in this device's remote-access list. */
   managers: PairedDevice[];
   /** Its managers were matched to this device by name only. */
   managersMatchedByName: boolean;
-  /**
-   * Pending library-sharing requests between the two: this device's own, on a device it
-   * knows; another device's, on that request's own unverified node.
-   */
-  sharingRequests: PairingRequest[];
   /** Its pending requests to manage this device — on the request's own unverified node. */
   managementRequestsIn: ManagementRequest[];
   /** This device's requests to manage it — live ones, and ones that ended, until dismissed. */
   managementRequestsOut: ManagedServerPendingRequest[];
-  /** Seen by sharing discovery. */
-  sharingCandidate?: SharingCandidate;
+  /** Seen by definitions synchronization discovery. */
+  dataSyncCandidate?: DataSyncPeerCandidate;
   /** Seen by the remote-access beacons. */
   managementCandidate?: ManagedServerCandidate;
   /**
@@ -201,13 +158,11 @@ export interface MapEdge {
   /** The other end. The first end is always this device. */
   nodeId: string;
   /**
-   * Towards the other device. Sharing: it may browse this device's library. Management:
-   * this device manages it.
+   * Towards the other device: this device manages it or sends definitions to it.
    */
   out: MapDirectionStatus;
   /**
-   * Towards this device. Sharing: this device may browse its library. Management: it
-   * manages this device.
+   * Towards this device: it manages this device or sends definitions to it.
    */
   in: MapDirectionStatus;
   /** A direction that exists but does not work right now (revoked, another server answers…). */
@@ -225,6 +180,8 @@ export interface MapEdge {
 }
 
 export interface DeviceGraph {
+  /** Management does not imply a desktop or view-switching capability. */
+  canManageServers?: boolean;
   self: MapNode;
   /** Every other device, connected ones first, each group by name. */
   nodes: MapNode[];
@@ -232,7 +189,7 @@ export interface DeviceGraph {
 }
 
 export interface DeviceGraphInput {
-  /** Library sharing; absent when it could not be read. */
+  /** Installation identity; absent when it could not be read. */
   status?: FederationStatus;
   /** Servers this device manages; absent when they could not be read. */
   servers?: ManagedServersView;
@@ -241,10 +198,10 @@ export interface DeviceGraphInput {
   /** Data sync of definitions; absent when it could not be read. */
   dataSync?: DataSyncMapView;
   discovery?: {
-    sharing?: SharingCandidate[];
+    dataSync?: DataSyncPeerCandidate[];
     management?: ManagedServerCandidate[];
   };
-  /** This device's name when library sharing could not be read. */
+  /** This device's fallback name when its identity could not be read. */
   selfName?: string;
   selfPlatform?: RemoteDevicePlatform;
   /** Future relationship kinds, drawn as given. Nothing supplies these yet. */
@@ -361,23 +318,6 @@ const kindOfPlatform = (platform?: RemoteDevicePlatform): MapNodeKind =>
         ? "mobile"
         : "unknown";
 
-const peerPresence = (state: string): MapPresence =>
-  state === "Online"
-    ? "online"
-    : // Its address led into a proxy on this computer: nothing reached it, as for an offline one.
-      state === "Offline" || state === PROXY_FAKE_ADDRESS
-      ? "offline"
-      : "unknown";
-
-const peerIssue = (state: string): MapIssue | undefined =>
-  state === "IdentityConflict"
-    ? "identityConflict"
-    : state === "Unauthorized"
-      ? "unauthorized"
-      : state === "Incompatible"
-        ? "incompatible"
-        : undefined;
-
 const serverPresence = (state: ManagedServerState): MapPresence =>
   // Revoked answered — it just no longer knows this device.
   state === ManagedServerState.Online || state === ManagedServerState.Revoked
@@ -398,13 +338,10 @@ const combinePresence = (values: MapPresence[]): MapPresence =>
 
 /**
  * Whether two devices of one name could be one install, by what each said of itself: one kind,
- * one system — a headless server never manages anything, a phone is not a desktop app, and
+ * one system — a phone is not a desktop app, and
  * another OS is another machine. What neither said leaves it open.
  */
 const couldBeOne = (a: MapNode, b: MapNode) => {
-  const manages = (node: MapNode) => node.sources.managers.length > 0;
-
-  if ((manages(a) && b.kind === "server") || (manages(b) && a.kind === "server")) return false;
   if (a.kind !== "unknown" && b.kind !== "unknown" && a.kind !== b.kind) return false;
 
   return a.platform === undefined || b.platform === undefined || a.platform === b.platform;
@@ -443,7 +380,6 @@ interface Draft {
 const emptySources = (): MapNodeSources => ({
   managers: [],
   managersMatchedByName: false,
-  sharingRequests: [],
   managementRequestsIn: [],
   managementRequestsOut: [],
   syncRequests: [],
@@ -553,27 +489,9 @@ export function buildDeviceGraph(input: DeviceGraphInput, now = Date.now()): Dev
   const sortBy = <T>(items: T[] | undefined, key: (item: T) => string) =>
     [...(items ?? [])].sort((a, b) => key(a).localeCompare(key(b)));
 
-  // 1. Library sharing peers: identities their handshake proved.
-  for (const peer of sortBy(status?.peers, (p) => p.nodeId)) {
-    if (peer.nodeId === selfNodeId) continue;
-    const draft = create(`peer:${peer.nodeId}`, {
-      name: peer.label,
-      address: peer.address ?? undefined,
-    });
-
-    addInstall(draft, peer.nodeId);
-    addKey(draft, identityKey.address(peer.address));
-    draft.sources.peer = peer;
-    draft.presences.push(peerPresence(peer.connectionState));
-    const issue = peerIssue(peer.connectionState);
-
-    if (issue) draft.issues.add(issue);
-  }
-
-  // 2. Servers this device manages: joined to a peer only by install id.
+  // Servers this device manages, identified by their verified installation ID.
   for (const server of sortBy(servers?.servers, (s) => s.serverId)) {
     const answersAsItself = server.state !== ManagedServerState.WrongServer;
-    // A merged device keeps the name its sharing handshake proved.
     const draft =
       byId(server.serverId) ??
       create(`server:${server.serverId}`, { name: server.name || server.address });
@@ -583,7 +501,7 @@ export function buildDeviceGraph(input: DeviceGraphInput, now = Date.now()): Dev
     draft.appVersion = server.appVersion ?? draft.appVersion;
     // An address that answers as another server says nothing about this one: never offered
     // as somewhere to pair, never evidence that another record is this server — nor shown as
-    // where it is, when its sharing record names the same place in another spelling.
+    // where it is, even if another record names the same place differently.
     // Otherwise it is the address management pairs with.
     if (answersAsItself) {
       draft.address = server.address;
@@ -596,17 +514,6 @@ export function buildDeviceGraph(input: DeviceGraphInput, now = Date.now()): Dev
     if (server.mode === RemoteAccessMode.Unrestricted) draft.issues.add("unrestricted");
   }
 
-  // 3. This device's own requests, to addresses it chose.
-  for (const request of sortBy(status?.requests, (r) => r.requestId)) {
-    if (request.direction !== "outgoing" || request.nodeId === selfNodeId) continue;
-    if (request.status !== "awaitingApproval" || !isLive(request.expiresAt, now)) continue;
-    const draft =
-      byId(request.nodeId) ?? create(`peer:${request.nodeId}`, { name: request.nodeName });
-
-    addInstall(draft, request.nodeId);
-    addKey(draft, identityKey.request(request.requestId));
-    draft.sources.sharingRequests.push(request);
-  }
   // Data sync: this device's links and grants, and its requests to read another device's
   // definitions — ended ones too, until dismissed — each on the device of the install id it
   // names, created when nothing else knows that device (a request to one that is no peer yet).
@@ -666,22 +573,6 @@ export function buildDeviceGraph(input: DeviceGraphInput, now = Date.now()): Dev
 
   // 5. Requests other devices filed: claims, each on its own unverified node. Two from the
   // same address under the same name are one requester.
-  for (const request of sortBy(status?.requests, (r) => r.requestId)) {
-    if (request.direction !== "incoming" || request.nodeId === selfNodeId) continue;
-    if (request.status !== "awaitingApproval" || !isLive(request.expiresAt, now)) continue;
-    const from = hostKey(request.remoteAddress);
-    const draft =
-      sameClaimant(request.nodeName, from) ??
-      create(`sharing-request:${request.requestId}`, {
-        name: request.nodeName,
-        unverified: true,
-        from,
-      });
-
-    draft.claimedIds.add(request.nodeId);
-    addKey(draft, identityKey.request(request.requestId));
-    draft.sources.sharingRequests.push(request);
-  }
   for (const request of sortBy(access?.pendingRequests, (r) => r.id)) {
     if (!isLive(request.expiresAt, now)) continue;
     const from = hostKey(request.remoteAddress);
@@ -725,8 +616,8 @@ export function buildDeviceGraph(input: DeviceGraphInput, now = Date.now()): Dev
 
   // Each carries an install id, so a name never joins it to anything (step 9 says whom it
   // may be).
-  for (const candidate of sortBy(discovery?.sharing, (c) => c.nodeId)) {
-    if (candidate.nodeId === selfNodeId) continue;
+  for (const candidate of sortBy(discovery?.dataSync, (c) => c.nodeId)) {
+    if (candidate.nodeId === selfNodeId || !candidate.address) continue;
     const draft =
       byId(candidate.nodeId) ??
       byAddress(candidate.address, joinable(candidate.nodeId)) ??
@@ -734,7 +625,7 @@ export function buildDeviceGraph(input: DeviceGraphInput, now = Date.now()): Dev
 
     addInstall(draft, candidate.nodeId);
     addKey(draft, identityKey.address(candidate.address));
-    draft.sources.sharingCandidate = candidate;
+    draft.sources.dataSyncCandidate = candidate;
     draft.address ??= candidate.address;
     draft.presences.push("online");
   }
@@ -784,16 +675,10 @@ export function buildDeviceGraph(input: DeviceGraphInput, now = Date.now()): Dev
     if (sources.managementRequestsOut.some((request) => !request.active))
       draft.issues.add("requestEnded");
     for (const issue of syncIssues(sources)) draft.issues.add(issue);
-    // What it says it is, most trusted first: its sharing handshake (verified), the server
-    // this device paired with, then what it answered nearby; a device that manages this one
+    // What it says it is: the paired server, then its discovery response. A device managing this one
     // only pairs as a desktop app or a phone, which its pairing's platform tells. Never a
     // request, whose word is all it has.
-    const reported = [
-      sources.peer,
-      sources.server,
-      sources.managementCandidate,
-      sources.sharingCandidate,
-    ];
+    const reported = [sources.server, sources.managementCandidate];
     const managerPlatform = knownPlatform(sources.managers[0]?.platform);
     const kind =
       reported.map((source) => kindOfServer(source?.kind)).find(Boolean) ??
@@ -821,25 +706,7 @@ export function buildDeviceGraph(input: DeviceGraphInput, now = Date.now()): Dev
     nodes.push(node);
     if (node.ghost) continue;
 
-    const incoming = sources.sharingRequests.filter((r) => r.direction === "incoming");
-    const outgoing = sources.sharingRequests.filter((r) => r.direction === "outgoing");
-    const sharingIssue = sources.peer?.outboundGrant
-      ? peerIssue(sources.peer.connectionState)
-      : undefined;
     const managementIssue = sources.server ? serverIssue(sources.server.state) : undefined;
-    const sharing: MapEdge = {
-      id: `sharing:${node.id}`,
-      kind: "sharing",
-      nodeId: node.id,
-      out: sources.peer?.inboundGrant ? "active" : incoming.length ? "pending" : "none",
-      in: sources.peer?.outboundGrant
-        ? "active"
-        : outgoing.length || incoming.some((r) => r.offersReciprocalAccess)
-          ? "pending"
-          : "none",
-      // This device's reading of its library is what fails.
-      attention: sharingIssue ? { direction: "in", issue: sharingIssue } : undefined,
-    };
     const management: MapEdge = {
       id: `management:${node.id}`,
       kind: "management",
@@ -857,7 +724,7 @@ export function buildDeviceGraph(input: DeviceGraphInput, now = Date.now()): Dev
       attention: managementIssue ? { direction: "out", issue: managementIssue } : undefined,
     };
 
-    for (const edge of [sharing, management])
+    for (const edge of [management])
       if (edge.out !== "none" || edge.in !== "none") edges.push(edge);
   }
 
@@ -906,8 +773,12 @@ export function buildDeviceGraph(input: DeviceGraphInput, now = Date.now()): Dev
     name: status?.identity.name?.trim() || input.selfName?.trim() || "",
     self: true,
     ghost: false,
-    // The desktop app can manage other servers; a headless server cannot.
-    kind: servers ? (servers.available ? "desktop" : "server") : "unknown",
+    // Management is available headlessly too; desktop view relays are a separate capability.
+    kind: servers
+      ? (servers.canOpenDesktopView ?? servers.available)
+        ? "desktop"
+        : "server"
+      : "unknown",
     platform: input.selfPlatform,
     presence: "online",
     issues: [],
@@ -917,7 +788,7 @@ export function buildDeviceGraph(input: DeviceGraphInput, now = Date.now()): Dev
     sources: emptySources(),
   };
 
-  return { self, nodes, edges };
+  return { self, nodes, edges, canManageServers: servers?.available };
 }
 
 /** The relationships drawn to one device, in kind order. */
@@ -925,7 +796,8 @@ export const edgesOf = (graph: DeviceGraph, nodeId: string) =>
   graph.edges.filter((edge) => edge.nodeId === nodeId);
 
 /** Whether this device's own UI can offer to manage a device: only the desktop app manages. */
-export const canManageFromHere = (graph: DeviceGraph) => graph.self.kind === "desktop";
+export const canManageFromHere = (graph: DeviceGraph) =>
+  graph.canManageServers ?? graph.self.kind === "desktop";
 
 /**
  * The node that now stands for a device known by these keys — the same device after an
