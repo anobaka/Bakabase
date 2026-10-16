@@ -8,7 +8,8 @@ Bakabase helps you manage your local media — anime, comics, audio dramas, douj
 
 ## Table of Contents
 
-- [Download](#download)
+- [Installation and Updates](#installation-and-updates)
+- [Features in Development](#features-in-development)
 - [Features](#features)
   - [Data Cards](#data-cards)
   - [Customizable Resource Detail Layout](#customizable-resource-detail-layout)
@@ -27,14 +28,126 @@ Bakabase helps you manage your local media — anime, comics, audio dramas, douj
 - [Contributing](#contributing)
 - [Star History](#star-history)
 
-## Download
+## Installation and Updates
 
-- [Stable](https://github.com/anobaka/Bakabase/releases/latest)
-- [Beta](https://github.com/anobaka/Bakabase/releases) — includes new features that aren't fully stable yet
+- [Stable downloads](https://github.com/anobaka/Bakabase/releases/latest): recommended for everyday use.
+- [Beta downloads](https://github.com/anobaka/Bakabase/releases): choose a `2.4.0-beta` release to try the [features in development](#features-in-development) below. Beta features and data structures may change; keep a complete data backup before upgrading.
 
-> ## ⚠️ Upgrading from a pre-2.3 version
->
-> 2.3 ships a brand-new installer and auto-updater and **cannot be upgraded in place from pre-2.3 versions**. Download the 2.3 installer once and install it as a fresh app; every update after that is one-click from inside the app again. To keep data from an older install, launch the new 2.3 build first, then point **Settings → System Information → App Data Path → Modify** at your old data folder.
+### Desktop App
+
+The desktop app includes its own server and window, and can also manage other paired servers. Open the release page and use its download links or **Assets** section to choose your platform:
+
+| Platform | Recommended installer | Alternative |
+| --- | --- | --- |
+| Windows x64 | `Bakabase-<version>-win-x64-Setup.exe` | `…-Portable.zip`: no installation; update by replacing program files manually |
+| macOS Apple Silicon (M series) | `Bakabase-<version>-osx-arm64-Setup.pkg` | — |
+| macOS Intel | `Bakabase-<version>-osx-x64-Setup.pkg` | — |
+| Linux / NAS | Use the Docker server below | — |
+
+Run the installer and follow its instructions. `.nupkg` update packages and GitHub **Source code** archives are not installers. On its first launch, the 2.4 beta opens Setup: choose a data directory and initialize empty data or import from another stopped Bakabase installation. External media files are not copied with application data; see [Setup and data import](docs/setup.md). Existing users keep their data directory when upgrading.
+
+**Updating an installed desktop app:**
+
+1. Open **System → Configuration → System information → Current version** and click **Check for updates**.
+2. Enable **Receive beta updates** to get 2.4 betas. Disabling it checks only stable releases; it does not downgrade your existing data to an older version.
+3. Follow the page's prompts to download an available update. If downloading has already started automatically, wait until it is ready, then select **Restart to update**. Updating replaces program files while retaining your data directory, workspaces, device pairings and path mappings.
+
+Portable and source builds do not support installer updates. Exit normally, replace the program manually, and keep the original data directory. If an installed app fails to update, you can also download a newer installer for the same platform from the release page.
+
+**Upgrading from before 2.3:** Version 2.3 introduced a new installer that the old updater cannot reach. Download an installer and install the new app once. First back up your complete old data and exit the old app. In the 2.4 beta, choose **Import existing data** during initial Setup, or use **System → Configuration → Workspaces → Current workspace data directory → Import existing data**. For the older 2.3 stable release, follow its release-specific migration instructions. Keep data outside the program installation directory, and never let two instances write to the same data directory.
+
+### Docker Server
+
+The Docker edition includes a server and web interface for NAS devices or always-on hosts. The instructions below apply to the 2.4 beta, which provides Linux AMD64 and ARM64 images; Apple Silicon can run ARM64 directly. Choose an explicit published version from [Docker Hub](https://hub.docker.com/r/anobaka/bakabase/tags); **there is no `latest` tag**. Check the release notes for older tags' capabilities and architectures.
+
+To use the repository's Compose helpers, install Docker Compose, Git, Bash and Python 3 (Windows users can run them in WSL):
+
+```sh
+git clone https://github.com/anobaka/Bakabase.git
+cd Bakabase
+cp docker/.env.example docker/.env
+```
+
+**Configure storage and mounts before starting.** A container cannot automatically access every folder on your computer or NAS:
+
+| Purpose | Host location (`source`) | Path inside Bakabase (`target`) |
+| --- | --- | --- |
+| Application data: databases, settings, covers and device connections; required | `BAKABASE_DATA_DIR` in `.env` | `/data` |
+| Media files; optional | `/absolute/path/to/media` | `/media` |
+| Downloads; optional | `/absolute/path/to/downloads` | `/downloads` |
+
+Media, download and import directories need separate mounts; mounting `/data` alone does not make them accessible. Mount NAS shares on the host first and confirm they work.
+
+Edit `docker/.env`, replacing the version and path below. Create your chosen data directory first, and select a version tag already published on Docker Hub:
+
+```dotenv
+BAKABASE_IMAGE=anobaka/bakabase:<version>
+BAKABASE_DATA_DIR=/absolute/path/to/bakabase-data
+```
+
+Create `docker/compose.local.yaml` to mount the folders you want to use, for example:
+
+```yaml
+services:
+  server:
+    volumes:
+      - type: bind
+        source: /absolute/path/to/media
+        target: /media
+        bind:
+          create_host_path: false
+      - type: bind
+        source: /absolute/path/to/downloads
+        target: /downloads
+        bind:
+          create_host_path: false
+```
+
+`source` is an **existing absolute host path**; `target` is the container path you select inside Bakabase. This example uses `/media` for libraries and `/downloads` for downloads. Replace the placeholder paths and remove unwanted mounts; see the [mount examples](docker/compose.local.example.yaml) for more options. To import old data, separately mount a copy from a stopped installation read-only at `/import`; do not share a writable `/data` between instances.
+
+Start the server:
+
+```sh
+./docker/image.sh pull
+./docker/image.sh up -d --no-build
+./docker/image.sh logs -f server
+```
+
+On the first launch, open the full link after `Server setup:` in the logs, preserving its token, and complete Setup. Then visit `http://localhost:34567`. Access is local-only by default; see the [Docker installation guide](docs/docker-installation.md) for LAN access, pairing and import instructions. After adding or changing a mount, run `./docker/image.sh up -d --no-build --force-recreate` to recreate the container; `restart` alone does not apply mount changes.
+
+**Updating:** The web interface's update check does not replace a Docker image. Stop the service normally, then back up the complete host application data directory to a separate location. Do not copy live SQLite files while the service is running:
+
+```sh
+./docker/image.sh stop server
+```
+
+After backing up, preserve the other `.env` settings, all mounts and the data directory. Change only `BAKABASE_IMAGE` to the target version, then run:
+
+```sh
+./docker/image.sh pull
+./docker/image.sh up -d --no-build --force-recreate
+```
+
+Check the displayed version, libraries and directory access afterward. Do not use `down -v` to clean up the old service: it deletes data in named volumes.
+
+**Testing source changes:** In the same checkout, set `BAKABASE_IMAGE` in `.env` to `bakabase:local`, run `git submodule update --init --recursive`, then `./docker/source.sh` to build and start inside Docker. To return to an official image, change `BAKABASE_IMAGE` back to a published tag and run the image-update commands above. Both modes share project `bakabase`, service `server` and the same local configuration, so they can replace and upgrade each other without starting a second stack. Keep data versions compatible; reverting only the image does not downgrade a database. Restore a complete backup for the matching version when rolling back.
+
+## Features in Development
+
+These features are being developed and tested in **2.4.0-beta** and are not part of the current stable release. Screenshots will follow.
+
+- **Headless server and Docker**: Manage libraries in a browser, with ARM64 and AMD64 images; source builds and published images share deployment configuration and application data.
+- **Setup and workspaces**: Choose where data is stored, import another installation with path checks and prefix mapping, and name or switch between isolated desktop workspaces.
+- **Unified multi-device management**: Search, filter and manage authorized devices' resources in the existing list, with device-color indicators; synchronized metadata enables searches on the managing device.
+- **Data sync and conflict review**: Synchronize custom properties, options and extension groups; inspect progress and history by device and data type, and resolve conflicts in batches.
+- **Reusable resource rules and cross-device processing**: Reuse filters, configure player and playable-file rules independently, and select a device with file access to perform enhancement or playable-file processing.
+- **Browser and local playback**: Use web or local players according to client capabilities; path mappings and local rules support remote resources, with improvements to mixed collections, batch playback and web-player controls.
+- **Collections, subscriptions and acquisition workflows**: Track owned and missing resources, discover new items from supported sources, and connect downloading, extraction and file placement through configurable workflows.
+- **Post parsing**: Organize post content and download leads, use AI to extract links, passwords and processing instructions, then review and hand them to an acquisition workflow.
+- **Collection memos**: Record collected time ranges, links and notes on a timeline for each collection target.
+- **Everyday usability**: Customize navigation, monitor resource usage, and improve file processing, background tasks, downloads, browsing history and userscript task feedback.
+
+Path mappings do not copy media files or create network mounts. Cross-device playback and processing still depend on file accessibility and the player or execution device's capabilities.
 
 ## Features
 

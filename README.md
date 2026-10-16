@@ -8,7 +8,8 @@ Bakabase 帮你管理本地媒体——动画、漫画、音声、本子、电�
 
 ## 目录
 
-- [下载](#下载)
+- [安装与更新](#安装与更新)
+- [开发中的功能](#开发中的功能)
 - [功能](#功能)
   - [数据卡片](#数据卡片)
   - [自定义资源详情布局](#自定义资源详情布局)
@@ -27,14 +28,126 @@ Bakabase 帮你管理本地媒体——动画、漫画、音声、本子、电�
 - [参与贡献](#参与贡献)
 - [Star History](#star-history)
 
-## 下载
+## 安装与更新
 
-- [正式版](https://github.com/anobaka/Bakabase/releases/latest)
-- [测试版](https://github.com/anobaka/Bakabase/releases) — 包含尚未稳定的新功能
+- [正式版下载](https://github.com/anobaka/Bakabase/releases/latest)：适合日常使用。
+- [测试版下载](https://github.com/anobaka/Bakabase/releases)：选择带 `2.4.0-beta` 的发布，体验下方[开发中的功能](#开发中的功能)。测试版功能和数据结构仍可能调整，升级前请保留完整数据备份。
 
-> ## ⚠️ 从 2.3 之前的版本升级
->
-> 2.3 采用了全新的安装器与自动更新机制，**无法从 2.3 之前的版本就地升级**。请手动下载一次 2.3 安装包并全新安装；此后每次更新都可在应用内一键完成。若想保留旧版本的数据，先启动新装好的 2.3，再到 **设置 → 系统信息 → 应用数据路径 → 修改** 指向你的旧数据目录即可。
+### 桌面一体版
+
+一体版包含本机服务端和桌面窗口，也能管理已配对的其他服务端。打开对应发布页，使用正文中的下载链接或底部的 **Assets**，按电脑平台选择：
+
+| 平台 | 推荐安装包 | 其他选择 |
+| --- | --- | --- |
+| Windows x64 | `Bakabase-<版本>-win-x64-Setup.exe` | `…-Portable.zip` 免安装版，手动替换程序更新 |
+| macOS Apple Silicon（M 系列） | `Bakabase-<版本>-osx-arm64-Setup.pkg` | — |
+| macOS Intel | `Bakabase-<版本>-osx-x64-Setup.pkg` | — |
+| Linux / NAS | 使用下方 Docker 服务端 | — |
+
+运行安装包，按提示完成安装；不要将 `.nupkg` 更新包或 GitHub 的 **Source code** 压缩包当作安装包。2.4 测试版首次启动会显示初始化向导：选择数据保存目录，可创建空白数据，也可从已停止的其他 Bakabase 实例导入。媒体原文件不会随应用数据自动复制，详见 [Setup 与数据导入](docs/setup.md)。已有用户升级后沿用原数据目录。
+
+**以后如何更新：**
+
+1. 使用安装版，在 **系统 → 配置 → 系统信息 → 当前版本** 中点击“检查更新”。
+2. 想接收 2.4 测试版时，开启“接收测试版更新”；关闭后只检查正式版，不会自动把已有数据降级到旧版本。
+3. 有可用更新时按页面提示下载；如果已经自动开始下载，等待显示“更新就绪”后点击“重启更新”。更新保留数据目录、工作区、设备配对和路径映射；仅替换程序文件。
+
+免安装版或源码运行不支持安装器更新，请正常退出后手动替换程序，并保留原数据目录。安装版更新失败时，也可从发布页下载同平台的新安装包更新。
+
+**从 2.3 之前的版本升级：** 2.3 更换了安装器，旧更新器不能直接跨越到新版，需要手动下载安装包并全新安装一次。先完整备份旧数据并退出旧程序；使用 2.4 测试版时，在首次向导选择“从已有数据导入”，或进入 **系统 → 配置 → 工作区 → 当前工作区的数据目录 → 导入已有数据**。旧的 2.3 正式版请按其发布说明迁移数据。不要把数据保存在程序安装目录内，也不要让两个实例共用一个正在写入的数据目录。
+
+### Docker 服务端
+
+Docker 版包含服务端和网页界面，适合 NAS 或常开设备。以下流程以 2.4 测试版为准，提供 Linux AMD64 / ARM64 镜像，Apple Silicon 可直接使用 ARM64。镜像标签见 [Docker Hub](https://hub.docker.com/r/anobaka/bakabase/tags)，**使用明确版本号，没有 `latest` 标签**；旧标签的能力和架构以对应发布说明为准。
+
+使用仓库的 Compose 脚本部署（需要 Docker Compose、Git、Bash 和 Python 3；Windows 可在 WSL 中执行）：
+
+```sh
+git clone https://github.com/anobaka/Bakabase.git
+cd Bakabase
+cp docker/.env.example docker/.env
+```
+
+**启动前先配置保存位置和挂载。** 容器不能自动访问电脑或 NAS 的所有目录：
+
+| 用途 | 宿主机来源（`source`） | Bakabase 内的路径（`target`） |
+| --- | --- | --- |
+| 应用数据：数据库、设置、封面和设备连接，必需 | `.env` 中的 `BAKABASE_DATA_DIR` | `/data` |
+| 媒体文件，可选 | `/absolute/path/to/media` | `/media` |
+| 下载文件，可选 | `/absolute/path/to/downloads` | `/downloads` |
+
+媒体、下载和导入来源需要另外挂载，不会因为挂载了 `/data` 就自动可用。NAS 目录应先在宿主机挂载并确认可访问。
+
+编辑 `docker/.env`，替换以下版本和路径；数据目录需提前创建。版本必须是 Docker Hub 中已发布的标签：
+
+```dotenv
+BAKABASE_IMAGE=anobaka/bakabase:<版本号>
+BAKABASE_DATA_DIR=/absolute/path/to/bakabase-data
+```
+
+再新建 `docker/compose.local.yaml`，将希望使用的目录挂载进去，例如：
+
+```yaml
+services:
+  server:
+    volumes:
+      - type: bind
+        source: /absolute/path/to/media
+        target: /media
+        bind:
+          create_host_path: false
+      - type: bind
+        source: /absolute/path/to/downloads
+        target: /downloads
+        bind:
+          create_host_path: false
+```
+
+`source` 是宿主机上**已存在的绝对路径**，`target` 是 Bakabase 中使用的容器路径：此例中媒体库选择 `/media`，下载目录选择 `/downloads`。替换占位路径，删除不需要的挂载；更多配置见[挂载示例](docker/compose.local.example.yaml)。需要导入旧数据时，将已停止的旧实例数据副本另行只读挂载为 `/import`，不要与新实例共用可写 `/data`。
+
+配置后启动：
+
+```sh
+./docker/image.sh pull
+./docker/image.sh up -d --no-build
+./docker/image.sh logs -f server
+```
+
+首次启动使用日志中 `Server setup:` 后的完整链接完成设置，保留链接中的令牌；随后访问 `http://localhost:34567`。默认仅本机可访问；局域网访问、配对和导入流程见 [Docker 安装教程](docs/docker-installation.md)。以后添加或更改挂载，执行 `./docker/image.sh up -d --no-build --force-recreate` 重建容器；仅 `restart` 不会应用新挂载。
+
+**更新：**Docker 网页内的“检查更新”不会替换镜像。先正常停止服务，备份完整的宿主机应用数据目录，备份放在目录之外；不要在服务运行时直接复制 SQLite 文件：
+
+```sh
+./docker/image.sh stop server
+```
+
+备份完成后，保留原 `.env` 其他设置、所有挂载和数据目录，只把 `BAKABASE_IMAGE` 改为目标版本，再执行：
+
+```sh
+./docker/image.sh pull
+./docker/image.sh up -d --no-build --force-recreate
+```
+
+升级后检查页面中的版本、媒体库及目录访问。不要使用 `down -v` 清理旧服务，它会删除命名卷中的数据。
+
+**从源码验证改动：**在同一仓库，将 `.env` 中的 `BAKABASE_IMAGE` 改为 `bakabase:local`，执行 `git submodule update --init --recursive`，再运行 `./docker/source.sh`，即可在 Docker 内构建并启动。切回官方镜像时，将 `BAKABASE_IMAGE` 改回发布标签，再执行上面的镜像更新命令。两种模式共用项目 `bakabase`、服务 `server` 及同一份本机配置，可互相替换升级；不用再启动第二套容器。保留兼容的数据版本，回退时使用对应版本的完整备份，不要仅回退镜像。
+
+## 开发中的功能
+
+以下功能正在 **2.4.0-beta** 中开发和验证，尚不属于当前正式版；截图后续补充。
+
+- **纯服务端与 Docker**：浏览器管理媒体库，提供 ARM64 / AMD64 镜像；源码构建与已发布镜像共用部署配置和数据目录。
+- **初始化与工作区**：选择数据保存目录，导入其他实例并预检、映射旧路径；桌面端支持命名及切换相互隔离的工作区。
+- **统一多设备管理**：在原有资源列表中搜索、筛选和管理已授权设备的资源，以设备颜色区分来源；元数据同步到管理端后在本机搜索。
+- **数据同步与冲突处理**：同步自定义属性、选项和扩展名组，集中查看设备、数据类型、进度与记录，并批量处理冲突。
+- **可复用资源规则与跨设备处理**：复用筛选范围，分别配置播放器、可播放文件等规则，指定能访问文件的设备执行增强或可播放文件处理。
+- **浏览器与本机播放**：按客户端能力使用网页或本机播放器，配合路径映射与本机规则打开远端资源，改进混合资源、批量播放和网页播放器操作。
+- **集合、订阅与获取工作流**：追踪已有及缺失资源，发现已支持来源的新增内容，通过可配置工作流衔接下载、解压和文件归置。
+- **帖子解析**：整理帖子正文与下载线索，结合 AI 提取链接、密码和处理指令，审阅后交给获取资源流程继续处理。
+- **收集备忘录**：在时间条上记录收集目标的已收集区间、链接与备注。
+- **日常操作改进**：自定义菜单布局、查看资源占用，改进文件处理、后台任务、下载操作、浏览记录及油猴脚本任务反馈。
+
+路径映射不会复制媒体文件或建立网络挂载；跨设备播放和处理仍取决于文件是否可访问，以及播放器和执行设备的能力。
 
 ## 功能
 
