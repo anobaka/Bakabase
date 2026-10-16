@@ -563,7 +563,7 @@ jobs:
         run: |
           dotnet test src/tests/Bakabase.Modules.Federation.Tests/Bakabase.Modules.Federation.Tests.csproj
           dotnet test src/tests/Bakabase.Modules.Player.Tests/Bakabase.Modules.Player.Tests.csproj
-          dotnet test src/tests/Bakabase.Tests/Bakabase.Tests.csproj --filter "FullyQualifiedName~Bakabase.Tests.Federation"
+          dotnet test src/tests/Bakabase.Tests/Bakabase.Tests.csproj -- --minimum-expected-tests 1 --filter "FullyQualifiedName~Bakabase.Tests.Federation"
           for nls in false true; do for p in Bakabase.Modules.DataSync.Tests/Bakabase.Modules.DataSync.Tests Bakabase.Tests/Bakabase.Tests; do DOTNET_SYSTEM_GLOBALIZATION_USENLS=$nls dotnet test src/tests/$p.csproj -- --filter "FullyQualifiedName~LabelKeyCrossCheckTests" || exit 1; done; done
       - name: Verify the actual macOS rectangle calling convention
         if: startsWith(matrix.rid, 'osx-')
