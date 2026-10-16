@@ -53,7 +53,13 @@ public sealed class MetadataSyncActivityTests
     public async Task History_bounds_payload_rows_and_age_before_returning_a_page()
     {
         await _store.BeginAsync("source", new string('a', 1000), "epoch", "Snapshot", default);
-        await using (var db = new SqliteConnection("Data Source=" + Path.Combine(_root, "metadata-replicas", "sync-activity.db")))
+        // These fixture-only connections must release their file handles on disposal,
+        // like the store's connections, so Windows can delete the temporary database.
+        var connectionString = new SqliteConnectionStringBuilder
+        {
+            DataSource = Path.Combine(_root, "metadata-replicas", "sync-activity.db"), Pooling = false
+        }.ToString();
+        await using (var db = new SqliteConnection(connectionString))
         {
             await db.OpenAsync();
             await using var command = db.CreateCommand();
@@ -70,7 +76,7 @@ public sealed class MetadataSyncActivityTests
         Assert.AreEqual(100, page.Entries.Count);
         Assert.AreEqual(128, page.Entries[0].ErrorCode!.Length);
         Assert.AreEqual(2048, page.Entries[0].Error!.Length);
-        await using var check = new SqliteConnection("Data Source=" + Path.Combine(_root, "metadata-replicas", "sync-activity.db"));
+        await using var check = new SqliteConnection(connectionString);
         await check.OpenAsync();
         await using var count = check.CreateCommand(); count.CommandText = "SELECT count(*) FROM activity";
         Assert.AreEqual((long)MetadataSyncActivityStore.MaxEntries, (long)(await count.ExecuteScalarAsync())!);

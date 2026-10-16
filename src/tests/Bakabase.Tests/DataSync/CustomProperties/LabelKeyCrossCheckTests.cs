@@ -80,7 +80,16 @@ public class LabelKeyCrossCheckTests
             }
         }
 
-        Assert.IsTrue(pairs > 1_000, $"only {pairs} equal pairs: the grouping found too little");
+        // NLS and ICU have different casing data. Derive the complete expected
+        // corpus from the comparer rather than assuming an ICU-specific size.
+        var expectedPairs = Enumerable.Range(0, 0x10000)
+            .Where(cp => !char.IsSurrogate((char) cp))
+            .Select(cp => ((char) cp).ToString())
+            .GroupBy(label => label, comparer)
+            .Select(group => group.Count())
+            .Sum(count => count * (count - 1) / 2);
+        Assert.IsTrue(expectedPairs >= 26, "the corpus must include the 26 ASCII case pairs");
+        Assert.AreEqual(expectedPairs, pairs, "every runtime-equivalent BMP pair must be checked");
     }
 
     /// <summary>
@@ -91,8 +100,10 @@ public class LabelKeyCrossCheckTests
     public void TheNormalizerFoldsExactlyWhatTheKeyFolds()
     {
         var comparer = ModuleComparer(true);
+        var buckets = BmpBuckets(comparer).ToArray();
+        var realLabels = RealLabels().ToArray();
         var checkedPairs = 0;
-        foreach (var bucket in BmpBuckets(comparer))
+        foreach (var bucket in buckets)
         {
             for (var y = 1; y < bucket.Count; y++)
             {
@@ -101,13 +112,16 @@ public class LabelKeyCrossCheckTests
             }
         }
 
-        foreach (var (a, b) in RealLabels())
+        foreach (var (a, b) in realLabels)
         {
             AssertNormalizerAgrees(a, b);
             checkedPairs++;
         }
 
-        Assert.IsTrue(checkedPairs > 1_000);
+        var bmpRepresentativePairs = buckets.Sum(bucket => bucket.Count - 1);
+        Assert.IsTrue(bmpRepresentativePairs >= 26, "the corpus must include the 26 ASCII case pairs");
+        Assert.AreEqual(bmpRepresentativePairs + realLabels.Length, checkedPairs,
+            "every BMP representative pair and real label pair must be checked");
 
         static void AssertNormalizerAgrees(string a, string b)
         {

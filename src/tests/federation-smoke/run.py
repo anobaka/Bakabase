@@ -70,7 +70,7 @@ def run(args):
         for label in ("a", "b", "c"):
             directory = root / label
             port = free_port()
-            log = (root / f"{label}.log").open("w")
+            log = (root / f"{label}.log").open("w", encoding="utf-8")
             streams.append(log)
             process = subprocess.Popen([args.dotnet, str(dll), str(port), str(directory), "257"],
                                        cwd=repo, stdout=log, stderr=subprocess.STDOUT)
@@ -179,7 +179,7 @@ def run(args):
             assert connection.execute('select count(*) from ResourcesV2 where PlayedAt is not null').fetchone()[0] == 0
         print("PASS: local replica search survives owner outage; reads do not update owner play history", flush=True)
         report = {"passed": True, "ownedResourcesPerDevice": 257, "managementPairings": 2, "nodes": [{"url": n["base"], "nodeId": n["id"], "pid": n["pid"]} for n in nodes]}
-        (results / "result.json").write_text(json.dumps(report, indent=2))
+        (results / "result.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
         print(json.dumps(report), flush=True)
     finally:
         if not args.keep:

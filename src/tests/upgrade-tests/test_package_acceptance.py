@@ -94,6 +94,72 @@ class HostedRunnerBoundary(unittest.TestCase):
                 runner.require_hosted_runner(HOSTED, system, machine, rid)
 
 
+class NativeCleanupBoundary(unittest.TestCase):
+    def test_profile_control_directory_is_outside_the_data_anchor_on_both_platforms(self):
+        home, local = Path("/fixture-home"), Path("/fixture-local")
+        self.assertEqual(home / "Library/Application Support/Bakabase.profiles",
+                         runner.profile_registry_path(True, home))
+        self.assertEqual(local / "Bakabase.AppData.profiles", runner.profile_registry_path(False, home, local))
+
+    def test_only_preflight_owned_existing_preference_domains_are_deleted(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            home = Path(temporary)
+            paths = [home / "Library/Preferences" / (domain + ".plist") for domain in runner.MAC_BUNDLE_IDS]
+            paths[0].parent.mkdir(parents=True)
+            paths[0].write_text("owned fixture")
+            with patch.object(runner, "command") as command:
+                self.assertEqual([runner.MAC_BUNDLE_IDS[0]],
+                                 runner.clear_owned_macos_preferences(home, paths, home))
+            self.assertEqual(["/usr/bin/defaults", "delete", runner.MAC_BUNDLE_IDS[0]], command.call_args.args[0])
+            self.assertEqual(1, command.call_count)
+
+    def test_unowned_preferences_and_delete_failures_do_not_pass_cleanup(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            home = Path(temporary)
+            paths = [home / "Library/Preferences" / (domain + ".plist") for domain in runner.MAC_BUNDLE_IDS]
+            paths[0].parent.mkdir(parents=True)
+            paths[0].write_text("owned fixture")
+            with patch.object(runner, "command") as command:
+                with self.assertRaisesRegex(AssertionError, "preflight"):
+                    runner.clear_owned_macos_preferences(home, [], home)
+                command.assert_not_called()
+            with patch.object(runner, "command", side_effect=AssertionError("delete failed")):
+                with self.assertRaisesRegex(AssertionError, "delete failed"):
+                    runner.clear_owned_macos_preferences(home, paths, home)
+
+    def test_cleanup_reports_recreated_paths_and_surviving_owned_processes(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            recreated = root / "recreated.plist"
+            recreated.write_text("fixture")
+            executable = root / "Bakabase"
+            with patch.object(runner, "native_processes", return_value=[42]) as query:
+                report = runner.inspect_owned_cleanup(root / "removed", [recreated], [executable, executable])
+            self.assertEqual([str(recreated)], report["remainingOwnedPaths"])
+            self.assertEqual([{"executable": str(executable), "processIds": [42]}], report["remainingOwnedProcesses"])
+            self.assertFalse(report["ownedFilesRemoved"])
+            self.assertFalse(report["ownedProcessesStopped"])
+            query.assert_called_once_with(executable)
+
+    @unittest.skipIf(os.name == "nt", "Creating symlinks requires additional Windows permissions")
+    def test_dangling_symlink_is_still_a_cleanup_remainder(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            link = root / "link"
+            link.symlink_to(root / "missing")
+            report = runner.inspect_owned_cleanup(root / "removed", [link], [])
+            self.assertEqual([str(link)], report["remainingOwnedPaths"])
+            self.assertFalse(report["ownedFilesRemoved"])
+
+    def test_no_remaining_paths_or_processes_passes_cleanup(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            with patch.object(runner, "native_processes", return_value=[]):
+                report = runner.inspect_owned_cleanup(root / "removed", [], [root / "Bakabase"])
+            self.assertTrue(report["ownedFilesRemoved"])
+            self.assertTrue(report["ownedProcessesStopped"])
+
+
 class ManifestBoundary(unittest.TestCase):
     def test_each_native_rid_has_exact_manifest_identity(self):
         for rid in ("win-x64", "osx-x64", "osx-arm64"):

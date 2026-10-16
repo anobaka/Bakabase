@@ -41,7 +41,7 @@ vi.mock("@/components/Property/components/PropertyTypeIcon", () => ({
 vi.mock("@/components/PropertyModal", async () => {
   const { useResourceApi } = await import("@/features/management/resourceContext");
   return {
-    default: ({ value }: any) => {
+    default: function MockPropertyModal({ value }: any) {
       const api = useResourceApi();
       return (
         <button

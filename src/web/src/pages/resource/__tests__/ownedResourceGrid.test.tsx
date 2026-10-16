@@ -26,7 +26,12 @@ const mocks = vi.hoisted(() => ({
   refreshSources: vi.fn(),
   cancelSelection: vi.fn(),
 }));
-vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
+vi.mock("react-i18next", () => ({
+  useTranslation: () => ({
+    t: (key: string, options?: { name?: string }) =>
+      options?.name ? `${key}: ${options.name}` : key,
+  }),
+}));
 vi.mock("@/sdk/BApi", () => ({
   default: {
     resource: { getSavedSearch: async () => ({ data: { search: { page: 1, pageSize: 50 } } }) },
@@ -58,7 +63,11 @@ vi.mock("@/hooks/useResourceSearch", () => ({
   }),
 }));
 vi.mock("@/stores/options", () => ({
-  useUiOptionsStore: () => ({ initialized: true, data: { resource: { colCount: 3 } } }),
+  useUiOptionsStore: (selector?: (state: any) => unknown) => {
+    const state = { initialized: true, data: { resource: { colCount: 3 } } };
+
+    return selector ? selector(state) : state;
+  },
   useResourceOptionsStore: () => ({ initialized: true, data: {} }),
 }));
 vi.mock("@/stores/bTasks", () => ({
@@ -166,13 +175,15 @@ describe("the original grid with resources from several devices", () => {
   it("marks only remote covers and keeps their device color stable when resources reorder", async () => {
     const view = render(<ResourceTabContent searchId="test" activated />);
     await screen.findByTestId("one");
-    expect(screen.queryByLabelText("local")).toBeNull();
-    const color = screen.getByLabelText("one").style.backgroundColor;
+    expect(screen.queryByTitle("deviceAppearance.source: local")).toBeNull();
+    const marker = screen.getByLabelText("deviceAppearance.source: one");
+    expect(marker).toHaveAttribute("title", "deviceAppearance.source: one");
+    const color = marker.style.backgroundColor;
     expect(color).not.toBe("");
     mocks.resources = [...mocks.resources].reverse();
     view.rerender(<ResourceTabContent searchId="test" searchName="Reordered" activated />);
-    expect(screen.getByLabelText("one").style.backgroundColor).toBe(color);
-    expect(screen.queryByLabelText("local")).toBeNull();
+    expect(screen.getByLabelText("deviceAppearance.source: one").style.backgroundColor).toBe(color);
+    expect(screen.queryByTitle("deviceAppearance.source: local")).toBeNull();
   });
 
   it("selects colliding IDs independently and routes edits/deletions to owner-qualified keys", async () => {

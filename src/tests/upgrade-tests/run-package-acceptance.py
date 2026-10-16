@@ -37,6 +37,7 @@ MAX_ARCHIVE_BYTES = 2 * 1024 ** 3
 SETUP_HEADER = "X-Bakabase-Setup-Token"
 MONITOR_HEADER = "X-Bakabase-Import-Token"
 MONITOR_PATH = "/app/data-path/import/progress/status"
+MAC_BUNDLE_IDS = ("com.anobaka.bakabase", "com.anobaka.bakabase.client")
 
 
 def require(condition, message):
@@ -235,6 +236,37 @@ def remove_owned_tree(path):
             if time.monotonic() >= deadline:
                 raise
             time.sleep(0.25)
+
+
+def profile_registry_path(mac, home, local_app_data=None):
+    # DesktopProfileRegistry.ForCurrentUser uses the platform anchor + ".profiles",
+    # even when the portable acceptance process overrides its own data directory.
+    anchor = home / "Library/Application Support/Bakabase" if mac else local_app_data / "Bakabase.AppData"
+    return Path(str(anchor) + ".profiles")
+
+
+def clear_owned_macos_preferences(home, owned_paths, results):
+    removed = []
+    for domain in MAC_BUNDLE_IDS:
+        path = home / "Library/Preferences" / (domain + ".plist")
+        require(path in owned_paths, "Preference domain was not covered by the absent-path preflight")
+        if path.exists():
+            # Raw plist deletion does not invalidate cfprefsd's cached domain.
+            # Do not kill shared macOS services or silently ignore a failed deletion.
+            command(["/usr/bin/defaults", "delete", domain], results / ("preferences-" + domain + ".log"))
+            removed.append(domain)
+    return removed
+
+
+def inspect_owned_cleanup(work, defaults, executables):
+    remaining_paths = [str(path) for path in [work, *defaults] if path.exists() or path.is_symlink()]
+    remaining_processes = []
+    for executable in dict.fromkeys(executables):
+        pids = native_processes(executable)
+        if pids:
+            remaining_processes.append({"executable": str(executable), "processIds": pids})
+    return {"remainingOwnedPaths": remaining_paths, "remainingOwnedProcesses": remaining_processes,
+            "ownedFilesRemoved": not remaining_paths, "ownedProcessesStopped": not remaining_processes}
 
 
 def prepare_data(directory):
@@ -439,6 +471,7 @@ def execute(args, results, report):
     else:
         defaults = [Path(os.environ["LOCALAPPDATA"]) / name
                     for name in ("Bakabase", "Bakabase.Client", "Bakabase.AppData", "Bakabase.Client.AppData")]
+    defaults.append(profile_registry_path(mac, home, None if mac else Path(os.environ["LOCALAPPDATA"])))
     require(not any(path.exists() or path.is_symlink() for path in defaults),
             "Runner already contains Bakabase installation, data or cache")
     require(not os.environ.get("BAKABASE_DATA_DIR") and not os.environ.get("BAKABASE_CLIENT_DATA_DIR"),
@@ -626,18 +659,24 @@ def execute(args, results, report):
                                 "Installer receipt remains after cleanup")
                 cleanup_step(f"Forget receipt {receipt}", forget_receipt)
         report["createdDefaultPaths"] = [str(path) for path in defaults if path.exists()]
+        if mac:
+            def clear_preferences():
+                report["clearedPreferenceDomains"] = clear_owned_macos_preferences(home, defaults, results)
+            cleanup_step("Clear owned macOS preference domains", clear_preferences)
         for path in defaults:
             def remove_default():
-                if path.exists():
+                if path.exists() or path.is_symlink():
                     if mac:
                         command(["sudo", "rm", "-rf", "--", path], results / ("cleanup-" + str(defaults.index(path)) + ".log"))
                     else:
                         remove_owned_tree(path)
             cleanup_step(f"Remove owned default {path}", remove_default)
         cleanup_step("Remove acceptance work directory", lambda: remove_owned_tree(work))
-        report["ownedFilesRemoved"] = not work.exists() and not any(path.exists() for path in defaults)
-        if not report["ownedFilesRemoved"]:
-            cleanup_errors.append("Owned installation/data cleanup is incomplete")
+        def inspect_cleanup():
+            report.update(inspect_owned_cleanup(work, defaults, owned_executables))
+            require(report["ownedFilesRemoved"] and report["ownedProcessesStopped"],
+                    "Owned installation/data cleanup is incomplete")
+        cleanup_step("Verify owned files and processes were removed", inspect_cleanup)
         for key, previous in launchd_environment.items():
             def restore_environment():
                 result = subprocess.run(["launchctl", "unsetenv", key] if previous is None else

@@ -147,11 +147,17 @@ module.exports = async function resourceProfiles({ browser, config, artifacts })
     await previewDialog.waitFor({ state: 'hidden' });
     console.log('Source profiles: B-only preview and persisted metadata verified');
 
-    const openingResponse = pageResponse(page, `/resource-profile/${profile.id}`, 'PUT');
+    // Individual categories now save through the revision-checked rule endpoint,
+    // which returns the updated profile directly rather than an API envelope.
+    const rulePath = `/resource-scope/profile/${profile.id}/rule`;
+    const openingResponse = pageResponse(page, rulePath, 'PATCH');
     await page.getByRole('button', { name: containing('resourceProfile.source.openingMode') }).click();
     await page.getByText(exactly('resourceProfile.source.mode.native')).last().click();
-    await success(openingResponse);
-    await page.getByRole('button', { name: exactly('common.action.configure') }).click();
+    const openingSaved = await openingResponse;
+    assert.equal(openingSaved.status(), 200, 'Saving the opening-mode rule failed');
+    assert.equal((await openingSaved.json()).openingMode, 'native');
+    await page.getByRole('heading', { name: exactly('resourceProfile.label.players') }).locator('..')
+      .getByRole('button', { name: exactly('common.action.configure') }).click();
     const players = page.getByRole('dialog', { name: exactly('resourceProfile.modal.configurePlayersTitle') });
     await players.getByRole('button', { name: exactly('resourceProfile.action.addPlayer') }).click();
     const executable = players.getByRole('combobox', { name: containing('resourceProfile.label.executablePath') });
@@ -178,9 +184,11 @@ module.exports = async function resourceProfiles({ browser, config, artifacts })
     await players.getByRole('button', { name: containing('resourceProfile.players.http.label') }).click();
     await page.getByText(exactly('resourceProfile.players.http.supported')).last().click();
     await players.screenshot({ path: artifacts('resource-profiles-local-player-editor.png') });
-    const playerResponse = pageResponse(page, `/resource-profile/${profile.id}`, 'PUT');
+    const playerResponse = pageResponse(page, rulePath, 'PATCH');
     await players.getByRole('button', { name: exactly('common.action.save') }).click();
-    await success(playerResponse);
+    const playerSaved = await playerResponse;
+    assert.equal(playerSaved.status(), 200, 'Saving the player rule failed');
+    assert.equal((await playerSaved.json()).id, profile.id);
     await players.waitFor({ state: 'hidden' });
     const saved = await envelope(a.base + `/resource-profile/${profile.id}`);
     assert.equal(saved.openingMode, 'native');
