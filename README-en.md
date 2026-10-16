@@ -9,6 +9,7 @@ Bakabase helps you manage your local media — anime, comics, audio dramas, douj
 ## Table of Contents
 
 - [Installation and Updates](#installation-and-updates)
+- [Features in Development](#features-in-development)
 - [Features](#features)
   - [Data Cards](#data-cards)
   - [Customizable Resource Detail Layout](#customizable-resource-detail-layout)
@@ -130,6 +131,23 @@ After backing up, preserve the other `.env` settings, all mounts and the data di
 Check the displayed version, libraries and directory access afterward. Do not use `down -v` to clean up the old service: it deletes data in named volumes.
 
 **Testing source changes:** In the same checkout, set `BAKABASE_IMAGE` in `.env` to `bakabase:local`, run `git submodule update --init --recursive`, then `./docker/source.sh` to build and start inside Docker. To return to an official image, change `BAKABASE_IMAGE` back to a published tag and run the image-update commands above. Both modes share project `bakabase`, service `server` and the same local configuration, so they can replace and upgrade each other without starting a second stack. Keep data versions compatible; reverting only the image does not downgrade a database. Restore a complete backup for the matching version when rolling back.
+
+## Features in Development
+
+These features are being developed and tested in **2.4.0-beta** and are not part of the current stable release. Screenshots will follow.
+
+- **Headless server and Docker**: Manage libraries in a browser, with ARM64 and AMD64 images; source builds and published images share deployment configuration and application data.
+- **Setup and workspaces**: Choose where data is stored, import another installation with path checks and prefix mapping, and name or switch between isolated desktop workspaces.
+- **Unified multi-device management**: Search, filter and manage authorized devices' resources in the existing list, with device-color indicators; synchronized metadata enables searches on the managing device.
+- **Data sync and conflict review**: Synchronize custom properties, options and extension groups; inspect progress and history by device and data type, and resolve conflicts in batches.
+- **Reusable resource rules and cross-device processing**: Reuse filters, configure player and playable-file rules independently, and select a device with file access to perform enhancement or playable-file processing.
+- **Browser and local playback**: Use web or local players according to client capabilities; path mappings and local rules support remote resources, with improvements to mixed collections, batch playback and web-player controls.
+- **Collections, subscriptions and acquisition workflows**: Track owned and missing resources, discover new items from supported sources, and connect downloading, extraction and file placement through configurable workflows.
+- **Post parsing**: Organize post content and download leads, use AI to extract links, passwords and processing instructions, then review and hand them to an acquisition workflow.
+- **Collection memos**: Record collected time ranges, links and notes on a timeline for each collection target.
+- **Everyday usability**: Customize navigation, monitor resource usage, and improve file processing, background tasks, downloads, browsing history and userscript task feedback.
+
+Path mappings do not copy media files or create network mounts. Cross-device playback and processing still depend on file accessibility and the player or execution device's capabilities.
 
 ## Features
 
