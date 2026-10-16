@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Db;
@@ -166,5 +167,123 @@ public class ThirdPartyContentTrackerService(
             ContentId = nearestBefore.ContentId,
             ViewedAt = nearestBefore.ViewedAt
         };
+    }
+
+    public async Task<ThirdPartyContentTrackerPageBoundariesViewModel> FindPageBoundaries(
+        string domainKey,
+        string? filter,
+        DateTime oldestUpdatedAt,
+        DateTime newestUpdatedAt,
+        IReadOnlyCollection<string> excludeContentIds)
+    {
+        if (oldestUpdatedAt.Kind != DateTimeKind.Utc || newestUpdatedAt.Kind != DateTimeKind.Utc)
+            throw new ArgumentException("Page content times must use UTC.");
+        if (oldestUpdatedAt > newestUpdatedAt)
+            throw new ArgumentException("The oldest content time must not follow the newest content time.");
+        var records = QueryHistoryRecords(domainKey, filter, excludeContentIds);
+
+        var older = await records.Where(t => t.UpdatedAt <= oldestUpdatedAt)
+            .OrderByDescending(t => t.UpdatedAt).ThenBy(t => t.ContentId).ThenBy(t => t.Id)
+            .Select(t => new {t.ContentId, UpdatedAt = t.UpdatedAt!.Value})
+            .FirstOrDefaultAsync();
+        var newer = await records.Where(t => t.UpdatedAt >= newestUpdatedAt)
+            .OrderBy(t => t.UpdatedAt).ThenBy(t => t.ContentId).ThenBy(t => t.Id)
+            .Select(t => new {t.ContentId, UpdatedAt = t.UpdatedAt!.Value})
+            .FirstOrDefaultAsync();
+
+        // SQLite loses DateTime.Kind, and the host's global DateFormatString omits
+        // offsets even for UTC DateTime values. Format after SQL materialization
+        // as a string so the display formatter cannot remove the UTC marker.
+        static string UtcIso(DateTime value) => DateTime.SpecifyKind(value, DateTimeKind.Utc)
+            .ToString("O", CultureInfo.InvariantCulture);
+        return new ThirdPartyContentTrackerPageBoundariesViewModel
+        {
+            Older = older == null ? null : new ThirdPartyContentTrackerPageBoundaryViewModel
+                {ContentId = older.ContentId, UpdatedAt = UtcIso(older.UpdatedAt)},
+            Newer = newer == null ? null : new ThirdPartyContentTrackerPageBoundaryViewModel
+                {ContentId = newer.ContentId, UpdatedAt = UtcIso(newer.UpdatedAt)}
+        };
+    }
+
+    public async Task<ThirdPartyContentTrackerDailyHistoryViewModel> GetDailyHistory(
+        string domainKey,
+        string? filter,
+        string centerDay,
+        string timeZoneId,
+        IReadOnlyCollection<string> excludeContentIds)
+    {
+        if (!DateOnly.TryParseExact(centerDay, "yyyy-MM-dd", CultureInfo.InvariantCulture,
+                DateTimeStyles.None, out var center))
+            throw new ArgumentException("The center day must use yyyy-MM-dd.", nameof(centerDay));
+        DateOnly startDay, endDay;
+        try
+        {
+            startDay = center.AddDays(-15);
+            endDay = center.AddDays(16);
+        }
+        catch (ArgumentOutOfRangeException)
+        {
+            throw new ArgumentException("The center day must allow fifteen days on either side.", nameof(centerDay));
+        }
+
+        TimeZoneInfo zone;
+        try { zone = TimeZoneInfo.FindSystemTimeZoneById(timeZoneId); }
+        catch (Exception error) when (error is TimeZoneNotFoundException or InvalidTimeZoneException or ArgumentException)
+        {
+            throw new ArgumentException("The requested time zone is not available.", nameof(timeZoneId));
+        }
+
+        DateTime UtcBoundary(DateOnly day)
+        {
+            var local = day.ToDateTime(TimeOnly.MinValue, DateTimeKind.Unspecified);
+            // A midnight skipped or repeated by a clock change has no unique UTC
+            // boundary. Reject that window rather than silently losing an hour.
+            if (zone.IsInvalidTime(local) || zone.IsAmbiguousTime(local))
+                throw new ArgumentException("The time zone has a skipped or repeated midnight at this window boundary.",
+                    nameof(centerDay));
+            var utc = TimeZoneInfo.ConvertTimeToUtc(local, zone);
+            if (TimeZoneInfo.ConvertTimeFromUtc(utc, zone) != local)
+                throw new ArgumentException("The date window exceeds the supported UTC range.", nameof(centerDay));
+            return utc;
+        }
+
+        var startUtc = UtcBoundary(startDay);
+        var endUtc = UtcBoundary(endDay);
+        // A nullable Filter leaves a hole in SQLite's unique index. Resolve each
+        // content ID's latest known content time before selecting this window;
+        // an older duplicate must not bring content back from outside it.
+        var contentTimes = await QueryHistoryRecords(domainKey, filter, excludeContentIds)
+            .GroupBy(t => t.ContentId)
+            .Select(group => group.Max(t => t.UpdatedAt)!.Value)
+            .Where(time => time >= startUtc && time < endUtc).ToArrayAsync();
+        var counts = new int[31];
+        foreach (var time in contentTimes)
+        {
+            var local = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(time, DateTimeKind.Utc), zone);
+            var index = DateOnly.FromDateTime(local).DayNumber - startDay.DayNumber;
+            if (index is >= 0 and < 31) counts[index]++;
+        }
+        return new ThirdPartyContentTrackerDailyHistoryViewModel
+        {
+            Days = Enumerable.Range(0, 31).Select(index => new ThirdPartyContentTrackerDailyHistoryDayViewModel
+            {
+                Date = startDay.AddDays(index).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                Count = counts[index]
+            }).ToList()
+        };
+    }
+
+    private IQueryable<ThirdPartyContentTrackerDbModel> QueryHistoryRecords(string domainKey, string? filter,
+        IReadOnlyCollection<string> excludeContentIds)
+    {
+        ArgumentNullException.ThrowIfNull(excludeContentIds);
+        var records = dbContext.ThirdPartyContentTrackers.AsNoTracking()
+            .Where(t => t.DomainKey == domainKey && t.Filter == filter && t.UpdatedAt.HasValue);
+        if (excludeContentIds.Count > 0)
+        {
+            var excluded = excludeContentIds.Distinct(StringComparer.Ordinal).ToArray();
+            records = records.Where(t => !Enumerable.Contains(excluded, t.ContentId));
+        }
+        return records;
     }
 }

@@ -35,9 +35,9 @@ public class TampermonkeyService(IGuiAdapter guiAdapter, AppContext appContext, 
     /// <summary>
     /// Reads an explicitly configured local script asset, or fetches the script
     /// from CDN, and seeds its stored API URL before it runs.
-    /// The script's @updateURL/@downloadURL still point to CDN,
-    /// so Tampermonkey auto-updates will work. The injected endpoint is auto-persisted
-    /// via GM_setValue on first use, surviving future CDN updates.
+    /// The installed script updates from the same Bakabase origin. The explicit
+    /// origin survives background requests through an HTTPS reverse proxy, while
+    /// the API endpoint and language are seeded only when their stored choices are empty.
     /// </summary>
     public Task<string?> GetScript(string apiEndpoint) =>
         GetScript(apiEndpoint, Environment.GetEnvironmentVariable(ScriptFileEnvironmentVariable));
@@ -73,11 +73,22 @@ public class TampermonkeyService(IGuiAdapter guiAdapter, AppContext appContext, 
 
         // Production bundlers erase an empty default constant. Insert outside the
         // compiled bundle instead, after the metadata so extension installation and
-        // CDN updates keep working. Never overwrite a user's existing preferences.
+        // local updates keep working. Never overwrite a user's existing preferences.
         const string metadataEnd = "// ==/UserScript==";
         if (!template.StartsWith("// ==UserScript==", StringComparison.Ordinal)) return null;
         var end = template.IndexOf(metadataEnd, StringComparison.Ordinal);
         if (end < 0) return null;
+        var updateUrl = $"{origin}/Tampermonkey/script/bakabase.user.js?apiEndpoint={Uri.EscapeDataString(origin!)}";
+        var metadata = template[..end];
+        foreach (var field in new[] {"updateURL", "downloadURL"})
+        {
+            var pattern = @"(?m)^(//[ \t]*@" + field + @"[ \t]+)[^\r\n]*";
+            metadata = Regex.IsMatch(metadata, pattern)
+                ? Regex.Replace(metadata, pattern, match => match.Groups[1].Value + updateUrl)
+                : metadata + $"// @{field} {updateUrl}\n";
+        }
+        template = metadata + template[end..];
+        end = metadata.Length;
         // A wildcard @connect still asks for permission when a new host is first used.
         // Declare the installed server explicitly as the intended LAN destination.
         var endpoint = new Uri(origin!);

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { IoClose } from 'react-icons/io5';
 import { getApiBaseUrl } from '../api';
 import type { ConnectionState } from '../heartbeat';
@@ -87,21 +87,23 @@ export function TaskSummaryPanel({
         aria-disabled={!taskPageUrl}
         style={{
           display: 'flex',
-          gap: 12,
+          gap: 6,
           minWidth: 0,
           padding: '8px 10px',
           textDecoration: 'none',
           cursor: taskPageUrl ? 'pointer' : 'default',
         }}
       >
-        {items.map(({ label, value, color }) => (
-          <span
-            key={label}
-            title={value === undefined ? `${label}: ${t('taskSummary.unavailable')}` : label}
-            style={{ minWidth: 0, fontSize: 14, lineHeight: '20px', fontWeight: 700, fontVariantNumeric: 'tabular-nums', overflowWrap: 'anywhere', color }}
-          >
-            {value === undefined ? '—' : value.toLocaleString()}
-          </span>
+        {items.map(({ label, value, color }, index) => (
+          <Fragment key={label}>
+            {index > 0 && <span aria-hidden="true" style={{ color: '#a1a1aa', fontSize: 12, lineHeight: '20px' }}>/</span>}
+            <span
+              title={value === undefined ? `${label}: ${t('taskSummary.unavailable')}` : label}
+              style={{ minWidth: 0, fontSize: 14, lineHeight: '20px', fontWeight: 700, fontVariantNumeric: 'tabular-nums', overflowWrap: 'anywhere', color }}
+            >
+              {value === undefined ? '—' : value.toLocaleString()}
+            </span>
+          </Fragment>
         ))}
       </a>
       <button

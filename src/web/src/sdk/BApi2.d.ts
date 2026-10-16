@@ -9686,6 +9686,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/third-party-content-tracker/page-boundaries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["FindThirdPartyContentPageBoundaries"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/third-party-content-tracker/daily-history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["GetThirdPartyContentDailyHistory"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/tool/open": {
         parameters: {
             query?: never;
@@ -11132,6 +11164,13 @@ export interface components {
             keepMediaLibrary: boolean;
             deleteSourceResource: boolean;
         };
+        "Bakabase.Abstractions.Models.Input.ThirdPartyContentTrackerDailyHistoryInputModel": {
+            domainKey: string;
+            filter?: string;
+            centerDay: string;
+            timeZoneId: string;
+            excludeContentIds: string[];
+        };
         "Bakabase.Abstractions.Models.Input.ThirdPartyContentTrackerMarkViewedInputModel": {
             domainKey: string;
             filter?: string;
@@ -11141,6 +11180,15 @@ export interface components {
             contentId: string;
             /** Format: date-time */
             updatedAt?: string;
+        };
+        "Bakabase.Abstractions.Models.Input.ThirdPartyContentTrackerPageBoundariesInputModel": {
+            domainKey: string;
+            filter?: string;
+            /** Format: date-time */
+            oldestUpdatedAt: string;
+            /** Format: date-time */
+            newestUpdatedAt: string;
+            excludeContentIds: string[];
         };
         "Bakabase.Abstractions.Models.Input.ThirdPartyContentTrackerQueryInputModel": {
             domainKey: string;
@@ -11277,10 +11325,26 @@ export interface components {
             isDynamic: boolean;
             mediaLibraryName?: string;
         };
+        "Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerDailyHistoryDayViewModel": {
+            date: string;
+            /** Format: int32 */
+            count: number;
+        };
+        "Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerDailyHistoryViewModel": {
+            days: components["schemas"]["Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerDailyHistoryDayViewModel"][];
+        };
         "Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerNearestViewModel": {
             contentId: string;
             /** Format: date-time */
             viewedAt: string;
+        };
+        "Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerPageBoundariesViewModel": {
+            older?: components["schemas"]["Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerPageBoundaryViewModel"];
+            newer?: components["schemas"]["Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerPageBoundaryViewModel"];
+        };
+        "Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerPageBoundaryViewModel": {
+            contentId: string;
+            updatedAt: string;
         };
         "Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerStatusViewModel": {
             contentId: string;
@@ -17879,11 +17943,23 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Abstractions.Models.View.ResourceMovePreviewViewModel"];
         };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerDailyHistoryViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerDailyHistoryViewModel"];
+        };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerNearestViewModel]": {
             /** Format: int32 */
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerNearestViewModel"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerPageBoundariesViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerPageBoundariesViewModel"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Services.PlaceholderResourceResult]": {
             /** Format: int32 */
@@ -38492,6 +38568,64 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerNearestViewModel]"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerNearestViewModel]"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerNearestViewModel]"];
+                };
+            };
+        };
+    };
+    FindThirdPartyContentPageBoundaries: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Abstractions.Models.Input.ThirdPartyContentTrackerPageBoundariesInputModel"];
+                "application/json": components["schemas"]["Bakabase.Abstractions.Models.Input.ThirdPartyContentTrackerPageBoundariesInputModel"];
+                "text/json": components["schemas"]["Bakabase.Abstractions.Models.Input.ThirdPartyContentTrackerPageBoundariesInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Abstractions.Models.Input.ThirdPartyContentTrackerPageBoundariesInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerPageBoundariesViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerPageBoundariesViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerPageBoundariesViewModel]"];
+                };
+            };
+        };
+    };
+    GetThirdPartyContentDailyHistory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Abstractions.Models.Input.ThirdPartyContentTrackerDailyHistoryInputModel"];
+                "application/json": components["schemas"]["Bakabase.Abstractions.Models.Input.ThirdPartyContentTrackerDailyHistoryInputModel"];
+                "text/json": components["schemas"]["Bakabase.Abstractions.Models.Input.ThirdPartyContentTrackerDailyHistoryInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Abstractions.Models.Input.ThirdPartyContentTrackerDailyHistoryInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerDailyHistoryViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerDailyHistoryViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerDailyHistoryViewModel]"];
                 };
             };
         };

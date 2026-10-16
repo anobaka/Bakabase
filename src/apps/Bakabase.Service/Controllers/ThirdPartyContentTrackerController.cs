@@ -1,8 +1,10 @@
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Input;
 using Bakabase.Abstractions.Models.View;
 using Bakabase.Abstractions.Services;
+using Bakabase.Service.Components.RemoteAccess;
 using Bootstrap.Models.ResponseModels;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
@@ -71,5 +73,32 @@ public class ThirdPartyContentTrackerController(IThirdPartyContentTrackerService
     {
         var result = await service.FindNearestViewedContent(domainKey, filter, targetContentId);
         return new SingletonResponse<ThirdPartyContentTrackerNearestViewModel?>(result);
+    }
+
+    [SwaggerOperation(OperationId = "FindThirdPartyContentPageBoundaries")]
+    [HttpPost("page-boundaries")]
+    [RemoteAccessible]
+    public async Task<ActionResult<SingletonResponse<ThirdPartyContentTrackerPageBoundariesViewModel>>> FindPageBoundaries(
+        [FromBody] ThirdPartyContentTrackerPageBoundariesInputModel model)
+    {
+        if (model == null || !ModelState.IsValid || !TryValidateModel(model)) return BadRequest(ModelState);
+        var result = await service.FindPageBoundaries(model.DomainKey, model.Filter,
+            model.OldestUpdatedAt!.Value, model.NewestUpdatedAt!.Value, model.ExcludeContentIds);
+        return new SingletonResponse<ThirdPartyContentTrackerPageBoundariesViewModel>(result);
+    }
+
+    [SwaggerOperation(OperationId = "GetThirdPartyContentDailyHistory")]
+    [HttpPost("daily-history")]
+    [RemoteAccessible]
+    public async Task<ActionResult<SingletonResponse<ThirdPartyContentTrackerDailyHistoryViewModel>>> GetDailyHistory(
+        [FromBody] ThirdPartyContentTrackerDailyHistoryInputModel model)
+    {
+        if (model == null || !ModelState.IsValid || !TryValidateModel(model)) return BadRequest(ModelState);
+        try
+        {
+            return new SingletonResponse<ThirdPartyContentTrackerDailyHistoryViewModel>(await service.GetDailyHistory(
+                model.DomainKey, model.Filter, model.CenterDay, model.TimeZoneId, model.ExcludeContentIds));
+        }
+        catch (ArgumentException error) { return BadRequest(new {message = error.Message}); }
     }
 }

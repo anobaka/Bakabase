@@ -40,3 +40,33 @@ export function setTaskSummaryVisible(siteKey: string, visible: boolean): void {
   setStoredValue(taskSummaryKey(siteKey), visible);
   notify();
 }
+
+const browsingHistoryKey = (siteKey: string, side: 'older' | 'newer' | 'chart') =>
+  `browsing_history_${side}_visible.${siteKey}`;
+
+export function isBrowsingHistoryOlderVisible(siteKey: string): boolean {
+  return getStoredValue(browsingHistoryKey(siteKey, 'older'), true);
+}
+
+export function setBrowsingHistoryOlderVisible(siteKey: string, visible: boolean): void {
+  setStoredValue(browsingHistoryKey(siteKey, 'older'), visible);
+  notify();
+}
+
+export function isBrowsingHistoryNewerVisible(siteKey: string): boolean {
+  return getStoredValue(browsingHistoryKey(siteKey, 'newer'), false);
+}
+
+export function setBrowsingHistoryNewerVisible(siteKey: string, visible: boolean): void {
+  setStoredValue(browsingHistoryKey(siteKey, 'newer'), visible);
+  notify();
+}
+
+export function isBrowsingHistoryChartVisible(siteKey: string): boolean {
+  return getStoredValue(browsingHistoryKey(siteKey, 'chart'), true);
+}
+
+export function setBrowsingHistoryChartVisible(siteKey: string, visible: boolean): void {
+  setStoredValue(browsingHistoryKey(siteKey, 'chart'), visible);
+  notify();
+}

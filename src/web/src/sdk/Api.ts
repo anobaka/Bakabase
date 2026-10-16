@@ -1276,6 +1276,28 @@ export interface BakabaseAbstractionsModelsInputResourceTransferInputModelItem {
   deleteSourceResource: boolean;
 }
 
+export interface BakabaseAbstractionsModelsInputThirdPartyContentTrackerDailyHistoryInputModel {
+  /**
+   * @minLength 1
+   * @maxLength 100
+   */
+  domainKey: string;
+  /** @maxLength 500 */
+  filter?: string;
+  /**
+   * @minLength 1
+   * @maxLength 10
+   */
+  centerDay: string;
+  /**
+   * @minLength 1
+   * @maxLength 100
+   */
+  timeZoneId: string;
+  /** @maxItems 1000 */
+  excludeContentIds: string[];
+}
+
 export interface BakabaseAbstractionsModelsInputThirdPartyContentTrackerMarkViewedInputModel {
   /**
    * @minLength 1
@@ -1295,6 +1317,22 @@ export interface BakabaseAbstractionsModelsInputThirdPartyContentTrackerMarkView
   contentId: string;
   /** @format date-time */
   updatedAt?: string;
+}
+
+export interface BakabaseAbstractionsModelsInputThirdPartyContentTrackerPageBoundariesInputModel {
+  /**
+   * @minLength 1
+   * @maxLength 100
+   */
+  domainKey: string;
+  /** @maxLength 500 */
+  filter?: string;
+  /** @format date-time */
+  oldestUpdatedAt: string;
+  /** @format date-time */
+  newestUpdatedAt: string;
+  /** @maxItems 1000 */
+  excludeContentIds: string[];
 }
 
 export interface BakabaseAbstractionsModelsInputThirdPartyContentTrackerQueryInputModel {
@@ -1448,10 +1486,30 @@ export interface BakabaseAbstractionsModelsViewResourceMovePreviewViewModelMarkE
   mediaLibraryName?: string;
 }
 
+export interface BakabaseAbstractionsModelsViewThirdPartyContentTrackerDailyHistoryDayViewModel {
+  date: string;
+  /** @format int32 */
+  count: number;
+}
+
+export interface BakabaseAbstractionsModelsViewThirdPartyContentTrackerDailyHistoryViewModel {
+  days: BakabaseAbstractionsModelsViewThirdPartyContentTrackerDailyHistoryDayViewModel[];
+}
+
 export interface BakabaseAbstractionsModelsViewThirdPartyContentTrackerNearestViewModel {
   contentId: string;
   /** @format date-time */
   viewedAt: string;
+}
+
+export interface BakabaseAbstractionsModelsViewThirdPartyContentTrackerPageBoundariesViewModel {
+  older?: BakabaseAbstractionsModelsViewThirdPartyContentTrackerPageBoundaryViewModel;
+  newer?: BakabaseAbstractionsModelsViewThirdPartyContentTrackerPageBoundaryViewModel;
+}
+
+export interface BakabaseAbstractionsModelsViewThirdPartyContentTrackerPageBoundaryViewModel {
+  contentId: string;
+  updatedAt: string;
 }
 
 export interface BakabaseAbstractionsModelsViewThirdPartyContentTrackerStatusViewModel {
@@ -9422,11 +9480,25 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstract
   data?: BakabaseAbstractionsModelsViewResourceMovePreviewViewModel;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsViewThirdPartyContentTrackerDailyHistoryViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseAbstractionsModelsViewThirdPartyContentTrackerDailyHistoryViewModel;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsViewThirdPartyContentTrackerNearestViewModel {
   /** @format int32 */
   code: number;
   message?: string;
   data?: BakabaseAbstractionsModelsViewThirdPartyContentTrackerNearestViewModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsViewThirdPartyContentTrackerPageBoundariesViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseAbstractionsModelsViewThirdPartyContentTrackerPageBoundariesViewModel;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsServicesPlaceholderResourceResult {
@@ -32889,6 +32961,74 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ThirdPartyContentTracker
+     * @name FindThirdPartyContentPageBoundaries
+     * @request POST:/third-party-content-tracker/page-boundaries
+     */
+    findThirdPartyContentPageBoundaries: (
+      data: BakabaseAbstractionsModelsInputThirdPartyContentTrackerPageBoundariesInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsViewThirdPartyContentTrackerPageBoundariesViewModel,
+        any
+      >({
+        path: `/third-party-content-tracker/page-boundaries`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for findThirdPartyContentPageBoundaries
+     * @name findThirdPartyContentPageBoundariesUrl
+     */
+    findThirdPartyContentPageBoundariesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/third-party-content-tracker/page-boundaries`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ThirdPartyContentTracker
+     * @name GetThirdPartyContentDailyHistory
+     * @request POST:/third-party-content-tracker/daily-history
+     */
+    getThirdPartyContentDailyHistory: (
+      data: BakabaseAbstractionsModelsInputThirdPartyContentTrackerDailyHistoryInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsViewThirdPartyContentTrackerDailyHistoryViewModel,
+        any
+      >({
+        path: `/third-party-content-tracker/daily-history`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getThirdPartyContentDailyHistory
+     * @name getThirdPartyContentDailyHistoryUrl
+     */
+    getThirdPartyContentDailyHistoryUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/third-party-content-tracker/daily-history`;
 
       return baseUrl + path;
     },

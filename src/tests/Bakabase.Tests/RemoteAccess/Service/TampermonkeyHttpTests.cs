@@ -28,6 +28,7 @@ public class TampermonkeyHttpTests
             return Task.FromResult(new HttpResponseMessage(Status)
             {
                 Content = new StringContent("// ==UserScript==\n// @grant GM_getValue\n// @grant GM_setValue\n" +
+                                            $"// @updateURL {TampermonkeyService.ScriptCdnUrl}\n// @downloadURL {TampermonkeyService.ScriptCdnUrl}\n" +
                                             "// ==/UserScript==\n(function(){const stored=GM_getValue('api_base_url','');})();")
             });
         }
@@ -80,6 +81,7 @@ public class TampermonkeyHttpTests
         StringAssert.Contains(script, "\"http://192.168.3.23:45678\"");
         StringAssert.Contains(script, "// @connect      192.168.3.23\n");
         StringAssert.Contains(script, "GM_setValue('locale', \"zh\");");
+        AssertUpdateMetadata(script, "http://192.168.3.23:45678");
         Assert.IsTrue(response.Headers.CacheControl!.NoStore);
         Assert.AreEqual(1, source.Requests);
     }
@@ -95,7 +97,39 @@ public class TampermonkeyHttpTests
         using var response = await host.SendAsync(HttpMethod.Get,
             "/Tampermonkey/script/bakabase.user.js?apiEndpoint=" + Uri.EscapeDataString(origin));
         Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
-        StringAssert.Contains(await response.Content.ReadAsStringAsync(), System.Text.Json.JsonSerializer.Serialize(origin));
+        var script = await response.Content.ReadAsStringAsync();
+        StringAssert.Contains(script, System.Text.Json.JsonSerializer.Serialize(origin));
+        AssertUpdateMetadata(script, origin);
+    }
+
+    [TestMethod]
+    [DataRow(ServerKind.Headless)]
+    [DataRow(ServerKind.Desktop)]
+    public async Task Background_updates_keep_the_explicit_https_installation_origin(ServerKind kind)
+    {
+        const string origin = "https://media.example:8443";
+        using var source = new ScriptSource();
+        await using var host = await Start(source, kind);
+        using var installed = await host.SendAsync(HttpMethod.Get,
+            "/Tampermonkey/script/bakabase.user.js?apiEndpoint=" + Uri.EscapeDataString(origin));
+        var first = await installed.Content.ReadAsStringAsync();
+        var updateUrl = new Uri(System.Text.RegularExpressions.Regex.Match(first, @"(?m)^// @updateURL\s+(\S+)").Groups[1].Value);
+        Assert.AreEqual(origin, updateUrl.GetLeftPart(UriPartial.Authority));
+        using var update = await host.SendAsync(HttpMethod.Get, updateUrl.PathAndQuery);
+        Assert.AreEqual(HttpStatusCode.OK, update.StatusCode);
+        var updated = await update.Content.ReadAsStringAsync();
+        AssertUpdateMetadata(updated, origin);
+        StringAssert.Contains(updated, "GM_setValue('api_base_url', \"https://media.example:8443\");");
+        StringAssert.Contains(updated, "if (!GM_getValue('api_base_url', ''))");
+        StringAssert.Contains(updated, "if (!GM_getValue('locale', ''))");
+        Assert.AreEqual(2, source.Requests);
+    }
+
+    private static void AssertUpdateMetadata(string script, string origin)
+    {
+        var url = $"{origin}/Tampermonkey/script/bakabase.user.js?apiEndpoint={Uri.EscapeDataString(origin)}";
+        StringAssert.Contains(script, "// @updateURL " + url);
+        StringAssert.Contains(script, "// @downloadURL " + url);
     }
 
     [TestMethod]

@@ -39,7 +39,7 @@ export default defineConfig(({ command }) => {
         userscript: {
           name: 'Bakabase 集成脚本',
           namespace: 'http://tampermonkey.net/',
-          version: '2.1.3',
+          version: '2.1.7',
           description: 'Bakabase 集成脚本',
           author: 'Bakabase',
           match: isDev ? ['*://*/*'] : prodMatch,
