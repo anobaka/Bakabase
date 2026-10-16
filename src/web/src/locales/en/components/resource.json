@@ -367,5 +367,8 @@
   "resource.desktopPlayback.download": "Get the desktop app",
   "resource.desktopPlayback.alreadyInstalled": "Already installed? Open Bakabase desktop and follow the steps above. This guide does not connect or start playback automatically.",
   "resource.profilePlayback.configure": "Resource profiles on this device",
-  "resource.profilePlayback.openFailed": "Could not open local resource profiles. Switch back to this device from the device selector and try again."
+  "resource.profilePlayback.openFailed": "Could not open local resource profiles. Switch back to this device from the device selector and try again.",
+  "resource.pathMappingHint.description": "Can this computer access these files too? Map their paths to also open them with a local player.",
+  "resource.pathMappingHint.configure": "Set up path mapping",
+  "resource.pathMappingHint.dismiss": "Do not show path mapping tips for this device again"
 }

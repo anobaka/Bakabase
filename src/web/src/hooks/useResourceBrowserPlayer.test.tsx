@@ -1,4 +1,4 @@
-import { act, renderHook } from "@testing-library/react";
+import { act, cleanup, render, renderHook, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useResourceBrowserPlayer } from "./useResourceBrowserPlayer";
@@ -17,6 +17,13 @@ vi.mock("@/components/ContextProvider/BakabaseContextProvider", () => ({
   useBakabaseContext: () => ({ createWindow: mocks.createWindow }),
 }));
 vi.mock("@/components/MediaPlayer", () => ({ default: () => null }));
+vi.mock("@/features/playback/RemotePathMappingHint", () => ({
+  default: ({ filePath, source }: any) => (
+    <span data-source={source?.serverId ?? "current"} data-testid="mapping-hint">
+      {filePath}
+    </span>
+  ),
+}));
 vi.mock("@/components/bakaui", () => ({ toast: { danger: mocks.danger, default: mocks.message } }));
 vi.mock("@/sdk/BApi", () => ({
   default: {
@@ -28,6 +35,7 @@ const resource = { id: 13, path: "/film", displayName: "Film", isFile: false } a
 
 beforeEach(() => {
   vi.clearAllMocks();
+  cleanup();
   mocks.files.mockResolvedValue({
     code: 0,
     data: ["/film/a.ass", "/film/cover.jpg", "/film/sample.mkv", "/film/main.mkv"],
@@ -51,6 +59,9 @@ describe("resource browser player", () => {
       configuredPaths: ["/film/main.mkv"],
     });
     expect(mocks.createWindow.mock.calls[0][1].entries).toHaveLength(4);
+    render(mocks.createWindow.mock.calls[0][1].renderFooterExtra("/film/main.mkv"));
+    expect(screen.getByTestId("mapping-hint")).toHaveTextContent("/film/main.mkv");
+    expect(screen.getByTestId("mapping-hint")).toHaveAttribute("data-source", "current");
   });
   it("passes an explicit candidate scope and alternative action without silently filtering whole-resource defaults", async () => {
     const alternative = vi.fn();

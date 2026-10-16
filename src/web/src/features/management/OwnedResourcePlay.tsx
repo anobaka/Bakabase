@@ -16,6 +16,7 @@ import { resolvePlaybackMethod } from "@/components/Resource/components/PlayCont
 import { sourceActionTarget } from "@/components/Resource/components/PlayControl/sourceActions";
 import { DesktopPlaybackGuideButton } from "@/components/Resource/components/PlayControl/DesktopPlaybackGuide";
 import { useSourceResourceProfile } from "@/features/playback/resourceProfiles";
+import RemotePathMappingHint from "@/features/playback/RemotePathMappingHint";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import MediaPlayer from "@/components/MediaPlayer";
 import { selectInitialMediaIndex } from "@/components/MediaPlayer/media";
@@ -117,6 +118,9 @@ function ManagedResourcePlay({
       {
         entries,
         defaultActiveIndex: initialIndex,
+        renderFooterExtra: (filePath: string) => (
+          <RemotePathMappingHint compact filePath={filePath} source={source} />
+        ),
         onOpenAlternative: canLaunch
           ? (path: string) => {
               const candidate = files.find((item) => item.key === path);
@@ -427,6 +431,15 @@ function ManagedResourcePlay({
             </div>
           )
         )}
+        <RemotePathMappingHint
+          active={!!dialog && dialog !== "empty"}
+          filePath={
+            selected && isFileItem(selected)
+              ? selected.key
+              : (items.find(isFileItem)?.key ?? browserPage?.items.find(isFileItem)?.key)
+          }
+          source={source}
+        />
       </Modal>
     </>
   );

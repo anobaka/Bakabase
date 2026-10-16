@@ -363,5 +363,8 @@
   "resource.desktopPlayback.download": "前往下载桌面版",
   "resource.desktopPlayback.alreadyInstalled": "已经安装？打开 Bakabase 桌面版，按上面的步骤连接即可。此入口不会自动连接或播放。",
   "resource.profilePlayback.configure": "本机资源扩展",
-  "resource.profilePlayback.openFailed": "未能打开本机的资源扩展，请通过左上角设备切换器返回本机后重试。"
+  "resource.profilePlayback.openFailed": "未能打开本机的资源扩展，请通过左上角设备切换器返回本机后重试。",
+  "resource.pathMappingHint.description": "本机也能访问这些文件？配置路径映射后，还可以用本机播放器打开。",
+  "resource.pathMappingHint.configure": "配置路径映射",
+  "resource.pathMappingHint.dismiss": "不再提示此设备的路径映射"
 }

@@ -16,6 +16,7 @@ interface MediaContentProps {
   currentInitialized: boolean;
   autoPlay?: boolean;
   progress?: number;
+  renderFooterExtra?: (filePath: string) => React.ReactNode;
   renderOperations?: (
     filePath: string,
     mediaType: MediaType,
@@ -53,6 +54,7 @@ const MediaContent = (props: MediaContentProps) => {
     autoPlay,
     progress,
     renderOperations,
+    renderFooterExtra,
     onPrevEntry,
     onNextEntry,
     ...events
@@ -81,6 +83,7 @@ const MediaContent = (props: MediaContentProps) => {
         playing={playing}
         progress={progress}
         reactPlayer={renderer.current?.getPlayerRef()}
+        renderFooterExtra={renderFooterExtra}
         renderOperations={renderOperations}
         totalEntries={playableEntries.length}
         onNextEntry={onNextEntry}

@@ -7,6 +7,7 @@ import { ResourceCardPlaybackButton, ResourceDetailPlaybackButton } from "./Play
 import PlayControl, { type PlayControlPortalProps } from ".";
 
 import { ClientMode, DataOrigin, DataStatus, ResourceSource } from "@/sdk/constants";
+import { ResourceOwnerProvider } from "@/features/management/resourceContext";
 
 const fixture = vi.hoisted(() => ({
   desktop: false,
@@ -79,6 +80,7 @@ vi.mock("@/hooks/usePlayableItemResolution", () => ({
 vi.mock("@/hooks/useResourceBrowserPlayer", () => ({
   useResourceBrowserPlayer: () => fixture.browser,
 }));
+vi.mock("@/features/playback/RemotePathMappingHint", () => ({ default: () => null }));
 vi.mock("@/hooks/useOpenResourceDirectory", () => ({
   useOpenResourceDirectory: () => ({ open: vi.fn(), label: "openFolder" }),
 }));
@@ -178,6 +180,28 @@ afterEach(() => {
 });
 
 describe("playback routing on the current device", () => {
+  it("captures the managed resource owner when creating a detached playback chooser", () => {
+    const source = {
+      serverId: "owner-a",
+      libraryEpoch: "epoch-a",
+      isLocal: false,
+      available: true,
+      name: "Owner A",
+      contractVersion: 1,
+    };
+
+    render(
+      <ResourceOwnerProvider resourceId={resource.id} source={source}>
+        <PlayControl PortalComponent={Portal} resource={resource} />
+      </ResourceOwnerProvider>,
+    );
+    fireEvent.click(screen.getByText("choose"));
+    expect(fixture.portal.mock.lastCall![1]).toMatchObject({
+      source,
+      filePath: resource.path,
+    });
+    expect(fixture.native).not.toHaveBeenCalled();
+  });
   it("offers desktop guidance for discovered files without opening it automatically", () => {
     render(<PlayControl PortalComponent={ResourceCardPlaybackButton} resource={resource} />);
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();

@@ -286,12 +286,21 @@
 }
 .media-player-footer {
   display: flex;
-  gap: 12px;
+  flex-wrap: wrap;
+  gap: 4px 12px;
   align-items: center;
   min-height: 56px;
   padding: 8px 18px;
   border-top: 1px solid #ffffff0c;
   background: #131b28;
+}
+.media-player-footer-extra {
+  flex-basis: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.media-player-footer-extra:empty {
+  display: none;
 }
 .media-player-current {
   display: flex;

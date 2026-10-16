@@ -402,6 +402,7 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
     if (!selectedPath) return;
     createPortal(PlayOnThisDevice, {
       resource,
+      source,
       filePath: selectedPath,
       isMixed: !item && collection.isMixed,
       unavailableReason,

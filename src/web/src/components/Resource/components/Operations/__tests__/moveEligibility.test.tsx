@@ -33,6 +33,9 @@ vi.mock("@/components/Resource/components/DeleteResourceConfirmContent", () => (
 }));
 vi.mock("@/components/Playlist", () => ({ PlaylistCollection: () => null }));
 vi.mock("@/components/MediaPlayer", () => ({ default: () => null }));
+vi.mock("@/hooks/useResourceBrowserPlayer", () => ({
+  useResourceBrowserPlayer: () => vi.fn(),
+}));
 vi.mock("@/components/bakaui", () => ({
   Button: ({ children, isDisabled, onPress, "aria-label": ariaLabel }: any) => (
     <button aria-label={ariaLabel} disabled={isDisabled} onClick={onPress}>
