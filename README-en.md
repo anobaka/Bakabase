@@ -134,7 +134,7 @@ Check the displayed version, libraries and directory access afterward. Do not us
 
 ## Features in Development
 
-These features are being developed and tested in **2.4.0-beta** and are not part of the current stable release. Screenshots will follow.
+These features are being developed and tested in **2.4.0-beta** and are not part of the current stable release.
 
 - **Headless server and Docker**: Manage libraries in a browser, with ARM64 and AMD64 images; source builds and published images share deployment configuration and application data.
 - **Setup and workspaces**: Choose where data is stored, import another installation with path checks and prefix mapping, and name or switch between isolated desktop workspaces.
@@ -146,6 +146,14 @@ These features are being developed and tested in **2.4.0-beta** and are not part
 - **Post parsing**: Organize post content and download leads, use AI to extract links, passwords and processing instructions, then review and hand them to an acquisition workflow.
 - **Collection memos**: Record collected time ranges, links and notes on a timeline for each collection target.
 - **Everyday usability**: Customize navigation, monitor resource usage, and improve file processing, background tasks, downloads, browsing history and userscript task feedback.
+
+**Multi-device preview: keep your media anywhere, and manage it together.**
+
+For example, keep movies and TV shows on a NAS, anime and manga on a small server, and games or music on your everyday computers. Pair each computer with the servers to search and manage authorized devices' resources in the familiar resource list, without moving media files or repeatedly opening each server's page.
+
+![Example multi-device setup: management and definitions sync between a gaming PC, MacBook, cinema NAS and anime server](https://github.com/anobaka/Bakabase.Docs/blob/main/imgs/v24/multi-device-map-en.jpg)
+
+*Device names and content are illustrative. The map shows the gaming PC's direct connections; the MacBook can pair with both servers separately. Each management direction requires its own authorization. Amber arrows point from a manager to the controlled device; purple arrows indicate two-way definitions sync.*
 
 Path mappings do not copy media files or create network mounts. Cross-device playback and processing still depend on file accessibility and the player or execution device's capabilities.
 
