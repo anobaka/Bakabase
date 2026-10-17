@@ -220,8 +220,10 @@ public class ResourceSyncService : ScopedService
         var deleted = await DeleteOrphanedResources(source, deletionSnapshots, ct);
         result.ResourcesDeleted = deleted;
 
-        // ===== Step 5: Rebuild parent-child relationships if new resources (85-92%) =====
-        if (result.ResourcesCreated > 0 || result.ResourcesDeleted > 0)
+        // Existing filesystem resources may have missing or stale relationships from
+        // an earlier version. A normal path sync must repair them even with no additions.
+        // ===== Step 5: Rebuild parent-child relationships (85-92%) =====
+        if (source == ResourceSource.PathMark || result.ResourcesCreated > 0 || result.ResourcesDeleted > 0)
         {
             await ReportProgress(onProgressChange, onProcessChange, 85, BTaskText.Localize(_localizer, "BTask_Process_RebuildingRelationships"));
             await _structureService.RebuildParentChildRelationships(ct);
@@ -236,11 +238,15 @@ public class ResourceSyncService : ScopedService
             result.PathMarksMarkedPending = true;
         }
 
-        if (deletionSnapshots.Count > 0)
+        if (result.ParentChildRebuilt || deletionSnapshots.Count > 0)
         {
             await ReportProgress(onProgressChange, onProcessChange, 98,
                 BTaskText.Localize(_localizer, "SyncPathMark_UpdatingSearchIndex"));
             await GetRequiredService<IResourceSearchIndexService>().WaitForPendingUpdatesAsync(ct);
+        }
+
+        if (deletionSnapshots.Count > 0)
+        {
             ct.ThrowIfCancellationRequested();
             await _pathMarkService.FinalizeResourceDeletions(deletionSnapshots, ct);
         }

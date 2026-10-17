@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Tasks;
+using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.Dto;
@@ -956,6 +957,96 @@ public class PathMarkSyncTests
     #endregion
 
     #region Parent-Child Relationship Tests
+
+    [TestMethod]
+    public async Task ParentChild_ResyncExistingResources_RepairsHierarchyAndSearchWithoutRecreatingResources()
+    {
+        var firstSeason = Path.Combine(_testRoot, "第一季");
+        var firstChild = Path.Combine(firstSeason, "子文件夹1");
+        var secondChild = Path.Combine(firstSeason, "子文件夹2");
+        var secondSeason = Path.Combine(_testRoot, "第二季");
+        Directory.CreateDirectory(firstChild);
+        Directory.CreateDirectory(secondChild);
+        Directory.CreateDirectory(secondSeason);
+
+        var marks = _sp.GetRequiredService<IPathMarkService>();
+        foreach (var layer in new[] { 1, 2 })
+        {
+            await marks.Add(new PathMark
+            {
+                Path = _testRoot,
+                Type = PathMarkType.Resource,
+                ConfigJson = JsonConvert.SerializeObject(new ResourceMarkConfig
+                {
+                    MatchMode = PathMatchMode.Layer,
+                    Layer = layer,
+                    FsTypeFilter = PathFilterFsType.Directory,
+                    ApplyScope = PathMarkApplyScope.MatchedOnly,
+                    IsResourceBoundary = false
+                })
+            });
+        }
+
+        var resources = _sp.GetRequiredService<IResourceService>();
+        var sync = _sp.GetRequiredService<ResourceSyncService>();
+        await sync.SyncResources(ResourceSource.PathMark, null, null, new PauseToken(), CancellationToken.None);
+        var existing = await resources.GetAll();
+        existing.Should().HaveCount(4);
+        var idsByPath = existing.ToDictionary(r => r.Path!, r => r.Id);
+        var parentId = idsByPath[firstSeason.StandardizePath()!];
+        var childIds = new[] { idsByPath[firstChild.StandardizePath()!], idsByPath[secondChild.StandardizePath()!] };
+
+        // Model resources persisted by a Windows version that failed to establish parents.
+        // Include an incorrect existing parent and tag to verify repair in both directions.
+        foreach (var resource in existing)
+        {
+            resource.ParentId = resource.Id == childIds[1] ? idsByPath[secondSeason.StandardizePath()!] : null;
+            resource.Tags = resource.Id == idsByPath[secondSeason.StandardizePath()!]
+                ? new HashSet<ResourceTag> { ResourceTag.IsParent }
+                : new HashSet<ResourceTag>();
+        }
+        await resources.AddOrPutRange(existing);
+        var index = _sp.GetRequiredService<IResourceSearchIndexService>();
+        await index.RebuildAllAsync(CancellationToken.None);
+        await index.WaitForReadyAsync(TimeSpan.FromSeconds(10));
+
+        var result = await sync.SyncResources(ResourceSource.PathMark, null, null, new PauseToken(), CancellationToken.None);
+
+        result.ResourcesCreated.Should().Be(0);
+        result.ResourcesDeleted.Should().Be(0);
+        result.ResourcesMaterialized.Should().Be(0);
+        result.ParentChildRebuilt.Should().BeTrue("ordinary resync must repair existing resource metadata");
+        var repaired = await resources.GetAll();
+        repaired.ToDictionary(r => r.Path!, r => r.Id).Should().BeEquivalentTo(idsByPath);
+        repaired.Where(r => childIds.Contains(r.Id)).Should().OnlyContain(r => r.ParentId == parentId);
+        repaired.Where(r => !childIds.Contains(r.Id)).Should().OnlyContain(r => r.ParentId == null);
+        repaired.Where(r => r.HasChildren).Select(r => r.Id).Should().BeEquivalentTo(new[] { parentId });
+
+        var parents = await resources.Search(new ResourceSearch { Tags = [ResourceTag.IsParent] });
+        parents.Data!.Select(r => r.Id).Should().BeEquivalentTo(new[] { parentId });
+        var parentProperty = (await _sp.GetRequiredService<IPropertyService>().GetProperties(PropertyPool.Internal))
+            .Single(p => p.Id == (int)InternalProperty.ParentResource);
+        var children = await resources.Search(new ResourceSearch
+        {
+            Group = new ResourceSearchFilterGroup
+            {
+                Combinator = SearchCombinator.And,
+                Filters =
+                [
+                    new ResourceSearchFilter
+                    {
+                        PropertyPool = PropertyPool.Internal,
+                        PropertyId = (int)InternalProperty.ParentResource,
+                        Operation = SearchOperation.Equals,
+                        DbValue = parentId.ToString(),
+                        Property = parentProperty
+                    }
+                ]
+            }
+        });
+        children.Data!.Select(r => r.Id).Should().BeEquivalentTo(childIds,
+            "indexed ParentResource search must reflect repaired relationships immediately after sync returns");
+    }
 
     /// <summary>
     /// 测试场景: 同一路径上添加 Layer=0 和 Layer=1 两个资源标记，应该形成父子关系
