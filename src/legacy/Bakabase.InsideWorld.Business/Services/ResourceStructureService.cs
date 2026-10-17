@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -45,24 +44,26 @@ public class ResourceStructureService
     public async Task RebuildParentChildRelationships(CancellationToken ct)
     {
         var allResources = await _resourceService.GetAll();
+        var resourcesWithPaths = allResources.Where(r => r.HasLocalPath)
+            .Select(r => (Resource: r, Path: r.Path.StandardizePath()!))
+            .Where(r => !string.IsNullOrEmpty(r.Path))
+            .ToList();
         var pathToResource = new Dictionary<string, Resource>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var r in allResources)
+        foreach (var (resource, path) in resourcesWithPaths)
         {
-            if (r.HasLocalPath)
-                pathToResource[r.Path!] = r;
+            pathToResource[path] = resource;
         }
 
         var changedResources = new Dictionary<int, Resource>();
 
-        foreach (var resource in allResources)
+        foreach (var (resource, path) in resourcesWithPaths)
         {
             ct.ThrowIfCancellationRequested();
 
-            if (!resource.HasLocalPath) continue;
-
-            // Walk up directory tree to find closest parent resource
-            var parentPath = Path.GetDirectoryName(resource.Path!);
+            // Internal paths always use '/'. OS path APIs would turn these back into
+            // backslashes on Windows, making them miss the standardized lookup keys.
+            var parentPath = GetParentPath(path);
             int? parentResourceId = null;
 
             while (!string.IsNullOrEmpty(parentPath))
@@ -73,7 +74,7 @@ public class ResourceStructureService
                     break;
                 }
 
-                parentPath = Path.GetDirectoryName(parentPath);
+                parentPath = GetParentPath(parentPath);
             }
 
             if (resource.ParentId != parentResourceId)
@@ -91,6 +92,25 @@ public class ResourceStructureService
         }
 
         await _resourceService.RefreshParentTag();
+    }
+
+    private static string? GetParentPath(string path)
+    {
+        var separator = path.LastIndexOf(InternalOptions.DirSeparator);
+        if (separator < 0) return null;
+        if (separator == 0) return path.Length > 1 ? "/" : null;
+        if (separator == 2 && path[1] == ':')
+            return path.Length > 3 ? path[..3] : null;
+
+        // A UNC share is a root, just like '/' or 'D:/'. Do not walk into the
+        // server name or let resources from different shares become related.
+        if (path.StartsWith(InternalOptions.UncPathPrefix, StringComparison.Ordinal))
+        {
+            var shareSeparator = path.IndexOf(InternalOptions.DirSeparator, 2);
+            if (shareSeparator < 0 || separator <= shareSeparator) return null;
+        }
+
+        return path[..separator];
     }
 
     /// <summary>

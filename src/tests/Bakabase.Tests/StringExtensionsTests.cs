@@ -191,6 +191,21 @@ public sealed class StringExtensionsTests
     }
 
     [TestMethod]
+    [DataRow(@"\\server\share\动画\", "//server/share/动画")]
+    [DataRow("//server/share/动画/", "//server/share/动画")]
+    [DataRow(@"\\server/share\动画", "//server/share/动画")]
+    [DataRow("//server/share", "//server/share")]
+    [DataRow("/", "/")]
+    [DataRow(@"D:\", "D:/")]
+    public void StandardizePath_AbsolutePaths_AreCanonicalAndIdempotent(string path, string expected)
+    {
+        var standardized = path.StandardizePath();
+        Assert.AreEqual(expected, standardized);
+        Assert.AreEqual(expected, standardized.StandardizePath(),
+            "standardizing an internal path again must preserve its root and separators");
+    }
+
+    [TestMethod]
     public void IsUncPath_FalseForNullEmptyAndRelativePaths()
     {
         Assert.IsFalse(((string?)null).IsUncPath());
