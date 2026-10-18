@@ -841,8 +841,8 @@ const Resource = React.forwardRef((props: Props, ref) => {
       }}
     >
       {selected && (
-        <div className="absolute top-2 right-2 z-20">
-          <CheckCircleFilled className="text-primary text-xl drop-shadow-md" />
+        <div className="absolute top-2 right-2 z-20 text-primary">
+          <CheckCircleFilled className="text-xl drop-shadow-md" />
         </div>
       )}
       {!moveLocked && (
