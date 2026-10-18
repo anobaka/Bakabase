@@ -20,6 +20,7 @@ import {
 } from "@/components/ResourceMovePanel/sourceContext";
 
 export const RESOURCE_MOVE_MIME = "application/x-bakabase-resource-move";
+export const RESOURCE_MOVE_OPENED_EVENT = "bakabase:resource-move-opened";
 export const RESOURCE_MOVE_SUBMITTED_EVENT = "bakabase:resource-move-submitted";
 export const RESOURCE_MOVE_UPDATED_EVENT = "bakabase:resource-move-updated";
 export type {
@@ -155,6 +156,7 @@ export const useResourceMovePanelStore = create<State>(() => ({
 }));
 const state = useResourceMovePanelStore.getState;
 const set = useResourceMovePanelStore.setState;
+let panelViewVersion = 0;
 const errorText = (e: unknown) => (e instanceof Error ? e.message : "Request failed");
 const savePreferences = () => {
   const s = state();
@@ -169,7 +171,21 @@ export function openMovePanel(payload?: MovePayload) {
     minimized: false,
     explicitPayload: payload?.resources.length ? bindMovePayload(payload) : undefined,
   });
+  window.dispatchEvent(new Event(RESOURCE_MOVE_OPENED_EVENT));
   void refreshMovePanel();
+}
+/** Leave the page without cancelling submitted work or releasing its reservations. */
+export function resetMovePanelView() {
+  panelViewVersion++;
+  cancelMoveDraft();
+  set({
+    panelEnabled: false,
+    open: false,
+    minimized: false,
+    dragging: false,
+    explicitPayload: undefined,
+    context: { resources: [], selectedResources: [] },
+  });
 }
 export function closeMovePanel() {
   set({ open: false, panelEnabled: false, minimized: false });
@@ -197,16 +213,21 @@ export function setMovePanelDragging(dragging: boolean) {
 }
 export function setMovePanelContext(context: MovePanelContext) {
   const previous = state().context;
+  const initializingContext =
+    !previous.tabId && !previous.resources.length && !previous.selectedResources.length;
   const selectionChanged =
     previous.tabId !== context.tabId ||
     previous.selectedResources.map((r) => r.id).join(",") !==
       context.selectedResources.map((r) => r.id).join(",");
 
-  set({ context, ...(selectionChanged ? { explicitPayload: undefined } : {}) });
+  set({
+    context,
+    ...(selectionChanged && !initializingContext ? { explicitPayload: undefined } : {}),
+  });
 }
 export function clearMovePanelContext(tabId?: string) {
   if (!tabId || state().context.tabId === tabId)
-    set({ context: { resources: [], selectedResources: [] } });
+    set({ context: { resources: [], selectedResources: [] }, explicitPayload: undefined });
 }
 export const selectPanelResourceReservation = (id: number, path?: string | null) => (s: State) =>
   s.reservations.find(
@@ -544,6 +565,21 @@ export async function submitMoveDraft() {
   const draft = state().draft;
 
   if (!draft || draft.phase === "submitting" || draft.phase === "preview") return;
+  const viewVersion = panelViewVersion;
+  const applyResult = (next: MoveDraft) => {
+    if (state().draft?.id !== draft.id) return false;
+    // A definitive refusal can return this submission to an unsubmitted preview.
+    // If its page was left meanwhile, do not resurrect that preview or its locks.
+    // Requests whose outcome is still unknown must remain available for recovery.
+    if (!next.request && viewVersion !== panelViewVersion) {
+      setDraft(undefined);
+
+      return false;
+    }
+    setDraft(next);
+
+    return true;
+  };
   const contextError = draftSourceError(draft);
 
   if (contextError) {
@@ -574,12 +610,12 @@ export async function submitMoveDraft() {
     const contextError = moveSourceContextError(draft.payload.sourceContext, currentContext);
 
     if (contextError) {
-      setDraft({ ...draft, contextError });
+      applyResult({ ...draft, contextError });
 
       return;
     }
   } catch {
-    setDraft({ ...draft, contextError: "sourceContextRequired" });
+    applyResult({ ...draft, contextError: "sourceContextRequired" });
 
     return;
   }
@@ -636,20 +672,20 @@ export async function submitMoveDraft() {
   } catch (e) {
     if (e instanceof MoveRequestRejected) {
       if (e.message.includes("previewChanged")) {
-        setDraft({ ...draft, phase: "preview", request: undefined });
+        if (!applyResult({ ...draft, phase: "preview", request: undefined })) return;
         try {
           const preview = await previewDraft(draft);
 
-          setDraft({ ...draft, preview, phase: "ready", request: undefined, error: undefined });
+          applyResult({ ...draft, preview, phase: "ready", request: undefined, error: undefined });
         } catch (previewError) {
-          setDraft({
+          applyResult({
             ...draft,
             phase: "ready",
             request: undefined,
             error: errorText(previewError),
           });
         }
-      } else setDraft({ ...draft, phase: "ready", request: undefined, error: errorText(e) });
+      } else applyResult({ ...draft, phase: "ready", request: undefined, error: errorText(e) });
     } else setDraft({ ...draft, phase: "unknown", request, error: errorText(e) });
   }
 }

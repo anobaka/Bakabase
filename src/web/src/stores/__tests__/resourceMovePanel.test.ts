@@ -18,6 +18,7 @@ vi.mock("@/config/env", () => ({ default: { apiEndpoint: "/api" } }));
 import {
   bindMovePayload,
   cancelMoveDraft,
+  clearMovePanelContext,
   normalizedMovePath,
   draftMovableIds,
   prepareMove,
@@ -240,6 +241,17 @@ describe("move panel domain state", () => {
     setMovePanelContext({ ...context, resources: [{ id: 1, path: "/new" }] });
     expect(useResourceMovePanelStore.getState().explicitPayload).toEqual(explicitPayload);
     setMovePanelContext({ ...context, selectedResources: [{ id: 3 }] });
+    expect(useResourceMovePanelStore.getState().explicitPayload).toBeUndefined();
+  });
+  it("clears an explicit selection when its active source tab is removed", () => {
+    setMovePanelContext({ tabId: "a", resources: [{ id: 1 }], selectedResources: [] });
+    const explicitPayload = { resources: [{ id: 2 }] };
+
+    useResourceMovePanelStore.setState({ explicitPayload });
+    clearMovePanelContext("inactive-tab");
+    expect(useResourceMovePanelStore.getState().explicitPayload).toEqual(explicitPayload);
+    clearMovePanelContext("a");
+    setMovePanelContext({ tabId: "b", resources: [{ id: 3 }], selectedResources: [] });
     expect(useResourceMovePanelStore.getState().explicitPayload).toBeUndefined();
   });
   it("uses the server's platform exclusions and only reserves the effective move set", async () => {
