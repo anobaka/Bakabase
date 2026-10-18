@@ -26,13 +26,13 @@ public class ManualCoverProvider : ICoverProvider
 
     public Task<List<string>?> GetCoversAsync(DomainResource resource, CancellationToken ct)
     {
-        var covers = resource.Properties?.GetValueOrDefault((int)PropertyPool.Reserved)
+        var values = resource.Properties?.GetValueOrDefault((int)PropertyPool.Reserved)
             ?.GetValueOrDefault((int)Abstractions.Models.Domain.Constants.ReservedProperty.Cover)?.Values?.OrderBy(x => x.Scope)
             .Select(x => x.Value as List<string>)
-            .OfType<List<string>>()
-            .FirstOrDefault(x => x.Any());
+            .OfType<List<string>>();
+        var covers = values == null ? null : CoverPathSelection.FirstAvailable(values);
 
-        return Task.FromResult(covers is { Count: > 0 } ? covers : null);
+        return Task.FromResult(covers);
     }
 
     public Task InvalidateAsync(int resourceId)

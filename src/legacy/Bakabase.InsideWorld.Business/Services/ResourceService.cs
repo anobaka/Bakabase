@@ -24,6 +24,7 @@ using Bakabase.Abstractions.Services;
 using Bakabase.Infrastructures.Components.Configurations.App;
 using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
+using Bakabase.InsideWorld.Business.Components.Providers.Cover;
 using Bakabase.InsideWorld.Business.Components.Search;
 using Bakabase.InsideWorld.Business.Extensions;
 using Bakabase.InsideWorld.Business.Models.Db;
@@ -1659,10 +1660,11 @@ namespace Bakabase.InsideWorld.Business.Services
                 TryDeleteLocalCoverThumbnail(resourceId);
 
                 // Check for existing covers from ReservedPropertyValue first
-                var existingCovers = (await _reservedPropertyValueService.GetAll(
+                var reservedCoversByPriority = (await _reservedPropertyValueService.GetAll(
                         x => x.ResourceId == resourceId && x.CoverPaths != null && x.CoverPaths.Any()))
                     .OrderBy(x => x.Scope)
-                    .FirstOrDefault()?.CoverPaths;
+                    .Select(x => x.CoverPaths);
+                var existingCovers = CoverPathSelection.FirstAvailable(reservedCoversByPriority);
 
                 if (existingCovers?.Any() == true)
                 {
