@@ -59,7 +59,14 @@ public class LocalFileCoverProvider : ICoverProvider
 
     public DataStatus GetStatus(DomainResource resource)
     {
-        return resource.Cache?.CachedTypes.Contains(ResourceCacheType.Covers) == true
+        if (resource.Cache?.CachedTypes.Contains(ResourceCacheType.Covers) != true)
+            return DataStatus.NotStarted;
+
+        // An empty discovery result is still cached. A positive result whose files
+        // disappeared needs discovery again (including old refreshes that cached a
+        // now-missing reserved cover instead of a filesystem thumbnail).
+        return resource.Cache.CoverPaths is not { Count: > 0 } ||
+               CoverPathSelection.Available(resource.Cache.CoverPaths).Count > 0
             ? DataStatus.Ready
             : DataStatus.NotStarted;
     }
@@ -69,7 +76,10 @@ public class LocalFileCoverProvider : ICoverProvider
         // If covers are already cached, return them directly.
         if (resource.Cache?.CachedTypes.Contains(ResourceCacheType.Covers) == true)
         {
-            return resource.Cache.CoverPaths is { Count: > 0 } ? resource.Cache.CoverPaths : null;
+            if (resource.Cache.CoverPaths is not { Count: > 0 }) return null;
+
+            var available = CoverPathSelection.Available(resource.Cache.CoverPaths);
+            if (available.Count > 0) return available;
         }
 
         if (!resource.HasLocalPath)

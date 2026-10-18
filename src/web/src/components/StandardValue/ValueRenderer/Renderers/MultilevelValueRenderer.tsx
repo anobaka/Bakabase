@@ -27,6 +27,7 @@ import { useFilterOptionsThreshold } from "@/hooks/useFilterOptionsThreshold";
 
 type FlattenedOption = {
   path: string[];
+  labels: string[];
   label: string;
   color?: string;
 };
@@ -143,6 +144,7 @@ const MultilevelValueRenderer = ({
           // Leaf node, add to results
           result.push({
             path: newPath,
+            labels: newLabels,
             label: newLabels.join("/"),
             color: node.color,
           });
@@ -165,7 +167,7 @@ const MultilevelValueRenderer = ({
     return selectedValues.includes(leafValue);
   };
 
-  const togglePath = (path: string[]) => {
+  const togglePath = (path: string[], labels: string[]) => {
     if (isReadonly || !editor?.onValueChange) return;
 
     const leafValue = path[path.length - 1];
@@ -185,16 +187,16 @@ const MultilevelValueRenderer = ({
       }
       newBizValues = flattenedOptions
         .filter((opt) => newDbValues.includes(opt.path[opt.path.length - 1]))
-        .map((opt) => opt.path);
+        .map((opt) => opt.labels);
     } else {
       if (multiple) {
         newDbValues = [...selectedValues, leafValue];
         newBizValues = flattenedOptions
           .filter((opt) => newDbValues.includes(opt.path[opt.path.length - 1]))
-          .map((opt) => opt.path);
+          .map((opt) => opt.labels);
       } else {
         newDbValues = [leafValue];
-        newBizValues = [path];
+        newBizValues = [labels];
       }
     }
 
@@ -231,7 +233,7 @@ const MultilevelValueRenderer = ({
               </>
             }
             size={size}
-            onClick={() => togglePath(opt.path)}
+            onClick={() => togglePath(opt.path, opt.labels)}
           />
         ))}
         {hasMore && (

@@ -160,6 +160,18 @@ export const hasValidValueExtractor = (config: MarkConfig, markType: PathMarkTyp
 // Kept for callers validating existing property-only forms.
 export const hasValidPropertyValueExtractor = hasValidValueExtractor;
 
+export const getPreviewConfigurationHint = (config: MarkConfig, markType: PathMarkType) => {
+  if (markType !== PathMarkType.Property) return undefined;
+  if (!config.propertyPool || !config.propertyId) return "pathMarkConfig.preview.configureProperty";
+  if (
+    (config.valueType ?? PropertyValueType.Fixed) === PropertyValueType.Fixed &&
+    !String(config.fixedValue ?? "").trim()
+  )
+    return "pathMarkConfig.preview.configureValue";
+
+  return undefined;
+};
+
 export const buildConfigJson = (config: MarkConfig, markType: PathMarkType): string => {
   if (markType === PathMarkType.Resource) {
     return JSON.stringify({

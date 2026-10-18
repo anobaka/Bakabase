@@ -84,10 +84,11 @@ const MarkConfigModal = ({
   const pathCount = paths.length;
   const preview = usePreview(rootPath ?? mark?.path, markType, config, 500, rootPaths);
   const hasValidValueExtractor = hasValidValueExtractorConfig(config, markType);
+  const canSave = hasValidValueExtractor && !preview.configurationHint;
   const isResource = markType === PathMarkType.Resource;
 
   const handleSave = useCallback(async () => {
-    if (!hasValidValueExtractor) return false;
+    if (!canSave) return false;
 
     const newMark: Partial<BakabaseAbstractionsModelsDomainPathMark> = {
       type: markType,
@@ -99,15 +100,7 @@ const MarkConfigModal = ({
     await onSave?.(newMark as BakabaseAbstractionsModelsDomainPathMark);
 
     return true;
-  }, [
-    markType,
-    priority,
-    config,
-    enableExpiration,
-    expiresInSeconds,
-    onSave,
-    hasValidValueExtractor,
-  ]);
+  }, [markType, priority, config, enableExpiration, expiresInSeconds, onSave, canSave]);
 
   const handleSyncNow = useCallback(async () => {
     if (!mark?.id) return;
@@ -138,7 +131,7 @@ const MarkConfigModal = ({
         actions: ["cancel", "ok"],
         okProps: {
           children: t("common.action.save"),
-          isDisabled: !hasValidValueExtractor,
+          isDisabled: !canSave,
           startContent: <SaveOutlined />,
         },
         startContent: mark?.id ? (

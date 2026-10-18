@@ -574,6 +574,7 @@ public class PathMarkService<TDbContext>(
         int? valueLayer = null;
         PropertyMarkConfig? propertyConfig = null;
         MediaLibraryMarkConfig? mediaLibraryConfig = null;
+        string? fixedMediaLibraryName = null;
         CustomProperty? propertyValueDefinition = null;
         IStandardValueService? propertyValueConverter = null;
 
@@ -623,6 +624,11 @@ public class PathMarkService<TDbContext>(
                 applyScope = config.ApplyScope;
                 valueType = config.ValueType;
                 valueLayer = config.LayerToMediaLibrary;
+                if (config.ValueType == PropertyValueType.Fixed && config.MediaLibraryId.HasValue)
+                {
+                    fixedMediaLibraryName = (await serviceProvider.GetRequiredService<IMediaLibraryV2Service>()
+                        .Get(config.MediaLibraryId.Value))?.Name;
+                }
                 break;
             }
             default:
@@ -663,7 +669,11 @@ public class PathMarkService<TDbContext>(
                     ? await CalculatePropertyMarkValue(rootPath, matchedPath, propertyConfig!,
                         propertyValueDefinition, propertyValueConverter, valueContext)
                     : CalculateMediaLibraryValue(rootPath, matchedPath, mediaLibraryConfig!, valueContext);
-                result.PropertyValue = extracted.Value;
+                // Fixed library configuration stores an ID; previews show its current name.
+                // Dynamic values are already names, including names made only of digits.
+                result.PropertyValue = mediaLibraryConfig?.ValueType == PropertyValueType.Fixed
+                    ? fixedMediaLibraryName
+                    : extracted.Value;
                 // Ancestor selection does not authorize reading or exposing an unmounted path.
                 result.ValueSourcePath = extracted.SourcePath != null && storage.IsPathAllowed(extracted.SourcePath)
                     ? extracted.SourcePath

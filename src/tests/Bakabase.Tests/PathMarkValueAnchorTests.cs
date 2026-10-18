@@ -15,7 +15,12 @@ using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Services;
 using Bakabase.Modules.Property.Abstractions.Services;
 using Bakabase.Modules.Property.Components.Properties.Choice;
+using Bakabase.Modules.Property.Components.Properties.Choice.Abstractions;
+using Bakabase.Modules.Property.Components.Properties.Multilevel;
+using Bakabase.Modules.Property.Components.Properties.Tags;
+using Bakabase.Modules.Property.Extensions;
 using Bakabase.Modules.StandardValue.Extensions;
+using Bakabase.Modules.StandardValue.Models.Domain;
 using Bakabase.TestKit.Utils;
 using Bootstrap.Components.Tasks;
 using FluentAssertions;
@@ -63,6 +68,125 @@ public sealed class PathMarkValueAnchorTests
     public void Cleanup()
     {
         if (Directory.Exists(_root)) Directory.Delete(_root, true);
+    }
+
+    [TestMethod]
+    public async Task FixedMediaLibraryPreview_ShowsCurrentNameAndNoValueForDeletedOrMissingLibrary()
+    {
+        var libraries = _sp.GetRequiredService<IMediaLibraryV2Service>();
+        var library = await libraries.Add(new MediaLibraryV2AddOrPutInputModel("Original library", []));
+        var request = new PathMarkPreviewRequest
+        {
+            Path = _markPath, Type = PathMarkType.MediaLibrary,
+            ConfigJson = JsonConvert.SerializeObject(new MediaLibraryMarkConfig
+            {
+                MatchMode = PathMatchMode.Layer, Layer = 1,
+                ValueType = PropertyValueType.Fixed, MediaLibraryId = library.Id
+            })
+        };
+        var originalConfig = request.ConfigJson;
+        var marks = _sp.GetRequiredService<IPathMarkService>();
+        var initial = await marks.PreviewMatchedPaths(request);
+        initial.Should().HaveCount(2).And.OnlyContain(result => result.PropertyValue == "Original library");
+
+        await libraries.Put(library.Id, new MediaLibraryV2AddOrPutInputModel("Renamed library", []));
+        var renamed = await marks.PreviewMatchedPaths(request);
+        renamed.Should().HaveCount(2).And.OnlyContain(result => result.PropertyValue == "Renamed library");
+
+        await libraries.Delete(library.Id);
+        var deleted = await marks.PreviewMatchedPaths(request);
+        deleted.Should().HaveCount(2).And.OnlyContain(result => result.PropertyValue == null);
+        request.ConfigJson.Should().Be(originalConfig);
+
+        request.ConfigJson = JsonConvert.SerializeObject(new MediaLibraryMarkConfig
+        {
+            MatchMode = PathMatchMode.Layer, Layer = 1,
+            ValueType = PropertyValueType.Fixed, MediaLibraryId = int.MaxValue
+        });
+        var missing = await marks.PreviewMatchedPaths(request);
+        missing.Should().HaveCount(2).And.OnlyContain(result => result.PropertyValue == null);
+        (await marks.GetAll()).Should().BeEmpty();
+    }
+
+    [TestMethod]
+    public async Task DynamicMediaLibraryPreview_PreservesNumericNameThatMatchesAnotherLibraryId()
+    {
+        var libraries = _sp.GetRequiredService<IMediaLibraryV2Service>();
+        var library = await libraries.Add(new MediaLibraryV2AddOrPutInputModel("Unrelated library", []));
+        var numericName = library.Id.ToString();
+        var numericPath = Path.Combine(_markPath, numericName);
+        Directory.CreateDirectory(numericPath);
+        var preview = await _sp.GetRequiredService<IPathMarkService>().PreviewMatchedPaths(new PathMarkPreviewRequest
+        {
+            Path = numericPath, Type = PathMarkType.MediaLibrary,
+            ConfigJson = JsonConvert.SerializeObject(new MediaLibraryMarkConfig
+            {
+                MatchMode = PathMatchMode.Layer, Layer = 0,
+                ValueType = PropertyValueType.Dynamic, ValueMatchMode = PathMatchMode.Layer,
+                ValueBasePath = PathMarkValueBasePath.MarkPath, LayerToMediaLibrary = 0
+            })
+        });
+
+        preview.Should().ContainSingle().Which.PropertyValue.Should().Be(numericName);
+        (await libraries.GetAll()).Should().ContainSingle().Which.Name.Should().Be("Unrelated library");
+    }
+
+    [TestMethod]
+    [DataRow(PropertyType.SingleChoice, PropertyValueType.Fixed)]
+    [DataRow(PropertyType.MultipleChoice, PropertyValueType.Fixed)]
+    [DataRow(PropertyType.Tags, PropertyValueType.Fixed)]
+    [DataRow(PropertyType.Multilevel, PropertyValueType.Fixed)]
+    [DataRow(PropertyType.SingleChoice, PropertyValueType.Dynamic)]
+    [DataRow(PropertyType.MultipleChoice, PropertyValueType.Dynamic)]
+    [DataRow(PropertyType.Tags, PropertyValueType.Dynamic)]
+    [DataRow(PropertyType.Multilevel, PropertyValueType.Dynamic)]
+    public async Task ReferencePropertyPreview_PreservesBusinessLabelsWithoutResolvingIdsOrMutatingOptions(
+        PropertyType type, PropertyValueType valueType)
+    {
+        var guidLabel = Guid.NewGuid().ToString();
+        object options = type switch
+        {
+            PropertyType.SingleChoice => new SingleChoicePropertyOptions
+                {Choices = [new ChoiceOptions {Value = guidLabel, Label = "Decoy"}]},
+            PropertyType.MultipleChoice => new MultipleChoicePropertyOptions
+                {Choices = [new ChoiceOptions {Value = guidLabel, Label = "Decoy"}]},
+            PropertyType.Tags => new TagsPropertyOptions
+                {Tags = [new TagsPropertyOptions.TagOptions("Decoy", "Old tag") {Value = guidLabel}]},
+            _ => new MultilevelPropertyOptions
+                {Data = [new MultilevelDataOptions {Value = guidLabel, Label = "Decoy"}]}
+        };
+        object businessValue = type switch
+        {
+            PropertyType.SingleChoice => guidLabel,
+            PropertyType.MultipleChoice => new List<string> {guidLabel, "New label"},
+            PropertyType.Tags => new List<TagValue> {new("Group", guidLabel), new(null, "New tag")},
+            _ => new List<List<string>> {new() {"Root", guidLabel}, new() {"New root", "Leaf"}}
+        };
+        var serialized = businessValue.SerializeAsStandardValue(type.GetBizValueType());
+        var property = await AddProperty(type, options);
+        var properties = _sp.GetRequiredService<ICustomPropertyService>();
+        var optionsBefore = JsonConvert.SerializeObject((await properties.GetByKey(property.Id)).Options);
+        var previewPath = Path.Combine(_markPath, serialized!);
+        Directory.CreateDirectory(previewPath);
+        var request = new PathMarkPreviewRequest
+        {
+            Path = previewPath, Type = PathMarkType.Property,
+            ConfigJson = JsonConvert.SerializeObject(new PropertyMarkConfig
+            {
+                Pool = PropertyPool.Custom, PropertyId = property.Id,
+                MatchMode = PathMatchMode.Layer, Layer = 0,
+                ValueType = valueType, FixedValue = valueType == PropertyValueType.Fixed ? serialized : null,
+                ValueBasePath = PathMarkValueBasePath.MarkPath, ValueMatchMode = PathMatchMode.Layer, ValueLayer = 0
+            })
+        };
+        var preview = await _sp.GetRequiredService<IPathMarkService>().PreviewMatchedPaths(request);
+
+        preview.Should().ContainSingle().Which.PropertyValue.Should().Be(serialized);
+        JsonConvert.SerializeObject((await properties.GetByKey(property.Id)).Options).Should().Be(optionsBefore);
+        (await _sp.GetRequiredService<ICustomPropertyValueService>()
+            .GetAllDbModels(value => value.PropertyId == property.Id)).Should().BeEmpty();
+        (await _sp.GetRequiredService<IPathMarkEffectService>()
+            .GetPropertyEffectsByResources(_resources.Select(resource => resource.Id))).Should().BeEmpty();
     }
 
     [TestMethod]
@@ -479,8 +603,9 @@ public sealed class PathMarkValueAnchorTests
         }))
     ];
 
-    private Task<CustomProperty> AddProperty(PropertyType type = PropertyType.SingleLineText) =>
-        _sp.GetRequiredService<ICustomPropertyService>().Add(new CustomPropertyAddOrPutDto { Name = "Anchor value", Type = type });
+    private Task<CustomProperty> AddProperty(PropertyType type = PropertyType.SingleLineText, object? options = null) =>
+        _sp.GetRequiredService<ICustomPropertyService>().Add(new CustomPropertyAddOrPutDto
+        { Name = "Anchor value", Type = type, Options = options == null ? null : JsonConvert.SerializeObject(options) });
     private Task<PathMark> AddMark(PathMarkType type, object config) => _sp.GetRequiredService<IPathMarkService>()
         .Add(new PathMark { Path = _markPath, Type = type, ConfigJson = JsonConvert.SerializeObject(config) });
     private async Task AddTrigger()

@@ -90,20 +90,22 @@ public sealed class LocalFileCoverProviderCacheTests
     [TestMethod]
     public async Task CacheHit_ReturnsCachedCoverPaths()
     {
+        var cachedPath = Path.Combine(_testRoot, "cached.jpg");
+        await File.WriteAllBytesAsync(cachedPath, []);
         var resource = new Resource
         {
             Path = Path.Combine(_testRoot, "Movie"),
             Cache = new ResourceFileSystemCache
             {
                 CachedTypes = [ResourceCacheType.Covers],
-                CoverPaths = ["/elsewhere/cover.jpg"]
+                CoverPaths = [cachedPath]
             }
         };
 
         var result = await Provider().GetCoversAsync(resource, CancellationToken.None);
 
         Assert.IsNotNull(result);
-        CollectionAssert.AreEqual(new[] { "/elsewhere/cover.jpg" }, result!);
+        CollectionAssert.AreEqual(new[] { cachedPath }, result!);
     }
 
     [TestMethod]

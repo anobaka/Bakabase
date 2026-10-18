@@ -10,6 +10,7 @@ import {
   PathMarkType,
   PathMatchMode,
   PropertyValueType,
+  PropertyPool,
   PathMarkValueBasePath,
 } from "@/sdk/constants";
 
@@ -27,6 +28,8 @@ type PreviewProps = {
 };
 
 const propertyConfig: MarkConfig = {
+  propertyPool: PropertyPool.Custom,
+  propertyId: 1,
   matchMode: PathMatchMode.Layer,
   layer: 1,
   valueType: PropertyValueType.Dynamic,
@@ -117,7 +120,7 @@ describe("usePreview", () => {
     {
       name: "property value type",
       markType: PathMarkType.Property,
-      config: { ...propertyConfig, valueType: PropertyValueType.Fixed },
+      config: { ...propertyConfig, valueType: PropertyValueType.Fixed, fixedValue: "old" },
       update: { valueType: PropertyValueType.Dynamic },
       expected: { valueType: PropertyValueType.Dynamic },
     },
@@ -274,4 +277,54 @@ describe("usePreview", () => {
       expect(previewRequest).toHaveBeenCalledTimes(1);
     },
   );
+
+  it("waits for a selected property and configured fixed value before requesting a preview", async () => {
+    const { result, rerender, initialProps } = renderPreview({
+      ...propertyConfig,
+      propertyId: undefined,
+      valueType: PropertyValueType.Fixed,
+      fixedValue: "",
+    });
+
+    expect(result.current.configurationHint).toBe("pathMarkConfig.preview.configureProperty");
+    await advanceDebounce();
+    expect(previewRequest).not.toHaveBeenCalled();
+
+    rerender({
+      ...initialProps,
+      config: { ...propertyConfig, valueType: PropertyValueType.Fixed, fixedValue: "" },
+    });
+    expect(result.current.configurationHint).toBe("pathMarkConfig.preview.configureValue");
+    await advanceDebounce();
+    expect(previewRequest).not.toHaveBeenCalled();
+
+    previewRequest.mockResolvedValueOnce({
+      data: [{ path: "/media/精品", propertyValue: "Ready" }],
+    });
+    rerender({
+      ...initialProps,
+      config: { ...propertyConfig, valueType: PropertyValueType.Fixed, fixedValue: "Ready" },
+    });
+    await advanceDebounce();
+    expect(result.current.configurationHint).toBeUndefined();
+    expect(result.current.results[0]?.propertyValue).toBe("Ready");
+  });
+
+  it("clears pending results when the target property is removed", async () => {
+    const pending = deferred();
+
+    previewRequest.mockReturnValueOnce(pending.promise);
+    const { result, rerender, initialProps } = renderPreview();
+
+    await advanceDebounce();
+
+    rerender({ ...initialProps, config: { ...propertyConfig, propertyId: undefined } });
+    expect(previewRequest.mock.calls[0][1].signal.aborted).toBe(true);
+    await act(async () => {
+      pending.resolve({ data: [{ path: "/old", propertyValue: "stale" }] });
+    });
+    expect(result.current.configurationHint).toBe("pathMarkConfig.preview.configureProperty");
+    expect(result.current.results).toEqual([]);
+    expect(result.current.loading).toBe(false);
+  });
 });
