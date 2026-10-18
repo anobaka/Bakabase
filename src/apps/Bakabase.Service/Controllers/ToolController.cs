@@ -24,7 +24,9 @@ using Bakabase.Modules.ThirdParty.Helpers;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Models.Constants;
 using Bootstrap.Models.ResponseModels;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Net.Http.Headers;
 using MimeKit;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats;
@@ -37,7 +39,6 @@ using Bakabase.Service.Components.RemoteAccess;
 using Swashbuckle.AspNetCore.Annotations;
 using Image = SixLabors.ImageSharp.Image;
 using Bakabase.Modules.RemoteAccess.Abstractions.Components;
-using Bakabase.Modules.RemoteAccess.Components.Pairing;
 
 namespace Bakabase.Service.Controllers
 {
@@ -120,13 +121,10 @@ namespace Bakabase.Service.Controllers
 
         [HttpGet("thumbnail")]
         [SwaggerOperation(OperationId = "GetThumbnail")]
-        // The token is part of the cache key even though the action ignores it. A signed
-        // URL carries no Authorization header, so unlike a header-signed request it does
-        // read and write this cache — and without varying on the token, a thumbnail a
-        // paired device pulled would afterwards be served to an anonymous caller asking
-        // for the same path.
-        [ResponseCache(VaryByQueryKeys = [nameof(path), nameof(w), nameof(h), SignedMediaUrl.QueryKey],
-            Duration = 30 * 60)]
+        // A generated cover is replaced at the same path. Keep browser copies, but
+        // validate them against the source file instead of serving them for 30 minutes.
+        // This also prevents middleware from serving a response before authorization.
+        [ResponseCache(Location = ResponseCacheLocation.None)]
         [RemoteAccessible(PathParameters = [nameof(path)])]
         public async Task<IActionResult> GetThumbnail(string path, int? w, int? h)
         {
@@ -164,6 +162,7 @@ namespace Bakabase.Service.Controllers
                 var ext = Path.GetExtension(path);
                 if (InternalOptions.ImageExtensions.Contains(ext))
                 {
+                    if (ThumbnailNotModified(path, w, h)) return StatusCode(StatusCodes.Status304NotModified);
                     var contentType = MimeTypes.GetMimeType(ext);
 
                     // No size asked for, or a format we never re-encode: hand back the
@@ -203,6 +202,31 @@ namespace Bakabase.Service.Controllers
             }
 
             return NotFound();
+        }
+
+        private bool ThumbnailNotModified(string sourcePath, int? w, int? h)
+        {
+            var file = new FileInfo(sourcePath);
+            var modified = new DateTimeOffset(file.LastWriteTimeUtc);
+            var lastModified = DateTimeOffset.FromUnixTimeSeconds(modified.ToUnixTimeSeconds());
+            // Keep sub-second precision in the validator: cover regeneration can replace
+            // a same-sized file twice in one second. Size and policy also identify the representation.
+            var tag = new EntityTagHeaderValue($"\"thumbnail-2-{modified.Ticks:x}-{file.Length:x}-{w ?? 0}x{h ?? 0}\"", true);
+            var headers = Response.GetTypedHeaders();
+            headers.ETag = tag;
+            headers.LastModified = lastModified;
+
+            // If-None-Match takes precedence even when it does not match. Falling back
+            // to the second-granularity date in that case can keep a replaced cover stale.
+            if (Request.Headers.ContainsKey(HeaderNames.IfNoneMatch))
+                return EntityTagHeaderValue.TryParseList(Request.Headers.IfNoneMatch, out var requested) &&
+                       requested.Any(candidate => candidate.Equals(EntityTagHeaderValue.Any) || candidate.Compare(tag, false));
+
+            // A date-only validator cannot distinguish same-second replacements. Only
+            // honor it when the source timestamp has no precision lost in the HTTP date.
+            return modified == lastModified &&
+                   HeaderUtilities.TryParseDate(Request.Headers.IfModifiedSince.ToString(), out var since) &&
+                   lastModified <= since;
         }
 
         /// <summary>
@@ -275,6 +299,11 @@ namespace Bakabase.Service.Controllers
                 return NotFound();
             }
 
+            if (ThumbnailNotModified(compressedFilePath, w, h))
+            {
+                await extractedStream.DisposeAsync();
+                return StatusCode(StatusCodes.Status304NotModified);
+            }
             var contentType = MimeTypes.GetMimeType(ext);
 
             // Same rule as the on-disk path: only decode when a resize is actually
