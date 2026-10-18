@@ -29,6 +29,7 @@ using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property.Abstractions.Services;
 using Bakabase.Modules.Property.Extensions;
 using Bakabase.Modules.Property.Models.View;
+using Bakabase.Modules.Federation.Identity;
 using Bakabase.Modules.Search.Models.Db;
 using Bakabase.Modules.StandardValue;
 using Bakabase.Service.Extensions;
@@ -68,7 +69,8 @@ public class ResourceController(
     Bakabase.Abstractions.Components.Localization.IBakabaseLocalizer bakabaseLocalizer,
     IResourceProfileService resourceProfileService,
     IPlaceholderResourceService placeholderResourceService,
-    IResourceMaterializationService materializationService)
+    IResourceMaterializationService materializationService,
+    INodeIdentityProvider nodeIdentity)
     : Controller
 {
     [HttpGet("search-operation")]
@@ -221,7 +223,7 @@ public class ResourceController(
         }
                 
         var dbModels = new[] { search.Search };
-        var viewModels = await dbModels.ToViewModels(propertyService, propertyLocalizer, service);
+        var viewModels = await ResolveSavedSearches(dbModels);
         return new SingletonResponse<SavedSearchViewModel>(new SavedSearchViewModel(id, viewModels[0], search.Name, search.DisplayMode));
     }
 
@@ -234,10 +236,16 @@ public class ResourceController(
         // property resolution, even if a tab is renamed or removed while it is pending.
         var searches = resourceOptionsManager.Value.SavedSearches
             .Select(search => (search.Id, search.Search, search.Name, search.DisplayMode)).ToArray();
-        var viewModels = await searches.Select(search => search.Search)
-            .ToViewModels(propertyService, propertyLocalizer, service);
+        var viewModels = await ResolveSavedSearches(searches.Select(search => search.Search));
         return new ListResponse<SavedSearchViewModel>(searches.Select((search, index) =>
             new SavedSearchViewModel(search.Id, viewModels[index], search.Name, search.DisplayMode)));
+    }
+
+    private async Task<List<ResourceSearchViewModel>> ResolveSavedSearches(IEnumerable<ResourceSearchDbModel> searches)
+    {
+        var self = await nodeIdentity.GetAsync();
+        return await searches.ToViewModels(propertyService, propertyLocalizer, service,
+            new ResourceSearchOwner {ServerId = self.NodeId, LibraryEpoch = self.LibraryEpoch});
     }
 
     [HttpDelete("saved-search")]

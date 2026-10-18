@@ -130,9 +130,11 @@
 }
 .move-panel-task-controls {
   display: flex;
+  flex: 1;
   align-items: center;
   justify-content: flex-end;
   min-width: 0;
+  max-width: 230px;
   gap: 4px;
 }
 .move-panel-task-controls > button {

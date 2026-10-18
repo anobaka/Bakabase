@@ -3,11 +3,13 @@ using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
+using Bakabase.Modules.Federation.Identity;
 using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property.Abstractions.Services;
 using Bakabase.Modules.Search.Models.Db;
 using Bakabase.Service.Controllers;
 using Bakabase.Tests.Notices;
+using Newtonsoft.Json;
 
 namespace Bakabase.Tests;
 
@@ -115,6 +117,68 @@ public sealed class SavedSearchReadTests
         Assert.AreEqual(0, options.SaveCount);
     }
 
+    [DataTestMethod]
+    [DataRow("unowned", false)]
+    [DataRow("local", false)]
+    [DataRow("foreign", false)]
+    [DataRow("stale", false)]
+    [DataRow("unowned", true)]
+    [DataRow("local", true)]
+    [DataRow("foreign", true)]
+    [DataRow("stale", true)]
+    public async Task Explicit_owners_resolve_only_for_this_exact_library_without_changing_saved_ownership(
+        string searchOwner, bool singleRead)
+    {
+        var localOwner = new ResourceSearchOwner {ServerId = "this-server", LibraryEpoch = "this-library"};
+        var foreignOwner = localOwner with {ServerId = "another-server"};
+        var staleOwner = localOwner with {LibraryEpoch = "previous-library"};
+        ResourceSearchOwner?[] owners = [null, localOwner, foreignOwner, staleOwner];
+        var search = new ResourceSearchDbModel
+        {
+            Owner = searchOwner switch {"local" => localOwner, "foreign" => foreignOwner, "stale" => staleOwner, _ => null},
+            Group = new() {Groups = [new() {Filters = owners.Select(owner => new ResourceSearchFilterDbModel
+            {
+                Owner = owner, PropertyPool = PropertyPool.Custom, PropertyId = 42,
+                Operation = SearchOperation.Equals, Value = "5"
+            }).ToList()}]}
+        };
+        var options = new StubOptions<ResourceOptions>(new() {SavedSearches = [new() {Id = "tab", Search = search}]});
+        var beforeRead = JsonConvert.SerializeObject(options.Value);
+        var properties = new RecordingProperties
+        {
+            Read = _ => Task.FromResult(new List<Property> {new(PropertyPool.Custom, 42, PropertyType.Number, "Resolved name")})
+        };
+        var controller = Controller(options, properties);
+
+        var tab = singleRead ? (await controller.GetSavedSearch("tab")).Data!
+            : (await controller.GetSavedSearches()).Data!.Single();
+
+        Assert.AreEqual(search.Owner, tab.Search.Owner);
+        var filters = tab.Search.Group!.Groups!.Single().Filters!;
+        var locallyOwnedSearch = searchOwner is "unowned" or "local";
+        for (var index = 0; index < filters.Count; index++)
+        {
+            var filter = filters[index];
+            Assert.AreEqual(owners[index], filter.Owner);
+            Assert.AreEqual("5", filter.DbValue);
+            if (locallyOwnedSearch && index < 2)
+            {
+                Assert.AreEqual("Resolved name", filter.Property!.Name);
+                Assert.IsNotNull(filter.ValueProperty);
+                Assert.AreEqual("5", filter.BizValue);
+            }
+            else
+            {
+                Assert.IsNull(filter.Property);
+                Assert.IsNull(filter.ValueProperty);
+                Assert.IsNull(filter.BizValue);
+            }
+        }
+        Assert.AreEqual(locallyOwnedSearch ? 1 : 0, properties.Reads.Count);
+        Assert.AreEqual(beforeRead, JsonConvert.SerializeObject(options.Value));
+        Assert.AreEqual(0, options.SaveCount);
+    }
+
     private static ResourceSearchDbModel Search(PropertyPool pool, int propertyId) => new()
     {
         Group = new() {Filters = [new() {PropertyPool = pool, PropertyId = propertyId,
@@ -127,7 +191,13 @@ public sealed class SavedSearchReadTests
         customPropertyValueService: null!, propertyLocalizer: DispatchProxy.Create<IPropertyLocalizer, Localizer>(),
         mediaLibraryV2Service: null!, mappingService: null!, taskManager: null!, fsOptionsManager: null!,
         scopePreferenceService: null!, resourceMoveGuard: null!, bakabaseLocalizer: null!, resourceProfileService: null!,
-        placeholderResourceService: null!, materializationService: null!);
+        placeholderResourceService: null!, materializationService: null!, nodeIdentity: new LocalIdentity());
+
+    private sealed class LocalIdentity : INodeIdentityProvider
+    {
+        public Task<NodeIdentity> GetAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult(new NodeIdentity("this-server", "this-library", "This device"));
+    }
 
     private sealed class RecordingProperties : IPropertyService
     {
