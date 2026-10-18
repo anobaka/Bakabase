@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Components.Tasks;
+using Bakabase.Abstractions.Components.ResourceMove;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Services;
@@ -13,6 +14,8 @@ using Bootstrap.Components.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
 
 namespace Bakabase.InsideWorld.Business.Components;
 
@@ -46,6 +49,20 @@ public class PathSyncManager : BackgroundService, IPathMarkSyncService
     /// Flag indicating that path mark sync should run (pending property/media library marks exist).
     /// </summary>
     private volatile bool _pathMarkSyncRequested;
+    private readonly object _pathMarkRequestLock = new();
+    private Dictionary<int, long>? _recoveredPathMarkRevisions;
+
+    private void RequestPathMarkSync(Dictionary<int, long>? revisions = null)
+    {
+        lock (_pathMarkRequestLock)
+        {
+            if (!_pathMarkSyncRequested) _recoveredPathMarkRevisions = revisions;
+            else if (revisions == null) _recoveredPathMarkRevisions = null;
+            else if (_recoveredPathMarkRevisions != null)
+                foreach (var (id, revision) in revisions) _recoveredPathMarkRevisions[id] = revision;
+            _pathMarkSyncRequested = true;
+        }
+    }
 
     private readonly TimeSpan _pollInterval = TimeSpan.FromSeconds(5);
 
@@ -74,7 +91,13 @@ public class PathSyncManager : BackgroundService, IPathMarkSyncService
     {
         await using var scope = _serviceProvider.CreateAsyncScope();
         var pathMarkService = scope.ServiceProvider.GetRequiredService<IPathMarkService>();
-        if (markIds.Length > 0) await pathMarkService.MarkAsPendingBatch(markIds);
+        if (markIds.Length > 0)
+        {
+            var requestedIds = markIds.ToHashSet();
+            var toReset = (await pathMarkService.GetAll()).Where(mark => requestedIds.Contains(mark.Id) &&
+                mark.SyncStatus != PathMarkSyncStatus.Pending).Select(mark => mark.Id);
+            await pathMarkService.MarkAsPendingBatch(toReset);
+        }
 
         // Check if any of these are resource marks - if so, also enqueue FileSystem resource sync
         var marks = markIds.Length == 0
@@ -90,8 +113,19 @@ public class PathSyncManager : BackgroundService, IPathMarkSyncService
         }
 
         if (marks.Any(m => m.Type is PathMarkType.Property or PathMarkType.MediaLibrary))
-            _pathMarkSyncRequested = true;
+            RequestPathMarkSync();
         _logger.LogDebug("Enqueued {Count} mark IDs for synchronization", markIds.Length);
+    }
+
+    public async Task EnqueueRequestedRevisions(IReadOnlyDictionary<int, long> revisions)
+    {
+        await using var scope = _serviceProvider.CreateAsyncScope();
+        var marks = await scope.ServiceProvider.GetRequiredService<IPathMarkService>().GetPendingMarks();
+        var requested = marks.Where(mark => mark.Type is PathMarkType.Property or PathMarkType.MediaLibrary &&
+                mark.SyncStatus == PathMarkSyncStatus.Pending && revisions.TryGetValue(mark.Id, out var revision) &&
+                revision == mark.UpdatedAt.Ticks)
+            .ToDictionary(mark => mark.Id, mark => mark.UpdatedAt.Ticks);
+        if (requested.Count > 0) RequestPathMarkSync(requested);
     }
 
     /// <summary>
@@ -225,7 +259,13 @@ public class PathSyncManager : BackgroundService, IPathMarkSyncService
             await _btm.Clean(PathMarkSyncTaskId);
         }
 
-        _pathMarkSyncRequested = false;
+        Dictionary<int, long>? recoveredRevisions;
+        lock (_pathMarkRequestLock)
+        {
+            recoveredRevisions = _recoveredPathMarkRevisions;
+            _recoveredPathMarkRevisions = null;
+            _pathMarkSyncRequested = false;
+        }
 
         _logger.LogInformation("Creating path mark sync task");
 
@@ -236,12 +276,12 @@ public class PathSyncManager : BackgroundService, IPathMarkSyncService
             .ConflictsWith(PathMarkSyncTaskId, PathMarkDatabaseConflictKey)
             .StartImmediately()
             .IgnoreIfExists()
-            .Run(RunPathMarkSync));
+            .Run(args => RunPathMarkSync(args, recoveredRevisions)));
     }
 
     /// <summary>
-    /// Recover marks that were left in Syncing state due to application interruption.
-    /// Resets them to Pending and enqueues them for synchronization.
+    /// Recover interrupted syncs and exact post-move pending revisions persisted before
+    /// the process could wake the scheduler. Leave unrequested manual edits pending.
     /// </summary>
     private async Task RecoverInterruptedSyncs(CancellationToken ct)
     {
@@ -252,32 +292,44 @@ public class PathSyncManager : BackgroundService, IPathMarkSyncService
 
             var syncingMarks = await pathMarkService.GetBySyncStatus(PathMarkSyncStatus.Syncing);
 
-            if (syncingMarks.Count == 0)
+            if (syncingMarks.Count > 0)
             {
-                _logger.LogDebug("No interrupted syncs to recover");
-                return;
+                _logger.LogInformation("Found {Count} interrupted mark(s), resetting to Pending", syncingMarks.Count);
+                await pathMarkService.MarkAsPendingBatch(syncingMarks.Select(mark => mark.Id));
             }
-
-            _logger.LogInformation(
-                "Found {Count} mark(s) left in Syncing state, resetting to Pending and re-queuing",
-                syncingMarks.Count);
-
-            var markIds = syncingMarks.Select(m => m.Id).ToList();
-            await pathMarkService.MarkAsPendingBatch(markIds);
+            var pendingMarks = await pathMarkService.GetPendingMarks();
+            var recoveredIds = syncingMarks.Select(mark => mark.Id).ToHashSet();
+            var receipts = await scope.ServiceProvider.GetRequiredService<BakabaseDbContext>().ResourceMoveRecords.AsNoTracking()
+                .Where(record => record.Status == ResourceMoveRecordStatus.Succeeded && record.ExecutionPlanJson != null)
+                .Select(record => record.ExecutionPlanJson!).ToListAsync(ct);
+            foreach (var receipt in receipts)
+            {
+                try
+                {
+                    var revisions = JsonConvert.DeserializeObject<ResourceMoveExecutionPlan>(receipt)?.PendingPathMarkRevisions;
+                    if (revisions == null) continue;
+                    foreach (var mark in pendingMarks.Where(mark => mark.SyncStatus == PathMarkSyncStatus.Pending &&
+                                 revisions.TryGetValue(mark.Id, out var requestedAt) && requestedAt == mark.UpdatedAt.Ticks))
+                        recoveredIds.Add(mark.Id);
+                }
+                catch (JsonException error) { _logger.LogWarning(error, "Ignoring invalid post-move sync receipt"); }
+            }
+            pendingMarks = pendingMarks.Where(mark => recoveredIds.Contains(mark.Id)).ToList();
 
             // Check if any are resource marks
-            if (syncingMarks.Any(m => m.Type == PathMarkType.Resource))
+            if (pendingMarks.Any(m => m.Type == PathMarkType.Resource))
             {
                 _pendingResourceSources.TryAdd(ResourceSource.PathMark, 0);
             }
 
             // Request path mark sync for property/media library marks
-            if (syncingMarks.Any(m => m.Type is PathMarkType.Property or PathMarkType.MediaLibrary))
+            if (pendingMarks.Any(m => m.Type is PathMarkType.Property or PathMarkType.MediaLibrary))
             {
-                _pathMarkSyncRequested = true;
+                RequestPathMarkSync(pendingMarks.Where(mark => mark.Type is PathMarkType.Property or PathMarkType.MediaLibrary)
+                    .ToDictionary(mark => mark.Id, mark => mark.UpdatedAt.Ticks));
             }
 
-            _logger.LogInformation("Successfully recovered {Count} interrupted sync(s)", syncingMarks.Count);
+            _logger.LogInformation("Recovered {Count} pending path mark(s)", pendingMarks.Count);
         }
         catch (Exception ex)
         {
@@ -314,7 +366,7 @@ public class PathSyncManager : BackgroundService, IPathMarkSyncService
             // If new resources were created or marks were marked pending, trigger path mark sync
             if (result.PathMarksMarkedPending)
             {
-                _pathMarkSyncRequested = true;
+                RequestPathMarkSync();
                 _logger.LogInformation(
                     "[ResourceSync] New resources from {Source}, path mark sync will be triggered", source);
             }
@@ -331,7 +383,7 @@ public class PathSyncManager : BackgroundService, IPathMarkSyncService
     /// <summary>
     /// Runs path mark sync for pending property/media library marks.
     /// </summary>
-    private async Task RunPathMarkSync(BTaskArgs args)
+    private async Task RunPathMarkSync(BTaskArgs args, IReadOnlyDictionary<int, long>? expectedMarkRevisions = null)
     {
         await args.UpdateTask(t =>
         {
@@ -346,7 +398,8 @@ public class PathSyncManager : BackgroundService, IPathMarkSyncService
             async p => await args.UpdateTask(t => t.Percentage = p),
             async p => await args.UpdateTask(t => t.SetProcess(p)),
             args.PauseToken,
-            args.CancellationToken);
+            args.CancellationToken,
+            expectedMarkRevisions);
 
         await args.UpdateTask(t => t.Data = result);
     }

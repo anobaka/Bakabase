@@ -107,11 +107,13 @@ public class PathMarkSyncService : ScopedService
     /// <param name="onProcessChange">Process description callback.</param>
     /// <param name="pt">Pause token.</param>
     /// <param name="ct">Cancellation token.</param>
+    /// <param name="expectedMarkRevisions">Only apply these exact already-requested revisions during recovery.</param>
     public async Task<PathMarkSyncResult> SyncMarks(
         Func<int, Task>? onProgressChange,
         Func<BTaskText?, Task>? onProcessChange,
         PauseToken pt,
-        CancellationToken ct)
+        CancellationToken ct,
+        IReadOnlyDictionary<int, long>? expectedMarkRevisions = null)
     {
         var result = new PathMarkSyncResult();
         var ctx = new SyncContext();
@@ -145,6 +147,8 @@ public class PathMarkSyncService : ScopedService
             var pendingMarks = allMarks
                 .Where(m => m.SyncStatus is PathMarkSyncStatus.Pending or PathMarkSyncStatus.PendingDelete)
                 .Where(m => m.Type is PathMarkType.Property or PathMarkType.MediaLibrary)
+                .Where(m => expectedMarkRevisions == null ||
+                    expectedMarkRevisions.TryGetValue(m.Id, out var requestedAt) && requestedAt == m.UpdatedAt.Ticks)
                 .ToList();
 
             if (pendingMarks.Count == 0)
@@ -190,7 +194,7 @@ public class PathMarkSyncService : ScopedService
             // legacy DB-valued reference effects can be normalized to the canonical
             // business-value representation during final-state computation.
             var contextMarkIds = allMarks
-                .Where(m => m.SyncStatus == PathMarkSyncStatus.Synced
+                .Where(m => (m.SyncStatus == PathMarkSyncStatus.Synced || expectedMarkRevisions != null)
                             && m.Type is PathMarkType.Property or PathMarkType.MediaLibrary)
                 .Select(m => m.Id)
                 .Where(id => !ctx.RunMarkIds.Contains(id))
@@ -752,6 +756,19 @@ public class PathMarkSyncService : ScopedService
                 !PropertySystem.Property.IsReferenceValueType(customProperty.Type) ||
                 string.IsNullOrEmpty(effect.Value))
             {
+                continue;
+            }
+
+            if (!ctx.RunMarkIds.Contains(effect.MarkId) &&
+                ctx.PathMarksById.TryGetValue(effect.MarkId, out var contextMark) &&
+                contextMark.SyncStatus != PathMarkSyncStatus.Synced)
+            {
+                // A partial recovery may carry an older applied effect from a manually
+                // edited mark. Its current config is unrequested, so cannot prove a
+                // reference representation or create options. Preserve the combined DB
+                // value until that mark is explicitly synchronized.
+                unresolvedEffectIds.Add(effect.Id);
+                ctx.PropertyValueKeysToPreserve.Add((effect.ResourceId, effect.PropertyPool, effect.PropertyId));
                 continue;
             }
 
