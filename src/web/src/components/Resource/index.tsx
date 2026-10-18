@@ -22,6 +22,7 @@ import {
   HistoryOutlined,
   PushpinOutlined,
   StopOutlined,
+  SwapOutlined,
 } from "@ant-design/icons";
 import { AiOutlineCloudDownload, AiOutlineFolderOpen } from "react-icons/ai";
 import moment from "moment";
@@ -43,15 +44,20 @@ import {
 } from "@/features/management/resourceContext";
 import ResourceCover from "@/components/Resource/components/ResourceCover";
 import { useOwnerResourceDisplayOptions } from "@/features/management/useOwnerResourceDisplayOptions";
+import { useResourceCoverProperties } from "@/features/management/useResourceCoverProperties";
+import { isReferenceValueType } from "@/components/Property/PropertySystem";
+import CoverPropertyValue from "@/components/Resource/components/CoverPropertyValue";
 import Operations from "@/components/Resource/components/Operations";
 import { getKnownMoveBlockReason } from "@/components/Resource/resourceMoveEligibility";
 import { useMoveReasonText } from "@/components/ResourceMovePanel/messages";
+import { moveSourceContextError } from "@/components/ResourceMovePanel/sourceContext";
 import AcquisitionModal from "@/components/Resource/components/AcquisitionModal";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { Button, Chip, Link, Spinner, Tooltip } from "@/components/bakaui";
 import { selectResourceMovingTask, useBTasksStore } from "@/stores/bTasks";
 import {
   openMovePanel,
+  normalizedMovePath,
   selectPanelResourceReservation,
   useResourceMovePanelStore,
 } from "@/stores/resourceMovePanel";
@@ -172,6 +178,30 @@ const Resource = React.forwardRef((props: Props, ref) => {
   const moveReservation = useResourceMovePanelStore((state) =>
     isRemoteOwner ? undefined : selectPanelResourceReservation(resource.id, resource.path)(state),
   );
+  const pendingMoveSource = useResourceMovePanelStore((state) => {
+    const payload = state.explicitPayload;
+
+    if (
+      isRemoteOwner ||
+      !state.panelEnabled ||
+      state.sourceContextInvalidated ||
+      !payload ||
+      (payload.sourceTabId && payload.sourceTabId !== sourceTabId) ||
+      (payload.sourceContext &&
+        state.sourceContext &&
+        moveSourceContextError(payload.sourceContext, state.sourceContext))
+    ) {
+      return false;
+    }
+
+    return payload.resources.some(
+      (source) =>
+        source.id === resource.id &&
+        (!source.path ||
+          !resource.path ||
+          normalizedMovePath(source.path) === normalizedMovePath(resource.path)),
+    );
+  });
   const moveLocked = !!movingTask || !!moveReservation;
   const moveStatus =
     moveReservation?.phase === "preview"
@@ -248,6 +278,16 @@ const Resource = React.forwardRef((props: Props, ref) => {
   const displayPropertyKeys = isRemoteOwner
     ? (ownerDisplayOptions.data?.uiResource?.displayProperties ?? [])
     : (displayProperties ?? []);
+  const hasReferenceCoverProperty = displayPropertyKeys.some((key) => {
+    const property = resource.properties?.[PropertyPool.Custom]?.[key.id];
+
+    return key.pool === PropertyPool.Custom && property && isReferenceValueType(property.type);
+  });
+  const coverPropertyDefinitions = useResourceCoverProperties(
+    hasReferenceCoverProperty
+      ? displayPropertyKeys.filter((key) => key.pool === PropertyPool.Custom).map((key) => key.id)
+      : [],
+  ).data;
 
   // Discovery happens automatically via SSE now
 
@@ -318,6 +358,19 @@ const Resource = React.forwardRef((props: Props, ref) => {
         </div>
         {/* lef-top */}
         <div className={"absolute top-1 left-1 right-1 flex gap-1 items-center flex-wrap"}>
+          {pendingMoveSource && !moveLocked && (
+            <Tooltip content={t<string>("resource.pendingMove.description")}>
+              <Chip
+                color="warning"
+                radius="sm"
+                size="sm"
+                startContent={<SwapOutlined />}
+                variant="solid"
+              >
+                {t<string>("resource.pendingMove.label")}
+              </Chip>
+            </Tooltip>
+          )}
           {movePanelEnabled && moveBlockReason && (
             <Tooltip content={moveReasonText(moveBlockReason)}>
               <span
@@ -414,6 +467,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
               let bizValue: any | undefined;
               let bizValueType: StandardValueType | undefined;
               let propertyType: PropertyType | undefined;
+              let propertyDbValue: any;
 
               try {
                 switch (dpk.pool) {
@@ -521,6 +575,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
                     const rawBizValue =
                       selectedValue?.aliasAppliedBizValue ?? selectedValue?.bizValue;
 
+                    propertyDbValue = selectedValue?.value;
                     bizValueType = property?.bizValueType;
                     propertyType = property?.type;
                     bizValue =
@@ -547,11 +602,16 @@ const Resource = React.forwardRef((props: Props, ref) => {
                   style={style}
                   variant={"flat"}
                 >
-                  <StandardValueRenderer
+                  <CoverPropertyValue
+                    dbValue={propertyDbValue}
+                    definition={
+                      dpk.pool === PropertyPool.Custom
+                        ? coverPropertyDefinitions?.get(dpk.id)
+                        : undefined
+                    }
                     propertyType={propertyType}
                     type={bizValueType}
                     value={bizValue}
-                    variant="light"
                   />
                 </Chip>,
               ];
@@ -738,9 +798,11 @@ const Resource = React.forwardRef((props: Props, ref) => {
       } ${
         selected
           ? "border-primary ring-2 ring-primary/30 bg-primary/5"
-          : hideResourceBorder
-            ? ""
-            : "border-default-200"
+          : pendingMoveSource
+            ? "border-warning ring-2 ring-warning/40 bg-warning/5"
+            : hideResourceBorder
+              ? ""
+              : "border-default-200"
       } ${
         resource.status === ResourceStatus.Absent
           ? "opacity-50 grayscale"
@@ -749,6 +811,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
             : ""
       }`}
       data-id={resource.id}
+      data-move-source={pendingMoveSource || undefined}
       data-resource-owner={owner?.serverId}
       style={style}
       onClickCapture={(e) => {

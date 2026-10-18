@@ -1,6 +1,8 @@
 "use client";
 
 import type { IProperty } from "@/components/Property/models";
+import type { OwnerResourceSelection } from "@/features/management/resourceSelection";
+import type { ManagementSource } from "@/features/management/api";
 
 import { MenuItem, SubMenu, MenuDivider, MenuHeader } from "@szhsin/react-menu";
 import { useTranslation } from "react-i18next";
@@ -21,16 +23,15 @@ import {
 } from "@ant-design/icons";
 import { HiOutlineCollection } from "react-icons/hi";
 import React, { useCallback, useEffect, useState } from "react";
-import type { OwnerResourceSelection } from "@/features/management/resourceSelection";
-import type { ManagementSource } from "@/features/management/api";
-import { ResourceOwnerProvider, useResourceOwner } from "@/features/management/resourceContext";
-import { sameResourceOwner } from "@/features/management/resourceIdentity";
-import { useOwnerResourceDisplayOptions } from "@/features/management/useOwnerResourceDisplayOptions";
 
 import PropertyValuePanel from "./PropertyValuePanel";
 import BatchPlayMenuItems from "./BatchPlayMenuItems";
 import PlaybackMenuItems from "./PlaybackMenuItems";
+import ContextMenuRow from "./ContextMenuRow";
 
+import { ResourceOwnerProvider, useResourceOwner } from "@/features/management/resourceContext";
+import { sameResourceOwner } from "@/features/management/resourceIdentity";
+import { useOwnerResourceDisplayOptions } from "@/features/management/useOwnerResourceDisplayOptions";
 import MediaLibraryMultiSelector from "@/components/MediaLibraryMultiSelector";
 import CollectionMultiSelector from "@/components/CollectionMultiSelector";
 import { EnhancementAdditionalItem, PropertyPool, ResourceAdditionalItem } from "@/sdk/constants";
@@ -114,11 +115,12 @@ const PropertyQuickSetItem = ({
     <SubMenu
       setDownOverflow
       label={
-        <div className={"flex items-center gap-2"}>
-          <SettingOutlined aria-hidden className={"text-base"} />
-          <span className="resource-context-menu__label">{menuLabel}</span>
-          <RightOutlined aria-hidden className="resource-context-menu__chevron" />
-        </div>
+        <ContextMenuRow
+          icon={<SettingOutlined />}
+          trailing={<RightOutlined aria-hidden className="resource-context-menu__chevron" />}
+        >
+          {menuLabel}
+        </ContextMenuRow>
       }
       menuClassName="resource-context-menu resource-context-menu--submenu"
       menuStyle={{ maxHeight: "400px", minWidth: "240px" }}
@@ -280,15 +282,18 @@ const ContextMenuItems = ({
       {/* Open folder — always uses the right-clicked resource, independent of selection. */}
       {contextResource?.path && (
         <MenuItem onClick={() => folderAction.open(contextResource)}>
-          <div className="flex items-center gap-2">
-            <FolderOpenOutlined aria-hidden className="text-base" />
-            <span className="resource-context-menu__label">{folderAction.label}</span>
-            {selectedResourceIds.length > 1 && (
-              <span className="resource-context-menu__annotation">
-                {t("resource.contextMenu.currentOnly")}
-              </span>
-            )}
-          </div>
+          <ContextMenuRow
+            icon={<FolderOpenOutlined />}
+            trailing={
+              selectedResourceIds.length > 1 && (
+                <span className="resource-context-menu__annotation">
+                  {t("resource.contextMenu.currentOnly")}
+                </span>
+              )
+            }
+          >
+            {folderAction.label}
+          </ContextMenuRow>
         </MenuItem>
       )}
 
@@ -313,12 +318,11 @@ const ContextMenuItems = ({
                     .then(() => onSelectedResourcesChanged?.(selectedResourceIds));
                 }}
               >
-                <div className="flex items-center gap-2">
-                  <PushpinOutlined aria-hidden className="text-base" />
+                <ContextMenuRow icon={<PushpinOutlined />}>
                   {res?.pinned
                     ? t<string>("resource.operation.unpin")
                     : t<string>("resource.operation.pin")}
-                </div>
+                </ContextMenuRow>
               </MenuItem>
               <MenuItem
                 onClick={() => {
@@ -334,10 +338,9 @@ const ContextMenuItems = ({
                     });
                 }}
               >
-                <div className="flex items-center gap-2">
-                  <FireOutlined aria-hidden className="text-base" />
+                <ContextMenuRow icon={<FireOutlined />}>
                   {t<string>("resource.operation.enhancements")}
-                </div>
+                </ContextMenuRow>
               </MenuItem>
               <MenuItem
                 onClick={() => {
@@ -350,10 +353,9 @@ const ContextMenuItems = ({
                   });
                 }}
               >
-                <div className="flex items-center gap-2">
-                  <VideoCameraAddOutlined aria-hidden className="text-base" />
+                <ContextMenuRow icon={<VideoCameraAddOutlined />}>
                   {t<string>("resource.operation.addToPlaylist")}
-                </div>
+                </ContextMenuRow>
               </MenuItem>
               {(res?.dataStates?.length ?? 0) > 0 && (
                 <MenuItem
@@ -366,10 +368,9 @@ const ContextMenuItems = ({
                     }
                   }}
                 >
-                  <div className="flex items-center gap-2">
-                    <ReloadOutlined aria-hidden className="text-base" />
+                  <ContextMenuRow icon={<ReloadOutlined />}>
                     {t<string>("resource.action.refreshCache")}
-                  </div>
+                  </ContextMenuRow>
                 </MenuItem>
               )}
               <MenuDivider />
@@ -391,12 +392,11 @@ const ContextMenuItems = ({
             }
           }}
         >
-          <div className="flex items-center gap-2">
-            <ReloadOutlined aria-hidden className="text-base" />
+          <ContextMenuRow icon={<ReloadOutlined />}>
             {t<string>("resource.contextMenu.refreshCacheForCount", {
               count: selectedResourceIds.length,
             })}
-          </div>
+          </ContextMenuRow>
         </MenuItem>
       )}
       <MenuHeader className="resource-context-menu__section">
@@ -410,10 +410,9 @@ const ContextMenuItems = ({
           });
         }}
       >
-        <div className={"flex items-center gap-2"}>
-          <ApiOutlined aria-hidden className={"text-base"} />
+        <ContextMenuRow icon={<ApiOutlined />}>
           {t<string>("resource.contextMenu.setMediaLibraries")}
-        </div>
+        </ContextMenuRow>
       </MenuItem>
       <MenuItem
         onClick={() => {
@@ -423,10 +422,9 @@ const ContextMenuItems = ({
           });
         }}
       >
-        <div className={"flex items-center gap-2"}>
-          <HiOutlineCollection aria-hidden className={"text-base"} />
+        <ContextMenuRow icon={<HiOutlineCollection />}>
           {t<string>("resource.contextMenu.addToCollections")}
-        </div>
+        </ContextMenuRow>
       </MenuItem>
       <MenuItem
         onClick={() => {
@@ -442,10 +440,9 @@ const ContextMenuItems = ({
           }
         }}
       >
-        <div className={"flex items-center gap-2"}>
-          <SendOutlined aria-hidden className={"text-base"} />
+        <ContextMenuRow icon={<SendOutlined />}>
           {t<string>("resource.contextMenu.transferResourceData")}
-        </div>
+        </ContextMenuRow>
       </MenuItem>
       <MenuItem
         disabled={!!moveDisabledReason}
@@ -459,17 +456,16 @@ const ContextMenuItems = ({
         }}
       >
         <Tooltip content={moveDisabledReason} isDisabled={!moveDisabledReason}>
-          <div className="flex flex-col gap-1 max-w-72" title={moveDisabledReason || undefined}>
-            <div className={"flex items-center gap-2"}>
-              <ExportOutlined aria-hidden className={"text-base"} />
+          <div className="flex flex-col gap-1" title={moveDisabledReason || undefined}>
+            <ContextMenuRow icon={<ExportOutlined />}>
               {moveResourceIds.length > 1
                 ? t<string>("resource.contextMenu.moveCountResources", {
                     count: moveResourceIds.length,
                   })
                 : t<string>("resource.contextMenu.moveResource")}
-            </div>
+            </ContextMenuRow>
             {moveDisabledReason && (
-              <span className="text-xs whitespace-normal">{moveDisabledReason}</span>
+              <span className="resource-context-menu__description">{moveDisabledReason}</span>
             )}
           </div>
         </Tooltip>
@@ -483,12 +479,11 @@ const ContextMenuItems = ({
           });
         }}
       >
-        <div className={"flex items-center gap-2"}>
-          <EditOutlined aria-hidden className={"text-base"} />
+        <ContextMenuRow icon={<EditOutlined />}>
           {selectedResourceIds.length > 1
             ? t<string>("resource.contextMenu.bulkEditProperties")
             : t<string>("resource.contextMenu.editProperties")}
-        </div>
+        </ContextMenuRow>
       </MenuItem>
       <MenuDivider />
       <MenuHeader className="resource-context-menu__section">
@@ -522,14 +517,13 @@ const ContextMenuItems = ({
         }}
       >
         <Tooltip content={t<string>("resource.contextMenu.reEnhance.tooltip")} placement={"right"}>
-          <div className={"flex items-center gap-2"}>
-            <ThunderboltOutlined aria-hidden className={"text-base"} />
+          <ContextMenuRow icon={<ThunderboltOutlined />}>
             {selectedResourceIds.length > 1
               ? t<string>("resource.contextMenu.reEnhanceCount", {
                   count: selectedResourceIds.length,
                 })
               : t<string>("resource.contextMenu.reEnhance")}
-          </div>
+          </ContextMenuRow>
         </Tooltip>
       </MenuItem>
       <MenuDivider />
@@ -562,14 +556,13 @@ const ContextMenuItems = ({
           });
         }}
       >
-        <div className={"flex items-center gap-2"}>
-          <DeleteOutlined aria-hidden className={"text-base"} />
+        <ContextMenuRow icon={<DeleteOutlined />}>
           {selectedResourceIds.length > 1
             ? t<string>("resource.contextMenu.deleteCountResources", {
                 count: selectedResourceIds.length,
               })
             : t<string>("resource.contextMenu.deleteResource")}
-        </div>
+        </ContextMenuRow>
       </MenuItem>
     </>
   );
@@ -616,22 +609,22 @@ export default function OwnerContextMenuItems(props: Props) {
           menuClassName="resource-context-menu resource-context-menu--submenu"
           overflow="auto"
         >
-          <ResourceOwnerProvider source={group.owner} resourceId={group.resources[0]?.id}>
+          <ResourceOwnerProvider resourceId={group.resources[0]?.id} source={group.owner}>
             <ContextMenuItems
               {...props}
-              selectedResourceGroups={undefined}
-              selectedResourceIds={group.ids}
-              selectedResources={group.resources}
               contextResource={
                 sameResourceOwner(group.owner, currentOwner)
                   ? props.contextResource
                   : group.resources[0]
               }
               moveResourceIds={group.ids}
+              selectedResourceGroups={undefined}
+              selectedResourceIds={group.ids}
+              selectedResources={group.resources}
+              onResourcesDeleted={(ids) => props.onResourceGroupDeleted?.(group.owner, ids)}
               onSelectedResourcesChanged={(ids) =>
                 props.onSelectedResourceGroupChanged?.(group.owner, ids)
               }
-              onResourcesDeleted={(ids) => props.onResourceGroupDeleted?.(group.owner, ids)}
             />
           </ResourceOwnerProvider>
         </SubMenu>

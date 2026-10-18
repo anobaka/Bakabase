@@ -12,7 +12,10 @@ import { useResourceOptionsStore } from "@/stores/options";
 import { usePendingSearchStore } from "@/stores/pendingSearch";
 import { FilterDisplayMode } from "@/sdk/constants";
 import BApi from "@/sdk/BApi.tsx";
-import { ResourceSourcesProvider } from "@/features/management/resourceSourcesContext";
+import {
+  ResourceSourcesProvider,
+  useResourceSources,
+} from "@/features/management/resourceSourcesContext";
 import { useManagementSources } from "@/features/management/useManagementSources";
 import ResourceTabContent from "@/pages/resource/components/ResourceTabContent";
 import RecentlyPlayedDrawer from "@/pages/resource/components/RecentlyPlayedDrawer";
@@ -23,6 +26,7 @@ import { ResourceMovePanelDock } from "@/components/ResourceMovePanel";
 type SearchForm = components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
 
 const MaxMountedTabs = 10;
+const EmptySearchForms: Record<string, ResourceSearchForm | undefined> = {};
 
 const LocalResourcePage = () => {
   const { t } = useTranslation();
@@ -38,15 +42,34 @@ const LocalResourcePage = () => {
   const [liveSearchForms, setLiveSearchForms] = useState<
     Record<string, ResourceSearchForm | undefined>
   >({});
-  // Criteria of tabs that aren't mounted — only the active tab is on first
-  // paint, so without this every other tab's tooltip would have nothing to
-  // show. Fetched on hover rather than up front so a long tab bar doesn't
-  // fire a request per tab while the page is still loading its resources.
-  const [fetchedSearchForms, setFetchedSearchForms] = useState<
-    Record<string, ResourceSearchForm | undefined>
-  >({});
-  const requestedSearchIdsRef = useRef(new Set<string>());
+  // Load names and summaries for untouched tabs together, without mounting their resource grids.
+  const [fetchedSearchState, setFetchedSearchState] = useState<{
+    scope?: string;
+    forms: Record<string, ResourceSearchForm | undefined>;
+  }>({ forms: EmptySearchForms });
+  const searchFormRequestRef = useRef<{
+    scope: string;
+    controller: AbortController;
+    batchPending: boolean;
+    requestedIds: Set<string>;
+  }>();
   const resourceOptions = useResourceOptionsStore();
+  const sourcesContext = useResourceSources();
+  const localSource = sourcesContext?.sources.find((source) => source.isLocal);
+  const searchScope = JSON.stringify([
+    BApi.baseUrl,
+    localSource?.serverId,
+    localSource?.libraryEpoch,
+  ]);
+  const fetchedSearchForms =
+    fetchedSearchState.scope === searchScope ? fetchedSearchState.forms : EmptySearchForms;
+  const currentSearchScopeRef = useRef(searchScope);
+  const savedSearchIdsRef = useRef(new Set<string>());
+
+  currentSearchScopeRef.current = searchScope;
+  savedSearchIdsRef.current = new Set(savedSearches.map((search) => search.id));
+  const canLoadSearchForms =
+    resourceOptions.initialized && !sourcesContext?.loading && savedSearches.length > 0;
   const pendingSearch = usePendingSearchStore((s) => s.pendingSearch);
   const consumePendingSearch = usePendingSearchStore((s) => s.consumePendingSearch);
   const optionsInitialized = useRef(false);
@@ -54,7 +77,8 @@ const LocalResourcePage = () => {
   const handleSearchFormChange = useCallback(
     (searchId: string, form: ResourceSearchForm | undefined) => {
       setLiveSearchForms((prev) => {
-        if (prev[searchId] === form) return prev;
+        if (Object.prototype.hasOwnProperty.call(prev, searchId) && prev[searchId] === form)
+          return prev;
 
         return { ...prev, [searchId]: form };
       });
@@ -62,27 +86,39 @@ const LocalResourcePage = () => {
     [],
   );
 
-  // Pulls a tab's criteria for the tooltip. The saved-search endpoint returns
-  // filters already resolved to property names and biz values, which the
-  // options store's raw copy is not. A failed request leaves nothing behind so
-  // the next hover retries.
+  // A failed batch or a newly created tab can retry on hover, without duplicating the initial batch.
   const ensureSearchForm = useCallback((searchId: string) => {
-    if (requestedSearchIdsRef.current.has(searchId)) return;
-    requestedSearchIdsRef.current.add(searchId);
+    const request = searchFormRequestRef.current;
+
+    if (!request || request.batchPending || request.requestedIds.has(searchId)) return;
+    request.requestedIds.add(searchId);
 
     BApi.resource
-      .getSavedSearch({ id: searchId })
+      .getSavedSearch(
+        { id: searchId },
+        { signal: request.controller.signal, showErrorToast: false },
+      )
       .then((r) => {
+        if (
+          request.controller.signal.aborted ||
+          searchFormRequestRef.current !== request ||
+          currentSearchScopeRef.current !== request.scope ||
+          !savedSearchIdsRef.current.has(searchId)
+        )
+          return;
         const search = r.data?.search;
 
         if (search) {
-          setFetchedSearchForms((prev) => ({ ...prev, [searchId]: search }));
+          setFetchedSearchState((prev) => ({
+            scope: request.scope,
+            forms: { ...prev.forms, [searchId]: search },
+          }));
         } else {
-          requestedSearchIdsRef.current.delete(searchId);
+          request.requestedIds.delete(searchId);
         }
       })
       .catch(() => {
-        requestedSearchIdsRef.current.delete(searchId);
+        request.requestedIds.delete(searchId);
       });
   }, []);
 
@@ -174,21 +210,66 @@ const LocalResourcePage = () => {
     changeTab,
   ]);
 
+  useEffect(() => {
+    setFetchedSearchState({ scope: searchScope, forms: EmptySearchForms });
+    if (!canLoadSearchForms) return;
+    const request = {
+      scope: searchScope,
+      controller: new AbortController(),
+      batchPending: true,
+      requestedIds: new Set<string>(),
+    };
+
+    searchFormRequestRef.current = request;
+    BApi.resource
+      .getSavedSearches({ signal: request.controller.signal, showErrorToast: false })
+      .then((response) => {
+        if (
+          request.controller.signal.aborted ||
+          searchFormRequestRef.current !== request ||
+          currentSearchScopeRef.current !== request.scope
+        )
+          return;
+        const forms: Record<string, ResourceSearchForm> = {};
+
+        for (const search of response.data ?? []) {
+          if (!savedSearchIdsRef.current.has(search.id)) continue;
+          forms[search.id] = search.search;
+          request.requestedIds.add(search.id);
+        }
+        setFetchedSearchState({ scope: request.scope, forms });
+      })
+      .catch(() => {
+        // Individual hover reads remain available after an initial loading failure.
+      })
+      .finally(() => {
+        request.batchPending = false;
+      });
+
+    return () => {
+      request.controller.abort();
+      if (searchFormRequestRef.current === request) searchFormRequestRef.current = undefined;
+    };
+  }, [canLoadSearchForms, searchScope]);
+
   // The displayed name uses the user-set name when present, otherwise an
-  // auto-generated combination of the current filter values reported by the
-  // mounted ResourceTabContent. When neither is available (e.g. un-mounted
-  // tab beyond the LRU cap, or no filters yet) it falls back to a localized
+  // auto-generated combination of current filter values or the batch-loaded criteria.
+  // A live cleared form must take precedence over older saved filters.
+  // When neither has filters it falls back to a localized
   // "Search N" placeholder so the tab still reads as something.
   const getDisplayName = useCallback(
     (s: IdName<string>, index: number): string => {
       if (s.name) return s.name;
-      const auto = buildAutoTabName(liveSearchForms[s.id]);
+      const form = Object.prototype.hasOwnProperty.call(liveSearchForms, s.id)
+        ? liveSearchForms[s.id]
+        : fetchedSearchForms[s.id];
+      const auto = buildAutoTabName(form);
 
       if (auto) return auto;
 
       return `${t<string>("common.action.search")} ${index + 1}`;
     },
-    [liveSearchForms, t],
+    [liveSearchForms, fetchedSearchForms, t],
   );
 
   const beginRename = (id: string) => {
@@ -232,6 +313,7 @@ const LocalResourcePage = () => {
 
     try {
       await BApi.resource.deleteSavedSearch({ id });
+      savedSearchIdsRef.current.delete(id);
       const idx = savedSearches.findIndex((x) => x.id == id);
       const prev = savedSearches[idx - 1];
       const next = savedSearches[idx + 1];
@@ -271,11 +353,12 @@ const LocalResourcePage = () => {
                 const isEditing = editingId == s.id;
                 // A mounted tab reports its criteria live, so its edits show up in
                 // the tooltip without a round trip; everything else falls back to
-                // the copy fetched on hover.
+                // the batch-loaded criteria.
                 const liveForm = liveSearchForms[s.id];
-                const summaryForm = liveForm ?? fetchedSearchForms[s.id];
+                const hasLiveForm = Object.prototype.hasOwnProperty.call(liveSearchForms, s.id);
+                const summaryForm = hasLiveForm ? liveForm : fetchedSearchForms[s.id];
                 const revealSummary = () => {
-                  if (!liveForm) ensureSearchForm(s.id);
+                  if (!hasLiveForm) ensureSearchForm(s.id);
                 };
 
                 return (
@@ -443,6 +526,7 @@ const LocalResourcePage = () => {
 /** The same resource page renders local and managed resources; only the data scope changes. */
 const ResourcePage = () => {
   const management = useManagementSources();
+
   return (
     <ResourceSourcesProvider value={management}>
       <LocalResourcePage />

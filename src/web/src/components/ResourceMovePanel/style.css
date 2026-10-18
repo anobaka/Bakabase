@@ -28,8 +28,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  padding: 10px 12px;
+  gap: 6px;
+  padding: 5px 8px;
   cursor: grab;
   background: hsl(var(--heroui-content2));
   border-bottom: 1px solid hsl(var(--heroui-default-200));
@@ -49,14 +49,52 @@
   flex-wrap: wrap;
 }
 .move-panel-toolbar {
-  padding: 8px 10px 4px;
+  padding: 5px 8px 3px;
   flex: none;
+}
+.move-panel-title-actions > button,
+.move-panel-destination-heading > button,
+.move-panel-toolbar > button[aria-label] {
+  width: 24px;
+  min-width: 24px;
+  height: 24px;
+}
+.move-panel-toolbar > button,
+.move-panel .move-panel-move-selected,
+.move-panel-task-actions > button {
+  height: 26px;
+  min-width: 0;
+  padding: 0 8px;
+  font-size: 11px;
+}
+.move-panel-source {
+  flex: none;
+  padding: 5px 8px;
+  border-bottom: 1px solid hsl(var(--heroui-default-200));
+}
+.move-panel-source-resources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  max-height: 48px;
+  overflow-y: auto;
+  margin-top: 3px;
+}
+.move-panel-source-resources > span {
+  max-width: 100%;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: hsl(var(--heroui-primary-50));
+  color: hsl(var(--heroui-primary-700));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .move-panel-auto {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 5px 10px 8px;
+  padding: 3px 8px 5px;
   font-size: 11px;
 }
 .move-panel-auto-help {
@@ -81,7 +119,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 8px 10px;
+  padding: 5px 8px;
   flex: none;
 }
 .move-panel-section-heading h3 {
@@ -90,23 +128,36 @@
 .move-panel-section-heading > span {
   color: hsl(var(--heroui-default-500));
 }
+.move-panel-task-controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 0;
+  gap: 4px;
+}
+.move-panel-task-controls > button {
+  flex: none;
+  width: 24px;
+  min-width: 24px;
+  height: 24px;
+}
 .move-panel-destinations,
 .move-panel-task-list {
   overflow-y: auto;
   overscroll-behavior: contain;
   min-height: 0;
-  padding: 0 10px 10px;
+  padding: 0 8px 6px;
 }
 .move-panel-destinations h4 {
   font-size: 10px;
   color: hsl(var(--heroui-default-500));
-  margin: 8px 0 5px;
+  margin: 5px 0 3px;
 }
 .move-panel-destination {
   border: 1px solid hsl(var(--heroui-default-200));
   border-radius: 8px;
-  padding: 6px 8px;
-  margin-bottom: 6px;
+  padding: 4px 6px;
+  margin-bottom: 4px;
   background: hsl(var(--heroui-content1));
 }
 .move-panel-destination.drop-hover {
@@ -141,7 +192,27 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  padding: 2px 0 5px;
+  padding: 1px 0 3px;
+}
+.move-panel-destination-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+.move-panel-destination-footer .move-panel-badges {
+  min-width: 0;
+  flex: 1;
+  gap: 3px;
+}
+.move-panel-destination-footer .move-panel-badges > div {
+  max-width: 100%;
+  height: 20px;
+  font-size: 10px;
+}
+.move-panel-badges [data-slot="content"] {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .move-panel-prefix {
   display: block;
@@ -167,7 +238,7 @@
   font-size: 10px;
 }
 .move-panel .move-panel-move-selected {
-  margin-top: 6px;
+  flex: none;
 }
 .move-panel-height-divider {
   flex: none;
@@ -196,8 +267,8 @@
 .move-panel-task {
   border: 1px solid hsl(var(--heroui-default-200));
   border-radius: 8px;
-  padding: 8px;
-  margin-bottom: 7px;
+  padding: 5px 6px;
+  margin-bottom: 4px;
 }
 .move-panel-task.status-waiting,
 .move-panel-task.status-needsRecovery {
@@ -212,7 +283,7 @@
   display: flex;
   align-items: center;
   gap: 7px;
-  margin: 7px 0 4px;
+  margin: 4px 0 3px;
   font-size: 10px;
 }
 .move-panel-counts {
@@ -255,7 +326,7 @@
 }
 .move-panel-empty {
   text-align: center;
-  padding: 22px 10px;
+  padding: 14px 8px;
   color: hsl(var(--heroui-default-500));
 }
 .move-panel-error {

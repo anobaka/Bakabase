@@ -225,6 +225,21 @@ public class ResourceController(
         return new SingletonResponse<SavedSearchViewModel>(new SavedSearchViewModel(id, viewModels[0], search.Name, search.DisplayMode));
     }
 
+    [HttpGet("saved-searches")]
+    [SwaggerOperation(OperationId = "GetSavedSearches")]
+    [RemoteAccessible]
+    public async Task<ListResponse<SavedSearchViewModel>> GetSavedSearches()
+    {
+        // Keep IDs and presentation settings paired with the criteria captured before
+        // property resolution, even if a tab is renamed or removed while it is pending.
+        var searches = resourceOptionsManager.Value.SavedSearches
+            .Select(search => (search.Id, search.Search, search.Name, search.DisplayMode)).ToArray();
+        var viewModels = await searches.Select(search => search.Search)
+            .ToViewModels(propertyService, propertyLocalizer, service);
+        return new ListResponse<SavedSearchViewModel>(searches.Select((search, index) =>
+            new SavedSearchViewModel(search.Id, viewModels[index], search.Name, search.DisplayMode)));
+    }
+
     [HttpDelete("saved-search")]
     [SwaggerOperation(OperationId = "DeleteSavedSearch")]
     public async Task<BaseResponse> DeleteSavedSearch(string id)

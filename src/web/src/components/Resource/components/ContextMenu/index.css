@@ -59,17 +59,39 @@
 .resource-context-menu .szh-menu__item > div {
   width: 100%;
   min-width: 0;
+}
+
+.resource-context-menu__row {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
   gap: 10px;
 }
 
-.resource-context-menu .szh-menu__item svg {
-  flex-shrink: 0;
+.resource-context-menu__icon {
+  display: inline-flex;
+  flex: 0 0 18px;
+  width: 18px;
+  height: 20px;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.resource-context-menu__icon > svg,
+.resource-context-menu__icon > .anticon {
+  width: 16px;
+  height: 16px;
   font-size: 16px;
 }
 
-.resource-context-menu .szh-menu__item .anticon {
-  flex-shrink: 0;
-  width: 18px;
+.resource-context-menu__description {
+  display: block;
+  padding-left: 28px;
+  font-size: 12px;
+  white-space: normal;
 }
 
 .resource-context-menu .szh-menu__item:active {

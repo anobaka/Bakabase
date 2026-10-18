@@ -1,12 +1,18 @@
 import type { MoveBatch, MoveRecord } from "./types";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { ClearOutlined } from "@ant-design/icons";
 
 import { movePanelApi } from "./api";
 import { getKnownMoveReasonCode, useMoveReasonText, useMoveText } from "./messages";
 import { moveSourceContextError } from "./sourceContext";
+import {
+  clearedMoveTaskStorageKey,
+  readClearedMoveTaskIds,
+  saveClearedMoveTaskIds,
+} from "./taskHistory";
 
-import { Button, Checkbox, Modal, Progress, Select } from "@/components/bakaui";
+import { Button, Checkbox, Modal, Progress, Select, Tooltip } from "@/components/bakaui";
 import { useBTasksStore } from "@/stores/bTasks";
 import { refreshMovePanel, useResourceMovePanelStore } from "@/stores/resourceMovePanel";
 
@@ -340,14 +346,34 @@ export default function TaskList() {
   const [history, setHistory] = useState<MoveBatch[]>([]);
   const [nextPage, setNextPage] = useState(100);
   const [hasMore, setHasMore] = useState(true);
+  const [clearing, setClearing] = useState(false);
+  const clearingRef = useRef(false);
+  const [clearError, setClearError] = useState<string>();
+  const [clearedTasks, setClearedTasks] = useState(() => ({
+    key: sourceContext ? clearedMoveTaskStorageKey(sourceContext) : undefined,
+    ids: sourceContext ? readClearedMoveTaskIds(sourceContext) : new Set<string>(),
+  }));
+  const sourceKey = sourceContext ? clearedMoveTaskStorageKey(sourceContext) : undefined;
 
   useEffect(() => {
     setHistory([]);
     setNextPage(100);
     setHasMore(true);
+    setClearError(undefined);
+    setClearedTasks({
+      key: sourceContext ? clearedMoveTaskStorageKey(sourceContext) : undefined,
+      ids: sourceContext ? readClearedMoveTaskIds(sourceContext) : new Set<string>(),
+    });
   }, [sourceContext?.nodeId, sourceContext?.libraryEpoch]);
-  const all = [...new Map([...history, ...batches].map((b) => [b.batchId, b])).values()];
-  const shown = all.filter((b) => !filterCurrent || b.sourceTabId === tabId);
+  const loaded = [...new Map([...history, ...batches].map((b) => [b.batchId, b])).values()];
+  const all = loaded.filter(
+    (batch) =>
+      batch.status !== "completed" ||
+      clearedTasks.key !== sourceKey ||
+      !clearedTasks.ids.has(batch.batchId),
+  );
+  const filterThisTab = filterCurrent && !!tabId;
+  const shown = all.filter((b) => !filterThisTab || b.sourceTabId === tabId);
   const otherWaiting = all.filter(
     (b) => b.sourceTabId !== tabId && (b.status === "waiting" || b.status === "needsRecovery"),
   ).length;
@@ -366,6 +392,53 @@ export default function TaskList() {
       setMoreLoading(false);
     }
   };
+  const clearCompleted = async () => {
+    if (clearingRef.current || moreLoading || !sourceContext) return;
+    clearingRef.current = true;
+    setClearing(true);
+    setClearError(undefined);
+    const assertSource = () => {
+      const current = useResourceMovePanelStore.getState();
+      const error = moveSourceContextError(sourceContext, current.sourceContext);
+
+      if (current.sourceContextInvalidated || error)
+        throw new Error(error ?? "sourceContextChanged");
+    };
+
+    try {
+      assertSource();
+      const contextError = moveSourceContextError(sourceContext, await movePanelApi.context());
+
+      if (contextError) throw new Error(contextError);
+      const completed = new Set<string>();
+      let skip = 0;
+      let page: MoveBatch[];
+
+      // Enumerate every history page, regardless of the selected source-tab filter.
+      do {
+        assertSource();
+        page = await movePanelApi.batches(skip);
+        assertSource();
+        page.forEach((batch) => {
+          if (batch.status === "completed") completed.add(batch.batchId);
+        });
+        skip += page.length;
+      } while (page.length >= 100);
+      const finalContextError = moveSourceContextError(sourceContext, await movePanelApi.context());
+
+      if (finalContextError) throw new Error(finalContextError);
+      assertSource();
+      setClearedTasks({
+        key: clearedMoveTaskStorageKey(sourceContext),
+        ids: saveClearedMoveTaskIds(sourceContext, completed),
+      });
+    } catch (error) {
+      setClearError(error instanceof Error ? error.message : String(error));
+    } finally {
+      clearingRef.current = false;
+      setClearing(false);
+    }
+  };
 
   if (contextInvalidated || !sourceContext)
     return (
@@ -380,24 +453,55 @@ export default function TaskList() {
         <h3>
           {text("tasks")} ({all.length})
         </h3>
-        <Select
-          disallowEmptySelection
-          aria-label={text("tasks")}
-          className="min-w-0 max-w-48"
-          dataSource={[
-            { value: "all", label: text("allTasks") },
-            ...(tabId ? [{ value: "current", label: text("currentTasks") }] : []),
-          ]}
-          selectedKeys={[filterCurrent ? "current" : "all"]}
-          size="sm"
-          onSelectionChange={(keys) => {
-            const value = Array.from(keys)[0];
+        <div className="move-panel-task-controls">
+          <Select
+            disallowEmptySelection
+            aria-label={text("taskFilter")}
+            className="min-w-0 max-w-48"
+            dataSource={[
+              { value: "all", label: text("allTasks"), description: text("allTasksHelp") },
+              ...(tabId
+                ? [
+                    {
+                      value: "current",
+                      label: text("currentTasks"),
+                      description: text("currentTasksHelp"),
+                    },
+                  ]
+                : []),
+            ]}
+            listboxProps={{ itemClasses: { description: "whitespace-normal" } }}
+            popoverProps={{ classNames: { content: "w-72 max-w-[calc(100vw-2rem)]" } }}
+            selectedKeys={[filterThisTab ? "current" : "all"]}
+            size="sm"
+            title={text("taskFilter")}
+            onSelectionChange={(keys) => {
+              const value = Array.from(keys)[0];
 
-            if (value === "all" || value === "current") setFilterCurrent(value === "current");
-          }}
-        />
+              if (value === "all" || value === "current") setFilterCurrent(value === "current");
+            }}
+          />
+          <Tooltip content={text("clearCompletedHelp")}>
+            <Button
+              isIconOnly
+              aria-label={text("clearCompleted")}
+              isDisabled={
+                clearing ||
+                moreLoading ||
+                (!all.some((b) => b.status === "completed") && !(hasMore && batches.length >= 100))
+              }
+              isLoading={clearing}
+              size="sm"
+              type="button"
+              variant="light"
+              onPress={() => void clearCompleted()}
+            >
+              <ClearOutlined />
+            </Button>
+          </Tooltip>
+        </div>
       </div>
-      {filterCurrent && otherWaiting > 0 && (
+      {filterThisTab && otherWaiting > 0 && (
         <Button
           className="h-auto whitespace-normal py-2"
           color="warning"
@@ -417,7 +521,7 @@ export default function TaskList() {
         )}
         {hasMore && batches.length >= 100 && (
           <Button
-            isDisabled={moreLoading}
+            isDisabled={moreLoading || clearing}
             isLoading={moreLoading}
             size="sm"
             type="button"
@@ -430,6 +534,11 @@ export default function TaskList() {
         {moreError && (
           <p className="move-panel-error" role="alert">
             {moreError}
+          </p>
+        )}
+        {clearError && (
+          <p className="move-panel-error" role="alert">
+            {getKnownMoveReasonCode(clearError) ? reasonText(clearError) : clearError}
           </p>
         )}
       </div>

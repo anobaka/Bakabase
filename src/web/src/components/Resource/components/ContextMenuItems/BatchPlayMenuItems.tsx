@@ -13,6 +13,7 @@ import {
   writeIncludeAllFiles,
   writeLastPlayer,
 } from "./batchPlayStorage";
+import ContextMenuRow from "./ContextMenuRow";
 
 import { toast } from "@/components/bakaui";
 import { buildLogger } from "@/components/utils";
@@ -107,13 +108,12 @@ const BatchPlayMenuItems = ({ selectedResourceIds }: Props) => {
   return (
     <SubMenu
       label={
-        <div className="flex items-center gap-2">
-          <PlayCircleOutlined aria-hidden className="text-base" />
-          <span className="resource-context-menu__label">
-            {t<string>("resource.contextMenu.batchPlay.shortLabel")}
-          </span>
-          <RightOutlined aria-hidden className="resource-context-menu__chevron" />
-        </div>
+        <ContextMenuRow
+          icon={<PlayCircleOutlined />}
+          trailing={<RightOutlined aria-hidden className="resource-context-menu__chevron" />}
+        >
+          {t<string>("resource.contextMenu.batchPlay.shortLabel")}
+        </ContextMenuRow>
       }
       menuClassName="resource-context-menu resource-context-menu--submenu"
       overflow="auto"
