@@ -471,10 +471,7 @@ export default function TaskList() {
                 : []),
             ]}
             listboxProps={{ itemClasses: { description: "whitespace-normal" } }}
-            popoverProps={{
-              placement: "bottom-end",
-              classNames: { content: "w-72 max-w-[calc(100vw-2rem)]" },
-            }}
+            popoverProps={{ placement: "bottom-end" }}
             selectedKeys={[filterThisTab ? "current" : "all"]}
             size="sm"
             title={text("taskFilter")}
