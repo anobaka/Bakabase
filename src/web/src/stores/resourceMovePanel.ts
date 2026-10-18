@@ -146,12 +146,12 @@ export const useResourceMovePanelStore = create<State>(() => ({
   savingOptions: false,
   dockAvailable: false,
   geometry: pref?.geometry ?? {
-    x: Math.max(16, (typeof window !== "undefined" ? window.innerWidth : 900) - 460),
+    x: Math.max(16, (typeof window !== "undefined" ? window.innerWidth : 900) - 420),
     y: 90,
-    width: 420,
-    height: 580,
+    width: 380,
+    height: 520,
   },
-  dockWidth: pref?.dockWidth ?? 400,
+  dockWidth: pref?.dockWidth ?? 360,
 }));
 const state = useResourceMovePanelStore.getState;
 const set = useResourceMovePanelStore.setState;

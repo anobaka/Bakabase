@@ -278,7 +278,7 @@ public static class ResourceSearchExtensions
     }
 
     public static ResourceSearchFilterViewModel ToViewModel(this ResourceSearchFilterDbModel model, Property? property,
-        IPropertyLocalizer propertyLocalizer)
+        IPropertyLocalizer propertyLocalizer, ResourceSearchOwner? verifiedLocalOwner = null)
     {
         var filter = new ResourceSearchFilterViewModel
         {
@@ -290,7 +290,7 @@ public static class ResourceSearchExtensions
             Disabled = model.Disabled
         };
 
-        if (property != null && model.Owner == null)
+        if (property != null && IsLocalSearchOwner(model.Owner, verifiedLocalOwner))
         {
             var psh = PropertySystem.Property.TryGetSearchHandler(property.Type);
             if (psh != null)
@@ -324,18 +324,19 @@ public static class ResourceSearchExtensions
     }
 
     private static ResourceSearchFilterGroupViewModel ToViewModel(this ResourceSearchFilterGroupDbModel model,
-        Dictionary<PropertyPool, Dictionary<int, Property>> propertyMap, IPropertyLocalizer propertyLocalizer)
+        Dictionary<PropertyPool, Dictionary<int, Property>> propertyMap, IPropertyLocalizer propertyLocalizer,
+        ResourceSearchOwner? verifiedLocalOwner = null)
     {
         return new ResourceSearchFilterGroupViewModel
         {
-            Groups = model.Groups?.Select(g => g.ToViewModel(propertyMap, propertyLocalizer)).ToList(),
+            Groups = model.Groups?.Select(g => g.ToViewModel(propertyMap, propertyLocalizer, verifiedLocalOwner)).ToList(),
             Filters = model.Filters?.Select(f =>
             {
                 if (f is {PropertyPool: not null, PropertyId: not null})
                 {
                     var property = propertyMap.GetValueOrDefault(f.PropertyPool.Value)
                         ?.GetValueOrDefault(f.PropertyId.Value);
-                    return f.ToViewModel(property, propertyLocalizer);
+                    return f.ToViewModel(property, propertyLocalizer, verifiedLocalOwner);
                 }
 
                 return f.ToViewModel(null, propertyLocalizer);
@@ -346,14 +347,15 @@ public static class ResourceSearchExtensions
     }
 
     public static async Task<List<ResourceSearchViewModel>> ToViewModels(this IEnumerable<ResourceSearchDbModel> models,
-        IPropertyService propertyService, IPropertyLocalizer propertyLocalizer, IResourceService? resourceService = null)
+        IPropertyService propertyService, IPropertyLocalizer propertyLocalizer, IResourceService? resourceService = null,
+        ResourceSearchOwner? verifiedLocalOwner = null)
     {
         var modelsArray = models.ToArray();
-        // Foreign IDs are opaque until their owner resolves them. In particular, a
-        // remote parent-resource ID must not be read as a coincident local resource.
-        var validFilters = modelsArray.Where(m => m.Owner == null)
+        // Explicit ownership is local only after the caller verifies both device and
+        // library identity. Foreign parent-resource IDs must never resolve locally.
+        var validFilters = modelsArray.Where(m => IsLocalSearchOwner(m.Owner, verifiedLocalOwner))
             .SelectMany(m => m.Group?.ExtractFilters() ?? [])
-            .Where(f => f.Owner == null && f.PropertyPool.HasValue && f.PropertyId.HasValue).ToList();
+            .Where(f => IsLocalSearchOwner(f.Owner, verifiedLocalOwner) && f.PropertyPool.HasValue && f.PropertyId.HasValue).ToList();
         var propertyPools =
             validFilters.Aggregate<ResourceSearchFilterDbModel, PropertyPool>(default,
                 (current, f) => current | f.PropertyPool!.Value);
@@ -393,7 +395,8 @@ public static class ResourceSearchExtensions
                 Keyword = model.Keyword,
                 PageSize = model.PageSize,
                 Page = model.Page,
-                Group = model.Group?.ToViewModel(model.Owner == null ? propertyMap : new Dictionary<PropertyPool, Dictionary<int, Property>>(), propertyLocalizer),
+                Group = model.Group?.ToViewModel(IsLocalSearchOwner(model.Owner, verifiedLocalOwner)
+                    ? propertyMap : new Dictionary<PropertyPool, Dictionary<int, Property>>(), propertyLocalizer, verifiedLocalOwner),
                 Orders = model.Orders,
                 Tags = model.Tags
             };
@@ -402,6 +405,9 @@ public static class ResourceSearchExtensions
 
         return viewModels;
     }
+
+    private static bool IsLocalSearchOwner(ResourceSearchOwner? owner, ResourceSearchOwner? verifiedLocalOwner) =>
+        owner == null || owner == verifiedLocalOwner;
 
     public static ResourceSearchFilterGroupViewModel ToViewModel(this ResourceSearchFilterGroup domainModel,
         IPropertyLocalizer propertyLocalizer)

@@ -22,7 +22,10 @@ import { isReferenceValueType } from "@/components/Property/PropertySystem";
 import { toSearchInputModel } from "@/components/ResourceFilter/utils/toInputModel";
 import { resourceChangedChannel } from "@/services/ResourceChangedChannel";
 import { canReadSourceMetadata, sourceSearchRevision } from "@/features/management/metadata";
-import { mediaLibraryChoiceValue } from "@/features/management/mediaLibraryFilter";
+import {
+  hasQualifiedMediaLibraryChoices,
+  mediaLibraryChoiceValue,
+} from "@/features/management/mediaLibraryFilter";
 
 type CountsResponse = { counts: Record<string, number>; isReady: boolean };
 const pending = new Map<string, Promise<CountsResponse>>();
@@ -47,6 +50,19 @@ export function referenceValueCountsCriteria(search?: SearchForm) {
   return { group, keyword, tags };
 }
 
+function requiresSourceCompilation(search?: SearchForm) {
+  const hasOwner = (group?: SearchForm["group"]): boolean =>
+    !!group &&
+    (!!group.filters?.some((filter) => filter.owner != null) || !!group.groups?.some(hasOwner));
+
+  return (
+    !!search?.owner ||
+    search?.deviceIds != null ||
+    hasOwner(search?.group) ||
+    hasQualifiedMediaLibraryChoices(search?.group)
+  );
+}
+
 function loadCounts(key: string, load: () => Promise<CountsResponse>) {
   let request = pending.get(key);
 
@@ -68,6 +84,7 @@ async function requestCounts(property: ReferenceProperty, criteria: object, api:
     type: ContentType.Json,
     body: criteria,
     format: "json",
+    showErrorToast: false,
   });
 
   if (response.code || !response.data)
@@ -81,18 +98,22 @@ export function useReferenceValueResourceCounts(property?: ReferenceProperty, se
   const api = useResourceApi();
   const owner = useResourceOwner();
   const ownerKey = useResourceOwnerKey();
-  const sources = useResourceSources()?.sources;
+  const sourceContext = useResourceSources();
+  const sources = sourceContext?.sources;
+  const requiresCompilation = requiresSourceCompilation(search);
   const unifiedMediaLibraries =
     !!property?.unifiedMediaLibraries &&
     property.pool === PropertyPool.Internal &&
     property.id === InternalProperty.MediaLibraryV2Multi;
+  const awaitingSources =
+    !owner && (requiresCompilation || unifiedMediaLibraries) && !!sourceContext?.loading;
   // The aggregate catalog reports unavailable sources separately. Count only
   // readable catalogs, including complete snapshots of offline devices.
   const countedSources = owner
     ? [owner]
     : unifiedMediaLibraries
       ? (sources ?? []).filter(canReadSourceMetadata)
-      : sources?.some((source) => !source.isLocal)
+      : sources?.length
         ? sources
         : undefined;
   const sourcesKey = countedSources
@@ -111,7 +132,7 @@ export function useReferenceValueResourceCounts(property?: ReferenceProperty, se
     ? `${sourcesKey}:${property.pool}:${property.id}:${property.type}:${unifiedMediaLibraries}`
     : "";
   const key = enabled
-    ? `${propertyKey}:${criteria}:${JSON.stringify([search?.owner?.serverId, search?.owner?.libraryEpoch, search?.deviceIds])}`
+    ? `${propertyKey}:${criteria}:${JSON.stringify([search?.owner?.serverId, search?.owner?.libraryEpoch, search?.deviceIds])}:${awaitingSources}`
     : "";
   const [refreshRequest, setRefreshRequest] = useState({
     revision: 0,
@@ -149,13 +170,20 @@ export function useReferenceValueResourceCounts(property?: ReferenceProperty, se
   useEffect(() => {
     // Never retain another property's counts, including across disabled periods.
     setResult((previous) => (previous?.propertyKey === propertyKey ? previous : undefined));
-    if (!enabled || !property) return;
+    if (!enabled || !property || awaitingSources) return;
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout>;
     const run = async () => {
       try {
         const response = await loadCounts(key, async () => {
-          if (!countedSources) return requestCounts(property, JSON.parse(criteria), api);
+          if (!countedSources) {
+            if (requiresCompilation)
+              throw new Error("A verified source is required for device-scoped resource counts.");
+
+            return requestCounts(property, JSON.parse(criteria), api);
+          }
+          if (!countedSources.length && requiresCompilation)
+            throw new Error("A verified source is required for device-scoped resource counts.");
           const responses: CountsResponse[] = [];
 
           for (let index = 0; index < countedSources.length; index += 4) {

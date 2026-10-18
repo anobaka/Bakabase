@@ -56,10 +56,13 @@ const messages = {
     "保存目标文件夹，然后将选中的资源拖到这里。",
   ],
   selected: ["selected", "项已选择"],
+  moveSource: ["Resources to move", "待移动资源"],
   moveSelected: ["Move selected", "移动所选"],
   openFolder: ["Open folder on server", "在服务器打开文件夹"],
   copyPath: ["Copy full path", "复制完整路径"],
   noLibrary: ["No associated media library", "无关联媒体库"],
+  dynamicLibrary: ["Media library determined by path", "媒体库由路径动态决定"],
+  unknownLibrary: ["Media library unavailable", "媒体库不可用"],
   related: [
     "Related media libraries; actual effects are shown in the preview.",
     "相关媒体库；实际影响以本次预览为准。",
@@ -112,8 +115,22 @@ const messages = {
   retrySubmission: ["Check / retry submission", "确认结果 / 安全重试"],
   submitting: ["Submitting…", "正在提交…"],
   noTasks: ["No move tasks yet", "暂无移动任务"],
-  allTasks: ["All tabs", "所有 Tab"],
-  currentTasks: ["This tab", "当前 Tab"],
+  taskFilter: ["Filter move tasks by source tab", "按来源 Tab 筛选移动任务"],
+  allTasks: ["All tabs' tasks", "所有 Tab 的任务"],
+  currentTasks: ["This tab's tasks", "当前 Tab 的任务"],
+  allTasksHelp: [
+    "Show move tasks started from every resource tab.",
+    "显示从所有资源 Tab 发起的移动任务。",
+  ],
+  currentTasksHelp: [
+    "Show only move tasks started from the current resource tab.",
+    "仅显示从当前资源 Tab 发起的移动任务。",
+  ],
+  clearCompleted: ["Clear completed tasks", "清理已完成任务"],
+  clearCompletedHelp: [
+    "Clear completed tasks from all tabs in this browser's panel. Move history is kept.",
+    "清理此浏览器面板中所有 Tab 的已完成任务，保留移动记录。",
+  ],
   autoOverwrite: ["Automatically overwrite conflicts for this panel", "本面板自动覆盖同名文件"],
   autoHelp: [
     "Applies to waiting and future panel tasks that inherit this policy. Each move still needs confirmation. Files of different types and resource identity conflicts are excluded.",

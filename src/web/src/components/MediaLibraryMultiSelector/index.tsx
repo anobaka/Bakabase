@@ -11,11 +11,8 @@ import {
   UndoOutlined,
 } from "@ant-design/icons";
 
-import { buildLogger } from "@/components/utils";
 import { useResourceApi } from "@/features/management/resourceContext";
 import { Button, Modal, Spinner, Tooltip } from "@/components/bakaui";
-
-const log = buildLogger("MediaLibraryMultiSelector");
 
 type Props = {
   resourceIds: number[];
@@ -60,7 +57,7 @@ const MediaLibraryMultiSelector = (props: Props) => {
       setLibraries(
         mls.map((ml) => ({
           id: ml.id!,
-          name: ml.name || `Library ${ml.id}`,
+          name: ml.name ?? "",
         })),
       );
 
@@ -229,18 +226,18 @@ const MediaLibraryMultiSelector = (props: Props) => {
       case AssociationState.Full:
         icon = <CheckCircleFilled className="text-success" />;
         color = "success";
-        tooltipText = t<string>("All selected resources are in this library");
+        tooltipText = t<string>("resource.mediaLibrarySelector.allAssociated.tooltip");
         break;
       case AssociationState.Partial:
         icon = <MinusCircleFilled className="text-warning" />;
         color = "warning";
-        tooltipText = t<string>("Some selected resources are in this library");
+        tooltipText = t<string>("resource.mediaLibrarySelector.partiallyAssociated.tooltip");
         break;
       case AssociationState.None:
       default:
         icon = <CloseCircleOutlined className="text-default-400" />;
         color = "default";
-        tooltipText = t<string>("No selected resources are in this library");
+        tooltipText = t<string>("resource.mediaLibrarySelector.notAssociated.tooltip");
         break;
     }
 
@@ -254,7 +251,8 @@ const MediaLibraryMultiSelector = (props: Props) => {
           variant={state === AssociationState.None ? "flat" : "solid"}
           onClick={() => handleLibraryClick(lib.id)}
         >
-          {lib.name}
+          {lib.name ||
+            t<string>("resource.mediaLibrarySelector.unnamedLibrary.label", { id: lib.id })}
         </Button>
       </Tooltip>
     );
@@ -264,7 +262,7 @@ const MediaLibraryMultiSelector = (props: Props) => {
     <Modal
       footer={false}
       size="lg"
-      title={t<string>("Set media libraries for {{count}} resources", {
+      title={t<string>("resource.contextMenu.setMediaLibrariesForCount", {
         count: resourceIds.length,
       })}
       visible={visible}
@@ -278,16 +276,14 @@ const MediaLibraryMultiSelector = (props: Props) => {
       ) : (
         <div>
           <div className="mb-4 text-sm text-default-500">
-            {t<string>(
-              "Click to toggle. Green = all associated, Yellow = partially associated, Gray = not associated",
-            )}
+            {t<string>("resource.mediaLibrarySelector.toggle.description")}
           </div>
 
           <div className="flex flex-wrap">{libraries.map((lib) => renderLibraryButton(lib))}</div>
 
           {libraries.length === 0 && (
             <div className="py-4 text-center text-default-400">
-              {t<string>("No media libraries found")}
+              {t<string>("resource.mediaLibrarySelector.empty.message")}
             </div>
           )}
 
@@ -299,7 +295,7 @@ const MediaLibraryMultiSelector = (props: Props) => {
               variant="flat"
               onClick={handleReset}
             >
-              {t<string>("Reset")}
+              {t<string>("common.action.reset")}
             </Button>
             <Button
               color="primary"
@@ -307,7 +303,7 @@ const MediaLibraryMultiSelector = (props: Props) => {
               isLoading={submitting}
               onClick={handleSubmit}
             >
-              {t<string>("Submit")}
+              {t<string>("common.action.submit")}
             </Button>
           </div>
         </div>

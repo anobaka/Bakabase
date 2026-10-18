@@ -1,4 +1,7 @@
-import type { BakabaseAbstractionsModelsDomainConstantsPathMarkAdditionalItem } from "@/sdk/Api";
+import type {
+  BakabaseAbstractionsModelsDomainConstantsPathMarkAdditionalItem,
+  BakabaseAbstractionsModelsDomainMediaLibraryV2,
+} from "@/sdk/Api";
 import type { DragEvent } from "react";
 import type { MoveDestination } from "./types";
 
@@ -27,7 +30,13 @@ import { clampGeometry, groupDestinations, parseMovePayload, reorderDestinations
 
 import { Button, Checkbox, Chip } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
-import { BTaskType, IwFsType, PathMarkAdditionalItem, PathMarkType } from "@/sdk/constants";
+import {
+  BTaskType,
+  IwFsType,
+  PathMarkAdditionalItem,
+  PathMarkType,
+  PropertyValueType,
+} from "@/sdk/constants";
 import { useBTasksStore } from "@/stores/bTasks";
 import { usePathMarksStore } from "@/stores/pathMarks";
 import {
@@ -97,6 +106,7 @@ function usePanelSync() {
 }
 function DestinationRow({
   destination,
+  mediaLibraries,
   relativeTo,
   available,
   onEdit,
@@ -106,6 +116,7 @@ function DestinationRow({
   canToggleGlobal,
 }: {
   destination: MoveDestination;
+  mediaLibraries: BakabaseAbstractionsModelsDomainMediaLibraryV2[];
   relativeTo?: string;
   available?: boolean;
   onEdit: () => void;
@@ -133,7 +144,26 @@ function DestinationRow({
       (normalizedMovePath(destination.path) === normalizedMovePath(m.path) ||
         normalizedMovePath(destination.path).startsWith(`${normalizedMovePath(m.path)}/`)),
   );
-  const libraries = [...new Set(related.map((m) => m.mediaLibrary?.name || `#${m.id}`))];
+  const libraries = [
+    ...new Set(
+      related.map((mark) => {
+        try {
+          const config = JSON.parse(mark.configJson);
+
+          if (config.valueType === PropertyValueType.Dynamic) return text("dynamicLibrary");
+
+          // Other views and SignalR can replace enriched marks with plain snapshots.
+          return (
+            mediaLibraries.find((library) => library.id === config.mediaLibraryId)?.name ||
+            mark.mediaLibrary?.name ||
+            text("unknownLibrary")
+          );
+        } catch {
+          return mark.mediaLibrary?.name || text("unknownLibrary");
+        }
+      }),
+    ),
+  ];
   const canDrop = (e: DragEvent) =>
     e.dataTransfer.types.includes(RESOURCE_MOVE_MIME) ||
     e.dataTransfer.types.includes(DESTINATION_MIME);
@@ -262,29 +292,31 @@ function DestinationRow({
       <code className="move-panel-path" title={destination.path}>
         {relativeTo ? destination.path.slice(relativeTo.length + 1) : destination.path}
       </code>
-      <div className="move-panel-badges" title={text("related")}>
-        {libraries.length ? (
-          libraries.map((name) => (
-            <Chip key={name} color="primary" radius="sm" size="sm" variant="flat">
-              {name}
-            </Chip>
-          ))
-        ) : (
-          <span className="move-panel-muted">{text("noLibrary")}</span>
-        )}
+      <div className="move-panel-destination-footer">
+        <div className="move-panel-badges" title={text("related")}>
+          {libraries.length ? (
+            libraries.map((name) => (
+              <Chip key={name} color="primary" radius="sm" size="sm" variant="flat">
+                {name}
+              </Chip>
+            ))
+          ) : (
+            <span className="move-panel-muted">{text("noLibrary")}</span>
+          )}
+        </div>
+        <Button
+          className="move-panel-move-selected"
+          isDisabled={!selection.length || !!draft || available === false || !contextReady}
+          size="sm"
+          type="button"
+          variant="flat"
+          onPress={() => void prepareMove(destination)}
+        >
+          {text("moveSelected")} ({selection.length})
+        </Button>
       </div>
       {available === false && <p className="move-panel-error">{text("unavailable")}</p>}
       {error && <p className="move-panel-error">{error}</p>}
-      <Button
-        className="move-panel-move-selected"
-        isDisabled={!selection.length || !!draft || available === false || !contextReady}
-        size="sm"
-        type="button"
-        variant="flat"
-        onPress={() => void prepareMove(destination)}
-      >
-        {text("moveSelected")} ({selection.length})
-      </Button>
     </article>
   );
 }
@@ -298,10 +330,29 @@ function PanelContent() {
   const [deleted, setDeleted] = useState<string>();
   const [grouped, setGrouped] = useState(false);
   const [availability, setAvailability] = useState<Record<string, boolean>>({});
+  const [mediaLibraries, setMediaLibraries] = useState<
+    BakabaseAbstractionsModelsDomainMediaLibraryV2[]
+  >([]);
   const [operationError, setOperationError] = useState<string>();
   const [pathsRatio, setPathsRatio] = useState(53);
   const root = useRef<HTMLDivElement>(null);
   const pathsKey = destinations.map((d) => d.path).join("\n");
+  const payload = currentMovePayload();
+
+  useEffect(() => {
+    let alive = true;
+
+    void BApi.mediaLibraryV2
+      .getAllMediaLibraryV2(undefined, { showErrorToast: false })
+      .then((response) => {
+        if (alive && !response.code) setMediaLibraries(response.data ?? []);
+      })
+      .catch(() => {});
+
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   useEffect(() => {
     let alive = true;
@@ -477,6 +528,22 @@ function PanelContent() {
           </Button>
         </div>
       </header>
+      {payload.resources.length > 0 && (
+        <div aria-label={text("moveSource")} className="move-panel-source">
+          <span className="move-panel-muted">
+            {text("moveSource")} ({payload.resources.length})
+          </span>
+          <div className="move-panel-source-resources">
+            {payload.resources.map((resource) => (
+              <span key={resource.id} title={resource.path || resource.displayName}>
+                {resource.displayName ||
+                  resource.path?.split(/[\\/]/).filter(Boolean).at(-1) ||
+                  `${text("resource")} #${resource.id}`}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
       <div className="move-panel-toolbar">
         <Button size="sm" type="button" variant="flat" onPress={() => setEditor("new")}>
           <PlusOutlined /> {text("add")}
@@ -564,7 +631,7 @@ function PanelContent() {
           <div className="move-panel-section-heading">
             <h3>{text("paths")}</h3>
             <span>
-              {currentMovePayload().resources.length} {text("selected")}
+              {payload.resources.length} {text("selected")}
             </span>
           </div>
           <div className="move-panel-destinations">
@@ -586,6 +653,7 @@ function PanelContent() {
                             s.initialized && !s.savingOptions && (d.scope === "tab" || !!tabId)
                           }
                           destination={d}
+                          mediaLibraries={mediaLibraries}
                           relativeTo={group.prefix}
                           onDelete={() => remove(d.id)}
                           onEdit={() => setEditor(d)}

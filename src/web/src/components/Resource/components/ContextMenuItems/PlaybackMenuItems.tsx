@@ -7,6 +7,8 @@ import { useTranslation } from "react-i18next";
 
 import PlayControl from "../PlayControl";
 
+import ContextMenuRow from "./ContextMenuRow";
+
 const VideoMenuItem = ({
   onPlayVideos,
   playbackReady,
@@ -19,30 +21,21 @@ const VideoMenuItem = ({
     <>
       {onPlayVideos && (
         <MenuItem disabled={playbackReady === false} onClick={onPlayVideos}>
-          <div className="flex items-center gap-2">
-            <VideoCameraOutlined aria-hidden className="text-base" />
-            <span className="resource-context-menu__label">
-              {t("resource.playback.playVideos")}
-            </span>
-          </div>
+          <ContextMenuRow icon={<VideoCameraOutlined />}>
+            {t("resource.playback.playVideos")}
+          </ContextMenuRow>
         </MenuItem>
       )}
       {onDesktopPlaybackGuide && (
         <MenuItem onClick={onDesktopPlaybackGuide}>
-          <div className="flex items-center gap-2">
-            <DesktopOutlined aria-hidden className="text-base" />
-            <span className="resource-context-menu__label">
-              {t("resource.desktopPlayback.action")}
-            </span>
-          </div>
+          <ContextMenuRow icon={<DesktopOutlined />}>
+            {t("resource.desktopPlayback.action")}
+          </ContextMenuRow>
         </MenuItem>
       )}
       {originalSourceActions?.map((action) => (
         <MenuItem key={action.key} onClick={action.onOpen}>
-          <div className="flex items-center gap-2">
-            <ExportOutlined aria-hidden className="text-base" />
-            <span className="resource-context-menu__label">{action.label}</span>
-          </div>
+          <ContextMenuRow icon={<ExportOutlined />}>{action.label}</ContextMenuRow>
         </MenuItem>
       ))}
     </>

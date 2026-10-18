@@ -9079,6 +9079,13 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModels
   data?: BakabaseServiceModelsViewResourceSearchFilterViewModel[];
 }
 
+export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewSavedSearchViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewSavedSearchViewModel[];
+}
+
 export interface BootstrapModelsResponseModelsListResponse1BootstrapComponentsLoggingLogServiceModelsEntitiesLog {
   /** @format int32 */
   code: number;
@@ -12794,6 +12801,35 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name GetSavedSearches
+     * @request GET:/resource/saved-searches
+     */
+    getSavedSearches: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewSavedSearchViewModel,
+        any
+      >({
+        path: `/resource/saved-searches`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getSavedSearches
+     * @name getSavedSearchesUrl
+     */
+    getSavedSearchesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource/saved-searches`;
 
       return baseUrl + path;
     },

@@ -13,6 +13,7 @@ import { serializeStandardValue } from "@/components/StandardValue/helpers";
 import { mediaLibraryChoiceValue } from "@/features/management/mediaLibraryFilter";
 import { ResourceOwnerProvider } from "@/features/management/resourceContext";
 import { ResourceSourcesProvider } from "@/features/management/resourceSourcesContext";
+import { normalizeQueryOwner } from "@/features/management/resourceQuery";
 import {
   InternalProperty,
   PropertyPool,
@@ -53,10 +54,11 @@ const property: ReferenceProperty = {
   unifiedMediaLibraries: true,
 };
 let sources: ManagementSource[];
+let sourcesLoading: boolean;
 
 function Wrapper({ children }: PropsWithChildren) {
   return (
-    <ResourceSourcesProvider value={{ sources, loading: false, refresh: () => {} }}>
+    <ResourceSourcesProvider value={{ sources, loading: sourcesLoading, refresh: () => {} }}>
       {children}
     </ResourceSourcesProvider>
   );
@@ -72,10 +74,155 @@ beforeEach(() => {
   vi.useFakeTimers();
   request.mockReset();
   sources = [local, peer];
+  sourcesLoading = false;
 });
 afterEach(() => vi.useRealTimers());
 
 describe("unified media library resource counts", () => {
+  it("compiles restored local-owner criteria even when this is the only source", async () => {
+    sources = [local];
+    const search = normalizeQueryOwner({
+      owner: { serverId: local.serverId, libraryEpoch: local.libraryEpoch },
+      page: 1,
+      pageSize: 50,
+      group: {
+        combinator: GroupCombinator.And,
+        disabled: false,
+        filters: [
+          {
+            propertyId: property.id,
+            propertyPool: property.pool,
+            operation: SearchOperation.Contains,
+            dbValue: "1",
+            disabled: false,
+          },
+        ],
+      },
+    });
+
+    request.mockResolvedValue({ data: { isReady: true, counts: { "1": 4 } } });
+    const { result } = renderHook(
+      () => useReferenceValueResourceCounts({ ...property, unifiedMediaLibraries: false }, search),
+      { wrapper: Wrapper },
+    );
+
+    await runRequests(1000);
+    expect(request).toHaveBeenCalledTimes(1);
+    expect(request.mock.calls[0][0]).toEqual(local);
+    const body = request.mock.calls[0][1].body;
+
+    expect(body.group.filters).toEqual([
+      {
+        propertyId: property.id,
+        propertyPool: property.pool,
+        operation: SearchOperation.Contains,
+        dbValue: "1",
+        disabled: false,
+      },
+    ]);
+    expect(JSON.stringify(body)).not.toContain('"owner"');
+    expect(result.current).toMatchObject({ counts: { "1": 4 }, loading: false, error: false });
+  });
+
+  it.each([
+    { ...local, serverId: "different-device" },
+    { ...local, libraryEpoch: "previous-library" },
+  ])(
+    "does not execute criteria for another source identity against the local-only API ($serverId/$libraryEpoch)",
+    async (owner) => {
+      sources = [local];
+      const search = { owner, page: 1, pageSize: 50 };
+      const { result } = renderHook(
+        () =>
+          useReferenceValueResourceCounts({ ...property, unifiedMediaLibraries: false }, search),
+        { wrapper: Wrapper },
+      );
+
+      await runRequests(1000);
+      expect(request).not.toHaveBeenCalled();
+      expect(result.current).toMatchObject({ counts: {}, loading: false, error: false });
+    },
+  );
+
+  it.each([
+    { owner: { serverId: local.serverId, libraryEpoch: local.libraryEpoch } },
+    { deviceIds: [] },
+    {
+      group: {
+        combinator: GroupCombinator.And,
+        disabled: false,
+        groups: [
+          {
+            combinator: GroupCombinator.And,
+            disabled: false,
+            filters: [
+              {
+                owner: { serverId: local.serverId, libraryEpoch: local.libraryEpoch },
+                propertyId: 1,
+                propertyPool: PropertyPool.Custom,
+                disabled: false,
+              },
+            ],
+          },
+        ],
+      },
+    },
+    {
+      group: {
+        combinator: GroupCombinator.And,
+        disabled: false,
+        filters: [
+          {
+            propertyId: property.id,
+            propertyPool: property.pool,
+            operation: SearchOperation.Contains,
+            dbValue: "bakabase:library:malformed",
+            disabled: false,
+          },
+        ],
+      },
+    },
+  ])("does not send scoped criteria without a verified source (%j)", async (criteria) => {
+    const { result } = renderHook(() =>
+      useReferenceValueResourceCounts(
+        { ...property, unifiedMediaLibraries: false },
+        { ...criteria, page: 1, pageSize: 50 },
+      ),
+    );
+
+    await runRequests(1000);
+    expect(request).not.toHaveBeenCalled();
+    expect(result.current.counts).toBeUndefined();
+    expect(result.current).toMatchObject({ loading: false, error: true });
+  });
+
+  it("waits for source identity without showing successful zero counts and recovers when it arrives", async () => {
+    sources = [];
+    sourcesLoading = true;
+    const search = {
+      owner: { serverId: local.serverId, libraryEpoch: local.libraryEpoch },
+      page: 1,
+      pageSize: 50,
+    };
+    const { result, rerender } = renderHook(
+      () => useReferenceValueResourceCounts({ ...property, unifiedMediaLibraries: false }, search),
+      { wrapper: Wrapper },
+    );
+
+    await runRequests(2000);
+    expect(request).not.toHaveBeenCalled();
+    expect(result.current).toMatchObject({ loading: true, error: false });
+    expect(result.current.counts).toBeUndefined();
+    sources = [local];
+    sourcesLoading = false;
+    request.mockResolvedValue({ data: { isReady: true, counts: { "1": 2 } } });
+    rerender();
+    await runRequests(1000);
+    expect(result.current).toMatchObject({ counts: { "1": 2 }, loading: false, error: false });
+    expect(request).toHaveBeenCalledTimes(1);
+    expect(request.mock.calls[0][0]).toEqual(local);
+  });
+
   it("keeps equal library IDs separate by device and library epoch", async () => {
     const restored = { ...peer, libraryEpoch: "restored-epoch" };
 
@@ -97,6 +244,26 @@ describe("unified media library resource counts", () => {
       [mediaLibraryChoiceValue(restored, 1)]: 3,
     });
     expect(result.current).toMatchObject({ loading: false, error: false });
+  });
+
+  it("waits for source discovery before settling global aggregate counts", async () => {
+    sources = [];
+    sourcesLoading = true;
+    const { result, rerender } = renderHook(() => useReferenceValueResourceCounts(property), {
+      wrapper: Wrapper,
+    });
+
+    await runRequests();
+    expect(result.current.counts).toBeUndefined();
+    expect(result.current).toMatchObject({ loading: true, error: false });
+    expect(request).not.toHaveBeenCalled();
+    sources = [local];
+    sourcesLoading = false;
+    request.mockResolvedValue({ data: { isReady: true, counts: { "1": 2 } } });
+    rerender();
+    await runRequests();
+    expect(result.current.counts).toEqual({ [mediaLibraryChoiceValue(local, 1)]: 2 });
+    expect(result.current.loading).toBe(false);
   });
 
   it("compiles selected library choices to owner-local IDs before requesting counts", async () => {

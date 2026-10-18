@@ -1,7 +1,7 @@
 import type { MoveBatch } from "../types";
 
 import React from "react";
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const api = vi.hoisted(() => ({
@@ -21,6 +21,7 @@ vi.mock("../api", () => ({ movePanelApi: api, MoveRequestRejected: class extends
 vi.mock("@/config/env", () => ({ default: { apiEndpoint: "/api" } }));
 vi.mock("@/sdk/BApi", () => ({
   default: {
+    mediaLibraryV2: { getAllMediaLibraryV2: vi.fn().mockResolvedValue({ data: [] }) },
     pathMark: {
       getAllPathMarks: vi.fn().mockResolvedValue({ data: [] }),
       getAllPathMarkPaths: vi.fn().mockResolvedValue({ data: [] }),
@@ -31,7 +32,7 @@ vi.mock("@/sdk/BApi", () => ({
 }));
 vi.mock("@/components/FileExplorer", () => ({ FileExplorer: () => <div>Folder picker</div> }));
 vi.mock("@/components/bakaui", async () => {
-  const { Button, Checkbox, Chip, Input, Progress, Select, SelectItem } = await import(
+  const { Button, Checkbox, Chip, Input, Progress, Select, SelectItem, Tooltip } = await import(
     "@heroui/react"
   );
 
@@ -41,6 +42,7 @@ vi.mock("@/components/bakaui", async () => {
     Chip,
     Input,
     Progress,
+    Tooltip,
     Select: ({ dataSource, ...props }: any) => (
       <Select {...props}>
         {(dataSource ?? []).map((item: any) => (
@@ -64,6 +66,7 @@ import MoveConfirmation from "../MoveConfirmation";
 import { MoveTaskCard } from "../TaskList";
 
 import BApi from "@/sdk/BApi";
+import { usePathMarksStore } from "@/stores/pathMarks";
 import { prepareMove, useResourceMovePanelStore } from "@/stores/resourceMovePanel";
 
 const initial = useResourceMovePanelStore.getState();
@@ -87,6 +90,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   Object.values(api).forEach((mock) => mock.mockReset());
   api.context.mockResolvedValue(sourceContext);
+  usePathMarksStore.getState().setMarks([]);
+  vi.mocked(BApi.mediaLibraryV2.getAllMediaLibraryV2).mockResolvedValue({ data: [] } as any);
   vi.mocked(BApi.pathMark.getAllPathMarks).mockResolvedValue({ data: [] } as any);
   vi.mocked(BApi.pathMark.getAllPathMarkPaths).mockResolvedValue({ data: [] } as any);
   vi.mocked(BApi.file.getIwFsEntry).mockResolvedValue({
@@ -117,6 +122,67 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 describe("real move panel interactions", () => {
+  it("keeps library names when a plain path-mark snapshot replaces enriched data", async () => {
+    const mark = {
+      id: 4,
+      path: "/target",
+      type: 3,
+      configJson: JSON.stringify({ valueType: 1, mediaLibraryId: 8 }),
+      mediaLibrary: { id: 8, name: "Books" },
+    };
+
+    vi.mocked(BApi.mediaLibraryV2.getAllMediaLibraryV2).mockResolvedValue({
+      data: [
+        { id: 8, name: "Books" },
+        { id: 9, name: "Films" },
+      ],
+    } as any);
+    vi.mocked(BApi.pathMark.getAllPathMarks).mockResolvedValue({ data: [mark] } as any);
+    render(<ResourceMovePanel />);
+    expect(await screen.findByText("Books")).toBeVisible();
+
+    act(() => usePathMarksStore.getState().setMarks([{ ...mark, mediaLibrary: undefined }] as any));
+    expect(screen.getByText("Books")).toBeVisible();
+    expect(screen.queryByText("#4")).not.toBeInTheDocument();
+
+    act(() =>
+      usePathMarksStore.getState().updateMark({
+        ...mark,
+        mediaLibrary: undefined,
+        configJson: JSON.stringify({ valueType: 1, mediaLibraryId: 9 }),
+      } as any),
+    );
+    expect(screen.getByText("Films")).toBeVisible();
+    expect(screen.queryByText("Books")).not.toBeInTheDocument();
+
+    act(() =>
+      usePathMarksStore.getState().updateMark({
+        ...mark,
+        configJson: JSON.stringify({ valueType: 2 }),
+      } as any),
+    );
+    expect(screen.getByText("Media library determined by path")).toBeVisible();
+  });
+  it("shows the right-click move target even when it differs from the current list selection", async () => {
+    useResourceMovePanelStore.setState({
+      explicitPayload: {
+        resources: [{ id: 2, path: "/source/right-clicked", displayName: "Right-clicked book" }],
+        sourceContext,
+        sourceTabId: "a",
+      },
+    });
+    render(<ResourceMovePanel />);
+    const source = screen.getByLabelText("Resources to move");
+
+    expect(within(source).getByText("Right-clicked book")).toBeVisible();
+    expect(within(source).queryByText("a")).not.toBeInTheDocument();
+    fireEvent.click(await screen.findByRole("button", { name: "Move selected (1)" }));
+    await waitFor(() =>
+      expect(api.preview).toHaveBeenCalledWith([2], "/target", [
+        { ...sourceContext, resourceId: 2 },
+      ]),
+    );
+  });
   it("never submits until the mandatory preview confirmation is accepted", async () => {
     api.create.mockResolvedValue({ batchId: "b", skippedResourceCount: 0 });
     render(<ResourceMovePanel />);
