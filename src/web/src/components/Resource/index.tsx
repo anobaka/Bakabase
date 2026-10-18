@@ -397,7 +397,13 @@ const Resource = React.forwardRef((props: Props, ref) => {
           )}
           {resource.status === ResourceStatus.Absent && (
             <Chip color="danger" radius={"sm"} size={"sm"} variant={"flat"}>
-              {t("enum.resourceStatus.absent")}
+              {t(
+                resource.hasLocalPath &&
+                  resource.sourceLinks?.length &&
+                  resource.sourceLinks.every((link) => link.source === ResourceSource.PathMark)
+                  ? "resource.label.filesMissing"
+                  : "enum.resourceStatus.absent",
+              )}
             </Chip>
           )}
           {resource.status === ResourceStatus.Unavailable && (

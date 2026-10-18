@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import Resource from "..";
 
+import { ResourceSource, ResourceStatus } from "@/sdk/constants";
 import {
   closeMovePanel,
   minimizeMovePanel,
@@ -198,4 +199,57 @@ describe("pending resource move indication", () => {
       expect(container.querySelector("[data-move-source]")).toBeNull();
     },
   );
+});
+
+describe("missing local file indication", () => {
+  it("labels an absent bound PathMark resource as files missing", () => {
+    render(
+      <Resource
+        resource={{
+          ...resource(1),
+          status: ResourceStatus.Absent,
+          sourceLinks: [{ source: ResourceSource.PathMark }] as ResourceModel["sourceLinks"],
+        }}
+      />,
+    );
+
+    expect(screen.getByText("resource.label.filesMissing")).toBeInTheDocument();
+    expect(screen.queryByText("enum.resourceStatus.absent")).not.toBeInTheDocument();
+  });
+
+  it.each([[ResourceSource.Steam], [ResourceSource.PathMark, ResourceSource.Steam]])(
+    "preserves source-availability wording for external source combination %j",
+    (...sources) => {
+      render(
+        <Resource
+          resource={{
+            ...resource(1),
+            status: ResourceStatus.Absent,
+            sourceLinks: sources.map((source) => ({ source })) as ResourceModel["sourceLinks"],
+          }}
+        />,
+      );
+
+      expect(screen.getByText("enum.resourceStatus.absent")).toBeInTheDocument();
+      expect(screen.queryByText("resource.label.filesMissing")).not.toBeInTheDocument();
+    },
+  );
+
+  it("does not call an unmaterialized resource's files missing", () => {
+    render(
+      <Resource
+        resource={{
+          ...resource(1),
+          path: undefined,
+          hasLocalPath: false,
+          status: ResourceStatus.Absent,
+          sourceLinks: [{ source: ResourceSource.PathMark }] as ResourceModel["sourceLinks"],
+        }}
+      />,
+    );
+
+    expect(screen.getByText("resource.label.notMaterialized")).toBeInTheDocument();
+    expect(screen.getByText("enum.resourceStatus.absent")).toBeInTheDocument();
+    expect(screen.queryByText("resource.label.filesMissing")).not.toBeInTheDocument();
+  });
 });
