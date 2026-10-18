@@ -12082,6 +12082,7 @@ export interface components {
             startupPage?: components["schemas"]["Bakabase.InsideWorld.Models.Constants.StartupPage"];
             isMenuCollapsed?: boolean;
             navigationLayout?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UINavigationLayout"];
+            mediaLibraryOrder?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIMediaLibraryOrder"];
             showResourceUsage?: boolean;
             hideResourceCovers?: boolean;
             resourceDetailLayout?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIOptions+ResourceDetailLayoutConfig"];
@@ -12556,6 +12557,9 @@ export interface components {
             name: string;
             urlTemplate: string;
         };
+        "Bakabase.InsideWorld.Models.Configs.UIMediaLibraryOrder": {
+            keys: string[];
+        };
         "Bakabase.InsideWorld.Models.Configs.UINavigationLayout": {
             /** Format: int32 */
             version: number;
@@ -12577,6 +12581,7 @@ export interface components {
             startupPage: components["schemas"]["Bakabase.InsideWorld.Models.Constants.StartupPage"];
             isMenuCollapsed: boolean;
             navigationLayout?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UINavigationLayout"];
+            mediaLibraryOrder?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIMediaLibraryOrder"];
             deviceColors: {
                 [key: string]: string;
             };

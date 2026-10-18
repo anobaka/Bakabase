@@ -1,12 +1,26 @@
 "use client";
 
 import type { CSSProperties } from "react";
+import type { DragEndEvent } from "@dnd-kit/core";
 import type { MediaLibrary } from "./models";
 import type { OwnedCatalogItem } from "@/features/management/ownedCatalog";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
+import {
+  closestCenter,
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  rectSortingStrategy,
+  sortableKeyboardCoordinates,
+} from "@dnd-kit/sortable";
 import {
   AiOutlineArrowRight,
   AiOutlineEdit,
@@ -20,6 +34,7 @@ import { HiOutlineCollection } from "react-icons/hi";
 import { MdOutlineDelete } from "react-icons/md";
 
 import MediaLibraryEditor from "./components/MediaLibraryEditor";
+import SortableLibraryCard from "./components/SortableLibraryCard";
 import styles from "./index.module.scss";
 
 import {
@@ -45,6 +60,10 @@ import {
 import { dashboardResourceSearch } from "@/pages/dashboard/dashboardSearch";
 import BApi from "@/sdk/BApi";
 import { usePendingSearchStore } from "@/stores/pendingSearch";
+import { mediaLibraryChoiceValue } from "@/features/management/mediaLibraryFilter";
+import { orderMediaLibraryChoices } from "@/features/management/mediaLibraryOrder";
+import { useMediaLibraryOrder } from "@/features/management/useMediaLibraryOrder";
+import MediaLibraryOrderToolbar from "@/features/management/MediaLibraryOrderToolbar";
 
 type Library = OwnedCatalogItem<MediaLibrary>;
 type LibraryFilter = "all" | "withResources" | "empty";
@@ -59,7 +78,6 @@ const MediaLibraryPage = () => {
   const [loadError, setLoadError] = useState(false);
   const [keyword, setKeyword] = useState("");
   const [filter, setFilter] = useState<LibraryFilter>("all");
-  const [sort, setSort] = useState("name");
   const [editor, setEditor] = useState<{ library?: Library }>();
   const [highlightedKey, setHighlightedKey] = useState<string>();
   const catalog = useOwnedCatalog(mediaLibraries, (api) =>
@@ -193,6 +211,15 @@ const MediaLibraryPage = () => {
   };
 
   const allLibraries = catalog.items;
+  const libraryKey = (library: Library) =>
+    library.owner ? mediaLibraryChoiceValue(library.owner, library.id) : catalogItemKey(library);
+  const order = useMediaLibraryOrder(allLibraries.map(libraryKey));
+  const orderPending = useRef(false);
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+  const orderingReady = allLibraries.every((library) => library.owner != null);
   const populatedCount = allLibraries.filter((library) => library.resourceCount > 0).length;
   const counts = {
     all: allLibraries.length,
@@ -200,19 +227,21 @@ const MediaLibraryPage = () => {
     empty: allLibraries.length - populatedCount,
   };
   const normalizedKeyword = keyword.trim().toLocaleLowerCase();
-  const visibleLibraries = allLibraries
-    .filter(
-      (library) =>
-        library.name.toLocaleLowerCase().includes(normalizedKeyword) &&
-        (filter === "all" ||
-          (filter === "withResources" ? library.resourceCount > 0 : !library.resourceCount)),
-    )
-    .sort(
-      (a, b) =>
-        (sort === "resourceCount" ? (b.resourceCount ?? 0) - (a.resourceCount ?? 0) : 0) ||
-        a.name.localeCompare(b.name) ||
-        catalogItemKey(a).localeCompare(catalogItemKey(b)),
-    );
+  const visibleLibraries = orderMediaLibraryChoices(allLibraries, order.keys, libraryKey).filter(
+    (library) =>
+      library.name.toLocaleLowerCase().includes(normalizedKeyword) &&
+      (filter === "all" ||
+        (filter === "withResources" ? library.resourceCount > 0 : !library.resourceCount)),
+  );
+  const moveLibrary = async ({ active, over }: DragEndEvent) => {
+    if (orderPending.current || !orderingReady || !over || active.id === over.id) return;
+    orderPending.current = true;
+    try {
+      await order.move(String(active.id), String(over.id), visibleLibraries.map(libraryKey));
+    } finally {
+      orderPending.current = false;
+    }
+  };
   const clearSearch = () => {
     setKeyword("");
     setFilter("all");
@@ -276,15 +305,6 @@ const MediaLibraryPage = () => {
               onClear={() => setKeyword("")}
               onValueChange={setKeyword}
             />
-            <select
-              aria-label={t("mediaLibrary.sort.label")}
-              className={styles.sort}
-              value={sort}
-              onChange={(event) => setSort(event.target.value)}
-            >
-              <option value="name">{t("mediaLibrary.sort.name")}</option>
-              <option value="resourceCount">{t("mediaLibrary.sort.resourceCount")}</option>
-            </select>
             <Button
               isIconOnly
               aria-label={t("mediaLibrary.action.refresh")}
@@ -298,6 +318,18 @@ const MediaLibraryPage = () => {
               <AiOutlineReload aria-hidden className="text-lg" />
             </Button>
           </div>
+          <MediaLibraryOrderToolbar
+            disabled={!orderingReady}
+            entries={allLibraries.map((library) => ({
+              key: libraryKey(library),
+              label: library.name,
+            }))}
+          />
+          {order.error && (
+            <p className="text-xs text-danger" role="alert">
+              {t("mediaLibrary.optionOrder.saveFailed")}
+            </p>
+          )}
           <div
             aria-label={t("mediaLibrary.filter.label")}
             className="flex flex-wrap gap-1"
@@ -361,88 +393,113 @@ const MediaLibraryPage = () => {
             </Button>
           </div>
         ) : (
-          <div className={styles.grid}>
-            {visibleLibraries.map((library) => (
-              <article
-                key={catalogItemKey(library)}
-                className={`${styles.card} ${highlightedKey === catalogItemKey(library) ? styles.highlighted : ""}`}
-                id={`media-library-${catalogItemKey(library)}`}
-                style={{ "--library-color": library.color || "#6366f1" } as CSSProperties}
-              >
-                <div className={styles.cardHeader}>
-                  <div aria-hidden className={styles.libraryIcon}>
-                    <HiOutlineCollection />
-                  </div>
-                  <Dropdown>
-                    <DropdownTrigger>
-                      <Button
-                        isIconOnly
-                        aria-label={t("mediaLibrary.action.manageNamed", { name: library.name })}
-                        className="text-default-500"
-                        isDisabled={!canEditCatalogItem(library)}
-                        size="sm"
-                        variant="light"
-                      >
-                        <AiOutlineMore aria-hidden className="text-xl" />
-                      </Button>
-                    </DropdownTrigger>
-                    <DropdownMenu
-                      aria-label={t("mediaLibrary.action.manageNamed", { name: library.name })}
-                    >
-                      <DropdownItem
-                        key="edit"
-                        startContent={<AiOutlineEdit aria-hidden />}
-                        onPress={() => setEditor({ library })}
-                      >
-                        {t("mediaLibrary.action.edit")}
-                      </DropdownItem>
-                      <DropdownItem
-                        key="delete"
-                        className="text-danger"
-                        color="danger"
-                        startContent={<MdOutlineDelete aria-hidden />}
-                        onPress={() => deleteLibrary(library)}
-                      >
-                        {t("mediaLibrary.action.delete")}
-                      </DropdownItem>
-                    </DropdownMenu>
-                  </Dropdown>
-                </div>
-                <div className={styles.cardContent}>
-                  <h2 className={styles.libraryName} title={library.name}>
-                    {library.name}
-                  </h2>
-                  <div className="flex min-h-5 items-center gap-2 text-xs text-default-400">
-                    <CatalogOwnerMark owner={library.owner} />
-                    <span>
-                      {library.resourceCount > 0
-                        ? t("mediaLibrary.card.collection")
-                        : t("mediaLibrary.card.empty")}
-                    </span>
-                  </div>
-                  <div className="mt-5 flex items-baseline gap-2">
-                    <span className="text-3xl font-semibold tracking-tight tabular-nums">
-                      {(library.resourceCount ?? 0).toLocaleString()}
-                    </span>
-                    <span className="whitespace-nowrap text-sm text-default-500">
-                      {t("mediaLibrary.label.resources")}
-                    </span>
-                  </div>
-                </div>
-                <div className={styles.cardFooter}>
-                  <Button
-                    aria-label={t("mediaLibrary.action.browseNamed", { name: library.name })}
-                    className="w-full justify-between bg-default-100/70 text-default-700"
-                    endContent={<AiOutlineArrowRight aria-hidden className={styles.browseArrow} />}
-                    variant="flat"
-                    onPress={() => browse(library)}
+          <DndContext collisionDetection={closestCenter} sensors={sensors} onDragEnd={moveLibrary}>
+            <SortableContext
+              items={visibleLibraries.map(libraryKey)}
+              strategy={rectSortingStrategy}
+            >
+              <div className={styles.grid}>
+                {visibleLibraries.map((library) => (
+                  <SortableLibraryCard
+                    key={catalogItemKey(library)}
+                    className={`${styles.card} ${highlightedKey === catalogItemKey(library) ? styles.highlighted : ""}`}
+                    disabled={order.saving || !orderingReady}
+                    domId={`media-library-${catalogItemKey(library)}`}
+                    dragLabel={t("mediaLibrary.optionOrder.drag", { name: library.name })}
+                    id={libraryKey(library)}
+                    style={{ "--library-color": library.color || "#6366f1" } as CSSProperties}
                   >
-                    {t("mediaLibrary.action.browse")}
-                  </Button>
-                </div>
-              </article>
-            ))}
-          </div>
+                    {(handle) => (
+                      <>
+                        <div className={styles.cardHeader}>
+                          <div className="flex items-center gap-2">
+                            {handle}
+                            <div aria-hidden className={styles.libraryIcon}>
+                              <HiOutlineCollection />
+                            </div>
+                          </div>
+                          <Dropdown>
+                            <DropdownTrigger>
+                              <Button
+                                isIconOnly
+                                aria-label={t("mediaLibrary.action.manageNamed", {
+                                  name: library.name,
+                                })}
+                                className="text-default-500"
+                                isDisabled={!canEditCatalogItem(library)}
+                                size="sm"
+                                variant="light"
+                              >
+                                <AiOutlineMore aria-hidden className="text-xl" />
+                              </Button>
+                            </DropdownTrigger>
+                            <DropdownMenu
+                              aria-label={t("mediaLibrary.action.manageNamed", {
+                                name: library.name,
+                              })}
+                            >
+                              <DropdownItem
+                                key="edit"
+                                startContent={<AiOutlineEdit aria-hidden />}
+                                onPress={() => setEditor({ library })}
+                              >
+                                {t("mediaLibrary.action.edit")}
+                              </DropdownItem>
+                              <DropdownItem
+                                key="delete"
+                                className="text-danger"
+                                color="danger"
+                                startContent={<MdOutlineDelete aria-hidden />}
+                                onPress={() => deleteLibrary(library)}
+                              >
+                                {t("mediaLibrary.action.delete")}
+                              </DropdownItem>
+                            </DropdownMenu>
+                          </Dropdown>
+                        </div>
+                        <div className={styles.cardContent}>
+                          <h2 className={styles.libraryName} title={library.name}>
+                            {library.name}
+                          </h2>
+                          <div className="flex min-h-5 items-center gap-2 text-xs text-default-400">
+                            <CatalogOwnerMark owner={library.owner} />
+                            <span>
+                              {library.resourceCount > 0
+                                ? t("mediaLibrary.card.collection")
+                                : t("mediaLibrary.card.empty")}
+                            </span>
+                          </div>
+                          <div className="mt-5 flex items-baseline gap-2">
+                            <span className="text-3xl font-semibold tracking-tight tabular-nums">
+                              {(library.resourceCount ?? 0).toLocaleString()}
+                            </span>
+                            <span className="whitespace-nowrap text-sm text-default-500">
+                              {t("mediaLibrary.label.resources")}
+                            </span>
+                          </div>
+                        </div>
+                        <div className={styles.cardFooter}>
+                          <Button
+                            aria-label={t("mediaLibrary.action.browseNamed", {
+                              name: library.name,
+                            })}
+                            className="w-full justify-between bg-default-100/70 text-default-700"
+                            endContent={
+                              <AiOutlineArrowRight aria-hidden className={styles.browseArrow} />
+                            }
+                            variant="flat"
+                            onPress={() => browse(library)}
+                          >
+                            {t("mediaLibrary.action.browse")}
+                          </Button>
+                        </div>
+                      </>
+                    )}
+                  </SortableLibraryCard>
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
         )}
       </section>
 

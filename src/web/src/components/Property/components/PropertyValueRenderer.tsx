@@ -85,6 +85,7 @@ const PropertyValueRenderer = (props: Props) => {
     property,
     renderOptionExtra,
     optionsDescription,
+    optionOrdering,
     disabledKeys,
     disabledKeysSource,
     variant = "default",
@@ -231,6 +232,7 @@ const PropertyValueRenderer = (props: Props) => {
           }
           isEditing={isEditing}
           isReadonly={isReadonly}
+          optionOrdering={optionOrdering}
           optionsDescription={optionsDescription}
           renderOptionExtra={renderOptionExtra}
           size={size}
@@ -274,6 +276,7 @@ const PropertyValueRenderer = (props: Props) => {
           }
           isEditing={isEditing}
           isReadonly={isReadonly}
+          optionOrdering={optionOrdering}
           optionsDescription={optionsDescription}
           renderOptionExtra={renderOptionExtra}
           size={size}

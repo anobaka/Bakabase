@@ -8,13 +8,14 @@ import { useTranslation } from "react-i18next";
 import { useEffect, useState } from "react";
 import { SearchOutlined } from "@ant-design/icons";
 
+import OrderableChoiceOptions from "../../ValueRenderer/Renderers/components/OrderableChoiceOptions";
+
 import {
   useDisabledChoiceKeys,
   type DisabledChoiceKeysSource,
 } from "@/hooks/useDisabledChoiceKeys";
 import { Button, Input, Modal } from "@/components/bakaui";
 import { buildLogger } from "@/components/utils";
-import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 
 type Data = { value: string; label: string };
 
@@ -30,10 +31,10 @@ type ChoiceValueEditorProps = ValueEditorProps<string[] | undefined> &
 const log = buildLogger("ChoiceValueEditor");
 const ChoiceValueEditor = (props: ChoiceValueEditorProps) => {
   const { t } = useTranslation();
-  const { createPortal } = useBakabaseContext();
   const {
     renderOptionExtra,
     optionsDescription,
+    optionOrdering,
     disabledKeys: initialDisabledKeys,
     disabledKeysSource,
     multiple,
@@ -61,6 +62,35 @@ const ChoiceValueEditor = (props: ChoiceValueEditorProps) => {
       setDataSource(data);
     }
   };
+
+  const visible = dataSource.filter(
+    (choice) => !keyword || choice.label.toLocaleLowerCase().includes(keyword.toLocaleLowerCase()),
+  );
+  const renderOption = (d: Data) => (
+    <Button
+      key={d.value}
+      color={value.includes(d.value) ? "primary" : "default"}
+      isDisabled={disabledKeys?.has(d.value) && !value.includes(d.value)}
+      size={"sm"}
+      onClick={() => {
+        if (disabledKeys?.has(d.value) && !value.includes(d.value)) return;
+
+        if (multiple) {
+          log("value", value, "select", d.value, "includes", value.includes(d.value));
+          if (value.includes(d.value)) {
+            setValue(value.filter((v) => v !== d.value));
+          } else {
+            setValue([...(value || []), d.value]);
+          }
+        } else {
+          setValue(value.includes(d.value) ? [] : [d.value]);
+        }
+      }}
+    >
+      {d.label}
+      {renderOptionExtra?.({ value: d.value, label: d.label })}
+    </Button>
+  );
 
   return (
     <Modal
@@ -90,43 +120,17 @@ const ChoiceValueEditor = (props: ChoiceValueEditorProps) => {
         />
       </div>
       {optionsDescription}
-      <div className={"flex flex-wrap gap-1"}>
-        {dataSource.length == 0
-          ? t<string>("No choices available, please check your configurations")
-          : dataSource
-              .filter(
-                (d) =>
-                  keyword.length == 0 ||
-                  (d.label ?? "").toLowerCase().includes(keyword.toLowerCase()),
-              )
-              .map((d) => {
-                return (
-                  <Button
-                    key={d.value}
-                    color={value.includes(d.value) ? "primary" : "default"}
-                    isDisabled={disabledKeys?.has(d.value) && !value.includes(d.value)}
-                    size={"sm"}
-                    onClick={() => {
-                      if (disabledKeys?.has(d.value) && !value.includes(d.value)) return;
-
-                      if (multiple) {
-                        log("value", value, "select", d.value, "includes", value.includes(d.value));
-                        if (value.includes(d.value)) {
-                          setValue(value.filter((v) => v !== d.value));
-                        } else {
-                          setValue([...(value || []), d.value]);
-                        }
-                      } else {
-                        setValue(value.includes(d.value) ? [] : [d.value]);
-                      }
-                    }}
-                  >
-                    {d.label}
-                    {renderOptionExtra?.({ value: d.value, label: d.label })}
-                  </Button>
-                );
-              })}
-      </div>
+      {dataSource.length === 0 ? (
+        <div>{t<string>("No choices available, please check your configurations")}</div>
+      ) : optionOrdering ? (
+        <OrderableChoiceOptions
+          choices={visible}
+          ordering={optionOrdering}
+          renderOption={renderOption}
+        />
+      ) : (
+        <div className="flex flex-wrap gap-1">{visible.map(renderOption)}</div>
+      )}
     </Modal>
   );
 };

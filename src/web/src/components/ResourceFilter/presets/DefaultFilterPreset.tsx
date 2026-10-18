@@ -7,6 +7,7 @@ import type { FilterOwner } from "../models";
 
 import FilterValueRenderer from "../components/Filter/FilterValueRenderer";
 import UnifiedMediaLibraryFilterValue from "../components/Filter/UnifiedMediaLibraryFilterValue";
+import MediaLibraryFilterValue from "../components/Filter/MediaLibraryFilterValue";
 
 import {
   hasQualifiedMediaLibraryChoices,
@@ -331,8 +332,11 @@ export function createDefaultFilterConfig(
             />
           );
         }
+        const ValueRenderer = isMediaLibraryProperty(property)
+          ? MediaLibraryFilterValue
+          : FilterValueRenderer;
         const input = (
-          <FilterValueRenderer
+          <ValueRenderer
             bizValue={bizValue}
             dbValue={dbValue}
             defaultEditing={options?.defaultEditing}
@@ -342,6 +346,11 @@ export function createDefaultFilterConfig(
             size={options?.size ?? "sm"}
             variant={options?.variant ?? "light"}
             onValueChange={onValueChange}
+            {...(isMediaLibraryProperty(property)
+              ? {
+                  orderOwner: property.owner ?? owner ?? sources?.find((source) => source.isLocal),
+                }
+              : {})}
           />
         );
 

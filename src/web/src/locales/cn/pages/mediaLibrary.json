@@ -40,9 +40,6 @@
   "mediaLibrary.filter.all": "全部媒体库",
   "mediaLibrary.filter.withResources": "已有资源",
   "mediaLibrary.filter.empty": "待添加资源",
-  "mediaLibrary.sort.label": "媒体库排序",
-  "mediaLibrary.sort.name": "按名称排序",
-  "mediaLibrary.sort.resourceCount": "资源数量优先",
   "mediaLibrary.card.collection": "按分类收纳的资源",
   "mediaLibrary.card.empty": "等待你的第一份收藏",
   "mediaLibrary.guide.title": "让本地文件自动归类",
@@ -61,5 +58,10 @@
   "mediaLibrary.error.load": "暂时无法更新媒体库，请重试。已加载的内容会保留。",
   "mediaLibrary.confirm.deleteTitle": "删除媒体库",
   "mediaLibrary.confirm.deleteNamed": "确定删除「{{name}}」吗？",
-  "mediaLibrary.confirm.deleteDescription": "删除媒体库会移除资源与此分类的关联，不会删除资源或本地文件。"
+  "mediaLibrary.confirm.deleteDescription": "删除媒体库会移除资源与此分类的关联，不会删除资源或本地文件。",
+  "mediaLibrary.optionOrder.label": "排列媒体库",
+  "mediaLibrary.optionOrder.name": "按媒体库名称排列",
+  "mediaLibrary.optionOrder.description": "媒体库列表与资源筛选共用顺序；拖拽调整，不改变资源搜索结果排序。",
+  "mediaLibrary.optionOrder.drag": "拖拽调整「{{name}}」的顺序",
+  "mediaLibrary.optionOrder.saveFailed": "顺序保存失败，请重试。"
 }

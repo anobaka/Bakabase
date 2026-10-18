@@ -2315,6 +2315,7 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputU
   startupPage?: BakabaseInsideWorldModelsConstantsStartupPage;
   isMenuCollapsed?: boolean;
   navigationLayout?: BakabaseInsideWorldModelsConfigsUINavigationLayout;
+  mediaLibraryOrder?: BakabaseInsideWorldModelsConfigsUIMediaLibraryOrder;
   showResourceUsage?: boolean;
   hideResourceCovers?: boolean;
   resourceDetailLayout?: BakabaseInsideWorldModelsConfigsUIOptionsResourceDetailLayoutConfig;
@@ -2893,6 +2894,10 @@ export interface BakabaseInsideWorldModelsConfigsThirdPartyOptionsSimpleSearchEn
   urlTemplate: string;
 }
 
+export interface BakabaseInsideWorldModelsConfigsUIMediaLibraryOrder {
+  keys: string[];
+}
+
 export interface BakabaseInsideWorldModelsConfigsUINavigationLayout {
   /** @format int32 */
   version: number;
@@ -2915,6 +2920,7 @@ export interface BakabaseInsideWorldModelsConfigsUIOptions {
   startupPage: BakabaseInsideWorldModelsConstantsStartupPage;
   isMenuCollapsed: boolean;
   navigationLayout?: BakabaseInsideWorldModelsConfigsUINavigationLayout;
+  mediaLibraryOrder?: BakabaseInsideWorldModelsConfigsUIMediaLibraryOrder;
   deviceColors: Record<string, string>;
   showResourceUsage: boolean;
   hideResourceCovers: boolean;

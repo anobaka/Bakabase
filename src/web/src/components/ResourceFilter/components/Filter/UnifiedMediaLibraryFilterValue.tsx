@@ -5,7 +5,7 @@ import type { ManagementSource } from "@/features/management/api";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import FilterValueRenderer from "./FilterValueRenderer";
+import MediaLibraryFilterValue from "./MediaLibraryFilterValue";
 
 import { sourceKey } from "@/features/management/api";
 import { canReadSourceMetadata } from "@/features/management/metadata";
@@ -185,9 +185,10 @@ export default function UnifiedMediaLibraryFilterValue({
   );
 
   return (
-    <FilterValueRenderer
+    <MediaLibraryFilterValue
       {...props}
       key={choicesKey}
+      qualified
       bizValue={undefined}
       dbValue={dbValue}
       optionsDescription={
