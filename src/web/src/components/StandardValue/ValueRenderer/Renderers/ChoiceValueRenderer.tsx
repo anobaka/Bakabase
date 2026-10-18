@@ -4,15 +4,15 @@
 import type { OptionDisplayProps } from "../../OptionDisplayProps";
 import type { ValueRendererProps } from "../models";
 
-import { useEffect, useState, useMemo, useRef, useSyncExternalStore } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
 import ChoiceValueEditor from "../../ValueEditor/Editors/ChoiceValueEditor";
 import { buildVisibleOptions, hasMoreOptions, getRemainingCount } from "../utils";
+import { useOrderedChoices } from "../../useOrderedChoices";
 
 import NotSet, { LightText } from "./components/LightText";
 import NoChoicesAvailable from "./components/NoChoicesAvailable";
-import OrderableChoiceOptions from "./components/OrderableChoiceOptions";
 
 import {
   useDisabledChoiceKeys,
@@ -25,9 +25,6 @@ import { buildLogger } from "@/components/utils";
 import { useFilterOptionsThreshold } from "@/hooks/useFilterOptionsThreshold";
 
 type Data = { label: string; value: string; color?: string };
-const EmptyOrder: readonly string[] = [];
-const emptyOrder = () => EmptyOrder;
-const noOrderSubscription = () => () => {};
 
 /**
  * value (biz) carries display labels; editor.value (db) carries choice ids.
@@ -56,7 +53,7 @@ const ChoiceValueRenderer = (props: ChoiceValueRendererProps) => {
     valueAttributes,
     renderOptionExtra,
     optionsDescription,
-    optionOrdering,
+    optionOrderSource,
     disabledKeys: initialDisabledKeys,
     disabledKeysSource,
     size,
@@ -70,20 +67,7 @@ const ChoiceValueRenderer = (props: ChoiceValueRendererProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [optionsThreshold] = useFilterOptionsThreshold();
   const disabledKeys = useDisabledChoiceKeys(disabledKeysSource, initialDisabledKeys);
-  const optionOrder = useSyncExternalStore(
-    optionOrdering?.source?.subscribe ?? noOrderSubscription,
-    optionOrdering?.source?.getSnapshot ?? emptyOrder,
-  );
-  const orderedDataSource = useMemo(() => {
-    if (!optionOrder.length) return dataSource;
-    const positions = new Map(optionOrder.map((key, index) => [key, index]));
-
-    return [...dataSource].sort(
-      (a, b) =>
-        (positions.get(a.value) ?? optionOrder.length) -
-        (positions.get(b.value) ?? optionOrder.length),
-    );
-  }, [dataSource, optionOrder]);
+  const orderedDataSource = useOrderedChoices(dataSource, optionOrderSource);
 
   // Internal editing state for uncontrolled mode
   const [internalIsEditing, setInternalIsEditing] = useState(defaultEditing);
@@ -134,7 +118,7 @@ const ChoiceValueRenderer = (props: ChoiceValueRendererProps) => {
         createPortal(ChoiceValueEditor, {
           renderOptionExtra,
           optionsDescription,
-          optionOrdering,
+          optionOrderSource,
           disabledKeys,
           disabledKeysSource,
           value: editor?.value,
@@ -230,20 +214,8 @@ const ChoiceValueRenderer = (props: ChoiceValueRendererProps) => {
 
     return (
       <div ref={containerRef} className="flex flex-wrap gap-1 items-center">
-        {optionOrdering && !isReadonly ? (
-          <OrderableChoiceOptions
-            choices={visibleOptions}
-            ordering={optionOrdering}
-            renderOption={renderOption}
-          >
-            {more}
-          </OrderableChoiceOptions>
-        ) : (
-          <>
-            {visibleOptions.map(renderOption)}
-            {more}
-          </>
-        )}
+        {visibleOptions.map(renderOption)}
+        {more}
       </div>
     );
   }

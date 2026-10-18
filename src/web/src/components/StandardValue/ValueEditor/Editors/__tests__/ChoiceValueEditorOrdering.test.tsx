@@ -6,26 +6,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import ChoiceValueEditor from "../ChoiceValueEditor";
 import ChoiceValueRenderer from "../../../ValueRenderer/Renderers/ChoiceValueRenderer";
 
-import {
-  createMediaLibraryOrderSource,
-  useMediaLibraryOrder,
-} from "@/features/management/useMediaLibraryOrder";
+import { createMediaLibraryOrderSource } from "@/features/management/mediaLibraryChoiceOrder";
 import { useUiOptionsStore } from "@/stores/options";
 
-const mocks = vi.hoisted(() => ({ patch: vi.fn(), changed: vi.fn(), drag: vi.fn() }));
+const mocks = vi.hoisted(() => ({ patch: vi.fn(), changed: vi.fn() }));
 
 vi.mock("@/sdk/BApi", () => ({ default: { options: new Proxy({}, { get: () => mocks.patch }) } }));
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 vi.mock("@/components/ContextProvider/BakabaseContextProvider", () => ({
   useBakabaseContext: () => ({ createPortal: vi.fn() }),
-}));
-vi.mock("@dnd-kit/core", async () => ({
-  ...(await vi.importActual("@dnd-kit/core")),
-  DndContext: ({ children, onDragEnd }: any) => {
-    mocks.drag.mockImplementation(onDragEnd);
-
-    return <>{children}</>;
-  },
 }));
 vi.mock("@/components/bakaui", () => ({
   Modal: ({ children, onOk }: { children: ReactNode; onOk: () => void }) => (
@@ -68,23 +57,12 @@ const choices = [
 const entries = choices.map(({ value }) => ({ value, key: value }));
 const source = createMediaLibraryOrderSource(entries);
 
-function Editor({ orderable = true }: { orderable?: boolean }) {
-  const order = useMediaLibraryOrder(choices.map(({ value }) => value));
-
+function Editor({ configuredOrder = true }: { configuredOrder?: boolean }) {
   return (
     <ChoiceValueEditor
       multiple
       getDataSource={async () => choices}
-      optionOrdering={
-        orderable
-          ? {
-              source,
-              dragLabel: (label) => `Arrange ${label}`,
-              failureLabel: "Save failed",
-              onMove: (active, over, visible) => order.move(active, over, visible),
-            }
-          : undefined
-      }
+      optionOrderSource={configuredOrder ? source : undefined}
       value={["2"]}
       onValueChange={mocks.changed}
     />
@@ -106,7 +84,7 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
-describe("opt-in media-library ordering in an open choice editor", () => {
+describe("read-only configured media-library order in an open choice editor", () => {
   it("reorders the entire inline catalog before applying the threshold without reloading or changing selection", async () => {
     const load = vi.fn(async () => choices);
 
@@ -116,11 +94,7 @@ describe("opt-in media-library ordering in an open choice editor", () => {
         multiple
         editor={{ value: ["2"], onValueChange: mocks.changed }}
         getDataSource={load}
-        optionOrdering={{
-          source,
-          dragLabel: (label) => `Arrange ${label}`,
-          onMove: async () => true,
-        }}
+        optionOrderSource={source}
       />,
     );
     await waitFor(() => expect(displayed()).toEqual(["Archive", "Comics"]));
@@ -146,23 +120,26 @@ describe("opt-in media-library ordering in an open choice editor", () => {
     expect(mocks.changed).toHaveBeenCalledWith(["2"], ["Comics"]);
   });
 
-  it("persists drag while a search hides another library and leaves selection unchanged", async () => {
+  it("applies configured order while searching without exposing order controls or saving preferences", async () => {
     render(<Editor />);
     await waitFor(() => expect(displayed()).toHaveLength(3));
     fireEvent.change(screen.getByRole("textbox"), { target: { value: "i" } });
     expect(displayed()).toEqual(["Archive", "Comics", "Films"]);
     fireEvent.change(screen.getByRole("textbox"), { target: { value: "m" } });
     expect(displayed()).toEqual(["Comics", "Films"]);
-    await act(async () => mocks.drag({ active: { id: "3" }, over: { id: "2" } }));
-    expect(mocks.patch).toHaveBeenLastCalledWith({ mediaLibraryOrder: { keys: ["1", "3", "2"] } });
+    act(() =>
+      useUiOptionsStore.getState().update({ mediaLibraryOrder: { keys: ["1", "3", "2"] } }),
+    );
     expect(displayed()).toEqual(["Films", "Comics"]);
     fireEvent.change(screen.getByRole("textbox"), { target: { value: "" } });
     expect(displayed()).toEqual(["Archive", "Films", "Comics"]);
     expect(mocks.changed).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: /^Arrange/ })).toBeNull();
+    expect(mocks.patch).not.toHaveBeenCalled();
   });
 
   it("keeps normal property editors free of library-order controls", async () => {
-    render(<Editor orderable={false} />);
+    render(<Editor configuredOrder={false} />);
     await waitFor(() => expect(displayed()).toHaveLength(3));
     expect(screen.queryByRole("button", { name: /^Arrange/ })).toBeNull();
     expect(mocks.patch).not.toHaveBeenCalled();

@@ -6,7 +6,7 @@ import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { HistoryOutlined, SearchOutlined } from "@ant-design/icons";
 
-import { buildLogger } from "@/components/utils";
+import { useConfiguredMediaLibraryChoices } from "@/features/management/mediaLibraryChoiceOrder";
 import BApi from "@/sdk/BApi";
 import { useResourceOptionsStore } from "@/stores/options";
 import { Button, Chip, Divider, Input, Modal } from "@/components/bakaui";
@@ -28,7 +28,6 @@ type Category = {
   libraries: Library[];
 };
 
-const log = buildLogger("MediaLibrarySelectorV2");
 const MediaLibrarySelectorV2 = (props: Props) => {
   const { t } = useTranslation();
   const { onSelect, confirmation } = props;
@@ -38,6 +37,17 @@ const MediaLibrarySelectorV2 = (props: Props) => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [keyword, setKeyword] = useState<string>();
   const resourceOptions = useResourceOptionsStore((state) => state.data);
+  const configuredLibraries = useConfiguredMediaLibraryChoices(
+    categories.flatMap((category) => category.libraries),
+    (library) => String(library.id),
+    { local: true },
+  );
+  const configuredCategories = categories.map((category) => ({
+    ...category,
+    libraries: configuredLibraries.choices.filter((library) =>
+      category.libraries.includes(library),
+    ),
+  }));
 
   const init = async () => {
     const mlv2s = (await BApi.mediaLibraryV2.getAllMediaLibraryV2()).data ?? [];
@@ -65,7 +75,7 @@ const MediaLibrarySelectorV2 = (props: Props) => {
   const lowerCasedKeyword = keyword?.toLowerCase() ?? "";
   const filteredCategories =
     keyword != undefined && keyword?.length > 0
-      ? categories
+      ? configuredCategories
           .map((a) => {
             if (a.name.toLowerCase().indexOf(lowerCasedKeyword) > -1) {
               return a;
@@ -81,7 +91,7 @@ const MediaLibrarySelectorV2 = (props: Props) => {
             }
           })
           .filter((c) => c.libraries.length > 0)
-      : categories;
+      : configuredCategories;
 
   return (
     <Modal
@@ -114,7 +124,7 @@ const MediaLibrarySelectorV2 = (props: Props) => {
                 >
                   <div>{c.name}</div>
                   <div>
-                    {c.libraries.map((l, il) => {
+                    {c.libraries.map((l) => {
                       const selectedRecently = recentlySelectedIds.includes(l.id);
 
                       return (

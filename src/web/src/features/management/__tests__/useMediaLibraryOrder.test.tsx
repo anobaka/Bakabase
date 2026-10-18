@@ -1,7 +1,12 @@
-import { act, cleanup, renderHook } from "@testing-library/react";
+import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createMediaLibraryOrderSource, useMediaLibraryOrder } from "../useMediaLibraryOrder";
+import { useMediaLibraryOrder } from "../useMediaLibraryOrder";
+import {
+  createMediaLibraryOrderSource,
+  useConfiguredMediaLibraryChoices,
+} from "../mediaLibraryChoiceOrder";
+import { mediaLibraryChoiceValue } from "../mediaLibraryFilter";
 
 import { useUiOptionsStore } from "@/stores/options";
 
@@ -19,7 +24,10 @@ beforeEach(() => {
     initialized: true,
   });
 });
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 
 describe("confirmed shared media-library order", () => {
   it("serializes concurrent disjoint edits against the latest confirmed preference", async () => {
@@ -80,6 +88,95 @@ describe("confirmed shared media-library order", () => {
     useUiOptionsStore.getState().update({ mediaLibraryOrder: { keys: ["B", "A"] } });
     expect(changed).toHaveBeenCalledOnce();
     expect(source.getSnapshot()).toEqual(["2", "1"]);
+    unsubscribe();
+  });
+});
+
+describe("configured order in selection-only library editors", () => {
+  const owner = { serverId: "owner", libraryEpoch: "epoch" };
+  const libraries = [{ id: 1 }, { id: 2 }];
+  const value = (library: { id: number }) => String(library.id);
+
+  it("keeps native IDs and ignores another owner's or restored data directory's same-numbered libraries", () => {
+    useUiOptionsStore.getState().update({
+      mediaLibraryOrder: {
+        keys: [
+          mediaLibraryChoiceValue({ ...owner, serverId: "another" }, 1),
+          mediaLibraryChoiceValue(owner, 2),
+          mediaLibraryChoiceValue(owner, 1),
+        ],
+      },
+    });
+    const hook = renderHook(
+      ({ currentOwner }) =>
+        useConfiguredMediaLibraryChoices(libraries, value, { owner: currentOwner }),
+      {
+        initialProps: { currentOwner: owner },
+      },
+    );
+
+    expect(hook.result.current.choices.map(value)).toEqual(["2", "1"]);
+    const original = hook.result.current.source!;
+
+    expect(original.getSnapshot()).toEqual(["2", "1"]);
+    hook.rerender({ currentOwner: { ...owner, libraryEpoch: "restored" } });
+    expect(hook.result.current.choices.map(value)).toEqual(["1", "2"]);
+    expect(original.getSnapshot()).toEqual(["2", "1"]);
+    expect(mocks.patch).not.toHaveBeenCalled();
+  });
+
+  it("uses qualified unified choices directly without qualifying them again", () => {
+    const choices = libraries.map((library) => ({
+      value: mediaLibraryChoiceValue(owner, library.id),
+    }));
+
+    useUiOptionsStore
+      .getState()
+      .update({ mediaLibraryOrder: { keys: choices.map((choice) => choice.value).reverse() } });
+    const hook = renderHook(() =>
+      useConfiguredMediaLibraryChoices(choices, (choice) => choice.value, { qualified: true }),
+    );
+
+    expect(hook.result.current.choices).toEqual([...choices].reverse());
+    expect(hook.result.current.source!.getSnapshot()).toEqual(
+      choices.map((choice) => choice.value).reverse(),
+    );
+    expect(mocks.patch).not.toHaveBeenCalled();
+  });
+
+  it("updates an already captured editor source when a local selector resolves its identity", async () => {
+    let finish!: (response: unknown) => void;
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        () =>
+          new Promise((resolve) => {
+            finish = resolve;
+          }),
+      ),
+    );
+    useUiOptionsStore.getState().update({
+      mediaLibraryOrder: {
+        keys: [mediaLibraryChoiceValue(owner, 2), mediaLibraryChoiceValue(owner, 1)],
+      },
+    });
+    const hook = renderHook(() =>
+      useConfiguredMediaLibraryChoices(libraries, value, { local: true }),
+    );
+    const captured = hook.result.current.source!;
+    const changed = vi.fn();
+    const unsubscribe = captured.subscribe(changed);
+
+    expect(captured.getSnapshot()).toEqual(["1", "2"]);
+    await act(async () =>
+      finish({ ok: true, json: async () => ({ sources: [{ ...owner, isLocal: true }] }) }),
+    );
+    await waitFor(() => expect(hook.result.current.choices.map(value)).toEqual(["2", "1"]));
+    expect(hook.result.current.source).toBe(captured);
+    expect(captured.getSnapshot()).toEqual(["2", "1"]);
+    expect(changed).toHaveBeenCalled();
+    expect(mocks.patch).not.toHaveBeenCalled();
     unsubscribe();
   });
 });

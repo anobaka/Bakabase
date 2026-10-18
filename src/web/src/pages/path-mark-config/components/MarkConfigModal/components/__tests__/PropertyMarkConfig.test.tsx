@@ -25,6 +25,7 @@ const t = (key: string) => key;
 
 vi.mock("@/sdk/BApi", () => ({
   default: {
+    options: new Proxy({}, { get: () => vi.fn() }),
     property: { getPropertiesByPool: api.getProperties, getPropertyDbValue: api.getDbValue },
   },
 }));

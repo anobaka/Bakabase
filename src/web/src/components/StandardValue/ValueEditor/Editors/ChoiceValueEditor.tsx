@@ -8,7 +8,7 @@ import { useTranslation } from "react-i18next";
 import { useEffect, useState } from "react";
 import { SearchOutlined } from "@ant-design/icons";
 
-import OrderableChoiceOptions from "../../ValueRenderer/Renderers/components/OrderableChoiceOptions";
+import { useOrderedChoices } from "../../useOrderedChoices";
 
 import {
   useDisabledChoiceKeys,
@@ -34,7 +34,7 @@ const ChoiceValueEditor = (props: ChoiceValueEditorProps) => {
   const {
     renderOptionExtra,
     optionsDescription,
-    optionOrdering,
+    optionOrderSource,
     disabledKeys: initialDisabledKeys,
     disabledKeysSource,
     multiple,
@@ -63,7 +63,8 @@ const ChoiceValueEditor = (props: ChoiceValueEditorProps) => {
     }
   };
 
-  const visible = dataSource.filter(
+  const orderedDataSource = useOrderedChoices(dataSource, optionOrderSource);
+  const visible = orderedDataSource.filter(
     (choice) => !keyword || choice.label.toLocaleLowerCase().includes(keyword.toLocaleLowerCase()),
   );
   const renderOption = (d: Data) => (
@@ -122,12 +123,6 @@ const ChoiceValueEditor = (props: ChoiceValueEditorProps) => {
       {optionsDescription}
       {dataSource.length === 0 ? (
         <div>{t<string>("No choices available, please check your configurations")}</div>
-      ) : optionOrdering ? (
-        <OrderableChoiceOptions
-          choices={visible}
-          ordering={optionOrdering}
-          renderOption={renderOption}
-        />
       ) : (
         <div className="flex flex-wrap gap-1">{visible.map(renderOption)}</div>
       )}

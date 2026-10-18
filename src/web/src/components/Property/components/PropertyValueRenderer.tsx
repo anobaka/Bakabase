@@ -17,7 +17,6 @@ import type { LinkValue, TagValue } from "@/components/StandardValue/models";
 import type { ValueRendererSize } from "@/components/StandardValue/ValueRenderer/models";
 import type { SerializedStandardValue } from "@/components/StandardValue";
 
-import { useTranslation } from "react-i18next";
 import React from "react";
 
 import { PropertyType, StandardValueType, PropertyPool, InternalProperty } from "@/sdk/constants";
@@ -41,6 +40,8 @@ import {
   serializeStandardValue,
 } from "@/components/StandardValue";
 import { buildLogger } from "@/components/utils";
+import { isMediaLibraryProperty } from "@/features/management/mediaLibraryFilter";
+import { useConfiguredMediaLibraryChoices } from "@/features/management/mediaLibraryChoiceOrder";
 import ParentResourceValueRenderer from "@/components/ResourceFilter/components/ParentResourceValueRenderer";
 
 export type DataPool = {};
@@ -85,7 +86,7 @@ const PropertyValueRenderer = (props: Props) => {
     property,
     renderOptionExtra,
     optionsDescription,
-    optionOrdering,
+    optionOrderSource: explicitOptionOrderSource,
     disabledKeys,
     disabledKeysSource,
     variant = "default",
@@ -98,7 +99,17 @@ const PropertyValueRenderer = (props: Props) => {
     isEditing,
     attachmentPropertyValueRendererProps,
   } = props;
-  const { t } = useTranslation();
+
+  const configuredChoices = useConfiguredMediaLibraryChoices(
+    (property.options?.choices ?? []) as { value: string }[],
+    (choice) => choice.value,
+    {
+      owner: property.owner,
+      qualified: property.unifiedMediaLibraries,
+      enabled: isMediaLibraryProperty(property) && !explicitOptionOrderSource,
+    },
+  );
+  const optionOrderSource = explicitOptionOrderSource ?? configuredChoices.source;
 
   // Default isReadonly to false
   const isReadonly = isReadonlyProp ?? false;
@@ -232,7 +243,7 @@ const PropertyValueRenderer = (props: Props) => {
           }
           isEditing={isEditing}
           isReadonly={isReadonly}
-          optionOrdering={optionOrdering}
+          optionOrderSource={optionOrderSource}
           optionsDescription={optionsDescription}
           renderOptionExtra={renderOptionExtra}
           size={size}
@@ -276,7 +287,7 @@ const PropertyValueRenderer = (props: Props) => {
           }
           isEditing={isEditing}
           isReadonly={isReadonly}
-          optionOrdering={optionOrdering}
+          optionOrderSource={optionOrderSource}
           optionsDescription={optionsDescription}
           renderOptionExtra={renderOptionExtra}
           size={size}

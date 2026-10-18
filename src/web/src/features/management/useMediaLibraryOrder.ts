@@ -1,10 +1,6 @@
 import { useState } from "react";
 
-import {
-  mergeMediaLibraryOrder,
-  orderMediaLibraryChoices,
-  reorderVisibleMediaLibraries,
-} from "./mediaLibraryOrder";
+import { mergeMediaLibraryOrder, reorderVisibleMediaLibraries } from "./mediaLibraryOrder";
 
 import BApi from "@/sdk/BApi";
 import { useUiOptionsStore } from "@/stores/options";
@@ -12,32 +8,8 @@ import { useUiOptionsStore } from "@/stores/options";
 const EmptyOrder: string[] = [];
 let writes: Promise<unknown> = Promise.resolve();
 
-/** Portals keep the catalog captured at open time but subscribe to confirmed shared ordering. */
-export function createMediaLibraryOrderSource(entries: { value: string; key: string }[]) {
-  let previous: readonly string[] | undefined;
-  let initialized = false;
-  let snapshot: string[] = [];
-
-  return {
-    subscribe: (changed: () => void) => useUiOptionsStore.subscribe(changed),
-    getSnapshot: () => {
-      const keys = useUiOptionsStore.getState().data.mediaLibraryOrder?.keys;
-
-      if (!initialized || keys !== previous) {
-        initialized = true;
-        previous = keys;
-        snapshot = orderMediaLibraryChoices(entries, keys ?? EmptyOrder, ({ key }) => key).map(
-          ({ value }) => value,
-        );
-      }
-
-      return snapshot;
-    },
-  };
-}
-
-// Several resource tabs/editors can be mounted at once. Compute each write from the
-// latest confirmed options after the previous request, so their full arrays cannot race.
+// Serialize management-page changes against the latest confirmed options so
+// toolbar and drag actions cannot overwrite each other with stale full arrays.
 function saveOrder(knownKeys: string[], change: (current: string[]) => string[]) {
   const write = writes.then(async () => {
     try {

@@ -5,6 +5,7 @@ import type { Library } from "./Definitions";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { useConfiguredMediaLibraryChoices } from "./mediaLibraryChoiceOrder";
 import { ownerClient, type ManagementSource } from "./api";
 
 import { Button, Modal, Spinner } from "@/components/bakaui";
@@ -54,6 +55,11 @@ export function ResourceEditor({
   const [resources, setResources] = useState<Resource[]>([]);
   const [properties, setProperties] = useState<IProperty[]>([]);
   const [libraries, setLibraries] = useState<Library[]>([]);
+  const configuredLibraries = useConfiguredMediaLibraryChoices(
+    libraries,
+    (library) => String(library.id),
+    { owner: source },
+  );
   const [chosenLibraries, setChosenLibraries] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
@@ -250,7 +256,7 @@ export function ResourceEditor({
               {t(bulk ? "management.replaceLibrariesHelp" : "management.libraryMembershipHelp")}
             </p>
             <div className="flex flex-wrap gap-2">
-              {libraries.map((library) => (
+              {configuredLibraries.choices.map((library) => (
                 <label
                   key={library.id}
                   className="flex items-center gap-2 rounded-md border border-divider px-3 py-2 text-sm"

@@ -61,7 +61,7 @@
   "mediaLibrary.confirm.deleteDescription": "Deleting a library removes its category assignments. Resources and local files are kept.",
   "mediaLibrary.optionOrder.label": "Arrange libraries",
   "mediaLibrary.optionOrder.name": "Arrange by library name",
-  "mediaLibrary.optionOrder.description": "Shared by the library list and resource filters. Drag to rearrange; resource search result sorting stays unchanged.",
+  "mediaLibrary.optionOrder.description": "Arrange libraries on this page. Property value options follow this order; resource search result sorting stays unchanged.",
   "mediaLibrary.optionOrder.drag": "Reorder {{name}}",
   "mediaLibrary.optionOrder.saveFailed": "Could not save the library order. Please try again."
 }

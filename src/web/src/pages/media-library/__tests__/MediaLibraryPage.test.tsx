@@ -67,23 +67,11 @@ vi.mock("@dnd-kit/core", async () => ({
   },
 }));
 vi.mock("@/components/ResourceFilter/components/Filter/FilterValueRenderer", () => ({
-  default: ({ property, optionOrdering, dbValue }: any) => {
+  default: ({ property, dbValue }: any) => {
     const choices = property.options.choices;
 
     return (
       <div data-testid="library-filter">
-        {optionOrdering?.toolbar}
-        <button
-          onClick={() =>
-            optionOrdering.onMove(
-              choices.at(-1).value,
-              choices[0].value,
-              choices.map((choice: any) => choice.value),
-            )
-          }
-        >
-          Move last filter library first
-        </button>
         {choices.map((choice: any) => (
           <span key={choice.value} data-filter-library>
             {choice.label}
@@ -526,7 +514,7 @@ describe("shared media-library order", () => {
   });
 });
 
-it("shares confirmed drag and name-arrange changes between management cards and native filter choices", async () => {
+it("shows configured library order in native filters while restricting sorting controls to management", async () => {
   render(
     <HeroUIProvider disableAnimation>
       <MediaLibraryPage />
@@ -565,22 +553,10 @@ it("shares confirmed drag and name-arrange changes between management cards and 
   await act(async () => mocks.dragEnd({ active: { id: key(3) }, over: { id: key(1) } }));
   expect(names()).toEqual(["Films", "Archive", "Comics"]);
   expect(filterNames()).toEqual(names());
-  await userEvent.click(
-    within(screen.getByTestId("library-filter")).getByRole("button", {
-      name: "Move last filter library first",
-    }),
-  );
-  await waitFor(() => expect(names()).toEqual(["Comics", "Films", "Archive"]));
-  // The keyed native value renderer remounts after order changes, as it does in production.
-  const current = screen.getByTestId("library-filter");
-
-  expect(
-    [...current.querySelectorAll("[data-filter-library]")].map((choice) => choice.textContent),
-  ).toEqual(names());
-  await userEvent.click(
-    within(current).getByRole("button", { name: "mediaLibrary.optionOrder.name" }),
-  );
+  expect(within(screen.getByTestId("library-filter")).queryByRole("button")).toBeNull();
+  await userEvent.click(screen.getByRole("button", { name: "mediaLibrary.optionOrder.name" }));
   await waitFor(() => expect(names()).toEqual(["Archive", "Comics", "Films"]));
+  expect(filterNames()).toEqual(names());
   expect(screen.getByTestId("library-filter").querySelector("output")).toHaveTextContent('["2"]');
   expect(mocks.changed).not.toHaveBeenCalled();
   expect(mocks.pendingSearch).not.toHaveBeenCalled();

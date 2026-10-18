@@ -61,7 +61,7 @@
   "mediaLibrary.confirm.deleteDescription": "删除媒体库会移除资源与此分类的关联，不会删除资源或本地文件。",
   "mediaLibrary.optionOrder.label": "排列媒体库",
   "mediaLibrary.optionOrder.name": "按媒体库名称排列",
-  "mediaLibrary.optionOrder.description": "媒体库列表与资源筛选共用顺序；拖拽调整，不改变资源搜索结果排序。",
+  "mediaLibrary.optionOrder.description": "在媒体库页面调整顺序，属性值选项按此顺序显示，不改变资源搜索结果排序。",
   "mediaLibrary.optionOrder.drag": "拖拽调整「{{name}}」的顺序",
   "mediaLibrary.optionOrder.saveFailed": "顺序保存失败，请重试。"
 }
