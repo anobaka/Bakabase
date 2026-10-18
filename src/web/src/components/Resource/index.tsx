@@ -344,7 +344,15 @@ const Resource = React.forwardRef((props: Props, ref) => {
         id={elementId}
         onMouseEnter={() => playControlRef.current?.triggerDiscovery()}
       >
-        <div className="absolute inset-0">
+        <div
+          className={`absolute inset-0 ${
+            resource.status === ResourceStatus.Absent
+              ? "opacity-50 grayscale"
+              : resource.status === ResourceStatus.Unavailable
+                ? "opacity-60"
+                : ""
+          }`}
+        >
           <ResourceCover
             ref={coverRef}
             biggerCoverPlacement={biggerCoverPlacement}
@@ -809,12 +817,6 @@ const Resource = React.forwardRef((props: Props, ref) => {
             : hideResourceBorder
               ? ""
               : "border-default-200"
-      } ${
-        resource.status === ResourceStatus.Absent
-          ? "opacity-50 grayscale"
-          : resource.status === ResourceStatus.Unavailable
-            ? "opacity-60"
-            : ""
       }`}
       data-id={resource.id}
       data-move-source={pendingMoveSource || undefined}
