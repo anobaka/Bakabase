@@ -3,7 +3,7 @@ import type { PathMarkType } from "@/sdk/constants";
 
 import { useState, useEffect, useMemo } from "react";
 
-import { buildConfigJson, hasValidValueExtractor } from "../utils";
+import { buildConfigJson, getPreviewConfigurationHint, hasValidValueExtractor } from "../utils";
 
 import { PathMatchMode } from "@/sdk/constants";
 import BApi from "@/sdk/BApi";
@@ -33,7 +33,9 @@ export const usePreview = (
   const [resultsByPath, setResultsByPath] = useState<PreviewResultsByPath[]>([]);
   const [error, setError] = useState<string | null>(null);
   const configJson = buildConfigJson(config, markType);
+  const configurationHint = getPreviewConfigurationHint(config, markType);
   const hasValidConfig =
+    !configurationHint &&
     hasValidValueExtractor(config, markType) &&
     (config.matchMode === PathMatchMode.Layer
       ? config.layer !== undefined
@@ -122,5 +124,6 @@ export const usePreview = (
     error,
     isMultiplePaths: effectivePaths.length > 1,
     applyScope: config.applyScope,
+    configurationHint,
   };
 };

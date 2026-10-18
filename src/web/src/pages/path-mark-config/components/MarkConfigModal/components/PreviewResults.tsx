@@ -14,6 +14,7 @@ type Props = {
   markType: PathMarkType;
   t: (key: string) => string;
   applyScope?: PathMarkApplyScope;
+  configurationHint?: string;
 };
 
 const PreviewResults = ({
@@ -25,6 +26,7 @@ const PreviewResults = ({
   markType,
   t,
   applyScope,
+  configurationHint,
 }: Props) => {
   const isResource = markType === PathMarkType.Resource;
   const renderResult = (result: PathMarkPreviewResult, index: number) => (
@@ -71,7 +73,7 @@ const PreviewResults = ({
                   : "pathMarkConfig.label.propertyValue",
               )}
             </span>
-            {result.propertyValue !== null && result.propertyValue !== undefined ? (
+            {result.propertyValue?.trim() ? (
               <Chip
                 color={markType === PathMarkType.MediaLibrary ? "secondary" : "primary"}
                 size="sm"
@@ -92,7 +94,14 @@ const PreviewResults = ({
 
   return (
     <div aria-busy={loading} aria-live="polite">
-      {loading ? (
+      {configurationHint ? (
+        <div
+          className="rounded-xl border border-dashed border-default-300 px-4 py-8 text-center text-xs leading-relaxed text-default-500"
+          role="status"
+        >
+          {t(configurationHint)}
+        </div>
+      ) : loading ? (
         <div className="flex min-h-40 items-center justify-center gap-2 text-sm text-default-500">
           <Spinner size="sm" />
           {t("pathMarkConfig.status.loadingPreview")}

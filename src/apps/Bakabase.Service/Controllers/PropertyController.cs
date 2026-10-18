@@ -150,7 +150,8 @@ namespace Bakabase.Service.Controllers
         {
             var property = await service.GetProperty(pool, id);
             var pd = PropertySystem.Property.GetDescriptor(property.Type);
-            var (dbValue, _) = pd.PrepareDbValue(property, bizValue.DeserializeBizValueAsStandardValue(property.Type));
+            var (dbValue, _) = pd.PrepareDbValue(property, bizValue.DeserializeBizValueAsStandardValue(property.Type),
+                PropertyValueMatchPolicy.MatchOnly);
             return new SingletonResponse<string>(dbValue.SerializeDbValueAsStandardValue(property.Type));
         }
 

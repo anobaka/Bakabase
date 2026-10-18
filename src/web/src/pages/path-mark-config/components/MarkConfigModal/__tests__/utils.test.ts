@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildConfigJson,
+  getPreviewConfigurationHint,
   hasValidPropertyValueExtractor,
   normalizeLegacyPropertyMarkConfig,
   parseMarkConfig,
@@ -23,6 +24,17 @@ const legacyPropertyConfig = {
   valueLayer: -1,
   applyScope: PathMarkApplyScope.MatchedOnly,
 };
+
+describe("preview configuration guidance", () => {
+  it.each([false, 0, "False", "0"])("accepts an existing fixed scalar value %s", (fixedValue) => {
+    const config = parseMarkConfig(
+      JSON.stringify({ ...legacyPropertyConfig, valueType: PropertyValueType.Fixed, fixedValue }),
+      PathMarkType.Property,
+    );
+
+    expect(getPreviewConfigurationHint(config, PathMarkType.Property)).toBeUndefined();
+  });
+});
 
 describe("legacy V220 property mark compatibility", () => {
   it("restores the original all-resources-under-path applicability", () => {

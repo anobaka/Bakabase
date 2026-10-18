@@ -9,7 +9,7 @@ import { PathMarkApplyScope, PathMarkType } from "@/sdk/constants";
 import translations from "@/locales/en/pages/pathMarkConfig.json";
 
 vi.mock("@/components/bakaui", () => ({
-  Chip: ({ children }: { children: ReactNode }) => <span>{children}</span>,
+  Chip: ({ children }: { children: ReactNode }) => <span data-testid="value-chip">{children}</span>,
   Spinner: () => <span>Loading</span>,
 }));
 
@@ -52,6 +52,36 @@ describe("PreviewResults", () => {
     );
     expect(screen.getByText("No value extracted")).toBeInTheDocument();
     expect(screen.queryByText("Value source path")).not.toBeInTheDocument();
+  });
+
+  it.each([null, undefined, "", "   "])(
+    "does not render an empty colored value for %s",
+    (value) => {
+      render(
+        <PreviewResults
+          {...props}
+          markType={PathMarkType.Property}
+          results={[{ path: "/media/精品", propertyValue: value }]}
+        />,
+      );
+      expect(screen.getByText("No value extracted")).toBeInTheDocument();
+      expect(screen.queryByTestId("value-chip")).not.toBeInTheDocument();
+    },
+  );
+
+  it("shows setup guidance instead of stale values while a property is unconfigured", () => {
+    render(
+      <PreviewResults
+        {...props}
+        configurationHint="pathMarkConfig.preview.configureProperty"
+        markType={PathMarkType.Property}
+      />,
+    );
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Select a target property and configure how to obtain its value first.",
+    );
+    expect(screen.queryByTestId("value-chip")).not.toBeInTheDocument();
+    expect(screen.queryByText(props.results[0].propertyValue)).not.toBeInTheDocument();
   });
 
   it("keeps the descendant scope label for resource matching", () => {
