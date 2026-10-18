@@ -90,6 +90,8 @@
   "pathMarkConfig.label.previewMatches": "预览匹配",
   "pathMarkConfig.label.resourceFilters": "资源过滤器（可选）",
   "pathMarkConfig.label.fileTypeFilter": "文件类型过滤",
+  "pathMarkConfig.fileType.file": "文件",
+  "pathMarkConfig.fileType.directory": "目录",
   "pathMarkConfig.label.limitExtensions": "限制文件扩展名",
   "pathMarkConfig.label.propertySettings": "属性设置",
   "pathMarkConfig.label.targetProperty": "目标属性",
