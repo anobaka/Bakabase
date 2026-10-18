@@ -1,8 +1,11 @@
 import type { MoveExcludedResource } from "./types";
 
+import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+
 import { getKnownMoveReasonCode, useMoveReasonText, useMoveText } from "./messages";
 
-import { Button, Modal, Select, Spinner } from "@/components/bakaui";
+import { Button, Checkbox, Modal, Radio, RadioGroup, Spinner } from "@/components/bakaui";
 import {
   cancelMoveDraft,
   hideUnknownMoveDraft,
@@ -17,14 +20,27 @@ export default function MoveConfirmation() {
   const draft = useResourceMovePanelStore((s) => s.draft);
   const text = useMoveText();
   const reasonText = useMoveReasonText();
+  const { t } = useTranslation();
+  const [onlyConflicts, setOnlyConflicts] = useState(false);
+
+  useEffect(() => setOnlyConflicts(false), [draft?.id]);
 
   if (!draft) return null;
   const ids = draftMovableIds(draft);
   const items = draft.preview?.items ?? [];
-  const blocked = !!draft.preview?.duplicateDestinationPaths?.length;
+  const duplicatePaths = new Set(
+    draft.preview?.duplicateDestinationPaths?.map((path) => path.toLowerCase()) ?? [],
+  );
+  const blocked = duplicatePaths.size > 0 && draft.conflictPolicy !== "skip";
   const irreversibleSubmit = !!draft.request;
   const loading = draft.phase === "preview" || draft.phase === "submitting";
   const movableItems = items.filter((item) => ids.includes(item.resourceId));
+  const isBatchDuplicate = (item: (typeof items)[number]) =>
+    item.conflictKind === "batchDestination" ||
+    duplicatePaths.has((item.destPath ?? "").toLowerCase());
+  const isConflict = (item: (typeof items)[number]) =>
+    !!item.destConflict || !!item.conflictKind || isBatchDuplicate(item);
+  const visibleItems = onlyConflicts ? movableItems.filter(isConflict) : movableItems;
   const excludedById = new Map<number, MoveExcludedResource>(
     (draft.preview?.excludedResources ?? []).map((resource) => [resource.resourceId, resource]),
   );
@@ -106,22 +122,43 @@ export default function MoveConfirmation() {
                 : draft.error}
           </div>
         )}
-        {blocked && (
-          <div className="move-panel-error">
-            {text("conflict")}
+        {duplicatePaths.size > 0 && (
+          <div className={blocked ? "move-panel-error" : "move-panel-notice"} role="status">
+            {t("resourceMove.confirm.batchDuplicate.description")}
+            <p>
+              {t(
+                blocked
+                  ? "resourceMove.confirm.batchDuplicate.blocked"
+                  : "resourceMove.confirm.batchDuplicate.skipped",
+              )}
+            </p>
             <ul>
               {draft.preview?.duplicateDestinationPaths?.map((path) => <li key={path}>{path}</li>)}
             </ul>
           </div>
         )}
+        <Checkbox isSelected={onlyConflicts} size="sm" onValueChange={setOnlyConflicts}>
+          {t("resourceMove.confirm.onlyConflicts.label")}
+        </Checkbox>
+        {onlyConflicts && !visibleItems.length && (
+          <p className="text-sm text-default-400" role="status">
+            {t("resourceMove.confirm.onlyConflicts.empty")}
+          </p>
+        )}
         <div className="move-panel-preview-list">
-          {movableItems.map((item) => (
+          {visibleItems.map((item) => (
             <article key={item.resourceId} className="move-panel-preview-item">
               <strong>{resourceLabel(item.resourceId, item.sourcePath)}</strong>
               <code>{item.sourcePath}</code>
               <code>→ {item.destPath}</code>
-              {item.destConflict && (
-                <span className="move-panel-badge warning">{text("conflict")}</span>
+              {isConflict(item) && (
+                <span className="move-panel-badge warning">
+                  {isBatchDuplicate(item)
+                    ? t("resourceMove.confirm.batchDuplicate.label")
+                    : text("conflict")}
+                  {draft.conflictPolicy === "skip" &&
+                    ` · ${t("resourceMove.confirm.policy.skip.badge")}`}
+                </span>
               )}
               {!!item.coveredResources?.length && (
                 <details>
@@ -182,24 +219,26 @@ export default function MoveConfirmation() {
             })}
           </details>
         )}
-        <Select
-          disallowEmptySelection
-          dataSource={["inherit", "ask", "overwrite"].map((value) => ({
-            value,
-            label: text(value as typeof draft.conflictPolicy),
-          }))}
+        <RadioGroup
           isDisabled={irreversibleSubmit}
           label={text("policy")}
-          labelPlacement="outside"
-          selectedKeys={[draft.conflictPolicy]}
           size="sm"
-          onSelectionChange={(keys) => {
-            const value = Array.from(keys)[0];
-
-            if (value === "inherit" || value === "ask" || value === "overwrite")
+          value={draft.conflictPolicy}
+          onValueChange={(value) => {
+            if (value === "inherit" || value === "ask" || value === "overwrite" || value === "skip")
               setMoveDraftPolicy(value);
           }}
-        />
+        >
+          {(["inherit", "ask", "overwrite", "skip"] as const).map((policy) => (
+            <Radio
+              key={policy}
+              description={t(`resourceMove.confirm.policy.${policy}.description`)}
+              value={policy}
+            >
+              {policy === "skip" ? t("resourceMove.confirm.policy.skip.label") : text(policy)}
+            </Radio>
+          ))}
+        </RadioGroup>
         <div className="move-panel-actions">
           {draft.phase === "unknown" && (
             <Button size="sm" type="button" variant="flat" onPress={hideUnknownMoveDraft}>

@@ -36,5 +36,17 @@
   "resourceMove.panel.stopAtBoundary": "Finish the current resource, then stop remaining moves",
   "resourceMove.panel.waitingForInput": "Move needs attention",
   "resourceMove.panel.open": "Move panel",
-  "resourceMove.panel.dragCount": "Move {{count}} resources"
+  "resourceMove.panel.dragCount": "Move {{count}} resources",
+  "resourceMove.confirm.onlyConflicts.label": "Show conflicts only",
+  "resourceMove.confirm.onlyConflicts.empty": "No conflicts. This filter only changes the preview; the move selection is unchanged.",
+  "resourceMove.confirm.batchDuplicate.label": "Shared batch destination",
+  "resourceMove.confirm.batchDuplicate.description": "Multiple selected resources map to the same destination. Overwrite cannot choose which source to keep.",
+  "resourceMove.confirm.batchDuplicate.blocked": "Change the selection or destination, or choose Skip conflicting resources to skip every source sharing a destination.",
+  "resourceMove.confirm.batchDuplicate.skipped": "All sources sharing a destination in this batch will be skipped. Other resources will continue moving.",
+  "resourceMove.confirm.policy.inherit.description": "Use the panel's automatic overwrite setting. Conflicts requiring a decision will still wait for confirmation.",
+  "resourceMove.confirm.policy.ask.description": "Pause the conflicting resource for your decision while other resources continue moving.",
+  "resourceMove.confirm.policy.overwrite.description": "Overwrite existing same-name files and keep destination-only files. Other resource records are not merged, and shared batch destinations remain blocked.",
+  "resourceMove.confirm.policy.skip.label": "Skip conflicting resources",
+  "resourceMove.confirm.policy.skip.description": "Skip the whole resource on a conflict without overwriting destination files. Skip all sources sharing a batch destination and continue the others.",
+  "resourceMove.confirm.policy.skip.badge": "Will be skipped"
 }

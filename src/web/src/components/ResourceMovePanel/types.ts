@@ -24,7 +24,7 @@ export type MovePanelOptions = {
   destinations: MoveDestination[];
   autoOverwrite: boolean;
 };
-export type ConflictPolicy = "inherit" | "ask" | "overwrite";
+export type ConflictPolicy = "inherit" | "ask" | "overwrite" | "skip";
 export type MoveExcludedResource = {
   resourceId: number;
   displayName?: string | null;

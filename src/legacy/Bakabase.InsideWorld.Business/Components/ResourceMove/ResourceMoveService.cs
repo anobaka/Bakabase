@@ -83,7 +83,7 @@ public partial class ResourceMoveService(
         var standardizedDestDir = destDir.StandardizePath();
         if (string.IsNullOrEmpty(standardizedDestDir))
             return SingletonResponseBuilder<ResourceMoveBatchViewModel>.Build(ResponseCode.InvalidPayloadOrOperation, localizer.PathIsNotFound(destDir));
-        if (options.ConflictPolicy is not ("inherit" or "ask" or "overwrite"))
+        if (options.ConflictPolicy is not ("inherit" or "ask" or "overwrite" or "skip"))
             return SingletonResponseBuilder<ResourceMoveBatchViewModel>.Build(ResponseCode.InvalidPayloadOrOperation, "Unknown conflict policy");
         var fingerprint = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(
             JsonConvert.SerializeObject(new { ids = resourceIds.Distinct().OrderBy(x => x), dest = standardizedDestDir,
@@ -114,7 +114,10 @@ public partial class ResourceMoveService(
                 return SingletonResponseBuilder<ResourceMoveBatchViewModel>.Build(ResponseCode.InvalidPayloadOrOperation,
                     localizer.ResourceMove_DestinationExists(r.Path));
         }
-        if (topLevel.GroupBy(r => BuildDestPath(standardizedDestDir, r.Path), StringComparer.OrdinalIgnoreCase).Any(g => g.Count() > 1))
+        var duplicateDestinations = topLevel
+            .GroupBy(r => BuildDestPath(standardizedDestDir, r.Path), StringComparer.OrdinalIgnoreCase)
+            .Where(g => g.Count() > 1).Select(g => g.Key).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (duplicateDestinations.Count > 0 && options.ConflictPolicy != "skip")
             return SingletonResponseBuilder<ResourceMoveBatchViewModel>.Build(ResponseCode.Conflict, "batchDestination: selected resources share the same destination");
         var sourcePlans = new Dictionary<int, ResourceMoveExecutionPlan>();
         var preview = await PreviewCore(resourceIds, destDir, sourcePlans);
@@ -133,6 +136,16 @@ public partial class ResourceMoveService(
             SourceTabName = options.SourceTabName, DestinationId = options.DestinationId,
             DestinationName = options.DestinationName, ConflictPolicy = options.ConflictPolicy,
         }).ToList();
+        // No source may win an intra-batch collision by execution order. Skip every
+        // colliding root, while preserving durable records and the request receipt.
+        if (options.ConflictPolicy == "skip")
+            foreach (var record in records.Where(r => duplicateDestinations.Contains(r.DestPath)))
+            {
+                record.Status = ResourceMoveRecordStatus.Skipped;
+                record.CompletedAt = now;
+                record.ConflictKind = record.ErrorCode = "batchDestination";
+                record.ConflictPath = record.DestPath;
+            }
         records[0].IdempotencyKey = string.IsNullOrWhiteSpace(options.IdempotencyKey) ? null : options.IdempotencyKey;
         records[0].RequestFingerprint = fingerprint;
         foreach (var r in records)
@@ -146,8 +159,9 @@ public partial class ResourceMoveService(
             GetExecutor(sourcePlans[r.ResourceId]);
             r.ExecutionPlanJson = JsonConvert.SerializeObject(sourcePlans[r.ResourceId]);
         }
-        var reservedPaths = records.SelectMany(r => new[] {r.SourcePath, r.DestPath}).Distinct().ToArray();
-        var affected = await ComputeAffectedResourceIds(reservedPaths, records.Select(r => r.ResourceId));
+        var movingRecords = records.Where(r => r.Status == ResourceMoveRecordStatus.Pending).ToList();
+        var reservedPaths = movingRecords.SelectMany(r => new[] {r.SourcePath, r.DestPath}).Distinct().ToArray();
+        var affected = await ComputeAffectedResourceIds(reservedPaths, movingRecords.Select(r => r.ResourceId));
         if (!guard.TryReserve(batchId, affected, reservedPaths, out var conflictPath))
             return SingletonResponseBuilder<ResourceMoveBatchViewModel>.Build(ResponseCode.Conflict,
                 localizer.ResourceMove_ResourcesAreBeingMoved(conflictPath!));
@@ -163,7 +177,8 @@ public partial class ResourceMoveService(
             // Persisted rows without an executor must stay recoverable and reserved.
             if (records.Any(r => r.Id != 0))
             {
-                foreach (var record in records) { record.Status = ResourceMoveRecordStatus.Interrupted; record.ErrorCode = "enqueueFailed"; }
+                foreach (var record in records.Where(r => r.Status == ResourceMoveRecordStatus.Pending))
+                { record.Status = ResourceMoveRecordStatus.Interrupted; record.ErrorCode = "enqueueFailed"; }
                 await db.SaveChangesAsync();
             }
             guard.Release(batchId);
@@ -300,14 +315,19 @@ public partial class ResourceMoveService(
                 }
                 catch (ResourceMoveConflictException conflict)
                 {
-                    record.Status = ResourceMoveRecordStatus.WaitingForConflict;
+                    // A conflict may be detected after copying has begun. Such a
+                    // record must retain its journal/reservation for recovery rather
+                    // than pretending the whole resource was left untouched.
+                    var skip = record.ConflictPolicy == "skip" && !record.PhysicalMoveStarted;
+                    record.Status = skip ? ResourceMoveRecordStatus.Skipped : ResourceMoveRecordStatus.WaitingForConflict;
                     record.ConflictKind = conflict.Kind;
                     record.ConflictPath = conflict.Path;
                     record.ConflictFingerprint = conflict.Fingerprint;
                     record.ConflictVersion++;
-                    record.CanOverwrite = conflict.CanOverwrite;
+                    record.CanOverwrite = !skip && conflict.CanOverwrite;
                     record.ErrorCode = conflict.Kind;
                     record.Error = conflict.Message;
+                    if (skip) record.CompletedAt = DateTime.Now;
                     await db.SaveChangesAsync();
                 }
                 catch (OperationCanceledException)
@@ -553,7 +573,7 @@ public partial class ResourceMoveService(
                     Path = resource.Path, ReasonCode = item.UnavailableReason,
                     BlockingResourceIds = sourcePlan.BlockingIds.Length == 0 ? null : sourcePlan.BlockingIds
                 });
-            if (vm.DuplicateDestinationPaths.Contains(destPath)) item.ConflictKind = "batchDestination";
+            if (vm.DuplicateDestinationPaths.Contains(destPath, StringComparer.OrdinalIgnoreCase)) item.ConflictKind = "batchDestination";
             else if (allDbModels.Any(m => m.Id != resource.Id && !m.Path.IsPathUnder(resource.Path) && m.Path.IsPathEqualOrUnder(destPath)))
                 item.ConflictKind = "resourceIdentity";
             else if (item.DestConflict)
@@ -657,7 +677,7 @@ public partial class ResourceMoveService(
         var recovery = records.Any(r => r.Status == ResourceMoveRecordStatus.NeedsRecovery);
         var cancel = records.Any(r => r.CancelRequested);
         var status = recovery ? "needsRecovery" : running ? cancel ? "stopping" : "running" : counts.Waiting > 0 ? "waiting" : queued ? "queued" :
-            counts.Succeeded == counts.Total ? "completed" : counts.Cancelled == counts.Total ? "cancelled" :
+            counts.Succeeded + counts.Skipped == counts.Total ? "completed" : counts.Cancelled == counts.Total ? "cancelled" :
             counts.Failed == counts.Total ? "failed" : "partial";
         var task = taskManager.GetTaskViewModel(BuildTaskId(first.BatchId));
         return new()

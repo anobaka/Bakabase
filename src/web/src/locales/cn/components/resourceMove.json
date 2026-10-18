@@ -36,5 +36,17 @@
   "resourceMove.panel.stopAtBoundary": "完成当前资源后停止剩余移动",
   "resourceMove.panel.waitingForInput": "移动需要处理",
   "resourceMove.panel.open": "移动面板",
-  "resourceMove.panel.dragCount": "移动 {{count}} 个资源"
+  "resourceMove.panel.dragCount": "移动 {{count}} 个资源",
+  "resourceMove.confirm.onlyConflicts.label": "只显示冲突项",
+  "resourceMove.confirm.onlyConflicts.empty": "没有冲突项。此筛选仅影响预览显示，移动范围不变。",
+  "resourceMove.confirm.batchDuplicate.label": "本批目标重名",
+  "resourceMove.confirm.batchDuplicate.description": "多个待移动资源将落到同一个目标路径，覆盖策略无法决定保留哪个源资源。",
+  "resourceMove.confirm.batchDuplicate.blocked": "请调整所选资源或目标路径，或选择“跳过冲突资源”以跳过所有目标重名的资源。",
+  "resourceMove.confirm.batchDuplicate.skipped": "本批所有目标重名的源资源都会被跳过，其余资源继续移动。",
+  "resourceMove.confirm.policy.inherit.description": "使用移动面板的自动覆盖设置；需要人工处理的冲突仍会等待确认。",
+  "resourceMove.confirm.policy.ask.description": "遇到冲突时暂停该资源，等待你选择如何处理；其余资源继续移动。",
+  "resourceMove.confirm.policy.overwrite.description": "覆盖目标中已有的同名文件，保留目标独有的文件。不会合并其他资源记录，也不会在本批重名目标中选择胜出者。",
+  "resourceMove.confirm.policy.skip.label": "跳过冲突资源",
+  "resourceMove.confirm.policy.skip.description": "遇到冲突时跳过整个资源，不覆盖目标文件；本批目标重名的资源全部跳过，其余资源继续。",
+  "resourceMove.confirm.policy.skip.badge": "将跳过"
 }
