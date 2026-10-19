@@ -1,11 +1,12 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Modules.Acquisition.Abstractions.Components;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
-using Bakabase.Modules.Downloader.Abstractions;
-using Bakabase.Modules.Downloader.Models;
+using Bakabase.Modules.HttpDownloads.Abstractions;
+using Bakabase.Modules.HttpDownloads.Models;
 using Bakabase.Service.Components.Acquisition.Steps;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -26,8 +27,8 @@ public sealed class AcquisitionHttpConfigurationTests
     [TestMethod]
     public async Task LegacyTimeoutOnlyConfigurationReceivesTheNewDefaults()
     {
-        var downloader = new Downloader();
-        using var services = new ServiceCollection().AddSingleton<IHttpDownloader>(downloader).BuildServiceProvider();
+        var downloader = new DownloadManager();
+        using var services = new ServiceCollection().AddSingleton<IHttpDownloadManager>(downloader).BuildServiceProvider();
         var context = new AcquisitionStepContext(services, NullLogger.Instance, (_, _) => Task.CompletedTask,
             "unused", """{"timeoutMinutes":60}""");
 
@@ -49,8 +50,8 @@ public sealed class AcquisitionHttpConfigurationTests
     [DataRow("{\"timeoutMinutes\":43201}", "timeoutInvalid")]
     public async Task InvalidSettingsProduceDiagnosticsAndCannotStartTheDownloader(string json, string code)
     {
-        var downloader = new Downloader();
-        using var services = new ServiceCollection().AddSingleton<IHttpDownloader>(downloader).BuildServiceProvider();
+        var downloader = new DownloadManager();
+        using var services = new ServiceCollection().AddSingleton<IHttpDownloadManager>(downloader).BuildServiceProvider();
         var step = new FetchHttpStep();
         var issues = await step.ValidateConfigurationAsync(new AcquisitionValidationContext(services, json), CancellationToken.None);
 
@@ -65,8 +66,8 @@ public sealed class AcquisitionHttpConfigurationTests
     [TestMethod]
     public async Task OneConnectionNoRetriesAndUnlimitedSpeedRemainExplicitChoices()
     {
-        var downloader = new Downloader();
-        using var services = new ServiceCollection().AddSingleton<IHttpDownloader>(downloader).BuildServiceProvider();
+        var downloader = new DownloadManager();
+        using var services = new ServiceCollection().AddSingleton<IHttpDownloadManager>(downloader).BuildServiceProvider();
         var context = new AcquisitionStepContext(services, NullLogger.Instance, (_, _) => Task.CompletedTask,
             "unused", """{"parallelConnections":1,"maxRetries":0,"speedLimitKiB":0}""");
 
@@ -76,13 +77,33 @@ public sealed class AcquisitionHttpConfigurationTests
         Assert.AreEqual(0L, downloader.Request.MaximumBytesPerSecond);
     }
 
-    private sealed class Downloader : IHttpDownloader
+    private sealed class DownloadManager : IHttpDownloadManager
     {
         public HttpDownloadRequest? Request;
-        public Task<string> DownloadAsync(HttpDownloadRequest request, Func<int, string?, Task>? progress, CancellationToken cancellationToken)
+
+        public Task<HttpDownloadJob> EnsureQueuedAsync(HttpDownloadRequest request, CancellationToken ct = default)
         {
             Request = request;
-            return Task.FromResult("downloaded.bin");
+            return Task.FromResult(Job(HttpDownloadStatus.Queued));
         }
+
+        public Task<HttpDownloadJob> WaitForCompletionAsync(string id, Func<HttpDownloadJob, Task>? progress = null,
+            bool stopOnCancellation = false, CancellationToken ct = default) => Task.FromResult(Job(HttpDownloadStatus.Completed));
+
+        private HttpDownloadJob Job(HttpDownloadStatus status) => new()
+        {
+            Id = "configured-http", Name = "Configured download", OutputDirectory = Request!.OutputDirectory,
+            Status = status, Files = ["downloaded.bin"]
+        };
+
+        public Task InitializeAsync(CancellationToken ct = default) => throw new NotSupportedException();
+        public Task<IReadOnlyList<HttpDownloadJob>> ListAsync(CancellationToken ct = default) => throw new NotSupportedException();
+        public Task<HttpDownloadJob?> GetAsync(string id, CancellationToken ct = default) => throw new NotSupportedException();
+        public Task<HttpDownloadJob?> FindByIdempotencyKeyAsync(string key, CancellationToken ct = default) => throw new NotSupportedException();
+        public Task<HttpDownloadJob> StopAsync(string id, CancellationToken ct = default) => throw new NotSupportedException();
+        public Task<HttpDownloadJob> ResumeAsync(string id, CancellationToken ct = default) => throw new NotSupportedException();
+        public Task<HttpDownloadJob> RecheckAsync(string id, CancellationToken ct = default) => throw new NotSupportedException();
+        public Task DeleteAsync(string id, CancellationToken ct = default) => throw new NotSupportedException();
+        public Task ShutdownAsync(CancellationToken ct = default) => throw new NotSupportedException();
     }
 }

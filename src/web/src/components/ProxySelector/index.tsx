@@ -13,7 +13,7 @@ const CUSTOM_PREFIX = "custom:";
 
 type Props = {
   value?: ProxyModel;
-  customProxies?: ProxyOptions[];
+  customProxies?: ProxyOptions[] | null;
   onChange: (value: ProxyModel | undefined) => void;
   allowInherit?: boolean;
   label?: ReactNode;
@@ -27,7 +27,7 @@ type Props = {
 /** The same proxy choices for global settings, site overrides and individual download protocols. */
 export default function ProxySelector({
   value,
-  customProxies = [],
+  customProxies,
   onChange,
   allowInherit = false,
   label,
@@ -38,6 +38,7 @@ export default function ProxySelector({
   unsupportedDescription,
 }: Props) {
   const { t } = useTranslation();
+  const proxies = customProxies ?? [];
   const selected =
     !value && allowInherit
       ? INHERIT
@@ -53,7 +54,7 @@ export default function ProxySelector({
       value: String(ProxyMode.UseSystem),
       label: t<string>("configuration.others.proxy.useSystem"),
     },
-    ...customProxies.map((proxy) => ({
+    ...proxies.map((proxy) => ({
       value: `${CUSTOM_PREFIX}${proxy.id}`,
       label: proxy.name ? `${proxy.name} (${proxy.address})` : proxy.address,
       description:
@@ -62,12 +63,12 @@ export default function ProxySelector({
           : undefined,
     })),
   ];
-  const disabledKeys = customProxies
+  const disabledKeys = proxies
     .filter((proxy) => isCustomProxySupported && !isCustomProxySupported(proxy))
     .map((proxy) => `${CUSTOM_PREFIX}${proxy.id}`);
   if (
     value?.mode === ProxyMode.UseCustom &&
-    !customProxies.some((proxy) => proxy.id === value.customProxyId)
+    !proxies.some((proxy) => proxy.id === value.customProxyId)
   ) {
     options.push({ value: selected, label: t<string>("configuration.others.proxy.unavailable") });
     disabledKeys.push(selected);

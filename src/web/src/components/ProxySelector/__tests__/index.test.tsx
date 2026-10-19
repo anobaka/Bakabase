@@ -25,6 +25,36 @@ describe("shared proxy selector", () => {
     fireEvent.change(screen.getByRole("combobox"), { target: { value: "1" } });
     expect(change).toHaveBeenLastCalledWith({ mode: 1, customProxyId: undefined });
   });
+  it("offers direct and system choices when a fresh server returns a null proxy list", () => {
+    render(<ProxySelector customProxies={null} onChange={change} />);
+
+    expect(screen.getByRole("combobox")).toHaveValue("0");
+    expect(screen.getAllByRole("option")).toHaveLength(2);
+    expect(change).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "1" } });
+
+    expect(change).toHaveBeenLastCalledWith({ mode: 1, customProxyId: undefined });
+  });
+  it("preserves a missing custom selection when the proxy list is null", () => {
+    render(
+      <ProxySelector
+        value={{ mode: 2, customProxyId: "missing" }}
+        customProxies={null}
+        onChange={change}
+      />,
+    );
+
+    expect(screen.getByRole("combobox")).toHaveValue("custom:missing");
+    expect(
+      screen.getByRole("option", { name: "configuration.others.proxy.unavailable" }),
+    ).toBeDisabled();
+    expect(change).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "0" } });
+
+    expect(change).toHaveBeenLastCalledWith({ mode: 0, customProxyId: undefined });
+  });
   it("supports explicit global inheritance for site overrides", () => {
     const view = render(<ProxySelector allowInherit onChange={change} />);
     expect(screen.getByRole("combobox")).toHaveValue("inherit");
