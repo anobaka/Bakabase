@@ -100,6 +100,37 @@ public sealed class BuiltInTorrentDownloaderTests
     }
 
     [DataTestMethod]
+    [DataRow(false, false)]
+    [DataRow(false, true)]
+    [DataRow(true, false)]
+    [DataRow(true, true)]
+    [Timeout(90000)]
+    public async Task StrictTracker_AcceptsOutboundOnlyMetadataAndMagnetDownloads(bool magnet, bool useProxy)
+    {
+        await using var seed = await LocalSeed.CreateAsync(Path.Combine(_root, "strict-seed"));
+        await using var proxy = new ForwardingSocksProxy();
+        var options = new FixedNetworkOptions(useProxy ? new() {ProxyUri = proxy.Address} : new());
+        var downloader = new BuiltInTorrentDownloader(Path.Combine(_root, "cache"),
+            NullLogger<BuiltInTorrentDownloader>.Instance, false, networkOptions: options);
+        var result = await downloader.DownloadAsync(new TorrentDownloadRequest
+        {
+            Metadata = magnet ? null : seed.Metadata, MagnetUri = magnet ? seed.Magnet : null,
+            WorkingDirectory = Path.Combine(_root, "result"), Timeout = TimeSpan.FromSeconds(30)
+        }, null, CancellationToken.None);
+
+        await AssertFiles(seed, result.Directory, result.Files);
+        Assert.IsTrue(seed.OutboundOnlyAnnounces > 0, "The strict tracker must receive the valid compatibility port.");
+        Assert.AreEqual(0, seed.InvalidAnnounces, "The downloader must not send absent, negative or zero ports to the strict tracker.");
+        Assert.AreEqual(0, seed.ExplicitIpAnnounces, "The tracker must infer the connection's source IP.");
+        var settings = downloader.SettingsFor(result.Directory, useProxy);
+        Assert.AreEqual(0, settings.ListenEndPoints.Count);
+        Assert.AreEqual(0, settings.ReportedListenEndPoints.Count);
+        Assert.IsFalse(settings.AllowPortForwarding);
+        if (useProxy) Assert.IsTrue(proxy.DestinationPorts.Contains(seed.PeerPort));
+        else Assert.AreEqual(0, proxy.DestinationPorts.Count);
+    }
+
+    [DataTestMethod]
     [DataRow("magnet")]
     [DataRow("metadata")]
     [DataRow("url")]
@@ -269,6 +300,9 @@ public sealed class BuiltInTorrentDownloaderTests
         public TorrentManager Manager { get; private set; } = null!;
         public bool AdvertisePeer = true;
         public int StoppedAnnounces;
+        public int InvalidAnnounces;
+        public int OutboundOnlyAnnounces;
+        public int ExplicitIpAnnounces;
         public bool DelayMetadataBody;
         public readonly TaskCompletionSource MetadataResponseStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -342,15 +376,40 @@ public sealed class BuiltInTorrentDownloaderTests
                 {
                     byte[] body;
                     if (context.Request.Url!.AbsolutePath == "/test.torrent") body = Metadata;
+                    else if (context.Request.Url.AbsolutePath == "/scrape")
+                    {
+                        // Scrapes have neither peer_id nor port and must not count as invalid announces.
+                        var torrent = Torrent.Load(Metadata);
+                        var files = new BEncodedDictionary();
+                        foreach (var hash in new[] {torrent.InfoHashes.V1, torrent.InfoHashes.V2}.Where(hash => hash != null))
+                            files[new BEncodedString(hash!.Span[..20].ToArray())] = new BEncodedDictionary
+                            {
+                                ["complete"] = new BEncodedNumber(1), ["downloaded"] = new BEncodedNumber(0),
+                                ["incomplete"] = new BEncodedNumber(0)
+                            };
+                        body = new BEncodedDictionary { ["files"] = files }.Encode();
+                    }
                     else
                     {
+                        // The fixture's separate seeding engine is not the downloader under test.
+                        var isSeeder = context.Request.QueryString["peer_id"] == _engine.PeerId.Text;
                         if (context.Request.QueryString["event"] == "stopped") Interlocked.Increment(ref StoppedAnnounces);
-                        byte[] peers = AdvertisePeer ? [127, 0, 0, 1, (byte)(_peerPort >> 8), (byte)_peerPort] : [];
-                        body = new BEncodedDictionary
+                        if (!isSeeder && !string.IsNullOrEmpty(context.Request.QueryString["ip"])) Interlocked.Increment(ref ExplicitIpAnnounces);
+                        if (!int.TryParse(context.Request.QueryString["port"], out var port) || port is < 1 or > 65535)
                         {
-                            ["interval"] = new BEncodedNumber(1),
-                            ["peers"] = new BEncodedString(peers)
-                        }.Encode();
+                            if (!isSeeder) Interlocked.Increment(ref InvalidAnnounces);
+                            body = new BEncodedDictionary { ["failure reason"] = new BEncodedString("Invalid announce port") }.Encode();
+                        }
+                        else
+                        {
+                            if (!isSeeder && port == 6881) Interlocked.Increment(ref OutboundOnlyAnnounces);
+                            byte[] peers = AdvertisePeer ? [127, 0, 0, 1, (byte)(_peerPort >> 8), (byte)_peerPort] : [];
+                            body = new BEncodedDictionary
+                            {
+                                ["interval"] = new BEncodedNumber(1),
+                                ["peers"] = new BEncodedString(peers)
+                            }.Encode();
+                        }
                     }
                     context.Response.ContentLength64 = body.Length;
                     if (DelayMetadataBody && context.Request.Url!.AbsolutePath == "/test.torrent")

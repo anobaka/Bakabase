@@ -64,8 +64,8 @@ internal sealed class TorrentNetwork : IDisposable
         // MonoTorrent's default tracker delegates close over their original Factories instance;
         // overriding only WithHttpClientCreator would leave HTTP trackers on the system proxy.
         Factories.TrackerCreator tracker = uri => new Tracker(
-            new HttpTrackerConnection(uri, CreateHttpClient, AddressFamily.InterNetwork),
-            new HttpTrackerConnection(uri, CreateHttpClient, AddressFamily.InterNetworkV6));
+            new OutboundOnlyTrackerConnection(new HttpTrackerConnection(uri, CreateHttpClient, AddressFamily.InterNetwork)),
+            new OutboundOnlyTrackerConnection(new HttpTrackerConnection(uri, CreateHttpClient, AddressFamily.InterNetworkV6)));
         factories = factories.WithTrackerCreator("http", tracker).WithTrackerCreator("https", tracker);
         if (UsesProxy)
         {
@@ -76,7 +76,32 @@ internal sealed class TorrentNetwork : IDisposable
                 // Passing null restores the default creator; return null instead to disable it.
                 .WithTrackerCreator("udp", _ => null!);
         }
+        else
+        {
+            factories = factories.WithTrackerCreator("udp", uri => new Tracker(
+                new OutboundOnlyTrackerConnection(new UdpTrackerConnection(uri, AddressFamily.InterNetwork)),
+                new OutboundOnlyTrackerConnection(new UdpTrackerConnection(uri, AddressFamily.InterNetworkV6))));
+        }
         return factories;
+    }
+
+    private sealed class OutboundOnlyTrackerConnection(ITrackerConnection inner) : ITrackerConnection
+    {
+        public bool CanScrape => inner.CanScrape;
+        public Uri Uri => inner.Uri;
+
+        public ReusableTask<AnnounceResponse> AnnounceAsync(AnnounceRequest request, CancellationToken token) =>
+            inner.AnnounceAsync(request.WithReportedEndPointFunc(type =>
+            {
+                var endpoint = request.GetReportedAddress(type);
+                // With no listeners MonoTorrent reports -1, which real trackers reject.
+                // 6881 is only a protocol compatibility port for this outbound-only client;
+                // it does not bind a socket, map a port or override the tracker-observed IP.
+                return (endpoint.address, endpoint.port is > 0 and <= 65535 ? endpoint.port : 6881);
+            }), token);
+
+        public ReusableTask<ScrapeResponse> ScrapeAsync(ScrapeRequest request, CancellationToken token) =>
+            inner.ScrapeAsync(request, token);
     }
 
     internal Task<Socket> ConnectAsync(string host, int port, AddressFamily family, CancellationToken ct) =>
