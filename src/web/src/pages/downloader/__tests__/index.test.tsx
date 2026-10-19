@@ -3,6 +3,7 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import DownloaderPage from "..";
+import GeneralTaskDetailModal from "../components/GeneralTaskDetailModal";
 import { useDownloadTasksStore } from "@/stores/downloadTasks";
 import {
   DownloadTaskActionOnConflict,
@@ -87,7 +88,7 @@ vi.mock("../components/TaskRow", () => ({
   ),
 }));
 vi.mock("../components/GeneralTaskRow", () => ({
-  default: ({ task, onSelect, onAction, onSource }: any) => (
+  default: ({ task, onSelect, onAction, onSource, onDetail }: any) => (
     <div>
       <button data-row-id={task.id} onClick={(event) => onSelect(task.id, event)}>
         {task.name}
@@ -97,6 +98,7 @@ vi.mock("../components/GeneralTaskRow", () => ({
           {action}-{task.id}
         </button>
       ))}
+      <button onClick={() => onDetail(task.id)}>detail-{task.id}</button>
       {task.siteTaskId != null && (
         <button onClick={() => onSource(task.siteTaskId)}>source-{task.id}</button>
       )}
@@ -250,6 +252,27 @@ describe("unified download center", () => {
     await screen.findByText("Gallery files");
     expect(rows()).toEqual(["bt:child"]);
   });
+  it.each(["bt:manual", "bt:child"])(
+    "mounts details for %s with actions bound to its common ID",
+    async (id) => {
+      mount();
+      await screen.findByText("Archive");
+      if (id === "bt:child") fireEvent.click(screen.getByText("expand-1"));
+      fireEvent.click(screen.getByText(`detail-${id}`));
+      expect(mocks.portal).toHaveBeenCalledExactlyOnceWith(
+        GeneralTaskDetailModal,
+        expect.objectContaining({
+          task: snapshot.find((task) => task.id === id),
+        }),
+      );
+      await act(async () => mocks.portal.mock.calls[0][1].onAction(id, "stop"));
+      expect(mocks.batch).toHaveBeenCalledWith({
+        ids: [id],
+        action: "stop",
+        actionOnConflict: DownloadTaskActionOnConflict.NotSet,
+      });
+    },
+  );
   it("uses common task IDs for start and stop controls", async () => {
     mount();
     await screen.findByText("Archive");
