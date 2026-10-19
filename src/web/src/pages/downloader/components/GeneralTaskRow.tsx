@@ -51,9 +51,19 @@ const GeneralTaskRow = memo(function GeneralTaskRow({
       className="flex w-full min-w-0 flex-col justify-between gap-1 py-1 text-left outline-none focus-visible:ring-2 focus-visible:ring-primary"
       style={{ height: DOWNLOAD_TASK_ROW_HEIGHT }}
       onClick={(event) => {
-        if (!(event.target as HTMLElement).closest("[data-task-action]")) onSelect(task.id, event);
+        if ((event.target as HTMLElement).closest("[data-task-action]")) {
+          event.stopPropagation();
+
+          return;
+        }
+        onSelect(task.id, event);
       }}
       onKeyDown={(event) => {
+        if ((event.target as HTMLElement).closest("[data-task-action]")) {
+          event.stopPropagation();
+
+          return;
+        }
         if (event.target === event.currentTarget && ["Enter", " "].includes(event.key)) {
           event.preventDefault();
           event.stopPropagation();
@@ -103,12 +113,7 @@ const GeneralTaskRow = memo(function GeneralTaskRow({
             isIndeterminate={task.progress == null && task.status === "running"}
           />
         </div>
-        <div
-          data-task-action
-          className="flex shrink-0 gap-0.5"
-          onClick={(event) => event.stopPropagation()}
-          onKeyDown={(event) => event.stopPropagation()}
-        >
+        <div data-task-action className="flex shrink-0 gap-0.5">
           {(task.availableActions ?? [])
             .filter((action) => action in icons)
             .map((action) => {

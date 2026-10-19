@@ -154,7 +154,11 @@ vi.mock("@/components/bakaui", () => ({
       {children}
     </div>
   ),
-  ListboxItem: ({ children }: { children: ReactNode }) => <div role="option">{children}</div>,
+  ListboxItem: ({ children }: { children: ReactNode }) => (
+    <div aria-selected={false} role="option">
+      {children}
+    </div>
+  ),
   Spinner: () => <span>loading</span>,
   Tooltip: ({ children }: { children: ReactNode }) => <>{children}</>,
   Dropdown: () => null,
