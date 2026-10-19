@@ -32,15 +32,16 @@ public sealed partial class ExHentaiDownloadResultTests
     }
 
     [TestMethod]
-    [DataRow("Archive/{RawName} [g{GalleryId}]/{PageTitle}{Extension}", "Gallery 12345 [g12345].torrent")]
-    [DataRow("Archive/{GalleryId}/{RawName}/{PageTitle}{Extension}", "12345 Gallery 12345.torrent")]
-    [DataRow("{RawName}/{GalleryId}{Extension}", "Gallery 12345 12345.torrent")]
-    [DataRow("{RawName}/{PageTitle} [g{GalleryId}]{Extension}", "Gallery 12345 [g12345].torrent")]
-    [DataRow("{GalleryId}/{RawName}{Extension}", "12345 Gallery 12345.torrent")]
-    [DataRow("{GalleryId}-{PageTitle}/{RawName}{Extension}", "12345-Gallery 12345 Gallery 12345.torrent")]
-    [DataRow("Images/{PageTitle}{Extension}", "Gallery 12345.torrent")]
-    [DataRow("{RawName} [g{GalleryId}]{Extension}", "Gallery 12345 [g12345].torrent")]
-    public async Task Torrents_UseTemplateNamesWithoutCreatingTemplateDirectories(string convention, string filename)
+    [DataRow("Archive/{RawName} [g{GalleryId}]/{PageTitle}{Extension}", "Archive/Gallery 12345 [g12345].torrent")]
+    [DataRow("Archive/{GalleryId}/{RawName}/{PageTitle}{Extension}", "Archive/12345/Gallery 12345.torrent")]
+    [DataRow("{RawName}/{GalleryId}{Extension}", "Gallery 12345.torrent")]
+    [DataRow("{RawName}/{PageTitle} [g{GalleryId}]{Extension}", "Gallery 12345.torrent")]
+    [DataRow("{GalleryId}/{RawName}{Extension}", "12345.torrent")]
+    [DataRow("{GalleryId}-{PageTitle}/{RawName}{Extension}", "[Misc] Gallery 12345.torrent")]
+    [DataRow("Images/{PageTitle}{Extension}", "Images.torrent")]
+    [DataRow("{RawName} [g{GalleryId}]{Extension}", "[Misc] Gallery 12345.torrent")]
+    public async Task Torrents_UseTheGalleryTemplatePathWithTorrentSuffix_WithoutCreatingAnEmptyGalleryDirectory(
+        string convention, string filename)
     {
         var handler = new GalleryHandler {TorrentBytes = _metadata};
         using var producer = await BuildProducer(handler, convention);
@@ -49,15 +50,15 @@ public sealed partial class ExHentaiDownloadResultTests
         await RunProducer(producer, "https://exhentai.org/g/12345/abcdef0123/", _ => Task.CompletedTask,
             resultWorkflowId: null);
 
-        var expected = Path.Combine(_root, filename);
+        var expected = Path.Combine(_root, filename.Replace('/', Path.DirectorySeparatorChar));
         Assert.IsTrue(File.Exists(expected));
         CollectionAssert.AreEqual(_metadata, await File.ReadAllBytesAsync(expected));
         var result = (await _results.GetByTaskAsync(10)).Single();
-        Assert.AreEqual(_root, result.DownloadDirectory);
+        Assert.AreEqual(Path.GetDirectoryName(expected), result.DownloadDirectory);
         Assert.AreEqual(expected, ExHentaiDownloadResultHelper.GetTorrentDownloadPath(result));
         CollectionAssert.AreEqual(new[] {result.Path, expected}, JsonSerializer.Deserialize<string[]>(result.FilesJson));
-        Assert.IsFalse(Directory.Exists(Path.Combine(_root, "Archive")));
-        Assert.IsFalse(Directory.Exists(Path.Combine(_root, "Images")));
+        Assert.IsFalse(Directory.Exists(expected[..^".torrent".Length]),
+            "Seed-only mode creates parent directories, not an empty BT content directory.");
 
         // Restarts recover the persisted filename even after the naming template changes.
         using var retry = await BuildProducer(new GalleryHandler {RejectRequests = true}, "Changed/{PageTitle}{Extension}");

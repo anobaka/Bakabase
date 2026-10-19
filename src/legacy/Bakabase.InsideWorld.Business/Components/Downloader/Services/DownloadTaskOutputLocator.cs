@@ -41,6 +41,7 @@ public sealed class DownloadTaskOutputLocator(BakabaseDbContext db, ExHentaiDown
         var imagePaths = new HashSet<string>(PathComparer);
         var currentRecordedPaths = new HashSet<string>(PathComparer);
         var supersededPaths = new HashSet<string>(PathComparer);
+        var latestBtContentsReady = false;
         // A changed template or an original-image upgrade can create another result for the
         // same gallery. Use its latest files rather than every historical result's paths.
         foreach (var gallery in results.GroupBy(x => x.SourceKey))
@@ -51,6 +52,8 @@ public sealed class DownloadTaskOutputLocator(BakabaseDbContext db, ExHentaiDown
                 ? DownloadResultContents.Read(state.ContentsDirectory, state.ContentsFilesJson) : null;
             if (placed != null)
             {
+                if (result.Id == latest?.Id && result.RequiresContentsDownload)
+                    latestBtContentsReady = true;
                 foreach (var file in placed.Files)
                 {
                     currentRecordedPaths.Add(file);
@@ -98,7 +101,8 @@ public sealed class DownloadTaskOutputLocator(BakabaseDbContext db, ExHentaiDown
         }
 
         var imageDirectory = CommonDirectory(imagePaths.Select(System.IO.Path.GetDirectoryName));
-        if (imageDirectory != null && (!PrefersTorrent(task.Options) || latest?.Kind != DownloadResultKind.TorrentMetadata))
+        if (imageDirectory != null && (latestBtContentsReady || !PrefersTorrent(task.Options) ||
+                                       latest?.Kind != DownloadResultKind.TorrentMetadata))
             return new(imageDirectory, false);
 
         if (latest?.Kind == DownloadResultKind.TorrentMetadata)

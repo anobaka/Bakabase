@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
@@ -20,7 +20,6 @@ using SixLabors.ImageSharp;
 using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bakabase.Modules.ThirdParty.ThirdParties.ExHentai.Models;
-using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
@@ -28,7 +27,7 @@ using Bakabase.InsideWorld.Business.Components.Downloader.Services;
 
 namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloaders.ExHentai
 {
-    public abstract class AbstractExHentaiDownloader : AbstractDownloader<ExHentaiDownloadTaskType, ExHentaiTaskOptions>
+    public abstract partial class AbstractExHentaiDownloader : AbstractDownloader<ExHentaiDownloadTaskType, ExHentaiTaskOptions>
     {
         protected readonly IStringLocalizer<SharedResource> Localizer;
         protected readonly ExHentaiClient Client;
@@ -55,12 +54,11 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
 
         protected static async Task<bool> CanReuseResultAsync(DownloadResultService results,
             Bakabase.InsideWorld.Business.Components.Downloader.Models.Db.DownloadResultDbModel result,
-            bool preferTorrent, bool preferOriginal, CancellationToken ct, bool requireTorrentExport = true,
-            bool requireTorrentMetadata = false)
+            bool preferTorrent, bool preferOriginal, CancellationToken ct, bool requireTorrentMetadata = false)
         {
             if (requireTorrentMetadata && result.Kind != DownloadResultKind.TorrentMetadata) return false;
             if (result.Kind == DownloadResultKind.TorrentMetadata && (!preferTorrent ||
-                requireTorrentExport && ExHentaiDownloadResultHelper.GetTorrentDownloadPath(result) == null) ||
+                ExHentaiDownloadResultHelper.GetTorrentDownloadPath(result) == null) ||
                 !await results.CanReuseAsync(result, ct)) return false;
             if (!preferOriginal || result.Kind != DownloadResultKind.LocalFiles) return true;
             try
@@ -89,7 +87,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
             downloadMode ??= preferTorrent ? ExHentaiDownloadMode.TorrentFile : ExHentaiDownloadMode.Direct;
             var downloadContents = downloadMode == ExHentaiDownloadMode.Torrent;
             var exportTorrent = !downloadContents || saveTorrentFile;
-            var dedicatedDirectory = resultWorkflowId.HasValue || downloadContents;
+            var dedicatedDirectory = resultWorkflowId.HasValue && !downloadContents;
             var results = GetRequiredService<DownloadResultService>();
             var sourceKey = ExHentaiDownloadResultHelper.NormalizeSourceKey(url);
             var exOptionsManager = GetRequiredService<IBOptionsManager<ExHentaiOptions>>();
@@ -98,7 +96,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
             var ledger = results.ExHentaiLedger;
             var previous = await results.GetLatestBySourceAsync(downloadTaskId, sourceKey, ct);
             var canReusePrevious = previous != null &&
-                await CanReuseResultAsync(results, previous, preferTorrent, preferOriginal, ct, exportTorrent,
+                await CanReuseResultAsync(results, previous, preferTorrent, preferOriginal, ct,
                     downloadMode == ExHentaiDownloadMode.TorrentFile);
             if (canReusePrevious && previous != null)
             {
@@ -112,68 +110,96 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                 }
                 else if (previous.Kind == DownloadResultKind.TorrentMetadata)
                 {
-                    if (!exportTorrent)
+                    // Reuse the saved naming choice when adding an output or retrying.
+                    // Only missing legacy naming information requires gallery metadata.
+                    ExHentaiResource? namingDetail = null;
+                    async Task<ExHentaiResource> GetNamingDetailAsync() => namingDetail ??=
+                        await Client.ParseDetail(url, false, ct)
+                        ?? throw new IOException($"Got empty gallery metadata for naming: {url}");
+
+                    var recordedTorrent = ExHentaiDownloadResultHelper.GetRecordedTorrentDownloadPath(previous);
+                    bool IsInsideDownloadRoot(string path)
                     {
-                        var bytes = await DownloadResultService.ReadReusableTorrentMetadataAsync(previous, ct)
-                            ?? throw new IOException("The saved torrent metadata changed during recovery.");
-                        await results.RecordTorrentMetadataAsync(downloadTaskId, ThirdPartyId, sourceKey, previous.Name,
-                            bytes, downloadPath, resultWorkflowId, true, ct: ct);
+                        var relative = Path.GetRelativePath(downloadPath, path);
+                        return !Path.IsPathRooted(relative) && relative != ".." &&
+                               !relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal);
                     }
-                    else
+                    var outputDirectory = downloadPath;
+                    if (downloadContents)
                     {
-                    var torrentPath = ExHentaiDownloadResultHelper.GetTorrentDownloadPath(previous)
-                        ?? throw new IOException("The recorded torrent output path is invalid.");
-                    // Switching from BT's gallery directory to seed-only output changes the
-                    // export root, not the existing BT job or its downloaded pieces.
-                    if (!string.Equals(Path.GetFullPath(previous.DownloadDirectory), Path.GetFullPath(downloadPath),
-                            OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
-                    {
-                        var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-                        var hasRecordedUserCopy = (JsonSerializer.Deserialize<string[]>(previous.FilesJson) ?? [])
-                            .Any(file => string.Equals(Path.GetFullPath(file), torrentPath, comparison));
-                        // The synthetic name for a metadata-only BT result was safe in its own
-                        // gallery directory. Include identity when first exporting to a shared root.
-                        var fileName = hasRecordedUserCopy ? Path.GetFileName(torrentPath)
-                            : ExHentaiTorrentFileName.Limit(
-                                $"{Path.GetFileNameWithoutExtension(torrentPath)} [g{sourceKey.Split('/')[0]}].torrent", sourceKey);
-                        torrentPath = Path.Combine(Path.GetFullPath(downloadPath), fileName);
+                        if (previous.RequiresContentsDownload)
+                            outputDirectory = previous.DownloadDirectory;
+                        else
+                        {
+                            Directory.CreateDirectory(downloadPath);
+                            // A saved seed already captures the template chosen for this work.
+                            // Keep its sibling destination even if the current template changed.
+                            outputDirectory = recordedTorrent != null && IsInsideDownloadRoot(recordedTorrent)
+                                ? ExHentaiGalleryOutputPath.Resolve(downloadPath,
+                                    Path.GetRelativePath(downloadPath, recordedTorrent[..^".torrent".Length]))
+                                : (await ResolveGalleryDirectoryAsync(downloadPath,
+                                    await GetNamingDetailAsync(), sourceKey)).Directory;
+                        }
                     }
-                    // Restore a missing or damaged user copy from verified managed bytes.
-                    // Bounded reads also protect recovery from a corrupt oversized file.
                     var metadata = await DownloadResultService.ReadReusableTorrentMetadataAsync(previous, ct)
                         ?? throw new IOException("The saved torrent metadata changed during recovery. Retry to acquire it again.");
-                    var userCopyMatches = false;
-                    try
+                    var torrentPath = recordedTorrent;
+                    if (exportTorrent)
                     {
-                        await using var userCopy = File.OpenRead(torrentPath);
-                        var userBytes = await Bakabase.Modules.Downloader.Components.TorrentMetadata.ReadBoundedAsync(userCopy, ct);
-                        userCopyMatches = metadata.AsSpan().SequenceEqual(userBytes);
-                    }
-                    catch (Exception error) when (error is IOException or UnauthorizedAccessException or ArgumentException) { }
-                    if (!userCopyMatches)
-                    {
+                        Directory.CreateDirectory(downloadPath);
+                        if (recordedTorrent != null)
+                        {
+                            torrentPath = IsInsideDownloadRoot(recordedTorrent)
+                                ? recordedTorrent : Path.Combine(downloadPath, Path.GetFileName(recordedTorrent));
+                        }
+                        else if (previous.RequiresContentsDownload)
+                        {
+                            var legacyDirectory = Path.Combine(downloadPath, "gallery-" + sourceKey.Replace('/', '-'));
+                            torrentPath = IsInsideDownloadRoot(previous.DownloadDirectory) &&
+                                          !string.Equals(Path.GetFullPath(previous.DownloadDirectory), Path.GetFullPath(legacyDirectory),
+                                              OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal)
+                                ? previous.DownloadDirectory + ".torrent"
+                                : await ResolveTorrentPathAsync(downloadPath, await GetNamingDetailAsync(), sourceKey);
+                        }
+                        else
+                            torrentPath = Path.Combine(downloadPath, Path.GetFileName(
+                                ExHentaiDownloadResultHelper.GetTorrentDownloadPath(previous)
+                                ?? throw new IOException("The recorded torrent output path is invalid.")));
+                        ExHentaiGalleryOutputPath.EnsureSafeTorrentOutputPath(downloadPath, torrentPath);
                         Directory.CreateDirectory(Path.GetDirectoryName(torrentPath)!);
                         ExHentaiGalleryOutputPath.EnsureSafeTorrentOutputPath(downloadPath, torrentPath);
-                        var temporary = Path.Combine(Path.GetDirectoryName(torrentPath)!,
-                            ".bakabase-torrent-" + Guid.NewGuid().ToString("N") + ".tmp");
-                        var ownsTemporary = false;
+                        // Restore a missing or damaged user copy from verified managed bytes.
+                        var userCopyMatches = false;
                         try
                         {
-                            await using (var output = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None))
-                            {
-                                ownsTemporary = true;
-                                await output.WriteAsync(metadata, ct);
-                            }
-                            ct.ThrowIfCancellationRequested();
-                            ExHentaiGalleryOutputPath.EnsureSafeTorrentOutputPath(downloadPath, torrentPath);
-                            File.Move(temporary, torrentPath, true);
+                            await using var userCopy = File.OpenRead(torrentPath);
+                            var userBytes = await Bakabase.Modules.Downloader.Components.TorrentMetadata.ReadBoundedAsync(userCopy, ct);
+                            userCopyMatches = metadata.AsSpan().SequenceEqual(userBytes);
                         }
-                        finally { if (ownsTemporary && File.Exists(temporary)) File.Delete(temporary); }
+                        catch (Exception error) when (error is IOException or UnauthorizedAccessException or ArgumentException) { }
+                        if (!userCopyMatches)
+                        {
+                            var temporary = Path.Combine(Path.GetDirectoryName(torrentPath)!,
+                                ".bakabase-torrent-" + Guid.NewGuid().ToString("N") + ".tmp");
+                            var ownsTemporary = false;
+                            try
+                            {
+                                await using (var output = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+                                {
+                                    ownsTemporary = true;
+                                    await output.WriteAsync(metadata, ct);
+                                }
+                                ct.ThrowIfCancellationRequested();
+                                ExHentaiGalleryOutputPath.EnsureSafeTorrentOutputPath(downloadPath, torrentPath);
+                                File.Move(temporary, torrentPath, true);
+                            }
+                            finally { if (ownsTemporary && File.Exists(temporary)) File.Delete(temporary); }
+                        }
+                        await OnFileDownloadedInternal(torrentPath);
                     }
-                    await OnFileDownloadedInternal(torrentPath);
                     await results.RecordTorrentMetadataAsync(downloadTaskId, ThirdPartyId, sourceKey, previous.Name,
-                        metadata, downloadPath, resultWorkflowId, downloadContents, torrentPath, ct);
-                    }
+                        metadata, downloadContents ? outputDirectory : Path.GetDirectoryName(torrentPath!)!,
+                        resultWorkflowId, downloadContents, torrentPath, ct);
                 }
                 if (onNameAcquired != null) await onNameAcquired(previous.Name);
                 if (previous.Kind == DownloadResultKind.TorrentMetadata && onTorrentDownloaded != null)
@@ -201,92 +227,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                 await onNameAcquired(betterName);
             }
 
-            var sourceKeyParts = sourceKey.Split('/');
-            var baseNameSegmentsValues = new Dictionary<ExHentaiNamingFields, object?>
-            {
-                [ExHentaiNamingFields.GalleryId] = sourceKeyParts[0],
-                [ExHentaiNamingFields.GalleryToken] = sourceKeyParts[1],
-                [ExHentaiNamingFields.RawName] = detail.RawName,
-                [ExHentaiNamingFields.Name] = detail.Name,
-                [ExHentaiNamingFields.Category] = detail.Category,
-            };
-
-            // The template produces page paths. A flat template (or one with page fields in a
-            // directory component) is wrapped in a stable gallery directory. The default template
-            // includes the gallery ID; custom templates intentionally control their own uniqueness.
-            async Task<(string Directory, string? TemplateDirectory)> ResolveGalleryDirectoryAsync()
-            {
-                var namingConvention = GetEffectiveNamingConvention((await GetDownloaderOptionsAsync()).NamingConvention);
-                var templateDirectory = Path.GetDirectoryName(namingConvention);
-                var pageDependentDirectory = templateDirectory?.Contains("{PageTitle}", StringComparison.OrdinalIgnoreCase) == true ||
-                                             templateDirectory?.Contains("{Extension}", StringComparison.OrdinalIgnoreCase) == true;
-                var sampleValues = new Dictionary<ExHentaiNamingFields, object?>(baseNameSegmentsValues)
-                {
-                    [ExHentaiNamingFields.PageTitle] = "bakabase-sample-page",
-                    [ExHentaiNamingFields.Extension] = ".img"
-                };
-                var samplePath = await BuildDownloadFilename(sampleValues);
-                var renderedDirectory = Path.GetDirectoryName(samplePath);
-                var useTemplateDirectory = !pageDependentDirectory && !string.IsNullOrWhiteSpace(renderedDirectory);
-                var relativeDirectory = useTemplateDirectory
-                    ? renderedDirectory!
-                    : FileNameSanitizer.Sanitize($"[{detail.Category}] {betterName}");
-                if (string.IsNullOrWhiteSpace(relativeDirectory))
-                    relativeDirectory = $"gallery-{sourceKeyParts[0]}";
-                if (dedicatedDirectory && !Directory.Exists(downloadPath))
-                {
-                    // Automatic handoffs use a per-gallery work root beneath the configured
-                    // download root. Create only that child, and only when this work has output.
-                    var parent = Path.GetDirectoryName(Path.GetFullPath(downloadPath));
-                    if (parent == null || !Directory.Exists(parent))
-                        throw new DirectoryNotFoundException($"ExHentai download root is unavailable: {downloadPath}");
-                    Directory.CreateDirectory(downloadPath);
-                }
-                return (ExHentaiGalleryOutputPath.Resolve(downloadPath, relativeDirectory),
-                    useTemplateDirectory ? renderedDirectory : null);
-            }
-
-            async Task<string> ResolveTorrentFileNameAsync()
-            {
-                var convention = GetEffectiveNamingConvention((await GetDownloaderOptionsAsync()).NamingConvention);
-                var values = new Dictionary<ExHentaiNamingFields, object?>(baseNameSegmentsValues)
-                {
-                    [ExHentaiNamingFields.PageTitle] = betterName,
-                    [ExHentaiNamingFields.Extension] = ".torrent"
-                };
-                var rendered = await BuildDownloadFilename(values);
-                var templateParts = convention.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-                var renderedParts = rendered.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-                var galleryFields = new[] {"{RawName}", "{Name}", "{GalleryId}", "{GalleryToken}"};
-                var fileTemplate = templateParts.Last();
-                var fileNamesGallery = galleryFields.Any(field => fileTemplate.Contains(field, StringComparison.OrdinalIgnoreCase));
-                // A page-oriented template puts the gallery's name in a directory. For a
-                // torrent that component becomes the filename rather than another folder.
-                var galleryNameParts = new List<string>();
-                for (var index = 0; index < templateParts.Length - 1; index++)
-                {
-                    var part = templateParts[index];
-                    if (fileNamesGallery &&
-                        ((part.Equals("{RawName}", StringComparison.OrdinalIgnoreCase) &&
-                          (fileTemplate.Contains("{RawName}", StringComparison.OrdinalIgnoreCase) ||
-                           fileTemplate.Contains("{PageTitle}", StringComparison.OrdinalIgnoreCase))) ||
-                         (part.Equals("{Name}", StringComparison.OrdinalIgnoreCase) &&
-                          fileTemplate.Contains("{Name}", StringComparison.OrdinalIgnoreCase)))) continue;
-                    if (galleryFields
-                        .Any(field => part.Contains(field, StringComparison.OrdinalIgnoreCase)))
-                        galleryNameParts.Add(renderedParts[index]);
-                }
-                var filename = Path.GetFileName(rendered);
-                if (fileNamesGallery)
-                    galleryNameParts.Add(filename.EndsWith(".torrent", StringComparison.OrdinalIgnoreCase)
-                        ? filename[..^".torrent".Length] : filename);
-                if (galleryNameParts.Count > 0)
-                    return ExHentaiTorrentFileName.Limit(
-                        FileNameSanitizer.Sanitize(string.Join(" ", galleryNameParts) + ".torrent"), sourceKey);
-                return ExHentaiTorrentFileName.Limit(
-                    FileNameSanitizer.Sanitize(filename.EndsWith(".torrent", StringComparison.OrdinalIgnoreCase)
-                        ? filename : filename + ".torrent"), sourceKey);
-            }
+            var baseNameSegmentsValues = GalleryNamingValues(detail, sourceKey);
 
             // Use the API count: an empty torrent window must not become a cached negative verdict.
             if (preferTorrent && detail.TorrentCount > 0)
@@ -315,14 +256,17 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                     .ThenByDescending(t => t.Downloaded)
                     .ToList();
 
-                // Automatic workflows already receive a dedicated work root; save-only
-                // tasks write straight into the user's selected download directory.
-                var path = Path.Combine(downloadPath, await ResolveTorrentFileNameAsync());
-                if (dedicatedDirectory)
-                    ExHentaiGalleryOutputPath.EnsureSafeOutputPath(configuredRoot, downloadPath, path);
+                // A gallery folder and its seed share the same template path; only the suffix differs.
                 if (dedicatedDirectory && !Directory.Exists(downloadPath))
+                {
+                    ExHentaiGalleryOutputPath.EnsureSafeOutputPath(configuredRoot, downloadPath,
+                        Path.Combine(downloadPath, "output"));
                     Directory.CreateDirectory(downloadPath);
-                ExHentaiGalleryOutputPath.EnsureSafeTorrentOutputPath(downloadPath, path);
+                }
+                var path = await ResolveTorrentPathAsync(downloadPath, detail, sourceKey);
+                var contentsDirectory = downloadContents
+                    ? (await ResolveGalleryDirectoryAsync(downloadPath, detail, sourceKey)).Directory
+                    : downloadPath;
 
                 if (onCurrentChanged != null)
                 {
@@ -386,26 +330,26 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                     {
                         var metadata = await File.ReadAllBytesAsync(temporary, ct);
                         await results.RecordTorrentMetadataAsync(downloadTaskId, ThirdPartyId, sourceKey, betterName,
-                            metadata, downloadPath, resultWorkflowId, true, ct: ct);
+                            metadata, contentsDirectory, resultWorkflowId, true, ct: ct);
                     }
                     else
                     {
-                    if (resultWorkflowId.HasValue)
-                        ExHentaiGalleryOutputPath.EnsureSafeOutputPath(configuredRoot, downloadPath, path);
-                    ExHentaiGalleryOutputPath.EnsureSafeTorrentOutputPath(downloadPath, path);
-                    File.Move(temporary, path, true);
-                    await OnFileDownloadedInternal(path);
-                    // Persist the result only after the user's copy is in the selected directory.
-                    // A failed move must remain retryable rather than looking completed.
-                    if (resultWorkflowId.HasValue)
-                        ExHentaiGalleryOutputPath.EnsureSafeOutputPath(configuredRoot, downloadPath, path);
-                    ExHentaiGalleryOutputPath.EnsureSafeTorrentOutputPath(downloadPath, path);
-                    if (downloadContents)
-                        await results.RecordTorrentMetadataAsync(downloadTaskId, ThirdPartyId, sourceKey, betterName,
-                            await File.ReadAllBytesAsync(path, ct), downloadPath, resultWorkflowId, true, path, ct);
-                    else
-                        await results.RecordTorrentAsync(downloadTaskId, ThirdPartyId, sourceKey, betterName,
-                            path, resultWorkflowId, ct);
+                        if (dedicatedDirectory)
+                            ExHentaiGalleryOutputPath.EnsureSafeOutputPath(configuredRoot, downloadPath, path);
+                        ExHentaiGalleryOutputPath.EnsureSafeTorrentOutputPath(downloadPath, path);
+                        File.Move(temporary, path, true);
+                        await OnFileDownloadedInternal(path);
+                        // Persist the result only after the user's copy is in the selected directory.
+                        // A failed move must remain retryable rather than looking completed.
+                        if (dedicatedDirectory)
+                            ExHentaiGalleryOutputPath.EnsureSafeOutputPath(configuredRoot, downloadPath, path);
+                        ExHentaiGalleryOutputPath.EnsureSafeTorrentOutputPath(downloadPath, path);
+                        if (downloadContents)
+                            await results.RecordTorrentMetadataAsync(downloadTaskId, ThirdPartyId, sourceKey, betterName,
+                                await File.ReadAllBytesAsync(path, ct), contentsDirectory, resultWorkflowId, true, path, ct);
+                        else
+                            await results.RecordTorrentAsync(downloadTaskId, ThirdPartyId, sourceKey, betterName,
+                                path, resultWorkflowId, ct);
                     }
                 }
                 finally
@@ -455,7 +399,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                 downloadMode == ExHentaiDownloadMode.Torrent && !fallbackToDirect)
                 throw new InvalidOperationException("This gallery has no torrent. Direct download fallback is disabled.");
 
-            var (galleryDirectoryForImages, stableTemplateDirectory) = await ResolveGalleryDirectoryAsync();
+            Directory.CreateDirectory(downloadPath);
+            var (galleryDirectoryForImages, stableTemplateDirectory) = await ResolveGalleryDirectoryAsync(downloadPath, detail, sourceKey);
 
             //var limit = await _client.GetImageLimits();
             //if (limit.Rest <= imageTitleAndPageUrls.Length)

@@ -197,6 +197,30 @@ public sealed class DownloadTaskOutputLocatorTests
     }
 
     [TestMethod]
+    public async Task CompletedBtContents_OpenTheirDirectoryBeforeTheSiblingTorrent()
+    {
+        var image = await WriteFile("downloads/[Misc] Gallery [g12345]/001.jpg");
+        var cache = await WriteFile("appdata/downloader/torrent-metadata/hash.torrent");
+        var torrent = await WriteFile("downloads/[Misc] Gallery [g12345].torrent");
+        var directory = Path.GetDirectoryName(image)!;
+        var result = await Record(DownloadResultKind.TorrentMetadata, "12345/abc", directory, cache, cache, torrent);
+        result.RequiresContentsDownload = true;
+        _task.Options = "{\"downloadMode\":2,\"saveTorrentFile\":true}";
+        _db.Set<DownloadResultProcessingDbModel>().Add(new()
+        {
+            DownloadResultId = result.Id, ContentsDirectory = directory,
+            ContentsFilesJson = JsonSerializer.Serialize(new[] {image}), ContentsReadyAt = DateTime.UtcNow
+        });
+        await _db.SaveChangesAsync();
+
+        Assert.AreEqual(new DownloadTaskOpenTarget(directory, false), await _locator.GetAsync(_task.Id));
+
+        // A stale completion marker cannot conceal missing content or the surviving seed.
+        File.Delete(image);
+        Assert.AreEqual(new DownloadTaskOpenTarget(torrent, true), await _locator.GetAsync(_task.Id));
+    }
+
+    [TestMethod]
     public async Task DirectDownload_PartialLedgerImagesOverrideHistoricalTorrent()
     {
         var cache = await WriteFile("appdata/downloader/torrent-metadata/hash.torrent");

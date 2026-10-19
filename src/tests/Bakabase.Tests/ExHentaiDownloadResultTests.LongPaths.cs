@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
 using Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloaders.ExHentai;
 
 namespace Bakabase.Tests;
@@ -69,6 +70,55 @@ public sealed partial class ExHentaiDownloadResultTests
         await RunProducer(retry, "https://exhentai.org/g/12345/abcdef0123/", _ => Task.CompletedTask);
         await RunProducer(retry, "https://exhentai.org/g/12346/abcdef0123/", _ => Task.CompletedTask);
         CollectionAssert.AreEquivalent(paths, resumed.ToArray());
+    }
+
+    [DataTestMethod]
+    [DataRow("ascii")]
+    [DataRow("cjk")]
+    [DataRow("emoji")]
+    public async Task BtMode_OversizedGalleryNameKeepsTheContentDirectoryAndTorrentAsSiblings(string kind)
+    {
+        var title = kind switch
+        {
+            "cjk" => new string('画', 150),
+            "emoji" => string.Concat(Enumerable.Repeat("🎨", 100)),
+            _ => new string('a', 300)
+        };
+        using var producer = await BuildProducer(new GalleryHandler {GalleryName = title, TorrentBytes = _metadata});
+
+        await RunProducer(producer, "https://exhentai.org/g/12345/abcdef0123/", _ => Task.CompletedTask,
+            resultWorkflowId: null, downloadMode: ExHentaiDownloadMode.Torrent, saveTorrentFile: true);
+
+        var result = (await _results.GetByTaskAsync(10)).Single();
+        var torrent = ExHentaiDownloadResultHelper.GetTorrentDownloadPath(result)!;
+        Assert.AreEqual(result.DownloadDirectory + ".torrent", torrent);
+        Assert.IsTrue(Directory.Exists(result.DownloadDirectory));
+        Assert.IsTrue(new UTF8Encoding(false, true).GetByteCount(Path.GetFileName(torrent)) <= 255);
+        CollectionAssert.AreEqual(_metadata, await File.ReadAllBytesAsync(torrent));
+        AssertNoTemporaryFiles();
+    }
+
+    [TestMethod]
+    public async Task BtMode_OversizedNestedGalleryNameBoundsEveryParentComponent()
+    {
+        var handler = new GalleryHandler {GalleryName = new string('画', 150), TorrentBytes = _metadata};
+        using var producer = await BuildProducer(handler, "Archive/{RawName}/{GalleryId}/{PageTitle}{Extension}");
+
+        await RunProducer(producer, "https://exhentai.org/g/12345/abcdef0123/", _ => Task.CompletedTask,
+            resultWorkflowId: null, downloadMode: ExHentaiDownloadMode.Torrent, saveTorrentFile: true);
+
+        var result = (await _results.GetByTaskAsync(10)).Single();
+        var torrent = ExHentaiDownloadResultHelper.GetTorrentDownloadPath(result)!;
+        Assert.AreEqual(result.DownloadDirectory + ".torrent", torrent);
+        Assert.AreEqual("12345.torrent", Path.GetFileName(torrent));
+        var components = Path.GetRelativePath(_root, torrent).Split(Path.DirectorySeparatorChar);
+        Assert.AreEqual(3, components.Length);
+        Assert.AreEqual("Archive", components[0]);
+        Assert.IsTrue(components.All(component => component.Length <= 255 &&
+            new UTF8Encoding(false, true).GetByteCount(component) <= 255));
+        Assert.IsTrue(Directory.Exists(result.DownloadDirectory));
+        CollectionAssert.AreEqual(_metadata, await File.ReadAllBytesAsync(torrent));
+        AssertNoTemporaryFiles();
     }
 
     [TestMethod]

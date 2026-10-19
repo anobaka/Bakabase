@@ -15,8 +15,8 @@ public sealed partial class ExHentaiDownloadResultTests
         var handler = new GalleryHandler {TorrentBytes = _metadata};
         using var producer = await BuildProducer(handler);
         const string url = "https://exhentai.org/g/12345/abcdef0123/";
-        var galleryDirectory = Path.Combine(_root, "gallery-12345-abcdef0123");
-        await RunProducer(producer, url, _ => Task.CompletedTask, downloadPath: galleryDirectory,
+        var galleryDirectory = Path.Combine(_root, "[Misc] Gallery 12345 [g12345]");
+        await RunProducer(producer, url, _ => Task.CompletedTask, downloadPath: _root,
             resultWorkflowId: null, downloadMode: ExHentaiDownloadMode.Torrent, fallbackToDirect: false);
         var saved = (await _results.GetByTaskAsync(10)).Single();
         var partialFile = Path.Combine(galleryDirectory, "existing-partial.bin");
@@ -31,14 +31,14 @@ public sealed partial class ExHentaiDownloadResultTests
         Assert.IsFalse(exported.RequiresContentsDownload);
         Assert.AreEqual(_root, exported.DownloadDirectory);
         var torrentPath = ExHentaiDownloadResultHelper.GetTorrentDownloadPath(exported)!;
-        Assert.AreEqual(_root, Path.GetDirectoryName(torrentPath));
+        Assert.AreEqual(Path.Combine(_root, "[Misc] Gallery 12345 [g12345].torrent"), torrentPath);
         CollectionAssert.AreEqual(_metadata, await File.ReadAllBytesAsync(torrentPath));
         CollectionAssert.AreEqual(_metadata, await File.ReadAllBytesAsync(exported.Path));
         Assert.AreEqual("keep existing BT pieces", await File.ReadAllTextAsync(partialFile));
         Assert.AreEqual(1, handler.TorrentRequests, "Conversion reuses verified managed metadata.");
         Assert.AreEqual(0, handler.ImageRequests);
 
-        await RunProducer(producer, url, _ => Task.CompletedTask, downloadPath: galleryDirectory,
+        await RunProducer(producer, url, _ => Task.CompletedTask, downloadPath: _root,
             resultWorkflowId: null, downloadMode: ExHentaiDownloadMode.Torrent, fallbackToDirect: false);
         var resumedIntent = (await _results.GetByTaskAsync(10)).Single();
         Assert.AreEqual(saved.Id, resumedIntent.Id);
@@ -58,8 +58,10 @@ public sealed partial class ExHentaiDownloadResultTests
         {
             var url = $"https://exhentai.org/g/{id}/abcdef0123/";
             await RunProducer(producer, url, _ => Task.CompletedTask,
-                downloadPath: Path.Combine(_root, $"gallery-{id}-abcdef0123"),
+                downloadPath: _root,
                 resultWorkflowId: null, downloadMode: ExHentaiDownloadMode.Torrent, saveTorrentFile: exportDuringBt);
+            var btResult = (await _results.GetByTaskAsync(10)).Single(result => result.SourceKey.StartsWith($"{id}/"));
+            Assert.AreEqual(Path.Combine(_root, $"[Misc] Identical gallery name [g{id}]"), btResult.DownloadDirectory);
             await RunProducer(producer, url, _ => Task.CompletedTask, downloadPath: _root,
                 resultWorkflowId: null, downloadMode: ExHentaiDownloadMode.TorrentFile);
         }
@@ -67,6 +69,11 @@ public sealed partial class ExHentaiDownloadResultTests
         var paths = (await _results.GetByTaskAsync(10)).Select(ExHentaiDownloadResultHelper.GetTorrentDownloadPath).ToArray();
         Assert.AreEqual(2, paths.Distinct().Count());
         Assert.AreEqual(2, Directory.GetFiles(_root, "*.torrent").Length);
+        CollectionAssert.AreEquivalent(new[]
+        {
+            Path.Combine(_root, "[Misc] Identical gallery name [g12345].torrent"),
+            Path.Combine(_root, "[Misc] Identical gallery name [g12346].torrent")
+        }, paths);
         foreach (var path in paths)
             CollectionAssert.AreEqual(_metadata, await File.ReadAllBytesAsync(path!));
         Assert.AreEqual(0, handler.ImageRequests);
@@ -132,9 +139,9 @@ public sealed partial class ExHentaiDownloadResultTests
             downloadMode: ExHentaiDownloadMode.TorrentFile, fallbackToDirect: false);
         var saved = (await _results.GetByTaskAsync(10)).Single();
         Assert.IsFalse(saved.RequiresContentsDownload);
-        var destination = Path.Combine(_root, "gallery-12345-abcdef0123");
+        var destination = Path.Combine(_root, "[Misc] Gallery 12345 [g12345]");
 
-        await RunProducer(producer, url, _ => Task.CompletedTask, downloadPath: destination,
+        await RunProducer(producer, url, _ => Task.CompletedTask, downloadPath: _root,
             resultWorkflowId: null, downloadMode: ExHentaiDownloadMode.Torrent, fallbackToDirect: false);
 
         var promoted = (await _results.GetByTaskAsync(10)).Single();
@@ -143,7 +150,7 @@ public sealed partial class ExHentaiDownloadResultTests
         Assert.IsTrue(promoted.RequiresContentsDownload);
         Assert.AreEqual(destination, promoted.DownloadDirectory);
         Assert.IsNull(await _results.GetAvailableContentsAsync(promoted), "Metadata is not completed BT content.");
-        Assert.AreEqual(1, handler.TorrentRequests, "Verified saved metadata is reused without another site request.");
+        Assert.AreEqual(1, handler.TorrentRequests, "Verified saved metadata is reused without another torrent request.");
         Assert.AreEqual(0, handler.ImageRequests, "The BT shortcut never falls back to GP-consuming images.");
     }
 
@@ -154,9 +161,9 @@ public sealed partial class ExHentaiDownloadResultTests
     {
         var handler = new GalleryHandler {TorrentBytes = _metadata};
         using var producer = await BuildProducer(handler);
-        var destination = Path.Combine(_root, "gallery-12345-abcdef0123");
+        var destination = Path.Combine(_root, "[Misc] Gallery 12345 [g12345]");
         await RunProducer(producer, "https://exhentai.org/g/12345/abcdef0123/", _ => Task.CompletedTask,
-            downloadPath: destination, resultWorkflowId: null, downloadMode: ExHentaiDownloadMode.Torrent,
+            downloadPath: _root, resultWorkflowId: null, downloadMode: ExHentaiDownloadMode.Torrent,
             saveTorrentFile: export);
 
         var result = (await _results.GetByTaskAsync(10)).Single();
@@ -164,15 +171,22 @@ public sealed partial class ExHentaiDownloadResultTests
         Assert.AreEqual(destination, result.DownloadDirectory);
         Assert.IsNull(result.WorkflowDefinitionId, "BT is usable without creating a workflow.");
         CollectionAssert.AreEqual(_metadata, await File.ReadAllBytesAsync(result.Path));
-        Assert.AreEqual(export ? 1 : 0, Directory.GetFiles(destination, "*.torrent", SearchOption.AllDirectories).Length);
+        Assert.AreEqual(0, Directory.GetFiles(destination, "*.torrent", SearchOption.AllDirectories).Length);
+        Assert.AreEqual(export ? 1 : 0, Directory.GetFiles(_root, "*.torrent").Length);
+        if (export)
+            Assert.AreEqual(Path.Combine(_root, "[Misc] Gallery 12345 [g12345].torrent"),
+                ExHentaiDownloadResultHelper.GetTorrentDownloadPath(result));
         Assert.AreEqual(0, handler.ImageRequests);
         Assert.AreEqual(export ? 2 : 1, JsonSerializer.Deserialize<string[]>(result.FilesJson)!.Length);
 
+        var requests = handler.Requests;
+        handler.RejectRequests = true;
         await RunProducer(producer, "https://exhentai.org/g/12345/abcdef0123/", _ => Task.CompletedTask,
-            downloadPath: destination, resultWorkflowId: null, downloadMode: ExHentaiDownloadMode.Torrent,
+            downloadPath: _root, resultWorkflowId: null, downloadMode: ExHentaiDownloadMode.Torrent,
             saveTorrentFile: export);
         Assert.AreEqual(1, (await _results.GetByTaskAsync(10)).Count);
         Assert.AreEqual(1, handler.TorrentRequests, "Restart reuses verified managed metadata.");
+        Assert.AreEqual(requests, handler.Requests, "An unchanged BT retry must work while the gallery is unavailable.");
     }
 
     [TestMethod]
