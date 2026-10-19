@@ -17,15 +17,9 @@ public static class ExHentaiDownloadResultHelper
         if (result.Kind != DownloadResultKind.TorrentMetadata) return null;
         try
         {
+            var recorded = GetRecordedTorrentDownloadPath(result);
+            if (recorded != null) return recorded;
             var directory = Path.TrimEndingDirectorySeparator(Path.GetFullPath(result.DownloadDirectory));
-            var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-            foreach (var file in JsonSerializer.Deserialize<string[]>(result.FilesJson) ?? [])
-            {
-                var path = Path.GetFullPath(file);
-                if (!string.Equals(path, Path.GetFullPath(result.Path), comparison) &&
-                    string.Equals(Path.GetDirectoryName(path), directory, comparison) &&
-                    Path.GetExtension(path).Equals(".torrent", StringComparison.OrdinalIgnoreCase)) return path;
-            }
             // Older results recorded only their managed metadata. Their user copy used this name.
             return Path.Combine(directory, ExHentaiTorrentFileName.Limit(
                 FileNameSanitizer.Sanitize($"{result.Name.RemoveInvalidFileNameChars()}.torrent"), result.SourceKey));
@@ -36,9 +30,23 @@ public static class ExHentaiDownloadResultHelper
         }
     }
 
-    /// <summary>Keep each automatic handoff's files independent while preserving legacy save-only paths.</summary>
+    /// <summary>The exported torrent may be a sibling of the payload directory, or precede a later root change.</summary>
+    internal static string? GetRecordedTorrentDownloadPath(DownloadResultDbModel result)
+    {
+        if (result.Kind != DownloadResultKind.TorrentMetadata) return null;
+        var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+        foreach (var file in JsonSerializer.Deserialize<string[]>(result.FilesJson) ?? [])
+        {
+            var path = Path.GetFullPath(file);
+            if (!string.Equals(path, Path.GetFullPath(result.Path), comparison) &&
+                Path.GetExtension(path).Equals(".torrent", StringComparison.OrdinalIgnoreCase)) return path;
+        }
+        return null;
+    }
+
+    /// <summary>Keep legacy workflow roots; BT resolves its gallery template after fetching gallery metadata.</summary>
     public static string GetWorkDirectory(string downloadPath, string url, int? workflowId, bool downloadContents = false) =>
-        workflowId.HasValue || downloadContents
+        workflowId.HasValue && !downloadContents
             ? Path.Combine(downloadPath, "gallery-" + NormalizeSourceKey(url).Replace('/', '-'))
             : downloadPath;
 

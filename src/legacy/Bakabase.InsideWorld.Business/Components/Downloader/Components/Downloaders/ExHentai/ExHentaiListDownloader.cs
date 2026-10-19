@@ -36,7 +36,6 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
             {
                 var latest = gallery.MaxBy(x => x.Id)!;
                 var available = await CanReuseResultAsync(results, latest, options.UsesTorrent, preferOriginal, ct,
-                    options.EffectiveDownloadMode != ExHentaiDownloadMode.Torrent || options.SaveTorrentFile,
                     options.EffectiveDownloadMode == ExHentaiDownloadMode.TorrentFile);
                 if (available && latest.Kind == DownloadResultKind.TorrentMetadata &&
                     (options.EffectiveDownloadMode != ExHentaiDownloadMode.Torrent || options.SaveTorrentFile))
@@ -105,9 +104,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                                 await OnCurrentChangedInternal();
                                 break;
                             case RangeCheckpointContext.AnalyzeResult.Download:
-                                // A follow-up workflow may move files while this list continues.
-                                // Give each gallery its own root, even when the naming convention
-                                // is flat or two galleries share the same title.
+                                // Preserve legacy workflow staging for direct files. BT resolves
+                                // its gallery template beneath the selected download root.
                                 var workPath = ExHentaiDownloadResultHelper.GetWorkDirectory(task.DownloadPath,
                                     r.Url, options.DownloadResultWorkflowId, options.EffectiveDownloadMode == ExHentaiDownloadMode.Torrent);
                                 await DownloadSingleWork(task.Id, r.Url, null, workPath, async name =>

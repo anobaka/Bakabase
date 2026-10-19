@@ -45,13 +45,13 @@ public static class ExHentaiGalleryOutputPath
         EnsureNoLinksBelowRoot(root, output);
     }
 
-    /// <summary>Torrents are direct children of their download directory, without an extra gallery folder.</summary>
+    /// <summary>Torrents follow the gallery template beneath the selected root, without traversing links.</summary>
     public static void EnsureSafeTorrentOutputPath(string downloadRoot, string file)
     {
         var root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(downloadRoot));
         var output = Path.GetFullPath(file);
-        if (!string.Equals(root, Path.GetDirectoryName(output), PathComparison))
-            throw new IOException("An ExHentai torrent must be saved directly in its download directory.");
+        if (!IsDescendant(root, output))
+            throw new IOException("An ExHentai torrent must be saved inside its download directory.");
         RequireAccessibleRoot(root);
         EnsureNoLinksBelowRoot(root, output);
     }
