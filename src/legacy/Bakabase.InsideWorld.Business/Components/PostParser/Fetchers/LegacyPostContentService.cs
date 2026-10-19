@@ -22,7 +22,8 @@ public class LegacyPostContentService(IEnumerable<ISharedContentReader> readers)
         ct.ThrowIfCancellationRequested();
         var reader = Resolve(reference, sourceHint)
                      ?? throw new NotSupportedException("No installed post reader supports this link or text.");
-        var content = await reader.ReadAsync(reference.Trim(), ct);
+        var isUrl = Uri.TryCreate(reference.Trim(), UriKind.Absolute, out var uri) && uri.Scheme is "http" or "https";
+        var content = await reader.ReadAsync(isUrl ? reference.Trim() : reference, ct);
         return ToContent(content, reader.Source?.ToString());
     }
 
@@ -36,6 +37,7 @@ public class LegacyPostContentService(IEnumerable<ISharedContentReader> readers)
         SourceUrl = content.SourceUrl,
         CapturedAt = content.CapturedAt,
         Scope = content.Scope,
+        HtmlEncodingTrusted = content.HtmlEncodingTrusted,
         Balance = content.Balance,
         SourceHint = sourceHint
     };

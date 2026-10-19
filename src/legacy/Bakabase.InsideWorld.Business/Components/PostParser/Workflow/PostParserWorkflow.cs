@@ -155,7 +155,7 @@ public sealed class ReadPostContentActivity : IWorkflowActivity
         await ctx.ReportStage("fetching");
         var service = ctx.Services.GetRequiredService<IPostContentService>();
         var content = input.Text is {Length: > 0} text
-            ? new PostContent {Title = input.Title ?? "", MainHtml = text, SourceHint = input.SourceHint}
+            ? new PostContent {Title = input.Title ?? "", MainHtml = text, SourceHint = input.SourceHint, Scope = "pastedText"}
             : await service.ReadAsync(input.Link!, input.SourceHint, ct);
         await bridge.EnsureCurrentAsync(input, runId, ct);
         await bridge.SaveSnapshotAsync(input, runId, content, null, "snapshotSaved", null, ct);

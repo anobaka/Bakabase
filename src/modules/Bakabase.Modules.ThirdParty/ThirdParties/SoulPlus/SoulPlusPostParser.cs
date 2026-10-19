@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Net;
 using System.Text.RegularExpressions;
 using Bakabase.Modules.ThirdParty.ThirdParties.SoulPlus.Models;
+using Bakabase.Modules.ThirdParty.Helpers;
 using CsQuery;
 
 namespace Bakabase.Modules.ThirdParty.ThirdParties.SoulPlus;
@@ -48,7 +49,7 @@ public static class SoulPlusPostParser
                 Floor = Floor(content),
                 Author = Blank(container.Find("a[href*='showuid'],a[href*='uid='],.author").First().Text()),
                 PostedAt = ParseTime(container.Find(".tiptop").Text()),
-                Html = WebUtility.HtmlDecode(content.Html())
+                Html = HtmlContentSnapshot.Capture(content)
             });
         }
 

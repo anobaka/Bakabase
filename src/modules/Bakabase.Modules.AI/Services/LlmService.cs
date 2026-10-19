@@ -16,6 +16,7 @@ public class LlmService(
     LlmQuotaManager quotaManager,
     IAiFeatureService featureService,
     IOptionsMonitor<AiModuleOptions> aiOptions,
+    LlmCacheRequestCoordinator cacheRequestCoordinator,
     ILogger<LlmService> logger
 ) : ILlmService
 {
@@ -36,6 +37,9 @@ public class LlmService(
             throw new InvalidOperationException($"Provider '{config.Name}' is disabled");
 
         var rawClient = llmProviderService.CreateChatClient(config, modelId);
+        var usesLocalQwenTemplate = feature == AiFeature.PostParser && PostParserLlmPolicy.UsesLocalQwenTemplate(config, modelId, rawClient);
+        if (feature == AiFeature.PostParser)
+            rawClient = PostParserLlmPolicy.ConfigureTransport(rawClient, config, modelId);
         var client = BuildPipeline(rawClient, providerConfigId, modelId, feature);
 
         var chatOptions = new ChatOptions();
@@ -50,6 +54,8 @@ public class LlmService(
         {
             chatOptions.ResponseFormat = ChatResponseFormat.Json;
         }
+
+        if (feature == AiFeature.PostParser) PostParserLlmPolicy.ApplyOptions(chatOptions, usesLocalQwenTemplate);
 
         return await client.GetResponseAsync(messages.ToList(), chatOptions, ct);
     }
@@ -93,7 +99,9 @@ public class LlmService(
         var parameters = new LlmModelParameters
         {
             Temperature = parametersOverride?.Temperature ?? featureConfig?.Temperature,
-            MaxTokens = parametersOverride?.MaxTokens ?? featureConfig?.MaxTokens,
+            MaxTokens = feature == AiFeature.PostParser
+                ? PostParserLlmPolicy.ResolveMaxTokens(featureConfig?.MaxTokens, parametersOverride?.MaxTokens)
+                : parametersOverride?.MaxTokens ?? featureConfig?.MaxTokens,
             TopP = parametersOverride?.TopP ?? featureConfig?.TopP,
             UseJsonResponseFormat = parametersOverride?.UseJsonResponseFormat ?? false
         };
@@ -129,6 +137,9 @@ public class LlmService(
             throw new InvalidOperationException($"Provider '{config.Name}' is disabled");
 
         var rawClient = llmProviderService.CreateChatClient(config, modelId);
+        var usesLocalQwenTemplate = feature == AiFeature.PostParser && PostParserLlmPolicy.UsesLocalQwenTemplate(config, modelId, rawClient);
+        if (feature == AiFeature.PostParser)
+            rawClient = PostParserLlmPolicy.ConfigureTransport(rawClient, config, modelId);
         // For streaming, skip cache but keep observation
         IChatClient client = new ObservationChatClient(rawClient, usageService, providerConfigId.Value, modelId,
             feature.ToString(), aiOptions.CurrentValue.AuditLogRequestContent);
@@ -137,6 +148,11 @@ public class LlmService(
         options.Temperature ??= featureConfig?.Temperature;
         options.MaxOutputTokens ??= featureConfig?.MaxTokens;
         options.TopP ??= featureConfig?.TopP;
+        if (feature == AiFeature.PostParser)
+        {
+            options.MaxOutputTokens = PostParserLlmPolicy.ResolveMaxTokens(options.MaxOutputTokens, featureConfig?.MaxTokens);
+            PostParserLlmPolicy.ApplyOptions(options, usesLocalQwenTemplate);
+        }
 
         await foreach (var update in client.GetStreamingResponseAsync(messages, options, ct))
         {
@@ -149,14 +165,15 @@ public class LlmService(
         var opts = aiOptions.CurrentValue;
         IChatClient client = rawClient;
 
-        // Observation layer (outermost - tracks everything including cache hits)
+        // Observe actual provider calls; the outer cache bypasses inference on a hit.
         client = new ObservationChatClient(client, usageService, providerConfigId, modelId, feature?.ToString(),
             opts.AuditLogRequestContent);
 
         // Cache layer
         if (opts.EnableCache)
         {
-            client = new CachingChatClient(client, cacheService, providerConfigId, modelId, opts.DefaultCacheTtlDays);
+            client = new CachingChatClient(client, cacheService, providerConfigId, modelId, cacheRequestCoordinator,
+                opts.DefaultCacheTtlDays);
         }
 
         return client;

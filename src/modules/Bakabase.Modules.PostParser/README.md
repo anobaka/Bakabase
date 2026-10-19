@@ -19,6 +19,31 @@ The user-facing feature remains **帖子解析** (Post parser).
 The module depends on the AI module, without depending on acquisition, workflow or
 legacy task storage. Legacy readers and the workflow adapter live in the business layer.
 
+## Inference policy
+
+Post parsing requests JSON. For local OpenAI-compatible Qwen models, it explicitly disables
+thinking through `chat_template_kwargs.enable_thinking=false` as well as `reasoning_effort=none`;
+the SDK template override is applied inside the cache boundary. Other provider/model combinations
+keep their reasoning settings. Download extraction is capped at 8,192 output tokens and
+availability assessment at 2,048; a smaller configured budget still applies.
+Reaching the output limit fails the step instead of accepting incomplete links or credentials.
+OpenAI-compatible post parsing uses a five-minute network timeout with SDK retries disabled,
+so a slow generation is not automatically cancelled and repeated every 100 seconds. Other
+AI features retain their transport settings. When caching is enabled, identical concurrent
+cache misses share a gate and recheck the cache; failed, truncated or invalid JSON responses
+are not stored, and reasoning/output-format options are part of the cache identity.
+
+Model input keeps readable Unicode, all captured comments and their chronology. Conservative
+HTML compaction removes presentation markup while retaining content, URLs, credential spaces
+and processing instructions; ambiguous markup falls back to the captured source. There is no
+keyword-based comment filtering or input truncation. Captured snapshots remain unchanged.
+Only freshly read HTML with a runtime encoding guarantee is compacted. The guarantee is never
+serialized or exposed in API payloads: restored workflow items, historical snapshots and other
+unmarked content keep their captured HTML verbatim, avoiding a second entity decode of passwords.
+Pasted text always bypasses HTML compaction, including literal paired tags and entity-like text.
+Script and style blocks remain inert source data with their raw contents and boundaries, including
+URLs, JSON values and comments that may carry credentials. Their entity-like text is not decoded.
+
 ## Workflow usage
 
 `postParser.manual` accepts either a post URL or pasted text, with an optional title.

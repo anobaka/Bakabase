@@ -27,6 +27,10 @@ public record PostContent
     public string Scope { get; set; } = "firstPage";
     public decimal? Balance { get; set; }
 
+    [System.Text.Json.Serialization.JsonIgnore]
+    [Newtonsoft.Json.JsonIgnore]
+    public bool HtmlEncodingTrusted { get; set; }
+
     /// <summary>
     /// Parts of the content still behind a payment. Reading no longer buys them: spending money is
     /// a decision, and it belongs to whoever is asking for the content, not to the reader.
