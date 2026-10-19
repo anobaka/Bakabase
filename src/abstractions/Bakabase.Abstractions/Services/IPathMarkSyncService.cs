@@ -13,6 +13,9 @@ public interface IPathMarkSyncService
     /// <param name="markIds">要同步的 mark ID 列表</param>
     Task EnqueueSync(params int[] markIds);
 
+    /// <summary>Wake synchronization only for these already-requested exact revisions.</summary>
+    Task EnqueueRequestedRevisions(IReadOnlyDictionary<int, long> revisions) => EnqueueSync([.. revisions.Keys]);
+
     /// <summary>
     /// 将指定 source 的同步请求加入队列。
     /// 对于非 FileSystem source，markIds 可为空（由 resolver 自行 discover）。

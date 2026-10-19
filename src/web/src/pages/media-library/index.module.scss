@@ -14,22 +14,6 @@
   gap: 16px;
 }
 
-.sort {
-  min-width: 150px;
-  height: 40px;
-  padding: 0 12px;
-  border: 1px solid hsl(var(--heroui-default-200) / 0.7);
-  border-radius: 12px;
-  background: hsl(var(--heroui-content1));
-  color: hsl(var(--heroui-foreground));
-  font-size: 13px;
-  cursor: pointer;
-
-  &:focus-visible {
-    outline: 2px solid hsl(var(--heroui-focus));
-    outline-offset: 2px;
-  }
-}
 
 .grid {
   display: grid;

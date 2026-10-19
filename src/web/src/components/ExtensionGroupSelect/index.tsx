@@ -37,6 +37,7 @@ const ExtensionGroupSelect = ({ value = [], onSelectionChange, size, className }
         value: l.id.toString(),
       }))}
       label={t<string>("extensionGroupSelect.label")}
+      listboxProps={{ emptyContent: t<string>("extensionGroupSelect.empty") }}
       placeholder={t<string>("extensionGroupSelect.placeholder")}
       selectedKeys={(value ?? []).map((x) => x.toString())}
       selectionMode={"multiple"}

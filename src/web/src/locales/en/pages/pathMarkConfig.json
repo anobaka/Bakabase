@@ -90,6 +90,8 @@
   "pathMarkConfig.label.previewMatches": "Preview matches",
   "pathMarkConfig.label.resourceFilters": "Resource Filters (Optional)",
   "pathMarkConfig.label.fileTypeFilter": "File Type Filter",
+  "pathMarkConfig.fileType.file": "File",
+  "pathMarkConfig.fileType.directory": "Directory",
   "pathMarkConfig.label.limitExtensions": "Limit file extensions",
   "pathMarkConfig.label.propertySettings": "Property Settings",
   "pathMarkConfig.label.targetProperty": "Target Property",

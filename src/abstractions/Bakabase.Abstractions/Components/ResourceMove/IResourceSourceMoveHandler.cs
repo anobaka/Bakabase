@@ -68,6 +68,9 @@ public sealed class ResourceMoveExecutionPlan
     public string ExecutorId { get; set; } = "local-files";
     public int ExecutorVersion { get; set; } = 1;
     public List<ResourceSourceMoveStep> Sources { get; set; } = [];
+    /// <summary>Already-requested post-move mark revisions. A later manual edit has a
+    /// different revision and must not be automatically applied by startup recovery.</summary>
+    public Dictionary<int, long>? PendingPathMarkRevisions { get; set; }
 }
 
 public sealed class ResourceSourceMoveException(string reasonCode, string? message = null)

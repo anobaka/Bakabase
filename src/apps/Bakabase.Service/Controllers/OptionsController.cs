@@ -189,6 +189,8 @@ namespace Bakabase.Service.Controllers
         {
             if (model.NavigationLayout?.Validate() is { } navigationError)
                 return BaseResponseBuilder.BuildBadRequest(navigationError);
+            if (model.MediaLibraryOrder?.Validate() is { } libraryOrderError)
+                return BaseResponseBuilder.BuildBadRequest(libraryOrderError);
 
             await _bakabaseOptionsManager.Get<UIOptions>().SaveAsync(options =>
             {
@@ -210,6 +212,13 @@ namespace Bakabase.Service.Controllers
                 if (model.NavigationLayout != null)
                 {
                     options.NavigationLayout = model.NavigationLayout;
+                }
+
+                if (model.MediaLibraryOrder != null)
+                {
+                    options.MediaLibraryOrder = model.MediaLibraryOrder.Keys.Count == 0
+                        ? null
+                        : model.MediaLibraryOrder;
                 }
 
                 if (model.HideResourceCovers.HasValue)

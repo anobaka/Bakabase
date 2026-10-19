@@ -11,6 +11,7 @@ import {
   UndoOutlined,
 } from "@ant-design/icons";
 
+import { useConfiguredMediaLibraryChoices } from "@/features/management/mediaLibraryChoiceOrder";
 import { useResourceApi } from "@/features/management/resourceContext";
 import { Button, Modal, Spinner, Tooltip } from "@/components/bakaui";
 
@@ -40,6 +41,9 @@ const MediaLibraryMultiSelector = (props: Props) => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [libraries, setLibraries] = useState<Library[]>([]);
+  const configuredLibraries = useConfiguredMediaLibraryChoices(libraries, (library) =>
+    String(library.id),
+  );
 
   // Original state from server
   const [originalMappings, setOriginalMappings] = useState<Record<number, number[]>>({});
@@ -279,7 +283,9 @@ const MediaLibraryMultiSelector = (props: Props) => {
             {t<string>("resource.mediaLibrarySelector.toggle.description")}
           </div>
 
-          <div className="flex flex-wrap">{libraries.map((lib) => renderLibraryButton(lib))}</div>
+          <div className="flex flex-wrap">
+            {configuredLibraries.choices.map((lib) => renderLibraryButton(lib))}
+          </div>
 
           {libraries.length === 0 && (
             <div className="py-4 text-center text-default-400">

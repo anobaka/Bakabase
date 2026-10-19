@@ -5,7 +5,7 @@ import type {
 import type { DragEvent } from "react";
 import type { MoveDestination } from "./types";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Rnd } from "react-rnd";
 import {
@@ -710,7 +710,7 @@ export function ResourceMovePanelDock() {
       useResourceMovePanelStore.setState({ dockAvailable: false });
     };
   }, []);
-  if (!s.open || s.mode !== "docked" || viewport.width < 720) return null;
+  if (!s.panelEnabled || !s.open || s.mode !== "docked" || viewport.width < 720) return null;
   const width = Math.min(s.dockWidth, Math.max(300, viewport.width * 0.48));
   const resize = (e: React.PointerEvent<HTMLDivElement>) => {
     e.currentTarget.setPointerCapture(e.pointerId);
@@ -756,21 +756,24 @@ export function ResourceMovePanelDock() {
     </aside>
   );
 }
-export default function ResourceMovePanel() {
+export default function ResourceMovePanel({ visible = true }: { visible?: boolean }) {
   usePanelSync();
   const s = useResourceMovePanelStore();
   const viewport = useViewport();
   const text = useMoveText();
   const hoverTimer = useRef<ReturnType<typeof setTimeout>>();
 
-  useEffect(
+  useLayoutEffect(
     () => () => {
       clearTimeout(hoverTimer.current);
+      hoverTimer.current = undefined;
     },
-    [],
+    [visible, s.panelEnabled],
   );
+  if (!visible) return null;
   const geometry = clampGeometry(s.geometry, viewport.width, viewport.height);
-  const floating = s.open && (s.mode === "floating" || !s.dockAvailable || viewport.width < 720);
+  const floating =
+    s.panelEnabled && s.open && (s.mode === "floating" || !s.dockAvailable || viewport.width < 720);
   const running = s.batches.find((b) => b.status === "running" || b.status === "stopping");
   const attention =
     s.pendingDrafts.length +
@@ -809,7 +812,8 @@ export default function ResourceMovePanel() {
           </Rnd>,
           document.body,
         )}
-      {s.minimized &&
+      {s.panelEnabled &&
+        s.minimized &&
         createPortal(
           <Button
             data-resource-move-panel
@@ -852,7 +856,7 @@ export default function ResourceMovePanel() {
           </Button>,
           document.body,
         )}
-      <MoveConfirmation />
+      {s.panelEnabled && <MoveConfirmation />}
     </>
   );
 }

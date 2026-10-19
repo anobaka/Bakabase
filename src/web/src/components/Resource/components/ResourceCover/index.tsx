@@ -1,5 +1,7 @@
 "use client";
 
+import type { Resource as ResourceModel } from "@/core/models/Resource";
+
 import React, {
   useCallback,
   useEffect,
@@ -21,9 +23,6 @@ import { useUiOptionsStore } from "@/stores/options";
 import { useIsRemoteClient } from "@/stores/remoteAccess";
 import { CoverFit } from "@/sdk/constants";
 import { Carousel, Tooltip, Image, Spinner } from "@/components/bakaui";
-
-import type { Resource as ResourceModel } from "@/core/models/Resource";
-
 import FallbackCover from "@/components/Resource/components/ResourceCover/components/FallbackCover.tsx";
 import { useCoverResolution } from "@/hooks/useCoverResolution";
 import BusinessConstants from "@/components/BusinessConstants";
@@ -135,19 +134,16 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
     // Use resolved covers, or fall back to resource.path
     const coverPaths = coverResolution.covers?.length ? coverResolution.covers : [resource.path];
 
-    // Cache-busting: after a cache refresh the thumbnail file may be regenerated at the
-    // same path, so the URL would otherwise be identical and the browser would serve the
-    // stale cached image. `reloadKey` covers the imperative reload() (cover fallback /
-    // Operations refresh button); `resource.reloadToken` is stamped when the list reloads
-    // the resource after a backend cache-refresh push. Only added once busted so normal
-    // loads keep benefiting from HTTP caching.
+    // The policy marker bypasses images cached by the old 30-minute response policy,
+    // including after a full page reload. The endpoint now revalidates cached images
+    // against its source-file ETag. Transient tokens still trigger immediate UI reloads.
     const reloadToken = resource.reloadToken;
     const bust = reloadKey > 0 || reloadToken ? `&v=${reloadToken ?? 0}.${reloadKey}` : "";
 
     return coverPaths.map(
       (coverPath) =>
         `${serverAddress}/tool/thumbnail?path=${encodeURIComponent(coverPath)}` +
-        `&w=${BusinessConstants.MaxCoverSize}&h=${BusinessConstants.MaxCoverSize}${bust}`,
+        `&w=${BusinessConstants.MaxCoverSize}&h=${BusinessConstants.MaxCoverSize}&cacheVersion=2${bust}`,
     );
   }, [
     coverResolution.status,

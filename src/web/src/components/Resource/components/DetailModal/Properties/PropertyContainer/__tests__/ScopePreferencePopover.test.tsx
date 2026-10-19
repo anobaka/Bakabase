@@ -23,6 +23,13 @@ const { createPortal, savePreference, onChanged } = vi.hoisted(() => ({
 vi.mock("@/sdk/BApi", () => ({
   default: { resource: { putResourcePropertyValueScopePreference: savePreference } },
 }));
+// These custom-property previews use the real renderers with no saved library
+// order; isolate UI preferences from the test's intentionally partial API mock.
+vi.mock("@/stores/options", async () => {
+  const { create } = await import("zustand");
+
+  return { useUiOptionsStore: create(() => ({ data: {} })) };
+});
 vi.mock("@/components/ContextProvider/BakabaseContextProvider", () => ({
   useBakabaseContext: () => ({ createPortal }),
 }));

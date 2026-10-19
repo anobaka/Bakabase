@@ -1,4 +1,5 @@
 import type { ManagementSource } from "../api";
+import type * as OptionsStore from "@/stores/options";
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -15,7 +16,8 @@ const { clients, writes, options } = vi.hoisted(() => ({
 vi.mock("../api", () => ({
   ownerClient: (source: ManagementSource) => clients.get(source.serverId),
 }));
-vi.mock("@/stores/options", () => ({
+vi.mock("@/stores/options", async (original) => ({
+  ...(await original<typeof OptionsStore>()),
   useResourceOptionsStore: (selector: (state: unknown) => unknown) => selector({ data: options }),
 }));
 vi.mock("@/components/bakaui", () => ({
@@ -117,9 +119,7 @@ describe("owner-scoped resource edits", () => {
           onUpdated={() => {}}
         />,
       );
-      await waitFor(() =>
-        expect(screen.getByTestId("property-value")).toHaveTextContent("synced"),
-      );
+      await waitFor(() => expect(screen.getByTestId("property-value")).toHaveTextContent("synced"));
       expect(screen.getByTestId("property-value")).not.toHaveTextContent("manual");
     },
   );
@@ -174,9 +174,7 @@ describe("owner-scoped resource edits", () => {
       render(
         <ResourceEditor ids={[7]} source={source("b")} onClose={() => {}} onUpdated={() => {}} />,
       );
-      await waitFor(() =>
-        expect(screen.getByTestId("property-value")).toHaveTextContent("manual"),
-      );
+      await waitFor(() => expect(screen.getByTestId("property-value")).toHaveTextContent("manual"));
     },
   );
 

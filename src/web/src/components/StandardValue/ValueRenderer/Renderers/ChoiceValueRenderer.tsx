@@ -9,6 +9,7 @@ import { useTranslation } from "react-i18next";
 
 import ChoiceValueEditor from "../../ValueEditor/Editors/ChoiceValueEditor";
 import { buildVisibleOptions, hasMoreOptions, getRemainingCount } from "../utils";
+import { useOrderedChoices } from "../../useOrderedChoices";
 
 import NotSet, { LightText } from "./components/LightText";
 import NoChoicesAvailable from "./components/NoChoicesAvailable";
@@ -52,6 +53,7 @@ const ChoiceValueRenderer = (props: ChoiceValueRendererProps) => {
     valueAttributes,
     renderOptionExtra,
     optionsDescription,
+    optionOrderSource,
     disabledKeys: initialDisabledKeys,
     disabledKeysSource,
     size,
@@ -65,6 +67,7 @@ const ChoiceValueRenderer = (props: ChoiceValueRendererProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [optionsThreshold] = useFilterOptionsThreshold();
   const disabledKeys = useDisabledChoiceKeys(disabledKeysSource, initialDisabledKeys);
+  const orderedDataSource = useOrderedChoices(dataSource, optionOrderSource);
 
   // Internal editing state for uncontrolled mode
   const [internalIsEditing, setInternalIsEditing] = useState(defaultEditing);
@@ -115,6 +118,7 @@ const ChoiceValueRenderer = (props: ChoiceValueRendererProps) => {
         createPortal(ChoiceValueEditor, {
           renderOptionExtra,
           optionsDescription,
+          optionOrderSource,
           disabledKeys,
           disabledKeysSource,
           value: editor?.value,
@@ -173,11 +177,11 @@ const ChoiceValueRenderer = (props: ChoiceValueRendererProps) => {
   const visibleOptions = useMemo(
     () =>
       buildVisibleOptions(
-        dataSource,
+        orderedDataSource,
         (item) => selectedValues.includes(item.value),
         optionsThreshold,
       ),
-    [dataSource, selectedValues, optionsThreshold],
+    [orderedDataSource, selectedValues, optionsThreshold],
   );
 
   const hasMore = hasMoreOptions(dataSource.length, optionsThreshold);
@@ -185,30 +189,33 @@ const ChoiceValueRenderer = (props: ChoiceValueRendererProps) => {
 
   // Editing mode: show inline options with toggle (only when isEditing is explicitly true)
   if (isEditing === true && dataSource.length > 0) {
+    const renderOption = (item: Data) => (
+      <SelectableChip
+        key={item.value}
+        color={item.color}
+        isDisabled={disabledKeys?.has(item.value) && !selectedValues.includes(item.value)}
+        isSelected={selectedValues.includes(item.value)}
+        itemKey={item.value}
+        label={
+          <>
+            {item.label}
+            {renderOptionExtra?.({ value: item.value, label: item.label })}
+          </>
+        }
+        size={size}
+        onClick={() => toggleValue(item.value)}
+      />
+    );
+    const more = hasMore ? (
+      <Button color="primary" size="sm" variant="light" onClick={openFullEditor}>
+        {t("common.action.more")} (+{remainingCount})
+      </Button>
+    ) : null;
+
     return (
       <div ref={containerRef} className="flex flex-wrap gap-1 items-center">
-        {visibleOptions.map((item) => (
-          <SelectableChip
-            key={item.value}
-            color={item.color}
-            isDisabled={disabledKeys?.has(item.value) && !selectedValues.includes(item.value)}
-            isSelected={selectedValues.includes(item.value)}
-            itemKey={item.value}
-            label={
-              <>
-                {item.label}
-                {renderOptionExtra?.({ value: item.value, label: item.label })}
-              </>
-            }
-            size={size}
-            onClick={() => toggleValue(item.value)}
-          />
-        ))}
-        {hasMore && (
-          <Button color="primary" size="sm" variant="light" onClick={openFullEditor}>
-            {t("common.action.more")} (+{remainingCount})
-          </Button>
-        )}
+        {visibleOptions.map(renderOption)}
+        {more}
       </div>
     );
   }

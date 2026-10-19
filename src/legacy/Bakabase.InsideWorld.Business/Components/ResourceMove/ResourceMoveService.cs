@@ -83,7 +83,7 @@ public partial class ResourceMoveService(
         var standardizedDestDir = destDir.StandardizePath();
         if (string.IsNullOrEmpty(standardizedDestDir))
             return SingletonResponseBuilder<ResourceMoveBatchViewModel>.Build(ResponseCode.InvalidPayloadOrOperation, localizer.PathIsNotFound(destDir));
-        if (options.ConflictPolicy is not ("inherit" or "ask" or "overwrite"))
+        if (options.ConflictPolicy is not ("inherit" or "ask" or "overwrite" or "skip"))
             return SingletonResponseBuilder<ResourceMoveBatchViewModel>.Build(ResponseCode.InvalidPayloadOrOperation, "Unknown conflict policy");
         var fingerprint = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(
             JsonConvert.SerializeObject(new { ids = resourceIds.Distinct().OrderBy(x => x), dest = standardizedDestDir,
@@ -114,7 +114,10 @@ public partial class ResourceMoveService(
                 return SingletonResponseBuilder<ResourceMoveBatchViewModel>.Build(ResponseCode.InvalidPayloadOrOperation,
                     localizer.ResourceMove_DestinationExists(r.Path));
         }
-        if (topLevel.GroupBy(r => BuildDestPath(standardizedDestDir, r.Path), StringComparer.OrdinalIgnoreCase).Any(g => g.Count() > 1))
+        var duplicateDestinations = topLevel
+            .GroupBy(r => BuildDestPath(standardizedDestDir, r.Path), StringComparer.OrdinalIgnoreCase)
+            .Where(g => g.Count() > 1).Select(g => g.Key).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (duplicateDestinations.Count > 0 && options.ConflictPolicy != "skip")
             return SingletonResponseBuilder<ResourceMoveBatchViewModel>.Build(ResponseCode.Conflict, "batchDestination: selected resources share the same destination");
         var sourcePlans = new Dictionary<int, ResourceMoveExecutionPlan>();
         var preview = await PreviewCore(resourceIds, destDir, sourcePlans);
@@ -133,6 +136,16 @@ public partial class ResourceMoveService(
             SourceTabName = options.SourceTabName, DestinationId = options.DestinationId,
             DestinationName = options.DestinationName, ConflictPolicy = options.ConflictPolicy,
         }).ToList();
+        // No source may win an intra-batch collision by execution order. Skip every
+        // colliding root, while preserving durable records and the request receipt.
+        if (options.ConflictPolicy == "skip")
+            foreach (var record in records.Where(r => duplicateDestinations.Contains(r.DestPath)))
+            {
+                record.Status = ResourceMoveRecordStatus.Skipped;
+                record.CompletedAt = now;
+                record.ConflictKind = record.ErrorCode = "batchDestination";
+                record.ConflictPath = record.DestPath;
+            }
         records[0].IdempotencyKey = string.IsNullOrWhiteSpace(options.IdempotencyKey) ? null : options.IdempotencyKey;
         records[0].RequestFingerprint = fingerprint;
         foreach (var r in records)
@@ -146,8 +159,9 @@ public partial class ResourceMoveService(
             GetExecutor(sourcePlans[r.ResourceId]);
             r.ExecutionPlanJson = JsonConvert.SerializeObject(sourcePlans[r.ResourceId]);
         }
-        var reservedPaths = records.SelectMany(r => new[] {r.SourcePath, r.DestPath}).Distinct().ToArray();
-        var affected = await ComputeAffectedResourceIds(reservedPaths, records.Select(r => r.ResourceId));
+        var movingRecords = records.Where(r => r.Status == ResourceMoveRecordStatus.Pending).ToList();
+        var reservedPaths = movingRecords.SelectMany(r => new[] {r.SourcePath, r.DestPath}).Distinct().ToArray();
+        var affected = await ComputeAffectedResourceIds(reservedPaths, movingRecords.Select(r => r.ResourceId));
         if (!guard.TryReserve(batchId, affected, reservedPaths, out var conflictPath))
             return SingletonResponseBuilder<ResourceMoveBatchViewModel>.Build(ResponseCode.Conflict,
                 localizer.ResourceMove_ResourcesAreBeingMoved(conflictPath!));
@@ -163,7 +177,8 @@ public partial class ResourceMoveService(
             // Persisted rows without an executor must stay recoverable and reserved.
             if (records.Any(r => r.Id != 0))
             {
-                foreach (var record in records) { record.Status = ResourceMoveRecordStatus.Interrupted; record.ErrorCode = "enqueueFailed"; }
+                foreach (var record in records.Where(r => r.Status == ResourceMoveRecordStatus.Pending))
+                { record.Status = ResourceMoveRecordStatus.Interrupted; record.ErrorCode = "enqueueFailed"; }
                 await db.SaveChangesAsync();
             }
             guard.Release(batchId);
@@ -231,7 +246,7 @@ public partial class ResourceMoveService(
             guard.Resume(batchId);
         }
         finally { ControlGate.Release(); }
-        var markIdsToSync = new HashSet<int>();
+        var markIdsToSync = new Dictionary<int, long>();
         var anySucceeded = false;
         try
         {
@@ -263,6 +278,7 @@ public partial class ResourceMoveService(
                     or ResourceMoveRecordStatus.Failed or ResourceMoveRecordStatus.Cancelled);
                 async Task Progress(int p) => await args.UpdateTask(t => t.Percentage = (completed * 100 + p) / Math.Max(1, total));
                 await args.UpdateTask(t => t.Process = $"{completed + 1}/{total} {Path.GetFileName(record.SourcePath)}");
+                var availabilityChanges = new HashSet<int>();
                 try
                 {
                     // Domain cancellation is intentionally checked at resource boundaries. Only
@@ -284,7 +300,7 @@ public partial class ResourceMoveService(
                             await db.SaveChangesAsync();
                         }, Progress, args.PauseToken, args.CancellationToken,
                         (path, stamp) => IsOverwriteAuthorized(record, path, stamp));
-                    await ApplyPostMoveFixups(record, markIdsToSync, executionPlan);
+                    await ApplyPostMoveFixups(record, markIdsToSync, executionPlan, availabilityChanges);
                     record.Status = ResourceMoveRecordStatus.Succeeded;
                     record.CompletedAt = DateTime.Now;
                     record.Error = null;
@@ -300,14 +316,19 @@ public partial class ResourceMoveService(
                 }
                 catch (ResourceMoveConflictException conflict)
                 {
-                    record.Status = ResourceMoveRecordStatus.WaitingForConflict;
+                    // A conflict may be detected after copying has begun. Such a
+                    // record must retain its journal/reservation for recovery rather
+                    // than pretending the whole resource was left untouched.
+                    var skip = record.ConflictPolicy == "skip" && !record.PhysicalMoveStarted;
+                    record.Status = skip ? ResourceMoveRecordStatus.Skipped : ResourceMoveRecordStatus.WaitingForConflict;
                     record.ConflictKind = conflict.Kind;
                     record.ConflictPath = conflict.Path;
                     record.ConflictFingerprint = conflict.Fingerprint;
                     record.ConflictVersion++;
-                    record.CanOverwrite = conflict.CanOverwrite;
+                    record.CanOverwrite = !skip && conflict.CanOverwrite;
                     record.ErrorCode = conflict.Kind;
                     record.Error = conflict.Message;
+                    if (skip) record.CompletedAt = DateTime.Now;
                     await db.SaveChangesAsync();
                 }
                 catch (OperationCanceledException)
@@ -332,6 +353,13 @@ public partial class ResourceMoveService(
                     record.Error = e is BTaskException bte ? bte.BriefMessage ?? e.Message : e.Message;
                     record.CompletedAt = DateTime.Now;
                     await db.SaveChangesAsync();
+                    if (availabilityChanges.Count > 0)
+                    {
+                        // Metadata fixups may have committed before a later step failed.
+                        // Recovery must expose those current paths/statuses to the UI too.
+                        try { resourceChangePublisher.PublishResourcesChanged(availabilityChanges); }
+                        catch (Exception publishError) { logger.LogError(publishError, "Failed to publish move recovery state for {RecordId}", record.Id); }
+                    }
                 }
             }
             if (await Records.AsNoTracking().AnyAsync(r => r.BatchId == batchId && r.CancelRequested))
@@ -359,9 +387,13 @@ public partial class ResourceMoveService(
             try
             {
                 if (anySucceeded) await resourceSyncService.RebuildParentChildRelationships(CancellationToken.None);
-                if (markIdsToSync.Any()) await pathMarkSyncService.EnqueueSync(markIdsToSync.ToArray());
             }
-            catch (Exception e) { logger.LogError(e, "Post-move cleanup failed for {BatchId}", batchId); }
+            catch (Exception e) { logger.LogError(e, "Post-move relationship rebuild failed for {BatchId}", batchId); }
+            try
+            {
+                if (markIdsToSync.Any()) await pathMarkSyncService.EnqueueRequestedRevisions(markIdsToSync);
+            }
+            catch (Exception e) { logger.LogError(e, "Post-move path mark scheduling failed for {BatchId}; persisted pending marks will resume at startup", batchId); }
         }
     }
 
@@ -442,8 +474,8 @@ public partial class ResourceMoveService(
     /// invalidate the path-valued filesystem caches, rekey path-keyed source links, and collect
     /// the ancestor property/media-library marks of both locations for re-sync.
     /// </summary>
-    private async Task ApplyPostMoveFixups(ResourceMoveRecordDbModel record, ISet<int> markIdsToSync,
-        ResourceMoveExecutionPlan executionPlan)
+    private async Task ApplyPostMoveFixups(ResourceMoveRecordDbModel record, IDictionary<int, long> markIdsToSync,
+        ResourceMoveExecutionPlan executionPlan, ISet<int> availabilityChanges)
     {
         var oldPathsByResourceId = await GetSourceSnapshot(record);
         var newPathsByResourceId = oldPathsByResourceId.ToDictionary(p => p.Key,
@@ -455,6 +487,7 @@ public partial class ResourceMoveService(
         if (pathChange.Code != 0) throw new ResourceSourceMoveException("sourceLocationChanged", "Could not commit moved resource paths");
 
         await ApplySourcePlan(record, executionPlan);
+        await RestoreMovedPathMarkAvailability(newPathsByResourceId, availabilityChanges);
 
         // Invalidate AFTER the DB path update so the cover provider cannot re-cache "no cover"
         // against the stale path in between.
@@ -462,17 +495,22 @@ public partial class ResourceMoveService(
         await resourceService.DeleteResourceCacheByResourceIdsAndCacheType(affectedIds,
             ResourceCacheType.PlayableFiles);
 
-        // Re-apply path marks covering the old or the new location (R8): flag their ancestor
-        // property/media-library marks; the batch enqueues one sync for all of them at the end.
+        // A nested resource can have its own marks inside the moved root. Include all
+        // recorded paths, and persist the pending work before declaring this row successful.
+        // The batch only needs one scheduler wake-up after all of its rows finish.
         var allMarks = await pathMarkService.GetAll();
+        var affectedPaths = oldPathsByResourceId.Values.Concat(newPathsByResourceId.Values).ToArray();
+        var relatedMarks = new List<PathMark>();
         foreach (var mark in allMarks.Where(m => m.Type is PathMarkType.Property or PathMarkType.MediaLibrary))
         {
-            if (record.SourcePath.IsPathEqualOrUnder(mark.Path) ||
-                record.DestPath.IsPathEqualOrUnder(mark.Path))
+            if (affectedPaths.Any(path => path.IsPathEqualOrUnder(mark.Path)))
             {
-                markIdsToSync.Add(mark.Id);
+                relatedMarks.Add(mark);
             }
         }
+        executionPlan.PendingPathMarkRevisions = await PersistPostMoveMarks(relatedMarks);
+        foreach (var (id, revision) in executionPlan.PendingPathMarkRevisions) markIdsToSync[id] = revision;
+        record.ExecutionPlanJson = JsonConvert.SerializeObject(executionPlan);
     }
 
     public Task<SingletonResponse<ResourceMovePreviewViewModel>> Preview(int[] resourceIds, string destDir) =>
@@ -553,7 +591,7 @@ public partial class ResourceMoveService(
                     Path = resource.Path, ReasonCode = item.UnavailableReason,
                     BlockingResourceIds = sourcePlan.BlockingIds.Length == 0 ? null : sourcePlan.BlockingIds
                 });
-            if (vm.DuplicateDestinationPaths.Contains(destPath)) item.ConflictKind = "batchDestination";
+            if (vm.DuplicateDestinationPaths.Contains(destPath, StringComparer.OrdinalIgnoreCase)) item.ConflictKind = "batchDestination";
             else if (allDbModels.Any(m => m.Id != resource.Id && !m.Path.IsPathUnder(resource.Path) && m.Path.IsPathEqualOrUnder(destPath)))
                 item.ConflictKind = "resourceIdentity";
             else if (item.DestConflict)
@@ -657,7 +695,7 @@ public partial class ResourceMoveService(
         var recovery = records.Any(r => r.Status == ResourceMoveRecordStatus.NeedsRecovery);
         var cancel = records.Any(r => r.CancelRequested);
         var status = recovery ? "needsRecovery" : running ? cancel ? "stopping" : "running" : counts.Waiting > 0 ? "waiting" : queued ? "queued" :
-            counts.Succeeded == counts.Total ? "completed" : counts.Cancelled == counts.Total ? "cancelled" :
+            counts.Succeeded + counts.Skipped == counts.Total ? "completed" : counts.Cancelled == counts.Total ? "cancelled" :
             counts.Failed == counts.Total ? "failed" : "partial";
         var task = taskManager.GetTaskViewModel(BuildTaskId(first.BatchId));
         return new()
@@ -901,6 +939,8 @@ public partial class ResourceMoveService(
             if (r == null) return BaseResponseBuilder.NotFound;
             if (IsRetained(r.Status) || guard.HoldsReservation(r.BatchId))
                 return BaseResponseBuilder.BuildBadRequest(localizer.ResourceMove_RecordInProgress());
+            if (await HasPendingPostMoveMarks([r]))
+                return BaseResponseBuilder.BuildBadRequest(localizer.ResourceMove_RecordInProgress());
             // Keep the request-key row so delayed network retries cannot recreate a finished move.
             if (r.IdempotencyKey != null) return BaseResponseBuilder.BuildBadRequest("Batch contains a durable submission receipt");
             Records.Remove(r); await db.SaveChangesAsync();
@@ -915,8 +955,10 @@ public partial class ResourceMoveService(
         try
         {
             var rows = await Records.ToListAsync();
-            var removable = rows.GroupBy(r => r.BatchId).Where(g => g.All(r => !IsRetained(r.Status)) &&
-                !guard.HoldsReservation(g.Key) && g.All(r => r.IdempotencyKey == null)).SelectMany(g => g).ToList();
+            var removable = new List<ResourceMoveRecordDbModel>();
+            foreach (var group in rows.GroupBy(r => r.BatchId).Where(g => g.All(r => !IsRetained(r.Status)) &&
+                         !guard.HoldsReservation(g.Key) && g.All(r => r.IdempotencyKey == null)))
+                if (!await HasPendingPostMoveMarks(group)) removable.AddRange(group);
             Records.RemoveRange(removable); await db.SaveChangesAsync();
             return BaseResponseBuilder.Ok;
         }

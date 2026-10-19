@@ -31,6 +31,13 @@ vi.mock("@/sdk/BApi", () => ({
     resource: { bulkPutResourcePropertyValue: api.bulkPut },
   },
 }));
+// These custom-property scenarios use the real renderers with no saved library
+// order; isolate UI preferences from the test's intentionally partial API mock.
+vi.mock("@/stores/options", async () => {
+  const { create } = await import("zustand");
+
+  return { useUiOptionsStore: create(() => ({ data: {} })) };
+});
 vi.mock("@/components/ContextProvider/BakabaseContextProvider", () => ({
   useBakabaseContext: () => ({ createPortal }),
 }));

@@ -344,7 +344,15 @@ const Resource = React.forwardRef((props: Props, ref) => {
         id={elementId}
         onMouseEnter={() => playControlRef.current?.triggerDiscovery()}
       >
-        <div className="absolute inset-0">
+        <div
+          className={`absolute inset-0 ${
+            resource.status === ResourceStatus.Absent
+              ? "opacity-50 grayscale"
+              : resource.status === ResourceStatus.Unavailable
+                ? "opacity-60"
+                : ""
+          }`}
+        >
           <ResourceCover
             ref={coverRef}
             biggerCoverPlacement={biggerCoverPlacement}
@@ -397,7 +405,13 @@ const Resource = React.forwardRef((props: Props, ref) => {
           )}
           {resource.status === ResourceStatus.Absent && (
             <Chip color="danger" radius={"sm"} size={"sm"} variant={"flat"}>
-              {t("enum.resourceStatus.absent")}
+              {t(
+                resource.hasLocalPath &&
+                  resource.sourceLinks?.length &&
+                  resource.sourceLinks.every((link) => link.source === ResourceSource.PathMark)
+                  ? "resource.label.filesMissing"
+                  : "enum.resourceStatus.absent",
+              )}
             </Chip>
           )}
           {resource.status === ResourceStatus.Unavailable && (
@@ -803,12 +817,6 @@ const Resource = React.forwardRef((props: Props, ref) => {
             : hideResourceBorder
               ? ""
               : "border-default-200"
-      } ${
-        resource.status === ResourceStatus.Absent
-          ? "opacity-50 grayscale"
-          : resource.status === ResourceStatus.Unavailable
-            ? "opacity-60"
-            : ""
       }`}
       data-id={resource.id}
       data-move-source={pendingMoveSource || undefined}
@@ -833,8 +841,8 @@ const Resource = React.forwardRef((props: Props, ref) => {
       }}
     >
       {selected && (
-        <div className="absolute top-2 right-2 z-20">
-          <CheckCircleFilled className="text-primary text-xl drop-shadow-md" />
+        <div className="absolute top-2 right-2 z-20 text-primary">
+          <CheckCircleFilled className="text-xl drop-shadow-md" />
         </div>
       )}
       {!moveLocked && (

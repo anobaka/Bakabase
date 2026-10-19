@@ -9,4 +9,9 @@ export type OptionDisplayProps<V = string> = {
   renderOptionExtra?: (option: { value: V; label: string }) => ReactNode;
   /** Supporting content shown above the options in the full editor. */
   optionsDescription?: ReactNode;
+  /** Read-only configured option order; editors cannot write or rearrange it. */
+  optionOrderSource?: {
+    subscribe: (changed: () => void) => () => void;
+    getSnapshot: () => readonly string[];
+  };
 };

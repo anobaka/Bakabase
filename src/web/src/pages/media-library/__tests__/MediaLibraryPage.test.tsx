@@ -8,12 +8,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import MediaLibraryPage from "../index";
 
+import MediaLibraryFilterValue from "@/components/ResourceFilter/components/Filter/MediaLibraryFilterValue";
+import { useUiOptionsStore } from "@/stores/options";
+import { mediaLibraryChoiceValue } from "@/features/management/mediaLibraryFilter";
 import { deserializeStandardValue } from "@/components/StandardValue/helpers";
 import {
   InternalProperty,
   PropertyPool,
   SearchOperation,
   StandardValueType,
+  PropertyType,
 } from "@/sdk/constants";
 
 const mocks = vi.hoisted(() => ({
@@ -24,6 +28,9 @@ const mocks = vi.hoisted(() => ({
   navigate: vi.fn(),
   pendingSearch: vi.fn(),
   createPortal: vi.fn(),
+  orderPatch: vi.fn(),
+  changed: vi.fn(),
+  dragEnd: vi.fn(),
   toast: { danger: vi.fn(), success: vi.fn() },
 }));
 
@@ -32,7 +39,7 @@ vi.mock("react-i18next", () => ({
   Trans: ({ children }: { children: ReactNode }) => children,
   useTranslation: () => ({
     t: (key: string, values?: Record<string, unknown>) =>
-      key.endsWith("Named")
+      key.endsWith("Named") || key === "mediaLibrary.optionOrder.drag"
         ? `${key}:${values?.name}`
         : key === "mediaLibrary.editor.color.option"
           ? `${key}:${values?.color}`
@@ -42,12 +49,37 @@ vi.mock("react-i18next", () => ({
 }));
 vi.mock("@/sdk/BApi", () => ({
   default: {
+    options: new Proxy({}, { get: () => mocks.orderPatch }),
     mediaLibraryV2: {
       getAllMediaLibraryV2: mocks.local.list,
       addMediaLibraryV2: mocks.local.add,
       patchMediaLibraryV2: mocks.local.patch,
       deleteMediaLibraryV2: mocks.local.remove,
     },
+  },
+}));
+vi.mock("@dnd-kit/core", async () => ({
+  ...(await vi.importActual("@dnd-kit/core")),
+  DndContext: ({ children, onDragEnd }: any) => {
+    mocks.dragEnd.mockImplementation(onDragEnd);
+
+    return <>{children}</>;
+  },
+}));
+vi.mock("@/components/ResourceFilter/components/Filter/FilterValueRenderer", () => ({
+  default: ({ property, dbValue }: any) => {
+    const choices = property.options.choices;
+
+    return (
+      <div data-testid="library-filter">
+        {choices.map((choice: any) => (
+          <span key={choice.value} data-filter-library>
+            {choice.label}
+          </span>
+        ))}
+        <output>{dbValue}</output>
+      </div>
+    );
   },
 }));
 vi.mock("react-router-dom", () => ({ useNavigate: () => mocks.navigate }));
@@ -151,6 +183,8 @@ async function manage(name: string, action: "edit" | "delete") {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  useUiOptionsStore.setState({ data: {}, initialized: true });
+  mocks.orderPatch.mockResolvedValue({ code: 0 });
   mocks.sources = [source("local")];
   mocks.local.list.mockResolvedValue({ code: 0, data: libraries });
   mocks.remote.list.mockResolvedValue({ code: 0, data: [] });
@@ -164,19 +198,16 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("media library discovery and owner-aware resource entry", () => {
-  it("combines name search, count sorting and resource filters, then clears the complete filter state", async () => {
+  it("combines name search and resource filters, then clears the complete filter state", async () => {
     renderPage();
     await loaded();
     expect(names()).toEqual(["Archive", "Comics", "Films"]);
 
-    fireEvent.change(screen.getByLabelText("mediaLibrary.sort.label"), {
-      target: { value: "resourceCount" },
-    });
-    expect(names()).toEqual(["Comics", "Archive", "Films"]);
+    expect(screen.queryByLabelText("mediaLibrary.sort.label")).toBeNull();
     await userEvent.click(
       screen.getByRole("button", { name: /^mediaLibrary.filter.withResources/ }),
     );
-    expect(names()).toEqual(["Comics", "Archive"]);
+    expect(names()).toEqual(["Archive", "Comics"]);
     fireEvent.change(screen.getByLabelText("mediaLibrary.search.label"), {
       target: { value: "  aRcHiVe  " },
     });
@@ -187,12 +218,12 @@ describe("media library discovery and owner-aware resource entry", () => {
     expect(screen.getByText("mediaLibrary.search.empty.title")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "mediaLibrary.action.clearSearch" }));
     expect(screen.getByLabelText("mediaLibrary.search.label")).toHaveValue("");
-    expect(names()).toEqual(["Comics", "Archive", "Films"]);
+    expect(names()).toEqual(["Archive", "Comics", "Films"]);
 
     await userEvent.click(screen.getByRole("button", { name: /^mediaLibrary.filter.empty/ }));
     expect(names()).toEqual(["Films"]);
     await userEvent.click(screen.getByRole("button", { name: /^mediaLibrary.filter.all/ }));
-    expect(names()).toEqual(["Comics", "Archive", "Films"]);
+    expect(names()).toEqual(["Archive", "Comics", "Films"]);
   });
 
   it("opens zero-resource libraries directly and retains separate owners for overlapping library IDs", async () => {
@@ -417,4 +448,116 @@ describe("media library creation and management", () => {
     expect(mocks.local.list).toHaveBeenCalledTimes(2);
     expect(mocks.refresh).toHaveBeenCalled();
   });
+});
+
+describe("shared media-library order", () => {
+  const key = (id: number, serverId = "local") => mediaLibraryChoiceValue(source(serverId), id);
+
+  it("persists a drag without changing resource search and retains order after remount", async () => {
+    const view = renderPage();
+
+    await loaded();
+    await act(async () => mocks.dragEnd({ active: { id: key(3) }, over: { id: key(1) } }));
+    expect(mocks.orderPatch).toHaveBeenLastCalledWith({
+      mediaLibraryOrder: { keys: [key(3), key(1), key(2)] },
+    });
+    expect(names()).toEqual(["Films", "Archive", "Comics"]);
+    expect(mocks.pendingSearch).not.toHaveBeenCalled();
+    view.unmount();
+    renderPage();
+    await loaded();
+    expect(names()).toEqual(["Films", "Archive", "Comics"]);
+    await userEvent.click(screen.getByRole("button", { name: "mediaLibrary.optionOrder.name" }));
+    await waitFor(() => expect(names()).toEqual(["Archive", "Comics", "Films"]));
+    expect(mocks.orderPatch).toHaveBeenLastCalledWith({
+      mediaLibraryOrder: { keys: [key(1), key(2), key(3)] },
+    });
+  });
+
+  it("preserves hidden positions on filtered drag and keeps failed changes unapplied", async () => {
+    renderPage();
+    await loaded();
+    await userEvent.click(
+      screen.getByRole("button", { name: /^mediaLibrary.filter.withResources/ }),
+    );
+    await act(async () => mocks.dragEnd({ active: { id: key(2) }, over: { id: key(1) } }));
+    expect(mocks.orderPatch).toHaveBeenLastCalledWith({
+      mediaLibraryOrder: { keys: [key(2), key(1), key(3)] },
+    });
+    expect(names()).toEqual(["Comics", "Archive"]);
+    mocks.orderPatch.mockResolvedValueOnce({ code: 500 });
+    await act(async () => mocks.dragEnd({ active: { id: key(1) }, over: { id: key(2) } }));
+    expect(names()).toEqual(["Comics", "Archive"]);
+    expect(screen.getByRole("alert")).toHaveTextContent("mediaLibrary.optionOrder.saveFailed");
+    await userEvent.click(screen.getByRole("button", { name: /^mediaLibrary.filter.all/ }));
+    expect(names()).toEqual(["Comics", "Archive", "Films"]);
+  });
+
+  it("shares owner-qualified keys for colliding library IDs and follows externally confirmed order", async () => {
+    mocks.sources = [source("local"), source("remote", false)];
+    mocks.remote.list.mockResolvedValue({
+      code: 0,
+      data: [{ id: 1, name: "Remote archive", resourceCount: 0 }],
+    });
+    renderPage();
+    await waitFor(() => expect(browseButtons()).toHaveLength(4));
+    act(() =>
+      useUiOptionsStore
+        .getState()
+        .update({ mediaLibraryOrder: { keys: [key(1, "remote"), key(3), key(2), key(1)] } }),
+    );
+    expect(names()).toEqual(["Remote archive", "Films", "Comics", "Archive"]);
+    await userEvent.click(screen.getByRole("button", { name: "mediaLibrary.optionOrder.name" }));
+    await waitFor(() => expect(names()).toEqual(["Archive", "Comics", "Films", "Remote archive"]));
+    expect(mocks.remote.patch).not.toHaveBeenCalled();
+    expect(mocks.local.patch).not.toHaveBeenCalled();
+  });
+});
+
+it("shows configured library order in native filters while restricting sorting controls to management", async () => {
+  render(
+    <HeroUIProvider disableAnimation>
+      <MediaLibraryPage />
+      <MediaLibraryFilterValue
+        isEditing
+        dbValue={JSON.stringify(["2"])}
+        orderOwner={source("local")}
+        property={{
+          id: InternalProperty.MediaLibraryV2Multi,
+          pool: PropertyPool.Internal,
+          type: PropertyType.MultipleChoice,
+          name: "Libraries",
+          typeName: "",
+          poolName: "",
+          order: 0,
+          dbValueType: StandardValueType.ListString,
+          bizValueType: StandardValueType.ListString,
+          options: {
+            choices: libraries.map((library) => ({
+              value: String(library.id),
+              label: library.name,
+            })),
+          },
+        }}
+        onValueChange={mocks.changed}
+      />
+    </HeroUIProvider>,
+  );
+  await loaded();
+  const filterNames = () =>
+    [...screen.getByTestId("library-filter").querySelectorAll("[data-filter-library]")].map(
+      (choice) => choice.textContent,
+    );
+  const key = (id: number) => mediaLibraryChoiceValue(source("local"), id);
+
+  await act(async () => mocks.dragEnd({ active: { id: key(3) }, over: { id: key(1) } }));
+  expect(names()).toEqual(["Films", "Archive", "Comics"]);
+  expect(filterNames()).toEqual(names());
+  expect(within(screen.getByTestId("library-filter")).queryByRole("button")).toBeNull();
+  await userEvent.click(screen.getByRole("button", { name: "mediaLibrary.optionOrder.name" }));
+  await waitFor(() => expect(names()).toEqual(["Archive", "Comics", "Films"]));
+  expect(filterNames()).toEqual(names());
+  expect(screen.getByTestId("library-filter").querySelector("output")).toHaveTextContent('["2"]');
+  expect(mocks.changed).not.toHaveBeenCalled();
+  expect(mocks.pendingSearch).not.toHaveBeenCalled();
 });

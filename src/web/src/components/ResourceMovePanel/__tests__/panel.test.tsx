@@ -32,9 +32,18 @@ vi.mock("@/sdk/BApi", () => ({
 }));
 vi.mock("@/components/FileExplorer", () => ({ FileExplorer: () => <div>Folder picker</div> }));
 vi.mock("@/components/bakaui", async () => {
-  const { Button, Checkbox, Chip, Input, Progress, Select, SelectItem, Tooltip } = await import(
-    "@heroui/react"
-  );
+  const {
+    Button,
+    Checkbox,
+    Chip,
+    Input,
+    Progress,
+    Radio,
+    RadioGroup,
+    Select,
+    SelectItem,
+    Tooltip,
+  } = await import("@heroui/react");
 
   return {
     Button,
@@ -42,6 +51,8 @@ vi.mock("@/components/bakaui", async () => {
     Chip,
     Input,
     Progress,
+    Radio,
+    RadioGroup,
     Tooltip,
     Select: ({ dataSource, ...props }: any) => (
       <Select {...props}>

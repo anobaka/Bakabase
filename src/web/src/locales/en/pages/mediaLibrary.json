@@ -40,9 +40,6 @@
   "mediaLibrary.filter.all": "All libraries",
   "mediaLibrary.filter.withResources": "With resources",
   "mediaLibrary.filter.empty": "Empty libraries",
-  "mediaLibrary.sort.label": "Sort libraries",
-  "mediaLibrary.sort.name": "Name: A–Z",
-  "mediaLibrary.sort.resourceCount": "Most resources",
   "mediaLibrary.card.collection": "A collection of resources",
   "mediaLibrary.card.empty": "Ready for your first resource",
   "mediaLibrary.guide.title": "Organize local files automatically",
@@ -61,5 +58,10 @@
   "mediaLibrary.error.load": "Could not refresh libraries. Your loaded libraries are still available. Please try again.",
   "mediaLibrary.confirm.deleteTitle": "Delete library",
   "mediaLibrary.confirm.deleteNamed": "Delete “{{name}}”?",
-  "mediaLibrary.confirm.deleteDescription": "Deleting a library removes its category assignments. Resources and local files are kept."
+  "mediaLibrary.confirm.deleteDescription": "Deleting a library removes its category assignments. Resources and local files are kept.",
+  "mediaLibrary.optionOrder.label": "Arrange libraries",
+  "mediaLibrary.optionOrder.name": "Arrange by library name",
+  "mediaLibrary.optionOrder.description": "Arrange libraries on this page. Property value options follow this order; resource search result sorting stays unchanged.",
+  "mediaLibrary.optionOrder.drag": "Reorder {{name}}",
+  "mediaLibrary.optionOrder.saveFailed": "Could not save the library order. Please try again."
 }

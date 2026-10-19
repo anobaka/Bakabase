@@ -397,6 +397,7 @@
   "Select data": "选择数据",
   "extensionGroupSelect.label": "限制扩展名分组",
   "extensionGroupSelect.placeholder": "从扩展名分组中选择",
+  "extensionGroupSelect.empty": "暂无扩展名分组",
   "common.confirm.navigateAway": "离开当前页面",
   "common.confirm.navigateAwayMessage": "即将离开当前页面，确定要继续吗？",
   "FeatureRequestTip.Developing": "<1>{{name}}</1> 功能正在开发中。你可以在 <3>Github</3> 或 <5>QQ群</5> 上催促作者或提出建议。",

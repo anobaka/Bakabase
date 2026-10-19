@@ -19,6 +19,8 @@ namespace Bakabase.InsideWorld.Models.Configs
 
         public UINavigationLayout? NavigationLayout { get; set; }
 
+        public UIMediaLibraryOrder? MediaLibraryOrder { get; set; }
+
         /// <summary>Device display preferences on this server; never part of shared definitions.</summary>
         public Dictionary<string, string> DeviceColors { get; set; } = new(StringComparer.Ordinal);
 

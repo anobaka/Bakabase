@@ -9,7 +9,7 @@ public record ResourceMoveRequestOptions
     public string? DestinationName { get; set; }
     public string? IdempotencyKey { get; set; }
     public string? ExpectedPreviewFingerprint { get; set; }
-    /// <summary>inherit, ask, or overwrite. Inherit only applies to move-panel requests.</summary>
+    /// <summary>inherit, ask, overwrite, or skip. Inherit only applies to move-panel requests.</summary>
     public string ConflictPolicy { get; set; } = "inherit";
 }
 

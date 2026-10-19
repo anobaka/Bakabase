@@ -32,7 +32,7 @@ namespace Bakabase.InsideWorld.Business.Services;
 ///
 /// This service is NOT thread-safe. Callers must ensure only one sync per source runs at a time.
 /// </summary>
-public class ResourceSyncService : ScopedService
+public partial class ResourceSyncService : ScopedService
 {
     private readonly IResourceService _resourceService;
     private readonly IResourceSourceLinkService _sourceLinkService;
@@ -92,10 +92,14 @@ public class ResourceSyncService : ScopedService
         // ===== Step 1: Discover resources (0-50%) =====
         await ReportProgress(onProgressChange, onProcessChange, 0, BTaskText.Localize(_localizer, "BTask_Process_DiscoveringResources", BTaskText.Deferred(() => _propertyLocalizer.ResourceSourceName(source))));
         ct.ThrowIfCancellationRequested();
-        var deletionSnapshots = source == ResourceSource.PathMark
-            ? (await _pathMarkService.GetPendingMarks()).Where(m => m.Type == PathMarkType.Resource &&
-                m.SyncStatus == PathMarkSyncStatus.PendingDelete && m.IsDeleted).ToList()
+        var pendingPathMarks = source == ResourceSource.PathMark
+            ? await _pathMarkService.GetPendingMarks()
             : new List<PathMark>();
+        var deletionSnapshots = pendingPathMarks.Where(m => m.Type == PathMarkType.Resource &&
+            m.SyncStatus == PathMarkSyncStatus.PendingDelete && m.IsDeleted).ToList();
+        var availabilitySnapshots = pendingPathMarks.Where(m => m.Type == PathMarkType.Resource &&
+            m.SyncStatus == PathMarkSyncStatus.Pending && !m.IsDeleted)
+            .Select(m => m.ToDbModel().ToDomainModel()).ToList();
 
         var resolver = _resourceResolvers.FirstOrDefault(r => r.Source == source);
         if (resolver == null)
@@ -213,7 +217,7 @@ public class ResourceSyncService : ScopedService
 
         // ===== Step 3: Update resource statuses for resolver sources (75-80%) =====
         await ReportProgress(onProgressChange, onProcessChange, 75, BTaskText.Localize(_localizer, "BTask_Process_UpdatingResourceStatuses"));
-        await UpdateResolverResourceStatuses(source, discoveredEntries, ctx, ct);
+        await UpdateResolverResourceStatuses(source, discoveredEntries, ctx, ct, availabilitySnapshots);
 
         // ===== Step 4: Delete orphaned resources (80-85%) =====
         await ReportProgress(onProgressChange, onProcessChange, 80, BTaskText.Localize(_localizer, "BTask_Process_CheckingOrphanedResources"));
@@ -618,10 +622,14 @@ public class ResourceSyncService : ScopedService
         ResourceSource source,
         List<DiscoveredResourceEntry> discoveredEntries,
         ResourceSyncContext ctx,
-        CancellationToken ct)
+        CancellationToken ct,
+        IReadOnlyList<PathMark> availabilitySnapshots)
     {
-        // Only for non-FileSystem sources
-        if (source == ResourceSource.PathMark) return;
+        if (source == ResourceSource.PathMark)
+        {
+            await UpdatePathMarkResourceStatuses(availabilitySnapshots, ct);
+            return;
+        }
 
         var discoveredKeys = discoveredEntries
             .Select(e => (e.Source, e.SourceKey))

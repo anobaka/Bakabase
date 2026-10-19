@@ -3,7 +3,7 @@
 import type { MarkConfig } from "../types";
 
 import { Select } from "@/components/bakaui";
-import { PathFilterFsType, pathFilterFsTypes } from "@/sdk/constants";
+import { PathFilterFsType } from "@/sdk/constants";
 import ExtensionGroupSelect from "@/components/ExtensionGroupSelect";
 import ExtensionsInput from "@/components/ExtensionsInput";
 
@@ -20,7 +20,11 @@ const ResourceMarkConfig = ({ config, updateConfig, t }: Props) => (
         className="flex-1"
         dataSource={[
           { label: t("common.label.all"), value: "" },
-          ...pathFilterFsTypes.map((t) => ({ label: t.label, value: String(t.value) })),
+          { label: t("pathMarkConfig.fileType.file"), value: String(PathFilterFsType.File) },
+          {
+            label: t("pathMarkConfig.fileType.directory"),
+            value: String(PathFilterFsType.Directory),
+          },
         ]}
         label={t("pathMarkConfig.label.fileTypeFilter")}
         selectedKeys={config.fsTypeFilter ? [String(config.fsTypeFilter)] : [""]}
