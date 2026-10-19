@@ -103,4 +103,49 @@ describe("general download task details", () => {
     expect(await screen.findByRole("dialog")).toBeInTheDocument();
     expect(onSelect).not.toHaveBeenCalled();
   });
+
+  it("retains a pressed detail button when a virtualized row receives a new progress snapshot", async () => {
+    const rect = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue(
+      new DOMRect(0, 0, 800, 500),
+    );
+    const onSelect = vi.fn();
+    const onDetail = vi.fn();
+    const onAction = vi.fn();
+    const onSource = vi.fn();
+    const onFolder = vi.fn();
+    const list = (currentTask: CenterTask) => (
+      <HeroUIProvider disableAnimation>
+        <Listbox
+          aria-label="Downloads"
+          isVirtualized
+          virtualization={{ maxListboxHeight: 500, itemHeight: 128 }}
+        >
+          <ListboxItem key={currentTask.id} textValue={currentTask.name || currentTask.id}>
+            <GeneralTaskRow
+              task={currentTask}
+              onSelect={onSelect}
+              onDetail={onDetail}
+              onAction={onAction}
+              onSource={onSource}
+              onFolder={onFolder}
+            />
+          </ListboxItem>
+        </Listbox>
+      </HeroUIProvider>
+    );
+    try {
+      const view = render(list(task));
+      const button = await screen.findByRole("button", { name: "downloadCenter.action.detail" });
+      const user = userEvent.setup();
+      await user.pointer({ target: button, keys: "[MouseLeft>]" });
+      view.rerender(list({ ...task, progress: 50, completedBytes: 1024 }));
+      expect(screen.getByRole("button", { name: "downloadCenter.action.detail" })).toBe(button);
+      await user.pointer({ target: button, keys: "[/MouseLeft]" });
+      expect(onDetail).toHaveBeenCalledExactlyOnceWith(task.id);
+      expect(onSelect).not.toHaveBeenCalled();
+      expect(onAction).not.toHaveBeenCalled();
+    } finally {
+      rect.mockRestore();
+    }
+  });
 });

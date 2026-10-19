@@ -273,6 +273,39 @@ describe("unified download center", () => {
       });
     },
   );
+  it("opens the latest task snapshot from an existing button after polling and source updates", async () => {
+    vi.useFakeTimers();
+    try {
+      mount();
+      await act(async () => {});
+      const button = screen.getByText("detail-bt:manual");
+      for (const progress of [20, 40, 60]) {
+        snapshot = snapshot.map((task) =>
+          task.id === "bt:manual"
+            ? { ...task, progress, outputDirectory: `/downloads/current-${progress}` }
+            : task,
+        );
+        await act(async () => {
+          useDownloadTasksStore.getState().patchTasks([1], { progress });
+          await vi.advanceTimersByTimeAsync(3000);
+        });
+      }
+      expect(screen.getByText("detail-bt:manual")).toBe(button);
+      fireEvent.click(button);
+      expect(mocks.portal).toHaveBeenCalledExactlyOnceWith(
+        GeneralTaskDetailModal,
+        expect.objectContaining({
+          task: expect.objectContaining({
+            id: "bt:manual",
+            progress: 60,
+            outputDirectory: "/downloads/current-60",
+          }),
+        }),
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
   it("uses common task IDs for start and stop controls", async () => {
     mount();
     await screen.findByText("Archive");
