@@ -264,5 +264,13 @@
   "downloadCenter.stage.completed": "已完成",
   "downloadCenter.detail.deleted": "此任务已被删除，已下载的文件仍会保留。",
   "downloadCenter.stage.Saving": "保存文件",
-  "downloadCenter.stage.Download verified": "文件校验完成"
+  "downloadCenter.stage.Download verified": "文件校验完成",
+  "downloadCenter.add.httpDirectoryDescription": "选择服务器上的保存目录。HTTP 下载使用常规网络设置。",
+  "downloadCenter.stage.Queued": "排队中",
+  "downloadCenter.stage.Starting": "准备下载",
+  "downloadCenter.stage.Downloading": "下载中",
+  "downloadCenter.stage.Completed": "已完成",
+  "downloadCenter.stage.Stopping": "停止中",
+  "downloadCenter.stage.Stopped": "已停止",
+  "downloadCenter.stage.Failed": "下载失败"
 }

@@ -568,7 +568,7 @@ export default function DownloaderPage() {
         <div role="alert" className="flex items-center gap-2 text-sm text-danger">
           {t("downloadCenter.error.load")}
           <Button size="sm" variant="light" onPress={() => void refresh()}>
-            {t("bt.refresh")}
+            {t("common.action.refresh")}
           </Button>
         </div>
       )}
@@ -678,7 +678,7 @@ export default function DownloaderPage() {
             </Tooltip>
             <Button
               isIconOnly
-              aria-label={t("bt.refresh")}
+              aria-label={t("common.action.refresh")}
               size="sm"
               variant="light"
               onPress={() => void refresh()}

@@ -264,5 +264,13 @@
   "downloadCenter.stage.completed": "Completed",
   "downloadCenter.detail.deleted": "This task has been deleted. Downloaded files are kept.",
   "downloadCenter.stage.Saving": "Saving file",
-  "downloadCenter.stage.Download verified": "Download verified"
+  "downloadCenter.stage.Download verified": "Download verified",
+  "downloadCenter.add.httpDirectoryDescription": "Choose a directory on this server. HTTP downloads use the general network settings.",
+  "downloadCenter.stage.Queued": "Queued",
+  "downloadCenter.stage.Starting": "Starting",
+  "downloadCenter.stage.Downloading": "Downloading",
+  "downloadCenter.stage.Completed": "Completed",
+  "downloadCenter.stage.Stopping": "Stopping",
+  "downloadCenter.stage.Stopped": "Stopped",
+  "downloadCenter.stage.Failed": "Failed"
 }

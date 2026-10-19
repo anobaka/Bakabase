@@ -35,6 +35,13 @@ const GeneralTaskRow = memo(function GeneralTaskRow({
 }: Props) {
   const { t } = useTranslation();
   const color = centerStatusColor(task.status);
+  const stageKey = `downloadCenter.stage.${task.stage}`;
+  const btStageKey = `bt.stage.${task.stage}`;
+  const translatedStage = t(stageKey);
+  const btStage = t(btStageKey);
+  const stage = translatedStage !== stageKey
+    ? translatedStage
+    : btStage !== btStageKey ? btStage : task.stage;
   const icons = { start: FiPlay, stop: FiSquare, retry: FiRefreshCw, delete: FiTrash2 };
   return (
     <div
@@ -77,11 +84,7 @@ const GeneralTaskRow = memo(function GeneralTaskRow({
               className={`min-w-0 flex-1 truncate ${task.error ? "text-danger" : "text-default-500"}`}
               title={task.error || undefined}
             >
-              {task.error ||
-                (task.stage &&
-                  t(`downloadCenter.stage.${task.stage}`, {
-                    defaultValue: t(`bt.stage.${task.stage}`, { defaultValue: task.stage }),
-                  }))}
+              {task.error || stage}
             </span>
             <span className="shrink-0 tabular-nums text-default-500">
               {formatBtBytes(task.completedBytes)} / {formatBtBytes(task.totalBytes)}

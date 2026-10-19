@@ -106,7 +106,7 @@ export default function AddGeneralDownloadModal({
       <DownloadDirectoryField
         label={t("bt.outputDirectory")}
         value={outputDirectory}
-        description={t("bt.add.directoryDescription")}
+        description={t(kind === "http" ? "downloadCenter.add.httpDirectoryDescription" : "bt.add.directoryDescription")}
         onChange={setOutputDirectory}
       />
       {error && (
