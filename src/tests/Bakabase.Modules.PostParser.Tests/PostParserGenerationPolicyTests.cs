@@ -20,8 +20,14 @@ public class PostParserGenerationPolicyTests
             .ExtractAsync(new PostContent());
 
         Assert.AreEqual(AiFeature.PostParser, llm.Feature);
-        Assert.AreEqual(8192, llm.Parameters!.MaxTokens);
+        Assert.AreEqual(16384, llm.Parameters!.MaxTokens);
         Assert.IsTrue(llm.Parameters.UseJsonResponseFormat);
+        var properties = llm.Parameters.JsonResponseSchema!.Value.GetProperty("properties");
+        Assert.IsFalse(properties.TryGetProperty("extraction", out _), "File processing belongs to each resource, not the response root.");
+        var resourceSchema = properties.GetProperty("resources").GetProperty("items");
+        Assert.IsTrue(resourceSchema.GetProperty("required").EnumerateArray().Any(x => x.GetString() == "extraction"));
+        Assert.IsTrue(resourceSchema.GetProperty("properties").TryGetProperty("password", out _));
+        Assert.IsFalse(resourceSchema.GetProperty("additionalProperties").GetBoolean());
         var resource = result.Resources.Single();
         Assert.AreEqual("https://mega.nz/file/download#key", resource.Link);
         Assert.AreEqual(" 访问 码 ", resource.Code);
@@ -38,6 +44,9 @@ public class PostParserGenerationPolicyTests
         Assert.AreEqual(AiFeature.PostParser, llm.Feature);
         Assert.AreEqual(2048, llm.Parameters!.MaxTokens);
         Assert.IsTrue(llm.Parameters.UseJsonResponseFormat);
+        var properties = llm.Parameters.JsonResponseSchema!.Value.GetProperty("properties");
+        Assert.IsTrue(properties.TryGetProperty("status", out _));
+        Assert.IsFalse(properties.TryGetProperty("resources", out _), "Availability uses its own response contract.");
     }
 
     [TestMethod]

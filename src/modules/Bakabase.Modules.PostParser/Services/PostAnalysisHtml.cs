@@ -41,9 +41,10 @@ internal static class PostAnalysisHtml
         "area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"
     };
 
+    // Inline style may hold relative/data URLs or literal credential text, so retain it in full.
     private static readonly HashSet<string> LayoutAttributes = new(StringComparer.OrdinalIgnoreCase)
     {
-        "class", "style", "width", "height", "align", "valign", "border", "cellpadding", "cellspacing",
+        "class", "width", "height", "align", "valign", "border", "cellpadding", "cellspacing",
         "color", "bgcolor", "face", "size", "target", "rel", "loading", "decoding", "referrerpolicy", "crossorigin", "tabindex"
     };
 

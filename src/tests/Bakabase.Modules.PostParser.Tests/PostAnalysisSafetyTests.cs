@@ -63,7 +63,7 @@ public class PostAnalysisSafetyTests
         Assert.AreEqual("moveFile", steps[1].Op);
         Assert.AreEqual("documents/notes", steps[1].TargetDirectory);
         Assert.AreEqual("name", steps[1].Input);
-        StringAssert.Contains(llm.Prompt!, "不必包含解压步骤");
+        StringAssert.Contains(llm.Prompt!, "纯文件改名或移动可以没有解压");
     }
 
     [TestMethod]

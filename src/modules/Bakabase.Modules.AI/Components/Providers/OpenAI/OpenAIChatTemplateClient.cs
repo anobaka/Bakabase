@@ -31,7 +31,7 @@ internal sealed class OpenAIChatTemplateClient(IChatClient innerClient) : Delega
         {
             var rawOptions = originalFactory?.Invoke(client) as ChatCompletionOptions ?? new ChatCompletionOptions();
             // Keep other caller-supplied template arguments and raw SDK settings.
-            // Only the feature's explicit thinking switch takes precedence.
+            // The feature's explicit thinking mode and effort take precedence.
 #pragma warning disable SCME0001 // SDK-supported JSON patch for llama.cpp's nonstandard request field.
             JsonElement? existingKwargs = null;
             if (rawOptions.Patch.TryGetJson("$.chat_template_kwargs"u8, out var existingJson))
@@ -40,13 +40,26 @@ internal sealed class OpenAIChatTemplateClient(IChatClient innerClient) : Delega
                 existingKwargs = existing.RootElement.Clone();
             }
             var merged = MergeKwargs(existingKwargs, kwargs);
+            if (configured.Reasoning?.Effort == ReasoningEffort.None) merged.Remove("reasoning_effort");
             rawOptions.Patch.Set("$.chat_template_kwargs"u8, JsonSerializer.SerializeToUtf8Bytes(merged));
 #pragma warning restore SCME0001
-#pragma warning disable OPENAI001 // The target local template accepts the per-request none setting.
-            rawOptions.ReasoningEffortLevel = ChatReasoningEffortLevel.None;
+#pragma warning disable OPENAI001 // Match the feature's explicit effort instead of conflicting raw SDK defaults.
+            rawOptions.ReasoningEffortLevel = configured.Reasoning?.Effort == ReasoningEffort.None
+                ? ChatReasoningEffortLevel.None : ChatReasoningEffortLevel.Low;
 #pragma warning restore OPENAI001
             rawOptions.MaxOutputTokenCount = PostParserLlmPolicy.ResolveMaxTokens(
                 rawOptions.MaxOutputTokenCount, configured.MaxOutputTokens);
+            if (configured.ResponseFormat is ChatResponseFormatJson { Schema: { } schema } jsonFormat)
+            {
+                // M.E.AI's default mapping transforms schemas for OpenAI strict
+                // mode, which would forbid arbitrary fields in a plain object.
+                // Keep the actual caller schema intact for this local endpoint.
+                bool? strict = configured.AdditionalProperties?.TryGetValue("strict", out var value) == true && value is bool flag
+                    ? flag : null;
+                rawOptions.ResponseFormat ??= global::OpenAI.Chat.ChatResponseFormat.CreateJsonSchemaFormat(
+                    jsonFormat.SchemaName ?? "json_schema", BinaryData.FromString(schema.GetRawText()),
+                    jsonFormat.SchemaDescription, strict);
+            }
             return rawOptions;
         };
         return configured;
@@ -64,7 +77,6 @@ internal sealed class OpenAIChatTemplateClient(IChatClient innerClient) : Delega
                 throw new ArgumentException("chat_template_kwargs must be a JSON object.");
             foreach (var property in json.EnumerateObject()) merged[property.Name] = property.Value.Clone();
         }
-        merged["enable_thinking"] = false;
         return merged;
     }
 }

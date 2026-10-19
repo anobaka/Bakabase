@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Bakabase.Modules.AI.Components.Cache;
 using Bakabase.Modules.AI.Models.Db;
+using Bakabase.Modules.AI.Models.Domain;
 using Microsoft.Extensions.AI;
 using CachingChatClient = Bakabase.Modules.AI.Components.Cache.CachingChatClient;
 
@@ -22,7 +23,8 @@ public class LlmCacheTests
         await server.FirstRequest.Task.WaitAsync(Timeout);
         var others = Enumerable.Range(0, 12).Select(_ => harness.CompleteAsync()).ToArray();
         Assert.AreEqual(1, server.Requests.Count);
-        Assert.IsFalse(server.Requests.Single().GetProperty("chat_template_kwargs").GetProperty("enable_thinking").GetBoolean());
+        Assert.IsTrue(server.Requests.Single().GetProperty("chat_template_kwargs").GetProperty("enable_thinking").GetBoolean());
+        Assert.AreEqual("low", server.Requests.Single().GetProperty("reasoning_effort").GetString());
         release.SetResult();
         await Task.WhenAll(others.Append(first)).WaitAsync(Timeout);
         Assert.AreEqual(1, server.Requests.Count);
@@ -129,12 +131,17 @@ public class LlmCacheTests
         templateOff.AdditionalProperties = new() { ["chat_template_kwargs"] = new Dictionary<string, object?> { ["enable_thinking"] = false } };
         await client.GetResponseAsync(Messages(), templateOff);
         await client.GetResponseAsync(Messages(), templateOff);
-        var templateOn = none.Clone();
-        templateOn.AdditionalProperties = new() { ["chat_template_kwargs"] = new Dictionary<string, object?> { ["enable_thinking"] = true } };
+        var templateOn = baseline.Clone();
+        templateOn.Reasoning = new ReasoningOptions { Effort = ReasoningEffort.Low };
+        templateOn.AdditionalProperties = new() { ["chat_template_kwargs"] = new Dictionary<string, object?> { ["enable_thinking"] = true, ["reasoning_effort"] = "low" } };
         await client.GetResponseAsync(Messages(), templateOn);
         var json = baseline.Clone();
         json.ResponseFormat = ChatResponseFormat.Json;
         await client.GetResponseAsync(Messages(), json);
+        var objectSchema = baseline.Clone();
+        objectSchema.ResponseFormat = new ChatResponseFormatJson(JsonSerializer.SerializeToElement(new { type = "object" }), "post_analysis");
+        await client.GetResponseAsync(Messages(), objectSchema);
+        await client.GetResponseAsync(Messages(), objectSchema);
         var schema = baseline.Clone();
         using var schemaDocument = JsonDocument.Parse("{\"type\":\"object\",\"properties\":{\"title\":{\"type\":\"string\"}}}");
         schema.ResponseFormat = ChatResponseFormat.ForJsonSchema(schemaDocument.RootElement);
@@ -146,9 +153,33 @@ public class LlmCacheTests
         var budget = baseline.Clone(); budget.MaxOutputTokens = 50;
         await client.GetResponseAsync(Messages(), budget);
         await client.GetResponseAsync([new ChatMessage(ChatRole.System, "same text")], baseline);
-        Assert.AreEqual(11, inner.Calls);
-        Assert.AreEqual(11, cache.Entries.Count);
+        Assert.AreEqual(12, inner.Calls);
+        Assert.AreEqual(12, cache.Entries.Count);
         Assert.AreEqual(0, coordinator.PendingKeyCount);
+    }
+
+    [TestMethod]
+    public async Task FeatureResponseSchemaOverridesUseSeparateCacheEntriesAndPreserveTheirWireSchema()
+    {
+        await using var server = new FakeOpenAiServer();
+        var harness = new LlmHarness(server.Endpoint);
+        var schemaA = JsonSerializer.SerializeToElement(new { type = "object", properties = new { a = new { type = "string" } } });
+        var schemaB = JsonSerializer.SerializeToElement(new { type = "object", properties = new { b = new { type = "string" } } });
+        foreach (var schema in new[] { schemaA, schemaB })
+        {
+            var parameters = new LlmModelParameters { UseJsonResponseFormat = true, JsonResponseSchema = schema };
+            await harness.Service.CompleteForFeatureAsync(AiFeature.PostParser, Messages(), parameters);
+            await harness.Service.CompleteForFeatureAsync(AiFeature.PostParser, Messages(), parameters);
+        }
+        await harness.Service.CompleteForFeatureAsync(AiFeature.PostParser, Messages(),
+            new LlmModelParameters { UseJsonResponseFormat = true });
+        Assert.AreEqual(3, server.Requests.Count);
+        Assert.AreEqual(3, harness.Cache.Entries.Count);
+        var requests = server.Requests.ToArray();
+        Assert.IsTrue(JsonElement.DeepEquals(schemaA, requests[0].GetProperty("response_format").GetProperty("json_schema").GetProperty("schema")));
+        Assert.IsTrue(JsonElement.DeepEquals(schemaB, requests[1].GetProperty("response_format").GetProperty("json_schema").GetProperty("schema")));
+        Assert.AreEqual(1, requests[2].GetProperty("response_format").GetProperty("json_schema").GetProperty("schema").EnumerateObject().Count());
+        Assert.AreEqual(0, harness.Coordinator.PendingKeyCount);
     }
 
     [TestMethod]

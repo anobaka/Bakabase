@@ -52,7 +52,9 @@ public class LlmService(
 
         if (parameters?.UseJsonResponseFormat == true)
         {
-            chatOptions.ResponseFormat = ChatResponseFormat.Json;
+            chatOptions.ResponseFormat = usesLocalQwenTemplate && parameters.JsonResponseSchema is { } schema
+                ? new ChatResponseFormatJson(schema, "post_analysis")
+                : ChatResponseFormat.Json;
         }
 
         if (feature == AiFeature.PostParser) PostParserLlmPolicy.ApplyOptions(chatOptions, usesLocalQwenTemplate);
@@ -103,7 +105,8 @@ public class LlmService(
                 ? PostParserLlmPolicy.ResolveMaxTokens(featureConfig?.MaxTokens, parametersOverride?.MaxTokens)
                 : parametersOverride?.MaxTokens ?? featureConfig?.MaxTokens,
             TopP = parametersOverride?.TopP ?? featureConfig?.TopP,
-            UseJsonResponseFormat = parametersOverride?.UseJsonResponseFormat ?? false
+            UseJsonResponseFormat = parametersOverride?.UseJsonResponseFormat ?? false,
+            JsonResponseSchema = parametersOverride?.JsonResponseSchema
         };
 
         return await CompleteAsync(providerConfigId.Value, modelId, messages, parameters, feature, ct);

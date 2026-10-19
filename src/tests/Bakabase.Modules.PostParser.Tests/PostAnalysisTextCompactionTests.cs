@@ -46,7 +46,7 @@ public class PostAnalysisTextCompactionTests
         Assert.IsFalse(text.Contains(layout, StringComparison.Ordinal));
         StringAssert.Contains(text, "<script>if (1 < 2) { var template = '<div>runtime template</div>'; }</script>");
         StringAssert.Contains(text, "<style>.layout { background: red; }</style>");
-        Assert.IsFalse(text.Contains("padding:", StringComparison.Ordinal));
+        StringAssert.Contains(text, "[style=padding: 10px; color: red]");
         Assert.IsTrue(prompt.Length < html.Length / 2, $"Expected clear compaction: {prompt.Length} prompt characters from {html.Length} source characters.");
     }
 
@@ -156,6 +156,24 @@ public class PostAnalysisTextCompactionTests
         var text = json.RootElement.GetProperty("mainHtml").GetString()!;
         foreach (var exact in new[] {"/download/archive?code=a%20b#keep", "../mirror/file.7z?sig=%2B#Key", "/materials/original.png?raw=1#image", "copy(' a  b ')", "  a  b  ", "  not-a-data-attribute  "})
             StringAssert.Contains(text, exact);
+    }
+
+    [TestMethod]
+    [DataRow("background-image: url('../materials/one%20file.png?literal=&amp;code=a%2Bb#Key%2Fy'); --password: '  a&amp;b  c  ';")]
+    [DataRow("background-image: url('data:image/svg+xml,%3Csvg%20viewBox%3D%220%200%201%201%22%3E%3C/svg%3E#Original');")]
+    [DataRow("content: '  密码 &lt;literal&gt;  a&amp;b  c  '; --archive: 'outer  one.zip'; /*  访问码 Ab  Cd  */")]
+    public async Task InlineStylesKeepRelativeUrlsDataImagesAndCssCredentialsWithSingleEntityDecoding(string style)
+    {
+        var encodedStyle = System.Net.WebUtility.HtmlEncode(style);
+        var html = $"<div class='layout' style=\"{encodedStyle}\">图片材料及处理说明</div>";
+        using var json = JsonDocument.Parse(await ExtractPromptAsync(new PostContent
+        {
+            MainHtml = html, Comments = [new() {Html = html}], HtmlEncodingTrusted = true
+        }));
+
+        var expectedAttribute = "[style=" + style + "]";
+        StringAssert.Contains(json.RootElement.GetProperty("mainHtml").GetString()!, expectedAttribute);
+        StringAssert.Contains(json.RootElement.GetProperty("comments")[0].GetProperty("Html").GetString()!, expectedAttribute);
     }
 
     [TestMethod]

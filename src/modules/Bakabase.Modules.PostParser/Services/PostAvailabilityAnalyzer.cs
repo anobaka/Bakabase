@@ -28,7 +28,11 @@ public class PostAvailabilityAnalyzer(ILlmService llmService, PostParserAiConcur
         var response = await _concurrency.ExecuteAsync("checkingAvailability", () =>
             llmService.CompleteForFeatureAsync(AiFeature.PostParser,
                 [new ChatMessage(ChatRole.System, SystemPrompt), new ChatMessage(ChatRole.User, PostAnalysisText.Render(content))],
-                new LlmModelParameters {MaxTokens = 2048, UseJsonResponseFormat = true}, ct), ct);
+                new LlmModelParameters
+                {
+                    MaxTokens = 2048, UseJsonResponseFormat = true,
+                    JsonResponseSchema = PostAnalysisResponseSchema.Availability
+                }, ct), ct);
         if (response.FinishReason == ChatFinishReason.Length)
             throw new InvalidOperationException(
                 "The post availability response reached its output limit. A partial assessment was not accepted.");

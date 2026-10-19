@@ -21,10 +21,15 @@ legacy task storage. Legacy readers and the workflow adapter live in the busines
 
 ## Inference policy
 
-Post parsing requests JSON. For local OpenAI-compatible Qwen models, it explicitly disables
-thinking through `chat_template_kwargs.enable_thinking=false` as well as `reasoning_effort=none`;
-the SDK template override is applied inside the cache boundary. Other provider/model combinations
-keep their reasoning settings. Download extraction is capped at 8,192 output tokens and
+Post parsing requests JSON. Local OpenAI-compatible Qwen models use low-effort thinking by default,
+with `chat_template_kwargs.enable_thinking=true` and `reasoning_effort=low` set per request.
+Download and availability requests supply separate response schemas. The local Qwen adapter sends
+the schemas intact so that credentials and file-processing plans stay under their resource, and
+the verified server activates JSON grammar instead of treating plain JSON mode as an empty schema.
+No hard thinking-token budget is imposed: real-data evaluation found that disabling thinking or
+cutting it short could lose passwords or processing steps. The SDK template override is applied
+inside the cache boundary. Other provider/model combinations
+keep their reasoning settings. Download extraction is capped at 16,384 output tokens and
 availability assessment at 2,048; a smaller configured budget still applies.
 Reaching the output limit fails the step instead of accepting incomplete links or credentials.
 OpenAI-compatible post parsing uses a five-minute network timeout with SDK retries disabled,

@@ -2,6 +2,7 @@ using System.ClientModel;
 using System.ClientModel.Primitives;
 using System.Net;
 using System.Net.Sockets;
+using System.Text.Json;
 using Bakabase.Modules.AI.Components.Providers.OpenAI;
 using Bakabase.Modules.AI.Models.Db;
 using Bakabase.Modules.AI.Models.Domain;
@@ -11,11 +12,19 @@ using OpenAI.Chat;
 
 namespace Bakabase.Modules.AI.Services;
 
+internal enum PostParserThinkingMode
+{
+    None,
+    Low
+}
+
 /// <summary>Bounded, non-retrying inference for background post extraction.</summary>
 internal static class PostParserLlmPolicy
 {
-    internal const int MaxOutputTokens = 8192;
+    internal const int MaxOutputTokens = 16384;
     internal static readonly TimeSpan NetworkTimeout = TimeSpan.FromMinutes(5);
+    private static readonly ChatResponseFormatJson JsonObjectFormat = new(
+        JsonSerializer.SerializeToElement(new { type = "object" }), "post_analysis");
 
     internal static int ResolveMaxTokens(params int?[] limits) => limits
         .Where(limit => limit is > 0)
@@ -23,17 +32,30 @@ internal static class PostParserLlmPolicy
         .Append(MaxOutputTokens)
         .Min();
 
-    internal static void ApplyOptions(ChatOptions options, bool usesLocalQwenTemplate)
+    internal static void ApplyOptions(ChatOptions options, bool usesLocalQwenTemplate,
+        PostParserThinkingMode? thinkingMode = null)
     {
         options.MaxOutputTokens = ResolveMaxTokens(options.MaxOutputTokens);
         if (!usesLocalQwenTemplate) return;
-        // reasoning_effort alone does not disable this llama.cpp template. Keep
-        // the actual template switch serializable so it also enters cache identity.
+        // The verified llama.cpp Qwen handler skips grammar for the empty schema
+        // behind json_object. A nonempty object schema activates JSON constraints.
+        if (options.ResponseFormat is ChatResponseFormatJson { Schema: null })
+            options.ResponseFormat = JsonObjectFormat;
+        // Keep limited reasoning for extraction accuracy. Explicit None remains
+        // available to internal callers, without changing the server's defaults.
+        var mode = thinkingMode ?? (options.Reasoning?.Effort == ReasoningEffort.None
+            ? PostParserThinkingMode.None : PostParserThinkingMode.Low);
         options.Reasoning ??= new ReasoningOptions();
-        options.Reasoning.Effort = ReasoningEffort.None;
+        options.Reasoning.Effort = mode == PostParserThinkingMode.None ? ReasoningEffort.None : ReasoningEffort.Low;
         options.AdditionalProperties ??= new AdditionalPropertiesDictionary();
         options.AdditionalProperties.TryGetValue(OpenAIChatTemplateClient.TemplateKwargsKey, out var existing);
-        options.AdditionalProperties[OpenAIChatTemplateClient.TemplateKwargsKey] = OpenAIChatTemplateClient.MergeKwargs(existing);
+        var kwargs = OpenAIChatTemplateClient.MergeKwargs(existing);
+        kwargs["enable_thinking"] = mode != PostParserThinkingMode.None;
+        // Override CLI/saved template effort for Low. The template does not
+        // accept "none" here, so its None mode controls only enable_thinking.
+        if (mode == PostParserThinkingMode.Low) kwargs["reasoning_effort"] = "low";
+        else kwargs.Remove("reasoning_effort");
+        options.AdditionalProperties[OpenAIChatTemplateClient.TemplateKwargsKey] = kwargs;
     }
 
     internal static bool UsesLocalQwenTemplate(AiProviderDbModel config, string modelId, IChatClient client)
