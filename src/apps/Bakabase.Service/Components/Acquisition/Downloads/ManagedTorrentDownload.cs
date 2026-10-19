@@ -11,6 +11,8 @@ using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
 using Bakabase.Modules.Bittorrent.Abstractions;
 using Bakabase.Modules.Bittorrent.Models;
 using Bakabase.Modules.Downloader.Models;
+using Bakabase.Modules.Downloader.Abstractions;
+using Bakabase.Service.Components.Downloader;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Bakabase.Service.Components.Acquisition.Downloads;
@@ -50,13 +52,22 @@ internal static class ManagedTorrentDownload
         try
         {
             job = await manager.EnsureQueuedAsync(request, deadline.Token);
+            var registry = ctx.ServiceProvider.GetService<IDownloadTaskRegistry>();
+            if (registry != null)
+                await registry.EnsureBindingAsync(DownloadCenterBindings.For(job), deadline.Token);
             if (job.Status == BtDownloadStatus.Stopping)
                 job = await manager.StopAsync(job.Id, deadline.Token);
             if (job.Status is BtDownloadStatus.Stopped or BtDownloadStatus.Failed)
+            {
+                if (registry != null) await registry.SetUserStoppedAsync("bt:" + job.Id, false, deadline.Token);
                 job = await manager.ResumeAsync(job.Id, deadline.Token);
+            }
             else if (job.Status == BtDownloadStatus.Completed &&
                      (job.Files.Count == 0 || job.Files.Any(path => !File.Exists(path))))
+            {
+                if (registry != null) await registry.SetUserStoppedAsync("bt:" + job.Id, false, deadline.Token);
                 job = await manager.RecheckAsync(job.Id, deadline.Token);
+            }
 
             waiting = true;
             var completed = await manager.WaitForCompletionAsync(job.Id,

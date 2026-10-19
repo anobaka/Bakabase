@@ -3,11 +3,16 @@ import type { ReactNode } from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import AddBtDownloadModal from "../AddBtDownloadModal";
+import AddGeneralDownloadModal from "../components/AddGeneralDownloadModal";
 
 const mocks = vi.hoisted(() => ({ create: vi.fn(), upload: vi.fn(), created: vi.fn() }));
 vi.mock("@/sdk/BApi", () => ({
-  default: { btDownloads: { createBtDownload: mocks.create, uploadBtDownload: mocks.upload } },
+  default: {
+    downloadCenter: {
+      createDownloadCenterTask: mocks.create,
+      uploadDownloadCenterTorrent: mocks.upload,
+    },
+  },
 }));
 vi.mock("@/stores/options", () => ({
   useDownloaderGlobalOptionsStore: (selector: (value: unknown) => unknown) =>
@@ -68,6 +73,7 @@ vi.mock("@/components/bakaui", () => ({
   }) => (
     <div>
       <button onClick={() => onSelectionChange("file")}>file-mode</button>
+      <button onClick={() => onSelectionChange("http")}>http-mode</button>
       {children}
     </div>
   ),
@@ -80,7 +86,7 @@ beforeEach(() => {
   mocks.upload.mockResolvedValue({ code: 0 });
 });
 
-describe("manual BT creation", () => {
+describe("general download creation", () => {
   it.each([
     ["magnet:?xt=urn:btih:abc", { magnetUri: "magnet:?xt=urn:btih:abc" }],
     [
@@ -88,7 +94,7 @@ describe("manual BT creation", () => {
       { torrentUrl: "https://example.test/gallery.torrent" },
     ],
   ])("passes the server output directory separately from source %s", async (source, body) => {
-    render(<AddBtDownloadModal onCreated={mocks.created} />);
+    render(<AddGeneralDownloadModal onCreated={mocks.created} />);
     fireEvent.change(screen.getByLabelText("bt.add.source"), { target: { value: ` ${source} ` } });
     fireEvent.change(screen.getByLabelText("directory"), {
       target: { value: " /downloads/gallery " },
@@ -96,15 +102,50 @@ describe("manual BT creation", () => {
     fireEvent.click(screen.getByText("submit"));
     await waitFor(() => expect(mocks.created).toHaveBeenCalledOnce());
     expect(mocks.create).toHaveBeenCalledWith(
-      { ...body, name: undefined },
+      { ...body, provider: "bt", name: undefined },
       { outputDirectory: "/downloads/gallery" },
     );
     expect(mocks.upload).not.toHaveBeenCalled();
   });
 
+  it("creates HTTP files through the common task API with a destination and optional file name", async () => {
+    render(<AddGeneralDownloadModal onCreated={mocks.created} />);
+    fireEvent.click(screen.getByText("http-mode"));
+    fireEvent.change(screen.getByLabelText("downloadCenter.add.httpUrl"), {
+      target: { value: "https://example.test/archive.zip" },
+    });
+    fireEvent.change(screen.getByLabelText("downloadCenter.add.fileName"), {
+      target: { value: " archive.zip " },
+    });
+    fireEvent.click(screen.getByText("submit"));
+    await waitFor(() =>
+      expect(mocks.create).toHaveBeenCalledWith(
+        {
+          provider: "http",
+          name: undefined,
+          url: "https://example.test/archive.zip",
+          fileName: "archive.zip",
+        },
+        { outputDirectory: "/output" },
+      ),
+    );
+  });
+  it("does not accept a magnet as an HTTP URL or a missing server directory", () => {
+    render(<AddGeneralDownloadModal onCreated={mocks.created} />);
+    fireEvent.click(screen.getByText("http-mode"));
+    fireEvent.change(screen.getByLabelText("downloadCenter.add.httpUrl"), {
+      target: { value: "magnet:?xt=urn:btih:abc" },
+    });
+    expect(screen.getByText("submit")).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("downloadCenter.add.httpUrl"), {
+      target: { value: "https://example.test/archive.zip" },
+    });
+    fireEvent.change(screen.getByLabelText("directory"), { target: { value: "" } });
+    expect(screen.getByText("submit")).toBeDisabled();
+  });
   it("uploads torrent bytes with the selected server directory", async () => {
     const file = new File(["torrent"], "gallery.torrent", { type: "application/x-bittorrent" });
-    render(<AddBtDownloadModal onCreated={mocks.created} />);
+    render(<AddGeneralDownloadModal onCreated={mocks.created} />);
     fireEvent.click(screen.getByText("file-mode"));
     fireEvent.change(screen.getByLabelText("bt.add.file"), { target: { files: [file] } });
     fireEvent.click(screen.getByText("submit"));
@@ -120,7 +161,7 @@ describe("manual BT creation", () => {
 
   it("keeps the form open with the server error when creation is rejected", async () => {
     mocks.create.mockResolvedValue({ code: 400, message: "Missing output directory" });
-    render(<AddBtDownloadModal onCreated={mocks.created} />);
+    render(<AddGeneralDownloadModal onCreated={mocks.created} />);
     fireEvent.change(screen.getByLabelText("bt.add.source"), {
       target: { value: "https://example.test/gallery.torrent" },
     });

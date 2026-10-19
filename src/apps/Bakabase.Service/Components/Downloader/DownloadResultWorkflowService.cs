@@ -49,7 +49,7 @@ public sealed class DownloadResultWorkflowService(BakabaseDbContext db,
     IBtDownloadManager torrents, DownloadResultBtService btResults, IPlaceholderResourceService placeholders, AppService app,
     FullMemoryCacheResourceService<BakabaseDbContext, ExHentaiGalleryDbModel, int> galleryCache,
     ILogger<DownloadResultWorkflowService> logger,
-    IBakabaseLocalizer localizer) : IAcquisitionContentsObserver
+    IBakabaseLocalizer localizer, IDownloadTaskRegistry registry) : IAcquisitionContentsObserver
 {
     // Serializes dispatch/retry inside one host; database transactions additionally protect restart boundaries.
     private static SemaphoreSlim DispatchGate => DownloadResultBtService.Gate;
@@ -257,10 +257,16 @@ public sealed class DownloadResultWorkflowService(BakabaseDbContext db,
                 job = await btResults.EnsureAsync(result, runId, definitionId, timeoutMinutes, ct);
                 await btResults.BindAsync(id, job, ct);
                 if (job.Status is BtDownloadStatus.Stopped or BtDownloadStatus.Failed)
+                {
+                    await registry.SetUserStoppedAsync("bt:" + job.Id, false, ct);
                     job = await torrents.ResumeAsync(job.Id, ct);
+                }
                 else if (job.Status == BtDownloadStatus.Completed &&
                          DownloadResultContents.Read(job.OutputDirectory, JsonSerializer.Serialize(job.Files)) == null)
+                {
+                    await registry.SetUserStoppedAsync("bt:" + job.Id, false, ct);
                     job = await torrents.RecheckAsync(job.Id, ct);
+                }
             }
             catch (OperationCanceledException)
             {

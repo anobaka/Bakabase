@@ -249,6 +249,10 @@ public static class TestServiceBuilder
                 sp.GetRequiredService<Bakabase.Modules.Downloader.Abstractions.ITorrentDownloader>(),
                 () => Path.Combine(testDir, "bt-downloads"),
                 () => sp.GetRequiredService<IBOptions<NetworkOptions>>().Value.BtMaxConcurrentDownloads));
+        services.AddSingleton<Bakabase.Modules.HttpDownloads.Abstractions.IHttpDownloadManager>(sp =>
+            new Bakabase.Modules.HttpDownloads.Components.HttpDownloadManager(
+                sp.GetRequiredService<Bakabase.Modules.Downloader.Abstractions.IHttpDownloader>(),
+                () => Path.Combine(testDir, "http-downloads")));
 
         // Auto-register all [Options]-attributed types as default IBOptions/IBOptionsManager
         // (mirrors what ConfigurationRegistrations does in production, but with empty values).

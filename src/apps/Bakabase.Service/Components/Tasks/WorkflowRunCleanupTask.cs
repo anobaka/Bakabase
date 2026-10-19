@@ -7,6 +7,7 @@ using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.InsideWorld.Business;
 using Bakabase.Modules.Bittorrent.Abstractions;
+using Bakabase.Modules.HttpDownloads.Abstractions;
 using Bakabase.Modules.Workflow.Abstractions.Models.Db;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
 using Microsoft.EntityFrameworkCore;
@@ -39,8 +40,14 @@ public class WorkflowRunCleanupTask : AbstractPredefinedBTaskBuilder
         await using var scope = CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<BakabaseDbContext>();
         var downloads = scope.ServiceProvider.GetService<IBtDownloadManager>();
-        var linkedBtRuns = downloads == null ? [] : (await downloads.ListAsync(args.CancellationToken))
-            .Where(j => j.WorkflowRunId != null).Select(j => j.WorkflowRunId!.Value).Distinct().ToArray();
+        var httpDownloads = scope.ServiceProvider.GetService<IHttpDownloadManager>();
+        IEnumerable<int> linkedBtRuns = downloads == null ? [] : (await downloads.ListAsync(args.CancellationToken))
+            .Where(j => j.WorkflowRunId != null).Select(j => j.WorkflowRunId!.Value);
+        IEnumerable<int> linkedHttpRuns = httpDownloads == null ? [] : (await httpDownloads.ListAsync(args.CancellationToken))
+            .Where(j => j.WorkflowRunId != null).Select(j => j.WorkflowRunId!.Value);
+        // Capability creation and registration are separate writes. Protect the short gap before
+        // the canonical binding is saved as well as registered tasks during the deletion query.
+        var linkedTransferRuns = linkedBtRuns.Concat(linkedHttpRuns).Distinct().ToArray();
 
         // Select concrete IDs, including a deterministic ID tie-breaker for runs created together.
         // Active and source-linked runs do not consume the unreferenced history retention budget.
@@ -55,10 +62,10 @@ public class WorkflowRunCleanupTask : AbstractPredefinedBTaskBuilder
             await args.YieldAsync();
             var defId = definitionIds[i];
 
-            var removable = await GetPrunableRunIdsAsync(db, defId, linkedBtRuns, RetentionPerDefinition, args.CancellationToken);
+            var removable = await GetPrunableRunIdsAsync(db, defId, linkedTransferRuns, RetentionPerDefinition, args.CancellationToken);
             if (removable.Count == 0) continue;
             // Recheck ownership and status when deleting: a retry may have started since selection.
-            var deleted = Eligible(db, linkedBtRuns).Where(r => removable.Contains(r.Id))
+            var deleted = Eligible(db, linkedTransferRuns).Where(r => removable.Contains(r.Id))
                 .ExecuteDeleteAsync(args.CancellationToken);
             totalDeleted += await deleted;
 
@@ -71,15 +78,16 @@ public class WorkflowRunCleanupTask : AbstractPredefinedBTaskBuilder
     }
 
     internal static Task<List<int>> GetPrunableRunIdsAsync(BakabaseDbContext db, int definitionId,
-        IReadOnlyCollection<int> linkedBtRuns, int retention, CancellationToken ct = default) =>
-        Eligible(db, linkedBtRuns).Where(r => r.WorkflowDefinitionId == definitionId)
+        IReadOnlyCollection<int> linkedTransferRuns, int retention, CancellationToken ct = default) =>
+        Eligible(db, linkedTransferRuns).Where(r => r.WorkflowDefinitionId == definitionId)
             .OrderByDescending(r => r.StartedAt).ThenByDescending(r => r.Id).Skip(retention)
             .Select(r => r.Id).ToListAsync(ct);
 
-    private static IQueryable<WorkflowRunDbModel> Eligible(BakabaseDbContext db, IReadOnlyCollection<int> linkedBtRuns) =>
+    private static IQueryable<WorkflowRunDbModel> Eligible(BakabaseDbContext db, IReadOnlyCollection<int> linkedTransferRuns) =>
         db.Set<WorkflowRunDbModel>().Where(r =>
             (r.Status == WorkflowRunStatus.Success || r.Status == WorkflowRunStatus.Failed ||
              r.Status == WorkflowRunStatus.Cancelled || r.Status == WorkflowRunStatus.Interrupted) &&
             !db.DownloadResultProcessing.Any(p => p.WorkflowRunId == r.Id) &&
-            !db.DownloadResultOwners.Any(o => o.WorkflowRunId == r.Id) && !linkedBtRuns.Contains(r.Id));
+            !db.DownloadResultOwners.Any(o => o.WorkflowRunId == r.Id) && !linkedTransferRuns.Contains(r.Id) &&
+            !db.ManagedDownloadTasks.Any(t => t.WorkflowRunId == r.Id));
 }

@@ -15,6 +15,7 @@ using Bakabase.Modules.Bittorrent.Components;
 using Bakabase.Modules.Bittorrent.Models;
 using Bakabase.Modules.Downloader.Abstractions;
 using Bakabase.Modules.Downloader.Models;
+using Bakabase.Modules.Downloader.Models.Db;
 using Bakabase.Modules.Workflow.Abstractions.Models.Db;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
 using Bakabase.Service.Components.Downloader;
@@ -115,6 +116,33 @@ public sealed class DownloadTaskExecutionLifecycleTests
         Assert.AreEqual(BtDownloadStatus.Stopped, (await _downloads.GetAsync(staleJob.Id))!.Status);
         Assert.IsTrue((await _downloads.GetAsync(currentJob.Id))!.Status is BtDownloadStatus.Queued or BtDownloadStatus.Running);
         Assert.AreEqual(BtDownloadStatus.Stopped, (await _downloads.GetAsync(directJob.Id))!.Status);
+    }
+
+    [TestMethod]
+    public async Task ParentStartHonorsAnExplicitlyStoppedChildAcrossRestart()
+    {
+        await using var scope = _services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<BakabaseDbContext>();
+        var source = NewTask("held child");
+        db.Set<DownloadTaskDbModel>().Add(source);
+        await db.SaveChangesAsync();
+        var result = NewResult(source.Id, "gallery");
+        db.DownloadResults.Add(result);
+        await db.SaveChangesAsync();
+        var job = await Queue(result);
+        await _downloads.StopAsync(job.Id);
+        var registry = scope.ServiceProvider.GetRequiredService<DownloadTaskRegistry>();
+        await registry.EnsureBindingAsync(DownloadCenterBindings.For(job));
+        await registry.SetUserStoppedAsync("bt:" + job.Id, true);
+
+        await Lifecycle().OnStartedAsync([source.Id]);
+        Assert.AreEqual(BtDownloadStatus.Stopped, (await _downloads.GetAsync(job.Id))!.Status);
+        var policy = ActivatorUtilities.CreateInstance<BtDownloadStartupPolicy>(_services);
+        Assert.IsFalse(await policy.CanResumeAsync(job, CancellationToken.None));
+
+        await registry.SetUserStoppedAsync("bt:" + job.Id, false);
+        await Lifecycle().OnStartedAsync([source.Id]);
+        Assert.IsTrue((await _downloads.GetAsync(job.Id))!.Status is BtDownloadStatus.Queued or BtDownloadStatus.Running);
     }
 
     [TestMethod]
@@ -254,6 +282,43 @@ public sealed class DownloadTaskExecutionLifecycleTests
 
         CollectionAssert.AreEqual(new[] { history[3].Id }, prune.ToArray());
         Assert.IsFalse(prune.Intersect(active.Select(r => r.Id)).Any());
+    }
+
+    [DataTestMethod]
+    [DataRow("http", WorkflowRunStatus.Failed)]
+    [DataRow("bt", WorkflowRunStatus.Cancelled)]
+    [DataRow("site", WorkflowRunStatus.Success)]
+    public async Task CleanupPreservesCanonicalDownloadLinksWithoutConsumingHistoryBudget(string provider, WorkflowRunStatus status)
+    {
+        await using var scope = _services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<BakabaseDbContext>();
+        var definition = new WorkflowDefinitionDbModel { Name = "download-history", TriggerKind = "test" };
+        db.Set<WorkflowDefinitionDbModel>().Add(definition);
+        await db.SaveChangesAsync();
+        var timestamp = DateTime.Now;
+        var linked = new WorkflowRunDbModel
+        { WorkflowDefinitionId = definition.Id, Status = status, StartedAt = timestamp.AddDays(-2) };
+        var unlinked = Enumerable.Range(0, 51).Select(_ => new WorkflowRunDbModel
+        { WorkflowDefinitionId = definition.Id, Status = WorkflowRunStatus.Success, StartedAt = timestamp }).ToArray();
+        db.Set<WorkflowRunDbModel>().Add(linked);
+        db.Set<WorkflowRunDbModel>().AddRange(unlinked);
+        await db.SaveChangesAsync();
+        db.ManagedDownloadTasks.Add(new ManagedDownloadTaskDbModel
+        {
+            Id = provider + ":retained", Provider = provider, ProviderTaskId = "retained",
+            Category = provider == "site" ? "site" : "general", OriginKind = "workflow",
+            WorkflowRunId = linked.Id, WorkflowDefinitionId = definition.Id, CreatedAt = timestamp
+        });
+        await db.SaveChangesAsync();
+
+        var prune = await WorkflowRunCleanupTask.GetPrunableRunIdsAsync(db, definition.Id, [], 50);
+
+        CollectionAssert.AreEqual(new[] { unlinked[0].Id }, prune.ToArray(),
+            "A canonical download must keep its workflow details and retry entry even when the transfer snapshot is absent.");
+        await db.ManagedDownloadTasks.ExecuteDeleteAsync();
+        prune = await WorkflowRunCleanupTask.GetPrunableRunIdsAsync(db, definition.Id, [], 50);
+        CollectionAssert.AreEquivalent(new[] { unlinked[0].Id, linked.Id }, prune.ToArray(),
+            "Removing the last task reference should release the run to normal retention.");
     }
 
     [TestMethod]

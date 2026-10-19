@@ -16,6 +16,9 @@ const { getDefinitions, patchOptions, successToast, globalOptions } = vi.hoisted
   globalOptions: { data: {} as { autoStartAfterCreation?: boolean; defaultDownloadPath?: string } },
 }));
 
+vi.mock("@/pages/bt-downloads/BtSettingsPanel", () => ({
+  default: () => <div>BT transport settings</div>,
+}));
 vi.mock("@/sdk/BApi", () => ({
   default: {
     downloadTask: { getAllDownloaderDefinitions: getDefinitions },

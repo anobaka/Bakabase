@@ -17,6 +17,10 @@ using Bakabase.Service.Components.Acquisition.Downloads;
 using Bakabase.Service.Components.Acquisition.Steps;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using Bakabase.Modules.HttpDownloads.Abstractions;
+using Bakabase.Modules.HttpDownloads.Models;
+using HttpDownloadRequest = Bakabase.Modules.Downloader.Models.HttpDownloadRequest;
+using ManagedHttpRequest = Bakabase.Modules.HttpDownloads.Models.HttpDownloadRequest;
 
 namespace Bakabase.Tests;
 
@@ -27,6 +31,7 @@ public sealed class AcquisitionDownloadAdapterTests
     private readonly Downloads _downloads = new();
     private readonly MetadataStore _store = new();
     private readonly BtManager _bt = new();
+    private readonly HttpManager _http = new();
     private readonly List<int> _progress = [];
     private ServiceProvider _services = null!;
     private string _working = null!;
@@ -38,6 +43,7 @@ public sealed class AcquisitionDownloadAdapterTests
         _services = new ServiceCollection()
             .AddSingleton<IHttpDownloader>(_downloads)
             .AddSingleton<IBtDownloadManager>(_bt)
+            .AddSingleton<IHttpDownloadManager>(_http)
             .AddSingleton<IAria2Downloader>(_downloads)
             .AddSingleton<IAcquisitionTorrentMetadataStore>(_store)
             .BuildServiceProvider();
@@ -79,18 +85,94 @@ public sealed class AcquisitionDownloadAdapterTests
             item, cancellation.Token);
 
         Assert.IsInstanceOfType<AcquisitionStepOutcome.Continue>(outcome);
-        Assert.AreEqual("https://example.invalid/chosen", _downloads.HttpRequest!.Url);
-        Assert.AreEqual(_working, _downloads.HttpRequest.Directory);
-        Assert.AreEqual(TimeSpan.FromMinutes(7), _downloads.HttpRequest.Timeout);
-        Assert.AreEqual(8, _downloads.HttpRequest.ParallelConnections);
-        Assert.AreEqual(5, _downloads.HttpRequest.MaxRetries);
-        Assert.AreEqual(1073741824L, _downloads.HttpRequest.MaximumBytesPerSecond);
-        Assert.IsNull(_downloads.HttpRequest.HttpClientName, "acquisition must use the neutral module's default client");
-        Assert.IsNull(_downloads.HttpRequest.FileName);
-        Assert.AreEqual(cancellation.Token, _downloads.Token);
+        Assert.AreEqual("https://example.invalid/chosen", _http.Request!.Url);
+        Assert.AreEqual(_working, _http.Request.OutputDirectory);
+        Assert.AreEqual(TimeSpan.FromMinutes(7), _http.Request.Timeout);
+        Assert.AreEqual(8, _http.Request.ParallelConnections);
+        Assert.AreEqual(5, _http.Request.MaxRetries);
+        Assert.AreEqual(1073741824L, _http.Request.MaximumBytesPerSecond);
+        Assert.IsNull(_http.Request.HttpClientName, "acquisition must use the neutral module's default client");
+        Assert.IsNull(_http.Request.FileName);
+        Assert.IsTrue(_http.StopOnCancellation);
+        Assert.AreEqual("workflow", _http.Request.SourceKind);
+        Assert.AreEqual(19, _http.Request.WorkflowRunId);
+        Assert.AreEqual(23, _http.Request.WorkflowDefinitionId);
+        Assert.IsFalse(_http.Request.IdempotencyKey!.Contains("example.invalid"));
         CollectionAssert.AreEqual(new[] {25}, _progress);
         CollectionAssert.AreEqual(item.Files.ToArray(), ((AcquisitionStepOutcome.Continue) outcome).Item.Files.ToArray());
         Assert.IsFalse(Directory.Exists(_working), "the adapter must leave filesystem work to the downloader");
+    }
+
+    [TestMethod]
+    public async Task ManagedHttpReentryKeepsItsTransferIdentityAndSiteOwnership()
+    {
+        var item = Item() with {Variables = new Dictionary<string, string>
+        { ["downloadTaskId"] = "32", ["downloadResultId"] = "31" }};
+        var step = new FetchHttpStep();
+        await step.ExecuteAsync(Context(), item, CancellationToken.None);
+        var first = _http.Request!;
+        await step.ExecuteAsync(Context(), item, CancellationToken.None);
+        Assert.AreEqual(first.IdempotencyKey, _http.Request!.IdempotencyKey);
+        Assert.AreEqual(32, first.DownloadTaskId);
+        Assert.AreEqual(31, first.DownloadResultId);
+        await step.ExecuteAsync(Context() with {WorkflowRunId = 20}, item, CancellationToken.None);
+        Assert.AreNotEqual(first.IdempotencyKey, _http.Request!.IdempotencyKey);
+    }
+
+    [DataTestMethod]
+    [DataRow(HttpDownloadStatus.Stopped)]
+    [DataRow(HttpDownloadStatus.Failed)]
+    [DataRow(HttpDownloadStatus.Stopping)]
+    public async Task WorkflowRetryResumesTheSameHttpTask(HttpDownloadStatus status)
+    {
+        _http.Existing = _http.Job(status);
+        var outcome = await new FetchHttpStep().ExecuteAsync(Context(), Item(), CancellationToken.None);
+        Assert.IsInstanceOfType<AcquisitionStepOutcome.Continue>(outcome);
+        Assert.AreEqual(1, _http.ResumeCount);
+        Assert.AreEqual("managed-http", _http.WaitedId);
+        Assert.AreEqual(status == HttpDownloadStatus.Stopping ? 1 : 0, _http.StopCount);
+    }
+
+    [TestMethod]
+    public async Task CancellingHttpWorkflowDrainsItsOwnedTransfer()
+    {
+        using var cancellation = new CancellationTokenSource();
+        _http.Waiting = ct => { cancellation.Cancel(); return Task.Delay(Timeout.InfiniteTimeSpan, ct); };
+        await Assert.ThrowsExactlyAsync<TaskCanceledException>(() => new FetchHttpStep()
+            .ExecuteAsync(Context(), Item(), cancellation.Token));
+        Assert.IsTrue(_http.StopOnCancellation);
+        Assert.AreEqual(1, _http.StopCount);
+    }
+
+    [TestMethod]
+    public async Task HttpCancellationDuringResumeStopsBeforeWaiting()
+    {
+        using var cancellation = new CancellationTokenSource();
+        _http.Existing = _http.Job(HttpDownloadStatus.Stopped);
+        _http.Resuming = ct => { cancellation.Cancel(); ct.ThrowIfCancellationRequested(); return Task.CompletedTask; };
+        await Assert.ThrowsExactlyAsync<OperationCanceledException>(() => new FetchHttpStep()
+            .ExecuteAsync(Context(), Item(), cancellation.Token));
+        Assert.AreEqual(1, _http.StopCount);
+        Assert.IsNull(_http.WaitedId);
+    }
+
+    [TestMethod]
+    public async Task HttpCompletedJobWithMissingOutputIsRechecked()
+    {
+        _http.Existing = _http.Job(HttpDownloadStatus.Completed);
+        var outcome = await new FetchHttpStep().ExecuteAsync(Context(), Item(), CancellationToken.None);
+        Assert.IsInstanceOfType<AcquisitionStepOutcome.Continue>(outcome);
+        Assert.AreEqual(1, _http.RecheckCount);
+        Assert.AreEqual(0, _http.ResumeCount);
+    }
+
+    [TestMethod]
+    public async Task HttpProgressCallbackFailureStopsTheOwnedTransfer()
+    {
+        var context = Context() with {ReportProgress = (_, _) => throw new InvalidOperationException("Workflow ended.")};
+        var outcome = await new FetchHttpStep().ExecuteAsync(context, Item(), CancellationToken.None);
+        Assert.IsInstanceOfType<AcquisitionStepOutcome.Fail>(outcome);
+        Assert.AreEqual(1, _http.StopCount);
     }
 
     [TestMethod]
@@ -106,6 +188,7 @@ public sealed class AcquisitionDownloadAdapterTests
             .ExecuteAsync(Context(), Item() with {Links = [], LeadKind = AcquisitionLeadKind.Torrent, LeadValue = "/private/data.torrent"}, CancellationToken.None));
         Assert.IsNull(_downloads.Method);
         Assert.IsNull(_bt.Request);
+        Assert.IsNull(_http.Request);
         Assert.IsFalse(Directory.Exists(_working));
     }
 
@@ -191,12 +274,12 @@ public sealed class AcquisitionDownloadAdapterTests
         var context = Context(kind == "aria2"
             ? """{"handler":1,"timeoutMinutes":7}"""
             : """{"timeoutMinutes":7}""");
-        _downloads.Failure = _bt.Failure = new TimeoutException("The download deadline elapsed.");
+        _downloads.Failure = _bt.Failure = _http.Failure = new TimeoutException("The download deadline elapsed.");
         Assert.IsInstanceOfType<AcquisitionStepOutcome.Fail>(await step.ExecuteAsync(context, item, CancellationToken.None));
 
         using var cancellation = new CancellationTokenSource();
         cancellation.Cancel();
-        _downloads.Failure = _bt.Failure = new OperationCanceledException(cancellation.Token);
+        _downloads.Failure = _bt.Failure = _http.Failure = new OperationCanceledException(cancellation.Token);
         await Assert.ThrowsExactlyAsync<OperationCanceledException>(() => step.ExecuteAsync(context, item, cancellation.Token));
     }
 
@@ -372,6 +455,69 @@ public sealed class AcquisitionDownloadAdapterTests
             if (Failure != null) throw Failure;
             if (progress != null) await progress(25, "Downloading");
         }
+    }
+
+    private sealed class HttpManager : IHttpDownloadManager
+    {
+        public ManagedHttpRequest? Request;
+        public HttpDownloadJob? Existing;
+        public TorrentDownloadResult Result = null!;
+        public Exception? Failure;
+        public Func<CancellationToken, Task>? Waiting, Resuming;
+        public int ResumeCount, RecheckCount, StopCount;
+        public string? WaitedId;
+        public bool StopOnCancellation;
+
+        public HttpDownloadJob Job(HttpDownloadStatus status) => new()
+        {
+            Id = "managed-http", Name = "HTTP download", OutputDirectory = Request?.OutputDirectory ?? string.Empty, Files = ["downloaded.bin"],
+            Status = status, Stage = status.ToString(), Percentage = status == HttpDownloadStatus.Completed ? 100 : 25
+        };
+        public Task<HttpDownloadJob> EnsureQueuedAsync(ManagedHttpRequest request, CancellationToken ct = default)
+        {
+            Request = request;
+            return Task.FromResult(Existing ?? Job(HttpDownloadStatus.Queued));
+        }
+        public async Task<HttpDownloadJob> ResumeAsync(string id, CancellationToken ct = default)
+        {
+            ResumeCount++;
+            if (Resuming != null) await Resuming(ct);
+            return Job(HttpDownloadStatus.Queued);
+        }
+        public Task<HttpDownloadJob> RecheckAsync(string id, CancellationToken ct = default)
+        {
+            RecheckCount++;
+            return Task.FromResult(Job(HttpDownloadStatus.Queued));
+        }
+        public Task<HttpDownloadJob> StopAsync(string id, CancellationToken ct = default)
+        {
+            StopCount++;
+            return Task.FromResult(Job(HttpDownloadStatus.Stopped));
+        }
+        public async Task<HttpDownloadJob> WaitForCompletionAsync(string id, Func<HttpDownloadJob, Task>? progress = null,
+            bool stopOnCancellation = false, CancellationToken ct = default)
+        {
+            WaitedId = id;
+            StopOnCancellation = stopOnCancellation;
+            try
+            {
+                if (Failure != null) throw Failure;
+                if (Waiting != null) await Waiting(ct);
+                if (progress != null) await progress(Job(HttpDownloadStatus.Running));
+                return Job(HttpDownloadStatus.Completed);
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                if (stopOnCancellation) await StopAsync(id, CancellationToken.None);
+                throw;
+            }
+        }
+        public Task InitializeAsync(CancellationToken ct = default) => Task.CompletedTask;
+        public Task ShutdownAsync(CancellationToken ct = default) => Task.CompletedTask;
+        public Task<IReadOnlyList<HttpDownloadJob>> ListAsync(CancellationToken ct = default) => throw new NotSupportedException();
+        public Task<HttpDownloadJob?> GetAsync(string id, CancellationToken ct = default) => throw new NotSupportedException();
+        public Task<HttpDownloadJob?> FindByIdempotencyKeyAsync(string key, CancellationToken ct = default) => throw new NotSupportedException();
+        public Task DeleteAsync(string id, CancellationToken ct = default) => throw new NotSupportedException();
     }
 
     private sealed class BtManager : IBtDownloadManager

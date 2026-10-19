@@ -11,5 +11,7 @@ public sealed record HttpDownloadRequest(string Url, string Directory)
     public int MaxRetries { get; init; } = 3;
     /// <summary>Per-transfer speed limit in bytes per second; zero means unlimited.</summary>
     public long MaximumBytesPerSecond { get; init; }
+    /// <summary>Whether an existing destination may be replaced after verification.</summary>
+    public bool AllowOverwrite { get; init; } = true;
     public TimeSpan Timeout { get; init; } = TimeSpan.FromHours(4);
 }

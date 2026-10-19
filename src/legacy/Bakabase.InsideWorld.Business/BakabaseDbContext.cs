@@ -15,6 +15,7 @@ using Bakabase.Modules.AI.Models.Db;
 using Bakabase.Modules.Comparison.Models.Db;
 using Bakabase.Modules.DataCard.Abstractions.Models.Db;
 using Bakabase.Modules.DataSync.Models.Db;
+using Bakabase.Modules.Downloader.Models.Db;
 using Bakabase.Modules.Notification.Abstractions.Models.Db;
 using Bakabase.Modules.Property.Abstractions.Models.Db;
 using Bakabase.Modules.Subscription.Abstractions.Models.Db;
@@ -38,6 +39,7 @@ namespace Bakabase.InsideWorld.Business
         public DbSet<CollectionMemoSettingsDbModel> CollectionMemoSettings { get; set; }
 
         public DbSet<DownloadTaskDbModel> DownloadTasks { get; set; }
+        public DbSet<ManagedDownloadTaskDbModel> ManagedDownloadTasks { get; set; }
         public DbSet<DownloadTaskFileDbModel> DownloadTaskFiles { get; set; }
 
         public DbSet<DownloadRecordDbModel> DownloadRecords { get; set; }
@@ -212,6 +214,14 @@ namespace Bakabase.InsideWorld.Business
                 t.HasIndex(a => a.ThirdPartyId);
                 t.HasIndex(a => new {a.ThirdPartyId, a.Type});
                 t.HasIndex(a => a.Status);
+            });
+
+            modelBuilder.Entity<ManagedDownloadTaskDbModel>(t =>
+            {
+                t.Property(a => a.Id).ValueGeneratedNever();
+                t.HasIndex(a => new { a.Provider, a.ProviderTaskId }).IsUnique();
+                t.HasIndex(a => a.ParentId);
+                t.HasIndex(a => a.WorkflowRunId);
             });
 
             modelBuilder.Entity<DownloadTaskFileDbModel>(t =>

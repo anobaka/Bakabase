@@ -85,8 +85,13 @@ public sealed class DownloadTaskExecutionLifecycle(IServiceScopeFactory scopes, 
                 !db.DownloadResults.Any(newer => newer.DownloadTaskId == r.DownloadTaskId && newer.SourceKey == r.SourceKey && newer.Id > r.Id))
                 .ToListAsync();
             var allowed = results.Where(r => CanContinue(tasks[r.DownloadTaskId], r)).ToDictionary(r => r.Id);
+            var held = await db.ManagedDownloadTasks.AsNoTracking().Where(t => t.UserStopped)
+                .Select(t => new {t.Provider, t.ProviderTaskId, t.DownloadResultId}).ToListAsync();
+            foreach (var resultId in held.Where(t => t.DownloadResultId.HasValue).Select(t => t.DownloadResultId!.Value))
+                allowed.Remove(resultId);
+            var heldBtIds = held.Where(t => t.Provider == "bt").Select(t => t.ProviderTaskId).ToHashSet();
             var jobs = (await downloads.ListAsync()).Where(j => j.WorkflowRunId == null && j.SourceKind != "workflow" &&
-                j.DownloadResultId is { } id && allowed.ContainsKey(id)).ToArray();
+                !heldBtIds.Contains(j.Id) && j.DownloadResultId is { } id && allowed.ContainsKey(id)).ToArray();
             foreach (var job in jobs.Where(j => j.Status is BtDownloadStatus.Stopped or BtDownloadStatus.Failed))
                 await downloads.ResumeAsync(job.Id);
             var allowedIds = allowed.Keys.ToArray();

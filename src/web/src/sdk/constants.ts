@@ -6373,6 +6373,33 @@ export const LlmCapabilitiesLabel: Record<LlmCapabilities, string> = {
   [LlmCapabilities.JsonMode]: 'JsonMode'
 };
 
+export enum HttpDownloadStatus {
+  Queued = 1,
+  Running = 2,
+  Stopping = 3,
+  Stopped = 4,
+  Completed = 5,
+  Failed = 6
+}
+
+export const httpDownloadStatuses = [
+  { label: 'Queued', value: HttpDownloadStatus.Queued },
+  { label: 'Running', value: HttpDownloadStatus.Running },
+  { label: 'Stopping', value: HttpDownloadStatus.Stopping },
+  { label: 'Stopped', value: HttpDownloadStatus.Stopped },
+  { label: 'Completed', value: HttpDownloadStatus.Completed },
+  { label: 'Failed', value: HttpDownloadStatus.Failed }
+] as const;
+
+export const HttpDownloadStatusLabel: Record<HttpDownloadStatus, string> = {
+  [HttpDownloadStatus.Queued]: 'Queued',
+  [HttpDownloadStatus.Running]: 'Running',
+  [HttpDownloadStatus.Stopping]: 'Stopping',
+  [HttpDownloadStatus.Stopped]: 'Stopped',
+  [HttpDownloadStatus.Completed]: 'Completed',
+  [HttpDownloadStatus.Failed]: 'Failed'
+};
+
 export enum BulkModificationProcessorOptionsItemsFilterBy {
   All = 1,
   Containing = 2,

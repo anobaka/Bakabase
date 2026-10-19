@@ -3,13 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Bakabase.Modules.Downloader.Abstractions;
-using Bakabase.Modules.Downloader.Models;
+using Bakabase.Modules.HttpDownloads.Models;
+using Bakabase.Service.Components.Acquisition.Downloads;
 using Bakabase.Modules.Acquisition.Abstractions.Components;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Acquisition.Components;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Bakabase.Service.Components.Acquisition.Steps;
 
@@ -87,20 +86,21 @@ public class FetchHttpStep : IAcquisitionStep
 
         try
         {
-            var path = await ctx.ServiceProvider.GetRequiredService<IHttpDownloader>().DownloadAsync(
-                new HttpDownloadRequest(link.Url, ctx.WorkingDirectory)
+            var download = await ManagedHttpDownload.DownloadAsync(ctx, item,
+                new HttpDownloadRequest
                 {
+                    Url = link.Url, OutputDirectory = ctx.WorkingDirectory,
                     Timeout = TimeSpan.FromMinutes(config.TimeoutMinutes),
                     ParallelConnections = config.ParallelConnections,
                     MaxRetries = config.MaxRetries,
                     MaximumBytesPerSecond = config.SpeedLimitKiB * 1024L
-                }, (percentage, process) => ctx.ReportProgress(percentage, process), ct);
+                }, ct);
 
             return new AcquisitionStepOutcome.Continue(item with
             {
                 // Distinct: a re-run after a restart downloads to the same name and must not list
                 // the same file twice.
-                Files = item.Files.Append(path).Distinct().ToList()
+                Files = item.Files.Concat(download.Files).Distinct().ToList()
             });
         }
         catch (TimeoutException)

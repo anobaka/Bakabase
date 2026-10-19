@@ -3293,6 +3293,63 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.ToTable("DataSyncReaders");
                 });
 
+            modelBuilder.Entity("Bakabase.Modules.Downloader.Models.Db.ManagedDownloadTaskDbModel", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("DownloadResultId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("OriginId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OriginKind")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ParentId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ProviderTaskId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("SiteTaskId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("UserStopped")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("WorkflowDefinitionId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("WorkflowRunId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ParentId");
+
+                    b.HasIndex("WorkflowRunId");
+
+                    b.HasIndex("Provider", "ProviderTaskId")
+                        .IsUnique();
+
+                    b.ToTable("ManagedDownloadTasks");
+                });
+
             modelBuilder.Entity("Bakabase.Modules.HealthScore.Models.Db.HealthScoreProfileDbModel", b =>
                 {
                     b.Property<int>("Id")

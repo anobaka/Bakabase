@@ -5375,6 +5375,83 @@ export interface BakabaseModulesDataSyncWireDataSyncSourceAttention {
   awaitingReview: number;
 }
 
+export interface BakabaseModulesDownloaderModelsTasksDownloadTask {
+  id: string;
+  category: string;
+  provider: string;
+  providerTaskId: string;
+  parentId?: string;
+  /** @format int32 */
+  siteTaskId?: number;
+  /** @format int32 */
+  thirdPartyId?: number;
+  key?: string;
+  name: string;
+  outputDirectory: string;
+  files: string[];
+  status: string;
+  stage?: string;
+  /** @format double */
+  progress?: number;
+  /** @format int64 */
+  completedBytes?: number;
+  /** @format int64 */
+  totalBytes?: number;
+  /** @format double */
+  speedBytesPerSecond?: number;
+  error?: string;
+  /** @format date-time */
+  createdAt: string;
+  /** @format date-time */
+  updatedAt: string;
+  /** @format date-time */
+  completedAt?: string;
+  originKind: string;
+  originId?: string;
+  /** @format int32 */
+  workflowRunId?: number;
+  /** @format int32 */
+  workflowDefinitionId?: number;
+  /** @format int32 */
+  downloadResultId?: number;
+  availableActions: string[];
+  execution?: BakabaseModulesDownloaderModelsTasksDownloadTaskExecution;
+}
+
+export interface BakabaseModulesDownloaderModelsTasksDownloadTaskActionResult {
+  id: string;
+  success: boolean;
+  /** @format int32 */
+  code: number;
+  error?: string;
+  task?: BakabaseModulesDownloaderModelsTasksDownloadTask;
+}
+
+export interface BakabaseModulesDownloaderModelsTasksDownloadTaskExecution {
+  /** @format int32 */
+  downloadTaskId: number;
+  status: string;
+  /** @format int32 */
+  totalCount: number;
+  /** @format int32 */
+  completedCount: number;
+  /** @format int32 */
+  runningCount: number;
+  /** @format int32 */
+  queuedCount: number;
+  /** @format int32 */
+  stoppedCount: number;
+  /** @format int32 */
+  failedCount: number;
+  /** @format int32 */
+  waitingCount: number;
+  sourceCompleted: boolean;
+  /** @format double */
+  progress?: number;
+  /** @format double */
+  speedBytesPerSecond?: number;
+}
+
 export type BakabaseModulesEnhancerAbstractionsComponentsIEnhancementConverter = object;
 
 export interface BakabaseModulesEnhancerAbstractionsComponentsIEnhancerDescriptor {
@@ -7395,6 +7472,24 @@ export interface BakabaseServiceModelsInputDeviceColorInput {
   color?: string;
 }
 
+export interface BakabaseServiceModelsInputDownloadCenterBatchInputModel {
+  ids: string[];
+  /** @minLength 1 */
+  action: string;
+  /** [0: NotSet, 1: StopOthers, 2: Ignore] */
+  actionOnConflict: BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsConstantsDownloadTaskActionOnConflict;
+}
+
+export interface BakabaseServiceModelsInputDownloadCenterCreateInputModel {
+  /** @minLength 1 */
+  provider: string;
+  name?: string;
+  magnetUri?: string;
+  torrentUrl?: string;
+  url?: string;
+  fileName?: string;
+}
+
 export interface BakabaseServiceModelsInputExHentaiDownloadTaskAddInputModel {
   /** [1: SingleWork, 2: Watched, 3: List] */
   type: BakabaseInsideWorldBusinessComponentsDownloaderComponentsDownloadersExHentaiExHentaiDownloadTaskType;
@@ -8955,6 +9050,20 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesDataSy
   data?: BakabaseModulesDataSyncServicesDataSyncReaderView[];
 }
 
+export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesDownloaderModelsTasksDownloadTaskActionResult {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesDownloaderModelsTasksDownloadTaskActionResult[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesDownloaderModelsTasksDownloadTask {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesDownloaderModelsTasksDownloadTask[];
+}
+
 export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesEnhancerAbstractionsComponentsIEnhancerDescriptor {
   /** @format int32 */
   code: number;
@@ -10208,6 +10317,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesD
   code: number;
   message?: string;
   data?: BakabaseModulesDataSyncServicesDataSyncTaskStart;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDownloaderModelsTasksDownloadTask {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesDownloaderModelsTasksDownloadTask;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesHealthScoreModelsViewHealthScoreProfileViewModel {
@@ -21926,6 +22042,264 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         format: "json",
         ...params,
       }),
+  };
+  downloadCenter = {
+    /**
+     * No description
+     *
+     * @tags DownloadCenter
+     * @name GetDownloadCenterTasks
+     * @request GET:/download-center/tasks
+     */
+    getDownloadCenterTasks: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesDownloaderModelsTasksDownloadTask,
+        any
+      >({
+        path: `/download-center/tasks`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getDownloadCenterTasks
+     * @name getDownloadCenterTasksUrl
+     */
+    getDownloadCenterTasksUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/download-center/tasks`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags DownloadCenter
+     * @name CreateDownloadCenterTask
+     * @request POST:/download-center/tasks
+     */
+    createDownloadCenterTask: (
+      data: BakabaseServiceModelsInputDownloadCenterCreateInputModel,
+      query?: {
+        outputDirectory?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDownloaderModelsTasksDownloadTask,
+        any
+      >({
+        path: `/download-center/tasks`,
+        method: "POST",
+        query: query,
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for createDownloadCenterTask
+     * @name createDownloadCenterTaskUrl
+     */
+    createDownloadCenterTaskUrl: (query?: {
+        outputDirectory?: string;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/download-center/tasks`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags DownloadCenter
+     * @name GetDownloadCenterTask
+     * @request GET:/download-center/tasks/{id}
+     */
+    getDownloadCenterTask: (id: string, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDownloaderModelsTasksDownloadTask,
+        any
+      >({
+        path: `/download-center/tasks/${id}`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DownloadCenter
+     * @name DeleteDownloadCenterTask
+     * @request DELETE:/download-center/tasks/{id}
+     */
+    deleteDownloadCenterTask: (id: string, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/download-center/tasks/${id}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DownloadCenter
+     * @name UploadDownloadCenterTorrent
+     * @request POST:/download-center/tasks/upload
+     */
+    uploadDownloadCenterTorrent: (
+      data: {
+        /** @format binary */
+        file?: File;
+        outputDirectory?: string;
+        name?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDownloaderModelsTasksDownloadTask,
+        any
+      >({
+        path: `/download-center/tasks/upload`,
+        method: "POST",
+        body: data,
+        type: ContentType.FormData,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for uploadDownloadCenterTorrent
+     * @name uploadDownloadCenterTorrentUrl
+     */
+    uploadDownloadCenterTorrentUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/download-center/tasks/upload`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags DownloadCenter
+     * @name StartDownloadCenterTask
+     * @request POST:/download-center/tasks/{id}/start
+     */
+    startDownloadCenterTask: (
+      id: string,
+      query?: {
+        /** [0: NotSet, 1: StopOthers, 2: Ignore] */
+        actionOnConflict?: BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsConstantsDownloadTaskActionOnConflict;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDownloaderModelsTasksDownloadTask,
+        any
+      >({
+        path: `/download-center/tasks/${id}/start`,
+        method: "POST",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DownloadCenter
+     * @name StopDownloadCenterTask
+     * @request POST:/download-center/tasks/{id}/stop
+     */
+    stopDownloadCenterTask: (id: string, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDownloaderModelsTasksDownloadTask,
+        any
+      >({
+        path: `/download-center/tasks/${id}/stop`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DownloadCenter
+     * @name RetryDownloadCenterTask
+     * @request POST:/download-center/tasks/{id}/retry
+     */
+    retryDownloadCenterTask: (
+      id: string,
+      query?: {
+        /** [0: NotSet, 1: StopOthers, 2: Ignore] */
+        actionOnConflict?: BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsConstantsDownloadTaskActionOnConflict;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDownloaderModelsTasksDownloadTask,
+        any
+      >({
+        path: `/download-center/tasks/${id}/retry`,
+        method: "POST",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DownloadCenter
+     * @name BatchDownloadCenterTasks
+     * @request POST:/download-center/tasks/batch
+     */
+    batchDownloadCenterTasks: (
+      data: BakabaseServiceModelsInputDownloadCenterBatchInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesDownloaderModelsTasksDownloadTaskActionResult,
+        any
+      >({
+        path: `/download-center/tasks/batch`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for batchDownloadCenterTasks
+     * @name batchDownloadCenterTasksUrl
+     */
+    batchDownloadCenterTasksUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/download-center/tasks/batch`;
+
+      return baseUrl + path;
+    },
   };
   downloader = {
     /**

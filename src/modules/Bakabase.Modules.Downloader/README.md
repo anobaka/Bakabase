@@ -4,6 +4,30 @@
 It does not reference the application host, resource models, acquisition, workflows, a database or a task queue.
 Desktop and server hosts register the same services.
 
+## Download task identity
+
+The module also defines the neutral `Models.Tasks.DownloadTask` snapshot and
+`IDownloadTaskRegistry` contract. The host persists `ManagedDownloadTaskDbModel`
+in its own database and exposes one `/download-center/tasks` command surface.
+`site:<id>`, `bt:<id>` and `http:<id>` identify the same task in every list,
+workflow link and parent expansion. Protocol URLs, credentials and provider
+configuration are not copied into the common snapshot.
+
+The categories are `site` and `general`; providers keep their own scheduling and
+recovery. The legacy site downloader discovers works, while the BT and HTTP
+managers perform transfers. A site-generated transfer points to its source task
+through `ParentId`. A workflow is an owner or a subsequent processor, not a
+download provider. Common task reconciliation registers existing identities
+without starting them or changing their provider IDs.
+
+The host aggregates content and workflow state for a source task: acquiring
+torrent metadata does not complete a task whose files are still downloading.
+Stopping a parent stops its dependent work. An explicit child stop is retained
+as `UserStopped`, so continuing the parent does not undo that choice. An explicit
+child start or an authorized workflow continuation clears that intent. Workflow
+transfers must resume through their owner, which validates the workflow state
+before resuming the same provider task.
+
 - `IHttpDownloader`: HTTP(S) files using Downloader for parallel chunks, transient retries and speed limits; configurable target name and named HTTP client.
 - `ITorrentDownloader`: magnets, torrent bytes and HTTP(S) torrent URLs; verified pieces, nested file trees and retry rehashing.
 - `IAria2Downloader`: optional aria2 JSON-RPC transport; tracks metadata and payload jobs and cancels its owned download on failure or cancellation.

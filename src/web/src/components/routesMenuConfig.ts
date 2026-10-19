@@ -381,7 +381,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
         component: BtDownloadsPage,
         icon: AiOutlineCloudDownload,
         layout: "basic",
-        menu: true,
+        menu: false,
       },
       {
         name: "menu.fileMover",

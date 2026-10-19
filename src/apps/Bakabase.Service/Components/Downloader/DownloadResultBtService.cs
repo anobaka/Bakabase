@@ -16,6 +16,7 @@ using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.Bittorrent.Abstractions;
 using Bakabase.Modules.Bittorrent.Models;
 using Bakabase.Modules.Downloader.Components;
+using Bakabase.Modules.Downloader.Abstractions;
 using Bootstrap.Components.Orm;
 using Microsoft.EntityFrameworkCore;
 
@@ -23,7 +24,8 @@ namespace Bakabase.Service.Components.Downloader;
 
 /// <summary>Connects platform results to the independent BT capability. No workflow is needed.</summary>
 public sealed class DownloadResultBtService(BakabaseDbContext db, IBtDownloadManager downloads,
-    FullMemoryCacheResourceService<BakabaseDbContext, ExHentaiGalleryDbModel, int> galleryCache)
+    FullMemoryCacheResourceService<BakabaseDbContext, ExHentaiGalleryDbModel, int> galleryCache,
+    IDownloadTaskRegistry registry)
 {
     internal static readonly SemaphoreSlim Gate = new(1, 1);
 
@@ -32,7 +34,10 @@ public sealed class DownloadResultBtService(BakabaseDbContext db, IBtDownloadMan
     {
         var existing = await downloads.FindByIdempotencyKeyAsync($"download-result:{result.Id}", ct);
         if (existing?.Status is BtDownloadStatus.Queued or BtDownloadStatus.Running or BtDownloadStatus.Stopping)
+        {
+            await registry.EnsureBindingAsync(DownloadCenterBindings.For(existing), ct);
             return existing;
+        }
         await using var stream = File.OpenRead(result.Path);
         var bytes = await TorrentMetadata.ReadBoundedAsync(stream, ct);
         TorrentMetadata.Validate(bytes);
@@ -47,7 +52,7 @@ public sealed class DownloadResultBtService(BakabaseDbContext db, IBtDownloadMan
             if (string.IsNullOrWhiteSpace(name)) name = "download";
             directory = Path.Combine(directory, $"{name} [{result.Id}]", "torrent-data");
         }
-        return await downloads.EnsureQueuedAsync(new BtDownloadRequest
+        var job = await downloads.EnsureQueuedAsync(new BtDownloadRequest
         {
             Name = result.Name, Metadata = bytes, OutputDirectory = existing?.OutputDirectory ?? directory,
             Timeout = TimeSpan.FromMinutes(timeoutMinutes), IdempotencyKey = $"download-result:{result.Id}",
@@ -56,10 +61,13 @@ public sealed class DownloadResultBtService(BakabaseDbContext db, IBtDownloadMan
             WorkflowRunId = existing == null ? workflowRunId : existing.WorkflowRunId,
             WorkflowDefinitionId = existing == null ? workflowDefinitionId : existing.WorkflowDefinitionId
         }, ct);
+        await registry.EnsureBindingAsync(DownloadCenterBindings.For(job), ct);
+        return job;
     }
 
     public async Task BindAsync(int resultId, BtDownloadJob job, CancellationToken ct)
     {
+        await registry.EnsureBindingAsync(DownloadCenterBindings.For(job), ct);
         var state = await db.DownloadResultProcessing.FindAsync([resultId], ct);
         if (state == null)
         {

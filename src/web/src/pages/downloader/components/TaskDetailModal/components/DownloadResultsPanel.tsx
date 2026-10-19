@@ -202,7 +202,7 @@ export default function DownloadResultsPanel({ taskId }: { taskId: number }) {
                   <div className="flex flex-wrap gap-1">
                     <Button
                       as="a"
-                      href={`#/bt-downloads?id=${encodeURIComponent(result.btDownloadId)}`}
+                      href={`#/downloader?category=general&provider=bt&id=${encodeURIComponent(`bt:${result.btDownloadId}`)}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       size="sm"

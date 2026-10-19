@@ -18,10 +18,11 @@ public sealed class BtDownloadStartupPolicy(IServiceScopeFactory scopes)
         // A workflow owns the continuation. Its adapter explicitly resumes the same transfer only
         // after workflow recovery has validated its cursor and enabled definition.
         if (job.SourceKind == "workflow" || job.WorkflowRunId != null) return false;
-        if (job.SourceKind == "manual") return true;
-        if (job.DownloadResultId is not { } resultId) return false;
         await using var scope = scopes.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<BakabaseDbContext>();
+        if (await db.ManagedDownloadTasks.AnyAsync(t => t.Id == "bt:" + job.Id && t.UserStopped, ct)) return false;
+        if (job.SourceKind == "manual") return true;
+        if (job.DownloadResultId is not { } resultId) return false;
         var result = await db.DownloadResults.AsNoTracking().SingleOrDefaultAsync(r => r.Id == resultId, ct);
         if (result == null || !result.RequiresContentsDownload) return false;
         var source = await db.Set<DownloadTaskDbModel>().AsNoTracking().SingleOrDefaultAsync(t => t.Id == result.DownloadTaskId, ct);

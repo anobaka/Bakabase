@@ -228,6 +228,19 @@ namespace Bakabase.Service.Extensions
                     () => sp.GetRequiredService<AppService>().AppDataDirectory,
                     (job, ct) => sp.GetRequiredService<Components.Downloader.BtDownloadStartupPolicy>().CanResumeAsync(job, ct)));
             services.AddHostedService<Components.Downloader.BtDownloadLifetime>();
+            services.AddSingleton<Components.Downloader.HttpDownloadStartupPolicy>();
+            services.AddSingleton<Bakabase.Modules.HttpDownloads.Abstractions.IHttpDownloadManager>(sp =>
+                new Bakabase.Modules.HttpDownloads.Components.HttpDownloadManager(
+                    sp.GetRequiredService<Bakabase.Modules.Downloader.Abstractions.IHttpDownloader>(),
+                    () => Path.Combine(sp.GetRequiredService<AppService>().AppDataDirectory, "http-downloads"),
+                    appDataDirectory: () => sp.GetRequiredService<AppService>().AppDataDirectory,
+                    canResumeOnStartup: (job, ct) => sp.GetRequiredService<Components.Downloader.HttpDownloadStartupPolicy>()
+                        .CanResumeAsync(job, ct)));
+            services.AddHostedService<Components.Downloader.HttpDownloadLifetime>();
+            services.AddScoped<Components.Downloader.DownloadTaskRegistry>();
+            services.AddScoped<Bakabase.Modules.Downloader.Abstractions.IDownloadTaskRegistry>(sp =>
+                sp.GetRequiredService<Components.Downloader.DownloadTaskRegistry>());
+            services.AddScoped<Components.Downloader.DownloadCenterService>();
             services.AddWorkflow<BakabaseDbContext>();
             services.AddAcquisition<BakabaseDbContext>();
             services.AddCollections<BakabaseDbContext>();

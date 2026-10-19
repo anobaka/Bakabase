@@ -8,6 +8,8 @@ using Bakabase.Modules.Bittorrent.Abstractions;
 using Bakabase.Modules.Bittorrent.Models;
 using Bakabase.Service.Components.RemoteAccess;
 using Bakabase.Service.Models.Input;
+using Bakabase.Service.Components.Downloader;
+using Bakabase.Modules.Downloader.Abstractions;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Models.ResponseModels;
 using Microsoft.AspNetCore.Http;
@@ -19,7 +21,8 @@ namespace Bakabase.Service.Controllers;
 /// <summary>Server-side BitTorrent transfers; output paths are explicitly declared for remote path guards.</summary>
 [ApiController]
 [Route("~/bt-downloads")]
-public sealed class BtDownloadController(IBtDownloadManager downloads) : ControllerBase
+public sealed class BtDownloadController(IBtDownloadManager downloads, IDownloadTaskRegistry registry,
+    DownloadCenterService center) : ControllerBase
 {
     private const int MaximumMetadataBytes = 4 * 1024 * 1024;
 
@@ -45,7 +48,7 @@ public sealed class BtDownloadController(IBtDownloadManager downloads) : Control
     [SwaggerOperation(OperationId = "CreateBtDownload")]
     public Task<SingletonResponse<BtDownloadJob>> Create([FromQuery] string outputDirectory,
         [FromBody] BtDownloadCreateInputModel model, CancellationToken ct)
-        => Change(() => downloads.EnsureQueuedAsync(new BtDownloadRequest
+        => Change(() => CreateBoundAsync(new BtDownloadRequest
         {
             Name = model.Name, MagnetUri = model.MagnetUri, TorrentUrl = model.TorrentUrl,
             OutputDirectory = outputDirectory
@@ -70,7 +73,7 @@ public sealed class BtDownloadController(IBtDownloadManager downloads) : Control
                 return SingletonResponseBuilder<BtDownloadJob>.BuildBadRequest("Choose a torrent file no larger than 4 MiB.");
             await metadata.WriteAsync(buffer.AsMemory(0, read), ct);
         }
-        return await Change(() => downloads.EnsureQueuedAsync(new BtDownloadRequest
+        return await Change(() => CreateBoundAsync(new BtDownloadRequest
         {
             Name = name ?? Path.GetFileNameWithoutExtension(file.FileName), Metadata = metadata.ToArray(),
             OutputDirectory = outputDirectory
@@ -81,19 +84,19 @@ public sealed class BtDownloadController(IBtDownloadManager downloads) : Control
     [RemoteAccessible]
     [SwaggerOperation(OperationId = "StopBtDownload")]
     public Task<SingletonResponse<BtDownloadJob>> Stop(string id, CancellationToken ct)
-        => Change(() => downloads.StopAsync(id, ct));
+        => Change(() => ExecuteAsync(id, "stop", ct));
 
     [HttpPost("{id}/resume")]
     [RemoteAccessible]
     [SwaggerOperation(OperationId = "ResumeBtDownload")]
     public Task<SingletonResponse<BtDownloadJob>> Resume(string id, CancellationToken ct)
-        => Change(() => downloads.ResumeAsync(id, ct));
+        => Change(() => ExecuteAsync(id, "start", ct));
 
     [HttpPost("{id}/retry")]
     [RemoteAccessible]
     [SwaggerOperation(OperationId = "RetryBtDownload")]
     public Task<SingletonResponse<BtDownloadJob>> Retry(string id, CancellationToken ct)
-        => Change(() => downloads.ResumeAsync(id, ct));
+        => Change(() => ExecuteAsync(id, "retry", ct));
 
     [HttpDelete("{id}")]
     [RemoteAccessible]
@@ -102,11 +105,24 @@ public sealed class BtDownloadController(IBtDownloadManager downloads) : Control
     {
         try
         {
-            await downloads.DeleteAsync(id, ct);
+            await center.ExecuteAsync("bt:" + id, "delete", ct);
             return BaseResponseBuilder.Ok;
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or KeyNotFoundException)
         { return BaseResponseBuilder.BuildBadRequest(ex.Message); }
+    }
+
+    private async Task<BtDownloadJob> CreateBoundAsync(BtDownloadRequest request, CancellationToken ct)
+    {
+        var job = await downloads.EnsureQueuedAsync(request, ct);
+        await registry.EnsureBindingAsync(DownloadCenterBindings.For(job), ct);
+        return job;
+    }
+
+    private async Task<BtDownloadJob> ExecuteAsync(string id, string action, CancellationToken ct)
+    {
+        await center.ExecuteAsync("bt:" + id, action, ct);
+        return (await downloads.GetAsync(id, ct))!;
     }
 
     private static async Task<SingletonResponse<BtDownloadJob>> Change(Func<Task<BtDownloadJob>> action)

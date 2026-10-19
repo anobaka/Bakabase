@@ -31,6 +31,7 @@ import {
   BangumiConfigPanel,
 } from "@/components/ThirdPartyConfig";
 import { useAutoSaveToast } from "@/components/ThirdPartyConfig/base/useAutoSaveToast";
+import BtSettingsPanel from "@/pages/bt-downloads/BtSettingsPanel";
 import DownloadDirectoryField from "@/components/ThirdPartyConfig/base/DownloadDirectoryField";
 
 type Props = {
@@ -110,6 +111,8 @@ const GeneralPanel = () => {
           </div>
         </Switch>
       </div>
+      <h3 className="text-sm font-semibold">{t("bt.settings.title")}</h3>
+      <BtSettingsPanel />
     </div>
   );
 };

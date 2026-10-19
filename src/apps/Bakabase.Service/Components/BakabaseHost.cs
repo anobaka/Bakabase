@@ -196,6 +196,9 @@ namespace Bakabase.Service.Components
             // Initialize BTaskManager
             await serviceProvider.GetRequiredService<Bakabase.Modules.Bittorrent.Abstractions.IBtDownloadManager>()
                 .InitializeAsync();
+            await serviceProvider.GetRequiredService<Bakabase.Modules.HttpDownloads.Abstractions.IHttpDownloadManager>()
+                .InitializeAsync();
+            await scope.ServiceProvider.GetRequiredService<Downloader.DownloadCenterService>().ReconcileAsync();
             await taskManager.Initialize();
 
             // Register all predefined tasks via DI discovery

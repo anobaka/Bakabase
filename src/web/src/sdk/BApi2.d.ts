@@ -3530,6 +3530,118 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/download-center/tasks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetDownloadCenterTasks"];
+        put?: never;
+        post: operations["CreateDownloadCenterTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/download-center/tasks/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetDownloadCenterTask"];
+        put?: never;
+        post?: never;
+        delete: operations["DeleteDownloadCenterTask"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/download-center/tasks/upload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["UploadDownloadCenterTorrent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/download-center/tasks/{id}/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["StartDownloadCenterTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/download-center/tasks/{id}/stop": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["StopDownloadCenterTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/download-center/tasks/{id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["RetryDownloadCenterTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/download-center/tasks/batch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["BatchDownloadCenterTasks"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/downloader/result": {
         parameters: {
             query?: never;
@@ -14738,6 +14850,80 @@ export interface components {
             /** Format: int32 */
             awaitingReview: number;
         };
+        "Bakabase.Modules.Downloader.Models.Tasks.DownloadTask": {
+            id: string;
+            category: string;
+            provider: string;
+            providerTaskId: string;
+            parentId?: string;
+            /** Format: int32 */
+            siteTaskId?: number;
+            /** Format: int32 */
+            thirdPartyId?: number;
+            key?: string;
+            name: string;
+            outputDirectory: string;
+            files: string[];
+            status: string;
+            stage?: string;
+            /** Format: double */
+            progress?: number;
+            /** Format: int64 */
+            completedBytes?: number;
+            /** Format: int64 */
+            totalBytes?: number;
+            /** Format: double */
+            speedBytesPerSecond?: number;
+            error?: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            /** Format: date-time */
+            completedAt?: string;
+            originKind: string;
+            originId?: string;
+            /** Format: int32 */
+            workflowRunId?: number;
+            /** Format: int32 */
+            workflowDefinitionId?: number;
+            /** Format: int32 */
+            downloadResultId?: number;
+            availableActions: string[];
+            execution?: components["schemas"]["Bakabase.Modules.Downloader.Models.Tasks.DownloadTaskExecution"];
+        };
+        "Bakabase.Modules.Downloader.Models.Tasks.DownloadTaskActionResult": {
+            id: string;
+            success: boolean;
+            /** Format: int32 */
+            code: number;
+            error?: string;
+            task?: components["schemas"]["Bakabase.Modules.Downloader.Models.Tasks.DownloadTask"];
+        };
+        "Bakabase.Modules.Downloader.Models.Tasks.DownloadTaskExecution": {
+            /** Format: int32 */
+            downloadTaskId: number;
+            status: string;
+            /** Format: int32 */
+            totalCount: number;
+            /** Format: int32 */
+            completedCount: number;
+            /** Format: int32 */
+            runningCount: number;
+            /** Format: int32 */
+            queuedCount: number;
+            /** Format: int32 */
+            stoppedCount: number;
+            /** Format: int32 */
+            failedCount: number;
+            /** Format: int32 */
+            waitingCount: number;
+            sourceCompleted: boolean;
+            /** Format: double */
+            progress?: number;
+            /** Format: double */
+            speedBytesPerSecond?: number;
+        };
         "Bakabase.Modules.Enhancer.Abstractions.Components.IEnhancementConverter": Record<string, never>;
         "Bakabase.Modules.Enhancer.Abstractions.Components.IEnhancerDescriptor": {
             /** Format: int32 */
@@ -16321,6 +16507,19 @@ export interface components {
         "Bakabase.Service.Models.Input.DeviceColorInput": {
             color?: string;
         };
+        "Bakabase.Service.Models.Input.DownloadCenterBatchInputModel": {
+            ids: string[];
+            action: string;
+            actionOnConflict: components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants.DownloadTaskActionOnConflict"];
+        };
+        "Bakabase.Service.Models.Input.DownloadCenterCreateInputModel": {
+            provider: string;
+            name?: string;
+            magnetUri?: string;
+            torrentUrl?: string;
+            url?: string;
+            fileName?: string;
+        };
         "Bakabase.Service.Models.Input.ExHentaiDownloadTaskAddInputModel": {
             type: components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloaders.ExHentai.ExHentaiDownloadTaskType"];
             link: string;
@@ -17636,6 +17835,18 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncReaderView"][];
         };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Downloader.Models.Tasks.DownloadTaskActionResult]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.Downloader.Models.Tasks.DownloadTaskActionResult"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Downloader.Models.Tasks.DownloadTask]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.Downloader.Models.Tasks.DownloadTask"][];
+        };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Enhancer.Abstractions.Components.IEnhancerDescriptor]": {
             /** Format: int32 */
             code: number;
@@ -18721,6 +18932,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncTaskStart"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Downloader.Models.Tasks.DownloadTask]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.Downloader.Models.Tasks.DownloadTask"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.HealthScore.Models.View.HealthScoreProfileViewModel]": {
             /** Format: int32 */
@@ -26435,6 +26652,245 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    GetDownloadCenterTasks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Downloader.Models.Tasks.DownloadTask]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Downloader.Models.Tasks.DownloadTask]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Downloader.Models.Tasks.DownloadTask]"];
+                };
+            };
+        };
+    };
+    CreateDownloadCenterTask: {
+        parameters: {
+            query?: {
+                outputDirectory?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.DownloadCenterCreateInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.DownloadCenterCreateInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.DownloadCenterCreateInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.DownloadCenterCreateInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Downloader.Models.Tasks.DownloadTask]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Downloader.Models.Tasks.DownloadTask]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Downloader.Models.Tasks.DownloadTask]"];
+                };
+            };
+        };
+    };
+    GetDownloadCenterTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Downloader.Models.Tasks.DownloadTask]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Downloader.Models.Tasks.DownloadTask]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Downloader.Models.Tasks.DownloadTask]"];
+                };
+            };
+        };
+    };
+    DeleteDownloadCenterTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    UploadDownloadCenterTorrent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file?: string;
+                    outputDirectory?: string;
+                    name?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Downloader.Models.Tasks.DownloadTask]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Downloader.Models.Tasks.DownloadTask]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Downloader.Models.Tasks.DownloadTask]"];
+                };
+            };
+        };
+    };
+    StartDownloadCenterTask: {
+        parameters: {
+            query?: {
+                /** @description [0: NotSet, 1: StopOthers, 2: Ignore] */
+                actionOnConflict?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants.DownloadTaskActionOnConflict"];
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Downloader.Models.Tasks.DownloadTask]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Downloader.Models.Tasks.DownloadTask]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Downloader.Models.Tasks.DownloadTask]"];
+                };
+            };
+        };
+    };
+    StopDownloadCenterTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Downloader.Models.Tasks.DownloadTask]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Downloader.Models.Tasks.DownloadTask]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Downloader.Models.Tasks.DownloadTask]"];
+                };
+            };
+        };
+    };
+    RetryDownloadCenterTask: {
+        parameters: {
+            query?: {
+                /** @description [0: NotSet, 1: StopOthers, 2: Ignore] */
+                actionOnConflict?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants.DownloadTaskActionOnConflict"];
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Downloader.Models.Tasks.DownloadTask]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Downloader.Models.Tasks.DownloadTask]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Downloader.Models.Tasks.DownloadTask]"];
+                };
+            };
+        };
+    };
+    BatchDownloadCenterTasks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.DownloadCenterBatchInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.DownloadCenterBatchInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.DownloadCenterBatchInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.DownloadCenterBatchInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Downloader.Models.Tasks.DownloadTaskActionResult]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Downloader.Models.Tasks.DownloadTaskActionResult]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Downloader.Models.Tasks.DownloadTaskActionResult]"];
                 };
             };
         };

@@ -48,6 +48,7 @@
     <ItemGroup>
         <ProjectReference Include="..\..\modules\Bakabase.Modules.Downloader\Bakabase.Modules.Downloader.csproj" />
         <ProjectReference Include="..\..\modules\Bakabase.Modules.Bittorrent\Bakabase.Modules.Bittorrent.csproj" />
+        <ProjectReference Include="..\..\modules\Bakabase.Modules.HttpDownloads\Bakabase.Modules.HttpDownloads.csproj" />
         <ProjectReference Include="..\..\legacy\Bakabase.InsideWorld.Business\Bakabase.InsideWorld.Business.csproj" />
         <ProjectReference Include="..\..\legacy\Bakabase.Migrations\Bakabase.Migrations.csproj" />
         <ProjectReference Include="..\..\modules\Bakabase.Modules.Comparison\Bakabase.Modules.Comparison.csproj" />

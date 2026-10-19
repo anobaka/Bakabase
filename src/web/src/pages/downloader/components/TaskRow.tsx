@@ -1,6 +1,7 @@
 "use client";
 
-import type { DownloadTaskExecution } from "../useDownloadTaskExecutions";
+import type { CenterTask } from "../downloadCenter";
+import type { BakabaseModulesDownloaderModelsTasksDownloadTaskExecution as DownloadTaskExecution } from "@/sdk/Api";
 import type { SyntheticEvent } from "react";
 import type { ChipProps, CircularProgressProps } from "@/components/bakaui";
 import type { DownloadTask } from "@/core/models/DownloadTask";
@@ -54,6 +55,10 @@ const stopPropagation = (event: SyntheticEvent) => {
 export type TaskRowProps = {
   task: DownloadTask;
   execution?: DownloadTaskExecution;
+  centerTask?: CenterTask;
+  childCount?: number;
+  childrenExpanded?: boolean;
+  onToggleChildren?: (id: number) => void;
   statusColor: ChipProps["color"];
   progressColor: CircularProgressProps["color"];
   formatDateTime: (value?: string | Date | null) => string;
@@ -81,6 +86,10 @@ export type TaskRowProps = {
 const TaskRow = memo(function TaskRow({
   task,
   execution,
+  centerTask,
+  childCount = 0,
+  childrenExpanded = false,
+  onToggleChildren,
   statusColor,
   progressColor,
   formatDateTime,
@@ -102,7 +111,11 @@ const TaskRow = memo(function TaskRow({
   const hasNotices = task.status === DownloadTaskStatus.Complete && !!task.message;
   const noticeSummary = task.message?.split("\n", 1)[0];
   const Icon = DownloadTaskTypeIconMap[task.thirdPartyId!]?.[task.type];
-  const progressValue = execution ? execution.progress : task.progress;
+  const progressValue = centerTask
+    ? centerTask.progress
+    : execution
+      ? execution.progress
+      : task.progress;
   const progress =
     progressValue != null && Number.isFinite(progressValue)
       ? Math.min(100, Math.max(0, progressValue))
@@ -110,11 +123,21 @@ const TaskRow = memo(function TaskRow({
   const executionActive =
     execution &&
     ["running", "queued", "waiting", "processing", "preparing"].includes(execution.status);
-  const actions = executionActive
-    ? [DownloadTaskAction.Disable]
-    : execution && ["stopped", "failed", "processingFailed"].includes(execution.status)
-      ? [DownloadTaskAction.StartManually]
-      : task.availableActions;
+  const actions = centerTask
+    ? (centerTask.availableActions ?? []).flatMap((action) =>
+        action === "start"
+          ? [DownloadTaskAction.StartManually]
+          : action === "retry"
+            ? [DownloadTaskAction.Restart]
+            : action === "stop"
+              ? [DownloadTaskAction.Disable]
+              : [],
+      )
+    : executionActive
+      ? [DownloadTaskAction.Disable]
+      : execution && ["stopped", "failed", "processingFailed"].includes(execution.status)
+        ? [DownloadTaskAction.StartManually]
+        : task.availableActions;
   const executionSummary = execution
     ? t("downloader.execution.summary", {
         completed: execution.completedCount,
@@ -210,9 +233,11 @@ const TaskRow = memo(function TaskRow({
           </div>
         </div>
         <Chip className="h-6 shrink-0" color={statusColor} size="sm" variant="flat">
-          {execution
-            ? t(`downloader.execution.status.${execution.status}`)
-            : t<string>(DownloadTaskStatus[task.status])}
+          {centerTask
+            ? t(`downloadCenter.status.${centerTask.status}`)
+            : execution
+              ? t(`downloader.execution.status.${execution.status}`)
+              : t<string>(DownloadTaskStatus[task.status])}
         </Chip>
       </div>
       <div className="flex h-8 min-w-0 shrink-0 items-center gap-3">
@@ -460,6 +485,23 @@ const TaskRow = memo(function TaskRow({
         </div>
       </div>
       <div className="flex h-6 min-w-0 shrink-0 items-center gap-2">
+        {childCount > 0 && (
+          <Button
+            data-task-action
+            aria-expanded={childrenExpanded}
+            className="h-6 min-h-0 shrink-0 px-1 text-xs"
+            size="sm"
+            variant="light"
+            onPress={() => onToggleChildren?.(task.id)}
+          >
+            {t(
+              childrenExpanded
+                ? "downloadCenter.children.collapse"
+                : "downloadCenter.children.expand",
+              { count: childCount },
+            )}
+          </Button>
+        )}
         <span
           aria-label={[createdAt, completedAt, nextStart].filter(Boolean).join(" · ")}
           className="min-w-0 flex-1 truncate text-xs text-default-400"
