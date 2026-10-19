@@ -89,6 +89,11 @@ public class WorkflowDefinitionService<TDbContext> : IWorkflowDefinitionService
         // Validate the effective chain before touching tracked fields or cancelling queued runs.
         if (input.Activities is not null || input.TriggerFilterJson is not null)
         {
+            if (await Acts.AnyAsync(a => a.WorkflowDefinitionId == id &&
+                    (a.Kind.StartsWith("download.") || a.Kind.StartsWith("baidu.")), ct) &&
+                await Runs.AnyAsync(r => r.WorkflowDefinitionId == id &&
+                    (r.Status == WorkflowRunStatus.Pending || r.Status == WorkflowRunStatus.Running || r.Status == WorkflowRunStatus.Waiting), ct))
+                throw new InvalidOperationException("This download workflow has active or waiting runs. Copy it to change the activity chain, or finish the existing runs first.");
             var nodes = input.Activities ?? (await Acts.AsNoTracking()
                 .Where(a => a.WorkflowDefinitionId == id).OrderBy(a => a.Order).ToListAsync(ct))
                 .Select(a => new WorkflowActivityInputModel { Kind = a.Kind, ConfigJson = a.ConfigJson }).ToList();

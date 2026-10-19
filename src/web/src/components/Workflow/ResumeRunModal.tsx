@@ -56,15 +56,16 @@ const ResumeRunModal = ({
     if (!rsp.code) {
       toast.success(t<string>("workflow.resume.done"));
       onResumed?.();
+      return true;
     }
+    return false;
   };
 
   /** The form path closes itself; the Continue path lets the modal do it. */
   const submitFromForm = async (signalJson: string) => {
     setSubmitting(true);
     try {
-      await send(signalJson);
-      onDestroyed?.();
+      if (await send(signalJson)) onDestroyed?.();
     } finally {
       setSubmitting(false);
     }

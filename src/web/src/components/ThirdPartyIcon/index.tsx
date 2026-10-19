@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslation } from "react-i18next";
-import { AiOutlineQuestionCircle } from "react-icons/ai";
+import { AiOutlineCloudDownload, AiOutlineQuestionCircle } from "react-icons/ai";
 
 import ExHentai from "@/assets/logo/exhentai.png";
 import Pixiv from "@/assets/logo/pixiv.png";
@@ -66,6 +66,13 @@ const ThirdPartyIcon = ({ thirdPartyId, size }: Props) => {
   const img = NameIcon[thirdPartyId];
 
   if (!img) {
+    if (
+      [ThirdPartyId.BaiduNetdisk, ThirdPartyId.GoogleDrive, ThirdPartyId.Gofile].includes(
+        thirdPartyId,
+      )
+    ) {
+      return <AiOutlineCloudDownload style={style} />;
+    }
     return <AiOutlineQuestionCircle style={style} />;
   }
 

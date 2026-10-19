@@ -1,4 +1,5 @@
 import type { WorkflowActivityUI } from "./types";
+import { cloudDownloadActivities } from "./CloudDownload";
 
 import { ExHentaiEnqueueDownloadUI } from "./ExHentaiEnqueueDownload";
 import { DownloaderEnqueueUI } from "./DownloaderEnqueue";
@@ -41,6 +42,7 @@ import {
 } from "./PostParser";
 
 export const workflowActivityRegistry: Record<string, WorkflowActivityUI<any>> = {
+  ...Object.fromEntries(cloudDownloadActivities.map((activity) => [activity.kind, activity])),
   [PostParserUnlockContentUI.kind]: PostParserUnlockContentUI,
   [PostParserCheckLinksUI.kind]: PostParserCheckLinksUI,
   [PostParserReadContentUI.kind]: PostParserReadContentUI,

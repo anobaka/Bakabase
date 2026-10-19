@@ -20,6 +20,7 @@ export const WorkflowItemTypes = {
   PostParserInput: "item.postParser.input",
   PostParserContent: "item.postParser.content",
   PostParserResult: "item.postParser.result",
+  DownloadWorkset: "item.download.workset",
 } as const;
 
 /** Shared by the canvas and type selectors; unknown types retain the server's readable name. */

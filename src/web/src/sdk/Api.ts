@@ -898,7 +898,7 @@ export interface BakabaseAbstractionsModelsDomainResourceExternalIdentity {
   id: number;
   /** @format int32 */
   resourceId: number;
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb] */
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb, 14: BaiduNetdisk, 15: GoogleDrive, 16: Gofile] */
   thirdPartyId: BakabaseInsideWorldModelsConstantsThirdPartyId;
   externalId: string;
   /** @format date-time */
@@ -2405,7 +2405,7 @@ export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsMode
   id: number;
   key: string;
   name?: string;
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb] */
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb, 14: BaiduNetdisk, 15: GoogleDrive, 16: Gofile] */
   thirdPartyId: BakabaseInsideWorldModelsConstantsThirdPartyId;
   /** @format int32 */
   type: number;
@@ -2471,7 +2471,7 @@ export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsMode
 }
 
 export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloaderDefinition {
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb] */
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb, 14: BaiduNetdisk, 15: GoogleDrive, 16: Gofile] */
   thirdPartyId: BakabaseInsideWorldModelsConstantsThirdPartyId;
   /** @format int32 */
   taskType: number;
@@ -2509,13 +2509,13 @@ export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsMode
 }
 
 export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsInputDownloadRecordQueryInputModel {
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb] */
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb, 14: BaiduNetdisk, 15: GoogleDrive, 16: Gofile] */
   thirdPartyId: BakabaseInsideWorldModelsConstantsThirdPartyId;
   keys: string[];
 }
 
 export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsInputDownloadTaskAddInputModel {
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb] */
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb, 14: BaiduNetdisk, 15: GoogleDrive, 16: Gofile] */
   thirdPartyId: BakabaseInsideWorldModelsConstantsThirdPartyId;
   /** @format int32 */
   type: number;
@@ -2541,7 +2541,7 @@ export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsMode
 
 export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsInputDownloadTaskDeleteInputModel {
   ids?: number[];
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb] */
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb, 14: BaiduNetdisk, 15: GoogleDrive, 16: Gofile] */
   thirdPartyId?: BakabaseInsideWorldModelsConstantsThirdPartyId;
 }
 
@@ -2591,7 +2591,7 @@ export type BakabaseInsideWorldBusinessComponentsDownloaderComponentsDownloaders
 export interface BakabaseInsideWorldBusinessComponentsDownloaderModelsDbDownloadRecordDbModel {
   /** @format int32 */
   id: number;
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb] */
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb, 14: BaiduNetdisk, 15: GoogleDrive, 16: Gofile] */
   thirdPartyId: BakabaseInsideWorldModelsConstantsThirdPartyId;
   /** @minLength 1 */
   key: string;
@@ -3143,7 +3143,7 @@ export type BakabaseInsideWorldModelsConstantsPlaylistItemType = 1 | 2 | 3 | 4;
 export type BakabaseInsideWorldModelsConstantsStartupPage = 0 | 1;
 
 /**
- * [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb]
+ * [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb, 14: BaiduNetdisk, 15: GoogleDrive, 16: Gofile]
  * @format int32
  */
 export type BakabaseInsideWorldModelsConstantsThirdPartyId =
@@ -3159,7 +3159,10 @@ export type BakabaseInsideWorldModelsConstantsThirdPartyId =
   | 10
   | 11
   | 12
-  | 13;
+  | 13
+  | 14
+  | 15
+  | 16;
 
 export interface BakabaseInsideWorldModelsModelsAosPreviewerItem {
   filePath: string;
@@ -3170,7 +3173,7 @@ export interface BakabaseInsideWorldModelsModelsAosPreviewerItem {
 }
 
 export interface BakabaseInsideWorldModelsModelsAosThirdPartyRequestStatistics {
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb] */
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb, 14: BaiduNetdisk, 15: GoogleDrive, 16: Gofile] */
   id: BakabaseInsideWorldModelsConstantsThirdPartyId;
   counts?: Record<string, number>;
   /** @format int64 */
@@ -3207,7 +3210,7 @@ export interface BakabaseInsideWorldModelsModelsDtosDashboardStatistics {
 }
 
 export interface BakabaseInsideWorldModelsModelsDtosDashboardStatisticsDownloaderTaskCount {
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb] */
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb, 14: BaiduNetdisk, 15: GoogleDrive, 16: Gofile] */
   id: BakabaseInsideWorldModelsConstantsThirdPartyId;
   statusAndCounts: Record<string, number>;
 }
@@ -3227,7 +3230,7 @@ export interface BakabaseInsideWorldModelsModelsDtosDashboardStatisticsTextAndCo
 }
 
 export interface BakabaseInsideWorldModelsModelsDtosDashboardStatisticsThirdPartyRequestCount {
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb] */
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb, 14: BaiduNetdisk, 15: GoogleDrive, 16: Gofile] */
   id: BakabaseInsideWorldModelsConstantsThirdPartyId;
   /** @format int32 */
   resultType: number;
@@ -3928,7 +3931,7 @@ export interface BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionTa
 }
 
 /**
- * [0: Unknown, 1: DirectUrl, 2: Baidu, 3: Xunlei, 4: Feimao, 5: Cloudflare, 6: Mega, 7: PikPak, 8: GoogleDrive, 9: OneDrive, 10: Magnet, 11: OneOneFive]
+ * [0: Unknown, 1: DirectUrl, 2: Baidu, 3: Xunlei, 4: Feimao, 5: Cloudflare, 6: Mega, 7: PikPak, 8: GoogleDrive, 9: OneDrive, 10: Magnet, 11: OneOneFive, 12: Gofile, 13: Pixeldrain]
  * @format int32
  */
 export type BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisitionDriveKind =
@@ -3943,7 +3946,9 @@ export type BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisiti
   | 8
   | 9
   | 10
-  | 11;
+  | 11
+  | 12
+  | 13;
 
 /**
  * [1: PlatformHolding, 2: SharedPage, 3: SharedDocument, 4: DirectUrl, 5: Magnet, 6: Manual, 7: Torrent]
@@ -5399,6 +5404,17 @@ export interface BakabaseModulesDataSyncWireDataSyncSourceAttention {
   awaitingReview: number;
 }
 
+export interface BakabaseModulesDownloaderCloudCloudSource {
+  id: string;
+  url: string;
+  providerId: string;
+  kind: string;
+  accessCode?: string;
+  archivePassword?: string;
+  extractionPlanJson?: string;
+  groupId?: string;
+}
+
 export interface BakabaseModulesDownloaderModelsTasksDownloadTask {
   id: string;
   category: string;
@@ -6395,7 +6411,7 @@ export interface BakabaseModulesSubscriptionAbstractionsModelsViewSubscriptionPr
   icon?: string;
   /** [1: PlatformHolding, 2: Catalog, 3: SharingChannel] */
   sourceKind: BakabaseModulesSubscriptionAbstractionsModelsDomainConstantsSubscriptionSourceKind;
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb] */
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb, 14: BaiduNetdisk, 15: GoogleDrive, 16: Gofile] */
   thirdPartyId?: BakabaseInsideWorldModelsConstantsThirdPartyId;
 }
 
@@ -6740,6 +6756,24 @@ export interface BakabaseServiceComponentsAcquisitionSharedListPreviewRow {
   /** @format int32 */
   lineNumber: number;
   alreadyKnown: boolean;
+}
+
+export interface BakabaseServiceComponentsCloudDownloadsBaiduBaiduPcsAccountViewModel {
+  id: string;
+  name: string;
+  uid?: string;
+  isDefault: boolean;
+  isLoggedIn: boolean;
+  /** @format date-time */
+  lastValidatedAt?: string;
+}
+
+export interface BakabaseServiceComponentsCloudDownloadsBaiduBaiduPcsLoginInputModel {
+  id?: string;
+  name: string;
+  cookies?: string;
+  bduss?: string;
+  stoken?: string;
 }
 
 export interface BakabaseServiceComponentsDataSyncSyncActivityDevice {
@@ -7135,6 +7169,40 @@ export interface BakabaseServiceControllersChatControllerSetToolEnabledRequest {
 
 export interface BakabaseServiceControllersChatControllerUpdateTitleRequest {
   title: string;
+}
+
+export interface BakabaseServiceControllersCloudDownloadPostInput {
+  /**
+   * @format int32
+   * @min 1
+   * @max 2147483647
+   */
+  taskId: number;
+  /** @format int32 */
+  revision: number;
+  resourceIndices: number[];
+  accountId?: string;
+  /** @minLength 1 */
+  outputDirectory: string;
+  /** @format int32 */
+  workflowDefinitionId?: number;
+}
+
+export interface BakabaseServiceControllersCloudDownloadStartInput {
+  sources: BakabaseModulesDownloaderCloudCloudSource[];
+  title?: string;
+  accountId?: string;
+  /** @minLength 1 */
+  outputDirectory: string;
+  /** @format int32 */
+  workflowDefinitionId?: number;
+}
+
+export interface BakabaseServiceControllersCloudProviderView {
+  providerId: string;
+  available: boolean;
+  problem?: string;
+  supportsTransfer: boolean;
 }
 
 export interface BakabaseServiceControllersCollectionAcquireMissingResult {
@@ -7662,7 +7730,7 @@ export interface BakabaseServiceModelsInputResourcePlaceholderInputModel {
 
 export interface BakabaseServiceModelsInputResourcePlaceholderItemInputModel {
   title?: string;
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb] */
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb, 14: BaiduNetdisk, 15: GoogleDrive, 16: Gofile] */
   thirdPartyId?: BakabaseInsideWorldModelsConstantsThirdPartyId;
   externalId?: string;
   sharedUrl?: string;
@@ -9230,6 +9298,13 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceCompon
   data?: BakabaseServiceComponentsAcquisitionSharedListPreviewRow[];
 }
 
+export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceComponentsCloudDownloadsBaiduBaiduPcsAccountViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsCloudDownloadsBaiduBaiduPcsAccountViewModel[];
+}
+
 export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceControllersChatControllerChatToolViewModel {
   /** @format int32 */
   code: number;
@@ -10534,6 +10609,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceC
   data?: BakabaseServiceComponentsAcquisitionSharedListImportResult;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsCloudDownloadsBaiduBaiduPcsAccountViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsCloudDownloadsBaiduBaiduPcsAccountViewModel;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsServerDataServerAppDataImportValidation {
   /** @format int32 */
   code: number;
@@ -10874,6 +10956,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollection
   code: number;
   message?: string;
   data?: Record<string, number>;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericList1BakabaseServiceControllersCloudProviderView {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceControllersCloudProviderView[];
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1SystemInt32 {
@@ -16928,6 +17017,133 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         ...params,
       }),
   };
+  baiduPcs = {
+    /**
+     * No description
+     *
+     * @tags BaiduPcs
+     * @name GetBaiduPcsAccounts
+     * @request GET:/baidu-pcs/accounts
+     */
+    getBaiduPcsAccounts: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseServiceComponentsCloudDownloadsBaiduBaiduPcsAccountViewModel,
+        any
+      >({
+        path: `/baidu-pcs/accounts`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getBaiduPcsAccounts
+     * @name getBaiduPcsAccountsUrl
+     */
+    getBaiduPcsAccountsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/baidu-pcs/accounts`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags BaiduPcs
+     * @name LoginBaiduPcsAccount
+     * @request POST:/baidu-pcs/accounts
+     */
+    loginBaiduPcsAccount: (
+      data: BakabaseServiceComponentsCloudDownloadsBaiduBaiduPcsLoginInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsCloudDownloadsBaiduBaiduPcsAccountViewModel,
+        any
+      >({
+        path: `/baidu-pcs/accounts`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for loginBaiduPcsAccount
+     * @name loginBaiduPcsAccountUrl
+     */
+    loginBaiduPcsAccountUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/baidu-pcs/accounts`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags BaiduPcs
+     * @name ValidateBaiduPcsAccount
+     * @request POST:/baidu-pcs/accounts/{id}/validate
+     */
+    validateBaiduPcsAccount: (id: string, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsCloudDownloadsBaiduBaiduPcsAccountViewModel,
+        any
+      >({
+        path: `/baidu-pcs/accounts/${id}/validate`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags BaiduPcs
+     * @name SetDefaultBaiduPcsAccount
+     * @request PUT:/baidu-pcs/accounts/{id}/default
+     */
+    setDefaultBaiduPcsAccount: (id: string, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/baidu-pcs/accounts/${id}/default`,
+        method: "PUT",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags BaiduPcs
+     * @name LogoutBaiduPcsAccount
+     * @request POST:/baidu-pcs/accounts/{id}/logout
+     */
+    logoutBaiduPcsAccount: (id: string, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/baidu-pcs/accounts/${id}/logout`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags BaiduPcs
+     * @name DeleteBaiduPcsAccount
+     * @request DELETE:/baidu-pcs/accounts/{id}
+     */
+    deleteBaiduPcsAccount: (id: string, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/baidu-pcs/accounts/${id}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+  };
   bilibili = {
     /**
      * No description
@@ -17873,6 +18089,140 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         format: "json",
         ...params,
       }),
+  };
+  cloudDownloads = {
+    /**
+     * No description
+     *
+     * @tags CloudDownloads
+     * @name GetCloudDownloadProviders
+     * @request GET:/cloud-downloads/providers
+     */
+    getCloudDownloadProviders: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericList1BakabaseServiceControllersCloudProviderView,
+        any
+      >({
+        path: `/cloud-downloads/providers`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getCloudDownloadProviders
+     * @name getCloudDownloadProvidersUrl
+     */
+    getCloudDownloadProvidersUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/cloud-downloads/providers`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags CloudDownloads
+     * @name StartCloudDownload
+     * @request POST:/cloud-downloads/run
+     */
+    startCloudDownload: (
+      data: BakabaseServiceControllersCloudDownloadStartInput,
+      query?: {
+        outputDirectory?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesWorkflowAbstractionsModelsViewWorkflowRunViewModel,
+        any
+      >({
+        path: `/cloud-downloads/run`,
+        method: "POST",
+        query: query,
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for startCloudDownload
+     * @name startCloudDownloadUrl
+     */
+    startCloudDownloadUrl: (query?: {
+        outputDirectory?: string;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/cloud-downloads/run`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags CloudDownloads
+     * @name StartCloudDownloadFromPost
+     * @request POST:/cloud-downloads/from-post
+     */
+    startCloudDownloadFromPost: (
+      data: BakabaseServiceControllersCloudDownloadPostInput,
+      query?: {
+        outputDirectory?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesWorkflowAbstractionsModelsViewWorkflowRunViewModel,
+        any
+      >({
+        path: `/cloud-downloads/from-post`,
+        method: "POST",
+        query: query,
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for startCloudDownloadFromPost
+     * @name startCloudDownloadFromPostUrl
+     */
+    startCloudDownloadFromPostUrl: (query?: {
+        outputDirectory?: string;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/cloud-downloads/from-post`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
   };
   collection = {
     /**
@@ -22663,7 +23013,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     getDownloadTaskSummary: (
       query?: {
-        /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb] */
+        /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb, 14: BaiduNetdisk, 15: GoogleDrive, 16: Gofile] */
         thirdPartyId?: BakabaseInsideWorldModelsConstantsThirdPartyId;
       },
       params: RequestParams = {},
@@ -22684,7 +23034,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name getDownloadTaskSummaryUrl
      */
     getDownloadTaskSummaryUrl: (query?: {
-        /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb] */
+        /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb, 14: BaiduNetdisk, 15: GoogleDrive, 16: Gofile] */
         thirdPartyId?: BakabaseInsideWorldModelsConstantsThirdPartyId;
       }) => {
       const baseUrl = this.baseUrl || "";

@@ -13,12 +13,14 @@ namespace Bakabase.Modules.Acquisition.Components;
 public static class AcquisitionDriveKinds
 {
     /// <summary>
-    /// Matched as a host suffix, so <c>pan.baidu.com</c> and <c>yun.baidu.com</c> both hit the
-    /// <c>baidu.com</c> entry without either being spelled out.
+    /// Known sharing hosts. An unrelated HTTP page remains unknown until an explicit file lead or provider resolves it.
     /// </summary>
     private static readonly (string Suffix, AcquisitionDriveKind Kind)[] ByHost =
     [
-        ("baidu.com", AcquisitionDriveKind.Baidu),
+        ("pan.baidu.com", AcquisitionDriveKind.Baidu),
+        ("yun.baidu.com", AcquisitionDriveKind.Baidu),
+        ("gofile.io", AcquisitionDriveKind.Gofile),
+        ("pixeldrain.com", AcquisitionDriveKind.Pixeldrain),
         ("xunlei.com", AcquisitionDriveKind.Xunlei),
         ("feimaoyun.com", AcquisitionDriveKind.Feimao),
         ("fmpan.com", AcquisitionDriveKind.Feimao),
@@ -70,9 +72,18 @@ public static class AcquisitionDriveKinds
             return AcquisitionDriveKind.OneOneFive;
         }
 
-        // An http(s) link nothing claimed: it may well be the file itself, which is the one case a
-        // fetch step can handle on its own.
-        return AcquisitionDriveKind.DirectUrl;
+        // Only recognizable file paths are inferred as direct files. Other web pages stay unknown.
+        var extension = System.IO.Path.GetExtension(uri.AbsolutePath);
+        return new[] {".zip", ".7z", ".rar", ".tar", ".gz", ".xz", ".pdf", ".epub", ".mp4", ".mkv", ".mp3", ".flac", ".iso"}
+            .Contains(extension, StringComparer.OrdinalIgnoreCase)
+            ? AcquisitionDriveKind.DirectUrl : AcquisitionDriveKind.Unknown;
+    }
+
+    public static AcquisitionDriveKind InferExplicitDirectLead(string? url)
+    {
+        var inferred = Infer(url);
+        return inferred == AcquisitionDriveKind.Unknown && Uri.TryCreate(url, UriKind.Absolute, out var uri) &&
+            uri.Scheme is "http" or "https" ? AcquisitionDriveKind.DirectUrl : inferred;
     }
 
     /// <summary>

@@ -89,5 +89,6 @@ public class WorkflowRunCleanupTask : AbstractPredefinedBTaskBuilder
              r.Status == WorkflowRunStatus.Cancelled || r.Status == WorkflowRunStatus.Interrupted) &&
             !db.DownloadResultProcessing.Any(p => p.WorkflowRunId == r.Id) &&
             !db.DownloadResultOwners.Any(o => o.WorkflowRunId == r.Id) && !linkedTransferRuns.Contains(r.Id) &&
+            !db.CloudDownloadOperations.Any(o => o.WorkflowRunId == r.Id) &&
             !db.ManagedDownloadTasks.Any(t => t.WorkflowRunId == r.Id));
 }

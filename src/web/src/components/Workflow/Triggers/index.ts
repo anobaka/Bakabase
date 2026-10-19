@@ -1,4 +1,5 @@
 import type { WorkflowTriggerUI } from "./types";
+import { DownloadSourcesTriggerUI } from "./DownloadSources";
 
 import { SubscriptionUpdatedTriggerUI } from "./SubscriptionUpdated";
 import { DownloaderCompletedTriggerUI } from "./DownloaderCompleted";
@@ -42,6 +43,7 @@ const withGuide = <T>(
  * fall back to a read-only "raw JSON" display in the editor.
  */
 export const workflowTriggerRegistry: Record<string, WorkflowTriggerUI<any>> = {
+  [DownloadSourcesTriggerUI.kind]: withGuide(DownloadSourcesTriggerUI, "downloader"),
   [FsProcessingPlanTriggerUI.kind]: withGuide(FsProcessingPlanTriggerUI, "fs"),
   [PostParserManualTriggerUI.kind]: withGuide(PostParserManualTriggerUI, "postParser"),
   [SubscriptionUpdatedTriggerUI.kind]: withGuide(SubscriptionUpdatedTriggerUI, "subscription"),

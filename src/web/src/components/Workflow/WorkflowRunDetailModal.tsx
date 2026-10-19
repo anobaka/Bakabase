@@ -11,6 +11,7 @@ import { Button, Chip, Modal, Progress, Spinner } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { WorkflowRunStatus } from "@/sdk/constants";
 import BApi from "@/sdk/BApi";
+import WorksetResults from "@/components/CloudDownload/WorksetResults";
 
 /** Opens one persisted instance, independent of the definition's run history. */
 export default function WorkflowRunDetailModal({
@@ -172,6 +173,7 @@ export default function WorkflowRunDetailModal({
               ))}
             </ol>
           )}
+          <WorksetResults json={run.outputItemsJson} />
           {run.outputItemsJson != null && (
             <details className="rounded-lg bg-default-50 p-3 text-xs">
               <summary className="cursor-pointer">{t("workflow.runs.resultPreview")}</summary>

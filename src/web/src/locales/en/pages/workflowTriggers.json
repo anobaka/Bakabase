@@ -73,5 +73,8 @@
   "workflowTriggers.guide.fs.processingPlan.input": "A manual run supplies a directory, file group, and file processing plan; it does not watch directories.",
   "workflowTriggers.guide.fs.processingPlan.configure": "Bind downloaded directories from post results or manually run the local processing preset. Run different resources separately.",
   "workflow.trigger.fsProcessingPlan.description": "Manually process a downloaded directory using an ordered file processing plan. This does not download or watch files. Bind each different resource to its own directory and plan.",
-  "workflow.trigger.fsProcessingPlan.displayName": "Process files in a local directory"
+  "workflow.trigger.fsProcessingPlan.displayName": "Process files in a local directory",
+  "workflow.trigger.cloudSources.description": "Starts when sources are submitted from the download center or saved post results. Input includes content groups, candidate URLs, access codes and output directory. Finishing post parsing does not invoke this entry automatically.",
+  "workflowTriggers.guide.download.sources.input": "A source workset containing content targets, mirrors, access codes, account references and an output directory.",
+  "workflowTriggers.guide.download.sources.configure": "Create a cloud download in the download center, or select sources from a saved post result. Choose a workflow with this trigger."
 }

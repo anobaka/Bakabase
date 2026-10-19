@@ -59,6 +59,7 @@ import TaskRow, { DOWNLOAD_TASK_ITEM_HEIGHT } from "./components/TaskRow";
 import GeneralTaskRow from "./components/GeneralTaskRow";
 import GeneralTaskDetailModal from "./components/GeneralTaskDetailModal";
 import AddGeneralDownloadModal from "./components/AddGeneralDownloadModal";
+import CloudDownloadModal from "@/components/CloudDownload/AsyncCloudDownloadModal";
 import DownloadCenterFilters from "./components/DownloadCenterFilters";
 import useDownloadCenter from "./useDownloadCenter";
 import {
@@ -259,6 +260,19 @@ export default function DownloaderPage() {
       classNames: { body: "pb-6" },
       children: (
         <div className="grid gap-3 sm:grid-cols-2">
+          <Button
+            className="h-auto flex-col items-start whitespace-normal p-4 text-left"
+            variant="flat"
+            onPress={() => {
+              picker.destroy();
+              createPortal(CloudDownloadModal, { onCreated: () => void refresh() });
+            }}
+          >
+            <span className="font-medium">{t("cloudDownload.title")}</span>
+            <span className="text-xs font-normal text-default-500">
+              {t("cloudDownload.description")}
+            </span>
+          </Button>
           <Button
             className="h-auto flex-col items-start whitespace-normal p-4 text-left"
             variant="flat"

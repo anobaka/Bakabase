@@ -43,7 +43,9 @@ public sealed class DownloadCenterService(BakabaseDbContext db, DownloadTaskServ
             .Where(id => id != null).Select(id => id!.Value).Distinct().ToArray();
         var resultRows = await db.DownloadResults.AsNoTracking().Where(r => linkedResultIds.Contains(r.Id)).ToDictionaryAsync(r => r.Id, ct);
         var owners = await db.DownloadResultOwners.AsNoTracking().ToDictionaryAsync(o => o.DownloadTaskId, ct);
-        var ownerRunIds = owners.Values.Select(o => o.WorkflowRunId).Distinct().ToArray();
+        var cloudOwners = await db.CloudDownloadOperations.AsNoTracking().Where(o => o.DownloadTaskId != null)
+            .ToDictionaryAsync(o => o.DownloadTaskId!.Value, ct);
+        var ownerRunIds = owners.Values.Select(o => o.WorkflowRunId).Concat(cloudOwners.Values.Select(o => o.WorkflowRunId)).Distinct().ToArray();
         var ownerRuns = await db.Set<WorkflowRunDbModel>().AsNoTracking().Where(r => ownerRunIds.Contains(r.Id))
             .ToDictionaryAsync(r => r.Id, ct);
         var latestResults = (await db.DownloadResults.AsNoTracking().Where(r => linkedResultIds.Contains(r.Id) &&
@@ -55,7 +57,8 @@ public sealed class DownloadCenterService(BakabaseDbContext db, DownloadTaskServ
         foreach (var source in siteTasks)
         {
             var owner = owners.GetValueOrDefault(source.Id);
-            var run = owner == null ? null : ownerRuns.GetValueOrDefault(owner.WorkflowRunId);
+            var cloudOwner = cloudOwners.GetValueOrDefault(source.Id);
+            var run = ownerRuns.GetValueOrDefault(owner?.WorkflowRunId ?? cloudOwner?.WorkflowRunId ?? 0);
             var summary = summaries.GetValueOrDefault(source.Id);
             var status = summary?.Status ?? SiteStatus(source.Status);
             snapshots.Add(new CommonTask
@@ -68,9 +71,12 @@ public sealed class DownloadCenterService(BakabaseDbContext db, DownloadTaskServ
                 Error = status is "failed" or "processingFailed" ? source.Message : null,
                 CreatedAt = source.CreatedAt.ToUniversalTime(), UpdatedAt = source.DownloadStatusUpdateDt.ToUniversalTime(),
                 CompletedAt = status == "completed" ? source.CompletedAt : null,
-                OriginKind = owner == null ? "manual" : "workflow", OriginId = owner?.AcquisitionTaskId.ToString(),
+                OriginKind = owner == null && cloudOwner == null ? "manual" : "workflow", OriginId = owner?.AcquisitionTaskId.ToString() ?? cloudOwner?.Id,
                 WorkflowRunId = run?.Id ?? owner?.WorkflowRunId, WorkflowDefinitionId = run?.WorkflowDefinitionId,
-                AvailableActions = owner == null ? SiteActions(source, status) : [],
+                AvailableActions = owner == null && (cloudOwner == null || run?.Status is
+                    WorkflowRunStatus.Success or WorkflowRunStatus.Cancelled or WorkflowRunStatus.Failed or WorkflowRunStatus.Interrupted)
+                    ? SiteActions(source, status)
+                    : cloudOwner != null && SiteActions(source, status).Contains("stop") ? ["stop"] : [],
                 Execution = summary == null ? null : new DownloadTaskExecution
                 {
                     DownloadTaskId = source.Id, Status = summary.Status, TotalCount = summary.TotalCount,

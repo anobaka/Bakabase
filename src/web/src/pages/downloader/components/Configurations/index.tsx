@@ -36,6 +36,7 @@ import NavigateButton from "@/components/NavigateButton";
 import { ProxyMode } from "@/components/ProxySelector";
 import BtSettingsPanel from "@/pages/bt-downloads/BtSettingsPanel";
 import DownloadDirectoryField from "@/components/ThirdPartyConfig/base/DownloadDirectoryField";
+import BaiduNetdiskConfig from "@/components/ThirdPartyConfig/platforms/BaiduNetdiskConfig";
 
 type Props = {
   onSubmitted?: any;
@@ -79,6 +80,7 @@ const ExHentaiDownloaderPanel = () => {
 
 /** Reuse the shared platform forms; this modal only controls their presentation. */
 const platformRenderers: Record<number, () => React.ReactNode> = {
+  [ThirdPartyIdEnum.BaiduNetdisk]: () => <BaiduNetdiskConfig />,
   [ThirdPartyIdEnum.ExHentai]: () => <ExHentaiDownloaderPanel />,
   [ThirdPartyIdEnum.DLsite]: () => (
     <DLsiteConfigPanel

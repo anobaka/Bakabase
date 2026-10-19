@@ -27,6 +27,7 @@ public sealed class WorkflowTriggerMetadataTests
             ["acquisition.statusChanged"] = (WorkflowActivationMode.SystemEvent, "acquisition"),
             ["downloader.resultReady"] = (WorkflowActivationMode.Module, "downloader"),
             ["downloader.completed"] = (WorkflowActivationMode.SystemEvent, "downloader"),
+            ["download.sources"] = (WorkflowActivationMode.Module, "downloader"),
             ["postParser.manual"] = (WorkflowActivationMode.Manual, "postParser"),
             ["subscription.updated"] = (WorkflowActivationMode.SystemEvent, "subscription"),
             ["collection.membersAdded"] = (WorkflowActivationMode.SystemEvent, "collection"),

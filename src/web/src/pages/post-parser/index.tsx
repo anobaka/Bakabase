@@ -50,6 +50,7 @@ import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContext
 import ThirdPartyIcon from "@/components/ThirdPartyIcon";
 import TampermonkeyInstallButton from "@/components/ThirdPartyConfig/base/TampermonkeyInstallButton";
 import WorkflowRunsDrawer from "@/components/Workflow/WorkflowRunsDrawer";
+import CloudDownloadModal from "@/components/CloudDownload/AsyncCloudDownloadModal";
 import WorkflowIntegrationHint from "@/components/Workflow/WorkflowIntegrationHint";
 import BApi from "@/sdk/BApi";
 import { openExternalUrl } from "@/utils/openExternalUrl";
@@ -670,6 +671,15 @@ const PostParserPage = () => {
             )}
             {canImport && (
               <ActionGroup stage="download">
+                <Button
+                  color="primary"
+                  size="sm"
+                  variant="flat"
+                  startContent={<AiOutlineCloudDownload aria-hidden />}
+                  onPress={() => createPortal(CloudDownloadModal, { task })}
+                >
+                  {t("cloudDownload.start")}
+                </Button>
                 <Button
                   color="primary"
                   size="sm"

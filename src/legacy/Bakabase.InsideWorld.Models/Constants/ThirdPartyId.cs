@@ -20,6 +20,9 @@ namespace Bakabase.InsideWorld.Models.Constants
         Patreon = 10,
         Tmdb = 11,
         Steam = 12,
-        Vndb = 13
+        Vndb = 13,
+        BaiduNetdisk = 14,
+        GoogleDrive = 15,
+        Gofile = 16
     }
 }

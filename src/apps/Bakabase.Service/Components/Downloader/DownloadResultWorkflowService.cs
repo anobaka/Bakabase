@@ -86,6 +86,7 @@ public sealed class DownloadResultWorkflowService(BakabaseDbContext db,
             var retryBefore = DateTime.UtcNow.AddMinutes(-1);
             var candidates = await Results.AsNoTracking().Where(r => r.WorkflowDefinitionId != null &&
                 !Owners.Any(o => o.DownloadTaskId == r.DownloadTaskId) &&
+                !db.CloudDownloadOperations.Any(o => o.DownloadTaskId == r.DownloadTaskId) &&
                 !Results.Any(newer => newer.DownloadTaskId == r.DownloadTaskId && newer.SourceKey == r.SourceKey && newer.Id > r.Id) &&
                 !db.Set<DownloadTaskDbModel>().Any(t => t.Id == r.DownloadTaskId && t.Status == DownloadTaskDbModelStatus.Disabled) &&
                 (!r.RequiresContentsDownload || Processing.Any(p => p.DownloadResultId == r.Id && p.ContentsReadyAt != null)) &&
@@ -172,6 +173,7 @@ public sealed class DownloadResultWorkflowService(BakabaseDbContext db,
 
     private async Task<bool> CanDispatchAsync(DownloadResultDbModel result, CancellationToken ct)
     {
+        if (await db.CloudDownloadOperations.AnyAsync(o => o.DownloadTaskId == result.DownloadTaskId, ct)) return false;
         var source = await db.Set<DownloadTaskDbModel>().AsNoTracking().SingleOrDefaultAsync(t => t.Id == result.DownloadTaskId, ct);
         if (source != null && (source.Status == DownloadTaskDbModelStatus.Disabled ||
                               !DownloadTaskExecutionLifecycle.CanContinue(source, result))) return false;

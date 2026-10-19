@@ -41,6 +41,7 @@ import DownloadResultsPanel from "@/pages/downloader/components/TaskDetailModal/
 import EstimatedRemainingTime from "@/pages/downloader/components/EstimatedRemainingTime";
 import TaskLinkCopyButton from "@/pages/downloader/components/TaskLinkCopyButton";
 import { useDownloadTasksStore } from "@/stores/downloadTasks";
+import CloudDownloadModal from "@/components/CloudDownload/AsyncCloudDownloadModal";
 
 type Form =
   components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Input.DownloadTaskAddInputModel"];
@@ -426,6 +427,17 @@ const DownloadTaskDetailModal = ({ onDestroyed, id }: Props) => {
                     color={isSelected ? "primary" : undefined}
                     isDisabled={!isAdding}
                     onPress={() => {
+                      if (
+                        [
+                          ThirdPartyId.BaiduNetdisk,
+                          ThirdPartyId.GoogleDrive,
+                          ThirdPartyId.Gofile,
+                        ].includes(thirdParty.id)
+                      ) {
+                        createPortal(CloudDownloadModal, {});
+                        onDestroyed?.();
+                        return;
+                      }
                       if (form.thirdPartyId !== thirdParty.id) {
                         setForm({
                           thirdPartyId: thirdParty.id,

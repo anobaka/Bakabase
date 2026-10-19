@@ -155,7 +155,8 @@ public class AcquisitionCandidateService(
                             ResourceId = resourceId, LeadKind = route.Kind, LeadValue = route.Value,
                             InitialLinks = source == null ? [] :
                                 [new AcquisitionLink(source.Value, source.AccessCode, source.Password,
-                                    AcquisitionDriveKinds.Infer(source.Value), source.ExtractionPlanJson)]
+                                    route.Kind == Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionLeadKind.DirectUrl
+                                        ? AcquisitionDriveKinds.InferExplicitDirectLead(source.Value) : AcquisitionDriveKinds.Infer(source.Value), source.ExtractionPlanJson)]
                         }, ct);
                 }
             }

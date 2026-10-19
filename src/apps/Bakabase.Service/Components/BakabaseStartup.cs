@@ -204,6 +204,10 @@ namespace Bakabase.Service.Components
             services.AddTransient<CookieCaptureOrchestrator>();
 
             services.TryAddSingleton<FfMpegService>();
+            services.TryAddSingleton<Bakabase.InsideWorld.Business.Components.Dependency.Implementations.BaiduPcsGo.BaiduPcsGoService>();
+            services.TryAddSingleton<Bakabase.InsideWorld.Business.Components.Dependency.Implementations.CloudTools.CloudPythonRuntimeService>();
+            services.TryAddSingleton<Bakabase.InsideWorld.Business.Components.Dependency.Implementations.CloudTools.GdownService>();
+            services.TryAddSingleton<Bakabase.InsideWorld.Business.Components.Dependency.Implementations.CloudTools.GalleryDlService>();
             services.TryAddSingleton<HardwareAccelerationService>();
             services.TryAddSingleton<SevenZipService>();
             services.TryAddSingleton<LocaleEmulatorService>();

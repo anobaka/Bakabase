@@ -39,6 +39,7 @@ namespace Bakabase.InsideWorld.Business
         public DbSet<CollectionMemoSettingsDbModel> CollectionMemoSettings { get; set; }
 
         public DbSet<DownloadTaskDbModel> DownloadTasks { get; set; }
+        public DbSet<Bakabase.Modules.Downloader.Cloud.CloudOperationDbModel> CloudDownloadOperations { get; set; }
         public DbSet<ManagedDownloadTaskDbModel> ManagedDownloadTasks { get; set; }
         public DbSet<DownloadTaskFileDbModel> DownloadTaskFiles { get; set; }
 
@@ -183,6 +184,11 @@ namespace Bakabase.InsideWorld.Business
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+            modelBuilder.Entity<Bakabase.Modules.Downloader.Cloud.CloudOperationDbModel>(t =>
+            {
+                t.HasIndex(o => o.WorkflowRunId);
+                t.HasIndex(o => o.DownloadTaskId).IsUnique();
+            });
 
             modelBuilder.Entity<CollectionMemoTargetDbModel>(t =>
             {

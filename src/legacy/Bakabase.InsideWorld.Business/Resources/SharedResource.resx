@@ -1190,4 +1190,12 @@ Downloads: https://www.ffmpeg.org/</value>
   <data name="BTask_Description_ResourceProcessing" xml:space="preserve"><value>Run selected rules on the chosen device and save checked results to the resource owner.</value></data>
   <data name="BTask_MessageOnInterruption_ResourceProcessing" xml:space="preserve"><value>Processing will resume from its saved position.</value></data>
   <data name="BTask_Process_ResourceProcessing_Resources" xml:space="preserve"><value>Processed: {0} resources</value></data>
+  <data name="Dependency_Component_BaiduPcsGo_Name" xml:space="preserve"><value>BaiduPCS-Go</value></data>
+  <data name="Dependency_Component_BaiduPcsGo_Description" xml:space="preserve"><value>Optional Baidu netdisk transfer and download adapter. The first installation builds a pinned upstream version with a structured protocol.</value></data>
+  <data name="Dependency_Component_CloudPython_Name" xml:space="preserve"><value>Cloud download Python runtime</value></data>
+  <data name="Dependency_Component_CloudPython_Description" xml:space="preserve"><value>Private Python runtime used by optional cloud download tools.</value></data>
+  <data name="Dependency_Component_Gdown_Name" xml:space="preserve"><value>gdown</value></data>
+  <data name="Dependency_Component_Gdown_Description" xml:space="preserve"><value>Optional Google Drive public file and folder downloader.</value></data>
+  <data name="Dependency_Component_GalleryDl_Name" xml:space="preserve"><value>gallery-dl</value></data>
+  <data name="Dependency_Component_GalleryDl_Description" xml:space="preserve"><value>Optional GoFile share downloader with recursive directory support.</value></data>
 </root>

@@ -1418,6 +1418,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/baidu-pcs/accounts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetBaiduPcsAccounts"];
+        put?: never;
+        post: operations["LoginBaiduPcsAccount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/baidu-pcs/accounts/{id}/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ValidateBaiduPcsAccount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/baidu-pcs/accounts/{id}/default": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["SetDefaultBaiduPcsAccount"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/baidu-pcs/accounts/{id}/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["LogoutBaiduPcsAccount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/baidu-pcs/accounts/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["DeleteBaiduPcsAccount"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/bilibili/favorites": {
         parameters: {
             query?: never;
@@ -1892,6 +1972,54 @@ export interface paths {
         get?: never;
         put: operations["SetChatToolEnabled"];
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/cloud-downloads/providers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetCloudDownloadProviders"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/cloud-downloads/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["StartCloudDownload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/cloud-downloads/from-post": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["StartCloudDownloadFromPost"];
         delete?: never;
         options?: never;
         head?: never;
@@ -13068,10 +13196,10 @@ export interface components {
         "Bakabase.InsideWorld.Models.Constants.StartupPage": 0 | 1;
         /**
          * Format: int32
-         * @description [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb]
+         * @description [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb, 14: BaiduNetdisk, 15: GoogleDrive, 16: Gofile]
          * @enum {integer}
          */
-        "Bakabase.InsideWorld.Models.Constants.ThirdPartyId": 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13;
+        "Bakabase.InsideWorld.Models.Constants.ThirdPartyId": 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16;
         "Bakabase.InsideWorld.Models.Models.Aos.PreviewerItem": {
             filePath: string;
             type: components["schemas"]["Bakabase.InsideWorld.Models.Constants.MediaType"];
@@ -13743,10 +13871,10 @@ export interface components {
         };
         /**
          * Format: int32
-         * @description [0: Unknown, 1: DirectUrl, 2: Baidu, 3: Xunlei, 4: Feimao, 5: Cloudflare, 6: Mega, 7: PikPak, 8: GoogleDrive, 9: OneDrive, 10: Magnet, 11: OneOneFive]
+         * @description [0: Unknown, 1: DirectUrl, 2: Baidu, 3: Xunlei, 4: Feimao, 5: Cloudflare, 6: Mega, 7: PikPak, 8: GoogleDrive, 9: OneDrive, 10: Magnet, 11: OneOneFive, 12: Gofile, 13: Pixeldrain]
          * @enum {integer}
          */
-        "Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionDriveKind": 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11;
+        "Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionDriveKind": 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13;
         /**
          * Format: int32
          * @description [1: PlatformHolding, 2: SharedPage, 3: SharedDocument, 4: DirectUrl, 5: Magnet, 6: Manual, 7: Torrent]
@@ -14931,6 +15059,16 @@ export interface components {
             /** Format: int32 */
             awaitingReview: number;
         };
+        "Bakabase.Modules.Downloader.Cloud.CloudSource": {
+            id: string;
+            url: string;
+            providerId: string;
+            kind: string;
+            accessCode?: string;
+            archivePassword?: string;
+            extractionPlanJson?: string;
+            groupId?: string;
+        };
         "Bakabase.Modules.Downloader.Models.Tasks.DownloadTask": {
             id: string;
             category: string;
@@ -15953,6 +16091,22 @@ export interface components {
             lineNumber: number;
             alreadyKnown: boolean;
         };
+        "Bakabase.Service.Components.CloudDownloads.Baidu.BaiduPcsAccountViewModel": {
+            id: string;
+            name: string;
+            uid?: string;
+            isDefault: boolean;
+            isLoggedIn: boolean;
+            /** Format: date-time */
+            lastValidatedAt?: string;
+        };
+        "Bakabase.Service.Components.CloudDownloads.Baidu.BaiduPcsLoginInputModel": {
+            id?: string;
+            name: string;
+            cookies?: string;
+            bduss?: string;
+            stoken?: string;
+        };
         "Bakabase.Service.Components.DataSync.SyncActivityDevice": {
             id: string;
             name: string;
@@ -16297,6 +16451,31 @@ export interface components {
         };
         "Bakabase.Service.Controllers.ChatController+UpdateTitleRequest": {
             title: string;
+        };
+        "Bakabase.Service.Controllers.CloudDownloadPostInput": {
+            /** Format: int32 */
+            taskId: number;
+            /** Format: int32 */
+            revision: number;
+            resourceIndices: number[];
+            accountId?: string;
+            outputDirectory: string;
+            /** Format: int32 */
+            workflowDefinitionId?: number;
+        };
+        "Bakabase.Service.Controllers.CloudDownloadStartInput": {
+            sources: components["schemas"]["Bakabase.Modules.Downloader.Cloud.CloudSource"][];
+            title?: string;
+            accountId?: string;
+            outputDirectory: string;
+            /** Format: int32 */
+            workflowDefinitionId?: number;
+        };
+        "Bakabase.Service.Controllers.CloudProviderView": {
+            providerId: string;
+            available: boolean;
+            problem?: string;
+            supportsTransfer: boolean;
         };
         "Bakabase.Service.Controllers.CollectionAcquireMissingResult": {
             /** Format: int32 */
@@ -18053,6 +18232,12 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Components.Acquisition.SharedListPreviewRow"][];
         };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Components.CloudDownloads.Baidu.BaiduPcsAccountViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Components.CloudDownloads.Baidu.BaiduPcsAccountViewModel"][];
+        };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Controllers.ChatController+ChatToolViewModel]": {
             /** Format: int32 */
             code: number;
@@ -19181,6 +19366,12 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Components.Acquisition.SharedListImportResult"];
         };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.CloudDownloads.Baidu.BaiduPcsAccountViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Components.CloudDownloads.Baidu.BaiduPcsAccountViewModel"];
+        };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.ServerData.ServerAppDataImport+Validation]": {
             /** Format: int32 */
             code: number;
@@ -19486,6 +19677,12 @@ export interface components {
             data?: {
                 [key: string]: number;
             };
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Collections.Generic.List`1[Bakabase.Service.Controllers.CloudProviderView]]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Controllers.CloudProviderView"][];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Int32]": {
             /** Format: int32 */
@@ -22434,6 +22631,153 @@ export interface operations {
             };
         };
     };
+    GetBaiduPcsAccounts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Components.CloudDownloads.Baidu.BaiduPcsAccountViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Components.CloudDownloads.Baidu.BaiduPcsAccountViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Components.CloudDownloads.Baidu.BaiduPcsAccountViewModel]"];
+                };
+            };
+        };
+    };
+    LoginBaiduPcsAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Components.CloudDownloads.Baidu.BaiduPcsLoginInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Components.CloudDownloads.Baidu.BaiduPcsLoginInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Components.CloudDownloads.Baidu.BaiduPcsLoginInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Components.CloudDownloads.Baidu.BaiduPcsLoginInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.CloudDownloads.Baidu.BaiduPcsAccountViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.CloudDownloads.Baidu.BaiduPcsAccountViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.CloudDownloads.Baidu.BaiduPcsAccountViewModel]"];
+                };
+            };
+        };
+    };
+    ValidateBaiduPcsAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.CloudDownloads.Baidu.BaiduPcsAccountViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.CloudDownloads.Baidu.BaiduPcsAccountViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.CloudDownloads.Baidu.BaiduPcsAccountViewModel]"];
+                };
+            };
+        };
+    };
+    SetDefaultBaiduPcsAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    LogoutBaiduPcsAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    DeleteBaiduPcsAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
     GetBiliBiliFavorites: {
         parameters: {
             query?: never;
@@ -23404,6 +23748,90 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    GetCloudDownloadProviders: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Collections.Generic.List`1[Bakabase.Service.Controllers.CloudProviderView]]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Collections.Generic.List`1[Bakabase.Service.Controllers.CloudProviderView]]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Collections.Generic.List`1[Bakabase.Service.Controllers.CloudProviderView]]"];
+                };
+            };
+        };
+    };
+    StartCloudDownload: {
+        parameters: {
+            query?: {
+                outputDirectory?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.CloudDownloadStartInput"];
+                "application/json": components["schemas"]["Bakabase.Service.Controllers.CloudDownloadStartInput"];
+                "text/json": components["schemas"]["Bakabase.Service.Controllers.CloudDownloadStartInput"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.CloudDownloadStartInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowRunViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowRunViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowRunViewModel]"];
+                };
+            };
+        };
+    };
+    StartCloudDownloadFromPost: {
+        parameters: {
+            query?: {
+                outputDirectory?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.CloudDownloadPostInput"];
+                "application/json": components["schemas"]["Bakabase.Service.Controllers.CloudDownloadPostInput"];
+                "text/json": components["schemas"]["Bakabase.Service.Controllers.CloudDownloadPostInput"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.CloudDownloadPostInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowRunViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowRunViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowRunViewModel]"];
                 };
             };
         };
@@ -27228,7 +27656,7 @@ export interface operations {
     GetDownloadTaskSummary: {
         parameters: {
             query?: {
-                /** @description [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb] */
+                /** @description [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb, 14: BaiduNetdisk, 15: GoogleDrive, 16: Gofile] */
                 thirdPartyId?: components["schemas"]["Bakabase.InsideWorld.Models.Constants.ThirdPartyId"];
             };
             header?: never;
@@ -27640,7 +28068,7 @@ export interface operations {
             };
             header?: never;
             path: {
-                /** @description [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb] */
+                /** @description [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb, 14: BaiduNetdisk, 15: GoogleDrive, 16: Gofile] */
                 thirdPartyId: components["schemas"]["Bakabase.InsideWorld.Models.Constants.ThirdPartyId"];
             };
             cookie?: never;
@@ -27667,7 +28095,7 @@ export interface operations {
             };
             header?: never;
             path: {
-                /** @description [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb] */
+                /** @description [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb, 14: BaiduNetdisk, 15: GoogleDrive, 16: Gofile] */
                 thirdPartyId: components["schemas"]["Bakabase.InsideWorld.Models.Constants.ThirdPartyId"];
             };
             cookie?: never;

@@ -2,6 +2,7 @@ import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 
 // Modular imports - English
+import enCloudDownload from "@/locales/en/pages/cloudDownload.json";
 import enCommon from "@/locales/en/common.json";
 import enValidation from "@/locales/en/validation.json";
 import enErrors from "@/locales/en/errors.json";
@@ -85,6 +86,7 @@ import enNotices from "@/locales/en/components/notices.json";
 import enNavigationEditor from "@/locales/en/components/navigationEditor.json";
 
 // New modular imports - Chinese
+import cnCloudDownload from "@/locales/cn/pages/cloudDownload.json";
 import cnCommon from "@/locales/cn/common.json";
 import cnValidation from "@/locales/cn/validation.json";
 import cnErrors from "@/locales/cn/errors.json";
@@ -169,6 +171,7 @@ import cnNavigationEditor from "@/locales/cn/components/navigationEditor.json";
 
 // Merge all English resources
 const enResources = {
+  ...enCloudDownload,
   ...enCommon,
   ...enValidation,
   ...enErrors,
@@ -252,6 +255,7 @@ const enResources = {
 
 // Merge all Chinese resources
 const cnResources = {
+  ...cnCloudDownload,
   ...cnCommon,
   ...cnValidation,
   ...cnErrors,

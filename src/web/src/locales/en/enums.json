@@ -230,5 +230,8 @@
   "enum.resourceMoveRecordStatus.failed": "Failed",
   "enum.resourceMoveRecordStatus.cancelled": "Cancelled",
   "enum.resourceMoveRecordStatus.interrupted": "Interrupted",
-  "enum.thirdPartyId.vndb": "VNDB"
+  "enum.thirdPartyId.vndb": "VNDB",
+  "enum.thirdPartyId.baiduNetdisk": "Baidu Netdisk",
+  "enum.thirdPartyId.googleDrive": "Google Drive",
+  "enum.thirdPartyId.gofile": "GoFile"
 }

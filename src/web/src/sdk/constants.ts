@@ -3227,7 +3227,10 @@ export enum ThirdPartyId {
   Patreon = 10,
   Tmdb = 11,
   Steam = 12,
-  Vndb = 13
+  Vndb = 13,
+  BaiduNetdisk = 14,
+  GoogleDrive = 15,
+  Gofile = 16
 }
 
 export const thirdPartyIds = [
@@ -3243,7 +3246,10 @@ export const thirdPartyIds = [
   { label: 'Patreon', value: ThirdPartyId.Patreon },
   { label: 'Tmdb', value: ThirdPartyId.Tmdb },
   { label: 'Steam', value: ThirdPartyId.Steam },
-  { label: 'Vndb', value: ThirdPartyId.Vndb }
+  { label: 'Vndb', value: ThirdPartyId.Vndb },
+  { label: 'BaiduNetdisk', value: ThirdPartyId.BaiduNetdisk },
+  { label: 'GoogleDrive', value: ThirdPartyId.GoogleDrive },
+  { label: 'Gofile', value: ThirdPartyId.Gofile }
 ] as const;
 
 export const ThirdPartyIdLabel: Record<ThirdPartyId, string> = {
@@ -3259,7 +3265,10 @@ export const ThirdPartyIdLabel: Record<ThirdPartyId, string> = {
   [ThirdPartyId.Patreon]: 'Patreon',
   [ThirdPartyId.Tmdb]: 'Tmdb',
   [ThirdPartyId.Steam]: 'Steam',
-  [ThirdPartyId.Vndb]: 'Vndb'
+  [ThirdPartyId.Vndb]: 'Vndb',
+  [ThirdPartyId.BaiduNetdisk]: 'BaiduNetdisk',
+  [ThirdPartyId.GoogleDrive]: 'GoogleDrive',
+  [ThirdPartyId.Gofile]: 'Gofile'
 };
 
 export enum PasswordSearchOrder {
@@ -4288,7 +4297,9 @@ export enum AcquisitionDriveKind {
   GoogleDrive = 8,
   OneDrive = 9,
   Magnet = 10,
-  OneOneFive = 11
+  OneOneFive = 11,
+  Gofile = 12,
+  Pixeldrain = 13
 }
 
 export const acquisitionDriveKinds = [
@@ -4303,7 +4314,9 @@ export const acquisitionDriveKinds = [
   { label: 'GoogleDrive', value: AcquisitionDriveKind.GoogleDrive },
   { label: 'OneDrive', value: AcquisitionDriveKind.OneDrive },
   { label: 'Magnet', value: AcquisitionDriveKind.Magnet },
-  { label: 'OneOneFive', value: AcquisitionDriveKind.OneOneFive }
+  { label: 'OneOneFive', value: AcquisitionDriveKind.OneOneFive },
+  { label: 'Gofile', value: AcquisitionDriveKind.Gofile },
+  { label: 'Pixeldrain', value: AcquisitionDriveKind.Pixeldrain }
 ] as const;
 
 export const AcquisitionDriveKindLabel: Record<AcquisitionDriveKind, string> = {
@@ -4318,7 +4331,9 @@ export const AcquisitionDriveKindLabel: Record<AcquisitionDriveKind, string> = {
   [AcquisitionDriveKind.GoogleDrive]: 'GoogleDrive',
   [AcquisitionDriveKind.OneDrive]: 'OneDrive',
   [AcquisitionDriveKind.Magnet]: 'Magnet',
-  [AcquisitionDriveKind.OneOneFive]: 'OneOneFive'
+  [AcquisitionDriveKind.OneOneFive]: 'OneOneFive',
+  [AcquisitionDriveKind.Gofile]: 'Gofile',
+  [AcquisitionDriveKind.Pixeldrain]: 'Pixeldrain'
 };
 
 export enum AcquisitionLeadKind {

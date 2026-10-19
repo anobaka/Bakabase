@@ -8,6 +8,7 @@ export type WorkflowLabelSource = {
 // AcquisitionRecipeSeeder persists these canonical names and the IsBuiltin flag.
 // Database IDs vary by installation; user definitions with the same name are not seeds.
 const BUILTIN_NAME_KEYS = new Map([
+  ["Download selected sources (v1)", "cloudDownload.recipe.name"],
   ["Forum post + cloud drive", "acquisition.recipe.sharedContent"],
   ["Direct download", "acquisition.recipe.directDownload"],
   ["Magnet", "acquisition.recipe.magnet"],

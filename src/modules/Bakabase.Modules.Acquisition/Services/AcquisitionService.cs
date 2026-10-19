@@ -463,7 +463,8 @@ public class AcquisitionService<TDbContext>(
             kind is not (AcquisitionLeadKind.DirectUrl or AcquisitionLeadKind.Magnet or AcquisitionLeadKind.Torrent)))
             return [];
         return [new AcquisitionLink(lead.Value, lead.AccessCode, lead.Password,
-            AcquisitionDriveKinds.Infer(lead.Value), lead.ExtractionPlanJson)];
+            kind == AcquisitionLeadKind.DirectUrl ? AcquisitionDriveKinds.InferExplicitDirectLead(lead.Value)
+                : AcquisitionDriveKinds.Infer(lead.Value), lead.ExtractionPlanJson)];
     }
 
     /// <summary>

@@ -5,11 +5,11 @@ export const workflowIntegrationSurfaces = {
     components: ["pages/acquisition/index.tsx"],
   },
   downloader: {
-    triggerKinds: ["downloader.resultReady", "downloader.completed"],
+    triggerKinds: ["downloader.resultReady", "downloader.completed", "download.sources"],
     components: ["pages/downloader/index.tsx"],
   },
   postParser: {
-    triggerKinds: ["postParser.manual", "fs.processingPlan"],
+    triggerKinds: ["postParser.manual", "fs.processingPlan", "download.sources"],
     components: ["pages/post-parser/index.tsx"],
   },
   subscription: {

@@ -15,6 +15,7 @@ const verticalTabListProps: Pick<AriaTabListProps<object>, "orientation"> = {
 };
 
 import ThirdPartyIcon from "@/components/ThirdPartyIcon";
+import BaiduNetdiskConfig from "@/components/ThirdPartyConfig/platforms/BaiduNetdiskConfig";
 import {
   AvSourcesConfigPanel,
   BangumiConfigPanel,
@@ -33,6 +34,7 @@ import {
 import { ThirdPartyId } from "@/sdk/constants";
 
 const THIRD_PARTY_TAB_KEY_TO_ID: Record<string, ThirdPartyId> = {
+  baidu: ThirdPartyId.BaiduNetdisk,
   bilibili: ThirdPartyId.Bilibili,
   exhentai: ThirdPartyId.ExHentai,
   steam: ThirdPartyId.Steam,
@@ -164,6 +166,7 @@ export default function ThirdPartyConfigurationPage() {
         label: t("avSources.tab.label", "AV Sources"),
         content: <AvSourcesConfigPanel />,
       },
+      { key: "baidu", label: t("cloudDownload.provider.baidu"), content: <BaiduNetdiskConfig /> },
     ],
     [t],
   );

@@ -29,6 +29,7 @@ COPY version.json ./
 COPY docker/SourceVersion.targets ./
 COPY src/abstractions/ ./src/abstractions/
 COPY src/modules/ ./src/modules/
+COPY src/tools/ ./src/tools/
 COPY src/legacy/ ./src/legacy/
 COPY src/libs/ ./src/libs/
 COPY src/apps/Bakabase.Service/ ./src/apps/Bakabase.Service/

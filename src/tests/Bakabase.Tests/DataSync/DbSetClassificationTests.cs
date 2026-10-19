@@ -30,7 +30,7 @@ public class DbSetClassificationTests
         Assert.AreEqual(0, unclassified.Count, $"Unclassified DbSets: {string.Join(", ", unclassified)}. {Rule}");
         var stale = DataSyncDbSetClassification.All.Keys.Except(DbSets).ToList();
         Assert.AreEqual(0, stale.Count, $"Classified but not a DbSet: {string.Join(", ", stale)}.");
-        Assert.AreEqual(89, DbSets.Count);
+        Assert.AreEqual(90, DbSets.Count);
         Assert.AreEqual(DbSets.Count, DataSyncDbSetClassification.All.Count);
     }
 
@@ -41,7 +41,7 @@ public class DbSetClassificationTests
             .ToDictionary(g => g.Key, g => g.Count());
         Assert.AreEqual(2, byClass[DataSyncTableClass.Synced]);
         Assert.AreEqual(31, byClass[DataSyncTableClass.LibraryData]);
-        Assert.AreEqual(56, byClass[DataSyncTableClass.NeverSync]);
+        Assert.AreEqual(57, byClass[DataSyncTableClass.NeverSync]);
         Assert.IsTrue(DataSyncDbSetClassification.All.Values.All(c => !string.IsNullOrWhiteSpace(c.Reason)));
         Assert.IsTrue(DataSyncDbSetClassification.All.All(e => e.Key == e.Value.DbSetName));
     }

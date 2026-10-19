@@ -3293,6 +3293,52 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.ToTable("DataSyncReaders");
                 });
 
+            modelBuilder.Entity("Bakabase.Modules.Downloader.Cloud.CloudOperationDbModel", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("DownloadTaskId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Error")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ReceiptJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RequestJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TargetId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("WorkflowRunId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DownloadTaskId")
+                        .IsUnique();
+
+                    b.HasIndex("WorkflowRunId");
+
+                    b.ToTable("CloudDownloadOperations");
+                });
+
             modelBuilder.Entity("Bakabase.Modules.Downloader.Models.Db.ManagedDownloadTaskDbModel", b =>
                 {
                     b.Property<string>("Id")

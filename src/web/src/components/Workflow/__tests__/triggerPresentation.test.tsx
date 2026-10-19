@@ -134,6 +134,7 @@ describe("workflow trigger presentation contract", () => {
       ].map((name) => `apps/Bakabase.Service/Components/Workflow/Triggers/${name}Trigger.cs`),
       "apps/Bakabase.Service/Components/Workflow/Resources/ResourceMaterializedTrigger.cs",
       "apps/Bakabase.Service/Components/Downloader/DownloadResultWorkflow.cs",
+      "apps/Bakabase.Service/Components/CloudDownloads/CloudWorkflow.cs",
       "apps/Bakabase.Service/Components/FileProcessing/FileProcessingWorkflow.cs",
       "modules/Bakabase.Modules.Acquisition/Components/Workflow/AcquisitionRequestedTrigger.cs",
       "modules/Bakabase.Modules.Acquisition/Components/Workflow/AcquisitionStatusChangedTrigger.cs",

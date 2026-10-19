@@ -230,5 +230,8 @@
   "enum.resourceMoveRecordStatus.failed": "失败",
   "enum.resourceMoveRecordStatus.cancelled": "已取消",
   "enum.resourceMoveRecordStatus.interrupted": "已中断",
-  "enum.thirdPartyId.vndb": "VNDB"
+  "enum.thirdPartyId.vndb": "VNDB",
+  "enum.thirdPartyId.baiduNetdisk": "百度网盘",
+  "enum.thirdPartyId.googleDrive": "Google Drive",
+  "enum.thirdPartyId.gofile": "GoFile"
 }

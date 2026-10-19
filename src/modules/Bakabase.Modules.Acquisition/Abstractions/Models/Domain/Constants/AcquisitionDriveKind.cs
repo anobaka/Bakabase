@@ -17,5 +17,7 @@ public enum AcquisitionDriveKind
     GoogleDrive = 8,
     OneDrive = 9,
     Magnet = 10,
-    OneOneFive = 11
+    OneOneFive = 11,
+    Gofile = 12,
+    Pixeldrain = 13
 }

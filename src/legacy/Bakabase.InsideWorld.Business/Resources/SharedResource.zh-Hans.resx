@@ -1190,4 +1190,12 @@
   <data name="BTask_Description_ResourceProcessing" xml:space="preserve"><value>在选定设备上执行规则，检查结果后保存到资源所属设备。</value></data>
   <data name="BTask_MessageOnInterruption_ResourceProcessing" xml:space="preserve"><value>下次将从已保存的位置继续处理。</value></data>
   <data name="BTask_Process_ResourceProcessing_Resources" xml:space="preserve"><value>已处理 {0} 个资源</value></data>
+  <data name="Dependency_Component_BaiduPcsGo_Name" xml:space="preserve"><value>BaiduPCS-Go</value></data>
+  <data name="Dependency_Component_BaiduPcsGo_Description" xml:space="preserve"><value>可选的百度网盘转存与下载适配器。首次安装会编译固定上游版本，提供结构化操作协议。</value></data>
+  <data name="Dependency_Component_CloudPython_Name" xml:space="preserve"><value>Cloud download Python runtime</value></data>
+  <data name="Dependency_Component_CloudPython_Description" xml:space="preserve"><value>供可选网盘下载工具使用的独立 Python 运行环境。</value></data>
+  <data name="Dependency_Component_Gdown_Name" xml:space="preserve"><value>gdown</value></data>
+  <data name="Dependency_Component_Gdown_Description" xml:space="preserve"><value>可选的 Google Drive 公开文件与目录下载工具。</value></data>
+  <data name="Dependency_Component_GalleryDl_Name" xml:space="preserve"><value>gallery-dl</value></data>
+  <data name="Dependency_Component_GalleryDl_Description" xml:space="preserve"><value>可选的 GoFile 分享下载工具，支持递归目录。</value></data>
 </root>

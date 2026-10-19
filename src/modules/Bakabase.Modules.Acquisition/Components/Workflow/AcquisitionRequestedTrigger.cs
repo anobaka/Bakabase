@@ -84,7 +84,8 @@ public class AcquisitionRequestedTrigger : IWorkflowTrigger
         // These leads already are download links; shared pages must still be parsed first.
         return item with
         {
-            Links = [new AcquisitionLink(item.LeadValue, DriveKind: AcquisitionDriveKinds.Infer(item.LeadValue))],
+            Links = [new AcquisitionLink(item.LeadValue, DriveKind: item.LeadKind == AcquisitionLeadKind.DirectUrl
+                ? AcquisitionDriveKinds.InferExplicitDirectLead(item.LeadValue) : AcquisitionDriveKinds.Infer(item.LeadValue))],
             SelectedLinkIndex = 0
         };
     }

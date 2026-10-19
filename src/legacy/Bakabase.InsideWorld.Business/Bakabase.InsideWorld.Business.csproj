@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="Bakabase.Tests" />
+    <EmbeddedResource Include="../../tools/BaiduPcsBridge/main.go" LogicalName="Bakabase.BaiduPcsBridge.main.go" />
   </ItemGroup>
 
 <ItemGroup>

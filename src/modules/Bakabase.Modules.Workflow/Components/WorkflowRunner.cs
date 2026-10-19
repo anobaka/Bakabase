@@ -318,7 +318,7 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
 
                     if (outcome.Suspension is { } suspension)
                     {
-                        if (!stepwise)
+                        if (!stepwise || items.Count != 1)
                         {
                             // Nothing could answer it: a batch has no single item the question
                             // would be about. That is a configuration mistake, not a runtime one.
