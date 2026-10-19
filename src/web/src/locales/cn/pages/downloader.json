@@ -109,8 +109,8 @@
   "downloader.bilibili.selectFavorites": "选择收藏夹",
   "downloader.bilibili.noFavorites": "无法获取 Bilibili 收藏夹。请确认 Cookie 设置正确且至少创建了一个收藏夹。",
   "downloader.bilibili.setupNow": "立即设置",
-  "downloader.label.configurations": "下载器配置",
-  "downloader.config.tab.general": "通用",
+  "downloader.label.configurations": "配置",
+  "downloader.config.tab.general": "常规",
   "downloader.config.autoStartAfterCreation.label": "创建站点任务后自动开始下载",
   "downloader.config.autoStartAfterCreation.description": "开启后，新建的站点下载任务会自动开始。通用下载创建后会直接加入下载队列。",
   "downloader.label.torrentAvailable": "有种子",
@@ -165,7 +165,7 @@
   "downloader.config.navigation.label": "下载器设置分类",
   "downloader.config.general.description": "配置所有下载器共用的任务行为。",
   "downloader.config.platform.description": "管理 {{platform}} 的账号、下载与请求设置。",
-  "downloader.config.platforms.label": "下载平台",
+  "downloader.config.platforms.label": "站点下载",
   "downloader.config.platforms.loadFailed": "无法加载下载平台，请重试。",
   "downloader.config.platforms.retry": "重新加载",
   "downloader.config.platforms.unavailable": "此平台暂未提供可配置项。",
@@ -272,5 +272,12 @@
   "downloadCenter.stage.Completed": "已完成",
   "downloadCenter.stage.Stopping": "停止中",
   "downloadCenter.stage.Stopped": "已停止",
-  "downloadCenter.stage.Failed": "下载失败"
+  "downloadCenter.stage.Failed": "下载失败",
+  "downloader.config.generalDownloads.description": "按下载方式配置通用下载。",
+  "downloader.config.http.description": "HTTP / HTTPS 下载使用全局网络代理。可在系统设置中管理，此处显示当前生效的选择。",
+  "downloader.config.http.proxy": "当前全局代理",
+  "downloader.config.http.manageNetwork": "管理网络设置",
+  "downloader.action.btDownload": "使用 BT 下载",
+  "downloader.tip.btDownload": "将此任务切换为 BT 下载并开始，继续使用当前下载目录。",
+  "downloader.toast.btDownloadFailed": "切换 BT 下载失败，请重试。"
 }

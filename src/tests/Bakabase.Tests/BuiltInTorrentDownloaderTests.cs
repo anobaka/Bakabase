@@ -134,6 +134,35 @@ public sealed class BuiltInTorrentDownloaderTests
         Directory.Move(downloaded.Directory, Path.Combine(_root, "placed"));
     }
 
+    [DataTestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    [Timeout(90000)]
+    public async Task HybridTorrent_WithOrWithoutFinalPaddingDownloadsVerifiedFilesFromLoopback(bool finalPadding)
+    {
+        await using var seed = await LocalSeed.CreateAsync(Path.Combine(_root, "hybrid-seed"), hybridFinalPadding: finalPadding);
+        var originalMetadata = seed.Metadata.ToArray();
+        var sourceTorrent = Torrent.Load(originalMetadata);
+        Assert.IsNotNull(sourceTorrent.InfoHashes.V1);
+        Assert.IsNotNull(sourceTorrent.InfoHashes.V2);
+        Assert.AreEqual(finalPadding, sourceTorrent.Files.Last().Padding > 0);
+        var progress = new List<TorrentTransferProgress>();
+        var result = await Downloader().DownloadAsync(new TorrentDownloadRequest
+        {
+            Metadata = seed.Metadata, WorkingDirectory = Path.Combine(_root, "hybrid-result"),
+            UseWorkingDirectoryAsDestination = true, Timeout = TimeSpan.FromSeconds(60)
+        }, update => { progress.Add(update); return Task.CompletedTask; }, CancellationToken.None);
+
+        await AssertFiles(seed, result.Directory, result.Files);
+        Assert.AreEqual(seed.Files.Count, Directory.GetFiles(result.Directory, "*", SearchOption.AllDirectories).Length,
+            "The transferred resource must contain actual files, without synthetic padding files.");
+        CollectionAssert.AreEqual(originalMetadata, seed.Metadata);
+        Assert.AreEqual(sourceTorrent.InfoHashes, Torrent.Load(seed.Metadata).InfoHashes);
+        Assert.AreEqual(100, progress.Last().Percentage);
+        Assert.AreEqual("Completed", progress.Last().Stage);
+        Assert.IsTrue(seed.StoppedAnnounces > 0);
+    }
+
     [TestMethod]
     [Timeout(90000)]
     public async Task CancellationLeavesVerifiedPiecesForAHashCheckedRetry()
@@ -257,11 +286,11 @@ public sealed class BuiltInTorrentDownloaderTests
             _requests = ServeAsync();
         }
 
-        public static async Task<LocalSeed> CreateAsync(string root, int fileSize = 192 * 1024, int uploadRate = 0)
+        public static async Task<LocalSeed> CreateAsync(string root, int fileSize = 192 * 1024, int uploadRate = 0, bool? hybridFinalPadding = null)
         {
             var files = new Dictionary<string, byte[]>
             {
-                [Path.Combine("disc1", "same.bin")] = RandomNumberGenerator.GetBytes(fileSize),
+                [Path.Combine("disc1", "same.bin")] = RandomNumberGenerator.GetBytes(fileSize + (hybridFinalPadding.HasValue ? 7 : 0)),
                 [Path.Combine("disc2", "nested", "same.bin")] = RandomNumberGenerator.GetBytes(48 * 1024),
                 ["readme.txt"] = "A local test torrent, never a public download."u8.ToArray()
             };
@@ -277,9 +306,7 @@ public sealed class BuiltInTorrentDownloaderTests
             var listener = new HttpListener();
             listener.Prefixes.Add(rootUrl);
             listener.Start();
-            var creator = new TorrentCreator(TorrentType.V1Only) {PieceLength = 16 * 1024};
-            creator.Announces.Add([rootUrl + "announce"]);
-            var metadata = (await creator.CreateAsync(new TorrentFileSource(Path.Combine(root, "files")))).Encode();
+            var metadata = TorrentFixture.Create("files", files, rootUrl + "announce", hybridFinalPadding);
             var engine = new ClientEngine(new EngineSettingsBuilder
             {
                 CacheDirectory = Path.Combine(root, "cache"),

@@ -440,5 +440,6 @@
   "configuration.storage.title": "Data and storage",
   "configuration.storage.title.server": "Server data and storage",
   "configuration.storage.details": "Storage details",
-  "configuration.storage.serverDescription": "These directories belong to the server you are managing."
+  "configuration.storage.serverDescription": "These directories belong to the server you are managing.",
+  "configuration.others.proxy.unavailable": "Configured proxy unavailable"
 }

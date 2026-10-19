@@ -4,9 +4,9 @@
   "bt.settings.title": "BT settings",
   "bt.settings.proxy.label": "BT proxy",
   "bt.settings.proxy.direct": "Do not use a proxy (ignore system proxy)",
-  "bt.settings.proxy.description": "Independent of the global and platform proxies. Choose a saved SOCKS5 proxy, or connect directly. Proxy errors never fall back to a direct connection.",
+  "bt.settings.proxy.description": "Applies only to BT downloads and defaults to no proxy. System proxy follows the machine running the server; saved HTTP or SOCKS5 proxies are also supported. Proxy failures never fall back to a direct connection.",
   "bt.settings.proxy.unavailable": "Configured proxy unavailable",
-  "bt.settings.proxy.unavailableDescription": "Choose a valid saved SOCKS5 proxy or explicitly select no proxy before starting new transfers.",
+  "bt.settings.proxy.unavailableDescription": "Choose an available HTTP or SOCKS5 proxy, the system proxy, or no proxy before starting a new download.",
   "bt.settings.proxy.udpDisabled": "Proxy mode disables DHT, UDP trackers, local peer discovery and incoming connections. Downloads need peers from HTTP(S) trackers or peer exchange.",
   "bt.settings.proxy.manage": "Manage saved proxies",
   "bt.settings.concurrency.label": "Maximum concurrent BT downloads",
@@ -60,5 +60,6 @@
   "bt.stage.Error": "Transfer error",
   "bt.stage.Seeding": "Finalizing download",
   "bt.createdAt": "Created {{time}}",
-  "bt.completedAt": "Completed {{time}}"
+  "bt.completedAt": "Completed {{time}}",
+  "bt.settings.proxy.unsupported": "BT supports HTTP or SOCKS5 proxies. Enter authentication separately in the proxy configuration."
 }

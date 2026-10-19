@@ -64,6 +64,7 @@ export type TaskRowProps = {
   formatDateTime: (value?: string | Date | null) => string;
   onStart: (id: number) => void;
   onDownloadDirectly: (id: number) => Promise<void>;
+  onDownloadWithBt: (id: number) => Promise<void>;
   onStop: (id: number) => void;
   onEdit: (id: number) => void;
   onOpenFolder: (task: DownloadTask) => void;
@@ -95,6 +96,7 @@ const TaskRow = memo(function TaskRow({
   formatDateTime,
   onStart,
   onDownloadDirectly,
+  onDownloadWithBt,
   onStop,
   onEdit,
   onOpenFolder,
@@ -223,6 +225,7 @@ const TaskRow = memo(function TaskRow({
               formatDateTime={formatDateTime}
               task={task}
               onDownloadDirectly={onDownloadDirectly}
+              onDownloadWithBt={onDownloadWithBt}
             />
           </div>
           <div className="flex min-w-0 items-center gap-1 text-xs leading-4 text-default-400">
@@ -530,10 +533,12 @@ const TorrentIndicator = ({
   task,
   formatDateTime,
   onDownloadDirectly,
+  onDownloadWithBt,
 }: {
   task: DownloadTask;
   formatDateTime: (value?: string | Date | null) => string;
   onDownloadDirectly: (id: number) => Promise<void>;
+  onDownloadWithBt: (id: number) => Promise<void>;
 }) => {
   const { t } = useTranslation();
   const [pending, setPending] = useState(false);
@@ -583,13 +588,13 @@ const TorrentIndicator = ({
   }
 
   const { Icon, className, label, tip } = indicator;
-  const downloadDirectly = async () => {
+  const download = async (mode: "direct" | "bt") => {
     if (pendingRef.current) return;
 
     pendingRef.current = true;
     setPending(true);
     try {
-      await onDownloadDirectly(task.id);
+      await (mode === "bt" ? onDownloadWithBt : onDownloadDirectly)(task.id);
     } catch (error) {
       const message =
         error instanceof Error
@@ -601,7 +606,14 @@ const TorrentIndicator = ({
             ? error.message
             : undefined;
 
-      toast.danger(message || t<string>("downloader.toast.directDownloadFailed"));
+      toast.danger(
+        message ||
+          t<string>(
+            mode === "bt"
+              ? "downloader.toast.btDownloadFailed"
+              : "downloader.toast.directDownloadFailed",
+          ),
+      );
     } finally {
       pendingRef.current = false;
       setPending(false);
@@ -639,9 +651,10 @@ const TorrentIndicator = ({
             </DropdownTrigger>
             <DropdownMenu
               aria-label={t<string>("downloader.action.torrentActions")}
-              disabledKeys={pending ? ["direct-download"] : []}
+              disabledKeys={pending ? ["direct-download", "bt-download"] : []}
               onAction={(key) => {
-                if (key === "direct-download") void downloadDirectly();
+                if (key === "direct-download") void download("direct");
+                if (key === "bt-download") void download("bt");
               }}
             >
               <DropdownItem
@@ -650,6 +663,13 @@ const TorrentIndicator = ({
                 startContent={<AiOutlineDownload aria-hidden className="text-lg" />}
               >
                 {t<string>("downloader.action.directDownload")}
+              </DropdownItem>
+              <DropdownItem
+                key="bt-download"
+                description={t<string>("downloader.tip.btDownload")}
+                startContent={<TbMagnet aria-hidden className="text-lg" />}
+              >
+                {t<string>("downloader.action.btDownload")}
               </DropdownItem>
             </DropdownMenu>
           </Dropdown>

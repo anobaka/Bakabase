@@ -71,6 +71,7 @@ import {
   type TaskAction,
 } from "./downloadCenter";
 import { downloadTaskDirectly } from "./directDownload";
+import { downloadTaskWithBt } from "./btDownload";
 import { DownloadFolderUnavailableError, openDownloadTaskFolder } from "./openDownloadTaskFolder";
 
 const formatTaskDateTime = (value?: string | Date | null) =>
@@ -254,6 +255,7 @@ export default function DownloaderPage() {
       defaultVisible: true,
       title: t("downloader.action.createTask"),
       footer: false,
+      classNames: { body: "pb-6" },
       children: (
         <div className="grid gap-3 sm:grid-cols-2">
           <Button
@@ -325,6 +327,14 @@ export default function DownloaderPage() {
       throw new Error(response.message || t("downloader.toast.directDownloadFailed"));
     await refresh();
   };
+  const btDownload = async (id: number) => {
+    let response = await downloadTaskWithBt(id);
+    if (response.code === ResponseCode.Conflict)
+      response = await downloadTaskWithBt(id, await chooseDownloadOrder(response.message));
+    if (response.code !== ResponseCode.Success)
+      throw new Error(response.message || t("downloader.toast.btDownloadFailed"));
+    await refresh();
+  };
   const clearCheckpoints = (ids: number[]) =>
     createPortal(Modal, {
       defaultVisible: true,
@@ -349,6 +359,7 @@ export default function DownloaderPage() {
     showError,
     openFolder,
     directDownload,
+    btDownload,
     model,
     selectedIds,
     taskById,
@@ -361,6 +372,7 @@ export default function DownloaderPage() {
     showError,
     openFolder,
     directDownload,
+    btDownload,
     model,
     selectedIds,
     taskById,
@@ -429,6 +441,7 @@ export default function DownloaderPage() {
     [],
   );
   const siteDirect = useCallback((id: number) => env.current.directDownload(id), []);
+  const siteBt = useCallback((id: number) => env.current.btDownload(id), []);
   const toggleChildren = useCallback(
     (id: number) =>
       setExpanded((current) => {
@@ -546,13 +559,13 @@ export default function DownloaderPage() {
         </div>
         <div className="flex flex-wrap gap-2">
           <WorkflowIntegrationHint surface="downloader" />
-          <Button size="sm" variant="flat" onPress={() => createPortal(Configurations, {})}>
-            <AiOutlineSetting />
-            {t("downloader.label.configurations")}
-          </Button>
           <Button size="sm" color="primary" onPress={createTask}>
             <AiOutlinePlusCircle />
             {t("downloader.action.createTask")}
+          </Button>
+          <Button size="sm" variant="flat" onPress={() => createPortal(Configurations, {})}>
+            <AiOutlineSetting />
+            {t("downloader.label.configurations")}
           </Button>
         </div>
       </header>
@@ -819,6 +832,7 @@ export default function DownloaderPage() {
                           onEdit={siteEdit}
                           onDelete={siteDelete}
                           onDownloadDirectly={siteDirect}
+                          onDownloadWithBt={siteBt}
                           onShowError={siteError}
                           onOpenFolder={siteFolder}
                         />

@@ -14,7 +14,7 @@ import ThirdPartyIcon from "@/components/ThirdPartyIcon";
 import { isThirdPartyDeveloping } from "@/pages/downloader/models";
 import DevelopingChip from "@/components/Chips/DevelopingChip";
 import { ThirdPartyId as ThirdPartyIdEnum } from "@/sdk/constants";
-import { useDownloaderGlobalOptionsStore } from "@/stores/options";
+import { useDownloaderGlobalOptionsStore, useNetworkOptionsStore } from "@/stores/options";
 import {
   ExHentaiConfigPanel,
   ExHentaiConfigField,
@@ -31,6 +31,8 @@ import {
   BangumiConfigPanel,
 } from "@/components/ThirdPartyConfig";
 import { useAutoSaveToast } from "@/components/ThirdPartyConfig/base/useAutoSaveToast";
+import NavigateButton from "@/components/NavigateButton";
+import { ProxyMode } from "@/components/ProxySelector";
 import BtSettingsPanel from "@/pages/bt-downloads/BtSettingsPanel";
 import DownloadDirectoryField from "@/components/ThirdPartyConfig/base/DownloadDirectoryField";
 
@@ -82,6 +84,7 @@ const platformRenderers: Record<number, () => React.ReactNode> = {
 };
 
 const GENERAL_TAB_KEY = "general";
+const GENERAL_DOWNLOADS_TAB_KEY = "general-downloads";
 
 const GeneralPanel = () => {
   const { t } = useTranslation();
@@ -111,9 +114,54 @@ const GeneralPanel = () => {
           </div>
         </Switch>
       </div>
-      <h3 className="text-sm font-semibold">{t("bt.settings.title")}</h3>
-      <BtSettingsPanel />
     </div>
+  );
+};
+
+const HttpSettingsPanel = () => {
+  const { t } = useTranslation();
+  const options = useNetworkOptionsStore((state) => state.data);
+  const proxy = options?.proxy;
+  const custom = options?.customProxies?.find((item) => item.id === proxy?.customProxyId);
+  const proxyLabel =
+    proxy?.mode === ProxyMode.UseCustom
+      ? custom?.name || custom?.address || t("configuration.others.proxy.unavailable")
+      : t(
+          proxy?.mode === ProxyMode.UseSystem
+            ? "configuration.others.proxy.useSystem"
+            : "configuration.others.proxy.doNotUse",
+        );
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-default-500">{t("downloader.config.http.description")}</p>
+      <div className="rounded-xl border border-default-200 p-4">
+        <div className="text-xs text-default-500">{t("downloader.config.http.proxy")}</div>
+        <div className="mt-1 text-sm">{proxyLabel}</div>
+      </div>
+      <NavigateButton to="/configuration">
+        {t("downloader.config.http.manageNetwork")}
+      </NavigateButton>
+    </div>
+  );
+};
+
+const GeneralDownloadsPanel = () => {
+  const { t } = useTranslation();
+  return (
+    <Tabs
+      destroyInactiveTabPanel
+      disableAnimation
+      classNames={{ base: "mb-3", tabList: "gap-4 p-0", tab: "px-1", panel: "p-0 pt-4" }}
+      defaultSelectedKey="bt"
+      variant="underlined"
+    >
+      <Tab key="bt" title={t("downloadCenter.provider.bt")}>
+        <BtSettingsPanel />
+      </Tab>
+      <Tab key="http" title={t("downloadCenter.provider.http")}>
+        <HttpSettingsPanel />
+      </Tab>
+    </Tabs>
   );
 };
 
@@ -150,11 +198,15 @@ const ConfigurationsModal = ({ onDestroyed }: Props) => {
   }, [loadPlatforms]);
 
   const selectedPlatform =
-    selectedTab === GENERAL_TAB_KEY ? undefined : (Number(selectedTab) as ThirdPartyId);
+    selectedTab === GENERAL_TAB_KEY || selectedTab === GENERAL_DOWNLOADS_TAB_KEY
+      ? undefined
+      : (Number(selectedTab) as ThirdPartyId);
   const selectedTitle =
-    selectedPlatform == null
+    selectedTab === GENERAL_TAB_KEY
       ? t("downloader.config.tab.general")
-      : t(ThirdPartyIdEnum[selectedPlatform] || `Third Party ${selectedPlatform}`);
+      : selectedTab === GENERAL_DOWNLOADS_TAB_KEY
+        ? t("downloadCenter.category.general")
+        : t(ThirdPartyIdEnum[selectedPlatform!] || `Third Party ${selectedPlatform}`);
   const renderer = selectedPlatform == null ? undefined : platformRenderers[selectedPlatform];
   const navButtonClass = (selected: boolean) =>
     `h-10 min-w-fit justify-start gap-2.5 rounded-lg px-3 text-sm font-medium md:w-full md:min-w-0 ${
@@ -189,6 +241,17 @@ const ConfigurationsModal = ({ onDestroyed }: Props) => {
             onPress={() => setSelectedTab(GENERAL_TAB_KEY)}
           >
             {t("downloader.config.tab.general")}
+          </Button>
+          <Button
+            aria-controls={panelId}
+            aria-pressed={selectedTab === GENERAL_DOWNLOADS_TAB_KEY}
+            className={navButtonClass(selectedTab === GENERAL_DOWNLOADS_TAB_KEY)}
+            size="sm"
+            startContent={<FiSettings aria-hidden className="shrink-0" size={17} />}
+            variant="light"
+            onPress={() => setSelectedTab(GENERAL_DOWNLOADS_TAB_KEY)}
+          >
+            {t("downloadCenter.category.general")}
           </Button>
           <div className="mb-1 mt-4 hidden px-3 text-xs font-medium text-default-400 md:block">
             {t("downloader.config.platforms.label")}
@@ -244,9 +307,11 @@ const ConfigurationsModal = ({ onDestroyed }: Props) => {
             </div>
             <p className="mt-1.5 text-xs leading-relaxed text-default-500">
               {t(
-                selectedPlatform == null
+                selectedTab === GENERAL_TAB_KEY
                   ? "downloader.config.general.description"
-                  : "downloader.config.platform.description",
+                  : selectedTab === GENERAL_DOWNLOADS_TAB_KEY
+                    ? "downloader.config.generalDownloads.description"
+                    : "downloader.config.platform.description",
                 { platform: selectedTitle },
               )}
             </p>
@@ -255,8 +320,10 @@ const ConfigurationsModal = ({ onDestroyed }: Props) => {
             key={selectedTab}
             className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 md:px-6"
           >
-            {selectedPlatform == null ? (
+            {selectedTab === GENERAL_TAB_KEY ? (
               <GeneralPanel />
+            ) : selectedTab === GENERAL_DOWNLOADS_TAB_KEY ? (
+              <GeneralDownloadsPanel />
             ) : renderer ? (
               renderer()
             ) : (

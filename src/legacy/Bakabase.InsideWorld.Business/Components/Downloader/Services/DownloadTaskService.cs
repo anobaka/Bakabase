@@ -870,6 +870,15 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
         /// </summary>
         public Task<BaseResponse> DirectDownload(int id,
             DownloadTaskActionOnConflict actionOnConflict = DownloadTaskActionOnConflict.NotSet) =>
+            ChangeExHentaiDownloadModeAndStart(id, ExHentaiDownloadMode.Direct, actionOnConflict);
+
+        /// <summary>Uses the same task and output directory for BT, without falling back to paid image requests.</summary>
+        public Task<BaseResponse> BtDownload(int id,
+            DownloadTaskActionOnConflict actionOnConflict = DownloadTaskActionOnConflict.NotSet) =>
+            ChangeExHentaiDownloadModeAndStart(id, ExHentaiDownloadMode.Torrent, actionOnConflict);
+
+        private Task<BaseResponse> ChangeExHentaiDownloadModeAndStart(int id, ExHentaiDownloadMode mode,
+            DownloadTaskActionOnConflict actionOnConflict) =>
             DownloaderManager.WithTaskActionLock(id, async () =>
             {
                 var task = await GetByKey(id);
@@ -877,7 +886,10 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
                     return BaseResponseBuilder.Build(ResponseCode.NotFound, $"Download task {id} was not found.");
                 if (task.ThirdPartyId != ThirdPartyId.ExHentai ||
                     !Enum.IsDefined(typeof(ExHentaiDownloadTaskType), task.Type))
-                    return BaseResponseBuilder.BuildBadRequest("Direct image download requires an ExHentai task.");
+                    return BaseResponseBuilder.BuildBadRequest("Changing the download method requires an ExHentai task.");
+                if (await GetRequiredService<BakabaseDbContext>().DownloadResultOwners.AsNoTracking()
+                        .AnyAsync(owner => owner.DownloadTaskId == id))
+                    return BaseResponseBuilder.BuildBadRequest("This download task is owned by a workflow. Continue it from its workflow instead.");
 
                 JsonObject options;
                 try
@@ -907,11 +919,20 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
                 options = string.IsNullOrWhiteSpace(task.Options)
                     ? new JsonObject()
                     : JsonNode.Parse(task.Options) as JsonObject ?? options;
-                foreach (var key in options.Select(x => x.Key)
-                             .Where(x => string.Equals(x, "preferTorrent", StringComparison.OrdinalIgnoreCase)).ToArray())
+                var replacedOptions = mode == ExHentaiDownloadMode.Torrent
+                    ? new[] {"preferTorrent", "downloadMode", "fallbackToDirect", "noTorrentCheckedAt"}
+                    : new[] {"preferTorrent", "downloadMode"};
+                foreach (var key in options.Select(x => x.Key).Where(x =>
+                             replacedOptions.Contains(x, StringComparer.OrdinalIgnoreCase)).ToArray())
                     options.Remove(key);
-                options["preferTorrent"] = false;
-                options["downloadMode"] = (int)ExHentaiDownloadMode.Direct;
+                options["preferTorrent"] = mode != ExHentaiDownloadMode.Direct;
+                options["downloadMode"] = (int)mode;
+                if (mode == ExHentaiDownloadMode.Torrent)
+                {
+                    // An explicit BT request probes again even after an old negative verdict,
+                    // and never starts paid image requests when the gallery has no torrent.
+                    options["fallbackToDirect"] = false;
+                }
                 await base.UpdateByKey(id, t =>
                 {
                     t.Options = options.ToJsonString();

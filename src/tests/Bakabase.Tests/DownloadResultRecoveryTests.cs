@@ -18,7 +18,6 @@ using Bootstrap.Components.Configuration.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
-using MonoTorrent;
 
 namespace Bakabase.Tests;
 
@@ -382,7 +381,6 @@ public sealed class DownloadResultRecoveryTests
     {
         var payload = Path.Combine(_root, name);
         await File.WriteAllTextAsync(payload, content);
-        return (await new TorrentCreator(TorrentType.V1Only) {PieceLength = 16384}
-            .CreateAsync(new TorrentFileSource(payload))).Encode();
+        return await TorrentFixture.FromPathAsync(payload);
     }
 }

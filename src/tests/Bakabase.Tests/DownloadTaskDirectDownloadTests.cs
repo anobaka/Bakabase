@@ -26,12 +26,13 @@ using Microsoft.Extensions.Localization;
 namespace Bakabase.Tests;
 
 [TestClass]
-public sealed class DownloadTaskDirectDownloadTests
+public sealed partial class DownloadTaskDirectDownloadTests
 {
     private DownloadTaskService _service = null!;
     private DownloaderManager _manager = null!;
     private FakeFactory _factory = null!;
     private FakePrecheck _precheck = null!;
+    private BakabaseDbContext _db = null!;
 
     [TestInitialize]
     public async Task Setup()
@@ -51,6 +52,7 @@ public sealed class DownloadTaskDirectDownloadTests
         });
         _service = sp.GetRequiredService<DownloadTaskService>();
         _manager = sp.GetRequiredService<DownloaderManager>();
+        _db = sp.GetRequiredService<BakabaseDbContext>();
     }
 
     private async Task<int> AddTask(ExHentaiDownloadTaskType type = ExHentaiDownloadTaskType.SingleWork,

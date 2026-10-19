@@ -15,13 +15,14 @@ public sealed class BtNetworkOptionsProvider(IBOptions<NetworkOptions> options) 
         var settings = options.Value;
         var selection = settings.BtProxy;
         if (selection == null || selection.Mode == NetworkOptions.ProxyMode.DoNotUse) return new();
+        if (selection.Mode == NetworkOptions.ProxyMode.UseSystem) return new() {UseSystemProxy = true};
         if (selection.Mode != NetworkOptions.ProxyMode.UseCustom)
-            throw new InvalidOperationException("BT requires direct connections or a saved SOCKS5 proxy.");
+            throw new InvalidOperationException("The BT proxy mode is invalid.");
         var proxy = settings.CustomProxies?.SingleOrDefault(p => p.Id == selection.CustomProxyId)
             ?? throw new InvalidOperationException("The selected BT proxy is unavailable. Choose a proxy or direct connections.");
-        if (!Uri.TryCreate(proxy.Address, UriKind.Absolute, out var address) || address.Scheme != "socks5" ||
-            !string.IsNullOrEmpty(address.UserInfo))
-            throw new InvalidOperationException("The selected BT proxy must use SOCKS5 with separately configured credentials.");
+        if (!Uri.TryCreate(proxy.Address, UriKind.Absolute, out var address) || address.Scheme is not ("http" or "socks5") ||
+            string.IsNullOrWhiteSpace(address.Host) || address.Port is < 1 or > 65535 || !string.IsNullOrEmpty(address.UserInfo))
+            throw new InvalidOperationException("The selected BT proxy must use HTTP CONNECT or SOCKS5 with a host, port and separately configured credentials.");
         return new TorrentNetworkOptions
         {
             ProxyUri = address,

@@ -1,8 +1,12 @@
 # Shared download services
 
-`Bakabase.Modules.Downloader` owns file transfer and depends only on .NET libraries, [Downloader 5.9.6](https://www.nuget.org/packages/Downloader/5.9.6) and [MonoTorrent 3.0.2](https://www.nuget.org/packages/MonoTorrent/3.0.2).
+`Bakabase.Modules.Downloader` owns file transfer and depends only on .NET libraries, [Downloader 5.9.6](https://www.nuget.org/packages/Downloader/5.9.6) and [MonoTorrent 3.0.3-alpha.unstable.rev0024](https://www.nuget.org/packages/MonoTorrent/3.0.3-alpha.unstable.rev0024).
 It does not reference the application host, resource models, acquisition, workflows, a database or a task queue.
 Desktop and server hosts register the same services.
+
+MonoTorrent is pinned to the first upstream package containing the [hybrid final-file padding fix](https://github.com/alanmcgovern/monotorrent/pull/688).
+It accepts both final-padding variants without rewriting metadata or changing either info hash; inconsistent intermediate padding and file lists remain invalid.
+The production module consumes torrent metadata and does not use `TorrentCreator`, whose Unix path regression in this package is avoided by independent synthetic test fixtures.
 
 ## Download task identity
 
@@ -59,7 +63,7 @@ var file = await downloader.DownloadAsync(
 
 The cache directory factory is evaluated when a transfer starts. Hosts own its location under their writable application data directory. The Bakabase host keeps the historical `acquisition-torrent-cache` path for compatibility; this name does not limit who can use it. Legacy torrent calls write below `torrent-data`. Managed transfers use `DownloadAsync(TorrentDownloadRequest, ...)` with `UseWorkingDirectoryAsDestination = true` to write into the exact directory supplied by their owner. Structured progress includes the transfer stage, verified bytes, total bytes, percentage, speed and peer count.
 
-BT routing is independent of HTTP download, source and workflow settings. `ITorrentNetworkOptionsProvider` lets the host resolve a saved proxy selection at transfer start. Missing providers or a null `ProxyUri` mean explicit direct access: system/environment proxies are never consulted. A configured SOCKS5 proxy carries metadata URL requests, HTTP(S) tracker requests, web seeds and peer TCP connections, including remote hostname resolution and optional username/password authentication. Proxy failures never fall back to direct access. UDP trackers and DHT are disabled in SOCKS5 mode; port forwarding, local peer discovery and incoming peer listeners are always disabled. Proxied magnet downloads therefore need reachable HTTP(S) trackers to discover peers. Changing a saved proxy affects subsequent starts/retries, not an active transfer's snapshot.
+BT routing is independent of HTTP download, source and workflow settings. `ITorrentNetworkOptionsProvider` snapshots the selection at transfer start. The default is explicit direct access and never consults system/environment proxies. A saved HTTP CONNECT or SOCKS5 proxy carries metadata requests, HTTP(S) trackers, web seeds and peer TCP connections, with remote hostname resolution and optional credentials. “Follow system” uses the host's .NET system proxy resolver for each destination and honors its bypass rules. HTTP requests retain their original scheme and URI; peer destinations use `http://host:port`, selecting HTTP/ALL proxy and NO_PROXY rules on environment-based hosts. HTTPS proxy endpoints and SOCKS4 are unsupported and fail explicitly; HTTP proxy authentication supports Basic credentials. Proxy failures never fall back to direct access. UDP trackers and DHT are disabled for both custom and system proxy modes, even when a particular destination bypasses the system proxy; port forwarding, local peer discovery and incoming peer listeners are always disabled. Proxied magnets therefore need reachable HTTP(S) trackers. Changing the BT selection affects subsequent starts/retries, not an active transfer.
 
 Callers own scheduling, concurrency, retries, link selection, acquisition lead storage, workflow state, file placement and resource materialization. Opening a magnet in the OS default application remains an application handoff, since it cannot report a verified local result. Workflow download nodes and component installers are consumers of these services; no workflow is required for a transfer.
 

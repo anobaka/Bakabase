@@ -33,7 +33,6 @@ using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using MonoTorrent;
 
 namespace Bakabase.Tests;
 
@@ -55,8 +54,7 @@ public sealed class DownloadResultWorkflowTests
         var files = Path.Combine(_root, "fixture");
         Directory.CreateDirectory(Path.Combine(files, "chapter"));
         await File.WriteAllTextAsync(Path.Combine(files, "chapter", "page.txt"), "torrent fixture");
-        _metadata = (await new TorrentCreator(TorrentType.V1Only) {PieceLength = 16 * 1024}
-            .CreateAsync(new TorrentFileSource(files))).Encode();
+        _metadata = await TorrentFixture.FromPathAsync(files);
         _sp.GetRequiredService<IBOptions<AcquisitionOptions>>().Value.LibraryRootDirectory = Path.Combine(_root, "library");
     }
 

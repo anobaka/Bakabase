@@ -4,9 +4,9 @@
   "bt.settings.title": "BT 设置",
   "bt.settings.proxy.label": "BT 下载代理",
   "bt.settings.proxy.direct": "不使用代理（不跟随系统）",
-  "bt.settings.proxy.description": "独立于全局和网站代理。可选择已保存的 SOCKS5 代理或明确直连；代理连接失败不会回退直连。",
+  "bt.settings.proxy.description": "仅影响 BT 下载，默认不使用代理。选择系统代理时，跟随运行服务器的系统代理；也可选择已保存的 HTTP 或 SOCKS5 代理。代理连接失败不会回退直连。",
   "bt.settings.proxy.unavailable": "已配置的代理不可用",
-  "bt.settings.proxy.unavailableDescription": "请重新选择有效的 SOCKS5 代理，或明确选择不使用代理，然后启动新的下载。",
+  "bt.settings.proxy.unavailableDescription": "请重新选择有效的 HTTP 或 SOCKS5 代理、系统代理，或不使用代理，然后启动新的下载。",
   "bt.settings.proxy.udpDisabled": "代理模式会关闭 DHT、UDP tracker、局域网节点发现和入站连接，下载需要通过 HTTP(S) tracker 或节点交换发现节点。",
   "bt.settings.proxy.manage": "管理已保存的代理",
   "bt.settings.concurrency.label": "BT 最大同时下载数",
@@ -60,5 +60,6 @@
   "bt.stage.Error": "传输错误",
   "bt.stage.Seeding": "正在完成下载",
   "bt.createdAt": "创建于 {{time}}",
-  "bt.completedAt": "完成于 {{time}}"
+  "bt.completedAt": "完成于 {{time}}",
+  "bt.settings.proxy.unsupported": "BT 下载支持 HTTP 或 SOCKS5 代理；认证信息需在代理配置中单独填写。"
 }

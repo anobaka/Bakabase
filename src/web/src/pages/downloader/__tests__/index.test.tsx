@@ -16,6 +16,8 @@ const mocks = vi.hoisted(() => ({
   batch: vi.fn(),
   portal: vi.fn(),
   direct: vi.fn(),
+  bt: vi.fn(),
+  btResult: undefined as Promise<void> | undefined,
   directResult: undefined as Promise<void> | undefined,
 }));
 vi.mock("@/sdk/BApi", () => ({
@@ -26,6 +28,7 @@ vi.mock("@/sdk/BApi", () => ({
   },
 }));
 vi.mock("../directDownload", () => ({ downloadTaskDirectly: mocks.direct }));
+vi.mock("../btDownload", () => ({ downloadTaskWithBt: mocks.bt }));
 vi.mock("@/components/ContextProvider/BakabaseContextProvider", () => ({
   useBakabaseContext: () => ({ createPortal: mocks.portal }),
 }));
@@ -54,6 +57,7 @@ vi.mock("../components/TaskRow", () => ({
     childCount,
     onShowError,
     onDownloadDirectly,
+    onDownloadWithBt,
   }: any) => (
     <div>
       <button data-row-id={`site:${task.id}`} onClick={(event) => onClick(task.id, event)}>
@@ -70,6 +74,14 @@ vi.mock("../components/TaskRow", () => ({
         }}
       >
         direct-{task.id}
+      </button>
+      <button
+        onClick={() => {
+          mocks.btResult = onDownloadWithBt(task.id);
+          void mocks.btResult!.catch(() => {});
+        }}
+      >
+        bt-{task.id}
       </button>
     </div>
   ),
@@ -186,6 +198,7 @@ beforeEach(() => {
     data: ids.map((id) => ({ id, code: 0, success: true })),
   }));
   mocks.direct.mockResolvedValue({ code: 0 });
+  mocks.bt.mockResolvedValue({ code: 0 });
   useDownloadTasksStore.getState().setTasks([
     {
       id: 1,
@@ -210,6 +223,17 @@ afterEach(() => {
   useDownloadTasksStore.getState().setTasks([]);
 });
 describe("unified download center", () => {
+  it("places task creation before configuration in the header", async () => {
+    mount();
+    await screen.findByText("Gallery");
+    const buttons = Array.from(document.querySelectorAll("header button"));
+    expect(
+      buttons.findIndex((button) => button.textContent === "downloader.action.createTask"),
+    ).toBeLessThan(
+      buttons.findIndex((button) => button.textContent === "downloader.label.configurations"),
+    );
+  });
+
   it("uses one virtualized list, hides children until expanded, and keeps request statistics", async () => {
     mount();
     await screen.findByText("Gallery");
@@ -325,6 +349,32 @@ describe("unified download center", () => {
       ),
     );
   });
+  it("switches an existing site task to BT using its stable task ID and refreshes the shared list", async () => {
+    mount();
+    await screen.findByText("Gallery");
+    const previousCalls = mocks.get.mock.calls.length;
+    fireEvent.click(screen.getByText("bt-1"));
+    await act(async () => mocks.btResult);
+    expect(mocks.bt).toHaveBeenCalledExactlyOnceWith(1);
+    expect(mocks.direct).not.toHaveBeenCalled();
+    expect(mocks.batch).not.toHaveBeenCalled();
+    expect(mocks.get.mock.calls.length).toBeGreaterThan(previousCalls);
+  });
+
+  it("keeps a BT queue conflict attached to the same task and propagates errors", async () => {
+    mocks.bt
+      .mockResolvedValueOnce({ code: ResponseCode.Conflict, message: "Busy queue" })
+      .mockResolvedValueOnce({ code: 400, message: "No torrent available" });
+    mount();
+    await screen.findByText("Gallery");
+    fireEvent.click(screen.getByText("bt-1"));
+    await waitFor(() => expect(mocks.portal).toHaveBeenCalled());
+    await act(async () => mocks.portal.mock.calls[0][1].onClose());
+    await expect(mocks.btResult).rejects.toThrow("No torrent available");
+    expect(mocks.bt).toHaveBeenLastCalledWith(1, DownloadTaskActionOnConflict.Ignore);
+    expect(mocks.direct).not.toHaveBeenCalled();
+  });
+
   it("preserves direct-download conflicts and reports a failed request", async () => {
     mocks.direct
       .mockResolvedValueOnce({ code: ResponseCode.Conflict })

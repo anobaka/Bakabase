@@ -109,7 +109,7 @@
   "downloader.bilibili.selectFavorites": "Select favorites",
   "downloader.bilibili.noFavorites": "Unable to retrieve Bilibili favorites. Please ensure your cookie is correctly set and that you have at least one favorite created.",
   "downloader.bilibili.setupNow": "Setup now",
-  "downloader.label.configurations": "Downloader Configurations",
+  "downloader.label.configurations": "Configuration",
   "downloader.config.tab.general": "General",
   "downloader.config.autoStartAfterCreation.label": "Auto-start site tasks after creation",
   "downloader.config.autoStartAfterCreation.description": "When enabled, new site downloads start automatically. General downloads join their download queue when created.",
@@ -165,7 +165,7 @@
   "downloader.config.navigation.label": "Downloader settings sections",
   "downloader.config.general.description": "Configure task behavior shared by all downloaders.",
   "downloader.config.platform.description": "Manage accounts, downloads, and requests for {{platform}}.",
-  "downloader.config.platforms.label": "Download sources",
+  "downloader.config.platforms.label": "Site downloads",
   "downloader.config.platforms.loadFailed": "Could not load download sources. Try again.",
   "downloader.config.platforms.retry": "Reload",
   "downloader.config.platforms.unavailable": "No settings are available for this source yet.",
@@ -272,5 +272,12 @@
   "downloadCenter.stage.Completed": "Completed",
   "downloadCenter.stage.Stopping": "Stopping",
   "downloadCenter.stage.Stopped": "Stopped",
-  "downloadCenter.stage.Failed": "Failed"
+  "downloadCenter.stage.Failed": "Failed",
+  "downloader.config.generalDownloads.description": "Configure general downloads by protocol.",
+  "downloader.config.http.description": "HTTP / HTTPS downloads use the global network proxy. Manage it in settings; the current selection is shown below.",
+  "downloader.config.http.proxy": "Current global proxy",
+  "downloader.config.http.manageNetwork": "Manage network settings",
+  "downloader.action.btDownload": "Download with BT",
+  "downloader.tip.btDownload": "Switch this task to BT and start downloading into its current folder.",
+  "downloader.toast.btDownloadFailed": "Could not start BT downloading. Please try again."
 }

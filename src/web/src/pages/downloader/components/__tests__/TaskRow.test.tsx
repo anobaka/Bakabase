@@ -79,6 +79,7 @@ async function show(
   overrides: Partial<DownloadTask> = {},
   onDownloadDirectly = vi.fn().mockResolvedValue(undefined),
   execution?: TaskRowProps["execution"],
+  onDownloadWithBt = vi.fn().mockResolvedValue(undefined),
 ) {
   const props: TaskRowProps = {
     task: { ...task, ...overrides },
@@ -88,6 +89,7 @@ async function show(
     formatDateTime: (value) => String(value),
     onStart: vi.fn(),
     onDownloadDirectly,
+    onDownloadWithBt,
     onStop: vi.fn(),
     onEdit: vi.fn(),
     onOpenFolder: vi.fn(),
@@ -638,6 +640,50 @@ describe("download task row interaction", () => {
       expect(props.onContextMenu).not.toHaveBeenCalled();
     },
   );
+
+  it.each(["pointer", "keyboard"])(
+    "switches a failed ExHentai task to BT from the torrent menu using %s",
+    async (method) => {
+      const props = await show({
+        status: DownloadTaskStatus.Failed,
+        metadata: { preferTorrent: false },
+      });
+      const trigger = element("downloader.label.torrentDisabled");
+      if (method === "pointer") await click(trigger);
+      else await key(trigger, "Enter");
+      const btItem = Array.from(document.querySelectorAll<HTMLElement>('[role="menuitem"]')).find(
+        (item) => item.textContent?.includes("downloader.action.btDownload"),
+      )!;
+      expect(btItem).toHaveTextContent("downloader.tip.btDownload");
+      if (method === "pointer") await click(btItem);
+      else await key(btItem, "Enter");
+      expect(props.onDownloadWithBt).toHaveBeenCalledExactlyOnceWith(task.id);
+      expect(props.onDownloadDirectly).not.toHaveBeenCalled();
+      expect(props.onStart).not.toHaveBeenCalled();
+      expect(props.onClick).not.toHaveBeenCalled();
+    },
+  );
+
+  it("keeps both acquisition choices disabled while switching to BT and surfaces failure", async () => {
+    let fail!: (error: Error) => void;
+    const pending = new Promise<void>((_, reject) => {
+      fail = reject;
+    });
+    const download = vi.fn(() => pending);
+    await show({}, undefined, undefined, download);
+    const trigger = element("downloader.label.torrentUnknown");
+    await click(trigger);
+    const btItem = Array.from(document.querySelectorAll<HTMLElement>('[role="menuitem"]')).find(
+      (item) => item.textContent?.includes("downloader.action.btDownload"),
+    )!;
+    await click(btItem);
+    expect(trigger).toBeDisabled();
+    await click(trigger);
+    expect(download).toHaveBeenCalledOnce();
+    await act(async () => fail(new Error("No torrent available")));
+    expect(dangerToast).toHaveBeenCalledExactlyOnceWith("No torrent available");
+    expect(trigger).not.toBeDisabled();
+  });
 
   it("blocks repeated direct downloads while the request or conflict choice is pending", async () => {
     let finish!: () => void;

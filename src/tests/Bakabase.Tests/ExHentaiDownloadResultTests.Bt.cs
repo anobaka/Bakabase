@@ -9,6 +9,31 @@ namespace Bakabase.Tests;
 
 public sealed partial class ExHentaiDownloadResultTests
 {
+    [TestMethod]
+    public async Task SwitchingTorrentFileToBt_PromotesExistingMetadataWithoutTreatingItAsDownloadedContents()
+    {
+        var handler = new GalleryHandler {TorrentBytes = _metadata};
+        using var producer = await BuildProducer(handler);
+        const string url = "https://exhentai.org/g/12345/abcdef0123/";
+        await RunProducer(producer, url, _ => Task.CompletedTask, resultWorkflowId: null,
+            downloadMode: ExHentaiDownloadMode.TorrentFile, fallbackToDirect: false);
+        var saved = (await _results.GetByTaskAsync(10)).Single();
+        Assert.IsFalse(saved.RequiresContentsDownload);
+        var destination = Path.Combine(_root, "gallery-12345-abcdef0123");
+
+        await RunProducer(producer, url, _ => Task.CompletedTask, downloadPath: destination,
+            resultWorkflowId: null, downloadMode: ExHentaiDownloadMode.Torrent, fallbackToDirect: false);
+
+        var promoted = (await _results.GetByTaskAsync(10)).Single();
+        Assert.AreEqual(saved.Id, promoted.Id);
+        Assert.AreEqual(saved.Fingerprint, promoted.Fingerprint);
+        Assert.IsTrue(promoted.RequiresContentsDownload);
+        Assert.AreEqual(destination, promoted.DownloadDirectory);
+        Assert.IsNull(await _results.GetAvailableContentsAsync(promoted), "Metadata is not completed BT content.");
+        Assert.AreEqual(1, handler.TorrentRequests, "Verified saved metadata is reused without another site request.");
+        Assert.AreEqual(0, handler.ImageRequests, "The BT shortcut never falls back to GP-consuming images.");
+    }
+
     [DataTestMethod]
     [DataRow(false)]
     [DataRow(true)]

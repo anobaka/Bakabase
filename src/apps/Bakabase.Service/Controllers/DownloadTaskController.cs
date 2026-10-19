@@ -204,6 +204,12 @@ public class DownloadTaskController : Controller
     public Task<BaseResponse> DirectDownload(int id, [FromBody] DownloadTaskDirectDownloadRequestModel model) =>
         _service.DirectDownload(id, model.ActionOnConflict);
 
+    [HttpPost("{id}/bt-download")]
+    [RemoteAccessible]
+    [SwaggerOperation(OperationId = "BtDownloadTask")]
+    public Task<BaseResponse> BtDownload(int id, [FromBody] DownloadTaskBtDownloadRequestModel model) =>
+        _service.BtDownload(id, model.ActionOnConflict);
+
     [HttpDelete("download")]
     [SwaggerOperation(OperationId = "StopDownloadTasks")]
     public async Task<BaseResponse> StopAll([FromBody] int[] ids)

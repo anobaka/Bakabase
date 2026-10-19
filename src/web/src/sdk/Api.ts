@@ -2520,6 +2520,11 @@ export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsMode
   options?: string;
 }
 
+export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsInputDownloadTaskBtDownloadRequestModel {
+  /** [0: NotSet, 1: StopOthers, 2: Ignore] */
+  actionOnConflict: BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsConstantsDownloadTaskActionOnConflict;
+}
+
 export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsInputDownloadTaskDeleteInputModel {
   ids?: number[];
   /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb] */
@@ -22805,6 +22810,27 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/download-task/${id}/direct-download`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DownloadTask
+     * @name BtDownloadTask
+     * @request POST:/download-task/{id}/bt-download
+     */
+    btDownloadTask: (
+      id: number,
+      data: BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsInputDownloadTaskBtDownloadRequestModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/download-task/${id}/bt-download`,
         method: "POST",
         body: data,
         type: ContentType.Json,

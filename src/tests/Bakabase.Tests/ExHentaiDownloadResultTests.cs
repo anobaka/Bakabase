@@ -46,8 +46,7 @@ public sealed partial class ExHentaiDownloadResultTests
         _results = new DownloadResultService(_db, () => Path.Combine(_root, "appdata"));
         var payload = Path.Combine(_root, "fixture.txt");
         await File.WriteAllTextAsync(payload, "Test gallery content.");
-        _metadata = (await new TorrentCreator(TorrentType.V1Only) {PieceLength = 16384}
-            .CreateAsync(new TorrentFileSource(payload))).Encode();
+        _metadata = await TorrentFixture.FromPathAsync(payload);
     }
 
     [TestCleanup]

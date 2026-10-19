@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 
-import { NumberInput, Select } from "@/components/bakaui";
+import { NumberInput } from "@/components/bakaui";
+import ProxySelector, { ProxyMode } from "@/components/ProxySelector";
 import NavigateButton from "@/components/NavigateButton";
 import useAutoSaveToast from "@/components/ThirdPartyConfig/base/useAutoSaveToast";
 import BApi from "@/sdk/BApi";
@@ -11,43 +12,29 @@ export default function BtSettingsPanel() {
   const options = useNetworkOptionsStore((s) => s.data);
   const save = useAutoSaveToast(BApi.options.patchNetworkOptions);
   const proxy = options?.btProxy;
-  const savedProxies = options?.customProxies?.filter((p) => isSupportedBtProxy(p.address)) ?? [];
-  const selected =
-    proxy?.mode == null || proxy.mode === 0
-      ? "direct"
-      : proxy.mode === 2
-        ? (proxy.customProxyId ?? "missing")
-        : "missing";
-  const choices = [
-    { value: "direct", label: t("bt.settings.proxy.direct") },
-    ...savedProxies.map((p) => ({ value: p.id!, label: p.name || p.address || p.id! })),
-  ];
-  const unavailable = selected !== "direct" && !savedProxies.some((p) => p.id === selected);
-
-  if (unavailable) choices.push({ value: selected, label: t("bt.settings.proxy.unavailable") });
+  const unavailable =
+    proxy?.mode === ProxyMode.UseCustom &&
+    !(options?.customProxies ?? []).some(
+      (saved) => saved.id === proxy.customProxyId && isSupportedBtProxy(saved.address),
+    );
 
   return (
     <div className="space-y-4 rounded-xl border border-default-200 p-4">
-      <Select
-        disallowEmptySelection
-        dataSource={choices}
+      <ProxySelector
+        value={proxy}
+        customProxies={options?.customProxies}
         label={t("bt.settings.proxy.label")}
         description={t("bt.settings.proxy.description")}
-        selectedKeys={[selected]}
-        onSelectionChange={(keys) => {
-          const key = Array.from(keys)[0];
-          if (key == null || key === "missing") return;
-          save({
-            btProxy: key === "direct" ? { mode: 0 } : { mode: 2, customProxyId: String(key) },
-          });
-        }}
+        isCustomProxySupported={(saved) => isSupportedBtProxy(saved.address)}
+        unsupportedDescription={t("bt.settings.proxy.unsupported")}
+        onChange={(value) => value && save({ btProxy: value })}
       />
       {unavailable && (
         <p className="text-sm text-danger" role="alert">
           {t("bt.settings.proxy.unavailableDescription")}
         </p>
       )}
-      {selected !== "direct" && (
+      {proxy?.mode != null && proxy.mode !== ProxyMode.DoNotUse && (
         <p className="text-xs text-warning-600">{t("bt.settings.proxy.udpDisabled")}</p>
       )}
       <NavigateButton to="/configuration">{t("bt.settings.proxy.manage")}</NavigateButton>
@@ -71,13 +58,12 @@ function isSupportedBtProxy(address?: string | null): boolean {
   try {
     const url = new URL(address ?? "");
     return (
-      url.protocol === "socks5:" &&
+      ["http:", "socks5:"].includes(url.protocol) &&
       !!url.hostname &&
-      !!url.port &&
       !url.username &&
       !url.password &&
-      Number(url.port) > 0 &&
-      Number(url.port) <= 65535
+      Number(url.port || (url.protocol === "http:" ? "80" : "0")) > 0 &&
+      Number(url.port || (url.protocol === "http:" ? "80" : "0")) <= 65535
     );
   } catch {
     return false;

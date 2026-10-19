@@ -49,7 +49,7 @@ public sealed class TorrentNetworkTests
             destination = await Handshake(stream, "test-user", "test-secret");
             await WriteHttpResponse(stream);
         });
-        var network = new TorrentNetwork(new TorrentNetworkOptions
+        using var network = new TorrentNetwork(new TorrentNetworkOptions
         {
             ProxyUri = new Uri($"socks5://127.0.0.1:{((IPEndPoint)proxy.LocalEndpoint).Port}"),
             Credentials = new NetworkCredential("test-user", "test-secret")
@@ -73,7 +73,7 @@ public sealed class TorrentNetworkTests
             destination = await Handshake(connection.GetStream());
             await connection.GetStream().WriteAsync("hello"u8.ToArray());
         });
-        var network = new TorrentNetwork(new TorrentNetworkOptions
+        using var network = new TorrentNetwork(new TorrentNetworkOptions
         {
             ProxyUri = new Uri($"socks5://127.0.0.1:{((IPEndPoint)proxy.LocalEndpoint).Port}")
         });
@@ -109,7 +109,7 @@ public sealed class TorrentNetworkTests
             using var connection = await proxy.AcceptTcpClientAsync();
             await Handshake(connection.GetStream(), rejectConnect: true);
         });
-        var network = new TorrentNetwork(new TorrentNetworkOptions
+        using var network = new TorrentNetwork(new TorrentNetworkOptions
         {
             ProxyUri = new Uri($"socks5://127.0.0.1:{((IPEndPoint)proxy.LocalEndpoint).Port}")
         });
@@ -123,12 +123,12 @@ public sealed class TorrentNetworkTests
     [TestMethod]
     public void AnUnsupportedOrCredentialBearingProxyFailsBeforeAnyConnection()
     {
-        foreach (var proxy in new[] {"http://127.0.0.1:8080", "socks5://user:secret@127.0.0.1:1080"})
-        {
-            var error = Assert.ThrowsException<ArgumentException>(() =>
-                new TorrentNetwork(new TorrentNetworkOptions {ProxyUri = new Uri(proxy)}));
-            Assert.IsFalse(error.Message.Contains("secret"));
-        }
+        var unsupported = Assert.ThrowsException<NotSupportedException>(() =>
+            new TorrentNetwork(new TorrentNetworkOptions {ProxyUri = new Uri("socks4://127.0.0.1:1080")}));
+        StringAssert.Contains(unsupported.Message, "unsupported");
+        var credentials = Assert.ThrowsException<ArgumentException>(() =>
+            new TorrentNetwork(new TorrentNetworkOptions {ProxyUri = new Uri("socks5://user:secret@127.0.0.1:1080")}));
+        Assert.IsFalse(credentials.Message.Contains("secret"));
     }
 
     private static async Task<string> Handshake(NetworkStream stream, string? user = null, string? password = null,

@@ -78,12 +78,12 @@ public sealed class BuiltInTorrentDownloader : ITorrentDownloader
             throw new ArgumentException("Exactly one torrent source is required.", nameof(request));
         if (string.IsNullOrWhiteSpace(request.WorkingDirectory))
             throw new ArgumentException("A download directory is required.", nameof(request));
-        var network = new TorrentNetwork(_networkOptions?.GetOptions() ?? new TorrentNetworkOptions());
+        using var network = new TorrentNetwork(_networkOptions?.GetOptions() ?? new TorrentNetworkOptions());
         MagnetLink? magnet = null;
         Torrent? torrent = request.Metadata != null ? TorrentMetadata.Parse(request.Metadata) : null;
         if (request.MagnetUri != null && !MagnetLink.TryParse(request.MagnetUri, out magnet))
             throw new ArgumentException("The magnet link does not contain a valid BitTorrent info hash.", nameof(request));
-        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(ct, network.RoutingFailureToken);
         deadline.CancelAfter(request.Timeout);
         try
         {
@@ -104,6 +104,10 @@ public sealed class BuiltInTorrentDownloader : ITorrentDownloader
             }
             return await TransferAsync(magnet, torrent, request.WorkingDirectory, request.UseWorkingDirectoryAsDestination,
                 network, progress, deadline.Token);
+        }
+        catch (Exception) when (!ct.IsCancellationRequested && network.ConfigurationError is { })
+        {
+            throw new IOException(network.ConfigurationError.Message, network.ConfigurationError);
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested && deadline.IsCancellationRequested)
         {

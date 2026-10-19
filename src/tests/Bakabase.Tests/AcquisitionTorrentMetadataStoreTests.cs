@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Bakabase.Service.Components.Acquisition.Downloads;
-using MonoTorrent;
 using MonoTorrent.BEncoding;
 
 namespace Bakabase.Tests;
@@ -25,8 +24,7 @@ public sealed class AcquisitionTorrentMetadataStoreTests
         Directory.CreateDirectory(Path.Combine(files, "nested"));
         await File.WriteAllTextAsync(Path.Combine(files, "one.txt"), "one");
         await File.WriteAllTextAsync(Path.Combine(files, "nested", "two.txt"), "two");
-        _metadata = (await new TorrentCreator(TorrentType.V1Only) { PieceLength = 16 * 1024 }
-            .CreateAsync(new TorrentFileSource(files))).Encode();
+        _metadata = await TorrentFixture.FromPathAsync(files);
     }
 
     [TestCleanup]

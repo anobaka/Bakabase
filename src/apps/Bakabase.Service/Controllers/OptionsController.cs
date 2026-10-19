@@ -1101,17 +1101,17 @@ namespace Bakabase.Service.Controllers
                 return BaseResponseBuilder.BuildBadRequest("BT download concurrency must be between 1 and 20.");
             var savedNetwork = _bakabaseOptionsManager.Get<NetworkOptions>().Value;
             var btProxy = model.BtProxy ?? savedNetwork.BtProxy ?? new NetworkOptions.ProxyModel();
-            if (btProxy.Mode is not (NetworkOptions.ProxyMode.DoNotUse or NetworkOptions.ProxyMode.UseCustom))
-                return BaseResponseBuilder.BuildBadRequest("BT downloads support direct access or a saved SOCKS5 proxy.");
+            if (btProxy.Mode is not (NetworkOptions.ProxyMode.DoNotUse or NetworkOptions.ProxyMode.UseSystem or NetworkOptions.ProxyMode.UseCustom))
+                return BaseResponseBuilder.BuildBadRequest("The BT proxy mode is invalid.");
             if (btProxy.Mode == NetworkOptions.ProxyMode.UseCustom)
             {
                 var address = model.CustomProxies != null
                     ? model.CustomProxies.FirstOrDefault(p => p.Id == btProxy.CustomProxyId)?.Address
                     : savedNetwork.CustomProxies?.FirstOrDefault(p => p.Id == btProxy.CustomProxyId)?.Address;
-                if (!Uri.TryCreate(address, UriKind.Absolute, out var proxyUri) || proxyUri.Scheme != "socks5" ||
+                if (!Uri.TryCreate(address, UriKind.Absolute, out var proxyUri) || proxyUri.Scheme is not ("http" or "socks5") ||
                     string.IsNullOrWhiteSpace(proxyUri.Host) || proxyUri.Port is < 1 or > 65535 ||
                     !string.IsNullOrEmpty(proxyUri.UserInfo))
-                    return BaseResponseBuilder.BuildBadRequest("Choose an existing SOCKS5 proxy with a host and port for BT downloads.");
+                    return BaseResponseBuilder.BuildBadRequest("Choose an existing HTTP CONNECT or SOCKS5 proxy with a host and port for BT downloads.");
             }
             await _bakabaseOptionsManager.Get<NetworkOptions>().SaveAsync(options =>
             {

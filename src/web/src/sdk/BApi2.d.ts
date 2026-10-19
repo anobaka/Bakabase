@@ -3834,6 +3834,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/download-task/{id}/bt-download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["BtDownloadTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/download-task/checkpoint": {
         parameters: {
             query?: never;
@@ -12500,6 +12516,9 @@ export interface components {
             downloadPath?: string;
             isDuplicateAllowed: boolean;
             options?: string;
+        };
+        "Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Input.DownloadTaskBtDownloadRequestModel": {
+            actionOnConflict: components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants.DownloadTaskActionOnConflict"];
         };
         "Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Input.DownloadTaskDeleteInputModel": {
             ids?: number[];
@@ -27328,6 +27347,37 @@ export interface operations {
                 "application/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Input.DownloadTaskDirectDownloadRequestModel"];
                 "text/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Input.DownloadTaskDirectDownloadRequestModel"];
                 "application/*+json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Input.DownloadTaskDirectDownloadRequestModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    BtDownloadTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Input.DownloadTaskBtDownloadRequestModel"];
+                "application/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Input.DownloadTaskBtDownloadRequestModel"];
+                "text/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Input.DownloadTaskBtDownloadRequestModel"];
+                "application/*+json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Input.DownloadTaskBtDownloadRequestModel"];
             };
         };
         responses: {
