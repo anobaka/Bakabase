@@ -14,6 +14,7 @@ import {
   AiOutlineDown,
   AiOutlineEdit,
   AiOutlineEllipsis,
+  AiOutlineFile,
   AiOutlineFolderOpen,
   AiOutlineInfoCircle,
   AiOutlinePlayCircle,
@@ -28,7 +29,13 @@ import { useEstimatedRemainingLabel } from "./EstimatedRemainingTime";
 import TaskLinkCopyButton from "./TaskLinkCopyButton";
 
 import { humanFileSize } from "@/components/utils";
-import { DownloadTaskAction, DownloadTaskStatus, ThirdPartyId } from "@/sdk/constants";
+import {
+  DownloadTaskAction,
+  DownloadTaskStatus,
+  ExHentaiDownloadMode,
+  ThirdPartyId,
+} from "@/sdk/constants";
+import { parseExHentaiDownloadOptions, resolveExHentaiDownloadMode } from "../exHentaiDownloadMode";
 import {
   Button,
   Chip,
@@ -65,6 +72,7 @@ export type TaskRowProps = {
   onStart: (id: number) => void;
   onDownloadDirectly: (id: number) => Promise<void>;
   onDownloadWithBt: (id: number) => Promise<void>;
+  onDownloadTorrentFile: (id: number) => Promise<void>;
   onStop: (id: number) => void;
   onEdit: (id: number) => void;
   onOpenFolder: (task: DownloadTask) => void;
@@ -97,6 +105,7 @@ const TaskRow = memo(function TaskRow({
   onStart,
   onDownloadDirectly,
   onDownloadWithBt,
+  onDownloadTorrentFile,
   onStop,
   onEdit,
   onOpenFolder,
@@ -226,6 +235,7 @@ const TaskRow = memo(function TaskRow({
               task={task}
               onDownloadDirectly={onDownloadDirectly}
               onDownloadWithBt={onDownloadWithBt}
+              onDownloadTorrentFile={onDownloadTorrentFile}
             />
           </div>
           <div className="flex min-w-0 items-center gap-1 text-xs leading-4 text-default-400">
@@ -527,24 +537,30 @@ const TaskRow = memo(function TaskRow({
  * few hundred images. These used to be text chips at the end of the row; most galleries have no
  * torrent, so a column of "No torrent" chips became the loudest thing in the list. An icon next to
  * the name keeps the fact visible where the eye already is, and the tooltip still carries the
- * detail. Every ExHentai task also offers its direct-image download action from this icon.
+ * detail. The icon also offers the other acquisition modes for an ExHentai task.
  */
 const TorrentIndicator = ({
   task,
   formatDateTime,
   onDownloadDirectly,
   onDownloadWithBt,
+  onDownloadTorrentFile,
 }: {
   task: DownloadTask;
   formatDateTime: (value?: string | Date | null) => string;
   onDownloadDirectly: (id: number) => Promise<void>;
   onDownloadWithBt: (id: number) => Promise<void>;
+  onDownloadTorrentFile: (id: number) => Promise<void>;
 }) => {
   const { t } = useTranslation();
   const [pending, setPending] = useState(false);
   const [tooltipOpen, setTooltipOpen] = useState(false);
   const pendingRef = useRef(false);
   const metadata = task.metadata ?? {};
+  const currentMode = resolveExHentaiDownloadMode({
+    ...metadata,
+    ...parseExHentaiDownloadOptions(task.options),
+  });
 
   if (task.thirdPartyId !== ThirdPartyId.ExHentai) {
     return null;
@@ -588,13 +604,36 @@ const TorrentIndicator = ({
   }
 
   const { Icon, className, label, tip } = indicator;
-  const download = async (mode: "direct" | "bt") => {
+  const actions = [
+    {
+      key: "direct-download",
+      mode: ExHentaiDownloadMode.Direct,
+      label: "directDownload",
+      Icon: AiOutlineDownload,
+      run: onDownloadDirectly,
+    },
+    {
+      key: "bt-download",
+      mode: ExHentaiDownloadMode.Torrent,
+      label: "btDownload",
+      Icon: TbMagnet,
+      run: onDownloadWithBt,
+    },
+    {
+      key: "torrent-file-download",
+      mode: ExHentaiDownloadMode.TorrentFile,
+      label: "torrentFileDownload",
+      Icon: AiOutlineFile,
+      run: onDownloadTorrentFile,
+    },
+  ].filter((action) => action.mode !== currentMode);
+  const download = async (action: (typeof actions)[number]) => {
     if (pendingRef.current) return;
 
     pendingRef.current = true;
     setPending(true);
     try {
-      await (mode === "bt" ? onDownloadWithBt : onDownloadDirectly)(task.id);
+      await action.run(task.id);
     } catch (error) {
       const message =
         error instanceof Error
@@ -606,14 +645,7 @@ const TorrentIndicator = ({
             ? error.message
             : undefined;
 
-      toast.danger(
-        message ||
-          t<string>(
-            mode === "bt"
-              ? "downloader.toast.btDownloadFailed"
-              : "downloader.toast.directDownloadFailed",
-          ),
-      );
+      toast.danger(message || t<string>(`downloader.toast.${action.label}Failed`));
     } finally {
       pendingRef.current = false;
       setPending(false);
@@ -651,26 +683,21 @@ const TorrentIndicator = ({
             </DropdownTrigger>
             <DropdownMenu
               aria-label={t<string>("downloader.action.torrentActions")}
-              disabledKeys={pending ? ["direct-download", "bt-download"] : []}
+              disabledKeys={pending ? actions.map((action) => action.key) : []}
               onAction={(key) => {
-                if (key === "direct-download") void download("direct");
-                if (key === "bt-download") void download("bt");
+                const action = actions.find((action) => action.key === key);
+                if (action) void download(action);
               }}
             >
-              <DropdownItem
-                key="direct-download"
-                description={t<string>("downloader.tip.directDownload")}
-                startContent={<AiOutlineDownload aria-hidden className="text-lg" />}
-              >
-                {t<string>("downloader.action.directDownload")}
-              </DropdownItem>
-              <DropdownItem
-                key="bt-download"
-                description={t<string>("downloader.tip.btDownload")}
-                startContent={<TbMagnet aria-hidden className="text-lg" />}
-              >
-                {t<string>("downloader.action.btDownload")}
-              </DropdownItem>
+              {actions.map(({ key, label, Icon }) => (
+                <DropdownItem
+                  key={key}
+                  description={t<string>(`downloader.tip.${label}`)}
+                  startContent={<Icon aria-hidden className="text-lg" />}
+                >
+                  {t<string>(`downloader.action.${label}`)}
+                </DropdownItem>
+              ))}
             </DropdownMenu>
           </Dropdown>
         </span>

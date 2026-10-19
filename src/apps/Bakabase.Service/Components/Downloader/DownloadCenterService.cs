@@ -82,13 +82,14 @@ public sealed class DownloadCenterService(BakabaseDbContext db, DownloadTaskServ
                 }
             });
         }
-        bool CanResume(int? sourceId, int? resultId, int? workflowRunId, string sourceKind)
+        bool CanResume(int? sourceId, int? resultId, int? workflowRunId, string sourceKind, bool isBt = false)
         {
             if (workflowRunId != null || sourceKind == "workflow") return false;
             if (sourceKind == "manual" && sourceId == null && resultId == null) return true;
             return resultId is { } id && resultRows.TryGetValue(id, out var result) && latestResults.Contains(id) &&
                 sourceRows.TryGetValue(result.DownloadTaskId, out var source) && !owners.ContainsKey(source.Id) &&
-                source.Status != DownloadTaskDbModelStatus.Disabled && DownloadTaskExecutionLifecycle.CanContinue(source, result);
+                source.Status != DownloadTaskDbModelStatus.Disabled &&
+                DownloadTaskExecutionLifecycle.CanContinue(source, result, independentBt: isBt);
         }
         foreach (var job in btJobs)
         {
@@ -104,7 +105,7 @@ public sealed class DownloadCenterService(BakabaseDbContext db, DownloadTaskServ
                 OriginKind = job.SourceKind, OriginId = job.SourceId, WorkflowRunId = job.WorkflowRunId,
                 WorkflowDefinitionId = job.WorkflowDefinitionId, DownloadResultId = job.DownloadResultId,
                 AvailableActions = TransferActions(job.CanStop, job.CanResume, job.CanRetry, job.CanDelete,
-                    CanResume(sourceId, job.DownloadResultId, job.WorkflowRunId, job.SourceKind))
+                    CanResume(sourceId, job.DownloadResultId, job.WorkflowRunId, job.SourceKind, isBt: true))
             });
         }
         foreach (var job in httpJobs)
@@ -310,7 +311,7 @@ public sealed class DownloadCenterService(BakabaseDbContext db, DownloadTaskServ
             ? await db.DownloadResults.AsNoTracking().SingleOrDefaultAsync(r => r.Id == resultId, ct) : null;
         var source = result == null ? null : await db.DownloadTasks.AsNoTracking().SingleOrDefaultAsync(s => s.Id == result.DownloadTaskId, ct);
         if (result == null || source == null || source.Status == DownloadTaskDbModelStatus.Disabled ||
-            !DownloadTaskExecutionLifecycle.CanContinue(source, result) ||
+            !DownloadTaskExecutionLifecycle.CanContinue(source, result, independentBt: task.Provider == "bt") ||
             await db.DownloadResultOwners.AnyAsync(o => o.DownloadTaskId == source.Id, ct) ||
             await db.DownloadResults.AnyAsync(r => r.DownloadTaskId == source.Id && r.SourceKey == result.SourceKey && r.Id > result.Id, ct))
             throw new InvalidOperationException("The source is stopped, removed, or no longer owns this download. Continue the source task first.");

@@ -210,6 +210,12 @@ public class DownloadTaskController : Controller
     public Task<BaseResponse> BtDownload(int id, [FromBody] DownloadTaskBtDownloadRequestModel model) =>
         _service.BtDownload(id, model.ActionOnConflict);
 
+    [HttpPost("{id}/torrent-file-download")]
+    [RemoteAccessible]
+    [SwaggerOperation(OperationId = "TorrentFileDownloadTask")]
+    public Task<BaseResponse> TorrentFileDownload(int id, [FromBody] DownloadTaskTorrentFileDownloadRequestModel model) =>
+        _service.TorrentFileDownload(id, model.ActionOnConflict);
+
     [HttpDelete("download")]
     [SwaggerOperation(OperationId = "StopDownloadTasks")]
     public async Task<BaseResponse> StopAll([FromBody] int[] ids)

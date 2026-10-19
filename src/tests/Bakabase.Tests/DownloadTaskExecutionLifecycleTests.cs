@@ -119,6 +119,81 @@ public sealed class DownloadTaskExecutionLifecycleTests
     }
 
     [TestMethod]
+    public async Task SwitchingBtToMetadataOnlyStopsItsJobAndDoesNotResumeItOrDeleteItsPieces()
+    {
+        await using var scope = _services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<BakabaseDbContext>();
+        var task = NewTask("switch-to-metadata");
+        db.DownloadTasks.Add(task);
+        await db.SaveChangesAsync();
+        var result = NewResult(task.Id, "gallery");
+        result.WorkflowDefinitionId = 123;
+        db.DownloadResults.Add(result);
+        await db.SaveChangesAsync();
+        var job = await Queue(result);
+        Directory.CreateDirectory(job.OutputDirectory);
+        var partial = Path.Combine(job.OutputDirectory, "existing.bin");
+        await File.WriteAllTextAsync(partial, "keep");
+
+        await Lifecycle().OnStoppedAsync([task.Id]);
+        Assert.AreEqual(BtDownloadStatus.Stopped, (await _downloads.GetAsync(job.Id))!.Status);
+        task.Options = "{\"downloadMode\":3,\"fallbackToDirect\":false}";
+        result.RequiresContentsDownload = false;
+        await db.SaveChangesAsync();
+        Assert.IsTrue(DownloadTaskExecutionLifecycle.CanContinue(task, result),
+            "Configured result processing remains possible; it must not resume the former independent BT job.");
+
+        await Lifecycle().OnStartedAsync([task.Id]);
+
+        var retained = (await _downloads.ListAsync()).Single();
+        Assert.AreEqual(job.Id, retained.Id);
+        Assert.AreEqual(job.OutputDirectory, retained.OutputDirectory);
+        Assert.AreEqual(BtDownloadStatus.Stopped, retained.Status);
+        Assert.AreEqual("keep", await File.ReadAllTextAsync(partial));
+
+        // The source starts its producer asynchronously. Restore the BT route before that producer
+        // has changed this same result back to RequiresContentsDownload=true.
+        task.Options = "{\"downloadMode\":2,\"fallbackToDirect\":false}";
+        await db.SaveChangesAsync();
+        await Lifecycle().OnStartedAsync([task.Id]);
+        Assert.IsTrue((await _downloads.GetAsync(job.Id))!.Status is BtDownloadStatus.Queued or BtDownloadStatus.Running);
+        Assert.IsFalse((await db.DownloadResults.AsNoTracking().SingleAsync(r => r.Id == result.Id)).RequiresContentsDownload);
+        Assert.AreEqual("keep", await File.ReadAllTextAsync(partial));
+    }
+
+    [TestMethod]
+    public async Task MetadataOnlyStartDoesNotRetryTheFormerImageResultWorkflow()
+    {
+        await using var scope = _services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<BakabaseDbContext>();
+        var source = NewTask("former-images");
+        source.Options = "{\"preferTorrent\":true}";
+        var definition = new WorkflowDefinitionDbModel {Name = "image workflow", TriggerKind = DownloadResultWorkflow.Trigger};
+        db.DownloadTasks.Add(source);
+        db.Set<WorkflowDefinitionDbModel>().Add(definition);
+        await db.SaveChangesAsync();
+        var result = NewResult(source.Id, "gallery");
+        result.Kind = DownloadResultKind.LocalFiles;
+        result.RequiresContentsDownload = false;
+        result.WorkflowDefinitionId = definition.Id;
+        var run = new WorkflowRunDbModel
+        {WorkflowDefinitionId = definition.Id, Status = WorkflowRunStatus.Cancelled, StartedAt = DateTime.Now};
+        db.DownloadResults.Add(result);
+        db.Set<WorkflowRunDbModel>().Add(run);
+        await db.SaveChangesAsync();
+        db.DownloadResultProcessing.Add(new DownloadResultProcessingDbModel
+        {DownloadResultId = result.Id, WorkflowRunId = run.Id});
+        await db.SaveChangesAsync();
+
+        await Lifecycle().OnStartedAsync([source.Id]);
+
+        Assert.AreEqual(1, await db.Set<WorkflowRunDbModel>().CountAsync());
+        Assert.AreEqual(WorkflowRunStatus.Cancelled,
+            (await db.Set<WorkflowRunDbModel>().AsNoTracking().SingleAsync()).Status);
+        Assert.IsNull((await db.DownloadResultProcessing.AsNoTracking().SingleAsync()).DispatchError);
+    }
+
+    [TestMethod]
     public async Task ParentStartHonorsAnExplicitlyStoppedChildAcrossRestart()
     {
         await using var scope = _services.CreateAsyncScope();
@@ -159,6 +234,9 @@ public sealed class DownloadTaskExecutionLifecycleTests
         Assert.IsFalse(DownloadTaskExecutionLifecycle.CanContinue(task, result));
         result.Kind = DownloadResultKind.LocalFiles;
         Assert.IsTrue(DownloadTaskExecutionLifecycle.CanContinue(task, result));
+        task.Options = "{\"downloadMode\":3}";
+        Assert.IsFalse(DownloadTaskExecutionLifecycle.CanContinue(task, result),
+            "An old image result must not resume processing after selecting seed-only output.");
     }
 
     [TestMethod]

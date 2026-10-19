@@ -10,6 +10,63 @@ namespace Bakabase.Tests;
 public sealed partial class DownloadTaskDirectDownloadTests
 {
     [TestMethod]
+    [DataRow(ExHentaiDownloadTaskType.SingleWork)]
+    [DataRow(ExHentaiDownloadTaskType.List)]
+    [DataRow(ExHentaiDownloadTaskType.Watched)]
+    public async Task TorrentFileShortcut_PreservesTaskIdentityAndDisablesPaidFallback(ExHentaiDownloadTaskType type)
+    {
+        var id = await AddTask(type);
+        await _service.UpdateByKey(id, task => task.Options = """
+            {"DownloadMode":2,"FallbackToDirect":true,"NoTorrentCheckedAt":"2026-10-19T00:00:00Z",
+             "downloadResultWorkflowId":19,"futureOption":{"keep":7}}
+            """);
+        var before = await _service.GetDto(id);
+        await _manager.Start(before, false);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _factory.Downloader.Drain = release.Task;
+        var action = _service.TorrentFileDownload(id);
+        await _factory.Downloader.Draining.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.IsFalse(action.IsCompleted);
+        Assert.AreEqual(before.Options, (await _service.GetDto(id)).Options);
+        release.SetResult();
+        Assert.AreEqual((int)ResponseCode.Success, (await action.WaitAsync(TimeSpan.FromSeconds(5))).Code);
+        var after = await _service.GetDto(id);
+        Assert.AreEqual(before.Id, after.Id);
+        Assert.AreEqual(before.DownloadPath, after.DownloadPath);
+        Assert.AreEqual(before.Key, after.Key);
+        Assert.AreEqual(type == ExHentaiDownloadTaskType.SingleWork ? before.Checkpoint : null, after.Checkpoint);
+        var options = after.GetTypedOptions<ExHentaiTaskOptions>();
+        Assert.AreEqual(ExHentaiDownloadMode.TorrentFile, options.EffectiveDownloadMode);
+        Assert.IsTrue(options.PreferTorrent);
+        Assert.IsFalse(options.FallbackToDirect);
+        Assert.IsNull(options.NoTorrentCheckedAt);
+        Assert.AreEqual(19, options.DownloadResultWorkflowId);
+        using var json = JsonDocument.Parse(after.Options!);
+        Assert.AreEqual(7, json.RootElement.GetProperty("futureOption").GetProperty("keep").GetInt32());
+        Assert.AreEqual(2, _factory.Downloader.StartedOptions.Count);
+    }
+
+    [TestMethod]
+    public async Task TorrentFileShortcut_RejectsOwnedSourcesAndKeepsConflictPolicy()
+    {
+        var occupied = await AddTask();
+        var target = await AddTask(status: DownloadTaskStatus.Failed);
+        await _manager.Start(await _service.GetDto(occupied), false);
+        Assert.AreEqual((int)ResponseCode.Conflict, (await _service.TorrentFileDownload(target)).Code);
+        Assert.AreEqual(DownloaderStatus.Downloading, _manager[occupied]!.Status);
+        Assert.AreEqual((int)ResponseCode.Success,
+            (await _service.TorrentFileDownload(target, DownloadTaskActionOnConflict.StopOthers)).Code);
+        Assert.AreEqual(DownloaderStatus.Stopped, _manager[occupied]!.Status);
+        _db.DownloadResultOwners.Add(new DownloadResultOwnerDbModel
+            {DownloadTaskId = target, AcquisitionTaskId = 1, WorkflowRunId = 2, ResourceId = 3});
+        await _db.SaveChangesAsync();
+        var before = (await _service.GetDto(target)).Options;
+        Assert.AreEqual((int)ResponseCode.InvalidPayloadOrOperation, (await _service.TorrentFileDownload(target)).Code);
+        Assert.AreEqual(before, (await _service.GetDto(target)).Options);
+        Assert.AreEqual(DownloaderStatus.Downloading, _manager[target]!.Status);
+    }
+
+    [TestMethod]
     [DataRow(false)]
     [DataRow(true)]
     public async Task DownloadModeShortcut_RejectsWorkflowOwnedSourcesWithoutStoppingOrMutating(bool bt)

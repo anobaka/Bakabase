@@ -167,6 +167,28 @@ public sealed class DownloadCenterTests
     }
 
     [TestMethod]
+    public async Task MetadataOnlySourceCannotResumeItsFormerIndependentBtThroughChildCommands()
+    {
+        var result = await NewResult();
+        var job = await Queue(result);
+        await _bt.StopAsync(job.Id);
+        await _db.DownloadTasks.Where(t => t.Id == result.DownloadTaskId)
+            .ExecuteUpdateAsync(s => s.SetProperty(t => t.Options, "{\"downloadMode\":3}"));
+        result.RequiresContentsDownload = false;
+        result.WorkflowDefinitionId = 123;
+        await _db.SaveChangesAsync();
+
+        var child = await _center.GetAsync($"bt:{job.Id}");
+
+        Assert.IsFalse(child!.AvailableActions.Contains("start"));
+        Assert.IsFalse(child.AvailableActions.Contains("retry"));
+        await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => _center.ExecuteAsync(child.Id, "start"));
+        Assert.AreEqual(BtDownloadStatus.Stopped, (await _bt.GetAsync(job.Id))!.Status);
+        Assert.AreEqual(job.OutputDirectory, child.OutputDirectory);
+        Assert.AreEqual($"site:{result.DownloadTaskId}", child.ParentId);
+    }
+
+    [TestMethod]
     public async Task WorkflowOwnedTransfersStopTheirRunAndCannotBypassWorkflowContinuation()
     {
         var definition = new WorkflowDefinitionDbModel { Name = "Owner", TriggerKind = "manual" };

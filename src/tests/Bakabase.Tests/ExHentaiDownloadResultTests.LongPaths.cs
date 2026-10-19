@@ -78,7 +78,7 @@ public sealed partial class ExHentaiDownloadResultTests
         var handler = new GalleryHandler {GalleryName = "Gallery", PageTitle = title};
         using var producer = await BuildProducer(handler, "{RawName}/{PageTitle}{Extension}");
         await RunProducer(producer, "https://exhentai.org/g/12345/abcdef0123/", _ => Task.CompletedTask,
-            resultWorkflowId: null);
+            preferTorrent: false, resultWorkflowId: null);
 
         var expected = Path.Combine(_root, "Gallery", title);
         CollectionAssert.AreEqual(handler.GetImageBytes(), await File.ReadAllBytesAsync(expected));

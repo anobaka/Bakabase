@@ -42,4 +42,24 @@ describe("ExHentai acquisition settings", () => {
       ),
     ).toEqual({ downloadMode: 2, fallbackToDirect: false, saveTorrentFile: true });
   });
+
+  it("normalizes legacy known field casing while retaining unrelated settings", () => {
+    const options = parseExHentaiDownloadOptions(
+      '{"DownloadMode":2,"SaveTorrentFile":true,"FallbackToDirect":false,"PreferTorrent":false,"CustomSetting":"keep"}',
+    );
+    expect(options).toEqual({
+      downloadMode: 2,
+      saveTorrentFile: true,
+      fallbackToDirect: false,
+      preferTorrent: false,
+      CustomSetting: "keep",
+    });
+    expect(resolveExHentaiDownloadMode(options)).toBe(ExHentaiDownloadMode.Torrent);
+  });
+
+  it("uses the final case-insensitive value just like the server", () => {
+    expect(parseExHentaiDownloadOptions('{"downloadMode":3,"DOWNLOADMODE":2}')).toEqual({
+      downloadMode: 2,
+    });
+  });
 });

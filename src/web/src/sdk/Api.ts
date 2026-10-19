@@ -2555,6 +2555,11 @@ export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsMode
   actionOnConflict: BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsConstantsDownloadTaskActionOnConflict;
 }
 
+export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsInputDownloadTaskTorrentFileDownloadRequestModel {
+  /** [0: NotSet, 1: StopOthers, 2: Ignore] */
+  actionOnConflict: BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsConstantsDownloadTaskActionOnConflict;
+}
+
 /**
  * [1: Direct, 2: Torrent, 3: TorrentFile]
  * @format int32
@@ -22831,6 +22836,27 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/download-task/${id}/bt-download`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DownloadTask
+     * @name TorrentFileDownloadTask
+     * @request POST:/download-task/{id}/torrent-file-download
+     */
+    torrentFileDownloadTask: (
+      id: number,
+      data: BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsInputDownloadTaskTorrentFileDownloadRequestModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/download-task/${id}/torrent-file-download`,
         method: "POST",
         body: data,
         type: ContentType.Json,

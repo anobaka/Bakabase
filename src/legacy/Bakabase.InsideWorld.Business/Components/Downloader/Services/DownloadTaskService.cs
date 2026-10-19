@@ -877,6 +877,11 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
             DownloadTaskActionOnConflict actionOnConflict = DownloadTaskActionOnConflict.NotSet) =>
             ChangeExHentaiDownloadModeAndStart(id, ExHentaiDownloadMode.Torrent, actionOnConflict);
 
+        /// <summary>Exports torrent metadata using the same task, without continuing an independent BT transfer.</summary>
+        public Task<BaseResponse> TorrentFileDownload(int id,
+            DownloadTaskActionOnConflict actionOnConflict = DownloadTaskActionOnConflict.NotSet) =>
+            ChangeExHentaiDownloadModeAndStart(id, ExHentaiDownloadMode.TorrentFile, actionOnConflict);
+
         private Task<BaseResponse> ChangeExHentaiDownloadModeAndStart(int id, ExHentaiDownloadMode mode,
             DownloadTaskActionOnConflict actionOnConflict) =>
             DownloaderManager.WithTaskActionLock(id, async () =>
@@ -919,7 +924,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
                 options = string.IsNullOrWhiteSpace(task.Options)
                     ? new JsonObject()
                     : JsonNode.Parse(task.Options) as JsonObject ?? options;
-                var replacedOptions = mode == ExHentaiDownloadMode.Torrent
+                var replacedOptions = mode != ExHentaiDownloadMode.Direct
                     ? new[] {"preferTorrent", "downloadMode", "fallbackToDirect", "noTorrentCheckedAt"}
                     : new[] {"preferTorrent", "downloadMode"};
                 foreach (var key in options.Select(x => x.Key).Where(x =>
@@ -927,7 +932,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
                     options.Remove(key);
                 options["preferTorrent"] = mode != ExHentaiDownloadMode.Direct;
                 options["downloadMode"] = (int)mode;
-                if (mode == ExHentaiDownloadMode.Torrent)
+                if (mode != ExHentaiDownloadMode.Direct)
                 {
                     // An explicit BT request probes again even after an old negative verdict,
                     // and never starts paid image requests when the gallery has no torrent.

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { DownloadTask } from "@/core/models/DownloadTask";
+import type { ExHentaiDownloadOptions } from "@/pages/downloader/exHentaiDownloadMode";
 
 import { HeroUIProvider } from "@heroui/react";
 import { fireEvent } from "@testing-library/react";
@@ -9,7 +10,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import TaskDetailModal from "..";
 
-import { DownloadTaskStatus, ExHentaiDownloadTaskType, ThirdPartyId } from "@/sdk/constants";
+import {
+  DownloadTaskStatus,
+  ExHentaiDownloadMode,
+  ExHentaiDownloadTaskType,
+  ThirdPartyId,
+} from "@/sdk/constants";
 
 const mocks = vi.hoisted(() => ({
   tasks: [] as DownloadTask[],
@@ -17,6 +23,8 @@ const mocks = vi.hoisted(() => ({
   getDefinitions: vi.fn(),
   getOptions: vi.fn(),
   dangerToast: vi.fn(),
+  defaults: {} as ExHentaiDownloadOptions,
+  modeOptions: vi.fn(),
 }));
 
 vi.mock("@/sdk/BApi", () => ({
@@ -43,7 +51,7 @@ vi.mock("@/stores/options", () => ({
   useDownloaderGlobalOptionsStore: (selector: (state: { data: object }) => unknown) =>
     selector({ data: {} }),
   useExHentaiOptionsStore: (selector: (state: { data: object }) => unknown) =>
-    selector({ data: {} }),
+    selector({ data: mocks.defaults }),
 }));
 vi.mock("@/components/ContextProvider/BakabaseContextProvider", () => ({
   useBakabaseContext: () => ({ createPortal: vi.fn() }),
@@ -72,7 +80,12 @@ vi.mock("../components/IntervalField", () => ({ default: () => null }));
 vi.mock("../components/CheckpointField", () => ({ default: () => null }));
 vi.mock("../components/AutoRetryField", () => ({ default: () => null }));
 vi.mock("../components/AllowDuplicateField", () => ({ default: () => null }));
-vi.mock("../components/ExHentaiDownloadModeField", () => ({ default: () => null }));
+vi.mock("../components/ExHentaiDownloadModeField", () => ({
+  default: ({ options }: { options: ExHentaiDownloadOptions }) => {
+    mocks.modeOptions(options);
+    return null;
+  },
+}));
 vi.mock("../components/DownloadResultsPanel", () => ({ default: () => null }));
 
 let root: Root;
@@ -92,6 +105,7 @@ async function show(id?: number) {
 
 beforeEach(() => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  mocks.defaults = {};
   mocks.tasks = [
     {
       id: 17,
@@ -203,6 +217,27 @@ describe("new download task defaults", () => {
     expect(container.querySelector('[aria-label="download-directory"]')).toHaveValue(
       "/nas-bakabase/Downloads/ExHentai",
     );
+  });
+
+  it("uses the ExHentai default BT combination for new tasks", async () => {
+    mocks.defaults = {
+      downloadMode: ExHentaiDownloadMode.Torrent,
+      saveTorrentFile: true,
+      fallbackToDirect: false,
+    };
+    await chooseTaskType();
+    expect(mocks.modeOptions).toHaveBeenLastCalledWith(mocks.defaults);
+  });
+
+  it("keeps an existing task's PascalCase BT preference ahead of current defaults", async () => {
+    mocks.defaults = { downloadMode: ExHentaiDownloadMode.Direct };
+    mocks.tasks[0].options = '{"DownloadMode":2,"SaveTorrentFile":true,"FallbackToDirect":false}';
+    await show(17);
+    expect(mocks.modeOptions).toHaveBeenLastCalledWith({
+      downloadMode: ExHentaiDownloadMode.Torrent,
+      saveTorrentFile: true,
+      fallbackToDirect: false,
+    });
   });
 
   it("keeps a task's manual directory when options finish loading", async () => {

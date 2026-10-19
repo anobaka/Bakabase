@@ -16,6 +16,20 @@ interface Props {
 export default function ExHentaiDownloadModeField({ options, onChange }: Props) {
   const { t } = useTranslation();
   const mode = resolveExHentaiDownloadMode(options);
+  const btRoute = mode !== ExHentaiDownloadMode.Direct;
+  const route = btRoute ? ExHentaiDownloadMode.Torrent : ExHentaiDownloadMode.Direct;
+  const createBtTask = mode === ExHentaiDownloadMode.Torrent;
+  const downloadTorrent = mode === ExHentaiDownloadMode.TorrentFile || !!options?.saveTorrentFile;
+  const changeBtSelection = (downloadTorrent: boolean, createTask: boolean) => {
+    if (!downloadTorrent && !createTask) return;
+    onChange({
+      downloadMode: createTask ? ExHentaiDownloadMode.Torrent : ExHentaiDownloadMode.TorrentFile,
+      saveTorrentFile: createTask && downloadTorrent,
+      ...(createTask && !createBtTask
+        ? { fallbackToDirect: options?.fallbackToDirect ?? false }
+        : {}),
+    });
+  };
 
   return (
     <div className="space-y-3 rounded-xl border border-default-200 p-3">
@@ -24,17 +38,24 @@ export default function ExHentaiDownloadModeField({ options, onChange }: Props) 
         dataSource={[
           { value: String(ExHentaiDownloadMode.Direct), label: t("downloader.mode.direct") },
           { value: String(ExHentaiDownloadMode.Torrent), label: t("downloader.mode.bt") },
-          {
-            value: String(ExHentaiDownloadMode.TorrentFile),
-            label: t("downloader.mode.torrentFile"),
-          },
         ]}
         label={t("downloader.mode.label")}
-        selectedKeys={[String(mode)]}
+        selectedKeys={[String(route)]}
         size="sm"
         onSelectionChange={(keys) => {
           const key = Array.from(keys)[0];
-          if (key != null) onChange({ downloadMode: Number(key) as ExHentaiDownloadMode });
+          if (key == null) return;
+          const downloadMode = Number(key) as ExHentaiDownloadMode;
+          if (downloadMode === route) return;
+          onChange({
+            downloadMode,
+            ...(downloadMode === ExHentaiDownloadMode.Torrent
+              ? {
+                  saveTorrentFile: options?.saveTorrentFile ?? false,
+                  fallbackToDirect: options?.fallbackToDirect ?? false,
+                }
+              : {}),
+          });
         }}
       />
       <p className="text-xs leading-relaxed text-default-500">
@@ -46,16 +67,30 @@ export default function ExHentaiDownloadModeField({ options, onChange }: Props) 
               : "downloader.mode.directDescription",
         )}
       </p>
-      {mode === ExHentaiDownloadMode.Torrent && (
-        <Checkbox
-          isSelected={options?.saveTorrentFile ?? false}
-          size="sm"
-          onValueChange={(saveTorrentFile) => onChange({ saveTorrentFile })}
-        >
-          {t("downloader.mode.saveTorrentFile")}
-        </Checkbox>
+      {btRoute && (
+        <div className="space-y-2">
+          <div className="flex flex-wrap gap-3">
+            <Checkbox
+              isSelected={downloadTorrent}
+              isDisabled={downloadTorrent && !createBtTask}
+              size="sm"
+              onValueChange={(selected) => changeBtSelection(selected, createBtTask)}
+            >
+              {t("downloader.mode.downloadTorrent")}
+            </Checkbox>
+            <Checkbox
+              isSelected={createBtTask}
+              isDisabled={createBtTask && !downloadTorrent}
+              size="sm"
+              onValueChange={(selected) => changeBtSelection(downloadTorrent, selected)}
+            >
+              {t("downloader.mode.createBtTask")}
+            </Checkbox>
+          </div>
+          <p className="text-xs text-default-500">{t("downloader.mode.btSelectionHint")}</p>
+        </div>
       )}
-      {mode !== ExHentaiDownloadMode.Direct && (
+      {createBtTask && (
         <div className="space-y-1">
           <Checkbox
             isSelected={options?.fallbackToDirect ?? true}

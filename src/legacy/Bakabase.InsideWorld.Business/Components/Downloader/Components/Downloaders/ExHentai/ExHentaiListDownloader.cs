@@ -36,7 +36,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
             {
                 var latest = gallery.MaxBy(x => x.Id)!;
                 var available = await CanReuseResultAsync(results, latest, options.UsesTorrent, preferOriginal, ct,
-                    options.EffectiveDownloadMode != ExHentaiDownloadMode.Torrent || options.SaveTorrentFile);
+                    options.EffectiveDownloadMode != ExHentaiDownloadMode.Torrent || options.SaveTorrentFile,
+                    options.EffectiveDownloadMode == ExHentaiDownloadMode.TorrentFile);
                 if (available && latest.Kind == DownloadResultKind.TorrentMetadata &&
                     (options.EffectiveDownloadMode != ExHentaiDownloadMode.Torrent || options.SaveTorrentFile))
                 {
@@ -123,7 +124,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                                     var newProgress = unitWorkProgress * (doneCount + p / 100m);
                                     await OnProgressInternal(newProgress);
                                 }, null, ct, options.UsesTorrent,
-                                    resultWorkflowId: options.DownloadResultWorkflowId, downloadMode: options.DownloadMode,
+                                    resultWorkflowId: options.DownloadResultWorkflowId, downloadMode: options.EffectiveDownloadMode,
                                     saveTorrentFile: options.SaveTorrentFile, fallbackToDirect: options.FallbackToDirect);
                                 break;
                             default:

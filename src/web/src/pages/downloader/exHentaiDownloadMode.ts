@@ -28,7 +28,17 @@ export function resolveExHentaiDownloadMode(
 export function parseExHentaiDownloadOptions(value?: string | null): ExHentaiDownloadOptions {
   try {
     const parsed = value ? JSON.parse(value) : {};
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+    const knownKeys: Record<string, string> = {
+      downloadmode: "downloadMode",
+      prefertorrent: "preferTorrent",
+      savetorrentfile: "saveTorrentFile",
+      fallbacktodirect: "fallbackToDirect",
+    };
+    // Match the server's case-insensitive options reader, preserving unrelated settings.
+    return Object.fromEntries(
+      Object.entries(parsed).map(([key, option]) => [knownKeys[key.toLowerCase()] ?? key, option]),
+    );
   } catch {
     return {};
   }

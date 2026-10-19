@@ -19,6 +19,7 @@ import {
 import ExHentaiDownloadModeField from "../TaskDetailModal/components/ExHentaiDownloadModeField";
 import {
   resolveExHentaiDownloadMode,
+  parseExHentaiDownloadOptions,
   type ExHentaiDownloadOptions,
 } from "@/pages/downloader/exHentaiDownloadMode";
 import DownloadPathSelector from "@/pages/downloader/components/TaskDetailModal/components/DownloadPathSelector";
@@ -46,18 +47,9 @@ const FieldTypeMap: Record<EditableKey, DownloadTaskFieldType> = {
   downloadPath: DownloadTaskFieldType.DownloadPath,
 };
 
-const safeParseOptions = (o?: string): Record<string, any> => {
-  if (!o) return {};
-  try {
-    return JSON.parse(o) ?? {};
-  } catch {
-    return {};
-  }
-};
-
 // Existing tasks default to preferring torrents (matches the single-task modal).
 const getDownloadOptions = (task: DownloadTask): ExHentaiDownloadOptions => {
-  const options = safeParseOptions(task.options);
+  const options = parseExHentaiDownloadOptions(task.options);
   return {
     downloadMode: resolveExHentaiDownloadMode(options),
     saveTorrentFile: options.saveTorrentFile ?? false,
@@ -167,7 +159,7 @@ const BatchEditModal = ({ tasks, onDestroyed }: Props) => {
 
         const options = isEdited("downloadMode")
           ? JSON.stringify({
-              ...safeParseOptions(cur.options),
+              ...parseExHentaiDownloadOptions(cur.options),
               ...modePatch,
             })
           : cur.options;

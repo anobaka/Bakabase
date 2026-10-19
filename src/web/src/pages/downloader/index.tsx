@@ -72,6 +72,7 @@ import {
 } from "./downloadCenter";
 import { downloadTaskDirectly } from "./directDownload";
 import { downloadTaskWithBt } from "./btDownload";
+import { downloadTaskTorrentFile } from "./torrentFileDownload";
 import { DownloadFolderUnavailableError, openDownloadTaskFolder } from "./openDownloadTaskFolder";
 
 const formatTaskDateTime = (value?: string | Date | null) =>
@@ -335,6 +336,14 @@ export default function DownloaderPage() {
       throw new Error(response.message || t("downloader.toast.btDownloadFailed"));
     await refresh();
   };
+  const torrentFileDownload = async (id: number) => {
+    let response = await downloadTaskTorrentFile(id);
+    if (response.code === ResponseCode.Conflict)
+      response = await downloadTaskTorrentFile(id, await chooseDownloadOrder(response.message));
+    if (response.code !== ResponseCode.Success)
+      throw new Error(response.message || t("downloader.toast.torrentFileDownloadFailed"));
+    await refresh();
+  };
   const clearCheckpoints = (ids: number[]) =>
     createPortal(Modal, {
       defaultVisible: true,
@@ -360,6 +369,7 @@ export default function DownloaderPage() {
     openFolder,
     directDownload,
     btDownload,
+    torrentFileDownload,
     model,
     selectedIds,
     taskById,
@@ -373,6 +383,7 @@ export default function DownloaderPage() {
     openFolder,
     directDownload,
     btDownload,
+    torrentFileDownload,
     model,
     selectedIds,
     taskById,
@@ -442,6 +453,7 @@ export default function DownloaderPage() {
   );
   const siteDirect = useCallback((id: number) => env.current.directDownload(id), []);
   const siteBt = useCallback((id: number) => env.current.btDownload(id), []);
+  const siteTorrentFile = useCallback((id: number) => env.current.torrentFileDownload(id), []);
   const toggleChildren = useCallback(
     (id: number) =>
       setExpanded((current) => {
@@ -833,6 +845,7 @@ export default function DownloaderPage() {
                           onDelete={siteDelete}
                           onDownloadDirectly={siteDirect}
                           onDownloadWithBt={siteBt}
+                          onDownloadTorrentFile={siteTorrentFile}
                           onShowError={siteError}
                           onOpenFolder={siteFolder}
                         />

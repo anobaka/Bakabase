@@ -358,7 +358,8 @@ public sealed class DownloadResultWorkflowTests
             var task = new DownloadTaskDbModel
             {
                 Key = "https://exhentai.org/g/123/abc/", DownloadPath = shared,
-                ThirdPartyId = ThirdPartyId.ExHentai, Status = DownloadTaskDbModelStatus.Complete
+                ThirdPartyId = ThirdPartyId.ExHentai, Status = DownloadTaskDbModelStatus.Complete,
+                Options = "{\"downloadMode\":1}"
             };
             db.Set<DownloadTaskDbModel>().Add(task);
             db.Set<ExHentaiGalleryDbModel>().Add(new() {GalleryId = 123, GalleryToken = "abc", Title = "Gallery"});

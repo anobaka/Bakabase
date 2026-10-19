@@ -91,7 +91,8 @@ public sealed class DownloadTaskExecutionLifecycle(IServiceScopeFactory scopes, 
                 allowed.Remove(resultId);
             var heldBtIds = held.Where(t => t.Provider == "bt").Select(t => t.ProviderTaskId).ToHashSet();
             var jobs = (await downloads.ListAsync()).Where(j => j.WorkflowRunId == null && j.SourceKind != "workflow" &&
-                !heldBtIds.Contains(j.Id) && j.DownloadResultId is { } id && allowed.ContainsKey(id)).ToArray();
+                !heldBtIds.Contains(j.Id) && j.DownloadResultId is { } id && allowed.TryGetValue(id, out var result) &&
+                CanContinue(tasks[result.DownloadTaskId], result, independentBt: true)).ToArray();
             foreach (var job in jobs.Where(j => j.Status is BtDownloadStatus.Stopped or BtDownloadStatus.Failed))
                 await downloads.ResumeAsync(job.Id);
             var allowedIds = allowed.Keys.ToArray();
@@ -145,13 +146,19 @@ public sealed class DownloadTaskExecutionLifecycle(IServiceScopeFactory scopes, 
         db.Set<DownloadTaskDbModel>().Where(t => taskIds.Contains(t.Id) &&
             !db.DownloadResultOwners.Any(o => o.DownloadTaskId == t.Id)).Select(t => t.Id).ToListAsync();
 
-    internal static bool CanContinue(DownloadTaskDbModel task, DownloadResultDbModel result)
+    internal static bool CanContinue(DownloadTaskDbModel task, DownloadResultDbModel result, bool independentBt = false)
     {
-        if (task.ThirdPartyId != ThirdPartyId.ExHentai) return true;
+        if (task.ThirdPartyId != ThirdPartyId.ExHentai) return !independentBt || result.RequiresContentsDownload;
         ExHentaiTaskOptions options;
         try { options = string.IsNullOrWhiteSpace(task.Options) ? new() : JsonSerializer.Deserialize<ExHentaiTaskOptions>(task.Options, JsonSerializerOptions.Web) ?? new(); }
         catch (JsonException) { return false; }
-        return result.Kind != DownloadResultKind.TorrentMetadata || options.EffectiveDownloadMode == ExHentaiDownloadMode.Torrent ||
+        // Starting a source happens before its producer refreshes the existing result. The selected
+        // route must therefore govern continuation, even while RequiresContentsDownload is stale.
+        if (independentBt) return result.Kind == DownloadResultKind.TorrentMetadata &&
+            options.EffectiveDownloadMode == ExHentaiDownloadMode.Torrent;
+        return result.Kind != DownloadResultKind.TorrentMetadata
+            ? options.EffectiveDownloadMode != ExHentaiDownloadMode.TorrentFile
+            : options.EffectiveDownloadMode == ExHentaiDownloadMode.Torrent ||
                options.EffectiveDownloadMode == ExHentaiDownloadMode.TorrentFile &&
                !result.RequiresContentsDownload && result.WorkflowDefinitionId != null;
     }

@@ -5,9 +5,10 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
     public class ExHentaiTaskOptions
     {
         public bool PreferTorrent { get; set; } = true;
-        /// <summary>Null preserves the acquisition behavior of existing tasks.</summary>
+        /// <summary>Null maps legacy PreferTorrent to the corresponding route.</summary>
         public ExHentaiDownloadMode? DownloadMode { get; set; }
         public bool SaveTorrentFile { get; set; }
+        /// <summary>Applies only to Torrent content transfers; TorrentFile never downloads images.</summary>
         public bool FallbackToDirect { get; set; } = true;
         [System.Text.Json.Serialization.JsonIgnore]
         public ExHentaiDownloadMode EffectiveDownloadMode => DownloadMode ??

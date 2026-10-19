@@ -6,9 +6,13 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ExHentaiConfigField, ExHentaiConfigPanel } from "../ExHentaiConfig";
+import { ExHentaiDownloadMode } from "@/sdk/constants";
 
 type OriginalImageOptions = {
   preferTorrent?: boolean;
+  downloadMode?: ExHentaiDownloadMode;
+  saveTorrentFile?: boolean;
+  fallbackToDirect?: boolean;
   preferOriginalImages?: boolean;
   allowOriginalImageGpSpending?: boolean;
   originalImageMinimumGpBalance?: number | null;
@@ -54,6 +58,19 @@ vi.mock("../../base/ConfigurableThirdPartyPanel", () => ({
 // Exercise the real number-field commit, clamping and clear behavior.
 vi.mock("@/components/bakaui", async () => ({
   ...(await import("@heroui/react")),
+  Select: ({ label, dataSource, selectedKeys, onSelectionChange }: any) => (
+    <select
+      aria-label={label}
+      value={selectedKeys[0]}
+      onChange={(event) => onSelectionChange(new Set([event.target.value]))}
+    >
+      {dataSource.map((item: { value: string; label: string }) => (
+        <option key={item.value} value={item.value}>
+          {item.label}
+        </option>
+      ))}
+    </select>
+  ),
   toast: { success: vi.fn() },
 }));
 vi.mock("../../base/AccountsPanel", () => ({ default: () => null }));
@@ -65,12 +82,6 @@ vi.mock("../../base/ProxyField", () => ({ default: () => null }));
 vi.mock("../../base/SourceDefaultDownloadPathField", () => ({ default: () => null }));
 vi.mock("../../base/DownloadResultWorkflowField", () => ({ default: () => null }));
 vi.mock("@/components/FileSystemSelector", () => ({ FileSystemSelectorButton: () => null }));
-vi.mock(
-  "@/pages/downloader/components/TaskDetailModal/components/ExHentaiDownloadModeField",
-  () => ({
-    default: () => null,
-  }),
-);
 
 const keys = {
   prefer: "thirdPartyConfig.exHentai.originalImages.prefer",
@@ -98,6 +109,35 @@ afterEach(() => {
 });
 
 describe("ExHentai original image configuration", () => {
+  it("saves the shared BT checkbox combination as the default acquisition preference", async () => {
+    state.options = {
+      downloadMode: ExHentaiDownloadMode.Torrent,
+      saveTorrentFile: true,
+      fallbackToDirect: false,
+    };
+    const user = userEvent.setup();
+    const view = render(panel());
+    expect(screen.getByRole("checkbox", { name: "downloader.mode.downloadTorrent" })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "downloader.mode.createBtTask" })).toBeChecked();
+    await user.click(screen.getByRole("checkbox", { name: "downloader.mode.createBtTask" }));
+    expect(patchExHentai).toHaveBeenLastCalledWith({
+      downloadMode: ExHentaiDownloadMode.TorrentFile,
+      saveTorrentFile: false,
+    });
+    state.options = { ...state.options, ...patchExHentai.mock.calls.at(-1)![0] };
+    view.rerender(panel());
+    expect(
+      screen.getByRole("checkbox", { name: "downloader.mode.downloadTorrent" }),
+    ).toBeDisabled();
+    expect(screen.queryByRole("checkbox", { name: "downloader.mode.fallbackToDirect" })).toBeNull();
+    await user.click(screen.getByRole("checkbox", { name: "downloader.mode.createBtTask" }));
+    expect(patchExHentai).toHaveBeenLastCalledWith({
+      downloadMode: ExHentaiDownloadMode.Torrent,
+      saveTorrentFile: true,
+      fallbackToDirect: false,
+    });
+  });
+
   it("defaults to normal images and makes the spending warning visible before opt-in", async () => {
     render(panel());
     expect(screen.getByRole("checkbox", { name: keys.prefer })).not.toBeChecked();

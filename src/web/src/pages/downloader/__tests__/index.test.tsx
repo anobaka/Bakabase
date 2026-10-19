@@ -18,6 +18,8 @@ const mocks = vi.hoisted(() => ({
   portal: vi.fn(),
   direct: vi.fn(),
   bt: vi.fn(),
+  torrentFile: vi.fn(),
+  torrentFileResult: undefined as Promise<void> | undefined,
   btResult: undefined as Promise<void> | undefined,
   directResult: undefined as Promise<void> | undefined,
 }));
@@ -30,6 +32,7 @@ vi.mock("@/sdk/BApi", () => ({
 }));
 vi.mock("../directDownload", () => ({ downloadTaskDirectly: mocks.direct }));
 vi.mock("../btDownload", () => ({ downloadTaskWithBt: mocks.bt }));
+vi.mock("../torrentFileDownload", () => ({ downloadTaskTorrentFile: mocks.torrentFile }));
 vi.mock("@/components/ContextProvider/BakabaseContextProvider", () => ({
   useBakabaseContext: () => ({ createPortal: mocks.portal }),
 }));
@@ -59,6 +62,7 @@ vi.mock("../components/TaskRow", () => ({
     onShowError,
     onDownloadDirectly,
     onDownloadWithBt,
+    onDownloadTorrentFile,
   }: any) => (
     <div>
       <button data-row-id={`site:${task.id}`} onClick={(event) => onClick(task.id, event)}>
@@ -83,6 +87,14 @@ vi.mock("../components/TaskRow", () => ({
         }}
       >
         bt-{task.id}
+      </button>
+      <button
+        onClick={() => {
+          mocks.torrentFileResult = onDownloadTorrentFile(task.id);
+          void mocks.torrentFileResult!.catch(() => {});
+        }}
+      >
+        torrent-file-{task.id}
       </button>
     </div>
   ),
@@ -201,6 +213,7 @@ beforeEach(() => {
   }));
   mocks.direct.mockResolvedValue({ code: 0 });
   mocks.bt.mockResolvedValue({ code: 0 });
+  mocks.torrentFile.mockResolvedValue({ code: 0 });
   useDownloadTasksStore.getState().setTasks([
     {
       id: 1,
@@ -429,6 +442,34 @@ describe("unified download center", () => {
     await expect(mocks.btResult).rejects.toThrow("No torrent available");
     expect(mocks.bt).toHaveBeenLastCalledWith(1, DownloadTaskActionOnConflict.Ignore);
     expect(mocks.direct).not.toHaveBeenCalled();
+  });
+
+  it("switches to torrent-file-only with the same task ID and refreshes the common list", async () => {
+    mount();
+    await screen.findByText("Gallery");
+    const previousCalls = mocks.get.mock.calls.length;
+    fireEvent.click(screen.getByText("torrent-file-1"));
+    await act(async () => mocks.torrentFileResult);
+    expect(mocks.torrentFile).toHaveBeenCalledExactlyOnceWith(1);
+    expect(mocks.direct).not.toHaveBeenCalled();
+    expect(mocks.bt).not.toHaveBeenCalled();
+    expect(mocks.batch).not.toHaveBeenCalled();
+    expect(mocks.get.mock.calls.length).toBeGreaterThan(previousCalls);
+  });
+
+  it("retries a torrent-file queue conflict with the chosen policy and surfaces the error", async () => {
+    mocks.torrentFile
+      .mockResolvedValueOnce({ code: ResponseCode.Conflict, message: "Busy queue" })
+      .mockResolvedValueOnce({ code: 400, message: "No torrent available" });
+    mount();
+    await screen.findByText("Gallery");
+    fireEvent.click(screen.getByText("torrent-file-1"));
+    await waitFor(() => expect(mocks.portal).toHaveBeenCalled());
+    await act(async () => mocks.portal.mock.calls[0][1].onOk());
+    await expect(mocks.torrentFileResult).rejects.toThrow("No torrent available");
+    expect(mocks.torrentFile).toHaveBeenLastCalledWith(1, DownloadTaskActionOnConflict.StopOthers);
+    expect(mocks.direct).not.toHaveBeenCalled();
+    expect(mocks.bt).not.toHaveBeenCalled();
   });
 
   it("preserves direct-download conflicts and reports a failed request", async () => {

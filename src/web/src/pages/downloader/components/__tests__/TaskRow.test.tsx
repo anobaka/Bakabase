@@ -8,7 +8,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import TaskRow from "../TaskRow";
 
-import { DownloadTaskAction, DownloadTaskStatus, ThirdPartyId } from "@/sdk/constants";
+import {
+  DownloadTaskAction,
+  DownloadTaskStatus,
+  ExHentaiDownloadMode,
+  ThirdPartyId,
+} from "@/sdk/constants";
 
 const { dangerToast } = vi.hoisted(() => ({ dangerToast: vi.fn() }));
 
@@ -80,6 +85,7 @@ async function show(
   onDownloadDirectly = vi.fn().mockResolvedValue(undefined),
   execution?: TaskRowProps["execution"],
   onDownloadWithBt = vi.fn().mockResolvedValue(undefined),
+  onDownloadTorrentFile = vi.fn().mockResolvedValue(undefined),
 ) {
   const props: TaskRowProps = {
     task: { ...task, ...overrides },
@@ -90,6 +96,7 @@ async function show(
     onStart: vi.fn(),
     onDownloadDirectly,
     onDownloadWithBt,
+    onDownloadTorrentFile,
     onStop: vi.fn(),
     onEdit: vi.fn(),
     onOpenFolder: vi.fn(),
@@ -619,6 +626,69 @@ describe("download task row interaction", () => {
     expect(element("downloader.label.torrentDisabled")).not.toBeInTheDocument();
     expect(element("downloader.label.torrentUnknown")).not.toBeInTheDocument();
   });
+
+  it.each([
+    [ExHentaiDownloadMode.Direct, "directDownload", "btDownload", "torrentFileDownload"],
+    [ExHentaiDownloadMode.Torrent, "btDownload", "directDownload", "torrentFileDownload"],
+    [ExHentaiDownloadMode.TorrentFile, "torrentFileDownload", "directDownload", "btDownload"],
+  ] as const)(
+    "omits the current acquisition mode %s from the menu",
+    async (mode, omitted, first, second) => {
+      await show({
+        options: JSON.stringify({ downloadMode: mode }),
+        metadata: { preferTorrent: true },
+      });
+      await click(element("downloader.label.torrentUnknown"));
+      const choices = Array.from(document.querySelectorAll('[role="menuitem"]'));
+      expect(choices).toHaveLength(2);
+      expect(choices[0]).toHaveTextContent(`downloader.action.${first}`);
+      expect(choices[1]).toHaveTextContent(`downloader.action.${second}`);
+      expect(
+        choices.some((item) => item.textContent?.includes(`downloader.action.${omitted}`)),
+      ).toBe(false);
+    },
+  );
+
+  it.each([
+    [undefined, "torrentFileDownload"],
+    ["{}", "torrentFileDownload"],
+    ['{"preferTorrent":false}', "directDownload"],
+    ['{"DownloadMode":2,"SaveTorrentFile":true}', "btDownload"],
+    ['{"DownloadMode":2,"SaveTorrentFile":false}', "btDownload"],
+  ])(
+    "resolves a legacy mode before hiding the current menu action (%s)",
+    async (options, omitted) => {
+      await show({ options });
+      await click(element("downloader.label.torrentUnknown"));
+      const choices = Array.from(document.querySelectorAll('[role="menuitem"]'));
+      expect(choices).toHaveLength(2);
+      expect(
+        choices.some((item) => item.textContent?.includes(`downloader.action.${omitted}`)),
+      ).toBe(false);
+    },
+  );
+
+  it.each(["pointer", "keyboard"])(
+    "switches to torrent-file-only using %s without normally starting or selecting the row",
+    async (method) => {
+      const props = await show({
+        options: JSON.stringify({ downloadMode: ExHentaiDownloadMode.Torrent }),
+      });
+      const trigger = element("downloader.label.torrentUnknown");
+      if (method === "pointer") await click(trigger);
+      else await key(trigger, "Enter");
+      const item = Array.from(document.querySelectorAll<HTMLElement>('[role="menuitem"]')).find(
+        (item) => item.textContent?.includes("downloader.action.torrentFileDownload"),
+      )!;
+      if (method === "pointer") await click(item);
+      else await key(item, "Enter");
+      expect(props.onDownloadTorrentFile).toHaveBeenCalledExactlyOnceWith(task.id);
+      expect(props.onDownloadWithBt).not.toHaveBeenCalled();
+      expect(props.onDownloadDirectly).not.toHaveBeenCalled();
+      expect(props.onStart).not.toHaveBeenCalled();
+      expect(props.onClick).not.toHaveBeenCalled();
+    },
+  );
 
   it.each(["pointer", "keyboard"])(
     "downloads directly from the torrent menu using %s without selecting or normally starting the row",

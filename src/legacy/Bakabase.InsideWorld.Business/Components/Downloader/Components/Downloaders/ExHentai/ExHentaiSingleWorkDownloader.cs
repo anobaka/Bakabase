@@ -34,7 +34,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
             var knownToHaveNoTorrent = verdictIsFresh || manager.IsKnownNoTorrent(task.Id);
 
             // Defer (probe-then-yield) only on the first pass of an un-probed task. Once it is known to
-            // have no torrent, it is re-run with deferIfNoTorrent=false and downloads images normally.
+            // have no torrent, the re-run applies the selected mode's fallback policy.
             var deferIfNoTorrent = exOptions.PrioritizeTasksWithTorrent
                                    && options.UsesTorrent
                                    && !knownToHaveNoTorrent;
@@ -51,7 +51,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                 deferIfNoTorrent, () => manager.MarkNoTorrentAsync(task.Id),
                 () => manager.MarkTorrentFoundAsync(task.Id),
                 () => manager.MarkTorrentDownloadedAsync(task.Id),
-                options.DownloadResultWorkflowId, options.DownloadMode, options.SaveTorrentFile, options.FallbackToDirect);
+                options.DownloadResultWorkflowId, options.EffectiveDownloadMode, options.SaveTorrentFile, options.FallbackToDirect);
         }
     }
 }
