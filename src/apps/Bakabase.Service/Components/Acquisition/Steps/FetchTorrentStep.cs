@@ -8,7 +8,6 @@ using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Acquisition.Components;
 using Bakabase.Service.Components.Acquisition.Downloads;
-using Bakabase.Modules.Downloader.Abstractions;
 using Bakabase.Modules.Downloader.Models;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -59,19 +58,18 @@ public class FetchTorrentStep : IAcquisitionStep
         deadline.CancelAfter(TimeSpan.FromMinutes(config.TimeoutMinutes));
         try
         {
-            var downloader = ctx.ServiceProvider.GetRequiredService<ITorrentDownloader>();
             TorrentDownloadResult downloaded;
             if (AcquisitionTorrentMetadataStore.IsManagedReference(reference))
             {
                 var metadata = await ctx.ServiceProvider.GetRequiredService<IAcquisitionTorrentMetadataStore>()
                     .ReadAsync(reference, deadline.Token);
-                downloaded = await downloader.DownloadTorrentAsync(metadata, ctx.WorkingDirectory,
-                    TimeSpan.FromMinutes(config.TimeoutMinutes), (percentage, process) => ctx.ReportProgress(percentage, process), deadline.Token);
+                downloaded = await ManagedTorrentDownload.DownloadAsync(ctx, item,
+                    TimeSpan.FromMinutes(config.TimeoutMinutes), deadline.Token, metadata: metadata);
             }
             else
             {
-                downloaded = await downloader.DownloadTorrentUrlAsync(reference, ctx.WorkingDirectory,
-                    TimeSpan.FromMinutes(config.TimeoutMinutes), (percentage, process) => ctx.ReportProgress(percentage, process), deadline.Token);
+                downloaded = await ManagedTorrentDownload.DownloadAsync(ctx, item,
+                    TimeSpan.FromMinutes(config.TimeoutMinutes), deadline.Token, torrentUrl: reference);
             }
             return new AcquisitionStepOutcome.Continue(item with
             {

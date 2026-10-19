@@ -76,6 +76,17 @@ public class DownloadTaskController : Controller
         return new SingletonResponse<TaskSummary>(await _service.GetSummary(thirdPartyId));
     }
 
+    [HttpGet("executions")]
+    [RemoteAccessible]
+    [SwaggerOperation(OperationId = "GetDownloadTaskExecutions")]
+    public async Task<ListResponse<Bakabase.Service.Models.View.DownloadTaskExecutionSummary>> GetExecutions(
+        [FromQuery] int[] ids, [FromServices] Bakabase.Service.Components.Downloader.DownloadTaskExecutionService executions)
+    {
+        if (ids.Length > 500) return ListResponseBuilder<Bakabase.Service.Models.View.DownloadTaskExecutionSummary>
+            .BuildBadRequest("At most 500 task ids can be queried at once.");
+        return new(await executions.GetAsync(ids.Distinct().ToArray(), HttpContext.RequestAborted));
+    }
+
     [SwaggerOperation(OperationId = "GetDownloadTask")]
     [HttpGet("{id}")]
     public async Task<SingletonResponse<DownloadTask>> Get(int id)
@@ -192,6 +203,18 @@ public class DownloadTaskController : Controller
     [SwaggerOperation(OperationId = "DirectDownloadTask")]
     public Task<BaseResponse> DirectDownload(int id, [FromBody] DownloadTaskDirectDownloadRequestModel model) =>
         _service.DirectDownload(id, model.ActionOnConflict);
+
+    [HttpPost("{id}/bt-download")]
+    [RemoteAccessible]
+    [SwaggerOperation(OperationId = "BtDownloadTask")]
+    public Task<BaseResponse> BtDownload(int id, [FromBody] DownloadTaskBtDownloadRequestModel model) =>
+        _service.BtDownload(id, model.ActionOnConflict);
+
+    [HttpPost("{id}/torrent-file-download")]
+    [RemoteAccessible]
+    [SwaggerOperation(OperationId = "TorrentFileDownloadTask")]
+    public Task<BaseResponse> TorrentFileDownload(int id, [FromBody] DownloadTaskTorrentFileDownloadRequestModel model) =>
+        _service.TorrentFileDownload(id, model.ActionOnConflict);
 
     [HttpDelete("download")]
     [SwaggerOperation(OperationId = "StopDownloadTasks")]

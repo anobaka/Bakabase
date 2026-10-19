@@ -16,7 +16,11 @@ public sealed class HttpDownloader(Func<string> cacheDirectory, IHttpClientFacto
 {
     private readonly ILogger<HttpDownloader> _logger = loggerFactory.CreateLogger<HttpDownloader>();
 
-    public async Task<string> DownloadAsync(HttpDownloadRequest request, Func<int, string?, Task>? progress,
+    public Task<string> DownloadAsync(HttpDownloadRequest request, Func<int, string?, Task>? progress,
+        CancellationToken cancellationToken) => DownloadWithProgressAsync(request,
+        progress == null ? null : value => progress(value.Percentage ?? 0, value.Stage), cancellationToken);
+
+    public async Task<string> DownloadWithProgressAsync(HttpDownloadRequest request, Func<HttpTransferProgress, Task>? progress,
         CancellationToken cancellationToken)
     {
         Validate(request);
@@ -30,14 +34,23 @@ public sealed class HttpDownloader(Func<string> cacheDirectory, IHttpClientFacto
         {
             var probe = await ProbeAsync(host, request.Url, deadline.Token);
             var target = Path.Combine(directory, request.FileName ?? probe.FileName);
+            if (!request.AllowOverwrite && File.Exists(target))
+                throw new IOException("The output file already exists. Choose another name or directory.");
             if (File.Exists(target) && await MatchesChecksumAsync(target, probe.Identity, deadline.Token))
             {
-                if (progress != null) await progress(100, "Download verified");
+                if (progress != null) await progress(new HttpTransferProgress { Percentage = 100, Stage = "Download verified", CompletedBytes = new FileInfo(target).Length, TotalBytes = new FileInfo(target).Length });
                 return target;
             }
             var key = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(request.Url + "\n" + target + "\n" + request.HttpClientName)));
             var cache = Path.Combine(Path.GetFullPath(cacheDirectory()), "http", key);
             Directory.CreateDirectory(cache);
+            // Checkpoints include source URLs, which may contain signed query parameters.
+            if (!OperatingSystem.IsWindows())
+            {
+                var mode = UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute;
+                File.SetUnixFileMode(Path.GetDirectoryName(cache)!, mode);
+                File.SetUnixFileMode(cache, mode);
+            }
             await using var lease = await AcquireLeaseAsync(cache, deadline.Token);
             var allowRanges = probe.Identity.CanResume;
             // A changed source or an ignored range gets one clean retry. The library owns normal
@@ -75,11 +88,11 @@ public sealed class HttpDownloader(Func<string> cacheDirectory, IHttpClientFacto
                 await using (var source = File.OpenRead(payload))
                 await using (var destination = new FileStream(staged, FileMode.CreateNew, FileAccess.Write, FileShare.None))
                     await source.CopyToAsync(destination, deadline.Token);
-                File.Move(staged, target, true);
+                File.Move(staged, target, request.AllowOverwrite);
             }
             finally { if (File.Exists(staged)) File.Delete(staged); }
             HttpDownloadCheckpoint.Clear(cache);
-            if (progress != null) await progress(100, "Download verified");
+            if (progress != null) await progress(new HttpTransferProgress { Percentage = 100, Stage = "Download verified", CompletedBytes = new FileInfo(target).Length, TotalBytes = new FileInfo(target).Length });
             _logger.LogDebug("HTTP download completed: {File}", target);
             return target;
         }
@@ -93,7 +106,7 @@ public sealed class HttpDownloader(Func<string> cacheDirectory, IHttpClientFacto
     }
 
     private async Task DownloadWithLibraryAsync(HttpClient host, HttpDownloadRequest request, HttpRemoteIdentity identity,
-        string cache, bool allowRanges, Func<int, string?, Task>? progress, CancellationToken ct)
+        string cache, bool allowRanges, Func<HttpTransferProgress, Task>? progress, CancellationToken ct)
     {
         var package = allowRanges ? await HttpDownloadCheckpoint.ReadAsync(cache, identity, ct) : null;
         if (package == null) HttpDownloadCheckpoint.Clear(cache);
@@ -130,9 +143,14 @@ public sealed class HttpDownloader(Func<string> cacheDirectory, IHttpClientFacto
         // diagnostics out of host error reporting; actual failures propagate via status/events below.
         await using var downloader = new DownloadService(config);
         Exception? completedError = null;
-        var percentage = 0;
+        HttpTransferProgress snapshot = new() { TotalBytes = identity.Length, Percentage = identity.Length > 0 ? 0 : null };
         downloader.DownloadStarted += (_, _) => guard.TransferStarted = true;
-        downloader.DownloadProgressChanged += (_, args) => Interlocked.Exchange(ref percentage, Math.Clamp((int)args.ProgressPercentage, 0, 99));
+        downloader.DownloadProgressChanged += (_, args) => Interlocked.Exchange(ref snapshot, new HttpTransferProgress
+        {
+            Percentage = identity.Length > 0 ? Math.Clamp((int)args.ProgressPercentage, 0, 99) : null,
+            CompletedBytes = args.ReceivedBytesSize, TotalBytes = identity.Length,
+            SpeedBytesPerSecond = Math.Max(0, args.BytesPerSecondSpeed)
+        });
         downloader.DownloadFileCompleted += (_, args) => completedError = args.Error;
         Task transfer = package == null
             ? downloader.DownloadFileTaskAsync(request.Url, Path.Combine(cache, "payload"), ct)
@@ -143,7 +161,7 @@ public sealed class HttpDownloader(Func<string> cacheDirectory, IHttpClientFacto
             while (!transfer.IsCompleted)
             {
                 await Task.WhenAny(transfer, Task.Delay(200));
-                if (!transfer.IsCompleted && progress != null) await progress(Volatile.Read(ref percentage), "Downloading");
+                if (!transfer.IsCompleted && progress != null) await progress(Volatile.Read(ref snapshot));
             }
             await transfer;
         }

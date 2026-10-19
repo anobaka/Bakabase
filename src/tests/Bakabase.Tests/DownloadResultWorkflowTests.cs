@@ -20,6 +20,8 @@ using Bakabase.Modules.Acquisition.Components;
 using Bakabase.Modules.Acquisition.Models.Domain;
 using Bakabase.Modules.Downloader.Abstractions;
 using Bakabase.Modules.Downloader.Models;
+using Bakabase.Modules.Bittorrent.Abstractions;
+using Bakabase.Modules.Bittorrent.Models;
 using Bakabase.Modules.Workflow.Abstractions.Models.Db;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Workflow.Abstractions.Models.Input;
@@ -31,7 +33,6 @@ using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using MonoTorrent;
 
 namespace Bakabase.Tests;
 
@@ -53,14 +54,14 @@ public sealed class DownloadResultWorkflowTests
         var files = Path.Combine(_root, "fixture");
         Directory.CreateDirectory(Path.Combine(files, "chapter"));
         await File.WriteAllTextAsync(Path.Combine(files, "chapter", "page.txt"), "torrent fixture");
-        _metadata = (await new TorrentCreator(TorrentType.V1Only) {PieceLength = 16 * 1024}
-            .CreateAsync(new TorrentFileSource(files))).Encode();
+        _metadata = await TorrentFixture.FromPathAsync(files);
         _sp.GetRequiredService<IBOptions<AcquisitionOptions>>().Value.LibraryRootDirectory = Path.Combine(_root, "library");
     }
 
     [TestCleanup]
-    public void Cleanup()
+    public async Task Cleanup()
     {
+        await _sp.GetRequiredService<IBtDownloadManager>().ShutdownAsync();
         if (Directory.Exists(_root)) Directory.Delete(_root, true);
     }
 
@@ -102,6 +103,49 @@ public sealed class DownloadResultWorkflowTests
     {
         await using var scope = _sp.CreateAsyncScope();
         await scope.ServiceProvider.GetRequiredService<DownloadResultWorkflowService>().DispatchAsync();
+    }
+
+    [DataTestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task DirectBtIsIndependentAndOptionalWorkflowWaitsForActualContents(bool withWorkflow)
+    {
+        var result = await TorrentResult(withWorkflow ? await Definition() : null);
+        await using (var scope = _sp.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<BakabaseDbContext>();
+            await db.DownloadResults.Where(r => r.Id == result.Id).ExecuteUpdateAsync(s => s.SetProperty(r => r.RequiresContentsDownload, true));
+            await db.Set<DownloadTaskDbModel>().Where(t => t.Id == result.DownloadTaskId)
+                .ExecuteUpdateAsync(s => s.SetProperty(t => t.Options, "{\"downloadMode\":2}"));
+        }
+        await Dispatch();
+        Assert.IsNull((await State(result.Id))?.WorkflowRunId, "Metadata alone must not start post-processing for BT mode.");
+        async Task DispatchBt()
+        {
+            await using var scope = _sp.CreateAsyncScope();
+            await scope.ServiceProvider.GetRequiredService<DownloadResultBtService>().DispatchAsync();
+        }
+        await Task.WhenAll(DispatchBt(), DispatchBt());
+        var manager = _sp.GetRequiredService<IBtDownloadManager>();
+        var job = (await manager.ListAsync()).Single();
+        Assert.IsNull(job.WorkflowRunId);
+        Assert.AreEqual(result.DownloadDirectory, job.OutputDirectory);
+        Assert.AreEqual(result.Id, job.DownloadResultId);
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        await manager.WaitForCompletionAsync(job.Id, ct: deadline.Token);
+        await DispatchBt();
+        await Dispatch();
+        var state = (await State(result.Id))!;
+        Assert.IsNotNull(state.ContentsReadyAt);
+        Assert.AreEqual(job.Id, state.BtDownloadId);
+        Assert.AreEqual(withWorkflow, state.WorkflowRunId != null);
+        if (state.WorkflowRunId is { } runId) await Execute(runId);
+        Assert.AreEqual(1, _torrent.Downloads, "An optional workflow reuses the independent transfer.");
+        await using var final = _sp.CreateAsyncScope();
+        var summary = (await final.ServiceProvider.GetRequiredService<DownloadTaskExecutionService>()
+            .GetAsync([result.DownloadTaskId], CancellationToken.None)).Single();
+        Assert.AreEqual("completed", summary.Status);
+        Assert.AreEqual(100d, summary.Progress);
     }
 
     private async Task<DownloadResultProcessingDbModel?> State(int id)
@@ -314,7 +358,8 @@ public sealed class DownloadResultWorkflowTests
             var task = new DownloadTaskDbModel
             {
                 Key = "https://exhentai.org/g/123/abc/", DownloadPath = shared,
-                ThirdPartyId = ThirdPartyId.ExHentai, Status = DownloadTaskDbModelStatus.Complete
+                ThirdPartyId = ThirdPartyId.ExHentai, Status = DownloadTaskDbModelStatus.Complete,
+                Options = "{\"downloadMode\":1}"
             };
             db.Set<DownloadTaskDbModel>().Add(task);
             db.Set<ExHentaiGalleryDbModel>().Add(new() {GalleryId = 123, GalleryToken = "abc", Title = "Gallery"});
@@ -352,13 +397,21 @@ public sealed class DownloadResultWorkflowTests
         public int Downloads;
         public int FailuresRemaining;
         public byte[] LastMetadata = [];
+        public Task<TorrentDownloadResult> DownloadAsync(TorrentDownloadRequest request,
+            Func<TorrentTransferProgress, Task>? progress, CancellationToken ct) =>
+            DownloadTorrentAsync(request.Metadata!, request.UseWorkingDirectoryAsDestination
+                    ? Path.GetDirectoryName(request.WorkingDirectory)! : request.WorkingDirectory,
+                request.Timeout, null, ct, request.UseWorkingDirectoryAsDestination ? request.WorkingDirectory : null);
         public async Task<TorrentDownloadResult> DownloadTorrentAsync(byte[] metadata, string workingDirectory,
             TimeSpan timeout, Func<int, string?, Task>? progress, CancellationToken ct)
+            => await DownloadTorrentAsync(metadata, workingDirectory, timeout, progress, ct, null);
+        private async Task<TorrentDownloadResult> DownloadTorrentAsync(byte[] metadata, string workingDirectory,
+            TimeSpan timeout, Func<int, string?, Task>? progress, CancellationToken ct, string? destination)
         {
             Downloads++;
             LastMetadata = metadata;
             if (FailuresRemaining-- > 0) throw new IOException("The test peer disconnected.");
-            var root = Path.Combine(workingDirectory, "torrent-data");
+            var root = destination ?? Path.Combine(workingDirectory, "torrent-data");
             Directory.CreateDirectory(Path.Combine(root, "chapter"));
             var file = Path.Combine(root, "chapter", "page.txt");
             await File.WriteAllTextAsync(file, "downloaded torrent contents", ct);

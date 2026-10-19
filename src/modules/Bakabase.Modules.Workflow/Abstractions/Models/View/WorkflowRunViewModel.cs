@@ -19,6 +19,12 @@ public record WorkflowRunViewModel
     public List<WorkflowRunStepStat> StepStats { get; set; } = [];
     public string? ErrorMessage { get; set; }
 
+    /// <summary>Live execution detail; persisted Status remains authoritative.</summary>
+    public int? Progress { get; set; }
+    public string? Process { get; set; }
+    public string? ActivityKind { get; set; }
+    public string? Stage { get; set; }
+
     /// <summary>Set while the run is waiting, so the drawer can say what it is waiting for.</summary>
     public string? WaitReason { get; set; }
 

@@ -9,11 +9,16 @@ import { workflowLabel } from "@/components/Workflow/builtinLabels";
 import BApi from "@/sdk/BApi";
 
 interface Props {
+  appearance?: "card" | "plain";
   value?: number | null;
   onChange: (workflowId: number | null) => Promise<void> | void;
 }
 
-export default function DownloadResultWorkflowField({ value, onChange }: Props) {
+export default function DownloadResultWorkflowField({
+  appearance = "card",
+  value,
+  onChange,
+}: Props) {
   const { t } = useTranslation();
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -84,7 +89,9 @@ export default function DownloadResultWorkflowField({ value, onChange }: Props) 
   };
 
   return (
-    <div className="space-y-3 rounded-xl bg-default-50 p-3">
+    <div
+      className={appearance === "plain" ? "space-y-3" : "space-y-3 rounded-xl bg-default-50 p-3"}
+    >
       <div className="flex items-center gap-2 text-sm font-medium">
         <FiGitBranch aria-hidden className="shrink-0 text-default-500" />
         {t("thirdPartyConfig.downloadResultWorkflow.title")}

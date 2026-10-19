@@ -8,7 +8,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import TaskRow from "../TaskRow";
 
-import { DownloadTaskAction, DownloadTaskStatus, ThirdPartyId } from "@/sdk/constants";
+import {
+  DownloadTaskAction,
+  DownloadTaskStatus,
+  ExHentaiDownloadMode,
+  ThirdPartyId,
+} from "@/sdk/constants";
 
 const { dangerToast } = vi.hoisted(() => ({ dangerToast: vi.fn() }));
 
@@ -60,7 +65,8 @@ async function key(target: HTMLElement, value: string) {
     // Commit each input event so React Aria can register its keyup listener.
     await act(async () => {
       // Menu triggers can move focus on keydown; keyup follows the new focus.
-      const focused = document.activeElement instanceof HTMLElement ? document.activeElement : target;
+      const focused =
+        document.activeElement instanceof HTMLElement ? document.activeElement : target;
 
       focused.dispatchEvent(
         new KeyboardEvent(type, {
@@ -77,14 +83,20 @@ async function key(target: HTMLElement, value: string) {
 async function show(
   overrides: Partial<DownloadTask> = {},
   onDownloadDirectly = vi.fn().mockResolvedValue(undefined),
+  execution?: TaskRowProps["execution"],
+  onDownloadWithBt = vi.fn().mockResolvedValue(undefined),
+  onDownloadTorrentFile = vi.fn().mockResolvedValue(undefined),
 ) {
   const props: TaskRowProps = {
     task: { ...task, ...overrides },
+    execution,
     statusColor: "default",
     progressColor: "primary",
     formatDateTime: (value) => String(value),
     onStart: vi.fn(),
     onDownloadDirectly,
+    onDownloadWithBt,
+    onDownloadTorrentFile,
     onStop: vi.fn(),
     onEdit: vi.fn(),
     onOpenFolder: vi.fn(),
@@ -122,6 +134,54 @@ afterEach(async () => {
 });
 
 describe("download task row interaction", () => {
+  const execution = (status: string): NonNullable<TaskRowProps["execution"]> => ({
+    downloadTaskId: task.id,
+    status,
+    sourceCompleted: true,
+    totalCount: 2,
+    completedCount: 0,
+    runningCount: status === "running" ? 1 : 0,
+    queuedCount: 0,
+    stoppedCount: status === "stopped" ? 2 : 0,
+    failedCount: 0,
+    waitingCount: 0,
+    progress: 25,
+    speedBytesPerSecond: status === "running" ? 1024 : undefined,
+  });
+
+  it("shows ongoing BT execution instead of the completed seed-fetch status and bytes", async () => {
+    const props = await show(
+      {
+        status: DownloadTaskStatus.Complete,
+        progress: 100,
+        completedAt: "2026-10-19T00:00:00Z",
+        downloadedBytes: 4096,
+        availableActions: [],
+      },
+      undefined,
+      execution("running"),
+    );
+    expect(container).toHaveTextContent("downloader.execution.status.running");
+    expect(container).toHaveTextContent("25%");
+    expect(container).not.toHaveTextContent("100%");
+    expect(container).not.toHaveTextContent("downloader.label.completedAt");
+    expect(
+      document.querySelector('[aria-label^="downloader.label.downloadedFileSize:"]'),
+    ).toBeNull();
+    await act(async () => element("downloader.action.stop").click());
+    expect(props.onStop).toHaveBeenCalledWith(task.id);
+  });
+
+  it("can continue a stopped BT execution after its source task has completed", async () => {
+    const props = await show(
+      { status: DownloadTaskStatus.Complete, availableActions: [] },
+      undefined,
+      execution("stopped"),
+    );
+    await act(async () => element("bt.action.resume").click());
+    expect(props.onStart).toHaveBeenCalledWith(task.id);
+  });
+
   it("shows the attributed file size before the progress percent", async () => {
     await show({ downloadedBytes: 1572864 });
 
@@ -567,6 +627,69 @@ describe("download task row interaction", () => {
     expect(element("downloader.label.torrentUnknown")).not.toBeInTheDocument();
   });
 
+  it.each([
+    [ExHentaiDownloadMode.Direct, "directDownload", "btDownload", "torrentFileDownload"],
+    [ExHentaiDownloadMode.Torrent, "btDownload", "directDownload", "torrentFileDownload"],
+    [ExHentaiDownloadMode.TorrentFile, "torrentFileDownload", "directDownload", "btDownload"],
+  ] as const)(
+    "omits the current acquisition mode %s from the menu",
+    async (mode, omitted, first, second) => {
+      await show({
+        options: JSON.stringify({ downloadMode: mode }),
+        metadata: { preferTorrent: true },
+      });
+      await click(element("downloader.label.torrentUnknown"));
+      const choices = Array.from(document.querySelectorAll('[role="menuitem"]'));
+      expect(choices).toHaveLength(2);
+      expect(choices[0]).toHaveTextContent(`downloader.action.${first}`);
+      expect(choices[1]).toHaveTextContent(`downloader.action.${second}`);
+      expect(
+        choices.some((item) => item.textContent?.includes(`downloader.action.${omitted}`)),
+      ).toBe(false);
+    },
+  );
+
+  it.each([
+    [undefined, "torrentFileDownload"],
+    ["{}", "torrentFileDownload"],
+    ['{"preferTorrent":false}', "directDownload"],
+    ['{"DownloadMode":2,"SaveTorrentFile":true}', "btDownload"],
+    ['{"DownloadMode":2,"SaveTorrentFile":false}', "btDownload"],
+  ])(
+    "resolves a legacy mode before hiding the current menu action (%s)",
+    async (options, omitted) => {
+      await show({ options });
+      await click(element("downloader.label.torrentUnknown"));
+      const choices = Array.from(document.querySelectorAll('[role="menuitem"]'));
+      expect(choices).toHaveLength(2);
+      expect(
+        choices.some((item) => item.textContent?.includes(`downloader.action.${omitted}`)),
+      ).toBe(false);
+    },
+  );
+
+  it.each(["pointer", "keyboard"])(
+    "switches to torrent-file-only using %s without normally starting or selecting the row",
+    async (method) => {
+      const props = await show({
+        options: JSON.stringify({ downloadMode: ExHentaiDownloadMode.Torrent }),
+      });
+      const trigger = element("downloader.label.torrentUnknown");
+      if (method === "pointer") await click(trigger);
+      else await key(trigger, "Enter");
+      const item = Array.from(document.querySelectorAll<HTMLElement>('[role="menuitem"]')).find(
+        (item) => item.textContent?.includes("downloader.action.torrentFileDownload"),
+      )!;
+      if (method === "pointer") await click(item);
+      else await key(item, "Enter");
+      expect(props.onDownloadTorrentFile).toHaveBeenCalledExactlyOnceWith(task.id);
+      expect(props.onDownloadWithBt).not.toHaveBeenCalled();
+      expect(props.onDownloadDirectly).not.toHaveBeenCalled();
+      expect(props.onStart).not.toHaveBeenCalled();
+      expect(props.onClick).not.toHaveBeenCalled();
+    },
+  );
+
   it.each(["pointer", "keyboard"])(
     "downloads directly from the torrent menu using %s without selecting or normally starting the row",
     async (method) => {
@@ -587,6 +710,50 @@ describe("download task row interaction", () => {
       expect(props.onContextMenu).not.toHaveBeenCalled();
     },
   );
+
+  it.each(["pointer", "keyboard"])(
+    "switches a failed ExHentai task to BT from the torrent menu using %s",
+    async (method) => {
+      const props = await show({
+        status: DownloadTaskStatus.Failed,
+        metadata: { preferTorrent: false },
+      });
+      const trigger = element("downloader.label.torrentDisabled");
+      if (method === "pointer") await click(trigger);
+      else await key(trigger, "Enter");
+      const btItem = Array.from(document.querySelectorAll<HTMLElement>('[role="menuitem"]')).find(
+        (item) => item.textContent?.includes("downloader.action.btDownload"),
+      )!;
+      expect(btItem).toHaveTextContent("downloader.tip.btDownload");
+      if (method === "pointer") await click(btItem);
+      else await key(btItem, "Enter");
+      expect(props.onDownloadWithBt).toHaveBeenCalledExactlyOnceWith(task.id);
+      expect(props.onDownloadDirectly).not.toHaveBeenCalled();
+      expect(props.onStart).not.toHaveBeenCalled();
+      expect(props.onClick).not.toHaveBeenCalled();
+    },
+  );
+
+  it("keeps both acquisition choices disabled while switching to BT and surfaces failure", async () => {
+    let fail!: (error: Error) => void;
+    const pending = new Promise<void>((_, reject) => {
+      fail = reject;
+    });
+    const download = vi.fn(() => pending);
+    await show({}, undefined, undefined, download);
+    const trigger = element("downloader.label.torrentUnknown");
+    await click(trigger);
+    const btItem = Array.from(document.querySelectorAll<HTMLElement>('[role="menuitem"]')).find(
+      (item) => item.textContent?.includes("downloader.action.btDownload"),
+    )!;
+    await click(btItem);
+    expect(trigger).toBeDisabled();
+    await click(trigger);
+    expect(download).toHaveBeenCalledOnce();
+    await act(async () => fail(new Error("No torrent available")));
+    expect(dangerToast).toHaveBeenCalledExactlyOnceWith("No torrent available");
+    expect(trigger).not.toBeDisabled();
+  });
 
   it("blocks repeated direct downloads while the request or conflict choice is pending", async () => {
     let finish!: () => void;

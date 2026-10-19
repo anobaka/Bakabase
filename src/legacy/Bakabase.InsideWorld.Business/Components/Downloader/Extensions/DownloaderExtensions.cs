@@ -224,7 +224,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Extensions
 
             var metadata = new DownloadTaskMetadata
             {
-                PreferTorrent = options.PreferTorrent,
+                PreferTorrent = options.UsesTorrent,
                 TorrentFoundAt = options.TorrentFoundAt,
                 NoTorrentCheckedAt = options.NoTorrentCheckedAt
             };

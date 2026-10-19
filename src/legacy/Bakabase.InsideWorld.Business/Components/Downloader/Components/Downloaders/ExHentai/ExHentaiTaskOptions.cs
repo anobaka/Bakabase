@@ -5,6 +5,16 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
     public class ExHentaiTaskOptions
     {
         public bool PreferTorrent { get; set; } = true;
+        /// <summary>Null maps legacy PreferTorrent to the corresponding route.</summary>
+        public ExHentaiDownloadMode? DownloadMode { get; set; }
+        public bool SaveTorrentFile { get; set; }
+        /// <summary>Applies only to Torrent content transfers; TorrentFile never downloads images.</summary>
+        public bool FallbackToDirect { get; set; } = true;
+        [System.Text.Json.Serialization.JsonIgnore]
+        public ExHentaiDownloadMode EffectiveDownloadMode => DownloadMode ??
+            (PreferTorrent ? ExHentaiDownloadMode.TorrentFile : ExHentaiDownloadMode.Direct);
+        [System.Text.Json.Serialization.JsonIgnore]
+        public bool UsesTorrent => EffectiveDownloadMode != ExHentaiDownloadMode.Direct;
         /// <summary>Frozen per task. Null preserves the save-only behavior of older tasks.</summary>
         public int? DownloadResultWorkflowId { get; set; }
 
@@ -52,6 +62,9 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
     internal class ExHentaiTaskOptionsPatch
     {
         public bool? PreferTorrent { get; set; }
+        public ExHentaiDownloadMode? DownloadMode { get; set; }
+        public bool? SaveTorrentFile { get; set; }
+        public bool? FallbackToDirect { get; set; }
         private int? _downloadResultWorkflowId;
         public int? DownloadResultWorkflowId
         {

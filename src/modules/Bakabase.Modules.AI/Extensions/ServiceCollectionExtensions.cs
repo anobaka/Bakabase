@@ -45,6 +45,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ResourceService<TDbContext, LlmToolConfigDbModel, int>>();
 
         // Observation & Cache
+        services.TryAddSingleton<LlmCacheRequestCoordinator>();
         services.TryAddScoped<ILlmUsageService, LlmUsageService<TDbContext>>();
         services.TryAddScoped<ILlmCacheService, LlmCacheService<TDbContext>>();
         services.TryAddScoped<LlmQuotaManager>();

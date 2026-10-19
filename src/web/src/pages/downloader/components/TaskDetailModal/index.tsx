@@ -35,7 +35,8 @@ import IntervalField from "@/pages/downloader/components/TaskDetailModal/compone
 import CheckpointField from "@/pages/downloader/components/TaskDetailModal/components/CheckpointField.tsx";
 import AutoRetryField from "@/pages/downloader/components/TaskDetailModal/components/AutoRetryField.tsx";
 import AllowDuplicateField from "@/pages/downloader/components/TaskDetailModal/components/AllowDuplicateField.tsx";
-import PreferTorrentField from "@/pages/downloader/components/TaskDetailModal/components/PreferTorrentField.tsx";
+import ExHentaiDownloadModeField from "./components/ExHentaiDownloadModeField";
+import { parseExHentaiDownloadOptions } from "@/pages/downloader/exHentaiDownloadMode";
 import DownloadResultsPanel from "@/pages/downloader/components/TaskDetailModal/components/DownloadResultsPanel";
 import EstimatedRemainingTime from "@/pages/downloader/components/EstimatedRemainingTime";
 import TaskLinkCopyButton from "@/pages/downloader/components/TaskLinkCopyButton";
@@ -54,9 +55,7 @@ const DownloadTaskDetailModal = ({ onDestroyed, id }: Props) => {
   const autoStartAfterCreation = useDownloaderGlobalOptionsStore(
     (s) => s.data?.autoStartAfterCreation ?? false,
   );
-  const exHentaiPreferTorrentDefault = useExHentaiOptionsStore(
-    (s) => s.data?.preferTorrent ?? true,
-  );
+  const exHentaiDefaults = useExHentaiOptionsStore((s) => s.data);
 
   const isAdding = !(id && id > 0);
   const [form, setForm] = useState<Partial<Form>>({ autoRetry: true });
@@ -317,21 +316,17 @@ const DownloadTaskDetailModal = ({ onDestroyed, id }: Props) => {
                 }}
               />
             ) : null;
-          case DownloadTaskFieldType.PreferTorrent: {
-            const parsedOptions = form.options ? JSON.parse(form.options) : {};
-            const preferTorrent =
-              parsedOptions.preferTorrent ?? (isAdding ? exHentaiPreferTorrentDefault : true);
+          case DownloadTaskFieldType.DownloadMode: {
+            const parsedOptions = parseExHentaiDownloadOptions(form.options);
+            const effectiveOptions = isAdding
+              ? { ...exHentaiDefaults, ...parsedOptions }
+              : parsedOptions;
 
             return (
-              <PreferTorrentField
-                preferTorrent={preferTorrent}
-                onChange={(value) => {
-                  const newOptions = { ...parsedOptions, preferTorrent: value };
-
-                  setForm({
-                    ...form,
-                    options: JSON.stringify(newOptions),
-                  });
+              <ExHentaiDownloadModeField
+                options={effectiveOptions}
+                onChange={(patch) => {
+                  setForm({ ...form, options: JSON.stringify({ ...parsedOptions, ...patch }) });
                 }}
               />
             );

@@ -742,6 +742,24 @@ export const FanboxNamingFieldsLabel: Record<FanboxNamingFields, string> = {
   [FanboxNamingFields.Extension]: 'Extension'
 };
 
+export enum ExHentaiDownloadMode {
+  Direct = 1,
+  Torrent = 2,
+  TorrentFile = 3
+}
+
+export const exHentaiDownloadModes = [
+  { label: 'Direct', value: ExHentaiDownloadMode.Direct },
+  { label: 'Torrent', value: ExHentaiDownloadMode.Torrent },
+  { label: 'TorrentFile', value: ExHentaiDownloadMode.TorrentFile }
+] as const;
+
+export const ExHentaiDownloadModeLabel: Record<ExHentaiDownloadMode, string> = {
+  [ExHentaiDownloadMode.Direct]: 'Direct',
+  [ExHentaiDownloadMode.Torrent]: 'Torrent',
+  [ExHentaiDownloadMode.TorrentFile]: 'TorrentFile'
+};
+
 export enum ExHentaiDownloadTaskType {
   SingleWork = 1,
   Watched = 2,
@@ -4645,6 +4663,33 @@ export const NullValueBehaviorLabel: Record<NullValueBehavior, string> = {
   [NullValueBehavior.Pass]: 'Pass'
 };
 
+export enum BtDownloadStatus {
+  Queued = 1,
+  Running = 2,
+  Stopping = 3,
+  Stopped = 4,
+  Completed = 5,
+  Failed = 6
+}
+
+export const btDownloadStatuses = [
+  { label: 'Queued', value: BtDownloadStatus.Queued },
+  { label: 'Running', value: BtDownloadStatus.Running },
+  { label: 'Stopping', value: BtDownloadStatus.Stopping },
+  { label: 'Stopped', value: BtDownloadStatus.Stopped },
+  { label: 'Completed', value: BtDownloadStatus.Completed },
+  { label: 'Failed', value: BtDownloadStatus.Failed }
+] as const;
+
+export const BtDownloadStatusLabel: Record<BtDownloadStatus, string> = {
+  [BtDownloadStatus.Queued]: 'Queued',
+  [BtDownloadStatus.Running]: 'Running',
+  [BtDownloadStatus.Stopping]: 'Stopping',
+  [BtDownloadStatus.Stopped]: 'Stopped',
+  [BtDownloadStatus.Completed]: 'Completed',
+  [BtDownloadStatus.Failed]: 'Failed'
+};
+
 export enum ServerHandshakeOutcome {
   Ok = 0,
   Unreachable = 1,
@@ -6326,6 +6371,33 @@ export const LlmCapabilitiesLabel: Record<LlmCapabilities, string> = {
   [LlmCapabilities.Streaming]: 'Streaming',
   [LlmCapabilities.Embedding]: 'Embedding',
   [LlmCapabilities.JsonMode]: 'JsonMode'
+};
+
+export enum HttpDownloadStatus {
+  Queued = 1,
+  Running = 2,
+  Stopping = 3,
+  Stopped = 4,
+  Completed = 5,
+  Failed = 6
+}
+
+export const httpDownloadStatuses = [
+  { label: 'Queued', value: HttpDownloadStatus.Queued },
+  { label: 'Running', value: HttpDownloadStatus.Running },
+  { label: 'Stopping', value: HttpDownloadStatus.Stopping },
+  { label: 'Stopped', value: HttpDownloadStatus.Stopped },
+  { label: 'Completed', value: HttpDownloadStatus.Completed },
+  { label: 'Failed', value: HttpDownloadStatus.Failed }
+] as const;
+
+export const HttpDownloadStatusLabel: Record<HttpDownloadStatus, string> = {
+  [HttpDownloadStatus.Queued]: 'Queued',
+  [HttpDownloadStatus.Running]: 'Running',
+  [HttpDownloadStatus.Stopping]: 'Stopping',
+  [HttpDownloadStatus.Stopped]: 'Stopped',
+  [HttpDownloadStatus.Completed]: 'Completed',
+  [HttpDownloadStatus.Failed]: 'Failed'
 };
 
 export enum BulkModificationProcessorOptionsItemsFilterBy {

@@ -1,5 +1,7 @@
 "use client";
 
+import type { CenterTask } from "../downloadCenter";
+import type { BakabaseModulesDownloaderModelsTasksDownloadTaskExecution as DownloadTaskExecution } from "@/sdk/Api";
 import type { SyntheticEvent } from "react";
 import type { ChipProps, CircularProgressProps } from "@/components/bakaui";
 import type { DownloadTask } from "@/core/models/DownloadTask";
@@ -12,6 +14,7 @@ import {
   AiOutlineDown,
   AiOutlineEdit,
   AiOutlineEllipsis,
+  AiOutlineFile,
   AiOutlineFolderOpen,
   AiOutlineInfoCircle,
   AiOutlinePlayCircle,
@@ -26,7 +29,13 @@ import { useEstimatedRemainingLabel } from "./EstimatedRemainingTime";
 import TaskLinkCopyButton from "./TaskLinkCopyButton";
 
 import { humanFileSize } from "@/components/utils";
-import { DownloadTaskAction, DownloadTaskStatus, ThirdPartyId } from "@/sdk/constants";
+import {
+  DownloadTaskAction,
+  DownloadTaskStatus,
+  ExHentaiDownloadMode,
+  ThirdPartyId,
+} from "@/sdk/constants";
+import { parseExHentaiDownloadOptions, resolveExHentaiDownloadMode } from "../exHentaiDownloadMode";
 import {
   Button,
   Chip,
@@ -52,11 +61,18 @@ const stopPropagation = (event: SyntheticEvent) => {
 
 export type TaskRowProps = {
   task: DownloadTask;
+  execution?: DownloadTaskExecution;
+  centerTask?: CenterTask;
+  childCount?: number;
+  childrenExpanded?: boolean;
+  onToggleChildren?: (id: number) => void;
   statusColor: ChipProps["color"];
   progressColor: CircularProgressProps["color"];
   formatDateTime: (value?: string | Date | null) => string;
   onStart: (id: number) => void;
   onDownloadDirectly: (id: number) => Promise<void>;
+  onDownloadWithBt: (id: number) => Promise<void>;
+  onDownloadTorrentFile: (id: number) => Promise<void>;
   onStop: (id: number) => void;
   onEdit: (id: number) => void;
   onOpenFolder: (task: DownloadTask) => void;
@@ -78,11 +94,18 @@ export type TaskRowProps = {
  */
 const TaskRow = memo(function TaskRow({
   task,
+  execution,
+  centerTask,
+  childCount = 0,
+  childrenExpanded = false,
+  onToggleChildren,
   statusColor,
   progressColor,
   formatDateTime,
   onStart,
   onDownloadDirectly,
+  onDownloadWithBt,
+  onDownloadTorrentFile,
   onStop,
   onEdit,
   onOpenFolder,
@@ -99,25 +122,67 @@ const TaskRow = memo(function TaskRow({
   const hasNotices = task.status === DownloadTaskStatus.Complete && !!task.message;
   const noticeSummary = task.message?.split("\n", 1)[0];
   const Icon = DownloadTaskTypeIconMap[task.thirdPartyId!]?.[task.type];
-  const progress = Number.isFinite(task.progress) ? Math.min(100, Math.max(0, task.progress)) : 0;
+  const progressValue = centerTask
+    ? centerTask.progress
+    : execution
+      ? execution.progress
+      : task.progress;
+  const progress =
+    progressValue != null && Number.isFinite(progressValue)
+      ? Math.min(100, Math.max(0, progressValue))
+      : undefined;
+  const executionActive =
+    execution &&
+    ["running", "queued", "waiting", "processing", "preparing"].includes(execution.status);
+  const actions = centerTask
+    ? (centerTask.availableActions ?? []).flatMap((action) =>
+        action === "start"
+          ? [DownloadTaskAction.StartManually]
+          : action === "retry"
+            ? [DownloadTaskAction.Restart]
+            : action === "stop"
+              ? [DownloadTaskAction.Disable]
+              : [],
+      )
+    : executionActive
+      ? [DownloadTaskAction.Disable]
+      : execution && ["stopped", "failed", "processingFailed"].includes(execution.status)
+        ? [DownloadTaskAction.StartManually]
+        : task.availableActions;
+  const executionSummary = execution
+    ? t("downloader.execution.summary", {
+        completed: execution.completedCount,
+        total: execution.totalCount,
+        running: execution.runningCount,
+        queued: execution.queuedCount,
+        waiting: execution.waitingCount,
+        failed: execution.failedCount,
+        stopped: execution.stoppedCount,
+      })
+    : undefined;
   const downloadedSize =
+    !execution &&
     task.downloadedBytes != null &&
     Number.isFinite(task.downloadedBytes) &&
     task.downloadedBytes >= 0
       ? humanFileSize(task.downloadedBytes, false, 1)
       : undefined;
+  const executionSpeed = execution?.speedBytesPerSecond;
   const downloadSpeed =
-    task.status === DownloadTaskStatus.Downloading &&
-    task.downloadSpeedBytesPerSecond != null &&
-    Number.isFinite(task.downloadSpeedBytesPerSecond) &&
-    task.downloadSpeedBytesPerSecond > 0
-      ? `${humanFileSize(task.downloadSpeedBytesPerSecond, false, 1)}/s`
-      : undefined;
+    executionSpeed != null && executionSpeed > 0
+      ? `${humanFileSize(executionSpeed, false, 1)}/s`
+      : task.status === DownloadTaskStatus.Downloading &&
+          task.downloadSpeedBytesPerSecond != null &&
+          Number.isFinite(task.downloadSpeedBytesPerSecond) &&
+          task.downloadSpeedBytesPerSecond > 0
+        ? `${humanFileSize(task.downloadSpeedBytesPerSecond, false, 1)}/s`
+        : undefined;
   const name = task.name || task.key;
   const createdAt = `${t<string>("downloader.label.createdAt")} ${formatDateTime(task.createdAt)}`;
-  const completedAt = task.completedAt
-    ? `${t<string>("downloader.label.completedAt")} ${formatDateTime(task.completedAt)}`
-    : undefined;
+  const completedAt =
+    task.completedAt && !execution
+      ? `${t<string>("downloader.label.completedAt")} ${formatDateTime(task.completedAt)}`
+      : undefined;
   const nextStart = task.nextStartDt
     ? `${t<string>("downloader.label.nextStartTime")} ${formatDateTime(task.nextStartDt)}`
     : undefined;
@@ -169,6 +234,8 @@ const TaskRow = memo(function TaskRow({
               formatDateTime={formatDateTime}
               task={task}
               onDownloadDirectly={onDownloadDirectly}
+              onDownloadWithBt={onDownloadWithBt}
+              onDownloadTorrentFile={onDownloadTorrentFile}
             />
           </div>
           <div className="flex min-w-0 items-center gap-1 text-xs leading-4 text-default-400">
@@ -179,13 +246,36 @@ const TaskRow = memo(function TaskRow({
           </div>
         </div>
         <Chip className="h-6 shrink-0" color={statusColor} size="sm" variant="flat">
-          {t<string>(DownloadTaskStatus[task.status])}
+          {centerTask
+            ? t(`downloadCenter.status.${centerTask.status}`)
+            : execution
+              ? t(`downloader.execution.status.${execution.status}`)
+              : t<string>(DownloadTaskStatus[task.status])}
         </Chip>
       </div>
       <div className="flex h-8 min-w-0 shrink-0 items-center gap-3">
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
           <div className="flex min-w-0 items-center gap-2 text-xs leading-4">
-            {hasErrorMessage ? (
+            {executionSummary ? (
+              <span
+                data-task-action
+                className="min-w-0 flex-1"
+                role="presentation"
+                onClick={stopPropagation}
+                onContextMenu={stopPropagation}
+                onKeyDown={stopPropagation}
+              >
+                <Button
+                  className="h-4 min-h-0 w-full min-w-0 justify-start truncate px-0 text-xs"
+                  size="sm"
+                  variant="light"
+                  title={executionSummary}
+                  onPress={() => onEdit(task.id)}
+                >
+                  {executionSummary}
+                </Button>
+              </span>
+            ) : hasErrorMessage ? (
               <span
                 data-task-action
                 className="min-w-0 flex-1"
@@ -264,7 +354,7 @@ const TaskRow = memo(function TaskRow({
                 </span>
               </>
             )}
-            {estimatedRemaining && (
+            {!execution && estimatedRemaining && (
               <>
                 <span className="shrink-0 tabular-nums text-default-500" title={estimatedRemaining}>
                   {estimatedRemaining}
@@ -274,7 +364,9 @@ const TaskRow = memo(function TaskRow({
                 </span>
               </>
             )}
-            <span className="shrink-0 tabular-nums text-default-500">{Math.round(progress)}%</span>
+            <span className="shrink-0 tabular-nums text-default-500">
+              {progress == null ? "—" : `${Math.round(progress)}%`}
+            </span>
           </div>
           <Progress
             disableAnimation
@@ -282,7 +374,10 @@ const TaskRow = memo(function TaskRow({
             classNames={{ track: "h-1 bg-default-100" }}
             color={progressColor}
             size="sm"
-            value={progress}
+            isIndeterminate={
+              progress == null && !!executionActive && execution?.status !== "waiting"
+            }
+            value={progress ?? 0}
           />
         </div>
         <div
@@ -293,13 +388,19 @@ const TaskRow = memo(function TaskRow({
           onContextMenu={stopPropagation}
           onKeyDown={stopPropagation}
         >
-          {task.availableActions?.map((action) => {
+          {actions?.map((action) => {
             switch (action) {
               case DownloadTaskAction.StartManually:
               case DownloadTaskAction.Restart: {
                 const restarting = action === DownloadTaskAction.Restart;
                 const label = t<string>(
-                  restarting ? "downloader.action.restart" : "downloader.action.start",
+                  execution?.status === "stopped"
+                    ? "bt.action.resume"
+                    : execution && ["failed", "processingFailed"].includes(execution.status)
+                      ? "bt.action.retry"
+                      : restarting
+                        ? "downloader.action.restart"
+                        : "downloader.action.start",
                 );
 
                 return (
@@ -397,6 +498,23 @@ const TaskRow = memo(function TaskRow({
         </div>
       </div>
       <div className="flex h-6 min-w-0 shrink-0 items-center gap-2">
+        {childCount > 0 && (
+          <Button
+            data-task-action
+            aria-expanded={childrenExpanded}
+            className="h-6 min-h-0 shrink-0 px-1 text-xs"
+            size="sm"
+            variant="light"
+            onPress={() => onToggleChildren?.(task.id)}
+          >
+            {t(
+              childrenExpanded
+                ? "downloadCenter.children.collapse"
+                : "downloadCenter.children.expand",
+              { count: childCount },
+            )}
+          </Button>
+        )}
         <span
           aria-label={[createdAt, completedAt, nextStart].filter(Boolean).join(" · ")}
           className="min-w-0 flex-1 truncate text-xs text-default-400"
@@ -419,22 +537,30 @@ const TaskRow = memo(function TaskRow({
  * few hundred images. These used to be text chips at the end of the row; most galleries have no
  * torrent, so a column of "No torrent" chips became the loudest thing in the list. An icon next to
  * the name keeps the fact visible where the eye already is, and the tooltip still carries the
- * detail. Every ExHentai task also offers its direct-image download action from this icon.
+ * detail. The icon also offers the other acquisition modes for an ExHentai task.
  */
 const TorrentIndicator = ({
   task,
   formatDateTime,
   onDownloadDirectly,
+  onDownloadWithBt,
+  onDownloadTorrentFile,
 }: {
   task: DownloadTask;
   formatDateTime: (value?: string | Date | null) => string;
   onDownloadDirectly: (id: number) => Promise<void>;
+  onDownloadWithBt: (id: number) => Promise<void>;
+  onDownloadTorrentFile: (id: number) => Promise<void>;
 }) => {
   const { t } = useTranslation();
   const [pending, setPending] = useState(false);
   const [tooltipOpen, setTooltipOpen] = useState(false);
   const pendingRef = useRef(false);
   const metadata = task.metadata ?? {};
+  const currentMode = resolveExHentaiDownloadMode({
+    ...metadata,
+    ...parseExHentaiDownloadOptions(task.options),
+  });
 
   if (task.thirdPartyId !== ThirdPartyId.ExHentai) {
     return null;
@@ -478,13 +604,36 @@ const TorrentIndicator = ({
   }
 
   const { Icon, className, label, tip } = indicator;
-  const downloadDirectly = async () => {
+  const actions = [
+    {
+      key: "direct-download",
+      mode: ExHentaiDownloadMode.Direct,
+      label: "directDownload",
+      Icon: AiOutlineDownload,
+      run: onDownloadDirectly,
+    },
+    {
+      key: "bt-download",
+      mode: ExHentaiDownloadMode.Torrent,
+      label: "btDownload",
+      Icon: TbMagnet,
+      run: onDownloadWithBt,
+    },
+    {
+      key: "torrent-file-download",
+      mode: ExHentaiDownloadMode.TorrentFile,
+      label: "torrentFileDownload",
+      Icon: AiOutlineFile,
+      run: onDownloadTorrentFile,
+    },
+  ].filter((action) => action.mode !== currentMode);
+  const download = async (action: (typeof actions)[number]) => {
     if (pendingRef.current) return;
 
     pendingRef.current = true;
     setPending(true);
     try {
-      await onDownloadDirectly(task.id);
+      await action.run(task.id);
     } catch (error) {
       const message =
         error instanceof Error
@@ -496,7 +645,7 @@ const TorrentIndicator = ({
             ? error.message
             : undefined;
 
-      toast.danger(message || t<string>("downloader.toast.directDownloadFailed"));
+      toast.danger(message || t<string>(`downloader.toast.${action.label}Failed`));
     } finally {
       pendingRef.current = false;
       setPending(false);
@@ -534,18 +683,21 @@ const TorrentIndicator = ({
             </DropdownTrigger>
             <DropdownMenu
               aria-label={t<string>("downloader.action.torrentActions")}
-              disabledKeys={pending ? ["direct-download"] : []}
+              disabledKeys={pending ? actions.map((action) => action.key) : []}
               onAction={(key) => {
-                if (key === "direct-download") void downloadDirectly();
+                const action = actions.find((action) => action.key === key);
+                if (action) void download(action);
               }}
             >
-              <DropdownItem
-                key="direct-download"
-                description={t<string>("downloader.tip.directDownload")}
-                startContent={<AiOutlineDownload aria-hidden className="text-lg" />}
-              >
-                {t<string>("downloader.action.directDownload")}
-              </DropdownItem>
+              {actions.map(({ key, label, Icon }) => (
+                <DropdownItem
+                  key={key}
+                  description={t<string>(`downloader.tip.${label}`)}
+                  startContent={<Icon aria-hidden className="text-lg" />}
+                >
+                  {t<string>(`downloader.action.${label}`)}
+                </DropdownItem>
+              ))}
             </DropdownMenu>
           </Dropdown>
         </span>

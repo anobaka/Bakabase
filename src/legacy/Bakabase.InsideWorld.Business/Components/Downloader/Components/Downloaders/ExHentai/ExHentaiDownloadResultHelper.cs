@@ -37,8 +37,8 @@ public static class ExHentaiDownloadResultHelper
     }
 
     /// <summary>Keep each automatic handoff's files independent while preserving legacy save-only paths.</summary>
-    public static string GetWorkDirectory(string downloadPath, string url, int? workflowId) =>
-        workflowId.HasValue
+    public static string GetWorkDirectory(string downloadPath, string url, int? workflowId, bool downloadContents = false) =>
+        workflowId.HasValue || downloadContents
             ? Path.Combine(downloadPath, "gallery-" + NormalizeSourceKey(url).Replace('/', '-'))
             : downloadPath;
 

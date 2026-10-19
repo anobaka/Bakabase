@@ -7,22 +7,12 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
 
-import { Select } from "@/components/bakaui";
+import ProxySelector from "@/components/ProxySelector";
 import { ProxyCapableThirdPartyIds } from "@/sdk/constants";
 import { useNetworkOptionsStore } from "@/stores/options";
 import BApi from "@/sdk/BApi";
 
 type ProxyModel = BakabaseInsideWorldModelsConfigsNetworkOptionsProxyModel;
-
-/** Mirrors NetworkOptions.ProxyMode. */
-const ProxyMode = {
-  DoNotUse: 0,
-  UseSystem: 1,
-  UseCustom: 2,
-} as const;
-
-/** Not a backend mode — the UI value for "no entry", i.e. follow the global proxy. */
-const INHERIT = "inherit";
 
 interface Props {
   thirdPartyId: ThirdPartyId;
@@ -45,34 +35,10 @@ const ProxyField: React.FC<Props> = ({ thirdPartyId }) => {
   const overrides = (networkOptions.thirdPartyProxies ?? {}) as Record<string, ProxyModel>;
   const entry = overrides[String(thirdPartyId)];
 
-  const selected = !entry
-    ? INHERIT
-    : entry.mode === ProxyMode.UseCustom
-      ? `custom:${entry.customProxyId}`
-      : String(entry.mode);
-
-  const options = [
-    { label: t("thirdPartyConfig.field.proxy.inherit"), value: INHERIT },
-    { label: t("configuration.others.proxy.doNotUse"), value: String(ProxyMode.DoNotUse) },
-    { label: t("configuration.others.proxy.useSystem"), value: String(ProxyMode.UseSystem) },
-    ...(networkOptions.customProxies ?? []).map((c) => ({
-      label: c.name ? `${c.name} (${c.address})` : (c.address ?? ""),
-      value: `custom:${c.id}`,
-    })),
-  ];
-
-  const change = async (value: string) => {
+  const change = async (value: ProxyModel | undefined) => {
     const next = { ...overrides };
-
-    // Inheriting carries no information, so drop the entry rather than storing a mode that
-    // means "same as global".
-    if (value === INHERIT) {
-      delete next[String(thirdPartyId)];
-    } else {
-      next[String(thirdPartyId)] = value.startsWith("custom:")
-        ? { mode: ProxyMode.UseCustom, customProxyId: value.slice("custom:".length) }
-        : { mode: Number(value) as ProxyModel["mode"], customProxyId: undefined };
-    }
+    if (value === undefined) delete next[String(thirdPartyId)];
+    else next[String(thirdPartyId)] = value;
 
     await BApi.options.patchNetworkOptions({ thirdPartyProxies: next });
     toast.success(t("thirdPartyConfig.success.saved"));
@@ -81,17 +47,12 @@ const ProxyField: React.FC<Props> = ({ thirdPartyId }) => {
   return (
     <div className="flex flex-col gap-1">
       <span className="text-sm font-medium">{t<string>("thirdPartyConfig.field.proxy.label")}</span>
-      <Select
+      <ProxySelector
+        allowInherit
         className="max-w-md"
-        dataSource={options}
-        multiple={false}
-        selectedKeys={[selected]}
-        size="sm"
-        onSelectionChange={(keys) => {
-          const key = Array.from(keys)[0] as string;
-
-          if (key) change(key);
-        }}
+        value={entry}
+        customProxies={networkOptions.customProxies}
+        onChange={change}
       />
       <span className="text-xs text-foreground-400">
         {t<string>("thirdPartyConfig.field.proxy.description")}

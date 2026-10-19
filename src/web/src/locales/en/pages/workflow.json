@@ -584,5 +584,9 @@
   "workflow.activity.postParserCheckLinks.displayName": "Check download link health",
   "workflow.activity.postParserCheckLinks.description": "Check supported shared links. Unsupported or inconclusive links remain unknown.",
   "workflow.waitReason.ExtractionPlanUnknown": "Waiting for file processing instructions",
-  "workflow.recipe.fileProcessingPlan.description": "Select local files and apply saved file processing instructions while retaining originals. Bind each resource to a directory and plan separately."
+  "workflow.recipe.fileProcessingPlan.description": "Select local files and apply saved file processing instructions while retaining originals. Bind each resource to a directory and plan separately.",
+  "workflow.runDetail.title": "Workflow run #{{id}}",
+  "workflow.runDetail.loadFailed": "Could not load this workflow run.",
+  "workflow.runDetail.definition": "View workflow definition",
+  "workflow.runDetail.progress": "Workflow progress"
 }

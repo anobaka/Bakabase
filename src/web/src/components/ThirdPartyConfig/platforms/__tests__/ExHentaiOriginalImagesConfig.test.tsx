@@ -6,13 +6,18 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ExHentaiConfigField, ExHentaiConfigPanel } from "../ExHentaiConfig";
+import { ExHentaiDownloadMode } from "@/sdk/constants";
 
 type OriginalImageOptions = {
   preferTorrent?: boolean;
+  downloadMode?: ExHentaiDownloadMode;
+  saveTorrentFile?: boolean;
+  fallbackToDirect?: boolean;
   preferOriginalImages?: boolean;
   allowOriginalImageGpSpending?: boolean;
   originalImageMinimumGpBalance?: number | null;
   originalImageMaximumGpCostPerTask?: number | null;
+  downloadResultWorkflowId?: number | null;
 };
 
 const { state, patchExHentai, getDefinitions } = vi.hoisted(() => ({
@@ -54,6 +59,19 @@ vi.mock("../../base/ConfigurableThirdPartyPanel", () => ({
 // Exercise the real number-field commit, clamping and clear behavior.
 vi.mock("@/components/bakaui", async () => ({
   ...(await import("@heroui/react")),
+  Select: ({ label, dataSource, selectedKeys, onSelectionChange }: any) => (
+    <select
+      aria-label={label}
+      value={selectedKeys[0]}
+      onChange={(event) => onSelectionChange(new Set([event.target.value]))}
+    >
+      {dataSource.map((item: { value: string; label: string }) => (
+        <option key={item.value} value={item.value}>
+          {item.label}
+        </option>
+      ))}
+    </select>
+  ),
   toast: { success: vi.fn() },
 }));
 vi.mock("../../base/AccountsPanel", () => ({ default: () => null }));
@@ -61,13 +79,23 @@ vi.mock("../../base/MetadataMappingPanel", () => ({ default: () => null }));
 vi.mock("../../base/AutoSyncPanel", () => ({ default: () => null }));
 vi.mock("../../base/TampermonkeyInstallButton", () => ({ default: () => null }));
 vi.mock("../../base/ThirdPartyConfigModal", () => ({ default: () => null }));
-vi.mock("../../base/ProxyField", () => ({ default: () => null }));
+vi.mock("../../base/ProxyField", () => ({ default: () => <div>ExHentai proxy</div> }));
 vi.mock("../../base/SourceDefaultDownloadPathField", () => ({ default: () => null }));
-vi.mock("../../base/DownloadResultWorkflowField", () => ({ default: () => null }));
-vi.mock("@/components/FileSystemSelector", () => ({ FileSystemSelectorButton: () => null }));
-vi.mock("@/pages/downloader/components/TaskDetailModal/components/PreferTorrentField", () => ({
-  default: () => null,
+vi.mock("../../base/DownloadResultWorkflowField", () => ({
+  default: ({ value, onChange }: { value?: number; onChange: (value: number | null) => void }) => (
+    <select
+      aria-label="Follow-up workflow"
+      value={value ?? "none"}
+      onChange={(event) =>
+        onChange(event.target.value === "none" ? null : Number(event.target.value))
+      }
+    >
+      <option value="none">None</option>
+      <option value="42">Organize downloads</option>
+    </select>
+  ),
 }));
+vi.mock("@/components/FileSystemSelector", () => ({ FileSystemSelectorButton: () => null }));
 
 const keys = {
   prefer: "thirdPartyConfig.exHentai.originalImages.prefer",
@@ -75,9 +103,9 @@ const keys = {
   minimum: "thirdPartyConfig.exHentai.originalImages.minimumGp",
   maximum: "thirdPartyConfig.exHentai.originalImages.maximumGp",
 };
-const panel = () => (
+const panel = (field: ExHentaiConfigField | "all" = ExHentaiConfigField.OriginalImages) => (
   <HeroUIProvider disableAnimation>
-    <ExHentaiConfigPanel fields={[ExHentaiConfigField.Download]} />
+    <ExHentaiConfigPanel fields={field === "all" ? "all" : [field]} />
   </HeroUIProvider>
 );
 const input = (key: string) => screen.getByRole<HTMLInputElement>("textbox", { name: key });
@@ -95,8 +123,72 @@ afterEach(() => {
 });
 
 describe("ExHentai original image configuration", () => {
+  it("saves the shared BT checkbox combination as the default acquisition preference", async () => {
+    state.options = {
+      downloadMode: ExHentaiDownloadMode.Torrent,
+      saveTorrentFile: true,
+      fallbackToDirect: false,
+    };
+    const user = userEvent.setup();
+    const view = render(panel(ExHentaiConfigField.Download));
+    expect(screen.queryByRole("checkbox", { name: keys.prefer })).toBeNull();
+    expect(screen.queryByLabelText("Follow-up workflow")).toBeNull();
+    expect(screen.queryByText("ExHentai proxy")).toBeNull();
+    expect(screen.getByRole("checkbox", { name: "downloader.mode.downloadTorrent" })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "downloader.mode.createBtTask" })).toBeChecked();
+    await user.click(screen.getByRole("checkbox", { name: "downloader.mode.createBtTask" }));
+    expect(patchExHentai).toHaveBeenLastCalledWith({
+      downloadMode: ExHentaiDownloadMode.TorrentFile,
+      saveTorrentFile: false,
+    });
+    state.options = { ...state.options, ...patchExHentai.mock.calls.at(-1)![0] };
+    view.rerender(panel(ExHentaiConfigField.Download));
+    expect(
+      screen.getByRole("checkbox", { name: "downloader.mode.downloadTorrent" }),
+    ).toBeDisabled();
+    expect(screen.queryByRole("checkbox", { name: "downloader.mode.fallbackToDirect" })).toBeNull();
+    await user.click(screen.getByRole("checkbox", { name: "downloader.mode.createBtTask" }));
+    expect(patchExHentai).toHaveBeenLastCalledWith({
+      downloadMode: ExHentaiDownloadMode.Torrent,
+      saveTorrentFile: true,
+      fallbackToDirect: false,
+    });
+  });
+
+  it("keeps original image settings, acquisition, follow-up processing and proxy in the full panel", () => {
+    render(panel("all"));
+    expect(screen.getByRole("checkbox", { name: keys.prefer })).toBeVisible();
+    expect(screen.getByLabelText("downloader.mode.label")).toBeVisible();
+    expect(screen.getByLabelText("Follow-up workflow")).toBeVisible();
+    expect(screen.getByText("ExHentai proxy")).toBeVisible();
+  });
+
+  it("keeps the proxy in request settings without exposing download preferences", () => {
+    render(panel(ExHentaiConfigField.DataFetch));
+    expect(screen.getByText("ExHentai proxy")).toBeVisible();
+    expect(screen.queryByLabelText("downloader.mode.label")).toBeNull();
+    expect(screen.queryByRole("checkbox", { name: keys.prefer })).toBeNull();
+    expect(screen.queryByLabelText("Follow-up workflow")).toBeNull();
+  });
+
+  it("saves and clears the default follow-up workflow from its own section", async () => {
+    const user = userEvent.setup();
+    const view = render(panel(ExHentaiConfigField.PostProcessing));
+    expect(screen.queryByLabelText("downloader.mode.label")).toBeNull();
+    expect(screen.queryByRole("checkbox", { name: keys.prefer })).toBeNull();
+    expect(screen.queryByText("ExHentai proxy")).toBeNull();
+    await user.selectOptions(screen.getByLabelText("Follow-up workflow"), "42");
+    expect(patchExHentai).toHaveBeenLastCalledWith({ downloadResultWorkflowId: 42 });
+    state.options = { downloadResultWorkflowId: 42 };
+    view.rerender(panel(ExHentaiConfigField.PostProcessing));
+    expect(screen.getByLabelText("Follow-up workflow")).toHaveValue("42");
+    await user.selectOptions(screen.getByLabelText("Follow-up workflow"), "none");
+    expect(patchExHentai).toHaveBeenLastCalledWith({ downloadResultWorkflowId: 0 });
+  });
+
   it("defaults to normal images and makes the spending warning visible before opt-in", async () => {
     render(panel());
+    expect(screen.queryByLabelText("downloader.mode.label")).toBeNull();
     expect(screen.getByRole("checkbox", { name: keys.prefer })).not.toBeChecked();
     expect(screen.getByRole("note")).toHaveTextContent(
       "thirdPartyConfig.exHentai.originalImages.warning",

@@ -6,7 +6,8 @@ import type { ThirdPartyId } from "@/sdk/constants";
 import { useCallback, useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Switch } from "@heroui/react";
-import { FiSettings } from "react-icons/fi";
+import { FiGlobe, FiSettings } from "react-icons/fi";
+import { TbMagnet } from "react-icons/tb";
 
 import { Button, Modal, Spinner, Tab, Tabs } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
@@ -14,7 +15,7 @@ import ThirdPartyIcon from "@/components/ThirdPartyIcon";
 import { isThirdPartyDeveloping } from "@/pages/downloader/models";
 import DevelopingChip from "@/components/Chips/DevelopingChip";
 import { ThirdPartyId as ThirdPartyIdEnum } from "@/sdk/constants";
-import { useDownloaderGlobalOptionsStore } from "@/stores/options";
+import { useDownloaderGlobalOptionsStore, useNetworkOptionsStore } from "@/stores/options";
 import {
   ExHentaiConfigPanel,
   ExHentaiConfigField,
@@ -31,6 +32,9 @@ import {
   BangumiConfigPanel,
 } from "@/components/ThirdPartyConfig";
 import { useAutoSaveToast } from "@/components/ThirdPartyConfig/base/useAutoSaveToast";
+import NavigateButton from "@/components/NavigateButton";
+import { ProxyMode } from "@/components/ProxySelector";
+import BtSettingsPanel from "@/pages/bt-downloads/BtSettingsPanel";
 import DownloadDirectoryField from "@/components/ThirdPartyConfig/base/DownloadDirectoryField";
 
 type Props = {
@@ -44,12 +48,24 @@ const ExHentaiDownloaderPanel = () => {
     <Tabs
       destroyInactiveTabPanel
       disableAnimation
-      classNames={{ base: "mb-3", tabList: "gap-4 p-0", tab: "px-1", panel: "p-0 pt-2" }}
+      classNames={{ base: "mb-5 max-w-full", tabList: "gap-4 p-0", tab: "px-1", panel: "p-0 pt-2" }}
       defaultSelectedKey={ExHentaiConfigField.Download}
       variant="underlined"
     >
       <Tab key={ExHentaiConfigField.Download} title={t("thirdPartyConfig.group.download")}>
         <ExHentaiConfigPanel fields={[ExHentaiConfigField.Download]} />
+      </Tab>
+      <Tab
+        key={ExHentaiConfigField.OriginalImages}
+        title={t("downloader.config.exHentai.originalImages")}
+      >
+        <ExHentaiConfigPanel fields={[ExHentaiConfigField.OriginalImages]} />
+      </Tab>
+      <Tab
+        key={ExHentaiConfigField.PostProcessing}
+        title={t("downloader.config.exHentai.postProcessing")}
+      >
+        <ExHentaiConfigPanel fields={[ExHentaiConfigField.PostProcessing]} />
       </Tab>
       <Tab key={ExHentaiConfigField.Accounts} title={t("resourceSource.config.tab.accounts")}>
         <ExHentaiConfigPanel fields={[ExHentaiConfigField.Accounts]} />
@@ -81,6 +97,8 @@ const platformRenderers: Record<number, () => React.ReactNode> = {
 };
 
 const GENERAL_TAB_KEY = "general";
+const BT_TAB_KEY = "bt";
+const HTTP_TAB_KEY = "http";
 
 const GeneralPanel = () => {
   const { t } = useTranslation();
@@ -110,6 +128,32 @@ const GeneralPanel = () => {
           </div>
         </Switch>
       </div>
+    </div>
+  );
+};
+
+const HttpSettingsPanel = () => {
+  const { t } = useTranslation();
+  const options = useNetworkOptionsStore((state) => state.data);
+  const proxy = options?.proxy;
+  const custom = options?.customProxies?.find((item) => item.id === proxy?.customProxyId);
+  const proxyLabel =
+    proxy?.mode === ProxyMode.UseCustom
+      ? custom?.name || custom?.address || t("configuration.others.proxy.unavailable")
+      : t(
+          proxy?.mode === ProxyMode.UseSystem
+            ? "configuration.others.proxy.useSystem"
+            : "configuration.others.proxy.doNotUse",
+        );
+  return (
+    <div className="space-y-4">
+      <div>
+        <div className="text-xs text-default-500">{t("downloader.config.http.proxy")}</div>
+        <div className="mt-1 text-sm">{proxyLabel}</div>
+      </div>
+      <NavigateButton to="/configuration">
+        {t("downloader.config.http.manageNetwork")}
+      </NavigateButton>
     </div>
   );
 };
@@ -146,15 +190,20 @@ const ConfigurationsModal = ({ onDestroyed }: Props) => {
     void loadPlatforms();
   }, [loadPlatforms]);
 
-  const selectedPlatform =
-    selectedTab === GENERAL_TAB_KEY ? undefined : (Number(selectedTab) as ThirdPartyId);
+  const selectedPlatform = [GENERAL_TAB_KEY, BT_TAB_KEY, HTTP_TAB_KEY].includes(selectedTab)
+    ? undefined
+    : (Number(selectedTab) as ThirdPartyId);
   const selectedTitle =
-    selectedPlatform == null
+    selectedTab === GENERAL_TAB_KEY
       ? t("downloader.config.tab.general")
-      : t(ThirdPartyIdEnum[selectedPlatform] || `Third Party ${selectedPlatform}`);
+      : selectedTab === BT_TAB_KEY
+        ? t("downloadCenter.provider.bt")
+        : selectedTab === HTTP_TAB_KEY
+          ? t("downloader.config.http.title")
+          : t(ThirdPartyIdEnum[selectedPlatform!] || `Third Party ${selectedPlatform}`);
   const renderer = selectedPlatform == null ? undefined : platformRenderers[selectedPlatform];
   const navButtonClass = (selected: boolean) =>
-    `h-10 min-w-fit justify-start gap-2.5 rounded-lg px-3 text-sm font-medium md:w-full md:min-w-0 ${
+    `h-10 min-w-fit shrink-0 justify-start gap-2.5 rounded-lg px-3 text-sm font-medium md:w-full md:min-w-0 ${
       selected ? "bg-primary/10 text-primary" : "text-default-600"
     }`;
 
@@ -174,7 +223,7 @@ const ConfigurationsModal = ({ onDestroyed }: Props) => {
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden md:flex-row">
         <nav
           aria-label={t("downloader.config.navigation.label")}
-          className="flex shrink-0 gap-1 overflow-x-auto border-b border-default-100 bg-default-50/60 p-2 md:w-48 md:flex-col md:overflow-x-hidden md:border-b-0 md:border-r md:p-3"
+          className="flex shrink-0 gap-1 overflow-x-auto border-b border-default-100 bg-default-50/60 p-2 md:w-48 md:min-h-0 md:flex-col md:overflow-x-hidden md:overflow-y-auto md:border-b-0 md:border-r md:p-3"
         >
           <Button
             aria-controls={panelId}
@@ -187,43 +236,86 @@ const ConfigurationsModal = ({ onDestroyed }: Props) => {
           >
             {t("downloader.config.tab.general")}
           </Button>
-          <div className="mb-1 mt-4 hidden px-3 text-xs font-medium text-default-400 md:block">
-            {t("downloader.config.platforms.label")}
+          <div
+            className="flex shrink-0 items-center gap-1 md:flex-col md:items-stretch"
+            role="group"
+            aria-labelledby={`${panelId}-general-downloads`}
+          >
+            <div
+              id={`${panelId}-general-downloads`}
+              className="px-3 text-xs font-medium text-default-400 md:mb-1 md:mt-4"
+            >
+              {t("downloader.config.generalDownloads.label")}
+            </div>
+            <Button
+              aria-controls={panelId}
+              aria-pressed={selectedTab === BT_TAB_KEY}
+              className={navButtonClass(selectedTab === BT_TAB_KEY)}
+              size="sm"
+              startContent={<TbMagnet aria-hidden className="shrink-0" size={17} />}
+              variant="light"
+              onPress={() => setSelectedTab(BT_TAB_KEY)}
+            >
+              {t("downloadCenter.provider.bt")}
+            </Button>
+            <Button
+              aria-controls={panelId}
+              aria-pressed={selectedTab === HTTP_TAB_KEY}
+              className={navButtonClass(selectedTab === HTTP_TAB_KEY)}
+              size="sm"
+              startContent={<FiGlobe aria-hidden className="shrink-0" size={17} />}
+              variant="light"
+              onPress={() => setSelectedTab(HTTP_TAB_KEY)}
+            >
+              {t("downloader.config.http.title")}
+            </Button>
           </div>
-          {loading && (
-            <div className="flex justify-center p-3">
-              <Spinner size="sm" />
+          <div
+            className="flex shrink-0 items-center gap-1 md:flex-col md:items-stretch"
+            role="group"
+            aria-labelledby={`${panelId}-sites`}
+          >
+            <div
+              id={`${panelId}-sites`}
+              className="px-3 text-xs font-medium text-default-400 md:mb-1 md:mt-4"
+            >
+              {t("downloader.config.platforms.label")}
             </div>
-          )}
-          {loadFailed && (
-            <div className="space-y-2 px-2 py-3 text-xs text-danger">
-              <p role="alert">{t("downloader.config.platforms.loadFailed")}</p>
-              <Button size="sm" variant="flat" onPress={() => void loadPlatforms()}>
-                {t("downloader.config.platforms.retry")}
-              </Button>
-            </div>
-          )}
-          {thirdPartyIds.map((thirdPartyId) => {
-            const selected = selectedTab === String(thirdPartyId);
-            const developing = isThirdPartyDeveloping(thirdPartyId);
-            const title = t(ThirdPartyIdEnum[thirdPartyId] || `Third Party ${thirdPartyId}`);
+            {loading && (
+              <div className="flex justify-center p-3">
+                <Spinner size="sm" />
+              </div>
+            )}
+            {loadFailed && (
+              <div className="space-y-2 px-2 py-3 text-xs text-danger">
+                <p role="alert">{t("downloader.config.platforms.loadFailed")}</p>
+                <Button size="sm" variant="flat" onPress={() => void loadPlatforms()}>
+                  {t("downloader.config.platforms.retry")}
+                </Button>
+              </div>
+            )}
+            {thirdPartyIds.map((thirdPartyId) => {
+              const selected = selectedTab === String(thirdPartyId);
+              const developing = isThirdPartyDeveloping(thirdPartyId);
+              const title = t(ThirdPartyIdEnum[thirdPartyId] || `Third Party ${thirdPartyId}`);
 
-            return (
-              <Button
-                key={thirdPartyId}
-                aria-controls={panelId}
-                aria-pressed={selected}
-                className={navButtonClass(selected)}
-                size="sm"
-                startContent={<ThirdPartyIcon thirdPartyId={thirdPartyId} />}
-                variant="light"
-                onPress={() => setSelectedTab(String(thirdPartyId))}
-              >
-                <span className="min-w-0 truncate">{title}</span>
-                {developing && <DevelopingChip size="sm" />}
-              </Button>
-            );
-          })}
+              return (
+                <Button
+                  key={thirdPartyId}
+                  aria-controls={panelId}
+                  aria-pressed={selected}
+                  className={navButtonClass(selected)}
+                  size="sm"
+                  startContent={<ThirdPartyIcon thirdPartyId={thirdPartyId} />}
+                  variant="light"
+                  onPress={() => setSelectedTab(String(thirdPartyId))}
+                >
+                  <span className="min-w-0 truncate">{title}</span>
+                  {developing && <DevelopingChip size="sm" />}
+                </Button>
+              );
+            })}
+          </div>
         </nav>
         <section
           aria-label={selectedTitle}
@@ -232,7 +324,11 @@ const ConfigurationsModal = ({ onDestroyed }: Props) => {
         >
           <div className="shrink-0 border-b border-default-100 px-5 py-4 md:px-6">
             <div className="flex items-center gap-2.5">
-              {selectedPlatform == null ? (
+              {selectedTab === BT_TAB_KEY ? (
+                <TbMagnet aria-hidden className="text-default-500" size={20} />
+              ) : selectedTab === HTTP_TAB_KEY ? (
+                <FiGlobe aria-hidden className="text-default-500" size={20} />
+              ) : selectedPlatform == null ? (
                 <FiSettings aria-hidden className="text-default-500" size={20} />
               ) : (
                 <ThirdPartyIcon thirdPartyId={selectedPlatform} />
@@ -241,9 +337,13 @@ const ConfigurationsModal = ({ onDestroyed }: Props) => {
             </div>
             <p className="mt-1.5 text-xs leading-relaxed text-default-500">
               {t(
-                selectedPlatform == null
+                selectedTab === GENERAL_TAB_KEY
                   ? "downloader.config.general.description"
-                  : "downloader.config.platform.description",
+                  : selectedTab === BT_TAB_KEY
+                    ? "downloader.config.bt.description"
+                    : selectedTab === HTTP_TAB_KEY
+                      ? "downloader.config.http.description"
+                      : "downloader.config.platform.description",
                 { platform: selectedTitle },
               )}
             </p>
@@ -252,8 +352,12 @@ const ConfigurationsModal = ({ onDestroyed }: Props) => {
             key={selectedTab}
             className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 md:px-6"
           >
-            {selectedPlatform == null ? (
+            {selectedTab === GENERAL_TAB_KEY ? (
               <GeneralPanel />
+            ) : selectedTab === BT_TAB_KEY ? (
+              <BtSettingsPanel appearance="plain" />
+            ) : selectedTab === HTTP_TAB_KEY ? (
+              <HttpSettingsPanel />
             ) : renderer ? (
               renderer()
             ) : (

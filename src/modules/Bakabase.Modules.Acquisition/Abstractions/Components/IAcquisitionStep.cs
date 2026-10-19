@@ -65,7 +65,8 @@ public record AcquisitionStepContext(
     string WorkingDirectory,
     string? ConfigJson = null,
     int? AcquisitionTaskId = null,
-    int? WorkflowRunId = null)
+    int? WorkflowRunId = null,
+    int? WorkflowDefinitionId = null)
 {
     /// <summary>
     /// The step's own configuration, or null when the recipe left it out. Malformed JSON reads as

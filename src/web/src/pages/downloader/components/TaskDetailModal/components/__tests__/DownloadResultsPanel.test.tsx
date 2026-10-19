@@ -16,18 +16,13 @@ const { getDownloadResults, retryDownloadResultWorkflow } = vi.hoisted(() => ({
 vi.mock("@/sdk/BApi", () => ({
   default: { downloader: { getDownloadResults, retryDownloadResultWorkflow } },
 }));
-vi.mock("@/components/Workflow/WorkflowRunsDrawer", () => ({
-  default: ({
-    workflowDefinitionId,
-    workflowName,
-  }: {
-    workflowDefinitionId: number;
-    workflowName: string;
-  }) => <div data-workflow={workflowDefinitionId}>{workflowName}</div>,
+vi.mock("@/components/Workflow/WorkflowRunDetailModal", () => ({
+  default: ({ runId }: { runId: number }) => <div data-run={runId}>Run {runId}</div>,
 }));
 vi.mock("@/components/bakaui", () => ({
   Chip: ({ children }: { children: ReactNode }) => <span>{children}</span>,
   Spinner: () => <span>Loading</span>,
+  Progress: ({ value }: { value: number }) => <progress value={value} max={100} />,
   Button: ({
     as,
     href,
@@ -145,9 +140,7 @@ describe("per-gallery download results", () => {
     expect(button("downloader.results.retry")).toBeUndefined();
     expect(container.querySelector("a")).toHaveAttribute("href", "#/acquisitions?tab=all");
     await act(async () => button("downloader.results.viewRun")!.click());
-    expect(container.querySelector('[data-workflow="4"]')).toHaveTextContent(
-      "Original acquisition · #12",
-    );
+    expect(container.querySelector('[data-run="12"]')).toHaveTextContent("Run 12");
   });
 
   it("shows retry errors without pretending a new run started", async () => {

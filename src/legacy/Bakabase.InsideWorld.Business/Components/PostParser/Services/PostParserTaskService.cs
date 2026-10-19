@@ -108,7 +108,7 @@ public class PostParserTaskService<TDbContext>(TDbContext db,
             if (!string.IsNullOrWhiteSpace(text))
             {
                 // Pasted text is its own task; do not accidentally merge unrelated posts by title.
-                var task = new PostParserTaskDbModel {Source = 0, Link = "", Text = text.Trim(), CreatedAt = DateTime.UtcNow};
+                var task = new PostParserTaskDbModel {Source = 0, Link = "", Text = text, CreatedAt = DateTime.UtcNow};
                 Reset(task, targets, title, stoppedRuns);
                 ParserTasks.Add(task);
                 changed.Add(task);

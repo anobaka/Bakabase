@@ -1,5 +1,4 @@
 using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using Bakabase.Modules.AI.Models.Db;
 using Microsoft.Extensions.AI;
@@ -11,6 +10,7 @@ public class CachingChatClient(
     ILlmCacheService cacheService,
     int providerConfigId,
     string modelId,
+    LlmCacheRequestCoordinator requestCoordinator,
     int cacheTtlDays = 7
 ) : DelegatingChatClient(innerClient)
 {
@@ -20,19 +20,32 @@ public class CachingChatClient(
         CancellationToken cancellationToken = new CancellationToken())
     {
         var chatMessages = new List<ChatMessage>(messages);
-        var cacheKey = ComputeCacheKey(chatMessages, options);
+        // Opaque provider options and executable tools cannot be represented by
+        // their JSON alone. Avoid caching those requests rather than conflating them.
+        if (options?.RawRepresentationFactory != null || options?.Tools is { Count: > 0 } ||
+            chatMessages.Any(m => m.RawRepresentation != null || m.Contents.Any(c => c.RawRepresentation != null)))
+            return await base.GetResponseAsync(chatMessages, options, cancellationToken);
 
-        var cached = await cacheService.GetAsync(cacheKey, cancellationToken);
-        if (cached != null)
+        string cacheKey;
+        try
         {
-            var response = JsonSerializer.Deserialize<ChatResponse>(cached.ResponseJson, JsonOptions);
-            if (response != null)
-            {
-                return response;
-            }
+            cacheKey = ComputeCacheKey(chatMessages, options);
+        }
+        catch (Exception ex) when (ex is JsonException or NotSupportedException)
+        {
+            return await base.GetResponseAsync(chatMessages, options, cancellationToken);
         }
 
+        if (await ReadCachedAsync(cacheKey, cancellationToken) is { } cached) return cached;
+
+        // Each waiter owns only its own cancellation token and DI scope. A
+        // cancelled waiter cannot abort another caller's in-flight generation.
+        using var lease = await requestCoordinator.AcquireAsync(cacheKey, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+        if (await ReadCachedAsync(cacheKey, cancellationToken) is { } afterWaiting) return afterWaiting;
+
         var result = await base.GetResponseAsync(chatMessages, options, cancellationToken);
+        if (result.FinishReason == ChatFinishReason.Length || !HasValidJsonWhenRequested(result, options)) return result;
 
         var entry = new LlmCallCacheEntryDbModel
         {
@@ -48,39 +61,41 @@ public class CachingChatClient(
         return result;
     }
 
+    private async Task<ChatResponse?> ReadCachedAsync(string key, CancellationToken ct)
+    {
+        var entry = await cacheService.GetAsync(key, ct);
+        if (entry == null) return null;
+        try
+        {
+            var response = JsonSerializer.Deserialize<ChatResponse>(entry.ResponseJson, JsonOptions);
+            return response?.FinishReason == ChatFinishReason.Length ? null : response;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
     private string ComputeCacheKey(IList<ChatMessage> messages, ChatOptions? options)
     {
-        var sb = new StringBuilder();
-        sb.Append(providerConfigId);
-        sb.Append('|');
-        sb.Append(modelId);
-        sb.Append('|');
-        sb.Append(options?.Temperature);
-        sb.Append('|');
-        sb.Append(options?.MaxOutputTokens);
-        sb.Append('|');
-        sb.Append(options?.TopP);
-        sb.Append('|');
+        // The version isolates legacy entries that omitted response format and
+        // reasoning. Serialize full options/content so future effective settings,
+        // schemas, and non-text message parts cannot silently share an entry.
+        var payload = JsonSerializer.SerializeToUtf8Bytes(new { providerConfigId, modelId, options, messages }, JsonOptions);
+        return "v2:" + Convert.ToHexString(SHA256.HashData(payload));
+    }
 
-        foreach (var msg in messages)
+    private static bool HasValidJsonWhenRequested(ChatResponse response, ChatOptions? options)
+    {
+        if (options?.ResponseFormat is not ChatResponseFormatJson) return true;
+        try
         {
-            sb.Append(msg.Role);
-            sb.Append(':');
-            sb.Append(msg.Text);
-            sb.Append(';');
+            using var json = JsonDocument.Parse(response.Text);
+            return true;
         }
-
-        if (options?.Tools is { Count: > 0 })
+        catch (JsonException)
         {
-            foreach (var tool in options.Tools)
-            {
-                sb.Append("tool:");
-                sb.Append(tool.Name);
-                sb.Append(';');
-            }
+            return false;
         }
-
-        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(sb.ToString()));
-        return Convert.ToHexString(hash);
     }
 }

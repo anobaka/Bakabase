@@ -1,7 +1,5 @@
 "use client";
 
-import type { Key } from "@react-types/shared";
-import type { BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputNetworkOptionsPatchInputModel } from "@/sdk/Api";
 import type { SettingItem } from "@/pages/configuration/components/SettingsSection";
 
 import { useTranslation } from "react-i18next";
@@ -9,17 +7,13 @@ import toast from "react-hot-toast";
 import { AiOutlineDelete, AiOutlineEdit, AiOutlineThunderbolt } from "react-icons/ai";
 
 import BApi from "@/sdk/BApi";
-import { Button, Input, Modal, Select, Switch } from "@/components/bakaui";
+import { Button, Input, Modal, Switch } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { useNetworkOptionsStore, useAppOptionsStore } from "@/stores/options";
 import SettingsSection from "@/pages/configuration/components/SettingsSection";
 import ProxyTestModal from "@/pages/configuration/components/Others/ProxyTestModal";
 
-enum ProxyMode {
-  DoNotUse = 0,
-  UseSystem = 1,
-  UseCustom = 2,
-}
+import ProxySelector, { ProxyMode } from "@/components/ProxySelector";
 
 interface OthersProps {
   applyPatches: <T>(
@@ -36,37 +30,6 @@ const Others: React.FC<OthersProps> = ({ applyPatches, query }) => {
 
   const appOptions = useAppOptionsStore((state) => state.data);
   const networkOptions = useNetworkOptionsStore((state) => state.data);
-
-  const proxies = [
-    {
-      label: t("configuration.others.proxy.doNotUse"),
-      value: ProxyMode.DoNotUse.toString(),
-    },
-    {
-      label: t("configuration.others.proxy.useSystem"),
-      value: ProxyMode.UseSystem.toString(),
-    },
-    // Named proxies read as "Home VPN (http://…)"; unnamed ones keep showing just the
-    // address, which is all there was before names existed.
-    ...(networkOptions.customProxies?.map((c) => ({
-      label: c.name ? `${c.name} (${c.address})` : c.address!,
-      value: c.id!,
-    })) ?? []),
-  ];
-
-  let selectedProxy: Key | undefined;
-
-  if (networkOptions?.proxy) {
-    const p = networkOptions.proxy;
-
-    if (p.mode === ProxyMode.UseCustom) {
-      selectedProxy = p.customProxyId!;
-    } else {
-      selectedProxy = p.mode?.toString();
-    }
-  }
-
-  selectedProxy ??= ProxyMode.DoNotUse.toString();
 
   const selectedCustomProxy =
     networkOptions?.proxy?.mode === ProxyMode.UseCustom
@@ -135,38 +98,13 @@ const Others: React.FC<OthersProps> = ({ applyPatches, query }) => {
         return (
           <div className="flex items-center gap-2">
             <div style={{ width: 300 }}>
-              <Select
-                dataSource={proxies}
-                multiple={false}
-                selectedKeys={selectedProxy === undefined ? undefined : [selectedProxy]}
-                size="sm"
-                onSelectionChange={(keys) => {
-                  const key = Array.from(keys)[0] as string;
-                  const patches: BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputNetworkOptionsPatchInputModel =
-                    {};
-
-                  if (key === ProxyMode.DoNotUse.toString()) {
-                    patches.proxy = {
-                      mode: ProxyMode.DoNotUse,
-                      customProxyId: undefined,
-                    };
-                  } else {
-                    if (key === ProxyMode.UseSystem.toString()) {
-                      patches.proxy = {
-                        mode: ProxyMode.UseSystem,
-                        customProxyId: undefined,
-                      };
-                    } else {
-                      patches.proxy = {
-                        mode: ProxyMode.UseCustom,
-                        customProxyId: key,
-                      };
-                    }
-                  }
-                  BApi.options.patchNetworkOptions(patches).then((x) => {
-                    if (!x.code) {
-                      toast.success(t("common.success.saved"));
-                    }
+              <ProxySelector
+                value={networkOptions?.proxy}
+                customProxies={networkOptions.customProxies}
+                onChange={(proxy) => {
+                  if (!proxy) return;
+                  BApi.options.patchNetworkOptions({ proxy }).then((response) => {
+                    if (!response.code) toast.success(t("common.success.saved"));
                   });
                 }}
               />

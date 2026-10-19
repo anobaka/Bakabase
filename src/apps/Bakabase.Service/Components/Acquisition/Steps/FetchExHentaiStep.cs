@@ -93,7 +93,8 @@ public sealed class FetchExHentaiStep : IAcquisitionStep
         }
         var variables = new Dictionary<string, string>(item.Variables)
         {
-            [ResultKindVariable] = result.Kind.ToString(), [ResultIdVariable] = result.Id.ToString()
+            [ResultKindVariable] = result.Kind.ToString(), [ResultIdVariable] = result.Id.ToString(),
+            ["downloadTaskId"] = state.DownloadTaskId.ToString()
         };
         if (result.Kind == DownloadResultKind.TorrentMetadata)
         {

@@ -13,6 +13,11 @@ public record PostContent
     public string Scope { get; init; } = "firstPage";
     public decimal? Balance { get; init; }
 
+    /// <summary>Only freshly read, correctly encoded HTML may be compacted; restored snapshots keep their source.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    [Newtonsoft.Json.JsonIgnore]
+    public bool HtmlEncodingTrusted { get; init; }
+
     /// <summary>The selected platform reader, when the content has a known source.</summary>
     public string? SourceHint { get; init; }
 }

@@ -135,6 +135,34 @@ public sealed class HttpDownloadProtocolTests
         Assert.IsFalse(File.Exists(path));
     }
 
+    [TestMethod]
+    public async Task SafePublishRefusesAnExistingDestinationEvenWhenChecksumMatches()
+    {
+        await using var server = new Server();
+        var path = Path.Combine(_directory, "payload.bin");
+        await File.WriteAllBytesAsync(path, server.Body);
+        using var provider = new ServiceCollection().AddDownloader(_ => Path.Combine(_directory, "cache")).BuildServiceProvider();
+        await Assert.ThrowsExactlyAsync<IOException>(() => provider.GetRequiredService<IHttpDownloader>().DownloadAsync(
+            new HttpDownloadRequest(server.Url, _directory) { FileName = "payload.bin", AllowOverwrite = false }, null, CancellationToken.None));
+        Assert.AreEqual(0, server.RangeStarts.Count, "An unrelated existing destination must not trigger a payload transfer.");
+        await AssertContent(server.Body, path);
+    }
+
+    [TestMethod]
+    public async Task StructuredProgressReportsVerifiedByteCount()
+    {
+        await using var server = new Server();
+        using var provider = new ServiceCollection().AddDownloader(_ => Path.Combine(_directory, "cache")).BuildServiceProvider();
+        HttpTransferProgress? last = null;
+        await provider.GetRequiredService<IHttpDownloader>().DownloadWithProgressAsync(
+            new HttpDownloadRequest(server.Url, _directory) { FileName = "payload.bin", MaxRetries = 0 },
+            progress => { last = progress; return Task.CompletedTask; }, CancellationToken.None);
+        Assert.IsNotNull(last);
+        Assert.AreEqual(100, last.Percentage);
+        Assert.AreEqual((long)server.Body.Length, last.CompletedBytes);
+        Assert.AreEqual((long)server.Body.Length, last.TotalBytes);
+    }
+
     private static async Task AssertContent(byte[] expected, string path) =>
         CollectionAssert.AreEqual(SHA256.HashData(expected), SHA256.HashData(await File.ReadAllBytesAsync(path)));
 

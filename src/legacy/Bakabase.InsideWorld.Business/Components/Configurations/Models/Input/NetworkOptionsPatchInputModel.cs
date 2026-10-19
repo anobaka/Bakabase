@@ -28,6 +28,8 @@ public record NetworkOptionsPatchInputModel
 
     public List<ProxyOptions>? CustomProxies { get; set; }
     public NetworkOptions.ProxyModel? Proxy { get; set; }
+    public NetworkOptions.ProxyModel? BtProxy { get; set; }
+    public int? BtMaxConcurrentDownloads { get; set; }
 
     /// <summary>Null leaves the saved list untouched; an empty list clears it.</summary>
     public List<string>? CustomTestSites { get; set; }

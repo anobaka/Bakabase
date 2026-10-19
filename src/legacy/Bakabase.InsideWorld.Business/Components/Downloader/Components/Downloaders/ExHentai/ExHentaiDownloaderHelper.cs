@@ -43,14 +43,17 @@ public class ExHentaiDownloaderHelper(
         var resultWorkflowDefault = defaults.DownloadResultWorkflowId;
         foreach (var task in tasks)
         {
-            task.Options = ApplyDefaultTaskOptions(task.Options, preferTorrentDefault, resultWorkflowDefault);
+            task.Options = ApplyDefaultTaskOptions(task.Options, preferTorrentDefault, resultWorkflowDefault,
+                defaults.DownloadMode, defaults.SaveTorrentFile, defaults.FallbackToDirect);
         }
 
         return tasks;
     }
 
     // Freeze the global PreferTorrent default onto the task at creation; an explicit per-task value is kept.
-    internal static string ApplyDefaultTaskOptions(string? rawOptions, bool preferTorrentDefault, int? resultWorkflowDefault)
+    internal static string ApplyDefaultTaskOptions(string? rawOptions, bool preferTorrentDefault, int? resultWorkflowDefault,
+        ExHentaiDownloadMode? downloadModeDefault = null, bool saveTorrentFileDefault = false,
+        bool fallbackToDirectDefault = true)
     {
         ExHentaiTaskOptionsPatch? patch = null;
         if (!string.IsNullOrWhiteSpace(rawOptions))
@@ -70,6 +73,9 @@ public class ExHentaiDownloaderHelper(
         var options = new ExHentaiTaskOptions
         {
             PreferTorrent = patch?.PreferTorrent ?? preferTorrentDefault,
+            DownloadMode = patch?.DownloadMode ?? (patch?.PreferTorrent.HasValue == true ? null : downloadModeDefault),
+            SaveTorrentFile = patch?.SaveTorrentFile ?? saveTorrentFileDefault,
+            FallbackToDirect = patch?.FallbackToDirect ?? fallbackToDirectDefault,
             DownloadResultWorkflowId = resultWorkflowId is > 0 ? resultWorkflowId : null,
             // Carried over rather than reset, so re-submitting a task does not throw away a
             // still-valid torrent verdict.

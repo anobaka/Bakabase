@@ -224,7 +224,7 @@
   "menu.synchronizationOptions": "Synchronization options",
   "menu.tools": "Tools",
   "menu.fileProcessor": "File Processor",
-  "menu.downloader": "Downloader",
+  "menu.downloader": "Downloads",
   "menu.fileMover": "File Mover",
   "menu.fileNameModifier": "File Name Modifier",
   "menu.experimental": "Experimental",
@@ -478,5 +478,6 @@
   "filePath.containerStorage": "Stored inside the container; no host folder is mapped.",
   "filePath.hostPathUnavailable": "Host path mapping is unavailable. Showing the container path.",
   "filePath.copyFailed": "Could not copy. Select the path and copy it manually.",
-  "otherDevices.canManage": "Multi-device management supported"
+  "otherDevices.canManage": "Multi-device management supported",
+  "menu.btDownloads": "BT downloads"
 }

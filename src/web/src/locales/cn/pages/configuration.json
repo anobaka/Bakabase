@@ -440,5 +440,6 @@
   "configuration.storage.title": "数据与存储",
   "configuration.storage.title.server": "服务器数据与存储",
   "configuration.storage.details": "存储详情",
-  "configuration.storage.serverDescription": "以下目录属于当前管理的服务器。"
+  "configuration.storage.serverDescription": "以下目录属于当前管理的服务器。",
+  "configuration.others.proxy.unavailable": "已配置的代理不可用"
 }

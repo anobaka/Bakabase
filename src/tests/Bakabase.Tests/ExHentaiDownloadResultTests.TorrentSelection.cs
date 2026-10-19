@@ -273,7 +273,7 @@ public sealed partial class ExHentaiDownloadResultTests
         return (Task) method.Invoke(producer, [10, "https://exhentai.org/g/12345/abcdef0123/", null, downloadPath ?? _root,
             (Func<string, Task>)(_ => Task.CompletedTask), (Func<string, Task>)(_ => Task.CompletedTask),
             progress ?? (_ => Task.CompletedTask), checkpoint ?? (_ => Task.CompletedTask), ct,
-            true, false, null, null, torrentCompleted, null])!;
+            true, false, null, null, torrentCompleted, null, null, false, true])!;
     }
 
     private static HttpResponseMessage TorrentHtmlError() => new(HttpStatusCode.OK)

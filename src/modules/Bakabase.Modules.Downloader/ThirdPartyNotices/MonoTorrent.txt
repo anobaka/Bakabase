@@ -1,6 +1,6 @@
-MonoTorrent 3.0.2
-Source: https://github.com/alanmcgovern/monotorrent/tree/release-v3.0.2
-Package: https://www.nuget.org/packages/MonoTorrent/3.0.2
+MonoTorrent 3.0.3-alpha.unstable.rev0024
+Source: https://github.com/alanmcgovern/monotorrent/tree/e60b1c8899c4dc3be31611fd5bb996b61bf3206d
+Package: https://www.nuget.org/packages/MonoTorrent/3.0.3-alpha.unstable.rev0024
 
 MIT License
 

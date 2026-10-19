@@ -29,7 +29,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
-using MonoTorrent;
 
 namespace Bakabase.Tests;
 
@@ -48,8 +47,7 @@ public sealed class DownloadResultContentStageTests
         Directory.CreateDirectory(_root);
         var source = Path.Combine(_root, "fixture.txt");
         await File.WriteAllTextAsync(source, "source contents");
-        _metadata = (await new TorrentCreator(TorrentType.V1Only) {PieceLength = 16384}
-            .CreateAsync(new TorrentFileSource(source))).Encode();
+        _metadata = await TorrentFixture.FromPathAsync(source);
         _torrent = new FakeTorrent();
         _sp = await TestServiceBuilder.BuildServiceProvider(s =>
         {
@@ -60,7 +58,11 @@ public sealed class DownloadResultContentStageTests
     }
 
     [TestCleanup]
-    public void Cleanup() { if (Directory.Exists(_root)) Directory.Delete(_root, true); }
+    public async Task Cleanup()
+    {
+        await _sp.GetRequiredService<Bakabase.Modules.Bittorrent.Abstractions.IBtDownloadManager>().ShutdownAsync();
+        if (Directory.Exists(_root)) Directory.Delete(_root, true);
+    }
 
     private AcquisitionStepContext Context(string? config = null) =>
         new(_sp, NullLogger.Instance, (_, _) => Task.CompletedTask, Path.Combine(_root, "working"),

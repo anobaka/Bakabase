@@ -1,6 +1,7 @@
 using System;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
+using Bakabase.Modules.Bittorrent.Models;
 
 namespace Bakabase.Service.Models.View;
 
@@ -24,4 +25,15 @@ public sealed record DownloadResultViewModel
     public string? Error { get; init; }
     public bool FilterDidNotMatch { get; init; }
     public bool CanRetry { get; init; }
+    public bool RequiresContentsDownload { get; init; }
+    public string? BtDownloadId { get; init; }
+    public BtDownloadStatus? BtStatus { get; init; }
+    public string? BtStage { get; init; }
+    public int? BtPercentage { get; init; }
+    public long? BtCompletedBytes { get; init; }
+    public long? BtTotalBytes { get; init; }
+    public double? BtSpeedBytesPerSecond { get; init; }
+    public int? WorkflowProgress { get; init; }
+    public string? WorkflowProcess { get; init; }
+    public bool CanStop { get; init; }
 }

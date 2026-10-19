@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 namespace Bakabase.Modules.AI.Models.Domain;
 
 public record LlmModelParameters
@@ -9,4 +11,9 @@ public record LlmModelParameters
     /// When true, requests the LLM to return a JSON response via the API's response_format parameter.
     /// </summary>
     public bool UseJsonResponseFormat { get; init; }
+    /// <summary>
+    /// Optional backend-only response schema for recognized local Qwen JSON requests.
+    /// Other providers retain their existing JSON mode.
+    /// </summary>
+    public JsonElement? JsonResponseSchema { get; init; }
 }

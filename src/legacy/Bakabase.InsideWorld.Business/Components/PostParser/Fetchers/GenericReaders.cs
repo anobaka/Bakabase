@@ -1,18 +1,18 @@
 using System;
-using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants;
+using Bakabase.Modules.ThirdParty.Helpers;
 using CsQuery;
 using Microsoft.Extensions.Logging;
 
 namespace Bakabase.InsideWorld.Business.Components.PostParser.Fetchers;
 
 /// <summary>
-/// Reads any public web page. It knows nothing about the site's markup — it takes the body, drops
-/// the scripts and styles, and hands the rest over. That is enough for a language model to find
+/// Reads any public web page. It knows nothing about the site's markup — it takes the body and
+/// keeps embedded source data that may contain links or credentials. A language model can find
 /// links and codes in, and it means a link shared somewhere Bakabase has never heard of is still
 /// worth following.
 /// </summary>
@@ -35,12 +35,8 @@ public class GenericHtmlReader(IHttpClientFactory httpClientFactory, ILogger<Gen
 
         var cq = new CQ(html);
 
-        cq["script"].Remove();
-        cq["style"].Remove();
-        cq["noscript"].Remove();
-
         var title = cq["title"].Text()?.Trim();
-        var body = cq["body"].Html();
+        var body = HtmlContentSnapshot.Capture(cq["body"]);
 
         if (string.IsNullOrWhiteSpace(body))
         {
@@ -51,10 +47,11 @@ public class GenericHtmlReader(IHttpClientFactory httpClientFactory, ILogger<Gen
         return new PostContent
         {
             Title = string.IsNullOrWhiteSpace(title) ? reference : title,
-            MainHtml = WebUtility.HtmlDecode(body),
+            MainHtml = body,
             SourceUrl = reference,
             CapturedAt = DateTimeOffset.UtcNow,
             Scope = "page",
+            HtmlEncodingTrusted = true,
         };
     }
 }
@@ -83,7 +80,7 @@ public class PlainTextReader : ISharedContentReader
 
     public Task<PostContent> ReadAsync(string reference, CancellationToken ct)
     {
-        var text = reference.Trim();
+        var text = reference;
         var firstLine = text.Split('\n', StringSplitOptions.RemoveEmptyEntries) is [var head, ..]
             ? head.Trim()
             : text;

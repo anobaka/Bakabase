@@ -8,6 +8,8 @@ public class DownloadResultProcessingDbModel
 {
     [Key] public int DownloadResultId { get; set; }
     public int? WorkflowRunId { get; set; }
+    public string? BtDownloadId { get; set; }
+    public string? BtDispatchError { get; set; }
     public string? ContentsDirectory { get; set; }
     public string? ContentsFilesJson { get; set; }
     public DateTime? ContentsReadyAt { get; set; }

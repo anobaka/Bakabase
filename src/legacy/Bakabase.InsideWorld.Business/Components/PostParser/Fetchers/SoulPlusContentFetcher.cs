@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants;
+using Bakabase.Modules.ThirdParty.Helpers;
 using Bakabase.Modules.ThirdParty.ThirdParties.SoulPlus;
 using CsQuery;
 
@@ -27,9 +27,9 @@ public class SoulPlusContentFetcher(SoulPlusClient spClient) : ISharedContentRea
         var post = await spClient.GetPostAsync(reference, ct);
 
         var cq = new CQ(post.Html);
-        var mainContent = WebUtility.HtmlDecode(cq["#read_tpc"].Html());
+        var mainContent = HtmlContentSnapshot.Capture(cq["#read_tpc"]);
         var commentContents = cq[".tpc_content>.f14:not(#read_tpc)"]
-            .Select(c => WebUtility.HtmlDecode(c.Cq().Html()))
+            .Select(c => HtmlContentSnapshot.Capture(c.Cq()))
             .ToList();
 
         return new PostContent
@@ -44,6 +44,7 @@ public class SoulPlusContentFetcher(SoulPlusClient spClient) : ISharedContentRea
             SourceUrl = post.SourceUrl ?? reference,
             CapturedAt = DateTimeOffset.UtcNow,
             Scope = "firstPage",
+            HtmlEncodingTrusted = true,
             Balance = post.Balance,
             Locks = post.LockedContents?
                 .Select(l => new SharedContentLock(l.Url, l.Price, l.IsBought) {Id = l.Id, Floor = l.Floor})

@@ -14,6 +14,7 @@ using Bakabase.Abstractions.Services;
 using Bakabase.Infrastructures.Components.App;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
+using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants;
 using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
 using Bakabase.InsideWorld.Business.Components.Downloader.Services;
 using Bakabase.InsideWorld.Models.Constants;
@@ -22,6 +23,8 @@ using Bakabase.Modules.Acquisition.Abstractions.Components;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Downloader.Abstractions;
 using Bakabase.Modules.Downloader.Components;
+using Bakabase.Modules.Bittorrent.Abstractions;
+using Bakabase.Modules.Bittorrent.Models;
 using Bakabase.Modules.Workflow.Abstractions.Components;
 using Bakabase.Modules.Workflow.Abstractions.Models.Db;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
@@ -31,6 +34,7 @@ using Bakabase.Modules.Workflow.Components;
 using Bootstrap.Components.Orm;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Bakabase.Service.Components.Downloader;
 
@@ -41,14 +45,14 @@ namespace Bakabase.Service.Components.Downloader;
 /// </summary>
 public sealed class DownloadResultWorkflowService(BakabaseDbContext db,
     IWorkflowDefinitionService definitions, IWorkflowValidationService validation,
-    BTaskManager tasks, WorkflowRunner<BakabaseDbContext> runner, IWorkflowRunResumer resumer,
-    ITorrentDownloader torrents, IPlaceholderResourceService placeholders, AppService app,
+    BTaskManager tasks, WorkflowRunSchedulingPolicyResolver scheduling, IWorkflowRunResumer resumer,
+    IBtDownloadManager torrents, DownloadResultBtService btResults, IPlaceholderResourceService placeholders, AppService app,
     FullMemoryCacheResourceService<BakabaseDbContext, ExHentaiGalleryDbModel, int> galleryCache,
     ILogger<DownloadResultWorkflowService> logger,
-    IBakabaseLocalizer localizer) : IAcquisitionContentsObserver
+    IBakabaseLocalizer localizer, IDownloadTaskRegistry registry) : IAcquisitionContentsObserver
 {
     // Serializes dispatch/retry inside one host; database transactions additionally protect restart boundaries.
-    private static readonly SemaphoreSlim DispatchGate = new(1, 1);
+    private static SemaphoreSlim DispatchGate => DownloadResultBtService.Gate;
     private DbSet<DownloadResultDbModel> Results => db.Set<DownloadResultDbModel>();
     private DbSet<DownloadResultProcessingDbModel> Processing => db.Set<DownloadResultProcessingDbModel>();
     private DbSet<DownloadResultOwnerDbModel> Owners => db.Set<DownloadResultOwnerDbModel>();
@@ -81,6 +85,9 @@ public sealed class DownloadResultWorkflowService(BakabaseDbContext db,
             var retryBefore = DateTime.UtcNow.AddMinutes(-1);
             var candidates = await Results.AsNoTracking().Where(r => r.WorkflowDefinitionId != null &&
                 !Owners.Any(o => o.DownloadTaskId == r.DownloadTaskId) &&
+                !Results.Any(newer => newer.DownloadTaskId == r.DownloadTaskId && newer.SourceKey == r.SourceKey && newer.Id > r.Id) &&
+                !db.Set<DownloadTaskDbModel>().Any(t => t.Id == r.DownloadTaskId && t.Status == DownloadTaskDbModelStatus.Disabled) &&
+                (!r.RequiresContentsDownload || Processing.Any(p => p.DownloadResultId == r.Id && p.ContentsReadyAt != null)) &&
                 !Processing.Any(p => p.DownloadResultId == r.Id &&
                     (p.WorkflowRunId != null || p.FilterDidNotMatch || p.LastAttemptAt > retryBefore)))
                 .OrderBy(r => r.Id).Take(100).Select(r => r.Id).ToListAsync(ct);
@@ -91,8 +98,15 @@ public sealed class DownloadResultWorkflowService(BakabaseDbContext db,
             }
             // Includes a run committed just before an enqueue failure or process shutdown.
             var pending = await Runs.AsNoTracking().Where(r => r.Status == WorkflowRunStatus.Pending &&
-                Processing.Any(p => p.WorkflowRunId == r.Id)).ToListAsync(ct);
-            foreach (var run in pending) await EnqueueAsync(run);
+                Processing.Any(p => p.WorkflowRunId == r.Id && Results.Any(result => result.Id == p.DownloadResultId &&
+                    !db.Set<DownloadTaskDbModel>().Any(t => t.Id == result.DownloadTaskId && t.Status == DownloadTaskDbModelStatus.Disabled))))
+                .ToListAsync(ct);
+            foreach (var run in pending)
+            {
+                var result = await Processing.Where(p => p.WorkflowRunId == run.Id)
+                    .Join(Results, p => p.DownloadResultId, r => r.Id, (_, r) => r).SingleAsync(ct);
+                if (await CanDispatchAsync(result, ct)) await EnqueueAsync(run);
+            }
         }
         finally { DispatchGate.Release(); }
     }
@@ -100,10 +114,12 @@ public sealed class DownloadResultWorkflowService(BakabaseDbContext db,
     private async Task DispatchOneAsync(int id, CancellationToken ct)
     {
         var result = await Results.AsNoTracking().SingleAsync(r => r.Id == id, ct);
+        if (!await CanDispatchAsync(result, ct)) return;
         var state = await Processing.FindAsync([id], ct);
         if (state?.WorkflowRunId != null || state?.FilterDidNotMatch == true) return;
         if (state?.LastAttemptAt > DateTime.UtcNow.AddMinutes(-1)) return;
         state ??= new DownloadResultProcessingDbModel {DownloadResultId = id};
+        if (result.RequiresContentsDownload && DownloadResultContents.Resolve(result, state) == null) return;
         if (db.Entry(state).State == EntityState.Detached) Processing.Add(state);
         state.LastAttemptAt = DateTime.UtcNow;
         try
@@ -153,10 +169,23 @@ public sealed class DownloadResultWorkflowService(BakabaseDbContext db,
         }
     }
 
-    private Task EnqueueAsync(WorkflowRunDbModel run) => tasks.Enqueue(BTaskBuilder.Create($"workflow.run.{run.Id}")
+    private async Task<bool> CanDispatchAsync(DownloadResultDbModel result, CancellationToken ct)
+    {
+        var source = await db.Set<DownloadTaskDbModel>().AsNoTracking().SingleOrDefaultAsync(t => t.Id == result.DownloadTaskId, ct);
+        if (source != null && (source.Status == DownloadTaskDbModelStatus.Disabled ||
+                              !DownloadTaskExecutionLifecycle.CanContinue(source, result))) return false;
+        return !await Results.AnyAsync(newer => newer.DownloadTaskId == result.DownloadTaskId &&
+            newer.SourceKey == result.SourceKey && newer.Id > result.Id, ct);
+    }
+
+    private Task EnqueueAsync(WorkflowRunDbModel run) => tasks.Enqueue(scheduling.Configure(BTaskBuilder.Create($"workflow.run.{run.Id}")
         .Named(() => localizer["BTask_Name_WorkflowRun", run.WorkflowDefinitionId, run.Id])
-        .IgnoreIfExists().ConflictsWith($"workflow.definition.{run.WorkflowDefinitionId}")
-        .Run(args => runner.ExecuteAsync(run.Id, args)));
+        .IgnoreIfExists()
+        .Run(async args =>
+        {
+            await using var scope = args.RootServiceProvider.CreateAsyncScope();
+            await scope.ServiceProvider.GetRequiredService<WorkflowRunner<BakabaseDbContext>>().ExecuteAsync(run.Id, args);
+        }), run.WorkflowDefinitionId, DownloadResultWorkflow.Trigger));
 
     public async Task RetryAsync(int id, CancellationToken ct = default)
     {
@@ -167,6 +196,11 @@ public sealed class DownloadResultWorkflowService(BakabaseDbContext db,
                 ?? throw new InvalidOperationException("The download result no longer exists.");
             if (await Owners.AnyAsync(o => o.DownloadTaskId == result.DownloadTaskId, ct))
                 throw new InvalidOperationException("Retry the original acquisition task to continue this result.");
+            if (await db.Set<DownloadTaskDbModel>().AnyAsync(t => t.Id == result.DownloadTaskId &&
+                    t.Status == DownloadTaskDbModelStatus.Disabled, ct))
+                throw new InvalidOperationException("Start the download task before retrying its result workflow.");
+            if (!await CanDispatchAsync(result, ct))
+                throw new InvalidOperationException("This result no longer matches the download task's current acquisition mode or source result.");
             var state = await Processing.FindAsync([id], ct);
             if (state?.WorkflowRunId is { } runId)
             {
@@ -214,19 +248,45 @@ public sealed class DownloadResultWorkflowService(BakabaseDbContext db,
         IReadOnlyList<string> files;
         if (result.Kind == DownloadResultKind.TorrentMetadata)
         {
-            await using var stream = File.OpenRead(result.Path);
-            var metadata = await TorrentMetadata.ReadBoundedAsync(stream, ct);
-            TorrentMetadata.Validate(metadata);
-            if (!string.Equals(Convert.ToHexString(SHA256.HashData(metadata)), result.Fingerprint,
-                    StringComparison.OrdinalIgnoreCase))
-                throw new IOException("The saved torrent metadata changed; acquire its result again.");
-            var name = string.Concat(result.Name.Select(c => Path.GetInvalidFileNameChars().Contains(c) || "/\\:*?\"<>|".Contains(c) ? '_' : c)).Trim();
-            if (name.Length > 100) name = name[..100];
-            if (string.IsNullOrWhiteSpace(name)) name = "download";
-            var workDirectory = Path.Combine(result.DownloadDirectory, $"{name} [{id}]");
-            var downloaded = await torrents.DownloadTorrentAsync(metadata, workDirectory,
-                TimeSpan.FromMinutes(timeoutMinutes), progress, ct);
-            directory = downloaded.Directory;
+            var definitionId = await Runs.Where(r => r.Id == runId).Select(r => (int?)r.WorkflowDefinitionId).SingleAsync(ct);
+            BtDownloadJob? job = null;
+            await DispatchGate.WaitAsync(ct);
+            try
+            {
+                if (!await CanDispatchAsync(result, ct)) throw new OperationCanceledException("The download task has stopped or changed acquisition mode.");
+                job = await btResults.EnsureAsync(result, runId, definitionId, timeoutMinutes, ct);
+                await btResults.BindAsync(id, job, ct);
+                if (job.Status is BtDownloadStatus.Stopped or BtDownloadStatus.Failed)
+                {
+                    await registry.SetUserStoppedAsync("bt:" + job.Id, false, ct);
+                    job = await torrents.ResumeAsync(job.Id, ct);
+                }
+                else if (job.Status == BtDownloadStatus.Completed &&
+                         DownloadResultContents.Read(job.OutputDirectory, JsonSerializer.Serialize(job.Files)) == null)
+                {
+                    await registry.SetUserStoppedAsync("bt:" + job.Id, false, ct);
+                    job = await torrents.RecheckAsync(job.Id, ct);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                if (job != null) await torrents.StopAsync(job.Id, CancellationToken.None);
+                throw;
+            }
+            finally { DispatchGate.Release(); }
+            BtDownloadJob downloaded;
+            try
+            {
+                downloaded = await torrents.WaitForCompletionAsync(job.Id,
+                    progress == null ? null : snapshot => progress(snapshot.Percentage, snapshot.Stage),
+                    stopOnCancellation: true, ct: ct);
+            }
+            catch
+            {
+                await torrents.StopAsync(job.Id, CancellationToken.None);
+                throw;
+            }
+            directory = downloaded.OutputDirectory;
             files = downloaded.Files;
         }
         else if (result.Kind == DownloadResultKind.LocalFiles)
@@ -297,7 +357,10 @@ public sealed class DownloadResultWorkflowService(BakabaseDbContext db,
             Title = result.Name, WorkingName = string.IsNullOrWhiteSpace(name) ? result.Name : name,
             WorkingDirectory = working, ExtractedDirectory = contentDirectory,
             Files = files, PreserveDirectoryStructure = true,
-            Variables = new Dictionary<string, string> {{"downloadResultId", id.ToString()}}
+            Variables = new Dictionary<string, string>
+            {
+                {"downloadResultId", id.ToString()}, {"downloadTaskId", result.DownloadTaskId.ToString()}
+            }
         };
     }
 

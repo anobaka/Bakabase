@@ -14,6 +14,8 @@ public class DownloadResultDbModel
     [Required] public string SourceKey { get; set; } = string.Empty;
     [Required] public string Name { get; set; } = string.Empty;
     public DownloadResultKind Kind { get; set; }
+    /// <summary>The source selected BT contents, independently of any optional workflow.</summary>
+    public bool RequiresContentsDownload { get; set; }
     /// <summary>Managed torrent metadata file, or the root containing this work's files.</summary>
     [Required] public string Path { get; set; } = string.Empty;
     /// <summary>Original user-selected output directory; never the managed metadata cache.</summary>

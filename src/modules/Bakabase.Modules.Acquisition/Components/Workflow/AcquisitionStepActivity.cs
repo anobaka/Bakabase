@@ -124,7 +124,8 @@ public class AcquisitionStepActivity(IAcquisitionStep step) : IResumableWorkflow
             workItem.WorkingDirectory,
             ctx.ActivityConfigJson,
             (ctx.Payload as AcquisitionRequestedPayload)?.TaskId,
-            checked((int) ctx.RunId));
+            checked((int) ctx.RunId),
+            ctx.WorkflowDefinitionId);
 
         return (workItem, stepCtx);
     }

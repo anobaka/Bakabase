@@ -177,11 +177,19 @@ public sealed partial class ExHentaiDownloadResultTests
             Id = 10, Key = "https://exhentai.org/?f_search=test", DownloadPath = _root, Checkpoint = checkpoint
         }, new ExHentaiTaskOptions {PreferTorrent = torrentResult}, CancellationToken.None])!;
         Assert.AreEqual(torrentResult ? 0 : 1, handler.ImageRequests);
-        Assert.AreEqual(0, handler.TorrentRequests, "A missing user copy must be restored from the valid metadata cache.");
+        Assert.AreEqual(torrentResult ? 1 : 0, handler.TorrentRequests,
+            "The missing user copy reuses metadata; seed-only mode also exports a torrent for the former image result.");
         Assert.IsTrue(File.Exists(lostFile));
         if (torrentResult) CollectionAssert.AreEqual(_metadata, await File.ReadAllBytesAsync(lostFile));
         var results = await _results.GetByTaskAsync(10);
-        Assert.AreEqual(2, results.Count);
+        Assert.AreEqual(torrentResult ? 3 : 2, results.Count);
+        Assert.AreEqual("valid recorded work", await File.ReadAllTextAsync(valid));
+        if (torrentResult)
+        {
+            var converted = results.Single(r => r.SourceKey == "12347/abcdef0123" && r.Kind == DownloadResultKind.TorrentMetadata);
+            CollectionAssert.AreEqual(_metadata,
+                await File.ReadAllBytesAsync(ExHentaiDownloadResultHelper.GetTorrentDownloadPath(converted)!));
+        }
         Assert.IsFalse(results.Any(x => x.SourceKey == "12346/abcdef0123"));
         Assert.IsTrue(await _results.CanReuseAsync((await _results.GetAsync(lost.Id))!));
     }
