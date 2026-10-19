@@ -60,7 +60,8 @@ async function key(target: HTMLElement, value: string) {
     // Commit each input event so React Aria can register its keyup listener.
     await act(async () => {
       // Menu triggers can move focus on keydown; keyup follows the new focus.
-      const focused = document.activeElement instanceof HTMLElement ? document.activeElement : target;
+      const focused =
+        document.activeElement instanceof HTMLElement ? document.activeElement : target;
 
       focused.dispatchEvent(
         new KeyboardEvent(type, {
@@ -77,9 +78,11 @@ async function key(target: HTMLElement, value: string) {
 async function show(
   overrides: Partial<DownloadTask> = {},
   onDownloadDirectly = vi.fn().mockResolvedValue(undefined),
+  execution?: TaskRowProps["execution"],
 ) {
   const props: TaskRowProps = {
     task: { ...task, ...overrides },
+    execution,
     statusColor: "default",
     progressColor: "primary",
     formatDateTime: (value) => String(value),
@@ -122,6 +125,54 @@ afterEach(async () => {
 });
 
 describe("download task row interaction", () => {
+  const execution = (status: string): NonNullable<TaskRowProps["execution"]> => ({
+    downloadTaskId: task.id,
+    status,
+    sourceCompleted: true,
+    totalCount: 2,
+    completedCount: 0,
+    runningCount: status === "running" ? 1 : 0,
+    queuedCount: 0,
+    stoppedCount: status === "stopped" ? 2 : 0,
+    failedCount: 0,
+    waitingCount: 0,
+    progress: 25,
+    speedBytesPerSecond: status === "running" ? 1024 : undefined,
+  });
+
+  it("shows ongoing BT execution instead of the completed seed-fetch status and bytes", async () => {
+    const props = await show(
+      {
+        status: DownloadTaskStatus.Complete,
+        progress: 100,
+        completedAt: "2026-10-19T00:00:00Z",
+        downloadedBytes: 4096,
+        availableActions: [],
+      },
+      undefined,
+      execution("running"),
+    );
+    expect(container).toHaveTextContent("downloader.execution.status.running");
+    expect(container).toHaveTextContent("25%");
+    expect(container).not.toHaveTextContent("100%");
+    expect(container).not.toHaveTextContent("downloader.label.completedAt");
+    expect(
+      document.querySelector('[aria-label^="downloader.label.downloadedFileSize:"]'),
+    ).toBeNull();
+    await act(async () => element("downloader.action.stop").click());
+    expect(props.onStop).toHaveBeenCalledWith(task.id);
+  });
+
+  it("can continue a stopped BT execution after its source task has completed", async () => {
+    const props = await show(
+      { status: DownloadTaskStatus.Complete, availableActions: [] },
+      undefined,
+      execution("stopped"),
+    );
+    await act(async () => element("bt.action.resume").click());
+    expect(props.onStart).toHaveBeenCalledWith(task.id);
+  });
+
   it("shows the attributed file size before the progress percent", async () => {
     await show({ downloadedBytes: 1572864 });
 

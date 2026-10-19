@@ -11,6 +11,7 @@ using Bakabase.Modules.Acquisition.Components;
 using Bakabase.Modules.Downloader.Abstractions;
 using Bakabase.Modules.Downloader.Components;
 using Bakabase.Modules.Downloader.Models;
+using Bakabase.Service.Components.Acquisition.Downloads;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -117,9 +118,8 @@ public class FetchMagnetStep : IAcquisitionStep
     {
         try
         {
-            var downloaded = await ctx.ServiceProvider.GetRequiredService<ITorrentDownloader>()
-                .DownloadMagnetAsync(magnet, ctx.WorkingDirectory, TimeSpan.FromMinutes(config.TimeoutMinutes),
-                    (percentage, process) => ctx.ReportProgress(percentage, process), ct);
+            var downloaded = await ManagedTorrentDownload.DownloadAsync(ctx, item,
+                TimeSpan.FromMinutes(config.TimeoutMinutes), ct, magnetUri: magnet);
             return new AcquisitionStepOutcome.Continue(item with
             {
                 Files = item.Files.Concat(downloaded.Files).Distinct().ToList(),

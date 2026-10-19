@@ -229,6 +229,9 @@ public class BTaskManager : IAsyncDisposable
         }
     }
 
+    public Task WaitForExecutionAsync(string id, CancellationToken ct = default) =>
+        _taskMap.TryGetValue(id, out var task) ? task.WaitForExecutionAsync(ct) : Task.CompletedTask;
+
     public Task MarkCancelled(string id) => _taskMap.TryGetValue(id, out var task)
         ? task.MarkCancelled() : Task.CompletedTask;
 

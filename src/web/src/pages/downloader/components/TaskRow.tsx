@@ -1,5 +1,6 @@
 "use client";
 
+import type { DownloadTaskExecution } from "../useDownloadTaskExecutions";
 import type { SyntheticEvent } from "react";
 import type { ChipProps, CircularProgressProps } from "@/components/bakaui";
 import type { DownloadTask } from "@/core/models/DownloadTask";
@@ -52,6 +53,7 @@ const stopPropagation = (event: SyntheticEvent) => {
 
 export type TaskRowProps = {
   task: DownloadTask;
+  execution?: DownloadTaskExecution;
   statusColor: ChipProps["color"];
   progressColor: CircularProgressProps["color"];
   formatDateTime: (value?: string | Date | null) => string;
@@ -78,6 +80,7 @@ export type TaskRowProps = {
  */
 const TaskRow = memo(function TaskRow({
   task,
+  execution,
   statusColor,
   progressColor,
   formatDateTime,
@@ -99,25 +102,53 @@ const TaskRow = memo(function TaskRow({
   const hasNotices = task.status === DownloadTaskStatus.Complete && !!task.message;
   const noticeSummary = task.message?.split("\n", 1)[0];
   const Icon = DownloadTaskTypeIconMap[task.thirdPartyId!]?.[task.type];
-  const progress = Number.isFinite(task.progress) ? Math.min(100, Math.max(0, task.progress)) : 0;
+  const progressValue = execution ? execution.progress : task.progress;
+  const progress =
+    progressValue != null && Number.isFinite(progressValue)
+      ? Math.min(100, Math.max(0, progressValue))
+      : undefined;
+  const executionActive =
+    execution &&
+    ["running", "queued", "waiting", "processing", "preparing"].includes(execution.status);
+  const actions = executionActive
+    ? [DownloadTaskAction.Disable]
+    : execution && ["stopped", "failed", "processingFailed"].includes(execution.status)
+      ? [DownloadTaskAction.StartManually]
+      : task.availableActions;
+  const executionSummary = execution
+    ? t("downloader.execution.summary", {
+        completed: execution.completedCount,
+        total: execution.totalCount,
+        running: execution.runningCount,
+        queued: execution.queuedCount,
+        waiting: execution.waitingCount,
+        failed: execution.failedCount,
+        stopped: execution.stoppedCount,
+      })
+    : undefined;
   const downloadedSize =
+    !execution &&
     task.downloadedBytes != null &&
     Number.isFinite(task.downloadedBytes) &&
     task.downloadedBytes >= 0
       ? humanFileSize(task.downloadedBytes, false, 1)
       : undefined;
+  const executionSpeed = execution?.speedBytesPerSecond;
   const downloadSpeed =
-    task.status === DownloadTaskStatus.Downloading &&
-    task.downloadSpeedBytesPerSecond != null &&
-    Number.isFinite(task.downloadSpeedBytesPerSecond) &&
-    task.downloadSpeedBytesPerSecond > 0
-      ? `${humanFileSize(task.downloadSpeedBytesPerSecond, false, 1)}/s`
-      : undefined;
+    executionSpeed != null && executionSpeed > 0
+      ? `${humanFileSize(executionSpeed, false, 1)}/s`
+      : task.status === DownloadTaskStatus.Downloading &&
+          task.downloadSpeedBytesPerSecond != null &&
+          Number.isFinite(task.downloadSpeedBytesPerSecond) &&
+          task.downloadSpeedBytesPerSecond > 0
+        ? `${humanFileSize(task.downloadSpeedBytesPerSecond, false, 1)}/s`
+        : undefined;
   const name = task.name || task.key;
   const createdAt = `${t<string>("downloader.label.createdAt")} ${formatDateTime(task.createdAt)}`;
-  const completedAt = task.completedAt
-    ? `${t<string>("downloader.label.completedAt")} ${formatDateTime(task.completedAt)}`
-    : undefined;
+  const completedAt =
+    task.completedAt && !execution
+      ? `${t<string>("downloader.label.completedAt")} ${formatDateTime(task.completedAt)}`
+      : undefined;
   const nextStart = task.nextStartDt
     ? `${t<string>("downloader.label.nextStartTime")} ${formatDateTime(task.nextStartDt)}`
     : undefined;
@@ -179,13 +210,34 @@ const TaskRow = memo(function TaskRow({
           </div>
         </div>
         <Chip className="h-6 shrink-0" color={statusColor} size="sm" variant="flat">
-          {t<string>(DownloadTaskStatus[task.status])}
+          {execution
+            ? t(`downloader.execution.status.${execution.status}`)
+            : t<string>(DownloadTaskStatus[task.status])}
         </Chip>
       </div>
       <div className="flex h-8 min-w-0 shrink-0 items-center gap-3">
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
           <div className="flex min-w-0 items-center gap-2 text-xs leading-4">
-            {hasErrorMessage ? (
+            {executionSummary ? (
+              <span
+                data-task-action
+                className="min-w-0 flex-1"
+                role="presentation"
+                onClick={stopPropagation}
+                onContextMenu={stopPropagation}
+                onKeyDown={stopPropagation}
+              >
+                <Button
+                  className="h-4 min-h-0 w-full min-w-0 justify-start truncate px-0 text-xs"
+                  size="sm"
+                  variant="light"
+                  title={executionSummary}
+                  onPress={() => onEdit(task.id)}
+                >
+                  {executionSummary}
+                </Button>
+              </span>
+            ) : hasErrorMessage ? (
               <span
                 data-task-action
                 className="min-w-0 flex-1"
@@ -264,7 +316,7 @@ const TaskRow = memo(function TaskRow({
                 </span>
               </>
             )}
-            {estimatedRemaining && (
+            {!execution && estimatedRemaining && (
               <>
                 <span className="shrink-0 tabular-nums text-default-500" title={estimatedRemaining}>
                   {estimatedRemaining}
@@ -274,7 +326,9 @@ const TaskRow = memo(function TaskRow({
                 </span>
               </>
             )}
-            <span className="shrink-0 tabular-nums text-default-500">{Math.round(progress)}%</span>
+            <span className="shrink-0 tabular-nums text-default-500">
+              {progress == null ? "—" : `${Math.round(progress)}%`}
+            </span>
           </div>
           <Progress
             disableAnimation
@@ -282,7 +336,10 @@ const TaskRow = memo(function TaskRow({
             classNames={{ track: "h-1 bg-default-100" }}
             color={progressColor}
             size="sm"
-            value={progress}
+            isIndeterminate={
+              progress == null && !!executionActive && execution?.status !== "waiting"
+            }
+            value={progress ?? 0}
           />
         </div>
         <div
@@ -293,13 +350,19 @@ const TaskRow = memo(function TaskRow({
           onContextMenu={stopPropagation}
           onKeyDown={stopPropagation}
         >
-          {task.availableActions?.map((action) => {
+          {actions?.map((action) => {
             switch (action) {
               case DownloadTaskAction.StartManually:
               case DownloadTaskAction.Restart: {
                 const restarting = action === DownloadTaskAction.Restart;
                 const label = t<string>(
-                  restarting ? "downloader.action.restart" : "downloader.action.start",
+                  execution?.status === "stopped"
+                    ? "bt.action.resume"
+                    : execution && ["failed", "processingFailed"].includes(execution.status)
+                      ? "bt.action.retry"
+                      : restarting
+                        ? "downloader.action.restart"
+                        : "downloader.action.start",
                 );
 
                 return (

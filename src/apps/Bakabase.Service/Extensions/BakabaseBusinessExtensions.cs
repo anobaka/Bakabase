@@ -216,6 +216,18 @@ namespace Bakabase.Service.Extensions
             // Keep the existing cache location so metadata from earlier runs remains reusable.
             services.AddDownloader(sp => Path.Combine(sp.GetRequiredService<AppService>().AppDataDirectory,
                 "acquisition-torrent-cache"));
+            services.AddSingleton<Bakabase.Modules.Downloader.Abstractions.ITorrentNetworkOptionsProvider,
+                Components.Downloader.BtNetworkOptionsProvider>();
+            services.AddSingleton<Components.Downloader.BtDownloadStartupPolicy>();
+            services.AddSingleton<Bakabase.Modules.Bittorrent.Abstractions.IBtDownloadManager>(sp =>
+                new Bakabase.Modules.Bittorrent.Components.BtDownloadManager(
+                    sp.GetRequiredService<Bakabase.Modules.Downloader.Abstractions.ITorrentDownloader>(),
+                    () => Path.Combine(sp.GetRequiredService<AppService>().AppDataDirectory, "bt-downloads"),
+                    () => sp.GetRequiredService<Bootstrap.Components.Configuration.Abstractions.IBOptions<Bakabase.InsideWorld.Models.Configs.NetworkOptions>>().Value.BtMaxConcurrentDownloads,
+                    () => sp.GetRequiredService<Bakabase.Abstractions.Components.Tasks.BTaskManager>().IsShuttingDown,
+                    () => sp.GetRequiredService<AppService>().AppDataDirectory,
+                    (job, ct) => sp.GetRequiredService<Components.Downloader.BtDownloadStartupPolicy>().CanResumeAsync(job, ct)));
+            services.AddHostedService<Components.Downloader.BtDownloadLifetime>();
             services.AddWorkflow<BakabaseDbContext>();
             services.AddAcquisition<BakabaseDbContext>();
             services.AddCollections<BakabaseDbContext>();

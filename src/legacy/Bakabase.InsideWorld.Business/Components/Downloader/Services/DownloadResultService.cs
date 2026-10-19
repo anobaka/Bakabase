@@ -77,6 +77,15 @@ public sealed class DownloadResultService
     {
         await using var stream = File.OpenRead(torrentPath);
         var bytes = await TorrentMetadata.ReadBoundedAsync(stream, ct);
+        return await RecordTorrentMetadataAsync(downloadTaskId, thirdPartyId, sourceKey, name, bytes,
+            Path.GetDirectoryName(Path.GetFullPath(torrentPath))!, workflowDefinitionId, false, torrentPath, ct);
+    }
+
+    /// <summary>Metadata storage and payload placement have independent paths; exporting a torrent is optional.</summary>
+    public async Task<DownloadResultDbModel> RecordTorrentMetadataAsync(int downloadTaskId, ThirdPartyId thirdPartyId,
+        string sourceKey, string name, byte[] bytes, string outputDirectory, int? workflowDefinitionId,
+        bool requiresContentsDownload, string? exportedTorrentPath = null, CancellationToken ct = default)
+    {
         TorrentMetadata.Validate(bytes);
         var fingerprint = Hash(bytes);
         var directory = System.IO.Path.Combine(_appData(), "downloader", "torrent-metadata");
@@ -93,8 +102,9 @@ public sealed class DownloadResultService
             if (File.Exists(temporary)) File.Delete(temporary);
         }
         return await RecordAsync(downloadTaskId, thirdPartyId, sourceKey, name,
-            DownloadResultKind.TorrentMetadata, target, System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(torrentPath))!,
-            [target, System.IO.Path.GetFullPath(torrentPath)], fingerprint, workflowDefinitionId, ct);
+            DownloadResultKind.TorrentMetadata, target, Path.GetFullPath(outputDirectory),
+            exportedTorrentPath == null ? [target] : [target, Path.GetFullPath(exportedTorrentPath)],
+            fingerprint, workflowDefinitionId, ct, requiresContentsDownload);
     }
 
     public async Task<DownloadResultDbModel> RecordFilesAsync(int downloadTaskId, ThirdPartyId thirdPartyId,
@@ -123,19 +133,20 @@ public sealed class DownloadResultService
 
     private async Task<DownloadResultDbModel> RecordAsync(int taskId, ThirdPartyId thirdPartyId, string sourceKey,
         string name, DownloadResultKind kind, string path, string downloadDirectory, string[] files, string fingerprint,
-        int? workflowDefinitionId, CancellationToken ct)
+        int? workflowDefinitionId, CancellationToken ct, bool requiresContentsDownload = false)
     {
         if (taskId <= 0 || string.IsNullOrWhiteSpace(sourceKey))
             throw new ArgumentException("A persisted download task and source key are required.");
         var key = Hash(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new object[]
             {taskId, (int) thirdPartyId, sourceKey, (int) kind, fingerprint})));
         var existing = await _db.DownloadResults.AsNoTracking().SingleOrDefaultAsync(x => x.DeduplicationKey == key, ct);
-        if (existing != null) return await RefreshOutputAsync(existing, name, path, downloadDirectory, files, ct);
+        if (existing != null) return await RefreshOutputAsync(existing, name, path, downloadDirectory, files, ct, requiresContentsDownload);
         var result = new DownloadResultDbModel
         {
             DownloadTaskId = taskId, ThirdPartyId = thirdPartyId, SourceKey = sourceKey, Name = name,
             Kind = kind, Path = path, DownloadDirectory = downloadDirectory, FilesJson = JsonSerializer.Serialize(files), Fingerprint = fingerprint,
-            DeduplicationKey = key, WorkflowDefinitionId = workflowDefinitionId
+            DeduplicationKey = key, WorkflowDefinitionId = workflowDefinitionId,
+            RequiresContentsDownload = requiresContentsDownload
         };
         _db.DownloadResults.Add(result);
         try
@@ -148,24 +159,26 @@ public sealed class DownloadResultService
             // Another producer may have recovered the same checkpoint concurrently.
             _db.Entry(result).State = EntityState.Detached;
             existing = await _db.DownloadResults.AsNoTracking().SingleOrDefaultAsync(x => x.DeduplicationKey == key, ct);
-            if (existing != null) return await RefreshOutputAsync(existing, name, path, downloadDirectory, files, ct);
+            if (existing != null) return await RefreshOutputAsync(existing, name, path, downloadDirectory, files, ct, requiresContentsDownload);
             throw;
         }
     }
 
     private async Task<DownloadResultDbModel> RefreshOutputAsync(DownloadResultDbModel existing, string name,
-        string path, string directory, string[] files, CancellationToken ct)
+        string path, string directory, string[] files, CancellationToken ct, bool requiresContentsDownload)
     {
         // Reacquiring identical bytes may use a new root. Keep the durable result identity,
         // workflow binding and ownership, while repairing its source output locations.
         var json = JsonSerializer.Serialize(files);
         await _db.DownloadResults.Where(x => x.Id == existing.Id).ExecuteUpdateAsync(setters => setters
             .SetProperty(x => x.Name, name).SetProperty(x => x.Path, path)
-            .SetProperty(x => x.DownloadDirectory, directory).SetProperty(x => x.FilesJson, json), ct);
+            .SetProperty(x => x.DownloadDirectory, directory).SetProperty(x => x.FilesJson, json)
+            .SetProperty(x => x.RequiresContentsDownload, requiresContentsDownload), ct);
         existing.Name = name;
         existing.Path = path;
         existing.DownloadDirectory = directory;
         existing.FilesJson = json;
+        existing.RequiresContentsDownload = requiresContentsDownload;
         return existing;
     }
 

@@ -13,6 +13,7 @@ import enEnums from "@/locales/en/enums.json";
 import enDashboard from "@/locales/en/pages/dashboard.json";
 import enResource from "@/locales/en/pages/resource.json";
 import enConfiguration from "@/locales/en/pages/configuration.json";
+import enBtDownloads from "@/locales/en/pages/btDownloads.json";
 import enDownloader from "@/locales/en/pages/downloader.json";
 import enFileProcessor from "@/locales/en/pages/fileProcessor.json";
 import enMediaLibrary from "@/locales/en/pages/mediaLibrary.json";
@@ -95,6 +96,7 @@ import cnEnums from "@/locales/cn/enums.json";
 import cnDashboard from "@/locales/cn/pages/dashboard.json";
 import cnResource from "@/locales/cn/pages/resource.json";
 import cnConfiguration from "@/locales/cn/pages/configuration.json";
+import cnBtDownloads from "@/locales/cn/pages/btDownloads.json";
 import cnDownloader from "@/locales/cn/pages/downloader.json";
 import cnFileProcessor from "@/locales/cn/pages/fileProcessor.json";
 import cnMediaLibrary from "@/locales/cn/pages/mediaLibrary.json";
@@ -178,6 +180,7 @@ const enResources = {
   ...enResource,
   ...enConfiguration,
   ...enDownloader,
+  ...enBtDownloads,
   ...enFileProcessor,
   ...enMediaLibrary,
   ...enPathMark,
@@ -260,6 +263,7 @@ const cnResources = {
   ...cnResource,
   ...cnConfiguration,
   ...cnDownloader,
+  ...cnBtDownloads,
   ...cnFileProcessor,
   ...cnMediaLibrary,
   ...cnPathMark,

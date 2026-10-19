@@ -478,5 +478,6 @@
   "filePath.containerStorage": "保存在容器内部，未映射宿主机文件夹。",
   "filePath.hostPathUnavailable": "未提供宿主机路径映射，当前显示容器内路径。",
   "filePath.copyFailed": "复制失败，请选中路径后手动复制。",
-  "otherDevices.canManage": "支持多设备管理"
+  "otherDevices.canManage": "支持多设备管理",
+  "menu.btDownloads": "BT 下载"
 }

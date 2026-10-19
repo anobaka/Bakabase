@@ -30,6 +30,7 @@ import TaskErrorMessage from "./components/TaskErrorMessage";
 import DownloadOrderPrompt from "./components/DownloadOrderPrompt";
 import TaskRow, { DOWNLOAD_TASK_ITEM_HEIGHT } from "./components/TaskRow";
 import DownloadTaskFilters, { type DownloadTaskFilter } from "./components/DownloadTaskFilters";
+import useDownloadTaskExecutions, { executionDisplayStatus } from "./useDownloadTaskExecutions";
 import { downloadTaskDirectly } from "./directDownload";
 import { DownloadFolderUnavailableError, openDownloadTaskFolder } from "./openDownloadTaskFolder";
 
@@ -134,6 +135,7 @@ const DownloaderPage = () => {
 
   const tasks = useDownloadTasksStore((state) => state.tasks);
   const patchTasks = useDownloadTasksStore((state) => state.patchTasks);
+  const executions = useDownloadTaskExecutions(tasks.map((task) => task.id));
 
   // Build third party filter from downloader definitions, sorted by value ASC
   const sortedThirdPartyIds = useMemo(() => {
@@ -493,7 +495,9 @@ const DownloaderPage = () => {
       taskFilters.push((t) => t.thirdPartyId === form.thirdPartyId);
     }
     if (form.status != undefined) {
-      taskFilters.push((t) => t.status === form.status);
+      taskFilters.push(
+        (t) => executionDisplayStatus(t.status, executions.get(t.id)) === form.status,
+      );
     }
 
     if (form.keyword != undefined && form.keyword.length > 0) {
@@ -507,7 +511,7 @@ const DownloaderPage = () => {
     }
 
     return taskFilters.length === 0 ? tasks : tasks.filter((x) => taskFilters.every((f) => f(x)));
-  }, [tasks, form.thirdPartyId, form.status, form.keyword]);
+  }, [tasks, executions, form.thirdPartyId, form.status, form.keyword]);
 
   /**
    * Membership is tested once per row per render. As an array that is a linear scan each time, so
@@ -526,11 +530,12 @@ const DownloaderPage = () => {
 
     for (const task of tasks) {
       byThirdParty.set(task.thirdPartyId, (byThirdParty.get(task.thirdPartyId) ?? 0) + 1);
-      byStatus.set(task.status, (byStatus.get(task.status) ?? 0) + 1);
+      const status = executionDisplayStatus(task.status, executions.get(task.id));
+      byStatus.set(status, (byStatus.get(status) ?? 0) + 1);
     }
 
     return { countsByThirdParty: byThirdParty, countsByStatus: byStatus };
-  }, [tasks]);
+  }, [tasks, executions]);
 
   // Keep the latest filtered tasks available to the (once-registered) key handler.
   const filteredTasksRef = useRef(filteredTasks);
@@ -768,6 +773,9 @@ const DownloaderPage = () => {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <Button as="a" href="#/bt-downloads" size="sm" variant="flat">
+            {t("menu.btDownloads")}
+          </Button>
           <WorkflowIntegrationHint surface="downloader" />
           <Button size="sm" variant="flat" onPress={() => createPortal(Configurations, {})}>
             <AiOutlineSetting size={17} />
@@ -1051,14 +1059,23 @@ const DownloaderPage = () => {
                     textValue={task.name || task.key}
                   >
                     <TaskRow
+                      execution={executions.get(task.id)}
                       formatDateTime={formatTaskDateTime}
                       openFolderLabel={t<string>(
                         userSideActionsRunHere
                           ? "common.action.openFolder"
                           : "resource.folderLocation.title",
                       )}
-                      progressColor={DownloadTaskStatusProgressBarColorMap[task.status]}
-                      statusColor={DownloadTaskStatusIceLabelStatusMap[task.status]}
+                      progressColor={
+                        DownloadTaskStatusProgressBarColorMap[
+                          executionDisplayStatus(task.status, executions.get(task.id))
+                        ]
+                      }
+                      statusColor={
+                        DownloadTaskStatusIceLabelStatusMap[
+                          executionDisplayStatus(task.status, executions.get(task.id))
+                        ]
+                      }
                       task={task}
                       onClick={handleRowClick}
                       onContextMenu={handleRowContextMenu}

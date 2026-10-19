@@ -16,6 +16,9 @@ using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Acquisition.Components;
 using Bakabase.Modules.Acquisition.Models.Domain;
+using Bakabase.Modules.Bittorrent.Abstractions;
+using Bakabase.Modules.Bittorrent.Components;
+using Bakabase.Modules.Bittorrent.Models;
 using Bakabase.Modules.Downloader.Abstractions;
 using Bakabase.Modules.Downloader.Models;
 using Bakabase.Service.Components.Acquisition.Downloads;
@@ -33,6 +36,7 @@ public sealed class ExHentaiAcquisitionTests
     private ServiceProvider _services = null!;
     private Queue _queue = null!;
     private Torrent _torrent = null!;
+    private BtDownloadManager _bt = null!;
     private ExHentaiAcquisitionService _owned = null!;
     private string _root = null!;
 
@@ -53,15 +57,17 @@ public sealed class ExHentaiAcquisitionTests
         await _db.SaveChangesAsync();
         _queue = new Queue(_db);
         _torrent = new Torrent();
+        _bt = new BtDownloadManager(_torrent, () => Path.Combine(_root, "bt-state"));
         _owned = new ExHentaiAcquisitionService(_db, _queue);
         _services = new ServiceCollection().AddSingleton(_owned)
             .AddSingleton<IAcquisitionTorrentMetadataStore, Metadata>()
-            .AddSingleton<ITorrentDownloader>(_torrent).BuildServiceProvider();
+            .AddSingleton<IBtDownloadManager>(_bt).BuildServiceProvider();
     }
 
     [TestCleanup]
     public async Task Cleanup()
     {
+        await _bt.DisposeAsync();
         await _services.DisposeAsync();
         await _db.DisposeAsync();
         Directory.Delete(_root, true);
@@ -92,7 +98,7 @@ public sealed class ExHentaiAcquisitionTests
     }
 
     [TestMethod]
-    public async Task TorrentResultResumesSameResourceAndPassesMetadataToSharedDownloader()
+    public async Task TorrentResultResumesSameResourceAndAppearsInIndependentBtManagement()
     {
         var step = new FetchExHentaiStep();
         await step.ExecuteAsync(Context(), Item(), default);
@@ -113,6 +119,18 @@ public sealed class ExHentaiAcquisitionTests
         Assert.IsTrue(fetched.Item.PreserveDirectoryStructure);
         Assert.AreEqual(1, fetched.Item.Files.Count);
         Assert.AreEqual(1, await _db.Set<AcquisitionTaskDbModel>().CountAsync());
+        Assert.AreEqual(Path.Combine(_root, "torrent-data"), fetched.Item.ExtractedDirectory);
+        var job = (await _bt.ListAsync()).Single();
+        Assert.AreEqual(BtDownloadStatus.Completed, job.Status);
+        Assert.AreEqual("workflow", job.SourceKind);
+        Assert.AreEqual(19, job.WorkflowRunId);
+        Assert.AreEqual(result.Id, job.DownloadResultId);
+        Assert.AreEqual(result.DownloadTaskId, job.DownloadTaskId);
+        Assert.IsTrue(job.IsLinked);
+        Assert.IsFalse(job.CanDelete);
+        await new FetchResultTorrentStep().ExecuteAsync(Context(), resumed.Item, default);
+        Assert.AreEqual(1, _torrent.Downloads, "Replaying the same workflow source reuses its completed managed transfer.");
+        Assert.AreEqual(1, (await _bt.ListAsync()).Count);
     }
 
     [TestMethod]
@@ -252,11 +270,19 @@ public sealed class ExHentaiAcquisitionTests
     private sealed class Torrent : ITorrentDownloader
     {
         public int Downloads;
-        public async Task<TorrentDownloadResult> DownloadTorrentAsync(byte[] metadata, string workingDirectory,
-            TimeSpan timeout, Func<int, string?, Task>? progress, CancellationToken ct)
+        public Task<TorrentDownloadResult> DownloadAsync(TorrentDownloadRequest request,
+            Func<TorrentTransferProgress, Task>? progress, CancellationToken ct) =>
+            WriteFiles(request.UseWorkingDirectoryAsDestination ? request.WorkingDirectory :
+                Path.Combine(request.WorkingDirectory, "torrent-data"), ct);
+
+        public Task<TorrentDownloadResult> DownloadTorrentAsync(byte[] metadata, string workingDirectory,
+            TimeSpan timeout, Func<int, string?, Task>? progress, CancellationToken ct) =>
+            WriteFiles(Path.Combine(workingDirectory, "torrent-data"), ct);
+
+        private async Task<TorrentDownloadResult> WriteFiles(string outputDirectory, CancellationToken ct)
         {
             Downloads++;
-            var directory = Path.Combine(workingDirectory, "torrent-data", "chapter");
+            var directory = Path.Combine(outputDirectory, "chapter");
             Directory.CreateDirectory(directory);
             var file = Path.Combine(directory, "page.jpg");
             await File.WriteAllTextAsync(file, "downloaded", ct);

@@ -169,13 +169,16 @@ public sealed class WorkflowAutomationTests
         var defId = await CreateDefinition(FsWorkflowKinds.TriggerWatch,
             new {roots = new[] {_root}, target = 1, settleSeconds = 5});
 
+        // This test drives events and time explicitly. Create the file before the native
+        // watcher starts so a delayed Created/Changed callback cannot re-arm a published entry.
+        var file = Path.Combine(_root, "dropped (x).mkv");
+        File.WriteAllText(file, "");
+
         var service = new WorkflowFsWatchService(
             _sp.GetRequiredService<IServiceScopeFactory>(),
             _sp.GetRequiredService<ILogger<WorkflowFsWatchService>>());
         await service.RefreshDefinitionsAsync();
 
-        var file = Path.Combine(_root, "dropped (x).mkv");
-        File.WriteAllText(file, "");
         service.NoteFsEvent(file);
 
         // Not settled yet — the file might still be mid-copy.

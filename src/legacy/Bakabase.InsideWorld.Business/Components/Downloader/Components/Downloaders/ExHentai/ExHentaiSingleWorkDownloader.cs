@@ -36,22 +36,22 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
             // Defer (probe-then-yield) only on the first pass of an un-probed task. Once it is known to
             // have no torrent, it is re-run with deferIfNoTorrent=false and downloads images normally.
             var deferIfNoTorrent = exOptions.PrioritizeTasksWithTorrent
-                                   && options.PreferTorrent
+                                   && options.UsesTorrent
                                    && !knownToHaveNoTorrent;
 
             var workPath = ExHentaiDownloadResultHelper.GetWorkDirectory(task.DownloadPath, task.Key,
-                options.DownloadResultWorkflowId);
+                options.DownloadResultWorkflowId, options.EffectiveDownloadMode == ExHentaiDownloadMode.Torrent);
             await DownloadSingleWork(task.Id, task.Key, task.Checkpoint, workPath, OnNameAcquiredInternal,
                 async current =>
                 {
                     Current = current;
                     await OnCurrentChangedInternal();
                 }, OnProgressInternal, OnCheckpointChangedInternal, ct,
-                options.PreferTorrent && !knownToHaveNoTorrent,
+                options.UsesTorrent && !knownToHaveNoTorrent,
                 deferIfNoTorrent, () => manager.MarkNoTorrentAsync(task.Id),
                 () => manager.MarkTorrentFoundAsync(task.Id),
                 () => manager.MarkTorrentDownloadedAsync(task.Id),
-                options.DownloadResultWorkflowId);
+                options.DownloadResultWorkflowId, options.DownloadMode, options.SaveTorrentFile, options.FallbackToDirect);
         }
     }
 }

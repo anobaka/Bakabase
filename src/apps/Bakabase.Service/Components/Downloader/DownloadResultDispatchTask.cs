@@ -15,6 +15,7 @@ public sealed class DownloadResultDispatchTask(IServiceProvider services, IBakab
     public override async Task RunAsync(BTaskArgs args)
     {
         await using var scope = CreateScope();
+        await scope.ServiceProvider.GetRequiredService<DownloadResultBtService>().DispatchAsync(args.CancellationToken);
         await scope.ServiceProvider.GetRequiredService<DownloadResultWorkflowService>().DispatchAsync(args.CancellationToken);
     }
 }

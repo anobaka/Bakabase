@@ -76,6 +76,17 @@ public class DownloadTaskController : Controller
         return new SingletonResponse<TaskSummary>(await _service.GetSummary(thirdPartyId));
     }
 
+    [HttpGet("executions")]
+    [RemoteAccessible]
+    [SwaggerOperation(OperationId = "GetDownloadTaskExecutions")]
+    public async Task<ListResponse<Bakabase.Service.Models.View.DownloadTaskExecutionSummary>> GetExecutions(
+        [FromQuery] int[] ids, [FromServices] Bakabase.Service.Components.Downloader.DownloadTaskExecutionService executions)
+    {
+        if (ids.Length > 500) return ListResponseBuilder<Bakabase.Service.Models.View.DownloadTaskExecutionSummary>
+            .BuildBadRequest("At most 500 task ids can be queried at once.");
+        return new(await executions.GetAsync(ids.Distinct().ToArray(), HttpContext.RequestAborted));
+    }
+
     [SwaggerOperation(OperationId = "GetDownloadTask")]
     [HttpGet("{id}")]
     public async Task<SingletonResponse<DownloadTask>> Get(int id)

@@ -583,5 +583,9 @@
   "workflow.activity.postParserCheckLinks.displayName": "检查下载链接状态",
   "workflow.activity.postParserCheckLinks.description": "检查已支持网盘的分享链接，不能确定或暂不支持的标记为未知。",
   "workflow.waitReason.ExtractionPlanUnknown": "等待补充文件处理方案",
-  "workflow.recipe.fileProcessingPlan.description": "选择本地文件执行已保存的文件处理指令，保留原件；每个资源分别绑定目录和方案。"
+  "workflow.recipe.fileProcessingPlan.description": "选择本地文件执行已保存的文件处理指令，保留原件；每个资源分别绑定目录和方案。",
+  "workflow.runDetail.title": "工作流实例 #{{id}}",
+  "workflow.runDetail.loadFailed": "无法加载该工作流实例。",
+  "workflow.runDetail.definition": "查看工作流定义",
+  "workflow.runDetail.progress": "工作流进度"
 }

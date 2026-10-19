@@ -1418,6 +1418,102 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/bt-downloads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetBtDownloads"];
+        put?: never;
+        post: operations["CreateBtDownload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/bt-downloads/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetBtDownload"];
+        put?: never;
+        post?: never;
+        delete: operations["DeleteBtDownload"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/bt-downloads/upload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["UploadBtDownload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/bt-downloads/{id}/stop": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["StopBtDownload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/bt-downloads/{id}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ResumeBtDownload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/bt-downloads/{id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["RetryBtDownload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/bulk-modification/{id}": {
         parameters: {
             query?: never;
@@ -3506,6 +3602,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["GetDownloadTaskSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/download-task/executions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetDownloadTaskExecutions"];
         put?: never;
         post?: never;
         delete?: never;
@@ -10134,6 +10246,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/workflow/run/{runId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetWorkflowRun"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -11672,6 +11800,9 @@ export interface components {
             defaultPath?: string;
             namingConvention?: string;
             preferTorrent: boolean;
+            downloadMode?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloaders.ExHentai.ExHentaiDownloadMode"];
+            saveTorrentFile: boolean;
+            fallbackToDirect: boolean;
             preferOriginalImages: boolean;
             allowOriginalImageGpSpending: boolean;
             /** Format: int64 */
@@ -11929,6 +12060,9 @@ export interface components {
             defaultPath?: string;
             namingConvention?: string;
             preferTorrent?: boolean;
+            downloadMode?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloaders.ExHentai.ExHentaiDownloadMode"];
+            saveTorrentFile?: boolean;
+            fallbackToDirect?: boolean;
             preferOriginalImages?: boolean;
             allowOriginalImageGpSpending?: boolean;
             /** Format: int64 */
@@ -11992,6 +12126,9 @@ export interface components {
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.NetworkOptionsPatchInputModel": {
             customProxies?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.NetworkOptionsPatchInputModel+ProxyOptions"][];
             proxy?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.NetworkOptions+ProxyModel"];
+            btProxy?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.NetworkOptions+ProxyModel"];
+            /** Format: int32 */
+            btMaxConcurrentDownloads?: number;
             customTestSites?: string[];
             selectedPresetTestSiteIds?: string[];
             thirdPartyProxies?: {
@@ -12277,6 +12414,12 @@ export interface components {
         };
         /**
          * Format: int32
+         * @description [1: Direct, 2: Torrent, 3: TorrentFile]
+         * @enum {integer}
+         */
+        "Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloaders.ExHentai.ExHentaiDownloadMode": 1 | 2 | 3;
+        /**
+         * Format: int32
          * @description [1: SingleWork, 2: Watched, 3: List]
          * @enum {integer}
          */
@@ -12518,6 +12661,9 @@ export interface components {
         "Bakabase.InsideWorld.Models.Configs.NetworkOptions": {
             customProxies?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.NetworkOptions+ProxyOptions"][];
             proxy: components["schemas"]["Bakabase.InsideWorld.Models.Configs.NetworkOptions+ProxyModel"];
+            btProxy: components["schemas"]["Bakabase.InsideWorld.Models.Configs.NetworkOptions+ProxyModel"];
+            /** Format: int32 */
+            btMaxConcurrentDownloads: number;
             thirdPartyProxies?: {
                 [key: string]: components["schemas"]["Bakabase.InsideWorld.Models.Configs.NetworkOptions+ProxyModel"];
             };
@@ -13525,6 +13671,52 @@ export interface components {
             text?: string;
             isPreferred: boolean;
         };
+        "Bakabase.Modules.Bittorrent.Models.BtDownloadJob": {
+            id: string;
+            name: string;
+            status: components["schemas"]["Bakabase.Modules.Bittorrent.Models.BtDownloadStatus"];
+            stage: string;
+            /** Format: int32 */
+            percentage: number;
+            /** Format: int64 */
+            completedBytes?: number;
+            /** Format: int64 */
+            totalBytes?: number;
+            /** Format: double */
+            speedBytesPerSecond?: number;
+            /** Format: int32 */
+            peers?: number;
+            outputDirectory: string;
+            files: string[];
+            error?: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            /** Format: date-time */
+            completedAt?: string;
+            sourceKind: string;
+            sourceId?: string;
+            /** Format: int32 */
+            workflowRunId?: number;
+            /** Format: int32 */
+            workflowDefinitionId?: number;
+            /** Format: int32 */
+            downloadTaskId?: number;
+            /** Format: int32 */
+            downloadResultId?: number;
+            isLinked: boolean;
+            readonly canStop: boolean;
+            readonly canResume: boolean;
+            readonly canRetry: boolean;
+            readonly canDelete: boolean;
+        };
+        /**
+         * Format: int32
+         * @description [1: Queued, 2: Running, 3: Stopping, 4: Stopped, 5: Completed, 6: Failed]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.Bittorrent.Models.BtDownloadStatus": 1 | 2 | 3 | 4 | 5 | 6;
         "Bakabase.Modules.Collection.Abstractions.Models.Domain.CollectionMember": {
             /** Format: int32 */
             collectionId: number;
@@ -15401,6 +15593,11 @@ export interface components {
             failedItemCount: number;
             stepStats: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Domain.WorkflowRunStepStat"][];
             errorMessage?: string;
+            /** Format: int32 */
+            progress?: number;
+            process?: string;
+            activityKind?: string;
+            stage?: string;
             waitReason?: string;
             waitPromptJson?: string;
             /** Format: date-time */
@@ -16034,6 +16231,11 @@ export interface components {
             /** Format: int32 */
             id: number;
         };
+        "Bakabase.Service.Models.Input.BtDownloadCreateInputModel": {
+            name?: string;
+            magnetUri?: string;
+            torrentUrl?: string;
+        };
         "Bakabase.Service.Models.Input.BulkModificationPatchInputModel": {
             name?: string;
             isActive?: boolean;
@@ -16634,6 +16836,46 @@ export interface components {
             error?: string;
             filterDidNotMatch: boolean;
             canRetry: boolean;
+            requiresContentsDownload: boolean;
+            btDownloadId?: string;
+            btStatus?: components["schemas"]["Bakabase.Modules.Bittorrent.Models.BtDownloadStatus"];
+            btStage?: string;
+            /** Format: int32 */
+            btPercentage?: number;
+            /** Format: int64 */
+            btCompletedBytes?: number;
+            /** Format: int64 */
+            btTotalBytes?: number;
+            /** Format: double */
+            btSpeedBytesPerSecond?: number;
+            /** Format: int32 */
+            workflowProgress?: number;
+            workflowProcess?: string;
+            canStop: boolean;
+        };
+        "Bakabase.Service.Models.View.DownloadTaskExecutionSummary": {
+            /** Format: int32 */
+            downloadTaskId: number;
+            status: string;
+            /** Format: int32 */
+            totalCount: number;
+            /** Format: int32 */
+            completedCount: number;
+            /** Format: int32 */
+            runningCount: number;
+            /** Format: int32 */
+            queuedCount: number;
+            /** Format: int32 */
+            stoppedCount: number;
+            /** Format: int32 */
+            failedCount: number;
+            /** Format: int32 */
+            waitingCount: number;
+            sourceCompleted: boolean;
+            /** Format: double */
+            progress?: number;
+            /** Format: double */
+            speedBytesPerSecond?: number;
         };
         "Bakabase.Service.Models.View.EnhancementViewModel": {
             /** Format: int32 */
@@ -17328,6 +17570,12 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Services.AcquisitionRecipeSummary"][];
         };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Bittorrent.Models.BtDownloadJob]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.Bittorrent.Models.BtDownloadJob"][];
+        };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Collection.Abstractions.Models.Domain.CollectionMember]": {
             /** Format: int32 */
             code: number;
@@ -17519,6 +17767,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Models.View.DownloadResultViewModel"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.DownloadTaskExecutionSummary]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Models.View.DownloadTaskExecutionSummary"][];
         };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.FileRenameEntryViewModel]": {
             /** Format: int32 */
@@ -18341,6 +18595,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Modules.Acquisition.Models.Domain.AcquisitionOptions"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Bittorrent.Models.BtDownloadJob]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.Bittorrent.Models.BtDownloadJob"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Collection.Abstractions.Models.Domain.CollectionProgress]": {
             /** Format: int32 */
@@ -21817,6 +22077,210 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.ThirdParty.ThirdParties.Bilibili.Models.Favorites]"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.ThirdParty.ThirdParties.Bilibili.Models.Favorites]"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.ThirdParty.ThirdParties.Bilibili.Models.Favorites]"];
+                };
+            };
+        };
+    };
+    GetBtDownloads: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Bittorrent.Models.BtDownloadJob]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Bittorrent.Models.BtDownloadJob]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Bittorrent.Models.BtDownloadJob]"];
+                };
+            };
+        };
+    };
+    CreateBtDownload: {
+        parameters: {
+            query?: {
+                outputDirectory?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.BtDownloadCreateInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.BtDownloadCreateInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.BtDownloadCreateInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.BtDownloadCreateInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Bittorrent.Models.BtDownloadJob]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Bittorrent.Models.BtDownloadJob]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Bittorrent.Models.BtDownloadJob]"];
+                };
+            };
+        };
+    };
+    GetBtDownload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Bittorrent.Models.BtDownloadJob]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Bittorrent.Models.BtDownloadJob]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Bittorrent.Models.BtDownloadJob]"];
+                };
+            };
+        };
+    };
+    DeleteBtDownload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    UploadBtDownload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file?: string;
+                    outputDirectory?: string;
+                    name?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Bittorrent.Models.BtDownloadJob]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Bittorrent.Models.BtDownloadJob]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Bittorrent.Models.BtDownloadJob]"];
+                };
+            };
+        };
+    };
+    StopBtDownload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Bittorrent.Models.BtDownloadJob]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Bittorrent.Models.BtDownloadJob]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Bittorrent.Models.BtDownloadJob]"];
+                };
+            };
+        };
+    };
+    ResumeBtDownload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Bittorrent.Models.BtDownloadJob]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Bittorrent.Models.BtDownloadJob]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Bittorrent.Models.BtDownloadJob]"];
+                };
+            };
+        };
+    };
+    RetryBtDownload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Bittorrent.Models.BtDownloadJob]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Bittorrent.Models.BtDownloadJob]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Bittorrent.Models.BtDownloadJob]"];
                 };
             };
         };
@@ -26146,6 +26610,30 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.TaskSummary]"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.TaskSummary]"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.TaskSummary]"];
+                };
+            };
+        };
+    };
+    GetDownloadTaskExecutions: {
+        parameters: {
+            query?: {
+                ids?: number[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.DownloadTaskExecutionSummary]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.DownloadTaskExecutionSummary]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.DownloadTaskExecutionSummary]"];
                 };
             };
         };
@@ -39398,6 +39886,30 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowRunViewModel]"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowRunViewModel]"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowRunViewModel]"];
+                };
+            };
+        };
+    };
+    GetWorkflowRun: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                runId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowRunViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowRunViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowRunViewModel]"];
                 };
             };
         };

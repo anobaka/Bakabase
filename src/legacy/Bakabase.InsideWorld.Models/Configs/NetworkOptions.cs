@@ -48,6 +48,10 @@ namespace Bakabase.InsideWorld.Models.Configs
         public List<ProxyOptions>? CustomProxies { get; set; }
         public ProxyModel Proxy { get; set; } = new() {Mode = ProxyMode.DoNotUse};
 
+        /// <summary>Independent BT routing. Direct explicitly ignores system/global/source proxies.</summary>
+        public ProxyModel BtProxy { get; set; } = new() {Mode = ProxyMode.DoNotUse};
+        public int BtMaxConcurrentDownloads { get; set; } = 2;
+
         /// <summary>
         /// Per-source proxy overrides, keyed by <see cref="Constants.ThirdPartyId"/>. A source with no
         /// entry uses <see cref="Proxy"/>, so this stays empty until someone actually wants one

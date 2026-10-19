@@ -90,6 +90,7 @@ import WorkflowPage from "@/pages/workflow";
 import WorkflowEditorPage from "@/pages/workflow/editor";
 import { SteamIcon, DLsiteIcon, ExHentaiIcon } from "@/components/SourceIcons";
 
+const BtDownloadsPage = lazy(() => import("@/pages/bt-downloads"));
 const DataSyncPage = lazy(() => import("@/features/data-sync/DataSyncPage"));
 
 // Lazy load test page to avoid circular dependency
@@ -371,6 +372,14 @@ export const routesMenuConfig: RouteMenuItem[] = [
         path: "/downloader",
         component: DownloaderPage,
         icon: AiOutlineDownload,
+        layout: "basic",
+        menu: true,
+      },
+      {
+        name: "menu.btDownloads",
+        path: "/bt-downloads",
+        component: BtDownloadsPage,
+        icon: AiOutlineCloudDownload,
         layout: "basic",
         menu: true,
       },

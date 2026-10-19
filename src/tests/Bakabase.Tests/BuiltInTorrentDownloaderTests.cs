@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using System.Net.Http;
 using Bakabase.Modules.Downloader.Abstractions;
 using Bakabase.Modules.Downloader.Components;
+using Bakabase.Modules.Downloader.Models;
 using Microsoft.Extensions.Logging.Abstractions;
 using MonoTorrent;
 using MonoTorrent.BEncoding;
@@ -18,6 +19,7 @@ using MonoTorrent.Client;
 namespace Bakabase.Tests;
 
 [TestClass]
+[DoNotParallelize]
 public sealed class BuiltInTorrentDownloaderTests
 {
     private string _root = null!;
@@ -36,6 +38,65 @@ public sealed class BuiltInTorrentDownloaderTests
     private sealed class HttpFactory : IHttpClientFactory
     {
         public HttpClient CreateClient(string name) => new() {Timeout = Timeout.InfiniteTimeSpan};
+    }
+
+    [DataTestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    [Timeout(90000)]
+    public async Task ManagedTransfersUseTheExactDirectoryAndRouteMetadataTrackersAndPeersTogether(bool useProxy)
+    {
+        await using var seed = await LocalSeed.CreateAsync(Path.Combine(_root, "seed"));
+        await using var proxy = new ForwardingSocksProxy();
+        var options = new FixedNetworkOptions(useProxy ? new TorrentNetworkOptions {ProxyUri = proxy.Address} : new TorrentNetworkOptions());
+        var downloader = new BuiltInTorrentDownloader(Path.Combine(_root, "cache"),
+            NullLogger<BuiltInTorrentDownloader>.Instance, false, networkOptions: options);
+        var working = Path.Combine(_root, "content");
+        var progress = new List<TorrentTransferProgress>();
+        var previousSystemProxy = HttpClient.DefaultProxy;
+        var forbiddenSystemProxy = new RejectSystemProxy();
+        HttpClient.DefaultProxy = forbiddenSystemProxy;
+        try
+        {
+            var result = await downloader.DownloadAsync(new TorrentDownloadRequest
+            {
+                TorrentUrl = seed.MetadataUrl, WorkingDirectory = working,
+                UseWorkingDirectoryAsDestination = true, Timeout = TimeSpan.FromSeconds(60)
+            }, update => { progress.Add(update); return Task.CompletedTask; }, CancellationToken.None);
+            Assert.AreEqual(working, result.Directory);
+            Assert.IsFalse(Directory.Exists(Path.Combine(working, "torrent-data")));
+            await AssertFiles(seed, result.Directory, result.Files);
+            Assert.AreEqual(0, forbiddenSystemProxy.Calls,
+                "Metadata, HTTP trackers and peers must never consult the system proxy.");
+            Assert.AreEqual("ReadingMetadata", progress[0].Stage);
+            Assert.AreEqual("Completed", progress.Last().Stage);
+            Assert.AreEqual(100, progress.Last().Percentage);
+            Assert.AreEqual(seed.Files.Values.Sum(f => (long)f.Length), progress.Last().CompletedBytes);
+            Assert.AreEqual(progress.Last().TotalBytes, progress.Last().CompletedBytes);
+            Assert.AreEqual(1, options.ReadCount, "Each transfer snapshots the routing policy once.");
+            if (useProxy)
+            {
+                CollectionAssert.AreEquivalent(new[] {new Uri(seed.MetadataUrl).Port, seed.PeerPort}, proxy.DestinationPorts.Distinct().ToArray());
+                Assert.IsTrue(proxy.DestinationPorts.Count(p => p == new Uri(seed.MetadataUrl).Port) > 1,
+                    "Both torrent metadata and tracker requests must pass through SOCKS.");
+            }
+            else Assert.AreEqual(0, proxy.DestinationPorts.Count);
+        }
+        finally { HttpClient.DefaultProxy = previousSystemProxy; }
+    }
+
+    private sealed class FixedNetworkOptions(TorrentNetworkOptions options) : ITorrentNetworkOptionsProvider
+    {
+        public int ReadCount;
+        public TorrentNetworkOptions GetOptions() { ReadCount++; return options; }
+    }
+
+    private sealed class RejectSystemProxy : IWebProxy
+    {
+        public int Calls;
+        public ICredentials? Credentials { get; set; }
+        public Uri GetProxy(Uri destination) { Interlocked.Increment(ref Calls); throw new InvalidOperationException("System proxy unexpectedly consulted."); }
+        public bool IsBypassed(Uri host) { Interlocked.Increment(ref Calls); return false; }
     }
 
     [DataTestMethod]
@@ -171,6 +232,7 @@ public sealed class BuiltInTorrentDownloaderTests
         private readonly ClientEngine _engine;
         private readonly Task _requests;
         private readonly int _peerPort;
+        public int PeerPort => _peerPort;
         public readonly Dictionary<string, byte[]> Files;
         public readonly byte[] Metadata;
         public readonly string MetadataUrl;
@@ -297,6 +359,92 @@ public sealed class BuiltInTorrentDownloaderTests
                 _listener.Close();
                 await _requests;
             }
+        }
+    }
+
+    /// <summary>A real loopback SOCKS5 TCP tunnel, recording metadata, tracker and peer destinations.</summary>
+    private sealed class ForwardingSocksProxy : IAsyncDisposable
+    {
+        private readonly TcpListener _listener = new(IPAddress.Loopback, 0);
+        private readonly CancellationTokenSource _stop = new();
+        private readonly Task _accept;
+        private readonly List<Task> _connections = [];
+        public readonly System.Collections.Concurrent.ConcurrentBag<int> DestinationPorts = [];
+        public Uri Address { get; }
+
+        public ForwardingSocksProxy()
+        {
+            _listener.Start();
+            Address = new Uri($"socks5://127.0.0.1:{((IPEndPoint)_listener.LocalEndpoint).Port}");
+            _accept = AcceptAsync();
+        }
+
+        private async Task AcceptAsync()
+        {
+            try
+            {
+                while (!_stop.IsCancellationRequested)
+                {
+                    var client = await _listener.AcceptTcpClientAsync(_stop.Token);
+                    _connections.Add(ForwardAsync(client));
+                }
+            }
+            catch (OperationCanceledException) { }
+        }
+
+        private async Task ForwardAsync(TcpClient client)
+        {
+            using (client)
+            using (var remote = new TcpClient())
+            {
+                try
+                {
+                    var input = client.GetStream();
+                    var greeting = new byte[3];
+                    await input.ReadExactlyAsync(greeting, _stop.Token);
+                    CollectionAssert.AreEqual(new byte[] {5, 1, 0}, greeting);
+                    await input.WriteAsync(new byte[] {5, 0}, _stop.Token);
+                    var header = new byte[4];
+                    await input.ReadExactlyAsync(header, _stop.Token);
+                    Assert.AreEqual(5, header[0]);
+                    Assert.AreEqual(1, header[1]);
+                    var length = header[3] switch {1 => 4, 4 => 16, _ => 0};
+                    if (header[3] == 3)
+                    {
+                        var count = new byte[1];
+                        await input.ReadExactlyAsync(count, _stop.Token);
+                        length = count[0];
+                    }
+                    var address = new byte[length];
+                    await input.ReadExactlyAsync(address, _stop.Token);
+                    var portBytes = new byte[2];
+                    await input.ReadExactlyAsync(portBytes, _stop.Token);
+                    var host = header[3] == 3 ? System.Text.Encoding.ASCII.GetString(address) : new IPAddress(address).ToString();
+                    var port = (portBytes[0] << 8) | portBytes[1];
+                    DestinationPorts.Add(port);
+                    await remote.ConnectAsync(host, port, _stop.Token);
+                    await input.WriteAsync(new byte[] {5, 0, 0, 1, 127, 0, 0, 1, 0, 0}, _stop.Token);
+                    var outbound = input.CopyToAsync(remote.GetStream(), _stop.Token);
+                    var inbound = remote.GetStream().CopyToAsync(input, _stop.Token);
+                    await Task.WhenAny(outbound, inbound);
+                    remote.Dispose();
+                    client.Dispose();
+                    await Task.WhenAll(outbound, inbound);
+                }
+                catch (IOException) { }
+                catch (SocketException) { }
+                catch (OperationCanceledException) { }
+                catch (ObjectDisposedException) { }
+            }
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            _stop.Cancel();
+            await _accept;
+            _listener.Stop();
+            await Task.WhenAll(_connections);
+            _stop.Dispose();
         }
     }
 }

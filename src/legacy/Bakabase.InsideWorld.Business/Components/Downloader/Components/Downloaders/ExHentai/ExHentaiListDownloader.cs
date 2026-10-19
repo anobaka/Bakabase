@@ -35,8 +35,10 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
             foreach (var gallery in (await results.GetByTaskAsync(task.Id, ct)).GroupBy(x => x.SourceKey))
             {
                 var latest = gallery.MaxBy(x => x.Id)!;
-                var available = await CanReuseResultAsync(results, latest, options.PreferTorrent, preferOriginal, ct);
-                if (available && latest.Kind == DownloadResultKind.TorrentMetadata)
+                var available = await CanReuseResultAsync(results, latest, options.UsesTorrent, preferOriginal, ct,
+                    options.EffectiveDownloadMode != ExHentaiDownloadMode.Torrent || options.SaveTorrentFile);
+                if (available && latest.Kind == DownloadResultKind.TorrentMetadata &&
+                    (options.EffectiveDownloadMode != ExHentaiDownloadMode.Torrent || options.SaveTorrentFile))
                 {
                     // Valid managed metadata can repair the user copy without a network request,
                     // but a list checkpoint must first let that gallery reach its producer.
@@ -44,6 +46,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                     available = userCopy != null &&
                         await DownloadResultService.ReadReusableTorrentMetadataAsync(latest, ct, userCopy) != null;
                 }
+                if (latest.RequiresContentsDownload != (options.EffectiveDownloadMode == ExHentaiDownloadMode.Torrent)) available = false;
                 if (!available)
                     missingSources.Add(gallery.Key);
             }
@@ -105,7 +108,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                                 // Give each gallery its own root, even when the naming convention
                                 // is flat or two galleries share the same title.
                                 var workPath = ExHentaiDownloadResultHelper.GetWorkDirectory(task.DownloadPath,
-                                    r.Url, options.DownloadResultWorkflowId);
+                                    r.Url, options.DownloadResultWorkflowId, options.EffectiveDownloadMode == ExHentaiDownloadMode.Torrent);
                                 await DownloadSingleWork(task.Id, r.Url, null, workPath, async name =>
                                 {
                                     betterName = name;
@@ -119,8 +122,9 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                                 {
                                     var newProgress = unitWorkProgress * (doneCount + p / 100m);
                                     await OnProgressInternal(newProgress);
-                                }, null, ct, options.PreferTorrent,
-                                    resultWorkflowId: options.DownloadResultWorkflowId);
+                                }, null, ct, options.UsesTorrent,
+                                    resultWorkflowId: options.DownloadResultWorkflowId, downloadMode: options.DownloadMode,
+                                    saveTorrentFile: options.SaveTorrentFile, fallbackToDirect: options.FallbackToDirect);
                                 break;
                             default:
                                 throw new ArgumentOutOfRangeException();

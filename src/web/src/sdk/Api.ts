@@ -1872,6 +1872,10 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomain
   defaultPath?: string;
   namingConvention?: string;
   preferTorrent: boolean;
+  /** [1: Direct, 2: Torrent, 3: TorrentFile] */
+  downloadMode?: BakabaseInsideWorldBusinessComponentsDownloaderComponentsDownloadersExHentaiExHentaiDownloadMode;
+  saveTorrentFile: boolean;
+  fallbackToDirect: boolean;
   preferOriginalImages: boolean;
   allowOriginalImageGpSpending: boolean;
   /** @format int64 */
@@ -2142,6 +2146,10 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputE
   defaultPath?: string;
   namingConvention?: string;
   preferTorrent?: boolean;
+  /** [1: Direct, 2: Torrent, 3: TorrentFile] */
+  downloadMode?: BakabaseInsideWorldBusinessComponentsDownloaderComponentsDownloadersExHentaiExHentaiDownloadMode;
+  saveTorrentFile?: boolean;
+  fallbackToDirect?: boolean;
   preferOriginalImages?: boolean;
   allowOriginalImageGpSpending?: boolean;
   /** @format int64 */
@@ -2210,6 +2218,9 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputJ
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputNetworkOptionsPatchInputModel {
   customProxies?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputNetworkOptionsPatchInputModelProxyOptions[];
   proxy?: BakabaseInsideWorldModelsConfigsNetworkOptionsProxyModel;
+  btProxy?: BakabaseInsideWorldModelsConfigsNetworkOptionsProxyModel;
+  /** @format int32 */
+  btMaxConcurrentDownloads?: number;
   customTestSites?: string[];
   selectedPresetTestSiteIds?: string[];
   thirdPartyProxies?: Record<string, BakabaseInsideWorldModelsConfigsNetworkOptionsProxyModel>;
@@ -2540,6 +2551,13 @@ export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsMode
 }
 
 /**
+ * [1: Direct, 2: Torrent, 3: TorrentFile]
+ * @format int32
+ */
+export type BakabaseInsideWorldBusinessComponentsDownloaderComponentsDownloadersExHentaiExHentaiDownloadMode =
+  1 | 2 | 3;
+
+/**
  * [1: SingleWork, 2: Watched, 3: List]
  * @format int32
  */
@@ -2842,6 +2860,9 @@ export interface BakabaseInsideWorldModelsConfigsJavLibraryOptionsCollectorOptio
 export interface BakabaseInsideWorldModelsConfigsNetworkOptions {
   customProxies?: BakabaseInsideWorldModelsConfigsNetworkOptionsProxyOptions[];
   proxy: BakabaseInsideWorldModelsConfigsNetworkOptionsProxyModel;
+  btProxy: BakabaseInsideWorldModelsConfigsNetworkOptionsProxyModel;
+  /** @format int32 */
+  btMaxConcurrentDownloads: number;
   thirdPartyProxies?: Record<string, BakabaseInsideWorldModelsConfigsNetworkOptionsProxyModel>;
   customTestSites?: string[];
   selectedPresetTestSiteIds?: string[];
@@ -4070,6 +4091,54 @@ export interface BakabaseModulesAliasModelsInputAliasPatchInputModel {
   text?: string;
   isPreferred: boolean;
 }
+
+export interface BakabaseModulesBittorrentModelsBtDownloadJob {
+  id: string;
+  name: string;
+  /** [1: Queued, 2: Running, 3: Stopping, 4: Stopped, 5: Completed, 6: Failed] */
+  status: BakabaseModulesBittorrentModelsBtDownloadStatus;
+  stage: string;
+  /** @format int32 */
+  percentage: number;
+  /** @format int64 */
+  completedBytes?: number;
+  /** @format int64 */
+  totalBytes?: number;
+  /** @format double */
+  speedBytesPerSecond?: number;
+  /** @format int32 */
+  peers?: number;
+  outputDirectory: string;
+  files: string[];
+  error?: string;
+  /** @format date-time */
+  createdAt: string;
+  /** @format date-time */
+  updatedAt: string;
+  /** @format date-time */
+  completedAt?: string;
+  sourceKind: string;
+  sourceId?: string;
+  /** @format int32 */
+  workflowRunId?: number;
+  /** @format int32 */
+  workflowDefinitionId?: number;
+  /** @format int32 */
+  downloadTaskId?: number;
+  /** @format int32 */
+  downloadResultId?: number;
+  isLinked: boolean;
+  canStop: boolean;
+  canResume: boolean;
+  canRetry: boolean;
+  canDelete: boolean;
+}
+
+/**
+ * [1: Queued, 2: Running, 3: Stopping, 4: Stopped, 5: Completed, 6: Failed]
+ * @format int32
+ */
+export type BakabaseModulesBittorrentModelsBtDownloadStatus = 1 | 2 | 3 | 4 | 5 | 6;
 
 export interface BakabaseModulesCollectionAbstractionsModelsDomainCollectionMember {
   /** @format int32 */
@@ -6467,6 +6536,11 @@ export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowRunViewMod
   failedItemCount: number;
   stepStats: BakabaseModulesWorkflowAbstractionsModelsDomainWorkflowRunStepStat[];
   errorMessage?: string;
+  /** @format int32 */
+  progress?: number;
+  process?: string;
+  activityKind?: string;
+  stage?: string;
   waitReason?: string;
   waitPromptJson?: string;
   /** @format date-time */
@@ -7211,6 +7285,12 @@ export interface BakabaseServiceModelsInputBindPropertyToMatchingProfilesInputMo
   id: number;
 }
 
+export interface BakabaseServiceModelsInputBtDownloadCreateInputModel {
+  name?: string;
+  magnetUri?: string;
+  torrentUrl?: string;
+}
+
 export interface BakabaseServiceModelsInputBulkModificationPatchInputModel {
   name?: string;
   isActive?: boolean;
@@ -7940,6 +8020,48 @@ export interface BakabaseServiceModelsViewDownloadResultViewModel {
   error?: string;
   filterDidNotMatch: boolean;
   canRetry: boolean;
+  requiresContentsDownload: boolean;
+  btDownloadId?: string;
+  /** [1: Queued, 2: Running, 3: Stopping, 4: Stopped, 5: Completed, 6: Failed] */
+  btStatus?: BakabaseModulesBittorrentModelsBtDownloadStatus;
+  btStage?: string;
+  /** @format int32 */
+  btPercentage?: number;
+  /** @format int64 */
+  btCompletedBytes?: number;
+  /** @format int64 */
+  btTotalBytes?: number;
+  /** @format double */
+  btSpeedBytesPerSecond?: number;
+  /** @format int32 */
+  workflowProgress?: number;
+  workflowProcess?: string;
+  canStop: boolean;
+}
+
+export interface BakabaseServiceModelsViewDownloadTaskExecutionSummary {
+  /** @format int32 */
+  downloadTaskId: number;
+  status: string;
+  /** @format int32 */
+  totalCount: number;
+  /** @format int32 */
+  completedCount: number;
+  /** @format int32 */
+  runningCount: number;
+  /** @format int32 */
+  queuedCount: number;
+  /** @format int32 */
+  stoppedCount: number;
+  /** @format int32 */
+  failedCount: number;
+  /** @format int32 */
+  waitingCount: number;
+  sourceCompleted: boolean;
+  /** @format double */
+  progress?: number;
+  /** @format double */
+  speedBytesPerSecond?: number;
 }
 
 export interface BakabaseServiceModelsViewEnhancementViewModel {
@@ -8756,6 +8878,13 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesAcquis
   data?: BakabaseModulesAcquisitionAbstractionsServicesAcquisitionRecipeSummary[];
 }
 
+export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesBittorrentModelsBtDownloadJob {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesBittorrentModelsBtDownloadJob[];
+}
+
 export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesCollectionAbstractionsModelsDomainCollectionMember {
   /** @format int32 */
   code: number;
@@ -8978,6 +9107,13 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModels
   code: number;
   message?: string;
   data?: BakabaseServiceModelsViewDownloadResultViewModel[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewDownloadTaskExecutionSummary {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewDownloadTaskExecutionSummary[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewFileRenameEntryViewModel {
@@ -9925,6 +10061,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesA
   code: number;
   message?: string;
   data?: BakabaseModulesAcquisitionModelsDomainAcquisitionOptions;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesBittorrentModelsBtDownloadJob {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesBittorrentModelsBtDownloadJob;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesCollectionAbstractionsModelsDomainCollectionProgress {
@@ -16537,6 +16680,214 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       return baseUrl + path;
     },
   };
+  btDownloads = {
+    /**
+     * No description
+     *
+     * @tags BtDownload
+     * @name GetBtDownloads
+     * @request GET:/bt-downloads
+     */
+    getBtDownloads: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesBittorrentModelsBtDownloadJob,
+        any
+      >({
+        path: `/bt-downloads`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getBtDownloads
+     * @name getBtDownloadsUrl
+     */
+    getBtDownloadsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/bt-downloads`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags BtDownload
+     * @name CreateBtDownload
+     * @request POST:/bt-downloads
+     */
+    createBtDownload: (
+      data: BakabaseServiceModelsInputBtDownloadCreateInputModel,
+      query?: {
+        outputDirectory?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesBittorrentModelsBtDownloadJob,
+        any
+      >({
+        path: `/bt-downloads`,
+        method: "POST",
+        query: query,
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for createBtDownload
+     * @name createBtDownloadUrl
+     */
+    createBtDownloadUrl: (query?: {
+        outputDirectory?: string;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/bt-downloads`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags BtDownload
+     * @name GetBtDownload
+     * @request GET:/bt-downloads/{id}
+     */
+    getBtDownload: (id: string, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesBittorrentModelsBtDownloadJob,
+        any
+      >({
+        path: `/bt-downloads/${id}`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags BtDownload
+     * @name DeleteBtDownload
+     * @request DELETE:/bt-downloads/{id}
+     */
+    deleteBtDownload: (id: string, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/bt-downloads/${id}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags BtDownload
+     * @name UploadBtDownload
+     * @request POST:/bt-downloads/upload
+     */
+    uploadBtDownload: (
+      data: {
+        /** @format binary */
+        file?: File;
+        outputDirectory?: string;
+        name?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesBittorrentModelsBtDownloadJob,
+        any
+      >({
+        path: `/bt-downloads/upload`,
+        method: "POST",
+        body: data,
+        type: ContentType.FormData,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for uploadBtDownload
+     * @name uploadBtDownloadUrl
+     */
+    uploadBtDownloadUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/bt-downloads/upload`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags BtDownload
+     * @name StopBtDownload
+     * @request POST:/bt-downloads/{id}/stop
+     */
+    stopBtDownload: (id: string, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesBittorrentModelsBtDownloadJob,
+        any
+      >({
+        path: `/bt-downloads/${id}/stop`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags BtDownload
+     * @name ResumeBtDownload
+     * @request POST:/bt-downloads/{id}/resume
+     */
+    resumeBtDownload: (id: string, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesBittorrentModelsBtDownloadJob,
+        any
+      >({
+        path: `/bt-downloads/${id}/resume`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags BtDownload
+     * @name RetryBtDownload
+     * @request POST:/bt-downloads/{id}/retry
+     */
+    retryBtDownload: (id: string, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesBittorrentModelsBtDownloadJob,
+        any
+      >({
+        path: `/bt-downloads/${id}/retry`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+  };
   bulkModification = {
     /**
      * No description
@@ -21802,6 +22153,55 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/download-task/summary`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags DownloadTask
+     * @name GetDownloadTaskExecutions
+     * @request GET:/download-task/executions
+     */
+    getDownloadTaskExecutions: (
+      query?: {
+        ids?: number[];
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewDownloadTaskExecutionSummary,
+        any
+      >({
+        path: `/download-task/executions`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getDownloadTaskExecutions
+     * @name getDownloadTaskExecutionsUrl
+     */
+    getDownloadTaskExecutionsUrl: (query?: {
+        ids?: number[];
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/download-task/executions`;
 
       // Build query string
       if (query) {
@@ -33991,6 +34391,24 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         path: `/workflow/${id}/runs`,
         method: "GET",
         query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Workflow
+     * @name GetWorkflowRun
+     * @request GET:/workflow/run/{runId}
+     */
+    getWorkflowRun: (runId: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesWorkflowAbstractionsModelsViewWorkflowRunViewModel,
+        any
+      >({
+        path: `/workflow/run/${runId}`,
+        method: "GET",
         format: "json",
         ...params,
       }),

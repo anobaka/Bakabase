@@ -1,10 +1,14 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.InsideWorld.Business;
+using Bakabase.Modules.Bittorrent.Abstractions;
 using Bakabase.Modules.Workflow.Abstractions.Models.Db;
+using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -12,7 +16,7 @@ namespace Bakabase.Service.Components.Tasks;
 
 /// <summary>
 /// Trims <c>WorkflowRun</c> history: keeps the most recent <see cref="RetentionPerDefinition"/>
-/// rows per workflow definition, deletes the rest. Runs every 6 hours so retention stays
+/// unreferenced terminal rows per workflow definition, preserving active and source-owned runs. Runs every 6 hours so retention stays
 /// loose (the cap isn't enforced in real time — bursty workflows can briefly exceed it).
 ///
 /// The TaskManager runs only one instance at a time via the default <c>ConflictKeys=[Id]</c>.
@@ -34,11 +38,12 @@ public class WorkflowRunCleanupTask : AbstractPredefinedBTaskBuilder
     {
         await using var scope = CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<BakabaseDbContext>();
+        var downloads = scope.ServiceProvider.GetService<IBtDownloadManager>();
+        var linkedBtRuns = downloads == null ? [] : (await downloads.ListAsync(args.CancellationToken))
+            .Where(j => j.WorkflowRunId != null).Select(j => j.WorkflowRunId!.Value).Distinct().ToArray();
 
-        // For each definition, find the StartedAt cutoff of the (Retention+1)-th most recent
-        // run; everything older than that goes. SQLite handles the N-th-row trick with
-        // OFFSET inside a subquery, but EF Core's translator does it as a follow-up scan,
-        // which is fine for our scale (< thousands of rows).
+        // Select concrete IDs, including a deterministic ID tie-breaker for runs created together.
+        // Active and source-linked runs do not consume the unreferenced history retention budget.
         var definitionIds = await db.Set<WorkflowRunDbModel>()
             .Select(r => r.WorkflowDefinitionId)
             .Distinct()
@@ -50,20 +55,12 @@ public class WorkflowRunCleanupTask : AbstractPredefinedBTaskBuilder
             await args.YieldAsync();
             var defId = definitionIds[i];
 
-            var cutoff = await db.Set<WorkflowRunDbModel>()
-                .Where(r => r.WorkflowDefinitionId == defId)
-                .OrderByDescending(r => r.StartedAt)
-                .ThenByDescending(r => r.Id)
-                .Skip(RetentionPerDefinition)
-                .Select(r => (DateTime?)r.StartedAt)
-                .FirstOrDefaultAsync(args.CancellationToken);
-
-            if (cutoff is null) continue;  // already at or below retention
-
-            var deleted = await db.Set<WorkflowRunDbModel>()
-                .Where(r => r.WorkflowDefinitionId == defId && r.StartedAt <= cutoff.Value)
+            var removable = await GetPrunableRunIdsAsync(db, defId, linkedBtRuns, RetentionPerDefinition, args.CancellationToken);
+            if (removable.Count == 0) continue;
+            // Recheck ownership and status when deleting: a retry may have started since selection.
+            var deleted = Eligible(db, linkedBtRuns).Where(r => removable.Contains(r.Id))
                 .ExecuteDeleteAsync(args.CancellationToken);
-            totalDeleted += deleted;
+            totalDeleted += await deleted;
 
             await args.UpdateTask(t =>
             {
@@ -72,4 +69,17 @@ public class WorkflowRunCleanupTask : AbstractPredefinedBTaskBuilder
             });
         }
     }
+
+    internal static Task<List<int>> GetPrunableRunIdsAsync(BakabaseDbContext db, int definitionId,
+        IReadOnlyCollection<int> linkedBtRuns, int retention, CancellationToken ct = default) =>
+        Eligible(db, linkedBtRuns).Where(r => r.WorkflowDefinitionId == definitionId)
+            .OrderByDescending(r => r.StartedAt).ThenByDescending(r => r.Id).Skip(retention)
+            .Select(r => r.Id).ToListAsync(ct);
+
+    private static IQueryable<WorkflowRunDbModel> Eligible(BakabaseDbContext db, IReadOnlyCollection<int> linkedBtRuns) =>
+        db.Set<WorkflowRunDbModel>().Where(r =>
+            (r.Status == WorkflowRunStatus.Success || r.Status == WorkflowRunStatus.Failed ||
+             r.Status == WorkflowRunStatus.Cancelled || r.Status == WorkflowRunStatus.Interrupted) &&
+            !db.DownloadResultProcessing.Any(p => p.WorkflowRunId == r.Id) &&
+            !db.DownloadResultOwners.Any(o => o.WorkflowRunId == r.Id) && !linkedBtRuns.Contains(r.Id));
 }

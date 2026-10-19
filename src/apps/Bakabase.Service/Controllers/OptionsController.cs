@@ -466,6 +466,8 @@ namespace Bakabase.Service.Controllers
         public async Task<BaseResponse> PatchExHentaiOptions([FromBody] ExHentaiOptionsPatchInputModel model,
             [FromServices] Bakabase.Modules.Workflow.Abstractions.Services.IWorkflowDefinitionService workflows)
         {
+            if (model.DownloadMode.HasValue && !Enum.IsDefined(model.DownloadMode.Value))
+                return BaseResponseBuilder.BuildBadRequest("Choose a supported ExHentai download mode.");
             if (model.OriginalImageMinimumGpBalance is < 0 || model.OriginalImageMaximumGpCostPerTask is < 0)
                 return BaseResponseBuilder.BuildBadRequest("Original-image GP limits must be non-negative.");
             if (model.DownloadResultWorkflowId is < 0)
@@ -529,6 +531,9 @@ namespace Bakabase.Service.Controllers
                 {
                     options.PreferTorrent = model.PreferTorrent.Value;
                 }
+                if (model.DownloadMode.HasValue) options.DownloadMode = model.DownloadMode;
+                if (model.SaveTorrentFile.HasValue) options.SaveTorrentFile = model.SaveTorrentFile.Value;
+                if (model.FallbackToDirect.HasValue) options.FallbackToDirect = model.FallbackToDirect.Value;
 
                 if (model.PreferOriginalImages.HasValue)
                     options.PreferOriginalImages = model.PreferOriginalImages.Value;
@@ -1092,8 +1097,26 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "PatchNetworkOptions")]
         public async Task<BaseResponse> PatchNetworkOptions([FromBody] NetworkOptionsPatchInputModel model)
         {
+            if (model.BtMaxConcurrentDownloads is < 1 or > 20)
+                return BaseResponseBuilder.BuildBadRequest("BT download concurrency must be between 1 and 20.");
+            var savedNetwork = _bakabaseOptionsManager.Get<NetworkOptions>().Value;
+            var btProxy = model.BtProxy ?? savedNetwork.BtProxy ?? new NetworkOptions.ProxyModel();
+            if (btProxy.Mode is not (NetworkOptions.ProxyMode.DoNotUse or NetworkOptions.ProxyMode.UseCustom))
+                return BaseResponseBuilder.BuildBadRequest("BT downloads support direct access or a saved SOCKS5 proxy.");
+            if (btProxy.Mode == NetworkOptions.ProxyMode.UseCustom)
+            {
+                var address = model.CustomProxies != null
+                    ? model.CustomProxies.FirstOrDefault(p => p.Id == btProxy.CustomProxyId)?.Address
+                    : savedNetwork.CustomProxies?.FirstOrDefault(p => p.Id == btProxy.CustomProxyId)?.Address;
+                if (!Uri.TryCreate(address, UriKind.Absolute, out var proxyUri) || proxyUri.Scheme != "socks5" ||
+                    string.IsNullOrWhiteSpace(proxyUri.Host) || proxyUri.Port is < 1 or > 65535 ||
+                    !string.IsNullOrEmpty(proxyUri.UserInfo))
+                    return BaseResponseBuilder.BuildBadRequest("Choose an existing SOCKS5 proxy with a host and port for BT downloads.");
+            }
             await _bakabaseOptionsManager.Get<NetworkOptions>().SaveAsync(options =>
             {
+                if (model.BtProxy != null) options.BtProxy = model.BtProxy;
+                if (model.BtMaxConcurrentDownloads != null) options.BtMaxConcurrentDownloads = model.BtMaxConcurrentDownloads.Value;
                 if (model.Proxy != null)
                 {
                     options.Proxy = model.Proxy;

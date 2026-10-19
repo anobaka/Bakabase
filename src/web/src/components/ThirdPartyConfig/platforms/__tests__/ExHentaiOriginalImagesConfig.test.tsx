@@ -65,9 +65,12 @@ vi.mock("../../base/ProxyField", () => ({ default: () => null }));
 vi.mock("../../base/SourceDefaultDownloadPathField", () => ({ default: () => null }));
 vi.mock("../../base/DownloadResultWorkflowField", () => ({ default: () => null }));
 vi.mock("@/components/FileSystemSelector", () => ({ FileSystemSelectorButton: () => null }));
-vi.mock("@/pages/downloader/components/TaskDetailModal/components/PreferTorrentField", () => ({
-  default: () => null,
-}));
+vi.mock(
+  "@/pages/downloader/components/TaskDetailModal/components/ExHentaiDownloadModeField",
+  () => ({
+    default: () => null,
+  }),
+);
 
 const keys = {
   prefer: "thirdPartyConfig.exHentai.originalImages.prefer",

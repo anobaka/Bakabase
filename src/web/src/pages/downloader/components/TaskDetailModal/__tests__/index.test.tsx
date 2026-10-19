@@ -72,7 +72,7 @@ vi.mock("../components/IntervalField", () => ({ default: () => null }));
 vi.mock("../components/CheckpointField", () => ({ default: () => null }));
 vi.mock("../components/AutoRetryField", () => ({ default: () => null }));
 vi.mock("../components/AllowDuplicateField", () => ({ default: () => null }));
-vi.mock("../components/PreferTorrentField", () => ({ default: () => null }));
+vi.mock("../components/ExHentaiDownloadModeField", () => ({ default: () => null }));
 vi.mock("../components/DownloadResultsPanel", () => ({ default: () => null }));
 
 let root: Root;

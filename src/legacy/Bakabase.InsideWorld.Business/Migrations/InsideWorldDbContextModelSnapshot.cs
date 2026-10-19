@@ -1276,6 +1276,9 @@ namespace Bakabase.InsideWorld.Business.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("RequiresContentsDownload")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("SourceKey")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -1323,6 +1326,12 @@ namespace Bakabase.InsideWorld.Business.Migrations
                 {
                     b.Property<int>("DownloadResultId")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("BtDispatchError")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("BtDownloadId")
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("ContentsDirectory")
                         .HasColumnType("TEXT");

@@ -49,7 +49,7 @@ export enum DownloadTaskFieldType {
   Checkpoint = 9,
   AutoRetry = 10,
   AllowDuplicate = 11,
-  PreferTorrent = 12,
+  DownloadMode = 12,
 }
 
 export type DownloadTaskField = {
@@ -109,7 +109,7 @@ https://exhentai.org/g/xxxxx/xxxxx/
         type: DownloadTaskFieldType.PageRange,
       },
       {
-        type: DownloadTaskFieldType.PreferTorrent,
+        type: DownloadTaskFieldType.DownloadMode,
       },
       {
         type: DownloadTaskFieldType.Checkpoint,
@@ -137,7 +137,7 @@ https://exhentai.org/g/xxxxx/xxxxx/
         type: DownloadTaskFieldType.PageRange,
       },
       {
-        type: DownloadTaskFieldType.PreferTorrent,
+        type: DownloadTaskFieldType.DownloadMode,
       },
       {
         type: DownloadTaskFieldType.Checkpoint,
@@ -165,7 +165,7 @@ https://exhentai.org/g/xxxxx/xxxxx/
         type: DownloadTaskFieldType.PageRange,
       },
       {
-        type: DownloadTaskFieldType.PreferTorrent,
+        type: DownloadTaskFieldType.DownloadMode,
       },
       {
         type: DownloadTaskFieldType.Checkpoint,

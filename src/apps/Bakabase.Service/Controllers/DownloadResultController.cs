@@ -4,11 +4,14 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
 using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
 using Bakabase.InsideWorld.Business.Components.Downloader.Services;
 using Bakabase.Modules.Workflow.Abstractions.Models.Db;
+using Bakabase.Modules.Bittorrent.Abstractions;
+using Bakabase.Modules.Bittorrent.Models;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
 using Bakabase.Service.Components.Downloader;
 using Bakabase.Service.Components.RemoteAccess;
@@ -24,7 +27,8 @@ namespace Bakabase.Service.Controllers;
 /// <summary>Result inspection and server-side workflow retry; no caller-supplied filesystem paths.</summary>
 [ApiController]
 [Route("~/downloader/result")]
-public sealed class DownloadResultController(BakabaseDbContext db, DownloadResultWorkflowService service) : ControllerBase
+public sealed class DownloadResultController(BakabaseDbContext db, DownloadResultWorkflowService service,
+    IBtDownloadManager? btDownloads = null, BTaskManager? backgroundTasks = null) : ControllerBase
 {
     [HttpGet]
     [RemoteAccessible]
@@ -46,6 +50,11 @@ public sealed class DownloadResultController(BakabaseDbContext db, DownloadResul
             .Concat(runs.Values.Select(r => r.WorkflowDefinitionId)).Distinct().ToList();
         var definitions = await db.Set<WorkflowDefinitionDbModel>().Where(d => definitionIds.Contains(d.Id))
             .ToDictionaryAsync(d => d.Id, ct);
+        var btJobs = btDownloads == null ? [] : await btDownloads.ListAsync(ct);
+        var btById = btJobs.ToDictionary(job => job.Id);
+        var btByResult = btJobs.Where(job => job.DownloadResultId != null)
+            .GroupBy(job => job.DownloadResultId!.Value)
+            .ToDictionary(group => group.Key, group => group.OrderByDescending(job => job.CreatedAt).First());
         return new ListResponse<DownloadResultViewModel>(rows.Select(result =>
         {
             var state = states.GetValueOrDefault(result.Id);
@@ -53,6 +62,12 @@ public sealed class DownloadResultController(BakabaseDbContext db, DownloadResul
             var run = runId is { } id ? runs.GetValueOrDefault(id) : null;
             var definitionId = run?.WorkflowDefinitionId ?? result.WorkflowDefinitionId;
             var contents = DownloadResultContents.Resolve(result, state);
+            var bt = state?.BtDownloadId is { } btId ? btById.GetValueOrDefault(btId) : null;
+            bt ??= btByResult.GetValueOrDefault(result.Id);
+            if (contents == null && bt?.Status == BtDownloadStatus.Completed)
+                contents = DownloadResultContents.Read(bt.OutputDirectory, JsonSerializer.Serialize(bt.Files));
+            var liveWorkflow = run?.Status == WorkflowRunStatus.Running
+                ? backgroundTasks?.GetTaskViewModel($"workflow.run.{runId}") : null;
             return new DownloadResultViewModel
             {
                 Id = result.Id, DownloadTaskId = taskId, SourceKey = result.SourceKey, Name = result.Name,
@@ -62,8 +77,15 @@ public sealed class DownloadResultController(BakabaseDbContext db, DownloadResul
                 WorkflowIsBuiltin = definitionId is { } builtinId && definitions.GetValueOrDefault(builtinId)?.IsBuiltin == true,
                 AcquisitionTaskId = owner?.AcquisitionTaskId, ResourceId = owner?.ResourceId ?? state?.ResourceId,
                 ContentsReady = contents != null,
-                ContentsDirectory = contents?.Directory, Error = state?.DispatchError ?? run?.ErrorMessage,
+                ContentsDirectory = contents?.Directory,
+                Error = state?.BtDispatchError ?? bt?.Error ?? state?.DispatchError ?? run?.ErrorMessage,
                 FilterDidNotMatch = state?.FilterDidNotMatch ?? false,
+                RequiresContentsDownload = result.RequiresContentsDownload,
+                BtDownloadId = bt?.Id ?? state?.BtDownloadId, BtStatus = bt?.Status, BtStage = bt?.Stage,
+                BtPercentage = bt?.Percentage, BtCompletedBytes = bt?.CompletedBytes, BtTotalBytes = bt?.TotalBytes,
+                BtSpeedBytesPerSecond = bt?.SpeedBytesPerSecond, CanStop = bt?.CanStop == true,
+                WorkflowProgress = run?.Status == WorkflowRunStatus.Success ? 100 : liveWorkflow?.Percentage,
+                WorkflowProcess = liveWorkflow?.Process,
                 CanRetry = owner == null && result.WorkflowDefinitionId != null &&
                     (run?.Status is WorkflowRunStatus.Failed or WorkflowRunStatus.Cancelled or WorkflowRunStatus.Interrupted ||
                      runId == null && state?.DispatchError != null)

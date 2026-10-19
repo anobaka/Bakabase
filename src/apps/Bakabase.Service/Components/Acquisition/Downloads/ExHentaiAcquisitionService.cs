@@ -42,7 +42,9 @@ public sealed class ExHentaiAcquisitionQueue(ExHentaiDownloaderHelper helper, Do
             Keys = [$"https://exhentai.org/g/{sourceKey}/"],
             Names = string.IsNullOrWhiteSpace(name) ? null : [name],
             DownloadPath = directory,
-            Options = """{"downloadResultWorkflowId":null}"""
+            // This task only produces the platform result. Its owning workflow chooses the
+            // content transfer, regardless of the independent downloader's default mode.
+            Options = """{"downloadResultWorkflowId":null,"downloadMode":3}"""
         });
         if (tasks.Length != 1) throw new InvalidOperationException("The ExHentai downloader refused this gallery.");
         var task = tasks[0].ToDbModel()!;

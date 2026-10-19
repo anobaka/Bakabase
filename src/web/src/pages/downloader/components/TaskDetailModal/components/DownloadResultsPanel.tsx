@@ -4,11 +4,12 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FiCheckCircle, FiFile, FiGitBranch, FiRefreshCw } from "react-icons/fi";
 
-import { Button, Chip, Spinner } from "@/components/bakaui";
-import WorkflowRunsDrawer from "@/components/Workflow/WorkflowRunsDrawer";
+import { Button, Chip, Progress, Spinner } from "@/components/bakaui";
+import WorkflowRunDetailModal from "@/components/Workflow/WorkflowRunDetailModal";
+import { formatBtBytes } from "@/pages/bt-downloads/format";
 import { workflowLabel } from "@/components/Workflow/builtinLabels";
 import BApi from "@/sdk/BApi";
-import { DownloadResultKind, WorkflowRunStatus } from "@/sdk/constants";
+import { BtDownloadStatus, DownloadResultKind, WorkflowRunStatus } from "@/sdk/constants";
 
 const statusColor = (
   status: WorkflowRunStatus,
@@ -37,6 +38,8 @@ export default function DownloadResultsPanel({ taskId }: { taskId: number }) {
   const [retryingId, setRetryingId] = useState<number>();
   const [retryFailedId, setRetryFailedId] = useState<number>();
   const [selectedResult, setSelectedResult] = useState<DownloadResult>();
+  const [btBusyId, setBtBusyId] = useState<string>();
+  const [btErrorId, setBtErrorId] = useState<string>();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -73,6 +76,24 @@ export default function DownloadResultsPanel({ taskId }: { taskId: number }) {
       setRetryFailedId(resultId);
     } finally {
       setRetryingId(undefined);
+    }
+  };
+
+  const controlBt = async (id: string, action: "stop" | "resume" | "retry") => {
+    setBtBusyId(id);
+    setBtErrorId(undefined);
+    try {
+      const response = await {
+        stop: BApi.btDownloads.stopBtDownload,
+        resume: BApi.btDownloads.resumeBtDownload,
+        retry: BApi.btDownloads.retryBtDownload,
+      }[action](id);
+      if (response.code) throw new Error(response.message);
+      await load();
+    } catch {
+      setBtErrorId(id);
+    } finally {
+      setBtBusyId(undefined);
     }
   };
 
@@ -138,14 +159,94 @@ export default function DownloadResultsPanel({ taskId }: { taskId: number }) {
                   {t(
                     result.contentsReady
                       ? "downloader.results.contentsReady"
-                      : result.kind === DownloadResultKind.TorrentMetadata
-                        ? "downloader.results.torrentReady"
-                        : "downloader.results.filesUnavailable",
+                      : result.requiresContentsDownload
+                        ? "downloader.results.contentsPending"
+                        : result.kind === DownloadResultKind.TorrentMetadata
+                          ? "downloader.results.torrentReady"
+                          : "downloader.results.filesUnavailable",
                   )}
                 </Chip>
               </div>
               {result.contentsReady && result.contentsDirectory && (
                 <p className="break-all text-xs text-default-500">{result.contentsDirectory}</p>
+              )}
+              {result.btDownloadId && (
+                <div className="space-y-2 rounded-lg border border-default-200 p-2">
+                  <div className="flex flex-wrap items-center gap-2 text-xs">
+                    <span className="font-medium">{t("bt.title")}</span>
+                    {result.btStatus != null && (
+                      <Chip size="sm" variant="flat">
+                        {t(`bt.status.${BtDownloadStatus[result.btStatus]}`)}
+                      </Chip>
+                    )}
+                    {result.btStage && (
+                      <span className="text-default-500">
+                        {t(`bt.stage.${result.btStage}`, { defaultValue: result.btStage })}
+                      </span>
+                    )}
+                  </div>
+                  <Progress
+                    aria-label={t("bt.progress")}
+                    size="sm"
+                    value={result.btPercentage ?? 0}
+                    isIndeterminate={
+                      result.btStatus === BtDownloadStatus.Running && result.btTotalBytes == null
+                    }
+                  />
+                  <p className="text-xs tabular-nums text-default-500">
+                    {formatBtBytes(result.btCompletedBytes)} / {formatBtBytes(result.btTotalBytes)}
+                    {result.btPercentage != null && ` · ${result.btPercentage}%`}
+                    {result.btStatus === BtDownloadStatus.Running &&
+                      ` · ${formatBtBytes(result.btSpeedBytesPerSecond)}/s`}
+                  </p>
+                  <div className="flex flex-wrap gap-1">
+                    <Button
+                      as="a"
+                      href={`#/bt-downloads?id=${encodeURIComponent(result.btDownloadId)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      size="sm"
+                      variant="light"
+                    >
+                      {t("downloader.results.viewBt")}
+                    </Button>
+                    {result.canStop && (
+                      <Button
+                        size="sm"
+                        variant="flat"
+                        isDisabled={!!btBusyId}
+                        onPress={() => void controlBt(result.btDownloadId!, "stop")}
+                      >
+                        {t("bt.action.stop")}
+                      </Button>
+                    )}
+                    {result.btStatus === BtDownloadStatus.Stopped && (
+                      <Button
+                        size="sm"
+                        variant="flat"
+                        isDisabled={!!btBusyId}
+                        onPress={() => void controlBt(result.btDownloadId!, "resume")}
+                      >
+                        {t("bt.action.resume")}
+                      </Button>
+                    )}
+                    {result.btStatus === BtDownloadStatus.Failed && (
+                      <Button
+                        size="sm"
+                        variant="flat"
+                        isDisabled={!!btBusyId}
+                        onPress={() => void controlBt(result.btDownloadId!, "retry")}
+                      >
+                        {t("bt.action.retry")}
+                      </Button>
+                    )}
+                  </div>
+                  {btErrorId === result.btDownloadId && (
+                    <p className="text-xs text-danger" role="alert">
+                      {t("bt.error.action")}
+                    </p>
+                  )}
+                </div>
               )}
               {result.workflowDefinitionId != null ? (
                 <div className="flex flex-wrap items-center gap-2 text-xs text-default-500">
@@ -157,11 +258,31 @@ export default function DownloadResultsPanel({ taskId }: { taskId: number }) {
                     </Chip>
                   ) : (
                     !result.filterDidNotMatch &&
-                    !result.error && <span>{t("downloader.results.queued")}</span>
+                    !result.error && (
+                      <span>
+                        {t(
+                          result.requiresContentsDownload && !result.contentsReady
+                            ? "downloader.results.waitingForContents"
+                            : "downloader.results.queued",
+                        )}
+                      </span>
+                    )
                   )}
                 </div>
               ) : (
-                <p className="text-xs text-default-500">{t("downloader.results.saveOnly")}</p>
+                !result.btDownloadId && (
+                  <p className="text-xs text-default-500">{t("downloader.results.saveOnly")}</p>
+                )
+              )}
+              {result.workflowProgress != null && (
+                <Progress
+                  aria-label={t("workflow.runDetail.progress")}
+                  size="sm"
+                  value={result.workflowProgress}
+                />
+              )}
+              {result.workflowProcess && (
+                <p className="text-xs text-default-500">{result.workflowProcess}</p>
               )}
               {result.filterDidNotMatch && (
                 <p className="text-xs text-default-500">{t("downloader.results.filtered")}</p>
@@ -213,12 +334,10 @@ export default function DownloadResultsPanel({ taskId }: { taskId: number }) {
           ))}
         </div>
       )}
-      {selectedResult?.workflowDefinitionId != null && (
-        <WorkflowRunsDrawer
-          isOpen
-          workflowDefinitionId={selectedResult.workflowDefinitionId}
-          workflowName={`${name(selectedResult)} · #${selectedResult.workflowRunId}`}
-          onClose={() => setSelectedResult(undefined)}
+      {selectedResult?.workflowRunId != null && (
+        <WorkflowRunDetailModal
+          runId={selectedResult.workflowRunId}
+          onDestroyed={() => setSelectedResult(undefined)}
         />
       )}
     </section>

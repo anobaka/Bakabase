@@ -23,7 +23,7 @@ public static class DownloaderServiceCollectionExtensions
             sp.GetRequiredService<IHttpClientFactory>(), sp.GetRequiredService<ILoggerFactory>()));
         services.TryAddSingleton<ITorrentDownloader>(sp => new BuiltInTorrentDownloader(
             () => cacheDirectory(sp), sp.GetRequiredService<ILogger<BuiltInTorrentDownloader>>(),
-            sp.GetRequiredService<IHttpClientFactory>()));
+            sp.GetRequiredService<IHttpClientFactory>(), sp.GetService<ITorrentNetworkOptionsProvider>()));
         services.TryAddSingleton<IAria2Downloader, Aria2Downloader>();
         return services;
     }

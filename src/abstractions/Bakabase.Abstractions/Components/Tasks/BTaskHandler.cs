@@ -30,6 +30,10 @@ public class BTaskHandler
     /// <summary>A terminal status can be published before the task's final cleanup returns.</summary>
     public bool HasAttachedExecution => _execution is {IsCompleted: false};
 
+    /// <summary>Waits for the currently attached body and its cleanup after a stop request.</summary>
+    public Task WaitForExecutionAsync(CancellationToken ct = default) =>
+        _execution?.WaitAsync(ct) ?? System.Threading.Tasks.Task.CompletedTask;
+
     /// <summary>
     /// How often the heartbeat fires a change notification while the task body
     /// is active. The point is to keep frontend timers (elapsed / remaining)

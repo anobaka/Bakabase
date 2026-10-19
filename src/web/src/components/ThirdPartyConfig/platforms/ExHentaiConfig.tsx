@@ -1,5 +1,7 @@
 "use client";
 
+import type { BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloaderDefinition as DownloaderDefinition } from "@/sdk/Api";
+
 import { useEffect, useMemo, useState, type FC } from "react";
 import { useTranslation } from "react-i18next";
 import { CheckboxGroup, Textarea } from "@heroui/react";
@@ -20,8 +22,14 @@ import SourceDefaultDownloadPathField from "../base/SourceDefaultDownloadPathFie
 import { Checkbox, Chip, NumberInput, toast } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
 import { useExHentaiOptionsStore } from "@/stores/options";
-import { CookieValidatorTarget, ResourceSource, ThirdPartyId } from "@/sdk/constants";
-import PreferTorrentField from "@/pages/downloader/components/TaskDetailModal/components/PreferTorrentField";
+import {
+  CookieValidatorTarget,
+  ResourceSource,
+  ThirdPartyId,
+  ExHentaiDownloadMode,
+} from "@/sdk/constants";
+import ExHentaiDownloadModeField from "@/pages/downloader/components/TaskDetailModal/components/ExHentaiDownloadModeField";
+import { resolveExHentaiDownloadMode } from "@/pages/downloader/exHentaiDownloadMode";
 
 export enum ExHentaiConfigField {
   Accounts = "accounts",
@@ -41,7 +49,7 @@ export const ExHentaiConfigPanel: FC<ExHentaiConfigPanelProps> = ({ fields = "al
   const options = useExHentaiOptionsStore((s) => s.data);
   const patch = useExHentaiOptionsStore((s) => s.patch);
   const patchWithToast = useAutoSaveToast(BApi.options.patchExHentaiOptions);
-  const [namingDefinition, setNamingDefinition] = useState<any>();
+  const [namingDefinition, setNamingDefinition] = useState<DownloaderDefinition>();
 
   const showDownload =
     fields === "all" || (Array.isArray(fields) && fields.includes(ExHentaiConfigField.Download));
@@ -151,10 +159,6 @@ export const ExHentaiConfigPanel: FC<ExHentaiConfigPanelProps> = ({ fields = "al
         title: t("thirdPartyConfig.group.download"),
         content: (
           <div className="space-y-4">
-            <DownloadResultWorkflowField
-              value={options?.downloadResultWorkflowId}
-              onChange={(workflowId) => patch({ downloadResultWorkflowId: workflowId ?? 0 })}
-            />
             <SourceDefaultDownloadPathField
               thirdPartyId={ThirdPartyId.ExHentai}
               value={options?.defaultPath}
@@ -195,13 +199,10 @@ export const ExHentaiConfigPanel: FC<ExHentaiConfigPanelProps> = ({ fields = "al
               onValueChange={(v) => patchWithToast({ namingConvention: v })}
             />
             <ProxyField thirdPartyId={ThirdPartyId.ExHentai} />
-            <PreferTorrentField
-              preferTorrent={options?.preferTorrent ?? true}
-              onChange={(v) => patchWithToast({ preferTorrent: v })}
-            />
+            <ExHentaiDownloadModeField options={options} onChange={patchWithToast} />
             <CheckboxGroup
               description={t<string>("downloader.tip.prioritizeTasksWithTorrentDesc")}
-              isDisabled={!(options?.preferTorrent ?? true)}
+              isDisabled={resolveExHentaiDownloadMode(options) === ExHentaiDownloadMode.Direct}
               label={t<string>("downloader.label.prioritizeTasksWithTorrent")}
               orientation="horizontal"
               size="sm"
@@ -214,7 +215,7 @@ export const ExHentaiConfigPanel: FC<ExHentaiConfigPanelProps> = ({ fields = "al
             </CheckboxGroup>
             <NumberInput
               description={t<string>("downloader.tip.torrentCheckValidityHoursDesc")}
-              isDisabled={!(options?.preferTorrent ?? true)}
+              isDisabled={resolveExHentaiDownloadMode(options) === ExHentaiDownloadMode.Direct}
               label={t<string>("downloader.label.torrentCheckValidityHours")}
               min={0}
               // 0 is the documented "always re-check" value, matching the backend, so an empty
@@ -223,6 +224,10 @@ export const ExHentaiConfigPanel: FC<ExHentaiConfigPanelProps> = ({ fields = "al
               onValueChange={(v) =>
                 patchWithToast({ torrentCheckValidityHours: Number.isNaN(v) ? 0 : v })
               }
+            />
+            <DownloadResultWorkflowField
+              value={options?.downloadResultWorkflowId}
+              onChange={(workflowId) => patch({ downloadResultWorkflowId: workflowId ?? 0 })}
             />
             <div className="flex flex-col gap-4 rounded-lg border border-default-200 p-3">
               <div className="flex flex-col gap-3">

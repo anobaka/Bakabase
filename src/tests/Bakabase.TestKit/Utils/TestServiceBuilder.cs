@@ -243,6 +243,12 @@ public static class TestServiceBuilder
         services.TryAddSingleton<IDataSyncDeviceIdentity>(_ => new TestDataSyncDeviceIdentity());
         services.TryAddSingleton<IDataSyncHostKind>(_ => new TestDataSyncHostKind());
         services.AddSingleton<IDataSyncDataDirectory>(FixedDataSyncDataDirectory.Under(testDir));
+        // Durable BT history must have the same isolation as this provider's database.
+        services.AddSingleton<Bakabase.Modules.Bittorrent.Abstractions.IBtDownloadManager>(sp =>
+            new Bakabase.Modules.Bittorrent.Components.BtDownloadManager(
+                sp.GetRequiredService<Bakabase.Modules.Downloader.Abstractions.ITorrentDownloader>(),
+                () => Path.Combine(testDir, "bt-downloads"),
+                () => sp.GetRequiredService<IBOptions<NetworkOptions>>().Value.BtMaxConcurrentDownloads));
 
         // Auto-register all [Options]-attributed types as default IBOptions/IBOptionsManager
         // (mirrors what ConfigurationRegistrations does in production, but with empty values).

@@ -122,7 +122,7 @@ public sealed class DownloadTaskOutputLocator(BakabaseDbContext db, ExHentaiDown
         if (string.IsNullOrWhiteSpace(options)) return true;
         try
         {
-            return JsonSerializer.Deserialize<ExHentaiTaskOptions>(options, JsonSerializerOptions.Web)?.PreferTorrent != false;
+            return JsonSerializer.Deserialize<ExHentaiTaskOptions>(options, JsonSerializerOptions.Web)?.UsesTorrent != false;
         }
         catch (JsonException) { return true; }
     }

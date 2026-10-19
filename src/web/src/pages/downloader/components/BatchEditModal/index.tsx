@@ -7,16 +7,8 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AiOutlineWarning } from "react-icons/ai";
 
-import {
-  Alert,
-  Checkbox,
-  Chip,
-  Modal,
-  NumberInput,
-  Textarea,
-  toast,
-} from "@/components/bakaui";
-import { ThirdPartyId } from "@/sdk/constants";
+import { Alert, Checkbox, Chip, Modal, NumberInput, Textarea, toast } from "@/components/bakaui";
+import { ExHentaiDownloadMode, ThirdPartyId } from "@/sdk/constants";
 import BApi from "@/sdk/BApi";
 import ThirdPartyIcon from "@/components/ThirdPartyIcon";
 import { useDownloadTasksStore } from "@/stores/downloadTasks";
@@ -24,6 +16,11 @@ import {
   DownloadTaskFieldMap,
   DownloadTaskFieldType,
 } from "@/pages/downloader/components/TaskDetailModal/models";
+import ExHentaiDownloadModeField from "../TaskDetailModal/components/ExHentaiDownloadModeField";
+import {
+  resolveExHentaiDownloadMode,
+  type ExHentaiDownloadOptions,
+} from "@/pages/downloader/exHentaiDownloadMode";
 import DownloadPathSelector from "@/pages/downloader/components/TaskDetailModal/components/DownloadPathSelector";
 
 type Props = {
@@ -31,10 +28,10 @@ type Props = {
 } & DestroyableProps;
 
 /** The fields we allow to be edited in bulk. */
-type EditableKey = "preferTorrent" | "autoRetry" | "checkpoint" | "interval" | "downloadPath";
+type EditableKey = "downloadMode" | "autoRetry" | "checkpoint" | "interval" | "downloadPath";
 
 type Values = {
-  preferTorrent: boolean;
+  downloadMode: ExHentaiDownloadOptions;
   autoRetry: boolean;
   checkpoint: string;
   interval?: number;
@@ -42,7 +39,7 @@ type Values = {
 };
 
 const FieldTypeMap: Record<EditableKey, DownloadTaskFieldType> = {
-  preferTorrent: DownloadTaskFieldType.PreferTorrent,
+  downloadMode: DownloadTaskFieldType.DownloadMode,
   autoRetry: DownloadTaskFieldType.AutoRetry,
   checkpoint: DownloadTaskFieldType.Checkpoint,
   interval: DownloadTaskFieldType.CheckInterval,
@@ -59,8 +56,14 @@ const safeParseOptions = (o?: string): Record<string, any> => {
 };
 
 // Existing tasks default to preferring torrents (matches the single-task modal).
-const getPreferTorrent = (task: DownloadTask): boolean =>
-  safeParseOptions(task.options).preferTorrent ?? true;
+const getDownloadOptions = (task: DownloadTask): ExHentaiDownloadOptions => {
+  const options = safeParseOptions(task.options);
+  return {
+    downloadMode: resolveExHentaiDownloadMode(options),
+    saveTorrentFile: options.saveTorrentFile ?? false,
+    fallbackToDirect: options.fallbackToDirect ?? true,
+  };
+};
 
 const allEqual = <T,>(values: T[]): boolean => values.every((v) => v === values[0]);
 
@@ -68,7 +71,7 @@ const BatchEditModal = ({ tasks, onDestroyed }: Props) => {
   const { t } = useTranslation();
 
   // A field is offered only when every selected task supports it — so the
-  // universal fields always show, while PreferTorrent appears only when the
+  // universal fields always show, while DownloadMode appears only when the
   // whole selection is ExHentai (the one type that declares it).
   const showField = (key: EditableKey) =>
     tasks.length > 0 &&
@@ -79,7 +82,7 @@ const BatchEditModal = ({ tasks, onDestroyed }: Props) => {
     );
 
   const show: Record<EditableKey, boolean> = {
-    preferTorrent: showField("preferTorrent"),
+    downloadMode: showField("downloadMode"),
     autoRetry: showField("autoRetry"),
     checkpoint: showField("checkpoint"),
     interval: showField("interval"),
@@ -87,25 +90,28 @@ const BatchEditModal = ({ tasks, onDestroyed }: Props) => {
   };
 
   // Per-field current values across the selection, used to detect "mixed" state.
-  const preferTorrents = tasks.map(getPreferTorrent);
+  const downloadOptions = tasks.map(getDownloadOptions);
   const autoRetries = tasks.map((x) => x.autoRetry);
   const checkpoints = tasks.map((x) => x.checkpoint ?? "");
   const intervals = tasks.map((x) => x.interval);
   const downloadPaths = tasks.map((x) => x.downloadPath ?? "");
 
   const mixed: Record<EditableKey, boolean> = {
-    preferTorrent: !allEqual(preferTorrents),
+    downloadMode: !allEqual(downloadOptions.map((options) => JSON.stringify(options))),
     autoRetry: !allEqual(autoRetries),
     checkpoint: !allEqual(checkpoints),
     interval: !allEqual(intervals),
     downloadPath: !allEqual(downloadPaths),
   };
 
+  const [modePatch, setModePatch] = useState<ExHentaiDownloadOptions>({});
   const [edited, setEdited] = useState<Set<EditableKey>>(() => new Set());
   const [values, setValues] = useState<Values>(() => ({
-    preferTorrent: mixed.preferTorrent ? false : preferTorrents[0] ?? true,
-    autoRetry: mixed.autoRetry ? false : autoRetries[0] ?? false,
-    checkpoint: mixed.checkpoint ? "" : checkpoints[0] ?? "",
+    downloadMode: mixed.downloadMode
+      ? { downloadMode: ExHentaiDownloadMode.TorrentFile }
+      : (downloadOptions[0] ?? {}),
+    autoRetry: mixed.autoRetry ? false : (autoRetries[0] ?? false),
+    checkpoint: mixed.checkpoint ? "" : (checkpoints[0] ?? ""),
     interval: mixed.interval ? undefined : intervals[0],
     downloadPath: mixed.downloadPath ? undefined : downloadPaths[0] || undefined,
   }));
@@ -159,10 +165,10 @@ const BatchEditModal = ({ tasks, onDestroyed }: Props) => {
       tasks.map(async (task) => {
         const cur = latestById.get(task.id) ?? task;
 
-        const options = isEdited("preferTorrent")
+        const options = isEdited("downloadMode")
           ? JSON.stringify({
               ...safeParseOptions(cur.options),
-              preferTorrent: values.preferTorrent,
+              ...modePatch,
             })
           : cur.options;
 
@@ -236,22 +242,19 @@ const BatchEditModal = ({ tasks, onDestroyed }: Props) => {
           variant="flat"
         />
 
-        {show.preferTorrent && (
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-2">
-              <Checkbox
-                isIndeterminate={!isEdited("preferTorrent") && mixed.preferTorrent}
-                isSelected={values.preferTorrent}
-                size="sm"
-                onValueChange={(v) => updateField("preferTorrent", v)}
-              >
-                {t<string>("downloader.label.preferTorrent")}
-              </Checkbox>
-              {renderEditedChip("preferTorrent")}
-            </div>
-            <div className="text-xs text-default-400">
-              {t<string>("downloader.tip.preferTorrentDesc")}
-            </div>
+        {show.downloadMode && (
+          <div className="space-y-2">
+            {mixed.downloadMode && !isEdited("downloadMode") && (
+              <p className="text-xs text-default-500">{t("downloader.batchEdit.multipleValues")}</p>
+            )}
+            <ExHentaiDownloadModeField
+              options={values.downloadMode}
+              onChange={(patch) => {
+                setModePatch((previous) => ({ ...previous, ...patch }));
+                updateField("downloadMode", { ...values.downloadMode, ...patch });
+              }}
+            />
+            {renderEditedChip("downloadMode")}
           </div>
         )}
 

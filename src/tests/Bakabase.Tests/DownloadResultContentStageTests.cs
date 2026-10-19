@@ -60,7 +60,11 @@ public sealed class DownloadResultContentStageTests
     }
 
     [TestCleanup]
-    public void Cleanup() { if (Directory.Exists(_root)) Directory.Delete(_root, true); }
+    public async Task Cleanup()
+    {
+        await _sp.GetRequiredService<Bakabase.Modules.Bittorrent.Abstractions.IBtDownloadManager>().ShutdownAsync();
+        if (Directory.Exists(_root)) Directory.Delete(_root, true);
+    }
 
     private AcquisitionStepContext Context(string? config = null) =>
         new(_sp, NullLogger.Instance, (_, _) => Task.CompletedTask, Path.Combine(_root, "working"),

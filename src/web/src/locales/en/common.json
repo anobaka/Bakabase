@@ -478,5 +478,6 @@
   "filePath.containerStorage": "Stored inside the container; no host folder is mapped.",
   "filePath.hostPathUnavailable": "Host path mapping is unavailable. Showing the container path.",
   "filePath.copyFailed": "Could not copy. Select the path and copy it manually.",
-  "otherDevices.canManage": "Multi-device management supported"
+  "otherDevices.canManage": "Multi-device management supported",
+  "menu.btDownloads": "BT downloads"
 }

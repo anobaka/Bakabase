@@ -157,6 +157,10 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
             var rsp = await TryStartAllTasksCore(DownloadTaskStartMode.ManualStart, tasks.Select(a => a.Id).ToArray(),
                 actionOnConflict, skipSatisfiedTasks: !targeted, taskActionLockHeld);
 
+            if (rsp.IsSuccess())
+                foreach (var lifecycle in GetRequiredService<IEnumerable<IDownloadTaskExecutionLifecycle>>())
+                    await lifecycle.OnStartedAsync(tasks.Select(t => t.Id).ToArray());
+
             PushAllDataToUi();
 
             return rsp;
@@ -179,6 +183,9 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
             {
                 await DownloaderManager.Stop(a, DownloaderStopBy.ManuallyStop);
             }
+
+            foreach (var lifecycle in GetRequiredService<IEnumerable<IDownloadTaskExecutionLifecycle>>())
+                await lifecycle.OnStoppedAsync(tasks.Select(t => t.Id).ToArray());
 
             PushAllDataToUi();
         }
@@ -840,9 +847,13 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
             });
         }
 
-        public async Task<SingletonResponse<DownloadTaskDbModel>> StopAndUpdateByKey(int id, Action<DownloadTaskDbModel> modify)
+        public Task<SingletonResponse<DownloadTaskDbModel>> StopAndUpdateByKey(int id, Action<DownloadTaskDbModel> modify) =>
+            DownloaderManager.WithTaskActionLock(id, async () =>
         {
-            await DownloaderManager.Stop(id, DownloaderStopBy.ManuallyStop);
+            await base.UpdateByKey(id, t => t.Status = DownloadTaskDbModelStatus.Disabled);
+            await DownloaderManager.StopAndWait(id, DownloaderStopBy.ManuallyStop);
+            foreach (var lifecycle in GetRequiredService<IEnumerable<IDownloadTaskExecutionLifecycle>>())
+                await lifecycle.OnStoppedAsync([id]);
             var rsp = await base.UpdateByKey(id, modify);
             // The task's options (incl. PreferTorrent) may have changed, so drop any stale torrent
             // verdict and let it be re-probed on the next run.
@@ -850,7 +861,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
             InvalidatePrecheck();
             PushAllDataToUi();
             return rsp;
-        }
+        });
 
         /// <summary>
         /// Switches one ExHentai task to images and starts it explicitly. List/watched range
@@ -886,6 +897,9 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
                 await base.UpdateByKey(id, t => t.Status = DownloadTaskDbModelStatus.Disabled);
                 await DownloaderManager.StopAndWait(id, DownloaderStopBy.ManuallyStop);
 
+                foreach (var lifecycle in GetRequiredService<IEnumerable<IDownloadTaskExecutionLifecycle>>())
+                    await lifecycle.OnStoppedAsync([id]);
+
                 // Re-read after draining, so the old run's final metadata is retained as well.
                 task = await GetByKey(id);
                 if (task == null)
@@ -897,6 +911,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
                              .Where(x => string.Equals(x, "preferTorrent", StringComparison.OrdinalIgnoreCase)).ToArray())
                     options.Remove(key);
                 options["preferTorrent"] = false;
+                options["downloadMode"] = (int)ExHentaiDownloadMode.Direct;
                 await base.UpdateByKey(id, t =>
                 {
                     t.Options = options.ToJsonString();

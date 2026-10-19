@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
 using Bakabase.Modules.Acquisition.Components.Workflow;
@@ -25,6 +26,10 @@ public static class DownloadResultWorkflow
     public static IServiceCollection AddDownloadResultWorkflows(this IServiceCollection services)
     {
         services.AddScoped<DownloadResultWorkflowService>();
+        services.AddScoped<DownloadResultBtService>();
+        services.AddScoped<DownloadTaskExecutionService>();
+        services.AddScoped<Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Components.IDownloadTaskExecutionLifecycle, DownloadTaskExecutionLifecycle>();
+        services.AddSingleton<IWorkflowRunSchedulingPolicy, DownloadResultSchedulingPolicy>();
         services.AddScoped<IAcquisitionContentsObserver>(sp => sp.GetRequiredService<DownloadResultWorkflowService>());
         services.AddSingleton<IWorkflowTrigger, DownloadResultReadyTrigger>();
         services.AddSingleton<IWorkflowItemTypeDescriptor, DownloadResultItemTypeDescriptor>();
@@ -32,6 +37,16 @@ public static class DownloadResultWorkflow
         services.AddSingleton<IWorkflowActivity, PrepareDownloadResultResourceActivity>();
         return services;
     }
+}
+
+/// <summary>Result workflows orchestrate independently; the BT capability limits actual transfers.</summary>
+public sealed class DownloadResultSchedulingPolicy : IWorkflowRunSchedulingPolicy
+{
+    public bool AppliesTo(string triggerKind) => triggerKind == DownloadResultWorkflow.Trigger;
+    public bool ResumeOnStartup => true;
+    public Bakabase.Abstractions.Components.Tasks.BTaskHandlerBuilder Configure(
+        Bakabase.Abstractions.Components.Tasks.BTaskHandlerBuilder builder) =>
+        builder.WithConcurrencyLimit("download-result-workflows", () => 16);
 }
 
 /// <summary>The result id is authoritative. Display fields never authorize a file or another task.</summary>

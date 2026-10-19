@@ -4,14 +4,21 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.Tasks;
+using Bakabase.InsideWorld.Business;
 using Bakabase.Modules.Workflow.Abstractions.Components;
+using Bakabase.Modules.Workflow.Abstractions.Models.Db;
+using Bakabase.Modules.Workflow.Abstractions.Models.Domain;
+using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Workflow.Abstractions.Models.Input;
 using Bakabase.Modules.Workflow.Abstractions.Models.View;
 using Bakabase.Modules.Workflow.Abstractions.Services;
+using Bakabase.Modules.Workflow.Extensions;
 using Bakabase.Service.Components.RemoteAccess;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Models.ResponseModels;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace Bakabase.Service.Controllers;
@@ -304,5 +311,35 @@ public class WorkflowController(
         return new SearchResponse<WorkflowRunViewModel>(
             result.Data!.Select(WorkflowRunViewModel.From),
             result.TotalCount, result.PageIndex, result.PageSize);
+    }
+
+    /// <summary>Inspect one persisted instance with optional live execution detail.</summary>
+    [HttpGet("run/{runId:int}")]
+    [RemoteAccessible]
+    [SwaggerOperation(OperationId = "GetWorkflowRun")]
+    public async Task<SingletonResponse<WorkflowRunViewModel?>> GetRun(int runId,
+        [FromServices] BakabaseDbContext db, [FromServices] BTaskManager backgroundTasks,
+        CancellationToken ct)
+    {
+        var row = await db.Set<WorkflowRunDbModel>().AsNoTracking()
+            .SingleOrDefaultAsync(r => r.Id == runId, ct);
+        if (row == null) return new SingletonResponse<WorkflowRunViewModel?>((WorkflowRunViewModel?)null);
+
+        var result = WorkflowRunViewModel.From(row.ToDomainModel());
+        if (row.Status == WorkflowRunStatus.Success) result.Progress = 100;
+        // A BTask can finish because a workflow suspended for input. It must never
+        // turn the persisted Waiting/Interrupted/Failed state into a success.
+        if (row.Status == WorkflowRunStatus.Running &&
+            backgroundTasks.GetTaskViewModel($"workflow.run.{runId}") is { } live)
+        {
+            result.Progress = live.Percentage;
+            result.Process = live.Process;
+            if (live.Data is WorkflowTaskProgress detail && detail.WorkflowRunId == runId)
+            {
+                result.ActivityKind = detail.ActivityKind;
+                result.Stage = detail.Stage;
+            }
+        }
+        return new SingletonResponse<WorkflowRunViewModel?>(result);
     }
 }
