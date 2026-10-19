@@ -37,6 +37,7 @@ internal static class PostParserLlmPolicy
     {
         options.MaxOutputTokens = ResolveMaxTokens(options.MaxOutputTokens);
         if (!usesLocalQwenTemplate) return;
+        options.Temperature ??= 0;
         // The verified llama.cpp Qwen handler skips grammar for the empty schema
         // behind json_object. A nonempty object schema activates JSON constraints.
         if (options.ResponseFormat is ChatResponseFormatJson { Schema: null })

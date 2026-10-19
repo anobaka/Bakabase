@@ -36,6 +36,27 @@ public class PostParserLlmPolicyTests
     }
 
     [TestMethod]
+    [DataRow("default")]
+    [DataRow("explicit")]
+    [DataRow("unknown")]
+    public async Task OnlyLocalQwenDefaultsMissingTemperatureToZero(string scenario)
+    {
+        await using var server = new FakeOpenAiServer();
+        var harness = new LlmHarness(server.Endpoint);
+        harness.DefaultConfig.Temperature = scenario == "explicit" ? 0.2f : null;
+        if (scenario == "unknown") harness.DefaultConfig.ModelId = "gpt-4o";
+        await harness.Service.CompleteForFeatureAsync(AiFeature.PostParser,
+            [new ChatMessage(ChatRole.User, "post")], new LlmModelParameters
+            {
+                Temperature = scenario == "explicit" ? 0.25f : null,
+                UseJsonResponseFormat = true
+            }).WaitAsync(TimeSpan.FromSeconds(5));
+        var request = server.Requests.Single();
+        if (scenario == "unknown") Assert.IsFalse(request.TryGetProperty("temperature", out _));
+        else Assert.AreEqual(scenario == "explicit" ? 0.25 : 0, request.GetProperty("temperature").GetDouble(), 0.0001);
+    }
+
+    [TestMethod]
     [DataRow("low", true)]
     [DataRow("none", false)]
     public async Task ExplicitInternalModeReachesActualNonStreamingJson(string effort, bool thinking)

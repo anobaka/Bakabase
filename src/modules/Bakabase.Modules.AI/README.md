@@ -14,6 +14,8 @@ can explicitly select None (including `ChatOptions.Reasoning.Effort = None`); th
 `reasoning_effort: none` and `chat_template_kwargs: {enable_thinking: false}`. The template switch is
 necessary because `reasoning_effort` alone did not disable thinking in the verified llama.cpp deployment.
 The policy does not change the inference server.
+Those local Qwen requests default a missing temperature to zero to reduce sampling variation;
+explicit feature or call-specific temperatures retain precedence.
 Unrecognized endpoints/models and other provider kinds receive no added thinking parameters; their
 reasoning behavior remains provider-defined. Other AI features retain their original transport policy.
 

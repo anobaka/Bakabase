@@ -24,6 +24,7 @@ public class PostDownloadInfoExtractor(ILlmService llmService, ILogger<PostDownl
         code只表示该下载链接的访问码；注册邀请码、优惠码和软件激活码不属于网盘访问码。未明确提供该链接访问码时填null，不要拿附近其它用途的码补全。
         每个资源文件(resource)对应的解压码/解压缩密码/解压密码(resource.password)，千万不要漏掉解压密码，没有解压密码将导致资源无法被解压缩。
         code和password必须保持原文，包括密码中有意义的空格，不要自行修正。
+        原始HTML中的字符实体只按浏览器含义解码一次，例如&amp;amp;表示字面&amp;，不能递归变成&。scope=pastedText及已精简的[属性=值]内容是字面文本，其中的&amp;等片段不要再次解码。
         在同一次分析中根据实际内容和用途对下载链接分组，返回groups数组以及每个resource.groupId。
         group结构为{id,title,kind,summary,evidence}，id是本次结果内唯一的短字符串；title为简短内容名称，summary为一句说明，evidence为支持判断的少量原文短句。
         kind仅允许main（本帖主要内容）、preview（预览或试玩）、supplement（补充内容或补丁）、related（相关但非本帖主要内容）、tool（工具）或unknown（无法判断用途）。
