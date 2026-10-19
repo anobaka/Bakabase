@@ -165,7 +165,7 @@
   "downloader.config.navigation.label": "下载器设置分类",
   "downloader.config.general.description": "配置所有下载器共用的任务行为。",
   "downloader.config.platform.description": "管理 {{platform}} 的账号、下载与请求设置。",
-  "downloader.config.platforms.label": "站点下载",
+  "downloader.config.platforms.label": "站点",
   "downloader.config.platforms.loadFailed": "无法加载下载平台，请重试。",
   "downloader.config.platforms.retry": "重新加载",
   "downloader.config.platforms.unavailable": "此平台暂未提供可配置项。",
@@ -285,5 +285,10 @@
   "downloader.toast.btDownloadFailed": "切换 BT 下载失败，请重试。",
   "downloader.action.torrentFileDownload": "仅下载种子",
   "downloader.tip.torrentFileDownload": "将此任务切换为仅下载种子并开始，继续使用当前下载目录，不会回退为直接下载。",
-  "downloader.toast.torrentFileDownloadFailed": "种子下载未能启动，请重试。"
+  "downloader.toast.torrentFileDownloadFailed": "种子下载未能启动，请重试。",
+  "downloader.config.generalDownloads.label": "通用",
+  "downloader.config.http.title": "HTTP(S) 下载",
+  "downloader.config.bt.description": "配置 BT 传输使用的代理和同时下载数。",
+  "downloader.config.exHentai.originalImages": "原图与 GP",
+  "downloader.config.exHentai.postProcessing": "后续处理"
 }

@@ -9,11 +9,16 @@ import {
 } from "@/pages/downloader/exHentaiDownloadMode";
 
 interface Props {
+  appearance?: "card" | "plain";
   options?: ExHentaiDownloadOptions;
   onChange: (patch: ExHentaiDownloadPatch) => void;
 }
 
-export default function ExHentaiDownloadModeField({ options, onChange }: Props) {
+export default function ExHentaiDownloadModeField({
+  appearance = "card",
+  options,
+  onChange,
+}: Props) {
   const { t } = useTranslation();
   const mode = resolveExHentaiDownloadMode(options);
   const btRoute = mode !== ExHentaiDownloadMode.Direct;
@@ -32,7 +37,11 @@ export default function ExHentaiDownloadModeField({ options, onChange }: Props) 
   };
 
   return (
-    <div className="space-y-3 rounded-xl border border-default-200 p-3">
+    <div
+      className={
+        appearance === "plain" ? "space-y-3" : "space-y-3 rounded-xl border border-default-200 p-3"
+      }
+    >
       <Select
         disallowEmptySelection
         dataSource={[
@@ -71,6 +80,7 @@ export default function ExHentaiDownloadModeField({ options, onChange }: Props) 
         <div className="space-y-2">
           <div className="flex flex-wrap gap-3">
             <Checkbox
+              className={appearance === "plain" ? "m-0 px-0" : undefined}
               isSelected={downloadTorrent}
               isDisabled={downloadTorrent && !createBtTask}
               size="sm"
@@ -79,6 +89,7 @@ export default function ExHentaiDownloadModeField({ options, onChange }: Props) 
               {t("downloader.mode.downloadTorrent")}
             </Checkbox>
             <Checkbox
+              className={appearance === "plain" ? "m-0 px-0" : undefined}
               isSelected={createBtTask}
               isDisabled={createBtTask && !downloadTorrent}
               size="sm"
@@ -93,6 +104,7 @@ export default function ExHentaiDownloadModeField({ options, onChange }: Props) 
       {createBtTask && (
         <div className="space-y-1">
           <Checkbox
+            className={appearance === "plain" ? "m-0 px-0" : undefined}
             isSelected={options?.fallbackToDirect ?? true}
             size="sm"
             onValueChange={(fallbackToDirect) => onChange({ fallbackToDirect })}

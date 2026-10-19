@@ -26,6 +26,8 @@
   "thirdPartyConfig.success.cookieValid": "Cookie 有效",
   "thirdPartyConfig.tip.bilibili": "配置 Bilibili 下载器设置，包括 Cookie 认证和下载参数。",
   "thirdPartyConfig.tip.exhentai": "配置 ExHentai 下载器设置。需要 Cookie 进行认证。",
+  "thirdPartyConfig.exHentai.originalImages.title": "原图与 GP",
+  "thirdPartyConfig.exHentai.postProcessing.title": "后续处理",
   "thirdPartyConfig.exHentai.originalImages.prefer": "优先下载原图",
   "thirdPartyConfig.exHentai.originalImages.warning": "原图本身也可能是 WebP。下载原图可能消耗 GP；GP 不足时，网站可能自动将 Credits 兑换为 GP。",
   "thirdPartyConfig.exHentai.originalImages.scope": "用于直接下载图片，包括任务菜单中的“直接下载”及允许的无种子回退。原图按配置的最大并发数下载；下载种子和 BT 内容传输不受此原图设置影响。",

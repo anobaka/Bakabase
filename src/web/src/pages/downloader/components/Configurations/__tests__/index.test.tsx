@@ -82,7 +82,13 @@ vi.mock("@heroui/react", () => ({
   ),
 }));
 vi.mock("@/components/ThirdPartyConfig", () => ({
-  ExHentaiConfigField: { Accounts: "accounts", DataFetch: "dataFetch", Download: "download" },
+  ExHentaiConfigField: {
+    Accounts: "accounts",
+    DataFetch: "dataFetch",
+    Download: "download",
+    OriginalImages: "originalImages",
+    PostProcessing: "postProcessing",
+  },
   DLsiteConfigField: { Accounts: "accounts", DataFetch: "dataFetch", Download: "download" },
   SteamConfigField: { Accounts: "accounts" },
   ExHentaiConfigPanel: ({ fields }: { fields: string[] }) => (
@@ -191,12 +197,22 @@ describe("downloader settings navigation", () => {
       ],
     });
     await act(async () => root.render(<ConfigurationsModal />));
-    expect(container.querySelectorAll("nav button")).toHaveLength(4);
+    expect(container.querySelectorAll("nav button")).toHaveLength(5);
     await choose("ExHentai");
     expect(button("ExHentai")).toHaveAttribute("aria-pressed", "true");
     expect(container.querySelector("[data-exhentai-fields]")).toHaveAttribute(
       "data-exhentai-fields",
       "download",
+    );
+    await choose("downloader.config.exHentai.originalImages");
+    expect(container.querySelector("[data-exhentai-fields]")).toHaveAttribute(
+      "data-exhentai-fields",
+      "originalImages",
+    );
+    await choose("downloader.config.exHentai.postProcessing");
+    expect(container.querySelector("[data-exhentai-fields]")).toHaveAttribute(
+      "data-exhentai-fields",
+      "postProcessing",
     );
     await choose("resourceSource.config.tab.accounts");
     expect(container.querySelector("[data-exhentai-fields]")).toHaveAttribute(
@@ -218,13 +234,22 @@ describe("downloader settings navigation", () => {
     );
   });
 
-  it("groups BT and HTTP under general downloads while retaining common and site settings", async () => {
+  it("opens BT and HTTP independently under a non-interactive general group", async () => {
     getDefinitions.mockResolvedValue({ data: [{ thirdPartyId: ThirdPartyId.ExHentai }] });
     await act(async () => root.render(<ConfigurationsModal />));
     expect(container).not.toHaveTextContent("BT transport settings");
-    await choose("downloadCenter.category.general");
+    expect(button("downloader.config.generalDownloads.label")).toBeUndefined();
+    expect(button("downloader.config.platforms.label")).toBeUndefined();
+    const groups = container.querySelectorAll('nav [role="group"]');
+    expect(groups).toHaveLength(2);
+    expect(groups[0]).toHaveAccessibleName("downloader.config.generalDownloads.label");
+    expect(groups[1]).toHaveAccessibleName("downloader.config.platforms.label");
+    await choose("downloadCenter.provider.bt");
     expect(container).toHaveTextContent("BT transport settings");
-    await choose("downloadCenter.provider.http");
+    expect(button("downloadCenter.provider.bt")).toHaveAttribute("aria-pressed", "true");
+    expect(container.querySelector('[role="tablist"]')).toBeNull();
+    await choose("downloader.config.http.title");
+    expect(button("downloader.config.http.title")).toHaveAttribute("aria-pressed", "true");
     expect(container).not.toHaveTextContent("BT transport settings");
     expect(container).toHaveTextContent("Global network");
     expect(container.querySelector('a[href="/configuration"]')).toHaveTextContent(

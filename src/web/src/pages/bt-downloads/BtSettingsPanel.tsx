@@ -7,7 +7,11 @@ import useAutoSaveToast from "@/components/ThirdPartyConfig/base/useAutoSaveToas
 import BApi from "@/sdk/BApi";
 import { useNetworkOptionsStore } from "@/stores/options";
 
-export default function BtSettingsPanel() {
+export default function BtSettingsPanel({
+  appearance = "card",
+}: {
+  appearance?: "card" | "plain";
+}) {
   const { t } = useTranslation();
   const options = useNetworkOptionsStore((s) => s.data);
   const save = useAutoSaveToast(BApi.options.patchNetworkOptions);
@@ -19,7 +23,11 @@ export default function BtSettingsPanel() {
     );
 
   return (
-    <div className="space-y-4 rounded-xl border border-default-200 p-4">
+    <div
+      className={
+        appearance === "plain" ? "space-y-5" : "space-y-4 rounded-xl border border-default-200 p-4"
+      }
+    >
       <ProxySelector
         value={proxy}
         customProxies={options?.customProxies}

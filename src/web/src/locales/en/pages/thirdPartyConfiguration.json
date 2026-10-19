@@ -26,6 +26,8 @@
   "thirdPartyConfig.success.cookieValid": "Cookie is good",
   "thirdPartyConfig.tip.bilibili": "Configure Bilibili downloader settings including cookie authentication and download parameters.",
   "thirdPartyConfig.tip.exhentai": "Configure ExHentai downloader settings. Cookie is required for authentication.",
+  "thirdPartyConfig.exHentai.originalImages.title": "Original images & GP",
+  "thirdPartyConfig.exHentai.postProcessing.title": "Follow-up processing",
   "thirdPartyConfig.exHentai.originalImages.prefer": "Prefer original images",
   "thirdPartyConfig.exHentai.originalImages.warning": "Original images may also be WebP. Downloading originals may spend GP; if GP runs out, the site may automatically convert Credits into GP.",
   "thirdPartyConfig.exHentai.originalImages.scope": "Applies to direct image downloads, including the task menu's Direct download action and permitted fallback when no torrent is available. Originals follow the configured maximum concurrency. This setting does not affect torrent files or BT content transfers.",

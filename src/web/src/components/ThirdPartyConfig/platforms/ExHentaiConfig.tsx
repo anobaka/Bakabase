@@ -35,6 +35,8 @@ export enum ExHentaiConfigField {
   Accounts = "accounts",
   DataFetch = "dataFetch",
   Download = "download",
+  OriginalImages = "originalImages",
+  PostProcessing = "postProcessing",
   MetadataSync = "metadataSync",
   AutoSync = "autoSync",
   Integration = "integration",
@@ -120,7 +122,8 @@ export const ExHentaiConfigPanel: FC<ExHentaiConfigPanelProps> = ({ fields = "al
         key: "dataFetch",
         title: t("thirdPartyConfig.group.dataFetch"),
         content: (
-          <div className="space-y-4">
+          <div className="space-y-5">
+            <ProxyField thirdPartyId={ThirdPartyId.ExHentai} />
             <NumberInput
               description={t<string>("thirdPartyConfig.field.maxConcurrency.description")}
               label={t<string>("thirdPartyConfig.label.maxConcurrency")}
@@ -158,7 +161,7 @@ export const ExHentaiConfigPanel: FC<ExHentaiConfigPanelProps> = ({ fields = "al
         key: "download",
         title: t("thirdPartyConfig.group.download"),
         content: (
-          <div className="space-y-4">
+          <div className="space-y-5">
             <SourceDefaultDownloadPathField
               thirdPartyId={ThirdPartyId.ExHentai}
               value={options?.defaultPath}
@@ -198,8 +201,11 @@ export const ExHentaiConfigPanel: FC<ExHentaiConfigPanelProps> = ({ fields = "al
               value={options?.namingConvention || ""}
               onValueChange={(v) => patchWithToast({ namingConvention: v })}
             />
-            <ProxyField thirdPartyId={ThirdPartyId.ExHentai} />
-            <ExHentaiDownloadModeField options={options} onChange={patchWithToast} />
+            <ExHentaiDownloadModeField
+              appearance="plain"
+              options={options}
+              onChange={patchWithToast}
+            />
             <CheckboxGroup
               description={t<string>("downloader.tip.prioritizeTasksWithTorrentDesc")}
               isDisabled={resolveExHentaiDownloadMode(options) === ExHentaiDownloadMode.Direct}
@@ -225,96 +231,108 @@ export const ExHentaiConfigPanel: FC<ExHentaiConfigPanelProps> = ({ fields = "al
                 patchWithToast({ torrentCheckValidityHours: Number.isNaN(v) ? 0 : v })
               }
             />
-            <DownloadResultWorkflowField
-              value={options?.downloadResultWorkflowId}
-              onChange={(workflowId) => patch({ downloadResultWorkflowId: workflowId ?? 0 })}
-            />
-            <div className="flex flex-col gap-4 rounded-lg border border-default-200 p-3">
-              <div className="flex flex-col gap-3">
-                <Checkbox
-                  className="m-0"
-                  isSelected={options?.preferOriginalImages ?? false}
-                  onValueChange={(v) => patchWithToast({ preferOriginalImages: v })}
-                >
-                  {t("thirdPartyConfig.exHentai.originalImages.prefer")}
-                </Checkbox>
-                <div
-                  className="rounded-lg border border-warning-300 bg-warning-50 p-3 text-sm text-warning-700"
-                  role="note"
-                >
-                  {t("thirdPartyConfig.exHentai.originalImages.warning")}
-                </div>
-                <p className="text-xs text-default-500">
-                  {t("thirdPartyConfig.exHentai.originalImages.scope")}
-                </p>
+          </div>
+        ),
+      },
+      {
+        field: ExHentaiConfigField.OriginalImages,
+        key: "originalImages",
+        title: t("thirdPartyConfig.exHentai.originalImages.title"),
+        content: (
+          <div className="space-y-5">
+            <div className="space-y-3">
+              <Checkbox
+                className="m-0 px-0"
+                isSelected={options?.preferOriginalImages ?? false}
+                onValueChange={(v) => patchWithToast({ preferOriginalImages: v })}
+              >
+                {t("thirdPartyConfig.exHentai.originalImages.prefer")}
+              </Checkbox>
+              <div className="text-sm leading-relaxed text-warning-700" role="note">
+                {t("thirdPartyConfig.exHentai.originalImages.warning")}
               </div>
-              {options?.preferOriginalImages && (
-                <div className="flex flex-col gap-4">
-                  <div className="flex flex-col gap-2">
-                    <p className="text-sm text-default-500">
-                      {t("thirdPartyConfig.exHentai.originalImages.freeOnly")}
-                    </p>
-                    <p className="text-xs leading-relaxed text-default-500">
-                      {t("thirdPartyConfig.exHentai.originalImages.freeConfirmation")}
-                    </p>
-                    <p className="text-sm text-default-500">
-                      {t("thirdPartyConfig.exHentai.originalImages.unavailable")}
+              <p className="text-xs text-default-500">
+                {t("thirdPartyConfig.exHentai.originalImages.scope")}
+              </p>
+            </div>
+            {options?.preferOriginalImages && (
+              <div className="space-y-5">
+                <div className="flex flex-col gap-2">
+                  <p className="text-sm text-default-500">
+                    {t("thirdPartyConfig.exHentai.originalImages.freeOnly")}
+                  </p>
+                  <p className="text-xs leading-relaxed text-default-500">
+                    {t("thirdPartyConfig.exHentai.originalImages.freeConfirmation")}
+                  </p>
+                  <p className="text-sm text-default-500">
+                    {t("thirdPartyConfig.exHentai.originalImages.unavailable")}
+                  </p>
+                </div>
+                <Checkbox
+                  className="m-0 px-0"
+                  isSelected={options?.allowOriginalImageGpSpending ?? false}
+                  onValueChange={(v) => patchWithToast({ allowOriginalImageGpSpending: v })}
+                >
+                  {t("thirdPartyConfig.exHentai.originalImages.allowGp")}
+                </Checkbox>
+                {options?.allowOriginalImageGpSpending && (
+                  <div className="space-y-5">
+                    <NumberInput
+                      description={t<string>(
+                        "thirdPartyConfig.exHentai.originalImages.minimumGpDescription",
+                      )}
+                      formatOptions={{ maximumFractionDigits: 0 }}
+                      label={t<string>("thirdPartyConfig.exHentai.originalImages.minimumGp")}
+                      maxValue={Number.MAX_SAFE_INTEGER}
+                      minValue={0}
+                      step={1}
+                      value={options?.originalImageMinimumGpBalance ?? 10000}
+                      onValueChange={(v) => {
+                        const value = Number.isNaN(v) ? 10000 : v;
+
+                        if (Number.isSafeInteger(value) && value >= 0) {
+                          patchWithToast({ originalImageMinimumGpBalance: value });
+                        }
+                      }}
+                    />
+                    <NumberInput
+                      description={t<string>(
+                        "thirdPartyConfig.exHentai.originalImages.maximumGpDescription",
+                      )}
+                      formatOptions={{ maximumFractionDigits: 0 }}
+                      label={t<string>("thirdPartyConfig.exHentai.originalImages.maximumGp")}
+                      maxValue={Number.MAX_SAFE_INTEGER}
+                      minValue={0}
+                      step={1}
+                      value={options?.originalImageMaximumGpCostPerTask ?? 100000}
+                      onValueChange={(v) => {
+                        const value = Number.isNaN(v) ? 100000 : v;
+
+                        if (Number.isSafeInteger(value) && value >= 0) {
+                          patchWithToast({ originalImageMaximumGpCostPerTask: value });
+                        }
+                      }}
+                    />
+                    <p className="text-xs text-default-500">
+                      {t("thirdPartyConfig.exHentai.originalImages.gpPolicy")}
                     </p>
                   </div>
-                  <Checkbox
-                    className="m-0"
-                    isSelected={options?.allowOriginalImageGpSpending ?? false}
-                    onValueChange={(v) => patchWithToast({ allowOriginalImageGpSpending: v })}
-                  >
-                    {t("thirdPartyConfig.exHentai.originalImages.allowGp")}
-                  </Checkbox>
-                  {options?.allowOriginalImageGpSpending && (
-                    <div className="flex flex-col gap-3">
-                      <NumberInput
-                        description={t<string>(
-                          "thirdPartyConfig.exHentai.originalImages.minimumGpDescription",
-                        )}
-                        formatOptions={{ maximumFractionDigits: 0 }}
-                        label={t<string>("thirdPartyConfig.exHentai.originalImages.minimumGp")}
-                        maxValue={Number.MAX_SAFE_INTEGER}
-                        minValue={0}
-                        step={1}
-                        value={options?.originalImageMinimumGpBalance ?? 10000}
-                        onValueChange={(v) => {
-                          const value = Number.isNaN(v) ? 10000 : v;
-
-                          if (Number.isSafeInteger(value) && value >= 0) {
-                            patchWithToast({ originalImageMinimumGpBalance: value });
-                          }
-                        }}
-                      />
-                      <NumberInput
-                        description={t<string>(
-                          "thirdPartyConfig.exHentai.originalImages.maximumGpDescription",
-                        )}
-                        formatOptions={{ maximumFractionDigits: 0 }}
-                        label={t<string>("thirdPartyConfig.exHentai.originalImages.maximumGp")}
-                        maxValue={Number.MAX_SAFE_INTEGER}
-                        minValue={0}
-                        step={1}
-                        value={options?.originalImageMaximumGpCostPerTask ?? 100000}
-                        onValueChange={(v) => {
-                          const value = Number.isNaN(v) ? 100000 : v;
-
-                          if (Number.isSafeInteger(value) && value >= 0) {
-                            patchWithToast({ originalImageMaximumGpCostPerTask: value });
-                          }
-                        }}
-                      />
-                      <p className="text-xs text-default-500">
-                        {t("thirdPartyConfig.exHentai.originalImages.gpPolicy")}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
           </div>
+        ),
+      },
+      {
+        field: ExHentaiConfigField.PostProcessing,
+        key: "postProcessing",
+        title: t("thirdPartyConfig.exHentai.postProcessing.title"),
+        content: (
+          <DownloadResultWorkflowField
+            appearance="plain"
+            value={options?.downloadResultWorkflowId}
+            onChange={(workflowId) => patch({ downloadResultWorkflowId: workflowId ?? 0 })}
+          />
         ),
       },
       {

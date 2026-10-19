@@ -165,7 +165,7 @@
   "downloader.config.navigation.label": "Downloader settings sections",
   "downloader.config.general.description": "Configure task behavior shared by all downloaders.",
   "downloader.config.platform.description": "Manage accounts, downloads, and requests for {{platform}}.",
-  "downloader.config.platforms.label": "Site downloads",
+  "downloader.config.platforms.label": "Sites",
   "downloader.config.platforms.loadFailed": "Could not load download sources. Try again.",
   "downloader.config.platforms.retry": "Reload",
   "downloader.config.platforms.unavailable": "No settings are available for this source yet.",
@@ -285,5 +285,10 @@
   "downloader.toast.btDownloadFailed": "Could not start BT downloading. Please try again.",
   "downloader.action.torrentFileDownload": "Download torrent only",
   "downloader.tip.torrentFileDownload": "Save only the torrent into this task's current folder, without falling back to direct downloading.",
-  "downloader.toast.torrentFileDownloadFailed": "Could not start the torrent download. Please try again."
+  "downloader.toast.torrentFileDownloadFailed": "Could not start the torrent download. Please try again.",
+  "downloader.config.generalDownloads.label": "General",
+  "downloader.config.http.title": "HTTP(S) downloads",
+  "downloader.config.bt.description": "Configure the proxy and concurrent downloads for BT transfers.",
+  "downloader.config.exHentai.originalImages": "Original images & GP",
+  "downloader.config.exHentai.postProcessing": "Post-processing"
 }
