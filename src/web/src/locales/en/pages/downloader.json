@@ -101,7 +101,7 @@
   "downloader.label.preferTorrent": "Prefer torrent download",
   "downloader.tip.preferTorrentDesc": "If available, download torrent files instead of downloading images directly.",
   "downloader.label.prioritizeTasksWithTorrent": "Prioritize tasks that have a torrent",
-  "downloader.tip.prioritizeTasksWithTorrentDesc": "When enabled, single-work tasks are probed one by one, prioritizing those with a torrent. The selected acquisition method determines whether to download through BT or save the torrent file. Tasks without a usable torrent follow the direct-download fallback setting. Applies to Prefer BT download and Prefer saving torrent files.",
+  "downloader.tip.prioritizeTasksWithTorrentDesc": "On the BT route, probe single-work tasks one by one and prioritize those with a torrent using the selected options. Selecting only “Download BT torrent” never falls back to direct downloading. With “Create BT download task” selected, a missing torrent follows the direct-download fallback setting.",
   "downloader.label.torrentCheckValidityHours": "Remember \"no torrent\" for (hours)",
   "downloader.tip.torrentCheckValidityHoursDesc": "Once a gallery has been found to have no torrent, skip probing it again for this long. Re-running a large set of tasks otherwise re-checks every gallery from scratch. The result is stored on the task, so it survives a restart. Defaults to 24 hours; 0 always re-checks.",
   "downloader.tip.exHentaiUserscript": "You can use our Tampermonkey userscript to download from ExHentai with one click.",

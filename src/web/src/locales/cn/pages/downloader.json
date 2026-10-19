@@ -101,7 +101,7 @@
   "downloader.label.preferTorrent": "优先下载种子",
   "downloader.tip.preferTorrentDesc": "如果可用，优先下载种子文件而非直接下载图片。",
   "downloader.label.prioritizeTasksWithTorrent": "优先下载包含种子的任务",
-  "downloader.tip.prioritizeTasksWithTorrentDesc": "勾选后，会先依次探测单作品任务，优先处理有种子的任务，并按所选获取方式进行 BT 下载或保存种子文件。没有可用种子的任务按直接下载回退设置处理。适用于“优先使用 BT 下载”和“优先保存种子文件”。",
+  "downloader.tip.prioritizeTasksWithTorrentDesc": "BT 下载路线下，先依次探测单作品任务，优先按所选选项处理有种子的任务。仅勾选“下载 BT 种子”时不会回退；勾选“创建 BT 下载任务”时，无可用种子按直接下载回退设置处理。",
   "downloader.label.torrentCheckValidityHours": "“无种子”结果有效期（小时）",
   "downloader.tip.torrentCheckValidityHoursDesc": "某个帖子被探测为没有种子后，在该时长内不再重复探测。否则每次重新下载整批任务都会把所有帖子从头检查一遍。结果保存在任务上，重启后依然有效。默认 24 小时，填 0 表示每次都重新检查。",
   "downloader.tip.exHentaiUserscript": "您可以使用我们提供的油猴脚本在 ExHentai 网站上一键下载。",
