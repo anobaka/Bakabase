@@ -22,6 +22,7 @@ using Bootstrap.Models.ResponseModels;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
 
 namespace Bakabase.Tests;
 
@@ -46,6 +47,9 @@ public sealed partial class DownloadTaskDirectDownloadTests
             services.AddSingleton<IDownloaderFactory>(_factory);
             services.RemoveAll<IDownloadTaskPrecheck>();
             services.AddSingleton<IDownloadTaskPrecheck>(_precheck);
+            // Explicit-action tests control every start/stop themselves. A real background
+            // pass can reset a stopped fake while a shortcut is still being asserted.
+            services.AddSingleton<DownloadQueuePump, NoopQueuePump>();
             services.AddSingleton<IWorkflowEventBus>(new NoopWorkflowBus());
             services.AddTransient(provider => new BakabaseLocalizer(
                 provider.GetRequiredService<IStringLocalizer<SharedResource>>()));
@@ -318,6 +322,12 @@ public sealed partial class DownloadTaskDirectDownloadTests
         }
         public void ResetStatus() => Status = DownloaderStatus.JustCreated;
         public void Dispose() { }
+    }
+
+    private sealed class NoopQueuePump(IServiceProvider services, ILogger<DownloadQueuePump> logger)
+        : DownloadQueuePump(services, logger)
+    {
+        protected override Task RunPassAsync() => Task.CompletedTask;
     }
 
     private sealed class NoopWorkflowBus : IWorkflowEventBus
