@@ -1,3 +1,6 @@
+import type * as AnalyticsModule from "../Analytics";
+import type * as AnalyticsContextModule from "../analyticsContext";
+
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
@@ -37,8 +40,8 @@ const info = (deploymentId = deploymentA) => ({
     postHogApiHost: "https://us.i.posthog.com",
   },
 });
-let analytics: typeof import("../Analytics");
-let context: typeof import("../analyticsContext");
+let analytics: typeof AnalyticsModule;
+let context: typeof AnalyticsContextModule;
 let transport: ReturnType<typeof vi.fn<typeof fetch>>;
 const sent = () =>
   transport.mock.calls
