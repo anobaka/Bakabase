@@ -31,6 +31,8 @@ function requiresManagedSearch(form: SearchForm) {
 }
 
 export type SearchOptions = {
+  /** UI searches report once when results arrive; background lookups leave this unset. */
+  onResult?: (totalCount: number, outcome: "success" | "failed") => void;
   saveSearch?: boolean;
   searchId?: string;
   /** How to combine new resources with existing ones */
@@ -118,6 +120,7 @@ export const useResourceSearch = (): UseResourceSearchResult => {
 
       setLoading(true);
       setLoadingDetails(false);
+      let reported = false;
       // Keep old results during "replace" (stale-while-revalidate) — avoids tearing
       // down the virtualized grid on every search.
 
@@ -134,6 +137,9 @@ export const useResourceSearch = (): UseResourceSearchResult => {
         if (currentSearchId !== searchIdRef.current) {
           return [];
         }
+
+        reported = true;
+        options?.onResult?.(rsp.totalCount ?? 0, rsp.code ? "failed" : "success");
 
         let basicResources = (rsp.data || []) as Resource[];
 
@@ -252,6 +258,7 @@ export const useResourceSearch = (): UseResourceSearchResult => {
         return basicResources;
       } catch (error) {
         if (currentSearchId === searchIdRef.current) {
+          if (!reported) options?.onResult?.(0, "failed");
           setLoading(false);
           setLoadingDetails(false);
         }

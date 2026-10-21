@@ -2,13 +2,14 @@
 
 import type { HelpSectionId, HelpTarget, HelpTopicId } from "./types";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AiOutlineQuestionCircle } from "react-icons/ai";
 
 import { helpTopics } from "./topics";
 
 import { Button, Modal } from "@/components/bakaui";
+import { trackAnalyticsEvent } from "@/services/Analytics";
 
 export interface HelpCenterModalProps extends HelpTarget {
   visible: boolean;
@@ -59,13 +60,21 @@ const HelpCenterModal = ({
 
   const activeTopic = helpTopics.find((item) => item.id === active.topicId) ?? helpTopics[0]!;
   const { Content, ConceptContent } = activeTopic;
+  useEffect(() => {
+    if (visible)
+      trackAnalyticsEvent("help_opened", { topic: active.topicId, first_run: !!firstRun });
+  }, [visible, active.topicId, firstRun]);
+  const complete = () => {
+    trackAnalyticsEvent("help_completed", { topic: active.topicId, first_run: !!firstRun });
+    onClose();
+  };
 
   return (
     <Modal
       footer={
         firstRun ? (
           <div className="flex justify-end w-full">
-            <Button color="primary" onPress={onClose}>
+            <Button color="primary" onPress={complete}>
               {t("helpCenter.action.getStarted")}
             </Button>
           </div>

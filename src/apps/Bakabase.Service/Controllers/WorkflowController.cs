@@ -1,3 +1,4 @@
+using Bakabase.Service.Services.Telemetry;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -70,6 +71,7 @@ public class WorkflowController(
 
     [HttpPost]
     [SwaggerOperation(OperationId = "AddWorkflow")]
+    [ProductEvent("workflow_configured", "workflow")]
     public async Task<SingletonResponse<WorkflowDefinitionViewModel>> Add(
         [FromBody] WorkflowDefinitionCreationInputModel model, CancellationToken ct)
     {
@@ -79,6 +81,7 @@ public class WorkflowController(
 
     [HttpPatch("{id:int}")]
     [SwaggerOperation(OperationId = "PatchWorkflow")]
+    [ProductEvent("workflow_configured", "workflow")]
     public async Task<SingletonResponse<WorkflowDefinitionViewModel>> Patch(
         int id, [FromBody] WorkflowDefinitionUpdateInputModel model, CancellationToken ct)
     {

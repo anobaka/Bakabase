@@ -1,5 +1,6 @@
 import BApi from "@/sdk/BApi";
 import envConfig from "@/config/env";
+import { analyticsRequestHeaders } from "@/services/analyticsContext";
 import { PropertyPool, ResourceAdditionalItem } from "@/sdk/constants";
 import type { ContentType } from "@/sdk/Api";
 import {
@@ -73,6 +74,10 @@ export async function getManagementSources(signal?: AbortSignal): Promise<Manage
   const response = await fetch(`${envConfig.apiEndpoint}/federation/local/management/sources`, {
     signal,
     cache: "no-store",
+    headers: analyticsRequestHeaders(
+      `${envConfig.apiEndpoint}/federation/local/management/sources`,
+      envConfig.apiEndpoint,
+    ),
   });
 
   if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
@@ -184,7 +189,13 @@ export function ownerClient(source: ManagementSource) {
         {
           method: "POST",
           cache: "no-store",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            ...analyticsRequestHeaders(
+              `${envConfig.apiEndpoint}/federation/local/management/${encodeURIComponent(owner.serverId)}/request`,
+              envConfig.apiEndpoint,
+            ),
+          },
           body: JSON.stringify({ ...input, libraryEpoch: owner.libraryEpoch, operation }),
         },
       );

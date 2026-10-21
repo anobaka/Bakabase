@@ -1,4 +1,5 @@
-﻿using System;
+using Bakabase.Service.Services.Telemetry;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -85,6 +86,7 @@ namespace Bakabase.Service.Controllers
 
         [HttpPost]
         [SwaggerOperation(OperationId = "AddCustomProperty")]
+        [ProductEvent("property_edit_completed", "custom_properties")]
         public async Task<SingletonResponse<CustomPropertyViewModel>> Add([FromBody] CustomPropertyAddOrPutDto model)
         {
             return new SingletonResponse<CustomPropertyViewModel>(
@@ -93,6 +95,7 @@ namespace Bakabase.Service.Controllers
 
         [HttpPost("batch")]
         [SwaggerOperation(OperationId = "AddCustomPropertyBatch")]
+        [ProductEvent("property_edit_completed", "custom_properties")]
         public async Task<ListResponse<CustomPropertyViewModel>> AddBatch(
             [FromBody] CustomPropertyAddOrPutDto[] models)
         {
@@ -103,6 +106,7 @@ namespace Bakabase.Service.Controllers
 
         [HttpPut("{id:int}")]
         [SwaggerOperation(OperationId = "PutCustomProperty")]
+        [ProductEvent("property_edit_completed", "custom_properties")]
         public async Task<SingletonResponse<CustomPropertyViewModel>> Put(int id,
             [FromBody] CustomPropertyAddOrPutDto model)
         {
@@ -172,6 +176,7 @@ namespace Bakabase.Service.Controllers
 
         [HttpPut("{id:int}/{type}")]
         [SwaggerOperation(OperationId = "ChangeCustomPropertyType")]
+        [ProductEvent("property_edit_completed", "custom_properties")]
         public async Task<BaseResponse> ChangeType(int id, PropertyType type)
         {
             return await service.ChangeType(id, type);

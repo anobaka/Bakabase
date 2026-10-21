@@ -1,6 +1,9 @@
 {
   "@@locale": "zh",
   "appTitle": "Bakabase",
+  "moreActions": "更多",
+  "usageDataTitle": "匿名使用数据",
+  "usageDataDescription": "分享功能使用情况、应用版本和设备类型，帮助改善 Bakabase。不包含服务器地址、搜索内容、资源标题、文件路径或配对凭证。只有此开关和当前服务器均允许时才会发送。关闭后也会丢弃尚未发送的使用数据。",
   "connectTitle": "连接到 Bakabase",
   "connecting": "连接中…",
   "onThisNetwork": "本网络中",

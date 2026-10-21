@@ -39,6 +39,10 @@ class _ResourcePageState extends State<ResourcePage> {
   @override
   void initState() {
     super.initState();
+    final analytics = widget.api.analytics;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) analytics?.capture('resource_opened');
+    });
     _load();
     _loadRating();
   }
@@ -61,25 +65,35 @@ class _ResourcePageState extends State<ResourcePage> {
       // Archive entries arrive in archive order; all-files is already
       // naturally sorted server-side. Sorting again is cheap and makes page
       // order deterministic either way.
-      final images = files.where((f) => classifyPath(f) == MediaKind.image).toList()
-        ..sort(naturalCompare);
-      final avFiles = files
-          .where((f) =>
-              classifyPath(f) == MediaKind.video || classifyPath(f) == MediaKind.audio)
-          .toList()
-        ..sort(naturalCompare);
-      final others = files
-          .where((f) =>
-              classifyPath(f) == MediaKind.other && !isCompressedFile(f))
-          .toList()
-        ..sort(naturalCompare);
+      final images =
+          files.where((f) => classifyPath(f) == MediaKind.image).toList()
+            ..sort(naturalCompare);
+      final avFiles =
+          files
+              .where(
+                (f) =>
+                    classifyPath(f) == MediaKind.video ||
+                    classifyPath(f) == MediaKind.audio,
+              )
+              .toList()
+            ..sort(naturalCompare);
+      final others =
+          files
+              .where(
+                (f) =>
+                    classifyPath(f) == MediaKind.other && !isCompressedFile(f),
+              )
+              .toList()
+            ..sort(naturalCompare);
 
       List<PlayableItem> curated;
       try {
         curated = (await playableFuture)
-            .where((i) =>
-                classifyPath(i.key) == MediaKind.video ||
-                classifyPath(i.key) == MediaKind.audio)
+            .where(
+              (i) =>
+                  classifyPath(i.key) == MediaKind.video ||
+                  classifyPath(i.key) == MediaKind.audio,
+            )
             .toList();
       } on ApiException {
         curated = const [];
@@ -121,7 +135,9 @@ class _ResourcePageState extends State<ResourcePage> {
     } on ApiException catch (e) {
       if (mounted) {
         setState(() => _rating = previous);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.message)));
       }
     }
   }
@@ -152,11 +168,17 @@ class _ResourcePageState extends State<ResourcePage> {
 
   void _openInAppPlayer(PlayableItem item) {
     _markPlayed(item.key);
+    final analytics = widget.api.analytics;
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => PlayerPage(
           url: widget.api.streamUrl(item.key),
           title: item.title,
+          onStarted: () => analytics?.capture('playback_started', {
+            'media_kind': classifyPath(item.key).name,
+            'player': 'built_in',
+            'playback_mode': 'native',
+          }),
         ),
       ),
     );
@@ -164,7 +186,14 @@ class _ResourcePageState extends State<ResourcePage> {
 
   Future<void> _openExternal(PlayableItem item, ExternalPlayer player) async {
     _markPlayed(item.key);
+    final analytics = widget.api.analytics;
     final ok = await player.launch(widget.api.streamUrl(item.key));
+    analytics?.capture('playback_handoff', {
+      'outcome': ok ? 'success' : 'failed',
+      'media_kind': classifyPath(item.key).name,
+      'player': 'external',
+      'playback_mode': 'external_player',
+    });
     if (!ok && mounted) {
       final l10n = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -174,13 +203,19 @@ class _ResourcePageState extends State<ResourcePage> {
   }
 
   Future<void> _copyStreamUrl(String itemKey) async {
+    final analytics = widget.api.analytics;
     await Clipboard.setData(ClipboardData(text: widget.api.streamUrl(itemKey)));
+    analytics?.capture('playback_handoff', {
+      'playback_mode': 'clipboard',
+      'outcome': 'success',
+      'media_kind': classifyPath(itemKey).name,
+    });
     _markPlayed(itemKey);
     if (mounted) {
       final l10n = AppLocalizations.of(context)!;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.streamLinkCopied)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.streamLinkCopied)));
     }
   }
 
@@ -205,7 +240,9 @@ class _ResourcePageState extends State<ResourcePage> {
             for (final player in externals)
               ListTile(
                 leading: const Icon(Icons.open_in_new),
-                title: Text(player.id == 'chooser' ? l10n.otherPlayer : player.name),
+                title: Text(
+                  player.id == 'chooser' ? l10n.otherPlayer : player.name,
+                ),
                 onTap: () {
                   Navigator.pop(sheetContext);
                   _openExternal(item, player);
@@ -229,7 +266,9 @@ class _ResourcePageState extends State<ResourcePage> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final resource = widget.resource;
-    final coverPath = resource.covers.isNotEmpty ? resource.covers.first : resource.path;
+    final coverPath = resource.covers.isNotEmpty
+        ? resource.covers.first
+        : resource.path;
     final loaded = _images != null;
     final images = _images ?? const [];
     final avItems = _avItems ?? const [];
@@ -269,20 +308,25 @@ class _ResourcePageState extends State<ResourcePage> {
                     (_rating ?? 0) >= star
                         ? Icons.star
                         : (_rating ?? 0) >= star - 0.5
-                            ? Icons.star_half
-                            : Icons.star_border,
+                        ? Icons.star_half
+                        : Icons.star_border,
                     color: Colors.amber,
                   ),
                   onPressed: () => _setRating(star.toDouble()),
                 ),
               if (_rating != null)
-                Text(_rating!.toStringAsFixed(1),
-                    style: Theme.of(context).textTheme.bodySmall),
+                Text(
+                  _rating!.toStringAsFixed(1),
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
             ],
           ),
           const SizedBox(height: 8),
           if (_error != null)
-            Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error))
+            Text(
+              _error!,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            )
           else if (!loaded)
             const Center(
               child: Padding(
@@ -300,14 +344,19 @@ class _ResourcePageState extends State<ResourcePage> {
               const SizedBox(height: 12),
             ],
             if (avItems.isNotEmpty) ...[
-              Text(l10n.playSection, style: Theme.of(context).textTheme.titleSmall),
+              Text(
+                l10n.playSection,
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
               const SizedBox(height: 4),
               for (final item in avItems)
                 Card(
                   child: ListTile(
-                    leading: Icon(classifyPath(item.key) == MediaKind.audio
-                        ? Icons.music_note_outlined
-                        : Icons.play_circle_outline),
+                    leading: Icon(
+                      classifyPath(item.key) == MediaKind.audio
+                          ? Icons.music_note_outlined
+                          : Icons.play_circle_outline,
+                    ),
                     title: Text(item.title),
                     onTap: () => _showPlayOptions(item),
                   ),
@@ -315,7 +364,10 @@ class _ResourcePageState extends State<ResourcePage> {
             ],
             if (others.isNotEmpty) ...[
               const SizedBox(height: 8),
-              Text(l10n.otherFiles, style: Theme.of(context).textTheme.titleSmall),
+              Text(
+                l10n.otherFiles,
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
               const SizedBox(height: 4),
               for (final file in others)
                 Card(

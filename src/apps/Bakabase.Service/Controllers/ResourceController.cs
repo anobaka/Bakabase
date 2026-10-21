@@ -1,4 +1,5 @@
-﻿using System;
+using Bakabase.Service.Services.Telemetry;
+using System;
 using Bakabase.Abstractions.Components.Identity;
 using System.Threading;
 using System.Collections.Generic;
@@ -148,6 +149,7 @@ public class ResourceController(
 
     [HttpPost("saved-search")]
     [SwaggerOperation(OperationId = "SaveNewResourceSearch")]
+    [ProductEvent("saved_search_created", "saved_search")]
     public async Task<SingletonResponse<SavedSearchViewModel>> SaveNewSearch([FromBody] SavedSearchAddInputModel model)
     {
         model.Search.StandardPageable();
@@ -262,6 +264,7 @@ public class ResourceController(
     [HttpPost("search")]
     [SwaggerOperation(OperationId = "SearchResources")]
     [RemoteAccessible]
+    [ProductEvent("resource_search_completed", "search")]
     public async Task<SearchResponse<Resource>> Search([FromBody] ResourceSearchInputModel model, bool saveSearch, string? searchId = null, ResourceAdditionalItem additionalItems = ResourceAdditionalItem.All)
     {
         using (MiniProfiler.Current.Step("StandardPageable"))
@@ -524,6 +527,7 @@ public class ResourceController(
     // The write lands in the database, not on the host's screen, so it is
     // meaningful from another device — rating from a phone is the use case.
     [RemoteAccessible]
+    [ProductEvent("property_edit_completed", "properties")]
     public async Task<BaseResponse> PutPropertyValue(int id, [FromBody] ResourcePropertyValuePutInputModel model)
     {
         return await service.PutPropertyValue(id, model);
@@ -567,6 +571,7 @@ public class ResourceController(
     /// </summary>
     [HttpPut("bulk/property-value")]
     [SwaggerOperation(OperationId = "BulkPutResourcePropertyValue")]
+    [ProductEvent("bulk_edit_completed", "properties")]
     public async Task<BaseResponse> BulkPutPropertyValue([FromBody] BulkResourcePropertyValuePutInputModel model)
     {
         if (model.ResourceIds.Count == 0)
@@ -1125,6 +1130,7 @@ public class ResourceController(
     /// </summary>
     [HttpPost("merge")]
     [SwaggerOperation(OperationId = "MergeResources")]
+    [ProductEvent("resource_merged", "resources")]
     public async Task<BaseResponse> MergeResources([FromBody] ResourceMergeInputModel model)
     {
         var targetResource = await service.Get(model.TargetResourceId);

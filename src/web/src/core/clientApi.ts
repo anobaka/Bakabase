@@ -1,4 +1,5 @@
 import type { ManagedServerState, RemoteDevicePlatform } from "@/sdk/constants";
+import { analyticsRequestHeaders } from "@/services/analyticsContext";
 
 /**
  * The console's own API, under `/client/`: what a managed server's UI, shown in the desktop
@@ -104,7 +105,11 @@ export class ClientApiError extends Error {
 const call = async <T>(path: string, init?: RequestInit): Promise<T> => {
   const rsp = await fetch(`/client${path}`, {
     ...init,
-    headers: init?.body ? { "Content-Type": "application/json", ...init?.headers } : init?.headers,
+    headers: {
+      ...(init?.body ? { "Content-Type": "application/json" } : {}),
+      ...init?.headers,
+      ...analyticsRequestHeaders(`/client${path}`, ""),
+    },
   });
 
   if (!rsp.ok) {

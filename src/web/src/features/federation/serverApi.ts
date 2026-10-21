@@ -8,6 +8,8 @@ import type {
 import type { ManagedMappingTreePage } from "./components/managedMappingTypes";
 
 import { FederationError, federationRequest, jsonBody } from "./transport";
+import { trackAnalyticsEvent } from "@/services/Analytics";
+import { ManagedServerOutcome } from "@/sdk/constants";
 
 export interface ManagedDeviceName {
   name: string;
@@ -46,11 +48,35 @@ export const managedServerApi = {
   probe: (address: string) =>
     federationRequest<ManagedServerProbe>(`${prefix}/probe`, jsonBody({ address })),
   /** With a code shown on the other server; without one, files a request for it to approve. */
-  pair: (address: string, code?: string) =>
-    federationRequest<ManagedServerPairing>(
-      `${prefix}/pair`,
-      jsonBody(code ? { address, code } : { address }),
-    ),
+  pair: async (address: string, code?: string) => {
+    const method = code ? "code" : "request";
+    const started = performance.now();
+    trackAnalyticsEvent("pairing_started", { method });
+    try {
+      const result = await federationRequest<ManagedServerPairing>(
+        `${prefix}/pair`,
+        jsonBody(code ? { address, code } : { address }),
+      );
+      trackAnalyticsEvent("pairing_result", {
+        method,
+        duration_ms: performance.now() - started,
+        outcome:
+          result.outcome === ManagedServerOutcome.Ok
+            ? "success"
+            : result.outcome === ManagedServerOutcome.AwaitingApproval
+              ? "pending"
+              : "failed",
+      });
+      return result;
+    } catch (error) {
+      trackAnalyticsEvent("pairing_result", {
+        method,
+        duration_ms: performance.now() - started,
+        outcome: "failed",
+      });
+      throw error;
+    }
+  },
   cancelRequest: (requestId: string) =>
     federationRequest<{ changed: boolean }>(`${prefix}/requests/${encodeURIComponent(requestId)}`, {
       method: "DELETE",

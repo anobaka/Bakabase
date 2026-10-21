@@ -1,4 +1,5 @@
 using Bakabase.Remoting.Components.Connection;
+using Bakabase.Remoting.Components.Console;
 using Bakabase.Modules.RemoteAccess.Components.Pairing;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Net.Http.Headers;
@@ -51,7 +52,8 @@ namespace Bakabase.Remoting.Components.Forwarding;
 /// <c>Origin</c> rewritten; the guard refuses its handshakes and writes before they get here.
 /// </para>
 /// </remarks>
-public sealed class UpstreamTransformer(IClientCredentialProvider credentials, ServerClock clock) : HttpTransformer
+public sealed class UpstreamTransformer(IClientCredentialProvider credentials, ServerClock clock,
+    ConsoleRelayContext? relay = null) : HttpTransformer
 {
     private static readonly object FromRelayPageKey = new();
 
@@ -86,6 +88,13 @@ public sealed class UpstreamTransformer(IClientCredentialProvider credentials, S
         proxyRequest.Headers.Host = null;
         proxyRequest.Headers.Authorization = null;
         proxyRequest.Headers.Remove(HeaderNames.Cookie);
+
+        // The desktop's live consent also governs requests from a managed server's page.
+        // A stale page must not keep attributing work after the local user opts out.
+        if (relay?.AnalyticsContext?.Invoke().EnableAnonymousDataTracking != true)
+            foreach (var name in proxyRequest.Headers.Select(h => h.Key)
+                         .Where(name => name.StartsWith("X-Bakabase-Analytics-", StringComparison.OrdinalIgnoreCase)).ToArray())
+                proxyRequest.Headers.Remove(name);
 
         var current = credentials.Current;
         if (current == null)

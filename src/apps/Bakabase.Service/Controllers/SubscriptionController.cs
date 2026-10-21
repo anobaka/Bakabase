@@ -1,3 +1,4 @@
+using Bakabase.Service.Services.Telemetry;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -41,6 +42,7 @@ public class SubscriptionController(
 
     [HttpPost]
     [SwaggerOperation(OperationId = "AddSubscription")]
+    [ProductEvent("subscription_configured", "subscriptions")]
     public async Task<SingletonResponse<SubscriptionViewModel>> Add([FromBody] SubscriptionCreationInputModel model, CancellationToken ct)
     {
         var row = await service.CreateAsync(model, ct);
@@ -50,6 +52,7 @@ public class SubscriptionController(
 
     [HttpPatch("{id:int}")]
     [SwaggerOperation(OperationId = "PatchSubscription")]
+    [ProductEvent("subscription_configured", "subscriptions")]
     public async Task<SingletonResponse<SubscriptionViewModel>> Patch(int id, [FromBody] SubscriptionUpdateInputModel model, CancellationToken ct)
     {
         var row = await service.UpdateAsync(id, model, ct);

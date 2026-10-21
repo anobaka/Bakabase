@@ -1,6 +1,8 @@
 using Bakabase.Abstractions.Components.Localization;
 using System.Text.Json;
 using Bakabase.Abstractions.Components.Tasks;
+using Bakabase.Abstractions.Components.Telemetry;
+using System.Diagnostics;
 using Bakabase.Modules.Workflow.Abstractions.Components;
 using Bakabase.Modules.Workflow.Abstractions.Models.Db;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain;
@@ -53,6 +55,7 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
 
     public async Task ExecuteAsync(int runId, BTaskArgs btaskArgs)
     {
+        var telemetryTimer = Stopwatch.StartNew();
         var ct = btaskArgs.CancellationToken;
         await using var scope = _scopeFactory.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<TDbContext>();
@@ -74,17 +77,32 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
             return;
         }
 
+        void TrackCompleted()
+        {
+            if (run.Status is not (WorkflowRunStatus.Success or WorkflowRunStatus.Failed or WorkflowRunStatus.Cancelled)) return;
+            TelemetryCapture.TryTrack(scope.ServiceProvider, "workflow_run_completed", new Dictionary<string, object?>
+            {
+                ["feature_id"] = "workflow", ["trigger"] = btaskArgs.TelemetryTrigger,
+                ["outcome"] = run.Status == WorkflowRunStatus.Cancelled ? "cancelled" :
+                    run.Status == WorkflowRunStatus.Failed ? "failed" : run.FailedItemCount > 0 ? "partial_success" : "success",
+                ["input_count"] = run.InputCount, ["output_count"] = run.OutputCount,
+                ["failure_count"] = run.FailedItemCount, ["duration_ms"] = telemetryTimer.Elapsed.TotalMilliseconds
+            }, btaskArgs.TelemetryActor);
+        }
+
         var definition = await db.Set<WorkflowDefinitionDbModel>()
             .FirstOrDefaultAsync(d => d.Id == run.WorkflowDefinitionId, ct);
         if (definition is null)
         {
             await FailRun(db, run, "Workflow definition deleted before run could start", ct);
+            TrackCompleted();
             return;
         }
 
         if (!_triggers.TryGet(definition.TriggerKind, out var trigger))
         {
             await FailRun(db, run, $"Unknown trigger kind: {definition.TriggerKind}", ct);
+            TrackCompleted();
             return;
         }
 
@@ -99,6 +117,7 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
         catch (Exception ex)
         {
             await FailRun(db, run, $"Payload deserialization failed: {ex.Message}", ct);
+            TrackCompleted();
             return;
         }
 
@@ -113,6 +132,7 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
         if (!check.IsValid)
         {
             await FailRun(db, run, new WorkflowValidationException(check).Message, ct);
+            TrackCompleted();
             return;
         }
 
@@ -144,6 +164,7 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
                 catch (Exception ex)
                 {
                     await FailRun(db, run, $"Could not restore the item at step {startStep}: {ex.Message}", ct);
+                    TrackCompleted();
 
                     return;
                 }
@@ -408,6 +429,7 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
         finally
         {
             await db.SaveChangesAsync(CancellationToken.None);
+            TrackCompleted();
         }
     }
 

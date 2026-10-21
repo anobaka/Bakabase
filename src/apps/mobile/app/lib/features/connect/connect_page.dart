@@ -7,6 +7,7 @@ import '../../core/server_profiles.dart';
 import '../../l10n/app_localizations.dart';
 import '../../discovery/discovered_server.dart';
 import '../../discovery/discovery_service.dart';
+import 'usage_data_page.dart';
 
 /// The front door: pick a discovered server, a remembered one, or type an
 /// address. Discovery runs for as long as this page is visible.
@@ -93,7 +94,18 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
     final profiles = ref.watch(serverProfilesProvider);
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.connectTitle)),
+      appBar: AppBar(
+        title: Text(l10n.connectTitle),
+        actions: [
+          IconButton(
+            tooltip: l10n.usageDataTitle,
+            icon: const Icon(Icons.privacy_tip_outlined),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(builder: (_) => const UsageDataPage()),
+            ),
+          ),
+        ],
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -231,8 +243,12 @@ class _FailureCard extends StatelessWidget {
     final hint = failure.denial == RemoteAccessDenial.disabled
         ? l10n.remoteAccessDisabledHint
         : switch (failure.kind) {
-            ConnectionFailureKind.protocolTooNew => l10n.protocolTooNew(failure.detail),
-            ConnectionFailureKind.protocolTooOld => l10n.protocolTooOld(failure.detail),
+            ConnectionFailureKind.protocolTooNew => l10n.protocolTooNew(
+              failure.detail,
+            ),
+            ConnectionFailureKind.protocolTooOld => l10n.protocolTooOld(
+              failure.detail,
+            ),
             ConnectionFailureKind.network => failure.detail,
           };
 

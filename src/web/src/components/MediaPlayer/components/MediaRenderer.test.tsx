@@ -5,6 +5,8 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import MediaRenderer, { MEDIA_LOAD_TIMEOUT } from "./MediaRenderer";
 
 import { IwFsType, MediaType } from "@/sdk/constants";
+const analytics = vi.hoisted(() => vi.fn());
+vi.mock("@/services/Analytics", () => ({ trackAnalyticsEvent: analytics }));
 vi.mock("@/components/Resource/components/PlayControl/DesktopPlaybackGuide", () => ({
   DesktopPlaybackGuideButton: () => <button>desktop playback guide</button>,
 }));
@@ -37,8 +39,39 @@ afterEach(() => {
   cleanup();
   vi.useRealTimers();
   vi.restoreAllMocks();
+  analytics.mockClear();
 });
 describe("browser media delivery", () => {
+  it("counts actual playback once per item, not metadata, buffering or play intent", () => {
+    const { container, rerender } = render(<MediaRenderer {...props} />);
+    const video = container.querySelector("video")!;
+    fireEvent.canPlay(video);
+    fireEvent.play(video);
+    expect(analytics).not.toHaveBeenCalled();
+    fireEvent.playing(video);
+    fireEvent.waiting(video);
+    fireEvent.playing(video);
+    expect(analytics).toHaveBeenCalledExactlyOnceWith("playback_started", {
+      playback_mode: "browser",
+      media_kind: "video",
+    });
+    rerender(<MediaRenderer {...props} entry={entry("/private/next.mkv")} />);
+    fireEvent.playing(container.querySelector("video")!);
+    expect(analytics).toHaveBeenCalledTimes(2);
+    expect(JSON.stringify(analytics.mock.calls)).not.toContain("private");
+  });
+  it("records an image reader only once after content is delivered", () => {
+    const { container, rerender } = render(
+      <MediaRenderer {...props} mediaType={MediaType.Image} />,
+    );
+    expect(analytics).not.toHaveBeenCalled();
+    fireEvent.load(container.querySelector("img")!);
+    rerender(
+      <MediaRenderer {...props} entry={entry("/private/page2.png")} mediaType={MediaType.Image} />,
+    );
+    fireEvent.load(container.querySelector("img")!);
+    expect(analytics).toHaveBeenCalledExactlyOnceWith("reader_opened", { media_kind: "image" });
+  });
   it.each([MediaType.Image, MediaType.Audio, MediaType.Video])(
     "uses the owner-bound media URL instead of a manager file path (%s)",
     (type) => {

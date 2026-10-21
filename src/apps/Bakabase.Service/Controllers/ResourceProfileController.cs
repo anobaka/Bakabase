@@ -1,3 +1,4 @@
+using Bakabase.Service.Services.Telemetry;
 using System;
 using System.Threading;
 using Bakabase.Modules.Property.Abstractions.Services;
@@ -61,6 +62,7 @@ public class ResourceProfileController(IResourceProfileService service, IPropert
 
     [HttpPost]
     [SwaggerOperation(OperationId = "AddResourceProfile")]
+    [ProductEvent("resource_profile_saved", "resource_profiles")]
     public async Task<SingletonResponse<ResourceProfileViewModel>> Add([FromBody] ResourceProfileInputModel model)
     {
         var searchJson = model.Search != null
@@ -88,6 +90,7 @@ public class ResourceProfileController(IResourceProfileService service, IPropert
 
     [HttpPut("{id:int}")]
     [SwaggerOperation(OperationId = "UpdateResourceProfile")]
+    [ProductEvent("resource_profile_saved", "resource_profiles")]
     public async Task<SingletonResponse<ResourceProfileViewModel>> Update(int id, [FromBody] ResourceProfileInputModel model)
     {
         var searchJson = model.Search != null

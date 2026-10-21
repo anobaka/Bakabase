@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/connection.dart';
+import 'core/analytics.dart';
 import 'features/connect/connect_page.dart';
 import 'features/connect/pair_page.dart';
 import 'features/library/library_page.dart';
@@ -14,10 +17,23 @@ class BakabaseApp extends ConsumerStatefulWidget {
   ConsumerState<BakabaseApp> createState() => _BakabaseAppState();
 }
 
-class _BakabaseAppState extends ConsumerState<BakabaseApp> {
+class _BakabaseAppState extends ConsumerState<BakabaseApp>
+    with WidgetsBindingObserver {
+  Timer? _analyticsRefresh;
+
+  void _startAnalyticsRefresh() {
+    _analyticsRefresh?.cancel();
+    _analyticsRefresh = Timer.periodic(const Duration(minutes: 4), (_) {
+      unawaited(ref.read(connectionProvider.notifier).refreshAnalytics());
+    });
+  }
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    unawaited(ref.read(mobileAnalyticsProvider).initialize());
+    _startAnalyticsRefresh();
 
     // Once, at startup, rather than whenever the picker appears: reconnecting from
     // the picker would make "switch server" bounce straight back to the server the
@@ -26,8 +42,37 @@ class _BakabaseAppState extends ConsumerState<BakabaseApp> {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _startAnalyticsRefresh();
+      unawaited(
+        ref
+            .read(connectionProvider.notifier)
+            .refreshAnalytics(newSession: true),
+      );
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      _analyticsRefresh?.cancel();
+      ref.read(connectionProvider.notifier).suspendAnalytics();
+    }
+  }
+
+  @override
+  void dispose() {
+    _analyticsRefresh?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final connection = ref.watch(connectionProvider);
+    ref.watch(mobileAnalyticsProvider);
+    if (connection is Connected) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) connection.api.analytics?.capture('ui_ready');
+      });
+    }
 
     return MaterialApp(
       onGenerateTitle: (context) => AppLocalizations.of(context)!.appTitle,

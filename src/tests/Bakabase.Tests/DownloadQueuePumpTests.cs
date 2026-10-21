@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.Telemetry;
 using Bakabase.InsideWorld.Business.Components.Downloader.Components;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -77,6 +78,24 @@ public class DownloadQueuePumpTests
         await WaitFor(() => pump.Passes == 1, "The requested pass never ran.");
         await Task.Delay(100);
         Assert.AreEqual(1, pump.Passes, "A single request must not keep the loop spinning.");
+    }
+
+    [TestMethod]
+    public async Task AutomaticPassClearsTheRequestersAmbientActorWithoutChangingTheCaller()
+    {
+        var observed = new TaskCompletionSource<(bool HasScope, TelemetryActor? Actor)>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var actor = new TelemetryActor(Guid.NewGuid().ToString("D"), Surface: "browser");
+        var pump = new TestPump(_ =>
+        {
+            observed.SetResult((TelemetryExecutionContext.HasScope, TelemetryExecutionContext.CurrentActor));
+            return Task.CompletedTask;
+        });
+        using var caller = TelemetryExecutionContext.Begin(actor);
+        pump.Request();
+        var captured = await observed.Task.WaitAsync(Timeout);
+        Assert.IsTrue(captured.HasScope, "An explicit system scope also overrides inherited HTTP context");
+        Assert.IsNull(captured.Actor);
+        Assert.AreEqual(actor, TelemetryExecutionContext.CurrentActor);
     }
 
     [TestMethod]

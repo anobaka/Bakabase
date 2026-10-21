@@ -48,6 +48,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Bakabase.Service.Components.RemoteAccess;
+using Bakabase.Service.Services.Telemetry;
 
 namespace Bakabase.Service.Controllers
 {
@@ -154,6 +155,9 @@ namespace Bakabase.Service.Controllers
                 }
 
             });
+
+            if (model.EnableAnonymousDataTracking == false)
+                HttpContext?.RequestServices.GetService<ProductTelemetry>()?.DiscardPending();
 
             if (newUiTheme.HasValue)
             {

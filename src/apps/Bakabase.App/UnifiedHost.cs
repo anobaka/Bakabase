@@ -6,6 +6,7 @@ using Bakabase.Remoting.Components.Console;
 using Bakabase.Service.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Bakabase.Abstractions.Components.Telemetry;
 
 namespace Bakabase.App;
 
@@ -33,6 +34,7 @@ internal sealed class UnifiedHost(IGuiAdapter guiAdapter, ISystemService systemS
         {
             services.AddRemoteConsole();
             services.AddSingleton<IDesktopProfileService, DesktopProfileService>();
+            services.AddSingleton<IDesktopAnalyticsContextProvider, DesktopAnalyticsContextProvider>();
         });
 
     /// <summary>

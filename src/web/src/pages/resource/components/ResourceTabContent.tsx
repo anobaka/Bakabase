@@ -28,6 +28,7 @@ import {
 } from "./Resources/resourceMoveSelection";
 
 import BApi from "@/sdk/BApi";
+import { trackAnalyticsEvent } from "@/services/Analytics";
 import {
   type ResourceSelectionKey,
   resourceSelectionKey,
@@ -88,6 +89,11 @@ type Props = {
 export type ResourceTabContentRef = {
   getCurrentSearch: () => SearchForm | undefined;
 };
+
+const hasActiveFilters = (group: SearchForm["group"]): boolean =>
+  !!group &&
+  !group.disabled &&
+  (!!group.filters?.some((filter) => !filter.disabled) || !!group.groups?.some(hasActiveFilters));
 
 const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props, ref) => {
   const { t } = useTranslation();
@@ -203,6 +209,7 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
         "replace",
         false,
         true,
+        "manual",
       );
     }
   }, []);
@@ -261,7 +268,7 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
         resourceOptionsInitializedRef.current = true;
         initializedSourcesRef.current = sourcesSignature;
         setSearchForm(sf.search);
-        search(sf.search, "replace");
+        search(sf.search, "replace", false, true, "restored");
       });
     }
 
@@ -575,6 +582,7 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
       renderMode: "append" | "replace" | "prepend",
       replaceSearchCriteria: boolean = false,
       save: boolean = true,
+      analyticsKind: "manual" | "restored" | "refresh" = "refresh",
     ) => {
       console.trace();
 
@@ -609,11 +617,24 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
 
       // Use the progressive search hook for two-phase loading
       // Pageable will be automatically updated via the searchResponse effect
+      const startedAt = performance.now();
       try {
         return await progressiveSearch(newForm, {
           saveSearch: save,
           searchId: props.searchId,
           mode: renderMode,
+          onResult: (totalCount, outcome) => {
+            if (attempt !== searchAttemptRef.current) return;
+            trackAnalyticsEvent("resource_query_presented", {
+              search_kind: analyticsKind,
+              load_mode: renderMode,
+              has_keyword: !!newForm.keyword?.trim(),
+              has_filters: hasActiveFilters(newForm.group),
+              result_count: totalCount,
+              duration_ms: performance.now() - startedAt,
+              outcome,
+            });
+          },
         });
       } finally {
         // Always reset searching flag after search completes

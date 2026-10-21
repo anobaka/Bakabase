@@ -11,9 +11,18 @@ public record AnalyticsAppInfoViewModel
     /// <summary>Mirror of <c>AppOptions.EnableAnonymousDataTracking</c>; gates all SDK init.</summary>
     public bool EnableAnonymousDataTracking { get; init; }
 
-    /// <summary>UUID v4, persisted in AppData. Shared as Clarity identify / Sentry user.id /
-    /// GA4 client_id so the three views can be cross-referenced.</summary>
+    /// <summary>Legacy compatibility alias for DeploymentId. Persisted in effective AppData;
+    /// never use it as the v2 client identity.</summary>
     public string DeviceId { get; init; } = string.Empty;
+
+    public string DeploymentId { get; init; } = string.Empty;
+    public string DeploymentType { get; init; } = string.Empty;
+    public string ServerOs { get; init; } = string.Empty;
+    public string ServerArch { get; init; } = string.Empty;
+    public string Environment { get; init; } = string.Empty;
+    public int SchemaVersion { get; init; } = 2;
+    public int IdentityVersion { get; init; } = 2;
+    public bool EnableSessionReplay { get; init; }
 
     /// <summary>The running app version. Surfaced here (rather than only on the telemetry
     /// snapshot) because Sentry needs <c>release</c> at init time, before the first error

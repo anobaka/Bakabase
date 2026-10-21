@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.Telemetry;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants;
 using Bakabase.InsideWorld.Business.Components.Downloader.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -63,6 +64,9 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
                 {
                     try
                     {
+                        // A completion callback may carry the previous manual task's actor. The
+                        // automatic queue pass is system work, including every downloader it starts.
+                        using var telemetryScope = TelemetryExecutionContext.Begin(null);
                         await RunPassAsync();
                     }
                     catch (Exception e)

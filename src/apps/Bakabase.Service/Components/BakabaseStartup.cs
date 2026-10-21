@@ -51,6 +51,10 @@ using Bakabase.Service.Components.Federation;
 using Bakabase.Service.Components.Tasks;
 using Bakabase.Service.Extensions;
 using Bakabase.Service.Services;
+using Bakabase.Service.Services.Telemetry;
+using Bakabase.Abstractions.Components.Telemetry;
+using Bakabase.Infrastructures.Components.Configurations.App;
+using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.DependencyInjection;
 using Bootstrap.Components.Orm.Extensions;
 using Bootstrap.Components.Storage.OneDrive;
@@ -71,6 +75,8 @@ namespace Bakabase.Service.Components
 {
     public class BakabaseStartup : AppStartup<BakabaseSwaggerCustomModelDocumentFilter>
     {
+        private Func<bool> _analyticsAllowed = () => false;
+
         public BakabaseStartup(IConfiguration configuration, IWebHostEnvironment env) : base(configuration, env)
         {
         }
@@ -262,6 +268,15 @@ namespace Bakabase.Service.Components
             services.AddSingleton<IDeviceIdService, DeviceIdService>();
             // Scoped because TelemetrySnapshotService consumes the scoped BakabaseDbContext.
             services.AddScoped<ITelemetrySnapshotService, TelemetrySnapshotService>();
+            services.AddHttpContextAccessor();
+            services.AddSingleton<TelemetryEnvironment>();
+            services.AddSingleton<ITelemetryActorAccessor, TelemetryActorAccessor>();
+            services.AddHttpClient(ProductTelemetry.HttpClientName, client => client.Timeout = TimeSpan.FromSeconds(5))
+                .RemoveAllLoggers();
+            services.AddSingleton<ProductTelemetry>();
+            services.AddSingleton<IProductTelemetry>(sp => sp.GetRequiredService<ProductTelemetry>());
+            services.AddHostedService(sp => sp.GetRequiredService<ProductTelemetry>());
+            services.AddHostedService<RuntimeTelemetry>();
 
             // Sentry backend SDK. Initialised programmatically (rather than via the more
             // common WebHostBuilder.UseSentry() pattern) because our IHostBuilder is built
@@ -278,6 +293,11 @@ namespace Bakabase.Service.Components
                     o.Dsn = backendSentryDsn;
                     o.Release = AppService.CoreVersion.ToString();
                     o.Environment = Env.EnvironmentName;
+                    o.SendDefaultPii = false;
+                    o.AutoSessionTracking = false;
+                    o.SendClientReports = false;
+                    o.CreateHttpMessageHandler = () => new ConsentHttpMessageHandler(
+                        () => _analyticsAllowed(), new System.Net.Http.HttpClientHandler());
                     // Performance tracing off — we want errors only, to stay within free tier.
                     o.TracesSampleRate = 0;
                     // We already log every failed third-party HTTP request via
@@ -289,7 +309,7 @@ namespace Bakabase.Service.Components
                     // Breadcrumbs (every HttpClient request, and Information-level logs) must not carry
                     // signed URLs: Bilibili CDN links hold upsig/deadline/oi/mid in their query, other
                     // services put tokens there. Keep scheme, host and path only.
-                    o.SetBeforeBreadcrumb(SentryBreadcrumbScrubber.Scrub);
+                    o.SetBeforeBreadcrumb(breadcrumb => _analyticsAllowed() ? SentryBreadcrumbScrubber.Scrub(breadcrumb) : null);
                     // Tracing is off; never attach sentry-trace/baggage headers to third-party requests.
                     o.TracePropagationTargets = [];
                     // Drop a couple of known-benign exceptions before they hit
@@ -302,6 +322,7 @@ namespace Bakabase.Service.Components
                     //     request itself still completes).
                     o.SetBeforeSend(@event =>
                     {
+                        if (!_analyticsAllowed()) return null;
                         var ex = @event.Exception;
                         while (ex != null)
                         {
@@ -393,6 +414,10 @@ namespace Bakabase.Service.Components
 
         public override void Configure(IApplicationBuilder app, IHostApplicationLifetime lifetime)
         {
+            var analyticsOptions = app.ApplicationServices.GetRequiredService<IBOptions<AppOptions>>();
+            var deploymentIds = app.ApplicationServices.GetRequiredService<IDeviceIdService>();
+            _analyticsAllowed = () => analyticsOptions.Value.EnableAnonymousDataTracking && TelemetryEnvironment.CanSend(Env.EnvironmentName) &&
+                TelemetryHttpContext.Uuid(deploymentIds.GetOrCreate()) != null;
             app.Use(async (context, next) =>
             {
                 if (SetupChildConnection.Current is { Role: "business" } child && await child.TryProxyAsync(context)) return;
@@ -407,12 +432,11 @@ namespace Bakabase.Service.Components
                 appService.AppDataDirectory,
                 appService.DataPathSource);
 
-            // Attach the anonymous device id to the Sentry global scope. SentryHub treats
-            // user.id specially for "Crash-free Users" calculations.
-            if (SentrySdk.IsEnabled)
+            // Diagnostics are grouped by anonymous deployment, never interpreted as human users.
+            if (SentrySdk.IsEnabled && _analyticsAllowed())
             {
-                var deviceId = app.ApplicationServices.GetRequiredService<IDeviceIdService>().GetOrCreate();
-                SentrySdk.ConfigureScope(scope => scope.User = new SentryUser { Id = deviceId });
+                var deviceId = deploymentIds.GetOrCreate();
+                SentrySdk.ConfigureScope(scope => scope.User = new SentryUser { Id = "v2:deployment:" + deviceId });
             }
 
             // The remote-access gate goes first so nothing downstream — MiniProfiler,

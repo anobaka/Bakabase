@@ -2,6 +2,7 @@ import { managedServerApi } from "./serverApi";
 import { FederationError } from "./transport";
 
 import { ClientApiError, clientApi, LOCAL_SWITCHER_TARGET } from "@/core/clientApi";
+import { trackAnalyticsEvent } from "@/services/Analytics";
 
 /** Where "Manage devices…" lands, on the device the window belongs to. */
 export const DEVICES_ROUTE = "/federation/devices";
@@ -81,9 +82,14 @@ export const navigateTo = (url: string) => {
  * its routes (see {@link withRoute}).
  */
 export async function openManagedServer(serverId: string, route?: string) {
-  const { url } = await managedServerApi.open(serverId);
-
-  navigateTo(withRoute(url, route));
+  trackAnalyticsEvent("server_switch_started", { target_kind: "managed" });
+  try {
+    const { url } = await managedServerApi.open(serverId);
+    navigateTo(withRoute(url, route));
+  } catch (error) {
+    trackAnalyticsEvent("server_switch_result", { target_kind: "managed", outcome: "failed" });
+    throw error;
+  }
 }
 
 /**
@@ -102,10 +108,13 @@ const asFederationError = (cause: unknown) =>
  */
 export async function openConsoleTarget(id: string, route?: string) {
   let url: string;
+  const target_kind = id === LOCAL_SWITCHER_TARGET ? "local" : "managed";
+  trackAnalyticsEvent("server_switch_started", { target_kind });
 
   try {
     ({ url } = await clientApi.switcher.open(id));
   } catch (cause) {
+    trackAnalyticsEvent("server_switch_result", { target_kind, outcome: "failed" });
     throw asFederationError(cause);
   }
 

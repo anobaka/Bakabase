@@ -174,6 +174,7 @@ public class SubscriptionService<TDbContext> : ISubscriptionService
 
         if (entity is null) return null;
 
+        using var telemetry = new SubscriptionCheckTelemetry(_serviceProvider, ct);
         if (!_providers.TryGet(entity.Kind, out var provider))
         {
             var msg = $"Unknown subscription kind: {entity.Kind}";
@@ -183,6 +184,7 @@ public class SubscriptionService<TDbContext> : ISubscriptionService
 
             return new SubscriptionCheckSummary {Error = msg};
         }
+        telemetry.SourceKind = provider.SourceKind;
 
         var collectionId = entity.CollectionId ?? await CreateCollectionFor(entity.DisplayName, ct);
 
@@ -199,6 +201,7 @@ public class SubscriptionService<TDbContext> : ISubscriptionService
         try
         {
             items = await provider.FetchAllItemsAsync(entity.ToDomainModel(), ct);
+            telemetry.ItemCount = items.Count;
         }
         catch (OperationCanceledException)
         {
@@ -233,6 +236,7 @@ public class SubscriptionService<TDbContext> : ISubscriptionService
                 // one unreadable entry should still bring in the other hundred and ninety-nine.
                 _logger.LogWarning(ex, "[Subscription] Could not make a resource of {SourceKey} from {Kind}",
                     item.SourceKey, entity.Kind);
+                telemetry.Failed++;
                 continue;
             }
 
@@ -242,6 +246,9 @@ public class SubscriptionService<TDbContext> : ISubscriptionService
 
             await _collections.AddMembers(collectionId, [resourceId],
                 CollectionMembershipOrigin.Subscription, entity.Id, ct);
+            telemetry.Succeeded++;
+            if (knownResourceIds.Contains(resourceId)) telemetry.Existing++;
+            else telemetry.Added++;
         }
 
         // Still listed: seen again just now. The mapping's LastSeenAt is what tells a member that
@@ -253,6 +260,7 @@ public class SubscriptionService<TDbContext> : ISubscriptionService
         if (added.Count > 0) entity.LastChangeAt = DateTime.Now;
 
         await _db.SaveChangesAsync(ct);
+        telemetry.Complete();
 
         // The first check is the collection's seed, so it is recorded like any other — but it is
         // not news. Announcing two hundred works as "new" would be true and useless.

@@ -10,6 +10,7 @@ import { asideMenuConfig } from "@/layouts/BasicLayout/components/PageNav/compon
 import BApi from "@/sdk/BApi";
 import { ClientMode } from "@/sdk/constants";
 import i18n from "@/i18n";
+import { initAnalytics, trackAnalyticsEvent } from "@/services/Analytics";
 
 export const DEVICE_SWITCH_TIMEOUT_MS = 10_000;
 
@@ -59,6 +60,16 @@ function ResolveDestination({ requestedPath }: { requestedPath: string }) {
           throw new Error("Could not read the destination navigation context");
 
         const isPureClient = data.clientMode === ClientMode.PureClient;
+        void initAnalytics({
+          enabled: app.data.enableAnonymousDataTracking,
+          contextKey: data.serverId ?? undefined,
+          clientMode: data.clientMode,
+        }).then(() => {
+          trackAnalyticsEvent("server_switch_result", {
+            target_kind: isPureClient ? "managed" : "local",
+            outcome: "success",
+          });
+        });
         // The normal provider applies this language after startup. Resolve directory
         // names with that same language without mounting it or changing global state.
         const translate = i18n.getFixedT(app.data!.language);

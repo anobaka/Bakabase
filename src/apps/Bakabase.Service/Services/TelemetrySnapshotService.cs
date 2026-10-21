@@ -20,9 +20,8 @@ namespace Bakabase.Service.Services;
 
 /// <summary>
 /// Computes the per-install state payload for analytics. Designed to be safe to call on
-/// every app launch — counts and option reads only, no file-system scanning. The payload
-/// is hash-stable so the frontend can detect "nothing changed since last upload" and skip
-/// the GA4 round-trip (see design §6.5).
+/// a bounded interval — counts and option reads only, no file-system scanning.
+/// RuntimeTelemetry owns PostHog snapshots; frontend reads remain for GA4 compatibility.
 /// </summary>
 public interface ITelemetrySnapshotService
 {
@@ -44,8 +43,9 @@ public class TelemetrySnapshotService(
         var os = DetectOs();
         var locale = appOptions.Value.Language ?? string.Empty;
 
-        var mediaLibraryCount = 0;
-        var resourceCount = 0;
+        int? mediaLibraryCount = null;
+        int? resourceCount = null;
+        var complete = true;
         try
         {
             mediaLibraryCount = await dbContext.MediaLibrariesV2.CountAsync();
@@ -53,6 +53,7 @@ public class TelemetrySnapshotService(
         }
         catch (Exception e)
         {
+            complete = false;
             // Telemetry is a best-effort dashboard signal — a disk I/O hiccup
             // or partial migration shouldn't fire a Sentry event. Drop to
             // Warning so it stays in local logs but isn't escalated.
@@ -60,7 +61,7 @@ public class TelemetrySnapshotService(
         }
 
         // Sorted ordinally so the snapshot hash is stable across profile-ordering changes.
-        var enabledEnhancers = new SortedSet<string>(StringComparer.Ordinal);
+        SortedSet<string>? enabledEnhancers = new(StringComparer.Ordinal);
         try
         {
             var profiles = await resourceProfileService.GetAll();
@@ -78,6 +79,8 @@ public class TelemetrySnapshotService(
         }
         catch (Exception e)
         {
+            enabledEnhancers = null;
+            complete = false;
             logger.LogWarning(e, "Telemetry: failed to enumerate enabled enhancers");
         }
 
@@ -91,9 +94,10 @@ public class TelemetrySnapshotService(
             Locale = locale,
             MediaLibraryCount = mediaLibraryCount,
             ResourceCount = resourceCount,
-            EnabledEnhancers = enabledEnhancers.ToList(),
+            EnabledEnhancers = enabledEnhancers?.ToList(),
             AiEnabled = aiEnabled,
-            HasMediaLibrary = mediaLibraryCount > 0,
+            HasMediaLibrary = mediaLibraryCount.HasValue ? mediaLibraryCount > 0 : null,
+            SnapshotStatus = complete ? "ok" : "partial",
         };
     }
 

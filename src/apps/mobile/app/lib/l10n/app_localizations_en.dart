@@ -12,6 +12,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appTitle => 'Bakabase';
 
   @override
+  String get moreActions => 'More';
+
+  @override
+  String get usageDataTitle => 'Anonymous usage data';
+
+  @override
+  String get usageDataDescription =>
+      'Help improve Bakabase by sharing feature usage, app versions and device types. This does not include server addresses, search text, resource titles, file paths or pairing credentials. Data is sent only when both this switch and the connected server allow it. Turning this off also discards unsent usage data.';
+
+  @override
   String get connectTitle => 'Connect to Bakabase';
 
   @override

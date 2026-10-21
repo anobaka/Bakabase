@@ -1,5 +1,6 @@
 using Bakabase.Abstractions.Components.Gui;
 using Bakabase.Modules.RemoteAccess.Abstractions.Models;
+using Bakabase.Abstractions.Components.Telemetry;
 
 namespace Bakabase.Remoting.Components.Console;
 
@@ -35,4 +36,7 @@ public interface IRemoteConsoleNavigator
 
 /// <summary>Which managed server one relay is for, in that relay's own container.</summary>
 /// <param name="AppVersion">This app's version, which the relay reports as its own.</param>
-public sealed record ConsoleRelayContext(string ServerId, string AppVersion, IRemoteConsoleNavigator Navigator);
+public sealed record ConsoleRelayContext(string ServerId, string AppVersion, IRemoteConsoleNavigator Navigator)
+{
+    public Func<DesktopAnalyticsContext>? AnalyticsContext { get; init; }
+}

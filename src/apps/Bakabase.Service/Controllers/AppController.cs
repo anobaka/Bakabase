@@ -11,6 +11,8 @@ using Bakabase.Service.Components;
 using Bakabase.Service.Components.ServerData;
 using Bakabase.Service.Models.View;
 using Bakabase.Service.Services;
+using Bakabase.Service.Services.Telemetry;
+using Bakabase.Service.Components.RemoteAccess;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Models.ResponseModels;
@@ -19,6 +21,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.DependencyInjection;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace Bakabase.Service.Controllers
@@ -87,13 +90,23 @@ namespace Bakabase.Service.Controllers
         /// </summary>
         [HttpGet("analytics-info")]
         [SwaggerOperation(OperationId = "GetAnalyticsAppInfo")]
+        [RemoteAccessible]
         public SingletonResponse<AnalyticsAppInfoViewModel> AnalyticsInfo()
         {
             var cfg = _analyticsConfig.Value;
+            var environment = HttpContext.RequestServices.GetRequiredService<TelemetryEnvironment>();
+            var allowed = _appOptions.Value.EnableAnonymousDataTracking && TelemetryEnvironment.CanSend(environment.Environment);
+            var deploymentId = allowed ? TelemetryHttpContext.Uuid(_deviceIdService.GetOrCreate()) : null;
             var vm = new AnalyticsAppInfoViewModel
             {
-                EnableAnonymousDataTracking = _appOptions.Value.EnableAnonymousDataTracking,
-                DeviceId = _deviceIdService.GetOrCreate(),
+                EnableAnonymousDataTracking = allowed && deploymentId != null,
+                DeviceId = deploymentId ?? string.Empty,
+                DeploymentId = deploymentId ?? string.Empty,
+                DeploymentType = environment.DeploymentType,
+                ServerOs = environment.ServerOs,
+                ServerArch = environment.ServerArch,
+                Environment = environment.Environment,
+                EnableSessionReplay = cfg.Clarity.EnableSessionReplay,
                 AppVersion = AppService.CoreVersion.ToString(),
                 ReleaseChannel = ReleaseChannelDetector.Detect(_env),
                 ClarityProjectId = string.IsNullOrWhiteSpace(cfg.Clarity.ProjectId) ? null : cfg.Clarity.ProjectId,
@@ -106,9 +119,8 @@ namespace Bakabase.Service.Controllers
         }
 
         /// <summary>
-        /// Per-install state used to populate GA4 user properties + event metrics. Counts
-        /// only — never paths, names, or PII. Frontend hashes the response and uploads only
-        /// when changed (see design §6.5).
+        /// Per-deployment counts for GA4 compatibility and local diagnostics.
+        /// PostHog snapshots are sent by the host, independently of frontend requests.
         /// </summary>
         [HttpGet("telemetry-snapshot")]
         [SwaggerOperation(OperationId = "GetAppTelemetrySnapshot")]

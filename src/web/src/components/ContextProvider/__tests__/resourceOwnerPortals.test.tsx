@@ -11,7 +11,11 @@ import {
 import type { ManagementSource } from "@/features/management/api";
 
 vi.mock("@/components/SignalR/UIHubConnection", () => ({ UIHubConnection: () => null }));
-vi.mock("@/services/Analytics", () => ({ initAnalytics: vi.fn() }));
+vi.mock("@/services/Analytics", () => ({
+  initAnalytics: vi.fn(),
+  trackAnalyticsEvent: vi.fn(),
+  stopAnalytics: vi.fn(),
+}));
 vi.mock("@/components/Window", () => ({ default: () => null }));
 vi.mock("@/components/Error", () => ({
   ErrorBoundary: ({ children }: { children: ReactNode }) => children,

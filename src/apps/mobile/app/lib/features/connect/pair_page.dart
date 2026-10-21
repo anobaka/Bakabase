@@ -26,8 +26,9 @@ class PairPage extends ConsumerStatefulWidget {
 class _PairPageState extends ConsumerState<PairPage> {
   late final PairingService _pairing = PairingService(widget.target.baseUrl);
   final TextEditingController _code = TextEditingController();
-  late final TextEditingController _deviceName =
-      TextEditingController(text: _defaultDeviceName());
+  late final TextEditingController _deviceName = TextEditingController(
+    text: _defaultDeviceName(),
+  );
 
   Timer? _polling;
   bool _busy = false;
@@ -52,18 +53,21 @@ class _PairPageState extends ConsumerState<PairPage> {
     super.dispose();
   }
 
-  String _describe(AppLocalizations l10n, PairingOutcome outcome) => switch (outcome) {
-        PairingOutcome.codeRejected => l10n.pairCodeRejected,
-        PairingOutcome.requestRejected => l10n.pairRequestRejected,
-        PairingOutcome.tooManyAttempts => l10n.pairTooManyAttempts,
-        PairingOutcome.unreachable => l10n.pairUnreachable,
-        PairingOutcome.unsupported => l10n.pairUnsupported,
-        // Neither is an error worth wording: paired is success, and awaiting approval
-        // has its own line on the page.
-        PairingOutcome.paired || PairingOutcome.awaitingApproval => '',
-      };
+  String _describe(
+    AppLocalizations l10n,
+    PairingOutcome outcome,
+  ) => switch (outcome) {
+    PairingOutcome.codeRejected => l10n.pairCodeRejected,
+    PairingOutcome.requestRejected => l10n.pairRequestRejected,
+    PairingOutcome.tooManyAttempts => l10n.pairTooManyAttempts,
+    PairingOutcome.unreachable => l10n.pairUnreachable,
+    PairingOutcome.unsupported => l10n.pairUnsupported,
+    // Neither is an error worth wording: paired is success, and awaiting approval
+    // has its own line on the page.
+    PairingOutcome.paired || PairingOutcome.awaitingApproval => '',
+  };
 
-  Future<void> _finish(PairingResult result) async {
+  Future<void> _finish(PairingResult result, String method) async {
     final credentials = result.credentials;
 
     if (credentials == null) {
@@ -76,11 +80,14 @@ class _PairPageState extends ConsumerState<PairPage> {
     // connection state says NeedsPairing. Storing the credentials moves that state to
     // Connected, and the app swaps this page for the library on its own. Popping as
     // well would be popping a route nothing pushed.
-    await ref.read(connectionProvider.notifier).completePairing(
+    await ref
+        .read(connectionProvider.notifier)
+        .completePairing(
           widget.target.baseUrl,
           widget.target.server,
           widget.target.clockOffset,
           credentials,
+          method: method,
         );
   }
 
@@ -90,16 +97,21 @@ class _PairPageState extends ConsumerState<PairPage> {
       _error = null;
     });
 
-    final result = await _pairing.pairWithCode(_code.text, _deviceName.text.trim());
+    final result = await _pairing.pairWithCode(
+      _code.text,
+      _deviceName.text.trim(),
+    );
 
     if (!mounted) {
       return;
     }
 
     if (result.outcome == PairingOutcome.paired) {
-      await _finish(result);
+      await _finish(result, 'code');
       return;
     }
+
+    _recordFailure(result.outcome, 'code');
 
     setState(() {
       _busy = false;
@@ -119,7 +131,9 @@ class _PairPageState extends ConsumerState<PairPage> {
       return;
     }
 
-    if (result.outcome != PairingOutcome.awaitingApproval || result.requestId == null) {
+    if (result.outcome != PairingOutcome.awaitingApproval ||
+        result.requestId == null) {
+      _recordFailure(result.outcome, 'approval');
       setState(() {
         _busy = false;
         _error = _describe(AppLocalizations.of(context)!, result.outcome);
@@ -143,14 +157,28 @@ class _PairPageState extends ConsumerState<PairPage> {
       }
 
       if (claim.outcome == PairingOutcome.paired) {
-        await _finish(claim);
+        await _finish(claim, 'approval');
       } else if (claim.outcome != PairingOutcome.awaitingApproval) {
+        _recordFailure(claim.outcome, 'approval');
         _polling?.cancel();
         setState(() {
           _waitingForApproval = false;
           _error = _describe(AppLocalizations.of(context)!, claim.outcome);
         });
       }
+    });
+  }
+
+  void _recordFailure(PairingOutcome outcome, String method) {
+    widget.target.resumeTo?.api.analytics?.capture('pairing_result', {
+      'method': method,
+      'outcome': switch (outcome) {
+        PairingOutcome.unreachable => 'unreachable',
+        PairingOutcome.unsupported => 'unsupported',
+        PairingOutcome.codeRejected ||
+        PairingOutcome.requestRejected => 'rejected',
+        _ => 'failed',
+      },
     });
   }
 
@@ -174,15 +202,25 @@ class _PairPageState extends ConsumerState<PairPage> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Text(widget.target.server.name, style: Theme.of(context).textTheme.titleMedium),
+          Text(
+            widget.target.server.name,
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
           const SizedBox(height: 4),
-          Text(widget.target.baseUrl, style: Theme.of(context).textTheme.bodySmall),
+          Text(
+            widget.target.baseUrl,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
           const SizedBox(height: 16),
           // Two different situations reach this page and they need different words:
           // one has been refused and has to pair, the other is already being served
           // and is choosing to. Telling the second one the server "only serves devices
           // it knows" is simply false.
-          Text(widget.target.resumeTo == null ? l10n.pairIntro : l10n.pairVoluntaryIntro),
+          Text(
+            widget.target.resumeTo == null
+                ? l10n.pairIntro
+                : l10n.pairVoluntaryIntro,
+          ),
           const SizedBox(height: 24),
           TextField(
             controller: _deviceName,

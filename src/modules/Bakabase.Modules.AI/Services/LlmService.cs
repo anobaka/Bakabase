@@ -1,3 +1,4 @@
+using Bakabase.Abstractions.Components.Telemetry;
 using Bakabase.Modules.AI.Components.Cache;
 using Bakabase.Modules.AI.Components.Observation;
 using Bakabase.Modules.AI.Models.Domain;
@@ -17,7 +18,9 @@ public class LlmService(
     IAiFeatureService featureService,
     IOptionsMonitor<AiModuleOptions> aiOptions,
     LlmCacheRequestCoordinator cacheRequestCoordinator,
-    ILogger<LlmService> logger
+    ILogger<LlmService> logger,
+    IProductTelemetry? telemetry = null,
+    ITelemetryActorAccessor? telemetryActor = null
 ) : ILlmService
 {
     public async Task<ChatResponse> CompleteAsync(
@@ -40,7 +43,7 @@ public class LlmService(
         var usesLocalQwenTemplate = feature == AiFeature.PostParser && PostParserLlmPolicy.UsesLocalQwenTemplate(config, modelId, rawClient);
         if (feature == AiFeature.PostParser)
             rawClient = PostParserLlmPolicy.ConfigureTransport(rawClient, config, modelId);
-        var client = BuildPipeline(rawClient, providerConfigId, modelId, feature);
+        var client = BuildPipeline(rawClient, providerConfigId, modelId, feature, config.Kind);
 
         var chatOptions = new ChatOptions();
         if (parameters != null)
@@ -144,6 +147,8 @@ public class LlmService(
         if (feature == AiFeature.PostParser)
             rawClient = PostParserLlmPolicy.ConfigureTransport(rawClient, config, modelId);
         // For streaming, skip cache but keep observation
+        if (telemetry != null)
+            rawClient = new ProductTelemetryChatClient(rawClient, telemetry, telemetryActor, config.Kind, feature);
         IChatClient client = new ObservationChatClient(rawClient, usageService, providerConfigId.Value, modelId,
             feature.ToString(), aiOptions.CurrentValue.AuditLogRequestContent);
 
@@ -163,10 +168,14 @@ public class LlmService(
         }
     }
 
-    private IChatClient BuildPipeline(IChatClient rawClient, int providerConfigId, string modelId, AiFeature? feature)
+    private IChatClient BuildPipeline(IChatClient rawClient, int providerConfigId, string modelId, AiFeature? feature,
+        AiProviderKind providerKind)
     {
         var opts = aiOptions.CurrentValue;
         IChatClient client = rawClient;
+
+        if (telemetry != null)
+            client = new ProductTelemetryChatClient(client, telemetry, telemetryActor, providerKind, feature);
 
         // Observe actual provider calls; the outer cache bypasses inference on a hit.
         client = new ObservationChatClient(client, usageService, providerConfigId, modelId, feature?.ToString(),

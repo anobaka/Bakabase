@@ -10,6 +10,7 @@ import { Spinner } from "@/components/bakaui";
 import TextReader from "@/components/TextReader";
 import envConfig from "@/config/env";
 import { DesktopPlaybackGuideButton } from "@/components/Resource/components/PlayControl/DesktopPlaybackGuide";
+import { trackAnalyticsEvent } from "@/services/Analytics";
 
 export interface MediaRendererRef {
   getImageRef: () => HTMLImageElement | null;
@@ -61,6 +62,8 @@ const MediaRenderer = forwardRef<MediaRendererRef, MediaRendererProps>((props, r
   const { t } = useTranslation();
   const image = useRef<HTMLImageElement>(null);
   const media = useRef<HTMLVideoElement | HTMLAudioElement>(null);
+  const analyticsStarted = useRef(false);
+  const analyticsRead = useRef(false);
   const [status, setStatus] = useState<"loading" | "ready" | "buffering" | "error">("loading");
   const [errorKey, setErrorKey] = useState("mediaPlayer.media.failed");
   const [attempt, setAttempt] = useState(0);
@@ -80,6 +83,7 @@ const MediaRenderer = forwardRef<MediaRendererRef, MediaRendererProps>((props, r
   }));
 
   useEffect(() => {
+    analyticsStarted.current = false;
     setStatus("loading");
     setAlternativeFailed(false);
     setMediaMetadataReceived(false);
@@ -132,6 +136,12 @@ const MediaRenderer = forwardRef<MediaRendererRef, MediaRendererProps>((props, r
   }, [playing, isMedia, status, path]);
 
   const ready = () => {
+    if (!analyticsRead.current && (mediaType === MediaType.Image || mediaType === MediaType.Text)) {
+      analyticsRead.current = true;
+      trackAnalyticsEvent("reader_opened", {
+        media_kind: mediaType === MediaType.Image ? "image" : "text",
+      });
+    }
     setStatus("ready");
     if (isMedia) setMediaMetadataReceived(true);
     onLoad();
@@ -166,6 +176,13 @@ const MediaRenderer = forwardRef<MediaRendererRef, MediaRendererProps>((props, r
       if (!media.current?.paused || media.current.readyState < 1) setStatus("buffering");
     },
     onPlaying: () => {
+      if (!analyticsStarted.current) {
+        analyticsStarted.current = true;
+        trackAnalyticsEvent("playback_started", {
+          playback_mode: "browser",
+          media_kind: mediaType === MediaType.Audio ? "audio" : "video",
+        });
+      }
       setStatus("ready");
       onVideoStart?.();
     },

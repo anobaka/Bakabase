@@ -1,0 +1,1280 @@
+{
+  "schema_version": 2,
+  "identity_version": 2,
+  "definition_status": "proposed",
+  "owner_tag": "bakabase-analytics-v2",
+  "notes": [
+    "These definitions are repository-owned proposals, not approved catalog metrics. Every query is restricted to production schema_version=2.",
+    "No production v2 events existed during creation on 2026-10-21. Empty charts are expected until rollout and consent.",
+    "Anonymous clients are not people: shared clients merge people; multiple clients, browser storage resets and reinstalls split people. No identity aliasing across v1/v2.",
+    "Native retention and funnels use PostHog's deterministic personless actor for the stable v2:client UUID. This equals client grain only while v2 IDs are never identified/aliased/merged. No person property or group filters.",
+    "Trends/retention/funnels use insight date ranges; custom SQL explicitly fixes 7/30 day windows as named. Dashboard date overrides do not rewrite custom SQL.",
+    "Missing telemetry is not proof of downtime. Heartbeats, opt-outs, offline delivery loss, and disabled development environments limit coverage.",
+    "Standard counts are observations/attempts, not installs or unique jobs. Native funnels are ordered within 30 minutes per anonymous client, not tied to one resource or operation.",
+    "Backend search completion counts API requests including automatic loading/pagination; UI manual search across web/mobile filters search_kind=manual and load_mode=replace, excluding restore/refresh/append.",
+    "Task attempts may include retries and partial/waiting states; rates only concern collected attempts, excluding scheduled housekeeping. Provider request counts exclude cache hits.",
+    "Never add unsanitized URLs, titles, resource IDs, prompts, keys, or identity properties to these charts."
+  ],
+  "documentation_sources": [
+    "https://posthog.com/docs/product-analytics/funnels",
+    "https://posthog.com/docs/product-analytics/retention",
+    "https://github.com/PostHog/posthog/blob/master/docs/published/handbook/engineering/person-processing.md#personless-mode-anonymous-events"
+  ],
+  "dashboards": [
+    {
+      "key": "runtime",
+      "name": "Bakabase v2 · 运行健康",
+      "description": "观察启动、监听就绪与运行部署；心跳不等于精确 uptime，unclean_or_unknown 不等于崩溃。 仅 schema_version=2、production；等待 v2 上线后有数据。定义为提案；UV 是匿名客户端，不是真人数。",
+      "insights": [
+        {
+          "key": "active_deployments",
+          "name": "每日有心跳的部署",
+          "description": "30 天内每天 uniq(deployment_id)。包括无人操作的后台部署；不是 DAU，也不推算精确在线时长。",
+          "query": {
+            "kind": "InsightVizNode",
+            "source": {
+              "kind": "TrendsQuery",
+              "dateRange": {
+                "date_from": "-30d"
+              },
+              "interval": "day",
+              "properties": [
+                {
+                  "key": "schema_version",
+                  "value": 2,
+                  "operator": "exact",
+                  "type": "event"
+                },
+                {
+                  "key": "environment",
+                  "value": "production",
+                  "operator": "exact",
+                  "type": "event"
+                }
+              ],
+              "series": [
+                {
+                  "kind": "EventsNode",
+                  "event": "runtime_heartbeat",
+                  "name": "runtime_heartbeat",
+                  "custom_name": "有心跳的部署",
+                  "math": "hogql",
+                  "math_hogql": "uniq(properties.deployment_id)"
+                }
+              ],
+              "trendsFilter": {
+                "display": "ActionsLineGraph",
+                "showLegend": true
+              }
+            }
+          },
+          "layout": {
+            "x": 0,
+            "y": 0,
+            "w": 6,
+            "h": 5
+          }
+        },
+        {
+          "key": "startup",
+          "name": "启动与监听就绪",
+          "description": "30 天 runtime_started / runtime_ready 次数；ready 仅 HTTP listening，不代表全部后台加载完成。早期崩溃和未送达会漏报，不能以两条线相除作为精确启动成功率。",
+          "query": {
+            "kind": "InsightVizNode",
+            "source": {
+              "kind": "TrendsQuery",
+              "dateRange": {
+                "date_from": "-30d"
+              },
+              "interval": "day",
+              "properties": [
+                {
+                  "key": "schema_version",
+                  "value": 2,
+                  "operator": "exact",
+                  "type": "event"
+                },
+                {
+                  "key": "environment",
+                  "value": "production",
+                  "operator": "exact",
+                  "type": "event"
+                }
+              ],
+              "series": [
+                {
+                  "kind": "EventsNode",
+                  "event": "runtime_started",
+                  "name": "runtime_started",
+                  "custom_name": "启动观察",
+                  "math": "total"
+                },
+                {
+                  "kind": "EventsNode",
+                  "event": "runtime_ready",
+                  "name": "runtime_ready",
+                  "custom_name": "HTTP 已监听",
+                  "math": "total"
+                }
+              ],
+              "trendsFilter": {
+                "display": "ActionsLineGraph",
+                "showLegend": true
+              }
+            }
+          },
+          "layout": {
+            "x": 6,
+            "y": 0,
+            "w": 6,
+            "h": 5
+          }
+        },
+        {
+          "key": "startup_duration",
+          "name": "监听就绪耗时 p95",
+          "description": "30 天 runtime_ready.startup_duration_ms 的 p95，按部署类型；只覆盖成功到达 HTTP listening 的样本。单位 ms。",
+          "query": {
+            "kind": "InsightVizNode",
+            "source": {
+              "kind": "TrendsQuery",
+              "dateRange": {
+                "date_from": "-30d"
+              },
+              "interval": "day",
+              "properties": [
+                {
+                  "key": "schema_version",
+                  "value": 2,
+                  "operator": "exact",
+                  "type": "event"
+                },
+                {
+                  "key": "environment",
+                  "value": "production",
+                  "operator": "exact",
+                  "type": "event"
+                }
+              ],
+              "series": [
+                {
+                  "kind": "EventsNode",
+                  "event": "runtime_ready",
+                  "name": "runtime_ready",
+                  "custom_name": "启动 p95 ms",
+                  "math": "p95",
+                  "math_property": "startup_duration_ms"
+                }
+              ],
+              "trendsFilter": {
+                "display": "ActionsLineGraph",
+                "showLegend": true
+              },
+              "breakdownFilter": {
+                "breakdowns": [
+                  {
+                    "property": "deployment_type",
+                    "type": "event"
+                  }
+                ]
+              }
+            }
+          },
+          "layout": {
+            "x": 0,
+            "y": 5,
+            "w": 6,
+            "h": 5
+          }
+        },
+        {
+          "key": "previous_exit",
+          "name": "上一次退出的观察结果",
+          "description": "按首次心跳携带的 previous_exit 分组、uniq(runtime_id)；排除后续 unknown。unclean_or_unknown 只是没有干净退出标记，不能称为 crash rate。",
+          "query": {
+            "kind": "InsightVizNode",
+            "source": {
+              "kind": "TrendsQuery",
+              "dateRange": {
+                "date_from": "-30d"
+              },
+              "interval": "day",
+              "properties": [
+                {
+                  "key": "schema_version",
+                  "value": 2,
+                  "operator": "exact",
+                  "type": "event"
+                },
+                {
+                  "key": "environment",
+                  "value": "production",
+                  "operator": "exact",
+                  "type": "event"
+                }
+              ],
+              "series": [
+                {
+                  "kind": "EventsNode",
+                  "event": "runtime_heartbeat",
+                  "name": "runtime_heartbeat",
+                  "custom_name": "本次启动数",
+                  "math": "hogql",
+                  "math_hogql": "uniq(properties.runtime_id)",
+                  "properties": [
+                    {
+                      "key": "previous_exit",
+                      "value": [
+                        "clean",
+                        "unclean_or_unknown"
+                      ],
+                      "operator": "exact",
+                      "type": "event"
+                    }
+                  ]
+                }
+              ],
+              "trendsFilter": {
+                "display": "ActionsBarValue",
+                "showLegend": true
+              },
+              "breakdownFilter": {
+                "breakdowns": [
+                  {
+                    "property": "previous_exit",
+                    "type": "event"
+                  }
+                ]
+              }
+            }
+          },
+          "layout": {
+            "x": 6,
+            "y": 5,
+            "w": 6,
+            "h": 5
+          }
+        }
+      ],
+      "live_dashboard_url": "https://eu.posthog.com/project/175495/dashboard/1042014"
+    },
+    {
+      "key": "versions",
+      "name": "Bakabase v2 · 版本与部署",
+      "description": "每部署/客户端仅取窗口内最新观察值，避免频繁上报或升级导致重复加权。 仅 schema_version=2、production；等待 v2 上线后有数据。定义为提案；UV 是匿名客户端，不是真人数。",
+      "insights": [
+        {
+          "key": "server_versions",
+          "name": "服务端版本与部署类型 · 近 30 天最新",
+          "description": "每 deployment_id 最近一次心跳对应的 server_version / deployment_type / release_channel；统计近 30 天被观察到的部署，不是所有安装量。",
+          "query": {
+            "kind": "DataVisualizationNode",
+            "source": {
+              "kind": "HogQLQuery",
+              "query": "SELECT server_version, deployment_type, release_channel, count() AS deployments FROM (SELECT properties.deployment_id AS deployment_id, argMax(properties.server_version, timestamp) AS server_version, argMax(properties.deployment_type, timestamp) AS deployment_type, argMax(properties.release_channel, timestamp) AS release_channel FROM events WHERE timestamp >= now() - INTERVAL 30 DAY AND toFloat(properties.schema_version) = 2 AND properties.environment = 'production' AND event = 'runtime_heartbeat' GROUP BY deployment_id) GROUP BY server_version, deployment_type, release_channel ORDER BY deployments DESC LIMIT 100"
+            },
+            "display": "ActionsTable"
+          },
+          "layout": {
+            "x": 0,
+            "y": 0,
+            "w": 6,
+            "h": 5
+          }
+        },
+        {
+          "key": "client_versions",
+          "name": "客户端版本与界面 · 近 30 天最新",
+          "description": "每客户端最后一次前端观察的 client_version 和 client_surface。排除后端关联事件缺少 client_version 的记录；Web 资产版本不应被当作远端 server_version。",
+          "query": {
+            "kind": "DataVisualizationNode",
+            "source": {
+              "kind": "HogQLQuery",
+              "query": "SELECT client_version, client_surface, count() AS clients FROM (SELECT distinct_id, argMax(properties.client_version, timestamp) AS client_version, argMax(properties.client_surface, timestamp) AS client_surface FROM events WHERE timestamp >= now() - INTERVAL 30 DAY AND toFloat(properties.schema_version) = 2 AND properties.environment = 'production' AND properties.actor_type = 'client' AND properties.client_version IS NOT NULL GROUP BY distinct_id) GROUP BY client_version, client_surface ORDER BY clients DESC LIMIT 100"
+            },
+            "display": "ActionsTable"
+          },
+          "layout": {
+            "x": 6,
+            "y": 0,
+            "w": 6,
+            "h": 5
+          }
+        },
+        {
+          "key": "server_platform",
+          "name": "服务端 OS / 架构 · 近 30 天最新",
+          "description": "每 deployment_id 最新心跳的平台，不能与客户端 OS 混用。只统计近 30 天有观察的实例。",
+          "query": {
+            "kind": "DataVisualizationNode",
+            "source": {
+              "kind": "HogQLQuery",
+              "query": "SELECT server_os, server_arch, count() AS deployments FROM (SELECT properties.deployment_id AS deployment_id, argMax(properties.server_os, timestamp) AS server_os, argMax(properties.server_arch, timestamp) AS server_arch FROM events WHERE timestamp >= now() - INTERVAL 30 DAY AND toFloat(properties.schema_version) = 2 AND properties.environment = 'production' AND event = 'runtime_heartbeat' GROUP BY deployment_id) GROUP BY server_os, server_arch ORDER BY deployments DESC LIMIT 100"
+            },
+            "display": "ActionsTable"
+          },
+          "layout": {
+            "x": 0,
+            "y": 5,
+            "w": 6,
+            "h": 5
+          }
+        },
+        {
+          "key": "library_size",
+          "name": "本地主库规模 · 近 7 天最新可用快照",
+          "description": "每部署最近一次 snapshot_status=ok 的本地主库 resource_count；只看近 7 天。远端副本不重复计入；退出/离线实例可能短期保留。",
+          "query": {
+            "kind": "DataVisualizationNode",
+            "source": {
+              "kind": "HogQLQuery",
+              "query": "SELECT multiIf(resource_count = 0, '0', resource_count < 100, '1-99', resource_count < 1000, '100-999', resource_count < 10000, '1000-9999', '10000+') AS resource_bucket, count() AS deployments FROM (SELECT properties.deployment_id AS deployment_id, argMax(toFloat(properties.resource_count), timestamp) AS resource_count FROM events WHERE timestamp >= now() - INTERVAL 7 DAY AND toFloat(properties.schema_version) = 2 AND properties.environment = 'production' AND event = 'deployment_snapshot' AND properties.snapshot_status = 'ok' GROUP BY deployment_id) GROUP BY resource_bucket ORDER BY resource_bucket LIMIT 20"
+            },
+            "display": "ActionsBarValue",
+            "chartSettings": {
+              "xAxis": {
+                "column": "resource_bucket"
+              },
+              "yAxis": [
+                {
+                  "column": "deployments"
+                }
+              ]
+            }
+          },
+          "layout": {
+            "x": 6,
+            "y": 5,
+            "w": 6,
+            "h": 5
+          }
+        }
+      ],
+      "live_dashboard_url": "https://eu.posthog.com/project/175495/dashboard/1042017"
+    },
+    {
+      "key": "activity",
+      "name": "Bakabase v2 · 活跃与留存",
+      "description": "活跃=资源打开、真实消费、功能操作或用户查询；启动/心跳/页面曝光不进入核心活跃。 仅 schema_version=2、production；等待 v2 上线后有数据。定义为提案；UV 是匿名客户端，不是真人数。",
+      "insights": [
+        {
+          "key": "dau",
+          "name": "核心交互 DAU · 匿名客户端",
+          "description": "每天 uniq(distinct_id)，仅 client 的明确交互集合；查询只计 manual+replace，启动、恢复、刷新、分页和系统任务排除。一台客户端不等于一个真人。",
+          "query": {
+            "kind": "InsightVizNode",
+            "source": {
+              "kind": "TrendsQuery",
+              "dateRange": {
+                "date_from": "-30d"
+              },
+              "interval": "day",
+              "properties": [
+                {
+                  "key": "schema_version",
+                  "value": 2,
+                  "operator": "exact",
+                  "type": "event"
+                },
+                {
+                  "key": "environment",
+                  "value": "production",
+                  "operator": "exact",
+                  "type": "event"
+                },
+                {
+                  "key": "actor_type",
+                  "value": "client",
+                  "operator": "exact",
+                  "type": "event"
+                }
+              ],
+              "series": [
+                {
+                  "kind": "EventsNode",
+                  "custom_name": "交互客户端",
+                  "math": "hogql",
+                  "math_hogql": "uniq(distinct_id)",
+                  "properties": [
+                    {
+                      "type": "hogql",
+                      "key": "(event IN ('resource_opened','playback_started','reader_opened','feature_invoked','client_action_completed') OR (event = 'resource_query_presented' AND (properties.search_kind = 'manual' AND properties.load_mode = 'replace')))"
+                    }
+                  ]
+                }
+              ],
+              "trendsFilter": {
+                "display": "ActionsLineGraph",
+                "showLegend": true
+              }
+            }
+          },
+          "layout": {
+            "x": 0,
+            "y": 0,
+            "w": 6,
+            "h": 5
+          }
+        },
+        {
+          "key": "wau_mau",
+          "name": "近 1 / 7 / 30 天交互客户端",
+          "description": "固定滚动 24h / 7d / 30d 的客户端去重数；不能把每日 DAU 相加求 WAU/MAU。范围与核心交互 DAU 相同。",
+          "query": {
+            "kind": "DataVisualizationNode",
+            "source": {
+              "kind": "HogQLQuery",
+              "query": "SELECT uniqIf(distinct_id, timestamp >= now() - INTERVAL 1 DAY) AS active_clients_24h, uniqIf(distinct_id, timestamp >= now() - INTERVAL 7 DAY) AS active_clients_7d, uniq(distinct_id) AS active_clients_30d FROM events WHERE timestamp >= now() - INTERVAL 30 DAY AND toFloat(properties.schema_version) = 2 AND properties.environment = 'production' AND properties.actor_type = 'client' AND (event IN ('resource_opened','playback_started','reader_opened','feature_invoked','client_action_completed') OR (event = 'resource_query_presented' AND (properties.search_kind = 'manual' AND properties.load_mode = 'replace'))) LIMIT 1"
+            },
+            "display": "ActionsTable"
+          },
+          "layout": {
+            "x": 6,
+            "y": 0,
+            "w": 6,
+            "h": 5
+          }
+        },
+        {
+          "key": "retention",
+          "name": "资源打开留存 · 每日周期 cohort",
+          "description": "原生 recurring retention：当日 resource_opened 客户端在第 1–7 个日历日再次打开资源；非首装留存、非累计回访。UTC；未成熟 cohort 不作 0% 解读。",
+          "query": {
+            "kind": "InsightVizNode",
+            "source": {
+              "kind": "RetentionQuery",
+              "dateRange": {
+                "date_from": "-30d"
+              },
+              "properties": [
+                {
+                  "key": "schema_version",
+                  "type": "event",
+                  "operator": "exact",
+                  "value": 2
+                },
+                {
+                  "key": "environment",
+                  "type": "event",
+                  "operator": "exact",
+                  "value": "production"
+                },
+                {
+                  "key": "actor_type",
+                  "type": "event",
+                  "operator": "exact",
+                  "value": "client"
+                }
+              ],
+              "retentionFilter": {
+                "targetEntity": {
+                  "id": "resource_opened",
+                  "type": "events"
+                },
+                "returningEntity": {
+                  "id": "resource_opened",
+                  "type": "events"
+                },
+                "period": "Day",
+                "totalIntervals": 8,
+                "retentionType": "retention_recurring",
+                "cumulative": false,
+                "timeWindowMode": "strict_calendar_dates",
+                "meanRetentionCalculation": "weighted"
+              }
+            }
+          },
+          "layout": {
+            "x": 0,
+            "y": 5,
+            "w": 6,
+            "h": 5
+          }
+        },
+        {
+          "key": "surfaces",
+          "name": "核心交互 DAU · 按界面",
+          "description": "相同交互口径按 client_surface 分组；同一匿名客户端在同日出现在多个 surface 时分组之和可能大于总体去重数。",
+          "query": {
+            "kind": "InsightVizNode",
+            "source": {
+              "kind": "TrendsQuery",
+              "dateRange": {
+                "date_from": "-30d"
+              },
+              "interval": "day",
+              "properties": [
+                {
+                  "key": "schema_version",
+                  "value": 2,
+                  "operator": "exact",
+                  "type": "event"
+                },
+                {
+                  "key": "environment",
+                  "value": "production",
+                  "operator": "exact",
+                  "type": "event"
+                },
+                {
+                  "key": "actor_type",
+                  "value": "client",
+                  "operator": "exact",
+                  "type": "event"
+                }
+              ],
+              "series": [
+                {
+                  "kind": "EventsNode",
+                  "custom_name": "交互客户端",
+                  "math": "hogql",
+                  "math_hogql": "uniq(distinct_id)",
+                  "properties": [
+                    {
+                      "type": "hogql",
+                      "key": "(event IN ('resource_opened','playback_started','reader_opened','feature_invoked','client_action_completed') OR (event = 'resource_query_presented' AND (properties.search_kind = 'manual' AND properties.load_mode = 'replace')))"
+                    }
+                  ]
+                }
+              ],
+              "trendsFilter": {
+                "display": "ActionsLineGraph",
+                "showLegend": true
+              },
+              "breakdownFilter": {
+                "breakdowns": [
+                  {
+                    "property": "client_surface",
+                    "type": "event"
+                  }
+                ]
+              }
+            }
+          },
+          "layout": {
+            "x": 6,
+            "y": 5,
+            "w": 6,
+            "h": 5
+          }
+        }
+      ],
+      "live_dashboard_url": "https://eu.posthog.com/project/175495/dashboard/1042019"
+    },
+    {
+      "key": "adoption",
+      "name": "Bakabase v2 · 功能采用",
+      "description": "曝光、尝试与成功是不同指标；采用率分母限定为同一功能已曝光客户端。 仅 schema_version=2、production；等待 v2 上线后有数据。定义为提案；UV 是匿名客户端，不是真人数。",
+      "insights": [
+        {
+          "key": "exposure",
+          "name": "Web 功能曝光客户端",
+          "description": "30 天内 feature_exposed 的匿名客户端，按 feature_id；曝光表示入口/界面出现，不等于实际使用。移动端尚无对应曝光事件。",
+          "query": {
+            "kind": "InsightVizNode",
+            "source": {
+              "kind": "TrendsQuery",
+              "dateRange": {
+                "date_from": "-30d"
+              },
+              "interval": "day",
+              "properties": [
+                {
+                  "key": "schema_version",
+                  "value": 2,
+                  "operator": "exact",
+                  "type": "event"
+                },
+                {
+                  "key": "environment",
+                  "value": "production",
+                  "operator": "exact",
+                  "type": "event"
+                },
+                {
+                  "key": "actor_type",
+                  "value": "client",
+                  "operator": "exact",
+                  "type": "event"
+                }
+              ],
+              "series": [
+                {
+                  "kind": "EventsNode",
+                  "event": "feature_exposed",
+                  "name": "feature_exposed",
+                  "custom_name": "曝光客户端",
+                  "math": "hogql",
+                  "math_hogql": "uniq(distinct_id)"
+                }
+              ],
+              "trendsFilter": {
+                "display": "ActionsBarValue",
+                "showLegend": true
+              },
+              "breakdownFilter": {
+                "breakdowns": [
+                  {
+                    "property": "feature_id",
+                    "type": "event"
+                  }
+                ]
+              }
+            }
+          },
+          "layout": {
+            "x": 0,
+            "y": 0,
+            "w": 6,
+            "h": 5
+          }
+        },
+        {
+          "key": "attempt_rate",
+          "name": "Web 功能尝试率 · 近 30 天",
+          "description": "同 feature_id 同窗口同时有 exposed 与 invoked 的客户端 / exposed 客户端；尝试不是业务成功，也不强制时间先后。零分母显示空值。",
+          "query": {
+            "kind": "DataVisualizationNode",
+            "source": {
+              "kind": "HogQLQuery",
+              "query": "SELECT feature_id, countIf(exposed > 0) AS exposed_clients, countIf(exposed > 0 AND invoked > 0) AS attempted_exposed_clients, countIf(exposed > 0 AND invoked > 0) / nullIf(countIf(exposed > 0), 0) AS attempt_rate FROM (SELECT distinct_id, properties.feature_id AS feature_id, countIf(event = 'feature_exposed') AS exposed, countIf(event = 'feature_invoked') AS invoked FROM events WHERE timestamp >= now() - INTERVAL 30 DAY AND toFloat(properties.schema_version) = 2 AND properties.environment = 'production' AND properties.actor_type = 'client' AND event IN ('feature_exposed','feature_invoked') GROUP BY distinct_id, feature_id) GROUP BY feature_id ORDER BY exposed_clients DESC LIMIT 100"
+            },
+            "display": "ActionsTable"
+          },
+          "layout": {
+            "x": 6,
+            "y": 0,
+            "w": 6,
+            "h": 5
+          }
+        },
+        {
+          "key": "completed_features",
+          "name": "已成功的配置与编辑 · 客户端数",
+          "description": "30 天后端权威 outcome=success 结果的去重客户端。一次配置成功不代表该功能持续使用；自动/system 事件排除。",
+          "query": {
+            "kind": "InsightVizNode",
+            "source": {
+              "kind": "TrendsQuery",
+              "dateRange": {
+                "date_from": "-30d"
+              },
+              "interval": "day",
+              "properties": [
+                {
+                  "key": "schema_version",
+                  "value": 2,
+                  "operator": "exact",
+                  "type": "event"
+                },
+                {
+                  "key": "environment",
+                  "value": "production",
+                  "operator": "exact",
+                  "type": "event"
+                },
+                {
+                  "key": "actor_type",
+                  "value": "client",
+                  "operator": "exact",
+                  "type": "event"
+                }
+              ],
+              "series": [
+                {
+                  "kind": "EventsNode",
+                  "custom_name": "成功客户端",
+                  "math": "hogql",
+                  "math_hogql": "uniq(distinct_id)",
+                  "properties": [
+                    {
+                      "type": "hogql",
+                      "key": "event IN ('library_configured','resource_profile_saved','property_edit_completed','bulk_edit_completed','collection_updated','saved_search_created','path_mark_configured','resource_merged','workflow_configured','subscription_configured')"
+                    },
+                    {
+                      "key": "outcome",
+                      "value": "success",
+                      "operator": "exact",
+                      "type": "event"
+                    }
+                  ]
+                }
+              ],
+              "trendsFilter": {
+                "display": "ActionsBarValue",
+                "showLegend": true
+              },
+              "breakdownFilter": {
+                "breakdowns": [
+                  {
+                    "property": "feature_id",
+                    "type": "event"
+                  }
+                ]
+              }
+            }
+          },
+          "layout": {
+            "x": 0,
+            "y": 5,
+            "w": 6,
+            "h": 5
+          }
+        },
+        {
+          "key": "consumption",
+          "name": "真实播放与阅读客户端",
+          "description": "30 天内确认 playback_started / reader_opened 的客户端。外部播放器 handoff 和复制链接不当作成功播放；不同媒体入口可能重叠。",
+          "query": {
+            "kind": "InsightVizNode",
+            "source": {
+              "kind": "TrendsQuery",
+              "dateRange": {
+                "date_from": "-30d"
+              },
+              "interval": "day",
+              "properties": [
+                {
+                  "key": "schema_version",
+                  "value": 2,
+                  "operator": "exact",
+                  "type": "event"
+                },
+                {
+                  "key": "environment",
+                  "value": "production",
+                  "operator": "exact",
+                  "type": "event"
+                },
+                {
+                  "key": "actor_type",
+                  "value": "client",
+                  "operator": "exact",
+                  "type": "event"
+                }
+              ],
+              "series": [
+                {
+                  "kind": "EventsNode",
+                  "event": "playback_started",
+                  "name": "playback_started",
+                  "custom_name": "已开始播放",
+                  "math": "hogql",
+                  "math_hogql": "uniq(distinct_id)"
+                },
+                {
+                  "kind": "EventsNode",
+                  "event": "reader_opened",
+                  "name": "reader_opened",
+                  "custom_name": "已打开阅读器",
+                  "math": "hogql",
+                  "math_hogql": "uniq(distinct_id)"
+                }
+              ],
+              "trendsFilter": {
+                "display": "ActionsLineGraph",
+                "showLegend": true
+              }
+            }
+          },
+          "layout": {
+            "x": 6,
+            "y": 5,
+            "w": 6,
+            "h": 5
+          }
+        }
+      ],
+      "live_dashboard_url": "https://eu.posthog.com/project/175495/dashboard/1042020"
+    },
+    {
+      "key": "journeys",
+      "name": "Bakabase v2 · 核心旅程",
+      "description": "原生有序漏斗按匿名客户端，30 分钟内允许中间事件；不声称是同一资源或同一次操作。 仅 schema_version=2、production；等待 v2 上线后有数据。定义为提案；UV 是匿名客户端，不是真人数。",
+      "insights": [
+        {
+          "key": "open_to_play",
+          "name": "打开资源 → 确认播放 · 30 分钟",
+          "description": "原生 ordered 漏斗：resource_opened → playback_started，30 分钟、匿名 client。允许切换资源或服务器；外部 handoff 不计成功。",
+          "query": {
+            "kind": "InsightVizNode",
+            "source": {
+              "kind": "FunnelsQuery",
+              "dateRange": {
+                "date_from": "-30d"
+              },
+              "properties": [
+                {
+                  "key": "schema_version",
+                  "value": 2,
+                  "operator": "exact",
+                  "type": "event"
+                },
+                {
+                  "key": "environment",
+                  "value": "production",
+                  "operator": "exact",
+                  "type": "event"
+                },
+                {
+                  "key": "actor_type",
+                  "value": "client",
+                  "operator": "exact",
+                  "type": "event"
+                }
+              ],
+              "series": [
+                {
+                  "kind": "EventsNode",
+                  "event": "resource_opened"
+                },
+                {
+                  "kind": "EventsNode",
+                  "event": "playback_started"
+                }
+              ],
+              "funnelsFilter": {
+                "funnelOrderType": "ordered",
+                "funnelWindowInterval": 30,
+                "funnelWindowIntervalUnit": "minute",
+                "funnelVizType": "steps",
+                "funnelStepReference": "total",
+                "layout": "vertical"
+              }
+            }
+          },
+          "layout": {
+            "x": 0,
+            "y": 0,
+            "w": 6,
+            "h": 5
+          }
+        },
+        {
+          "key": "open_to_read",
+          "name": "打开资源 → 阅读器显示 · 30 分钟",
+          "description": "原生 ordered 漏斗：resource_opened → reader_opened，30 分钟、匿名 client。所有打开资源为分母，媒体类型不匹配会降低比例；不是阅读器错误率。",
+          "query": {
+            "kind": "InsightVizNode",
+            "source": {
+              "kind": "FunnelsQuery",
+              "dateRange": {
+                "date_from": "-30d"
+              },
+              "properties": [
+                {
+                  "key": "schema_version",
+                  "value": 2,
+                  "operator": "exact",
+                  "type": "event"
+                },
+                {
+                  "key": "environment",
+                  "value": "production",
+                  "operator": "exact",
+                  "type": "event"
+                },
+                {
+                  "key": "actor_type",
+                  "value": "client",
+                  "operator": "exact",
+                  "type": "event"
+                }
+              ],
+              "series": [
+                {
+                  "kind": "EventsNode",
+                  "event": "resource_opened"
+                },
+                {
+                  "kind": "EventsNode",
+                  "event": "reader_opened"
+                }
+              ],
+              "funnelsFilter": {
+                "funnelOrderType": "ordered",
+                "funnelWindowInterval": 30,
+                "funnelWindowIntervalUnit": "minute",
+                "funnelVizType": "steps",
+                "funnelStepReference": "total",
+                "layout": "vertical"
+              }
+            }
+          },
+          "layout": {
+            "x": 6,
+            "y": 0,
+            "w": 6,
+            "h": 5
+          }
+        },
+        {
+          "key": "manual_search",
+          "name": "用户查询呈现 · 结果",
+          "description": "只计 resource_query_presented 的 manual+replace（排除恢复、刷新、分页），按 outcome；后端 resource_search_completed 是 API 请求，不能替代这个指标。",
+          "query": {
+            "kind": "InsightVizNode",
+            "source": {
+              "kind": "TrendsQuery",
+              "dateRange": {
+                "date_from": "-30d"
+              },
+              "interval": "day",
+              "properties": [
+                {
+                  "key": "schema_version",
+                  "value": 2,
+                  "operator": "exact",
+                  "type": "event"
+                },
+                {
+                  "key": "environment",
+                  "value": "production",
+                  "operator": "exact",
+                  "type": "event"
+                },
+                {
+                  "key": "actor_type",
+                  "value": "client",
+                  "operator": "exact",
+                  "type": "event"
+                }
+              ],
+              "series": [
+                {
+                  "kind": "EventsNode",
+                  "event": "resource_query_presented",
+                  "name": "resource_query_presented",
+                  "custom_name": "查询呈现",
+                  "math": "total",
+                  "properties": [
+                    {
+                      "key": "search_kind",
+                      "value": "manual",
+                      "operator": "exact",
+                      "type": "event"
+                    },
+                    {
+                      "key": "load_mode",
+                      "value": "replace",
+                      "operator": "exact",
+                      "type": "event"
+                    }
+                  ]
+                }
+              ],
+              "trendsFilter": {
+                "display": "ActionsLineGraph",
+                "showLegend": true
+              },
+              "breakdownFilter": {
+                "breakdowns": [
+                  {
+                    "property": "outcome",
+                    "type": "event"
+                  }
+                ]
+              }
+            }
+          },
+          "layout": {
+            "x": 0,
+            "y": 5,
+            "w": 6,
+            "h": 5
+          }
+        },
+        {
+          "key": "connection_results",
+          "name": "配对与服务端切换 · 结果",
+          "description": "仅在已有可用采集配置时可观察；首次未配置或离线失败会缺失，不能把这些计数当作全量连接成功率。移动端 connection_result 只确认已连接。",
+          "query": {
+            "kind": "InsightVizNode",
+            "source": {
+              "kind": "TrendsQuery",
+              "dateRange": {
+                "date_from": "-30d"
+              },
+              "interval": "day",
+              "properties": [
+                {
+                  "key": "schema_version",
+                  "value": 2,
+                  "operator": "exact",
+                  "type": "event"
+                },
+                {
+                  "key": "environment",
+                  "value": "production",
+                  "operator": "exact",
+                  "type": "event"
+                },
+                {
+                  "key": "actor_type",
+                  "value": "client",
+                  "operator": "exact",
+                  "type": "event"
+                }
+              ],
+              "series": [
+                {
+                  "kind": "EventsNode",
+                  "event": "pairing_result",
+                  "name": "pairing_result",
+                  "custom_name": "配对",
+                  "math": "total"
+                },
+                {
+                  "kind": "EventsNode",
+                  "event": "server_switch_result",
+                  "name": "server_switch_result",
+                  "custom_name": "切换",
+                  "math": "total"
+                },
+                {
+                  "kind": "EventsNode",
+                  "event": "server_connection_result",
+                  "name": "server_connection_result",
+                  "custom_name": "移动连接确认",
+                  "math": "total"
+                }
+              ],
+              "trendsFilter": {
+                "display": "ActionsBarValue",
+                "showLegend": true
+              },
+              "breakdownFilter": {
+                "breakdowns": [
+                  {
+                    "property": "outcome",
+                    "type": "event"
+                  }
+                ]
+              }
+            }
+          },
+          "layout": {
+            "x": 6,
+            "y": 5,
+            "w": 6,
+            "h": 5
+          }
+        }
+      ],
+      "live_dashboard_url": "https://eu.posthog.com/project/175495/dashboard/1042021"
+    },
+    {
+      "key": "quality",
+      "name": "Bakabase v2 · 任务与 AI / 下载质量",
+      "description": "只分析已观察到的任务尝试/真实请求终态；失败、取消、等待和部分完成分别保留。 仅 schema_version=2、production；等待 v2 上线后有数据。定义为提案；UV 是匿名客户端，不是真人数。",
+      "insights": [
+        {
+          "key": "task_outcomes",
+          "name": "已采集任务尝试 · 结果",
+          "description": "task_attempt_finished 按 outcome；每次重试单独一次，定时 housekeeping 排除；包含 client/system，不代表独立用户请求数。等待/重试不是成功。",
+          "query": {
+            "kind": "InsightVizNode",
+            "source": {
+              "kind": "TrendsQuery",
+              "dateRange": {
+                "date_from": "-30d"
+              },
+              "interval": "day",
+              "properties": [
+                {
+                  "key": "schema_version",
+                  "value": 2,
+                  "operator": "exact",
+                  "type": "event"
+                },
+                {
+                  "key": "environment",
+                  "value": "production",
+                  "operator": "exact",
+                  "type": "event"
+                }
+              ],
+              "series": [
+                {
+                  "kind": "EventsNode",
+                  "event": "task_attempt_finished",
+                  "name": "task_attempt_finished",
+                  "custom_name": "任务尝试",
+                  "math": "total"
+                }
+              ],
+              "trendsFilter": {
+                "display": "ActionsLineGraph",
+                "showLegend": true
+              },
+              "breakdownFilter": {
+                "breakdowns": [
+                  {
+                    "property": "outcome",
+                    "type": "event"
+                  }
+                ]
+              }
+            }
+          },
+          "layout": {
+            "x": 0,
+            "y": 0,
+            "w": 6,
+            "h": 5
+          }
+        },
+        {
+          "key": "pipeline_results",
+          "name": "工作流 / 增强 / 订阅检查 · 结果",
+          "description": "真实 workflow_run_completed、enhancement_completed、subscription_check_completed；部分结果、取消或内部失败不能仅凭后台任务 Completed 判成功。",
+          "query": {
+            "kind": "InsightVizNode",
+            "source": {
+              "kind": "TrendsQuery",
+              "dateRange": {
+                "date_from": "-30d"
+              },
+              "interval": "day",
+              "properties": [
+                {
+                  "key": "schema_version",
+                  "value": 2,
+                  "operator": "exact",
+                  "type": "event"
+                },
+                {
+                  "key": "environment",
+                  "value": "production",
+                  "operator": "exact",
+                  "type": "event"
+                }
+              ],
+              "series": [
+                {
+                  "kind": "EventsNode",
+                  "event": "workflow_run_completed",
+                  "name": "workflow_run_completed",
+                  "custom_name": "工作流",
+                  "math": "total"
+                },
+                {
+                  "kind": "EventsNode",
+                  "event": "enhancement_completed",
+                  "name": "enhancement_completed",
+                  "custom_name": "增强批次",
+                  "math": "total"
+                },
+                {
+                  "kind": "EventsNode",
+                  "event": "subscription_check_completed",
+                  "name": "subscription_check_completed",
+                  "custom_name": "订阅检查",
+                  "math": "total"
+                }
+              ],
+              "trendsFilter": {
+                "display": "ActionsBarValue",
+                "showLegend": true
+              },
+              "breakdownFilter": {
+                "breakdowns": [
+                  {
+                    "property": "outcome",
+                    "type": "event"
+                  }
+                ]
+              }
+            }
+          },
+          "layout": {
+            "x": 6,
+            "y": 0,
+            "w": 6,
+            "h": 5
+          }
+        },
+        {
+          "key": "ai_quality",
+          "name": "AI 实际请求 · 近 30 天",
+          "description": "按 provider_type / ai_feature / outcome 统计真实请求，缓存命中排除。duration p95 单位 ms。token 仅统计提供用量的样本；缺失不是零，不据此估算账单。",
+          "query": {
+            "kind": "DataVisualizationNode",
+            "source": {
+              "kind": "HogQLQuery",
+              "query": "SELECT properties.provider_type AS provider_type, properties.ai_feature AS ai_feature, properties.outcome AS outcome, count() AS requests, quantile(0.95)(toFloat(properties.duration_ms)) AS duration_p95_ms, countIf(properties.token_usage_available = 'true') AS requests_with_token_usage, sumIf(toFloat(properties.total_tokens), properties.token_usage_available = 'true') AS reported_total_tokens FROM events WHERE timestamp >= now() - INTERVAL 30 DAY AND toFloat(properties.schema_version) = 2 AND properties.environment = 'production' AND event = 'ai_request_completed' GROUP BY provider_type, ai_feature, outcome ORDER BY requests DESC LIMIT 100"
+            },
+            "display": "ActionsTable"
+          },
+          "layout": {
+            "x": 0,
+            "y": 5,
+            "w": 6,
+            "h": 5
+          }
+        },
+        {
+          "key": "downloads",
+          "name": "下载执行终态 · 按来源与结果",
+          "description": "download_completed：真实运行终态，重复状态通知只记一次，预检查已有文件不算下载成功；中断、延后和取消单列，重试可能增加运行次数。",
+          "query": {
+            "kind": "InsightVizNode",
+            "source": {
+              "kind": "TrendsQuery",
+              "dateRange": {
+                "date_from": "-30d"
+              },
+              "interval": "day",
+              "properties": [
+                {
+                  "key": "schema_version",
+                  "value": 2,
+                  "operator": "exact",
+                  "type": "event"
+                },
+                {
+                  "key": "environment",
+                  "value": "production",
+                  "operator": "exact",
+                  "type": "event"
+                }
+              ],
+              "series": [
+                {
+                  "kind": "EventsNode",
+                  "event": "download_completed",
+                  "name": "download_completed",
+                  "custom_name": "下载运行",
+                  "math": "total"
+                }
+              ],
+              "trendsFilter": {
+                "display": "ActionsBarValue",
+                "showLegend": true
+              },
+              "breakdownFilter": {
+                "breakdowns": [
+                  {
+                    "property": "download_source",
+                    "type": "event"
+                  },
+                  {
+                    "property": "outcome",
+                    "type": "event"
+                  }
+                ]
+              }
+            }
+          },
+          "layout": {
+            "x": 6,
+            "y": 5,
+            "w": 6,
+            "h": 5
+          }
+        }
+      ],
+      "live_dashboard_url": "https://eu.posthog.com/project/175495/dashboard/1042022"
+    }
+  ]
+}

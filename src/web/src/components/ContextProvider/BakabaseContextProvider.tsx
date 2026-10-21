@@ -219,6 +219,9 @@ const BakabaseContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
   }, []);
 
   const appOptionsStore = useAppOptionsStore();
+  const analyticsContextState = useRemoteAccessStore((state) => state.context);
+  const analyticsServerId = useRemoteAccessStore((state) => state.serverId);
+  const analyticsClientMode = useRemoteAccessStore((state) => state.clientMode);
   const cssVariableOverwrites = useUiStyleOptionsStore((s) => s.data?.cssVariableOverwrites);
   const isDebugging = false;
   const firstTimeGotAppOptionsRef = useRef(false);
@@ -242,7 +245,19 @@ const BakabaseContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
     // A long-lived page keeps its address candidate fresh, and a returning window
     // can recover from a failed startup observation without polling the network.
     const refreshRemoteContext = () => {
-      if (!document.hidden) void useRemoteAccessStore.getState().load();
+      if (!document.hidden) {
+        void useRemoteAccessStore.getState().load();
+        const remote = useRemoteAccessStore.getState();
+        const options = useAppOptionsStore.getState();
+        if (options.initialized && remote.context === "known") {
+          void initAnalytics({
+            enabled: options.data.enableAnonymousDataTracking,
+            contextKey: remote.serverId,
+            clientMode: remote.clientMode,
+            refresh: true,
+          });
+        }
+      }
     };
     const remoteContextTimer = setInterval(refreshRemoteContext, 60 * 60_000);
 
@@ -250,7 +265,7 @@ const BakabaseContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
     console.log("bakabase context provider initialized");
     // Analytics SDKs init in the appOptions effect below — they need the toggle value
-    // and (via initAnalytics) the device id / project ids returned by /app/analytics-info.
+    // and (via initAnalytics) deployment context / project IDs returned by /app/analytics-info.
 
     return () => {
       clearInterval(remoteContextTimer);
@@ -266,15 +281,27 @@ const BakabaseContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
   }, [appOptionsStore]);
 
   useEffect(() => {
+    if (!appOptions) return;
+    // Revocation is immediate even if context is still loading or unavailable.
+    if (!appOptions.enableAnonymousDataTracking || analyticsContextState === "known") {
+      void initAnalytics({
+        enabled: appOptions.enableAnonymousDataTracking,
+        contextKey: analyticsServerId,
+        clientMode: analyticsClientMode,
+      });
+    }
+  }, [
+    appOptions?.enableAnonymousDataTracking,
+    analyticsContextState,
+    analyticsServerId,
+    analyticsClientMode,
+  ]);
+
+  useEffect(() => {
     if (appOptions) {
       console.log("appOptions", appOptions, firstTimeGotAppOptionsRef.current);
       if (!firstTimeGotAppOptionsRef.current) {
         firstTimeGotAppOptionsRef.current = true;
-        if (appOptions.enableAnonymousDataTracking) {
-          // initAnalytics fetches /app/analytics-info, double-checks the toggle,
-          // then bootstraps Clarity / GA4 / Sentry per the configured project ids.
-          void initAnalytics();
-        }
         i18n.changeLanguage(appOptions.language);
       }
 

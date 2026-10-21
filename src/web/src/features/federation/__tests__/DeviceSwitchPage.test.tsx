@@ -63,7 +63,11 @@ vi.mock("@/layouts/BlankLayout", () => ({
   default: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
 vi.mock("@/components/utils", () => ({ buildLogger: () => () => {} }));
-vi.mock("@/services/Analytics", () => ({ trackPageView: vi.fn() }));
+vi.mock("@/services/Analytics", () => ({
+  trackPageView: vi.fn(),
+  initAnalytics: vi.fn().mockResolvedValue(undefined),
+  trackAnalyticsEvent: vi.fn(),
+}));
 
 const context = {
   code: 0,

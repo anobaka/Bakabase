@@ -23,18 +23,20 @@ public record TelemetrySnapshotViewModel
 
     public string Locale { get; init; } = string.Empty;
 
-    public int MediaLibraryCount { get; init; }
+    public int? MediaLibraryCount { get; init; }
 
-    public int ResourceCount { get; init; }
+    public int? ResourceCount { get; init; }
 
     /// <summary>
     /// Distinct ids of enhancers that the user has configured anywhere in their resource
     /// profiles. Sorted alphabetically so the snapshot hash is stable regardless of profile
     /// ordering.
     /// </summary>
-    public List<string> EnabledEnhancers { get; init; } = [];
+    public List<string>? EnabledEnhancers { get; init; }
 
     public bool AiEnabled { get; init; }
 
-    public bool HasMediaLibrary { get; init; }
+    public bool? HasMediaLibrary { get; init; }
+
+    public string SnapshotStatus { get; init; } = "ok";
 }
