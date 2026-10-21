@@ -611,6 +611,8 @@ namespace Bakabase.Modules.Enhancer.Services
             CancellationToken ct)
         {
             var enhanceTasks = await BuildContextCreationTasks(targetResources, restrictedEnhancerIds);
+            using var telemetry = new EnhancementTelemetryBatch(_serviceProvider,
+                enhanceTasks.Select(task => task.Enhancer.Id), ct);
             var taskCount = enhanceTasks.Count;
             var doneCount = 0;
             var currentPercentage = 0;
@@ -678,6 +680,8 @@ namespace Bakabase.Modules.Enhancer.Services
                         }
 
                         doneCount++;
+                        telemetry.Persisted(enhancer.Id, !string.IsNullOrEmpty(record.ErrorMessage),
+                            enhancements?.Count == 0);
                         var newPercentage = (int)Math.Floor(doneCount * 100.0 / taskCount);
                         if (newPercentage != currentPercentage)
                         {
@@ -740,6 +744,7 @@ namespace Bakabase.Modules.Enhancer.Services
                                     }
 
                                     set.Remove(task);
+                                    telemetry.Skipped(task.Enhancer.Id);
                                     continue;
                                 }
 
@@ -808,6 +813,7 @@ namespace Bakabase.Modules.Enhancer.Services
             {
                 await onProgress(100);
             }
+            telemetry.Completed = true;
         }
 
         public async Task EnhanceResource(int resourceId, HashSet<int>? enhancerIds, PauseToken pt,
@@ -924,13 +930,15 @@ namespace Bakabase.Modules.Enhancer.Services
 
         public async Task EnhanceResourceWithOptions(int resourceId, List<EnhancerFullOptions> enhancerOptionsList, CancellationToken ct)
         {
+            using var telemetry = new EnhancementTelemetryBatch(_serviceProvider,
+                enhancerOptionsList.Select(options => options.EnhancerId), ct);
             var resource = (await _resourceService.Get(resourceId, ResourceAdditionalItem.All))!;
 
             foreach (var options in enhancerOptionsList)
             {
                 var enhancerId = options.EnhancerId;
                 var enhancer = _enhancers.GetValueOrDefault(enhancerId);
-                if (enhancer == null) continue;
+                if (enhancer == null) { telemetry.Skipped(enhancerId); continue; }
 
                 // Delete existing enhancement data for this resource + enhancer
                 await _enhancementService.RemoveAll(x => x.ResourceId == resourceId && x.EnhancerId == enhancerId, true);
@@ -995,7 +1003,9 @@ namespace Bakabase.Modules.Enhancer.Services
                 // Apply enhancements
                 await ApplyEnhancementsToResources(
                     new Dictionary<int, HashSet<int>> { { resourceId, [enhancerId] } }, enhancements, ct);
+                telemetry.Persisted(enhancerId, !string.IsNullOrEmpty(record.ErrorMessage), enhancements.Count == 0);
             }
+            telemetry.Completed = true;
         }
 
         public Task ProcessComputedValuesAsync(List<EnhancementRawValue> values, EnhancerFullOptions options,

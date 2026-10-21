@@ -1,5 +1,8 @@
 using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Components.Tasks;
+using Bakabase.Abstractions.Components.Telemetry;
+using Bakabase.Modules.AI.Components.Observation;
+using System.Diagnostics;
 using System.Globalization;
 using System.Text.Json;
 using Bakabase.Abstractions.Components.FileSystem;
@@ -20,7 +23,9 @@ public class AigcRunExecutor<TDbContext>(
     IFileManager fileManager,
     IEnumerable<IAigcProviderInvoker> invokers,
     ILogger<AigcRunExecutor<TDbContext>> logger,
-    IBakabaseLocalizer localizer
+    IBakabaseLocalizer localizer,
+    IProductTelemetry? telemetry = null,
+    ITelemetryActorAccessor? telemetryActor = null
 ) : IAigcRunExecutor where TDbContext : DbContext
 {
     private readonly Dictionary<AiProviderKind, IAigcProviderInvoker> _invokerMap =
@@ -58,7 +63,27 @@ public class AigcRunExecutor<TDbContext>(
 
             if (onProgress is not null) await onProgress(5, BTaskText.Localize(localizer, "BTask_Process_AigcCallingProvider"), ct);
 
-            var result = await invoker.InvokeAsync(provider, request, ct);
+            var actor = AiRequestTelemetry.Actor(telemetryActor);
+            var attemptId = Guid.NewGuid().ToString("D");
+            var invocationStarted = Stopwatch.GetTimestamp();
+            var invocationOutcome = "failed";
+            AigcInvocationResult result;
+            try
+            {
+                result = await invoker.InvokeAsync(provider, request, ct);
+                invocationOutcome = result.Outputs.Count > 0 ? "success" : "failed";
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                invocationOutcome = "cancelled";
+                throw;
+            }
+            finally
+            {
+                // Provider completion and saving/registering the output are separate outcomes.
+                AiRequestTelemetry.Track(telemetry, actor, provider.Kind, null, "aigc", invocationOutcome,
+                    invocationStarted, attemptId, false);
+            }
 
             run.RequestPayload = result.RawRequestPayload;
             run.ResponsePayload = result.RawResponsePayload;

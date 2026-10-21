@@ -1,4 +1,5 @@
 import envConfig from "@/config/env";
+import { analyticsRequestHeaders } from "@/services/analyticsContext";
 
 export class FederationError extends Error {
   constructor(
@@ -23,6 +24,10 @@ export async function federationRequest<T>(path: string, init?: RequestInit): Pr
     headers: {
       ...(init?.body ? { "Content-Type": "application/json" } : {}),
       ...init?.headers,
+      ...analyticsRequestHeaders(
+        `${envConfig.apiEndpoint}/federation/local${path}`,
+        envConfig.apiEndpoint,
+      ),
     },
   });
   const payload = await response.json().catch(() => undefined);

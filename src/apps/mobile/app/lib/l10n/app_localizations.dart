@@ -104,6 +104,24 @@ abstract class AppLocalizations {
   /// **'Bakabase'**
   String get appTitle;
 
+  /// No description provided for @moreActions.
+  ///
+  /// In en, this message translates to:
+  /// **'More'**
+  String get moreActions;
+
+  /// No description provided for @usageDataTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Anonymous usage data'**
+  String get usageDataTitle;
+
+  /// No description provided for @usageDataDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Help improve Bakabase by sharing feature usage, app versions and device types. This does not include server addresses, search text, resource titles, file paths or pairing credentials. Data is sent only when both this switch and the connected server allow it. Turning this off also discards unsent usage data.'**
+  String get usageDataDescription;
+
   /// No description provided for @connectTitle.
   ///
   /// In en, this message translates to:

@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 
+import 'analytics.dart';
 import 'credentials.dart';
 import 'list_string.dart';
 import 'models.dart';
@@ -50,30 +51,37 @@ class BakabaseApiClient {
     DeviceCredentials? credentials,
     Duration clockOffset = Duration.zero,
     void Function(RemoteAccessDenial denial)? onDenied,
-  })  : _credentials = credentials,
-        _clockOffset = clockOffset,
-        _onDenied = onDenied,
-        _dio = Dio(BaseOptions(
-          baseUrl: baseUrl,
-          connectTimeout: const Duration(seconds: 5),
-          receiveTimeout: const Duration(seconds: 30),
-          // Denials are handled below rather than thrown as raw DioExceptions.
-          validateStatus: (_) => true,
-        )) {
+  }) : _credentials = credentials,
+       _clockOffset = clockOffset,
+       _onDenied = onDenied,
+       _dio = Dio(
+         BaseOptions(
+           baseUrl: baseUrl,
+           connectTimeout: const Duration(seconds: 5),
+           receiveTimeout: const Duration(seconds: 30),
+           // Analytics context and signatures belong only to this server.
+           followRedirects: false,
+           // Denials are handled below rather than thrown as raw DioExceptions.
+           validateStatus: (_) => true,
+         ),
+       ) {
     // Unpaired is a normal state: a server with RequirePairing off serves an
     // anonymous device everything it is allowed to. So the interceptor is installed
     // only when there is something to sign with, rather than signing with a blank
     // key and having every request refused.
     if (credentials != null) {
-      _dio.interceptors.add(DeviceSigningInterceptor(
-        credentials: () => credentials,
-        clockOffset: () => clockOffset,
-      ));
+      _dio.interceptors.add(
+        DeviceSigningInterceptor(
+          credentials: () => credentials,
+          clockOffset: () => clockOffset,
+        ),
+      );
     }
   }
 
   final String baseUrl;
   final Dio _dio;
+  AnalyticsBinding? analytics;
 
   /// Null when this device has not paired with this server. Exposed so the UI can
   /// tell "not paired" from "paired and refused".
@@ -131,6 +139,9 @@ class BakabaseApiClient {
     return ServerInfo.fromJson(_dataOf(data));
   }
 
+  Future<AnalyticsConfig> analyticsInfo() async =>
+      AnalyticsConfig.fromJson(_dataOf(await _get('/app/analytics-info')));
+
   Future<List<MediaLibrary>> mediaLibraries() async {
     final data = await _get('/media-library-v2');
     return (_listOf(data)).map(MediaLibrary.fromJson).toList();
@@ -150,7 +161,8 @@ class BakabaseApiClient {
     return <String, dynamic>{
       'page': page,
       'pageSize': pageSize,
-      if (keyword != null && keyword.trim().isNotEmpty) 'keyword': keyword.trim(),
+      if (keyword != null && keyword.trim().isNotEmpty)
+        'keyword': keyword.trim(),
       if (sortProperty != null)
         'orders': [
           {'property': sortProperty, 'asc': sortAsc},
@@ -218,15 +230,24 @@ class BakabaseApiClient {
   /// server. The ground truth the detail page classifies — playable-items only
   /// reflects the user's curated profile rules and is often empty.
   Future<List<String>> allFiles(String path) async {
-    final response = await _request('GET', '/file/all-files', queryParameters: {'path': path});
-    return (response['data'] as List<dynamic>? ?? const []).whereType<String>().toList();
+    final response = await _request(
+      'GET',
+      '/file/all-files',
+      queryParameters: {'path': path},
+    );
+    return (response['data'] as List<dynamic>? ?? const [])
+        .whereType<String>()
+        .toList();
   }
 
   /// Entries inside an archive, as full `archive.zip!inner/path` keys the
   /// file endpoints accept.
   Future<List<String>> compressedEntries(String archivePath) async {
-    final response = await _request('GET', '/file/compressed-file/entries',
-        queryParameters: {'compressedFilePath': archivePath});
+    final response = await _request(
+      'GET',
+      '/file/compressed-file/entries',
+      queryParameters: {'compressedFilePath': archivePath},
+    );
     return _listOf(response)
         .map((e) => e['path'] as String?)
         .whereType<String>()
@@ -235,11 +256,20 @@ class BakabaseApiClient {
   }
 
   /// Play history, newest first, with total count for paging.
-  Future<(List<PlayHistoryEntry>, int)> playHistory({int page = 1, int pageSize = 50}) async {
-    final response = await _request('GET', '/play-history',
-        queryParameters: {'pageIndex': page, 'pageSize': pageSize});
+  Future<(List<PlayHistoryEntry>, int)> playHistory({
+    int page = 1,
+    int pageSize = 50,
+  }) async {
+    final response = await _request(
+      'GET',
+      '/play-history',
+      queryParameters: {'pageIndex': page, 'pageSize': pageSize},
+    );
     final entries = _listOf(response).map(PlayHistoryEntry.fromJson).toList();
-    return (entries, (response['totalCount'] as num?)?.toInt() ?? entries.length);
+    return (
+      entries,
+      (response['totalCount'] as num?)?.toInt() ?? entries.length,
+    );
   }
 
   /// Batch-resolves resources by id — how the history page turns ids into
@@ -248,10 +278,11 @@ class BakabaseApiClient {
     if (ids.isEmpty) {
       return const [];
     }
-    final response = await _request('GET', '/resource/keys', queryParameters: {
-      'ids': ids,
-      'additionalItems': _gridAdditionalItems,
-    });
+    final response = await _request(
+      'GET',
+      '/resource/keys',
+      queryParameters: {'ids': ids, 'additionalItems': _gridAdditionalItems},
+    );
     return _listOf(response).map(ResourceSummary.fromJson).toList();
   }
 
@@ -284,10 +315,14 @@ class BakabaseApiClient {
   }
 
   Future<double?> resourceRating(int resourceId) async {
-    final response = await _request('GET', '/resource/keys', queryParameters: {
-      'ids': [resourceId],
-      'additionalItems': _propertiesAdditionalItem,
-    });
+    final response = await _request(
+      'GET',
+      '/resource/keys',
+      queryParameters: {
+        'ids': [resourceId],
+        'additionalItems': _propertiesAdditionalItem,
+      },
+    );
     final list = _listOf(response);
     return list.isEmpty ? null : ratingFromResourceJson(list.first);
   }
@@ -295,11 +330,15 @@ class BakabaseApiClient {
   /// Writes the reserved Rating. The value is the Decimal dbValue's
   /// StandardValue serialization — a plain numeric string.
   Future<void> setRating(int resourceId, double rating) async {
-    await _request('PUT', '/resource/$resourceId/property-value', body: {
-      'propertyId': _reservedRatingPropertyId,
-      'isCustomProperty': false,
-      'value': rating.toString(),
-    });
+    await _request(
+      'PUT',
+      '/resource/$resourceId/property-value',
+      body: {
+        'propertyId': _reservedRatingPropertyId,
+        'isCustomProperty': false,
+        'value': rating.toString(),
+      },
+    );
   }
 
   /// Records that playback started on this device; the server writes the play
@@ -320,20 +359,28 @@ class BakabaseApiClient {
       if (width != null) 'w': width.toString(),
     };
     return _signedUrl(
-      Uri.parse(baseUrl).replace(path: '/tool/thumbnail', queryParameters: query),
+      Uri.parse(
+        baseUrl,
+      ).replace(path: '/tool/thumbnail', queryParameters: query),
     );
   }
 
   /// The raw byte stream with range support — what native players get handed.
   /// Deliberately not archive-aware; use [playFileUrl] for archive entries.
   String rawFileUrl(String path) => _signedUrl(
-      Uri.parse(baseUrl).replace(path: '/file/raw', queryParameters: {'fullname': path}));
+    Uri.parse(
+      baseUrl,
+    ).replace(path: '/file/raw', queryParameters: {'fullname': path}),
+  );
 
   /// The browser-oriented delivery endpoint. The one thing the app needs it
   /// for is entries inside archives (`archive.zip!inner/file`), which the
   /// server extracts and streams — without seeking.
   String playFileUrl(String path) => _signedUrl(
-      Uri.parse(baseUrl).replace(path: '/file/play', queryParameters: {'fullname': path}));
+    Uri.parse(
+      baseUrl,
+    ).replace(path: '/file/play', queryParameters: {'fullname': path}),
+  );
 
   /// Best stream URL for a playable item: raw (seekable) for plain files,
   /// the extracting endpoint for archive entries.
@@ -346,10 +393,9 @@ class BakabaseApiClient {
   /// headless server has no screen to show this on, and the phone is often the only
   /// place its owner can see who else has access.
   Future<List<RemoteDevice>> devices() async {
-    return _listOf(await _get('/remote-access/devices'))
-        .map(RemoteDevice.fromJson)
-        .whereType<RemoteDevice>()
-        .toList();
+    return _listOf(
+      await _get('/remote-access/devices'),
+    ).map(RemoteDevice.fromJson).whereType<RemoteDevice>().toList();
   }
 
   /// Devices waiting to be let in.
@@ -374,10 +420,10 @@ class BakabaseApiClient {
       _request('DELETE', '/remote-access/devices/$deviceId');
 
   Future<void> renameDevice(String deviceId, String name) => _request(
-        'PUT',
-        '/remote-access/devices/$deviceId/name',
-        body: {'name': name},
-      );
+    'PUT',
+    '/remote-access/devices/$deviceId/name',
+    body: {'name': name},
+  );
 
   /// This device's own id, or null when it has not paired. Lets the device list
   /// point out which row is the phone in the user's hand.
@@ -397,7 +443,15 @@ class BakabaseApiClient {
         path,
         data: body,
         queryParameters: queryParameters,
-        options: Options(method: method),
+        options: Options(
+          method: method,
+          headers: path == '/app/analytics-info'
+              ? null
+              : analytics?.requestHeaders(
+                  Uri.parse(baseUrl).resolve(path),
+                  MobileAnalytics.newId(),
+                ),
+        ),
       );
     } on DioException catch (e) {
       throw ApiException('Could not reach the server: ${e.message}');
@@ -428,7 +482,9 @@ class BakabaseApiClient {
 
     final status = response.statusCode ?? 0;
     if (status < 200 || status >= 300) {
-      throw ApiException(_messageOf(response.data) ?? 'Server error ($status).');
+      throw ApiException(
+        _messageOf(response.data) ?? 'Server error ($status).',
+      );
     }
 
     final data = response.data;
@@ -438,7 +494,9 @@ class BakabaseApiClient {
 
     final code = (data['code'] as num?)?.toInt() ?? 0;
     if (code != 0) {
-      throw ApiException(data['message'] as String? ?? 'Server reported error $code.');
+      throw ApiException(
+        data['message'] as String? ?? 'Server reported error $code.',
+      );
     }
 
     return data;
@@ -464,14 +522,14 @@ class BakabaseApiClient {
   /// The header carries the enum's name, not its number — a bare 6 in a network log
   /// tells nobody anything.
   static RemoteAccessDenial parseDenial(String value) => switch (value) {
-        'Disabled' => RemoteAccessDenial.disabled,
-        'HostOnly' => RemoteAccessDenial.hostOnly,
-        'PathNotServable' => RemoteAccessDenial.pathNotServable,
-        'TranscodeDisabled' => RemoteAccessDenial.transcodeDisabled,
-        'RunsOnUserMachine' => RemoteAccessDenial.runsOnUserMachine,
-        'Unauthenticated' => RemoteAccessDenial.unauthenticated,
-        'SignatureExpired' => RemoteAccessDenial.signatureExpired,
-        'DeviceRevoked' => RemoteAccessDenial.deviceRevoked,
-        _ => RemoteAccessDenial.unknown,
-      };
+    'Disabled' => RemoteAccessDenial.disabled,
+    'HostOnly' => RemoteAccessDenial.hostOnly,
+    'PathNotServable' => RemoteAccessDenial.pathNotServable,
+    'TranscodeDisabled' => RemoteAccessDenial.transcodeDisabled,
+    'RunsOnUserMachine' => RemoteAccessDenial.runsOnUserMachine,
+    'Unauthenticated' => RemoteAccessDenial.unauthenticated,
+    'SignatureExpired' => RemoteAccessDenial.signatureExpired,
+    'DeviceRevoked' => RemoteAccessDenial.deviceRevoked,
+    _ => RemoteAccessDenial.unknown,
+  };
 }

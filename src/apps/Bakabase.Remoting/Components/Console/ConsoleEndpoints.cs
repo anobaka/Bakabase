@@ -72,6 +72,22 @@ public static class ConsoleEndpoints
 
     public static void Map(IEndpointRouteBuilder endpoints)
     {
+        endpoints.MapGet($"{Prefix}/analytics-context", async (HttpContext context, ConsoleRelayContext relay) =>
+        {
+            context.Response.Headers.CacheControl = "no-store";
+            var request = context.Request;
+            var address = context.Connection.RemoteIpAddress;
+            if (!Bakabase.Abstractions.Components.Telemetry.DesktopAnalyticsRequest.IsAllowed(
+                    address != null && System.Net.IPAddress.IsLoopback(address), request.Headers.UserAgent.ToString(),
+                    request.Scheme, request.Host.Value, request.Headers.Origin.ToString(),
+                    request.Headers["Sec-Fetch-Site"].ToString()) || relay.AnalyticsContext == null)
+            {
+                await RefuseAsync(context, HttpStatusCode.NotFound, "NotFound");
+                return;
+            }
+            await WriteAsync(context, relay.AnalyticsContext());
+        });
+
         endpoints.MapGet($"{Prefix}/status",
             async (HttpContext context, ConsoleRelayContext relay, IClientConnectionStore store,
                 IUpstreamContextProbe probe, UserMachineDispatcher dispatcher) =>

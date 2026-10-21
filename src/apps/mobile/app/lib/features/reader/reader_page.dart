@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/api_client.dart';
+import '../../core/analytics.dart';
 
 /// Horizontal page-flip reader for a resource's image files — the
 /// comic/gallery case. Images stream straight from the server (raw for plain
@@ -28,9 +29,13 @@ class ReaderPage extends StatefulWidget {
 }
 
 class _ReaderPageState extends State<ReaderPage> {
-  late final PageController _pages = PageController(initialPage: widget.initialIndex);
+  late final PageController _pages = PageController(
+    initialPage: widget.initialIndex,
+  );
   late int _index = widget.initialIndex;
   bool _chromeVisible = true;
+  late final AnalyticsBinding? _analytics = widget.api.analytics;
+  bool _opened = false;
 
   String _urlAt(int index) => widget.api.streamUrl(widget.imagePaths[index]);
 
@@ -78,6 +83,23 @@ class _ReaderPageState extends State<ReaderPage> {
               child: CachedNetworkImage(
                 imageUrl: _urlAt(index),
                 fit: BoxFit.contain,
+                imageBuilder: (context, provider) {
+                  // A visible decoded page, not merely entering a loading route.
+                  if (!_opened && index == _index) {
+                    _opened = true;
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (mounted) {
+                        _analytics?.capture('reader_opened', {
+                          'media_kind': 'image',
+                          'page_count_bucket': MobileAnalytics.countBucket(
+                            widget.imagePaths.length,
+                          ),
+                        });
+                      }
+                    });
+                  }
+                  return Image(image: provider, fit: BoxFit.contain);
+                },
                 placeholder: (context, url) =>
                     const CircularProgressIndicator(strokeWidth: 2),
                 errorWidget: (context, url, error) => const Icon(

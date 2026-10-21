@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
+using Bakabase.Abstractions.Components.Telemetry;
 using Bakabase.Modules.Acquisition.Abstractions.Services;
 using Bakabase.Modules.Collection.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Collection.Abstractions.Services;
@@ -30,6 +31,14 @@ namespace Bakabase.Tests;
 public sealed class SubscriptionAsCollectionSourceTests
 {
     private IServiceProvider _sp = null!;
+    private RecordingTelemetry _telemetry = null!;
+
+    private sealed class RecordingTelemetry : IProductTelemetry
+    {
+        public List<(string Name, IReadOnlyDictionary<string, object?> Properties)> Events { get; } = [];
+        public void Track(string eventName, IReadOnlyDictionary<string, object?>? properties = null, TelemetryActor? actor = null)
+            => Events.Add((eventName, properties ?? new Dictionary<string, object?>()));
+    }
 
     /// <summary>A source whose listing the test controls.</summary>
     private sealed class FakeSource : ISubscriptionProvider
@@ -40,6 +49,7 @@ public sealed class SubscriptionAsCollectionSourceTests
         public static ThirdPartyId IdentityNamespace = Bakabase.InsideWorld.Models.Constants.ThirdPartyId.DLsite;
 
         public static int FetchCount;
+        public static Exception? FetchError;
 
         public string Kind => "test.source";
         public string DisplayName => "Test source";
@@ -56,6 +66,7 @@ public sealed class SubscriptionAsCollectionSourceTests
             CancellationToken ct)
         {
             FetchCount++;
+            if (FetchError != null) throw FetchError;
 
             return Task.FromResult<IReadOnlyList<SubscriptionItem>>(Items.ToList());
         }
@@ -83,11 +94,14 @@ public sealed class SubscriptionAsCollectionSourceTests
     {
         FakeSource.Items.Clear();
         FakeSource.FetchCount = 0;
+        FakeSource.FetchError = null;
         FakeSource.Kind_ = SubscriptionSourceKind.PlatformHolding;
         FakeSource.IdentityNamespace = ThirdPartyId.DLsite;
 
+        _telemetry = new RecordingTelemetry();
         _sp = await TestServiceBuilder.BuildServiceProvider(services =>
         {
+            services.AddSingleton<IProductTelemetry>(_telemetry);
             services.AddSingleton<ISubscriptionProvider, FakeSource>();
             Bakabase.Modules.Acquisition.Extensions.ServiceCollectionExtensions
                 .AddAcquisitionStep<NoopStep>(services);
@@ -110,6 +124,41 @@ public sealed class SubscriptionAsCollectionSourceTests
 
     private async Task<int> NotificationCount() =>
         (await _sp.GetRequiredService<INotificationService>().SearchAsync(new() {PageSize = 100})).Data?.Count ?? 0;
+
+    [TestMethod]
+    public async Task SubscriptionTelemetryReportsFetchFailureWithoutPrivateError()
+    {
+        var subscription = await NewSubscription("private subscription name");
+        FakeSource.FetchError = new InvalidOperationException("https://private.example/?token=secret");
+        var summary = await Subscriptions.RunCheckAsync(subscription.Id);
+        Assert.IsNotNull(summary!.Error);
+        var captured = _telemetry.Events.Single(e => e.Name == "subscription_check_completed").Properties;
+        Assert.AreEqual("failed", captured["outcome"]);
+        Assert.IsNull(captured["item_count"]);
+        Assert.AreEqual("PlatformHolding", captured["subscription_source_kind"]);
+        Assert.IsFalse(System.Text.Json.JsonSerializer.Serialize(captured).Contains("private"));
+    }
+
+    [TestMethod]
+    public async Task SubscriptionTelemetryDistinguishesPartialCheckAndKnownItems()
+    {
+        FakeSource.Kind_ = SubscriptionSourceKind.SharingChannel;
+        var subscription = await NewSubscription();
+        FakeSource.Items.Add(new SubscriptionItem("valid", "Private title", "https://example.invalid/item"));
+        FakeSource.Items.Add(new SubscriptionItem("invalid", "Missing link"));
+        await Subscriptions.RunCheckAsync(subscription.Id);
+        await Subscriptions.RunCheckAsync(subscription.Id);
+        var captures = _telemetry.Events.Where(e => e.Name == "subscription_check_completed").Select(e => e.Properties).ToList();
+        Assert.AreEqual(2, captures.Count);
+        Assert.AreEqual("partial_success", captures[0]["outcome"]);
+        Assert.AreEqual(2, captures[0]["item_count"]);
+        Assert.AreEqual(1, captures[0]["success_count"]);
+        Assert.AreEqual(1, captures[0]["failure_count"]);
+        Assert.AreEqual(1, captures[0]["new_item_count"]);
+        Assert.AreEqual(0, captures[1]["new_item_count"]);
+        Assert.AreEqual(1, captures[1]["skipped_count"]);
+        Assert.AreNotEqual(captures[0]["attempt_id"], captures[1]["attempt_id"]);
+    }
 
     /// <summary>A source needs somewhere to put what it finds, so making one makes that too.</summary>
     [TestMethod]

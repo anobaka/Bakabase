@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.Telemetry;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Components;
@@ -38,6 +39,8 @@ public sealed class DownloadTaskCompletionTests
     private DownloadTaskService _service = null!;
     private BakabaseDbContext _db = null!;
     private readonly SatisfiedPrecheck _precheck = new();
+    private readonly TelemetryCollector _telemetry = new();
+    private readonly TestTelemetryActor _actor = new();
 
     public enum ScriptTaskType { Only = 1 }
 
@@ -63,6 +66,8 @@ public sealed class DownloadTaskCompletionTests
             services.AddSingleton<IWorkflowEventBus>(new NoopWorkflowBus());
             services.AddTransient(provider => new BakabaseLocalizer(provider.GetRequiredService<IStringLocalizer<SharedResource>>()));
             services.AddSingleton<DownloadQueuePump>(provider => new QuietPump(provider));
+            services.AddSingleton<IProductTelemetry>(_telemetry);
+            services.AddSingleton<ITelemetryActorAccessor>(_actor);
         });
         _service = _services.GetRequiredService<DownloadTaskService>();
         _db = _services.GetRequiredService<BakabaseDbContext>();
@@ -145,6 +150,67 @@ public sealed class DownloadTaskCompletionTests
         var task = await _service.GetDto(id);
         Assert.AreEqual(DownloadTaskStatus.Complete, task.Status);
         Assert.AreEqual(previous, task.CompletedAt);
+        Assert.AreEqual(0, _telemetry.Events.Count, "An already-existing file is not a new download run.");
+    }
+
+    [TestMethod]
+    public async Task DownloadTelemetryUsesPersistedTerminalStatesNotProgressAndDeduplicatesEachRun()
+    {
+        var id = await Add();
+        var actor = new TelemetryActor(Guid.NewGuid().ToString("D"), Guid.NewGuid().ToString("D"),
+            Guid.NewGuid().ToString("D"), "mobile_app");
+        _actor.CurrentActor = actor;
+        var downloader = new StatusDownloader(DownloaderStatus.Starting);
+        await _service.OnStatusChanged(id, downloader, null);
+        _actor.CurrentActor = null;
+        downloader.Status = DownloaderStatus.Downloading;
+        await _service.OnStatusChanged(id, downloader, null);
+        await _service.OnProgress(id, 100);
+        Assert.AreEqual(0, _telemetry.Events.Count);
+
+        downloader.Status = DownloaderStatus.Complete;
+        await _service.OnStatusChanged(id, downloader, null);
+        await _service.OnStatusChanged(id, downloader, null);
+        var completed = _telemetry.Events.Single();
+        Assert.AreEqual("download_completed", completed.Name);
+        Assert.AreEqual("success", completed.Properties["outcome"]);
+        Assert.AreEqual("exhentai", completed.Properties["download_source"]);
+        Assert.AreSame(actor, completed.Actor);
+        Assert.IsTrue(completed.Properties.ContainsKey("duration_ms"));
+        Assert.AreEqual(DownloadTaskDbModelStatus.Complete, (await _db.DownloadTasks.AsNoTracking().SingleAsync(t => t.Id == id)).Status);
+        var firstAttempt = completed.Properties["attempt_id"];
+        Assert.IsFalse(JsonSerializer.Serialize(completed.Properties).Contains("completion-fixture"));
+
+        downloader.Status = DownloaderStatus.Starting;
+        await _service.OnStatusChanged(id, downloader, null);
+        downloader.Status = DownloaderStatus.Failed;
+        await _service.OnStatusChanged(id, downloader, null);
+        Assert.AreEqual(2, _telemetry.Events.Count);
+        Assert.AreEqual("failed", _telemetry.Events.Last().Properties["outcome"]);
+        Assert.AreNotEqual(firstAttempt, _telemetry.Events.Last().Properties["attempt_id"]);
+        Assert.IsNull(_telemetry.Events.Last().Actor, "A later scheduled run must not inherit the old manual actor.");
+    }
+
+    [TestMethod]
+    public async Task TelemetryFailureCannotUndoACompletedDownload()
+    {
+        var id = await Add();
+        _telemetry.Throw = true;
+        await _service.OnStatusChanged(id, new StatusDownloader(DownloaderStatus.Complete), null);
+        Assert.AreEqual(DownloadTaskStatus.Complete, (await _service.GetDto(id)).Status);
+    }
+
+    [DataTestMethod]
+    [DataRow(DownloaderStopBy.ManuallyStop, "cancelled")]
+    [DataRow(DownloaderStopBy.AppendToTheQueue, "interrupted")]
+    [DataRow(DownloaderStopBy.Defer, "waiting")]
+    public async Task StoppingADownloadDoesNotReportSuccess(DownloaderStopBy reason, string expected)
+    {
+        var id = await Add();
+        await _service.OnStatusChanged(id, new StatusDownloader(DownloaderStatus.Stopped) { StoppedBy = reason }, null);
+        var result = _telemetry.Events.Single().Properties;
+        Assert.AreEqual(expected, result["outcome"]);
+        Assert.IsFalse(result.ContainsKey("duration_ms"), "An unobserved start must not invent a duration.");
     }
 
     [TestMethod]
@@ -326,7 +392,7 @@ public sealed class DownloadTaskCompletionTests
     {
         public ThirdPartyId ThirdPartyId => ThirdPartyId.ExHentai;
         public int TaskType => 1;
-        public DownloaderStatus Status => status;
+        public DownloaderStatus Status { get; set; } = status;
         public DateTime? CompletedAt => completedAt;
         public string? Current => null;
         public double? EstimatedRemainingSeconds => null;
@@ -352,5 +418,21 @@ public sealed class DownloadTaskCompletionTests
     private sealed class NoopWorkflowBus : IWorkflowEventBus
     {
         public Task PublishAsync<T>(string triggerKind, T payload, CancellationToken ct = default) => Task.CompletedTask;
+    }
+
+    private sealed class TestTelemetryActor : ITelemetryActorAccessor
+    {
+        public TelemetryActor? CurrentActor { get; set; }
+    }
+
+    private sealed class TelemetryCollector : IProductTelemetry
+    {
+        public readonly List<(string Name, IReadOnlyDictionary<string, object?> Properties, TelemetryActor? Actor)> Events = [];
+        public bool Throw;
+        public void Track(string eventName, IReadOnlyDictionary<string, object?>? properties = null, TelemetryActor? actor = null)
+        {
+            if (Throw) throw new InvalidOperationException("Unavailable telemetry");
+            Events.Add((eventName, properties!, actor));
+        }
     }
 }

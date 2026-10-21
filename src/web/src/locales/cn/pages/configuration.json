@@ -138,7 +138,7 @@
   "configuration.others.enablePreRelease": "启用测试版本渠道",
   "configuration.others.enablePreRelease.tip": "优先使用具有新功能但稳定性较低的测试版本",
   "configuration.others.enableTracking": "启用匿名数据追踪",
-  "configuration.others.enableTracking.tip": "我们使用 Microsoft Clarity（会话录像/热图）、Google Analytics 4（功能使用 / 版本分布）和 Sentry（错误诊断）来改进产品质量。不会收集您的文件路径、文件名、媒体库内容或任何账号信息。您可以随时关闭此开关。",
+  "configuration.others.enableTracking.tip": "我们使用 PostHog 和 Google Analytics 4 统计匿名客户端、部署、版本及功能使用情况；产品统计不包含文件名、路径、搜索内容或媒体内容。Sentry 用于错误诊断，错误报告可能包含异常上下文。会话录像默认关闭，仅在另行配置启用 Microsoft Clarity 时使用。您可以随时关闭此开关。",
   "configuration.others.maxParallelism": "CPU 线程数",
   "configuration.others.maxParallelism.tip": "CPU 密集型操作的并行线程数。设为 1 表示单线程。留空使用默认值（CPU 核心数的一半）。",
   "configuration.development.title": "开发",

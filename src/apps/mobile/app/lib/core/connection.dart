@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'api_client.dart';
+import 'analytics.dart';
 import 'credentials.dart';
 import 'models.dart';
 import 'server_profiles.dart';
@@ -48,7 +49,12 @@ class Connected extends ServerConnectionState {
 /// good — throwing it away to make them find the server again would be a punishment
 /// for looking.
 class NeedsPairing extends ServerConnectionState {
-  const NeedsPairing(this.baseUrl, this.server, this.clockOffset, {this.resumeTo});
+  const NeedsPairing(
+    this.baseUrl,
+    this.server,
+    this.clockOffset, {
+    this.resumeTo,
+  });
 
   final String baseUrl;
   final ServerInfo server;
@@ -81,6 +87,51 @@ class ConnectionFailed extends ServerConnectionState {
 class ConnectionController extends Notifier<ServerConnectionState> {
   final ServerProfileStore _profiles = ServerProfileStore();
   final CredentialStore _credentials = CredentialStore();
+  int _analyticsRequest = 0;
+
+  void suspendAnalytics() {
+    _analyticsRequest++;
+    ref.read(mobileAnalyticsProvider).clearContext();
+  }
+
+  /// Refresh on connect, foreground resume and periodically. Unknown/old server
+  /// configuration never permits capture, and a stale response cannot re-enable it.
+  Future<void> refreshAnalytics({
+    bool newSession = false,
+    bool connected = false,
+    String? pairingMethod,
+  }) async {
+    final request = ++_analyticsRequest;
+    final analytics = ref.read(mobileAnalyticsProvider);
+    analytics.clearContext(keepSession: !newSession);
+    final current = state;
+    if (current is! Connected) return;
+    current.api.analytics = null;
+    await analytics.initialize();
+    if (!analytics.localEnabled || request != _analyticsRequest) return;
+    try {
+      final config = await current.api.analyticsInfo();
+      if (request != _analyticsRequest || !identical(state, current)) return;
+      final binding = analytics.configure(
+        config,
+        current.api.baseUrl,
+        current.server.protocolVersion,
+        newSession: newSession,
+      );
+      current.api.analytics = binding;
+      if (connected) {
+        binding?.capture('server_connection_result', {'outcome': 'success'});
+      }
+      if (pairingMethod != null) {
+        binding?.capture('pairing_result', {
+          'outcome': 'success',
+          'method': pairingMethod,
+        });
+      }
+    } on Object {
+      // Old servers and refused/offline config simply leave capture disabled.
+    }
+  }
 
   /// How many times a denial has been recovered from without the user asking for
   /// anything in between. A phone whose clock is genuinely wrong would otherwise
@@ -117,6 +168,7 @@ class ConnectionController extends Notifier<ServerConnectionState> {
   /// The whole connect handshake: reach the server, learn who it is, check
   /// protocol compatibility, remember it on success.
   Future<void> connect(String baseUrl, {bool userInitiated = true}) async {
+    suspendAnalytics();
     if (userInitiated) {
       _recoveryAttempts = 0;
     }
@@ -130,35 +182,51 @@ class ConnectionController extends Notifier<ServerConnectionState> {
     try {
       info = await BakabaseApiClient(baseUrl).serverInfo();
     } on ApiException catch (e) {
-      state = ConnectionFailed(baseUrl, ConnectionFailureKind.network, e.message,
-          denial: e.denial);
+      state = ConnectionFailed(
+        baseUrl,
+        ConnectionFailureKind.network,
+        e.message,
+        denial: e.denial,
+      );
       return;
     }
 
     if (info.protocolVersion > maxSupportedProtocol) {
       state = ConnectionFailed(
-          baseUrl, ConnectionFailureKind.protocolTooNew, '${info.protocolVersion}');
+        baseUrl,
+        ConnectionFailureKind.protocolTooNew,
+        '${info.protocolVersion}',
+      );
       return;
     }
     if (info.protocolVersion < minSupportedProtocol) {
       state = ConnectionFailed(
-          baseUrl, ConnectionFailureKind.protocolTooOld, '${info.protocolVersion}');
+        baseUrl,
+        ConnectionFailureKind.protocolTooOld,
+        '${info.protocolVersion}',
+      );
       return;
     }
 
     final offset = _measureOffset(info.serverTime, sentAt);
     final credentials = await _credentials.read(info.id);
 
-    await _profiles.save(ServerProfile(
-      id: info.id,
-      name: info.name,
-      baseUrl: baseUrl,
-      lastConnectedAt: DateTime.now(),
-      paired: credentials != null,
-    ));
+    await _profiles.save(
+      ServerProfile(
+        id: info.id,
+        name: info.name,
+        baseUrl: baseUrl,
+        lastConnectedAt: DateTime.now(),
+        paired: credentials != null,
+      ),
+    );
 
-    final api = BakabaseApiClient(baseUrl,
-        credentials: credentials, clockOffset: offset, onDenied: _onDenied);
+    final api = BakabaseApiClient(
+      baseUrl,
+      credentials: credentials,
+      clockOffset: offset,
+      onDenied: _onDenied,
+    );
 
     // Unpaired is fine on a server that does not require pairing — most of them, since
     // the switch is off by default. So rather than guessing from flags, ask for
@@ -176,6 +244,7 @@ class ConnectionController extends Notifier<ServerConnectionState> {
     }
 
     state = Connected(api, info, clockOffset: offset);
+    unawaited(refreshAnalytics(newSession: true, connected: true));
   }
 
   /// Enters pairing because the user asked to, not because the server refused.
@@ -199,22 +268,40 @@ class ConnectionController extends Notifier<ServerConnectionState> {
   /// Backs out of pairing, to wherever there is to back out to.
   void cancelPairing() {
     if (state case NeedsPairing(resumeTo: final resume)) {
+      if (resume == null) suspendAnalytics();
       state = resume ?? const Disconnected();
     }
   }
 
   /// Stores the credentials a pairing produced and connects with them.
   Future<void> completePairing(
-      String baseUrl, ServerInfo server, Duration clockOffset, DeviceCredentials credentials) async {
+    String baseUrl,
+    ServerInfo server,
+    Duration clockOffset,
+    DeviceCredentials credentials, {
+    String method = 'code',
+  }) async {
+    suspendAnalytics();
     await _credentials.write(server.id, credentials);
     await _profiles.setPaired(server.id, true);
     _recoveryAttempts = 0;
 
     state = Connected(
-      BakabaseApiClient(baseUrl,
-          credentials: credentials, clockOffset: clockOffset, onDenied: _onDenied),
+      BakabaseApiClient(
+        baseUrl,
+        credentials: credentials,
+        clockOffset: clockOffset,
+        onDenied: _onDenied,
+      ),
       server,
       clockOffset: clockOffset,
+    );
+    unawaited(
+      refreshAnalytics(
+        newSession: true,
+        connected: true,
+        pairingMethod: method,
+      ),
     );
   }
 
@@ -245,8 +332,15 @@ class ConnectionController extends Notifier<ServerConnectionState> {
           await _credentials.delete(current.server.id);
           await _profiles.setPaired(current.server.id, false);
 
-          if (state case Connected(server: final s) when s.id == current.server.id) {
-            state = NeedsPairing(current.api.baseUrl, current.server, current.clockOffset);
+          if (state case Connected(
+            server: final s,
+          ) when s.id == current.server.id) {
+            suspendAnalytics();
+            state = NeedsPairing(
+              current.api.baseUrl,
+              current.server,
+              current.clockOffset,
+            );
           }
         case RemoteAccessDenial.signatureExpired:
           await connect(current.api.baseUrl, userInitiated: false);
@@ -263,6 +357,7 @@ class ConnectionController extends Notifier<ServerConnectionState> {
     await _profiles.remove(serverId);
 
     if (state case Connected(server: final s) when s.id == serverId) {
+      suspendAnalytics();
       state = const Disconnected();
     }
   }
@@ -288,13 +383,15 @@ class ConnectionController extends Notifier<ServerConnectionState> {
   }
 
   void disconnect() {
+    suspendAnalytics();
     state = const Disconnected();
   }
 }
 
-final connectionProvider = NotifierProvider<ConnectionController, ServerConnectionState>(
-  ConnectionController.new,
-);
+final connectionProvider =
+    NotifierProvider<ConnectionController, ServerConnectionState>(
+      ConnectionController.new,
+    );
 
 final serverProfilesProvider = FutureProvider<List<ServerProfile>>((ref) {
   // Re-reads whenever the connection changes, so a fresh connect reorders the

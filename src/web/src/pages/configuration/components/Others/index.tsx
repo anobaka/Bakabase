@@ -7,6 +7,7 @@ import toast from "react-hot-toast";
 import { AiOutlineDelete, AiOutlineEdit, AiOutlineThunderbolt } from "react-icons/ai";
 
 import BApi from "@/sdk/BApi";
+import { stopAnalytics } from "@/services/Analytics";
 import { Button, Input, Modal, Switch } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { useNetworkOptionsStore, useAppOptionsStore } from "@/stores/options";
@@ -190,6 +191,7 @@ const Others: React.FC<OthersProps> = ({ applyPatches, query }) => {
             isSelected={appOptions.enableAnonymousDataTracking}
             size="sm"
             onValueChange={(checked) => {
+              if (!checked) stopAnalytics();
               applyPatches(BApi.options.patchAppOptions, { enableAnonymousDataTracking: checked });
             }}
           />

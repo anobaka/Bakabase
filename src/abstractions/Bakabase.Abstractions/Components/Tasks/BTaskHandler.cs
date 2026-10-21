@@ -1,5 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Diagnostics;
+using Bakabase.Abstractions.Components.Telemetry;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.Input;
@@ -57,6 +58,9 @@ public class BTaskHandler
     private TimeSpan _elapsedOnLastPercentageChange = TimeSpan.Zero;
     public Stopwatch Sw { get; } = new();
     private ILogger _logger;
+    private readonly TelemetryActor? _originActor;
+    private TelemetryActor? _lastAttemptActor;
+    private int _attemptCount;
 
     public DateTime? NextTimeStartAt
     {
@@ -127,6 +131,8 @@ public class BTaskHandler
         _onPercentageChanged = onPercentageChanged;
         var loggerName = $"{GetType().FullName}:{task.Id}:{task.Name}";
         _logger = rootServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(loggerName);
+        try { _originActor = rootServiceProvider.GetService<ITelemetryActorAccessor>()?.CurrentActor; }
+        catch { /* Telemetry must remain optional for every task host. */ }
     }
 
     private static void SetTaskError(BTask task, Exception error)
@@ -237,6 +243,24 @@ public class BTaskHandler
             _cts?.Dispose();
 
             Sw.Restart();
+            TelemetryActor? telemetryActor = null;
+            try { telemetryActor = _rootServiceProvider.GetService<ITelemetryActorAccessor>()?.CurrentActor; }
+            catch { }
+            var retrying = Task.NextRetryAt.HasValue;
+            var scheduled = automatically && Task.IsPersistent && Task.Interval.HasValue && !retrying;
+            if (_attemptCount == 0 && !scheduled) telemetryActor ??= _originActor;
+            if (retrying) telemetryActor ??= _lastAttemptActor;
+            if (scheduled) telemetryActor = null;
+            _lastAttemptActor = telemetryActor;
+            var telemetryTrigger = scheduled ? "scheduled" : telemetryActor != null ? "manual" : "unknown";
+            var captureAttempt = BTaskTelemetry.ShouldCaptureAttempt(Task.Id, automatically,
+                Task.IsPersistent && Task.Interval.HasValue, telemetryActor != null);
+            var eligibleAt = Task.NextRetryAt ?? Task.EnableAfter ?? Task.CreatedAt;
+            if (scheduled && Task.LastFinishedAt.HasValue) eligibleAt = Task.LastFinishedAt.Value + Task.Interval!.Value;
+            var queueDuration = automatically ? Math.Max(0, (DateTime.Now - eligibleAt).TotalMilliseconds) : 0;
+            var attemptId = Guid.NewGuid().ToString("D");
+            var attemptTimer = Stopwatch.StartNew();
+            _attemptCount++;
             _cts = new CancellationTokenSource();
             _cts.Token.Register(() => { Sw.Stop(); });
             CancellationToken ct;
@@ -287,9 +311,11 @@ public class BTaskHandler
 
             _execution = System.Threading.Tasks.Task.Run(async () =>
             {
+                using var telemetryScope = TelemetryExecutionContext.Begin(telemetryActor);
                 try
                 {
-                    await _run(new BTaskArgs(_pts.Token, ct, Task, UpdateTask, _rootServiceProvider));
+                    await _run(new BTaskArgs(_pts.Token, ct, Task, UpdateTask, _rootServiceProvider)
+                    { TelemetryActor = telemetryActor, TelemetryTrigger = telemetryTrigger });
                     await UpdateTask(t =>
                     {
                         // A domain stop finishes its safe boundary without throwing cancellation.
@@ -359,6 +385,18 @@ public class BTaskHandler
                     Sw.Stop();
                     if (Task.Status.IsFinished())
                         await UpdateTask(t => t.LastFinishedAt = DateTime.Now);
+                    if (captureAttempt) TelemetryCapture.TryTrack(_rootServiceProvider, "task_attempt_finished", new Dictionary<string, object?>
+                    {
+                        ["attempt_id"] = attemptId,
+                        ["task_type"] = Enum.IsDefined(Task.Type) ? Task.Type.ToString() : "unknown",
+                        ["task_resource_type"] = Enum.IsDefined(Task.ResourceType) ? Task.ResourceType.ToString() : "unknown",
+                        ["feature_id"] = BTaskTelemetry.Feature(Task.Id, Task.Type),
+                        ["trigger"] = telemetryTrigger,
+                        ["outcome"] = BTaskTelemetry.Outcome(Task.Status, Task.NextRetryAt.HasValue),
+                        ["duration_ms"] = attemptTimer.Elapsed.TotalMilliseconds,
+                        ["queue_duration_ms"] = queueDuration,
+                        ["retry_count"] = Task.RetryCount
+                    }, telemetryActor);
                 }
             });
         }

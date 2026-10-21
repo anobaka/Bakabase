@@ -173,6 +173,13 @@ that catalog as part of a library. Setup rejects targets containing these
 controls or another registered space. The historical default anchor is not
 moved or rewritten merely by enabling Profiles.
 
+The desktop's optional anonymous `analytics-client-id` also lives in this existing
+desktop control directory. It describes the client across workspace switches, not
+any library, and is neither exported nor relocated with library data. This narrow
+exception must not become a general settings store. The per-library analytics
+deployment ID remains under the effective AppData directory; neither identifier
+may be derived from pairing credentials or hardware fingerprints.
+
 Registering an existing directory does not import, copy or reset its identity.
 A new space requires an empty directory and runs the same first-launch Setup;
 only initialization creates its new identity. Removing a registration never

@@ -112,9 +112,12 @@ export function useManagedResourceSearch() {
       const attempt = ++revision.current;
       refreshRevisions.current.clear();
       setLoading(true);
+      let reported = false;
       try {
         const result = await request.pager.page(form.page || 1);
         if (attempt !== revision.current || request.controller.signal.aborted) return [];
+        reported = true;
+        options?.onResult?.(result.totalCount, request.pager.failures.size ? "failed" : "success");
         const items = options?.filter ? options.filter(result.data) : result.data;
         setResources((previous) =>
           mode === "replace"
@@ -149,6 +152,7 @@ export function useManagedResourceSearch() {
         return items;
       } catch (error) {
         if (request.controller.signal.aborted || attempt !== revision.current) return [];
+        if (!reported) options?.onResult?.(0, "failed");
         throw error;
       } finally {
         if (attempt === revision.current) setLoading(false);

@@ -8,4 +8,8 @@ public record BTaskArgs(
     CancellationToken CancellationToken,
     BTask Task,
     Func<Action<BTask>, Task> UpdateTask,
-    IServiceProvider RootServiceProvider);
+    IServiceProvider RootServiceProvider)
+{
+    public Bakabase.Abstractions.Components.Telemetry.TelemetryActor? TelemetryActor { get; init; }
+    public string TelemetryTrigger { get; init; } = "unknown";
+}

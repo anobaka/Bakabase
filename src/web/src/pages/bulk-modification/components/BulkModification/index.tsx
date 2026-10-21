@@ -19,6 +19,7 @@ import ScopePreferences from "./ScopePreferences";
 import { Button, Modal } from "@/components/bakaui";
 import { ResourceFilterController } from "@/components/ResourceFilter";
 import BApi from "@/sdk/BApi";
+import { trackAnalyticsEvent } from "@/services/Analytics";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import DiffsModal from "@/pages/bulk-modification/components/BulkModification/DiffsModal";
 import ResourcesModal from "@/components/ResourcesModal";
@@ -286,10 +287,15 @@ const BulkModification = ({ bm, onChange }: Props) => {
               size="sm"
               variant="bordered"
               onPress={() => {
+                trackAnalyticsEvent("feature_invoked", { feature_id: "bulk_modification" });
                 setCalculatingDiffs(true);
                 BApi.bulkModification
                   .previewBulkModification(bm.id)
-                  .then(() => {
+                  .then((result) => {
+                    trackAnalyticsEvent("feature_previewed", {
+                      feature_id: "bulk_modification",
+                      outcome: result.code ? "failed" : "success",
+                    });
                     reload();
                   })
                   .finally(() => {

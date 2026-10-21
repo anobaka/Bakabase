@@ -1,6 +1,9 @@
 {
   "@@locale": "en",
   "appTitle": "Bakabase",
+  "moreActions": "More",
+  "usageDataTitle": "Anonymous usage data",
+  "usageDataDescription": "Help improve Bakabase by sharing feature usage, app versions and device types. This does not include server addresses, search text, resource titles, file paths or pairing credentials. Data is sent only when both this switch and the connected server allow it. Turning this off also discards unsent usage data.",
   "connectTitle": "Connect to Bakabase",
   "connecting": "Connecting…",
   "onThisNetwork": "On this network",

@@ -34,6 +34,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
 using Bakabase.Abstractions.Components.FileSystem;
+using Bakabase.Abstractions.Components.Telemetry;
 using DownloadTask = Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.DownloadTask;
 
 namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
@@ -200,8 +201,13 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
         /// <exception cref="ArgumentOutOfRangeException"></exception>
         public async Task OnStatusChanged(int taskId, IDownloader downloader, object? extraData)
         {
+            var observedStatus = downloader.Status;
+            var stoppedBy = downloader.StoppedBy;
+            var telemetry = ServiceProvider.GetService<IProductTelemetry>();
+            if (telemetry != null && observedStatus == DownloaderStatus.Starting)
+                DownloadRunTelemetry.Begin(downloader, ServiceProvider.GetService<ITelemetryActorAccessor>());
             DownloadTaskDbModelStatus? newStatus = null;
-            switch (downloader.Status)
+            switch (observedStatus)
             {
                 case DownloaderStatus.JustCreated:
                 case DownloaderStatus.Starting:
@@ -257,6 +263,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
                 }
 
                 await base.Update(task);
+                if (telemetry != null)
+                    DownloadRunTelemetry.Complete(downloader, observedStatus, stoppedBy, telemetry);
 
                 // Permanently remember that this (ThirdPartyId, Key) has been downloaded.
                 // Kept in a dedicated table so it survives deletion of the task itself.

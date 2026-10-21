@@ -2,6 +2,8 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Tasks;
+using Bakabase.Abstractions.Components.Telemetry;
+using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Components.Localization;
 using Bakabase.TestKit.Implementations;
 using Bakabase.Abstractions.Models.Domain;
@@ -25,6 +27,48 @@ namespace Bakabase.Tests;
 [TestClass]
 public class WorkflowRunnerScopeTests
 {
+    [TestMethod]
+    public async Task PreflightFailureIsReportedOnlyAfterItIsPersistedAndStaleRunIsNotReportedTwice()
+    {
+        await using var connection = new SqliteConnection("DataSource=:memory:");
+        await connection.OpenAsync();
+        var recorder = new TelemetryRecorder();
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddSingleton<IBakabaseLocalizer, TestBakabaseLocalizer>();
+        services.AddDbContext<TestWorkflowDbContext>(o => o.UseSqlite(connection));
+        services.AddSingleton<IWorkflowTriggerRegistry>(new WorkflowTriggerRegistry([]));
+        services.AddSingleton<IWorkflowActivityRegistry>(new WorkflowActivityRegistry([]));
+        services.AddSingleton<IWorkflowItemTypeRegistry>(new WorkflowItemTypeRegistry([]));
+        services.AddSingleton<IProductTelemetry>(recorder);
+        services.AddScoped<WorkflowRunner<TestWorkflowDbContext>>();
+        await using var root = services.BuildServiceProvider();
+        await using var scope = root.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<TestWorkflowDbContext>();
+        await db.Database.EnsureCreatedAsync();
+        var row = new WorkflowRunDbModel { Status = WorkflowRunStatus.Pending, WorkflowDefinitionId = 9999, StartedAt = DateTime.Now };
+        db.Runs.Add(row);
+        await db.SaveChangesAsync();
+        var runner = scope.ServiceProvider.GetRequiredService<WorkflowRunner<TestWorkflowDbContext>>();
+        await runner.ExecuteAsync(row.Id, BuildArgs(root));
+        await db.Entry(row).ReloadAsync();
+        Assert.AreEqual(WorkflowRunStatus.Failed, row.Status);
+        Assert.AreEqual("workflow_run_completed", recorder.Name);
+        Assert.AreEqual("failed", recorder.Properties!["outcome"]);
+        Assert.AreEqual(1, recorder.Count);
+        await runner.ExecuteAsync(row.Id, BuildArgs(root));
+        Assert.AreEqual(1, recorder.Count);
+    }
+
+    private sealed class TelemetryRecorder : IProductTelemetry
+    {
+        public int Count;
+        public string? Name;
+        public System.Collections.Generic.IReadOnlyDictionary<string, object?>? Properties;
+        public void Track(string eventName, System.Collections.Generic.IReadOnlyDictionary<string, object?>? properties = null,
+            TelemetryActor? actor = null) { Count++; Name = eventName; Properties = properties; }
+    }
+
     private sealed class TestWorkflowDbContext(DbContextOptions<TestWorkflowDbContext> options)
         : DbContext(options)
     {

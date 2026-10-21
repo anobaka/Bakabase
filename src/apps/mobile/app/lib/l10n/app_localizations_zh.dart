@@ -12,6 +12,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get appTitle => 'Bakabase';
 
   @override
+  String get moreActions => '更多';
+
+  @override
+  String get usageDataTitle => '匿名使用数据';
+
+  @override
+  String get usageDataDescription =>
+      '分享功能使用情况、应用版本和设备类型，帮助改善 Bakabase。不包含服务器地址、搜索内容、资源标题、文件路径或配对凭证。只有此开关和当前服务器均允许时才会发送。关闭后也会丢弃尚未发送的使用数据。';
+
+  @override
   String get connectTitle => '连接到 Bakabase';
 
   @override

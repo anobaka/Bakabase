@@ -6,9 +6,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api_client.dart';
+import '../../core/analytics.dart';
 import '../../core/connection.dart';
 import '../../core/models.dart';
 import '../connect/devices_page.dart';
+import '../connect/usage_data_page.dart';
 import '../history/history_page.dart';
 import '../resource/resource_page.dart';
 import '../../l10n/app_localizations.dart';
@@ -26,11 +28,11 @@ enum SortChoice {
   final int property;
 
   String label(AppLocalizations l10n) => switch (this) {
-        SortChoice.addDt => l10n.sortAddDt,
-        SortChoice.playedAt => l10n.sortPlayedAt,
-        SortChoice.fileModifyDt => l10n.sortFileModifyDt,
-        SortChoice.filename => l10n.sortFilename,
-      };
+    SortChoice.addDt => l10n.sortAddDt,
+    SortChoice.playedAt => l10n.sortPlayedAt,
+    SortChoice.fileModifyDt => l10n.sortFileModifyDt,
+    SortChoice.filename => l10n.sortFilename,
+  };
 }
 
 /// The main browsing surface: media-library chips, keyword search, and an
@@ -67,7 +69,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
   void initState() {
     super.initState();
     _scroll.addListener(_maybeLoadMore);
-    _reload();
+    _reload(searchKind: 'restored');
     _loadLibraries();
   }
 
@@ -90,14 +92,14 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
     }
   }
 
-  Future<void> _reload() async {
+  Future<void> _reload({String searchKind = 'refresh'}) async {
     setState(() {
       _resources.clear();
       _page = 0;
       _totalCount = 0;
       _error = null;
     });
-    await _loadNextPage();
+    await _loadNextPage(searchKind: searchKind);
   }
 
   void _maybeLoadMore() {
@@ -106,14 +108,19 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
     }
   }
 
-  Future<void> _loadNextPage() async {
+  Future<void> _loadNextPage({String searchKind = 'refresh'}) async {
     if (_loading || (_page > 0 && _resources.length >= _totalCount)) {
       return;
     }
     _loading = true;
+    final api = _api;
+    final analytics = api.analytics;
+    final hasKeyword = _keyword.text.trim().isNotEmpty;
+    final hasLibraryFilter = _selectedLibraryId != null;
+    final nextPage = _page > 0;
 
     try {
-      final result = await _api.search(
+      final result = await api.search(
         keyword: _keyword.text,
         mediaLibraryId: _selectedLibraryId,
         page: _page + 1,
@@ -129,6 +136,19 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
         _totalCount = result.totalCount;
         _resources.addAll(result.resources);
       });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        analytics?.capture('resource_query_presented', {
+          'search_kind': searchKind,
+          'load_mode': nextPage ? 'append' : 'replace',
+          'outcome': 'success',
+          'has_keyword': hasKeyword,
+          'has_filters': hasLibraryFilter,
+          'has_library_filter': hasLibraryFilter,
+          'is_next_page': nextPage,
+          'result_count_bucket': MobileAnalytics.countBucket(result.totalCount),
+        });
+      });
     } on ApiException catch (e) {
       if (mounted) {
         setState(() => _error = e.message);
@@ -140,7 +160,10 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
 
   void _onKeywordChanged(String _) {
     _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 400), _reload);
+    _debounce = Timer(
+      const Duration(milliseconds: 400),
+      () => _reload(searchKind: 'manual'),
+    );
   }
 
   @override
@@ -166,7 +189,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                   _sort = SortChoice.values.byName(value);
                 }
               });
-              _reload();
+              _reload(searchKind: 'manual');
             },
             itemBuilder: (context) => [
               for (final choice in SortChoice.values)
@@ -189,15 +212,32 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
               MaterialPageRoute<void>(builder: (_) => HistoryPage(api: _api)),
             ),
           ),
-          IconButton(
-            // The escape hatch to everything the thin app deliberately does
-            // not implement: the full desktop web UI, in the system browser.
-            tooltip: l10n.openWebUiTooltip,
-            icon: const Icon(Icons.open_in_browser),
-            onPressed: () => launchUrl(
-              Uri.parse(_api.baseUrl),
-              mode: LaunchMode.externalApplication,
-            ),
+          PopupMenuButton<String>(
+            tooltip: l10n.moreActions,
+            icon: const Icon(Icons.more_vert),
+            onSelected: (value) async {
+              if (value == 'usage') {
+                await Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const UsageDataPage(),
+                  ),
+                );
+              } else {
+                final analytics = _api.analytics;
+                if (await launchUrl(
+                  Uri.parse(_api.baseUrl),
+                  mode: LaunchMode.externalApplication,
+                )) {
+                  analytics?.capture('client_action_completed', {
+                    'action': 'open_web_ui',
+                  });
+                }
+              }
+            },
+            itemBuilder: (_) => [
+              PopupMenuItem(value: 'web', child: Text(l10n.openWebUiTooltip)),
+              PopupMenuItem(value: 'usage', child: Text(l10n.usageDataTitle)),
+            ],
           ),
           IconButton(
             // Only where it can do anything: an unpaired device may not manage
@@ -207,8 +247,10 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
             onPressed: !_api.isPaired
                 ? null
                 : () => Navigator.of(context).push(
-                      MaterialPageRoute<void>(builder: (_) => DevicesPage(api: _api)),
+                    MaterialPageRoute<void>(
+                      builder: (_) => DevicesPage(api: _api),
                     ),
+                  ),
           ),
           IconButton(
             tooltip: l10n.switchServerTooltip,
@@ -226,7 +268,8 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
           // for a phone.
           if (!_api.isPaired && connection.server.pairingSupported)
             _NotPairedBanner(
-              onPair: () => ref.read(connectionProvider.notifier).startPairing(),
+              onPair: () =>
+                  ref.read(connectionProvider.notifier).startPairing(),
             ),
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
@@ -255,7 +298,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                       selected: _selectedLibraryId == null,
                       onSelected: (_) {
                         setState(() => _selectedLibraryId = null);
-                        _reload();
+                        _reload(searchKind: 'manual');
                       },
                     ),
                   ),
@@ -263,11 +306,13 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                     Padding(
                       padding: const EdgeInsets.only(right: 8),
                       child: FilterChip(
-                        label: Text('${library.name} (${library.resourceCount})'),
+                        label: Text(
+                          '${library.name} (${library.resourceCount})',
+                        ),
                         selected: _selectedLibraryId == library.id,
                         onSelected: (_) {
                           setState(() => _selectedLibraryId = library.id);
-                          _reload();
+                          _reload(searchKind: 'manual');
                         },
                       ),
                     ),
@@ -299,7 +344,9 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                   if (index == _resources.length - 1) {
                     // Reaching the last built cell is the load-more signal that
                     // also works before the grid overflows the viewport.
-                    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeLoadMore());
+                    WidgetsBinding.instance.addPostFrameCallback(
+                      (_) => _maybeLoadMore(),
+                    );
                   }
                   return _ResourceCell(api: _api, resource: _resources[index]);
                 },
@@ -320,7 +367,9 @@ class _ResourceCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final coverPath = resource.covers.isNotEmpty ? resource.covers.first : resource.path;
+    final coverPath = resource.covers.isNotEmpty
+        ? resource.covers.first
+        : resource.path;
 
     return InkWell(
       onTap: () => Navigator.of(context).push(
@@ -386,23 +435,24 @@ class _NotPairedBanner extends StatelessWidget {
                 children: [
                   Text(
                     l10n.notPairedTitle,
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodyMedium
-                        ?.copyWith(color: scheme.onSecondaryContainer),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: scheme.onSecondaryContainer,
+                    ),
                   ),
                   Text(
                     l10n.notPairedBody,
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodySmall
-                        ?.copyWith(color: scheme.onSecondaryContainer),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: scheme.onSecondaryContainer,
+                    ),
                   ),
                 ],
               ),
             ),
             const SizedBox(width: 8),
-            FilledButton.tonal(onPressed: onPair, child: Text(l10n.notPairedAction)),
+            FilledButton.tonal(
+              onPressed: onPair,
+              child: Text(l10n.notPairedAction),
+            ),
           ],
         ),
       ),

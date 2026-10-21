@@ -1,3 +1,4 @@
+using Bakabase.Service.Services.Telemetry;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -40,6 +41,7 @@ public class MediaLibraryV2Controller(
 
     [HttpPost]
     [SwaggerOperation(OperationId = "AddMediaLibraryV2")]
+    [ProductEvent("library_configured", "library")]
     public async Task<BaseResponse> Add([FromBody] MediaLibraryV2AddOrPutInputModel model)
     {
         await service.Add(model);
@@ -48,6 +50,7 @@ public class MediaLibraryV2Controller(
 
     [HttpPut("{id:int}")]
     [SwaggerOperation(OperationId = "PutMediaLibraryV2")]
+    [ProductEvent("library_configured", "library")]
     public async Task<BaseResponse> Put(int id, [FromBody] MediaLibraryV2AddOrPutInputModel model)
     {
         await service.Put(id, model);
@@ -56,6 +59,7 @@ public class MediaLibraryV2Controller(
 
     [HttpPatch("{id:int}")]
     [SwaggerOperation(OperationId = "PatchMediaLibraryV2")]
+    [ProductEvent("library_configured", "library")]
     public async Task<BaseResponse> Patch(int id, [FromBody] MediaLibraryV2PatchInputModel model)
     {
         await service.Patch(id, model);
@@ -64,6 +68,7 @@ public class MediaLibraryV2Controller(
 
     [HttpPut]
     [SwaggerOperation(OperationId = "SaveAllMediaLibrariesV2")]
+    [ProductEvent("library_configured", "library")]
     public async Task<BaseResponse> SaveAll([FromBody] MediaLibraryV2[] model)
     {
         await service.ReplaceAll(model);

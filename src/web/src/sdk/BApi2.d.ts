@@ -3274,6 +3274,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/app/analytics-client-context": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetDesktopAnalyticsClientContext"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/app/profiles": {
         parameters: {
             query?: never;
@@ -10457,6 +10473,12 @@ export interface components {
         "Bakabase.Abstractions.Components.Configuration.TaskOptions": {
             tasks?: components["schemas"]["Bakabase.Abstractions.Models.Db.BTaskDbModel"][];
         };
+        "Bakabase.Abstractions.Components.Telemetry.DesktopAnalyticsContext": {
+            clientId?: string;
+            clientVersion: string;
+            enableAnonymousDataTracking: boolean;
+            clientSurface: string;
+        };
         "Bakabase.Abstractions.Models.Db.BTaskDbModel": {
             id: string;
             /** Format: date-span */
@@ -16783,6 +16805,16 @@ export interface components {
         "Bakabase.Service.Models.View.AnalyticsAppInfoViewModel": {
             enableAnonymousDataTracking: boolean;
             deviceId: string;
+            deploymentId: string;
+            deploymentType: string;
+            serverOs: string;
+            serverArch: string;
+            environment: string;
+            /** Format: int32 */
+            schemaVersion: number;
+            /** Format: int32 */
+            identityVersion: number;
+            enableSessionReplay: boolean;
             appVersion: string;
             releaseChannel: string;
             clarityProjectId?: string;
@@ -17510,12 +17542,13 @@ export interface components {
             os: string;
             locale: string;
             /** Format: int32 */
-            mediaLibraryCount: number;
+            mediaLibraryCount?: number;
             /** Format: int32 */
-            resourceCount: number;
-            enabledEnhancers: string[];
+            resourceCount?: number;
+            enabledEnhancers?: string[];
             aiEnabled: boolean;
-            hasMediaLibrary: boolean;
+            hasMediaLibrary?: boolean;
+            snapshotStatus: string;
         };
         "Bakabase.Service.Models.View.UserStorageRootViewModel": {
             path: string;
@@ -18328,6 +18361,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Abstractions.Components.Configuration.TaskOptions"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Components.Telemetry.DesktopAnalyticsContext]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Abstractions.Components.Telemetry.DesktopAnalyticsContext"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Db.DLsiteWorkDbModel]": {
             /** Format: int32 */
@@ -26202,6 +26241,28 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.DeploymentPathsViewModel]"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.DeploymentPathsViewModel]"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.DeploymentPathsViewModel]"];
+                };
+            };
+        };
+    };
+    GetDesktopAnalyticsClientContext: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Components.Telemetry.DesktopAnalyticsContext]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Components.Telemetry.DesktopAnalyticsContext]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Components.Telemetry.DesktopAnalyticsContext]"];
                 };
             };
         };

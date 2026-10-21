@@ -46,6 +46,7 @@ import { useResourceBrowserPlayer } from "@/hooks/useResourceBrowserPlayer";
 import PlayOnThisDevice from "@/components/Resource/components/PlayOnThisDevice";
 import { useOpenResourceDirectory } from "@/hooks/useOpenResourceDirectory";
 import { openExternalUrl } from "@/utils/openExternalUrl";
+import { trackAnalyticsEvent } from "@/services/Analytics";
 import { isDesktopAppWindow } from "@/utils/clientSurface";
 
 // Play control status for UI rendering
@@ -368,8 +369,17 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
 
   // Play a PlayableItem via unified PlayItem API (all sources go through resolvers)
   const playNativeItem = async (item: PlayableItem, explicitChoice = false) => {
+    const analyticsProperties = {
+      playback_mode: "native",
+      source_scope: source && !source.isLocal ? "managed" : "local",
+    };
+    trackAnalyticsEvent("playback_requested", analyticsProperties);
     try {
       const rsp = await playItemApi(api, resource.id, item.origin, item.key, explicitChoice);
+      trackAnalyticsEvent("playback_handoff", {
+        ...analyticsProperties,
+        outcome: rsp.code ? "failed" : "success",
+      });
 
       if (!rsp.code) {
         if (item.origin === DataOrigin.Steam)
@@ -380,6 +390,7 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
         choosePlayback(item, t("resource.playbackPolicy.nativeFailed"));
       }
     } catch (e) {
+      trackAnalyticsEvent("playback_handoff", { ...analyticsProperties, outcome: "failed" });
       if (item.origin === DataOrigin.FileSystem)
         choosePlayback(item, t("resource.playbackPolicy.nativeFailed"));
       else toast.error(String(e));
@@ -387,6 +398,10 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
   };
 
   const playInBrowser = (initialPath?: string) => {
+    trackAnalyticsEvent("playback_requested", {
+      playback_mode: "browser",
+      source_scope: source && !source.isLocal ? "managed" : "local",
+    });
     void openInBrowserPlayer(resource, initialPath, {
       onOpenAlternative: (path) => choosePlayback({ origin: DataOrigin.FileSystem, key: path }),
       canOpenAlternative: (path) =>

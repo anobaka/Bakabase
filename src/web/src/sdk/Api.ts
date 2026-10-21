@@ -69,6 +69,13 @@ export interface BakabaseAbstractionsComponentsConfigurationTaskOptions {
   tasks?: BakabaseAbstractionsModelsDbBTaskDbModel[];
 }
 
+export interface BakabaseAbstractionsComponentsTelemetryDesktopAnalyticsContext {
+  clientId?: string;
+  clientVersion: string;
+  enableAnonymousDataTracking: boolean;
+  clientSurface: string;
+}
+
 export interface BakabaseAbstractionsModelsDbBTaskDbModel {
   id: string;
   /** @format date-span */
@@ -7802,6 +7809,16 @@ export interface BakabaseServiceModelsViewAcquisitionCandidateViewModel {
 export interface BakabaseServiceModelsViewAnalyticsAppInfoViewModel {
   enableAnonymousDataTracking: boolean;
   deviceId: string;
+  deploymentId: string;
+  deploymentType: string;
+  serverOs: string;
+  serverArch: string;
+  environment: string;
+  /** @format int32 */
+  schemaVersion: number;
+  /** @format int32 */
+  identityVersion: number;
+  enableSessionReplay: boolean;
   appVersion: string;
   releaseChannel: string;
   clarityProjectId?: string;
@@ -8636,12 +8653,13 @@ export interface BakabaseServiceModelsViewTelemetrySnapshotViewModel {
   os: string;
   locale: string;
   /** @format int32 */
-  mediaLibraryCount: number;
+  mediaLibraryCount?: number;
   /** @format int32 */
-  resourceCount: number;
-  enabledEnhancers: string[];
+  resourceCount?: number;
+  enabledEnhancers?: string[];
   aiEnabled: boolean;
-  hasMediaLibrary: boolean;
+  hasMediaLibrary?: boolean;
+  snapshotStatus: string;
 }
 
 export interface BakabaseServiceModelsViewUserStorageRootViewModel {
@@ -9577,6 +9595,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstract
   code: number;
   message?: string;
   data?: BakabaseAbstractionsComponentsConfigurationTaskOptions;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsComponentsTelemetryDesktopAnalyticsContext {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseAbstractionsComponentsTelemetryDesktopAnalyticsContext;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDbDLsiteWorkDbModel {
@@ -16446,6 +16471,35 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getDeploymentPathsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/app/deployment-paths`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags DesktopAnalytics
+     * @name GetDesktopAnalyticsClientContext
+     * @request GET:/app/analytics-client-context
+     */
+    getDesktopAnalyticsClientContext: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsComponentsTelemetryDesktopAnalyticsContext,
+        any
+      >({
+        path: `/app/analytics-client-context`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getDesktopAnalyticsClientContext
+     * @name getDesktopAnalyticsClientContextUrl
+     */
+    getDesktopAnalyticsClientContextUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/app/analytics-client-context`;
 
       return baseUrl + path;
     },

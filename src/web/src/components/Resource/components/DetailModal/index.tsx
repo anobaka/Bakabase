@@ -77,6 +77,7 @@ import {
 } from "@/components/ResourceDetailLayoutEditor";
 import { useUiOptionsStore } from "@/stores/options";
 import { useOpenResourceDirectory } from "@/hooks/useOpenResourceDirectory";
+import { trackAnalyticsEvent } from "@/services/Analytics";
 
 type ColumnCount = 1 | 2 | 3;
 const PROPERTIES_COLUMNS_KEY = "bakabase:properties:columns";
@@ -88,6 +89,12 @@ interface Props extends DestroyableProps {
 }
 const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
   const BApi = useResourceApi();
+  const analyticsOwner = useResourceOwner();
+  useEffect(() => {
+    trackAnalyticsEvent("resource_opened", {
+      source_scope: analyticsOwner && !analyticsOwner.isLocal ? "managed" : "local",
+    });
+  }, [id, analyticsOwner?.serverId, analyticsOwner?.libraryEpoch]);
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const folderAction = useOpenResourceDirectory();

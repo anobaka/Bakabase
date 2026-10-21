@@ -26,6 +26,7 @@ import { managedMediaUrl } from "@/features/management/playback";
 import { createResourceApi } from "@/features/management/resourceApi";
 import RemotePathMappingHint from "@/features/playback/RemotePathMappingHint";
 import { DataOrigin, MediaType } from "@/sdk/constants";
+import { trackAnalyticsEvent } from "@/services/Analytics";
 
 const platformOptions: DevicePlatform[] = ["android", "ios", "windows", "macos", "linux"];
 
@@ -84,6 +85,11 @@ const PlayOnThisDevice = ({
   const schemes = useMemo(() => schemesForPlatform(platform, mediaType), [platform, mediaType]);
   const title = resource.displayName ?? filePath.split(/[/\\]/).pop() ?? "";
   const openIn = (build: (url: string, title: string, mediaType: MediaType) => string) => {
+    // Protocol dispatch is observable; playback inside another application is not.
+    trackAnalyticsEvent("playback_handoff", {
+      playback_mode: "external_player",
+      outcome: "pending",
+    });
     BApi.resource.markResourceAsPlayed(resource.id, { item: filePath }).catch(() => {});
     // Keep custom protocol navigation within the click gesture.
     window.location.href = build(streamUrl, title, mediaType);
@@ -92,6 +98,7 @@ const PlayOnThisDevice = ({
     setCopyFeedback(undefined);
     try {
       await copyTextToClipboard(streamUrl);
+      trackAnalyticsEvent("playback_handoff", { playback_mode: "clipboard", outcome: "success" });
       setCopyFeedback(t("resource.playOnThisDevice.copied"));
       toast.success(t("resource.playOnThisDevice.copied"));
     } catch {

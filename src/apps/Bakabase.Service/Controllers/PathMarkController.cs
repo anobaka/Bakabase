@@ -1,3 +1,4 @@
+using Bakabase.Service.Services.Telemetry;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -75,6 +76,7 @@ public class PathMarkController(IPathMarkService service, IPathMarkSyncService s
 
     [HttpPost]
     [SwaggerOperation(OperationId = "AddPathMark")]
+    [ProductEvent("path_mark_configured", "path_marks")]
     public async Task<SingletonResponse<PathMark>> Add([FromBody] PathMark mark)
     {
         var result = await service.Add(mark);
@@ -83,6 +85,7 @@ public class PathMarkController(IPathMarkService service, IPathMarkSyncService s
 
     [HttpPost("batch")]
     [SwaggerOperation(OperationId = "AddPathMarks")]
+    [ProductEvent("path_mark_configured", "path_marks")]
     public async Task<ListResponse<PathMark>> AddRange([FromBody] List<PathMark> marks)
     {
         var results = await service.AddRange(marks);
@@ -91,6 +94,7 @@ public class PathMarkController(IPathMarkService service, IPathMarkSyncService s
 
     [HttpPut("{id:int}")]
     [SwaggerOperation(OperationId = "UpdatePathMark")]
+    [ProductEvent("path_mark_configured", "path_marks")]
     public async Task<BaseResponse> Update(int id, [FromBody] PathMark mark)
     {
         mark.Id = id;

@@ -471,7 +471,11 @@ public sealed class RemoteConsoleManager : ManagedServerManager, IMainViewSwitch
         _tokens,
         ClockFor(serverId),
         _self,
-        new ConsoleRelayContext(serverId, AppService.CoreVersion.ToString(), this),
+        new ConsoleRelayContext(serverId, AppService.CoreVersion.ToString(), this)
+        {
+            AnalyticsContext = () => _services.GetService<Bakabase.Abstractions.Components.Telemetry.IDesktopAnalyticsContextProvider>()?.Read()
+                ?? new Bakabase.Abstractions.Components.Telemetry.DesktopAnalyticsContext(null, AppService.CoreVersion.ToString(), false)
+        },
         _loggerFactory,
         _services.GetService<AppService>(),
         _services.GetService<IGuiAdapter>(),

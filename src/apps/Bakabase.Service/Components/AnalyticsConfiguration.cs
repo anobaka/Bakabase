@@ -17,6 +17,8 @@ public class AnalyticsConfiguration
     public class ClarityOptions
     {
         public string? ProjectId { get; set; }
+        /// <summary>Recordings need separate explicit operator consent and masking verification.</summary>
+        public bool EnableSessionReplay { get; set; }
     }
 
     public class Ga4Options
@@ -42,6 +44,13 @@ public class AnalyticsConfiguration
     /// </summary>
     public class PostHogOptions
     {
+        /// <summary>Bounded, memory-only delivery. Offline events are dropped, never written to disk.</summary>
+        public int QueueCapacity { get; set; } = 512;
+        public int BatchSize { get; set; } = 50;
+        public int FlushIntervalSeconds { get; set; } = 10;
+        public int HeartbeatIntervalMinutes { get; set; } = 360;
+        public int SnapshotIntervalHours { get; set; } = 24;
+
         /// <summary>The PostHog project API key (a.k.a. "Project API Key", starts with
         /// <c>phc_</c>). Surfaced to the frontend; safe to expose since it's write-only.</summary>
         public string? ApiKey { get; set; }

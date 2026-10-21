@@ -1,3 +1,4 @@
+using Bakabase.Service.Services.Telemetry;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -36,11 +37,13 @@ public class CollectionController(
 
     [HttpPost]
     [SwaggerOperation(OperationId = "AddCollection")]
+    [ProductEvent("collection_updated", "collections")]
     public async Task<SingletonResponse<ResourceCollection>> Add([FromBody] CollectionInputModel model) =>
         new(await service.Add(model));
 
     [HttpPut("{id:int}")]
     [SwaggerOperation(OperationId = "PutCollection")]
+    [ProductEvent("collection_updated", "collections")]
     public async Task<SingletonResponse<ResourceCollection>> Put(int id,
         [FromBody] CollectionInputModel model)
     {
@@ -90,6 +93,7 @@ public class CollectionController(
 
     [HttpPost("{id:int}/members")]
     [SwaggerOperation(OperationId = "AddCollectionMembers")]
+    [ProductEvent("collection_updated", "collections")]
     public async Task<BaseResponse> AddMembers(int id, [FromBody] CollectionMembersInputModel model)
     {
         await service.AddMembers(id, model.ResourceIds);
@@ -99,6 +103,7 @@ public class CollectionController(
 
     [HttpDelete("{id:int}/members")]
     [SwaggerOperation(OperationId = "RemoveCollectionMembers")]
+    [ProductEvent("collection_updated", "collections")]
     public async Task<BaseResponse> RemoveMembers(int id, [FromBody] CollectionMembersInputModel model)
     {
         await service.RemoveMembers(id, model.ResourceIds);
@@ -112,6 +117,7 @@ public class CollectionController(
     /// </summary>
     [HttpPut("{id:int}/members/{resourceId:int}/ignored")]
     [SwaggerOperation(OperationId = "SetCollectionMemberIgnored")]
+    [ProductEvent("collection_updated", "collections")]
     public async Task<BaseResponse> SetIgnored(int id, int resourceId, [FromQuery] bool ignored)
     {
         await service.SetMemberIgnored(id, resourceId, ignored);
@@ -121,6 +127,7 @@ public class CollectionController(
 
     [HttpPut("{id:int}/members/order")]
     [SwaggerOperation(OperationId = "ReorderCollectionMembers")]
+    [ProductEvent("collection_updated", "collections")]
     public async Task<BaseResponse> Reorder(int id, [FromBody] CollectionMembersInputModel model)
     {
         await service.ReorderMembers(id, model.ResourceIds);

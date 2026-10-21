@@ -389,6 +389,33 @@ public class RelayPipelineTests
     // ---- forwarding ----
 
     [TestMethod]
+    public async Task Live_desktop_opt_out_strips_cached_analytics_headers_only()
+    {
+        var enabled = true;
+        var relay = new Bakabase.Remoting.Components.Console.ConsoleRelayContext("server", "1", null!)
+        {
+            AnalyticsContext = () => new Bakabase.Abstractions.Components.Telemetry.DesktopAnalyticsContext(
+                enabled ? "bdafdd4c-e81a-4124-b4da-1bca7e7ef3f3" : null, "1", enabled)
+        };
+        var transformer = new UpstreamTransformer(new NoCredentials(), new ServerClock(), relay);
+        foreach (var consent in new[] { true, false, true })
+        {
+            enabled = consent;
+            var context = new Microsoft.AspNetCore.Http.DefaultHttpContext();
+            context.Request.Method = "GET";
+            context.Request.Path = "/resource/search";
+            context.Request.Headers["X-Bakabase-Analytics-Consent"] = "1";
+            context.Request.Headers["X-Bakabase-Analytics-Client"] = "bdafdd4c-e81a-4124-b4da-1bca7e7ef3f3";
+            context.Request.Headers["X-Kept"] = "1";
+            using var proxy = new HttpRequestMessage(HttpMethod.Get, (Uri?) null);
+            await transformer.TransformRequestAsync(context, proxy, "http://127.0.0.1:1/", CancellationToken.None);
+            Assert.AreEqual(consent, proxy.Headers.Contains("X-Bakabase-Analytics-Client"));
+            Assert.AreEqual(consent, proxy.Headers.Contains("X-Bakabase-Analytics-Consent"));
+            Assert.IsTrue(proxy.Headers.Contains("X-Kept"));
+        }
+    }
+
+    [TestMethod]
     public async Task A_relay_actually_reaches_its_server()
     {
         var response = await Send("/resource/search?page=2");

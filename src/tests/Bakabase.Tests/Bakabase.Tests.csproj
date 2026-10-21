@@ -27,6 +27,7 @@
     <!-- Exercise desktop startup teardown without launching Avalonia or referencing the entry executable. -->
     <Compile Include="..\..\apps\Bakabase.App\DesktopSetupBootstrap.cs" Link="Desktop\DesktopSetupBootstrap.cs" />
     <Compile Include="..\..\apps\Bakabase.App\DesktopProtocolRegistration.cs" Link="Desktop\DesktopProtocolRegistration.cs" />
+    <Compile Include="..\..\apps\Bakabase.App\DesktopAnalyticsContextProvider.cs" Link="Desktop\DesktopAnalyticsContextProvider.cs" />
   </ItemGroup>
 
 </Project>
