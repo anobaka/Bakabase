@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Extensions;
@@ -282,5 +283,96 @@ public sealed class MediaLibraryV2BulkDeleteTests
         (await Libraries.Get(id)).Should().BeNull();
         (await Mappings.GetMediaLibraryIdsByResourceId(resource)).Should().BeEmpty();
         (await Marks.GetAll()).Should().BeEmpty();
+    }
+
+    [DataTestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task Cleanup_DoesNotOverwriteOrDeleteConcurrentlyEditedMarkOrItsEffects(bool originallyMixed)
+    {
+        var barrier = new MarkSnapshotBarrier();
+        (_sp as IDisposable)?.Dispose();
+        _sp = await TestServiceBuilder.BuildServiceProvider(_root, services =>
+            services.AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, PathMarkDbModel, int>>(
+                sp => new SnapshotPathMarkOrm(sp, barrier)));
+        var selected = await AddLibrary("Delete");
+        var keep = await AddLibrary("Keep");
+        var added = await AddLibrary("Added concurrently");
+        var resource = await AddResource();
+        var mark = await AddMark(originallyMixed ? Fixed(selected, keep) : Fixed(selected));
+        await Sync();
+
+        barrier.Arm();
+        var deletion = Libraries.DeleteMany([selected], true);
+        await barrier.Captured.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        string editedConfig;
+        string editedEffect;
+        try
+        {
+            await using var editScope = _sp.CreateAsyncScope();
+            var edits = editScope.ServiceProvider.GetRequiredService<IPathMarkService>();
+            var current = (await edits.Get(mark.Id))!;
+            current.ConfigJson = editedConfig = JsonConvert.SerializeObject(originallyMixed
+                ? Fixed(selected, keep, added) : Fixed(keep));
+            current.Priority = 123;
+            await edits.Update(current);
+            // The replacement ledger contribution must survive a skipped snapshot deletion.
+            editedEffect = originallyMixed ? JsonConvert.SerializeObject(new[] {keep, added}) : keep.ToString();
+            var effects = editScope.ServiceProvider.GetRequiredService<IPathMarkEffectService>();
+            var rows = await effects.GetPropertyEffectsByMarkId(mark.Id);
+            if (rows.Count == 0)
+            {
+                await effects.AddPropertyEffects([new PropertyMarkEffect
+                {
+                    MarkId = mark.Id, PropertyPool = PropertyPool.Internal,
+                    PropertyId = (int) ResourceProperty.MediaLibraryV2Multi, ResourceId = resource,
+                    Value = editedEffect, Priority = 123
+                }]);
+            }
+            else
+            {
+                rows.Single().Value = editedEffect;
+                await effects.UpdatePropertyEffects(rows);
+            }
+        }
+        finally { barrier.Resume.TrySetResult(); }
+        await deletion.WaitAsync(TimeSpan.FromSeconds(10));
+
+        (await Libraries.Get(selected)).Should().BeNull();
+        var remaining = await Marks.Get(mark.Id);
+        remaining.Should().NotBeNull("a changed snapshot must never delete a mark with unselected libraries");
+        remaining!.ConfigJson.Should().Be(editedConfig, "cleanup must not overwrite an editor's newer fixed values");
+        remaining.Priority.Should().Be(123);
+        (await Effects.GetPropertyEffectsByMarkId(mark.Id)).Should().ContainSingle()
+            .Which.Value.Should().Be(editedEffect);
+        await Sync();
+        (await Mappings.GetMediaLibraryIdsByResourceId(resource)).Should().BeEquivalentTo(
+            originallyMixed ? new[] {keep, added} : new[] {keep});
+    }
+
+    private sealed class MarkSnapshotBarrier
+    {
+        private int _armed;
+        public TaskCompletionSource Captured { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource Resume { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public void Arm() => Interlocked.Exchange(ref _armed, 1);
+        public async Task AfterSnapshot()
+        {
+            if (Interlocked.Exchange(ref _armed, 0) == 0) return;
+            Captured.TrySetResult();
+            await Resume.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        }
+    }
+
+    private sealed class SnapshotPathMarkOrm(IServiceProvider services, MarkSnapshotBarrier barrier)
+        : FullMemoryCacheResourceService<BakabaseDbContext, PathMarkDbModel, int>(services)
+    {
+        public override async Task<List<PathMarkDbModel>> GetAll(
+            Expression<Func<PathMarkDbModel, bool>>? selector = null, bool asNoTracking = true)
+        {
+            var snapshot = await base.GetAll(selector, asNoTracking);
+            await barrier.AfterSnapshot();
+            return snapshot;
+        }
     }
 }

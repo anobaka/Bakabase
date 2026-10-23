@@ -415,7 +415,12 @@ public class PathMarkService<TDbContext>(
         if (selected.Count == 0) return;
         var marks = await GetAll(m => !m.IsDeleted &&
             (m.Type == PathMarkType.MediaLibrary || m.Type == PathMarkType.Property));
-        var deleteIds = new List<int>();
+        var db = serviceProvider.GetRequiredService<TDbContext>();
+        IQueryable<PathMarkDbModel> Unchanged(PathMark snapshot) => db.Set<PathMarkDbModel>().Where(m =>
+            m.Id == snapshot.Id && !m.IsDeleted && m.Type == snapshot.Type &&
+            m.ConfigJson == snapshot.ConfigJson && m.UpdatedAt == snapshot.UpdatedAt);
+        var deleteSnapshots = new List<PathMark>();
+        var changed = new List<PathMarkDbModel>();
         foreach (var mark in marks)
         {
             // Keep malformed historical configurations untouched; a library deletion must
@@ -438,7 +443,7 @@ public class PathMarkService<TDbContext>(
                 var current = config.GetFixedMediaLibraryIds();
                 if (!current.Any(selected.Contains)) continue;
                 var remaining = current.Where(id => !selected.Contains(id)).ToList();
-                if (remaining.Count == 0) { deleteIds.Add(mark.Id); continue; }
+                if (remaining.Count == 0) { deleteSnapshots.Add(mark); continue; }
                 SetConfigValue(json, nameof(config.MediaLibraryIds), JArray.FromObject(remaining));
                 SetConfigValue(json, nameof(config.MediaLibraryId), JToken.FromObject(remaining[0]));
             }
@@ -461,28 +466,54 @@ public class PathMarkService<TDbContext>(
                 bool IsSelected(JToken value) => int.TryParse(value.ToString(), out var id) && selected.Contains(id);
                 if (!values.Any(IsSelected)) continue;
                 var remaining = values.Where(value => !IsSelected(value)).ToList();
-                if (remaining.Count == 0) { deleteIds.Add(mark.Id); continue; }
+                if (remaining.Count == 0) { deleteSnapshots.Add(mark); continue; }
                 var nextValue = new JArray(remaining);
                 SetConfigValue(json, nameof(config.FixedValue), serialized
                     ? JValue.CreateString(nextValue.ToString(Formatting.None)) : nextValue);
             }
 
-            mark.ConfigJson = json.ToString(Formatting.None);
             // This maintenance operation changes only configured library IDs. A historical
             // mark can still reference a path that the current storage policy no longer allows.
-            mark.UpdatedAt = DateTime.UtcNow;
+            // Compare the snapshot in the write itself: another editor may have added an
+            // unselected library or changed the mark's type while cleanup was awaiting I/O.
+            var configJson = json.ToString(Formatting.None);
+            var updatedAt = DateTime.UtcNow;
+            var affected = await Unchanged(mark).ExecuteUpdateAsync(set => set
+                .SetProperty(m => m.ConfigJson, configJson)
+                .SetProperty(m => m.UpdatedAt, updatedAt)
+                .SetProperty(m => m.SyncStatus, PathMarkSyncStatus.Pending));
+            if (affected == 0) continue;
+            orm.ClearCache();
+            mark.ConfigJson = configJson;
+            mark.UpdatedAt = updatedAt;
             mark.SyncStatus = PathMarkSyncStatus.Pending;
-            var response = await orm.Update(mark.ToDbModel());
-            if (!response.IsSuccess()) throw new InvalidOperationException(response.Message);
-            await NotifyPathMarkStatusChange(mark.ToDbModel());
-            await TriggerImmediateSyncIfEnabled(mark.Id);
+            changed.Add(mark.ToDbModel());
         }
 
-        if (deleteIds.Count > 0)
+        if (deleteSnapshots.Count > 0)
         {
-            var effectService = serviceProvider.GetRequiredService<IPathMarkEffectService>();
-            foreach (var id in deleteIds) await effectService.DeletePropertyEffectsByMarkId(id);
-            await HardDeleteBatch(deleteIds);
+            var removed = new List<int>();
+            await using var transaction = await db.Database.BeginTransactionAsync();
+            foreach (var snapshot in deleteSnapshots)
+            {
+                var affected = await Unchanged(snapshot).ExecuteDeleteAsync();
+                if (affected == 0) continue;
+                await db.Set<PropertyMarkEffectDbModel>().Where(e => e.MarkId == snapshot.Id).ExecuteDeleteAsync();
+                removed.Add(snapshot.Id);
+            }
+            await transaction.CommitAsync();
+            if (removed.Count > 0)
+            {
+                orm.ClearCache();
+                serviceProvider.GetRequiredService<FullMemoryCacheResourceService<TDbContext, PropertyMarkEffectDbModel, int>>()
+                    .ClearCache();
+                foreach (var id in removed) await uiHub.Clients.All.DeleteData("PathMark", id);
+            }
+        }
+        foreach (var mark in changed)
+        {
+            await NotifyPathMarkStatusChange(mark);
+            await TriggerImmediateSyncIfEnabled(mark.Id);
         }
     }
 
