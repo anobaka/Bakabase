@@ -39,6 +39,7 @@ import styles from "./index.module.scss";
 
 import {
   Button,
+  Checkbox,
   Dropdown,
   DropdownItem,
   DropdownMenu,
@@ -80,6 +81,8 @@ const MediaLibraryPage = () => {
   const [filter, setFilter] = useState<LibraryFilter>("all");
   const [editor, setEditor] = useState<{ library?: Library }>();
   const [highlightedKey, setHighlightedKey] = useState<string>();
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
   const catalog = useOwnedCatalog(mediaLibraries, (api) =>
     api.mediaLibraryV2.getAllMediaLibraryV2(),
   );
@@ -169,30 +172,109 @@ const MediaLibraryPage = () => {
     catalog.refresh();
   };
 
-  const deleteLibrary = (library: Library) => {
+  const deleteLibraries = (libraries: Library[]) => {
+    let removeRelatedPathMarks = false;
+    let remainingLibraries = libraries;
+    let deleting = false;
+
     createPortal(Modal, {
       defaultVisible: true,
-      title: t("mediaLibrary.confirm.deleteTitle"),
+      title: t(
+        libraries.length === 1
+          ? "mediaLibrary.confirm.deleteTitle"
+          : "mediaLibrary.confirm.deleteSelectedTitle",
+      ),
       children: (
         <div className="space-y-3">
           <p className="break-words">
-            {t("mediaLibrary.confirm.deleteNamed", { name: library.name })}
+            {libraries.length === 1
+              ? t("mediaLibrary.confirm.deleteNamed", { name: libraries[0].name })
+              : t("mediaLibrary.confirm.deleteSelected", { count: libraries.length })}
           </p>
+          {libraries.length > 1 && (
+            <ul className="max-h-40 space-y-1 overflow-y-auto text-sm">
+              {libraries.map((library) => (
+                <li key={catalogItemKey(library)} className="flex flex-wrap items-center gap-2">
+                  <span className="break-words">{library.name}</span>
+                  <CatalogOwnerMark owner={library.owner} />
+                </li>
+              ))}
+            </ul>
+          )}
           <p className="text-sm text-default-500">{t("mediaLibrary.confirm.deleteDescription")}</p>
+          <div className="rounded-xl border border-default-200 p-3">
+            <Checkbox
+              aria-describedby="media-library-delete-path-marks-description"
+              defaultSelected={false}
+              onValueChange={(value) => {
+                removeRelatedPathMarks = value;
+              }}
+            >
+              {t("mediaLibrary.confirm.removeRelatedPathMarks.label")}
+            </Checkbox>
+            <p
+              className="mt-2 pl-7 text-xs leading-6 text-default-500"
+              id="media-library-delete-path-marks-description"
+            >
+              {t("mediaLibrary.confirm.removeRelatedPathMarks.description")}
+            </p>
+          </div>
           <p className="text-sm text-danger">{t("mediaLibrary.warning.irreversible")}</p>
         </div>
       ),
       onOk: async () => {
-        const current = currentItem(library);
+        if (deleting) return;
+        const currentLibraries = remainingLibraries.map(currentItem);
 
-        if (!canEditCatalogItem(current)) throw new Error(t("management.catalog.ownerUnavailable"));
-        const response = await catalogItemApi(current).mediaLibraryV2.deleteMediaLibraryV2(
-          current.id,
-        );
+        if (currentLibraries.some((library) => !canEditCatalogItem(library))) {
+          throw new Error(t("management.catalog.ownerUnavailable"));
+        }
+        const groups = new Map<string, Library[]>();
 
-        if (response.code) throw new Error(response.message);
-        await loadMediaLibraries();
-        catalog.refresh();
+        for (const library of currentLibraries) {
+          const owner = JSON.stringify([
+            library.owner?.serverId ?? "local",
+            library.owner?.libraryEpoch ?? "",
+          ]);
+          const group = groups.get(owner) ?? [];
+
+          group.push(library);
+          groups.set(owner, group);
+        }
+        deleting = true;
+        const deleted = new Set<string>();
+        const cleanup = removeRelatedPathMarks;
+
+        try {
+          for (const group of groups.values()) {
+            // Managed-device requests accept at most 100 IDs per operation.
+            for (let offset = 0; offset < group.length; offset += 100) {
+              const chunk = group.slice(offset, offset + 100);
+              const current = currentItem(chunk[0]);
+
+              if (!canEditCatalogItem(current))
+                throw new Error(t("management.catalog.ownerUnavailable"));
+              const response = await catalogItemApi(current).mediaLibraryV2.deleteMediaLibrariesV2({
+                ids: chunk.map((library) => library.id),
+                removeRelatedPathMarks: cleanup,
+              });
+
+              if (response.code) throw new Error(response.message);
+              chunk.forEach((library) => deleted.add(catalogItemKey(library)));
+            }
+          }
+        } finally {
+          if (deleted.size) {
+            // A retry only submits owners that have not already confirmed deletion.
+            remainingLibraries = remainingLibraries.filter(
+              (library) => !deleted.has(catalogItemKey(library)),
+            );
+            setSelectedKeys((keys) => new Set([...keys].filter((key) => !deleted.has(key))));
+            await loadMediaLibraries();
+            catalog.refresh();
+          }
+          deleting = false;
+        }
       },
       footer: {
         actions: ["ok", "cancel"],
@@ -211,6 +293,21 @@ const MediaLibraryPage = () => {
   };
 
   const allLibraries = catalog.items;
+  const selectedLibraries = allLibraries.filter((library) =>
+    selectedKeys.has(catalogItemKey(library)),
+  );
+  const availableKeys = JSON.stringify(allLibraries.map(catalogItemKey));
+
+  useEffect(() => {
+    const available = new Set<string>(JSON.parse(availableKeys));
+
+    setSelectedKeys((keys) =>
+      [...keys].every((key) => available.has(key))
+        ? keys
+        : new Set([...keys].filter((key) => available.has(key))),
+    );
+  }, [availableKeys]);
+
   const libraryKey = (library: Library) =>
     library.owner ? mediaLibraryChoiceValue(library.owner, library.id) : catalogItemKey(library);
   const order = useMediaLibraryOrder(allLibraries.map(libraryKey));
@@ -233,6 +330,22 @@ const MediaLibraryPage = () => {
       (filter === "all" ||
         (filter === "withResources" ? library.resourceCount > 0 : !library.resourceCount)),
   );
+  const selectableLibraries = visibleLibraries.filter(canEditCatalogItem);
+  const selectedVisibleCount = selectableLibraries.filter((library) =>
+    selectedKeys.has(catalogItemKey(library)),
+  ).length;
+  const changeSelection = (libraries: Library[], selected: boolean) => {
+    setSelectedKeys((keys) => {
+      const next = new Set(keys);
+
+      for (const library of libraries) {
+        if (selected) next.add(catalogItemKey(library));
+        else next.delete(catalogItemKey(library));
+      }
+
+      return next;
+    });
+  };
   const moveLibrary = async ({ active, over }: DragEndEvent) => {
     if (orderPending.current || !orderingReady || !over || active.id === over.id) return;
     orderPending.current = true;
@@ -264,8 +377,22 @@ const MediaLibraryPage = () => {
             {t("mediaLibrary.description")}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <HelpCenterButton concept="mediaLibrary" topic="pathMark" />
+          {(selectionMode || allLibraries.length > 0) && (
+            <Button
+              aria-controls={selectionMode ? "media-library-selection-toolbar" : undefined}
+              aria-expanded={selectionMode}
+              color={selectionMode ? "primary" : "default"}
+              variant="flat"
+              onPress={() => {
+                setSelectionMode((active) => !active);
+                setSelectedKeys(new Set());
+              }}
+            >
+              {t(selectionMode ? "mediaLibrary.selection.exit" : "mediaLibrary.action.bulkManage")}
+            </Button>
+          )}
           <Button
             color="primary"
             startContent={<AiOutlinePlus aria-hidden className="text-lg" />}
@@ -352,6 +479,48 @@ const MediaLibraryPage = () => {
               </Button>
             ))}
           </div>
+          {selectionMode && (
+            <div
+              aria-label={t("mediaLibrary.selection.label")}
+              className="flex flex-wrap items-center gap-3"
+              id="media-library-selection-toolbar"
+              role="group"
+            >
+              <Checkbox
+                isDisabled={selectableLibraries.length === 0}
+                isIndeterminate={
+                  selectedVisibleCount > 0 && selectedVisibleCount < selectableLibraries.length
+                }
+                isSelected={
+                  selectableLibraries.length > 0 &&
+                  selectedVisibleCount === selectableLibraries.length
+                }
+                onValueChange={(selected) => changeSelection(selectableLibraries, selected)}
+              >
+                {t("mediaLibrary.selection.selectVisible")}
+              </Checkbox>
+              {selectedLibraries.length > 0 && (
+                <>
+                  <span aria-live="polite" className="text-sm text-default-500">
+                    {t("mediaLibrary.selection.count", { count: selectedLibraries.length })}
+                  </span>
+                  <Button size="sm" variant="light" onPress={() => setSelectedKeys(new Set())}>
+                    {t("mediaLibrary.selection.clear")}
+                  </Button>
+                  <Button
+                    color="danger"
+                    isDisabled={selectedLibraries.some((library) => !canEditCatalogItem(library))}
+                    size="sm"
+                    startContent={<MdOutlineDelete aria-hidden />}
+                    variant="flat"
+                    onPress={() => deleteLibraries(selectedLibraries)}
+                  >
+                    {t("mediaLibrary.action.deleteSelected")}
+                  </Button>
+                </>
+              )}
+            </div>
+          )}
         </section>
       )}
 
@@ -402,7 +571,7 @@ const MediaLibraryPage = () => {
                 {visibleLibraries.map((library) => (
                   <SortableLibraryCard
                     key={catalogItemKey(library)}
-                    className={`${styles.card} ${highlightedKey === catalogItemKey(library) ? styles.highlighted : ""}`}
+                    className={`${styles.card} ${highlightedKey === catalogItemKey(library) || selectedKeys.has(catalogItemKey(library)) ? styles.highlighted : ""}`}
                     disabled={order.saving || !orderingReady}
                     domId={`media-library-${catalogItemKey(library)}`}
                     dragLabel={t("mediaLibrary.optionOrder.drag", { name: library.name })}
@@ -414,6 +583,16 @@ const MediaLibraryPage = () => {
                         <div className={styles.cardHeader}>
                           <div className="flex items-center gap-2">
                             {handle}
+                            {selectionMode && (
+                              <Checkbox
+                                aria-label={t("mediaLibrary.selection.selectNamed", {
+                                  name: library.name,
+                                })}
+                                isDisabled={!canEditCatalogItem(library)}
+                                isSelected={selectedKeys.has(catalogItemKey(library))}
+                                onValueChange={(selected) => changeSelection([library], selected)}
+                              />
+                            )}
                             <div aria-hidden className={styles.libraryIcon}>
                               <HiOutlineCollection />
                             </div>
@@ -450,7 +629,7 @@ const MediaLibraryPage = () => {
                                 className="text-danger"
                                 color="danger"
                                 startContent={<MdOutlineDelete aria-hidden />}
-                                onPress={() => deleteLibrary(library)}
+                                onPress={() => deleteLibraries([library])}
                               >
                                 {t("mediaLibrary.action.delete")}
                               </DropdownItem>

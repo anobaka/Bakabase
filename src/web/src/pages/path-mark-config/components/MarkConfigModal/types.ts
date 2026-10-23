@@ -42,6 +42,7 @@ export interface MarkConfig {
   isResourceBoundary?: boolean;
   // For MediaLibrary type
   mediaLibraryId?: number;
+  mediaLibraryIds?: number[];
   mediaLibraryValueType?: PropertyValueType;
   layerToMediaLibrary?: number;
   regexToMediaLibrary?: string;

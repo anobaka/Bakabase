@@ -41,6 +41,11 @@ public class MediaLibraryMarkConfig
     public int? MediaLibraryId { get; set; }
 
     /// <summary>
+    /// Fixed libraries. When present, takes precedence over the legacy single MediaLibraryId.
+    /// </summary>
+    public List<int>? MediaLibraryIds { get; set; }
+
+    /// <summary>
     /// Dynamic layer relative to ValueBasePath: 0 selects that path's name (including a file extension),
     /// negative values select ancestors (-1 = parent). With MarkPath, positive values select the
     /// resource's branch at that depth below the mark. ResourcePath does not support positive layers.

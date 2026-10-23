@@ -55,6 +55,7 @@ vi.mock("@/sdk/BApi", () => ({
       addMediaLibraryV2: mocks.local.add,
       patchMediaLibraryV2: mocks.local.patch,
       deleteMediaLibraryV2: mocks.local.remove,
+      deleteMediaLibrariesV2: mocks.local.remove,
     },
   },
 }));
@@ -101,6 +102,7 @@ vi.mock("@/features/management/resourceApi", () => ({
         addMediaLibraryV2: api.add,
         patchMediaLibraryV2: api.patch,
         deleteMediaLibraryV2: api.remove,
+        deleteMediaLibrariesV2: api.remove,
       },
     };
   },
@@ -170,6 +172,10 @@ function names() {
 
 async function loaded() {
   await waitFor(() => expect(browseButtons()).toHaveLength(3));
+}
+
+async function enterSelectionMode() {
+  await userEvent.click(screen.getByRole("button", { name: "mediaLibrary.action.bulkManage" }));
 }
 
 async function manage(name: string, action: "edit" | "delete") {
@@ -444,9 +450,216 @@ describe("media library creation and management", () => {
     expect(names()).toEqual(["Archive", "Comics", "Films"]);
 
     await act(async () => confirmation.onOk());
-    expect(mocks.local.remove).toHaveBeenLastCalledWith(1);
+    expect(mocks.local.remove).toHaveBeenLastCalledWith({
+      ids: [1],
+      removeRelatedPathMarks: false,
+    });
     expect(mocks.local.list).toHaveBeenCalledTimes(2);
     expect(mocks.refresh).toHaveBeenCalled();
+  });
+
+  it("shows selection controls only after entering bulk management and clears selection on exit", async () => {
+    renderPage();
+    await loaded();
+    expect(screen.queryByRole("checkbox")).toBeNull();
+    expect(screen.queryByRole("group", { name: "mediaLibrary.selection.label" })).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "mediaLibrary.action.manageNamed:Archive" }),
+    ).toBeEnabled();
+    await enterSelectionMode();
+    expect(screen.getByRole("group", { name: "mediaLibrary.selection.label" })).toBeInTheDocument();
+    await userEvent.click(
+      screen.getByRole("checkbox", { name: "mediaLibrary.selection.selectNamed:Archive" }),
+    );
+    expect(
+      screen.getByRole("button", { name: "mediaLibrary.action.deleteSelected" }),
+    ).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "mediaLibrary.selection.exit" }));
+    expect(screen.queryByRole("checkbox")).toBeNull();
+    expect(screen.queryByRole("group", { name: "mediaLibrary.selection.label" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "mediaLibrary.action.deleteSelected" })).toBeNull();
+    await enterSelectionMode();
+    expect(
+      screen.getByRole("checkbox", { name: "mediaLibrary.selection.selectNamed:Archive" }),
+    ).not.toBeChecked();
+    expect(
+      screen.getByRole("checkbox", { name: "mediaLibrary.selection.selectVisible" }),
+    ).not.toBeChecked();
+    expect(screen.queryByRole("button", { name: "mediaLibrary.action.deleteSelected" })).toBeNull();
+  });
+
+  it("selects visible libraries without losing hidden selections and opts into fixed path-mark cleanup", async () => {
+    renderPage();
+    await loaded();
+    await enterSelectionMode();
+    await userEvent.click(
+      screen.getByRole("checkbox", { name: "mediaLibrary.selection.selectNamed:Films" }),
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: /^mediaLibrary.filter.withResources/ }),
+    );
+    await userEvent.click(
+      screen.getByRole("checkbox", { name: "mediaLibrary.selection.selectVisible" }),
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "mediaLibrary.action.deleteSelected" }),
+    );
+
+    const confirmation = mocks.createPortal.mock.lastCall![1];
+    const contents = render(<>{confirmation.children}</>);
+
+    expect(contents.getByText("mediaLibrary.confirm.deleteSelected")).toBeInTheDocument();
+    for (const library of libraries) {
+      expect(within(contents.container).getByText(library.name)).toBeInTheDocument();
+    }
+    const cleanupCheckbox = contents.getByRole("checkbox", {
+      name: "mediaLibrary.confirm.removeRelatedPathMarks.label",
+    });
+
+    expect(cleanupCheckbox).not.toBeChecked();
+    await userEvent.click(cleanupCheckbox);
+    await act(async () => confirmation.onOk());
+    expect(mocks.local.remove).toHaveBeenCalledWith({
+      ids: [1, 2, 3],
+      removeRelatedPathMarks: true,
+    });
+    expect(screen.queryByRole("button", { name: "mediaLibrary.action.deleteSelected" })).toBeNull();
+  });
+
+  it("keeps colliding IDs on their owner and retries only failed owners after a partial bulk delete", async () => {
+    mocks.sources = [source("local"), source("remote")];
+    mocks.remote.list.mockResolvedValue({
+      code: 0,
+      data: [{ id: 1, name: "Remote archive", resourceCount: 2 }],
+    });
+    renderPage();
+    await waitFor(() => expect(browseButtons()).toHaveLength(4));
+    await enterSelectionMode();
+    await userEvent.click(
+      screen.getByRole("checkbox", { name: "mediaLibrary.selection.selectNamed:Archive" }),
+    );
+    await userEvent.click(
+      screen.getByRole("checkbox", { name: "mediaLibrary.selection.selectNamed:Remote archive" }),
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "mediaLibrary.action.deleteSelected" }),
+    );
+    const confirmation = mocks.createPortal.mock.lastCall![1];
+
+    mocks.remote.remove.mockResolvedValueOnce({ code: 500, message: "delete denied" });
+    await act(async () => {
+      await expect(confirmation.onOk()).rejects.toThrow("delete denied");
+    });
+    expect(mocks.local.remove).toHaveBeenCalledTimes(1);
+    expect(mocks.local.remove).toHaveBeenCalledWith({ ids: [1], removeRelatedPathMarks: false });
+    expect(mocks.remote.remove).toHaveBeenCalledWith({ ids: [1], removeRelatedPathMarks: false });
+    expect(
+      screen.getByRole("checkbox", { name: "mediaLibrary.selection.selectNamed:Archive" }),
+    ).not.toBeChecked();
+    expect(
+      screen.getByRole("checkbox", { name: "mediaLibrary.selection.selectNamed:Remote archive" }),
+    ).toBeChecked();
+    await act(async () => confirmation.onOk());
+    expect(mocks.local.remove).toHaveBeenCalledTimes(1);
+    expect(mocks.remote.remove).toHaveBeenCalledTimes(2);
+  });
+
+  it("chunks large selections and preserves only unconfirmed IDs for a retry", async () => {
+    mocks.local.list.mockResolvedValue({
+      code: 0,
+      data: Array.from({ length: 101 }, (_, index) => ({
+        id: index + 1,
+        name: `Library ${index + 1}`,
+        resourceCount: 0,
+      })),
+    });
+    renderPage();
+    await waitFor(() => expect(browseButtons()).toHaveLength(101));
+    await enterSelectionMode();
+    await userEvent.click(
+      screen.getByRole("checkbox", { name: "mediaLibrary.selection.selectVisible" }),
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "mediaLibrary.action.deleteSelected" }),
+    );
+    const confirmation = mocks.createPortal.mock.lastCall![1];
+
+    mocks.local.remove
+      .mockResolvedValueOnce({ code: 0 })
+      .mockResolvedValueOnce({ code: 500, message: "second chunk failed" });
+    await act(async () => {
+      await expect(confirmation.onOk()).rejects.toThrow("second chunk failed");
+    });
+    expect(mocks.local.remove.mock.calls.map(([body]) => body.ids.length)).toEqual([100, 1]);
+    expect(
+      screen.getByRole("checkbox", { name: "mediaLibrary.selection.selectNamed:Library 1" }),
+    ).not.toBeChecked();
+    expect(
+      screen.getByRole("checkbox", { name: "mediaLibrary.selection.selectNamed:Library 101" }),
+    ).toBeChecked();
+    await act(async () => confirmation.onOk());
+    expect(mocks.local.remove).toHaveBeenLastCalledWith({
+      ids: [101],
+      removeRelatedPathMarks: false,
+    });
+  });
+
+  it("excludes read-only libraries from select-all and revalidates every owner before deleting", async () => {
+    mocks.sources = [source("local"), source("remote", false)];
+    mocks.remote.list.mockResolvedValue({
+      code: 0,
+      data: [{ id: 1, name: "Remote archive", resourceCount: 2 }],
+    });
+    const page = renderPage();
+
+    await waitFor(() => expect(browseButtons()).toHaveLength(4));
+    await enterSelectionMode();
+    expect(
+      screen.getByRole("checkbox", { name: "mediaLibrary.selection.selectNamed:Remote archive" }),
+    ).toBeDisabled();
+    await userEvent.click(
+      screen.getByRole("checkbox", { name: "mediaLibrary.selection.selectVisible" }),
+    );
+    expect(
+      screen.getByRole("checkbox", { name: "mediaLibrary.selection.selectNamed:Remote archive" }),
+    ).not.toBeChecked();
+    await userEvent.click(screen.getByRole("button", { name: "mediaLibrary.selection.clear" }));
+    mocks.sources = [source("local"), source("remote")];
+    page.rerender(
+      <HeroUIProvider disableAnimation>
+        <MediaLibraryPage />
+      </HeroUIProvider>,
+    );
+    await waitFor(() =>
+      expect(
+        screen.getByRole("checkbox", { name: "mediaLibrary.selection.selectNamed:Remote archive" }),
+      ).not.toBeDisabled(),
+    );
+    await userEvent.click(
+      screen.getByRole("checkbox", { name: "mediaLibrary.selection.selectNamed:Archive" }),
+    );
+    await userEvent.click(
+      screen.getByRole("checkbox", { name: "mediaLibrary.selection.selectNamed:Remote archive" }),
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "mediaLibrary.action.deleteSelected" }),
+    );
+    const confirmation = mocks.createPortal.mock.lastCall![1];
+
+    mocks.sources = [source("local"), source("remote", false)];
+    page.rerender(
+      <HeroUIProvider disableAnimation>
+        <MediaLibraryPage />
+      </HeroUIProvider>,
+    );
+    await waitFor(() =>
+      expect(
+        screen.getByRole("checkbox", { name: "mediaLibrary.selection.selectNamed:Remote archive" }),
+      ).toBeDisabled(),
+    );
+    await expect(confirmation.onOk()).rejects.toThrow("management.catalog.ownerUnavailable");
+    expect(mocks.local.remove).not.toHaveBeenCalled();
+    expect(mocks.remote.remove).not.toHaveBeenCalled();
   });
 });
 

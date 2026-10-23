@@ -80,6 +80,7 @@ public interface IMediaLibraryResourceMappingService
     /// Delete mappings by media library ID
     /// </summary>
     Task DeleteByMediaLibraryId(int mediaLibraryId);
+    Task DeleteByMediaLibraryIds(IEnumerable<int> mediaLibraryIds);
 
     /// <summary>
     /// Ensure mappings exist for a resource (add missing, preserve existing)

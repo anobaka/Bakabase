@@ -155,7 +155,11 @@ describe("usePreview", () => {
     {
       name: "media library value type",
       markType: PathMarkType.MediaLibrary,
-      config: { ...libraryConfig, mediaLibraryValueType: PropertyValueType.Fixed },
+      config: {
+        ...libraryConfig,
+        mediaLibraryValueType: PropertyValueType.Fixed,
+        mediaLibraryIds: [1],
+      },
       update: { mediaLibraryValueType: PropertyValueType.Dynamic },
       expected: { valueType: PropertyValueType.Dynamic },
     },
@@ -169,6 +173,17 @@ describe("usePreview", () => {
       },
       update: { mediaLibraryId: 2 },
       expected: { mediaLibraryId: 2 },
+    },
+    {
+      name: "multiple fixed media libraries",
+      markType: PathMarkType.MediaLibrary,
+      config: {
+        ...libraryConfig,
+        mediaLibraryValueType: PropertyValueType.Fixed,
+        mediaLibraryIds: [1, 2],
+      },
+      update: { mediaLibraryIds: [2, 3] },
+      expected: { mediaLibraryId: 2, mediaLibraryIds: [2, 3] },
     },
     {
       name: "media library value layer",

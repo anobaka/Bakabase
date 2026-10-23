@@ -186,6 +186,40 @@ public class PathMarkEffectService<TDbContext>(
         }
     }
 
+    public async Task DeleteMediaLibraryEffects(IEnumerable<int> mediaLibraryIds)
+    {
+        var ids = mediaLibraryIds.ToHashSet();
+        if (ids.Count == 0) return;
+        var effects = await propertyEffectOrm.GetAll(e =>
+            e.PropertyPool == (int) PropertyPool.Internal &&
+            e.PropertyId == (int) Bakabase.InsideWorld.Models.Constants.ResourceProperty.MediaLibraryV2Multi);
+        var remove = new List<PropertyMarkEffectDbModel>();
+        var update = new List<PropertyMarkEffectDbModel>();
+        foreach (var effect in effects)
+        {
+            var current = MediaLibraryMarkValue.Read(effect.Value);
+            if (!current.Any(ids.Contains)) continue;
+            var remaining = current.Where(id => !ids.Contains(id)).ToList();
+            if (remaining.Count == 0) remove.Add(effect);
+            else
+            {
+                effect.Value = MediaLibraryMarkValue.Write(remaining);
+                effect.UpdatedAt = DateTime.UtcNow;
+                update.Add(effect);
+            }
+        }
+        if (remove.Count > 0)
+        {
+            var response = await propertyEffectOrm.RemoveRange(remove);
+            if (!response.IsSuccess()) throw new InvalidOperationException(response.Message);
+        }
+        if (update.Count > 0)
+        {
+            var response = await propertyEffectOrm.UpdateRange(update);
+            if (!response.IsSuccess()) throw new InvalidOperationException(response.Message);
+        }
+    }
+
     #endregion
 
     #region Value Calculation

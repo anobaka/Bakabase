@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Text.RegularExpressions;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
@@ -27,9 +28,14 @@ internal static class PathMarkValueConfigValidator
         config.ValueType, config.ValueBasePath, config.ValueMatchMode, config.GetEffectiveValueMatchMode(),
         config.ValueLayer, config.ValueRegex, config.UsesResourceRelativeValueRegex());
 
-    public static void Validate(MediaLibraryMarkConfig config) => Validate(
-        config.ValueType, config.ValueBasePath, config.ValueMatchMode, config.GetEffectiveValueMatchMode(),
-        config.LayerToMediaLibrary, config.RegexToMediaLibrary, false);
+    public static void Validate(MediaLibraryMarkConfig config)
+    {
+        if (config.ValueType == PropertyValueType.Fixed && config.MediaLibraryIds != null &&
+            (config.MediaLibraryIds.Count == 0 || config.MediaLibraryIds.Any(id => id <= 0)))
+            throw new ArgumentException("Select at least one positive media library ID.");
+        Validate(config.ValueType, config.ValueBasePath, config.ValueMatchMode, config.GetEffectiveValueMatchMode(),
+            config.LayerToMediaLibrary, config.RegexToMediaLibrary, false);
+    }
 
     private static void Validate(PropertyValueType valueType, PathMarkValueBasePath basePath,
         PathMatchMode? explicitMode, PathMatchMode effectiveMode, int? layer, string? regex, bool legacyRegex)

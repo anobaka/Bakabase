@@ -27,6 +27,7 @@ public interface IPathMarkEffectService
     Task UpdatePropertyEffects(IEnumerable<PropertyMarkEffect> effects);
     Task DeletePropertyEffectsByMarkId(int markId);
     Task DeletePropertyEffects(IEnumerable<int> effectIds);
+    Task DeleteMediaLibraryEffects(IEnumerable<int> mediaLibraryIds);
 
     #endregion
 

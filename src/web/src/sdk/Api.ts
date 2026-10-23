@@ -707,6 +707,7 @@ export interface BakabaseAbstractionsModelsDomainPathMark {
   expiresInSeconds?: number;
   property?: BakabaseAbstractionsModelsDomainProperty;
   mediaLibrary?: BakabaseAbstractionsModelsDomainMediaLibraryV2;
+  mediaLibraries?: BakabaseAbstractionsModelsDomainMediaLibraryV2[];
 }
 
 export interface BakabaseAbstractionsModelsDomainPathMarkPreviewResult {
@@ -1215,6 +1216,12 @@ export interface BakabaseAbstractionsModelsInputMediaLibraryV2AddOrPutInputModel
   paths: string[];
   color?: string;
   players?: BakabaseAbstractionsModelsDomainMediaLibraryPlayer[];
+}
+
+export interface BakabaseAbstractionsModelsInputMediaLibraryV2DeleteInputModel {
+  /** @minItems 1 */
+  ids: number[];
+  removeRelatedPathMarks: boolean;
 }
 
 export interface BakabaseAbstractionsModelsInputMediaLibraryV2PatchInputModel {
@@ -7828,6 +7835,39 @@ export interface BakabaseServiceModelsViewAnalyticsAppInfoViewModel {
   postHogApiHost: string;
 }
 
+export interface BakabaseServiceModelsViewAppStorageUsageCategoryViewModel {
+  id: string;
+  /** @format int64 */
+  bytes: number;
+  /** @format int64 */
+  fileCount: number;
+  path?: string;
+  partial: boolean;
+}
+
+export interface BakabaseServiceModelsViewAppStorageUsageErrorViewModel {
+  path: string;
+  message: string;
+}
+
+export interface BakabaseServiceModelsViewAppStorageUsageViewModel {
+  rootPath: string;
+  /** @format int64 */
+  totalBytes: number;
+  /** @format int64 */
+  fileCount: number;
+  /** @format date-time */
+  scannedAt: string;
+  fromCache: boolean;
+  partial: boolean;
+  /** @format int64 */
+  skippedSymbolicLinks: number;
+  categories: BakabaseServiceModelsViewAppStorageUsageCategoryViewModel[];
+  errors: BakabaseServiceModelsViewAppStorageUsageErrorViewModel[];
+  /** @format int64 */
+  errorCount: number;
+}
+
 export interface BakabaseServiceModelsViewAvSourceHttpInteractionViewModel {
   method: string;
   url: string;
@@ -10555,6 +10595,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceM
   code: number;
   message?: string;
   data?: BakabaseServiceModelsViewAnalyticsAppInfoViewModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewAppStorageUsageViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewAppStorageUsageViewModel;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewBulkModificationViewModel {
@@ -16442,6 +16489,57 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     dataPathRelocationSetupSessionCreateUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/app/data-path/relocation/setup-session`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AppStorageUsage
+     * @name GetAppStorageUsage
+     * @request GET:/app/storage-usage
+     */
+    getAppStorageUsage: (
+      query?: {
+        /** @default false */
+        forceRefresh?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewAppStorageUsageViewModel,
+        any
+      >({
+        path: `/app/storage-usage`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getAppStorageUsage
+     * @name getAppStorageUsageUrl
+     */
+    getAppStorageUsageUrl: (query?: {
+        /** @default false */
+        forceRefresh?: boolean;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/app/storage-usage`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
 
       return baseUrl + path;
     },
@@ -27542,6 +27640,37 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags MediaLibraryV2
+     * @name DeleteMediaLibrariesV2
+     * @request DELETE:/media-library-v2
+     */
+    deleteMediaLibrariesV2: (
+      data: BakabaseAbstractionsModelsInputMediaLibraryV2DeleteInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/media-library-v2`,
+        method: "DELETE",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for deleteMediaLibrariesV2
+     * @name deleteMediaLibrariesV2Url
+     */
+    deleteMediaLibrariesV2Url: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/media-library-v2`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags MediaLibraryV2
      * @name GetMediaLibraryV2
      * @request GET:/media-library-v2/{id}
      */
@@ -27605,10 +27734,18 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name DeleteMediaLibraryV2
      * @request DELETE:/media-library-v2/{id}
      */
-    deleteMediaLibraryV2: (id: number, params: RequestParams = {}) =>
+    deleteMediaLibraryV2: (
+      id: number,
+      query?: {
+        /** @default false */
+        removeRelatedPathMarks?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/media-library-v2/${id}`,
         method: "DELETE",
+        query: query,
         format: "json",
         ...params,
       }),

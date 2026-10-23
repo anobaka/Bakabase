@@ -37,7 +37,7 @@ public static class DownloadTaskStorage
     public static void EnsureAcquisitionDirectory(string path, string appDataDirectory, int acquisitionTaskId)
     {
         var root = Path.GetFullPath(appDataDirectory);
-        var expected = Path.Combine(root, "acquisition", acquisitionTaskId.ToString(), "platform");
+        var expected = AppDataStorage.Acquisition.GetPath(root, acquisitionTaskId.ToString(), "platform");
         // Accept only the server-generated directory, not a task option claiming to be internal.
         if (acquisitionTaskId <= 0 || !string.Equals(path, expected, StringComparison.Ordinal))
             throw new IOException("The acquisition download directory no longer matches its owning task.");

@@ -26,7 +26,9 @@ public interface IMediaLibraryV2Service
     Task<List<MediaLibraryV2>> GetAll(Expression<Func<MediaLibraryV2DbModel, bool>>? filter = null,
         MediaLibraryV2AdditionalItem additionalItems = MediaLibraryV2AdditionalItem.None);
 
-    Task Delete(int id);
+    Task Delete(int id, bool removeRelatedPathMarks = false);
+
+    Task DeleteMany(IEnumerable<int> ids, bool removeRelatedPathMarks = false);
 
     Task RefreshResourceCount(int id);
 }

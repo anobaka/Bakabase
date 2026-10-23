@@ -43,6 +43,21 @@ beforeEach(() => {
 });
 
 describe("original resource UI owner-scoped SDK", () => {
+  it("forwards bulk library deletion and its path-mark cleanup option to the captured owner", async () => {
+    const api = createResourceApi(source("owner"));
+
+    await api.mediaLibraryV2.deleteMediaLibrariesV2({ ids: [1, 2], removeRelatedPathMarks: true });
+    expect(request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        path: "/federation/local/management/owner/request",
+        body: {
+          libraryEpoch: "epoch-owner",
+          operation: "libraryBulkDelete",
+          body: { ids: [1, 2], removeRelatedPathMarks: true },
+        },
+      }),
+    );
+  });
   it("forwards the generated custom-property ValueCount query unchanged for both catalog and ID reads", async () => {
     const api = createResourceApi(source("owner"));
     await api.customProperty.getAllCustomProperties({

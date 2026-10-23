@@ -7,6 +7,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloaders.ExHentai;
 
 namespace Bakabase.InsideWorld.Business.Components.Downloader.Services;
@@ -25,7 +26,7 @@ public sealed class ExHentaiDownloadLedger(Func<string> appData)
     private string GetPath(int taskId)
     {
         if (taskId <= 0) throw new ArgumentOutOfRangeException(nameof(taskId));
-        return Path.Combine(appData(), "downloader", "exhentai-state", taskId + ".json");
+        return AppDataStorage.Downloads.GetPath(appData(), "exhentai-state", taskId + ".json");
     }
 
     private static string Hash(string text) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(text)));

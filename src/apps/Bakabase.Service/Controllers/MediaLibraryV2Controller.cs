@@ -77,9 +77,19 @@ public class MediaLibraryV2Controller(
 
     [HttpDelete("{id:int}")]
     [SwaggerOperation(OperationId = "DeleteMediaLibraryV2")]
-    public async Task<BaseResponse> Delete(int id)
+    [RemoteAccessible]
+    public async Task<BaseResponse> Delete(int id, [FromQuery] bool removeRelatedPathMarks = false)
     {
-        await service.Delete(id);
+        await service.Delete(id, removeRelatedPathMarks);
+        return BaseResponseBuilder.Ok;
+    }
+
+    [HttpDelete]
+    [SwaggerOperation(OperationId = "DeleteMediaLibrariesV2")]
+    [RemoteAccessible]
+    public async Task<BaseResponse> DeleteMany([FromBody] MediaLibraryV2DeleteInputModel model)
+    {
+        await service.DeleteMany(model.Ids, model.RemoveRelatedPathMarks);
         return BaseResponseBuilder.Ok;
     }
 

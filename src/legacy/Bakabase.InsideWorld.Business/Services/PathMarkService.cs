@@ -16,6 +16,8 @@ using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.Gui;
 using Bakabase.Modules.Property.Abstractions.Services;
+using Bakabase.Modules.Property.Components;
+using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.Property.Extensions;
 using Bakabase.Modules.StandardValue.Abstractions.Services;
 using Bakabase.Modules.StandardValue.Extensions;
@@ -28,6 +30,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using StackExchange.Profiling;
 
 namespace Bakabase.InsideWorld.Business.Services;
@@ -133,10 +136,7 @@ public class PathMarkService<TDbContext>(
                             if (config != null)
                             {
                                 mediaLibraryConfigs[mark.Id] = config;
-                                if (config.MediaLibraryId.HasValue)
-                                {
-                                    mediaLibraryIds.Add(config.MediaLibraryId.Value);
-                                }
+                                mediaLibraryIds.UnionWith(config.GetFixedMediaLibraryIds());
                             }
                         }
                     }
@@ -218,10 +218,9 @@ public class PathMarkService<TDbContext>(
                     }
                     else if (mark.Type == PathMarkType.MediaLibrary && mediaLibraryConfigs.TryGetValue(mark.Id, out var mlConfig))
                     {
-                        if (mlConfig.MediaLibraryId.HasValue && mediaLibrariesMap.TryGetValue(mlConfig.MediaLibraryId.Value, out var lib))
-                        {
-                            mark.MediaLibrary = lib;
-                        }
+                        mark.MediaLibraries = mlConfig.GetFixedMediaLibraryIds()
+                            .Select(id => mediaLibrariesMap.GetValueOrDefault(id)).OfType<MediaLibraryV2>().ToList();
+                        mark.MediaLibrary = mark.MediaLibraries.FirstOrDefault();
                     }
                 }
             }
@@ -356,7 +355,8 @@ public class PathMarkService<TDbContext>(
             mark.SyncStatus = PathMarkSyncStatus.Pending;
         }
 
-        await orm.Update(mark.ToDbModel());
+        var response = await orm.Update(mark.ToDbModel());
+        if (!response.IsSuccess()) throw new InvalidOperationException(response.Message);
 
         // Trigger immediate sync if enabled
         await TriggerImmediateSyncIfEnabled(mark.Id);
@@ -407,6 +407,90 @@ public class PathMarkService<TDbContext>(
         var response = await orm.RemoveByKeys(keys);
         if (!response.IsSuccess()) throw new InvalidOperationException(response.Message);
         foreach (var id in keys) await uiHub.Clients.All.DeleteData("PathMark", id);
+    }
+
+    public async Task RemoveMediaLibrariesFromFixedMarks(IEnumerable<int> mediaLibraryIds)
+    {
+        var selected = mediaLibraryIds.ToHashSet();
+        if (selected.Count == 0) return;
+        var marks = await GetAll(m => !m.IsDeleted &&
+            (m.Type == PathMarkType.MediaLibrary || m.Type == PathMarkType.Property));
+        var deleteIds = new List<int>();
+        foreach (var mark in marks)
+        {
+            // Keep malformed historical configurations untouched; a library deletion must
+            // not silently replace an unrelated mark with a default configuration.
+            JObject json;
+            try
+            {
+                PathMarkValueConfigValidator.Validate(mark.Type, mark.ConfigJson);
+                json = JObject.Parse(mark.ConfigJson);
+            }
+            catch (JsonException) { continue; }
+            catch (ArgumentException) { continue; }
+
+            if (mark.Type == PathMarkType.MediaLibrary)
+            {
+                MediaLibraryMarkConfig? config;
+                try { config = json.ToObject<MediaLibraryMarkConfig>(); }
+                catch (JsonException) { continue; }
+                if (config?.ValueType != PropertyValueType.Fixed) continue;
+                var current = config.GetFixedMediaLibraryIds();
+                if (!current.Any(selected.Contains)) continue;
+                var remaining = current.Where(id => !selected.Contains(id)).ToList();
+                if (remaining.Count == 0) { deleteIds.Add(mark.Id); continue; }
+                SetConfigValue(json, nameof(config.MediaLibraryIds), JArray.FromObject(remaining));
+                SetConfigValue(json, nameof(config.MediaLibraryId), JToken.FromObject(remaining[0]));
+            }
+            else
+            {
+                PropertyMarkConfig? config;
+                try { config = json.ToObject<PropertyMarkConfig>(); }
+                catch (JsonException) { continue; }
+                if (config?.ValueType != PropertyValueType.Fixed || config.Pool != PropertyPool.Internal ||
+                    config.PropertyId != (int) ResourceProperty.MediaLibraryV2Multi &&
+                    !MediaLibraryV2Adapter.IsLegacyProperty(config.Pool, config.PropertyId)) continue;
+                var fixedValue = json.GetValue(nameof(config.FixedValue), StringComparison.OrdinalIgnoreCase);
+                var serialized = false;
+                if (fixedValue?.Type == JTokenType.String && fixedValue.Value<string>()?.TrimStart().StartsWith('[') == true)
+                {
+                    try { fixedValue = JArray.Parse(fixedValue.Value<string>()!); serialized = true; }
+                    catch (JsonException) { continue; }
+                }
+                var values = fixedValue is JArray array ? array.ToList() : fixedValue == null ? [] : new List<JToken> {fixedValue};
+                bool IsSelected(JToken value) => int.TryParse(value.ToString(), out var id) && selected.Contains(id);
+                if (!values.Any(IsSelected)) continue;
+                var remaining = values.Where(value => !IsSelected(value)).ToList();
+                if (remaining.Count == 0) { deleteIds.Add(mark.Id); continue; }
+                var nextValue = new JArray(remaining);
+                SetConfigValue(json, nameof(config.FixedValue), serialized
+                    ? JValue.CreateString(nextValue.ToString(Formatting.None)) : nextValue);
+            }
+
+            mark.ConfigJson = json.ToString(Formatting.None);
+            // This maintenance operation changes only configured library IDs. A historical
+            // mark can still reference a path that the current storage policy no longer allows.
+            mark.UpdatedAt = DateTime.UtcNow;
+            mark.SyncStatus = PathMarkSyncStatus.Pending;
+            var response = await orm.Update(mark.ToDbModel());
+            if (!response.IsSuccess()) throw new InvalidOperationException(response.Message);
+            await NotifyPathMarkStatusChange(mark.ToDbModel());
+            await TriggerImmediateSyncIfEnabled(mark.Id);
+        }
+
+        if (deleteIds.Count > 0)
+        {
+            var effectService = serviceProvider.GetRequiredService<IPathMarkEffectService>();
+            foreach (var id in deleteIds) await effectService.DeletePropertyEffectsByMarkId(id);
+            await HardDeleteBatch(deleteIds);
+        }
+    }
+
+    private static void SetConfigValue(JObject json, string name, JToken value)
+    {
+        var property = json.Property(name, StringComparison.OrdinalIgnoreCase);
+        if (property != null) property.Value = value;
+        else json[char.ToLowerInvariant(name[0]) + name[1..]] = value;
     }
 
     public static bool MatchesResourceDeletionSnapshot(PathMark current, PathMark snapshot) =>
@@ -624,10 +708,13 @@ public class PathMarkService<TDbContext>(
                 applyScope = config.ApplyScope;
                 valueType = config.ValueType;
                 valueLayer = config.LayerToMediaLibrary;
-                if (config.ValueType == PropertyValueType.Fixed && config.MediaLibraryId.HasValue)
+                if (config.ValueType == PropertyValueType.Fixed)
                 {
-                    fixedMediaLibraryName = (await serviceProvider.GetRequiredService<IMediaLibraryV2Service>()
-                        .Get(config.MediaLibraryId.Value))?.Name;
+                    var ids = config.GetFixedMediaLibraryIds();
+                    var libraries = (await serviceProvider.GetRequiredService<IMediaLibraryV2Service>()
+                        .GetByKeys(ids.ToArray())).ToDictionary(l => l.Id);
+                    fixedMediaLibraryName = libraries.Count == 0 ? null :
+                        string.Join(", ", ids.Where(libraries.ContainsKey).Select(id => libraries[id].Name));
                 }
                 break;
             }
@@ -866,7 +953,7 @@ public class PathMarkService<TDbContext>(
         string rootPath, string matchedPath, MediaLibraryMarkConfig config, SyncContext ctx) =>
         config.ValueType switch
         {
-            PropertyValueType.Fixed => new(config.MediaLibraryId?.ToString(), null),
+            PropertyValueType.Fixed => new(string.Join(", ", config.GetFixedMediaLibraryIds()), null),
             PropertyValueType.Dynamic => PathMarkDynamicValueExtractor.Extract(rootPath, matchedPath,
                 config.ValueBasePath, config.GetEffectiveValueMatchMode(), config.LayerToMediaLibrary,
                 config.RegexToMediaLibrary, ctx, true),

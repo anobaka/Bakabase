@@ -1,4 +1,5 @@
 using System.IO;
+using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Infrastructures.Components.App;
 using Bakabase.Modules.RemoteAccess.Abstractions.Components;
 
@@ -17,7 +18,7 @@ public sealed class AppServiceRemoteAccessDataDirectory(AppService appService) :
 {
     public const string DirectoryName = "remote-access";
 
-    public string Path => System.IO.Path.Combine(appService.AppDataDirectory, DirectoryName);
+    public string Path => AppDataStorage.RemoteAccess.GetPath(appService.AppDataDirectory);
 
-    public string Ensure() => appService.RequestAppDataDirectory(DirectoryName);
+    public string Ensure() => appService.RequestAppDataDirectory(AppDataStorage.RemoteAccess.RelativePath);
 }

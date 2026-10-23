@@ -33,7 +33,7 @@ public record PropertyMarkEffectDbModel
 
     /// <summary>
     /// For custom properties, the value serialized with the property's BizValueType.
-    /// For MediaLibrary effects, the media library ID as a string.
+    /// For MediaLibrary effects, a scalar library ID or a JSON array of library IDs.
     /// </summary>
     public string? Value { get; set; }
 

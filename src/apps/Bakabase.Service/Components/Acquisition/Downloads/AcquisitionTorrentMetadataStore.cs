@@ -3,6 +3,7 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Infrastructures.Components.App;
 using Bakabase.Modules.Downloader.Components;
 
@@ -24,7 +25,7 @@ public sealed class AcquisitionTorrentMetadataStore : IAcquisitionTorrentMetadat
     public AcquisitionTorrentMetadataStore(AppService appService) : this(() => appService.AppDataDirectory) { }
     internal AcquisitionTorrentMetadataStore(Func<string> appData) => _appData = appData;
 
-    private string Root => Path.Combine(_appData(), "acquisition", "torrent-metadata");
+    private string Root => AppDataStorage.Acquisition.GetPath(_appData(), "torrent-metadata");
 
     public async Task<string> SaveAsync(byte[] metadata, CancellationToken ct = default)
     {

@@ -1,5 +1,6 @@
 ﻿using Bakabase.Modules.Downloader.Extensions;
 using Bakabase.Infrastructures.Components.App;
+using Bakabase.Abstractions.Components.FileSystem;
 using System.IO;
 using Bakabase.Abstractions.Components.Events;
 using Bakabase.Abstractions.Components.ResourceMove;
@@ -214,15 +215,14 @@ namespace Bakabase.Service.Extensions
                 Components.Subscription.Providers.Platform.ExHentaiFavoritesProvider>();
             // Shared transfer services are also used by dependency installers and other modules.
             // Keep the existing cache location so metadata from earlier runs remains reusable.
-            services.AddDownloader(sp => Path.Combine(sp.GetRequiredService<AppService>().AppDataDirectory,
-                "acquisition-torrent-cache"));
+            services.AddDownloader(sp => AppDataStorage.TorrentCache.GetPath(sp.GetRequiredService<AppService>().AppDataDirectory));
             services.AddSingleton<Bakabase.Modules.Downloader.Abstractions.ITorrentNetworkOptionsProvider,
                 Components.Downloader.BtNetworkOptionsProvider>();
             services.AddSingleton<Components.Downloader.BtDownloadStartupPolicy>();
             services.AddSingleton<Bakabase.Modules.Bittorrent.Abstractions.IBtDownloadManager>(sp =>
                 new Bakabase.Modules.Bittorrent.Components.BtDownloadManager(
                     sp.GetRequiredService<Bakabase.Modules.Downloader.Abstractions.ITorrentDownloader>(),
-                    () => Path.Combine(sp.GetRequiredService<AppService>().AppDataDirectory, "bt-downloads"),
+                    () => AppDataStorage.TorrentDownloads.GetPath(sp.GetRequiredService<AppService>().AppDataDirectory),
                     () => sp.GetRequiredService<Bootstrap.Components.Configuration.Abstractions.IBOptions<Bakabase.InsideWorld.Models.Configs.NetworkOptions>>().Value.BtMaxConcurrentDownloads,
                     () => sp.GetRequiredService<Bakabase.Abstractions.Components.Tasks.BTaskManager>().IsShuttingDown,
                     () => sp.GetRequiredService<AppService>().AppDataDirectory,
@@ -232,7 +232,7 @@ namespace Bakabase.Service.Extensions
             services.AddSingleton<Bakabase.Modules.HttpDownloads.Abstractions.IHttpDownloadManager>(sp =>
                 new Bakabase.Modules.HttpDownloads.Components.HttpDownloadManager(
                     sp.GetRequiredService<Bakabase.Modules.Downloader.Abstractions.IHttpDownloader>(),
-                    () => Path.Combine(sp.GetRequiredService<AppService>().AppDataDirectory, "http-downloads"),
+                    () => AppDataStorage.HttpDownloads.GetPath(sp.GetRequiredService<AppService>().AppDataDirectory),
                     appDataDirectory: () => sp.GetRequiredService<AppService>().AppDataDirectory,
                     canResumeOnStartup: (job, ct) => sp.GetRequiredService<Components.Downloader.HttpDownloadStartupPolicy>()
                         .CanResumeAsync(job, ct)));
@@ -380,9 +380,9 @@ namespace Bakabase.Service.Extensions
                     var appService = sp.GetService<Bakabase.Infrastructures.Components.App.AppService>();
                     if (appService != null)
                     {
-                        o.TempPlaylistDirectory = appService.RequestAppDataDirectory("temp", "playlists");
+                        o.TempPlaylistDirectory = appService.RequestAppDataDirectory(AppDataStorage.Temporary.RelativePath, "playlists");
                         o.DevicePlaybackPreferencesFile = () => Path.Combine(
-                            appService.RequestAppDataDirectory("configs"),
+                            appService.RequestAppDataDirectory(AppDataStorage.Configuration.RelativePath),
                             Bakabase.Modules.Player.Services.DevicePlaybackPreferencesStore.FileName);
                     }
                 }));
