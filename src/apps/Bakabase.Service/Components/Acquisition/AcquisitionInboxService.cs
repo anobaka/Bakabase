@@ -228,7 +228,7 @@ public class AcquisitionInboxService(
 
     /// <summary>Same layout the service uses when it starts a run; the two must not drift.</summary>
     private string WorkingDirectoryOf(AcquisitionTask task) =>
-        Path.Combine(appService.AppDataDirectory, "acquisition", task.Id.ToString());
+        AppDataStorage.Acquisition.GetPath(appService.AppDataDirectory, task.Id.ToString());
 
     /// <summary>
     /// Whether a file has finished arriving: not wearing a download client's temporary extension,

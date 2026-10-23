@@ -12,6 +12,8 @@ import { RelocationButton, RelocationRestartGate } from "../AppInfo/Relocation";
 import { LegacyAppDataNoticeBanner } from "../AppInfo/LegacyNotice";
 import { SettingsRows } from "../SettingsSection";
 
+import StorageUsageButton from "./StorageUsage";
+
 import { DataPathSource } from "@/sdk/constants";
 import FilePathValue from "@/components/FilePathValue";
 import { Accordion, AccordionItem, Chip, Divider } from "@/components/bakaui";
@@ -72,6 +74,11 @@ export function getAppDataStorageItems(
         "已有数据",
         "服务器",
         "一体版",
+        "usage",
+        "space",
+        "空间",
+        "占用",
+        "统计",
       ],
       value: (
         <div className="flex flex-col gap-1">
@@ -79,6 +86,7 @@ export function getAppDataStorageItems(
             <FilePathValue path={appInfo.appDataPath} />
             {renderDataPathSource()}
             <AppDataImportButton />
+            <StorageUsageButton />
             {appInfo.appDataPath &&
               !appInfo.dataInSystemPath &&
               appInfo.dataPathSource !== DataPathSource.Environment && (

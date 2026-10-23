@@ -122,6 +122,9 @@ namespace Bakabase.Service.Components
             services.AddSingleton(sp => new ResourceUsageService(
                 sp.GetRequiredService<AppService>().AppDataDirectory,
                 sp.GetRequiredService<IHostApplicationLifetime>().ApplicationStopping));
+            services.AddSingleton(sp => new AppStorageUsageService(
+                () => sp.GetRequiredService<AppService>().AppDataDirectory,
+                sp.GetRequiredService<IHostApplicationLifetime>().ApplicationStopping));
 
             // What this install tells other devices it is. Before AddRemoteAccess, whose
             // default knows the platform but not the kind.

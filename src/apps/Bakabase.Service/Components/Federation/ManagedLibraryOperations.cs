@@ -43,6 +43,7 @@ public static class ManagedLibraryOperations
             "resourceScopePreferencesDelete" => new[] {"propertyPool", "propertyId"},
             "resourcePin" => new[] {"pin"},
             "resourceMarkPlayed" => new[] {"item"},
+            "libraryDelete" => new[] {"removeRelatedPathMarks"},
             "resourceBrowserFiles" => new[] {"offset", "pageSize", "scope", "initialPath"},
             "resourceNativeFallback" => new[] {"key", "origin"},
             "getSearchOperationsForProperty" or "getFilterValueProperty" => new[] {"propertyPool", "propertyId", "operation"},
@@ -225,7 +226,8 @@ public static class ManagedLibraryOperations
             "libraryAdd" => (HttpMethod.Post, "/media-library-v2"),
             "libraryPut" => (HttpMethod.Put, $"/media-library-v2/{Id()}"),
             "libraryPatch" => (HttpMethod.Patch, $"/media-library-v2/{Id()}"),
-            "libraryDelete" => (HttpMethod.Delete, $"/media-library-v2/{Id()}"),
+            "libraryDelete" => (HttpMethod.Delete, $"/media-library-v2/{Id()}?removeRelatedPathMarks={Boolean("removeRelatedPathMarks", "false")}"),
+            "libraryBulkDelete" => (HttpMethod.Delete, "/media-library-v2"),
             "resourcePropertyPut" => (HttpMethod.Put, $"/resource/{Id()}/property-value"),
             "resourceLibrariesPut" => (HttpMethod.Put, "/resource/media-libraries"),
             "resourceMappings" => (HttpMethod.Post, "/resource/media-library-mappings"),
@@ -273,11 +275,14 @@ public static class ManagedLibraryOperations
         var bodyIdsKey = request.Operation switch
         {
             "bulkPutResourcePropertyValue" or "addCollectionMembers" or "removeCollectionMembers" => "resourceIds",
-            "bulkDeleteResources" or "refreshResourcesCache" => "ids",
+            "bulkDeleteResources" or "refreshResourcesCache" or "libraryBulkDelete" => "ids",
             _ => null
         };
         if (bodyIdsKey != null)
             ValidIds(ReadIds((body as JObject)?.GetValue(bodyIdsKey, StringComparison.OrdinalIgnoreCase)));
+        if (request.Operation == "libraryBulkDelete" &&
+            (body as JObject)?.GetValue("removeRelatedPathMarks", StringComparison.OrdinalIgnoreCase) is {Type: not JTokenType.Boolean})
+            throw Invalid("The path mark cleanup option must be a boolean.");
         if (request.Operation == "sortCustomProperties")
         {
             var order = ReadIds((body as JObject)?.GetValue("ids", StringComparison.OrdinalIgnoreCase));
@@ -309,7 +314,7 @@ public static class ManagedLibraryOperations
             "previewCustomPropertyTypeConversion" or "changeCustomPropertyType" or
             "setCollectionMemberIgnored" or "acquireMissingCollectionMembers" or "runSubscriptionCheck";
         var needsBody = !noBody && (method != HttpMethod.Get && method != HttpMethod.Delete ||
-            request.Operation is "removeCollectionMembers" or "deleteEnhancementsByResources");
+            request.Operation is "removeCollectionMembers" or "deleteEnhancementsByResources" or "libraryBulkDelete");
         if (needsBody && body == null) throw Invalid("A request body is required.");
         var json = needsBody ? body!.ToString(Formatting.None) : null;
         var requestLimit = request.Operation is "uploadFile" or "addResourceAcquisitionTorrent"

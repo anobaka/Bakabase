@@ -1,4 +1,5 @@
 using System;
+using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Infrastructures.Components.App;
 using Bakabase.Modules.DataSync.Runtime;
 
@@ -13,8 +14,8 @@ public sealed class AppDataSyncDataDirectory(AppService appService) : IDataSyncD
 {
     private readonly Lazy<string> _root = new(() => appService.AppDataDirectory);
 
-    public string Path => System.IO.Path.Combine(_root.Value, "data-sync");
-    public string BackupsPath => System.IO.Path.Combine(_root.Value, "backups");
+    public string Path => AppDataStorage.DataSync.GetPath(_root.Value);
+    public string BackupsPath => AppDataStorage.Backups.GetPath(_root.Value);
 }
 
 /// <summary>
@@ -36,5 +37,5 @@ public sealed class FixedDataSyncDataDirectory : IDataSyncDataDirectory
 
     /// <summary>The two folders under one test directory.</summary>
     public static FixedDataSyncDataDirectory Under(string root) =>
-        new(System.IO.Path.Combine(root, "data-sync"), System.IO.Path.Combine(root, "backups"));
+        new(AppDataStorage.DataSync.GetPath(root), AppDataStorage.Backups.GetPath(root));
 }

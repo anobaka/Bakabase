@@ -1,4 +1,5 @@
 using Bakabase.Abstractions.Components.Localization;
+using Bakabase.Abstractions.Components.FileSystem;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -326,7 +327,7 @@ public sealed class DownloadResultWorkflowService(BakabaseDbContext db,
             state.ResourceId = resource.ResourceId;
             await db.SaveChangesAsync(ct);
         }
-        var working = Path.Combine(app.AppDataDirectory, "download-result-workflows", id.ToString());
+        var working = AppDataStorage.DownloadResultWorkflows.GetPath(app.AppDataDirectory, id.ToString());
         Directory.CreateDirectory(working);
         var contentDirectory = state.ContentsDirectory;
         if (result.Kind == DownloadResultKind.LocalFiles)

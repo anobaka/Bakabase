@@ -32,6 +32,7 @@ type RawMarkConfig = PropertyMarkCompatibilityConfig & {
   extensionGroupIds?: number[];
   isResourceBoundary?: boolean;
   mediaLibraryId?: number;
+  mediaLibraryIds?: number[];
   layerToMediaLibrary?: number;
   regexToMediaLibrary?: string;
 };
@@ -113,6 +114,8 @@ export const parseMarkConfig = (configJson?: string, markType?: PathMarkType): M
       extensionGroupIds: config.extensionGroupIds ?? [],
       isResourceBoundary: config.isResourceBoundary ?? false,
       mediaLibraryId: config.mediaLibraryId,
+      mediaLibraryIds:
+        config.mediaLibraryIds ?? (config.mediaLibraryId ? [config.mediaLibraryId] : undefined),
       mediaLibraryValueType: config.valueType ?? PropertyValueType.Fixed,
       layerToMediaLibrary: config.layerToMediaLibrary ?? 0,
       regexToMediaLibrary: config.regexToMediaLibrary ?? "",
@@ -161,6 +164,16 @@ export const hasValidValueExtractor = (config: MarkConfig, markType: PathMarkTyp
 export const hasValidPropertyValueExtractor = hasValidValueExtractor;
 
 export const getPreviewConfigurationHint = (config: MarkConfig, markType: PathMarkType) => {
+  if (
+    markType === PathMarkType.MediaLibrary &&
+    (config.mediaLibraryValueType ?? PropertyValueType.Fixed) === PropertyValueType.Fixed
+  ) {
+    const ids = config.mediaLibraryIds ?? (config.mediaLibraryId ? [config.mediaLibraryId] : []);
+
+    if (!ids.length || ids.some((id) => !Number.isSafeInteger(id) || id <= 0)) {
+      return "pathMarkConfig.preview.configureMediaLibraries";
+    }
+  }
   if (markType !== PathMarkType.Property) return undefined;
   if (!config.propertyPool || !config.propertyId) return "pathMarkConfig.preview.configureProperty";
   if (
@@ -185,6 +198,9 @@ export const buildConfigJson = (config: MarkConfig, markType: PathMarkType): str
       isResourceBoundary: config.isResourceBoundary ?? false,
     });
   } else if (markType === PathMarkType.MediaLibrary) {
+    const mediaLibraryIds =
+      config.mediaLibraryIds ?? (config.mediaLibraryId ? [config.mediaLibraryId] : []);
+
     return JSON.stringify({
       matchMode: config.matchMode,
       layer: config.layer,
@@ -193,9 +209,9 @@ export const buildConfigJson = (config: MarkConfig, markType: PathMarkType): str
       valueBasePath: config.valueBasePath ?? PathMarkValueBasePath.MarkPath,
       valueMatchMode: config.valueMatchMode ?? config.matchMode,
       mediaLibraryId:
-        config.mediaLibraryValueType === PropertyValueType.Fixed
-          ? config.mediaLibraryId
-          : undefined,
+        config.mediaLibraryValueType === PropertyValueType.Fixed ? mediaLibraryIds[0] : undefined,
+      mediaLibraryIds:
+        config.mediaLibraryValueType === PropertyValueType.Fixed ? mediaLibraryIds : undefined,
       layerToMediaLibrary:
         config.mediaLibraryValueType === PropertyValueType.Dynamic &&
         (config.valueMatchMode ?? config.matchMode) === PathMatchMode.Layer

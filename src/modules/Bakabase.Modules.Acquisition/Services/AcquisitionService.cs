@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Services;
@@ -412,7 +413,7 @@ public class AcquisitionService<TDbContext>(
 
     private async Task StartRun(AcquisitionTaskDbModel task, string? title, CancellationToken ct)
     {
-        var workingDirectory = Path.Combine(appService.AppDataDirectory, "acquisition", task.Id.ToString());
+        var workingDirectory = AppDataStorage.Acquisition.GetPath(appService.AppDataDirectory, task.Id.ToString());
 
         var payload = new AcquisitionRequestedPayload
         {

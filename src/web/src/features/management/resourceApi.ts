@@ -88,6 +88,7 @@ const routes: readonly Route[] = [
   ["POST", "/media-library-v2", "libraryAdd"],
   ["PUT", "/media-library-v2/{id}", "libraryPut"],
   ["PATCH", "/media-library-v2/{id}", "libraryPatch"],
+  ["DELETE", "/media-library-v2", "libraryBulkDelete"],
   ["DELETE", "/media-library-v2/{id}", "libraryDelete"],
   ["PUT", "/resource/{id}/property-value", "resourcePropertyPut"],
   ["PUT", "/resource/media-libraries", "resourceLibrariesPut"],

@@ -228,15 +228,32 @@ public class MediaLibraryV2Service<TDbContext>(
         return data;
     }
 
-    public async Task Delete(int id)
+    public Task Delete(int id, bool removeRelatedPathMarks = false) => DeleteMany([id], removeRelatedPathMarks);
+
+    public async Task DeleteMany(IEnumerable<int> ids, bool removeRelatedPathMarks = false)
     {
-        // Cascade-clean the resource↔library mapping table first so resources
-        // don't keep a dangling reference (no FK constraint at the DB layer).
-        // Resource rows themselves are intentionally preserved — a user who
-        // recreates the library can re-bind them.
-        var mappingService = GetRequiredService<IMediaLibraryResourceMappingService>();
-        await mappingService.DeleteByMediaLibraryId(id);
-        await orm.RemoveByKey(id);
+        var keys = ids.Distinct().ToArray();
+        if (keys.Length == 0) return;
+        if (keys.Any(id => id <= 0)) throw new ArgumentException("Media library IDs must be positive.", nameof(ids));
+        var gate = await MediaLibraryMutationGate.Acquire(GetRequiredService<GlobalCacheVault>());
+        try
+        {
+            // Resource rows remain available for users to bind to another library.
+            var mappingService = GetRequiredService<IMediaLibraryResourceMappingService>();
+            await mappingService.DeleteByMediaLibraryIds(keys);
+            var response = await orm.RemoveByKeys(keys);
+            if (!response.IsSuccess())
+            {
+                orm.ClearCache();
+                throw new InvalidOperationException(response.Message);
+            }
+            // Context effects also participate in partial mark syncs. Drop deleted library
+            // entries so an unrelated sync cannot restore their dangling mappings.
+            await GetRequiredService<IPathMarkEffectService>().DeleteMediaLibraryEffects(keys);
+            if (removeRelatedPathMarks)
+                await GetRequiredService<IPathMarkService>().RemoveMediaLibrariesFromFixedMarks(keys);
+        }
+        finally { gate.Release(); }
     }
 
 }

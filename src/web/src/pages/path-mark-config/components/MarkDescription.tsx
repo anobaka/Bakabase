@@ -55,8 +55,10 @@ const MarkDescription = ({ mark, className, label, priority }: Props) => {
       if (mark.type === PathMarkType.MediaLibrary) {
         const valueType = config.valueType ?? PropertyValueType.Fixed;
 
-        if (valueType === PropertyValueType.Fixed && mark.mediaLibrary?.name) {
-          typeLabel = `${typeLabel}:${mark.mediaLibrary.name}`;
+        const libraries = mark.mediaLibraries ?? (mark.mediaLibrary ? [mark.mediaLibrary] : []);
+
+        if (valueType === PropertyValueType.Fixed && libraries.length) {
+          typeLabel = `${typeLabel}:${libraries.map((library) => library.name).join(", ")}`;
         }
       }
 

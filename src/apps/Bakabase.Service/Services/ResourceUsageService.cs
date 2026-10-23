@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
@@ -90,44 +89,8 @@ public sealed class ResourceUsageService(string dataDirectory, CancellationToken
 
     internal static (long Bytes, bool Partial) MeasureDirectory(string root, CancellationToken ct)
     {
-        // Resolve the root chosen by AppService, but never follow links inside it into a media library.
-        var rootInfo = new DirectoryInfo(root);
-        if (!rootInfo.Exists) throw new DirectoryNotFoundException();
-        long bytes = 0;
-        var partial = false;
-        var pending = new Stack<DirectoryInfo>();
-        pending.Push(rootInfo);
-        var options = new EnumerationOptions
-        {
-            RecurseSubdirectories = false,
-            IgnoreInaccessible = false,
-            AttributesToSkip = FileAttributes.ReparsePoint,
-            ReturnSpecialDirectories = false
-        };
-        while (pending.TryPop(out var directory))
-        {
-            ct.ThrowIfCancellationRequested();
-            try
-            {
-                foreach (var entry in directory.EnumerateFileSystemInfos("*", options))
-                {
-                    ct.ThrowIfCancellationRequested();
-                    try
-                    {
-                        if ((entry.Attributes & FileAttributes.ReparsePoint) != 0) continue;
-                        if (entry is DirectoryInfo child) pending.Push(child);
-                        else if (entry is FileInfo file) bytes += file.Length;
-                    }
-                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { partial = true; }
-                }
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            {
-                if (directory == rootInfo) throw;
-                partial = true;
-            }
-        }
-        return (bytes, partial);
+        var result = AppStorageUsageScanner.Scan(root, ct);
+        return (result.TotalBytes, result.Partial);
     }
 
     private static TimeSpan ReadCpuTime()

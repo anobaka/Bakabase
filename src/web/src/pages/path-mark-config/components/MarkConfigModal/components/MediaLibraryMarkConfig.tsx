@@ -26,40 +26,48 @@ interface MediaLibrary {
 
 const MediaLibraryMarkConfig = ({ config, updateConfig, t }: Props) => {
   const { createPortal } = useBakabaseContext();
-  const [selectedLibrary, setSelectedLibrary] = useState<MediaLibrary | null>(null);
+  const [libraries, setLibraries] = useState<MediaLibrary[]>([]);
+  const selectedIds =
+    config.mediaLibraryIds ?? (config.mediaLibraryId ? [config.mediaLibraryId] : []);
+  const updateLibraries = (ids: number[]) =>
+    updateConfig({
+      mediaLibraryIds: ids,
+      mediaLibraryId: ids[0],
+    });
 
-  // Load selected library info on mount if we have mediaLibraryId
   useEffect(() => {
-    const loadLibrary = async () => {
-      if (config.mediaLibraryId) {
-        try {
-          const response = await BApi.mediaLibraryV2.getAllMediaLibraryV2();
-          const libraries = response?.data || [];
-          const lib = libraries.find((l) => l.id === config.mediaLibraryId);
+    let cancelled = false;
+    const loadLibraries = async () => {
+      try {
+        const response = await BApi.mediaLibraryV2.getAllMediaLibraryV2();
 
-          if (lib) {
-            setSelectedLibrary({ id: lib.id!, name: lib.name || `Library ${lib.id}` });
-          }
-        } catch (e) {
-          console.error("Failed to load media library", e);
+        if (!response.code && !cancelled) {
+          setLibraries(
+            (response.data ?? []).map((library) => ({ id: library.id, name: library.name })),
+          );
         }
+      } catch (error) {
+        console.error("Failed to load media libraries", error);
       }
     };
 
-    loadLibrary();
+    void loadLibraries();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handleSelectLibrary = () => {
     createPortal(MediaLibrarySelectorV2, {
       onSelect: async (id: number) => {
-        // Load the library name
         const response = await BApi.mediaLibraryV2.getAllMediaLibraryV2();
-        const lib = response?.data?.find((l) => l.id === id);
 
-        if (lib) {
-          setSelectedLibrary({ id: lib.id!, name: lib.name || `Library ${lib.id}` });
-          updateConfig({ mediaLibraryId: lib.id });
-        }
+        if (response.code) throw new Error(response.message);
+        setLibraries(
+          (response.data ?? []).map((library) => ({ id: library.id, name: library.name })),
+        );
+        updateLibraries([...new Set([...selectedIds, id])]);
       },
     });
   };
@@ -80,21 +88,23 @@ const MediaLibraryMarkConfig = ({ config, updateConfig, t }: Props) => {
       </RadioGroup>
       {valueType === PropertyValueType.Fixed ? (
         <>
-          {/* Fixed Mode: Media Library Selector using MediaLibrarySelectorV2 */}
           <div className="flex flex-col gap-1">
             <span className="text-sm">{t("pathMarkConfig.label.targetMediaLibrary")}</span>
-            <div className="flex items-center gap-2">
-              {selectedLibrary ? (
-                <Chip
-                  color="secondary"
-                  variant="flat"
-                  onClose={() => {
-                    setSelectedLibrary(null);
-                    updateConfig({ mediaLibraryId: undefined });
-                  }}
-                >
-                  {selectedLibrary.name}
-                </Chip>
+            <div className="flex flex-wrap items-center gap-2">
+              {selectedIds.length > 0 ? (
+                selectedIds.map((id) => (
+                  <Chip
+                    key={id}
+                    color="secondary"
+                    variant="flat"
+                    onClose={() =>
+                      updateLibraries(selectedIds.filter((selectedId) => selectedId !== id))
+                    }
+                  >
+                    {libraries.find((library) => library.id === id)?.name ||
+                      `${t("mediaLibrary.title")} #${id}`}
+                  </Chip>
+                ))
               ) : (
                 <span className="text-sm text-default-400">
                   {t("pathMarkConfig.empty.noMediaLibrarySelected")}
@@ -106,9 +116,7 @@ const MediaLibraryMarkConfig = ({ config, updateConfig, t }: Props) => {
                 variant="flat"
                 onPress={handleSelectLibrary}
               >
-                {selectedLibrary
-                  ? t("common.action.change")
-                  : t("pathMarkConfig.action.selectMediaLibrary")}
+                {t("pathMarkConfig.action.addMediaLibrary")}
               </Button>
             </div>
           </div>

@@ -26,6 +26,28 @@ const legacyPropertyConfig = {
 };
 
 describe("preview configuration guidance", () => {
+  it("requires fixed library values and treats an explicit empty list as authoritative", () => {
+    for (const mediaLibraryIds of [[], [0], [-1], [1.5]]) {
+      const config = {
+        ...parseMarkConfig(undefined, PathMarkType.MediaLibrary),
+        mediaLibraryId: 9,
+        mediaLibraryIds,
+      };
+
+      expect(getPreviewConfigurationHint(config, PathMarkType.MediaLibrary)).toBe(
+        "pathMarkConfig.preview.configureMediaLibraries",
+      );
+    }
+    expect(
+      getPreviewConfigurationHint(
+        {
+          ...parseMarkConfig(undefined, PathMarkType.MediaLibrary),
+          mediaLibraryIds: [1, 2],
+        },
+        PathMarkType.MediaLibrary,
+      ),
+    ).toBeUndefined();
+  });
   it.each([false, 0, "False", "0"])("accepts an existing fixed scalar value %s", (fixedValue) => {
     const config = parseMarkConfig(
       JSON.stringify({ ...legacyPropertyConfig, valueType: PropertyValueType.Fixed, fixedValue }),
@@ -33,6 +55,58 @@ describe("preview configuration guidance", () => {
     );
 
     expect(getPreviewConfigurationHint(config, PathMarkType.Property)).toBeUndefined();
+  });
+});
+
+describe("fixed media library values", () => {
+  it("reads a legacy single library and saves the full multiple-library selection", () => {
+    const config = parseMarkConfig(
+      JSON.stringify({
+        matchMode: PathMatchMode.Layer,
+        layer: 0,
+        valueType: PropertyValueType.Fixed,
+        mediaLibraryId: 2,
+      }),
+      PathMarkType.MediaLibrary,
+    );
+
+    expect(config.mediaLibraryIds).toEqual([2]);
+    const saved = JSON.parse(
+      buildConfigJson({ ...config, mediaLibraryIds: [2, 3] }, PathMarkType.MediaLibrary),
+    );
+
+    expect(saved).toMatchObject({ mediaLibraryId: 2, mediaLibraryIds: [2, 3] });
+    expect(
+      parseMarkConfig(JSON.stringify(saved), PathMarkType.MediaLibrary).mediaLibraryIds,
+    ).toEqual([2, 3]);
+  });
+
+  it("does not revive a removed legacy library or emit fixed values for dynamic marks", () => {
+    const config = parseMarkConfig(
+      JSON.stringify({
+        mediaLibraryId: 2,
+        mediaLibraryIds: [],
+        valueType: PropertyValueType.Fixed,
+      }),
+      PathMarkType.MediaLibrary,
+    );
+    const fixed = JSON.parse(buildConfigJson(config, PathMarkType.MediaLibrary));
+
+    expect(fixed.mediaLibraryIds).toEqual([]);
+    expect(fixed).not.toHaveProperty("mediaLibraryId");
+    const dynamic = JSON.parse(
+      buildConfigJson(
+        {
+          ...config,
+          mediaLibraryIds: [2, 3],
+          mediaLibraryValueType: PropertyValueType.Dynamic,
+        },
+        PathMarkType.MediaLibrary,
+      ),
+    );
+
+    expect(dynamic).not.toHaveProperty("mediaLibraryIds");
+    expect(dynamic).not.toHaveProperty("mediaLibraryId");
   });
 });
 

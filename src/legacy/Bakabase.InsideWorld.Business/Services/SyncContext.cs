@@ -38,6 +38,7 @@ internal class SyncContext
 
     // Pre-loaded media library cache for dynamic mode (name -> id)
     public Dictionary<string, int> MediaLibraryCache { get; } = new(StringComparer.OrdinalIgnoreCase);
+    public HashSet<int> ExistingMediaLibraryIds { get; } = new();
 
     #region PathMark Effect Tracking (Property/MediaLibrary Only)
 

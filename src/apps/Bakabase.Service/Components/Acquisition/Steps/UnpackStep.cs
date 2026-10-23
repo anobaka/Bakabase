@@ -1,4 +1,5 @@
 using Bakabase.Abstractions.Components.Localization;
+using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Abstractions.Components.Tasks;
 using System;
 using System.Collections.Generic;
@@ -173,7 +174,7 @@ public class UnpackStep : IAcquisitionStep
                 Bakabase.Modules.Acquisition.Components.AcquisitionStoragePaths.EnsureSourceAllowed(ctx, item, file);
             var app = ctx.ServiceProvider.GetService<AppService>();
             var stateDirectory = item.ProcessingStateDirectory ?? (app != null
-                ? Path.Combine(app.AppDataDirectory, "file-processing", ctx.WorkflowRunId?.ToString() ??
+                ? AppDataStorage.FileProcessing.GetPath(app.AppDataDirectory, ctx.WorkflowRunId?.ToString() ??
                     ctx.AcquisitionTaskId?.ToString() ?? Guid.NewGuid().ToString("N"))
                 : ctx.WorkingDirectory.TrimEnd(Path.DirectorySeparatorChar) + ".processing");
             item = item with {ExtractionPlanJson = planJson, ProcessingStateDirectory = stateDirectory};

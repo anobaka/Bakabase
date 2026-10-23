@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Infrastructures.Components.App;
 using Microsoft.Extensions.Logging;
 
@@ -18,7 +19,6 @@ public interface IDeviceIdService
 
 public class DeviceIdService : IDeviceIdService
 {
-    private const string SubDir = "analytics";
     private const string FileName = "device-id";
 
     private readonly object _lock = new();
@@ -27,7 +27,7 @@ public class DeviceIdService : IDeviceIdService
     private string? _cached;
 
     public DeviceIdService(AppService appService, ILogger<DeviceIdService> logger)
-        : this(() => appService.RequestAppDataDirectory(SubDir), logger) { }
+        : this(() => appService.RequestAppDataDirectory(AppDataStorage.Analytics.RelativePath), logger) { }
 
     internal DeviceIdService(Func<string> directory, ILogger<DeviceIdService> logger)
     {

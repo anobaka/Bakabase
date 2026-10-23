@@ -24,6 +24,22 @@ public class ManagedLibraryTests
     private static ManagedLibraryRequest Search(int size = 24) => new(Epoch, "resourceSearch",
         Body: JObject.FromObject(new {page = 1, pageSize = size, keyword = "film"}));
 
+    [TestMethod]
+    public void Library_bulk_delete_preserves_owner_and_cleanup_choice_and_bounds_selected_ids()
+    {
+        var operation = ManagedLibraryOperations.Build(new(Epoch, "libraryBulkDelete",
+            Body: JObject.FromObject(new {ids = new[] {7, 8}, removeRelatedPathMarks = true})));
+        Assert.AreEqual(HttpMethod.Delete, operation.Method);
+        Assert.AreEqual("/media-library-v2?managedLibraryEpoch=library-one", operation.Path);
+        Assert.IsTrue(JObject.Parse(operation.Json!)["removeRelatedPathMarks"]!.Value<bool>());
+        Assert.ThrowsExactly<FederationAccessException>(() => ManagedLibraryOperations.Build(new(Epoch,
+            "libraryBulkDelete", Body: JObject.FromObject(new {ids = Enumerable.Range(1, 101).ToArray()}))));
+        Assert.ThrowsExactly<FederationAccessException>(() => ManagedLibraryOperations.Build(new(Epoch,
+            "libraryBulkDelete", Body: JObject.FromObject(new {ids = new[] {7}, removeRelatedPathMarks = "true"}))));
+        Assert.ThrowsExactly<FederationAccessException>(() => ManagedLibraryOperations.Build(new(Epoch,
+            "libraryBulkDelete", Body: JObject.FromObject(new {ids = new[] {0}}))));
+    }
+
     [DataTestMethod]
     [DataRow(0)]
     [DataRow(2)]

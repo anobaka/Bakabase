@@ -73,6 +73,9 @@ public interface IPathMarkService
     /// </summary>
     Task HardDeleteBatch(IEnumerable<int> ids);
 
+    /// <summary>Remove libraries from fixed-value marks, deleting only marks with no remaining libraries.</summary>
+    Task RemoveMediaLibrariesFromFixedMarks(IEnumerable<int> mediaLibraryIds);
+
     /// <summary>Finalize only unchanged resource deletion snapshots, atomically removing their ownership effects.</summary>
     Task FinalizeResourceDeletions(IReadOnlyCollection<PathMark> snapshots, CancellationToken ct = default);
 

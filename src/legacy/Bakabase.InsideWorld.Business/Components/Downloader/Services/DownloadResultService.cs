@@ -7,6 +7,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Infrastructures.Components.App;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
 using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
@@ -88,7 +89,7 @@ public sealed class DownloadResultService
     {
         TorrentMetadata.Validate(bytes);
         var fingerprint = Hash(bytes);
-        var directory = System.IO.Path.Combine(_appData(), "downloader", "torrent-metadata");
+        var directory = AppDataStorage.Downloads.GetPath(_appData(), "torrent-metadata");
         var target = System.IO.Path.GetFullPath(System.IO.Path.Combine(directory, fingerprint + ".torrent"));
         Directory.CreateDirectory(directory);
         var temporary = target + "." + Guid.NewGuid().ToString("N") + ".tmp";

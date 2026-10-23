@@ -82,5 +82,8 @@ public class PathMark
     /// </summary>
     public MediaLibraryV2? MediaLibrary { get; set; }
 
+    /// <summary>Fixed libraries populated by PathMarkAdditionalItem.MediaLibrary.</summary>
+    public List<MediaLibraryV2>? MediaLibraries { get; set; }
+
     #endregion
 }

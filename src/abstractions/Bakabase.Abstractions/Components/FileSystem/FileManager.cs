@@ -5,7 +5,7 @@ namespace Bakabase.Abstractions.Components.FileSystem;
 
 public class FileManager(AppService appService) : IFileManager
 {
-    public string BaseDir => Path.Combine(appService.AppDataDirectory, "data").StandardizePath()!;
+    public string BaseDir => Path.Combine(appService.AppDataDirectory, AppDataStorage.DataDirectoryName).StandardizePath()!;
 
     public string BuildAbsolutePath(params object[] segmentsAfterBaseDir)
     {
@@ -22,29 +22,29 @@ public class FileManager(AppService appService) : IFileManager
     }
 
     public string GetLocalCoverPathWithoutExtension(int resourceId) =>
-        BuildAbsolutePath("covers", "local", resourceId.ToString());
+        AppDataStorage.Covers.GetPath(appService.AppDataDirectory, "local", resourceId.ToString()).StandardizePath()!;
 
     public string GetSourceCoverDir(string source, int resourceId) =>
-        BuildAbsolutePath("covers", "source", source, resourceId.ToString());
+        AppDataStorage.Covers.GetPath(appService.AppDataDirectory, "source", source, resourceId.ToString()).StandardizePath()!;
 
     public string GetManualCoverPath(int resourceId, int index) =>
-        BuildAbsolutePath("covers", "manual", $"{resourceId}-{index}.jpg");
+        AppDataStorage.Covers.GetPath(appService.AppDataDirectory, "manual", $"{resourceId}-{index}.jpg").StandardizePath()!;
 
     public string GetEnhancerFilePath(string enhancerId, string fileName) =>
-        BuildAbsolutePath("enhancers", enhancerId, fileName);
+        AppDataStorage.EnhancerFiles.GetPath(appService.AppDataDirectory, enhancerId, fileName).StandardizePath()!;
 
     public string GetEnhancerResourceFilePath(string enhancerId, string resourceIdPart, string fileName) =>
-        BuildAbsolutePath("enhancers", enhancerId, resourceIdPart, fileName);
+        AppDataStorage.EnhancerFiles.GetPath(appService.AppDataDirectory, enhancerId, resourceIdPart, fileName).StandardizePath()!;
 
     public string GetAttachmentPath(string fileName) =>
-        BuildAbsolutePath("attachments", fileName);
+        AppDataStorage.Attachments.GetPath(appService.AppDataDirectory, fileName).StandardizePath()!;
 
     public string GetAigcGeneratorDir(int generatorId) =>
-        BuildAbsolutePath("aigc", $"g{generatorId}");
+        AppDataStorage.Aigc.GetPath(appService.AppDataDirectory, $"g{generatorId}").StandardizePath()!;
 
     public string GetAigcRunDir(int generatorId, int runId) =>
-        BuildAbsolutePath("aigc", $"g{generatorId}", $"r{runId}");
+        AppDataStorage.Aigc.GetPath(appService.AppDataDirectory, $"g{generatorId}", $"r{runId}").StandardizePath()!;
 
     public string GetAigcArtifactRelativePath(int generatorId, int runId, string fileName) =>
-        Path.Combine("aigc", $"g{generatorId}", $"r{runId}", fileName).StandardizePath()!;
+        Path.Combine(AppDataStorage.AigcDirectoryName, $"g{generatorId}", $"r{runId}", fileName).StandardizePath()!;
 }

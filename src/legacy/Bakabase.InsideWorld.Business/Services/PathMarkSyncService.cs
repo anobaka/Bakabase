@@ -27,6 +27,7 @@ using Bakabase.Modules.StandardValue.Extensions;
 using Bootstrap.Components.Configuration.Abstractions;
 using CustomProperty = Bakabase.Abstractions.Models.Domain.CustomProperty;
 using Bootstrap.Components.DependencyInjection;
+using Bootstrap.Components.Orm;
 using Bootstrap.Components.Tasks;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -115,11 +116,13 @@ public class PathMarkSyncService : ScopedService
         CancellationToken ct,
         IReadOnlyDictionary<int, long>? expectedMarkRevisions = null)
     {
+        var gate = await MediaLibraryMutationGate.Acquire(GetRequiredService<GlobalCacheVault>());
         var result = new PathMarkSyncResult();
         var ctx = new SyncContext();
 
         try
         {
+            ct.ThrowIfCancellationRequested();
             // ===== Initialization (0-5%) =====
             await ReportProgress(onProgressChange, onProcessChange, 0, BTaskText.Localize(_localizer, "SyncPathMark_Collecting"));
 
@@ -340,6 +343,7 @@ public class PathMarkSyncService : ScopedService
         {
             throw;
         }
+        finally { gate.Release(); }
 
         return result;
     }
@@ -485,12 +489,14 @@ public class PathMarkSyncService : ScopedService
 
         // For fixed values
         int? sharedMediaLibraryId = null;
+        List<int>? fixedMediaLibraryIds = null;
         string? sharedMediaLibraryName = null;
 
         if (valueType == PropertyValueType.Fixed)
         {
-            sharedMediaLibraryId = config.MediaLibraryId;
-            if (!sharedMediaLibraryId.HasValue) return Task.CompletedTask;
+            fixedMediaLibraryIds = config.GetFixedMediaLibraryIds()
+                .Where(ctx.ExistingMediaLibraryIds.Contains).ToList();
+            if (fixedMediaLibraryIds.Count == 0) return Task.CompletedTask;
         }
         else if (!needsPerResourceExtraction)
         {
@@ -505,17 +511,22 @@ public class PathMarkSyncService : ScopedService
         {
             ct.ThrowIfCancellationRequested();
 
-            int mediaLibraryId;
-            if (needsPerResourceExtraction)
+            List<int> mediaLibraryIds;
+            if (fixedMediaLibraryIds != null)
+            {
+                mediaLibraryIds = fixedMediaLibraryIds;
+            }
+            else if (needsPerResourceExtraction)
             {
                 var name = ExtractDynamicValue(mark.Path, resource.Path, config.ValueBasePath, config.GetEffectiveValueMatchMode(), valueLayer,
                     config.RegexToMediaLibrary, ctx, true);
                 if (string.IsNullOrEmpty(name)) continue;
-                if (!ctx.MediaLibraryCache.TryGetValue(name, out mediaLibraryId)) continue;
+                if (!ctx.MediaLibraryCache.TryGetValue(name, out var mediaLibraryId)) continue;
+                mediaLibraryIds = [mediaLibraryId];
             }
             else
             {
-                mediaLibraryId = sharedMediaLibraryId!.Value;
+                mediaLibraryIds = [sharedMediaLibraryId!.Value];
             }
 
             // Record the effect (using Internal pool and MediaLibraryV2Multi property)
@@ -525,7 +536,7 @@ public class PathMarkSyncService : ScopedService
                 PropertyPool = PropertyPool.Internal,
                 PropertyId = mediaLibraryPropertyId,
                 ResourceId = resource.Id,
-                Value = mediaLibraryId.ToString(),
+                Value = MediaLibraryMarkValue.Write(mediaLibraryIds),
                 Priority = mark.Priority
             });
             ctx.CurrentPropertyEffectKeys.Add((mark.Id, PropertyPool.Internal, mediaLibraryPropertyId, resource.Id));
@@ -929,10 +940,8 @@ public class PathMarkSyncService : ScopedService
 
             foreach (var effect in group)
             {
-                if (int.TryParse(effect.Value, out var mlId))
-                {
-                    mediaLibraryIds.Add(mlId);
-                }
+                mediaLibraryIds.UnionWith(MediaLibraryMarkValue.Read(effect.Value)
+                    .Where(ctx.ExistingMediaLibraryIds.Contains));
             }
 
             if (mediaLibraryIds.Count > 0)
@@ -955,12 +964,10 @@ public class PathMarkSyncService : ScopedService
             foreach (var effect in oldEffects)
             {
                 if (!IsMediaLibraryEffect(effect)) continue;
-                if (!int.TryParse(effect.Value, out var mediaLibraryId)) continue;
-
-                var mapping = (effect.ResourceId, mediaLibraryId);
-                if (!currentMappings.Contains(mapping))
+                foreach (var mediaLibraryId in MediaLibraryMarkValue.Read(effect.Value))
                 {
-                    ctx.MediaLibraryMappingsToDelete.Add(mapping);
+                    var mapping = (effect.ResourceId, mediaLibraryId);
+                    if (!currentMappings.Contains(mapping)) ctx.MediaLibraryMappingsToDelete.Add(mapping);
                 }
             }
         }
@@ -1373,6 +1380,7 @@ public class PathMarkSyncService : ScopedService
         var existingLibraries = await _mediaLibraryV2Service.GetAll();
         foreach (var lib in existingLibraries)
         {
+            ctx.ExistingMediaLibraryIds.Add(lib.Id);
             if (!string.IsNullOrEmpty(lib.Name) && !ctx.MediaLibraryCache.ContainsKey(lib.Name))
             {
                 ctx.MediaLibraryCache[lib.Name] = lib.Id;
@@ -1445,6 +1453,7 @@ public class PathMarkSyncService : ScopedService
                 Paths: new List<string>()
             ));
             ctx.MediaLibraryCache[name] = newLibrary.Id;
+            ctx.ExistingMediaLibraryIds.Add(newLibrary.Id);
         }
     }
 

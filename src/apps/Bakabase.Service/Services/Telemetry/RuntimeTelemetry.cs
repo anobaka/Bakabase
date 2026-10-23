@@ -77,7 +77,8 @@ public sealed class RuntimeTelemetry : BackgroundService
         {
             if (_state == null)
             {
-                _statePath = Path.Combine(_app.RequestAppDataDirectory("analytics"), "runtime-v2.json");
+                _statePath = Path.Combine(_app.RequestAppDataDirectory(
+                    Bakabase.Abstractions.Components.FileSystem.AppDataStorage.Analytics.RelativePath), "runtime-v2.json");
                 _state = ReadState(_statePath);
                 if (_state.FirstObservedAt == null)
                 {

@@ -11,6 +11,7 @@ using Bakabase.Abstractions.Services;
 using Bootstrap.Components.DependencyInjection;
 using Bootstrap.Components.Orm;
 using Bootstrap.Components.Orm.Extensions;
+using Bootstrap.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -139,12 +140,17 @@ public class MediaLibraryResourceMappingService<TDbContext>(
         }
     }
 
-    public async Task DeleteByMediaLibraryId(int mediaLibraryId)
+    public Task DeleteByMediaLibraryId(int mediaLibraryId) => DeleteByMediaLibraryIds([mediaLibraryId]);
+
+    public async Task DeleteByMediaLibraryIds(IEnumerable<int> mediaLibraryIds)
     {
-        var dbModels = await orm.GetAll(m => m.MediaLibraryId == mediaLibraryId);
+        var ids = mediaLibraryIds.ToHashSet();
+        if (ids.Count == 0) return;
+        var dbModels = await orm.GetAll(m => ids.Contains(m.MediaLibraryId));
         if (dbModels.Any())
         {
-            await orm.RemoveRange(dbModels);
+            var response = await orm.RemoveRange(dbModels);
+            if (!response.IsSuccess()) throw new InvalidOperationException(response.Message);
             await indexService.RemoveRangeAsync(dbModels);
 
             // Publish resource data changed event

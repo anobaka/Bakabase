@@ -1306,6 +1306,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/app/storage-usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetAppStorageUsage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/av/sources": {
         parameters: {
             query?: never;
@@ -6272,7 +6288,7 @@ export interface paths {
         get: operations["GetAllMediaLibraryV2"];
         put: operations["SaveAllMediaLibrariesV2"];
         post: operations["AddMediaLibraryV2"];
-        delete?: never;
+        delete: operations["DeleteMediaLibrariesV2"];
         options?: never;
         head?: never;
         patch?: never;
@@ -11002,6 +11018,7 @@ export interface components {
             expiresInSeconds?: number;
             property?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Property"];
             mediaLibrary?: components["schemas"]["Bakabase.Abstractions.Models.Domain.MediaLibraryV2"];
+            mediaLibraries?: components["schemas"]["Bakabase.Abstractions.Models.Domain.MediaLibraryV2"][];
         };
         "Bakabase.Abstractions.Models.Domain.PathMarkPreviewResult": {
             path: string;
@@ -11419,6 +11436,10 @@ export interface components {
             paths: string[];
             color?: string;
             players?: components["schemas"]["Bakabase.Abstractions.Models.Domain.MediaLibraryPlayer"][];
+        };
+        "Bakabase.Abstractions.Models.Input.MediaLibraryV2DeleteInputModel": {
+            ids: number[];
+            removeRelatedPathMarks: boolean;
         };
         "Bakabase.Abstractions.Models.Input.MediaLibraryV2PatchInputModel": {
             name?: string;
@@ -16823,6 +16844,36 @@ export interface components {
             postHogApiKey?: string;
             postHogApiHost: string;
         };
+        "Bakabase.Service.Models.View.AppStorageUsageCategoryViewModel": {
+            id: string;
+            /** Format: int64 */
+            bytes: number;
+            /** Format: int64 */
+            fileCount: number;
+            path?: string;
+            partial: boolean;
+        };
+        "Bakabase.Service.Models.View.AppStorageUsageErrorViewModel": {
+            path: string;
+            message: string;
+        };
+        "Bakabase.Service.Models.View.AppStorageUsageViewModel": {
+            rootPath: string;
+            /** Format: int64 */
+            totalBytes: number;
+            /** Format: int64 */
+            fileCount: number;
+            /** Format: date-time */
+            scannedAt: string;
+            fromCache: boolean;
+            partial: boolean;
+            /** Format: int64 */
+            skippedSymbolicLinks: number;
+            categories: components["schemas"]["Bakabase.Service.Models.View.AppStorageUsageCategoryViewModel"][];
+            errors: components["schemas"]["Bakabase.Service.Models.View.AppStorageUsageErrorViewModel"][];
+            /** Format: int64 */
+            errorCount: number;
+        };
         "Bakabase.Service.Models.View.AvSourceHttpInteractionViewModel": {
             method: string;
             url: string;
@@ -19183,6 +19234,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Models.View.AnalyticsAppInfoViewModel"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.AppStorageUsageViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Models.View.AppStorageUsageViewModel"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.BulkModificationViewModel]": {
             /** Format: int32 */
@@ -22154,6 +22211,30 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    GetAppStorageUsage: {
+        parameters: {
+            query?: {
+                forceRefresh?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.AppStorageUsageViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.AppStorageUsageViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.AppStorageUsageViewModel]"];
                 };
             };
         };
@@ -31929,6 +32010,35 @@ export interface operations {
             };
         };
     };
+    DeleteMediaLibrariesV2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Abstractions.Models.Input.MediaLibraryV2DeleteInputModel"];
+                "application/json": components["schemas"]["Bakabase.Abstractions.Models.Input.MediaLibraryV2DeleteInputModel"];
+                "text/json": components["schemas"]["Bakabase.Abstractions.Models.Input.MediaLibraryV2DeleteInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Abstractions.Models.Input.MediaLibraryV2DeleteInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
     GetMediaLibraryV2: {
         parameters: {
             query?: never;
@@ -31986,7 +32096,9 @@ export interface operations {
     };
     DeleteMediaLibraryV2: {
         parameters: {
-            query?: never;
+            query?: {
+                removeRelatedPathMarks?: boolean;
+            };
             header?: never;
             path: {
                 id: number;
