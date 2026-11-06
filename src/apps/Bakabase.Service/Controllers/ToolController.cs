@@ -51,7 +51,7 @@ namespace Bakabase.Service.Controllers
         public BaseResponse Open(string path, bool openInDirectory)
         {
             if (OperatingSystem.IsLinux() && openInDirectory) LinuxFileManager.RevealInParentDirectory(path);
-            else OsShell.Open(path, openInDirectory);
+            else if (openInDirectory || !WindowsWebpViewer.TryOpen(path)) OsShell.Open(path, openInDirectory);
             return BaseResponseBuilder.Ok;
         }
 
@@ -355,15 +355,10 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "OpenFile")]
         public async Task<BaseResponse> OpenFile(string path)
         {
-            var p = new Process
+            if (!WindowsWebpViewer.TryOpen(path))
             {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = path,
-                    UseShellExecute = true
-                }
-            };
-            p.Start();
+                using var process = Process.Start(new ProcessStartInfo(path) {UseShellExecute = true});
+            }
             return BaseResponseBuilder.Ok;
         }
 

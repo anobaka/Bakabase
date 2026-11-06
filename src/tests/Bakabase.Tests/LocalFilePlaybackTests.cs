@@ -1,5 +1,6 @@
 using System.Reflection;
 using Bakabase.Abstractions.Components;
+using Bakabase.Abstractions.Helpers;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components.Providers.PlayableItem;
@@ -127,5 +128,16 @@ public class LocalFilePlaybackTests
         var windows = SelfPlayer.BuildStartInfo("C:/Media/My movie.mp4", true);
         Assert.AreEqual(@"C:\Media\My movie.mp4", windows.FileName);
         Assert.IsTrue(windows.UseShellExecute);
+    }
+
+    [TestMethod]
+    public void WindowsWebpViewerEscapesThePathAndRespectsWindowsAssociations()
+    {
+        const string photos = "Microsoft.Windows.Photos_8wekyb3d8bbwe!App";
+        const string path = "C:/Media/本 #1 & 50%.WebP";
+        Assert.AreEqual("ms-photos:viewer?fileName=C%3A%5CMedia%5C%E6%9C%AC%20%231%20%26%2050%25.WebP",
+            WindowsWebpViewer.BuildViewerUri(path, photos, photos));
+        Assert.IsNull(WindowsWebpViewer.BuildViewerUri(path, "ThirdParty.Viewer", photos));
+        Assert.IsNull(WindowsWebpViewer.BuildViewerUri(path, photos, null));
     }
 }

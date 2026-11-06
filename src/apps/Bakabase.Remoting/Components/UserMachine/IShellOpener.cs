@@ -52,10 +52,14 @@ public sealed class OsShellOpener : IShellOpener
     public void Reveal(string path, bool inParentDirectory)
     {
         if (OperatingSystem.IsLinux() && inParentDirectory) LinuxFileManager.RevealInParentDirectory(path);
-        else OsShell.Open(path, inParentDirectory);
+        else if (inParentDirectory || !WindowsWebpViewer.TryOpen(path)) OsShell.Open(path, inParentDirectory);
     }
 
-    public void Launch(string target) => Process.Start(new ProcessStartInfo(target) {UseShellExecute = true});
+    public void Launch(string target)
+    {
+        if (WindowsWebpViewer.TryOpen(target)) return;
+        using var process = Process.Start(new ProcessStartInfo(target) {UseShellExecute = true});
+    }
 
     public void LaunchProcess(string executable, string arguments, bool useShellExecute) =>
         Process.Start(new ProcessStartInfo(executable)
