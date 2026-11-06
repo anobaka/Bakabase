@@ -36,20 +36,9 @@ const TaskPopover: React.FC<Props> = ({ onOpenChat }) => {
   const pausedTasks = bTasks.filter((task) => task.status === BTaskStatus.Paused);
 
   return (
-    <div
-      className="flex flex-col gap-2 p-2 min-w-[300px]"
-      role="button"
-      tabIndex={0}
-      onClick={(e) => e.stopPropagation()}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          e.stopPropagation();
-        }
-      }}
-    >
+    <div className="flex min-w-[min(300px,calc(100dvw-3rem))] max-w-[calc(100dvw-3rem)] flex-col gap-2 p-2">
       <div className="flex flex-col gap-2">
-        <div className="flex flex-col gap-1 max-h-[600px] overflow-auto">
+        <div className="flex max-h-[min(600px,65dvh)] flex-col gap-1 overflow-auto">
           <TaskTable tasks={bTasks} />
         </div>
         <Divider orientation="horizontal" />

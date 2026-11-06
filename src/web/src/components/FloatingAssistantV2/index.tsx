@@ -1,4 +1,7 @@
+import type { DockedEdge } from "./types";
+
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import "./index.scss";
 import { useStateMachine } from "./hooks/useStateMachine";
@@ -8,8 +11,6 @@ import BakaCharacter from "./components/BakaCharacter";
 import ChatPanel from "./components/ChatPanel";
 import TaskPopover from "./components/TaskPopover";
 
-import type { DockedEdge } from "./types";
-
 import { BAKA_SIZE, REDOCK_DELAY, WAVING_BYE_DURATION } from "./constants";
 
 import { Popover } from "@/components/bakaui";
@@ -17,17 +18,21 @@ import { useBTasksStore } from "@/stores/bTasks";
 import { BTaskStatus } from "@/sdk/constants";
 
 const HOVER_HITBOX_EXTRA = 24;
+const TASK_PANEL_PLACEMENT = {
+  left: "right",
+  right: "left",
+  top: "bottom",
+  bottom: "top",
+} as const;
 
 const FloatingAssistantV2: React.FC = () => {
+  const { t } = useTranslation();
   const { machine, send } = useStateMachine();
-  const clickTimerRef = useRef<ReturnType<typeof setTimeout>>();
   const mouseOverRef = useRef(false);
   const redockTimerRef = useRef<ReturnType<typeof setTimeout>>();
   const wavingTimerRef = useRef<ReturnType<typeof setTimeout>>();
   const [popoverVisible, setPopoverVisible] = useState(false);
-  const isWorking = useBTasksStore((s) =>
-    s.tasks.some((t) => t.status === BTaskStatus.Running),
-  );
+  const isWorking = useBTasksStore((s) => s.tasks.some((t) => t.status === BTaskStatus.Running));
 
   const machineRef = useRef(machine);
 
@@ -83,10 +88,12 @@ const FloatingAssistantV2: React.FC = () => {
   }, [redockToEdge, send]);
 
   useEffect(() => {
-    if (machine.state === "hovered" && machine.undockedByHover && !mouseOverRef.current) {
+    if (popoverVisible) {
+      cancelRedock();
+    } else if (machine.state === "hovered" && machine.undockedByHover && !mouseOverRef.current) {
       scheduleRedock();
     }
-  }, [machine.state, machine.undockedByHover, scheduleRedock]);
+  }, [popoverVisible, machine.state, machine.undockedByHover, cancelRedock, scheduleRedock]);
 
   useEffect(() => {
     return () => {
@@ -97,29 +104,32 @@ const FloatingAssistantV2: React.FC = () => {
 
   // ---- Event handlers ----
 
-  const handleClick = useCallback(() => {
-    if (isDragging()) return;
+  const handleTaskPanelChange = useCallback(
+    (open: boolean) => {
+      if (!open) {
+        setPopoverVisible(false);
 
-    if (machine.state === "chatting") {
-      send({ type: "CLOSE_CHAT" });
+        return;
+      }
+      if (isDragging()) return;
 
-      return;
-    }
-    if (machine.state === "waving-bye") {
+      if (machine.state === "chatting") {
+        send({ type: "CLOSE_CHAT" });
+
+        return;
+      }
       cancelRedock();
-      send({ type: "HOVER_ENTER" });
-
-      return;
-    }
-
-    // Single click → toggle task popover
-    setPopoverVisible((v) => !v);
-  }, [isDragging, machine.state, send, cancelRedock]);
+      if (machine.state === "waving-bye") {
+        send({ type: "HOVER_ENTER" });
+      }
+      setPopoverVisible(true);
+    },
+    [isDragging, machine.state, send, cancelRedock],
+  );
 
   const handleDoubleClick = useCallback(() => {
     if (isDragging()) return;
     cancelRedock();
-    clearTimeout(clickTimerRef.current);
     setPopoverVisible(false); // close popover if open
     send({ type: "OPEN_CHAT" });
   }, [isDragging, send, cancelRedock]);
@@ -150,6 +160,7 @@ const FloatingAssistantV2: React.FC = () => {
   const handleMouseLeave = useCallback(() => {
     mouseOverRef.current = false;
     if (
+      popoverVisible ||
       machine.state === "clicked" ||
       machine.state === "chatting" ||
       machine.state === "waving-bye"
@@ -160,7 +171,7 @@ const FloatingAssistantV2: React.FC = () => {
     } else {
       send({ type: "HOVER_LEAVE" });
     }
-  }, [machine.state, machine.undockedByHover, send, scheduleRedock]);
+  }, [popoverVisible, machine.state, machine.undockedByHover, send, scheduleRedock]);
 
   const handleCloseChat = useCallback(() => {
     send({ type: "CLOSE_CHAT" });
@@ -179,8 +190,11 @@ const FloatingAssistantV2: React.FC = () => {
         />
       )}
       <Popover
+        disableAnimation
+        placement={TASK_PANEL_PLACEMENT[machine.dockedEdge]}
         trigger={
           <div
+            aria-label={t("floatingAssistant.label.taskList")}
             className={`baka-assistant-v2 baka-state-${machine.state} ${cursorClass}`}
             role="button"
             style={{
@@ -190,14 +204,7 @@ const FloatingAssistantV2: React.FC = () => {
               height: BAKA_SIZE,
             }}
             tabIndex={0}
-            onClick={handleClick}
             onDoubleClick={handleDoubleClick}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                handleClick();
-              }
-            }}
             onMouseDown={handleMouseDown}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
@@ -213,10 +220,9 @@ const FloatingAssistantV2: React.FC = () => {
             />
           </div>
         }
+        updatePositionDeps={[position.x, position.y]}
         visible={popoverVisible}
-        onOpenChange={(v) => {
-          if (!v) setPopoverVisible(false);
-        }}
+        onOpenChange={handleTaskPanelChange}
       >
         <TaskPopover onOpenChat={handleOpenChatFromPopover} />
       </Popover>

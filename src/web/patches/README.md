@@ -25,3 +25,15 @@ DOM render can hide the regression. It covers both module formats.
 Remove this patch when upgrading Framer Motion to a release with the upstream fix,
 then rerun these tests and check HeroUI tooltip, popover, dropdown, and modal
 entrance/exit animations in the browser. Do not carry the patch forward blindly.
+
+## React Aria Tooltip 3.9.2: first hover after keyboard input
+
+The tooltip's hover handler checks input modality. A pointer can enter a trigger
+before the first pointer movement changes that modality, so the hover can be
+missed after keyboard input or initial navigation. The patch opens the tooltip
+on the next pointer movement over the same trigger. It still ignores enters
+caused by keyboard-driven layout changes until the pointer moves.
+
+HeroUI pins this version. When upgrading HeroUI, run the shared Tooltip tests
+and check that the first pointer movement over a trigger after pressing Escape
+opens its tooltip before removing or updating the patch.

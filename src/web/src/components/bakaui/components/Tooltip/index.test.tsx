@@ -1,9 +1,10 @@
 import React, { createRef } from "react";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HeroUIProvider } from "@heroui/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { Button } from "../Button";
 import Tooltip from "./index";
 
 const renderTooltip = (element: React.ReactElement) => render(element, { wrapper: HeroUIProvider });
@@ -11,6 +12,23 @@ const renderTooltip = (element: React.ReactElement) => render(element, { wrapper
 afterEach(cleanup);
 
 describe("shared Tooltip", () => {
+  it("opens on the first pointer movement over its trigger after keyboard input", async () => {
+    renderTooltip(
+      <Tooltip content="Pointer help">
+        <Button>Help</Button>
+      </Tooltip>,
+    );
+    const trigger = screen.getByRole("button", { name: "Help" });
+
+    fireEvent.keyDown(document.body, { key: "Escape" });
+    fireEvent.pointerOver(trigger, { pointerType: "mouse" });
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+
+    fireEvent.pointerMove(trigger, { pointerType: "mouse" });
+    fireEvent.mouseMove(trigger);
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("Pointer help");
+  });
+
   it("keeps its anchor marked and the same overlay mounted when hovering the content", async () => {
     const user = userEvent.setup();
 

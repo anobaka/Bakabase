@@ -1,0 +1,177 @@
+diff --git a/node_modules/@react-aria/tooltip/dist/useTooltipTrigger.main.js b/node_modules/@react-aria/tooltip/dist/useTooltipTrigger.main.js
+--- a/node_modules/@react-aria/tooltip/dist/useTooltipTrigger.main.js
++++ b/node_modules/@react-aria/tooltip/dist/useTooltipTrigger.main.js
+@@ -25,6 +25,7 @@
+     let { isDisabled: isDisabled, trigger: trigger, shouldCloseOnPress: shouldCloseOnPress = true } = props;
+     let tooltipId = (0, $jCY2B$reactariautils.useId)();
+     let isHovered = (0, $jCY2B$react.useRef)(false);
++    let waitingForPointerMove = (0, $jCY2B$react.useRef)(false);
+     let isFocused = (0, $jCY2B$react.useRef)(false);
+     let handleShow = ()=>{
+         if (isHovered.current || isFocused.current) state.open(isFocused.current);
+@@ -61,11 +62,21 @@
+         // is the result of moving the mouse.
+         if ((0, $jCY2B$reactariainteractions.getInteractionModality)() === 'pointer') isHovered.current = true;
+         else isHovered.current = false;
++        waitingForPointerMove.current = !isHovered.current;
++        handleShow();
++    };
++    let onPointerMove = (e)=>{
++        // Pointer enter can precede the pointer move that changes input modality.
++        // Actual movement confirms hover, unlike enter caused by a dismissing overlay.
++        if (!waitingForPointerMove.current || isDisabled || trigger === 'focus' || e.pointerType === 'touch') return;
++        waitingForPointerMove.current = false;
++        isHovered.current = true;
+         handleShow();
+     };
+     let onHoverEnd = ()=>{
+         if (trigger === 'focus') return;
+         // no matter how the trigger is left, we should close the tooltip
++        waitingForPointerMove.current = false;
+         isFocused.current = false;
+         isHovered.current = false;
+         handleHide();
+@@ -74,6 +85,7 @@
+         // if shouldCloseOnPress is false, we should not close the tooltip
+         if (!shouldCloseOnPress) return;
+         // no matter how the trigger is pressed, we should close the tooltip
++        waitingForPointerMove.current = false;
+         isFocused.current = false;
+         isHovered.current = false;
+         handleHide(true);
+@@ -86,6 +98,7 @@
+         }
+     };
+     let onBlur = ()=>{
++        waitingForPointerMove.current = false;
+         isFocused.current = false;
+         isHovered.current = false;
+         handleHide(true);
+@@ -104,6 +117,9 @@
+         triggerProps: {
+             'aria-describedby': state.isOpen ? tooltipId : undefined,
+             ...(0, $jCY2B$reactariautils.mergeProps)(focusableProps, hoverProps, {
++                onPointerMove: onPointerMove,
++                // HeroUI buttons forward mouse move but filter out pointer move.
++                onMouseMove: onPointerMove,
+                 onPointerDown: onPressStart,
+                 onKeyDown: onPressStart
+             }),
+diff --git a/node_modules/@react-aria/tooltip/dist/useTooltipTrigger.mjs b/node_modules/@react-aria/tooltip/dist/useTooltipTrigger.mjs
+--- a/node_modules/@react-aria/tooltip/dist/useTooltipTrigger.mjs
++++ b/node_modules/@react-aria/tooltip/dist/useTooltipTrigger.mjs
+@@ -19,6 +19,7 @@
+     let { isDisabled: isDisabled, trigger: trigger, shouldCloseOnPress: shouldCloseOnPress = true } = props;
+     let tooltipId = (0, $6VwSn$useId)();
+     let isHovered = (0, $6VwSn$useRef)(false);
++    let waitingForPointerMove = (0, $6VwSn$useRef)(false);
+     let isFocused = (0, $6VwSn$useRef)(false);
+     let handleShow = ()=>{
+         if (isHovered.current || isFocused.current) state.open(isFocused.current);
+@@ -55,11 +56,21 @@
+         // is the result of moving the mouse.
+         if ((0, $6VwSn$getInteractionModality)() === 'pointer') isHovered.current = true;
+         else isHovered.current = false;
++        waitingForPointerMove.current = !isHovered.current;
++        handleShow();
++    };
++    let onPointerMove = (e)=>{
++        // Pointer enter can precede the pointer move that changes input modality.
++        // Actual movement confirms hover, unlike enter caused by a dismissing overlay.
++        if (!waitingForPointerMove.current || isDisabled || trigger === 'focus' || e.pointerType === 'touch') return;
++        waitingForPointerMove.current = false;
++        isHovered.current = true;
+         handleShow();
+     };
+     let onHoverEnd = ()=>{
+         if (trigger === 'focus') return;
+         // no matter how the trigger is left, we should close the tooltip
++        waitingForPointerMove.current = false;
+         isFocused.current = false;
+         isHovered.current = false;
+         handleHide();
+@@ -68,6 +79,7 @@
+         // if shouldCloseOnPress is false, we should not close the tooltip
+         if (!shouldCloseOnPress) return;
+         // no matter how the trigger is pressed, we should close the tooltip
++        waitingForPointerMove.current = false;
+         isFocused.current = false;
+         isHovered.current = false;
+         handleHide(true);
+@@ -80,6 +92,7 @@
+         }
+     };
+     let onBlur = ()=>{
++        waitingForPointerMove.current = false;
+         isFocused.current = false;
+         isHovered.current = false;
+         handleHide(true);
+@@ -98,6 +111,9 @@
+         triggerProps: {
+             'aria-describedby': state.isOpen ? tooltipId : undefined,
+             ...(0, $6VwSn$mergeProps)(focusableProps, hoverProps, {
++                onPointerMove: onPointerMove,
++                // HeroUI buttons forward mouse move but filter out pointer move.
++                onMouseMove: onPointerMove,
+                 onPointerDown: onPressStart,
+                 onKeyDown: onPressStart
+             }),
+diff --git a/node_modules/@react-aria/tooltip/dist/useTooltipTrigger.module.js b/node_modules/@react-aria/tooltip/dist/useTooltipTrigger.module.js
+--- a/node_modules/@react-aria/tooltip/dist/useTooltipTrigger.module.js
++++ b/node_modules/@react-aria/tooltip/dist/useTooltipTrigger.module.js
+@@ -19,6 +19,7 @@
+     let { isDisabled: isDisabled, trigger: trigger, shouldCloseOnPress: shouldCloseOnPress = true } = props;
+     let tooltipId = (0, $6VwSn$useId)();
+     let isHovered = (0, $6VwSn$useRef)(false);
++    let waitingForPointerMove = (0, $6VwSn$useRef)(false);
+     let isFocused = (0, $6VwSn$useRef)(false);
+     let handleShow = ()=>{
+         if (isHovered.current || isFocused.current) state.open(isFocused.current);
+@@ -55,11 +56,21 @@
+         // is the result of moving the mouse.
+         if ((0, $6VwSn$getInteractionModality)() === 'pointer') isHovered.current = true;
+         else isHovered.current = false;
++        waitingForPointerMove.current = !isHovered.current;
++        handleShow();
++    };
++    let onPointerMove = (e)=>{
++        // Pointer enter can precede the pointer move that changes input modality.
++        // Actual movement confirms hover, unlike enter caused by a dismissing overlay.
++        if (!waitingForPointerMove.current || isDisabled || trigger === 'focus' || e.pointerType === 'touch') return;
++        waitingForPointerMove.current = false;
++        isHovered.current = true;
+         handleShow();
+     };
+     let onHoverEnd = ()=>{
+         if (trigger === 'focus') return;
+         // no matter how the trigger is left, we should close the tooltip
++        waitingForPointerMove.current = false;
+         isFocused.current = false;
+         isHovered.current = false;
+         handleHide();
+@@ -68,6 +79,7 @@
+         // if shouldCloseOnPress is false, we should not close the tooltip
+         if (!shouldCloseOnPress) return;
+         // no matter how the trigger is pressed, we should close the tooltip
++        waitingForPointerMove.current = false;
+         isFocused.current = false;
+         isHovered.current = false;
+         handleHide(true);
+@@ -80,6 +92,7 @@
+         }
+     };
+     let onBlur = ()=>{
++        waitingForPointerMove.current = false;
+         isFocused.current = false;
+         isHovered.current = false;
+         handleHide(true);
+@@ -98,6 +111,9 @@
+         triggerProps: {
+             'aria-describedby': state.isOpen ? tooltipId : undefined,
+             ...(0, $6VwSn$mergeProps)(focusableProps, hoverProps, {
++                onPointerMove: onPointerMove,
++                // HeroUI buttons forward mouse move but filter out pointer move.
++                onMouseMove: onPointerMove,
+                 onPointerDown: onPressStart,
+                 onKeyDown: onPressStart
+             }),
