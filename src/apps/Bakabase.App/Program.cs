@@ -52,12 +52,14 @@ class Program
         // no coverage of a real launch.
         CrashHandler.Install();
         // Reopening the desktop activates its current workspace before resolving any
-        // default/explicit data directory (the default may be on disconnected storage).
+        // launch profile, which may point to disconnected storage.
         var restartHandoff = RestartHandoff.WaitForPredecessor(args);
         DesktopWorkspaceSession? desktopSession = null;
+        DesktopProfileRegistry? registry = null;
         if (!args.Any(arg => arg.StartsWith(SetupChildConnection.RoleArgument, StringComparison.Ordinal)))
         {
-            var registryDirectory = DesktopProfileRegistry.ForCurrentUser().RootDirectory;
+            registry = DesktopProfileRegistry.ForCurrentUser();
+            var registryDirectory = registry.RootDirectory;
             desktopSession = DesktopWorkspaceSession.TryAcquire(registryDirectory);
             if (desktopSession == null && RestartHandoff.TryReadPredecessorPid(args) != null)
             {
@@ -76,7 +78,10 @@ class Program
             }
         }
         using var desktopLease = desktopSession;
-        DesktopProfileSelection.Initialize(args);
+        if (registry != null)
+            args = new DesktopStartupProfile(registry).Apply(args,
+                Environment.GetEnvironmentVariable(DefaultAppDataPathResolver.EnvVarName));
+        DesktopProfileSelection.Initialize(args, registry);
 
         // Internal child roles are authenticated by the coordinator before any directory
         // guard, AppService or Avalonia initialization can run.

@@ -24,6 +24,7 @@ internal sealed class DesktopProfileService : IDesktopProfileService
     public DesktopProfileView Update(string id, DesktopProfileUpdateInput input)
     {
         var updated = _registry.Update(id, input.Name, input.MakeDefault);
+        if (input.MakeDefault) new DesktopStartupProfile(_registry).Record(id);
         return View(updated, _registry.Read().DefaultId);
     }
     public void Remove(string id)

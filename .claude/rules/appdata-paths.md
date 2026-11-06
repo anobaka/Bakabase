@@ -158,7 +158,8 @@ you've touched anything in this list.
 The desktop app resolves an optional `--profile=<registered ID>` before anything
 reads `AppDataAnchor`. First check the user-level desktop session: a normal
 repeat launch activates the current workspace without resolving a disconnected
-default directory. With no live desktop, use the catalog's default profile. An
+default directory. With no live desktop, use the last workspace that reached the
+main window, or the catalog's default if the remembered one is unavailable. An
 existing `BAKABASE_DATA_DIR` launcher retains its prior semantics; opening a
 registered profile explicitly removes that inherited override. Do not set the
 environment variable to select profiles: Setup would treat the path as fixed.
@@ -169,9 +170,10 @@ all importable libraries. It is not an options/configuration directory. Its
 `profiles.json` is atomically written under an exclusive cross-process lock;
 Unix directories/files are private to the user. Named profile anchors live in
 `anchors/<id>` and use the existing `.redirect` mechanism. Never import or move
-that catalog as part of a library. Setup rejects targets containing these
-controls or another registered space. The historical default anchor is not
-moved or rewritten merely by enabling Profiles.
+those controls as part of a library. `startup-profile.json` remembers the last
+successful workspace or an explicitly chosen default. Setup rejects targets
+containing these controls or another registered space. The historical default
+anchor is not moved or rewritten merely by enabling Profiles.
 
 The desktop's optional anonymous `analytics-client-id` also lives in this existing
 desktop control directory. It describes the client across workspace switches, not
@@ -199,7 +201,8 @@ pass the current anchor and environment-override status explicitly to Setup, and
 pass `--profile` to fresh children. Restarts, Setup children, native browser state
 and updater relaunches must preserve the current profile ID. Desktop URL schemes
 cannot supply IDs, paths or arbitrary actions; valid tool links activate the
-currently running workspace, or the default when no desktop is running.
+currently running workspace, or follow the ordinary launch selection when no
+desktop is running.
 
 Only desktop coordinators register an installation lease. Upgrading refuses if
 another coordinator from the **same installation** remains open, and reserves

@@ -82,6 +82,8 @@ internal sealed class DesktopSetupBootstrap : IDisposable
                 Dispatcher.UIThread.Post(() =>
                 {
                     if (startup.IsCancellationRequested || !ReferenceEquals(_currentStartup, startup)) return;
+                    if (!_businessWasReady && workspace.ProfileId is { } profileId)
+                        new DesktopStartupProfile(DesktopProfileRegistry.ForCurrentUser()).Record(profileId);
                     _businessWasReady = true;
                     _window?.ContinueStartup(); _window = null;
                     _workspaces!.Ready();
