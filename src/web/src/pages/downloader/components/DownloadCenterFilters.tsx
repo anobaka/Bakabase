@@ -1,5 +1,8 @@
 import { useTranslation } from "react-i18next";
-import { Button, Input, Select } from "@/components/bakaui";
+import { FiGlobe } from "react-icons/fi";
+import { TbMagnet } from "react-icons/tb";
+import { Button, Input } from "@/components/bakaui";
+import ThirdPartyIcon from "@/components/ThirdPartyIcon";
 import {
   buildCenterRows,
   centerStatuses,
@@ -29,15 +32,19 @@ export default function DownloadCenterFilters({
     ),
   ].sort((a, b) => a - b);
   const providers = [
-    { value: "all", label: t("downloader.filter.allSources") },
+    { value: undefined, label: t("downloader.filter.allSources"), icon: undefined },
     ...(value.category !== "site"
-      ? ["bt", "http"].map((provider) => ({
-          value: provider,
-          label: t(`downloadCenter.provider.${provider}`),
-        }))
+      ? [
+          { value: "bt", label: t("downloadCenter.provider.bt"), icon: <TbMagnet size={17} /> },
+          { value: "http", label: t("downloadCenter.provider.http"), icon: <FiGlobe size={17} /> },
+        ]
       : []),
     ...(value.category !== "general"
-      ? sites.map((id) => ({ value: `site:${id}`, label: t(ThirdPartyId[id]) }))
+      ? sites.map((id) => ({
+          value: `site:${id}`,
+          label: t(ThirdPartyId[id]),
+          icon: <ThirdPartyIcon thirdPartyId={id} />,
+        }))
       : []),
   ];
   const filteredScope = buildCenterRows(
@@ -86,27 +93,30 @@ export default function DownloadCenterFilters({
           onValueChange={(keyword) => onChange({ ...value, keyword })}
           onClear={() => onChange({ ...value, keyword: undefined })}
         />
-        <Select
-          disallowEmptySelection
-          aria-label={t("downloader.filter.source")}
-          className="w-52"
-          size="sm"
-          dataSource={providers}
-          selectedKeys={[value.provider ?? "all"]}
-          onSelectionChange={(keys) => {
-            const provider = String(Array.from(keys)[0] ?? "all");
-            onChange({
-              ...value,
-              provider: provider === "all" ? undefined : provider,
-              id: undefined,
-            });
-          }}
-        />
         {(value.status || value.keyword || value.provider || value.id) && (
           <Button size="sm" variant="light" onPress={() => onChange({ category: value.category })}>
             {t("downloader.filter.reset")}
           </Button>
         )}
+      </div>
+      <div
+        role="group"
+        aria-label={t("downloader.filter.source")}
+        className="mt-3 flex flex-wrap gap-1"
+      >
+        {providers.map(({ value: provider, label, icon }) => (
+          <Button
+            key={provider ?? "all"}
+            aria-pressed={value.provider === provider}
+            color={value.provider === provider ? "primary" : "default"}
+            size="sm"
+            startContent={icon && <span aria-hidden="true">{icon}</span>}
+            variant="light"
+            onPress={() => onChange({ ...value, provider, id: undefined })}
+          >
+            {label}
+          </Button>
+        ))}
       </div>
       <div
         role="group"

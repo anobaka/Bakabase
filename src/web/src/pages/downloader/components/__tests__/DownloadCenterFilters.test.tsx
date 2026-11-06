@@ -1,18 +1,15 @@
-import type { ComponentProps } from "react";
 import { useState } from "react";
 import { HeroUIProvider } from "@heroui/react";
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import DownloadCenterFilters from "../DownloadCenterFilters";
 import type { CenterFilter, CenterTask } from "../../downloadCenter";
 import { indexCenterTasks } from "../../downloadCenter";
-import ActualSelect from "@/components/bakaui/components/Select";
 import { ThirdPartyId } from "@/sdk/constants";
 vi.mock("@/i18n", () => ({ getEnumKey: (name: string, value: string) => `${name}.${value}` }));
 vi.mock("@/components/bakaui", async () => ({
   ...(await import("@heroui/react")),
   Button: (await import("@/components/bakaui/components/Button")).Button,
-  Select: (props: ComponentProps<typeof ActualSelect>) => <ActualSelect {...props} />,
 }));
 const task = (id: string, overrides: Partial<CenterTask> = {}): CenterTask => ({
   id,
@@ -90,23 +87,35 @@ describe("download center filters with production controls", () => {
     expect(changed).toHaveBeenLastCalledWith({ ...initial, keyword: undefined });
     expect(statusButton("running")).toHaveAttribute("aria-pressed", "true");
   });
-  it("updates provider through the production selection control", async () => {
+  it("shows sources with icons and filters by pressing them", async () => {
     const { changed } = mount({ category: "all", keyword: "gallery" });
-    const trigger = document.querySelector<HTMLButtonElement>('button[aria-haspopup="listbox"]')!;
-    await act(async () => trigger.click());
-    await act(async () =>
-      screen.getByRole("option", { name: "downloadCenter.provider.bt" }).click(),
-    );
+    const sources = within(screen.getByRole("group", { name: "downloader.filter.source" }));
+    const all = sources.getByRole("button", { name: "downloader.filter.allSources" });
+    const bt = sources.getByRole("button", { name: "downloadCenter.provider.bt" });
+    const site = sources.getByRole("button", { name: "ExHentai" });
+    expect(bt.querySelector("svg")).toBeInTheDocument();
+    expect(site.querySelector("img")).toBeInTheDocument();
+    expect(all).toHaveAttribute("aria-pressed", "true");
+    await act(async () => bt.click());
     expect(changed).toHaveBeenLastCalledWith({
       category: "all",
       keyword: "gallery",
       provider: "bt",
       id: undefined,
     });
-    expect(trigger).toHaveTextContent("downloadCenter.provider.bt");
+    expect(bt).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("button", { name: /downloader.filter.allStatuses/ })).toHaveTextContent(
       "2",
     );
+    await act(async () => site.click());
+    expect(changed).toHaveBeenLastCalledWith({
+      category: "all",
+      keyword: "gallery",
+      provider: `site:${ThirdPartyId.ExHentai}`,
+      id: undefined,
+    });
+    await act(async () => all.click());
+    expect(all).toHaveAttribute("aria-pressed", "true");
   });
   it("changes category without retaining an incompatible provider or task link", async () => {
     const { changed } = mount({
