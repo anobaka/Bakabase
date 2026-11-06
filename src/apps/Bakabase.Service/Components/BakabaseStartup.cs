@@ -70,6 +70,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using StackExchange.Profiling;
 
 namespace Bakabase.Service.Components
 {
@@ -266,6 +267,12 @@ namespace Bakabase.Service.Components
                 // Track SQL if using EF
                 options.TrackConnectionOpenClose = true;
             });
+
+            // Keep the results page reachable without collecting profiles for routine Docker traffic.
+            var inContainer = string.Equals(Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER"),
+                "true", StringComparison.OrdinalIgnoreCase);
+            if (!Configuration.GetValue("PerformanceProfiler:Enabled", !inContainer))
+                services.PostConfigure<MiniProfilerOptions>(options => options.ShouldProfile = _ => false);
 
             // Analytics (Clarity / GA4 / Sentry) — credentials bound from the "Analytics"
             // section of appsettings.json + ENV overrides. The device-id service emits a

@@ -1,10 +1,13 @@
 # Optional local settings, shared by source and image deployments.
 # This file is a valid empty override when copied unchanged.
-# To add mounts, change `server: {}` to `server:` and uncomment the desired
-# entries below. Replace each source with an existing absolute host directory.
+# To add settings, change `server: {}` to `server:` and uncomment the desired
+# entries below. Use existing absolute host directories for bind mount sources.
 # Docker selects the host architecture automatically; no platform is forced.
 services:
   server: {}
+    # Request profiles are disabled in Docker by default. Enable temporarily for diagnostics.
+    # environment:
+    #   PerformanceProfiler__Enabled: "true"
     # volumes:
     #   - type: bind
     #     source: /absolute/path/to/media
