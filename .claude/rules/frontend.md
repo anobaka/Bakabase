@@ -50,3 +50,13 @@ keep the GUI endpoint so the desktop app or its local relay opens the OS browser
 Do not use `isLocal` to choose: a headless server reports `RemoteBrowser` on
 loopback too. Browser navigation stays synchronous with the user action; do not
 await a backend request before opening the tab.
+
+## UI components
+
+- Use the project's `@/components/bakaui` wrappers for visible form controls,
+  buttons, selection controls and accordions; use HeroUI directly when no
+  project wrapper exists. Do not introduce native HTML controls as an alternative
+  UI. Semantic layout markup and test fixtures are unaffected.
+- Reuse `FileSystemSelectorButton` for server-path selection. Its selected state
+  already displays the path; do not duplicate that path in a separate placeholder
+  or display block alongside the button.

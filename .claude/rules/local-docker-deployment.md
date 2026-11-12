@@ -39,3 +39,21 @@ require rebuilding or restarting it.
    result, access address and any remaining limitation. If merging is part of
    the authorized task, update the local server to the merged revision when
    its application contents or version differ, and verify it again.
+
+## Development snapshot retention
+
+The application's backup count does not manage external deployment snapshots.
+Keep at most two verified deployment recovery sets plus one in-progress set for
+this local installation. A set may be a preserved base plus hashed incremental
+overlays; retain every dependency needed to restore it. After successful
+deployment verification, retire superseded sets by an exact recorded manifest,
+after checking active processes, mounts and AppData ownership locks. Never use
+an age-only sweep or delete another task's recovery point without coordination.
+
+Do not recursively copy old deployment backups into each new snapshot, or copy
+downloads and processing workspaces into deployment backups. Keep their existing
+storage and reference them in the recovery record. Preserve user/application
+backup policy separately. Record logical and actual volume usage before and
+after cleanup: APFS clones make summed directory sizes misleading. Retain small
+deployment manifests, verification results and recovery instructions after bulk
+snapshots are retired.

@@ -18,6 +18,14 @@ User data — DB, configs, covers, caches, anything written at runtime — must
 live at `AppService.AppDataDirectory`. **Never** under the application's
 install directory.
 
+User-selected download, processing-workspace and final-delivery directories are
+explicit storage destinations outside this default. Bulk file-processing
+payloads default to an isolated, owned workspace on the input/download storage;
+AppData retains their location records and recovery metadata. A disconnected
+destination must suspend the operation, never silently fall back to AppData or
+the install directory. Relocation must preserve operation identities, verify
+file contents and update references before retiring source files.
+
 Why: on Windows the installer is Velopack, which:
 - On every **upgrade**, atomically replaces `{install_root}/current/` with
   the new release. Any user file inside `current/` is destroyed.
