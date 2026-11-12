@@ -2,6 +2,8 @@ namespace Bakabase.Modules.Workflow.Abstractions.Models.Input;
 
 public record WorkflowDefinitionUpdateInputModel
 {
+    public List<WorkflowParameterDefinition>? Parameters { get; set; }
+
     public string? Name { get; set; }
     /// <summary>Empty string clears the description; null leaves it unchanged.</summary>
     public string? Description { get; set; }

@@ -17,15 +17,17 @@ using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions.Models.Co
 using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions;
 using Bakabase.InsideWorld.Business.Components.Dependency.Exceptions;
 using Microsoft.Extensions.Logging;
+using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.CloudTools;
 
 namespace Bakabase.InsideWorld.Business.Components.Compression
 {
-    public class CompressedFileService
+    public partial class CompressedFileService
     {
         private readonly IWebHostEnvironment _env;
         private readonly SevenZipService? _sevenZipService;
         private readonly ILogger<CompressedFileService> _logger;
         private readonly IDependencyLocalizer? _dependencyLocalizer;
+        private readonly PyzipperService? _pyzipperService;
 
         // Compound formats that require two-stage extraction (e.g., .tar.gz -> .tar -> files)
         private static readonly HashSet<string> CompoundFormats = new(StringComparer.OrdinalIgnoreCase)
@@ -34,13 +36,24 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
         };
 
         public CompressedFileService(IWebHostEnvironment env, ILogger<CompressedFileService> logger,
-            SevenZipService? sevenZipService = null, IDependencyLocalizer? dependencyLocalizer = null)
+            SevenZipService? sevenZipService = null, IDependencyLocalizer? dependencyLocalizer = null,
+            PyzipperService? pyzipperService = null)
         {
             _env = env;
             _logger = logger;
             _sevenZipService = sevenZipService;
             _dependencyLocalizer = dependencyLocalizer;
+            _pyzipperService = pyzipperService;
         }
+
+        protected virtual Task<PythonRuntimeExecution> GetZipCompatibilityExecutionAsync(CancellationToken ct) =>
+            _pyzipperService?.CaptureReadyExecutionAsync(ct) ?? throw new DependencyNotInstalledException(
+                "Pyzipper", "pyzipper", "Install pyzipper in dependency management to use ZIP compatibility reading.", PyzipperService.ComponentId);
+
+        private async Task<ZipPasswordCompatibility.Result> RunZipCompatibilityAsync(string operation, string path,
+            string? destination, string? password, ArchiveOpenOptions options, Action<string>? progress, CancellationToken ct) =>
+            await ZipPasswordCompatibility.RunAsync(await GetZipCompatibilityExecutionAsync(ct), operation,
+                path, destination, password, options, progress, ct);
 
         protected virtual string? GetSevenZipExecutable()
         {
@@ -90,13 +103,13 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
             {
                 var message = _dependencyLocalizer?.Dependency_Installing_Message(sevenZipDisplayName)
                     ?? $"{sevenZipDisplayName} is currently being installed. Please wait for it to complete.";
-                return new DependencyNotInstalledException("7z", sevenZipDisplayName, message);
+                return new DependencyNotInstalledException("7z", sevenZipDisplayName, message, _sevenZipService?.Id);
             }
 
             // 7z is not installed
             var notInstalledMessage = _dependencyLocalizer?.Dependency_NotInstalled_Message(sevenZipDisplayName)
                 ?? $"{sevenZipDisplayName} is required for archive extraction. Please install it in the system settings page.";
-            return new DependencyNotInstalledException("7z", sevenZipDisplayName, notInstalledMessage);
+            return new DependencyNotInstalledException("7z", sevenZipDisplayName, notInstalledMessage, _sevenZipService?.Id);
         }
 
         public async Task ExtractToCurrentDirectory(string compressedFilePath, bool overwrite, CancellationToken ct)
@@ -125,24 +138,13 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
 
         private async Task ExtractSingleStage(string compressedFilePath, string outputDir, bool overwrite, CancellationToken ct)
         {
-            var sevenZipExe = (await GetSevenZipExecutableAsync(ct))!;
             var password = compressedFilePath.GetPasswordsFromPath().FirstOrDefault();
-
-            var arguments = new List<string>
-            {
-                "x",
-                compressedFilePath,
-                password.IsNotEmpty() ? $"-p{password}" : null!,
-                overwrite ? "-y" : null!,
-                $"-o{outputDir}"
-            }.Where(a => a.IsNotEmpty()).ToArray();
-
-            var command = Cli.Wrap(sevenZipExe).WithArguments(arguments, true);
-            var result = await command.ExecuteAsync(ct);
-
+            var result = await ExtractWithProgress(compressedFilePath, outputDir, password, true,
+                overwrite ? OverwriteMode.OverwriteAll : OverwriteMode.None, ProgressOutputTarget.StandardOutput,
+                null, null, null, ct);
             if (result.ExitCode != 0)
             {
-                throw new Exception($"Got exit code: {result.ExitCode} while executing [{command}]");
+                throw new InvalidDataException($"Archive extraction failed (exit code {result.ExitCode}): {result.StandardError}");
             }
         }
 
@@ -192,6 +194,9 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
         public async Task<MemoryStream?> ExtractOneEntry(string compressedFilePath, string entryPath,
             CancellationToken ct)
         {
+            var opening = await ResolveAutomaticOpeningAsync(compressedFilePath, null, ct);
+            if (opening?.UsesZipCompatibilityReader == true)
+                throw new NotSupportedException("This archive requires compatibility extraction before previewing a member.");
             var sevenZipExe = await GetSevenZipExecutableAsync(ct);
             if (sevenZipExe == null)
             {
@@ -206,6 +211,7 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
             var arguments = new List<string>
             {
                 "e",                    // extract command
+                opening?.TypeArgument!,
                 "-so",                  // write to stdout
                 "-y",                   // assume yes
                 password.IsNotEmpty() ? $"-p{password}" : null!,
@@ -240,10 +246,29 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
         }
 
         public async Task<ListResponse<CompressedFileEntry>> GetCompressFileEntries(string compressFilePath,
-            CancellationToken ct)
+            CancellationToken ct, ArchiveOpenOptions? openOptions = null)
         {
             if (File.Exists(compressFilePath))
             {
+                openOptions = await ResolveAutomaticOpeningAsync(compressFilePath, openOptions, ct);
+                if (openOptions?.UsesZipCompatibilityReader == true)
+                {
+                    var compatibilityResult = await RunZipCompatibilityAsync("list", compressFilePath, null, null, openOptions, null, ct);
+                    ZipPasswordCompatibility.RequireSuccess(compatibilityResult);
+                    return new ListResponse<CompressedFileEntry>(compatibilityResult.Entries ?? []);
+                }
+                if (openOptions?.Mode != null)
+                {
+                    var catalog = await ReadParserCatalogAsync(compressFilePath, ct);
+                    return new ListResponse<CompressedFileEntry>(catalog.Selected(openOptions.MemberSelector)
+                        .Select(m => new CompressedFileEntry {Path = m.Name, Size = m.Size}).ToList());
+                }
+                if (openOptions?.ZipFileNameCodePage != null)
+                {
+                    ct.ThrowIfCancellationRequested();
+                    using var zip = new ExplicitZipNameReader(compressFilePath, openOptions);
+                    return new ListResponse<CompressedFileEntry>(zip.Entries());
+                }
                 var sevenZipExe = await GetSevenZipExecutableAsync(ct);
                 if (sevenZipExe == null)
                 {
@@ -260,6 +285,7 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
                     password.IsNotEmpty() ? $"-p{password}" : null!,
                     "l",
                     "-slt", // Technical listing format with key=value pairs
+                    openOptions?.TypeArgument!,
                     compressFilePath
                 }.Where(a => a.IsNotEmpty()).ToArray();
 
@@ -388,8 +414,29 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
             string? workingDirectory,
             Action<string>? onStandardOutput,
             Action<string>? onStandardError,
-            CancellationToken ct)
+            CancellationToken ct, ArchiveOpenOptions? openOptions = null)
         {
+            openOptions = await ResolveAutomaticOpeningAsync(compressedFilePath, openOptions, ct);
+            if (openOptions?.UsesZipCompatibilityReader == true)
+            {
+                var compatibilityResult = await RunZipCompatibilityAsync("test", compressedFilePath, null, password, openOptions, onStandardOutput, ct);
+                if (compatibilityResult.Code == "ArchivePasswordRejected")
+                {
+                    onStandardError?.Invoke("Wrong password");
+                    return new TestResult {ExitCode = 2, StandardError = "Wrong password"};
+                }
+                ZipPasswordCompatibility.RequireSuccess(compatibilityResult);
+                return new TestResult {ExitCode = 0};
+            }
+            if (openOptions?.Mode != null)
+                return await ProcessParserAsync(compressedFilePath, null, openOptions, onStandardOutput, ct);
+            if (openOptions?.ZipFileNameCodePage != null)
+            {
+                ct.ThrowIfCancellationRequested();
+                using var zip = new ExplicitZipNameReader(compressedFilePath, openOptions);
+                await zip.ReadAsync(null, onStandardOutput, ct);
+                return new TestResult {ExitCode = 0};
+            }
             var sevenZipExe = await GetSevenZipExecutableAsync(ct);
             if (sevenZipExe == null)
             {
@@ -402,11 +449,12 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
             var args = new List<string?>
             {
                 "t",
+                openOptions?.TypeArgument,
                 compressedFilePath,
                 password.IsNotEmpty() ? $"-p{password}" : null,
                 "-sccUTF-8",
                 "-scsUTF-16LE",
-                "-bsp2",
+                "-bsp0", // Keep terminal progress control bytes out of password/error diagnostics.
                 "-bb1"
             }.OfType<string>().ToArray();
 
@@ -487,8 +535,27 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
             string? workingDirectory,
             Action<string>? onStandardOutput,
             Action<string>? onStandardError,
-            CancellationToken ct)
+            CancellationToken ct, ArchiveOpenOptions? openOptions = null)
         {
+            openOptions = await ResolveAutomaticOpeningAsync(compressedFilePath, openOptions, ct);
+            if (openOptions?.UsesZipCompatibilityReader == true)
+            {
+                var compatibilityResult = await RunZipCompatibilityAsync("extract", compressedFilePath, targetDirectory, password, openOptions,
+                    progressOutput == ProgressOutputTarget.StandardError ? onStandardError : onStandardOutput, ct);
+                ZipPasswordCompatibility.RequireSuccess(compatibilityResult);
+                return new TestResult {ExitCode = 0};
+            }
+            if (openOptions?.Mode != null)
+                return await ProcessParserAsync(compressedFilePath, targetDirectory, openOptions,
+                    progressOutput == ProgressOutputTarget.StandardError ? onStandardError : onStandardOutput, ct);
+            if (openOptions?.ZipFileNameCodePage != null)
+            {
+                ct.ThrowIfCancellationRequested();
+                using var zip = new ExplicitZipNameReader(compressedFilePath, openOptions);
+                await zip.ReadAsync(targetDirectory,
+                    progressOutput == ProgressOutputTarget.StandardError ? onStandardError : onStandardOutput, ct);
+                return new TestResult {ExitCode = 0};
+            }
             var sevenZipExe = await GetSevenZipExecutableAsync(ct);
             if (sevenZipExe == null)
             {
@@ -514,6 +581,7 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
             var args = new List<string?>
             {
                 "x",
+                openOptions?.TypeArgument,
                 compressedFilePath,
                 (password.IsNotEmpty() && usePasswordSwitch) ? $"-p{password}" : null,
                 $"-o{targetDirectory}",

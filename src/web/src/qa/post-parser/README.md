@@ -84,10 +84,15 @@ runtime queues/timers. Switching back to the normal scenarios restores the origi
 The task toolbar includes a global status overview that does not change when searching. Running
 work takes precedence over saved results; hover the running count for a breakdown by stage.
 The locate icon selects the first actively running task in list order, clears a search that hides
-it, scrolls the virtual list to its stable task ID, and highlights it for three seconds. Queued
+it, opens its page, scrolls to its stable task ID, and highlights it for three seconds. Queued
 and paused tasks do not enable the icon. Click again to locate again; incoming updates never
 take over scrolling. In the concurrency scenario, scroll away or search for a queued post while
 the queue runs, then use the icon to return to the first running task.
+
+The page uses manual pagination and ordinary scrolling with stable task rows. Polling does not
+discard row heights or replace row DOM; actual content resizing uses browser scroll anchoring.
+Only explicit page, filter and page-size changes reset the viewport. Processing-plan history is
+loaded as it approaches the viewport, so a 100-task page does not query every source immediately.
 
 Post #5 stores five resource entries for four distinct downloads. Its first Baidu share appears
 twice: one entry supplies the access code and link check, and the other includes `?pwd=am26`,

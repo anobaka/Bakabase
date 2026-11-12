@@ -19,6 +19,7 @@ using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Acquisition.Components;
 using Bakabase.Modules.Acquisition.Models.Domain;
 using Bakabase.Modules.PostParser.Models.Domain;
+using Bakabase.Modules.Workflow.Artifacts;
 using Bakabase.Service.Components.FileProcessing;
 using Bakabase.Infrastructures.Components.App;
 using Bootstrap.Components.Configuration.Abstractions;
@@ -35,20 +36,23 @@ namespace Bakabase.Service.Components.Acquisition.Steps;
 /// extractor: it has to be able to stop and ask, and to carry on from the answer.
 /// </para>
 /// </summary>
-public class UnpackStep : IAcquisitionStep
+public partial class UnpackStep : IAcquisitionStep
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
     public string Kind => AcquisitionStepKinds.Unpack;
     public string DisplayName => "Unpack";
-    public string Description => "Execute saved rename, move and extraction instructions when available; otherwise extract recognized archives using supplied passwords. Missing instructions or passwords can be provided manually.";
+    public string Description => "Execute saved rename, move and extraction instructions. Missing instructions wait for confirmation; automatic archive detection requires an explicit configuration choice.";
     public string DescriptionKey => "workflow.activity.acquisition.unpack.description";
     public Type? ConfigType => typeof(Config);
 
     public record Config
     {
+        public string? ExtractionLayout { get; init; }
         /// <summary>Send the archive to the recycle bin once its contents are out.</summary>
-        public bool DeleteArchive { get; init; } = true;
+        public bool DeleteArchive { get; init; }
+        /// <summary>Explicit approval to discover archives when no saved instructions exist.</summary>
+        public bool AllowAutomaticDetection { get; init; }
 
         /// <summary>
         /// How many times to unwrap an archive that contained another archive. Two by default:
@@ -70,7 +74,7 @@ public class UnpackStep : IAcquisitionStep
     public record PasswordSignal(string? Password = null, string? ExtractionPlanJson = null);
 
     public record PlanPrompt(string Reason, string Message, string? StepId, string ExtractionPlanJson,
-        string? ArchiveName = null, IReadOnlyList<string>? Tried = null);
+        string? ArchiveName = null, IReadOnlyList<string>? Tried = null, FileProcessingPathConflict? PathConflict = null);
 
     public Task<AcquisitionStepOutcome> ExecuteAsync(AcquisitionStepContext ctx, AcquisitionWorkItem item,
         CancellationToken ct) => UnpackAsync(ctx, item, null, ct);
@@ -97,15 +101,21 @@ public class UnpackStep : IAcquisitionStep
     private async Task<AcquisitionStepOutcome> UnpackAsync(AcquisitionStepContext ctx,
         AcquisitionWorkItem item, string? suppliedPassword, CancellationToken ct)
     {
+        var config = ctx.GetConfig<Config>() ?? new Config();
+        if (!FileExtractionLayouts.Valid(config.ExtractionLayout))
+            return new AcquisitionStepOutcome.Fail("Invalid archive extraction layout.");
         if (item.AlreadyProcessed) return await ExecutePlan(ctx, item,
             JsonSerializer.Serialize(new PostExtractionPlan {Requirement = "notRequired"}, Json), null, ct);
         var planJson = item.ExtractionPlanJson ?? item.SelectedLink?.ExtractionPlanJson ??
                        (item.Links.Count == 1 ? item.Links[0].ExtractionPlanJson : null);
         if (planJson != null) return await ExecutePlan(ctx, item, planJson, suppliedPassword, ct);
 
-        var config = ctx.GetConfig<Config>() ?? new Config();
+        if (!config.AllowAutomaticDetection)
+            return await ExecutePlan(ctx, item, JsonSerializer.Serialize(new PostExtractionPlan(), Json), null, ct);
         var options = ctx.ServiceProvider.GetRequiredService<IBOptions<AcquisitionOptions>>().Value;
         var extraction = ctx.ServiceProvider.GetRequiredService<IArchiveExtractionService>();
+        if (config.ExtractionLayout != null)
+            return await UnpackInWorkspaceAsync(ctx, item, config, options, extraction, suppliedPassword, ct);
 
         var directory = item.ExtractedDirectory ?? ctx.WorkingDirectory;
         Bakabase.Modules.Acquisition.Components.AcquisitionStoragePaths.EnsureSourceAllowed(ctx, item, directory);
@@ -125,7 +135,7 @@ public class UnpackStep : IAcquisitionStep
         {
             ct.ThrowIfCancellationRequested();
 
-            var files = Directory.GetFiles(directory, "*", SearchOption.AllDirectories);
+            var files = FileProcessingFiles.Enumerate(directory, excludeManagedWorkspaces: true).ToArray();
             foreach (var file in files)
                 Bakabase.Modules.Acquisition.Components.AcquisitionStoragePaths.EnsureSourceAllowed(ctx, item, file);
             var groups = CompressedFileHelper.DetectCompressedFileGroups(files, true)
@@ -165,31 +175,29 @@ public class UnpackStep : IAcquisitionStep
     {
         try
         {
-            var plan = JsonSerializer.Deserialize<PostExtractionPlan>(planJson, Json)
-                       ?? throw new InvalidOperationException("The extraction plan is empty.");
+            var plan = FileExtractionLayouts.Apply(JsonSerializer.Deserialize<PostExtractionPlan>(planJson, Json)
+                       ?? throw new InvalidOperationException("The extraction plan is empty."), ctx.GetConfig<Config>()?.ExtractionLayout);
             var root = item.ExtractedDirectory ?? ctx.WorkingDirectory;
             Bakabase.Modules.Acquisition.Components.AcquisitionStoragePaths.EnsureSourceAllowed(ctx, item, root);
-            var files = item.Files.Count > 0 ? item.Files : FileProcessingFiles.Enumerate(root);
+            var files = item.Files.Count > 0 ? item.Files : FileProcessingFiles.Enumerate(root, excludeManagedWorkspaces: true);
             foreach (var file in files)
                 Bakabase.Modules.Acquisition.Components.AcquisitionStoragePaths.EnsureSourceAllowed(ctx, item, file);
-            var app = ctx.ServiceProvider.GetService<AppService>();
-            var stateDirectory = item.ProcessingStateDirectory ?? (app != null
-                ? AppDataStorage.FileProcessing.GetPath(app.AppDataDirectory, ctx.WorkflowRunId?.ToString() ??
-                    ctx.AcquisitionTaskId?.ToString() ?? Guid.NewGuid().ToString("N"))
-                : ctx.WorkingDirectory.TrimEnd(Path.DirectorySeparatorChar) + ".processing");
+            var workspaces = ctx.ServiceProvider.GetService<FileProcessingWorkspaceResolver>();
+            var stateDirectory = await Workspace(ctx, item, root, workspaces, ct);
             item = item with {ExtractionPlanJson = planJson, ProcessingStateDirectory = stateDirectory};
             var executor = ctx.ServiceProvider.GetService<FileProcessingPlanExecutor>() ??
                            new FileProcessingPlanExecutor(ctx.ServiceProvider.GetRequiredService<IArchiveExtractionService>());
             var localizer = ctx.ServiceProvider.GetRequiredService<IBakabaseLocalizer>();
             var result = await executor.ExecuteAsync(plan, root, files, stateDirectory, password,
                 p => ctx.ReportProgress(p, BTaskText.Localize(localizer,
-                    "BTask_Process_ExtractionInstructions")).GetAwaiter().GetResult(), ct);
+                    "BTask_Process_ExtractionInstructions")).GetAwaiter().GetResult(), ct,
+                identityPath: workspaces == null ? null : workspaces.IdentityPath);
             if (!result.Completed)
             {
                 var reason = result.NeedsPassword ? AcquisitionWaitReason.PasswordUnknown : AcquisitionWaitReason.ExtractionPlanUnknown;
                 return new AcquisitionStepOutcome.Suspend(reason,
                     JsonSerializer.Serialize(new PlanPrompt(reason.ToString(), result.Message ?? "Input is needed.",
-                        result.StepId, planJson, result.StepId, result.TriedPasswords), Json), item);
+                        result.StepId, planJson, result.StepId, result.TriedPasswords, result.PathConflict), Json), item);
             }
             return new AcquisitionStepOutcome.Continue(item with
             {
@@ -201,6 +209,25 @@ public class UnpackStep : IAcquisitionStep
         {
             return new AcquisitionStepOutcome.Fail($"Could not execute extraction instructions: {ex.Message}", ex);
         }
+    }
+
+    private static async Task<string> Workspace(AcquisitionStepContext ctx, AcquisitionWorkItem item, string root,
+        FileProcessingWorkspaceResolver? workspaces, CancellationToken ct)
+    {
+        if (item.ProcessingStateDirectory != null)
+        {
+            var pinned = workspaces?.Relocate(item.ProcessingStateDirectory) ?? item.ProcessingStateDirectory;
+            FileProcessingWorkspaceResolver.ValidateConfiguredRoot(pinned);
+            return pinned;
+        }
+        var app = ctx.ServiceProvider.GetService<AppService>();
+        var owner = ctx.WorkflowRunId?.ToString() ?? ctx.AcquisitionTaskId?.ToString() ?? Guid.NewGuid().ToString("N");
+        var legacy = app == null ? null : AppDataStorage.FileProcessing.GetPath(app.AppDataDirectory, owner);
+        if (legacy != null) legacy = workspaces?.Relocate(legacy) ?? legacy;
+        if (legacy != null && Directory.Exists(legacy)) return legacy;
+        return workspaces == null ? ctx.WorkingDirectory.TrimEnd(Path.DirectorySeparatorChar) + ".processing" :
+            await workspaces.ResolveAsync("operations", Bakabase.Service.Components.CloudDownloads.CloudOperationService.Key("legacy-unpack", owner), 1, root,
+                ctx.ServiceProvider.GetService<IBOptions<AcquisitionOptions>>()?.Value.ProcessingWorkspaceDirectory, ct);
     }
 
     private async Task<AcquisitionStepOutcome> UnpackOneAsync(AcquisitionStepContext ctx,

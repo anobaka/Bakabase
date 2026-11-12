@@ -10,7 +10,7 @@ public record AcquisitionStatusChangedPayload
     public int AcquisitionTaskId { get; init; }
     public int? RunId { get; init; }
     public AcquisitionStatus Status { get; init; }
-    public int ResourceId { get; init; }
+    public int? ResourceId { get; init; }
     public int? CollectionId { get; init; }
     public AcquisitionLeadKind LeadKind { get; init; }
     public AcquisitionWaitReason? WaitReason { get; init; }

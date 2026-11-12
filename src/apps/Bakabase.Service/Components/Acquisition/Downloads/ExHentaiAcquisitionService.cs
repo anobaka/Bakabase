@@ -156,7 +156,7 @@ public sealed class ExHentaiAcquisitionService(BakabaseDbContext db, IExHentaiAc
     {
         var parent = await db.Set<AcquisitionTaskDbModel>().AsNoTracking()
             .SingleOrDefaultAsync(a => a.Id == taskId && a.ResourceId == resourceId, ct);
-        if (parent == null || parent.Status is AcquisitionStatus.Cancelled or AcquisitionStatus.Completed)
+        if (parent == null || parent.DeletedAt != null || parent.Status is AcquisitionStatus.Cancelled or AcquisitionStatus.Completed)
             throw new InvalidOperationException("The acquisition is no longer active.");
     }
 }

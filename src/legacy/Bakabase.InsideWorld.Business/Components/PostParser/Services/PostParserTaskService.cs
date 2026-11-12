@@ -9,6 +9,7 @@ using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Business.Components.Gui;
 using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.PostParser.Extensions;
+using Bakabase.InsideWorld.Business.Components.PostParser.Fetchers;
 using Bakabase.InsideWorld.Business.Components.PostParser.Models.Db;
 using Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants;
@@ -21,14 +22,16 @@ using Bootstrap.Components.Orm;
 using Bootstrap.Components.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Bakabase.InsideWorld.Business.Components.PostParser.Services;
 
-public class PostParserTaskService<TDbContext>(TDbContext db,
+public partial class PostParserTaskService<TDbContext>(TDbContext db,
     FullMemoryCacheResourceService<TDbContext, PostParserTaskDbModel, int> cache,
     PostParserTaskExecutionGate gate, PostParserWorkflowService<TDbContext> workflow,
     BTaskManager tasks, IBOptions<ThirdPartyOptions> options,
-    IHubContext<WebGuiHub, IWebGuiClient> uiHub, IBOptions<SoulPlusOptions> purchaseOptions) : IPostParserTaskService where TDbContext : DbContext
+    IHubContext<WebGuiHub, IWebGuiClient> uiHub, IBOptions<SoulPlusOptions> purchaseOptions,
+    ILogger<PostParserTaskService<TDbContext>> logger, IEnumerable<ISharedContentPurchaser> purchasers) : IPostParserTaskService where TDbContext : DbContext
 {
     private DbSet<PostParserTaskDbModel> ParserTasks => db.Set<PostParserTaskDbModel>();
 
@@ -41,8 +44,14 @@ public class PostParserTaskService<TDbContext>(TDbContext db,
             .ToDictionaryAsync(r => r.Id, r => r.Status);
         foreach (var task in result)
             if (task.WorkflowRunId is { } id && runs.TryGetValue(id, out var status)) task.WorkflowStatus = status;
+        var handoffs = await db.Set<Bakabase.Modules.Acquisition.Abstractions.Models.Db.AcquisitionHandoffDbModel>()
+            .AsNoTracking().Where(h => h.SourceModule == "postParser" && h.SourceKind == "task").ToListAsync();
+        var handoffsBySource = handoffs.ToDictionary(h => (h.SourceId, h.SourceRevision));
         foreach (var task in result)
         {
+            if (handoffsBySource.TryGetValue((task.Id.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    task.Revision.ToString(System.Globalization.CultureInfo.InvariantCulture)), out var handoff))
+                task.AcquisitionHandoff = Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionHandoffView.From(handoff);
             task.AutoBuyThreshold = purchaseOptions.Value.AutoBuyThreshold;
             task.MinimumRemainingCoins = purchaseOptions.Value.MinimumRemainingCoins;
         }
@@ -51,11 +60,9 @@ public class PostParserTaskService<TDbContext>(TDbContext db,
 
     public async Task<TaskSummary> GetSummary(PostParserSource? source = null)
     {
-        var all = await GetAll();
-        var activeTasks = tasks.Tasks.Where(t => t.Task.Status is BTaskStatus.NotStarted or BTaskStatus.Running
-                or BTaskStatus.Paused or BTaskStatus.Pausing or BTaskStatus.Resuming or BTaskStatus.Cancelling)
-            .Select(t => t.Id).ToHashSet();
-        return PostParserTaskSummary.Create(all, source, activeTasks);
+        var all = (await ReadFacts("", CancellationToken.None)).Where(f => source == null || f.Source == (int)source).ToList();
+        return new TaskSummary {Total = all.Count, Completed = all.Count(f => f.Group == "success"),
+            Failed = all.Count(f => f.Group == "failed")};
     }
 
     public Task AddRange(Dictionary<PostParserSource, List<string>> sourceLinksMap, List<PostParseTarget> targets) =>
@@ -146,7 +153,8 @@ public class PostParserTaskService<TDbContext>(TDbContext db,
     public async Task Delete(int id) => await DeleteWhere(t => t.Id == id);
     public Task<int> DeleteByLinks(PostParserSource source, List<string> links) =>
         DeleteWhere(t => t.Source == source && links.Contains(t.Link));
-    public async Task DeleteAll() => await DeleteWhere(_ => true);
+    public Task DeleteAll() => throw new InvalidOperationException(
+        "Bulk deletion now requires a preview and confirmation. Refresh the page and try again.");
 
     private async Task<int> DeleteWhere(Func<PostParserTaskDbModel, bool> predicate)
     {
@@ -192,22 +200,111 @@ public class PostParserTaskService<TDbContext>(TDbContext db,
                 await workflow.DispatchUnderGateAsync([id]);
                 return;
             }
-            // Starting a new pending input does not create a new revision. A finished/waiting
-            // attempt is explicitly replaced, and reserving its new run under this same gate
-            // makes concurrent reparse requests observe that reservation instead of resetting it.
-            if (task.WorkflowRunId != null || task.Error != null ||
-                !PostParserWorkflowService<TDbContext>.IsPending(task.ToDomainModel()))
-            {
-                Reset(task, task.ToDomainModel().Targets, null, stoppedRuns);
-                await CancelRunsUnderGate(stoppedRuns);
-                await db.SaveChangesAsync();
-                cache.ClearCache();
-                await Publish(task);
-            }
-            await workflow.DispatchUnderGateAsync([id]);
+            await ReParseUnderGate(task, stoppedRuns);
         }
         finally { gate.Semaphore.Release(); }
         await StopRuns(stoppedRuns);
+    }
+
+    private async Task ReParseUnderGate(PostParserTaskDbModel task, List<int> stoppedRuns)
+    {
+        // Starting a pending input preserves its revision. Replacing a finished/waiting attempt
+        // reserves the next revision and run under the same gate used by all parser actions.
+        if (task.WorkflowRunId != null || task.Error != null ||
+            !PostParserWorkflowService<TDbContext>.IsPending(task.ToDomainModel()))
+        {
+            Reset(task, task.ToDomainModel().Targets, null, stoppedRuns);
+            await CancelRunsUnderGate(stoppedRuns);
+            await db.SaveChangesAsync();
+            cache.ClearCache();
+            await Publish(task);
+        }
+        await workflow.DispatchUnderGateAsync([task.Id]);
+    }
+
+    public async Task<PostParserReparseBatchResult> ReParseFailed(ReParseFailedPostParserTasksInput input)
+    {
+        if (input.Tasks == null || input.Tasks.Count > 10_000 ||
+            input.Tasks.Any(t => t == null || t.TaskId <= 0 || t.Revision < 0 || t.WorkflowRunId is <= 0) ||
+            input.Tasks.Select(t => t.TaskId).Distinct().Count() != input.Tasks.Count)
+            throw new ArgumentException("Provide at most 10000 unique task snapshots with valid identifiers and revisions.");
+
+        var result = new PostParserReparseBatchResult {RequestedCount = input.Tasks.Count};
+        foreach (var selection in input.Tasks)
+        {
+            var stoppedRuns = new List<int>();
+            var dispatchAttempted = false;
+            PostParserReparseBatchItem outcome;
+            await gate.Semaphore.WaitAsync();
+            try
+            {
+                outcome = await ReParseFailedUnderGate(selection, stoppedRuns, () => dispatchAttempted = true);
+            }
+            catch (Exception error)
+            {
+                logger.LogError(error, "Could not queue confirmed reparse for post parser task {TaskId}", selection.TaskId);
+                // An enqueue/UI publication can fail after the run was committed. Never repeat
+                // the action: inspect its reservation and report it, then continue other inputs.
+                db.ChangeTracker.Clear();
+                PostParserTaskDbModel? latest = null;
+                try { latest = await ParserTasks.AsNoTracking().SingleOrDefaultAsync(t => t.Id == selection.TaskId); }
+                catch { /* The per-item failure is still reportable if storage is unavailable. */ }
+                var started = dispatchAttempted && latest?.WorkflowRunId is { } id && id != selection.WorkflowRunId &&
+                    tasks.Tasks.Any(t => t.Id == $"workflow.run.{id}");
+                if (started)
+                    outcome = new(selection.TaskId, "queued", latest!.WorkflowRunId);
+                else
+                {
+                    try
+                    {
+                        if (dispatchAttempted && latest != null)
+                            await workflow.RecordDispatchFailureUnderGateAsync(selection.TaskId,
+                                "The reparse request could not be queued. Review this task before trying again.", CancellationToken.None);
+                    }
+                    catch { db.ChangeTracker.Clear(); } // A second publication failure must not abort the batch.
+                    outcome = new(selection.TaskId, "failed", latest?.WorkflowRunId, "QUEUE_FAILED");
+                }
+            }
+            finally { gate.Semaphore.Release(); }
+
+            // Only replaced terminal/waiting attempts are here; preserve their persisted history.
+            // This cleanup cannot change whether the new run was accepted.
+            foreach (var oldRun in stoppedRuns.Distinct())
+                try { await tasks.Stop($"workflow.run.{oldRun}"); } catch { /* terminal handler cleanup */ }
+            result.Items.Add(outcome);
+        }
+        result.QueuedCount = result.Items.Count(i => i.Status == "queued");
+        result.SkippedCount = result.Items.Count(i => i.Status == "skipped");
+        result.FailedCount = result.Items.Count(i => i.Status == "failed");
+        return result;
+    }
+
+    private async Task<PostParserReparseBatchItem> ReParseFailedUnderGate(PostParserReparseSelection selection,
+        List<int> stoppedRuns, Action onDispatch)
+    {
+        if (tasks.IsShuttingDown) return new(selection.TaskId, "skipped", Reason: "SHUTTING_DOWN");
+        await workflow.RefreshTasksUnderGateAsync(CancellationToken.None, [selection.TaskId]);
+        var task = await ParserTasks.SingleOrDefaultAsync(t => t.Id == selection.TaskId);
+        if (task == null || task.IsDeleted) return new(selection.TaskId, "skipped", Reason: "TASK_UNAVAILABLE");
+        if (task.Revision != selection.Revision || task.WorkflowRunId != selection.WorkflowRunId)
+            return new(selection.TaskId, "skipped", task.WorkflowRunId, "TASK_CHANGED");
+        if (task.WorkflowRunId is { } runId && tasks.Tasks.Any(t => t.Id == $"workflow.run.{runId}" &&
+                (t.HasAttachedExecution || t.Task.Status is BTaskStatus.NotStarted or BTaskStatus.Running or
+                    BTaskStatus.Paused or BTaskStatus.Pausing or BTaskStatus.Resuming or BTaskStatus.Cancelling)))
+            return new(selection.TaskId, "skipped", task.WorkflowRunId, "TASK_ACTIVE");
+        var domain = task.ToDomainModel();
+        domain.WorkflowStatus = task.WorkflowRunId is { } currentRun
+            ? await db.Set<WorkflowRunDbModel>().AsNoTracking().Where(r => r.Id == currentRun)
+                .Select(r => (WorkflowRunStatus?)r.Status).SingleOrDefaultAsync()
+            : null;
+        if (!PostParserTaskSummary.IsFailed(domain))
+            return new(selection.TaskId, "skipped", task.WorkflowRunId, "TASK_NOT_FAILED");
+        onDispatch();
+        await ReParseUnderGate(task, stoppedRuns);
+        var updated = await ParserTasks.AsNoTracking().SingleAsync(t => t.Id == selection.TaskId);
+        return updated.WorkflowRunId is { } newRun && tasks.Tasks.Any(t => t.Id == $"workflow.run.{newRun}")
+            ? new(selection.TaskId, "queued", newRun)
+            : new(selection.TaskId, "failed", updated.WorkflowRunId, "QUEUE_FAILED");
     }
 
     public Task Retry(int id) => workflow.RetryAsync(id);

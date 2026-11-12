@@ -564,14 +564,14 @@ public sealed partial class ExHentaiDownloadResultTests
         Func<string, Task> checkpoint, bool preferTorrent = true, string? downloadPath = null,
         int? resultWorkflowId = 7, bool deferIfNoTorrent = false,
         Func<Task>? onNoTorrentDetected = null, ExHentaiDownloadMode? downloadMode = null,
-        bool saveTorrentFile = false, bool fallbackToDirect = true)
+        bool saveTorrentFile = false, bool fallbackToDirect = true, ExHentaiNoTorrentAction? noTorrentAction = null)
     {
         var method = typeof(AbstractExHentaiDownloader).GetMethod("DownloadSingleWork", BindingFlags.Instance | BindingFlags.NonPublic)!;
         return (Task) method.Invoke(producer, [10, url, null, downloadPath ?? _root,
             (Func<string, Task>)(_ => Task.CompletedTask), (Func<string, Task>)(_ => Task.CompletedTask),
             (Func<decimal, Task>)(_ => Task.CompletedTask), checkpoint, CancellationToken.None,
             preferTorrent, deferIfNoTorrent, onNoTorrentDetected, null, null, resultWorkflowId,
-            downloadMode, saveTorrentFile, fallbackToDirect])!;
+            downloadMode, saveTorrentFile, fallbackToDirect, noTorrentAction])!;
     }
 
     private const Bakabase.InsideWorld.Models.Constants.ThirdPartyId ThirdParty =

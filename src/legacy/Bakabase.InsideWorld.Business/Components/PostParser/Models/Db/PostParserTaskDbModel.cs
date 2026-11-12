@@ -12,6 +12,7 @@ public record PostParserTaskDbModel
     public string? Text { get; set; }
     public string? ContentSnapshotJson { get; set; }
     public string? AvailabilityJson { get; set; }
+    public string? ContentReadinessJson { get; set; }
     public string? ParsingState { get; set; }
     public string? ParsingMessage { get; set; }
     public DateTime? CreatedAt { get; set; }

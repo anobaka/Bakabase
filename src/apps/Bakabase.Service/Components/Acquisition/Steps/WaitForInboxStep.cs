@@ -145,7 +145,7 @@ public class WaitForInboxStep : IAcquisitionStep
                 entries = JsonSerializer.Deserialize<List<DeliveryEntry>>(await File.ReadAllTextAsync(journalPath, ct), Json)!;
             else
             {
-                var selected = claim.Directory == null ? new List<string>() : FileProcessingFiles.Enumerate(root);
+                var selected = claim.Directory == null ? new List<string>() : FileProcessingFiles.Enumerate(root, excludeManagedWorkspaces: true);
                 if (claim.Files != null) selected.AddRange(claim.Files.Select(f => FileProcessingFiles.Within(f, root)));
                 var files = (claim.AlreadyProcessed ? selected.Distinct(FileProcessingFiles.PathComparer).ToList() : FileProcessingFiles.ExpandVolumes(selected))
                     .Select(f => FileProcessingFiles.Within(f, root)).ToList();

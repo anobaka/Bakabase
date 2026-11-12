@@ -66,6 +66,9 @@ public static class PostParserExtensions
         services.AddSingleton(sp => new PostParserAiConcurrency(() =>
             sp.GetRequiredService<IBOptions<ThirdPartyOptions>>().Value.PostParserAiMaxConcurrency));
         services.AddPostParserCapabilities();
+        services.AddScoped<IPostAnalysisPromptContributor, SoulPlusPostAnalysisPromptContributor>();
+        services.AddScoped<IPostContentDecisionValidator, SoulPlusPostAnalysisPromptContributor>();
+        services.AddScoped<IPostContentEvidenceCanonicalizer, SoulPlusPostEvidenceCanonicalizer>();
         services.AddScoped<IPostContentService, LegacyPostContentService>();
         services.AddPostParserWorkflows<TDbContext>();
         services.AddHttpClient(nameof(GenericHtmlReader));
@@ -109,6 +112,7 @@ public static class PostParserExtensions
             Text = task.Text,
             ContentSnapshotJson = task.ContentSnapshot == null ? null : JsonConvert.SerializeObject(task.ContentSnapshot),
             AvailabilityJson = task.Availability == null ? null : JsonConvert.SerializeObject(task.Availability),
+            ContentReadinessJson = task.ContentReadinessJson,
             ParsingState = task.ParsingState,
             ParsingMessage = task.ParsingMessage,
             CreatedAt = TimestampUtc(task.CreatedAt),
@@ -161,6 +165,30 @@ public static class PostParserExtensions
         }
 
         var error = dbModel.Error;
+        var availability = ReadOptional<Bakabase.Modules.PostParser.Models.Domain.PostAvailabilityAssessment>(dbModel.AvailabilityJson);
+        var effectiveAvailability = PostAvailabilityEvidencePolicy.Apply(availability);
+        var insufficientExpiry = availability?.Status == "expired" && effectiveAvailability?.Status == "unknown";
+
+        var snapshot = ReadOptional<Bakabase.Modules.PostParser.Models.Domain.PostContent>(dbModel.ContentSnapshotJson);
+        if (snapshot != null) snapshot = PostParserContentReadinessState.Read(dbModel.ContentReadinessJson).Apply(snapshot);
+        if (effectiveAvailability != null) effectiveAvailability = effectiveAvailability with {ContentReadiness = snapshot?.Readiness};
+        if (results?.GetValueOrDefault(PostParseTarget.DownloadInfo) is JsonObject download)
+        {
+            var data = (download["data"] ?? download["Data"] ?? download) as JsonObject;
+            foreach (var key in new[] {"contentReadiness", "ContentReadiness"})
+                if (data?[key] is { } proof)
+                {
+                    try
+                    {
+                        var assessment = System.Text.Json.JsonSerializer.Deserialize<Bakabase.Modules.PostParser.Models.Domain.PostContentReadinessAssessment>(proof.ToJsonString(), System.Text.Json.JsonSerializerOptions.Web);
+                        if (snapshot != null) assessment = PostParserContentReadinessState.Read(dbModel.ContentReadinessJson).RebindAssessment(snapshot, assessment);
+                        if (snapshot == null || !PostContentReadinessPolicy.IsCurrent(snapshot, assessment) ||
+                            assessment?.Basis == "manual" && snapshot.Readiness?.Basis != "manual") data[key] = null;
+                        else data[key] = System.Text.Json.JsonSerializer.SerializeToNode(assessment, System.Text.Json.JsonSerializerOptions.Web);
+                    }
+                    catch (System.Text.Json.JsonException) { data[key] = null; }
+                }
+        }
 
         return new PostParserTask
         {
@@ -168,10 +196,11 @@ public static class PostParserExtensions
             Source = dbModel.Source,
             Link = dbModel.Link,
             Text = dbModel.Text,
-            ContentSnapshot = ReadOptional<Bakabase.Modules.PostParser.Models.Domain.PostContent>(dbModel.ContentSnapshotJson),
-            Availability = ReadOptional<Bakabase.Modules.PostParser.Models.Domain.PostAvailabilityAssessment>(dbModel.AvailabilityJson),
-            ParsingState = dbModel.ParsingState,
-            ParsingMessage = dbModel.ParsingMessage,
+            ContentSnapshot = snapshot,
+            ContentReadinessJson = dbModel.ContentReadinessJson,
+            Availability = effectiveAvailability,
+            ParsingState = insufficientExpiry && dbModel.ParsingState == "possiblyExpired" ? "awaitingPurchase" : dbModel.ParsingState,
+            ParsingMessage = insufficientExpiry ? PostAvailabilityEvidencePolicy.InsufficientEvidence : dbModel.ParsingMessage,
             CreatedAt = TimestampUtc(dbModel.CreatedAt),
             CompletedAt = TimestampUtc(dbModel.CompletedAt),
             Revision = dbModel.Revision,

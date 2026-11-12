@@ -6,6 +6,7 @@ import { Alert } from "@/components/bakaui";
 import { DependentComponentStatus } from "@/sdk/constants";
 import { useDependentComponentContextsStore } from "@/stores/dependentComponentContexts";
 import dependentComponentIds from "@/core/models/Constants/DependentComponentIds";
+import { dependencyManagerPath } from "@/components/Dependency/routes";
 
 export default function FfMpegRequired() {
   const { t } = useTranslation();
@@ -25,11 +26,14 @@ export default function FfMpegRequired() {
 
   // FFmpeg is missing, show error
   return (
-    <Alert
-      color="danger"
-      title={t<string>(
-        "This function is not working because FFmpeg is not found, check it in system configurations",
-      )}
-    />
+    <div className="space-y-2">
+      <Alert color="danger" title={t<string>("dependency.ffmpeg.required")} />
+      <a
+        className="text-sm text-primary"
+        href={`#${dependencyManagerPath(dependentComponentIds.FFMpeg)}`}
+      >
+        {t("menu.dependencies")}
+      </a>
+    </div>
   );
 }

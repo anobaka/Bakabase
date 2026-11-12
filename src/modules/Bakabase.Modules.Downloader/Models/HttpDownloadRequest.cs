@@ -1,7 +1,10 @@
+using Bakabase.Abstractions.Components.FileSystem;
 namespace Bakabase.Modules.Downloader.Models;
 
 public sealed record HttpDownloadRequest(string Url, string Directory)
 {
+    /// <summary>Runtime caller safety policy; excluded from content and idempotency identity.</summary>
+    public StorageWriteContext? WriteContext { get; init; }
     /// <summary>A single file name; when omitted, use the server name or the URL's last segment.</summary>
     public string? FileName { get; init; }
     /// <summary>Optional host-configured client for authentication, proxies or request headers.</summary>

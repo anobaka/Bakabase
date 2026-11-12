@@ -1,25 +1,54 @@
-import type { BakabaseModulesWorkflowAbstractionsModelsViewWorkflowRunViewModel as Run } from "@/sdk/Api";
+import type { BakabaseModulesWorkflowAbstractionsModelsViewWorkflowRunViewModel } from "@/sdk/Api";
 import type { DestroyableProps } from "@/components/bakaui/types";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { activityDisplayName } from "./displayNames";
-import ResumeRunModal from "./ResumeRunModal";
+import { ResumeRunContent } from "./ResumeRunModal";
 
 import { Button, Chip, Modal, Progress, Spinner } from "@/components/bakaui";
-import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { WorkflowRunStatus } from "@/sdk/constants";
 import BApi from "@/sdk/BApi";
-import WorksetResults from "@/components/CloudDownload/WorksetResults";
+import WorkflowNodeMetadata from "./WorkflowNodeMetadata";
+import { workflowWaitReasonLabel } from "./waitReasonLabel";
+import DownloadProblemMessage from "@/components/CloudDownload/DownloadProblemMessage";
+import WorkflowParameterSummary from "./Parameters/WorkflowParameterSummary";
+import CurrentProcessingFiles from "./CurrentProcessingFiles";
+import { WorkflowArtifactBrowserButton } from "./WorkflowArtifactBrowserModal";
+import ExecutionTiming from "./ExecutionTiming";
+
+type Run = BakabaseModulesWorkflowAbstractionsModelsViewWorkflowRunViewModel;
+
+/** Current download evidence may supersede an older persisted wait at this exact node. */
+export interface CompletedDownloadWait {
+  runId: number;
+  stepIndex: number;
+  message: string;
+  onDiagnose?: () => void;
+}
 
 /** Opens one persisted instance, independent of the definition's run history. */
-export default function WorkflowRunDetailModal({
+export function WorkflowRunDetailContent({
   runId,
-  onDestroyed,
-}: DestroyableProps & { runId: number }) {
+  readOnly = false,
+  respondInitially = false,
+  responseOnly = false,
+  completedDownloadWait,
+  wrapWaitingResponse,
+  onChanged,
+}: {
+  runId: number;
+  readOnly?: boolean;
+  respondInitially?: boolean;
+  responseOnly?: boolean;
+  completedDownloadWait?: CompletedDownloadWait;
+  wrapWaitingResponse?: (run: Run, form: ReactNode) => ReactNode;
+  onChanged?: () => void;
+}) {
   const { t } = useTranslation();
-  const { createPortal } = useBakabaseContext();
+  const [responseRun, setResponseRun] = useState<Run>();
+  const initialResponseConsumed = useRef(false);
   const [run, setRun] = useState<Run>();
   const [failed, setFailed] = useState(false);
   const requestId = useRef(0);
@@ -30,14 +59,30 @@ export default function WorkflowRunDetailModal({
       if (request !== requestId.current) return;
       if (response.code || !response.data) throw new Error(response.message);
       setRun(response.data);
+      // Keep edited answers stable during polling, but never show an answer form for an old wait.
+      setResponseRun((current) =>
+        current &&
+        response.data!.status === WorkflowRunStatus.Waiting &&
+        current.currentStepIndex === response.data!.currentStepIndex &&
+        current.waitReason === response.data!.waitReason &&
+        current.waitPromptJson === response.data!.waitPromptJson
+          ? current
+          : undefined,
+      );
+      if (respondInitially && !readOnly && !initialResponseConsumed.current) {
+        initialResponseConsumed.current = true;
+        if (response.data.status === WorkflowRunStatus.Waiting) setResponseRun(response.data);
+      }
       setFailed(false);
     } catch {
       if (request === requestId.current) setFailed(true);
     }
-  }, [runId]);
+  }, [runId, readOnly, respondInitially]);
 
   useEffect(() => {
     setRun(undefined);
+    setResponseRun(undefined);
+    initialResponseConsumed.current = false;
     void load();
     const timer = setInterval(() => {
       if (!document.hidden) void load();
@@ -48,14 +93,52 @@ export default function WorkflowRunDetailModal({
     };
   }, [load]);
 
+  const completedWait =
+    run?.status === WorkflowRunStatus.Waiting &&
+    completedDownloadWait?.runId === run.id &&
+    completedDownloadWait.stepIndex === run.currentStepIndex &&
+    (run.activityKind ??
+      run.planNodes?.find((node) => node.order === run.currentStepIndex)?.kind) ===
+      "download.awaitCompletion"
+      ? completedDownloadWait
+      : undefined;
+
+  const fileTask = responseOnly && run?.status === WorkflowRunStatus.Waiting &&
+    (run.waitReason === "cloud.fileProcessing" || run.waitReason === "files.processing" ||
+      (run.waitReason === "artifacts.publication" &&
+        (run.activityKind ?? run.planNodes?.find(n => n.order === run.currentStepIndex)?.kind) === "fs.publishArtifacts"));
+  const form = !readOnly && responseRun && (
+    <ResumeRunContent
+      key={JSON.stringify([
+        responseRun.id,
+        responseRun.currentStepIndex,
+        responseRun.waitPromptJson,
+      ])}
+      fileTask={fileTask}
+      compact={responseOnly}
+      runId={runId}
+      workflowDefinitionId={responseRun.workflowDefinitionId}
+      currentStepIndex={responseRun.currentStepIndex}
+      waitReason={responseRun.waitReason}
+      waitPromptJson={responseRun.waitPromptJson}
+      activityKind={
+        responseRun.activityKind ??
+        responseRun.planNodes?.find(
+          (node) => node.order === responseRun.currentStepIndex,
+        )?.kind
+      }
+      onClose={() => setResponseRun(undefined)}
+      onResumed={() => {
+        void load();
+        onChanged?.();
+      }}
+    />
+  );
+  const answerForm = form && responseRun && wrapWaitingResponse
+    ? wrapWaitingResponse(responseRun, form)
+    : form;
   return (
-    <Modal
-      defaultVisible
-      footer={false}
-      size="3xl"
-      title={t("workflow.runDetail.title", { id: runId })}
-      onDestroyed={onDestroyed}
-    >
+    <>
       {failed && (
         <div className="flex items-center gap-2 text-danger" role="alert">
           <span>{t("workflow.runDetail.loadFailed")}</span>
@@ -66,6 +149,20 @@ export default function WorkflowRunDetailModal({
       )}
       {!run ? (
         !failed && <Spinner />
+      ) : responseOnly ? (
+        <div className="min-w-0 space-y-3">
+          {fileTask && <CurrentProcessingFiles run={run} />}
+          {completedWait ? <>
+            <p className="text-sm">{completedWait.message}</p>
+            {!readOnly && completedWait.onDiagnose && <Button color="secondary" size="sm" onPress={completedWait.onDiagnose}>
+              {t("acquisition.runtime.diagnoseContinuation")}
+            </Button>}
+          </> : answerForm || (!readOnly && run.status === WorkflowRunStatus.Waiting && (
+            <Button size="sm" variant="flat" onPress={() => setResponseRun(run)}>
+              {t("workflow.resume.respond")}
+            </Button>
+          ))}
+        </div>
       ) : (
         <div className="space-y-4">
           <div className="flex flex-wrap items-center gap-3">
@@ -82,21 +179,27 @@ export default function WorkflowRunDetailModal({
             >
               {t(`workflow.runs.status.${WorkflowRunStatus[run.status]}`)}
             </Chip>
-            <span className="text-xs text-default-500">
-              {new Date(run.startedAt).toLocaleString()}
-            </span>
-            <Button
-              as="a"
-              href={`#/workflows/editor?id=${run.workflowDefinitionId}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              size="sm"
-              variant="light"
-            >
-              {t("workflow.runDetail.definition")}
-            </Button>
+            <ExecutionTiming startedAt={run.startedAt} completedAt={run.completedAt} />
+            <WorkflowArtifactBrowserButton
+              allowFileOperations={!readOnly}
+              runId={runId}
+              executions={run.nodeExecutions}
+            />
+            {!readOnly && run.workflowDefinitionId > 0 && (
+              <Button
+                as="a"
+                href={`#/workflows/editor?id=${run.workflowDefinitionId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                size="sm"
+                variant="light"
+              >
+                {t("workflow.runDetail.definition")}
+              </Button>
+            )}
           </div>
-          {run.progress != null && (
+          {!responseOnly && <WorkflowParameterSummary sources={run.parameterSources} />}
+          {run.progress != null && !completedWait && (
             <Progress
               aria-label={t("workflow.runDetail.progress")}
               size="sm"
@@ -107,94 +210,90 @@ export default function WorkflowRunDetailModal({
           {(run.activityKind || run.stage || run.process) && (
             <p className="break-words text-sm text-default-500">
               {run.activityKind && activityDisplayName(t, run.activityKind)}
-              {run.stage && ` · ${run.stage}`}
-              {run.process && ` · ${run.process}`}
+              {!completedWait && run.stage && ` · ${run.stage}`}
+              {!completedWait && run.process && ` · ${run.process}`}
             </p>
           )}
-          {run.errorMessage && (
-            <p className="break-words text-sm text-danger">{run.errorMessage}</p>
+          {run.errorMessage && !completedWait && (
+            <DownloadProblemMessage
+              className="space-y-1 break-words text-sm text-danger"
+              message={run.errorMessage}
+            />
           )}
           {run.status === WorkflowRunStatus.Waiting && (
             <div className="space-y-2 rounded-lg bg-secondary-50 p-3">
-              <p className="text-sm">
-                {t("workflow.resume.waitingFor", {
-                  reason: run.waitReason
-                    ? t(`workflow.waitReason.${run.waitReason}`, { defaultValue: run.waitReason })
-                    : t("workflow.resume.unknownReason"),
-                })}
-              </p>
-              <Button
-                color="secondary"
-                size="sm"
-                onPress={() =>
-                  createPortal(ResumeRunModal, {
-                    runId,
-                    workflowDefinitionId: run.workflowDefinitionId,
-                    currentStepIndex: run.currentStepIndex,
-                    waitReason: run.waitReason,
-                    waitPromptJson: run.waitPromptJson,
-                    onResumed: load,
-                  })
-                }
-              >
-                {t("workflow.resume.respond")}
-              </Button>
+              {completedWait ? (
+                <>
+                  <p className="text-sm">{completedWait.message}</p>
+                  {!readOnly && completedWait.onDiagnose && (
+                    <Button color="secondary" size="sm" onPress={completedWait.onDiagnose}>
+                      {t("acquisition.runtime.diagnoseContinuation")}
+                    </Button>
+                  )}
+                </>
+              ) : (
+                <>
+                  <p className="text-sm">
+                    {t("workflow.resume.waitingFor", {
+                      reason: workflowWaitReasonLabel(t, run.waitReason, run.waitPromptJson),
+                    })}
+                  </p>
+                  {!readOnly && !responseRun && (
+                    <Button color="secondary" size="sm" onPress={() => setResponseRun(run)}>
+                      {t("workflow.resume.respond")}
+                    </Button>
+                  )}
+                  {answerForm}
+                </>
+              )}
             </div>
           )}
-          <div className="flex flex-wrap gap-4 text-xs text-default-500">
-            <span>
-              {t("workflow.runs.input")}: {run.inputCount}
-            </span>
-            <span>
-              {t("workflow.runs.output")}: {run.outputCount}
-            </span>
-            <span>
-              {t("workflow.runs.failed")}: {run.failedItemCount}
-            </span>
-          </div>
-          {!!run.stepStats?.length && (
-            <ol className="space-y-2">
-              {run.stepStats.map((step) => (
-                <li
-                  key={step.stepIndex}
-                  className="flex flex-wrap items-center gap-3 rounded-lg bg-default-50 p-3 text-sm"
-                >
-                  <span className="text-default-400">{step.stepIndex + 1}</span>
-                  <span className="flex-1">{activityDisplayName(t, step.kind)}</span>
-                  <span className="text-xs tabular-nums">
-                    {step.inputCount} → {step.outputCount}
-                  </span>
-                  {step.failedCount > 0 && (
-                    <span className="text-xs text-danger">
-                      {t("workflow.runs.failed")}: {step.failedCount}
-                    </span>
-                  )}
-                </li>
-              ))}
-            </ol>
-          )}
-          <WorksetResults json={run.outputItemsJson} />
-          {run.outputItemsJson != null && (
-            <details className="rounded-lg bg-default-50 p-3 text-xs">
-              <summary className="cursor-pointer">{t("workflow.runs.resultPreview")}</summary>
-              {run.outputPreviewTruncated && (
-                <p className="mt-2 text-warning-600">{t("workflow.runs.resultPreviewTruncated")}</p>
-              )}
-              <pre className="mt-2 max-h-80 overflow-auto whitespace-pre-wrap break-all">
-                {formatOutput(run.outputItemsJson)}
-              </pre>
-            </details>
+          {!responseOnly && (
+            <>
+              <div className="flex flex-wrap gap-4 text-xs text-default-500">
+                <span>
+                  {t("workflow.runs.input")}: {run.inputCount}
+                </span>
+                <span>
+                  {t("workflow.runs.output")}: {run.outputCount}
+                </span>
+                <span>
+                  {t("workflow.runs.failed")}: {run.failedItemCount}
+                </span>
+              </div>
+              <WorkflowNodeMetadata
+                readOnly={readOnly}
+                runId={runId}
+                executions={run.nodeExecutions}
+                legacyOutput={run.outputItemsJson}
+                planNodes={run.hasPlanSnapshot ? run.planNodes : undefined}
+                planName={run.planName}
+                stepStats={run.stepStats}
+              />
+            </>
           )}
         </div>
       )}
-    </Modal>
+    </>
   );
 }
 
-function formatOutput(value: string): string {
-  try {
-    return JSON.stringify(JSON.parse(value), null, 2);
-  } catch {
-    return value;
-  }
+/** Standalone run viewer; embedding consumers keep navigation inside their existing dialog. */
+export default function WorkflowRunDetailModal({
+  runId,
+  readOnly,
+  onDestroyed,
+}: DestroyableProps & { runId: number; readOnly?: boolean }) {
+  const { t } = useTranslation();
+  return (
+    <Modal
+      defaultVisible
+      footer={false}
+      size="3xl"
+      title={t("workflow.runDetail.title", { id: runId })}
+      onDestroyed={onDestroyed}
+    >
+      <WorkflowRunDetailContent runId={runId} readOnly={readOnly} />
+    </Modal>
+  );
 }

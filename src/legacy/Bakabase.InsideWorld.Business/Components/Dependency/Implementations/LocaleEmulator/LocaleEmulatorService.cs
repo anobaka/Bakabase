@@ -12,6 +12,7 @@ using Bakabase.InsideWorld.Business.Components.Dependency.Discovery;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.LocaleEmulator.Models;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.SevenZip;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.SevenZip.Models;
+using Bakabase.InsideWorld.Business.Components.Dependency.Models;
 using Bootstrap.Components.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -47,7 +48,7 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Lo
         /// </summary>
         public string LEProcExecutable => GetExecutableWithValidation("LEProc");
 
-        public override bool IsAvailableOnCurrentPlatform => AppService.OsPlatform == OsPlatform.Windows;
+        public override IReadOnlyList<DependentComponentTarget> SupportedTargets => DependentComponentPlatforms.LocaleEmulator;
 
         public override async Task<DependentComponentVersion> GetLatestVersion(CancellationToken ct)
         {

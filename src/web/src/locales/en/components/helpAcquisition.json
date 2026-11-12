@@ -86,5 +86,7 @@
   "helpCenter.acquisition.concept.task.wait.desc": "Follow the task's prompt when it needs files, a password, or a conflict decision. Claiming files or submitting the requested input lets the workflow continue from that waiting step.",
   "helpCenter.acquisition.concept.task.finish.title": "Inspect the result or failure reason",
   "helpCenter.acquisition.concept.task.finish.desc": "Successful acquisition associates the resource with local files. If it fails, inspect the reason in “All tasks”, fix the link, files, or configuration, and decide whether to retry.",
+  "helpCenter.acquisition.concept.task.remove.title": "Remove a task after accepting its files",
+  "helpCenter.acquisition.concept.task.remove.desc": "By default, removing a task from the list keeps its files and run history. To free space, choose to clean up the original downloads and intermediate files; delivered files are excluded. Accepting delivery selects “Skip file content verification” by default. Clear it to keep verification. If you want the task removed even when some files remain, select that option before confirming.",
   "helpCenter.acquisition.concept.task.note": "Waiting for input and failing are different states. Resumable waits provide a way to continue. A retry succeeds only if the underlying problem is resolved; not every failure can recover automatically."
 }

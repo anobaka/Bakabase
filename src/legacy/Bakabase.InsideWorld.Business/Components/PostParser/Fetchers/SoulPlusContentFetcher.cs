@@ -46,8 +46,23 @@ public class SoulPlusContentFetcher(SoulPlusClient spClient) : ISharedContentRea
             Scope = "firstPage",
             HtmlEncodingTrusted = true,
             Balance = post.Balance,
+            CurrencyCode = "SP", CurrencyName = "SP币", SourceEvidenceFingerprint = post.EvidenceFingerprint,
+            ReaderEvidence = post.ReaderEvidence is { } evidence ? new()
+            {
+                ReaderId = "soulplus-sale-v1", SourceIdentity = evidence.SourceIdentity,
+                ContentFingerprint = evidence.ContentFingerprint, OutsideSlotsDigest = evidence.OutsideSlotsDigest,
+                Slots = evidence.Slots.Select(slot => new Bakabase.Modules.PostParser.Models.Domain.PostContentEvidenceSlot
+                {
+                    BlockId = slot.BlockId, OwnerId = slot.OwnerId, Floor = slot.Floor,
+                    CanonicalTargetId = slot.CanonicalTargetId, PurchaseTargetId = slot.PurchaseTargetId,
+                    IsReadable = slot.IsReadable, Price = slot.Price,
+                    CurrencyCode = "SP", MetadataDigest = slot.MetadataDigest, ContentDigest = slot.ContentDigest
+                }).ToList()
+            } : null,
             Locks = post.LockedContents?
-                .Select(l => new SharedContentLock(l.Url, l.Price, l.IsBought) {Id = l.Id, Floor = l.Floor})
+                .Select(l => new SharedContentLock(l.Url, l.Price, l.IsBought) {Id = l.Id, Floor = l.Floor,
+                    BlockId = l.BlockId, PurchaseTargetId = l.PurchaseTargetId, ContextText = l.ContextText,
+                    CurrencyCode = "SP", CurrencyName = "SP币"})
                 .ToList() ?? []
         };
     }

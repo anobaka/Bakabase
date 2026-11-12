@@ -11,8 +11,26 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace Bakabase.Modules.PostParser.Tests;
 
 [TestClass]
-public class PostDownloadInfoExtractorTests
+public partial class PostDownloadInfoExtractorTests
 {
+    [TestMethod]
+    public async Task ScreenshotResponsesAreSeparatedBeforeResourceIdentitiesAreSaved()
+    {
+        var llm = new FakeLlm {ResponseText = """
+            {"groups":[{"id":"screenshot","title":"Screenshot","kind":"preview","evidence":["Screenshot"]}],
+             "resources":[{"link":"https://example.test/screen.jpg","groupId":"screenshot"},{"link":"https://example.test/main.zip"}],
+             "coverCandidates":[{"url":"https://example.test/cover.jpg","kind":"cover","evidence":["Cover"]}]}
+            """};
+        var result = await new PostDownloadInfoExtractor(llm, NullLogger<PostDownloadInfoExtractor>.Instance)
+            .ExtractAsync(new PostContent {MainHtml = "<p>Screenshot</p><img src='https://example.test/screen.jpg'><p>Cover</p><img src='https://example.test/cover.jpg'>", HtmlEncodingTrusted = true});
+        Assert.AreEqual("https://example.test/main.zip", result.Resources.Single().Link);
+        Assert.HasCount(2, result.CoverCandidates);
+        Assert.HasCount(0, result.Groups);
+        StringAssert.Contains(llm.Prompt!, "[embedded-image]");
+        StringAssert.Contains(llm.Prompt!, "不得放入resources");
+        Assert.AreEqual(1, llm.Calls);
+    }
+
     [TestMethod]
     public async Task ExtractionPreservesEveryLinkAndItsCredentialsIncludingComments()
     {
@@ -89,7 +107,7 @@ public class PostDownloadInfoExtractorTests
         var result = await new PostDownloadInfoExtractor(llm, NullLogger<PostDownloadInfoExtractor>.Instance)
             .ExtractAsync(new PostContent {MainHtml = "本体百度、MEGA任选；试玩另外提供"});
 
-        Assert.AreEqual(3, result.SchemaVersion);
+        Assert.AreEqual(4, result.SchemaVersion);
         Assert.HasCount(9, result.Groups);
         Assert.HasCount(11, result.Resources);
         CollectionAssert.AreEqual(new[] {"full", "full", "preview", "patch", "related", "tool", "older", "part1", "part2", "unsure", null},

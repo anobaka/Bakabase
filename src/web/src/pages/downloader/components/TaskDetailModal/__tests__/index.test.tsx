@@ -3,12 +3,11 @@ import type { DownloadTask } from "@/core/models/DownloadTask";
 import type { ExHentaiDownloadOptions } from "@/pages/downloader/exHentaiDownloadMode";
 
 import { HeroUIProvider } from "@heroui/react";
-import { fireEvent } from "@testing-library/react";
-import { act } from "react";
+import { act, fireEvent } from "@testing-library/react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import TaskDetailModal from "..";
+import TaskDetailModal, { SiteDownloadForm } from "..";
 
 import {
   DownloadTaskStatus,
@@ -25,6 +24,9 @@ const mocks = vi.hoisted(() => ({
   dangerToast: vi.fn(),
   defaults: {} as ExHentaiDownloadOptions,
   modeOptions: vi.fn(),
+  modeContext: vi.fn(),
+  putTask: vi.fn(),
+  addTask: vi.fn(),
 }));
 
 vi.mock("@/sdk/BApi", () => ({
@@ -33,13 +35,22 @@ vi.mock("@/sdk/BApi", () => ({
       getDownloadTask: mocks.getTask,
       getAllDownloaderDefinitions: mocks.getDefinitions,
       getDownloaderOptions: mocks.getOptions,
+      putDownloadTask: mocks.putTask,
+      addDownloadTask: mocks.addTask,
     },
   },
 }));
 vi.mock("@/components/bakaui", async () => ({
   ...(await import("@heroui/react")),
   Button: (await import("@/components/bakaui/components/Button")).Button,
-  Modal: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  Modal: ({ children, onOk, footer }: any) => (
+    <div>
+      {children}
+      <button disabled={footer.okProps.isDisabled} onClick={() => void onOk()}>
+        save-task
+      </button>
+    </div>
+  ),
   Alert: ({ description }: { description: ReactNode }) => <div>{description}</div>,
   toast: { danger: mocks.dangerToast },
 }));
@@ -81,8 +92,15 @@ vi.mock("../components/CheckpointField", () => ({ default: () => null }));
 vi.mock("../components/AutoRetryField", () => ({ default: () => null }));
 vi.mock("../components/AllowDuplicateField", () => ({ default: () => null }));
 vi.mock("../components/ExHentaiDownloadModeField", () => ({
-  default: ({ options }: { options: ExHentaiDownloadOptions }) => {
+  default: ({
+    options,
+    isExistingTask,
+  }: {
+    options: ExHentaiDownloadOptions;
+    isExistingTask: boolean;
+  }) => {
     mocks.modeOptions(options);
+    mocks.modeContext(isExistingTask);
     return null;
   },
 }));
@@ -128,6 +146,8 @@ beforeEach(() => {
   mocks.getTask.mockResolvedValue({ data: mocks.tasks[0] });
   mocks.getDefinitions.mockResolvedValue({ data: [] });
   mocks.getOptions.mockResolvedValue({ data: undefined });
+  mocks.putTask.mockResolvedValue({ code: 0 });
+  mocks.addTask.mockResolvedValue({ code: 0 });
   originalClipboard = Object.getOwnPropertyDescriptor(navigator, "clipboard");
   writeText = vi.fn().mockResolvedValue(undefined);
   Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
@@ -186,6 +206,81 @@ describe("download task details", () => {
 });
 
 describe("new download task defaults", () => {
+  it("creates a fixed-site task through the embedded form with the existing validation", async () => {
+    const created = vi.fn();
+    const state = vi.fn();
+    await act(async () =>
+      root.render(
+        <HeroUIProvider disableAnimation>
+          <SiteDownloadForm
+            formId="embedded-site"
+            thirdPartyId={ThirdPartyId.ExHentai}
+            definitions={[
+              {
+                thirdPartyId: ThirdPartyId.ExHentai,
+                taskType: ExHentaiDownloadTaskType.SingleWork,
+                name: "Single gallery",
+              },
+            ]}
+            onStateChange={state}
+            onCreated={created}
+          />
+        </HeroUIProvider>,
+      ),
+    );
+    expect(container.textContent).not.toContain("downloader.label.site");
+    expect(state).toHaveBeenLastCalledWith({ canSubmit: false, busy: false });
+    const type = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent === "Single gallery",
+    )!;
+    await act(async () => type.click());
+    await act(async () => {
+      fireEvent.change(container.querySelector("textarea")!, {
+        target: { value: " https://exhentai.org/g/123/token/ " },
+      });
+    });
+    expect(state).toHaveBeenLastCalledWith({ canSubmit: false, busy: false });
+    await act(async () =>
+      fireEvent.change(container.querySelector('[aria-label="download-directory"]')!, {
+        target: { value: "/site-output" },
+      }),
+    );
+    expect(state).toHaveBeenLastCalledWith({ canSubmit: true, busy: false });
+    await act(async () => fireEvent.submit(container.querySelector("form")!));
+    expect(mocks.addTask).toHaveBeenCalledWith(
+      expect.objectContaining({
+        keys: ["https://exhentai.org/g/123/token/"],
+        downloadPath: "/site-output",
+        thirdPartyId: ThirdPartyId.ExHentai,
+        type: ExHentaiDownloadTaskType.SingleWork,
+      }),
+    );
+    expect(created).toHaveBeenCalledOnce();
+    expect(mocks.getDefinitions).not.toHaveBeenCalled();
+  });
+
+  it("keeps edits on the existing task API after embedding the shared form", async () => {
+    await show(17);
+    await act(async () =>
+      fireEvent.change(container.querySelector('[aria-label="download-directory"]')!, {
+        target: { value: "/edited-directory" },
+      }),
+    );
+    const save = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent === "save-task",
+    )!;
+    await act(async () => save.click());
+    expect(mocks.putTask).toHaveBeenCalledWith(
+      17,
+      expect.objectContaining({
+        downloadPath: "/edited-directory",
+        keys: ["https://exhentai.org/g/4171374/abcdef0123/"],
+        thirdPartyId: ThirdPartyId.ExHentai,
+      }),
+    );
+    expect(mocks.addTask).not.toHaveBeenCalled();
+  });
+
   const chooseTaskType = async () => {
     mocks.getDefinitions.mockResolvedValue({
       data: [
@@ -198,7 +293,7 @@ describe("new download task defaults", () => {
     });
     await show(undefined);
     const source = Array.from(container.querySelectorAll("button")).find(
-      (button) => button.textContent === "ExHentai",
+      (button) => button.textContent === "enum.thirdPartyId.exHentai",
     )!;
 
     await act(async () => source.click());
@@ -227,6 +322,7 @@ describe("new download task defaults", () => {
     };
     await chooseTaskType();
     expect(mocks.modeOptions).toHaveBeenLastCalledWith(mocks.defaults);
+    expect(mocks.modeContext).toHaveBeenLastCalledWith(false);
   });
 
   it("keeps an existing task's PascalCase BT preference ahead of current defaults", async () => {
@@ -238,6 +334,8 @@ describe("new download task defaults", () => {
       saveTorrentFile: true,
       fallbackToDirect: false,
     });
+    expect(mocks.modeContext).toHaveBeenLastCalledWith(true);
+    expect(mocks.putTask).not.toHaveBeenCalled();
   });
 
   it("keeps a task's manual directory when options finish loading", async () => {

@@ -1,4 +1,4 @@
-import type { ComponentType, ReactNode } from "react";
+import type { ComponentProps, ComponentType, ReactNode } from "react";
 import type { components } from "@/sdk/BApi2";
 
 import { createElement, useState } from "react";
@@ -6,11 +6,15 @@ import { HeroUIProvider } from "@heroui/react";
 import { act } from "react-dom/test-utils";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { fireEvent } from "@testing-library/react";
 
 import WorkflowPage from "..";
 
 import ManualRunModal from "@/components/Workflow/ManualRunModal";
 import TemplateLibrary from "@/components/Workflow/TemplateLibrary";
+import WorkflowBrowser from "@/components/Workflow/WorkflowBrowser";
+import WorkflowBrowserModal from "@/components/Workflow/WorkflowBrowserModal";
+import ActualSelect from "@/components/bakaui/components/Select";
 
 type Workflow =
   components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowDefinitionViewModel"];
@@ -19,6 +23,7 @@ type Trigger =
 
 const api = vi.hoisted(() => ({
   search: vi.fn(),
+  get: vi.fn().mockResolvedValue({ code: 0, data: { parameters: [] } }),
   triggers: vi.fn(),
   run: vi.fn(),
   add: vi.fn(),
@@ -39,6 +44,7 @@ vi.mock("@/sdk/BApi", () => ({
     },
     workflow: {
       searchWorkflows: api.search,
+      getWorkflow: api.get,
       getWorkflowTriggers: api.triggers,
       runWorkflowManually: api.run,
       addWorkflow: api.add,
@@ -68,12 +74,23 @@ vi.mock("@/components/ContextProvider/BakabaseContextProvider", () => ({
 }));
 vi.mock("@/components/HelpCenter", () => ({ HelpCenterButton: () => null }));
 vi.mock("@/components/Workflow/WorkflowRunsDrawer", () => ({ default: () => null }));
+vi.mock("@/components/Workflow/CanvasEditor", () => ({
+  default: ({ workflow, embedded, onBack, onSaved, triggers }: any) => (
+    <div data-embedded-editor={String(embedded)}>
+      <span>Editing {workflow?.id ?? "new"}</span>
+      <span data-editor-triggers>{triggers.map((trigger: Trigger) => trigger.kind).join(",")}</span>
+      <button onClick={onBack}>Back to browser</button>
+      <button onClick={() => onSaved(workflow?.id ?? 100)}>Notify definition saved</button>
+    </div>
+  ),
+}));
 vi.mock("@/components/FileSystemSelector", () => ({ FileSystemSelectorModal: () => null }));
 vi.mock("@/components/Workflow/Activities", () => ({ getWorkflowActivityUI: () => undefined }));
 vi.mock("@/components/bakaui", async () => ({
   ...(await import("@heroui/react")),
   ...(await import("@/components/bakaui/components/Tabs")),
   Button: (await import("@/components/bakaui/components/Button")).Button,
+  Select: (props: ComponentProps<typeof ActualSelect>) => <ActualSelect {...props} />,
   toast: { success: vi.fn(), danger: vi.fn() },
   // Keep production controls and forms; only replace modal positioning/animation.
   Modal: ({
@@ -114,6 +131,7 @@ const workflow = (
   isBuiltin,
   enabled: true,
   createdAt: "2026-09-14T00:00:00Z",
+  parameters: [],
   activities: [],
 });
 const workflows = [
@@ -184,6 +202,24 @@ const button = (name: string, within: ParentNode = container): HTMLButtonElement
 const click = async (element: HTMLElement) => {
   await act(async () => element.click());
 };
+const changeFilter = async (label: string, value: string) => {
+  if (label === "keyword") {
+    const element = container.querySelector(`[aria-label="workflow.browser.filter.${label}"]`)!;
+    await act(async () => {
+      fireEvent.change(element, { target: { value } });
+    });
+    return;
+  }
+  await click(button(`workflow.browser.filter.${label}`));
+  const key = !value ? "all" : label === "enabled" ? value : `${label}:${value}`;
+  const option = document.querySelector(`[role="option"][data-key="${key}"]`) as HTMLElement;
+  expect(option).not.toBeNull();
+  await click(option);
+};
+const visibleWorkflowIds = () =>
+  [...container.querySelectorAll("[data-workflow-id]")].map((element) =>
+    element.getAttribute("data-workflow-id"),
+  );
 const openBuiltins = () => click(button("workflow.sections.builtin"));
 const noWorkflowWrites = () => {
   expect(api.run).not.toHaveBeenCalled();
@@ -241,7 +277,7 @@ describe("workflow preset entry points", () => {
     await click(button("workflow.filter.clear"));
     expect(button("workflow.sections.custom")).toHaveAttribute("aria-selected", "true");
     expect(api.paramsChanged.mock.calls[0][0].toString()).toBe("keep=1");
-    expect(container.querySelector('[aria-label="workflow.sections.all"]')).toBeNull();
+    expect(button("workflow.sections.all")).toBeDefined();
     noWorkflowWrites();
   });
 
@@ -363,6 +399,144 @@ describe("workflow preset entry points", () => {
 
     expect(dialog.querySelector("textarea")).not.toBeNull();
     expect(api.navigate).not.toHaveBeenCalled();
+    noWorkflowWrites();
+  });
+});
+
+describe("shared workflow browser filters and modal host", () => {
+  it("uses registry sources/events, intersects category filters, and preserves unrelated URL state", async () => {
+    api.query = "keep=1";
+    const future = { ...workflow(51, "Future delivery", "future.received", false), enabled: false };
+    api.search.mockResolvedValue({ code: 0, data: [...workflows, future] });
+    api.triggers.mockResolvedValue({
+      code: 0,
+      data: [
+        ...triggers,
+        {
+          kind: "future.received",
+          displayName: "Future resource received",
+          sourceModule: "futureModule",
+          activationMode: 3,
+          supportsManualRun: false,
+          requiresManualPayload: false,
+          payloadFields: [],
+        },
+      ],
+    });
+    await show();
+    expect(visibleWorkflowIds()).toEqual(["11", "51"]);
+    await changeFilter("source", "futureModule");
+    expect(visibleWorkflowIds()).toEqual(["51"]);
+    await click(button("workflow.browser.filter.event"));
+    const events = document.querySelector('[role="listbox"]')!;
+    expect(events).toHaveTextContent("Future resource received");
+    expect(events).not.toHaveTextContent("Acquisition requested");
+    await click(button("workflow.browser.filter.event"));
+    await changeFilter("event", "future.received");
+    expect(api.paramsChanged.mock.lastCall?.[0].toString()).toBe(
+      "keep=1&triggerKind=future.received",
+    );
+    expect(button("workflow.sections.all")).toHaveAttribute("aria-selected", "true");
+    await click(button("workflow.sections.builtin"));
+    expect(visibleWorkflowIds()).toEqual([]);
+    await click(button("workflow.sections.custom"));
+    expect(visibleWorkflowIds()).toEqual(["51"]);
+    noWorkflowWrites();
+  });
+
+  it("combines keyword and enabled filters without mutating or starting workflows", async () => {
+    api.search.mockResolvedValue({
+      code: 0,
+      data: [
+        ...workflows,
+        { ...workflow(52, "Custom archive", "postParser.manual", false), enabled: false },
+      ],
+    });
+    await show();
+    await changeFilter("keyword", "archive");
+    expect(visibleWorkflowIds()).toEqual(["52"]);
+    await changeFilter("enabled", "enabled");
+    expect(visibleWorkflowIds()).toEqual([]);
+    await changeFilter("enabled", "disabled");
+    expect(visibleWorkflowIds()).toEqual(["52"]);
+    await changeFilter("keyword", "");
+    expect(visibleWorkflowIds()).toEqual(["52"]);
+    noWorkflowWrites();
+  });
+
+  it("keeps an unknown URL event visible and clearable while registry metadata is unavailable", async () => {
+    api.query = "triggerKind=old.unknown&keep=1";
+    api.triggers.mockRejectedValue(new Error("offline"));
+    await show();
+    const select = container.querySelector('[aria-label="workflow.browser.filter.event"]');
+    expect(select).toHaveTextContent("old.unknown");
+    await click(button("workflow.filter.clear"));
+    expect(api.paramsChanged.mock.lastCall?.[0].toString()).toBe("keep=1");
+    noWorkflowWrites();
+  });
+
+  it("shares the source-scoped all-category browser inside the large modal without routing or execution", async () => {
+    const processing = [
+      workflow(61, "Local preset", "fs.processingPlan"),
+      workflow(62, "Local custom", "fs.processingPlan", false),
+    ];
+    api.search.mockResolvedValue({ code: 0, data: [...workflows, ...processing] });
+    api.triggers.mockResolvedValue({
+      code: 0,
+      data: [
+        ...triggers,
+        {
+          kind: "fs.processingPlan",
+          displayName: "Local files",
+          sourceModule: "fileSystem",
+          activationMode: 1,
+          supportsManualRun: true,
+          requiresManualPayload: true,
+          payloadFields: [],
+        },
+      ],
+    });
+    const changed = vi.fn();
+    await show(
+      <WorkflowBrowserModal
+        visible
+        triggerKind="fs.processingPlan"
+        onClose={vi.fn()}
+        onChanged={changed}
+      />,
+    );
+    expect(container.querySelectorAll("[data-workflow-browser]")).toHaveLength(1);
+    expect(visibleWorkflowIds()).toEqual(["61", "62"]);
+    expect(button("workflow.sections.all")).toHaveAttribute("aria-selected", "true");
+    expect(button("workflow.browser.filter.event")).toHaveAttribute("data-disabled", "true");
+    await click(button("workflow.browser.filter.event"));
+    expect(document.querySelector('[role="listbox"]')).toBeNull();
+    expect(api.paramsChanged).not.toHaveBeenCalled();
+    noWorkflowWrites();
+    const builtin = container.querySelector('[data-workflow-id="61"]')!;
+    await click(button("workflow.templates.configure", builtin));
+    expect(container.querySelector('[data-embedded-editor="true"]')).not.toBeNull();
+    expect(container.querySelector("[data-editor-triggers]")).toHaveTextContent(
+      "fs.processingPlan",
+    );
+    expect(api.navigate).not.toHaveBeenCalled();
+    await click(button("Back to browser"));
+    expect(visibleWorkflowIds()).toEqual(["61", "62"]);
+    const custom = container.querySelector('[data-workflow-id="62"]')!;
+    await click(button("workflow.action.edit", custom));
+    await click(button("Notify definition saved"));
+    expect(changed).toHaveBeenCalledTimes(1);
+    expect(visibleWorkflowIds()).toEqual(["61", "62"]);
+    expect(api.navigate).not.toHaveBeenCalled();
+    noWorkflowWrites();
+  });
+
+  it("allows local browser event filtering without reading or changing the workflow page URL", async () => {
+    api.query = "triggerKind=unrelated.page";
+    await show(<WorkflowBrowser embedded />);
+    await changeFilter("event", "acquisition.requested");
+    expect(visibleWorkflowIds()).toEqual(["11", "12"]);
+    expect(api.paramsChanged).not.toHaveBeenCalled();
     noWorkflowWrites();
   });
 });

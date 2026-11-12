@@ -10,6 +10,7 @@ using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.PostParser;
 using Bakabase.InsideWorld.Business.Components.PostParser.Fetchers;
+using Bakabase.InsideWorld.Business.Components.PostParser.Extensions;
 using Bakabase.InsideWorld.Business.Components.PostParser.Models.Db;
 using Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants;
 using Bakabase.InsideWorld.Business.Components.PostParser.Services;
@@ -662,9 +663,13 @@ public sealed class PostParserWorkflowTests
         Assert.AreEqual("二选一的分流", saved["groups"]![0]!["summary"]!.GetValue<string>());
         Assert.AreEqual("百度与MEGA内容相同", saved["groups"]![0]!["evidence"]![0]!.GetValue<string>());
         using var output = JsonDocument.Parse((await RunState(runId)).OutputItemsJson!);
-        var result = output.RootElement[0].GetProperty("result");
-        Assert.AreEqual("完整本体", result.GetProperty("groups")[0].GetProperty("title").GetString());
-        Assert.AreEqual("preview", result.GetProperty("resources")[2].GetProperty("groupId").GetString());
+        var summary = output.RootElement[0];
+        Assert.AreEqual(id, summary.GetProperty("taskId").GetInt32());
+        Assert.AreEqual(3, summary.GetProperty("sourceCount").GetInt32());
+        Assert.AreEqual(2, summary.GetProperty("groupCount").GetInt32());
+        Assert.AreEqual(3, summary.GetProperty("processingUnknownCount").GetInt32());
+        Assert.IsFalse(summary.TryGetProperty("result", out _), "full parsed results belong to the source module");
+        Assert.IsFalse(output.RootElement.GetRawText().Contains("pan.baidu.com"));
     }
 
     [TestMethod]
@@ -869,6 +874,71 @@ public sealed class PostParserWorkflowTests
     }
 
     [TestMethod]
+    [DataRow("revision")]
+    [DataRow("run")]
+    [DataRow("step")]
+    [DataRow("status")]
+    [DataRow("decision")]
+    public async Task ConditionalRetryRejectsChangedTaskOrCheckpoint(string changed)
+    {
+        _extractor.FailuresRemaining = 1;
+        var id = await Add();
+        await Dispatch();
+        var task = await TaskState(id);
+        var runId = task.WorkflowRunId!.Value;
+        await Execute(runId);
+        var before = await RunState(runId);
+        await using var scope = _services.CreateAsyncScope();
+        var workflow = scope.ServiceProvider.GetRequiredService<PostParserWorkflowService<BakabaseDbContext>>();
+        var controller = new Bakabase.Service.Controllers.PostParserAcquisitionController(null!);
+        var response = await controller.Retry(id, workflow, CancellationToken.None,
+            changed == "revision" ? task.Revision + 1 : task.Revision,
+            changed == "run" ? runId + 1 : runId,
+            changed == "step" ? before.CurrentStepIndex + 1 : before.CurrentStepIndex,
+            changed == "status" ? WorkflowRunStatus.Interrupted : before.Status,
+            changed == "decision" ? 1 : 0);
+
+        Assert.AreNotEqual(0, response.Code);
+        var after = await RunState(runId);
+        Assert.AreEqual(before.Status, after.Status);
+        Assert.AreEqual(before.CurrentStepIndex, after.CurrentStepIndex);
+        Assert.AreEqual(before.CurrentItemJson, after.CurrentItemJson);
+        Assert.AreEqual(before.PendingSignalJson, after.PendingSignalJson);
+        Assert.AreEqual(runId, (await TaskState(id)).WorkflowRunId);
+        Assert.IsFalse(_services.GetRequiredService<BTaskManager>().Tasks.Any(t => t.Id == $"workflow.run.{runId}"));
+        Assert.AreEqual(0, _purchaser.Purchases);
+    }
+
+    [TestMethod]
+    public async Task ConditionalRetryWithMatchingCheckpointKeepsTheSameRunAndRevision()
+    {
+        _extractor.FailuresRemaining = 1;
+        var id = await Add();
+        await Dispatch();
+        var task = await TaskState(id);
+        var runId = task.WorkflowRunId!.Value;
+        await Execute(runId);
+        var before = await RunState(runId);
+        await using (var scope = _services.CreateAsyncScope())
+        {
+            var controller = new Bakabase.Service.Controllers.PostParserAcquisitionController(null!);
+            var response = await controller.Retry(id,
+                scope.ServiceProvider.GetRequiredService<PostParserWorkflowService<BakabaseDbContext>>(), CancellationToken.None,
+                task.Revision, runId, before.CurrentStepIndex, before.Status, 0);
+            Assert.AreEqual(0, response.Code);
+        }
+        Assert.AreEqual(WorkflowRunStatus.Pending, (await RunState(runId)).Status);
+        Assert.AreEqual(before.PendingSignalJson, (await RunState(runId)).PendingSignalJson);
+        await Execute(runId);
+        var recovered = await TaskState(id);
+        Assert.AreEqual(task.WorkflowRunId, recovered.WorkflowRunId);
+        Assert.AreEqual(task.Revision, recovered.Revision);
+        Assert.AreEqual(WorkflowRunStatus.Success, recovered.WorkflowStatus);
+        Assert.AreEqual(1, _reader.Reads);
+        Assert.AreEqual(0, _purchaser.Purchases);
+    }
+
+    [TestMethod]
     public async Task RestartClearsTheRequestedQueueWithoutStartingUnrequestedPosts()
     {
         var queuedId = await Add();
@@ -995,7 +1065,10 @@ public sealed class PostParserWorkflowTests
         await Execute(run.Id);
         Assert.AreEqual(WorkflowRunStatus.Success, (await RunState(run.Id)).Status);
         using var output = JsonDocument.Parse((await RunState(run.Id)).OutputItemsJson!);
-        Assert.AreEqual("Extracted title", output.RootElement[0].GetProperty("result").GetProperty("title").GetString());
+        Assert.AreEqual("downloadInformation", output.RootElement[0].GetProperty("stage").GetString());
+        Assert.AreEqual(1, output.RootElement[0].GetProperty("sourceCount").GetInt32());
+        Assert.IsFalse(output.RootElement[0].TryGetProperty("input", out _));
+        Assert.IsFalse(output.RootElement[0].TryGetProperty("result", out _));
         Assert.AreEqual(0, _reader.Reads);
         Assert.AreEqual(1, _extractor.Extractions);
         Assert.AreEqual(0, await scope.ServiceProvider.GetRequiredService<BakabaseDbContext>().Set<PostParserTaskDbModel>().CountAsync());
@@ -1153,9 +1226,11 @@ public sealed class PostParserWorkflowTests
     }
 
     [TestMethod]
-    public async Task ExpiredPostWaitsAndExplicitPurchaseResumesTheSameRun()
+    [DataRow("expired", "possiblyExpired")]
+    [DataRow("unknown", "awaitingPurchase")]
+    public async Task UncertainPostWaitsAndExplicitPurchaseResumesTheSameRun(string availability, string state)
     {
-        _analyzer.Status = "expired";
+        _analyzer.Status = availability;
         _services.GetRequiredService<IBOptions<SoulPlusOptions>>().Value.AutoBuyThreshold = 10;
         _reader.Locks = [new("https://example.test/lock", 5, false)];
         var id = await Add(source: PostParserSource.SoulPlus);
@@ -1163,7 +1238,7 @@ public sealed class PostParserWorkflowTests
         var task = await TaskState(id);
         await Execute(task.WorkflowRunId!.Value);
         var pending = await TaskState(id);
-        Assert.AreEqual("possiblyExpired", pending.ParsingState);
+        Assert.AreEqual(state, pending.ParsingState);
         Assert.AreEqual(0, _purchaser.Purchases);
         await using (var scope = _services.CreateAsyncScope())
             await scope.ServiceProvider.GetRequiredService<PostParserWorkflowService<BakabaseDbContext>>()
@@ -1174,12 +1249,16 @@ public sealed class PostParserWorkflowTests
         Assert.AreEqual(1, _purchaser.Purchases);
         Assert.AreEqual(WorkflowRunStatus.Success, (await TaskState(id)).WorkflowStatus);
         Assert.AreEqual(task.WorkflowRunId, (await TaskState(id)).WorkflowRunId);
+        Assert.AreEqual(availability, (await TaskState(id)).Availability!.Status,
+            "An explicit purchase approval must not rewrite the evidence-based availability assessment.");
     }
 
     [TestMethod]
-    public async Task OneClickPurchaseRevalidatesLimitsQuoteAndDisplayedTotal()
+    [DataRow("expired")]
+    [DataRow("unknown")]
+    public async Task OneClickPurchaseRevalidatesLimitsQuoteAndDisplayedTotal(string availability)
     {
-        _analyzer.Status = "expired";
+        _analyzer.Status = availability;
         var options = _services.GetRequiredService<IBOptions<SoulPlusOptions>>().Value;
         options.AutoBuyThreshold = 10;
         options.MinimumRemainingCoins = 96;
@@ -1233,19 +1312,234 @@ public sealed class PostParserWorkflowTests
     }
 
     [TestMethod]
-    public async Task HealthyPostCannotUseTheRiskOverrideButtonToBypassAutomaticLimits()
+    public async Task ExplicitPurchaseAlsoSupportsHealthyPostsWithoutBypassingConfiguredLimits()
     {
         _reader.Locks = [new("https://example.test/lock", 5, false)];
         var id = await Add(source: PostParserSource.SoulPlus);
         await Dispatch();
         var task = await TaskState(id);
         await Execute(task.WorkflowRunId!.Value);
-        _services.GetRequiredService<IBOptions<SoulPlusOptions>>().Value.AutoBuyThreshold = 5;
         await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => Purchase(id, task.Revision, 5));
         Assert.AreEqual(0, _purchaser.Purchases);
-        await Retry(id);
+        _services.GetRequiredService<IBOptions<SoulPlusOptions>>().Value.AutoBuyThreshold = 5;
+        await Purchase(id, task.Revision, 5);
         await Execute(task.WorkflowRunId.Value);
-        Assert.AreEqual(1, _purchaser.Purchases, "Normal posts use the automatic path after their limits change.");
+        Assert.AreEqual(1, _purchaser.Purchases);
+        Assert.AreEqual(task.WorkflowRunId, (await TaskState(id)).WorkflowRunId);
+    }
+
+    [TestMethod]
+    [DataRow("expired", false)]
+    [DataRow("unknown", false)]
+    [DataRow("expired", true)]
+    public async Task FreeUnlockPrecedesRiskAssessmentAndNeverIncludesPaidItems(string availability, bool paidRemainder)
+    {
+        _analyzer.Status = availability;
+        _reader.Balance = null;
+        var options = _services.GetRequiredService<IBOptions<SoulPlusOptions>>().Value;
+        options.AutoBuyThreshold = 10;
+        options.MinimumRemainingCoins = 1000;
+        _reader.Locks = [new("https://example.test/free", 0, false)];
+        if (paidRemainder) _reader.Locks.Add(new("https://example.test/paid", 1, false));
+        var id = await Add(source: PostParserSource.SoulPlus);
+        await Dispatch();
+        var runId = (await TaskState(id)).WorkflowRunId!.Value;
+        await Execute(runId);
+        var task = await TaskState(id);
+        Assert.AreEqual(1, _purchaser.Purchases);
+        Assert.IsTrue(task.ContentSnapshot!.Locks.Single(l => l.Url!.EndsWith("/free")).IsBought);
+        Assert.AreEqual(paidRemainder ? WorkflowRunStatus.Waiting : WorkflowRunStatus.Success, task.WorkflowStatus);
+        Assert.AreEqual(paidRemainder ? 1 : 0, _analyzer.Assessments,
+            "No availability inference is needed to authorize an explicit free offer.");
+        if (paidRemainder) Assert.IsFalse(task.ContentSnapshot.Locks.Single(l => l.Url!.EndsWith("/paid")).IsBought);
+    }
+
+    [TestMethod]
+    public async Task FreeUnlockWorksBeforeMissingAiButExtractionStillWaitsForAi()
+    {
+        await using (var scope = _services.CreateAsyncScope())
+            await scope.ServiceProvider.GetRequiredService<IAiFeatureService>().SaveConfigAsync(new() {Feature = AiFeature.PostParser, UseDefault = false});
+        _reader.Locks = [new("https://example.test/free", 0, false)];
+        var id = await Add(source: PostParserSource.SoulPlus);
+        await Dispatch();
+        await Execute((await TaskState(id)).WorkflowRunId!.Value);
+        Assert.AreEqual(1, _purchaser.Purchases);
+        Assert.AreEqual("awaitingAi", (await TaskState(id)).ParsingState);
+        Assert.AreEqual(0, _analyzer.Assessments);
+        Assert.AreEqual(0, _extractor.Extractions);
+    }
+
+    [TestMethod]
+    public async Task ZeroPriceThatChangesDuringRefreshIsNotRetriedAsPaidInTheSameRun()
+    {
+        _services.GetRequiredService<IBOptions<SoulPlusOptions>>().Value.AutoBuyThreshold = 10;
+        _reader.Locks = [new("https://example.test/free", 0, false)];
+        _reader.OnRead = count => { if (count >= 2) _reader.Locks = [new("https://example.test/free", 1, false)]; };
+        var id = await Add(source: PostParserSource.SoulPlus);
+        await Dispatch();
+        await Execute((await TaskState(id)).WorkflowRunId!.Value);
+        Assert.AreEqual(0, _purchaser.Purchases);
+        Assert.AreEqual(WorkflowRunStatus.Waiting, (await TaskState(id)).WorkflowStatus);
+        Assert.AreEqual(1m, (await TaskState(id)).PurchaseQuote!.EligibleTotal);
+    }
+
+    [TestMethod]
+    public async Task QueuedPurchaseUsesFrozenNodeAndRejectsLaterAccountChanges()
+    {
+        _analyzer.Status = "expired";
+        _services.GetRequiredService<IBOptions<SoulPlusOptions>>().Value.AutoBuyThreshold = 5;
+        _reader.Locks = [new("https://example.test/lock", 5, false)];
+        var id = await Add(source: PostParserSource.SoulPlus);
+        await Dispatch();
+        var task = await TaskState(id);
+        await Execute(task.WorkflowRunId!.Value);
+        await using (var scope = _services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<BakabaseDbContext>();
+            await db.WorkflowActivities.Where(a => a.WorkflowDefinitionId == task.WorkflowDefinitionId && a.Order == 1)
+                .ExecuteUpdateAsync(s => s.SetProperty(a => a.Kind, "not.the.frozen.node"));
+        }
+        await Purchase(id, task.Revision, 5);
+        _purchaser.AccountKey = "different-account";
+        await Execute(task.WorkflowRunId.Value);
+        Assert.AreEqual(0, _purchaser.Purchases);
+        Assert.AreEqual(WorkflowRunStatus.Failed, (await TaskState(id)).WorkflowStatus);
+    }
+
+    [TestMethod]
+    public async Task RetryRefreshesLockedCheckpointAfterPurchaseReadFailureBeforeAskingAi()
+    {
+        _analyzer.Status = "expired";
+        _services.GetRequiredService<IBOptions<SoulPlusOptions>>().Value.AutoBuyThreshold = 5;
+        _reader.Locks = [new("https://example.test/lock", 5, false)];
+        var id = await Add(source: PostParserSource.SoulPlus);
+        await Dispatch();
+        var original = await TaskState(id);
+        var runId = original.WorkflowRunId!.Value;
+        await Execute(runId);
+        await Purchase(id, original.Revision, 5);
+        _reader.OnRead = _ =>
+        {
+            if (_purchaser.Purchases > 0) throw new System.IO.IOException("Fixture post-purchase refresh failed.");
+        };
+        await Execute(runId);
+        var failed = await RunState(runId);
+        Assert.AreEqual(WorkflowRunStatus.Failed, failed.Status);
+        Assert.AreEqual(1, failed.CurrentStepIndex);
+        Assert.IsNull(failed.PendingSignalJson, "The runner already consumed this attempt's purchase signal.");
+        Assert.IsTrue(((PostParserContentItem)WorkflowItemSnapshot.Restore(failed.CurrentItemJson!))
+            .Content.Locks.Single().IsBought == false, "The durable checkpoint still predates the purchase.");
+        Assert.IsTrue(_reader.Locks.Single().IsBought, "The source has already committed the purchase.");
+        var assessments = _analyzer.Assessments;
+
+        _reader.OnRead = null;
+        await using (var scope = _services.CreateAsyncScope())
+            await scope.ServiceProvider.GetRequiredService<IAiFeatureService>()
+                .SaveConfigAsync(new() {Feature = AiFeature.PostParser, UseDefault = false});
+        await Retry(id);
+        await Execute(runId);
+
+        var recovered = await TaskState(id);
+        Assert.AreEqual(original.WorkflowRunId, recovered.WorkflowRunId);
+        Assert.AreEqual(original.Revision, recovered.Revision);
+        Assert.AreEqual(1, _purchaser.Purchases);
+        Assert.AreEqual(assessments, _analyzer.Assessments, "Already unlocked content needs no new availability analysis.");
+        Assert.IsTrue(recovered.ContentSnapshot!.Locks.Single().IsBought);
+        Assert.AreEqual(WorkflowRunStatus.Waiting, recovered.WorkflowStatus);
+        Assert.AreEqual("awaitingAi", recovered.ParsingState);
+        Assert.AreEqual(2, (await RunState(runId)).CurrentStepIndex,
+            "Unlock must finish; only the separate extraction node may wait for AI configuration.");
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task MixedPriceWaitingCheckpointResumesSameRunUsingFirstQuoteOrFreshUnlockedState(bool alreadyUnlocked)
+    {
+        const string post = "https://www.north-plus.net/read.php?tid-42.html";
+        const string payment = "https://www.north-plus.net/job.php?action=buytopic&tid=42&pid=tpc&verify=fixture";
+        var options = _services.GetRequiredService<IBOptions<SoulPlusOptions>>().Value;
+        options.AutoBuyThreshold = 0;
+        _reader.SourceUrl = post;
+        _reader.Locks = [new(payment, 2, false) {Floor = "0"}, new(payment, 5, false) {Floor = "0"}];
+        var id = await Add(post, PostParserSource.SoulPlus);
+        await Dispatch();
+        var original = await TaskState(id);
+        var runId = original.WorkflowRunId!.Value;
+        await Execute(runId);
+        var waiting = await RunState(runId);
+        Assert.AreEqual(WorkflowRunStatus.Waiting, waiting.Status);
+        var saved = (PostParserContentItem)WorkflowItemSnapshot.Restore(waiting.CurrentItemJson!);
+        CollectionAssert.AreEqual(new decimal?[] {2, 5}, saved.Content.Locks.Select(l => l.Price).ToArray());
+        var assessments = _analyzer.Assessments;
+
+        options.AutoBuyThreshold = 10;
+        if (alreadyUnlocked) _reader.Locks = _reader.Locks.Select(l => l with {IsBought = true}).ToList();
+        await using (var scope = _services.CreateAsyncScope())
+            await scope.ServiceProvider.GetRequiredService<IWorkflowRunResumer>().ResumeAsync(runId, "{}");
+        await Execute(runId);
+
+        var completed = await TaskState(id);
+        Assert.AreEqual(runId, completed.WorkflowRunId);
+        Assert.AreEqual(original.Revision, completed.Revision);
+        Assert.AreEqual(WorkflowRunStatus.Success, completed.WorkflowStatus);
+        Assert.AreEqual(alreadyUnlocked ? 0 : 1, _purchaser.Purchases);
+        Assert.AreEqual(alreadyUnlocked ? 100m : 98m, _reader.Balance);
+        if (alreadyUnlocked) Assert.AreEqual(assessments, _analyzer.Assessments);
+    }
+
+    [TestMethod]
+    public async Task RetryWithoutSignalKeepsCheckpointUrlsAndPriceCeilings()
+    {
+        _analyzer.Status = "expired";
+        _services.GetRequiredService<IBOptions<SoulPlusOptions>>().Value.AutoBuyThreshold = 10;
+        _reader.Locks = [new("https://example.test/stable", 5, false), new("https://example.test/increased", 5, false)];
+        var id = await Add(source: PostParserSource.SoulPlus);
+        await Dispatch();
+        var original = await TaskState(id);
+        var runId = original.WorkflowRunId!.Value;
+        await Execute(runId);
+        Assert.AreEqual(WorkflowRunStatus.Waiting, (await RunState(runId)).Status);
+        await using (var scope = _services.CreateAsyncScope())
+            await scope.ServiceProvider.GetRequiredService<BakabaseDbContext>().WorkflowRuns.Where(r => r.Id == runId)
+                .ExecuteUpdateAsync(s => s.SetProperty(r => r.Status, WorkflowRunStatus.Interrupted)
+                    .SetProperty(r => r.PendingSignalJson, (string?)null));
+
+        _analyzer.Status = "noExpiryReported";
+        _reader.Locks = [new("https://example.test/stable", 5, false), new("https://example.test/increased", 7, false),
+            new("https://example.test/new", 1, false)];
+        await Retry(id);
+        await Execute(runId);
+
+        var recovered = await TaskState(id);
+        Assert.AreEqual(original.WorkflowRunId, recovered.WorkflowRunId);
+        Assert.AreEqual(original.Revision, recovered.Revision);
+        Assert.AreEqual(1, _purchaser.Purchases);
+        Assert.AreEqual(95m, _reader.Balance);
+        Assert.IsTrue(_reader.Locks.Single(l => l.Url!.EndsWith("/stable")).IsBought);
+        Assert.IsFalse(_reader.Locks.Single(l => l.Url!.EndsWith("/increased")).IsBought);
+        Assert.IsFalse(_reader.Locks.Single(l => l.Url!.EndsWith("/new")).IsBought);
+        Assert.AreEqual(WorkflowRunStatus.Waiting, recovered.WorkflowStatus);
+    }
+
+    [TestMethod]
+    public void LegacyUnsubstantiatedExpiryIsProjectedWithoutChangingSavedHistory()
+    {
+        var raw = new PostParserTaskDbModel
+        {
+            Link = "https://example.test/post", ParsingState = "possiblyExpired", ParsingMessage = "model inference",
+            AvailabilityJson = "{\"status\":\"expired\",\"evidence\":[\"老了\"],\"reason\":\"model inference\"}",
+            Results = "{\"DownloadInfo\":{\"isComplete\":false,\"availability\":{\"status\":\"expired\"}}}"
+        };
+        var beforeAvailability = raw.AvailabilityJson;
+        var beforeResults = raw.Results;
+        var view = raw.ToDomainModel();
+        Assert.AreEqual("unknown", view.Availability!.Status);
+        Assert.AreEqual("awaitingPurchase", view.ParsingState);
+        Assert.AreEqual(PostAvailabilityEvidencePolicy.InsufficientEvidence, view.ParsingMessage);
+        Assert.AreEqual(beforeAvailability, raw.AvailabilityJson);
+        Assert.AreEqual(beforeResults, raw.Results);
+        Assert.AreEqual("possiblyExpired", raw.ParsingState);
     }
 
     [TestMethod]
@@ -1295,11 +1589,351 @@ public sealed class PostParserWorkflowTests
             .PurchaseAndResumeAsync(id, revision, ["https://example.test/lock"], maximum, CancellationToken.None);
     }
 
+    [TestMethod]
+    [DataRow(null)]
+    [DataRow("")]
+    [DataRow("   ")]
+    [DataRow("  The visible information already supplies the resource.  ")]
+    public async Task ManualReadinessContinuesSameRunWithoutPurchasingAndSurvivesReparse(string? reason)
+    {
+        _analyzer.Status = "expired";
+        _reader.Locks = [new("https://example.test/proof", 999999, false)
+            {BlockId = "proof-1", ContextText = "Purchase proof, not required for the resource"}];
+        var id = await Add(source: PostParserSource.SoulPlus);
+        await Dispatch();
+        var original = await TaskState(id);
+        await Execute(original.WorkflowRunId!.Value);
+        await using var scope = _services.CreateAsyncScope();
+        var workflow = scope.ServiceProvider.GetRequiredService<PostParserWorkflowService<BakabaseDbContext>>();
+        var view = await workflow.GetContentReadinessAsync(id);
+        Assert.IsTrue(view.CanConfirm);
+        Assert.IsTrue(view.CanContinue);
+        var analyses = _analyzer.Assessments;
+        var confirmed = await workflow.ConfirmContentReadinessAsync(id, new()
+        {
+            Revision = view.Revision, WorkflowRunId = view.WorkflowRunId,
+            ExpectedContentFingerprint = view.ContentFingerprint!, ExpectedDecisionVersion = view.DecisionVersion,
+            NotRequiredBlockIds = ["proof-1"], Reason = reason, ContinueParsing = true
+        });
+        Assert.AreEqual("manual", confirmed.Basis);
+        Assert.AreEqual(reason?.Trim() ?? "", confirmed.History.Single().Reason,
+            "Missing notes must remain empty instead of inventing a user explanation.");
+        Assert.AreEqual(reason?.Trim() ?? "", confirmed.Assessment!.Decisions.Single().Reason);
+        await Execute(original.WorkflowRunId.Value);
+        Assert.AreEqual(WorkflowRunStatus.Success, (await TaskState(id)).WorkflowStatus);
+        Assert.AreEqual(0, _purchaser.Purchases);
+        Assert.AreEqual(analyses, _analyzer.Assessments);
+        Assert.IsFalse(_reader.Locks.Single().IsBought);
+        await Reparse(id);
+        var reparsed = await TaskState(id);
+        await Execute(reparsed.WorkflowRunId!.Value);
+        Assert.AreEqual(WorkflowRunStatus.Success, (await TaskState(id)).WorkflowStatus);
+        Assert.AreEqual(0, _purchaser.Purchases);
+        var repeated = await workflow.GetContentReadinessAsync(id);
+        Assert.AreEqual(confirmed.ActiveDecisionId, repeated.ActiveDecisionId);
+        Assert.AreEqual(1, repeated.History.Count);
+        Assert.AreEqual(original.WorkflowRunId, repeated.History[0].WorkflowRunId);
+    }
+
+    [TestMethod]
+    public async Task ReadinessRejectsStaleCasAndRevocationNeverChangesBoughtState()
+    {
+        _analyzer.Status = "expired";
+        _reader.Locks = [new("https://example.test/proof", 999999, false) {BlockId = "proof", ContextText = "proof"}];
+        var id = await Add(source: PostParserSource.SoulPlus);
+        await Dispatch(); await Execute((await TaskState(id)).WorkflowRunId!.Value);
+        await using var scope = _services.CreateAsyncScope();
+        var workflow = scope.ServiceProvider.GetRequiredService<PostParserWorkflowService<BakabaseDbContext>>();
+        var view = await workflow.GetContentReadinessAsync(id);
+        var input = new Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.ConfirmPostParserContentReadinessInput
+        {Revision = view.Revision, WorkflowRunId = view.WorkflowRunId, ExpectedContentFingerprint = view.ContentFingerprint!,
+            ExpectedDecisionVersion = view.DecisionVersion, NotRequiredBlockIds = ["proof"], Reason = "Auxiliary proof"};
+        await Assert.ThrowsExceptionAsync<ArgumentException>(() => workflow.ConfirmContentReadinessAsync(id, input with {Reason = new string('x', 1001)}));
+        await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => workflow.ConfirmContentReadinessAsync(id, input with {Revision = input.Revision + 1}));
+        await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => workflow.ConfirmContentReadinessAsync(id, input with {WorkflowRunId = 99999}));
+        await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => workflow.ConfirmContentReadinessAsync(id, input with {ExpectedContentFingerprint = new string('0', 64)}));
+        var accepted = await workflow.ConfirmContentReadinessAsync(id, input);
+        Assert.AreEqual("Auxiliary proof", accepted.History.Single().Reason);
+        await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => workflow.ConfirmContentReadinessAsync(id, input));
+        _reader.Balance++;
+        var sameEvidence = await workflow.RefreshContentReadinessAsync(id, RefreshInput(accepted));
+        Assert.AreEqual(accepted.ActiveDecisionId, sameEvidence.ActiveDecisionId);
+        Assert.AreEqual("manual", sameEvidence.Basis);
+        Assert.IsFalse(sameEvidence.ParsedResultMayBeStale);
+        var revoked = await workflow.RevokeContentReadinessAsync(id, new()
+        {Revision = view.Revision, WorkflowRunId = view.WorkflowRunId, ExpectedContentFingerprint = view.ContentFingerprint!,
+            ExpectedDecisionVersion = accepted.DecisionVersion, DecisionId = accepted.ActiveDecisionId!});
+        Assert.AreEqual("needsUnlock", revoked.Status);
+        Assert.IsNull(revoked.ActiveDecisionId);
+        Assert.AreEqual(2, revoked.History.Count);
+        Assert.AreEqual("revoke", revoked.History[1].Action);
+        Assert.IsFalse(revoked.ContentSnapshot!.Locks.Single().IsBought);
+        Assert.AreEqual(WorkflowRunStatus.Waiting, (await TaskState(id)).WorkflowStatus);
+        await scope.ServiceProvider.GetRequiredService<BakabaseDbContext>().WorkflowRuns.Where(r => r.Id == view.WorkflowRunId)
+            .ExecuteUpdateAsync(update => update.SetProperty(r => r.CurrentStepIndex, 2));
+        var otherStep = await workflow.GetContentReadinessAsync(id);
+        Assert.IsTrue(otherStep.CanConfirm);
+        Assert.IsFalse(otherStep.CanContinue, "A different waiting node must never advertise content-unlock continuation.");
+    }
+
+    [TestMethod]
+    public async Task ChangedFreshContentInvalidatesReadinessSignalWithoutPurchasing()
+    {
+        _analyzer.Status = "expired";
+        _reader.Locks = [new("https://example.test/proof", 5, false) {BlockId = "proof", ContextText = "proof"}];
+        var id = await Add(source: PostParserSource.SoulPlus);
+        await Dispatch(); var task = await TaskState(id); await Execute(task.WorkflowRunId!.Value);
+        await using var scope = _services.CreateAsyncScope();
+        var workflow = scope.ServiceProvider.GetRequiredService<PostParserWorkflowService<BakabaseDbContext>>();
+        var view = await workflow.GetContentReadinessAsync(id);
+        await workflow.ConfirmContentReadinessAsync(id, new()
+        {Revision = view.Revision, WorkflowRunId = view.WorkflowRunId, ExpectedContentFingerprint = view.ContentFingerprint!,
+            ExpectedDecisionVersion = view.DecisionVersion, NotRequiredBlockIds = ["proof"], Reason = "Auxiliary", ContinueParsing = true});
+        _reader.Locks = [new("https://example.test/proof", 5, false) {BlockId = "proof", ContextText = "Download password now required"}];
+        await Execute(task.WorkflowRunId.Value);
+        Assert.AreEqual(WorkflowRunStatus.Waiting, (await TaskState(id)).WorkflowStatus);
+        Assert.AreEqual(0, _purchaser.Purchases);
+        var changed = await workflow.GetContentReadinessAsync(id);
+        Assert.IsTrue(changed.HasStaleDecision);
+        Assert.IsNull(changed.Assessment);
+    }
+
+    [TestMethod]
+    public async Task LegacyUnidentifiedLocksRequireFreshReadBeforeManualConfirmation()
+    {
+        _analyzer.Status = "expired";
+        _reader.Locks = [new("https://example.test/proof", 50, false)];
+        var id = await Add(source: PostParserSource.SoulPlus);
+        await Dispatch(); await Execute((await TaskState(id)).WorkflowRunId!.Value);
+        await using var scope = _services.CreateAsyncScope();
+        var view = await scope.ServiceProvider.GetRequiredService<PostParserWorkflowService<BakabaseDbContext>>().GetContentReadinessAsync(id);
+        Assert.IsFalse(view.CanConfirm);
+        Assert.AreEqual("needsUnlock", view.Status);
+    }
+
+    [TestMethod]
+    public async Task EvidenceRefreshUpgradesLegacyLocksWithoutAnalysisPaymentOrChangingTheWaitingCheckpoint()
+    {
+        _analyzer.Status = "expired";
+        _reader.Locks = [new("https://example.test/proof", 50, false)];
+        var id = await Add(source: PostParserSource.SoulPlus);
+        await Dispatch(); var task = await TaskState(id); await Execute(task.WorkflowRunId!.Value);
+        await using var scope = _services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<BakabaseDbContext>();
+        var workflow = scope.ServiceProvider.GetRequiredService<PostParserWorkflowService<BakabaseDbContext>>();
+        var view = await workflow.GetContentReadinessAsync(id);
+        var before = await db.PostParserTasks.AsNoTracking().SingleAsync(t => t.Id == id);
+        var run = await RunState(task.WorkflowRunId.Value);
+        var counts = (_reader.Reads, _analyzer.Assessments, _extractor.Extractions);
+        _reader.Locks = [new("https://example.test/proof", 50, false) {BlockId = "proof", ContextText = "purchase proof"}];
+        var fresh = await workflow.RefreshContentReadinessAsync(id, RefreshInput(view));
+        Assert.IsTrue(fresh.CanConfirm);
+        Assert.IsTrue(fresh.CanContinue);
+        Assert.IsTrue(fresh.ParsedResultMayBeStale);
+        Assert.AreEqual("proof", fresh.ContentSnapshot!.Locks.Single().BlockId);
+        Assert.IsFalse(fresh.ContentSnapshot.Locks.Single().IsBought);
+        Assert.AreEqual(counts.Reads + 1, _reader.Reads);
+        Assert.AreEqual(counts.Assessments, _analyzer.Assessments);
+        Assert.AreEqual(counts.Extractions, _extractor.Extractions);
+        Assert.AreEqual(0, _purchaser.Purchases);
+        var stored = await db.PostParserTasks.AsNoTracking().SingleAsync(t => t.Id == id);
+        Assert.AreEqual(before.Results, stored.Results);
+        Assert.AreEqual(before.Revision, stored.Revision);
+        Assert.AreEqual(before.WorkflowRunId, stored.WorkflowRunId);
+        var unchanged = await RunState(task.WorkflowRunId.Value);
+        Assert.AreEqual(run.Status, unchanged.Status);
+        Assert.AreEqual(run.CurrentStepIndex, unchanged.CurrentStepIndex);
+        Assert.AreEqual(run.CurrentItemJson, unchanged.CurrentItemJson);
+        Assert.AreEqual(run.WaitPromptJson, unchanged.WaitPromptJson);
+        Assert.AreEqual(run.PendingSignalJson, unchanged.PendingSignalJson);
+        Assert.AreEqual(1, await db.WorkflowRuns.CountAsync());
+        await workflow.ConfirmContentReadinessAsync(id, new()
+        {
+            Revision = fresh.Revision, WorkflowRunId = fresh.WorkflowRunId,
+            ExpectedContentFingerprint = fresh.ContentFingerprint!, ExpectedDecisionVersion = fresh.DecisionVersion,
+            NotRequiredBlockIds = ["proof"], Reason = "Visible information suffices", ContinueParsing = true
+        });
+        await Execute(task.WorkflowRunId.Value);
+        Assert.AreEqual(WorkflowRunStatus.Success, (await TaskState(id)).WorkflowStatus);
+        Assert.IsFalse((await workflow.GetContentReadinessAsync(id)).ParsedResultMayBeStale);
+        Assert.AreEqual(0, _purchaser.Purchases);
+        Assert.AreEqual(counts.Assessments, _analyzer.Assessments);
+    }
+
+    [TestMethod]
+    public async Task EvidenceRefreshRejectsStaleApprovalAndActiveExecutionBeforeReading()
+    {
+        _analyzer.Status = "expired";
+        _reader.Locks = [new("https://example.test/proof", 50, false)];
+        var id = await Add(source: PostParserSource.SoulPlus);
+        await Dispatch(); await Execute((await TaskState(id)).WorkflowRunId!.Value);
+        await using var scope = _services.CreateAsyncScope();
+        var workflow = scope.ServiceProvider.GetRequiredService<PostParserWorkflowService<BakabaseDbContext>>();
+        var view = await workflow.GetContentReadinessAsync(id);
+        var input = RefreshInput(view);
+        var reads = _reader.Reads;
+        foreach (var stale in new[] {input with {Revision = input.Revision + 1}, input with {WorkflowRunId = 98765},
+                     input with {ExpectedContentFingerprint = new string('0', 64)}, input with {ExpectedDecisionVersion = 98765}})
+            await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => workflow.RefreshContentReadinessAsync(id, stale));
+        await scope.ServiceProvider.GetRequiredService<BakabaseDbContext>().WorkflowRuns.Where(r => r.Id == view.WorkflowRunId)
+            .ExecuteUpdateAsync(s => s.SetProperty(r => r.Status, WorkflowRunStatus.Running));
+        Assert.IsFalse((await workflow.GetContentReadinessAsync(id)).CanRefresh);
+        await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => workflow.RefreshContentReadinessAsync(id, input));
+        Assert.AreEqual(reads, _reader.Reads);
+    }
+
+    [DataTestMethod]
+    [DataRow("decision")]
+    [DataRow("run")]
+    [DataRow("source")]
+    public async Task EvidenceRefreshNeverOverwritesConcurrentChanges(string change)
+    {
+        _analyzer.Status = "expired";
+        _reader.Locks = [new("https://example.test/proof", 50, false) {BlockId = "proof", ContextText = "proof"}];
+        var id = await Add(source: PostParserSource.SoulPlus);
+        await Dispatch(); await Execute((await TaskState(id)).WorkflowRunId!.Value);
+        await using var scope = _services.CreateAsyncScope();
+        var workflow = scope.ServiceProvider.GetRequiredService<PostParserWorkflowService<BakabaseDbContext>>();
+        var view = await workflow.GetContentReadinessAsync(id);
+        _reader.Hold = true;
+        _reader.Entered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        var refresh = workflow.RefreshContentReadinessAsync(id, RefreshInput(view));
+        await _reader.Entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        try
+        {
+            await using var other = _services.CreateAsyncScope();
+            if (change == "decision")
+                await other.ServiceProvider.GetRequiredService<PostParserWorkflowService<BakabaseDbContext>>().ConfirmContentReadinessAsync(id, new()
+                {
+                    Revision = view.Revision, WorkflowRunId = view.WorkflowRunId,
+                    ExpectedContentFingerprint = view.ContentFingerprint!, ExpectedDecisionVersion = view.DecisionVersion,
+                    NotRequiredBlockIds = ["proof"], Reason = "Confirmed while the read was in flight"
+                });
+            else if (change == "run")
+                await other.ServiceProvider.GetRequiredService<BakabaseDbContext>().WorkflowRuns.Where(r => r.Id == view.WorkflowRunId)
+                    .ExecuteUpdateAsync(s => s.SetProperty(r => r.Status, WorkflowRunStatus.Running));
+            else
+                await other.ServiceProvider.GetRequiredService<BakabaseDbContext>().PostParserTasks.Where(t => t.Id == id)
+                    .ExecuteUpdateAsync(s => s.SetProperty(t => t.Link, "https://example.test/changed-post"));
+        }
+        finally { _reader.Release.TrySetResult(); }
+        await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => refresh);
+        var after = await workflow.GetContentReadinessAsync(id);
+        Assert.AreEqual(change == "decision" ? "manual" : null, after.Basis);
+        Assert.AreEqual(change == "decision" ? 1 : 0, after.History.Count);
+        Assert.AreEqual(view.ContentFingerprint, after.ContentFingerprint);
+        Assert.AreEqual(0, _purchaser.Purchases);
+    }
+
+    [DataTestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task FailedOrCancelledEvidenceRefreshPreservesTheSavedSnapshot(bool cancel)
+    {
+        _analyzer.Status = "expired";
+        _reader.Locks = [new("https://example.test/proof", 50, false)];
+        var id = await Add(source: PostParserSource.SoulPlus);
+        await Dispatch(); await Execute((await TaskState(id)).WorkflowRunId!.Value);
+        await using var scope = _services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<BakabaseDbContext>();
+        var workflow = scope.ServiceProvider.GetRequiredService<PostParserWorkflowService<BakabaseDbContext>>();
+        var view = await workflow.GetContentReadinessAsync(id);
+        var before = await db.PostParserTasks.AsNoTracking().SingleAsync(t => t.Id == id);
+        using var cts = new CancellationTokenSource();
+        _reader.OnRead = _ => { if (cancel) cts.Cancel(); else throw new InvalidOperationException("reader failure"); };
+        if (cancel) await Assert.ThrowsExceptionAsync<OperationCanceledException>(() => workflow.RefreshContentReadinessAsync(id, RefreshInput(view), cts.Token));
+        else await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => workflow.RefreshContentReadinessAsync(id, RefreshInput(view), cts.Token));
+        var after = await db.PostParserTasks.AsNoTracking().SingleAsync(t => t.Id == id);
+        Assert.AreEqual(before.ContentSnapshotJson, after.ContentSnapshotJson);
+        Assert.AreEqual(before.ContentReadinessJson, after.ContentReadinessJson);
+        Assert.AreEqual(before.Results, after.Results);
+        Assert.AreEqual(0, _purchaser.Purchases);
+    }
+
+    [TestMethod]
+    public async Task EvidenceRefreshIgnoresVolatileFieldsAndStaleResultsStayBlockedUntilSuccessfulExtraction()
+    {
+        var id = await Add(source: PostParserSource.SoulPlus);
+        await Dispatch(); await Execute((await TaskState(id)).WorkflowRunId!.Value);
+        await using var scope = _services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<BakabaseDbContext>();
+        var workflow = scope.ServiceProvider.GetRequiredService<PostParserWorkflowService<BakabaseDbContext>>();
+        var view = await workflow.GetContentReadinessAsync(id);
+        _reader.Balance++;
+        _reader.CapturedAt = DateTimeOffset.UtcNow;
+        var unchanged = await workflow.RefreshContentReadinessAsync(id, RefreshInput(view));
+        Assert.AreEqual(view.ContentFingerprint, unchanged.ContentFingerprint);
+        Assert.IsFalse(unchanged.ParsedResultMayBeStale);
+        _reader.MainHtml = "changed resource credentials";
+        var changed = await workflow.RefreshContentReadinessAsync(id, RefreshInput(unchanged));
+        Assert.IsTrue(changed.ParsedResultMayBeStale);
+        var old = await db.PostParserTasks.AsNoTracking().SingleAsync(t => t.Id == id);
+        Assert.IsTrue(PostParserSavedResults.ReadDownloadInfo(old.Results!).IsComplete, "The old output is still available as history.");
+        Assert.ThrowsException<ArgumentException>(() => PostParserSavedResults.ReadDownloadInfo(old));
+        var originalResult = PostParserSavedResults.ReadDownloadInfo(old.Results!);
+        var originalInput = new PostParserInput {TaskId = id, Revision = old.Revision};
+        await workflow.SaveResultAsync(originalInput, old.WorkflowRunId!.Value, originalResult, default);
+        Assert.IsTrue((await workflow.GetContentReadinessAsync(id)).ParsedResultMayBeStale,
+            "A link-check saving an old complete result is not a new extraction.");
+        await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => workflow.SaveResultAsync(originalInput,
+            old.WorkflowRunId.Value, originalResult, default, unchanged.ContentFingerprint));
+        _extractor.FailuresRemaining = 1;
+        await Reparse(id); await Execute((await TaskState(id)).WorkflowRunId!.Value);
+        Assert.IsTrue((await workflow.GetContentReadinessAsync(id)).ParsedResultMayBeStale);
+        await Retry(id); await Execute((await TaskState(id)).WorkflowRunId!.Value);
+        Assert.IsFalse((await workflow.GetContentReadinessAsync(id)).ParsedResultMayBeStale);
+        Assert.IsTrue(PostParserSavedResults.HasCompletedDownloadResult(await db.PostParserTasks.AsNoTracking().SingleAsync(t => t.Id == id)));
+    }
+
+    private static Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.RefreshPostParserContentReadinessInput RefreshInput(
+        Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.PostParserContentReadinessView view) => new()
+    {Revision = view.Revision, WorkflowRunId = view.WorkflowRunId, ExpectedContentFingerprint = view.ContentFingerprint!, ExpectedDecisionVersion = view.DecisionVersion};
+
+    [TestMethod]
+    public async Task EvidenceOptionalBlocksCompleteParsingWithoutPaymentOrAdditionalAiCall()
+    {
+        _reader.Locks = [new("https://example.test/proof", 999999, false)
+            {BlockId = "proof", ContextText = "purchase proof only"}];
+        _analyzer.Decisions = [new() {BlockId = "proof", Relevance = "optional", Purpose = "purchaseProof", Evidence = ["purchase proof"]}];
+        var id = await Add(source: PostParserSource.SoulPlus);
+        await Dispatch(); var task = await TaskState(id); await Execute(task.WorkflowRunId!.Value);
+        Assert.AreEqual(WorkflowRunStatus.Success, (await TaskState(id)).WorkflowStatus);
+        Assert.AreEqual(0, _purchaser.Purchases);
+        Assert.AreEqual(1, _analyzer.Assessments);
+        Assert.IsFalse(_reader.Locks.Single().IsBought);
+        Assert.AreEqual("analysis", (await TaskState(id)).ContentSnapshot!.Readiness!.Basis);
+    }
+
+    [TestMethod]
+    public async Task SuccessfulRequiredPurchaseReassessesFreshAuxiliaryEvidenceWithoutAnotherPaymentRound()
+    {
+        _services.GetRequiredService<IBOptions<SoulPlusOptions>>().Value.AutoBuyThreshold = 10;
+        _services.GetRequiredService<IBOptions<SoulPlusOptions>>().Value.MinimumRemainingCoins = 0;
+        _reader.Locks = [new("https://example.test/credential", 1, false) {BlockId = "credential", ContextText = "download password"},
+            new("https://example.test/proof", 999999, false) {BlockId = "proof", ContextText = "purchase proof only"}];
+        _analyzer.Decisions = [new() {BlockId = "credential", Relevance = "required", Purpose = "downloadCredentials", Evidence = ["download password"]},
+            new() {BlockId = "proof", Relevance = "optional", Purpose = "purchaseProof", Evidence = ["purchase proof"]}];
+        var id = await Add(source: PostParserSource.SoulPlus);
+        await Dispatch(); var task = await TaskState(id); await Execute(task.WorkflowRunId!.Value);
+        Assert.AreEqual(WorkflowRunStatus.Success, (await TaskState(id)).WorkflowStatus);
+        Assert.AreEqual(1, _purchaser.Purchases);
+        Assert.AreEqual(2, _analyzer.Assessments, "Changed readable evidence requires one fresh analysis, never another payment round.");
+        Assert.IsTrue(_reader.Locks.Single(l => l.BlockId == "credential").IsBought);
+        Assert.IsFalse(_reader.Locks.Single(l => l.BlockId == "proof").IsBought);
+    }
+
     private sealed class FakeAvailabilityAnalyzer : IPostAvailabilityAnalyzer
     {
         public string Status = "noExpiryReported";
-        public Task<PostAvailabilityAssessment> AnalyzeAsync(PostContent content, CancellationToken ct = default) =>
-            Task.FromResult(new PostAvailabilityAssessment {Status = Status, Evidence = ["fixture reply"]});
+        public int Assessments;
+        public List<PostContentBlockDecision>? Decisions;
+        public Task<PostAvailabilityAssessment> AnalyzeAsync(PostContent content, CancellationToken ct = default)
+        {
+            Assessments++;
+            return Task.FromResult(new PostAvailabilityAssessment {Status = Status,
+                ContentReadiness = Decisions == null ? null : PostContentReadinessPolicy.FromAnalysis(content, Decisions),
+                Evidence = [Status == "expired" ? "下载链接失效了" : Status == "restored" ? "已经补档了" : "fixture reply"]});
+        }
     }
 
     private sealed class FakeHealthChecker : IPostLinkHealthChecker
@@ -1311,18 +1945,23 @@ public sealed class PostParserWorkflowTests
     private sealed class FakeReader : IPostContentService
     {
         public int Reads;
+        public Action<int>? OnRead;
         public bool Hold;
         public decimal? Balance = 100;
+        public DateTimeOffset? CapturedAt;
+        public string MainHtml = "shared content";
+        public string? SourceUrl;
         public List<PostContentLock> Locks = [];
         public TaskCompletionSource Entered = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource Release = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public bool CanRead(string reference, string? sourceHint = null) => true;
         public async Task<PostContent> ReadAsync(string reference, string? sourceHint = null, CancellationToken ct = default)
         {
-            Interlocked.Increment(ref Reads);
+            var count = Interlocked.Increment(ref Reads);
+            OnRead?.Invoke(count);
             Entered.TrySetResult();
             if (Hold) await Release.Task.WaitAsync(ct);
-            return new() {Title = "Post title", MainHtml = "shared content", SourceHint = sourceHint, Locks = Locks.ToList(), Balance = Balance,
+            return new() {Title = "Post title", MainHtml = MainHtml, CapturedAt = CapturedAt, SourceUrl = SourceUrl, SourceHint = sourceHint, Locks = Locks.ToList(), Balance = Balance,
                 Comments = [new() {Id = "reply-2", Floor = "2", Author = "fixture", Html = "reply"}]};
         }
     }
@@ -1348,6 +1987,7 @@ public sealed class PostParserWorkflowTests
     private sealed class FakePurchaser(FakeReader reader) : ISharedContentPurchaser
     {
         public PostParserSource Source => PostParserSource.SoulPlus;
+        public string AccountKey { get; set; } = Guid.NewGuid().ToString();
         public int Purchases;
         public bool Hold;
         public TaskCompletionSource Entered = new(TaskCreationOptions.RunContinuationsAsynchronously);

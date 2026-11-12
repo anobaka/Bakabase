@@ -412,6 +412,18 @@ describe("download task row interaction", () => {
     expect(props.onClick).not.toHaveBeenCalled();
   });
 
+  it("summarizes the exact legacy no-torrent stack and passes the untouched task to error details", async () => {
+    const message =
+      "System.InvalidOperationException: This gallery has no torrent. Direct download fallback is disabled.\n   at Downloader()";
+    const props = await show({ status: DownloadTaskStatus.Failed, failureTimes: 1, message });
+    const button = element("downloader.action.showError");
+    expect(button).toHaveTextContent("downloader.problem.exHentaiNoTorrentLegacy");
+    expect(button).not.toHaveTextContent("System.InvalidOperationException");
+    await click(button);
+    expect(props.onShowError).toHaveBeenCalledWith(expect.objectContaining({ message }));
+    expect(props.onStart).not.toHaveBeenCalled();
+  });
+
   it.each([0, undefined])("does not invent a failure count when it is %s", async (failureTimes) => {
     await show({
       status: DownloadTaskStatus.Failed,

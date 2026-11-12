@@ -29,3 +29,13 @@ describe("workflow source integration coverage", () => {
     }
   });
 });
+
+
+it("registers the generated delivery review with its shared recovery UI", () => {
+  const registry = readFileSync(resolve(__dirname, "../Activities/index.ts"), "utf8");
+  expect(registry).toContain('[AssessDeliveryUI.kind]: AssessDeliveryUI');
+  const activity = readFileSync(resolve(__dirname, "../Activities/AssessDelivery.tsx"), "utf8");
+  expect(activity).toContain('kind: "fs.assessDelivery"');
+  expect(activity).toContain('displayNameKey: "workflow.activity.fsAssessDelivery.name"');
+  expect(activity).toContain('ProcessFileArtifactsUI.ResumeForm');
+});

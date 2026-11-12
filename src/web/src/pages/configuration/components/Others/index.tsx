@@ -13,8 +13,9 @@ import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContext
 import { useNetworkOptionsStore, useAppOptionsStore } from "@/stores/options";
 import SettingsSection from "@/pages/configuration/components/SettingsSection";
 import ProxyTestModal from "@/pages/configuration/components/Others/ProxyTestModal";
-
 import ProxySelector, { ProxyMode } from "@/components/ProxySelector";
+import DownloadToolProxies from "./DownloadToolProxies";
+import { DownloadToolProxyTargets } from "@/sdk/constants";
 
 interface OthersProps {
   applyPatches: <T>(
@@ -23,9 +24,10 @@ interface OthersProps {
     success?: (rsp: unknown) => void,
   ) => void;
   query?: string;
+  group?: "all" | "network" | "advanced";
 }
 
-const Others: React.FC<OthersProps> = ({ applyPatches, query }) => {
+const Others: React.FC<OthersProps> = ({ applyPatches, query, group = "all" }) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
@@ -97,11 +99,11 @@ const Others: React.FC<OthersProps> = ({ applyPatches, query }) => {
       keywords: ["network", "socks", "http proxy", "代理", "网络"],
       render: () => {
         return (
-          <div className="flex items-center gap-2">
-            <div style={{ width: 300 }}>
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <div className="w-full min-w-0 sm:max-w-[300px]">
               <ProxySelector
-                value={networkOptions?.proxy}
                 customProxies={networkOptions.customProxies}
+                value={networkOptions?.proxy}
                 onChange={(proxy) => {
                   if (!proxy) return;
                   BApi.options.patchNetworkOptions({ proxy }).then((response) => {
@@ -149,6 +151,7 @@ const Others: React.FC<OthersProps> = ({ applyPatches, query }) => {
               <>
                 <Button
                   isIconOnly
+                  aria-label={t("common.action.edit")}
                   size="sm"
                   variant="light"
                   onPress={() => openProxyEditor(selectedCustomProxy)}
@@ -157,6 +160,7 @@ const Others: React.FC<OthersProps> = ({ applyPatches, query }) => {
                 </Button>
                 <Button
                   isIconOnly
+                  aria-label={t("common.action.delete")}
                   color="danger"
                   size="sm"
                   variant="light"
@@ -164,10 +168,22 @@ const Others: React.FC<OthersProps> = ({ applyPatches, query }) => {
                     const remaining = (networkOptions.customProxies ?? []).filter(
                       (c) => c.id !== selectedCustomProxy.id,
                     );
+                    const toolOverrides = networkOptions.downloadToolProxies ?? {};
+                    const downloadToolProxies = Object.fromEntries(
+                      Object.entries(toolOverrides).filter(
+                        ([, proxy]) =>
+                          proxy?.mode !== ProxyMode.UseCustom ||
+                          proxy.customProxyId !== selectedCustomProxy.id,
+                      ),
+                    );
 
                     await BApi.options.patchNetworkOptions({
                       customProxies: remaining,
                       proxy: { mode: ProxyMode.DoNotUse, customProxyId: undefined },
+                      ...(Object.keys(downloadToolProxies).length !==
+                      Object.keys(toolOverrides).length
+                        ? { downloadToolProxies }
+                        : {}),
                     });
                     toast.success(t("common.success.saved"));
                   }}
@@ -179,6 +195,19 @@ const Others: React.FC<OthersProps> = ({ applyPatches, query }) => {
           </div>
         );
       },
+    },
+    {
+      id: "downloadToolProxies",
+      label: t("configuration.downloadTools.proxy.label"),
+      tip: t("configuration.downloadTools.proxy.description"),
+      keywords: [
+        "download tools",
+        "proxy",
+        "下载工具",
+        "代理",
+        ...DownloadToolProxyTargets.map((target) => target.name),
+      ],
+      render: () => <DownloadToolProxies />,
     },
     {
       id: "enableTracking",
@@ -232,10 +261,28 @@ const Others: React.FC<OthersProps> = ({ applyPatches, query }) => {
   return (
     <>
       <SettingsSection
-        items={otherSettings}
-        keywords={["misc", "miscellaneous", "其他"]}
+        items={otherSettings.filter(
+          (item) =>
+            group === "all" ||
+            (group === "network"
+              ? item.id === "proxy" || item.id === "downloadToolProxies"
+              : item.id !== "proxy" && item.id !== "downloadToolProxies"),
+        )}
+        keywords={
+          group === "network"
+            ? ["network", "proxy", "代理", "网络"]
+            : group === "advanced"
+              ? ["advanced", "高级"]
+              : ["misc", "miscellaneous", "其他"]
+        }
         query={query}
-        title={t("configuration.others.title")}
+        title={t(
+          group === "network"
+            ? "configuration.others.networkTitle"
+            : group === "advanced"
+              ? "configuration.others.advancedTitle"
+              : "configuration.others.title",
+        )}
       />
     </>
   );

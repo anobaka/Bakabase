@@ -7,5 +7,6 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Bakabase.Modules.AI\Bakabase.Modules.AI.csproj" />
+    <ProjectReference Include="..\Bakabase.Modules.Workflow\Bakabase.Modules.Workflow.csproj" />
   </ItemGroup>
 </Project>

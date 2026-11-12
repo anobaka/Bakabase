@@ -6,17 +6,22 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Tasks;
+using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business;
 using Bakabase.Modules.Workflow.Abstractions.Components;
 using Bakabase.Modules.Workflow.Abstractions.Models.Db;
+using Bakabase.Modules.Workflow.Abstractions.Models.Domain;
+using Bakabase.Modules.Workflow.Extensions;
+using Bakabase.Modules.Workflow.Services;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Workflow.Abstractions.Models.Input;
 using Bakabase.Modules.Workflow.Abstractions.Services;
 using Bakabase.Modules.Workflow.Components;
 using Bakabase.Service.Components.Workflow;
+using Bakabase.Service.Controllers;
 using Bakabase.Service.Components.Workflow.Fs;
 using Bakabase.Service.Components.Workflow.Text;
 using Bakabase.TestKit.Utils;
@@ -47,27 +52,54 @@ public sealed class WorkflowSuspensionTests
     {
         public const string ActivityKind = "action.test.waitForWord";
         public static readonly List<string> Calls = [];
+        public static readonly List<string?> ResumePrompts = [];
 
         public string Kind => ActivityKind;
         public string DisplayName => "Wait for a word (test)";
         public WorkflowActivityCategory Category => WorkflowActivityCategory.Action;
         public string Group => "test";
 
-        public Task<WorkflowItemOutcome> ProcessItemAsync(WorkflowExecutionContext ctx, object item,
+        public async Task<WorkflowItemOutcome> ProcessItemAsync(WorkflowExecutionContext ctx, object item,
             CancellationToken ct)
         {
             Calls.Add($"process:{((FsEntryItem) item).WorkingName}");
-            return Task.FromResult(WorkflowItemOutcome.Suspend(
-                new WorkflowSuspension("test.waitingForWord", """{"ask":"word"}""", item)));
+            await ctx.ReportOutputMetadata([new() {Kind = "scalar", Key = "state", Value = "awaiting"}]);
+            return WorkflowItemOutcome.Suspend(
+                new WorkflowSuspension("test.waitingForWord", """{"ask":"word"}""", item));
         }
 
-        public Task<WorkflowItemOutcome> ResumeAsync(WorkflowExecutionContext ctx, object item, string signalJson,
+        public async Task<WorkflowItemOutcome> ResumeAsync(WorkflowExecutionContext ctx, object item, string signalJson,
             CancellationToken ct)
         {
             var entry = (FsEntryItem) item;
+            ResumePrompts.Add(ctx.ResumePromptJson);
             Calls.Add($"resume:{entry.WorkingName}");
             var word = JsonDocument.Parse(signalJson).RootElement.GetProperty("word").GetString()!;
-            return Task.FromResult(WorkflowItemOutcome.ReplaceWith(entry with {WorkingName = word}));
+            await ctx.ReportOutputMetadata([new() {Kind = "scalar", Key = "state", Value = "answered"}]);
+            return WorkflowItemOutcome.ReplaceWith(entry with {WorkingName = word});
+        }
+    }
+
+    private sealed class MutableMetadataItem : IWorkflowOutputMetadata
+    {
+        public string Value { get; set; } = "before";
+        public IReadOnlyList<WorkflowOutputBlock> GetWorkflowOutputMetadata(string activityKind) =>
+            [new() {Kind = "scalar", Key = "state", Value = Value}];
+    }
+
+    private sealed class MetadataMutationActivity : IWorkflowActivity
+    {
+        public string Kind => "action.test.metadataMutation";
+        public string DisplayName => "Metadata mutation";
+        public WorkflowActivityCategory Category => WorkflowActivityCategory.Action;
+        public string Group => "test";
+        public Task<WorkflowItemOutcome> ProcessItemAsync(WorkflowExecutionContext ctx, object item, CancellationToken ct)
+        {
+            Assert.IsNull(ctx.ResumePromptJson, "A downstream activity cannot use the resumed step's authority.");
+            if (item is not MutableMetadataItem projected)
+                return Task.FromResult(WorkflowItemOutcome.ReplaceWith(new MutableMetadataItem()));
+            projected.Value = "after";
+            return Task.FromResult(WorkflowItemOutcome.ReplaceWith(projected));
         }
     }
 
@@ -87,14 +119,39 @@ public sealed class WorkflowSuspensionTests
                 new WorkflowSuspension("test.waitingForever", null, item)));
     }
 
+    private sealed class ReportingFailureActivity : IWorkflowActivity
+    {
+        public string Kind => "action.test.reportingFailure";
+        public string DisplayName => "Reporting failure";
+        public WorkflowActivityCategory Category => WorkflowActivityCategory.Action;
+        public string Group => "test";
+        public async Task<WorkflowItemOutcome> ProcessItemAsync(WorkflowExecutionContext ctx, object item, CancellationToken ct)
+        {
+            await ctx.ReportOutputMetadata([new() {Kind = "task", Key = "partial", TaskKind = "download", TaskId = "site:42"}]);
+            if (ctx.GetConfig<JsonElement>().TryGetProperty("cancel", out var cancel) && cancel.GetBoolean())
+                throw new OperationCanceledException();
+            if (ctx.GetConfig<JsonElement>().TryGetProperty("storage", out var storage))
+                throw storage.GetString() switch
+                {
+                    "typed" => new LocalStorageException("LOCAL_STORAGE_RESERVE_LOW"),
+                    "os" => new IOException("SECRET_PATH", unchecked((int)0x80070070)),
+                    _ => new IOException("Network failed; the text LOCAL_STORAGE_FULL is not an OS capacity code.")
+                };
+            throw new InvalidOperationException("password=secret-canary");
+        }
+    }
+
     [TestInitialize]
     public async Task Setup()
     {
         WaitForWordActivity.Calls.Clear();
+        WaitForWordActivity.ResumePrompts.Clear();
         _sp = await TestServiceBuilder.BuildServiceProvider(services =>
         {
             services.AddSingleton<IWorkflowActivity, WaitForWordActivity>();
             services.AddSingleton<IWorkflowActivity, NonResumableWaitActivity>();
+            services.AddSingleton<IWorkflowActivity, ReportingFailureActivity>();
+            services.AddSingleton<IWorkflowActivity, MetadataMutationActivity>();
         });
         _root = Path.Combine(Path.GetTempPath(), $"BakabaseSuspend_{Guid.NewGuid():N}");
         Directory.CreateDirectory(_root);
@@ -166,7 +223,7 @@ public sealed class WorkflowSuspensionTests
     {
         await using var scope = _sp.CreateAsyncScope();
         return await scope.ServiceProvider.GetRequiredService<BakabaseDbContext>()
-            .Set<WorkflowRunDbModel>().AsNoTracking().FirstAsync(r => r.Id == runId);
+            .Set<WorkflowRunDbModel>().AsNoTracking().Include(r => r.NodeExecutions).FirstAsync(r => r.Id == runId);
     }
 
     private async Task Resume(int runId, string signalJson)
@@ -179,6 +236,35 @@ public sealed class WorkflowSuspensionTests
     /// The whole cycle on a single-item run: suspend at the second step, park with a cursor, and
     /// come back into that same step's <c>ResumeAsync</c> rather than starting over.
     /// </summary>
+    [TestMethod]
+    public async Task ResumeAuthorityIsConsumedBeforeTheDownstreamActivity()
+    {
+        File.WriteAllText(Path.Combine(_root, "input.txt"), "");
+        var id = await StartRun(ScanFilterJson(), Activity(WaitForWordActivity.ActivityKind),
+            Activity("action.test.metadataMutation"));
+        await Execute(id);
+        await Resume(id, """{"word":"continued.txt"}""");
+        await Execute(id);
+        var run = await Run(id);
+        Assert.AreEqual(WorkflowRunStatus.Success, run.Status, run.ErrorMessage);
+        Assert.AreEqual("""{"ask":"word"}""", WaitForWordActivity.ResumePrompts.Single());
+    }
+
+    [TestMethod]
+    public async Task NodeInputProjectionIsPersistedBeforeInPlaceMutation()
+    {
+        File.WriteAllText(Path.Combine(_root, "input.txt"), "");
+        var id = await StartRun(ScanFilterJson(), Activity("action.test.metadataMutation"),
+            Activity("action.test.metadataMutation"));
+        await Execute(id);
+        var run = await Run(id);
+        Assert.AreEqual(WorkflowRunStatus.Success, run.Status, run.ErrorMessage);
+        var nodes = run.NodeExecutions.OrderBy(n => n.StepIndex).ToArray();
+        Assert.IsNull(nodes[0].InputsJson, "Inputs without an explicit projection remain unknown.");
+        Assert.AreEqual("before", nodes[1].ToDomainModel().Inputs.Single().Value);
+        Assert.AreEqual("after", nodes[1].ToDomainModel().Outputs.Single().Value);
+    }
+
     [TestMethod]
     public async Task SingleItemRun_SuspendsAtStepTwo_ThenResumesIntoThatStepAndFinishes()
     {
@@ -209,10 +295,20 @@ public sealed class WorkflowSuspensionTests
         await Execute(runId);
 
         var done = await Run(runId);
+        Assert.AreEqual("""{"ask":"word"}""", WaitForWordActivity.ResumePrompts.Single());
         Assert.AreEqual(WorkflowRunStatus.Success, done.Status, done.ErrorMessage);
         Assert.IsNull(done.CurrentStepIndex, "a finished run keeps no cursor");
         Assert.IsNull(done.CurrentItemJson);
         Assert.IsNull(done.WaitReason);
+        var attempts = done.NodeExecutions.OrderBy(n => n.Id).ToList();
+        CollectionAssert.AreEqual(new[] {"succeeded", "waiting", "succeeded", "succeeded"}, attempts.Select(n => n.Status).ToArray());
+        Assert.AreEqual(attempts[1].NodeId, attempts[2].NodeId);
+        Assert.AreEqual(1, attempts[1].Attempt);
+        Assert.AreEqual(2, attempts[2].Attempt);
+        Assert.AreEqual("signal", attempts[2].ResumeKind);
+        Assert.AreEqual("awaiting", attempts[1].ToDomainModel().Outputs.Single().Value);
+        Assert.AreEqual("answered", attempts[2].ToDomainModel().Outputs.Single().Value);
+        CollectionAssert.AreEqual(new[] {0, 1, 2}, done.ToDomainModel().StepStats.Select(s => s.StepIndex).ToArray());
 
         CollectionAssert.AreEqual(
             new[] {"process:raw.mkv", "resume:raw.mkv"},
@@ -223,6 +319,100 @@ public sealed class WorkflowSuspensionTests
         var plan = await scope.ServiceProvider.GetRequiredService<IFileRenameEntryService>().GetByRunId(runId);
         Assert.AreEqual("clean.mkv", plan.Single().To,
             "the rename step downstream of the wait saw the item the signal produced");
+    }
+
+    [TestMethod]
+    public async Task WaitingRunDetailSearchAndSourceHistoryUseItsRecordedKindWithoutLiveTaskOrCurrentDefinition()
+    {
+        File.WriteAllText(Path.Combine(_root, "input.txt"), "");
+        var id = await StartRun(ScanFilterJson(), Activity(WaitForWordActivity.ActivityKind));
+        await Execute(id);
+        var waiting = await Run(id);
+        Assert.AreEqual(WorkflowRunStatus.Waiting, waiting.Status);
+
+        await using var scope = _sp.CreateAsyncScope();
+        var services = scope.ServiceProvider;
+        var db = services.GetRequiredService<BakabaseDbContext>();
+        db.Set<WorkflowRunSourceDbModel>().Add(new()
+            {WorkflowRunId = id, Module = "fixture", EntityKind = "input", EntityId = "waiting"});
+        await db.SaveChangesAsync();
+        // Deliberately change only this fixture's live definition after execution. All read
+        // surfaces must still display the actual persisted node, not this replacement kind.
+        await db.Set<WorkflowActivityDbModel>().Where(a => a.WorkflowDefinitionId == waiting.WorkflowDefinitionId)
+            .ExecuteUpdateAsync(s => s.SetProperty(a => a.Kind, "different.current.definition"));
+        var controller = ActivatorUtilities.CreateInstance<WorkflowController>(services);
+        var detail = await controller.GetRun(id, db, services.GetRequiredService<BTaskManager>(), default);
+        Assert.AreEqual(WaitForWordActivity.ActivityKind, detail.Data!.ActivityKind);
+        var search = await controller.SearchRuns(waiting.WorkflowDefinitionId, new());
+        Assert.AreEqual(WaitForWordActivity.ActivityKind, search.Data!.Single().ActivityKind);
+        // This filesystem fixture has no downloader projection; the source-history query
+        // therefore needs no site download service or external provider dependencies.
+        var sources = new WorkflowSourcesController(db,
+            services.GetRequiredService<WorkflowSourceIndex<BakabaseDbContext>>(), [],
+            services.GetRequiredService<BTaskManager>(), null!);
+        var history = await sources.Query(new() {Sources = [new("fixture", "input", "waiting")]}, default);
+        Assert.AreEqual(WaitForWordActivity.ActivityKind, history.Data!.Single().Runs.Single().Run.ActivityKind);
+    }
+
+    [DataTestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task FailedAndCancelledAttemptsRetainExplicitSafePartialOutputs(bool cancel)
+    {
+        File.WriteAllText(Path.Combine(_root, "input.txt"), "");
+        var id = await StartRun(ScanFilterJson(), Activity("action.test.reportingFailure", new {cancel}));
+        if (cancel) await Assert.ThrowsExceptionAsync<OperationCanceledException>(() => Execute(id));
+        else await Execute(id);
+        var run = await Run(id);
+        var node = run.NodeExecutions.Single();
+        Assert.AreEqual(cancel ? "cancelled" : "failed", node.Status);
+        Assert.IsNotNull(node.CompletedAt);
+        Assert.IsTrue(node.ToDomainModel().Outputs.Any(b => b.TaskId == "site:42"));
+        Assert.IsFalse(node.OutputsJson.Contains("secret-canary"));
+    }
+
+    [DataTestMethod]
+    [DataRow("typed", "LOCAL_STORAGE_RESERVE_LOW")]
+    [DataRow("os", "LOCAL_STORAGE_FULL")]
+    [DataRow("network", "WORKFLOW_ACTIVITY_FAILED")]
+    public async Task StorageFailureMetadataUsesOnlyTypedOrOsEvidence(string storage, string expected)
+    {
+        File.WriteAllText(Path.Combine(_root, "input.txt"), "");
+        var id = await StartRun(ScanFilterJson(), Activity("action.test.reportingFailure", new {storage}));
+        await Execute(id);
+        var run = await Run(id);
+        Assert.AreEqual(WorkflowRunStatus.Failed, run.Status);
+        var node = run.NodeExecutions.Single();
+        Assert.AreEqual(expected, node.ToDomainModel().Outputs.Single(b => b.Key == "activity-failed").Code);
+        Assert.IsFalse(node.OutputsJson.Contains("SECRET_PATH"));
+    }
+
+    [TestMethod]
+    public async Task ProcessRestartEndsOldAttemptAndCheckpointStartsAnotherWithoutReplayingUpstream()
+    {
+        File.WriteAllText(Path.Combine(_root, "input.txt"), "");
+        var id = await StartRun(ScanFilterJson(),
+            Activity(TextWorkflowKinds.TransformCapture, new {pattern = @"^(?<stem>[^.]+)"}),
+            Activity(WaitForWordActivity.ActivityKind));
+        await Execute(id);
+        await using (var scope = _sp.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<BakabaseDbContext>();
+            var run = await db.WorkflowRuns.Include(r => r.NodeExecutions).SingleAsync(r => r.Id == id);
+            run.Status = WorkflowRunStatus.Running;
+            var unfinished = run.NodeExecutions.Single(n => n.StepIndex == 1);
+            unfinished.Status = "running";
+            unfinished.CompletedAt = null;
+            await db.SaveChangesAsync();
+            await scope.ServiceProvider.GetRequiredService<WorkflowRunRehydrator<BakabaseDbContext>>().MarkInterruptedRunsAsync();
+        }
+        await Execute(id);
+        var result = await Run(id);
+        var nodes = result.NodeExecutions.OrderBy(n => n.Id).ToList();
+        CollectionAssert.AreEqual(new[] {"succeeded", "interrupted", "waiting"}, nodes.Select(n => n.Status).ToArray());
+        Assert.AreEqual(2, nodes[2].Attempt);
+        Assert.AreEqual("checkpoint", nodes[2].ResumeKind);
+        Assert.AreEqual(1, result.ToDomainModel().StepStats.Count);
     }
 
     /// <summary>

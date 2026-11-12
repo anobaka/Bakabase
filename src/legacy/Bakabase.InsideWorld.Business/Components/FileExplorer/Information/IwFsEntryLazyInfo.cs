@@ -123,7 +123,9 @@ namespace Bakabase.InsideWorld.Business.Components.FileExplorer.Information
 
             try
             {
-                Size = fileSystemInfo is FileInfo f ? f.Length : null;
+                // A known media/archive type still refers to a regular file. Returning null
+                // here used to erase the size supplied by the directory listing.
+                Size = IwFsEntry.ReadFileSize(path, type);
             }
             catch (Exception)
             {

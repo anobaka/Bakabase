@@ -44,7 +44,7 @@ public class ExHentaiDownloaderHelper(
         foreach (var task in tasks)
         {
             task.Options = ApplyDefaultTaskOptions(task.Options, preferTorrentDefault, resultWorkflowDefault,
-                defaults.DownloadMode, defaults.SaveTorrentFile, defaults.FallbackToDirect);
+                defaults.DownloadMode, defaults.SaveTorrentFile, defaults.FallbackToDirect, defaults.NoTorrentAction);
         }
 
         return tasks;
@@ -53,7 +53,7 @@ public class ExHentaiDownloaderHelper(
     // Freeze the global PreferTorrent default onto the task at creation; an explicit per-task value is kept.
     internal static string ApplyDefaultTaskOptions(string? rawOptions, bool preferTorrentDefault, int? resultWorkflowDefault,
         ExHentaiDownloadMode? downloadModeDefault = null, bool saveTorrentFileDefault = false,
-        bool fallbackToDirectDefault = true)
+        bool fallbackToDirectDefault = true, ExHentaiNoTorrentAction? noTorrentActionDefault = null)
     {
         ExHentaiTaskOptionsPatch? patch = null;
         if (!string.IsNullOrWhiteSpace(rawOptions))
@@ -70,12 +70,25 @@ public class ExHentaiDownloaderHelper(
 
         var resultWorkflowId = patch?.DownloadResultWorkflowSpecified == true
             ? patch.DownloadResultWorkflowId : resultWorkflowDefault;
+        var explicitLegacySeedOnly = patch?.NoTorrentAction == null &&
+            (patch?.DownloadMode == ExHentaiDownloadMode.TorrentFile ||
+             patch?.DownloadMode == null && patch?.PreferTorrent == true);
         var options = new ExHentaiTaskOptions
         {
             PreferTorrent = patch?.PreferTorrent ?? preferTorrentDefault,
-            DownloadMode = patch?.DownloadMode ?? (patch?.PreferTorrent.HasValue == true ? null : downloadModeDefault),
+            // Creation alone adopts the new default. Existing rows are read directly and keep
+            // their legacy nullable mode and no-torrent behavior until explicitly edited.
+            DownloadMode = patch?.DownloadMode ?? (patch?.PreferTorrent.HasValue == true
+                ? patch.PreferTorrent.Value
+                    ? explicitLegacySeedOnly ? ExHentaiDownloadMode.TorrentFile : ExHentaiDownloadMode.Torrent
+                    : ExHentaiDownloadMode.Direct
+                : downloadModeDefault ?? (preferTorrentDefault ? ExHentaiDownloadMode.Torrent : ExHentaiDownloadMode.Direct)),
             SaveTorrentFile = patch?.SaveTorrentFile ?? saveTorrentFileDefault,
             FallbackToDirect = patch?.FallbackToDirect ?? fallbackToDirectDefault,
+            // An older client can explicitly forbid fallback without knowing NoTorrentAction.
+            // Preserve that opt-out ahead of newer global defaults; an explicit new policy wins.
+            NoTorrentAction = patch?.NoTorrentAction ?? (patch?.FallbackToDirect == false || explicitLegacySeedOnly
+                ? ExHentaiNoTorrentAction.Fail : noTorrentActionDefault ?? ExHentaiNoTorrentAction.DirectDownload),
             DownloadResultWorkflowId = resultWorkflowId is > 0 ? resultWorkflowId : null,
             // Carried over rather than reset, so re-submitting a task does not throw away a
             // still-valid torrent verdict.

@@ -1,11 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.InsideWorld.Business;
+using Bakabase.InsideWorld.Business.Components.PostParser.Models.Db;
+using Bakabase.Modules.Acquisition.Abstractions.Models.Db;
 using Bakabase.Modules.Bittorrent.Abstractions;
 using Bakabase.Modules.HttpDownloads.Abstractions;
 using Bakabase.Modules.Workflow.Abstractions.Models.Db;
@@ -83,12 +86,38 @@ public class WorkflowRunCleanupTask : AbstractPredefinedBTaskBuilder
             .OrderByDescending(r => r.StartedAt).ThenByDescending(r => r.Id).Skip(retention)
             .Select(r => r.Id).ToListAsync(ct);
 
-    private static IQueryable<WorkflowRunDbModel> Eligible(BakabaseDbContext db, IReadOnlyCollection<int> linkedTransferRuns) =>
-        db.Set<WorkflowRunDbModel>().Where(r =>
+    private static IQueryable<WorkflowRunDbModel> Eligible(BakabaseDbContext db, IReadOnlyCollection<int> linkedTransferRuns)
+    {
+        var parserRuns = OwnedRunIds(db, db.Set<PostParserTaskDbModel>().Where(t => !t.IsDeleted),
+            t => t.WorkflowRunId, t => t.Id.ToString(), "postParser", "task");
+        var acquisitionRuns = OwnedRunIds(db, db.Set<AcquisitionTaskDbModel>(),
+            t => t.WorkflowRunId, t => t.Id.ToString(), "acquisition", "task");
+        return db.Set<WorkflowRunDbModel>().Where(r =>
             (r.Status == WorkflowRunStatus.Success || r.Status == WorkflowRunStatus.Failed ||
              r.Status == WorkflowRunStatus.Cancelled || r.Status == WorkflowRunStatus.Interrupted) &&
+            !parserRuns.Contains(r.Id) && !acquisitionRuns.Contains(r.Id) &&
             !db.DownloadResultProcessing.Any(p => p.WorkflowRunId == r.Id) &&
             !db.DownloadResultOwners.Any(o => o.WorkflowRunId == r.Id) && !linkedTransferRuns.Contains(r.Id) &&
             !db.CloudDownloadOperations.Any(o => o.WorkflowRunId == r.Id) &&
             !db.ManagedDownloadTasks.Any(t => t.WorkflowRunId == r.Id));
+    }
+
+    /// <summary>
+    /// Current references preserve legacy runs without a source index; the common source index
+    /// also preserves previous revisions and dynamic plans while their business owner exists.
+    /// A source label alone is not ownership: deleted, missing and unknown owners remain prunable.
+    /// Keep these as database queries so ownership is rechecked in the eventual delete statement.
+    /// </summary>
+    private static IQueryable<int> OwnedRunIds<TOwner>(BakabaseDbContext db, IQueryable<TOwner> owners,
+        Expression<Func<TOwner, int?>> currentRun, Expression<Func<TOwner, string>> sourceId,
+        string module, string entityKind) where TOwner : class
+    {
+        var ownerIds = owners.Select(sourceId);
+        var current = owners.Select(currentRun).Where(id => id != null).Select(id => id!.Value);
+        var history = db.Set<WorkflowRunSourceDbModel>()
+            .Where(source => source.Module == module && source.EntityKind == entityKind &&
+                             ownerIds.Contains(source.EntityId))
+            .Select(source => source.WorkflowRunId);
+        return current.Union(history);
+    }
 }

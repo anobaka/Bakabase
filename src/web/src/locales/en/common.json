@@ -353,6 +353,8 @@
   "aigc.runStatus.6": "Cancelled",
   "menu.system": "System",
   "menu.configuration": "Configuration",
+  "menu.dependencies": "Dependencies",
+  "dependency.ffmpeg.required": "This feature requires FFmpeg.",
   "menu.dataSync": "Data sync",
   "menu.thirdParty": "Third Party Config",
   "menu.backgroundTask": "Background Task",

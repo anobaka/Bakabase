@@ -14,6 +14,7 @@ using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions;
 using Bakabase.InsideWorld.Business.Components.Dependency.Discovery;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg.Models;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.SevenZip;
+using Bakabase.InsideWorld.Business.Components.Dependency.Models;
 using Bakabase.InsideWorld.Business.Resources;
 using Bootstrap.Components.Storage;
 using Bootstrap.Components.Tasks;
@@ -35,6 +36,7 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Ff
         public override string Id => "364e3884-4c6f-446f-b72c-1ec84e8da2c2";
         protected override string KeyInLocalizer => "ffmpeg";
         public override bool IsRequired => false;
+        public override IReadOnlyList<DependentComponentTarget> SupportedTargets => DependentComponentPlatforms.FfMpeg;
 
         protected override IDiscoverer Discoverer { get; } = new FfMpegDiscoverer(loggerFactory);
 

@@ -2,6 +2,8 @@ using System;
 using System.Linq;
 using System.Text;
 using Bakabase.Abstractions.Components.Configuration;
+using Bakabase.Abstractions.Components.Network;
+using System.Text.Json;
 using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.Modules.DataSync.Abstractions;
 using Bakabase.Modules.DataSync.Wire;
@@ -34,6 +36,10 @@ namespace Bakabase.Service.Components
             sb.Append(Environment.NewLine);
             sb.Append(GenerateProxyCapableThirdPartyIds());
             sb.Append(Environment.NewLine);
+            sb.Append(GenerateDownloadToolProxyTargets());
+            sb.Append(Environment.NewLine);
+            sb.Append(GenerateCloudDownloadSources());
+            sb.Append(Environment.NewLine);
             sb.Append(GenerateDataSyncConstants());
             return sb.ToString();
         }
@@ -61,6 +67,29 @@ namespace Bakabase.Service.Components
                 $"export const ProxyCapableThirdPartyIds: readonly ThirdPartyId[] = [{nl}" +
                 $"  {string.Join($",{nl}  ", entries)}{nl}" +
                 $"] as const;{nl}";
+        }
+
+        private static string GenerateDownloadToolProxyTargets()
+        {
+            var nl = Environment.NewLine;
+            var entries = JsonSerializer.Serialize(DownloadToolProxyTargets.All, JsonSerializerOptions.Web);
+            return $"export interface DownloadToolProxyTarget {{ id: string; name: string; thirdPartyId?: ThirdPartyId | null; supportedProxySchemes: readonly string[] }}{nl}" +
+                   $"export const DownloadToolProxyTargets: readonly DownloadToolProxyTarget[] = {entries} as const;{nl}";
+        }
+
+        private static string GenerateCloudDownloadSources()
+        {
+            var nl = Environment.NewLine;
+            var entries = JsonSerializer.Serialize(CloudDownloads.CloudSites.Sources, JsonSerializerOptions.Web);
+            var availability = DownloadIntents.DownloadMethodCatalog.Methods.Where(m => m.Availability != null)
+                .Select(m => new {MethodId = m.Id, m.ProviderId, m.Availability!.Status,
+                    ReasonCode = DownloadIntents.DownloadMethodAvailabilityConstraint.ReasonCode, m.Availability.DescriptionKey});
+            return $"export interface CloudDownloadMethod {{ id: string; displayName: string; engineId?: string | null; accountProvider?: string | null; sourceKinds: readonly string[]; dependencyIds: readonly string[]; scope?: string | null }}{nl}" +
+                   $"export interface CloudDownloadSource {{ providerId: string; thirdPartyId: ThirdPartyId; supportsRemote: boolean; dependencyIds: readonly string[]; methods: readonly CloudDownloadMethod[] }}{nl}" +
+                   $"export const CloudDownloadSources: readonly CloudDownloadSource[] = {entries} as const;{nl}" +
+                   $"export interface DownloadMethodAvailabilityInfo {{ methodId: string; providerId: string; status: string; reasonCode: string; descriptionKey: string }}{nl}" +
+                   $"export const DownloadMethodAvailability: readonly DownloadMethodAvailabilityInfo[] = {JsonSerializer.Serialize(availability, JsonSerializerOptions.Web)} as const;{nl}" +
+                   $"export const DownloadSourceProviderIds = {JsonSerializer.Serialize(DownloadIntents.DownloadMethodCatalog.Methods.Select(m => m.ProviderId).Distinct().ToList())} as const;{nl}";
         }
 
         private static string GenerateProxyTestSites()

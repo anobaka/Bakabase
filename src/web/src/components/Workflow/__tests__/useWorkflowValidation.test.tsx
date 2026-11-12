@@ -52,6 +52,7 @@ const workflow = (id: number, extra: Partial<Workflow> = {}): Workflow => ({
   enabled: true,
   isBuiltin: false,
   createdAt: "2026-09-15T00:00:00Z",
+  parameters: [],
   activities: [],
   ...extra,
 });
@@ -83,7 +84,7 @@ function Saved({ definitions }: { definitions: Workflow[] }) {
   return <div>{definitions.map((item) => JSON.stringify(saved.getState(item.id))).join("\n")}</div>;
 }
 function Draft({ kind = "fs.manualScan" }: { kind?: string }) {
-  draft = useDraftWorkflowValidation({ triggerKind: kind, activities: [] });
+  draft = useDraftWorkflowValidation({ triggerKind: kind, parameters: [], activities: [] });
 
   return <div>{JSON.stringify(draft)}</div>;
 }
@@ -256,7 +257,7 @@ describe("draft automatic validation", () => {
     await advance(500);
     expect(draft.failed).toBe(true);
     expect(api.draft).toHaveBeenLastCalledWith(
-      { triggerKind: "fs.manualScan", activities: [] },
+      { triggerKind: "fs.manualScan", activities: [], parameters: [] },
       { signal: expect.any(AbortSignal), showErrorToast: false },
     );
     await act(async () => draft.retry());

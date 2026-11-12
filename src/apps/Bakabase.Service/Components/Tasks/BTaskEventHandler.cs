@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -9,7 +8,6 @@ using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Abstractions.Models.View;
 using Bakabase.InsideWorld.Business.Components.Gui;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Bakabase.Service.Components.Tasks;
@@ -20,10 +18,11 @@ public class BTaskEventHandler : IBTaskEventHandler, IDisposable
     private readonly ITrayIconController? _trayIconController;
     private readonly ILogger<BTaskEventHandler> _logger;
 
-    private readonly ConcurrentDictionary<string, BTaskViewModel> _pendingIncrementalTasks = new();
-    private readonly SemaphoreSlim _allTasksLock = new(1, 1);
-    private IEnumerable<BTaskViewModel>? _pendingAllTasks;
-    private bool _hasAllTasksUpdate;
+    private readonly object _pendingLock = new();
+    private Dictionary<string, BTaskViewModel> _pendingIncrementalTasks = new(StringComparer.Ordinal);
+    private BTaskViewModel[]? _pendingAllTasks;
+    private int _flushing;
+    private bool _disposed;
 
     private readonly Timer _flushTimer;
     private const int FlushIntervalMs = 500;
@@ -32,111 +31,101 @@ public class BTaskEventHandler : IBTaskEventHandler, IDisposable
         IHubContext<WebGuiHub, IWebGuiClient> uiHub,
         ILogger<BTaskEventHandler> logger,
         ITrayIconController? trayIconController = null)
+        : this(uiHub, logger, trayIconController, true) { }
+
+    internal BTaskEventHandler(IHubContext<WebGuiHub, IWebGuiClient> uiHub,
+        ILogger<BTaskEventHandler> logger, ITrayIconController? trayIconController, bool startTimer)
     {
         _uiHub = uiHub;
         _logger = logger;
         _trayIconController = trayIconController;
 
-        _flushTimer = new Timer(FlushPendingEvents, null, FlushIntervalMs, FlushIntervalMs);
+        _flushTimer = new Timer(FlushPendingEvents, null,
+            startTimer ? FlushIntervalMs : Timeout.Infinite, startTimer ? FlushIntervalMs : Timeout.Infinite);
     }
 
-    public async Task OnTaskChange(BTaskViewModel task)
+    public Task OnTaskChange(BTaskViewModel task)
     {
         // logger.LogInformation($"BTask status changed: [{task.Id}]{task.Name} -> {task.Status}", task);
-        _pendingIncrementalTasks[task.Id] = task;
+        lock (_pendingLock)
+            if (!_disposed) _pendingIncrementalTasks[task.Id] = task;
+        return Task.CompletedTask;
     }
 
-    public async Task OnAllTasksChange(IEnumerable<BTaskViewModel> tasks)
+    public Task OnAllTasksChange(IEnumerable<BTaskViewModel> tasks)
     {
-        await _allTasksLock.WaitAsync();
-        try
-        {
-            _pendingAllTasks = tasks;
-            _hasAllTasksUpdate = true;
-        }
-        finally
-        {
-            _allTasksLock.Release();
-        }
+        lock (_pendingLock)
+            if (!_disposed)
+            {
+                _pendingAllTasks = tasks.ToArray();
+                // The complete snapshot supersedes all earlier incremental updates,
+                // including tasks removed from it. Only later updates may overlay it.
+                _pendingIncrementalTasks.Clear();
+            }
+        return Task.CompletedTask;
     }
 
-    public async Task OnTaskManagerStatusChange(bool isRunning)
+    public Task OnTaskManagerStatusChange(bool isRunning)
     {
         _trayIconController?.SetTrayIcon(isRunning);
+        return Task.CompletedTask;
     }
 
-    private async void FlushPendingEvents(object? state)
+    private void FlushPendingEvents(object? state) => _ = FlushPendingEventsAsync();
+
+    internal async Task FlushPendingEventsAsync()
     {
+        // Timer callbacks can overlap while SignalR awaits a slow client. Keep their
+        // sends ordered, so an earlier progress batch cannot arrive after completion.
+        if (Interlocked.CompareExchange(ref _flushing, 1, 0) != 0) return;
+        BTaskViewModel[]? allTasks = null;
+        BTaskViewModel[] incremental = [];
+        var sent = 0;
         try
         {
-            // 处理全量数据更新（优先级更高）
-            bool shouldSendAll = false;
-            IEnumerable<BTaskViewModel>? allTasks = null;
-
-            await _allTasksLock.WaitAsync();
-            try
+            lock (_pendingLock)
             {
-                if (_hasAllTasksUpdate)
+                if (_disposed) return;
+                allTasks = _pendingAllTasks;
+                if (allTasks != null)
                 {
-                    shouldSendAll = true;
-                    allTasks = _pendingAllTasks;
-                    _hasAllTasksUpdate = false;
+                    var latest = allTasks.ToDictionary(t => t.Id, StringComparer.Ordinal);
+                    foreach (var task in _pendingIncrementalTasks.Values) latest[task.Id] = task;
+                    allTasks = latest.Values.ToArray();
                     _pendingAllTasks = null;
                 }
+                else incremental = _pendingIncrementalTasks.Values.ToArray();
+                // Producers now write into a different buffer. Never clear a live
+                // concurrent collection after enumerating it.
+                _pendingIncrementalTasks = new(StringComparer.Ordinal);
             }
-            finally
+            if (allTasks != null)
             {
-                _allTasksLock.Release();
-            }
-
-            if (shouldSendAll && allTasks != null)
-            {
-                // 合并增量更新到全量数据中，因为增量数据可能比全量快照更新
-                // Merge incremental updates into full data, as incremental data may be newer than the snapshot
-                if (!_pendingIncrementalTasks.IsEmpty)
-                {
-                    var taskList = allTasks.ToList();
-                    foreach (var incrementalTask in _pendingIncrementalTasks.Values)
-                    {
-                        var idx = taskList.FindIndex(t => t.Id == incrementalTask.Id);
-                        if (idx >= 0)
-                        {
-                            taskList[idx] = incrementalTask;
-                        }
-                        else
-                        {
-                            taskList.Add(incrementalTask);
-                        }
-                    }
-                    allTasks = taskList;
-                    _pendingIncrementalTasks.Clear();
-                }
-
                 await _uiHub.Clients.All.GetData("BTask", allTasks);
-                return;
             }
-
-            // 处理增量数据更新
-            if (!_pendingIncrementalTasks.IsEmpty)
-            {
-                var tasksToSend = _pendingIncrementalTasks.Values.ToList();
-                _pendingIncrementalTasks.Clear();
-
-                foreach (var task in tasksToSend)
-                {
-                    await _uiHub.Clients.All.GetIncrementalData("BTask", task);
-                }
-            }
+            else for (; sent < incremental.Length; sent++)
+                await _uiHub.Clients.All.GetIncrementalData("BTask", incremental[sent]);
         }
         catch (Exception ex)
         {
+            // Keep an unsent completion/error for the next tick. A newer snapshot or
+            // newer update wins over this retry; never restore stale progress over it.
+            lock (_pendingLock)
+                if (!_disposed && _pendingAllTasks == null)
+                {
+                    if (allTasks != null) _pendingAllTasks = allTasks;
+                    else for (var index = sent; index < incremental.Length; index++)
+                        _pendingIncrementalTasks.TryAdd(incremental[index].Id, incremental[index]);
+                }
             _logger.LogError(ex, "Error flushing pending BTask events");
         }
+        finally { Interlocked.Exchange(ref _flushing, 0); }
     }
 
     public void Dispose()
     {
-        _flushTimer?.Dispose();
-        _allTasksLock?.Dispose();
+        _flushTimer.Dispose();
+        lock (_pendingLock)
+        { _disposed = true; _pendingAllTasks = null; _pendingIncrementalTasks.Clear(); }
     }
 }

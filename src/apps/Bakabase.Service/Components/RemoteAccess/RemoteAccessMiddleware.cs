@@ -121,6 +121,10 @@ namespace Bakabase.Service.Components.RemoteAccess
             if (mode != RemoteAccessMode.Unrestricted &&
                 remoteAccessService.GetRequirePairing() &&
                 auth.Outcome != DeviceAuthOutcome.Authenticated &&
+                // OAuth completion authenticates an owner-created, one-use state in its
+                // broker. Admit only registered callback paths/methods, never the
+                // adjacent provider settings or account administration endpoints.
+                !Bakabase.Service.Components.OAuth.OAuthProviderRegistry.IsCallbackRequest(context.Request) &&
                 !AnonymousPathPrefixes.Any(p => path.StartsWith(p, StringComparison.OrdinalIgnoreCase)))
             {
                 await WriteDenial(context, HttpStatusCode.Unauthorized, RemoteAccessDenialReason.Unauthenticated,

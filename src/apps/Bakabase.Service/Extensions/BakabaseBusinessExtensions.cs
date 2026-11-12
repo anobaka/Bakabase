@@ -226,7 +226,8 @@ namespace Bakabase.Service.Extensions
                     () => sp.GetRequiredService<Bootstrap.Components.Configuration.Abstractions.IBOptions<Bakabase.InsideWorld.Models.Configs.NetworkOptions>>().Value.BtMaxConcurrentDownloads,
                     () => sp.GetRequiredService<Bakabase.Abstractions.Components.Tasks.BTaskManager>().IsShuttingDown,
                     () => sp.GetRequiredService<AppService>().AppDataDirectory,
-                    (job, ct) => sp.GetRequiredService<Components.Downloader.BtDownloadStartupPolicy>().CanResumeAsync(job, ct)));
+                    (job, ct) => sp.GetRequiredService<Components.Downloader.BtDownloadStartupPolicy>().CanResumeAsync(job, ct),
+                    storageWrites: sp.GetRequiredService<Bakabase.Abstractions.Components.FileSystem.IStorageWriteGuard>()));
             services.AddHostedService<Components.Downloader.BtDownloadLifetime>();
             services.AddSingleton<Components.Downloader.HttpDownloadStartupPolicy>();
             services.AddSingleton<Bakabase.Modules.HttpDownloads.Abstractions.IHttpDownloadManager>(sp =>
@@ -235,7 +236,8 @@ namespace Bakabase.Service.Extensions
                     () => AppDataStorage.HttpDownloads.GetPath(sp.GetRequiredService<AppService>().AppDataDirectory),
                     appDataDirectory: () => sp.GetRequiredService<AppService>().AppDataDirectory,
                     canResumeOnStartup: (job, ct) => sp.GetRequiredService<Components.Downloader.HttpDownloadStartupPolicy>()
-                        .CanResumeAsync(job, ct)));
+                        .CanResumeAsync(job, ct),
+                    storageWrites: sp.GetRequiredService<Bakabase.Abstractions.Components.FileSystem.IStorageWriteGuard>()));
             services.AddHostedService<Components.Downloader.HttpDownloadLifetime>();
             services.AddScoped<Components.Downloader.DownloadTaskRegistry>();
             services.AddScoped<Bakabase.Modules.Downloader.Abstractions.IDownloadTaskRegistry>(sp =>
@@ -244,6 +246,7 @@ namespace Bakabase.Service.Extensions
             Components.CloudDownloads.CloudDownloadRegistration.AddCloudDownloads(services);
             services.AddWorkflow<BakabaseDbContext>();
             services.AddAcquisition<BakabaseDbContext>();
+            Components.Acquisition.Planning.AcquisitionPlanRegistration.AddAcquisitionPlanning(services);
             services.AddCollections<BakabaseDbContext>();
             // The app-layer subclass supplies the two things the module deliberately does not know:
             // how to run a resource search, and what is currently being acquired.
@@ -271,6 +274,7 @@ namespace Bakabase.Service.Extensions
             services.AddScoped<Components.Acquisition.PostParserAcquisitionService>();
             services.AddAcquisitionStep<Components.Acquisition.Steps.UnpackStep>();
             services.AddSingleton<Components.FileProcessing.FileProcessingPlanExecutor>();
+            services.AddScoped<Components.FileProcessing.AdaptiveFileProcessingAssessmentService>();
             services.AddSingleton<IWorkflowTrigger, Components.FileProcessing.FileProcessingPlanTrigger>();
             services.AddScoped<Components.FileProcessing.FileProcessingWorkflowSeeder>();
             services.AddAcquisitionStep<Bakabase.Modules.Acquisition.Components.Steps.PickLocalDirectoryStep>();

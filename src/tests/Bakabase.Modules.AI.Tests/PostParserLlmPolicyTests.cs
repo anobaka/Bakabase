@@ -15,6 +15,9 @@ public class PostParserLlmPolicyTests
     [DataRow(200000, 16384, 16384)]
     [DataRow(200000, 2048, 2048)]
     [DataRow(512, 16384, 512)]
+    [DataRow(2048, 4608, 2048)]
+    [DataRow(3000, 8192, 3000)]
+    [DataRow(0, 4608, 4608)]
     [DataRow(200000, 0, 16384)]
     [DataRow(0, 0, 16384)]
     public async Task CapturesActualReasoningAndBudgetJsonWithoutChangingSampling(int configuredLimit, int overrideLimit, int expected)
@@ -65,7 +68,7 @@ public class PostParserLlmPolicyTests
         var harness = new LlmHarness(server.Endpoint);
         var raw = new OpenAIProviderFactory(NullLogger<OpenAIProviderFactory>.Instance)
             .CreateClient(harness.Provider, "qwen-local-test");
-        using var client = PostParserLlmPolicy.ConfigureTransport(raw, harness.Provider, "qwen-local-test");
+        using var client = OpenAIBackgroundCompletion.ConfigureTransport(raw, harness.Provider, "qwen-local-test");
         var options = new ChatOptions();
         PostParserLlmPolicy.ApplyOptions(options, true,
             thinking ? PostParserThinkingMode.Low : PostParserThinkingMode.None);
@@ -108,7 +111,7 @@ public class PostParserLlmPolicyTests
         var harness = new LlmHarness(server.Endpoint);
         var raw = new OpenAIProviderFactory(NullLogger<OpenAIProviderFactory>.Instance)
             .CreateClient(harness.Provider, "qwen-local-test");
-        using var client = PostParserLlmPolicy.ConfigureTransport(raw, harness.Provider, "qwen-local-test");
+        using var client = OpenAIBackgroundCompletion.ConfigureTransport(raw, harness.Provider, "qwen-local-test");
         var customSchema = JsonSerializer.SerializeToElement(new
         {
             type = "object", properties = new { title = new { type = "string" } }, additionalProperties = true
@@ -181,6 +184,8 @@ public class PostParserLlmPolicyTests
     [TestMethod]
     [DataRow("http://127.0.0.1:11435/v1", true)]
     [DataRow("http://localhost:11435/v1", true)]
+    [DataRow("http://host.docker.internal:18181/v1", true)]
+    [DataRow("http://HOST.DOCKER.INTERNAL:18181/v1", true)]
     [DataRow("http://10.1.2.3:11435/v1", true)]
     [DataRow("http://172.16.1.1:11435/v1", true)]
     [DataRow("http://172.31.255.255:11435/v1", true)]
@@ -190,10 +195,13 @@ public class PostParserLlmPolicyTests
     [DataRow("https://dashscope.aliyuncs.com/compatible-mode/v1", false)]
     [DataRow("http://172.32.0.1/v1", false)]
     [DataRow("http://8.8.8.8/v1", false)]
+    [DataRow("http://host.docker.internal.example.org:18181/v1", false)]
+    [DataRow("http://my-local-qwen.internal:18181/v1", false)]
     public void RecognizesOnlyExplicitLocalQwenTargets(string endpoint, bool expected)
     {
-        Assert.AreEqual(expected, PostParserLlmPolicy.UsesLocalQwenTemplate(AiProviderKind.OpenAI, "my-Qwen-model", new Uri(endpoint)));
-        Assert.IsFalse(PostParserLlmPolicy.UsesLocalQwenTemplate(AiProviderKind.Ollama, "qwen", new Uri(endpoint)));
+        Assert.AreEqual(expected, OpenAIBackgroundCompletion.UsesLocalQwenTemplate(AiProviderKind.OpenAI, "my-Qwen-model", new Uri(endpoint)));
+        Assert.IsFalse(OpenAIBackgroundCompletion.UsesLocalQwenTemplate(AiProviderKind.Ollama, "qwen", new Uri(endpoint)));
+        Assert.IsFalse(OpenAIBackgroundCompletion.UsesLocalQwenTemplate(AiProviderKind.OpenAI, "other-model", new Uri(endpoint)));
     }
 
     [TestMethod]
@@ -275,13 +283,13 @@ public class PostParserLlmPolicyTests
     [TestMethod]
     public async Task ConfiguredTransportTimeoutCancelsOnceWithoutRetrying()
     {
-        Assert.AreEqual(TimeSpan.FromMinutes(5), PostParserLlmPolicy.NetworkTimeout);
+        Assert.AreEqual(TimeSpan.FromMinutes(5), OpenAIBackgroundCompletion.NetworkTimeout);
         await using var server = new FakeOpenAiServer();
         var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         server.Respond = async _ => { await release.Task; return (200, FakeOpenAiServer.Completion()); };
         var harness = new LlmHarness(server.Endpoint);
         var raw = new OpenAIProviderFactory(NullLogger<OpenAIProviderFactory>.Instance).CreateClient(harness.Provider, "local-test");
-        using var client = PostParserLlmPolicy.ConfigureTransport(raw, harness.Provider, "local-test", TimeSpan.FromMilliseconds(200));
+        using var client = OpenAIBackgroundCompletion.ConfigureTransport(raw, harness.Provider, "local-test", TimeSpan.FromMilliseconds(200));
         try
         {
             await Assert.ThrowsAsync<OperationCanceledException>(() => client.GetResponseAsync(

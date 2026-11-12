@@ -18,9 +18,10 @@ type Workflow =
 interface Props extends DestroyableProps {
   workflows: Workflow[];
   onChoose: (path: string) => void;
+  triggerKind?: string;
 }
 
-const TemplateLibrary = ({ workflows, onChoose, onDestroyed }: Props) => {
+const TemplateLibrary = ({ workflows, onChoose, onDestroyed, triggerKind }: Props) => {
   const { t } = useTranslation();
   const [visible, setVisible] = useState(true);
   const { data: triggers } = useWorkflowTriggerDescriptors();
@@ -45,7 +46,7 @@ const TemplateLibrary = ({ workflows, onChoose, onDestroyed }: Props) => {
         triggerKind: wf.triggerKind,
         path: `/workflows/editor?id=${wf.id}`,
       })),
-  ];
+  ].filter((entry) => !triggerKind || entry.triggerKind === triggerKind);
 
   return (
     <Modal

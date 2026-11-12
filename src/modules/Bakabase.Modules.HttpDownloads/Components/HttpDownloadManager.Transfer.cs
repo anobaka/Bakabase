@@ -1,3 +1,4 @@
+using Bakabase.Abstractions.Components.FileSystem;
 using System.Security.Cryptography;
 using System.Text;
 using Bakabase.Modules.HttpDownloads.Models;
@@ -16,10 +17,7 @@ public sealed partial class HttpDownloadManager
         RestrictDirectory(staging);
         if (stored.FileName != null && stored.ReadyContentHash != null)
         {
-            var published = Path.Combine(stored.Job.OutputDirectory, stored.FileName);
-            // Publishing intent is saved before the atomic rename. Recover only our verified bytes.
-            if (stored.Publishing && File.Exists(published) && await MatchesReadyFileAsync(published, stored, ct))
-                return published;
+            if (await ReusePublishedAsync(stored, ct) is { } published) return published;
             var prepared = Path.Combine(staging, stored.FileName);
             if (File.Exists(prepared) && await MatchesReadyFileAsync(prepared, stored, ct))
                 return await PublishAsync(stored, prepared, ct);
@@ -35,7 +33,7 @@ public sealed partial class HttpDownloadManager
             FileName = stored.RequestedFileName, HttpClientName = stored.HttpClientName,
             ParallelConnections = stored.ParallelConnections, MaxRetries = stored.MaxRetries,
             MaximumBytesPerSecond = stored.MaximumBytesPerSecond, Timeout = stored.Timeout,
-            AllowOverwrite = false
+            AllowOverwrite = false, WriteContext = WriteContext(stored)
         }, async progress =>
         {
             await _gate.WaitAsync(ct);
@@ -75,6 +73,14 @@ public sealed partial class HttpDownloadManager
         return await PublishAsync(stored, file, ct);
     }
 
+    private static async Task<string?> ReusePublishedAsync(StoredJob stored, CancellationToken ct)
+    {
+        if (!stored.Publishing || stored.FileName == null || stored.ReadyContentHash == null) return null;
+        var published = Path.Combine(stored.Job.OutputDirectory, stored.FileName);
+        // Publishing intent is saved before the atomic rename. Recover only our verified bytes.
+        return File.Exists(published) && await MatchesReadyFileAsync(published, stored, ct) ? published : null;
+    }
+
     private async Task<string> PublishAsync(StoredJob stored, string prepared, CancellationToken ct)
     {
         Directory.CreateDirectory(stored.Job.OutputDirectory);
@@ -87,7 +93,8 @@ public sealed partial class HttpDownloadManager
             await using (var source = File.OpenRead(prepared))
             await using (var destination = new FileStream(temporary, FileMode.Create, FileAccess.Write, FileShare.None))
             {
-                await source.CopyToAsync(destination, ct);
+                if (storageWrites == null) await source.CopyToAsync(destination, ct);
+                else await storageWrites.CopyAsync(source, destination, temporary, WriteContext(stored), ct);
                 await destination.FlushAsync(ct);
                 destination.Flush(true);
             }
@@ -184,6 +191,7 @@ public sealed partial class HttpDownloadManager
     // Network exceptions may embed credential-bearing URLs. Keep endpoint details out of task history.
     private static string SafeError(Exception exception) => exception switch
     {
+        LocalStorageException local => local.Code,
         DestinationExistsException => "The output file already exists. Choose another name or directory.",
         TimeoutException => "The HTTP download timed out. Retry to continue from verified partial files.",
         OperationCanceledException => "The HTTP transfer was interrupted. Retry to continue from verified partial files.",

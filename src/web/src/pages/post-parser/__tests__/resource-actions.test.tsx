@@ -2,11 +2,12 @@ import type { ReactNode } from "react";
 import type { PostParserTask } from "@/core/models/PostParserTask";
 
 import { HeroUIProvider } from "@heroui/react";
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import AddToAcquisitionModal from "../components/AddToAcquisitionModal";
 import LocalProcessingModal from "../components/LocalProcessingModal";
+import { FileSystemSelectorModal } from "@/components/FileSystemSelector";
 
 import { PostParseTarget, PostParserSource } from "@/sdk/constants";
 
@@ -14,18 +15,55 @@ const api = vi.hoisted(() => ({
   import: vi.fn(),
   workflows: vi.fn(),
   runWorkflow: vi.fn(),
+  manualWorkflow: vi.fn(),
+  download: vi.fn(),
+  portal: vi.fn(),
   navigate: vi.fn(),
   openUrl: vi.fn(),
+  browser: vi.fn(),
 }));
 
 vi.mock("@/sdk/BApi", () => ({
   default: {
-    postParser: { importPostParserTaskToAcquisition: api.import },
-    workflow: { searchWorkflows: api.workflows, runWorkflowManually: api.runWorkflow },
+    postParser: { importPostParserTaskToAcquisition: api.import, createPostAcquisitionPlan: api.download },
+    workflow: { searchWorkflows: api.workflows, runWorkflowManually: api.manualWorkflow },
+    downloadIntents: {
+      startPostLocalProcessing: api.runWorkflow,
+      submitPostDownloadIntent: vi.fn(),
+    },
     gui: { openUrlInDefaultBrowser: api.openUrl },
   },
 }));
 vi.mock("react-router-dom", () => ({ useNavigate: () => api.navigate }));
+vi.mock("@/components/ContextProvider/BakabaseContextProvider", () => ({
+  useBakabaseContext: () => ({ createPortal: api.portal }),
+}));
+vi.mock("@/components/FileSystemSelector/components/Modal", () => ({ default: () => null }));
+vi.mock("@/components/FileSystemSelector/components/Panel", () => ({ default: () => null }));
+vi.mock("@/components/Workflow/displayNames", () => ({
+  activityDisplayName: (_: unknown, kind: string) => kind,
+}));
+vi.mock("@/components/Workflow/Activities", () => ({
+  getWorkflowActivityUI: () => ({ parseConfig: JSON.parse, Summary: () => null }),
+}));
+vi.mock("@/components/ThirdPartyIcon", () => ({
+  default: () => <span aria-hidden>site-icon</span>,
+}));
+vi.mock("@/components/ExternalLink", () => ({
+  default: ({ href, children }: any) => <a href={href}>{children}</a>,
+}));
+
+vi.mock("@/components/Workflow/WorkflowBrowserModal", () => ({
+  default: (props: any) => {
+    api.browser(props);
+    return (
+      <div role="dialog" aria-label="related-workflow-browser">
+        <button onClick={props.onClose}>close-workflows</button>
+        <button onClick={props.onChanged}>workflows-changed</button>
+      </div>
+    );
+  },
+}));
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string, options?: { number?: number }) =>
@@ -116,12 +154,121 @@ const show = (content: ReactNode) =>
 beforeEach(() => {
   vi.clearAllMocks();
   api.import.mockResolvedValue({ code: 0, data: { resourceId: 77 } });
-  api.workflows.mockResolvedValue({ code: 0, data: [{ id: 99, name: "Local plan" }] });
+  api.workflows.mockResolvedValue({
+    code: 0,
+    data: [
+      {
+        id: 99,
+        name: "Local plan",
+        triggerKind: "fs.processingPlan",
+        enabled: true,
+        activities: [{ id: 1, order: 0, kind: "acquisition.unpack", configJson: "{}" }],
+      },
+    ],
+  });
   api.runWorkflow.mockResolvedValue({ code: 0, data: { id: 201 } });
 });
 afterEach(cleanup);
 
 describe("deduplicated post resource actions", () => {
+  it("chooses folders and keeps each completed-files switch on its own row without starting downloads", async () => {
+    show(<LocalProcessingModal task={task} />);
+    await waitFor(() => expect(api.workflows).toHaveBeenCalled());
+    const directories = () =>
+      screen.getAllByRole("button", { name: /workflow.processing.chooseDirectory/ });
+    const pickers = () =>
+      screen.getAllByRole("button", { name: /workflow.processing.chooseDirectory/ });
+    for (const [index, toggle] of screen.getAllByRole("switch").entries()) {
+      const row = toggle.closest("label")!.parentElement!;
+      expect(row).toHaveClass("block");
+      expect(row.previousElementSibling).toBe(directories()[index]);
+      expect(row).not.toContainElement(directories()[index]);
+    }
+    expect(screen.queryByRole("textbox")).toBeNull();
+    fireEvent.click(pickers()[0]);
+    expect(api.portal).toHaveBeenLastCalledWith(
+      FileSystemSelectorModal,
+      expect.objectContaining({ targetType: "folder", multiple: false, startPath: undefined }),
+    );
+    act(() => api.portal.mock.lastCall![1].onSelected({ path: "/server/picked-first" }));
+    expect(directories()[0]).toHaveTextContent("/server/picked-first");
+    expect(directories()[0]).toHaveAttribute("title", "/server/picked-first");
+    expect(directories()[1]).toHaveTextContent("workflow.processing.chooseDirectory");
+    expect(screen.queryByText("workflow.processing.binding.noDirectory")).toBeNull();
+    expect(document.querySelector("code")).toBeNull();
+    fireEvent.click(pickers()[1]);
+    act(() => api.portal.mock.lastCall![1].onSelected({ path: "/server/picked-other" }));
+    expect(directories()[1]).toHaveTextContent("/server/picked-other");
+    fireEvent.click(pickers()[0]);
+    expect(api.portal.mock.lastCall![1]).toEqual(
+      expect.objectContaining({
+        startPath: "/server/picked-first",
+        defaultSelectedPath: "/server/picked-first",
+      }),
+    );
+    expect(screen.getByText("workflow.processing.binding.folderOnly")).toBeVisible();
+    expect(screen.getByText("workflow.processing.binding.groupRules")).toBeVisible();
+    for (const checkbox of screen.getAllByRole("checkbox")) expect(checkbox).not.toBeChecked();
+    expect(api.runWorkflow).not.toHaveBeenCalled();
+    expect(api.download).not.toHaveBeenCalled();
+  });
+
+  it("locks folder selection while starting and for a completed binding, including late picker callbacks", async () => {
+    let finish!: (response: { code: number; data: { id: number } }) => void;
+    api.runWorkflow.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    );
+    show(<LocalProcessingModal task={task} />);
+    await waitFor(() => expect(api.workflows).toHaveBeenCalled());
+    const directories = () =>
+      screen.getAllByRole("button", { name: /workflow.processing.chooseDirectory/ });
+    const pickers = () =>
+      screen.getAllByRole("button", { name: /workflow.processing.chooseDirectory/ });
+    fireEvent.click(pickers()[0]);
+    act(() => api.portal.mock.lastCall![1].onSelected({ path: "/server/first" }));
+    fireEvent.click(screen.getAllByRole("checkbox")[0]);
+    fireEvent.click(pickers()[0]);
+    const lateSelection = api.portal.mock.lastCall![1].onSelected;
+    fireEvent.click(screen.getByRole("button", { name: "workflow.processing.startSelected" }));
+    await waitFor(() => expect(api.runWorkflow).toHaveBeenCalledTimes(1));
+    for (const picker of pickers()) expect(picker).toBeDisabled();
+    act(() => lateSelection({ path: "/server/late-during-start" }));
+    expect(directories()[0]).toHaveTextContent("/server/first");
+    await act(async () => finish({ code: 0, data: { id: 201 } }));
+    expect(pickers()[0]).toBeDisabled();
+    expect(pickers()[1]).toBeEnabled();
+    act(() => lateSelection({ path: "/server/late-after-start" }));
+    expect(directories()[0]).toHaveTextContent("/server/first");
+    expect(api.download).not.toHaveBeenCalled();
+  });
+
+  it("opens the shared compatible workflow browser without navigation and preserves directory drafts", async () => {
+    show(<LocalProcessingModal task={task} />);
+    await waitFor(() => expect(api.workflows).toHaveBeenCalled());
+    fireEvent.click(
+      screen.getAllByRole("button", { name: /workflow.processing.chooseDirectory/ })[0],
+    );
+    act(() => api.portal.mock.lastCall![1].onSelected({ path: "/server/draft" }));
+    fireEvent.click(screen.getByRole("button", { name: "workflow.processing.viewWorkflows" }));
+    expect(api.browser.mock.lastCall![0]).toEqual(
+      expect.objectContaining({ visible: true, triggerKind: "fs.processingPlan" }),
+    );
+    expect(screen.getAllByRole("dialog")).toHaveLength(2);
+    expect(api.navigate).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "workflows-changed" }));
+    await waitFor(() => expect(api.workflows).toHaveBeenCalledTimes(2));
+    fireEvent.click(screen.getByRole("button", { name: "close-workflows" }));
+    expect(screen.getAllByRole("dialog")).toHaveLength(1);
+    expect(
+      screen.getAllByRole("button", { name: /workflow.processing.chooseDirectory/ })[0],
+    ).toHaveTextContent("/server/draft");
+    expect(api.runWorkflow).not.toHaveBeenCalled();
+    expect(api.download).not.toHaveBeenCalled();
+  });
+
   it("shows complementary duplicates once and submits every original index with the preview revision", async () => {
     show(<AddToAcquisitionModal task={task} />);
     const choices = screen.getAllByRole("checkbox");
@@ -164,7 +311,7 @@ describe("deduplicated post resource actions", () => {
     );
   });
 
-  it("starts one local run per selected URL using the merged plan and stable original binding indices", async () => {
+  it("starts one local run per selected URL with stable original indices for server-side plan resolution", async () => {
     const { container } = show(<LocalProcessingModal task={task} />);
 
     await waitFor(() => expect(api.workflows).toHaveBeenCalled());
@@ -179,23 +326,41 @@ describe("deduplicated post resource actions", () => {
       [other!, "/downloads/other"],
     ] as const) {
       fireEvent.click(within(section).getByRole("checkbox"));
-      fireEvent.change(within(section).getByLabelText("workflow.processing.directory"), {
-        target: { value: directory },
-      });
+      fireEvent.click(
+        within(section).getByRole("button", { name: /workflow.processing.chooseDirectory/ }),
+      );
+      act(() => api.portal.mock.lastCall![1].onSelected({ path: directory }));
     }
     const start = screen.getByRole("button", { name: "workflow.processing.startSelected" });
 
     await waitFor(() => expect(start).toBeEnabled());
     fireEvent.click(start);
     await waitFor(() => expect(api.runWorkflow).toHaveBeenCalledTimes(2));
-    const firstPayload = JSON.parse(api.runWorkflow.mock.calls[0][1].argsJson);
-    const otherPayload = JSON.parse(api.runWorkflow.mock.calls[1][1].argsJson);
-
-    expect(api.runWorkflow.mock.calls[0][0]).toBe(99);
-    expect(firstPayload).toMatchObject({ directory: "/downloads/first", bindingId: "post:14:3:1" });
-    expect(JSON.parse(firstPayload.extractionPlanJson)).toEqual(extraction);
-    expect(otherPayload).toMatchObject({ directory: "/downloads/other", bindingId: "post:14:3:4" });
+    expect(api.runWorkflow.mock.calls[0]).toEqual([
+      {
+        taskId: 14,
+        revision: 3,
+        resourceIndex: 1,
+        workflowDefinitionId: 99,
+        files: [],
+        alreadyProcessed: false,
+      },
+      { directory: "/downloads/first" },
+    ]);
+    expect(api.runWorkflow.mock.calls[1]).toEqual([
+      {
+        taskId: 14,
+        revision: 3,
+        resourceIndex: 4,
+        workflowDefinitionId: 99,
+        files: [],
+        alreadyProcessed: false,
+      },
+      { directory: "/downloads/other" },
+    ]);
     expect(start).toBeDisabled();
+    expect(api.download).not.toHaveBeenCalled();
+    expect(api.manualWorkflow).not.toHaveBeenCalled();
   });
 });
 
@@ -327,7 +492,7 @@ describe("content-grouped post resource actions", () => {
     await waitFor(() => expect(api.import.mock.calls[0]?.[1].resourceIndices).toEqual([1]));
   });
 
-  it("keeps mirror processing plans and original bindings independent without automatically selecting them", async () => {
+  it("selects one downloaded mirror per content group without automatically selecting ungrouped inputs", async () => {
     show(<LocalProcessingModal task={groupedTask} />);
     await waitFor(() => expect(api.workflows).toHaveBeenCalled());
     const main = screen.getByRole("group", { name: "The full resource" });
@@ -335,34 +500,36 @@ describe("content-grouped post resource actions", () => {
 
     expect(choices).toHaveLength(2);
     for (const choice of choices) expect(choice).not.toBeChecked();
-    expect(screen.getByText("postParser.groups.localProcessingHint")).toBeVisible();
+    expect(screen.getByText("workflow.processing.binding.groupRules")).toBeVisible();
     for (const [url, directory] of [
       [firstUrl, "/downloads/first"],
       [mirrorUrl, "/downloads/mirror"],
     ]) {
-      const choice = within(main).getByRole("checkbox", { name: url });
-      const source = choice.closest("section")!;
+      const source = within(main).getByRole("link", { name: url }).closest("section")!;
+      const choice = within(source).getByRole("checkbox");
 
       fireEvent.click(choice);
-      fireEvent.change(within(source).getByLabelText("workflow.processing.directory"), {
-        target: { value: directory },
-      });
+      fireEvent.click(
+        within(source).getByRole("button", { name: /workflow.processing.chooseDirectory/ }),
+      );
+      act(() => api.portal.mock.lastCall![1].onSelected({ path: directory }));
     }
     const start = screen.getByRole("button", { name: "workflow.processing.startSelected" });
 
     await waitFor(() => expect(start).toBeEnabled());
     fireEvent.click(start);
-    await waitFor(() => expect(api.runWorkflow).toHaveBeenCalledTimes(2));
-    const firstPayload = JSON.parse(api.runWorkflow.mock.calls[0][1].argsJson);
-    const mirrorPayload = JSON.parse(api.runWorkflow.mock.calls[1][1].argsJson);
-
-    expect(firstPayload).toMatchObject({ directory: "/downloads/first", bindingId: "post:14:3:1" });
-    expect(JSON.parse(firstPayload.extractionPlanJson)).toEqual(extraction);
-    expect(mirrorPayload).toMatchObject({
-      directory: "/downloads/mirror",
-      bindingId: "post:14:3:3",
-    });
-    expect(JSON.parse(mirrorPayload.extractionPlanJson)).toEqual(mirrorExtraction);
+    await waitFor(() => expect(api.runWorkflow).toHaveBeenCalledTimes(1));
+    expect(api.runWorkflow.mock.calls[0]).toEqual([
+      {
+        taskId: 14,
+        revision: 3,
+        resourceIndex: 3,
+        workflowDefinitionId: 99,
+        files: [],
+        alreadyProcessed: false,
+      },
+      { directory: "/downloads/mirror" },
+    ]);
     expect(
       within(screen.getByRole("group", { name: "Preview images" })).getByRole("checkbox"),
     ).not.toBeChecked();

@@ -1,8 +1,11 @@
+using Bakabase.Abstractions.Components.FileSystem;
 namespace Bakabase.Modules.Bittorrent.Models;
 
 /// <summary>Internal capability request; ownership and idempotency are assigned by trusted callers.</summary>
 public sealed record BtDownloadRequest
 {
+    /// <summary>Runtime caller safety policy; excluded from content and idempotency identity.</summary>
+    public StorageWriteContext? WriteContext { get; init; }
     public string? Name { get; init; }
     public string? MagnetUri { get; init; }
     public byte[]? Metadata { get; init; }

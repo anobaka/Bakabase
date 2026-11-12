@@ -8,6 +8,8 @@ public record SoulPlusPost
     public List<SoulPlusPostLockedContent>? LockedContents { get; set; }
     public string? SourceUrl { get; set; }
     public decimal? Balance { get; set; }
+    public string? EvidenceFingerprint { get; set; }
+    public SoulPlusPostEvidence? ReaderEvidence { get; set; }
     public List<SoulPlusPostComment> Comments { get; set; } = [];
 }
 

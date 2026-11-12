@@ -58,8 +58,7 @@ import DownloadOrderPrompt from "./components/DownloadOrderPrompt";
 import TaskRow, { DOWNLOAD_TASK_ITEM_HEIGHT } from "./components/TaskRow";
 import GeneralTaskRow from "./components/GeneralTaskRow";
 import GeneralTaskDetailModal from "./components/GeneralTaskDetailModal";
-import AddGeneralDownloadModal from "./components/AddGeneralDownloadModal";
-import CloudDownloadModal from "@/components/CloudDownload/AsyncCloudDownloadModal";
+import CreateDownloadTaskModal from "./components/CreateDownloadTaskModal";
 import DownloadCenterFilters from "./components/DownloadCenterFilters";
 import useDownloadCenter from "./useDownloadCenter";
 import {
@@ -252,57 +251,8 @@ export default function DownloaderPage() {
       ),
       onOk: () => execute(ids, "delete"),
     });
-  const createTask = () => {
-    const picker = createPortal(Modal, {
-      defaultVisible: true,
-      title: t("downloader.action.createTask"),
-      footer: false,
-      classNames: { body: "pb-6" },
-      children: (
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Button
-            className="h-auto flex-col items-start whitespace-normal p-4 text-left"
-            variant="flat"
-            onPress={() => {
-              picker.destroy();
-              createPortal(CloudDownloadModal, { onCreated: () => void refresh() });
-            }}
-          >
-            <span className="font-medium">{t("cloudDownload.title")}</span>
-            <span className="text-xs font-normal text-default-500">
-              {t("cloudDownload.description")}
-            </span>
-          </Button>
-          <Button
-            className="h-auto flex-col items-start whitespace-normal p-4 text-left"
-            variant="flat"
-            onPress={() => {
-              picker.destroy();
-              createPortal(AddGeneralDownloadModal, { onCreated: () => void refresh() });
-            }}
-          >
-            <span className="font-medium">{t("downloadCenter.category.general")}</span>
-            <span className="text-xs font-normal text-default-500">
-              {t("downloadCenter.add.generalDescription")}
-            </span>
-          </Button>
-          <Button
-            className="h-auto flex-col items-start whitespace-normal p-4 text-left"
-            variant="flat"
-            onPress={() => {
-              picker.destroy();
-              createPortal(DownloadTaskDetailModal, {});
-            }}
-          >
-            <span className="font-medium">{t("downloadCenter.category.site")}</span>
-            <span className="text-xs font-normal text-default-500">
-              {t("downloadCenter.add.siteDescription")}
-            </span>
-          </Button>
-        </div>
-      ),
-    });
-  };
+  const createTask = () =>
+    createPortal(CreateDownloadTaskModal, { onCreated: () => void refresh() });
   const showSite = (id: number) => createPortal(DownloadTaskDetailModal, { id });
   const showError = (task: { message?: string; status?: DownloadTaskStatus }) => {
     const failed = task.status === DownloadTaskStatus.Failed;

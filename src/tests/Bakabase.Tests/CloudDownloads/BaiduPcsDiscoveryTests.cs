@@ -16,7 +16,7 @@ public sealed class BaiduPcsDiscoveryTests
         {
             var executable = Path.Combine(root, "bakabase-baidu-pcs");
             await File.WriteAllTextAsync(executable,
-                "#!/bin/sh\n[ -n \"$BAIDUPCS_GO_CONFIG_DIR\" ] || exit 23\n[ \"$1\" = --version ] || exit 24\nprintf '4.0.2+bakabase.1\\n'\n");
+                $"#!/bin/sh\n[ -n \"$BAIDUPCS_GO_CONFIG_DIR\" ] || exit 23\n[ \"$1\" = --version ] || exit 24\nprintf '{BaiduPcsGoService.BridgeVersion}\\n'\n");
             File.SetUnixFileMode(executable, (UnixFileMode)0x1c0);
             var discovery = new BaiduPcsGoDiscoverer(NullLoggerFactory.Instance);
             var found = await discovery.TryDiscoverAt(root, default);

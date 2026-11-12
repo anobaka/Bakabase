@@ -29,6 +29,7 @@ import { useTranslation } from "react-i18next";
 import { ControlledMenu, useMenuState } from "@szhsin/react-menu";
 import _ from "lodash";
 
+import { pageChildren, type ExplorerDirectoryPage } from "@/core/models/FileExplorer/DirectoryPage";
 import EventListener, { SelectionMode } from "./components/EventListener";
 import ContextMenu from "./components/ContextMenu";
 import { FileSystemTreeEntryCapabilityMap } from "./models";
@@ -39,7 +40,7 @@ import DeleteConfirmationModal from "./components/DeleteConfirmationModal";
 import WrapModal from "./components/WrapModal";
 import ExtractModal from "./components/ExtractModal";
 
-import { Entry } from "@/core/models/FileExplorer/Entry";
+import { Entry, MainLineHeight } from "@/core/models/FileExplorer/Entry";
 import { IwFsType } from "@/sdk/constants";
 import BApi from "@/sdk/BApi";
 import { buildLogger, getStandardParentPath, standardizePath } from "@/components/utils";
@@ -49,7 +50,7 @@ import RootEntry from "@/core/models/FileExplorer/RootEntry";
 import { Button, Chip, Input, Tooltip, toast } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import FolderSelector from "@/components/FolderSelector";
-import { useIsRemoteClient } from "@/stores/remoteAccess";
+import { useIsRemoteClient, useUserSideActionsRunHere } from "@/stores/remoteAccess";
 import { hasKeyboardModifier, matchesPrimaryShortcut } from "@/core/keyboard";
 import {
   useUserStorageStore,
@@ -61,6 +62,8 @@ import {
 export type FileExplorerProps = {
   /** Opt-in page layout; shared folder pickers retain their existing presentation. */
   appearance?: "default" | "compact";
+  /** Opt-in inline preview: fit visible rows up to this list height (px). Default fills its parent. */
+  maxContentHeight?: number;
   toolbarContent?: React.ReactNode;
   locationNotice?: React.ReactNode;
   rootPath?: string;
@@ -78,11 +81,15 @@ export type FileExplorerProps = {
    * (copy/cut/paste, delete, navigation) is unwanted.
    */
   keyboard?: boolean;
+  /** false: recorded/on-demand view; poll: independent live view without taking over the server watcher. */
+  watchChanges?: boolean | "poll";
   onSelected?: (entries: Entry[]) => any;
   selectable: "disabled" | "single" | "multiple";
   defaultSelectedPath?: string;
   onInitialized?: (path?: string) => any;
   onNavigationStart?: () => void;
+  /** Optional host scope, checked before loading a different working directory. */
+  canNavigateToPath?: (path?: string) => boolean;
   onDoubleClick?: (event: React.MouseEvent<any>, entry: Entry) => boolean;
   afterPlayedFirstFile?: (entry: Entry) => any;
   renderExtraContextMenuItems?: (entries: Entry[]) => React.ReactNode;
@@ -99,21 +106,25 @@ export type FileExplorerRef = {
   clearSelection: () => void;
 };
 
-const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
+const FilesystemExplorer = forwardRef<FileExplorerRef, FileExplorerProps & { directoryPage?: ExplorerDirectoryPage }>(
   (
     {
       rootPath,
       appearance = "default",
+      maxContentHeight,
+      directoryPage,
       toolbarContent,
       locationNotice,
       rootPaths,
       keyboard = true,
+      watchChanges = true,
       onDoubleClick,
       filter,
       onSelected,
       selectable,
       onInitialized,
       onNavigationStart,
+      canNavigateToPath,
       defaultSelectedPath,
       expandable = false,
       capabilities,
@@ -132,6 +143,7 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
     // Asks about files, not about actions: this explorer browses whichever machine
     // holds them, and in every flavour but the all-in-one that is not this one.
     const filesAreElsewhere = useIsRemoteClient();
+    const canRunNativeAction = useUserSideActionsRunHere();
     const storage = useUserStorageStore((state) => state.settings);
     const rootsError = useUserStorageStore((state) => state.error);
     const [navigationError, setNavigationError] = useState<string>();
@@ -140,6 +152,8 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
     const initializeSeqRef = useRef(0);
     const acceptedRootRef = useRef<{ model: RootEntry; sequence: number }>();
     const onNavigationStartRef = useRef(onNavigationStart);
+    const canNavigateToPathRef = useRef(canNavigateToPath);
+    canNavigateToPathRef.current = canNavigateToPath;
 
     onNavigationStartRef.current = onNavigationStart;
 
@@ -149,8 +163,17 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
 
     const inputBlurHandlerRef = useRef<ReturnType<typeof setTimeout>>();
 
-    const [root, setRoot] = useState<RootEntry>();
+    const [filesystemRoot, setRoot] = useState<RootEntry>();
+    const root = useMemo(() => {
+      if (!directoryPage) return filesystemRoot;
+      const pageRoot = new RootEntry(directoryPage.directory, false, false, directoryPage);
+      pageRoot.children = pageChildren(pageRoot, directoryPage.entries);
+      pageRoot.expireFilteredChildren();
+      return pageRoot;
+    }, [filesystemRoot, directoryPage]);
     const rootRef = useRef(root);
+    const [contentHeight, setContentHeight] = useState<{ rootId: string; height: number }>();
+    const fitContent = maxContentHeight != null && Number.isFinite(maxContentHeight) && maxContentHeight > 0;
     const renderedRootRef = useRef(root);
 
     renderedRootRef.current = root;
@@ -169,6 +192,8 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
     const fsOptionsStore = useFileSystemOptionsStore();
     const showHiddenFiles = fsOptions?.showHiddenFiles ?? false;
     const showHiddenFilesRef = useRef(showHiddenFiles);
+    const watchChangesRef = useRef(watchChanges);
+    watchChangesRef.current = watchChanges;
 
     const defaultSelectedPathInitializedRef = useRef(false);
 
@@ -208,6 +233,7 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
     }, [selectedEntries]);
 
     const initialize = useCallback(async (path?: string, addToHistory: boolean = true) => {
+      if (canNavigateToPathRef.current?.(path) === false) return;
       clearTimeout(inputBlurHandlerRef.current);
       // Each call supersedes any still-awaiting predecessor; a stale one must never setRoot
       // over a newer navigation.
@@ -237,7 +263,11 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
             }
           }
 
-          const virtualRoot = new RootEntry(undefined, showHiddenFilesRef.current);
+          const virtualRoot = new RootEntry(
+            undefined,
+            showHiddenFilesRef.current,
+            watchChangesRef.current,
+          );
 
           virtualRoot.children = [];
 
@@ -329,17 +359,23 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
 
         log("initialize", finalPath, historyRootPathsRef.current);
 
-        acceptRoot(new RootEntry(finalPath || undefined, showHiddenFilesRef.current));
+        acceptRoot(
+          new RootEntry(
+            finalPath || undefined,
+            showHiddenFilesRef.current,
+            watchChangesRef.current,
+          ),
+        );
       } catch (cause) {
         if (superseded()) return;
         setNavigationError(storageError(cause, t).message);
         if (!rootRef.current && useUserStorageStore.getState().settings)
-          acceptRoot(new RootEntry(undefined, showHiddenFilesRef.current));
+          acceptRoot(new RootEntry(undefined, showHiddenFilesRef.current, watchChangesRef.current));
       }
     }, []);
 
     useEffect(() => {
-      initialize(rootPath);
+      if (!directoryPage) initialize(rootPath);
 
       return () => {
         log("Disposing", rootRef);
@@ -352,13 +388,13 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
 
     // Listen for rootPath changes from parent
     useUpdateEffect(() => {
-      initialize(rootPath);
-    }, [rootPath]);
+      if (!directoryPage) initialize(rootPath);
+    }, [rootPath, watchChanges]);
 
     // Re-initialize when showHiddenFiles option changes
     useUpdateEffect(() => {
       showHiddenFilesRef.current = showHiddenFiles;
-      if (rootRef.current) {
+      if (!directoryPage && rootRef.current) {
         initialize(rootRef.current.path, false);
       }
     }, [showHiddenFiles]);
@@ -526,7 +562,7 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
       [selectable],
     );
 
-    if (!storage || !root) {
+    if ((!directoryPage && !storage) || !root) {
       return (
         <div className="space-y-2 p-3 text-sm" role={rootsError ? "alert" : "status"}>
           {t(rootsError ? "fileExplorer.storage.loadFailed" : "fileExplorer.storage.loading")}
@@ -538,9 +574,14 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
         </div>
       );
     }
-    const parentPath = getStandardParentPath(root.path);
-    const canGoToParent = parentPath !== undefined && isInsideStorageRoots(parentPath, storage);
-    const storageOverview = storage.isRestricted && !root.path && !rootPaths?.length;
+    const parentPath = directoryPage
+      ? directoryPage.directory.split("/").slice(0, -1).join("/")
+      : getStandardParentPath(root.path);
+    const canGoToParent = directoryPage ? !!directoryPage.directory :
+      parentPath !== undefined && !!storage && isInsideStorageRoots(parentPath, storage) &&
+      canNavigateToPath?.(parentPath) !== false;
+    const storageOverview = !directoryPage && storage?.isRestricted && !root.path && !rootPaths?.length;
+    const enterDirectory = directoryPage ? directoryPage.onNavigate : initialize;
 
     const filteredChildrenCount = root.filteredChildren.length ?? 0;
     const childrenCount = root.childrenCount ?? 0;
@@ -552,9 +593,9 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
 
     return (
       <div
-        className={`flex flex-col gap-1 max-h-full min-h-0 grow ${compact ? "file-processor-explorer" : ""}`}
+        className={`flex min-h-0 flex-col gap-1 ${fitContent ? "" : "h-full max-h-full flex-1"} ${compact ? "file-processor-explorer" : ""}`}
       >
-        <ControlledMenu
+        {!directoryPage && <ControlledMenu
           {...menuProps}
           anchorPoint={anchorPoint}
           boundingBoxPadding={compact ? "8" : undefined}
@@ -577,7 +618,7 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
             onChangeWorkingDirectory={initialize}
             onEntriesDeleted={clearDeletedSelection}
           />
-        </ControlledMenu>
+        </ControlledMenu>}
         {keyboard && (
           <EventListener
             onClick={(evt) => {
@@ -837,11 +878,11 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
         <div
           className={
             compact
-              ? "file-explorer-toolbar flex items-center gap-0.5"
-              : "flex items-center bg-default-100 dark:bg-default-50"
+              ? "file-explorer-toolbar flex shrink-0 items-center gap-0.5"
+              : "flex shrink-0 items-center bg-default-100 dark:bg-default-50"
           }
         >
-          <Button
+          {!directoryPage && <Button
             isIconOnly
             aria-label={t("fileExplorer.navigation.back")}
             isDisabled={historyRootPaths.length == 0}
@@ -857,7 +898,7 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
             }}
           >
             <ArrowLeftOutlined className={"text-base"} />
-          </Button>
+          </Button>}
           <Button
             isIconOnly
             aria-label={t("fileExplorer.navigation.parent")}
@@ -867,43 +908,40 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
             title={t("fileExplorer.navigation.parent")}
             variant={"light"}
             onPress={() => {
-              if (root) {
-                const newRootPath = getStandardParentPath(root.path);
-
-                if (newRootPath !== undefined && isInsideStorageRoots(newRootPath, storage)) {
-                  initialize(newRootPath);
-                }
-              }
+              if (canGoToParent && parentPath !== undefined) enterDirectory(parentPath);
             }}
           >
             <ArrowUpOutlined className={"text-base"} />
           </Button>
-          {storage.isRestricted && !rootPaths?.length && (
+          {((!directoryPage && storage?.isRestricted && !rootPaths?.length) || !!directoryPage) && (
             <Button
               isIconOnly
-              aria-label={t("fileExplorer.storage.locations")}
+              aria-label={t(directoryPage ? "workflow.processing.inputFiles.root" : "fileExplorer.storage.locations")}
+              isDisabled={!!directoryPage && !directoryPage.directory}
               size="sm"
-              title={t("fileExplorer.storage.locations")}
+              title={t(directoryPage ? "workflow.processing.inputFiles.root" : "fileExplorer.storage.locations")}
               variant="light"
-              onPress={() => void initialize()}
+              onPress={() => directoryPage ? enterDirectory("") : void initialize()}
             >
               <HomeOutlined className="text-base" />
             </Button>
           )}
-          <Button
-            isIconOnly
-            aria-label={t("fileExplorer.contextMenu.openInFileManager")}
-            isDisabled={!root?.path}
-            radius={"none"}
-            size={"sm"}
-            title={t("fileExplorer.contextMenu.openInFileManager")}
-            variant={"light"}
-            onPress={() => {
-              BApi.tool.openFileOrDirectory({ path: root?.path });
-            }}
-          >
-            <FolderOutlined className={"text-base"} />
-          </Button>
+          {!directoryPage && canRunNativeAction && (
+            <Button
+              isIconOnly
+              aria-label={t("fileExplorer.contextMenu.openInFileManager")}
+              isDisabled={!root?.path}
+              radius={"none"}
+              size={"sm"}
+              title={t("fileExplorer.contextMenu.openInFileManager")}
+              variant={"light"}
+              onPress={() => {
+                BApi.tool.openFileOrDirectory({ path: root?.path });
+              }}
+            >
+              <FolderOutlined className={"text-base"} />
+            </Button>
+          )}
 
           <div className="w-px h-5 bg-default-300 mx-1" />
 
@@ -925,17 +963,19 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
               )
             }
             placeholder={t<string>(
-              storage.isRestricted
+              directoryPage ? "workflow.processing.inputFiles.hierarchy" : storage?.isRestricted
                 ? "fileExplorer.storage.locations"
                 : "fileExplorer.navigation.pathPlaceholder",
             )}
             radius={"none"}
             size={"sm"}
-            value={inputValue}
+            isReadOnly={!!directoryPage}
+            value={directoryPage ? directoryPage.directory || "/" : inputValue}
             onKeyDown={(evt) => {
               evt.stopPropagation();
             }}
             onValueChange={(v) => {
+              if (directoryPage) return;
               const path = standardizePath(v)!;
 
               setInputValue(path ?? "");
@@ -963,7 +1003,7 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
 
           <div className="w-px h-5 bg-default-300 mx-1" />
 
-          <Tooltip content={t<string>("fileExplorer.label.showHiddenFiles")}>
+          {!directoryPage && <Tooltip content={t<string>("fileExplorer.label.showHiddenFiles")}>
             <Button
               isIconOnly
               aria-label={t("fileExplorer.label.showHiddenFiles")}
@@ -982,14 +1022,14 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
                 <EyeInvisibleOutlined className={"text-base"} />
               )}
             </Button>
-          </Tooltip>
+          </Tooltip>}
           {/*
             Only where the files actually are. Deleting happens on the machine holding
             them, so on any other one this opens a recycle bin that has never seen a
             file this explorer showed — and no path mapping can change that, because
             there is nothing to map it to.
           */}
-          {!filesAreElsewhere && (
+          {!directoryPage && !filesAreElsewhere && (
             <Button
               className={"shrink-0"}
               radius={"none"}
@@ -1011,7 +1051,7 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
             question about which disk is being browsed.
           */}
           {locationNotice ??
-            (filesAreElsewhere && (
+            (!directoryPage && filesAreElsewhere && (
               <span className="shrink-0 text-xs text-foreground-400 px-2">
                 {t<string>("fileExplorer.tip.pathsAreOnTheServer")}
               </span>
@@ -1085,21 +1125,28 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
         )}
         {storageOverview && (
           <p className="px-2 text-xs text-default-500">
-            {t(storage.roots.length ? "fileExplorer.storage.help" : "fileExplorer.storage.empty")}
+            {t(storage?.roots.length ? "fileExplorer.storage.help" : "fileExplorer.storage.empty")}
           </p>
         )}
-        <div className={`grow min-h-0 ${compact ? "file-explorer-list" : ""}`}>
+        {/* Keep the viewport independent of virtual rows, which derive their height from it. */}
+        <div className={`min-h-0 overflow-hidden ${fitContent ? "shrink-0" : "flex-1"} ${compact ? "file-explorer-list" : ""}`}
+          style={fitContent ? { height: Math.min(maxContentHeight!, Math.max(MainLineHeight,
+            contentHeight?.rootId === root.id ? contentHeight.height : MainLineHeight * 6)) } : undefined}>
           <FileExplorerEntry
             key={root.id}
             afterPlayedFirstFile={afterPlayedFirstFile}
             capabilities={capabilities}
             entry={root}
+            onContentHeightChange={fitContent ? height => {
+              if (root !== renderedRootRef.current) return;
+              setContentHeight(current => current?.rootId === root.id && current.height === height ? current : { rootId: root.id, height });
+            } : undefined}
             expandable={expandable}
             filter={filterObj}
             renderAfterName={(entry) => (
               <>
                 {renderAfterName?.(entry)}
-                {storage.isRestricted &&
+                {!directoryPage && storage?.isRestricted &&
                   storage.roots.some((root) => root.path === entry.path && root.readOnly) && (
                     <span className="shrink-0 text-xs text-default-400">
                       {t("fileExplorer.storage.readOnly")}
@@ -1114,7 +1161,8 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
               // The previous root remains visible while validation of a new path awaits.
               // Its late listing must not mark that newer navigation ready or select rows.
               const accepted = acceptedRootRef.current;
-              if (accepted?.model !== root || accepted.sequence !== initializeSeqRef.current) return;
+              if (accepted?.model !== root || accepted.sequence !== initializeSeqRef.current)
+                return;
               if (!defaultSelectedPathInitializedRef.current) {
                 defaultSelectedPathInitializedRef.current = true;
                 const standardDefaultSelectedPath = standardizePath(defaultSelectedPath);
@@ -1147,6 +1195,7 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
             }}
             onContextMenu={(evt, entry) => {
               evt.preventDefault();
+              if (directoryPage) return;
               setAnchorPoint({
                 x: evt.clientX,
                 y: evt.clientY,
@@ -1165,7 +1214,7 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
                 }
               }
             }}
-            onEnterDirectory={initialize}
+            onEnterDirectory={enterDirectory}
           />
         </div>
       </div>
@@ -1173,6 +1222,12 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
   },
 );
 
+FilesystemExplorer.displayName = "FilesystemExplorer";
+const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps | { recordedDirectory: ExplorerDirectoryPage; maxContentHeight?: number }>(
+  (props, ref) => "recordedDirectory" in props
+    ? <FilesystemExplorer key="recorded" ref={ref} directoryPage={props.recordedDirectory} maxContentHeight={props.maxContentHeight} selectable="disabled" keyboard={false} watchChanges={false} expandable capabilities={["enter-directory"]} />
+    : <FilesystemExplorer {...props} ref={ref} />,
+);
 FileExplorer.displayName = "FileExplorer";
 
 export default FileExplorer;

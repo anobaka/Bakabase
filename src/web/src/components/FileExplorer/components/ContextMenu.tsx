@@ -2,6 +2,7 @@
 
 "use strict";
 import type { Entry } from "@/core/models/FileExplorer/Entry";
+import { useUserSideActionsRunHere } from "@/stores/remoteAccess";
 import type { FileExplorerEntryProps } from "../FileExplorerEntry";
 
 import { canDeleteEntry } from "../utils";
@@ -10,6 +11,8 @@ import { MenuItem } from "@szhsin/react-menu";
 import React from "react";
 import {
   CopyOutlined,
+  ScissorOutlined,
+  SnippetsOutlined,
   DeleteColumnOutlined,
   DeleteOutlined,
   DownOutlined,
@@ -41,6 +44,7 @@ import FileNameModifierModal from "@/components/FileNameModifierModal";
 import { toast } from "@/components/bakaui";
 import FolderSelector from "@/components/FolderSelector";
 import BulkDecompressionToolModal from "@/components/BulkDecompressionToolModal";
+import { useFileExplorerClipboardStore } from "@/stores/fileExplorerClipboard";
 
 type Props = {
   selectedEntries: Entry[];
@@ -66,6 +70,8 @@ const ContextMenu = ({
 }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
+  const canRunNativeAction = useUserSideActionsRunHere();
+  const clipboard = useFileExplorerClipboardStore();
 
   const items: Item[] = [];
 
@@ -93,7 +99,7 @@ const ContextMenu = ({
     }
 
     // Open in system file manager (single entry only)
-    if (selectedEntries.length === 1) {
+    if (selectedEntries.length === 1 && canRunNativeAction) {
       const entry = selectedEntries[0];
 
       items.push({
@@ -243,6 +249,10 @@ const ContextMenu = ({
     }
 
     if (capabilities?.includes("move")) {
+      items.push({ icon: <CopyOutlined />, label: t("fileExplorer.contextMenu.copyFiles"),
+        onClick: () => clipboard.copy(selectedEntries.map(entry => entry.path)) });
+      items.push({ icon: <ScissorOutlined />, label: t("fileExplorer.contextMenu.cutFiles"),
+        onClick: () => clipboard.cut(selectedEntries.map(entry => entry.path)) });
       items.push({
         icon: <SendOutlined className={"text-base"} />,
         label: t<string>("fileExplorer.contextMenu.moveItems", {
@@ -344,17 +354,33 @@ const ContextMenu = ({
     });
 
     // 批量修改名称操作
-    items.push({
-      icon: <MdDriveFileRenameOutline className={"text-base"} />, // 可换为更合适的icon
-      label: t<string>("fileExplorer.contextMenu.batchRename", {
-        count: selectedEntries.length,
-      }),
-      onClick: () => {
-        createPortal(FileNameModifierModal, {
-          initialFilePaths: selectedEntries.map((e) => e.path),
-        });
-      },
-    });
+    if (capabilities?.includes("rename"))
+      items.push({
+        icon: <MdDriveFileRenameOutline className={"text-base"} />, // 可换为更合适的icon
+        label: t<string>("fileExplorer.contextMenu.batchRename", {
+          count: selectedEntries.length,
+        }),
+        onClick: () => {
+          createPortal(FileNameModifierModal, {
+            initialFilePaths: selectedEntries.map((e) => e.path),
+          });
+        },
+      });
+  }
+
+  const pasteDirectory = selectedEntries.length === 0 ? root?.path
+    : selectedEntries.length === 1 && selectedEntries[0].isDirectoryOrDrive ? selectedEntries[0].path : undefined;
+  if (capabilities?.includes("move") && pasteDirectory && clipboard.paths.length > 0) {
+    items.push({ icon: <SnippetsOutlined />, label: t("fileExplorer.contextMenu.pasteFiles"), onClick: async () => {
+      const { paths, mode } = useFileExplorerClipboardStore.getState();
+      if (!paths.length) return;
+      try {
+        const result = await (mode === "copy" ? BApi.file.copyEntries : BApi.file.moveEntries)({ destDir: pasteDirectory, entryPaths: paths });
+        if (result.code) return;
+        if (mode === "cut") useFileExplorerClipboardStore.getState().clear();
+        await root?.expand(true);
+      } catch { /* The shared API displays the specific storage error. */ }
+    } });
   }
 
   // Create new folder in current working directory when no entries selected

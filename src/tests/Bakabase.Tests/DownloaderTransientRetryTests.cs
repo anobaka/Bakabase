@@ -4,6 +4,7 @@ using System.IO;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Components;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants;
@@ -141,6 +142,33 @@ public sealed class DownloaderTransientRetryTests
 
             await Task.Delay(10);
         }
+    }
+
+    [TestMethod]
+    public async Task DiskFullEndsTheCurrentAttemptWithoutNetworkRetriesAndHoldsTheDestination()
+    {
+        var guard = new DownloadStorageAdmission(_ => "/downloads", _ => 1024L * 1024 * 1024, _ => { });
+        var services = await TestServiceBuilder.BuildServiceProvider(s =>
+        {
+            s.AddSingleton<IDownloaderLocalizer>(new RetryLocalizer());
+            s.AddSingleton(guard);
+        });
+        var downloader = new ScriptedDownloader(services, async (self, _, _, _) =>
+        {
+            await self.ReportCheckpoint("keep-existing-range");
+            throw new AggregateException(new LocalStorageException("LOCAL_STORAGE_FULL"));
+        });
+        string? persistedCheckpoint = null;
+        downloader.OnCheckpointChanged += value => { persistedCheckpoint = value; return Task.CompletedTask; };
+        Assert.IsTrue(await downloader.Start(NewTask("old-checkpoint")));
+        await WaitUntilSettled(downloader);
+        Assert.AreEqual(DownloaderStatus.Failed, downloader.Status);
+        Assert.AreEqual(1, downloader.Runs);
+        Assert.AreEqual(1, downloader.FailureTimes);
+        Assert.AreEqual(0, downloader.Waits.Count);
+        Assert.AreEqual("keep-existing-range", persistedCheckpoint);
+        Assert.AreEqual("LOCAL_STORAGE_FULL", guard.BlockReason("/downloads/another-source"));
+        StringAssert.Contains(downloader.Message, "LOCAL_STORAGE_FULL");
     }
 
     [TestMethod]

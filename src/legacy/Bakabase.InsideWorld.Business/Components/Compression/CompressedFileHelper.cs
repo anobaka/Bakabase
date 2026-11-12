@@ -11,17 +11,21 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
     public static class CompressedFileHelper
     {
         private static readonly Regex PartPattern =
-            new Regex(@"\.part(?<index>\d+)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+            new Regex(@"\.part(?<index>\d+)(?=\.|$)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        private static readonly Regex TrailingPartPattern =
+            new Regex(@"\.part(?<index>\d+)$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         private static readonly Regex NumericSplitPattern =
             new Regex(@"\.(?<index>\d{3,})$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         private static readonly Regex TailingXNumberPattern =
-            new Regex(@"\.[rz](?<index>\d{2,})$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+            new Regex(@"\.(?<family>[rz])(?<index>\d{2,})$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         public static List<CompressedFileGroup> DetectCompressedFileGroups(
             string[] filePaths,
-            bool ignoreUnknownExtensions = true)
+            bool ignoreUnknownExtensions = true,
+            bool inspectFileSizes = true)
         {
             var allGroups = new List<CompressedFileGroup>();
 
@@ -51,29 +55,38 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
 
                     if (isKnown)
                     {
-                        keyName = Path.GetFileNameWithoutExtension(fileName[..^ext.Length]);
+                        // Only an explicit trailing volume marker belongs to the family key.
+                        // A dot in an ordinary archive's basename is significant: foo.v1.zip
+                        // and foo.v2.zip are two archives, not companion volumes.
+                        var stem = fileName[..^ext.Length];
+                        keyName = ext.Equals(".rar", StringComparison.OrdinalIgnoreCase) ||
+                                  InternalOptions.CompoundCompressedFileExtensions.Contains(ext)
+                            ? TrailingPartPattern.Replace(stem, "") : stem;
                         mainExt = ext;
                     }
                     else if (isPart)
                     {
                         var match = PartPattern.Match(fileName);
-                        if (match.Success)
-                        {
-                            var baseName = fileName[..match.Index];
-                            keyName = Path.GetFileNameWithoutExtension(baseName);
-                            mainExt = GetArchiveExtension(fileName[(match.Index + match.Length)..]);
-                        }
-                        else if (NumericSplitPattern.IsMatch(fileName))
+                        // A literal .partN inside the basename must not steal a recognized
+                        // trailing volume suffix (for example foo.part1.preview.7z.001).
+                        if (NumericSplitPattern.IsMatch(fileName))
                         {
                             var baseName = NumericSplitPattern.Replace(fileName, "");
-                            keyName = Path.GetFileNameWithoutExtension(baseName);
+                            keyName = RemoveArchiveExtension(baseName);
                             mainExt = GetArchiveExtension(baseName);
                         }
-                        else
+                        else if (TailingXNumberPattern.IsMatch(fileName))
                         {
                             var baseName = Path.GetFileNameWithoutExtension(fileName);
                             keyName = baseName;
-                            mainExt = Path.GetExtension(baseName);
+                            mainExt = TailingXNumberPattern.Match(fileName).Groups["family"].Value
+                                .Equals("r", StringComparison.OrdinalIgnoreCase) ? ".rar" : ".zip";
+                        }
+                        else
+                        {
+                            var baseName = fileName[..match.Index];
+                            keyName = RemoveArchiveExtension(baseName);
+                            mainExt = GetArchiveExtension(fileName[(match.Index + match.Length)..]);
                         }
                     }
                     else
@@ -104,7 +117,9 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
                     }
 
                     g.Files = ordered;
-                    g.FileSizes = ordered.Select(f => new FileInfo(f).Length).ToList();
+                    // Plans can group projected names before creating their private copies.
+                    // That mode performs no filesystem reads and intentionally has no size facts.
+                    g.FileSizes = inspectFileSizes ? ordered.Select(f => new FileInfo(f).Length).ToList() : [];
                 }
 
                 allGroups.AddRange(groups.Values);
@@ -124,6 +139,14 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
         private static string? NormalizeExtension(string? ext)
         {
             return string.IsNullOrWhiteSpace(ext) ? null : ext;
+        }
+
+        private static string RemoveArchiveExtension(string fileName)
+        {
+            var ext = GetArchiveExtension(fileName);
+            return InternalOptions.CompressedFileExtensions.Contains(ext) ||
+                   InternalOptions.CompoundCompressedFileExtensions.Contains(ext)
+                ? fileName[..^ext.Length] : fileName;
         }
 
         private static void AddToGroup(
@@ -154,7 +177,8 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
         private static string GetFamilyKey(string keyName, string? ext, string fileName)
         {
             // RAR .partN family
-            if (PartPattern.IsMatch(fileName) && fileName.EndsWith(".rar", StringComparison.OrdinalIgnoreCase))
+            if (fileName.EndsWith(".rar", StringComparison.OrdinalIgnoreCase) &&
+                TrailingPartPattern.IsMatch(fileName[..^".rar".Length]))
                 return $"{keyName}|rar.part";
 
             // RAR + .rNN family

@@ -233,5 +233,10 @@
   "enum.thirdPartyId.vndb": "VNDB",
   "enum.thirdPartyId.baiduNetdisk": "Baidu Netdisk",
   "enum.thirdPartyId.googleDrive": "Google Drive",
-  "enum.thirdPartyId.gofile": "GoFile"
+  "enum.thirdPartyId.gofile": "GoFile",
+  "enum.thirdPartyId.pikPak": "PikPak",
+  "enum.thirdPartyId.oneDrive": "OneDrive / SharePoint",
+  "enum.thirdPartyId.pixeldrain": "Pixeldrain",
+  "enum.thirdPartyId.mega": "MEGA",
+  "enum.thirdPartyId.teraBox": "TeraBox"
 }

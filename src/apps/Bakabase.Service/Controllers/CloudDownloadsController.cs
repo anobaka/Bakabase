@@ -7,13 +7,14 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.InsideWorld.Business;
+using Bakabase.InsideWorld.Business.Components.PostParser.Services;
 using Bakabase.InsideWorld.Business.Components.PostParser.Workflow;
 using Bakabase.Modules.Downloader.Cloud;
+using Bakabase.Modules.PostParser.Services;
 using Bakabase.Modules.Workflow.Abstractions.Models.Db;
 using Bakabase.Modules.Workflow.Abstractions.Models.Input;
 using Bakabase.Modules.Workflow.Abstractions.Models.View;
 using Bakabase.Modules.Workflow.Abstractions.Services;
-using Bakabase.Service.Components.Acquisition;
 using Bakabase.Service.Components.CloudDownloads;
 using Bakabase.Service.Components.RemoteAccess;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
@@ -43,14 +44,14 @@ public sealed record CloudDownloadPostInput
     [Required] public string OutputDirectory { get; init; } = "";
     public int? WorkflowDefinitionId { get; init; }
 }
-public sealed record CloudProviderView(string ProviderId, bool Available, string? Problem, bool SupportsTransfer);
+public sealed record CloudProviderView(string ProviderId, bool Available, string? Problem, bool SupportsTransfer, string? MethodId = null);
 
 [ApiController]
 [Route("~/cloud-downloads")]
 public sealed class CloudDownloadsController(BakabaseDbContext db, IEnumerable<ICloudDownloadProvider> providers,
-    IWorkflowDefinitionService workflows, IUserStoragePolicy storage, PostParserTaskExecutionGate postGate) : ControllerBase
+    IWorkflowDefinitionService workflows, IUserStoragePolicy storage, PostParserTaskExecutionGate postGate,
+    PostParserWorkflowService<BakabaseDbContext> postWorkflow) : ControllerBase
 {
-    private static readonly SemaphoreSlim SeedGate = new(1, 1);
     [HttpGet("providers")]
     [RemoteAccessible]
     [SwaggerOperation(OperationId = "GetCloudDownloadProviders")]
@@ -60,7 +61,7 @@ public sealed class CloudDownloadsController(BakabaseDbContext db, IEnumerable<I
         foreach (var provider in providers)
         {
             var ready = await provider.CheckReadyAsync(null, ct);
-            result.Add(new(provider.ProviderId, ready.Available, ready.Problem, provider.SupportsTransfer));
+            result.Add(new(provider.ProviderId, ready.Available, ready.Problem, provider.SupportsTransfer, provider.MethodId));
         }
         return new(result);
     }
@@ -83,76 +84,39 @@ public sealed class CloudDownloadsController(BakabaseDbContext db, IEnumerable<I
         await postGate.Semaphore.WaitAsync(ct);
         try
         {
+            await postWorkflow.RefreshTaskUnderGateAsync(input.TaskId, ct);
             var task = await db.PostParserTasks.AsNoTracking().SingleOrDefaultAsync(t => t.Id == input.TaskId && !t.IsDeleted, ct)
                 ?? throw new ArgumentException("The saved parsing result no longer exists.");
             if (task.Revision != input.Revision) throw new InvalidOperationException("The post was parsed again. Refresh its results before starting a download.");
             if (task.ParsingState != "complete" || task.Error != null || string.IsNullOrWhiteSpace(task.Results))
                 throw new ArgumentException("Complete parsing before downloading this result.");
-            var resources = PostParserAcquisitionService.ReadResources(task.Results);
+            var resources = PostDownloadGroupNormalizer.Normalize(PostParserSavedResults.ReadDownloadInfo(task)).Resources;
             if (input.ResourceIndices.Count is 0 or > 500 || input.ResourceIndices.Any(i => i < 0 || i >= resources.Count))
                 throw new ArgumentException("Select download sources from the current result.");
             var parsed = new Bakabase.Modules.PostParser.Models.Domain.PostDownloadInfo
                 {Title = task.Title, Resources = input.ResourceIndices.Distinct().Select(i => resources[i]).ToList()};
             var workset = CloudWorkflow.Prepare(parsed, "post:" + task.Id + ":" + task.Revision + ":" + Guid.NewGuid().ToString("N"), outputDirectory)
-                with {PostTaskId = task.Id, PostRevision = task.Revision};
+                with {PostTaskId = task.Id, PostRevision = task.Revision,
+                    SourceRefs = [new("postParser", "task", task.Id.ToString(), task.Revision.ToString())]};
             foreach (var target in workset.Targets) foreach (var source in target.Sources) Normalize(source);
             return await Start(workset, input.AccountId, input.WorkflowDefinitionId, ct);
         }
         finally {postGate.Semaphore.Release();}
     });
 
-    private async Task<WorkflowRunViewModel> Start(DownloadWorkset item, string? accountId, int? definitionId, CancellationToken ct)
-    {
-        if (string.IsNullOrWhiteSpace(item.OutputDirectory)) throw new ArgumentException("Choose an output directory.");
-        if (!System.IO.Path.IsPathFullyQualified(item.OutputDirectory)) throw new ArgumentException("Choose an absolute download directory.");
-        storage.EnsurePathAllowed(item.OutputDirectory);
-        if (item.Targets.Any(t => t.Sources.Any(s => s.ProviderId == "baidu")))
-            accountId = await HttpContext.RequestServices.GetRequiredService<Bakabase.Service.Components.CloudDownloads.Baidu.BaiduPcsAccountStore>()
-                .ResolveAccountIdAsync(accountId, ct);
-        // The submitted sources are an explicit user selection. Mirrors still require one choice per group.
-        if (item.Targets.Any(t => t.Sources.Count > 1)) throw new ArgumentException("Choose one mirror per content group.");
-        item = item with {Targets = item.Targets.Select(t => t with {SelectedSourceId = t.Sources[0].Id, AccountId = t.Sources[0].ProviderId == "baidu" ? accountId : null,
-            RemoteEntry = t.Sources[0].Kind == "remote" && accountId != null ? new("baidu", accountId, t.Sources[0].Url) : null}).ToList()};
-        if (definitionId == null)
-        {
-            await SeedGate.WaitAsync(ct);
-            try
-            {
-                var builtin = await db.Set<WorkflowDefinitionDbModel>().SingleOrDefaultAsync(d => d.Name == CloudWorkflow.BuiltinName && d.IsBuiltin, ct);
-                if (builtin == null)
-                {
-                    var created = await workflows.CreateAsync(new WorkflowDefinitionCreationInputModel
-                    {Name = CloudWorkflow.BuiltinName, TriggerKind = CloudWorkflow.Trigger, Enabled = true,
-                        Activities = CloudWorkflow.Nodes.Select(k => new WorkflowActivityInputModel {Kind = k, ConfigJson = "{}"}).ToList()}, ct);
-                    builtin = await db.Set<WorkflowDefinitionDbModel>().SingleAsync(d => d.Id == created.Id, ct);
-                    builtin.IsBuiltin = true;
-                    await db.SaveChangesAsync(ct);
-                }
-                definitionId = builtin.Id;
-            }
-            finally {SeedGate.Release();}
-        }
-        var definition = await workflows.GetAsync(definitionId.Value) ?? throw new ArgumentException("Choose a download workflow.");
-        if (definition.TriggerKind != CloudWorkflow.Trigger) throw new ArgumentException("This workflow does not accept download sources.");
-        return WorkflowRunViewModel.From(await workflows.RunManagedAsync(definition.Id, item, ct));
-    }
+    private Task<WorkflowRunViewModel> Start(DownloadWorkset item, string? accountId, int? definitionId, CancellationToken ct) =>
+        new Bakabase.Service.Components.DownloadIntents.DownloadIntentStarter(db, workflows, storage, HttpContext.RequestServices)
+        .StartFilesAsync(item, accountId, definitionId, ct);
 
     internal static CloudSource Normalize(CloudSource source)
     {
-        if (source.Url.Length is 0 or > 2048 || source.AccessCode?.Length > 512 || source.ArchivePassword?.Length > 2048)
-            throw new ArgumentException("The source URL or access information is invalid.");
-        if (source.Kind == "remote")
+        return Components.DownloadIntents.DownloadSourceResolver.Normalize(new()
         {
-            if (source.ProviderId != "baidu" || !source.Url.StartsWith('/') || source.Url.Contains('\0'))
-                throw new ArgumentException("A Baidu remote source needs an absolute cloud path.");
-            return source;
-        }
-        if (!Uri.TryCreate(source.Url, UriKind.Absolute, out var uri) || uri.Scheme is not ("https" or "http" or "magnet"))
-            throw new ArgumentException("Choose an HTTP(S), magnet or supported cloud share URL.");
-        var provider = CloudSourceClassifier.Classify(source.Url);
-        if (source.Kind == "http" && provider is not ("unknown" or "http")) throw new ArgumentException("Use the provider adapter for a cloud share.");
-        return source with {ProviderId = source.Kind == "http" ? "http" : provider,
-            Kind = provider is "http" or "torrent" ? provider : source.Kind};
+            Id = source.Id, Url = source.Url, Kind = source.Kind, ProviderId = source.Kind == "remote" ? source.ProviderId : null,
+            MethodId = source.MethodId, AccountId = source.AccountId, AccessCode = source.AccessCode,
+            ArchivePassword = source.ArchivePassword, ExtractionPlanJson = source.ExtractionPlanJson,
+            GroupId = source.GroupId, Version = source.Version
+        });
     }
 
     private static async Task<SingletonResponse<WorkflowRunViewModel>> Change(Func<Task<WorkflowRunViewModel>> action)

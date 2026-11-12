@@ -1,3 +1,4 @@
+using Bakabase.Abstractions.Components.FileSystem;
 using System.Text.Json;
 using Bakabase.Modules.HttpDownloads.Abstractions;
 using Bakabase.Modules.HttpDownloads.Models;
@@ -15,7 +16,8 @@ public sealed partial class HttpDownloadManager(
     Func<string> storeDirectory,
     Func<int>? concurrencyLimit = null,
     Func<string>? appDataDirectory = null,
-    Func<HttpDownloadJob, CancellationToken, Task<bool>>? canResumeOnStartup = null) : IHttpDownloadManager, IAsyncDisposable
+    Func<HttpDownloadJob, CancellationToken, Task<bool>>? canResumeOnStartup = null,
+    IStorageWriteGuard? storageWrites = null) : IHttpDownloadManager, IAsyncDisposable
 {
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly Dictionary<string, StoredJob> _jobs = new(StringComparer.Ordinal);
@@ -75,6 +77,11 @@ public sealed partial class HttpDownloadManager(
     public async Task<IReadOnlyList<HttpDownloadJob>> ListAsync(CancellationToken ct = default)
     {
         await InitializeAsync(ct);
+        return await ReadSnapshotAsync(ct);
+    }
+
+    public async Task<IReadOnlyList<HttpDownloadJob>> ReadSnapshotAsync(CancellationToken ct = default)
+    {
         await _gate.WaitAsync(ct);
         try { return _jobs.Values.Select(x => Snapshot(x.Job)).OrderByDescending(x => x.CreatedAt).ToArray(); }
         finally { _gate.Release(); }
@@ -125,7 +132,7 @@ public sealed partial class HttpDownloadManager(
                     {
                         var updated = existing with
                         {
-                            Timeout = request.Timeout, ParallelConnections = request.ParallelConnections,
+                            WriteContext = request.WriteContext ?? existing.WriteContext, Timeout = request.Timeout, ParallelConnections = request.ParallelConnections,
                             MaxRetries = request.MaxRetries, MaximumBytesPerSecond = request.MaximumBytesPerSecond,
                             Job = existing.Job with { UpdatedAt = DateTime.UtcNow }
                         };
@@ -150,7 +157,7 @@ public sealed partial class HttpDownloadManager(
             };
             var stored = new StoredJob
             {
-                Job = job, IdempotencyKey = request.IdempotencyKey, PayloadHash = payloadHash,
+                Job = job, WriteContext = request.WriteContext ?? StorageWriteScope.Current, IdempotencyKey = request.IdempotencyKey, PayloadHash = payloadHash,
                 Url = request.Url, RequestedFileName = request.FileName,
                 HttpClientName = request.HttpClientName, ParallelConnections = request.ParallelConnections,
                 MaxRetries = request.MaxRetries, MaximumBytesPerSecond = request.MaximumBytesPerSecond,
@@ -327,7 +334,15 @@ public sealed partial class HttpDownloadManager(
     {
         string? file = null;
         Exception? failure = null;
-        try { file = await TransferAsync(stored, active.Cancellation.Token); }
+        try
+        {
+            // A committed publication can be verified without allocating payload bytes.
+            // Keep incomplete/corrupt files behind the normal write admission check.
+            file = await ReusePublishedAsync(stored, active.Cancellation.Token);
+            file ??= storageWrites == null ? await TransferAsync(stored, active.Cancellation.Token) :
+                await storageWrites.RunAsync([stored.Job.OutputDirectory, StagingDirectory(stored)], WriteContext(stored),
+                    token => TransferAsync(stored, token), active.Cancellation.Token);
+        }
         catch (Exception ex) { failure = ex; }
         await _gate.WaitAsync();
         try
@@ -508,8 +523,15 @@ public sealed partial class HttpDownloadManager(
         public TaskCompletionSource Completion { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
     }
 
+    private static StorageWriteContext? WriteContext(StoredJob stored) => stored.WriteContext ??
+        (stored.Job.WorkflowRunId is { } runId ? new("workflow", runId.ToString()) :
+        stored.Job.DownloadTaskId is { } taskId ? new("downloadTask", taskId.ToString()) :
+        stored.Job.SourceKind == "workflow" && stored.Job.SourceId is { } operationId
+            ? new("artifactOperation", operationId) : new("independentDownload", stored.Job.Id));
+
     private sealed record StoredJob
     {
+        public StorageWriteContext? WriteContext { get; init; }
         public required HttpDownloadJob Job { get; set; }
         public string? IdempotencyKey { get; init; }
         public required string PayloadHash { get; init; }

@@ -1,3 +1,5 @@
+using Bakabase.Modules.Workflow.Abstractions.Models;
+using Bakabase.Modules.Workflow.Components;
 using System.Text.Json;
 using Bakabase.Modules.Workflow.Abstractions.Components;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain;
@@ -17,6 +19,13 @@ public sealed class WorkflowValidationService(
     public WorkflowValidationResult ValidateStructure(WorkflowValidationInputModel input)
     {
         var result = new WorkflowValidationResult();
+        HashSet<int> unresolved;
+        try { input = PrepareParameters(input, false, out unresolved, out var missing); AddMissingParameters(result, missing); }
+        catch (Exception ex) when (ex is ArgumentException or InvalidDataException)
+        {
+            Add("invalidParameters", ex.Message);
+            return result;
+        }
         string? currentType = null;
         if (string.IsNullOrWhiteSpace(input.TriggerKind) || !triggers.TryGet(input.TriggerKind, out var trigger))
             Add("unknownTrigger", $"Unknown trigger kind: {input.TriggerKind}", kind: input.TriggerKind);
@@ -78,18 +87,19 @@ public sealed class WorkflowValidationService(
             }
             catch (Exception ex)
             {
-                Add("missingOutputType", ex.Message, i, node);
+                Add("missingOutputType", ex.Message, i, node, warning: unresolved.Contains(i));
                 currentType = null;
             }
         }
 
         return result;
 
-        void Add(string code, string message, int? index = null, WorkflowActivityInputModel? node = null, string? kind = null) =>
+        void Add(string code, string message, int? index = null, WorkflowActivityInputModel? node = null, string? kind = null, bool warning = false) =>
             result.Diagnostics.Add(new WorkflowValidationDiagnostic
             {
                 Code = code, Message = message, MessageKey = $"workflow.validation.{code}",
                 NodeIndex = index, NodeId = node?.NodeId, Kind = node?.Kind ?? kind,
+                Severity = warning ? "warning" : "error", DependsOnPayload = warning,
             });
     }
 
@@ -97,11 +107,20 @@ public sealed class WorkflowValidationService(
         bool isExecution = false, object? payload = null, CancellationToken ct = default, int startNodeIndex = 0)
     {
         var result = ValidateStructure(input);
+        if (result.Diagnostics.Any(d => d.Code == "invalidParameters")) return result;
+        HashSet<int> unresolved;
+        try { input = PrepareParameters(input, isExecution, out unresolved, out _); }
+        catch (Exception ex) when (ex is ArgumentException or InvalidDataException)
+        {
+            result.Diagnostics.Add(new WorkflowValidationDiagnostic { Code = "invalidParameters", Message = ex.Message,
+                MessageKey = "workflow.validation.invalidParameters", Severity = "error" });
+            return result;
+        }
         for (var i = Math.Max(0, startNodeIndex); i < input.Activities.Count; i++)
         {
             ct.ThrowIfCancellationRequested();
             var node = input.Activities[i];
-            if (string.IsNullOrWhiteSpace(node.Kind) || !activities.TryGet(node.Kind, out var impl)) continue;
+            if (unresolved.Contains(i) || string.IsNullOrWhiteSpace(node.Kind) || !activities.TryGet(node.Kind, out var impl)) continue;
             var config = string.IsNullOrEmpty(node.ConfigJson) ? "{}" : node.ConfigJson;
             try
             {
@@ -146,12 +165,52 @@ public sealed class WorkflowValidationService(
         ValidateAsync(new WorkflowValidationInputModel
         {
             TriggerKind = definition.TriggerKind, TriggerFilterJson = definition.TriggerFilterJson,
+            Parameters = definition.ParameterSnapshot == null ? definition.Parameters.ToList() : [],
             Activities = definition.Activities.OrderBy(a => a.Order).Select(a => new WorkflowActivityInputModel
             {
-                NodeId = a.Id.ToString(System.Globalization.CultureInfo.InvariantCulture), Kind = a.Kind,
+                NodeId = a.NodeId ?? a.Id.ToString(System.Globalization.CultureInfo.InvariantCulture), Kind = a.Kind,
                 ConfigJson = a.ConfigJson, Notes = a.Notes, OnItemError = a.OnItemError,
+                ParameterBindings = definition.ParameterSnapshot == null ? a.ParameterBindings.ToList() : [],
             }).ToList(),
         }, isExecution, payload, ct, startNodeIndex);
+
+    private static WorkflowValidationInputModel PrepareParameters(WorkflowValidationInputModel input, bool requireValues,
+        out HashSet<int> unresolved, out IReadOnlyList<string> missing)
+    {
+        unresolved = [];
+        missing = [];
+        if (input.Parameters == null || input.Activities.Any(a => a.ParameterBindings == null))
+            throw new ArgumentException("Workflow parameters and bindings must be lists.");
+        if (input.Parameters.Count == 0 && input.ParameterValues?.Count is not > 0 &&
+            input.Activities.All(a => a.ParameterBindings.Count == 0)) return input;
+        var plan = new WorkflowRunPlan
+        {
+            Name = "Validation", TriggerKind = string.IsNullOrWhiteSpace(input.TriggerKind) ? "validation" : input.TriggerKind,
+            Parameters = input.Parameters,
+            Nodes = input.Activities.Select((a, i) => new WorkflowRunPlanNode
+            {
+                NodeId = "validation:" + i, Kind = a.Kind, ConfigJson = a.ConfigJson,
+                ParameterBindings = a.ParameterBindings, Notes = a.Notes, OnItemError = a.OnItemError
+            }).ToArray()
+        };
+        var invocation = new WorkflowInvocationInput { Overrides = input.ParameterValues };
+        var prepared = requireValues ? WorkflowInvocationResolver.Resolve(plan, invocation) : WorkflowInvocationResolver.Preview(plan, invocation);
+        var available = prepared.ParameterSnapshot!.Values.Select(v => v.Key).ToHashSet(StringComparer.Ordinal);
+        missing = input.Parameters.Where(p => p.Required && !available.Contains(p.Key)).Select(p => p.Key).ToArray();
+        for (var i = 0; i < input.Activities.Count; i++)
+            if (input.Activities[i].ParameterBindings.Any(b => !available.Contains(b.ParameterKey))) unresolved.Add(i);
+        return input with { Activities = input.Activities.Select((node, i) => node with { ConfigJson = prepared.Nodes[i].ConfigJson }).ToList() };
+    }
+
+    private static void AddMissingParameters(WorkflowValidationResult result, IReadOnlyList<string> missing)
+    {
+        foreach (var key in missing)
+            result.Diagnostics.Add(new WorkflowValidationDiagnostic
+            {
+                Code = "parameterRequired", Message = $"Workflow parameter '{key}' must be supplied when starting the run.",
+                MessageKey = "workflow.validation.parameterRequired", Severity = "warning", DependsOnPayload = true
+            });
+    }
 
     private string? PeekNextSingleAcceptedType(int index, IReadOnlyList<WorkflowActivityInputModel> nodes)
     {

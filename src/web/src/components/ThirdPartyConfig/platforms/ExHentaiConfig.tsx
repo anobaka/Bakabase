@@ -29,7 +29,7 @@ import {
   ExHentaiDownloadMode,
 } from "@/sdk/constants";
 import ExHentaiDownloadModeField from "@/pages/downloader/components/TaskDetailModal/components/ExHentaiDownloadModeField";
-import { resolveExHentaiDownloadMode } from "@/pages/downloader/exHentaiDownloadMode";
+import { resolveExHentaiPolicyMode } from "@/pages/downloader/exHentaiDownloadMode";
 
 export enum ExHentaiConfigField {
   Accounts = "accounts",
@@ -208,7 +208,7 @@ export const ExHentaiConfigPanel: FC<ExHentaiConfigPanelProps> = ({ fields = "al
             />
             <CheckboxGroup
               description={t<string>("downloader.tip.prioritizeTasksWithTorrentDesc")}
-              isDisabled={resolveExHentaiDownloadMode(options) === ExHentaiDownloadMode.Direct}
+              isDisabled={resolveExHentaiPolicyMode(options) === ExHentaiDownloadMode.Direct}
               label={t<string>("downloader.label.prioritizeTasksWithTorrent")}
               orientation="horizontal"
               size="sm"
@@ -221,7 +221,7 @@ export const ExHentaiConfigPanel: FC<ExHentaiConfigPanelProps> = ({ fields = "al
             </CheckboxGroup>
             <NumberInput
               description={t<string>("downloader.tip.torrentCheckValidityHoursDesc")}
-              isDisabled={resolveExHentaiDownloadMode(options) === ExHentaiDownloadMode.Direct}
+              isDisabled={resolveExHentaiPolicyMode(options) === ExHentaiDownloadMode.Direct}
               label={t<string>("downloader.label.torrentCheckValidityHours")}
               min={0}
               // 0 is the documented "always re-check" value, matching the backend, so an empty

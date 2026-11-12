@@ -4,6 +4,8 @@ namespace Bakabase.Modules.Workflow.Abstractions.Models.View;
 
 public record WorkflowDefinitionViewModel
 {
+    public IReadOnlyList<WorkflowParameterDefinition> Parameters { get; set; } = [];
+
     public int Id { get; set; }
     public string Name { get; set; } = null!;
     public string? Description { get; set; }
@@ -23,6 +25,7 @@ public record WorkflowDefinitionViewModel
 
     public static WorkflowDefinitionViewModel From(WorkflowDefinition d) => new()
     {
+        Parameters = d.Parameters,
         Id = d.Id,
         Name = d.Name,
         Description = d.Description,

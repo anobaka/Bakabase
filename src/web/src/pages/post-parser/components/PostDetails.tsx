@@ -4,6 +4,8 @@ import { useTranslation } from "react-i18next";
 import { Popover, PopoverContent, PopoverTrigger } from "@heroui/react";
 import { AiOutlineQuestionCircle } from "react-icons/ai";
 
+import { translateKnownMessage } from "../knownMessages";
+
 import { Button } from "@/components/bakaui";
 
 export const contentText = (html?: string) => {
@@ -45,7 +47,9 @@ export function EvidencePopover({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="max-w-sm items-start gap-2 p-3 text-xs">
-        {reason && <p className="whitespace-pre-wrap break-words">{reason}</p>}
+        {reason && (
+          <p className="whitespace-pre-wrap break-words">{translateKnownMessage(t, reason)}</p>
+        )}
         {details.length > 0 && (
           <ul className="list-disc space-y-1 pl-4">
             {details.map((text, index) => (
@@ -87,7 +91,9 @@ export function AvailabilityDetails({
       </div>
       {!compact && (
         <>
-          {value.reason && <p className="text-default-500">{value.reason}</p>}
+          {value.reason && (
+            <p className="text-default-500">{translateKnownMessage(t, value.reason)}</p>
+          )}
           {!!value.evidence?.length && (
             <ul className="list-disc space-y-1 pl-4">
               {value.evidence.map((text, index) => (

@@ -7,6 +7,7 @@ namespace Bakabase.InsideWorld.Business.Components.Configurations.Models.Input
     {
         public List<SimpleSearchEngineOptionsPatchInput>? SimpleSearchEngines { get; set; }
         public bool? AutomaticallyParsingPosts { get; set; }
+        public Bakabase.InsideWorld.Models.Configs.ThirdPartyOptions.PostParserAcquisitionOptions? PostParserAcquisition { get; set; }
 
         [Range(1, int.MaxValue)]
         public int? PostParserMaxConcurrency { get; set; }

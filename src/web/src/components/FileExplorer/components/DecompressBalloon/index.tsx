@@ -1,270 +1,153 @@
 "use client";
 
-import type {
-  BakabaseInsideWorldModelsConstantsAosPasswordSearchOrder,
-  BakabaseInsideWorldModelsModelsEntitiesPassword,
-} from "@/sdk/Api";
-
-import React, { useCallback, useRef, useState } from "react";
-import { Trans, useTranslation } from "react-i18next";
-import i18n from "i18next";
-
-import { Button, Modal, Input, Chip } from "@/components/bakaui";
-import { toast } from "@/components/bakaui";
-import BApi from "@/sdk/BApi";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { FileZipOutlined } from "@ant-design/icons";
+import { useTranslation } from "react-i18next";
+import { Button, Modal, Spinner, Tooltip, toast } from "@/components/bakaui";
+import ArchivePasswordInput from "@/components/PasswordSelector/ArchivePasswordInput";
+import { useResourceOwnerScope } from "@/features/management/resourceContext";
 import { PasswordSearchOrder } from "@/sdk/constants";
-import PasswordSelector from "@/components/PasswordSelector";
-import { Tooltip } from "@/components/bakaui";
-import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-
-const QuickPasswordCount = 5;
-
-type Password = BakabaseInsideWorldModelsModelsEntitiesPassword;
+import BApi from "@/sdk/BApi";
 
 interface Props {
   trigger: React.ReactElement;
-  entry: {
-    path: string;
-  };
+  entry: { path: string };
   passwords?: string[];
 }
+type Source = "filename" | "recent" | "frequent";
+type Candidate = { value: string; sources: Source[] };
+type Selection = { path: string; ownerKey?: string; candidates: string[] };
 
-const loadTopNPasswords = async (type: PasswordSearchOrder): Promise<Password[]> => {
-  const rsp = await BApi.password.searchPasswords({
-    order: type as BakabaseInsideWorldModelsConstantsAosPasswordSearchOrder,
-    pageSize: QuickPasswordCount,
-  });
+function mergeCandidates(groups: [Source, string[]][]): Candidate[] {
+  const values = new Map<string, Candidate>();
+  for (const [source, passwords] of groups) for (const value of passwords) {
+    // Passwords are case-sensitive and may contain whitespace. Never normalize their contents.
+    if (typeof value !== "string" || value.length === 0) continue;
+    const candidate = values.get(value) ?? { value, sources: [] };
+    if (!candidate.sources.includes(source)) candidate.sources.push(source);
+    values.set(value, candidate);
+  }
+  return [...values.values()];
+}
 
-  return rsp.data || [];
-};
-const DecompressBalloon = (props: Props) => {
-  const { trigger, entry, passwords = [] } = props;
+export default function DecompressBalloon({ trigger, entry, passwords = [] }: Props) {
   const { t } = useTranslation();
-  const { createPortal } = useBakabaseContext();
-  const customPasswordRef = useRef<string>();
+  const owner = useResourceOwnerScope();
+  const canUseServer = !owner || owner.source.isLocal;
+  const [selection, setSelection] = useState<Selection>();
+  const [password, setPassword] = useState("");
+  const [retry, setRetry] = useState(0);
+  const [saved, setSaved] = useState<{ selection: Selection; groups: [Source, string[]][]; failed: boolean }>();
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string>();
+  const pending = useRef(false);
+  const mounted = useRef(true);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+  const current = selection?.path === entry.path && selection?.ownerKey === owner?.key;
 
-  const [recentPasswords, setRecentPasswords] = useState<Password[]>([]);
-  const [frequentlyUsedPasswords, setFrequentlyUsedPasswords] = useState<Password[]>([]);
-
-  const decompress = useCallback((path: string, password?: string) => {
-    // Notification.open({
-    //   title: t<string>('Start decompressing'),
-    //   type: 'success',
-    //   // content:
-    //   //   "This is the content of the notification. This is the content of the notification. This is the content of the notification.",
-    //   // type
-    // });
-    toast.default(t<string>("Start decompressing"));
-
-    return BApi.file.decompressFiles({
-      paths: [path],
-      password,
+  useEffect(() => {
+    if (!selection || !current || !canUseServer) return;
+    const request = new AbortController();
+    setSaved(undefined);
+    void Promise.allSettled([
+      BApi.password.searchPasswords({ order: PasswordSearchOrder.Latest, pageSize: 5 },
+        { signal: request.signal, showErrorToast: false, sensitiveResponse: true }),
+      BApi.password.searchPasswords({ order: PasswordSearchOrder.Frequency, pageSize: 5 },
+        { signal: request.signal, showErrorToast: false, sensitiveResponse: true }),
+    ]).then(results => {
+      if (request.signal.aborted) return;
+      const groups: [Source, string[]][] = [];
+      let failed = false;
+      results.forEach((result, index) => {
+        if (result.status !== "fulfilled" || result.value.code !== 0) { failed = true; return; }
+        groups.push([index === 0 ? "recent" : "frequent", (result.value.data ?? []).map(item => item.text)]);
+      });
+      setSaved({ selection, groups, failed });
     });
-  }, []);
+    return () => request.abort();
+  }, [selection, current, canUseServer, retry]);
 
-  const onBalloonVisible = useCallback(async () => {
-    setRecentPasswords(await loadTopNPasswords(PasswordSearchOrder.Latest));
-    setFrequentlyUsedPasswords(await loadTopNPasswords(PasswordSearchOrder.Frequency));
-  }, []);
+  const savedForSelection = saved?.selection === selection ? saved : undefined;
+  const candidates = useMemo(() => mergeCandidates([
+    ["filename", selection?.candidates ?? []], ...(savedForSelection?.groups ?? []),
+  ]), [selection, savedForSelection]);
+  const close = () => {
+    if (pending.current) return;
+    setSelection(undefined); setPassword(""); setError(undefined);
+  };
+  const start = async () => {
+    if (!selection || !current || !canUseServer || pending.current) return;
+    pending.current = true; setSubmitting(true); setError(undefined);
+    try {
+      const response = await BApi.file.decompressFiles(
+        // An explicit empty string disables the server's filename-password fallback.
+        { paths: [selection.path], password }, { showErrorToast: false, sensitiveResponse: true },
+      );
+      if (!mounted.current) return;
+      if (response.code !== 0) { setError(response.message || t("fileExplorer.decompress.failed")); return; }
+      setSelection(undefined); setPassword("");
+      toast.success(t("fileExplorer.decompress.started"));
+    } catch {
+      if (mounted.current) setError(t("fileExplorer.decompress.failed"));
+    } finally {
+      pending.current = false;
+      if (mounted.current) setSubmitting(false);
+    }
+  };
 
-  const openPasswordSelector = useCallback(() => {
-    PasswordSelector.show({
-      onSelect: (password: string) => {
-        decompress(entry.path, password);
+  return <>
+    {React.cloneElement(trigger, {
+      onClick: (event: React.MouseEvent) => event.stopPropagation(),
+      onPress: () => {
+        if (pending.current) return;
+        setSelection({ path: entry.path, ownerKey: owner?.key, candidates: passwords.slice() });
+        setPassword(""); setError(undefined);
       },
-    });
-  }, []);
-
-  const renderTopNPasswords = useCallback(
-    (type: PasswordSearchOrder) => {
-      let label: string;
-      let passwords: Password[];
-
-      switch (type) {
-        case PasswordSearchOrder.Latest:
-          label = "recently used";
-          passwords = recentPasswords;
-          break;
-        case PasswordSearchOrder.Frequency:
-          label = "frequently used";
-          passwords = frequentlyUsedPasswords;
-          break;
-      }
-      if (passwords.length > 0) {
-        return (
-          <div className="rounded p-2.5 shadow-[rgba(0,0,0,0.05)_0px_0px_0px_1px,rgb(209,213,219)_0px_0px_0px_1px_inset]">
-            <div className="mb-1.5">
-              {t<string>(`Alternatively, you can choose a password from ${label} passwords:`)}
-              {passwords.length === 5 && (
-                <Button
-                  color={"primary"}
-                  size={"sm"}
-                  variant={"light"}
-                  onClick={openPasswordSelector}
-                >
-                  {t<string>("Show more")}
-                </Button>
-              )}
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {passwords.map((p) => {
-                return (
-                  <Chip
-                    key={p.text}
-                    className="cursor-pointer"
-                    size={"sm"}
-                    onClick={() => {
-                      decompress(entry.path, p.text);
-                    }}
-                    onClose={() => {
-                      createPortal(Modal, {
-                        defaultVisible: true,
-                        title: t<string>("Delete password from history?"),
-                        children: t<string>(
-                          "Are you sure you want to delete this password from history?",
-                        ),
-                        onOk: () => BApi.password.deletePassword(p.text),
-                      });
-                    }}
-                  >
-                    {p.text}
-                  </Chip>
-                );
-              })}
-            </div>
+    })}
+    {selection && <Modal visible size="md" scrollBehavior="inside" onClose={close}
+      title={<span className="inline-flex items-center gap-2"><FileZipOutlined aria-hidden />{t("fileExplorer.decompress.title")}</span>}
+      isDismissable={!submitting} isKeyboardDismissDisabled={submitting} hideCloseButton={submitting}
+      footer={<div className="flex w-full flex-wrap justify-end gap-2">
+        <Button variant="light" isDisabled={submitting} onPress={close}>{t("common.action.close")}</Button>
+        <Button color="primary" isLoading={submitting} isDisabled={!current || !canUseServer || submitting} onPress={start}>
+          {t("fileExplorer.decompress.start")}
+        </Button>
+      </div>}>
+      <div className="min-w-0 space-y-1">
+        <p className="text-sm font-medium [overflow-wrap:anywhere]">{selection.path.replace(/\\/g, "/").split("/").pop()}</p>
+        <p className="max-h-20 overflow-auto whitespace-pre-wrap break-all text-xs text-default-500">{selection.path}</p>
+        <p className="text-xs text-default-500">{t("fileExplorer.decompress.destination")}</p>
+      </div>
+      {!current || !canUseServer ? <p role="alert" className="text-sm text-warning">{t("fileExplorer.decompress.unavailable")}</p> : <>
+        <ArchivePasswordInput label={t("fileExplorer.decompress.password")} value={password}
+          size="sm" isDisabled={submitting} onValueChange={setPassword} />
+        <div className="min-w-0 space-y-1.5">
+          <div className="flex items-center gap-2 text-xs text-default-500">
+            <span>{t("fileExplorer.decompress.quickChoices")}</span>
+            {!savedForSelection && <Spinner size="sm" aria-label={t("common.state.loading")} />}
           </div>
-        );
-      }
-
-      return;
-    },
-    [recentPasswords, frequentlyUsedPasswords],
-  );
-
-  return (
-    <Tooltip
-      content={
-        <div>
-          <div className="my-1.5">
-            {t<string>(
-              "Contents will be decompressed to the same directory as the compressed file.",
-            )}
+          <div className="flex max-h-32 min-w-0 flex-wrap gap-1.5 overflow-auto">
+            <Button size="sm" radius="full" variant={password === "" ? "flat" : "bordered"}
+              color={password === "" ? "primary" : "default"} aria-pressed={password === ""}
+              isDisabled={submitting} onPress={() => setPassword("")}>{t("fileExplorer.decompress.noPassword")}</Button>
+            {candidates.map(candidate => <Tooltip key={candidate.value} delay={650} placement="bottom"
+              content={candidate.sources.map(source => t(`fileExplorer.decompress.source.${source}`)).join(" · ")}>
+              <Button type="button" size="sm" radius="full" isDisabled={submitting}
+                className="h-auto min-h-7 min-w-0 max-w-full whitespace-normal px-2.5 py-1"
+                color={password === candidate.value ? "primary" : "default"} variant="flat"
+                aria-pressed={password === candidate.value} onPress={() => setPassword(candidate.value)}>
+                <span className="min-w-0 whitespace-pre-wrap [overflow-wrap:anywhere]">{candidate.value}</span>
+              </Button>
+            </Tooltip>)}
           </div>
-          <div className="flex flex-col gap-2.5">
-            {passwords.length > 0 && (
-              <div>
-                <Trans
-                  i18nKey={"fp.te.db.defaultPassword"}
-                  values={{
-                    password: passwords[0],
-                  }}
-                >
-                  By default, we will use&nbsp;
-                  <Button color={"primary"} size={"sm"} variant={"light"}>
-                    password
-                  </Button>
-                  &nbsp; as password.
-                </Trans>
-              </div>
-            )}
-            {passwords.length > 1 && (
-              <div className="rounded p-2.5 shadow-[rgba(0,0,0,0.05)_0px_0px_0px_1px,rgb(209,213,219)_0px_0px_0px_1px_inset]">
-                <div className="mb-1.5">
-                  {t<string>(
-                    "Alternatively, you can choose a password from the following candidates:",
-                  )}
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {passwords.slice(1).map((password: string) => (
-                    <Button
-                      key={password}
-                      size={"sm"}
-                      variant={"flat"}
-                      onClick={() => {
-                        decompress(entry.path, password);
-                      }}
-                    >
-                      {password}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {renderTopNPasswords(PasswordSearchOrder.Latest)}
-            {renderTopNPasswords(PasswordSearchOrder.Frequency)}
-
-            <div className="rounded p-2.5 shadow-[rgba(0,0,0,0.05)_0px_0px_0px_1px,rgb(209,213,219)_0px_0px_0px_1px_inset]">
-              <div className="mb-1.5">{t<string>("Or you can use a custom password:")}</div>
-              <Input
-                isClearable
-                endContent={
-                  <Button
-                    size={"sm"}
-                    variant={"flat"}
-                    onClick={() => {
-                      if (customPasswordRef.current) {
-                        decompress(entry.path, customPasswordRef.current);
-                      } else {
-                        toast.danger(i18n.t<string>("Password can not be empty"));
-                      }
-                    }}
-                  >
-                    {t<string>("Use custom password to decompress")}
-                  </Button>
-                }
-                placeholder={i18n.t<string>("Password")}
-                size={"sm"}
-                style={{ width: "100%" }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                }}
-                onDoubleClick={(e) => {
-                  e.stopPropagation();
-                }}
-                onKeyDown={(e) => {
-                  e.cancelable = true;
-                }}
-                onMouseDown={(e) => {
-                  e.stopPropagation();
-                }}
-                onValueChange={(v) => {
-                  customPasswordRef.current = v;
-                }}
-              />
-            </div>
-          </div>
+          <p className="text-xs text-default-500">{t("fileExplorer.decompress.choicesHint")}</p>
+          {savedForSelection?.failed && <div role="status" className="flex flex-wrap items-center gap-1 text-xs text-warning">
+            <span>{t("fileExplorer.decompress.passwordsFailed")}</span>
+            <Button size="sm" variant="light" isDisabled={submitting} onPress={() => setRetry(value => value + 1)}>{t("common.action.retry")}</Button>
+          </div>}
         </div>
-      }
-      delay={500}
-      placement={"left"}
-      onClick={() => {}}
-      onOpenChange={(v) => {
-        if (v) {
-          onBalloonVisible();
-        }
-      }}
-    >
-      {React.cloneElement(trigger, {
-        onContextMenu: () => {
-          // e.stopPropagation();
-          // e.preventDefault();
-          // setVisible(true);
-        },
-        onClick: () => {
-          // console.log(e);
-          // e.stopPropagation();
-          // e.preventDefault();
-          if (trigger.props.onClick) {
-            trigger.props.onClick();
-          }
-          decompress(entry.path);
-        },
-      })}
-    </Tooltip>
-  );
-};
-
-DecompressBalloon.displayName = "DecompressBalloon";
-
-export default DecompressBalloon;
+      </>}
+      {error && <p role="alert" className="whitespace-pre-wrap break-words text-sm text-danger">{error}</p>}
+    </Modal>}
+  </>;
+}

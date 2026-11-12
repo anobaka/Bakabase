@@ -86,5 +86,7 @@
   "helpCenter.acquisition.concept.task.wait.desc": "等待文件、密码或冲突处理时，按当前任务的提示操作。完成认领或提交所需输入后，工作流可从等待的步骤继续。",
   "helpCenter.acquisition.concept.task.finish.title": "查看完成结果或失败原因",
   "helpCenter.acquisition.concept.task.finish.desc": "成功入库后，资源会关联本地文件。失败时在「全部任务」查看原因，修正链接、文件或配置后再决定是否重试。",
+  "helpCenter.acquisition.concept.task.remove.title": "验收后移除任务",
+  "helpCenter.acquisition.concept.task.remove.desc": "默认只从列表移除任务，保留文件和执行历史。需要释放空间时，可选择清理原始下载和中间文件；正式交付文件不在清理范围内。确认已验收后，默认跳过文件内容校验，也可以取消勾选再继续。若希望部分文件未能清理时仍移除任务，请在最终确认前勾选对应选项。",
   "helpCenter.acquisition.concept.task.note": "等待输入与执行失败是不同状态。可恢复的等待会提供继续操作；重试能否成功取决于失败原因是否解决，并非所有失败都能自动恢复。"
 }

@@ -31,6 +31,12 @@ import { workflowLabel } from "../builtinLabels";
 import { workflowDescription } from "../metadata";
 import WorkflowDiagnostics from "../WorkflowDiagnostics";
 import { useDraftWorkflowValidation } from "../useWorkflowValidation";
+import ParameterDefinitionsEditor from "../Parameters/ParameterDefinitionsEditor";
+import {
+  parameterBindingsAreValid,
+  parameterDefinitionsAreValid,
+  type WorkflowParameter,
+} from "../Parameters/model";
 
 import { useChainDrag } from "./useChainDrag";
 import { useCanvasView } from "./useCanvasView";
@@ -61,6 +67,10 @@ interface Props {
   triggers: TriggerDescriptorVm[];
   /** Prefill for a fresh definition (template / hand-off). Ignored when editing. */
   seed?: EditorSeedLike;
+  /** The same editor can stay inside a source-action workflow browser. */
+  embedded?: boolean;
+  onBack?: () => void;
+  onSaved?: (id: number) => void | Promise<void>;
 }
 
 function activityVmToDraft(a: ActivityVm): ActivityDraft {
@@ -70,6 +80,7 @@ function activityVmToDraft(a: ActivityVm): ActivityDraft {
     configJson: a.configJson,
     notes: a.notes ?? undefined,
     onItemError: a.onItemError as WorkflowActivityErrorBehavior,
+    parameterBindings: a.parameterBindings ?? [],
   };
 }
 
@@ -79,7 +90,14 @@ function activityVmToDraft(a: ActivityVm): ActivityDraft {
  * magnetic insertion slots, and a fixed inspector on the right. All type inference and every
  * config form is the same code the modal editor used — only the shell changed.
  */
-const WorkflowCanvasEditor: React.FC<Props> = ({ workflow, triggers, seed }) => {
+const WorkflowCanvasEditor: React.FC<Props> = ({
+  workflow,
+  triggers,
+  seed,
+  embedded = false,
+  onBack,
+  onSaved,
+}) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { createPortal } = useBakabaseContext();
@@ -118,6 +136,10 @@ const WorkflowCanvasEditor: React.FC<Props> = ({ workflow, triggers, seed }) => 
     () => workflow?.activities?.map(activityVmToDraft) ?? seed?.drafts ?? [],
   );
   const [selection, setSelection] = useState<CanvasSelection | null>("trigger");
+  const [parameters, setParameters] = useState<WorkflowParameter[]>(
+    workflow?.parameters ?? seed?.parameters ?? [],
+  );
+  const [parameterInputsValid, setParameterInputsValid] = useState(true);
   const [saving, setSaving] = useState(false);
   const [runsOpen, setRunsOpen] = useState(false);
 
@@ -331,30 +353,43 @@ const WorkflowCanvasEditor: React.FC<Props> = ({ workflow, triggers, seed }) => 
 
     if (!ui) return false;
     try {
+      // Required invocation values may not exist until the caller starts the workflow.
+      // Bound fields are validated against the contract here and by the server after resolution.
+      if (a.parameterBindings?.length)
+        return parameterBindingsAreValid(a.configJson, a.parameterBindings, parameters);
       return ui.isValid(ui.parseConfig(a.configJson));
     } catch {
       return false;
     }
   });
   const isChainValid = chain?.allCompatible ?? false;
-  const isValid = isNameValid && isTriggerValid && isActivityConfigsValid && isChainValid;
+  const areParametersValid = parameterInputsValid && parameterDefinitionsAreValid(parameters);
+  const isValid =
+    isNameValid && isTriggerValid && isActivityConfigsValid && isChainValid && areParametersValid;
 
   const lintMessage = !isNameValid
     ? t<string>("workflow.validation.nameRequired")
-    : !isChainValid
-      ? t<string>("workflow.editor.lint.chainBroken")
-      : !isActivityConfigsValid
-        ? t<string>("workflow.editor.lint.configIncomplete")
-        : !drafts.some((a) => getWorkflowActivityUI(a.kind)?.category != null)
-          ? drafts.length === 0
-            ? t<string>("workflow.editor.lint.noActivities")
-            : ""
-          : "";
+    : !areParametersValid
+      ? t<string>("workflow.parameters.invalid")
+      : !isChainValid
+        ? t<string>("workflow.editor.lint.chainBroken")
+        : !isActivityConfigsValid
+          ? t<string>("workflow.editor.lint.configIncomplete")
+          : !drafts.some((a) => getWorkflowActivityUI(a.kind)?.category != null)
+            ? drafts.length === 0
+              ? t<string>("workflow.editor.lint.noActivities")
+              : ""
+            : "";
 
   const validation = useDraftWorkflowValidation({
     triggerKind,
+    parameters,
     triggerFilterJson: triggerUi?.serializeFilter(filter) ?? undefined,
-    activities: drafts.map(({ clientId, ...draft }) => ({ ...draft, nodeId: clientId })),
+    activities: drafts.map(({ clientId, ...draft }) => ({
+      ...draft,
+      nodeId: clientId,
+      parameterBindings: draft.parameterBindings ?? [],
+    })),
   });
 
   const handleSave = async () => {
@@ -367,15 +402,18 @@ const WorkflowCanvasEditor: React.FC<Props> = ({ workflow, triggers, seed }) => 
       description,
       triggerFilterJson: triggerUi.serializeFilter(filter) ?? undefined,
       enabled,
+      parameters,
       activities: drafts.map((a) => ({
         kind: a.kind,
         configJson: a.configJson,
         notes: a.notes ?? undefined,
         onItemError: a.onItemError,
+        parameterBindings: a.parameterBindings ?? [],
       })),
     };
 
     try {
+      let savedId = workflow?.id;
       if (isEditing && !workflow?.isBuiltin) {
         const rsp = await BApi.workflow.patchWorkflow(workflow!.id, payload);
 
@@ -384,10 +422,12 @@ const WorkflowCanvasEditor: React.FC<Props> = ({ workflow, triggers, seed }) => 
         const rsp = await BApi.workflow.addWorkflow({ ...payload, triggerKind });
 
         if (rsp.code || !rsp.data) throw new Error(rsp.message ?? "save failed");
-        // Stay in the editor, now editing the created definition.
-        navigate(`/workflows/editor?id=${rsp.data!.id}`, { replace: true });
+        savedId = rsp.data.id;
+        // A modal host owns its navigation; the standalone editor keeps its existing route.
+        if (!onSaved) navigate(`/workflows/editor?id=${savedId}`, { replace: true });
       }
       toast.success(t<string>("workflow.editor.saved"));
+      if (savedId != null) await onSaved?.(savedId);
     } catch (e: any) {
       toast.danger(e?.message ?? String(e));
     } finally {
@@ -407,7 +447,7 @@ const WorkflowCanvasEditor: React.FC<Props> = ({ workflow, triggers, seed }) => 
       return;
     }
 
-    if (trigger?.requiresManualPayload) {
+    if (trigger && (trigger.requiresManualPayload || workflow.parameters?.length)) {
       createPortal(ManualRunModal, {
         workflowId: workflow.id,
         workflowName: displayName,
@@ -448,10 +488,18 @@ const WorkflowCanvasEditor: React.FC<Props> = ({ workflow, triggers, seed }) => 
   const runEntry = getWorkflowTriggerUI(workflow?.triggerKind ?? "")?.runEntry;
 
   return (
-    <div className="flex flex-col gap-0 h-[calc(100vh-16px)] min-h-0">
+    <div
+      className={`flex min-h-0 flex-col gap-0 ${embedded ? "h-[75dvh] min-h-[32rem]" : "h-[calc(100vh-16px)]"}`}
+    >
       {/* Top bar */}
       <div className="flex items-center gap-2 px-1 pb-2">
-        <Button isIconOnly size="sm" variant="light" onPress={() => navigate("/workflows")}>
+        <Button
+          isIconOnly
+          aria-label={t("workflow.browser.back")}
+          size="sm"
+          variant="light"
+          onPress={() => (onBack ? onBack() : navigate("/workflows"))}
+        >
           <AiOutlineArrowLeft />
         </Button>
         <Input
@@ -523,6 +571,11 @@ const WorkflowCanvasEditor: React.FC<Props> = ({ workflow, triggers, seed }) => 
           onValueChange={setDescription}
         />
       </details>
+      <ParameterDefinitionsEditor
+        parameters={parameters}
+        onChange={setParameters}
+        onValidityChange={setParameterInputsValid}
+      />
       {/* Three zones */}
       <div className="flex-1 min-h-0 grid grid-cols-[230px_1fr_300px] max-md:grid-cols-1 gap-0 border border-default-200 rounded-xl overflow-hidden">
         {/* Palette */}
@@ -688,6 +741,7 @@ const WorkflowCanvasEditor: React.FC<Props> = ({ workflow, triggers, seed }) => 
             />
           </div>
           <InspectorPanel
+            parameters={parameters}
             descriptors={allDescriptors}
             drafts={drafts}
             filter={filter}

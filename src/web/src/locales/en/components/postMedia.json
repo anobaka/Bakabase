@@ -1,0 +1,6 @@
+{
+  "postMedia.candidates": "Cover and preview candidates ({{count}})",
+  "postMedia.description": "Images are kept separately from download sources and passed to acquisition plans as cover candidates. They are not queued for download or selected as the final cover automatically.",
+  "postMedia.cover": "Cover {{number}}",
+  "postMedia.preview": "Preview {{number}}"
+}

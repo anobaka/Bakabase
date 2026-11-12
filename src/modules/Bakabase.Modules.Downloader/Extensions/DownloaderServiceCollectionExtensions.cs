@@ -1,3 +1,4 @@
+using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Modules.Downloader.Abstractions;
 using Bakabase.Modules.Downloader.Components;
 using Microsoft.Extensions.DependencyInjection;
@@ -20,10 +21,10 @@ public static class DownloaderServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(cacheDirectory);
         services.AddHttpClient(HttpClientName, client => client.Timeout = Timeout.InfiniteTimeSpan);
         services.TryAddSingleton<IHttpDownloader>(sp => new HttpDownloader(() => cacheDirectory(sp),
-            sp.GetRequiredService<IHttpClientFactory>(), sp.GetRequiredService<ILoggerFactory>()));
+            sp.GetRequiredService<IHttpClientFactory>(), sp.GetRequiredService<ILoggerFactory>(), sp.GetService<IStorageWriteGuard>()));
         services.TryAddSingleton<ITorrentDownloader>(sp => new BuiltInTorrentDownloader(
             () => cacheDirectory(sp), sp.GetRequiredService<ILogger<BuiltInTorrentDownloader>>(),
-            sp.GetRequiredService<IHttpClientFactory>(), sp.GetService<ITorrentNetworkOptionsProvider>()));
+            sp.GetRequiredService<IHttpClientFactory>(), sp.GetService<ITorrentNetworkOptionsProvider>(), sp.GetService<IStorageWriteGuard>()));
         services.TryAddSingleton<IAria2Downloader, Aria2Downloader>();
         return services;
     }

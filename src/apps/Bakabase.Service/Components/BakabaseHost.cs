@@ -174,6 +174,10 @@ namespace Bakabase.Service.Components
             // the management page complete regardless of what seeding history a database has.
             await scope.ServiceProvider.GetRequiredService<ITextVocabularyService>().EnsureBuiltinTypes();
 
+            var recoveredLinks = await Acquisition.Planning.AcquisitionStageHistoryMigration.BackfillAsync(
+                scope.ServiceProvider.GetRequiredService<BakabaseDbContext>());
+            Logger.LogInformation("Acquisition stage history ready. Restored {Count} missing task/run links.", recoveredLinks);
+
             // Warm in-memory caches that depend on tables created by migrations.
             // Must run here (post-migration) — not via IHostedService, which fires
             // during host start before MigrateDb has executed.

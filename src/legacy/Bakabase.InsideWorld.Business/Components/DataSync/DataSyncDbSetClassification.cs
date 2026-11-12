@@ -57,7 +57,8 @@ public static class DataSyncDbSetClassification
         Add(DataSyncTableClass.NeverSync, "Device task or runtime state", null,
             "CloudDownloadOperations", "DownloadTasks", "ManagedDownloadTasks", "DownloadTaskFiles", "DownloadRecords", "DownloadResults", "DownloadResultOwners",
             "DownloadResultProcessing", "PostParserTasks", "AcquisitionLeads", "AcquisitionTasks", "BulkModifications",
-            "WorkflowRuns", "SubscriptionSnapshots", "FileRenameEntries", "Notifications", "ResourceProcessingJobs");
+            "ArtifactOperations", "Artifacts", "ArtifactConsumers", "ArtifactLineage", "ArtifactOperationBindings",
+            "WorkflowRuns", "WorkflowNodeExecutions", "ProcessingPlanRevisions", "SubscriptionSnapshots", "FileRenameEntries", "Notifications", "ResourceProcessingJobs");
         Add(DataSyncTableClass.NeverSync, "Device logs and history", null,
             "LlmUsageLogs", "LlmCallCacheEntries", "ChatConversations", "ChatMessages", "AigcGenerationRuns",
             "AigcArtifacts");

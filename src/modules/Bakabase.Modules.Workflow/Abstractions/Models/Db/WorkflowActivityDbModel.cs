@@ -9,6 +9,8 @@ namespace Bakabase.Modules.Workflow.Abstractions.Models.Db;
 /// </summary>
 public record WorkflowActivityDbModel
 {
+    public string? ParameterBindingsJson { get; set; }
+
     [Key] public int Id { get; set; }
     public int WorkflowDefinitionId { get; set; }
 

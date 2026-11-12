@@ -66,6 +66,7 @@ public class PostParserWorkflowRunsController(BakabaseDbContext db) : Controller
         }
 
         var rows = await query.OrderByDescending(r => r.StartedAt).ThenByDescending(r => r.Id)
+            .Include(r => r.NodeExecutions)
             .ToListAsync(ct);
         return new SearchResponse<WorkflowRunViewModel>(
             rows.Select(r => WorkflowRunViewModel.From(r.ToDomainModel())), total, pageIndex, pageSize);

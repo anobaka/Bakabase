@@ -20,7 +20,7 @@ namespace Bakabase.Modules.Acquisition.Components.Workflow;
 /// saying a step did not work.
 /// </para>
 /// </summary>
-public class AcquisitionStepActivity(IAcquisitionStep step) : IResumableWorkflowActivity
+public class AcquisitionStepActivity(IAcquisitionStep step) : IResumableWorkflowActivity, IAcquisitionLeadKindsActivity
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 

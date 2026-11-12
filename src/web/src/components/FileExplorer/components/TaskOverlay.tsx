@@ -17,7 +17,7 @@ const TaskOverlay = ({ task: sourceTask }: TaskOverlayProps) => {
   const { t, i18n } = useTranslation();
   const task = localizeBTask(sourceTask, i18n.language);
 
-  if (task.error) {
+  if (task.error || task.status === BTaskStatus.Error) {
     return null;
   }
 

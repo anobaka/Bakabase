@@ -30,6 +30,18 @@ public sealed class BaiduPcsController(BaiduPcsAccountStore accounts) : Controll
     public async Task<SingletonResponse<BaiduPcsAccountViewModel>> Validate(string id, CancellationToken ct) =>
         new(await accounts.ValidateAsync(id, ct));
 
+    [HttpPost("{id}/membership/refresh")]
+    [RemoteAccessible]
+    [SwaggerOperation(OperationId = "RefreshBaiduPcsMembership")]
+    public async Task<SingletonResponse<BaiduPcsAccountViewModel>> RefreshMembership(string id, CancellationToken ct) =>
+        new(await accounts.RefreshMembershipAsync(id, ct));
+
+    [HttpPut("{id}/download-options")]
+    [RemoteAccessible]
+    [SwaggerOperation(OperationId = "SetBaiduPcsDownloadOptions")]
+    public async Task<SingletonResponse<BaiduPcsAccountViewModel>> SetDownloadOptions(string id,
+        [FromBody] BaiduDownloadOptions input, CancellationToken ct) => new(await accounts.SetDownloadOptionsAsync(id, input, ct));
+
     [HttpPut("{id}/default")]
     [RemoteAccessible]
     [SwaggerOperation(OperationId = "SetDefaultBaiduPcsAccount")]

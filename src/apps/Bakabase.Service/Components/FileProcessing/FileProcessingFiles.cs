@@ -32,7 +32,7 @@ public static class FileProcessingFiles
         return full;
     }
 
-    public static List<string> Enumerate(string root)
+    public static List<string> Enumerate(string root, bool excludeManagedWorkspaces = false)
     {
         Within(root, root);
         var files = new List<string>();
@@ -41,6 +41,7 @@ public static class FileProcessingFiles
             foreach (var path in Directory.EnumerateFileSystemEntries(directory).OrderBy(x => x, PathComparer))
             {
                 Within(path, root);
+                if (excludeManagedWorkspaces && Directory.Exists(path) && Path.GetFileName(path) == ".bakabase-work") continue;
                 if (Directory.Exists(path)) Walk(path); else files.Add(path);
             }
         }
@@ -64,7 +65,7 @@ public static class FileProcessingFiles
     }
 
     /// <summary>Checks detectable gaps. Unknown final volume counts still need a human completion signal.</summary>
-    public static void ValidateVolumes(IEnumerable<string> files)
+    public static void ValidateVolumes(IEnumerable<string> files, bool inspectSiblingDownloads = true)
     {
         foreach (var group in CompressedFileHelper.DetectCompressedFileGroups(files.ToArray(), true))
         {
@@ -75,12 +76,17 @@ public static class FileProcessingFiles
             var first = group.Files[0];
             var stem = Regex.Replace(Path.GetFileName(first), @"(?:\.part\d+\.[^.]+|\.[rz]\d{2,}|\.\d{3,})$", "", RegexOptions.IgnoreCase);
             var unfinished = new[] {".crdownload", ".part", ".partial", ".download", ".tmp", ".!qb", ".aria2"};
-            if (Directory.EnumerateFiles(Path.GetDirectoryName(first)!, stem + "*").Any(f =>
+            if (inspectSiblingDownloads && Directory.EnumerateFiles(Path.GetDirectoryName(first)!, stem + "*").Any(f =>
                     unfinished.Contains(Path.GetExtension(f), StringComparer.OrdinalIgnoreCase)))
                 throw new InvalidOperationException("An archive part is still downloading.");
             var indices = numbered.Select(m => int.Parse(m.Groups["part"].Success ? m.Groups["part"].Value :
                 m.Groups["legacy"].Success ? m.Groups["legacy"].Value : m.Groups["number"].Value)).Order().ToArray();
             var start = numbered[0].Groups["family"].Value.Equals("r", StringComparison.OrdinalIgnoreCase) ? 0 : 1;
+            // Numeric suffixes can disguise a complete RAR (for example .111). Only a
+            // checked, non-volume main header overrides that filename guess. Real part
+            // families, unknown headers and unfinished downloads keep their safeguards.
+            if (group.Files.Count == 1 && numbered[0].Groups["number"].Success && indices[0] != start &&
+                RarVolumeHeader.ConfirmsSingleArchive(first)) continue;
             if (!indices.SequenceEqual(Enumerable.Range(start, indices.Length)))
                 throw new InvalidOperationException($"The archive volume set for {Path.GetFileName(group.Files[0])} has missing parts.");
             var legacy = numbered[0].Groups["family"].Value;

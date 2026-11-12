@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.FileSystem;
+using Bakabase.Abstractions.Components.Network;
 using Bakabase.Infrastructures.Components.App;
 using Bakabase.Infrastructures.Components.App.Models.RequestModels;
 using Bakabase.Infrastructures.Components.Configurations.App;
@@ -472,6 +473,8 @@ namespace Bakabase.Service.Controllers
         {
             if (model.DownloadMode.HasValue && !Enum.IsDefined(model.DownloadMode.Value))
                 return BaseResponseBuilder.BuildBadRequest("Choose a supported ExHentai download mode.");
+            if (model.NoTorrentAction.HasValue && !Enum.IsDefined(model.NoTorrentAction.Value))
+                return BaseResponseBuilder.BuildBadRequest("Choose a supported action when no torrent is available.");
             if (model.OriginalImageMinimumGpBalance is < 0 || model.OriginalImageMaximumGpCostPerTask is < 0)
                 return BaseResponseBuilder.BuildBadRequest("Original-image GP limits must be non-negative.");
             if (model.DownloadResultWorkflowId is < 0)
@@ -538,6 +541,7 @@ namespace Bakabase.Service.Controllers
                 if (model.DownloadMode.HasValue) options.DownloadMode = model.DownloadMode;
                 if (model.SaveTorrentFile.HasValue) options.SaveTorrentFile = model.SaveTorrentFile.Value;
                 if (model.FallbackToDirect.HasValue) options.FallbackToDirect = model.FallbackToDirect.Value;
+                if (model.NoTorrentAction.HasValue) options.NoTorrentAction = model.NoTorrentAction;
 
                 if (model.PreferOriginalImages.HasValue)
                     options.PreferOriginalImages = model.PreferOriginalImages.Value;
@@ -1046,6 +1050,7 @@ namespace Bakabase.Service.Controllers
         {
             if (model.PostParserMaxConcurrency is < 1 || model.PostParserAiMaxConcurrency is < 1)
                 return BaseResponseBuilder.BuildBadRequest("Post parsing concurrency limits must be at least 1.");
+            ValidatePostAcquisitionOptions(model.PostParserAcquisition);
 
             await _bakabaseOptionsManager.Get<ThirdPartyOptions>().SaveAsync(options =>
             {
@@ -1053,6 +1058,8 @@ namespace Bakabase.Service.Controllers
                 {
                     options.AutomaticallyParsingPosts = model.AutomaticallyParsingPosts.Value;
                 }
+                if (model.PostParserAcquisition != null)
+                    options.PostParserAcquisition = model.PostParserAcquisition;
 
                 if (model.PostParserMaxConcurrency.HasValue)
                 {
@@ -1085,9 +1092,18 @@ namespace Bakabase.Service.Controllers
         {
             if (model.PostParserMaxConcurrency < 1 || model.PostParserAiMaxConcurrency < 1)
                 return BaseResponseBuilder.BuildBadRequest("Post parsing concurrency limits must be at least 1.");
+            ValidatePostAcquisitionOptions(model.PostParserAcquisition);
 
             await _bakabaseOptionsManager.Get<ThirdPartyOptions>().SaveAsync(model);
             return BaseResponseBuilder.Ok;
+        }
+
+        private void ValidatePostAcquisitionOptions(ThirdPartyOptions.PostParserAcquisitionOptions? options)
+        {
+            if (string.IsNullOrWhiteSpace(options?.OutputDirectory)) return;
+            if (options.OutputDirectory.Length > 4096 || !System.IO.Path.IsPathFullyQualified(options.OutputDirectory))
+                throw new ArgumentException("Choose an absolute acquisition output directory.");
+            _storagePolicy.EnsurePathAllowed(options.OutputDirectory);
         }
 
         [HttpGet("network")]
@@ -1104,31 +1120,66 @@ namespace Bakabase.Service.Controllers
             if (model.BtMaxConcurrentDownloads is < 1 or > 20)
                 return BaseResponseBuilder.BuildBadRequest("BT download concurrency must be between 1 and 20.");
             var savedNetwork = _bakabaseOptionsManager.Get<NetworkOptions>().Value;
-            var btProxy = model.BtProxy ?? savedNetwork.BtProxy ?? new NetworkOptions.ProxyModel();
-            if (btProxy.Mode is not (NetworkOptions.ProxyMode.DoNotUse or NetworkOptions.ProxyMode.UseSystem or NetworkOptions.ProxyMode.UseCustom))
-                return BaseResponseBuilder.BuildBadRequest("The BT proxy mode is invalid.");
-            if (btProxy.Mode == NetworkOptions.ProxyMode.UseCustom)
+            var customProxies = model.CustomProxies?.Select(p => p.ToOptions()).ToList() ?? savedNetwork.CustomProxies;
+            if (customProxies?.Any(p => string.IsNullOrWhiteSpace(p.Id)) == true ||
+                customProxies?.GroupBy(p => p.Id, StringComparer.Ordinal).Any(g => g.Count() > 1) == true)
+                return BaseResponseBuilder.BuildBadRequest("Custom proxy IDs must be nonempty and unique.");
+            var availableProxyIds = (customProxies ?? []).Select(p => p.Id).ToHashSet(StringComparer.Ordinal);
+            var removedProxyIds = model.CustomProxies == null ? new HashSet<string>() :
+                (savedNetwork.CustomProxies ?? []).Select(p => p.Id).Where(id => !availableProxyIds.Contains(id)).ToHashSet(StringComparer.Ordinal);
+
+            // A deleted shared proxy no longer owns a selection. Tool/source entries resume
+            // inheritance; independent global/BT selections explicitly return to direct.
+            bool WasDeleted(NetworkOptions.ProxyModel selection) => selection.Mode == NetworkOptions.ProxyMode.UseCustom &&
+                selection.CustomProxyId != null && removedProxyIds.Contains(selection.CustomProxyId);
+            NetworkOptions.ProxyModel KeepOrDirect(NetworkOptions.ProxyModel selection) => WasDeleted(selection) ? new() : selection;
+            var globalProxy = KeepOrDirect(model.Proxy ?? savedNetwork.Proxy);
+            var btProxy = KeepOrDirect(model.BtProxy ?? savedNetwork.BtProxy ?? new());
+            var sourceProxies = (model.ThirdPartyProxies ?? savedNetwork.ThirdPartyProxies)?
+                .Where(p => p.Value != null && !WasDeleted(p.Value)).ToDictionary(p => p.Key, p => p.Value);
+            var toolProxies = (model.DownloadToolProxies ?? savedNetwork.DownloadToolProxies)?
+                .Where(p => p.Value != null && !WasDeleted(p.Value)).ToDictionary(p => p.Key, p => p.Value, StringComparer.Ordinal);
+
+            string? ValidateSelection(NetworkOptions.ProxyModel selection, string label, IReadOnlyList<string>? schemes = null,
+                bool rejectInlineCredentials = false)
             {
-                var address = model.CustomProxies != null
-                    ? model.CustomProxies.FirstOrDefault(p => p.Id == btProxy.CustomProxyId)?.Address
-                    : savedNetwork.CustomProxies?.FirstOrDefault(p => p.Id == btProxy.CustomProxyId)?.Address;
-                if (!Uri.TryCreate(address, UriKind.Absolute, out var proxyUri) || proxyUri.Scheme is not ("http" or "socks5") ||
+                if (selection.Mode is not (NetworkOptions.ProxyMode.DoNotUse or NetworkOptions.ProxyMode.UseSystem or NetworkOptions.ProxyMode.UseCustom))
+                    return $"The {label} proxy mode is invalid.";
+                if (selection.Mode != NetworkOptions.ProxyMode.UseCustom) return null;
+                var custom = customProxies?.FirstOrDefault(p => p.Id == selection.CustomProxyId);
+                if (custom == null) return $"Choose an existing custom proxy for {label}.";
+                if (schemes == null) return null;
+                if (!Uri.TryCreate(custom.Address, UriKind.Absolute, out var proxyUri) || !schemes.Contains(proxyUri.Scheme) ||
                     string.IsNullOrWhiteSpace(proxyUri.Host) || proxyUri.Port is < 1 or > 65535 ||
-                    !string.IsNullOrEmpty(proxyUri.UserInfo))
-                    return BaseResponseBuilder.BuildBadRequest("Choose an existing HTTP CONNECT or SOCKS5 proxy with a host and port for BT downloads.");
+                    (rejectInlineCredentials && !string.IsNullOrEmpty(proxyUri.UserInfo)) ||
+                    proxyUri.AbsolutePath is not ("" or "/") || !string.IsNullOrEmpty(proxyUri.Query) || !string.IsNullOrEmpty(proxyUri.Fragment))
+                    return $"Choose a supported proxy with a host and port for {label}.";
+                return null;
+            }
+
+            var validation = ValidateSelection(globalProxy, "global traffic") ?? ValidateSelection(btProxy, "BT downloads", ["http", "socks5"], true);
+            if (validation != null) return BaseResponseBuilder.BuildBadRequest(validation);
+            foreach (var selection in sourceProxies?.Values ?? Enumerable.Empty<NetworkOptions.ProxyModel>())
+                if (ValidateSelection(selection, "source traffic") is { } error) return BaseResponseBuilder.BuildBadRequest(error);
+            foreach (var (id, selection) in toolProxies ?? [])
+            {
+                var target = DownloadToolProxyTargets.Find(id);
+                if (target == null) return BaseResponseBuilder.BuildBadRequest("Unknown download tool proxy target.");
+                if (ValidateSelection(selection, target.Name, target.SupportedProxySchemes) is { } error)
+                    return BaseResponseBuilder.BuildBadRequest(error);
             }
             await _bakabaseOptionsManager.Get<NetworkOptions>().SaveAsync(options =>
             {
-                if (model.BtProxy != null) options.BtProxy = model.BtProxy;
+                if (model.BtProxy != null || model.CustomProxies != null) options.BtProxy = btProxy;
                 if (model.BtMaxConcurrentDownloads != null) options.BtMaxConcurrentDownloads = model.BtMaxConcurrentDownloads.Value;
-                if (model.Proxy != null)
+                if (model.Proxy != null || model.CustomProxies != null)
                 {
-                    options.Proxy = model.Proxy;
+                    options.Proxy = globalProxy;
                 }
 
                 if (model.CustomProxies != null)
                 {
-                    options.CustomProxies = model.CustomProxies.Select(c => c.ToOptions()).ToList();
+                    options.CustomProxies = customProxies;
                 }
 
                 if (model.CustomTestSites != null)
@@ -1141,13 +1192,18 @@ namespace Bakabase.Service.Controllers
                     options.SelectedPresetTestSiteIds = model.SelectedPresetTestSiteIds;
                 }
 
-                if (model.ThirdPartyProxies != null)
+                if (model.ThirdPartyProxies != null || model.CustomProxies != null)
                 {
                     // Entries set to inherit carry no information, so drop them rather than
                     // persisting a growing map of no-ops.
-                    options.ThirdPartyProxies = model.ThirdPartyProxies.Count == 0
+                    options.ThirdPartyProxies = sourceProxies?.Count is null or 0
                         ? null
-                        : model.ThirdPartyProxies;
+                        : sourceProxies;
+                }
+
+                if (model.DownloadToolProxies != null || model.CustomProxies != null)
+                {
+                    options.DownloadToolProxies = toolProxies?.Count is null or 0 ? null : toolProxies;
                 }
             });
             return BaseResponseBuilder.Ok;

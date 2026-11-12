@@ -1,8 +1,11 @@
+using Bakabase.Abstractions.Components.FileSystem;
 namespace Bakabase.Modules.HttpDownloads.Models;
 
 /// <summary>Internal capability request; callers assign ownership and idempotency.</summary>
 public sealed record HttpDownloadRequest
 {
+    /// <summary>Runtime caller safety policy; excluded from content and idempotency identity.</summary>
+    public StorageWriteContext? WriteContext { get; init; }
     public required string Url { get; init; }
     public required string OutputDirectory { get; init; }
     public string? FileName { get; init; }

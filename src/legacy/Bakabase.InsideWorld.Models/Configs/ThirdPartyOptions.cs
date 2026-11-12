@@ -22,6 +22,14 @@ namespace Bakabase.InsideWorld.Models.Configs
 
         public bool AutomaticallyParsingPosts { get; set; }
 
+        public PostParserAcquisitionOptions PostParserAcquisition { get; set; } = new();
+
+        public class PostParserAcquisitionOptions
+        {
+            public bool Enabled { get; set; }
+            [MaxLength(4096)] public string? OutputDirectory { get; set; }
+        }
+
         [Range(1, int.MaxValue)]
         public int PostParserMaxConcurrency { get; set; } = 10;
 

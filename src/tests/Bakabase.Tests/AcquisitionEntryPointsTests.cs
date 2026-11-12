@@ -273,4 +273,164 @@ public sealed class AcquisitionEntryPointsTests
         Assert.AreEqual(before, options.DirectoryTemplate);
         Assert.AreEqual(0, (await scope.ServiceProvider.GetRequiredService<IPathMarkService>().GetAll()).Count);
     }
+
+    [TestMethod]
+    public async Task WorkspaceOverrideCanBeChangedAndClearedWithoutCreatingLibraryMarks()
+    {
+        var workspace = Path.Combine(_root, "workspace");
+        Directory.CreateDirectory(workspace);
+        await using var scope = _sp.CreateAsyncScope();
+        var setup = scope.ServiceProvider.GetRequiredService<AcquisitionSetupService>();
+        var result = await setup.ApplyAsync(new AcquisitionSetupInputModel
+        {
+            ProcessingWorkspaceDirectory = workspace,
+        });
+        var options = scope.ServiceProvider.GetRequiredService<IBOptions<AcquisitionOptions>>();
+        Assert.AreEqual(workspace, options.Value.ProcessingWorkspaceDirectory);
+        Assert.IsFalse(result.CreatedInbox);
+        Assert.IsFalse(result.CreatedLibrary);
+        Assert.IsNull(result.PathMarkId);
+        Assert.AreEqual(0, Directory.GetFileSystemEntries(workspace).Length);
+
+        await setup.ApplyAsync(new AcquisitionSetupInputModel {AutoPurchaseLimit = 5});
+        Assert.AreEqual(workspace, options.Value.ProcessingWorkspaceDirectory,
+            "an omitted field must not reset the selected processing storage");
+        await setup.ApplyAsync(new AcquisitionSetupInputModel {ProcessingWorkspaceDirectory = ""});
+        Assert.IsNull(options.Value.ProcessingWorkspaceDirectory);
+        Assert.IsTrue(Directory.Exists(workspace), "clearing a default never removes existing work");
+        Assert.AreEqual(0, (await scope.ServiceProvider.GetRequiredService<IPathMarkService>().GetAll()).Count);
+    }
+
+    [TestMethod]
+    public async Task DownloadRootCanBeOmittedOrClearedWithoutChangingProcessingOrDelivery()
+    {
+        var download = Path.Combine(_root, "download-work");
+        var processing = Path.Combine(_root, "processing-work");
+        var delivery = Path.Combine(_root, "final-output");
+        Directory.CreateDirectory(download); Directory.CreateDirectory(processing);
+        await using var scope = _sp.CreateAsyncScope();
+        var setup = scope.ServiceProvider.GetRequiredService<AcquisitionSetupService>();
+        await setup.ApplyAsync(new AcquisitionSetupInputModel
+        {DownloadRootDirectory = download, ProcessingWorkspaceDirectory = processing, DeliveryRootDirectory = delivery});
+        var options = scope.ServiceProvider.GetRequiredService<IBOptions<AcquisitionOptions>>();
+        await setup.ApplyAsync(new AcquisitionSetupInputModel {AutoPurchaseLimit = 7});
+        Assert.AreEqual(download, options.Value.DownloadRootDirectory);
+        await setup.ApplyAsync(new AcquisitionSetupInputModel {DownloadRootDirectory = ""});
+        Assert.IsNull(options.Value.DownloadRootDirectory);
+        Assert.AreEqual(processing, options.Value.ProcessingWorkspaceDirectory);
+        Assert.AreEqual(delivery, options.Value.DeliveryRootDirectory);
+        Assert.IsTrue(Directory.Exists(download));
+        Assert.AreEqual(0, Directory.GetFileSystemEntries(download).Length);
+        Assert.AreEqual(0, (await scope.ServiceProvider.GetRequiredService<IPathMarkService>().GetAll()).Count);
+    }
+
+    [TestMethod]
+    public async Task MissingAcquisitionDownloadRootRejectsSetupWithoutRecreatingMount()
+    {
+        var missing = Path.Combine(_root, "offline-volume", "downloads");
+        var inbox = Path.Combine(_root, "must-not-create-download-inbox");
+        await using var scope = _sp.CreateAsyncScope();
+        await Assert.ThrowsExceptionAsync<DirectoryNotFoundException>(() =>
+            scope.ServiceProvider.GetRequiredService<AcquisitionSetupService>().ApplyAsync(new AcquisitionSetupInputModel
+            {DownloadRootDirectory = missing, InboxDirectory = inbox}));
+        Assert.IsFalse(Directory.Exists(missing)); Assert.IsFalse(Directory.Exists(inbox));
+        Assert.IsNull(scope.ServiceProvider.GetRequiredService<IBOptions<AcquisitionOptions>>().Value.DownloadRootDirectory);
+    }
+
+    [TestMethod]
+    public async Task MissingWorkspaceRejectsWholeSetupWithoutRecreatingDisconnectedStorage()
+    {
+        var workspace = Path.Combine(_root, "unavailable-mount", "workspace");
+        var inbox = Path.Combine(_root, "must-not-create-inbox");
+        await using var scope = _sp.CreateAsyncScope();
+        var setup = scope.ServiceProvider.GetRequiredService<AcquisitionSetupService>();
+        await Assert.ThrowsExceptionAsync<DirectoryNotFoundException>(() => setup.ApplyAsync(new AcquisitionSetupInputModel
+        {
+            ProcessingWorkspaceDirectory = workspace,
+            InboxDirectory = inbox,
+        }));
+        Assert.IsFalse(Directory.Exists(workspace));
+        Assert.IsFalse(Directory.Exists(inbox));
+        Assert.IsNull(scope.ServiceProvider.GetRequiredService<IBOptions<AcquisitionOptions>>().Value.ProcessingWorkspaceDirectory);
+    }
+
+    [TestMethod]
+    public async Task RelativeWorkspaceIsRejectedBeforeSettingsChange()
+    {
+        await using var scope = _sp.CreateAsyncScope();
+        await Assert.ThrowsExceptionAsync<ArgumentException>(() =>
+            scope.ServiceProvider.GetRequiredService<AcquisitionSetupService>().ApplyAsync(new AcquisitionSetupInputModel
+            {
+                ProcessingWorkspaceDirectory = "relative/workspace",
+            }));
+        Assert.IsNull(scope.ServiceProvider.GetRequiredService<IBOptions<AcquisitionOptions>>().Value.ProcessingWorkspaceDirectory);
+    }
+    [TestMethod]
+    public async Task RuntimeReserveCanChangeWithoutResettingSavedPathsOrCreatingResources()
+    {
+        await using var scope = _sp.CreateAsyncScope();
+        var setup = scope.ServiceProvider.GetRequiredService<AcquisitionSetupService>();
+        var options = scope.ServiceProvider.GetRequiredService<IBOptionsManager<AcquisitionOptions>>();
+        Assert.AreEqual(100L * 1024 * 1024 * 1024, new AcquisitionOptions().MinimumFreeSpaceBytes);
+        var processing = Path.Combine(_root, "processing");
+        Directory.CreateDirectory(processing);
+        await setup.ApplyAsync(new() {ProcessingWorkspaceDirectory = processing,
+            DeliveryRootDirectory = Path.Combine(_root, "delivered"), MinimumFreeSpaceBytes = 0});
+        await setup.ApplyAsync(new() {AutoPurchaseLimit = 8});
+        Assert.AreEqual(0L, options.Value.MinimumFreeSpaceBytes, "omitting a value preserves explicit zero");
+        await setup.ApplyAsync(new() {MinimumFreeSpaceBytes = 50L * 1024 * 1024 * 1024});
+        Assert.AreEqual(50L * 1024 * 1024 * 1024, options.Value.MinimumFreeSpaceBytes);
+        var priority = options.Value.SourceProviderPriority.ToArray();
+        await setup.ApplyAsync(new() {UseEmergencySpaceReserve = true});
+        Assert.IsTrue(options.Value.UseEmergencySpaceReserve);
+        var oldClient = System.Text.Json.JsonSerializer.Deserialize<AcquisitionOptions>("{}")! with
+            {MinimumFreeSpaceBytes = options.Value.MinimumFreeSpaceBytes, ProcessingWorkspaceDirectory = processing,
+                DeliveryRootDirectory = Path.Combine(_root, "delivered"), SourceProviderPriority = priority.ToList()};
+        await setup.ReplaceOptionsAsync(oldClient, default);
+        Assert.IsTrue(options.Value.UseEmergencySpaceReserve);
+        await setup.ApplyAsync(new() {UseEmergencySpaceReserve = false});
+        Assert.IsFalse(options.Value.UseEmergencySpaceReserve);
+        CollectionAssert.AreEqual(priority, options.Value.SourceProviderPriority);
+        Assert.AreEqual(50L * 1024 * 1024 * 1024, options.Value.MinimumFreeSpaceBytes);
+        Assert.AreEqual(processing, options.Value.ProcessingWorkspaceDirectory);
+        Assert.AreEqual(Path.Combine(_root, "delivered"), options.Value.DeliveryRootDirectory);
+        Assert.AreEqual(0, (await scope.ServiceProvider.GetRequiredService<IPathMarkService>().GetAll()).Count);
+    }
+
+    [TestMethod]
+    [DataRow(-1L)]
+    [DataRow(9_007_199_254_740_992L)]
+    public async Task InvalidReserveRejectsTheEntireSetupBeforeAnyMutation(long value)
+    {
+        await using var scope = _sp.CreateAsyncScope();
+        var options = scope.ServiceProvider.GetRequiredService<IBOptions<AcquisitionOptions>>();
+        var before = options.Value.MinimumFreeSpaceBytes;
+        var inbox = Path.Combine(_root, "must-not-create-reserve");
+        await Assert.ThrowsExactlyAsync<ArgumentException>(() =>
+            scope.ServiceProvider.GetRequiredService<AcquisitionSetupService>().ApplyAsync(new()
+                {MinimumFreeSpaceBytes = value, InboxDirectory = inbox, AutoPurchaseLimit = 123}));
+        Assert.IsFalse(Directory.Exists(inbox));
+        Assert.AreEqual(before, options.Value.MinimumFreeSpaceBytes);
+        Assert.AreNotEqual(123m, options.Value.AutoPurchaseLimit);
+    }
+
+    [TestMethod]
+    public async Task ModernSetupPreservesInvalidLegacyLayoutWithoutCreatingLibraryMarks()
+    {
+        await using var scope = _sp.CreateAsyncScope();
+        var manager = scope.ServiceProvider.GetRequiredService<IBOptionsManager<AcquisitionOptions>>();
+        var legacyRoot = Path.Combine(_root, "retained-legacy-library");
+        await manager.SaveAsync(o => { o.DirectoryTemplate = "../{Title}"; o.LibraryRootDirectory = legacyRoot; });
+        var setup = scope.ServiceProvider.GetRequiredService<AcquisitionSetupService>();
+        var delivery = Path.Combine(_root, "modern-delivery");
+        await setup.ApplyAsync(new() {DeliveryRootDirectory = delivery, MinimumFreeSpaceBytes = 0});
+        Assert.AreEqual(delivery, manager.Value.DeliveryRootDirectory);
+        Assert.AreEqual("../{Title}", manager.Value.DirectoryTemplate);
+        Assert.AreEqual(legacyRoot, manager.Value.LibraryRootDirectory);
+        Assert.IsFalse(Directory.Exists(legacyRoot));
+        Assert.AreEqual(0, (await scope.ServiceProvider.GetRequiredService<IPathMarkService>().GetAll()).Count);
+        await Assert.ThrowsExactlyAsync<ArgumentException>(() => setup.ApplyAsync(new() {LibraryRootDirectory = legacyRoot}));
+        Assert.IsFalse(Directory.Exists(legacyRoot));
+    }
+
 }

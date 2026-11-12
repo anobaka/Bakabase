@@ -15,6 +15,7 @@ using Bakabase.Modules.Acquisition.Models.Domain;
 using Bakabase.Modules.Workflow.Abstractions.Components;
 using Bakabase.Modules.Workflow.Abstractions.Models.Db;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
+using Bakabase.Modules.Workflow.Abstractions.Models.Domain;
 using Bakabase.Modules.Workflow.Abstractions.Services;
 using Bootstrap.Components.Configuration.Abstractions;
 using Microsoft.EntityFrameworkCore;
@@ -34,7 +35,8 @@ public class AcquisitionService<TDbContext>(
     IBOptions<AcquisitionOptions> options,
     AppService appService,
     BTaskManager taskManager,
-    ILogger<AcquisitionService<TDbContext>> logger) : IAcquisitionService, IAcquisitionQueue
+    ILogger<AcquisitionService<TDbContext>> logger,
+    IAcquisitionCreationOriginResolver? creationOrigins = null) : IAcquisitionService, IAcquisitionQueue
     where TDbContext : DbContext
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
@@ -47,9 +49,19 @@ public class AcquisitionService<TDbContext>(
     private static readonly AcquisitionStatus[] Live =
         [AcquisitionStatus.Pending, AcquisitionStatus.Running, AcquisitionStatus.Waiting];
 
-    public async Task<AcquisitionTask> CreateAsync(int resourceId, AcquisitionLeadKind leadKind,
+    public Task<AcquisitionTask> CreateAsync(int resourceId, AcquisitionLeadKind leadKind,
         string leadValue, int? leadId = null, int? recipeDefinitionId = null, int? collectionId = null,
-        CancellationToken ct = default)
+        CancellationToken ct = default) => CreateCoreAsync(resourceId, leadKind, leadValue, null,
+            leadId, recipeDefinitionId, collectionId, ct);
+
+    public Task<AcquisitionTask> CreatePreparedAsync(int resourceId, AcquisitionLeadKind leadKind,
+        string leadValue, AcquisitionPreparedContext context, int? leadId = null,
+        int? recipeDefinitionId = null, int? collectionId = null, CancellationToken ct = default) =>
+        CreateCoreAsync(resourceId, leadKind, leadValue, context, leadId, recipeDefinitionId, collectionId, ct);
+
+    private async Task<AcquisitionTask> CreateCoreAsync(int resourceId, AcquisitionLeadKind leadKind,
+        string leadValue, AcquisitionPreparedContext? prepared, int? leadId, int? recipeDefinitionId,
+        int? collectionId, CancellationToken ct)
     {
         var resource = (await resources.GetAll(r => r.Id == resourceId)).FirstOrDefault()
                        ?? throw new InvalidOperationException($"Resource #{resourceId} does not exist.");
@@ -83,6 +95,7 @@ public class AcquisitionService<TDbContext>(
             LeadValue = leadValue,
             AcquisitionLeadId = leadId,
             RecipeDefinitionId = recipe.Id,
+            PreparedContextJson = prepared == null ? null : JsonSerializer.Serialize(prepared, Json),
             Status = AcquisitionStatus.Pending,
             CreatedAt = now,
             UpdatedAt = now,
@@ -104,7 +117,7 @@ public class AcquisitionService<TDbContext>(
     public async Task<List<AcquisitionTask>> SearchAsync(AcquisitionStatus? status = null,
         int? resourceId = null, CancellationToken ct = default)
     {
-        var query = Tasks.AsNoTracking().AsQueryable();
+        var query = Tasks.AsNoTracking().Where(t => t.DeletedAt == null);
 
         if (status is { } s) query = query.Where(t => t.Status == s);
         if (resourceId is { } rid) query = query.Where(t => t.ResourceId == rid);
@@ -121,10 +134,30 @@ public class AcquisitionService<TDbContext>(
         return row == null ? null : await Decorate(row.ToDomainModel(), ct);
     }
 
+    public async Task<List<AcquisitionTask>> GetByIdsAsync(IReadOnlyCollection<int> taskIds, CancellationToken ct = default)
+    {
+        if (taskIds.Count > 100) throw new ArgumentException("Read at most 100 acquisition tasks at a time.");
+        var rows = await Tasks.AsNoTracking().Where(t => t.DeletedAt == null && taskIds.Contains(t.Id)).ToListAsync(ct);
+        return await DecorateMany(rows.Select(t => t.ToDomainModel()).ToList(), ct);
+    }
+
+    public Task<Dictionary<int, string?>> GetDisplayNamesAsync(IReadOnlyCollection<int> resourceIds, CancellationToken ct = default) =>
+        ResolveNames(resourceIds.ToArray());
+
     public async Task ResumeAsync(int taskId, string signalJson, CancellationToken ct = default)
+    {
+        var gate = AcquisitionTaskGate.For(taskId);
+        await gate.WaitAsync(ct);
+        try { await ResumeCoreAsync(taskId, signalJson, ct); }
+        finally { gate.Release(); }
+    }
+
+    private async Task ResumeCoreAsync(int taskId, string signalJson, CancellationToken ct)
     {
         var task = await Tasks.FirstOrDefaultAsync(t => t.Id == taskId, ct)
                    ?? throw new InvalidOperationException($"Acquisition #{taskId} does not exist.");
+        await db.Entry(task).ReloadAsync(ct);
+        AcquisitionTaskGuard.EnsureNotDeleted(task);
 
         if (task.WorkflowRunId is not { } runId)
         {
@@ -137,6 +170,7 @@ public class AcquisitionService<TDbContext>(
         await resumer.ResumeAsync(runId, signalJson, ct);
 
         task.Status = AcquisitionStatus.Running;
+        if (task.BuilderId != null) task.Phase = "executing";
         task.WaitReason = null;
         task.UpdatedAt = DateTime.Now;
         await db.SaveChangesAsync(ct);
@@ -145,8 +179,18 @@ public class AcquisitionService<TDbContext>(
 
     public async Task<AcquisitionTask> RetryAsync(int taskId, CancellationToken ct = default)
     {
+        var gate = AcquisitionTaskGate.For(taskId);
+        await gate.WaitAsync(ct);
+        try { return await RetryCoreAsync(taskId, ct); }
+        finally { gate.Release(); }
+    }
+
+    private async Task<AcquisitionTask> RetryCoreAsync(int taskId, CancellationToken ct)
+    {
         var task = await Tasks.FirstOrDefaultAsync(t => t.Id == taskId, ct)
                    ?? throw new InvalidOperationException($"Acquisition #{taskId} does not exist.");
+        await db.Entry(task).ReloadAsync(ct);
+        AcquisitionTaskGuard.EnsureNotDeleted(task);
 
         if (Live.Contains(task.Status))
         {
@@ -158,8 +202,11 @@ public class AcquisitionService<TDbContext>(
             ? await Runs.Where(r => r.Id == existingRunId).Select(r => r.CurrentStepIndex)
                 .FirstOrDefaultAsync(ct)
             : 0;
-        await ValidateBeforeStarting(task.RecipeDefinitionId, task.ResourceId, task.LeadKind,
-            task.LeadValue, ct, startNodeIndex ?? 0);
+        if (task.BuilderId == null)
+            await ValidateBeforeStarting(task.RecipeDefinitionId!.Value, task.ResourceId!.Value, task.LeadKind,
+                task.LeadValue, ct, startNodeIndex ?? 0);
+        else if (task.WorkflowRunId == null)
+            throw new InvalidOperationException("Prepare and confirm this acquisition plan before starting it.");
 
         task.Error = null;
         task.CompletedAt = null;
@@ -174,7 +221,7 @@ public class AcquisitionService<TDbContext>(
         }
         else
         {
-            await StartRun(task, await ResolveName(task.ResourceId), ct);
+            await StartRun(task, await ResolveName(task.ResourceId!.Value), ct);
         }
 
         await Publish(task, ct);
@@ -184,8 +231,18 @@ public class AcquisitionService<TDbContext>(
 
     public async Task CancelAsync(int taskId, CancellationToken ct = default)
     {
+        var gate = AcquisitionTaskGate.For(taskId);
+        await gate.WaitAsync(ct);
+        try { await CancelCoreAsync(taskId, ct); }
+        finally { gate.Release(); }
+    }
+
+    private async Task CancelCoreAsync(int taskId, CancellationToken ct)
+    {
         var task = await Tasks.FirstOrDefaultAsync(t => t.Id == taskId, ct)
                    ?? throw new InvalidOperationException($"Acquisition #{taskId} does not exist.");
+        await db.Entry(task).ReloadAsync(ct);
+        AcquisitionTaskGuard.EnsureNotDeleted(task);
 
         if (task.WorkflowRunId is { } runId)
         {
@@ -200,6 +257,7 @@ public class AcquisitionService<TDbContext>(
         }
 
         task.Status = AcquisitionStatus.Cancelled;
+        if (task.BuilderId != null) task.Phase = "attention";
         task.CompletedAt = DateTime.Now;
         task.UpdatedAt = task.CompletedAt.Value;
         await db.SaveChangesAsync(ct);
@@ -212,7 +270,7 @@ public class AcquisitionService<TDbContext>(
     {
         var task = await Tasks.FirstOrDefaultAsync(t => t.Id == taskId, ct);
 
-        if (task == null) return;
+        if (task == null || task.DeletedAt != null) return;
 
         task.WorkflowRunId = (int) runId;
         task.Status = status;
@@ -261,7 +319,7 @@ public class AcquisitionService<TDbContext>(
         // The source-reading node declares accepted inputs. Presentation never infers whether
         // later nodes download automatically, wait for a person, or perform other work.
         foreach (var kind in kinds)
-            if (activities.Get(kind) is AcquisitionStepActivity {AcceptedLeadKinds: { } accepted})
+            if (activities.Get(kind) is IAcquisitionLeadKindsActivity {AcceptedLeadKinds: { } accepted})
                 return accepted.ToList();
         return [];
     }
@@ -289,7 +347,7 @@ public class AcquisitionService<TDbContext>(
     /// which is not a resource anyone is protecting.
     /// </summary>
     private Task<int> CountLiveRunning(CancellationToken ct) =>
-        Tasks.CountAsync(t => t.Status == AcquisitionStatus.Running, ct);
+        Tasks.CountAsync(t => t.DeletedAt == null && t.Status == AcquisitionStatus.Running, ct);
 
     /// <summary>
     /// Starts queued tasks while there is room. Called by the queue task, so a task that could not
@@ -303,13 +361,19 @@ public class AcquisitionService<TDbContext>(
         if (room <= 0) return;
 
         var queued = await Tasks
-            .Where(t => t.Status == AcquisitionStatus.Pending && t.WorkflowRunId == null)
+            .Where(t => t.DeletedAt == null && t.Status == AcquisitionStatus.Pending && t.WorkflowRunId == null && t.BuilderId == null)
             .OrderBy(t => t.Id)
             .Take(room)
             .ToListAsync(ct);
 
         foreach (var task in queued)
         {
+            var gate = AcquisitionTaskGate.For(task.Id);
+            await gate.WaitAsync(ct);
+            try
+            {
+            await db.Entry(task).ReloadAsync(ct);
+            if (task.DeletedAt != null || task.Status != AcquisitionStatus.Pending || task.WorkflowRunId != null) continue;
             var resource = (await resources.GetAll(r => r.Id == task.ResourceId)).FirstOrDefault();
 
             if (resource == null)
@@ -323,8 +387,10 @@ public class AcquisitionService<TDbContext>(
                 continue;
             }
 
-            await StartRun(task, await ResolveName(task.ResourceId), ct);
+            await StartRun(task, await ResolveName(task.ResourceId!.Value), ct);
             await Publish(task, ct);
+            }
+            finally { gate.Release(); }
         }
     }
 
@@ -335,7 +401,7 @@ public class AcquisitionService<TDbContext>(
     /// </summary>
     public async Task ReconcileAsync(CancellationToken ct = default)
     {
-        var live = await Tasks.Where(t => Live.Contains(t.Status) && t.WorkflowRunId != null).ToListAsync(ct);
+        var live = await Tasks.Where(t => t.DeletedAt == null && Live.Contains(t.Status) && t.WorkflowRunId != null).ToListAsync(ct);
 
         if (live.Count == 0) return;
 
@@ -350,7 +416,10 @@ public class AcquisitionService<TDbContext>(
 
             var status = FromRunStatus(run.Status);
 
-            if (status == task.Status) continue;
+            var phase = status switch {AcquisitionStatus.Completed => "completed", AcquisitionStatus.Running => "executing",
+                AcquisitionStatus.Pending => "executing", _ => "attention"};
+            if (status == task.Status && (task.BuilderId == null || task.Phase == phase)) continue;
+            if (task.BuilderId != null) task.Phase = phase;
 
             task.Status = status;
             task.UpdatedAt = DateTime.Now;
@@ -413,25 +482,30 @@ public class AcquisitionService<TDbContext>(
 
     private async Task StartRun(AcquisitionTaskDbModel task, string? title, CancellationToken ct)
     {
+        AcquisitionTaskGuard.EnsureNotDeleted(task);
         var workingDirectory = AppDataStorage.Acquisition.GetPath(appService.AppDataDirectory, task.Id.ToString());
+        var prepared = task.PreparedContextJson == null ? null :
+            JsonSerializer.Deserialize<AcquisitionPreparedContext>(task.PreparedContextJson, Json);
 
         var payload = new AcquisitionRequestedPayload
         {
             TaskId = task.Id,
-            ResourceId = task.ResourceId,
+            ResourceId = task.ResourceId!.Value,
             CollectionId = task.CollectionId,
             LeadKind = task.LeadKind,
             LeadValue = task.LeadValue ?? "",
-            InitialLinks = await ReadInitialLinks(task.ResourceId, task.LeadKind, task.LeadValue ?? "", ct),
+            InitialLinks = await ReadInitialLinks(task.ResourceId!.Value, task.LeadKind, task.LeadValue ?? "", ct),
             Title = title,
             WorkingDirectory = workingDirectory,
             WorkingName = title ?? $"acquisition-{task.Id}",
+            InitialVariables = prepared?.Variables ?? new Dictionary<string, string>(),
+            SourceRefs = prepared?.SourceRefs.Count > 0 ? prepared.SourceRefs : await ReadSourceRefs(task, ct),
         };
 
         Workflow.Abstractions.Models.Domain.WorkflowRun run;
         try
         {
-            run = await workflows.RunManagedAsync(task.RecipeDefinitionId, payload, ct);
+            run = await workflows.RunManagedAsync(task.RecipeDefinitionId!.Value, payload, ct);
         }
         catch (WorkflowValidationException ex)
         {
@@ -467,6 +541,17 @@ public class AcquisitionService<TDbContext>(
                 : AcquisitionDriveKinds.Infer(lead.Value), lead.ExtractionPlanJson)];
     }
 
+    private async Task<IReadOnlyList<WorkflowSourceRef>> ReadSourceRefs(AcquisitionTaskDbModel task, CancellationToken ct)
+    {
+        var value = (task.LeadValue ?? "").NormalizeLeadValue();
+        var lead = await db.Set<AcquisitionLeadDbModel>().AsNoTracking().FirstOrDefaultAsync(l =>
+            l.ResourceId == task.ResourceId && (task.AcquisitionLeadId != null ? l.Id == task.AcquisitionLeadId :
+                l.Kind == task.LeadKind && l.Value == value), ct);
+        if (string.IsNullOrWhiteSpace(lead?.SourceRefsJson)) return [];
+        try { return JsonSerializer.Deserialize<List<WorkflowSourceRef>>(lead.SourceRefsJson, Json) ?? []; }
+        catch (JsonException) { return []; }
+    }
+
     /// <summary>
     /// What the user calls the thing being got. It comes from the reserved Name property rather than
     /// the resource's display name, which is derived from a file path a resource without files
@@ -492,10 +577,10 @@ public class AcquisitionService<TDbContext>(
     {
         if (tasks.Count == 0) return tasks;
 
-        var resourceIds = tasks.Select(t => t.ResourceId).Distinct().ToArray();
+        var resourceIds = tasks.Where(t => t.ResourceId != null).Select(t => t.ResourceId!.Value).Distinct().ToArray();
         var names = await ResolveNames(resourceIds);
 
-        var defIds = tasks.Select(t => t.RecipeDefinitionId).Distinct().ToList();
+        var defIds = tasks.Where(t => t.RecipeDefinitionId != null).Select(t => t.RecipeDefinitionId!.Value).Distinct().ToList();
         var defNames = await Defs.AsNoTracking().Where(d => defIds.Contains(d.Id))
             .ToDictionaryAsync(d => d.Id, d => d.Name, ct);
 
@@ -506,17 +591,26 @@ public class AcquisitionService<TDbContext>(
 
         foreach (var task in tasks)
         {
-            task.ResourceName = names.GetValueOrDefault(task.ResourceId);
-            task.RecipeName = defNames.GetValueOrDefault(task.RecipeDefinitionId);
+            task.ResourceName = task.Title ?? (task.ResourceId is { } resourceId ? names.GetValueOrDefault(resourceId) : null);
+            task.RecipeName = task.RecipeDefinitionId is { } definitionId ? defNames.GetValueOrDefault(definitionId) : null;
 
             if (task.WorkflowRunId is { } runId && runs.TryGetValue(runId, out var run))
             {
+                task.ExecutionStartedAt = run.StartedAt;
+                task.ExecutionCompletedAt = run.CompletedAt;
+                task.Status = FromRunStatus(run.Status);
+                if (task.BuilderId != null)
+                {
+                    task.Phase = task.Status switch {AcquisitionStatus.Completed => "completed", AcquisitionStatus.Running => "executing", _ => "attention"};
+                }
                 task.CurrentStepIndex = run.CurrentStepIndex;
                 task.WaitPromptJson = run.WaitPromptJson;
                 task.WaitingSince = run.WaitingSince;
             }
+            task.NormalizeTimestampsToUtc();
         }
 
+        if (creationOrigins != null) await creationOrigins.EnrichAsync(tasks, ct);
         return tasks;
     }
 

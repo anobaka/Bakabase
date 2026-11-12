@@ -84,6 +84,30 @@ public class FileProcessingPlanTests
     }
 
     [TestMethod]
+    public async Task AdaptiveSiblingArchivesReadTheSameInventoryAndMergeOutputsWithoutLosingUnselectedFiles()
+    {
+        var first = await Input("a/first.zip");
+        var second = await Input("b/second.zip");
+        var key = await Input("activation.key", "keep this unrelated key");
+        var decision = new AdaptiveFileProcessingDecision("continue", null, null,
+            [new("extract", "a/first.zip"), new("extract", "b/second.zip")], [], []);
+        var plan = AdaptiveFileProcessingAssessmentService.BuildPlan(decision)!;
+        // The fake archive service requires this password for both independent archives.
+        plan = plan with {Steps = plan.Steps.Select(s => s with {Password = "second"}).ToList()};
+        var archives = new FakeArchives();
+        var result = await new FileProcessingPlanExecutor(archives).ExecuteAsync(plan, _input, [first, second, key], _state);
+        Assert.IsTrue(result.Completed, result.Message);
+        Assert.AreEqual(2, archives.Extractions);
+        CollectionAssert.AreEquivalent(new[] {"a/first/final.txt", "b/second/final.txt", "activation.key"},
+            result.Files.Select(f => Path.GetRelativePath(result.OutputDirectory!, f).Replace('\\', '/')).ToArray());
+        Assert.AreEqual("keep this unrelated key", await File.ReadAllTextAsync(result.Files.Single(f => Path.GetFileName(f) == "activation.key")));
+        Assert.IsTrue(File.Exists(first) && File.Exists(second) && File.Exists(key));
+        var repeated = await new FileProcessingPlanExecutor(archives).ExecuteAsync(plan, _input, [first, second, key], _state);
+        Assert.IsTrue(repeated.Completed);
+        Assert.AreEqual(2, archives.Extractions, "A completed sibling is not extracted again during recovery.");
+    }
+
+    [TestMethod]
     public async Task RenameMoveAndExtractionCanBeFreelyCombinedWithPerStepOutputs()
     {
         var original = await Input("outer.png");
@@ -110,6 +134,46 @@ public class FileProcessingPlanTests
     }
 
     [TestMethod]
+    public async Task DynamicNodeBoundariesShareCheckpointsAndKeepExplicitEarlierStepReferences()
+    {
+        var original = await Input("outer.png");
+        var note = await Input("download-note.txt", "keep");
+        var archives = new FakeArchives();
+        var executor = new FileProcessingPlanExecutor(archives);
+        var plan = NestedPlan();
+        var renamed = await executor.ExecuteAsync(plan, _input, [original, note], _state, stopAfterStepId: "rename1");
+        Assert.IsTrue(renamed.Completed);
+        Assert.AreEqual(0, archives.Extractions);
+        CollectionAssert.Contains(renamed.Files.Select(Path.GetFileName).ToArray(), "outer.7z");
+        var opened = await executor.ExecuteAsync(plan, _input, [original, note], _state, stopAfterStepId: "extract1");
+        Assert.IsTrue(opened.Completed);
+        Assert.AreEqual(1, archives.Extractions);
+        await executor.ExecuteAsync(plan, _input, [original, note], _state, stopAfterStepId: "rename2");
+        Assert.AreEqual(1, archives.Extractions, "The previous archive step is not re-executed for the next node.");
+        var final = await executor.ExecuteAsync(plan, _input, [original, note], _state, stopAfterStepId: "extract2");
+        Assert.AreEqual(2, archives.Extractions);
+        CollectionAssert.AreEquivalent(new[] {"final.txt", "readme.txt", "download-note.txt"}, final.Files.Select(Path.GetFileName).ToArray());
+        var replayFirst = await executor.ExecuteAsync(plan, _input, [original, note], _state, stopAfterStepId: "rename1");
+        Assert.AreEqual(renamed.OutputDirectory, replayFirst.OutputDirectory, "Earlier node history must never become the final result.");
+        CollectionAssert.Contains(replayFirst.Files.Select(Path.GetFileName).ToArray(), "outer.7z");
+        Assert.AreEqual(2, archives.Extractions);
+        Assert.IsTrue(File.Exists(original));
+    }
+
+    [TestMethod]
+    public async Task MissingIntermediateBoundaryDoesNotReturnALaterFinalArtifact()
+    {
+        var original = await Input("outer.png");
+        var executor = new FileProcessingPlanExecutor(new FakeArchives());
+        var plan = NestedPlan();
+        var first = await executor.ExecuteAsync(plan, _input, [original], _state, stopAfterStepId: "rename1");
+        await executor.ExecuteAsync(plan, _input, [original], _state, stopAfterStepId: "extract2");
+        Directory.Delete(first.OutputDirectory!, true);
+        await Assert.ThrowsExceptionAsync<InvalidOperationException>(() =>
+            executor.ExecuteAsync(plan, _input, [original], _state, stopAfterStepId: "rename1"));
+    }
+
+    [TestMethod]
     public async Task AFileProcessingPlanCanRenameAndMoveWithoutAnyExtraction()
     {
         var original = await Input("data.009", "not an archive part");
@@ -131,15 +195,17 @@ public class FileProcessingPlanTests
         var occupied = await Input("occupied.txt", "keep");
         var rename = new PostExtractionPlan {Requirement = "required", Steps = [
             new() {Id = "rename", Op = "renameFile", Selector = "source.txt", TargetName = "occupied.txt"}]};
-        await Assert.ThrowsExactlyAsync<InvalidOperationException>(() => new FileProcessingPlanExecutor(new FakeArchives())
-            .ExecuteAsync(rename, _input, [source, occupied], _state));
+        var renamed = await new FileProcessingPlanExecutor(new FakeArchives()).ExecuteAsync(rename, _input, [source, occupied], _state);
+        Assert.IsFalse(renamed.Completed);
+        Assert.AreEqual("PlannedTargetCollision", renamed.PathConflict?.Kind);
         Assert.AreEqual("keep", await File.ReadAllTextAsync(occupied));
         var first = await Input("a/same.txt", "first");
         var second = await Input("b/same.txt", "second");
         var move = new PostExtractionPlan {Requirement = "required", Steps = [
             new() {Id = "move", Op = "moveFile", TargetDirectory = "destination"}]};
-        await Assert.ThrowsExactlyAsync<InvalidOperationException>(() => new FileProcessingPlanExecutor(new FakeArchives())
-            .ExecuteAsync(move, _input, [first, second], _state));
+        var moved = await new FileProcessingPlanExecutor(new FakeArchives()).ExecuteAsync(move, _input, [first, second], _state);
+        Assert.IsFalse(moved.Completed);
+        Assert.AreEqual("PlannedTargetCollision", moved.PathConflict?.Kind);
         Assert.AreEqual("first", await File.ReadAllTextAsync(first));
         Assert.AreEqual("second", await File.ReadAllTextAsync(second));
     }
@@ -284,11 +350,14 @@ public class FileProcessingPlanTests
         var saved = await db.Set<WorkflowRunDbModel>().AsNoTracking().SingleAsync(r => r.Id == run.Id);
         Assert.AreEqual(WorkflowRunStatus.Success, saved.Status, saved.ErrorMessage);
         Assert.AreEqual(1, saved.InputCount);
-        var output = JsonSerializer.Deserialize<List<AcquisitionWorkItem>>(saved.OutputItemsJson!, Json)!.Single();
-        Assert.AreEqual(0, output.ResourceId);
-        Assert.AreEqual("selected.mp4", Path.GetFileName(output.Files.Single()));
-        Assert.AreNotEqual(_input, output.ExtractedDirectory, "the real unpack node must stage only the bound files");
-        Assert.IsTrue(File.Exists(output.Files.Single()));
+        using var output = JsonDocument.Parse(saved.OutputItemsJson!);
+        var summary = output.RootElement[0];
+        Assert.AreEqual(0, summary.GetProperty("resourceId").GetInt32());
+        Assert.AreEqual(1, summary.GetProperty("filesCount").GetInt32());
+        var extractedDirectory = summary.GetProperty("extractedDirectory").GetString()!;
+        Assert.AreNotEqual(_input, extractedDirectory, "the real unpack node must stage only the bound files");
+        Assert.AreEqual("selected.mp4", Path.GetFileName(Directory.GetFiles(extractedDirectory, "*", SearchOption.AllDirectories).Single()));
+        Assert.IsFalse(summary.TryGetProperty("leadValue", out _), "inspection must not expose the execution payload");
         Assert.AreEqual(0, await db.Set<AcquisitionTaskDbModel>().CountAsync());
     }
 

@@ -9,8 +9,8 @@ import FileExplorer from "../FileExplorer";
 import { useFileExplorerClipboardStore } from "@/stores/fileExplorerClipboard";
 import { useUserStorageStore } from "@/stores/userStorage";
 
-const { checkPath, select, createPortal, moveEntries, getRoots, validatePaths, deferredListings } = vi.hoisted(
-  () => ({
+const { checkPath, select, createPortal, moveEntries, getRoots, validatePaths, deferredListings } =
+  vi.hoisted(() => ({
     checkPath: vi.fn().mockResolvedValue({ data: false }),
     select: vi.fn(),
     createPortal: vi.fn(),
@@ -18,9 +18,9 @@ const { checkPath, select, createPortal, moveEntries, getRoots, validatePaths, d
     getRoots: vi.fn(),
     validatePaths: vi.fn(),
     deferredListings: new Map<string, (() => void) | undefined>(),
-  }),
-);
+  }));
 
+vi.mock("@/components/FileSystemEntryIcon", () => ({ default: () => null }));
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string, values?: { count: number; visible: number }) => {
@@ -57,7 +57,7 @@ vi.mock("@/components/utils", () => ({
 vi.mock("auto-text-size", () => ({
   AutoTextSize: ({ children }: { children: ReactNode }) => <div>{children}</div>,
 }));
-vi.mock("@/core/models/FileExplorer/Entry", () => ({ Entry: class {} }));
+vi.mock("@/core/models/FileExplorer/Entry", () => ({ Entry: class {}, MainLineHeight: 35 }));
 vi.mock("@/core/models/FileExplorer/RootEntry", () => ({
   default: class {
     path?: string;
@@ -89,7 +89,7 @@ vi.mock("../FileExplorerEntry", async () => {
   const { default: EditableFileName } = await import("../components/EditableFileName");
 
   return {
-    default: function MockEntry({ entry, onChildrenLoaded, switchSelective, filter }: any) {
+    default: function MockEntry({ entry, onChildrenLoaded, onContentHeightChange, switchSelective, filter }: any) {
       const [initialRootPath] = useState(entry.path);
       const [, forceUpdate] = useReducer((value) => value + 1, 0);
 
@@ -102,6 +102,7 @@ vi.mock("../FileExplorerEntry", async () => {
       // the rows without rerendering the parent toolbar by itself.
       useEffect(() => {
         entry.patchFilter(filter);
+        onContentHeightChange?.(entry.filteredChildren.length * 35);
         forceUpdate();
       }, [entry, filter]);
 
@@ -147,7 +148,10 @@ vi.mock("@/components/FolderSelector", () => ({ default: () => null }));
 vi.mock("@/components/ContextProvider/BakabaseContextProvider", () => ({
   useBakabaseContext: () => ({ createPortal }),
 }));
-vi.mock("@/stores/remoteAccess", () => ({ useIsRemoteClient: () => true }));
+vi.mock("@/stores/remoteAccess", () => ({
+  useIsRemoteClient: () => true,
+  useUserSideActionsRunHere: () => false,
+}));
 vi.mock("@/stores/options", () => ({
   useFileSystemOptionsStore: (selector?: (state: object) => unknown) => {
     const state = { data: { showHiddenFiles: false }, patch: vi.fn() };
@@ -198,6 +202,44 @@ afterEach(() => {
 });
 
 describe("compact file processor toolbar", () => {
+  it("honors a host directory scope before loading or replacing the current directory", async () => {
+    const onNavigationStart = vi.fn();
+    const props: FileExplorerProps = { keyboard: false, selectable: "disabled",
+      onNavigationStart, canNavigateToPath: path => path === "/media" };
+    const view = render(<FileExplorer {...props} rootPath="/media" />);
+    await screen.findByRole("button", { name: "alpha" });
+    expect(screen.getByTestId("entries")).toHaveAttribute("data-initial-root", "/media");
+    view.rerender(<FileExplorer {...props} rootPath="/empty" />);
+    await act(async () => {});
+    expect(screen.getByTestId("entries")).toHaveAttribute("data-initial-root", "/media");
+    expect(checkPath).not.toHaveBeenCalledWith({ path: "/empty" });
+    expect(onNavigationStart).toHaveBeenCalledTimes(1);
+  });
+  it("fits a short inline listing, caps longer rows and leaves the default fill-parent layout unchanged", async () => {
+    const props = { rootPath: "/media", selectable: "disabled" as const, keyboard: false };
+    const view = render(<FileExplorer {...props} maxContentHeight={70} />);
+    await screen.findByRole("button", { name: "alpha" });
+    const viewport = () => screen.getByTestId("entries").parentElement!;
+    await waitFor(() => expect(viewport()).toHaveStyle({ height: "70px" }));
+    view.rerender(<FileExplorer {...props} maxContentHeight={200} />);
+    await waitFor(() => expect(viewport()).toHaveStyle({ height: "105px" }));
+    view.rerender(<FileExplorer {...props} />);
+    expect(viewport().style.height).toBe("");
+  });
+  it("does not offer an OS file-manager action to a browser client", async () => {
+    render(
+      <FileExplorer
+        rootPath="/media"
+        selectable="disabled"
+        capabilities={["enter-directory"]}
+        keyboard={false}
+      />,
+    );
+    await screen.findByRole("button", { name: "alpha" });
+    expect(
+      screen.queryByRole("button", { name: "fileExplorer.contextMenu.openInFileManager" }),
+    ).toBeNull();
+  });
   it("keeps Docker navigation inside a storage root and returns to storage locations without injecting slash", async () => {
     getRoots.mockResolvedValue({
       data: {
@@ -274,7 +316,10 @@ describe("compact file processor toolbar", () => {
     const onNavigationStart = vi.fn();
     deferredListings.set("/media", undefined);
     const props: FileExplorerProps = {
-      keyboard: false, selectable: "single", onInitialized, onNavigationStart,
+      keyboard: false,
+      selectable: "single",
+      onInitialized,
+      onNavigationStart,
     };
     const view = render(<FileExplorer {...props} rootPath="/media" />);
     await screen.findByTestId("entries");
@@ -282,9 +327,11 @@ describe("compact file processor toolbar", () => {
     const previousListingReady = deferredListings.get("/media")!;
 
     let finishPathValidation!: (response: unknown) => void;
-    checkPath.mockReturnValueOnce(new Promise((resolve) => {
-      finishPathValidation = resolve;
-    }));
+    checkPath.mockReturnValueOnce(
+      new Promise((resolve) => {
+        finishPathValidation = resolve;
+      }),
+    );
     view.rerender(<FileExplorer {...props} rootPath="/empty" />);
     await waitFor(() => expect(checkPath).toHaveBeenLastCalledWith({ path: "/empty" }));
     expect(onNavigationStart).toHaveBeenCalledTimes(2);

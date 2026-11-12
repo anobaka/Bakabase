@@ -2,12 +2,13 @@
 
 import { useTranslation } from "react-i18next";
 import { AiOutlineCloudDownload, AiOutlineQuestionCircle } from "react-icons/ai";
+import { SiMega } from "react-icons/si";
 
 import ExHentai from "@/assets/logo/exhentai.png";
 import Pixiv from "@/assets/logo/pixiv.png";
 import Bilibili from "@/assets/logo/bilibili.png";
 import SoulPlus from "@/assets/logo/soulplus.png";
-import { ThirdPartyId } from "@/sdk/constants";
+import { CloudDownloadSources, ThirdPartyId } from "@/sdk/constants";
 import { getEnumKey } from "@/i18n";
 import dlsiteLogo from "@/assets/logo/dlsite.png";
 import fanboxLogo from "@/assets/logo/fanbox.png";
@@ -17,6 +18,13 @@ import patreonLogo from "@/assets/logo/patreon.png";
 import bangumiLogo from "@/assets/logo/bangumi.png";
 import steamLogo from "@/assets/logo/steam.png";
 import tmdbLogo from "@/assets/logo/tmdb.png";
+import baiduNetdiskLogo from "@/assets/logo/baidu-netdisk.ico";
+import googleDriveLogo from "@/assets/logo/google-drive.svg";
+import gofileLogo from "@/assets/logo/gofile.png";
+import pikpakLogo from "@/assets/logo/pikpak.png";
+import pixeldrainLogo from "@/assets/logo/pixeldrain.png";
+import oneDriveLogo from "@/assets/logo/onedrive.svg";
+import teraBoxLogo from "@/assets/logo/terabox.png";
 
 const NameIcon: { [key in ThirdPartyId]?: string } = {
   [ThirdPartyId.ExHentai]: ExHentai,
@@ -31,6 +39,13 @@ const NameIcon: { [key in ThirdPartyId]?: string } = {
   [ThirdPartyId.Patreon]: patreonLogo,
   [ThirdPartyId.Tmdb]: tmdbLogo,
   [ThirdPartyId.Steam]: steamLogo,
+  [ThirdPartyId.BaiduNetdisk]: baiduNetdiskLogo,
+  [ThirdPartyId.GoogleDrive]: googleDriveLogo,
+  [ThirdPartyId.Gofile]: gofileLogo,
+  [ThirdPartyId.PikPak]: pikpakLogo,
+  [ThirdPartyId.Pixeldrain]: pixeldrainLogo,
+  [ThirdPartyId.OneDrive]: oneDriveLogo,
+  [ThirdPartyId.TeraBox]: teraBoxLogo,
 };
 
 type Props = {
@@ -61,16 +76,16 @@ const ThirdPartyIcon = ({ thirdPartyId, size }: Props) => {
     height: sizeValue,
     maxWidth: sizeValue,
     maxHeight: sizeValue,
+    objectFit: "contain" as const,
   };
 
   const img = NameIcon[thirdPartyId];
 
+  if (thirdPartyId === ThirdPartyId.Mega)
+    return <SiMega style={style} className="text-[#d9272e]" />;
+
   if (!img) {
-    if (
-      [ThirdPartyId.BaiduNetdisk, ThirdPartyId.GoogleDrive, ThirdPartyId.Gofile].includes(
-        thirdPartyId,
-      )
-    ) {
+    if (CloudDownloadSources.some((source) => source.thirdPartyId === thirdPartyId)) {
       return <AiOutlineCloudDownload style={style} />;
     }
     return <AiOutlineQuestionCircle style={style} />;

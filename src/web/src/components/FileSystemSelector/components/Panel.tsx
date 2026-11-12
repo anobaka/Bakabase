@@ -3,6 +3,8 @@
 import type { Entry } from "@/core/models/FileExplorer/Entry";
 import type { FileExplorerRef } from "@/components/FileExplorer";
 import type { FileSystemSelectorProps } from "@/components/FileSystemSelector/models";
+import type { Capability } from "@/components/FileExplorer/models";
+import { managedFileCapabilities } from "@/components/FileExplorer/models";
 
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -20,15 +22,24 @@ const Panel = (props: FileSystemSelectorProps) => {
   const { t } = useTranslation();
 
   const {
+    mode = "select",
     startPath,
     targetType,
+    capabilities,
+    keyboard,
     onSelected,
     onMultipleSelected,
     onCancel,
-    filter: propsFilter = (e) => true,
+    filter: propsFilter = () => true,
     defaultSelectedPath,
     multiple = false,
   } = props;
+  const managing = mode === "manage";
+  const explorerCapabilities: Capability[] =
+    capabilities ??
+    (managing
+      ? managedFileCapabilities
+      : ["rename", "delete", "create-directory", "select", "enter-directory"]);
 
   const [selected, setSelected] = useState<Entry>();
   const [selectedMany, setSelectedMany] = useState<Entry[]>([]);
@@ -154,18 +165,19 @@ const Panel = (props: FileSystemSelectorProps) => {
           rootRef.current = r;
           log("ref", r);
         }}
-        capabilities={["rename", "delete", "create-directory", "select", "enter-directory"]}
+        capabilities={explorerCapabilities}
+        keyboard={keyboard ?? true}
         defaultSelectedPath={defaultSelectedPath}
         filter={{
           custom: (e) => filter(e, "visible"),
         }}
         rootPath={startPath}
-        selectable={multiple ? "multiple" : "single"}
+        selectable={managing || multiple ? "multiple" : "single"}
         onInitialized={() => {
           setNavigating(false);
           log("onInitialized", rootRef.current?.root);
           if (rootRef.current?.root) {
-            trySelectRootOrClearSelection();
+            if (!managing) trySelectRootOrClearSelection();
             if (rootRef.current.root.isDirectoryOrDrive) {
               setCurrentDirPath(rootRef.current.root.path);
             } else setCurrentDirPath(undefined);
@@ -201,7 +213,7 @@ const Panel = (props: FileSystemSelectorProps) => {
           }
         }}
       />
-      {!multiple && selected && (
+      {!managing && !multiple && selected && (
         <div className="flex items-center gap-2">
           <Chip color={"success"} radius={"sm"} size={"sm"} variant={"light"}>
             {t<string>("Selected")}
@@ -217,7 +229,7 @@ const Panel = (props: FileSystemSelectorProps) => {
           </Chip>
         </div>
       )}
-      {multiple && selectedMany.length > 0 && (
+      {!managing && multiple && selectedMany.length > 0 && (
         <div className="flex flex-wrap items-start gap-2 max-h-32 overflow-auto">
           <Chip color={"success"} radius={"sm"} size={"sm"} variant={"light"}>
             {t<string>("Selected")} ({selectedMany.length})
@@ -243,7 +255,12 @@ const Panel = (props: FileSystemSelectorProps) => {
       )}
       <div className="flex items-center justify-between mb-2">
         <Button
-          isDisabled={navigating || !newFolderParentPath || creatingFolder}
+          isDisabled={
+            navigating ||
+            !newFolderParentPath ||
+            creatingFolder ||
+            !explorerCapabilities.includes("create-directory")
+          }
           isLoading={creatingFolder}
           title={newFolderParentPath}
           onClick={() => void createFolder()}
@@ -252,21 +269,23 @@ const Panel = (props: FileSystemSelectorProps) => {
           {t<string>("fileSystemSelector.action.newFolder")}
         </Button>
         <div className="flex items-center gap-2">
-          <Button
-            color={"primary"}
-            // size={'small'}
-            disabled={navigating || !hasSelection || busy}
-            onClick={() => void confirmSelection()}
-          >
-            {t<string>("OK")}
-          </Button>
+          {!managing && (
+            <Button
+              color={"primary"}
+              // size={'small'}
+              disabled={navigating || !hasSelection || busy}
+              onClick={() => void confirmSelection()}
+            >
+              {t<string>("OK")}
+            </Button>
+          )}
           <Button
             // size={'small'}
             onClick={() => {
               onCancel?.();
             }}
           >
-            {t<string>("Cancel")}
+            {managing ? t<string>("common.action.close") : t<string>("Cancel")}
           </Button>
         </div>
       </div>

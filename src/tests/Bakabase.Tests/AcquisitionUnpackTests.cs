@@ -94,8 +94,29 @@ public sealed class AcquisitionUnpackTests
         return null;
     }
 
-    private AcquisitionStepContext Context(string? configJson = null) => new(
-        _sp, NullLogger.Instance, (_, _) => Task.CompletedTask, _working, configJson);
+    private AcquisitionStepContext Context(string? configJson = null, bool approveAutomaticDetection = true)
+    {
+        var config = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(configJson ?? "{}", Json)!;
+        if (approveAutomaticDetection)
+        {
+            config["allowAutomaticDetection"] = JsonSerializer.SerializeToElement(true);
+            config.TryAdd("deleteArchive", JsonSerializer.SerializeToElement(true));
+        }
+        return new(_sp, NullLogger.Instance, (_, _) => Task.CompletedTask, _working, JsonSerializer.Serialize(config, Json));
+    }
+
+    [TestMethod]
+    public async Task MissingInstructionsWaitForConfirmationAndPreserveDownloadsByDefault()
+    {
+        var archive = Path.Combine(_working, "unconfirmed.rar");
+        await File.WriteAllTextAsync(archive, "formal download");
+        var result = await new UnpackStep().ExecuteAsync(Context(approveAutomaticDetection: false),
+            Item() with {WorkingDirectory = _working, Files = [archive]}, default);
+        Assert.IsInstanceOfType<AcquisitionStepOutcome.Suspend>(result);
+        Assert.AreEqual(AcquisitionWaitReason.ExtractionPlanUnknown, ((AcquisitionStepOutcome.Suspend)result).Reason);
+        Assert.AreEqual("formal download", await File.ReadAllTextAsync(archive));
+        Assert.IsFalse(new UnpackStep.Config().DeleteArchive);
+    }
 
     private static AcquisitionWorkItem Item(string? archivePassword = null) => new()
     {
@@ -173,6 +194,26 @@ public sealed class AcquisitionUnpackTests
         Assert.IsTrue(File.Exists(Path.Combine(_working, "content.txt")),
             "and its contents are lifted up, not left in a folder named after the archive");
         Assert.IsFalse(File.Exists(Path.Combine(_working, "plain.7z")), "the archive is cleared away");
+    }
+
+    [DataTestMethod]
+    [DataRow("currentDirectory", "files/content.txt")]
+    [DataRow("archiveDirectory", "files/plain/content.txt")]
+    public async Task NewAutomaticUnpackLayoutUsesAnIsolatedManifestAndRetainsSiblings(string layout, string expected)
+    {
+        Require7z();
+        var source = await MakeArchive("plain.7z");
+        var directory = Directory.CreateDirectory(Path.Combine(_working, "files")).FullName;
+        var nested = Path.Combine(directory, "plain.7z"); File.Move(source, nested);
+        var key = Path.Combine(directory, "license.key"); await File.WriteAllTextAsync(key, "keep");
+        var item = Item() with {Files = [nested, key], ProcessingStateDirectory = Directory.CreateDirectory(Path.Combine(_root, "processing")).FullName};
+        var outcome = await new UnpackStep().ExecuteAsync(Context(JsonSerializer.Serialize(
+            new {extractionLayout = layout, deleteArchive = false})), item, default);
+        Assert.IsInstanceOfType<AcquisitionStepOutcome.Continue>(outcome, DescribeOutcome(outcome));
+        var result = ((AcquisitionStepOutcome.Continue)outcome).Item;
+        Assert.IsTrue(File.Exists(Path.Combine(result.ExtractedDirectory!, expected)));
+        Assert.AreEqual("keep", await File.ReadAllTextAsync(Path.Combine(result.ExtractedDirectory!, "files/license.key")));
+        Assert.IsTrue(File.Exists(nested)); Assert.IsTrue(File.Exists(key));
     }
 
     /// <summary>

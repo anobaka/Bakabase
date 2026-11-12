@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Enumeration;
@@ -27,8 +26,7 @@ namespace Bakabase.InsideWorld.Business.Components.FileExplorer
 
         private readonly MemoryCache _memCache = new("IwFsWatcher");
 
-        private ConcurrentBag<IwFsEntryChangeEvent> _pendingEvents = new();
-        private readonly ConcurrentBag<IwFsEntryChangeEvent> _sendingEvents = new();
+        private List<IwFsEntryChangeEvent> _pendingEvents = new();
         private readonly object _lock = new object();
 
         private CancellationTokenSource? _cts;
@@ -111,8 +109,7 @@ namespace Bakabase.InsideWorld.Business.Components.FileExplorer
 
                 _logger.LogInformation("[4]After disposing watcher");
 
-                _pendingEvents.Clear();
-                _sendingEvents.Clear();
+                lock (_lock) _pendingEvents.Clear();
             });
         }
 
@@ -151,19 +148,38 @@ namespace Bakabase.InsideWorld.Business.Components.FileExplorer
                 {
                     ct.ThrowIfCancellationRequested();
 
-                    Interlocked.Exchange(ref _pendingEvents, _sendingEvents);
-
-                    if (_sendingEvents.Any())
-                    {
-                        var events = _sendingEvents.OrderBy(a => a.ChangedAt).ToList();
-                        _sendingEvents.Clear();
-                        _logger.LogInformation($"Sending events {JsonConvert.SerializeObject(events)}");
-                        await _hubContext.Clients.All.IwFsEntriesChange(events, ct);
-                    }
+                    await FlushPendingEventsAsync(ct);
 
                     await Task.Delay(RaiseIntervalMs, ct);
                 }
             }, ct);
+        }
+
+        internal async Task FlushPendingEventsAsync(CancellationToken ct)
+        {
+            ct.ThrowIfCancellationRequested();
+            List<IwFsEntryChangeEvent> events;
+            lock (_lock)
+            {
+                events = _pendingEvents;
+                _pendingEvents = new();
+            }
+            if (events.Count == 0) return;
+            try
+            {
+                events = events.OrderBy(a => a.ChangedAt).ToList();
+                _logger.LogInformation($"Sending events {JsonConvert.SerializeObject(events)}");
+                await _hubContext.Clients.All.IwFsEntriesChange(events, ct);
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
+            catch (Exception error)
+            {
+                // Producers use the replacement buffer while SignalR awaits. Keep an
+                // unsent batch without clearing or suppressing events that arrived later.
+                lock (_lock)
+                    if (!ct.IsCancellationRequested) _pendingEvents.InsertRange(0, events);
+                _logger.LogError(error, "Unable to send file system changes; retrying the pending events");
+            }
         }
 
         // private void OnChanged(object sender, FileSystemEventArgs e)

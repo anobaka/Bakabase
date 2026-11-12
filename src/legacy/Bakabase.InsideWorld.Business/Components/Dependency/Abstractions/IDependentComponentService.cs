@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions.Models.Constants;
+using Bakabase.InsideWorld.Business.Components.Dependency.Models;
 
 namespace Bakabase.InsideWorld.Business.Components.Dependency.Abstractions
 {
@@ -35,6 +37,9 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Abstractions
         // Task<bool> VerifyIntegrality(CancellationToken ct);
 
         bool IsAvailableOnCurrentPlatform { get; }
+        bool CanAutoInstallOnCurrentPlatform { get; }
+        IReadOnlyList<DependentComponentTarget> SupportedTargets { get; }
+        IReadOnlyList<string> DependencyIds { get; }
         DependentComponentStatus Status { get; }
         DependentComponentContext Context { get; }
 

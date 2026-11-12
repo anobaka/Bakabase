@@ -248,6 +248,25 @@ public sealed class DownloaderNoticesTests
     }
 
     [TestMethod]
+    public async Task ExpectedPolicyStopShowsOnlyItsActionableReasonAndPreservesNotices()
+    {
+        const string reason = "No torrent is available. Enable direct download to continue.";
+        using var downloader = new NoticeDownloader(_services, (self, _) =>
+        {
+            self.Note("Existing files were retained.");
+            throw new DownloadPolicyException(reason);
+        });
+        await downloader.Start(NewTask());
+        await Settle(downloader);
+        Assert.AreEqual(DownloaderStatus.Failed, downloader.Status);
+        Assert.AreEqual(1, downloader.Runs, "A policy stop must not trigger network retries.");
+        StringAssert.StartsWith(downloader.Message!, reason);
+        StringAssert.Contains(downloader.Message!, "Existing files were retained.");
+        Assert.IsFalse(downloader.Message!.Contains("Exception"));
+        Assert.IsFalse(downloader.Message!.Contains("checkpoint"));
+    }
+
+    [TestMethod]
     public async Task AnOrdinaryFailureKeepsTheGenericHeaderFirst()
     {
         var downloader = new NoticeDownloader(_services, (_, _) => throw new InvalidOperationException("boom"));

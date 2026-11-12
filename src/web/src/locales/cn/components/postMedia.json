@@ -1,0 +1,6 @@
+{
+  "postMedia.candidates": "封面与截图候选（{{count}}）",
+  "postMedia.description": "这些图片与下载来源分开保存，创建获取任务时会作为封面候选传入。它们不会自动加入下载列表，也不代表已选为最终封面。",
+  "postMedia.cover": "封面 {{number}}",
+  "postMedia.preview": "截图 {{number}}"
+}

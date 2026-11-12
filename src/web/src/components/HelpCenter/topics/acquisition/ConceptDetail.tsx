@@ -18,7 +18,7 @@ const conceptSteps: Record<string, string[]> = {
   inbox: ["configure", "transfer", "claim"],
   workflow: ["choose", "save", "run"],
   lead: ["record", "check", "acquire"],
-  task: ["start", "wait", "finish"],
+  task: ["start", "wait", "finish", "remove"],
 };
 
 const AcquisitionConceptDetail = ({ conceptId }: { conceptId: string }) => {

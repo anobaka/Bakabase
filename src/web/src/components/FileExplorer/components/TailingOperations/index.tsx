@@ -21,6 +21,7 @@ import BApi from "@/sdk/BApi";
 import { IwFsType } from "@/sdk/constants";
 import { Button, Tooltip } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
+import { useUserSideActionsRunHere } from "@/stores/remoteAccess";
 
 type Props = {
   entry: Entry;
@@ -29,6 +30,7 @@ type Props = {
 const TailingOperations = (props: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
+  const canRunNativeAction = useUserSideActionsRunHere();
   const { entry, capabilities, onEnterDirectory } = props;
 
   // Display-only rows (multi-root group headers) carry no operations at all — a refresh
@@ -45,33 +47,39 @@ const TailingOperations = (props: Props) => {
 
   return (
     <>
-      <OperationButton
-        isIconOnly
-        onClick={(e) => {
-          e.stopPropagation();
-          BApi.tool.openFileOrDirectory({
-            path: entry.path,
-            openInDirectory: entry.type != IwFsType.Directory,
-          });
-        }}
-      >
-        <FolderOpenOutlined className={"text-base"} />
-      </OperationButton>
-      {entry.isDirectoryOrDrive && onEnterDirectory && capabilities?.includes("enter-directory") && (
-        <Tooltip content={t<string>("fileExplorer.action.enterDirectory")} placement={"top"}>
-          <Button
-            isIconOnly
-            className={"w-auto h-auto p-1 min-w-fit opacity-60 hover:opacity-100"}
-            variant={"light"}
-            onClick={(e) => {
-              e.stopPropagation();
-              onEnterDirectory(entry.path);
-            }}
-          >
-            <LoginOutlined className={"text-base"} />
-          </Button>
-        </Tooltip>
+      {canRunNativeAction && !entry.root?.directoryPage && (
+        <OperationButton
+          isIconOnly
+          aria-label={t("fileExplorer.contextMenu.openInFileManager")}
+          onClick={(e) => {
+            e.stopPropagation();
+            BApi.tool.openFileOrDirectory({
+              path: entry.path,
+              openInDirectory: entry.type != IwFsType.Directory,
+            });
+          }}
+        >
+          <FolderOpenOutlined className={"text-base"} />
+        </OperationButton>
       )}
+      {entry.isDirectoryOrDrive &&
+        onEnterDirectory &&
+        capabilities?.includes("enter-directory") && (
+          <Tooltip content={t<string>("fileExplorer.action.enterDirectory")} placement={"top"}>
+            <Button
+              isIconOnly
+              aria-label={t("fileExplorer.action.enterDirectory")}
+              className={"w-auto h-auto p-1 min-w-fit opacity-60 hover:opacity-100"}
+              variant={"light"}
+              onClick={(e) => {
+                e.stopPropagation();
+                onEnterDirectory(entry.path);
+              }}
+            >
+              <LoginOutlined className={"text-base"} />
+            </Button>
+          </Tooltip>
+        )}
       {isExtractable && (
         <Tooltip
           content={`(E)${t<string>("fileExplorer.tip.extractChildrenToParent")}`}

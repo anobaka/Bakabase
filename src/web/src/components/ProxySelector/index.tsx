@@ -16,12 +16,15 @@ type Props = {
   customProxies?: ProxyOptions[] | null;
   onChange: (value: ProxyModel | undefined) => void;
   allowInherit?: boolean;
+  inheritLabel?: string;
+  inheritDescription?: string;
   label?: ReactNode;
   description?: ReactNode;
   className?: string;
   size?: "sm" | "md" | "lg";
   isCustomProxySupported?: (proxy: ProxyOptions) => boolean;
   unsupportedDescription?: string;
+  isDisabled?: boolean;
 };
 
 /** The same proxy choices for global settings, site overrides and individual download protocols. */
@@ -30,12 +33,15 @@ export default function ProxySelector({
   customProxies,
   onChange,
   allowInherit = false,
+  inheritLabel,
+  inheritDescription,
   label,
   description,
   className,
   size = "sm",
   isCustomProxySupported,
   unsupportedDescription,
+  isDisabled = false,
 }: Props) {
   const { t } = useTranslation();
   const proxies = customProxies ?? [];
@@ -47,12 +53,24 @@ export default function ProxySelector({
         : String(value?.mode ?? ProxyMode.DoNotUse);
   const options: { value: string; label: string; description?: string }[] = [
     ...(allowInherit
-      ? [{ value: INHERIT, label: t<string>("thirdPartyConfig.field.proxy.inherit") }]
+      ? [
+          {
+            value: INHERIT,
+            label: inheritLabel ?? t<string>("thirdPartyConfig.field.proxy.inherit"),
+            description:
+              inheritDescription ?? t<string>("configuration.others.proxy.inheritDescription"),
+          },
+        ]
       : []),
-    { value: String(ProxyMode.DoNotUse), label: t<string>("configuration.others.proxy.doNotUse") },
+    {
+      value: String(ProxyMode.DoNotUse),
+      label: t<string>("configuration.others.proxy.doNotUse"),
+      description: t<string>("configuration.others.proxy.doNotUseDescription"),
+    },
     {
       value: String(ProxyMode.UseSystem),
       label: t<string>("configuration.others.proxy.useSystem"),
+      description: t<string>("configuration.others.proxy.useSystemDescription"),
     },
     ...proxies.map((proxy) => ({
       value: `${CUSTOM_PREFIX}${proxy.id}`,
@@ -80,7 +98,11 @@ export default function ProxySelector({
       label={label}
       description={description}
       className={className}
+      isDisabled={isDisabled}
       dataSource={options}
+      listboxProps={{
+        itemClasses: { description: "whitespace-normal break-words", wrapper: "min-w-0" },
+      }}
       disabledKeys={disabledKeys}
       selectedKeys={[selected]}
       size={size}

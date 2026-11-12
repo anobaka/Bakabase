@@ -6,6 +6,8 @@ public interface IHttpDownloadManager
 {
     Task InitializeAsync(CancellationToken ct = default);
     Task<IReadOnlyList<HttpDownloadJob>> ListAsync(CancellationToken ct = default);
+    /// <summary>Already loaded runtime state only; never initializes or resumes a queue.</summary>
+    Task<IReadOnlyList<HttpDownloadJob>> ReadSnapshotAsync(CancellationToken ct = default) => Task.FromResult<IReadOnlyList<HttpDownloadJob>>([]);
     Task<HttpDownloadJob?> GetAsync(string id, CancellationToken ct = default);
     Task<HttpDownloadJob?> FindByIdempotencyKeyAsync(string key, CancellationToken ct = default);
     Task<HttpDownloadJob> EnsureQueuedAsync(HttpDownloadRequest request, CancellationToken ct = default);

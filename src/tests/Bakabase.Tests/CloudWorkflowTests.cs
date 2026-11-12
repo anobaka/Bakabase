@@ -20,7 +20,11 @@ using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
 using Bakabase.Modules.Downloader.Cloud;
 using Bakabase.Modules.PostParser.Models.Domain;
 using Bakabase.Modules.Workflow.Abstractions.Components;
+using Bakabase.Modules.Workflow.Abstractions.Services;
+using Bakabase.Modules.Workflow.Abstractions.Models.Db;
+using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
 using Bakabase.Service.Components.CloudDownloads;
+using Bakabase.Service.Components.DownloadIntents;
 using Bakabase.TestKit.Utils;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -33,7 +37,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Bakabase.Tests;
 
 [TestClass]
-public sealed class CloudWorkflowTests
+public sealed partial class CloudWorkflowTests
 {
     private IServiceProvider _services = null!;
     private string _root = null!;
@@ -59,6 +63,9 @@ public sealed class CloudWorkflowTests
             collection.AddTransient(sp => new BakabaseLocalizer(sp.GetRequiredService<IStringLocalizer<SharedResource>>()));
             collection.AddSingleton<DownloadQueuePump, NoopQueuePump>();
         });
+        Db.Set<WorkflowDefinitionDbModel>().Add(new() {Id = 7201, Name = "Artifact consumer", TriggerKind = CloudWorkflow.Trigger, Enabled = true});
+        Db.Set<WorkflowRunDbModel>().Add(new() {Id = 7201, WorkflowDefinitionId = 7201, Status = WorkflowRunStatus.Running, StartedAt = DateTime.UtcNow});
+        await Db.SaveChangesAsync();
     }
 
     [TestCleanup]
@@ -92,6 +99,31 @@ public sealed class CloudWorkflowTests
     };
     private static DownloadWorkset Item(WorkflowItemOutcome outcome) =>
         (DownloadWorkset)(outcome.Suspension?.Item ?? outcome.Replacement ?? throw new AssertFailedException("Workset was dropped."));
+
+    [TestMethod]
+    public async Task Download_center_rejects_legacy_builtin_configuration_before_starting_a_run()
+    {
+        var definition = new WorkflowDefinitionDbModel
+        {
+            Name = CloudWorkflow.BuiltinName, TriggerKind = CloudWorkflow.Trigger, Enabled = true, IsBuiltin = true
+        };
+        Db.Set<WorkflowDefinitionDbModel>().Add(definition);
+        await Db.SaveChangesAsync();
+        Db.Set<WorkflowActivityDbModel>().AddRange(CloudWorkflow.Nodes.Select((kind, order) => new WorkflowActivityDbModel
+        {
+            WorkflowDefinitionId = definition.Id, Kind = kind, Order = order,
+            ConfigJson = order == 0 ? JsonSerializer.Serialize(new {OutputDirectory = Path.Combine(_root, "unexpected")}) : "{}"
+        }));
+        await Db.SaveChangesAsync();
+        using var boundaryServices = new ServiceCollection().BuildServiceProvider();
+        var starter = new DownloadIntentStarter(Db, _services.GetRequiredService<IWorkflowDefinitionService>(),
+            new UserStoragePolicy(false), boundaryServices);
+        var before = await Db.Set<WorkflowRunDbModel>().CountAsync();
+        await Assert.ThrowsExactlyAsync<InvalidOperationException>(() => starter.StartFilesAsync(
+            Workset(Source("center", "googleDrive")), null, null, default, downloadsOnly: true));
+        Assert.AreEqual(before, await Db.Set<WorkflowRunDbModel>().CountAsync());
+        Assert.AreEqual(0, await Db.DownloadTasks.CountAsync());
+    }
 
     [TestMethod]
     public void Parsed_mixed_sources_preserve_credentials_groups_and_unknown_links()
@@ -295,6 +327,41 @@ public sealed class CloudWorkflowTests
         Assert.AreEqual(1, await Db.DownloadTasks.CountAsync());
     }
 
+    [DataTestMethod]
+    [DataRow("site")]
+    [DataRow("http")]
+    [DataRow("bt")]
+    public async Task Queued_sources_resume_past_resolution_without_reusing_a_stale_problem(string transport)
+    {
+        Assert.IsNotNull(_services.GetService<DownloadSourceResolver>(), "This regression requires the production resolution stage.");
+        var source = transport switch
+        {
+            "http" => new CloudSource {Id = "queued-http", ProviderId = "http", Kind = "http", Url = "https://example.test/file.zip"},
+            "bt" => new CloudSource {Id = "queued-bt", ProviderId = "magnet", Url = "magnet:?xt=urn:btih:0123456789012345678901234567890123456789"},
+            _ => Source("queued-site", "googleDrive")
+        };
+        var workset = Workset(source);
+        var target = Chosen(source) with {Problem = "Previous configuration needed attention."};
+        if (transport == "site")
+            target = target with {DownloadTaskId = await Operations.EnqueueAsync(7201, target, workset.OutputDirectory, default)};
+        else
+            target = target with {TransportTaskId = transport + ":existing-job"};
+        workset = workset with {Targets = [target]};
+        // Native jobs pass through the transfer node in the same source workset. Site replay also
+        // exercises the real queue binding to ensure the old error does not create a second task.
+        CloudActivity activity = transport == "site" ? new EnqueueCloudSourcesActivity() : new BaiduTransferActivity();
+        var result = await activity.ResumeAsync(Context(workset), workset, "{}", default);
+        Assert.IsNull(result.Suspension);
+        var resumed = Item(result).Targets.Single();
+        Assert.IsNull(resumed.Problem);
+        Assert.AreEqual(target.DownloadTaskId, resumed.DownloadTaskId);
+        Assert.AreEqual(target.TransportTaskId, resumed.TransportTaskId);
+        Assert.AreEqual(source, resumed.SelectedSource);
+        Assert.AreEqual(transport == "site" ? 1 : 0, await Db.DownloadTasks.CountAsync());
+        Assert.AreEqual(0, _baidu.TransferRequests.Count);
+        Assert.AreEqual(0, _google.DownloadCalls + _gofile.DownloadCalls + _baidu.DownloadCalls);
+    }
+
     [TestMethod]
     public async Task Failed_queue_binding_rolls_back_the_task_before_any_download_can_start()
     {
@@ -339,11 +406,13 @@ public sealed class CloudWorkflowTests
         Assert.AreEqual(1, await Db.CloudDownloadOperations.CountAsync());
     }
 
-    [TestMethod]
-    public async Task Excluding_sources_stops_their_bound_tasks_and_keeps_unknown_details()
+    [DataTestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task Excluding_sources_detaches_shared_tasks_but_stops_exclusive_tasks_and_keeps_unknown_details(bool exclusive)
     {
         var keep = Chosen(Source("keep", "googleDrive"));
-        var stop = Chosen(Source("stop", "gofile"));
+        var stop = Chosen(Source("stop", "gofile")) with {AcquisitionNonce = exclusive ? "7201" : null};
         var unknown = Chosen(Source("unknown", "unknown"));
         var output = Path.Combine(_root, "selected-output");
         keep = keep with {DownloadTaskId = await Operations.EnqueueAsync(7201, keep, output, default)};
@@ -358,15 +427,18 @@ public sealed class CloudWorkflowTests
         var excludedUnknown = item.Targets.Single(t => t.Id == unknown.Id);
         Assert.IsTrue(excludedUnknown.Excluded);
         Assert.AreEqual(unknown.Sources.Single(), excludedUnknown.Sources.Single());
-        Assert.AreEqual(DownloadTaskDbModelStatus.Disabled, (await Db.DownloadTasks.AsNoTracking().SingleAsync(t => t.Id == stop.DownloadTaskId)).Status);
+        Assert.AreEqual(exclusive ? DownloadTaskDbModelStatus.Disabled : DownloadTaskDbModelStatus.InProgress,
+            (await Db.DownloadTasks.AsNoTracking().SingleAsync(t => t.Id == stop.DownloadTaskId)).Status);
         Assert.AreEqual(2, await Db.DownloadTasks.CountAsync());
     }
 
-    [TestMethod]
-    public async Task Cancellation_stops_every_queued_sibling_even_before_the_first_wait_completes()
+    [DataTestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task Cancellation_preserves_shared_acquisition_and_stops_exclusive_siblings(bool exclusive)
     {
-        var first = Chosen(Source("cancel-first", "googleDrive"));
-        var second = Chosen(Source("cancel-second", "gofile"));
+        var first = Chosen(Source("cancel-first", "googleDrive")) with {AcquisitionNonce = exclusive ? "7201" : null};
+        var second = Chosen(Source("cancel-second", "gofile")) with {AcquisitionNonce = exclusive ? "7201" : null};
         var output = Path.Combine(_root, "cancel-output");
         first = first with {DownloadTaskId = await Operations.EnqueueAsync(7201, first, output, default)};
         second = second with {DownloadTaskId = await Operations.EnqueueAsync(7201, second, output, default)};
@@ -375,7 +447,8 @@ public sealed class CloudWorkflowTests
         cancellation.Cancel();
         await Assert.ThrowsExceptionAsync<OperationCanceledException>(() => new AwaitCloudDownloadsActivity()
             .ProcessItemAsync(Context(workset), workset, cancellation.Token));
-        Assert.IsTrue((await Db.DownloadTasks.AsNoTracking().ToArrayAsync()).All(t => t.Status == DownloadTaskDbModelStatus.Disabled));
+        Assert.IsTrue((await Db.DownloadTasks.AsNoTracking().ToArrayAsync()).All(t => t.Status ==
+            (exclusive ? DownloadTaskDbModelStatus.Disabled : DownloadTaskDbModelStatus.InProgress)));
     }
 
     [DataTestMethod]
@@ -513,10 +586,13 @@ public sealed class CloudWorkflowTests
     {
         public string ProviderId => id;
         public bool SupportsTransfer => id == "baidu";
+        public bool CanCorrectAccessCodeAfterFailure(string code) =>
+            id == "baidu" && code is "BAIDU_ACCESS_CODE_REQUIRED" or "BAIDU_SHARE_ACCESS_CODE_REJECTED";
         public List<CloudTransferRequest> TransferRequests { get; } = [];
         public int ReadinessCalls { get; private set; }
         public int DownloadCalls { get; private set; }
         public CloudDownloadResult? DownloadResult { get; set; }
+        public Func<Func<CloudDownloadProgress, Task>, Task>? ProgressScript { get; set; }
         public int Reconciliations { get; private set; }
         public Exception? TransferError { get; set; }
         public bool CanReconcile { get; set; }
@@ -532,10 +608,11 @@ public sealed class CloudWorkflowTests
         }
         public Task<CloudTransferReceipt?> ReconcileTransferAsync(CloudTransferRequest request, CancellationToken ct)
         { Reconciliations++; return Task.FromResult(CanReconcile ? Receipt(request) : null); }
-        public Task<CloudDownloadResult> DownloadAsync(CloudDownloadRequest request, Func<CloudDownloadProgress, Task> progress, CancellationToken ct)
+        public async Task<CloudDownloadResult> DownloadAsync(CloudDownloadRequest request, Func<CloudDownloadProgress, Task> progress, CancellationToken ct)
         {
             DownloadCalls++;
-            return DownloadResult != null ? Task.FromResult(DownloadResult)
+            if (ProgressScript != null) await ProgressScript(progress);
+            return DownloadResult != null ? DownloadResult
                 : throw new AssertFailedException("The queue fixture must never execute a provider or access a cloud drive.");
         }
     }

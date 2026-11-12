@@ -3,12 +3,14 @@
 import type { DestroyableProps } from "@/components/bakaui/types";
 import type { components } from "@/sdk/BApi2";
 
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import BApi from "@/sdk/BApi";
-import { Chip, Modal, Textarea, toast } from "@/components/bakaui";
+import { Button, Chip, Modal, Spinner, Textarea, toast } from "@/components/bakaui";
 import { getWorkflowTriggerUI } from "@/components/Workflow/Triggers";
+import InvocationParameterFields from "./Parameters/InvocationParameterFields";
+import { parameterValueIsValid, type WorkflowParameter } from "./Parameters/model";
 
 type TriggerDescriptorVm =
   components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowTriggerDescriptorViewModel"];
@@ -46,6 +48,51 @@ const ManualRunModal = ({ workflowId, workflowName, trigger, onRan }: Props) => 
     [trigger, triggerUI],
   );
   const [argsJson, setArgsJson] = useState<string>(skeleton);
+  const [parameters, setParameters] = useState<WorkflowParameter[]>();
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [reload, setReload] = useState(0);
+  const [values, setValues] = useState<Record<string, unknown>>({});
+  const [invalid, setInvalid] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    let active = true;
+    setParameters(undefined);
+    setLoadFailed(false);
+    void BApi.workflow
+      .getWorkflow(workflowId)
+      .then((response) => {
+        if (!active) return;
+        if (response.code || !response.data) throw new Error("Unable to load workflow");
+        setParameters(response.data.parameters ?? []);
+      })
+      .catch(() => {
+        if (active) setLoadFailed(true);
+      });
+    return () => {
+      active = false;
+    };
+  }, [workflowId, reload]);
+  const reportValidity = useCallback(
+    (key: string, valid: boolean) =>
+      setInvalid((current) => {
+        if (current.has(key) === !valid) return current;
+        const next = new Set(current);
+        if (valid) next.delete(key);
+        else next.add(key);
+        return next;
+      }),
+    [],
+  );
+  const parametersValid =
+    !!parameters &&
+    !invalid.size &&
+    parameters.every((parameter) =>
+      parameterValueIsValid(
+        parameter,
+        Object.prototype.hasOwnProperty.call(values, parameter.key)
+          ? values[parameter.key]
+          : parameter.defaultValue,
+      ),
+    );
 
   const parseError = useMemo(() => {
     if (!argsJson.trim()) return null;
@@ -66,6 +113,7 @@ const ManualRunModal = ({ workflowId, workflowName, trigger, onRan }: Props) => 
         okProps: {
           isDisabled:
             trigger.supportsManualRun === false ||
+            !parametersValid ||
             !!parseError ||
             triggerUI?.isManualPayloadValid?.(argsJson) === false,
         },
@@ -75,9 +123,13 @@ const ManualRunModal = ({ workflowId, workflowName, trigger, onRan }: Props) => 
       onOk={async () => {
         if (trigger.supportsManualRun === false)
           throw new Error(t<string>("workflow.entry.managed"));
+        if (!parametersValid) throw new Error(t<string>("workflow.parameters.invalid"));
         // Thrown so the modal stays open on a rejected payload — the server validates the shape,
         // not just the syntax, and the user needs the box they typed into to still be there.
-        const rsp = await BApi.workflow.runWorkflowManually(workflowId, { argsJson });
+        const rsp = await BApi.workflow.runWorkflowManually(workflowId, {
+          argsJson,
+          parameterValues: values,
+        });
 
         if (rsp.code) throw new Error(rsp.message);
         toast.success(t<string>("workflow.manualRun.started"));
@@ -85,33 +137,53 @@ const ManualRunModal = ({ workflowId, workflowName, trigger, onRan }: Props) => 
       }}
     >
       <div className="flex flex-col gap-2">
-        {ManualRunForm ? (
-          <ManualRunForm value={argsJson} onChange={setArgsJson} />
-        ) : (
-          <>
-            <div className="text-sm text-default-500">{t<string>("workflow.manualRun.hint")}</div>
-            {(trigger.payloadFields ?? []).length > 0 && (
-              <div className="flex flex-wrap gap-1">
-                {trigger.payloadFields.map((f) => (
-                  <Chip key={f.name} radius="sm" size="sm" variant="flat">
-                    {f.name}
-                    <span className="opacity-50">
-                      : {f.type}
-                      {f.nullable ? "?" : ""}
-                    </span>
-                  </Chip>
-                ))}
-              </div>
-            )}
-            <Textarea
-              className="font-mono"
-              minRows={8}
-              value={argsJson}
-              onValueChange={setArgsJson}
-            />
-          </>
-        )}
+        {trigger.requiresManualPayload &&
+          (ManualRunForm ? (
+            <ManualRunForm value={argsJson} onChange={setArgsJson} />
+          ) : (
+            <>
+              <div className="text-sm text-default-500">{t<string>("workflow.manualRun.hint")}</div>
+              {(trigger.payloadFields ?? []).length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {trigger.payloadFields.map((f) => (
+                    <Chip key={f.name} radius="sm" size="sm" variant="flat">
+                      {f.name}
+                      <span className="opacity-50">
+                        : {f.type}
+                        {f.nullable ? "?" : ""}
+                      </span>
+                    </Chip>
+                  ))}
+                </div>
+              )}
+              <Textarea
+                className="font-mono"
+                minRows={8}
+                value={argsJson}
+                onValueChange={setArgsJson}
+              />
+            </>
+          ))}
         {parseError && <div className="text-xs text-danger">{parseError}</div>}
+        {loadFailed ? (
+          <div role="alert" className="space-y-2 text-sm text-danger">
+            <p>{t("workflow.parameters.loadFailed")}</p>
+            <Button size="sm" variant="flat" onPress={() => setReload((value) => value + 1)}>
+              {t("common.action.retry")}
+            </Button>
+          </div>
+        ) : !parameters ? (
+          <div className="flex justify-center py-6">
+            <Spinner />
+          </div>
+        ) : (
+          <InvocationParameterFields
+            parameters={parameters}
+            values={values}
+            onChange={setValues}
+            onValidityChange={reportValidity}
+          />
+        )}
       </div>
     </Modal>
   );

@@ -8,7 +8,7 @@ import type {
   BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloaderOptions,
 } from "@/sdk/Api";
 
-import React, { useEffect, useState } from "react";
+import React, { forwardRef, useEffect, useId, useImperativeHandle, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ButtonGroup, Input, Textarea } from "@heroui/react";
 import moment from "moment";
@@ -21,7 +21,6 @@ import { isThirdPartyDeveloping } from "@/pages/downloader/models";
 import DevelopingChip from "@/components/Chips/DevelopingChip";
 import ThirdPartyIcon from "@/components/ThirdPartyIcon";
 import BApi from "@/sdk/BApi";
-import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import {
   DownloadTaskFieldMap,
   DownloadTaskFieldType,
@@ -41,32 +40,48 @@ import DownloadResultsPanel from "@/pages/downloader/components/TaskDetailModal/
 import EstimatedRemainingTime from "@/pages/downloader/components/EstimatedRemainingTime";
 import TaskLinkCopyButton from "@/pages/downloader/components/TaskLinkCopyButton";
 import { useDownloadTasksStore } from "@/stores/downloadTasks";
-import CloudDownloadModal from "@/components/CloudDownload/AsyncCloudDownloadModal";
+import type { DownloadFormHandle, DownloadFormState } from "../downloadForm";
+import { getEnumKey } from "@/i18n";
 
 type Form =
   components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Input.DownloadTaskAddInputModel"];
+type SiteDefinition = Pick<
+  BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloaderDefinition,
+  "thirdPartyId" | "taskType" | "name" | "description"
+>;
 
 type Props = {
   id?: number;
 } & DestroyableProps;
 
-const DownloadTaskDetailModal = ({ onDestroyed, id }: Props) => {
+export const SiteDownloadForm = forwardRef<
+  DownloadFormHandle,
+  {
+    id?: number;
+    thirdPartyId?: ThirdPartyId;
+    definitions?: SiteDefinition[];
+    formId: string;
+    onStateChange: (state: DownloadFormState) => void;
+    onCreated?: () => void;
+  }
+>(({ id, thirdPartyId, definitions, formId, onStateChange, onCreated }, ref) => {
   const { t } = useTranslation();
-  const { createPortal } = useBakabaseContext();
   const autoStartAfterCreation = useDownloaderGlobalOptionsStore(
     (s) => s.data?.autoStartAfterCreation ?? false,
   );
   const exHentaiDefaults = useExHentaiOptionsStore((s) => s.data);
 
   const isAdding = !(id && id > 0);
-  const [form, setForm] = useState<Partial<Form>>({ autoRetry: true });
+  const [form, setForm] = useState<Partial<Form>>({ autoRetry: true, thirdPartyId });
   const [loadedTask, setLoadedTask] =
     useState<BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloadTask>();
   const liveTask = useDownloadTasksStore((s) => s.tasks.find((task) => task.id === id));
   const task = liveTask ?? loadedTask;
-  const [taskDefinitions, setTaskDefinitions] = useState<
-    BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloaderDefinition[]
-  >([]);
+  const [taskDefinitions, setTaskDefinitions] = useState<SiteDefinition[]>(definitions ?? []);
+  const [busy, setBusy] = useState(false);
+  const busyRef = useRef(false);
+  const [error, setError] = useState<string>();
+  const [ready, setReady] = useState(isAdding && !!definitions);
   const [downloaderOptions, setDownloaderOptions] =
     useState<BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloaderOptions | null>(
       null,
@@ -85,13 +100,18 @@ const DownloadTaskDetailModal = ({ onDestroyed, id }: Props) => {
       setLoadedTask(task);
     }
 
-    const taskDefinitionsResponse = await BApi.downloadTask.getAllDownloaderDefinitions();
-
-    setTaskDefinitions(taskDefinitionsResponse.data || []);
+    if (!definitions) {
+      const response = await BApi.downloadTask.getAllDownloaderDefinitions();
+      if (response.code) throw new Error(response.message || t("downloadCenter.error.action"));
+      setTaskDefinitions(response.data || []);
+    }
+    setReady(true);
   };
 
   useEffect(() => {
-    init();
+    void init().catch((e) =>
+      setError(e instanceof Error ? e.message : t("downloadCenter.error.action")),
+    );
   }, []);
 
   // Load downloader options when thirdPartyId and type change
@@ -137,6 +157,14 @@ const DownloadTaskDetailModal = ({ onDestroyed, id }: Props) => {
     const uniqueThirdParties = new Map<ThirdPartyId, string>();
 
     taskDefinitions.forEach((def) => {
+      // Cloud creation belongs to the unified download form. Existing task details still show their site.
+      if (
+        isAdding &&
+        [ThirdPartyId.BaiduNetdisk, ThirdPartyId.GoogleDrive, ThirdPartyId.Gofile].includes(
+          def.thirdPartyId,
+        )
+      )
+        return;
       if (!uniqueThirdParties.has(def.thirdPartyId)) {
         // Use ThirdPartyId enum to get the name, or fallback to the definition name
         const thirdPartyName = ThirdPartyId[def.thirdPartyId] || def.name;
@@ -326,6 +354,7 @@ const DownloadTaskDetailModal = ({ onDestroyed, id }: Props) => {
             return (
               <ExHentaiDownloadModeField
                 options={effectiveOptions}
+                isExistingTask={!isAdding}
                 onChange={(patch) => {
                   setForm({ ...form, options: JSON.stringify({ ...parsedOptions, ...patch }) });
                 }}
@@ -337,59 +366,65 @@ const DownloadTaskDetailModal = ({ onDestroyed, id }: Props) => {
     }
   };
 
-  return (
-    <>
-      <Modal
-        defaultVisible
-        footer={{
-          actions: ["ok", "cancel"],
-          okProps: {
-            isDisabled: !validateForm(form),
-          },
-        }}
-        size={"xl"}
-        title={
-          isAdding
-            ? t<string>("downloader.modal.creatingTask")
-            : t<string>("downloader.modal.taskDetail")
+  const valid = ready && validateForm(form);
+  useEffect(() => onStateChange({ canSubmit: valid, busy }), [valid, busy, onStateChange]);
+  const submit = async () => {
+    if (!valid || busyRef.current) return;
+    busyRef.current = true;
+    setBusy(true);
+    setError(undefined);
+    try {
+      const validForm = {
+        ...form,
+        keys: form.keys?.map((k) => k.trim()).filter(Boolean),
+      } as Form;
+
+      if (isAdding) {
+        const r = await BApi.downloadTask.addDownloadTask(validForm);
+
+        if (r.code) {
+          throw new Error(r.message);
         }
-        onDestroyed={onDestroyed}
-        onOk={async () => {
-          const validForm = {
-            ...form,
-            keys: form.keys?.map((k) => k.trim()).filter(Boolean),
-          } as Form;
 
-          console.log(form, validForm);
+        if (autoStartAfterCreation) {
+          const newIds = (r.data ?? [])
+            .map((task) => task.id)
+            .filter((tid): tid is number => typeof tid === "number");
 
-          if (isAdding) {
-            const r = await BApi.downloadTask.addDownloadTask(validForm);
-
-            if (r.code) {
-              throw new Error(r.message);
-            }
-
-            if (autoStartAfterCreation) {
-              const newIds = (r.data ?? [])
-                .map((task) => task.id)
-                .filter((tid): tid is number => typeof tid === "number");
-
-              if (newIds.length > 0) {
-                await BApi.downloadTask.startDownloadTasks({
-                  ids: newIds,
-                  actionOnConflict: DownloadTaskActionOnConflict.Ignore,
-                });
-              }
-            }
-          } else {
-            const r = await BApi.downloadTask.putDownloadTask(id, validForm);
-
-            if (r.code) {
-              throw new Error(r.message);
-            }
+          if (newIds.length > 0) {
+            await BApi.downloadTask.startDownloadTasks({
+              ids: newIds,
+              actionOnConflict: DownloadTaskActionOnConflict.Ignore,
+            });
           }
-        }}
-      >
+        }
+      } else {
+        const r = await BApi.downloadTask.putDownloadTask(id, validForm);
+
+        if (r.code) {
+          throw new Error(r.message);
+        }
+      }
+      onCreated?.();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("downloadCenter.error.action"));
+      throw e;
+    } finally {
+      busyRef.current = false;
+      setBusy(false);
+    }
+  };
+  useImperativeHandle(ref, () => ({ submit }));
+
+  return (
+    <form
+      id={formId}
+      onSubmit={(event) => {
+        event.preventDefault();
+        void submit().catch(() => undefined);
+      }}
+    >
+      <fieldset disabled={busy} className="min-w-0 space-y-3">
         {!isAdding && task && (
           <dl className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-default-500">
             <div className="flex items-center gap-1">
@@ -413,53 +448,46 @@ const DownloadTaskDetailModal = ({ onDestroyed, id }: Props) => {
           </dl>
         )}
         {!isAdding && task && <EstimatedRemainingTime task={task} />}
-        <div className={"grid gap-2 items-center"} style={{ gridTemplateColumns: "auto 1fr" }}>
-          <div>{t<string>("downloader.label.site")}</div>
-          <div>
-            <ButtonGroup size={"sm"}>
-              {availableThirdParties.map((thirdParty) => {
-                const isSelected = form.thirdPartyId === thirdParty.id;
-                const isDeveloping = isThirdPartyDeveloping(thirdParty.id);
+        <div className="grid min-w-0 grid-cols-[max-content_minmax(0,1fr)] items-center gap-2">
+          {thirdPartyId == null && (
+            <>
+              <div className="whitespace-nowrap">{t<string>("downloader.label.site")}</div>
+              <div className="min-w-0">
+                <ButtonGroup size={"sm"} className="max-w-full flex-wrap justify-start gap-y-1">
+                  {availableThirdParties.map((thirdParty) => {
+                    const isSelected = form.thirdPartyId === thirdParty.id;
+                    const isDeveloping = isThirdPartyDeveloping(thirdParty.id);
 
-                return (
-                  <Button
-                    key={thirdParty.id}
-                    color={isSelected ? "primary" : undefined}
-                    isDisabled={!isAdding}
-                    onPress={() => {
-                      if (
-                        [
-                          ThirdPartyId.BaiduNetdisk,
-                          ThirdPartyId.GoogleDrive,
-                          ThirdPartyId.Gofile,
-                        ].includes(thirdParty.id)
-                      ) {
-                        createPortal(CloudDownloadModal, {});
-                        onDestroyed?.();
-                        return;
-                      }
-                      if (form.thirdPartyId !== thirdParty.id) {
-                        setForm({
-                          thirdPartyId: thirdParty.id,
-                          type: undefined, // Reset task type when changing third party
-                        });
-                      }
-                    }}
-                  >
-                    <ThirdPartyIcon thirdPartyId={thirdParty.id} />
-                    {t<string>(thirdParty.name)}
-                    {isDeveloping && <DevelopingChip size="sm" />}
-                  </Button>
-                );
-              })}
-            </ButtonGroup>
-          </div>
+                    return (
+                      <Button
+                        key={thirdParty.id}
+                        color={isSelected ? "primary" : undefined}
+                        isDisabled={!isAdding}
+                        onPress={() => {
+                          if (form.thirdPartyId !== thirdParty.id) {
+                            setForm({
+                              thirdPartyId: thirdParty.id,
+                              type: undefined, // Reset task type when changing third party
+                            });
+                          }
+                        }}
+                      >
+                        <ThirdPartyIcon thirdPartyId={thirdParty.id} />
+                        {t<string>(getEnumKey("ThirdPartyId", thirdParty.name))}
+                        {isDeveloping && <DevelopingChip size="sm" />}
+                      </Button>
+                    );
+                  })}
+                </ButtonGroup>
+              </div>
+            </>
+          )}
           {form.thirdPartyId &&
             (availableTaskTypes.length > 0 ? (
               <>
-                <div>{t<string>("downloader.label.taskType")}</div>
-                <div>
-                  <ButtonGroup size={"sm"}>
+                <div className="whitespace-nowrap">{t<string>("downloader.label.taskType")}</div>
+                <div className="min-w-0">
+                  <ButtonGroup size={"sm"} className="max-w-full flex-wrap justify-start gap-y-1">
                     {availableTaskTypes.map((taskType) => {
                       const isSelected = form.type === taskType.value;
                       const Icon = DownloadTaskTypeIconMap[form.thirdPartyId!]?.[taskType.value];
@@ -507,13 +535,42 @@ const DownloadTaskDetailModal = ({ onDestroyed, id }: Props) => {
           />
         )}
         {form.thirdPartyId && form.type && (
-          <div className={"flex flex-col gap-2"}>{renderFields()}</div>
+          <div className="flex min-w-0 flex-col gap-2">{renderFields()}</div>
         )}
         {!isAdding && id != null && form.thirdPartyId === ThirdPartyId.ExHentai && (
           <DownloadResultsPanel taskId={id} />
         )}
-      </Modal>
-    </>
+        {error && (
+          <p role="alert" className="text-sm text-danger">
+            {error}
+          </p>
+        )}
+      </fieldset>
+    </form>
+  );
+});
+SiteDownloadForm.displayName = "SiteDownloadForm";
+
+const DownloadTaskDetailModal = ({ onDestroyed, id }: Props) => {
+  const { t } = useTranslation();
+  const formId = useId();
+  const form = useRef<DownloadFormHandle>(null);
+  const [state, setState] = useState<DownloadFormState>({ canSubmit: false, busy: false });
+  return (
+    <Modal
+      defaultVisible
+      size="xl"
+      title={t(id ? "downloader.modal.taskDetail" : "downloader.modal.creatingTask")}
+      onDestroyed={onDestroyed}
+      isDismissable={!state.busy}
+      footer={{
+        actions: ["ok", "cancel"],
+        okProps: { isDisabled: !state.canSubmit || state.busy },
+      }}
+      onOk={() => form.current?.submit()}
+    >
+      <SiteDownloadForm ref={form} id={id} formId={formId} onStateChange={setState} />
+    </Modal>
   );
 };
 

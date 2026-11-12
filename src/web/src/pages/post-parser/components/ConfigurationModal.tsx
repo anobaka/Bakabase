@@ -15,6 +15,7 @@ import AiProviderPanel from "@/components/AiProviderPanel";
 import AiFeaturePanel from "@/components/AiFeaturePanel";
 import BApi from "@/sdk/BApi";
 import { useThirdPartyOptionsStore } from "@/stores/options";
+import AutoAcquisitionConfiguration from "./AutoAcquisitionConfiguration";
 
 type Props = DestroyableProps;
 type ParserOptionsPatch = Pick<
@@ -129,6 +130,7 @@ const ConfigurationModal = (props: Props) => {
                 {error}
               </p>
             )}
+            <AutoAcquisitionConfiguration />
           </div>
         </Tab>
         <Tab key="ai" title={t<string>("postParser.config.ai")}>

@@ -7,5 +7,8 @@ public record WorkflowManualRunInputModel
     /// (<c>IWorkflowTrigger.BuildManualPayload</c>). Null for a trigger that reads its inputs
     /// from the definition itself.
     /// </summary>
+    [Newtonsoft.Json.JsonProperty(ItemConverterType = typeof(WorkflowJsonElementConverter))]
+    public Dictionary<string, System.Text.Json.JsonElement>? ParameterValues { get; set; }
+
     public string? ArgsJson { get; set; }
 }

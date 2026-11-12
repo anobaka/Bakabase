@@ -60,6 +60,13 @@ namespace Bakabase.InsideWorld.Models.Configs
         public Dictionary<int, ProxyModel>? ThirdPartyProxies { get; set; }
 
         /// <summary>
+        /// Download-tool overrides keyed by the stable tool id (baidu-pcs-go, gdown, gallery-dl).
+        /// No entry inherits the source's setting, then the global proxy. DoNotUse is explicit direct.
+        /// These do not apply to dependency installation or BT traffic.
+        /// </summary>
+        public Dictionary<string, ProxyModel>? DownloadToolProxies { get; set; }
+
+        /// <summary>
         /// Extra URLs the user wants a proxy connectivity test to hit, on top of the
         /// built-in presets. Null/empty means presets only.
         /// </summary>

@@ -3,7 +3,7 @@ import WorkflowIntegrationHint from "@/components/Workflow/WorkflowIntegrationHi
 
 import type { components } from "@/sdk/BApi2";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Drawer, DrawerBody, DrawerContent, DrawerHeader } from "@heroui/react";
@@ -11,46 +11,55 @@ import {
   AiOutlineBranches,
   AiOutlineDownload,
   AiOutlineFolderOpen,
-  AiOutlineImport,
   AiOutlinePlusCircle,
   AiOutlineSetting,
+  AiOutlineDelete,
+  AiOutlineLink,
 } from "react-icons/ai";
 
 import InboxDrawer from "./components/InboxDrawer";
 import AcquisitionRow from "./components/AcquisitionRow";
 import StartAcquisitionModal from "./components/StartAcquisitionModal";
-import SetupWizard from "./components/SetupWizard";
-import ImportSharedListModal from "./components/ImportSharedListModal";
-import MatchSuggestions from "./components/MatchSuggestions";
-import CandidateOverview from "./components/CandidateOverview";
+import AcquisitionSettingsModal from "./components/AcquisitionSettingsModal";
+import AcquisitionReserveSetting from "./components/AcquisitionReserveSetting";
+import AcquisitionAttentionFilters from "./components/AcquisitionAttentionFilters";
+import AcquisitionTaskSearch from "./components/AcquisitionTaskSearch";
+import DeleteAcquisitionTasksModal from "./components/DeleteAcquisitionTasksModal";
+import AcquisitionContinueModal from "./components/AcquisitionContinueModal";
+import AcquisitionSelectionButtons from "./components/AcquisitionSelectionButtons";
+import { acquisitionActionLimits, acquisitionSelectionLimit } from "./acquisitionSelection";
+import { normalizeAcquisitionFilters, type AcquisitionFilterSelection } from "./acquisitionFilters";
+import { readAcquisitionListPreferences, writeAcquisitionListPreferences, type AcquisitionListPreferences } from "./listPreferences";
+import AcquisitionDownloadDestinationModal from "./components/AcquisitionDownloadDestinationModal";
+import AcquisitionStorageMaintenanceModal from "./components/AcquisitionStorageMaintenanceModal";
+import useAcquisitionTasks from "./useAcquisitionTasks";
 import RecipeCatalog from "./components/RecipeCatalog";
+import AcquisitionStageFilters from "./components/AcquisitionStageFilters";
+import SourceAvailabilityReviewModal from "@/components/SourceAvailability/SourceAvailabilityReviewModal";
 
 import BApi from "@/sdk/BApi";
 import { HelpCenterButton } from "@/components/HelpCenter";
-import { Button, Chip, Spinner, Tab, Tabs, Tooltip } from "@/components/bakaui";
+import {
+  Button,
+  Badge,
+  Checkbox,
+  Pagination,
+  Select,
+  Spinner,
+  Tooltip,
+} from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-import { AcquisitionStatus } from "@/sdk/constants";
+import PlanTaskRow from "@/components/Acquire/PlanTask/PlanTaskRow";
+import PlanTaskDetailModal from "@/components/Acquire/PlanTask/PlanTaskDetailModal";
+import type { PlanTask } from "@/components/Acquire/PlanTask/models";
+import useRuntimeOverviews from "@/components/Acquire/PlanTask/useRuntimeOverviews";
+import LegacyTaskDetailModal from "./components/LegacyTaskDetailModal";
+import { acquisitionStages, type AcquisitionStageFilter } from "@/components/Acquire/taskStage";
 
 export type AcquisitionTaskVm =
   components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionTask"];
 export type AcquisitionRecipeVm =
   components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Services.AcquisitionRecipeSummary"];
-
-/** Anything that has not finished. Waiting is emphatically one of them. */
-const LIVE: AcquisitionStatus[] = [
-  AcquisitionStatus.Waiting,
-  AcquisitionStatus.Running,
-  AcquisitionStatus.Pending,
-];
-
-type TabKey = "overview" | "live" | "all" | "matches";
-
-/** Waiting first: it is the only state that needs a person, and it is what the page is for. */
-const ORDER: Record<number, number> = {
-  [AcquisitionStatus.Waiting]: 0,
-  [AcquisitionStatus.Running]: 1,
-  [AcquisitionStatus.Pending]: 2,
-};
 
 const AcquisitionPage: React.FC = () => {
   const { t } = useTranslation();
@@ -58,60 +67,202 @@ const AcquisitionPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const { createPortal } = useBakabaseContext();
 
-  const [tasks, setTasks] = useState<AcquisitionTaskVm[]>([]);
   const [recipes, setRecipes] = useState<AcquisitionRecipeVm[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<TabKey>("overview");
+  const [initialPreferences] = useState(() => {
+    const saved = readAcquisitionListPreferences();
+    const requested = searchParams.get("stage");
+    return ["all", ...acquisitionStages].includes(requested ?? "")
+      ? { ...saved, stage: requested as AcquisitionStageFilter, attentionTags: [], facts: [] }
+      : saved;
+  });
+  const [stage, setStage] = useState<AcquisitionStageFilter>(initialPreferences.stage);
+  const [keyword, setKeyword] = useState(initialPreferences.keyword);
+  const [searchKeyword, setSearchKeyword] = useState(initialPreferences.keyword.trim());
+  const [filters, setFilters] = useState<AcquisitionFilterSelection>({ attentionTags: initialPreferences.attentionTags, facts: initialPreferences.facts });
+  const filtersKey = JSON.stringify(filters);
+  const [page, setPage] = useState(1);
+  const [sort, setSort] = useState<AcquisitionListPreferences["sort"]>(initialPreferences.sort);
+  const [selectedTaskIds, setSelectedTaskIds] = useState(new Set<number>());
+  const openedTask = useRef<string>();
+  const [settingsRevision, setSettingsRevision] = useState(0);
+  const [recipesOpen, setRecipesOpen] = useState(false);
+  const {
+    data,
+    stageCounts,
+    attentionCounts,
+    factCounts,
+    queueTaskCount,
+    loading,
+    failed: loadFailed,
+    refresh: load,
+  } = useAcquisitionTasks({
+    keyword: searchKeyword,
+    stage,
+    ...filters,
+    page,
+    pageSize: 24,
+    sort,
+  });
+  const tasks = (data?.items ?? []) as PlanTask[];
+  const filterPending = keyword.trim() !== searchKeyword;
+  const checkableIds = data?.checkableTaskIds ?? [];
+  const filteredIds = data?.filteredTaskIds ?? [];
+  // A same-query poll preserves the accepted rows. Toggling HeroUI's disabled
+  // appearance every five seconds makes checked boxes flash and interrupts clicks.
+  // Local selection can remain editable; execution gets its own fixed-ID preview.
+  // A new scope has no data, and a failed refresh remains protected until reloaded.
+  const selectionDisabled = !data || loadFailed || filterPending;
+  const scopeLabel = [
+    t(`acquisition.stage.${stage}`),
+    ...filters.attentionTags.map(tag => t(`acquisition.attention.tag.${tag}`)),
+    ...filters.facts.map(fact => t(`acquisition.filters.fact.${fact}`)),
+    filters.attentionTags.length + filters.facts.length > 1 && t("acquisition.filters.matchAll"),
+    searchKeyword,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   useEffect(() => {
-    const requested = searchParams.get("tab");
-
-    if (
-      requested === "live" ||
-      requested === "all" ||
-      requested === "matches" ||
-      requested === "overview"
-    )
-      setTab(requested);
-  }, [searchParams]);
-  const [recipesOpen, setRecipesOpen] = useState(false);
-  const [matchCount, setMatchCount] = useState(0);
-
-  const load = useCallback(async () => {
-    try {
-      const [tasksRsp, recipesRsp, matchesRsp] = await Promise.all([
-        BApi.acquisition.searchAcquisitions({}),
-        BApi.acquisition.getAcquisitionRecipes(),
-        BApi.resource.countPendingResourceMatchSuggestions(),
-      ]);
-
-      setTasks((tasksRsp.data ?? []) as AcquisitionTaskVm[]);
-      setRecipes((recipesRsp.data ?? []) as AcquisitionRecipeVm[]);
-      setMatchCount(matchesRsp.data ?? 0);
-    } finally {
-      setLoading(false);
+    if (keyword.trim() === searchKeyword) return;
+    const timer = setTimeout(() => {
+      setSearchKeyword(keyword.trim());
+      setPage(1);
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [keyword, searchKeyword]);
+  useEffect(() => {
+    writeAcquisitionListPreferences({ stage, keyword: searchKeyword, sort, ...filters });
+  }, [stage, searchKeyword, sort, filtersKey]);
+  // Pagination and sorting preserve the explicit selection; changing its scope does not.
+  useEffect(() => {
+    setSelectedTaskIds(new Set());
+  }, [stage, filtersKey, searchKeyword]);
+  useEffect(() => {
+    if (!data || loading || loadFailed || data.taskIdsTruncated) return;
+    const current = new Set(data.filteredTaskIds ?? []);
+    setSelectedTaskIds((previous) => {
+      const next = new Set([...previous].filter((id) => current.has(id)));
+      return next.size === previous.size ? previous : next;
+    });
+  }, [data, loading, loadFailed]);
+  useEffect(() => {
+    const requested = searchParams.get("stage");
+    if (["all", ...acquisitionStages].includes(requested ?? "")) {
+      setStage(requested as AcquisitionStageFilter);
+      setFilters({ attentionTags: [], facts: [] });
+      setPage(1);
     }
+  }, [searchParams]);
+  useEffect(() => {
+    let current = true;
+    void BApi.acquisition
+      .getAcquisitionRecipes()
+      .then((result) => {
+        if (current && !result.code) setRecipes(result.data ?? []);
+      })
+      .catch(() => {});
+    return () => {
+      current = false;
+    };
   }, []);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  // The queue runs on a timer server-side, so the page has to look again to see it move.
-  useEffect(() => {
-    const handle = setInterval(() => void load(), 5000);
-
-    return () => clearInterval(handle);
-  }, [load]);
-
-  const shown = (tab === "live" ? tasks.filter((x) => LIVE.includes(x.status)) : tasks).sort(
-    (a, b) => (ORDER[a.status] ?? 9) - (ORDER[b.status] ?? 9) || b.id - a.id,
+  const openTask = useCallback(
+    (task: PlanTask) => {
+      if (task.builderId) createPortal(PlanTaskDetailModal, { taskId: task.id, onChanged: load });
+      else
+        createPortal(LegacyTaskDetailModal, {
+          taskId: task.id,
+          recipes,
+          onChanged: load,
+          onEditRecipe: (id: number) => navigate(`/workflows/editor?id=${id}`),
+        });
+    },
+    [createPortal, load, navigate, recipes],
   );
+  const openTaskById = useCallback((id: number) => {
+    void BApi.acquisition
+      .getAcquisition(id, { sensitiveResponse: true, showErrorToast: false })
+      .then((result) => {
+        if (!result.code && result.data) openTask(result.data as PlanTask);
+      })
+      .catch(() => {});
+  }, [openTask]);
 
-  const waitingCount = tasks.filter((x) => x.status === AcquisitionStatus.Waiting).length;
+  useEffect(() => {
+    const taskId = searchParams.get("taskId");
+    if (!taskId || !/^\d+$/.test(taskId) || Number(taskId) <= 0 || openedTask.current === taskId)
+      return;
+    // A deep link may refer to a task outside this page, or to retained cancelled history.
+    let current = true;
+    void BApi.acquisition
+      .getAcquisition(Number(taskId), { sensitiveResponse: true })
+      .then((result) => {
+        if (current && !result.code && result.data) {
+          openedTask.current = taskId;
+          openTask(result.data as PlanTask);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      current = false;
+    };
+  }, [searchParams, openTask]);
+
+  const pageCount = Math.max(1, Math.ceil((data?.totalCount ?? 0) / 24));
+  const currentPage = data?.page ?? page;
+  const visibleTasks = tasks;
+  const visibleTaskIds = visibleTasks.map((task) => task.id);
+  const selectedOnPage = visibleTaskIds.filter((id) => selectedTaskIds.has(id)).length;
+  const pageSelectionExceedsLimit =
+    selectedTaskIds.size + visibleTaskIds.length - selectedOnPage > acquisitionSelectionLimit;
+  const changePageSelection = (checked: boolean) => {
+    if (selectionDisabled || (checked && pageSelectionExceedsLimit)) return;
+    setSelectedTaskIds((previous) => {
+      const next = new Set(previous);
+      for (const id of visibleTaskIds) {
+        if (checked) next.add(id);
+        else next.delete(id);
+      }
+      return next;
+    });
+  };
+  const selectedIds = [...selectedTaskIds];
+  const checkableSet = new Set(checkableIds);
+  const selectedSourceIds = selectedIds.filter(id => checkableSet.has(id));
+  const hasScopedFilter = stage !== "all" || filters.attentionTags.length > 0 || filters.facts.length > 0 ||
+    searchKeyword.trim().length > 0;
+  const scopeLoading = loading && !data;
+  // Both continuation methods use the same captured selection or complete narrowed filter.
+  const filteredAnalysis = selectedIds.length === 0 && hasScopedFilter;
+  const continuationIds = selectedIds.length ? selectedIds :
+    filteredAnalysis && !data?.taskIdsTruncated ? filteredIds : [];
+  const selectedScopeLabel = (ids: number[]) => `${t("acquisition.actionbar.selectedScope", { count: ids.length })} · ${scopeLabel}`;
+  const taskActions: { key: keyof typeof acquisitionActionLimits; label: string; ids: number[]; limit: number;
+    color?: "primary" | "danger"; icon?: React.ReactNode; open: (ids: number[]) => void }[] = [
+    { key: "continue", label: "acquisition.continueEntry.open", ids: continuationIds,
+      limit: acquisitionActionLimits.continue,
+      color: "primary", open: ids => createPortal(AcquisitionContinueModal, { taskIds: ids,
+        scopeLabel: filteredAnalysis ? `${t("acquisition.actionbar.filteredScope", { count: ids.length })} · ${scopeLabel}` : selectedScopeLabel(ids),
+        filteredAnalysis, onChanged: load, onOpenTask: openTaskById }) },
+    { key: "checkSources", label: "acquisition.actionbar.checkSources", ids: selectedSourceIds, limit: acquisitionActionLimits.checkSources,
+      icon: <AiOutlineLink aria-hidden />, open: ids => createPortal(SourceAvailabilityReviewModal, { taskIds: ids, scopeLabel: selectedScopeLabel(ids), onChanged: load }) },
+    { key: "downloadDestination", label: "acquisition.actionbar.downloadDestination", ids: selectedIds, limit: acquisitionActionLimits.downloadDestination,
+      icon: <AiOutlineFolderOpen aria-hidden />, open: ids => createPortal(AcquisitionDownloadDestinationModal, { taskIds: ids, scopeLabel: selectedScopeLabel(ids), onChanged: load }) },
+    { key: "storagePolicy", label: "acquisition.actionbar.storagePolicy", ids: selectedIds, limit: acquisitionActionLimits.storagePolicy,
+      icon: <AiOutlineSetting aria-hidden />, open: ids => createPortal(AcquisitionStorageMaintenanceModal, { mode: "policy", taskIds: ids, scopeLabel: selectedScopeLabel(ids), onChanged: load }) },
+    { key: "workspaceCleanup", label: "acquisition.actionbar.workspaceCleanup", ids: selectedIds, limit: acquisitionActionLimits.workspaceCleanup,
+      icon: <AiOutlineFolderOpen aria-hidden />, open: ids => createPortal(AcquisitionStorageMaintenanceModal, { mode: "cleanup", taskIds: ids, scopeLabel: selectedScopeLabel(ids), onChanged: load }) },
+    { key: "delete", label: "acquisition.actionbar.delete", ids: selectedIds, limit: acquisitionActionLimits.delete, color: "danger",
+      icon: <AiOutlineDelete aria-hidden />, open: ids => createPortal(DeleteAcquisitionTasksModal, { taskIds: ids, scopeLabel: selectedScopeLabel(ids), onChanged: load }) },
+  ];
+  const {
+    overviews,
+    failed: runtimeFailed,
+    loading: runtimeLoading,
+  } = useRuntimeOverviews(visibleTasks);
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="@container/acquisition flex min-w-0 flex-col gap-3">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex flex-wrap items-center gap-2">
@@ -123,7 +274,16 @@ const AcquisitionPage: React.FC = () => {
             {t<string>("acquisition.overview.description")}
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
+          <AcquisitionReserveSetting revision={settingsRevision} />
+          <Tooltip content={t("acquisition.continueEntry.queueCountHint", { count: queueTaskCount })}>
+            <Badge content={queueTaskCount} color="primary" size="sm" isInvisible={!queueTaskCount} showOutline={false}>
+              <Button size="sm" variant="flat"
+                onPress={() => createPortal(AcquisitionContinueModal, { onChanged: load })}>
+                {t("acquisition.continueEntry.queue")}
+              </Button>
+            </Badge>
+          </Tooltip>
           <Button
             size="sm"
             startContent={<AiOutlineBranches aria-hidden className="text-base" />}
@@ -153,93 +313,228 @@ const AcquisitionPage: React.FC = () => {
                 {t<string>("acquisition.inbox.open")}
               </Button>
             </Tooltip>
-            <Tooltip content={t<string>("acquisition.setup.description")}>
+            <Tooltip content={t<string>("acquisition.settings.description")}>
               <Button
                 size="sm"
                 startContent={<AiOutlineSetting aria-hidden className="text-base" />}
                 variant="light"
-                onPress={() => createPortal(SetupWizard, { onDone: load })}
+                onPress={() => createPortal(AcquisitionSettingsModal, { onDone: () => { setSettingsRevision(n => n + 1); void load(); } })}
               >
-                {t<string>("acquisition.setup.open")}
+                {t<string>("acquisition.settings.title")}
               </Button>
             </Tooltip>
           </div>
         </div>
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        <Tabs selectedKey={tab} size="sm" onSelectionChange={(k) => setTab(k as TabKey)}>
-          <Tab key="overview" title={t<string>("acquisition.tab.overview")} />
-          <Tab key="live" title={t<string>("acquisition.tab.live")} />
-          <Tab key="all" title={t<string>("acquisition.tab.all")} />
-          <Tab
-            key="matches"
-            title={
-              matchCount > 0
-                ? t<string>("acquisition.tab.matchesWithCount", { count: matchCount })
-                : t<string>("acquisition.tab.matches")
-            }
-          />
-        </Tabs>
-
-        {waitingCount > 0 && (
-          <Chip color="secondary" size="sm" variant="flat">
-            {t<string>("acquisition.waitingCount", { count: waitingCount })}
-          </Chip>
-        )}
-
+        <AcquisitionTaskSearch
+          value={keyword}
+          onValueChange={(value) => {
+            setSelectedTaskIds(new Set());
+            setKeyword(value);
+            setPage(1);
+          }}
+          onSearch={() => {
+            setSearchKeyword(keyword.trim());
+            setPage(1);
+          }}
+          onOpenTask={openTask}
+        />
+        <AcquisitionStageFilters
+          counts={stageCounts}
+          value={stage}
+          loading={!stageCounts}
+          onChange={(value) => {
+            setStage(value);
+            setFilters({ attentionTags: [], facts: [] });
+            setPage(1);
+          }}
+        />
         <div className="ml-auto flex flex-wrap items-center gap-2">
+          <Select
+            aria-label={t("acquisition.sort.label")}
+            className="w-48"
+            size="sm"
+            disallowEmptySelection
+            selectedKeys={[sort]}
+            dataSource={["newest", "lastProcessed", "sizeAsc", "sizeDesc"].map((value) => ({
+              value,
+              label: t(`acquisition.sort.${value}`),
+            }))}
+            onSelectionChange={(keys) => {
+              const value = Array.from(keys)[0];
+              if (value === "newest" || value === "lastProcessed" || value === "sizeAsc" || value === "sizeDesc") {
+                setSort(value);
+                setPage(1);
+              }
+            }}
+          />
           <Button
             color="primary"
             size="sm"
             startContent={<AiOutlineDownload aria-hidden className="text-base" />}
-            onPress={() => createPortal(StartAcquisitionModal, { recipes, onStarted: load })}
+            onPress={() =>
+              createPortal(StartAcquisitionModal, {
+                onStarted: (taskId: number) => {
+                  void load();
+                  setStage("all");
+                  setFilters({ attentionTags: [], facts: [] });
+                  setKeyword("");
+                  setPage(1);
+                  createPortal(PlanTaskDetailModal, { taskId, onChanged: load });
+                },
+              })
+            }
           >
             {t<string>("acquisition.start")}
           </Button>
-          <Tooltip content={t<string>("acquisition.sharedList.hint")}>
-            <Button
-              size="sm"
-              startContent={<AiOutlineImport aria-hidden className="text-base" />}
-              variant="light"
-              onPress={() => createPortal(ImportSharedListModal, { onImported: load })}
-            >
-              {t<string>("acquisition.sharedList.title")}
-            </Button>
-          </Tooltip>
         </div>
       </div>
+      {attentionCounts &&
+        (stage === "attention" ||
+          filters.attentionTags.length || filters.facts.length ||
+          Object.values(attentionCounts).some((count) => count > 0) ||
+          Object.values(factCounts ?? {}).some((count) => count > 0)) && (
+          <AcquisitionAttentionFilters
+            counts={attentionCounts}
+            factCounts={factCounts}
+            matchingCount={data?.totalCount}
+            value={filters}
+            disabled={loadFailed || filterPending}
+            onChange={(value) => {
+              setSelectedTaskIds(new Set());
+              setFilters(normalizeAcquisitionFilters(value));
+              setPage(1);
+            }}
+          />
+        )}
 
-      {tab === "overview" ? (
-        <CandidateOverview
-          onOpenRecipe={(id) => navigate(`/workflows/editor?id=${id}`)}
-          onStarted={() => {
-            void load();
-            setTab("live");
-          }}
-          onViewTasks={() => setTab("live")}
-        />
-      ) : tab === "matches" ? (
-        <MatchSuggestions onChanged={load} />
-      ) : loading && tasks.length === 0 ? (
+      {loadFailed && (
+        <div role="alert" className="flex flex-wrap items-center gap-2 text-sm text-danger">
+          <span>{t("acquisition.plan.loadFailed")}</span>
+          <Button size="sm" variant="light" onPress={() => void load()}>
+            {t("common.action.retry")}
+          </Button>
+        </div>
+      )}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-xs">
+        <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
+          <Checkbox size="sm"
+            isSelected={!!visibleTaskIds.length && selectedOnPage === visibleTaskIds.length}
+            isIndeterminate={selectedOnPage > 0 && selectedOnPage < visibleTaskIds.length}
+            isDisabled={selectionDisabled || !visibleTaskIds.length ||
+              (selectedOnPage < visibleTaskIds.length && pageSelectionExceedsLimit)}
+            onValueChange={changePageSelection}>
+            {t("acquisition.selection.page", { count: visibleTaskIds.length })}
+          </Checkbox>
+          <AcquisitionSelectionButtons pageIds={visibleTaskIds} filteredIds={filteredIds}
+            totalCount={data?.totalCount ?? 0} truncated={data?.taskIdsTruncated === true}
+            disabled={selectionDisabled} otherPagesSelected={selectedTaskIds.size > selectedOnPage}
+            onSelect={ids => setSelectedTaskIds(new Set(ids))} />
+          <Tooltip content={t("acquisition.selection.hint")} delay={1000} placement="bottom">
+            <span className="text-default-500" aria-live="polite">
+              {t("acquisition.selection.summary", { total: data?.totalCount ?? "—", count: selectedTaskIds.size })}
+            </span>
+          </Tooltip>
+          {!!selectedTaskIds.size && <Button size="sm" variant="light" onPress={() => setSelectedTaskIds(new Set())}>
+            {t("acquisition.selection.clear")}
+          </Button>}
+        </div>
+        <div className="ml-auto flex flex-wrap items-center gap-1">
+          {taskActions.map(action => {
+            const overLimit = action.ids.length > action.limit;
+            const disabled = selectionDisabled || scopeLoading || !action.ids.length || overLimit;
+            const hint = action.key === "continue" && filteredAnalysis && data?.taskIdsTruncated
+              ? t("acquisition.continueActions.narrowFilter") : overLimit ? t("acquisition.actionbar.limit", { count: action.ids.length, limit: action.limit }) : action.key === "continue" && filteredAnalysis && action.ids.length
+              ? t("acquisition.actionbar.filteredScope", { count: action.ids.length }) :
+              !selectedTaskIds.size ? t("acquisition.actionbar.selectFirst") : action.key === "checkSources"
+                ? t("acquisition.actionbar.checkable", { count: action.ids.length, total: selectedTaskIds.size })
+                : selectedTaskIds.size ? t("acquisition.actionbar.selectedScope", { count: action.ids.length })
+                  : t("acquisition.actionbar.filteredScope", { count: action.ids.length });
+            return <Tooltip key={action.key} content={hint} delay={1000} placement="bottom">
+              <span><Button size="sm" variant="flat" color={action.color} startContent={action.icon}
+                isDisabled={disabled} onPress={() => {
+                  if (!disabled) action.open([...action.ids]);
+                }}>{t(action.label)}</Button></span>
+            </Tooltip>;
+          })}
+        </div>
+        {data?.taskIdsTruncated && <span className="text-warning-600">{t("acquisition.selection.truncated")}</span>}
+        {runtimeFailed && <span role="status" className="text-warning-600">{t("acquisition.runtime.refreshFailed")}</span>}
+        {runtimeLoading && !visibleTasks.some(task => overviews[task.id]) &&
+          <span className="text-default-500">{t("acquisition.runtime.loading")}</span>}
+      </div>
+      {loading && !data ? (
         <div className="flex justify-center py-10">
           <Spinner size="lg" />
         </div>
-      ) : shown.length === 0 ? (
+      ) : tasks.length === 0 && !loadFailed ? (
         <div className="text-center text-default-500 py-10">
-          {t<string>(tab === "live" ? "acquisition.empty.live" : "acquisition.empty.all")}
+          {t<string>("acquisition.tasks.empty")}
         </div>
       ) : (
         <div className="flex flex-col gap-2">
-          {shown.map((task) => (
-            <AcquisitionRow
-              key={task.id}
-              recipes={recipes}
-              task={task}
-              onChanged={load}
-              onEditRecipe={(id) => navigate(`/workflows/editor?id=${id}`)}
-            />
+          {visibleTasks.map((task) => (
+            <div key={task.id} className="flex items-start gap-2">
+              <Checkbox
+                className="mt-3 shrink-0"
+                size="sm"
+                aria-label={t("acquisition.selection.task", { id: task.id })}
+                isSelected={selectedTaskIds.has(task.id)}
+                isDisabled={
+                  selectionDisabled ||
+                  (!selectedTaskIds.has(task.id) &&
+                    selectedTaskIds.size >= acquisitionSelectionLimit)
+                }
+                onValueChange={(checked) => {
+                  if (
+                    selectionDisabled ||
+                    (checked && selectedTaskIds.size >= acquisitionSelectionLimit)
+                  )
+                    return;
+                  setSelectedTaskIds((previous) => {
+                    const next = new Set(previous);
+                    if (checked) next.add(task.id);
+                    else next.delete(task.id);
+                    return next;
+                  });
+                }}
+              />
+              <div className="min-w-0 flex-1">
+                {task.builderId ? (
+                  <PlanTaskRow
+                    key={task.id}
+                    task={task}
+                    overview={overviews[task.id]}
+                    sizeEstimate={data?.sizeEstimates?.[task.id]}
+                    onOpen={() => openTask(task)}
+                    onDelete={() => createPortal(DeleteAcquisitionTasksModal, { taskIds: [task.id], onChanged: load })}
+                  />
+                ) : (
+                  <AcquisitionRow
+                    key={task.id}
+                    recipes={recipes}
+                    task={task as AcquisitionTaskVm}
+                    overview={overviews[task.id]}
+                    sizeEstimate={data?.sizeEstimates?.[task.id]}
+                    onChanged={load}
+                    onOpen={() => openTask(task)}
+                    onDelete={() => createPortal(DeleteAcquisitionTasksModal, { taskIds: [task.id], onChanged: load })}
+                    onEditRecipe={(id) => navigate(`/workflows/editor?id=${id}`)}
+                  />
+                )}
+              </div>
+            </div>
           ))}
         </div>
+      )}
+      {pageCount > 1 && (
+        <Pagination
+          aria-label={t("acquisition.tasks.pagination")}
+          page={currentPage}
+          total={pageCount}
+          onChange={setPage}
+        />
       )}
 
       <Drawer isOpen={recipesOpen} placement="right" size="3xl" onOpenChange={setRecipesOpen}>

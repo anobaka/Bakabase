@@ -25,6 +25,7 @@ vi.mock("@/sdk/BApi", () => ({
 }));
 vi.mock("@/core/clipboard", () => ({ copyTextToClipboard: mocks.copy }));
 vi.mock("@/components/bakaui", () => ({
+  Tooltip: ({ children, content }: { children: ReactNode; content: ReactNode }) => <span data-tooltip="mapping"><span hidden>{content}</span>{children}</span>,
   Button: ({
     children,
     onPress,
@@ -75,6 +76,31 @@ describe("FilePathValue", () => {
     fireEvent.click(screen.getByRole("button", { name: "filePath.openFolder" }));
     expect(mocks.open).toHaveBeenCalledWith({ path: "C:\\Bakabase\\logs" });
     expect(mocks.load).not.toHaveBeenCalled();
+  });
+
+  it("places a supplied browser action next to copy without duplicating it for the container-path disclosure", async () => {
+    const browse = vi.fn();
+    render(<FilePathValue path="/data/logs" pathActions={<button onClick={browse}>Browse files</button>} />);
+    await screen.findByText("/Users/test/Bakabase/logs");
+    const copy = screen.getByRole("button", { name: "filePath.copy:filePath.hostPath" });
+    const action = screen.getByRole("button", { name: "Browse files" });
+    expect(action.parentElement).toBe(copy.parentElement);
+    expect(copy.nextElementSibling).toBe(action);
+    expect(screen.getAllByRole("button", { name: "Browse files" })).toHaveLength(1);
+    fireEvent.click(action);
+    expect(browse).toHaveBeenCalledOnce();
+    expect(mocks.open).not.toHaveBeenCalled();
+  });
+
+  it("keeps Docker mapping notes available without taking another visible line in compact task views", async () => {
+    mocks.load.mockResolvedValue({ code: 0, data: {
+      isContainer: true, paths: [{ serverPath: "/data/logs", storageKind: "unknown" }],
+    } });
+    render(<FilePathValue path="/data/logs" compact />);
+    const metadata = await screen.findByLabelText("filePath.containerPath");
+    expect(metadata).toBeVisible();
+    expect(screen.getByText("filePath.hostPathUnavailable")).not.toBeVisible();
+    expect(screen.getByRole("button", { name: "filePath.copy:filePath.containerPath" })).toBeVisible();
   });
 
   it("never treats a Docker host path as the desktop relay's local path", async () => {

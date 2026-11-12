@@ -88,8 +88,11 @@ describe("post parser status overview classification", () => {
       getTaskDisplayStatus({ ...successful, workflowStatus: WorkflowRunStatus.Waiting }).group,
     ).toBe("attention");
     expect(
-      getTaskDisplayStatus({ ...successful, contentSnapshot: { locks: [{ isBought: false }] } })
-        .group,
+      getTaskDisplayStatus({
+        ...successful,
+        results: { DownloadInfo: { resources: [] } },
+        contentSnapshot: { locks: [{ isBought: false }] },
+      }).group,
     ).toBe("attention");
     expect(
       getTaskDisplayStatus({ ...successful, results: { DownloadInfo: { isComplete: false } } })
@@ -99,7 +102,16 @@ describe("post parser status overview classification", () => {
       getTaskDisplayStatus({ ...task, results: { DownloadInfo: { error: "Failed extraction" } } })
         .group,
     ).toBe("failed");
-    expect(getTaskDisplayStatus({ ...successful, workflowStatus: undefined }).group).toBe("ready");
+    expect(getTaskDisplayStatus({ ...successful, workflowStatus: undefined }).group).toBe(
+      "success",
+    );
+    expect(
+      getTaskDisplayStatus({ ...successful, workflowStatus: undefined, error: "Actual failure" })
+        .group,
+    ).toBe("failed");
+    expect(
+      getTaskDisplayStatus({ ...successful, workflowStatus: undefined, results: undefined }).group,
+    ).toBe("ready");
     expect(
       getTaskDisplayStatus({ ...successful, workflowRunId: undefined, workflowStatus: undefined })
         .group,

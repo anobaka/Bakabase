@@ -3,26 +3,14 @@ import { useState, type ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import ExHentaiDownloadModeField from "../ExHentaiDownloadModeField";
-import { ExHentaiDownloadMode } from "@/sdk/constants";
+import { ExHentaiDownloadMode, ExHentaiNoTorrentAction } from "@/sdk/constants";
 import type {
   ExHentaiDownloadOptions,
   ExHentaiDownloadPatch,
 } from "@/pages/downloader/exHentaiDownloadMode";
 
 vi.mock("@/components/bakaui", () => ({
-  Select: ({ label, dataSource, selectedKeys, onSelectionChange }: any) => (
-    <select
-      aria-label={label}
-      value={selectedKeys[0]}
-      onChange={(event) => onSelectionChange(new Set([event.target.value]))}
-    >
-      {dataSource.map((option: { value: string; label: string }) => (
-        <option key={option.value} value={option.value}>
-          {option.label}
-        </option>
-      ))}
-    </select>
-  ),
+  Button: ({ children, onPress }: any) => <button onClick={onPress}>{children}</button>,
   Checkbox: ({
     children,
     isSelected,
@@ -46,7 +34,14 @@ vi.mock("@/components/bakaui", () => ({
   ),
 }));
 
-function mount(initial?: ExHentaiDownloadOptions) {
+const keys = {
+  prefer: "downloader.policy.preferBt",
+  save: "downloader.policy.saveTorrent",
+  download: "downloader.policy.downloadBt",
+  adopt: "downloader.policy.adoptFallback",
+};
+const checkbox = (key: string) => screen.getByRole("checkbox", { name: key });
+function mount(initial?: ExHentaiDownloadOptions, isExistingTask = false) {
   const onChange = vi.fn();
   function Harness() {
     const [options, setOptions] = useState(initial);
@@ -54,127 +49,118 @@ function mount(initial?: ExHentaiDownloadOptions) {
       onChange(patch);
       setOptions((current) => ({ ...current, ...patch }));
     };
-    return <ExHentaiDownloadModeField options={options} onChange={update} />;
+    return (
+      <ExHentaiDownloadModeField
+        options={options}
+        isExistingTask={isExistingTask}
+        onChange={update}
+      />
+    );
   }
   render(<Harness />);
   return onChange;
 }
 
-describe("ExHentai acquisition routes", () => {
-  it("offers only direct and BT routes and starts a newly selected BT route without paid fallback", () => {
-    const onChange = mount({ downloadMode: ExHentaiDownloadMode.Direct });
-    const route = screen.getByRole("combobox", { name: "downloader.mode.label" });
-    expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
-      "downloader.mode.direct",
-      "downloader.mode.bt",
-    ]);
-    expect(screen.queryByRole("checkbox")).toBeNull();
-    fireEvent.change(route, { target: { value: String(ExHentaiDownloadMode.Torrent) } });
+describe("ExHentai BT preference", () => {
+  it("defaults new settings to internal BT without writing settings on mount", () => {
+    const onChange = mount();
+    expect(checkbox(keys.prefer)).toBeChecked();
+    expect(checkbox(keys.save)).not.toBeChecked();
+    expect(checkbox(keys.download)).toBeChecked();
+    expect(checkbox(keys.download)).toBeDisabled();
+    expect(screen.getAllByRole("checkbox")).toHaveLength(3);
+    expect(screen.queryByRole("combobox")).toBeNull();
+    expect(screen.getByText("downloader.policy.costHint")).toBeVisible();
+    expect(screen.getByText("downloader.policy.fallbackHint")).toBeVisible();
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("supports both BT actions and never lets the last action be unchecked", () => {
+    const onChange = mount();
+    fireEvent.click(checkbox(keys.save));
     expect(onChange).toHaveBeenLastCalledWith({
       downloadMode: ExHentaiDownloadMode.Torrent,
-      saveTorrentFile: false,
-      fallbackToDirect: false,
+      preferTorrent: true,
+      saveTorrentFile: true,
+      fallbackToDirect: true,
+      noTorrentAction: ExHentaiNoTorrentAction.DirectDownload,
     });
-    expect(
-      screen.getByRole("checkbox", { name: "downloader.mode.downloadTorrent" }),
-    ).not.toBeChecked();
-    expect(screen.getByRole("checkbox", { name: "downloader.mode.createBtTask" })).toBeChecked();
-    expect(screen.getByRole("checkbox", { name: "downloader.mode.createBtTask" })).toBeDisabled();
-    expect(
-      screen.getByRole("checkbox", { name: "downloader.mode.fallbackToDirect" }),
-    ).not.toBeChecked();
+    expect(checkbox(keys.download)).toBeEnabled();
+    fireEvent.click(checkbox(keys.download));
+    expect(onChange).toHaveBeenLastCalledWith({
+      downloadMode: ExHentaiDownloadMode.TorrentFile,
+      preferTorrent: true,
+      saveTorrentFile: false,
+      fallbackToDirect: true,
+      noTorrentAction: ExHentaiNoTorrentAction.DirectDownload,
+    });
+    expect(checkbox(keys.save)).toBeChecked();
+    expect(checkbox(keys.save)).toBeDisabled();
+    expect(checkbox(keys.download)).not.toBeChecked();
+    expect(screen.getByText("downloader.policy.torrentFileHint")).toBeVisible();
+    fireEvent.click(checkbox(keys.prefer));
+    expect(onChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        downloadMode: ExHentaiDownloadMode.Direct,
+        preferTorrent: false,
+        noTorrentAction: ExHentaiNoTorrentAction.DirectDownload,
+      }),
+    );
+    expect(screen.getAllByRole("checkbox")).toHaveLength(1);
+    expect(screen.getByText("downloader.policy.directHint")).toBeVisible();
+    fireEvent.click(checkbox(keys.prefer));
+    expect(checkbox(keys.save)).toBeChecked();
+    expect(checkbox(keys.download)).not.toBeChecked();
+    expect(onChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({ downloadMode: ExHentaiDownloadMode.TorrentFile }),
+    );
   });
 
   it.each([
     undefined,
     { preferTorrent: true },
-    { downloadMode: ExHentaiDownloadMode.TorrentFile },
     { downloadMode: ExHentaiDownloadMode.TorrentFile, fallbackToDirect: true },
-  ])(
-    "keeps saved torrent-only settings on the BT route without silently changing them (%o)",
-    (options) => {
-      const onChange = mount(options);
-      const route = screen.getByRole("combobox", { name: "downloader.mode.label" });
-      expect(route).toHaveValue(String(ExHentaiDownloadMode.Torrent));
-      expect(
-        screen.getByRole("checkbox", { name: "downloader.mode.downloadTorrent" }),
-      ).toBeChecked();
-      expect(
-        screen.getByRole("checkbox", { name: "downloader.mode.downloadTorrent" }),
-      ).toBeDisabled();
-      expect(
-        screen.getByRole("checkbox", { name: "downloader.mode.createBtTask" }),
-      ).not.toBeChecked();
-      expect(
-        screen.queryByRole("checkbox", { name: "downloader.mode.fallbackToDirect" }),
-      ).toBeNull();
-      fireEvent.change(route, { target: { value: String(ExHentaiDownloadMode.Torrent) } });
-      expect(onChange).not.toHaveBeenCalled();
-      expect(
-        screen.getByRole("checkbox", { name: "downloader.mode.downloadTorrent" }),
-      ).toBeChecked();
-    },
-  );
+    { downloadMode: ExHentaiDownloadMode.Torrent, fallbackToDirect: false },
+    { downloadMode: ExHentaiDownloadMode.Torrent, noTorrentAction: ExHentaiNoTorrentAction.Fail },
+  ])("preserves an old no-fallback task until the user adopts the new policy (%o)", (options) => {
+    const onChange = mount(options, true);
+    expect(screen.getByRole("note")).toHaveTextContent("downloader.policy.legacyNoFallback");
+    expect(onChange).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: keys.adopt }));
+    expect(onChange).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({
+        noTorrentAction: ExHentaiNoTorrentAction.DirectDownload,
+        fallbackToDirect: true,
+        preferTorrent: true,
+      }),
+    );
+    expect(screen.queryByRole("note")).toBeNull();
+    expect(screen.getByText("downloader.policy.fallbackHint")).toBeVisible();
+  });
 
-  it("supports all three BT combinations without clearing an explicit fallback preference", () => {
+  it("shows fallback for new tasks using a saved torrent-file preference", () => {
     const onChange = mount({
-      downloadMode: ExHentaiDownloadMode.Torrent,
-      saveTorrentFile: false,
-      fallbackToDirect: true,
-    });
-    const torrent = () => screen.getByRole("checkbox", { name: "downloader.mode.downloadTorrent" });
-    const transfer = () => screen.getByRole("checkbox", { name: "downloader.mode.createBtTask" });
-    expect(transfer()).toBeChecked();
-    expect(transfer()).toBeDisabled();
-    fireEvent.click(torrent());
-    expect(onChange).toHaveBeenLastCalledWith({
-      downloadMode: ExHentaiDownloadMode.Torrent,
-      saveTorrentFile: true,
-    });
-    expect(torrent()).toBeChecked();
-    expect(torrent()).toBeEnabled();
-    expect(transfer()).toBeChecked();
-    expect(transfer()).toBeEnabled();
-    expect(
-      screen.getByRole("checkbox", { name: "downloader.mode.fallbackToDirect" }),
-    ).toBeChecked();
-    fireEvent.click(transfer());
-    expect(onChange).toHaveBeenLastCalledWith({
       downloadMode: ExHentaiDownloadMode.TorrentFile,
-      saveTorrentFile: false,
+      fallbackToDirect: false,
     });
-    expect(torrent()).toBeChecked();
-    expect(torrent()).toBeDisabled();
-    expect(transfer()).not.toBeChecked();
-    expect(screen.queryByRole("checkbox", { name: "downloader.mode.fallbackToDirect" })).toBeNull();
-    fireEvent.click(transfer());
-    expect(onChange).toHaveBeenLastCalledWith({
-      downloadMode: ExHentaiDownloadMode.Torrent,
-      saveTorrentFile: true,
-      fallbackToDirect: true,
-    });
-    expect(
-      screen.getByRole("checkbox", { name: "downloader.mode.fallbackToDirect" }),
-    ).toBeChecked();
-    fireEvent.click(torrent());
-    expect(onChange).toHaveBeenLastCalledWith({
-      downloadMode: ExHentaiDownloadMode.Torrent,
-      saveTorrentFile: false,
-    });
-    expect(transfer()).toBeDisabled();
-    expect(screen.getByText("downloader.mode.btSelectionHint")).toBeVisible();
-    fireEvent.change(screen.getByRole("combobox"), {
-      target: { value: String(ExHentaiDownloadMode.Direct) },
-    });
-    expect(onChange).toHaveBeenLastCalledWith({ downloadMode: ExHentaiDownloadMode.Direct });
-    expect(screen.queryByRole("checkbox")).toBeNull();
-    fireEvent.change(screen.getByRole("combobox"), {
-      target: { value: String(ExHentaiDownloadMode.Torrent) },
-    });
-    expect(onChange).toHaveBeenLastCalledWith({
-      downloadMode: ExHentaiDownloadMode.Torrent,
-      saveTorrentFile: false,
-      fallbackToDirect: true,
-    });
+    expect(checkbox(keys.save)).toBeChecked();
+    expect(checkbox(keys.download)).not.toBeChecked();
+    expect(screen.queryByRole("note")).toBeNull();
+    expect(screen.getByText("downloader.policy.fallbackHint")).toBeVisible();
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { downloadMode: ExHentaiDownloadMode.Torrent, fallbackToDirect: true },
+    {
+      downloadMode: ExHentaiDownloadMode.TorrentFile,
+      fallbackToDirect: false,
+      noTorrentAction: ExHentaiNoTorrentAction.DirectDownload,
+    },
+  ])("recognizes tasks that already allow fallback without changing them (%o)", (options) => {
+    const onChange = mount(options, true);
+    expect(screen.queryByRole("button", { name: keys.adopt })).toBeNull();
+    expect(screen.getByText("downloader.policy.fallbackHint")).toBeVisible();
+    expect(onChange).not.toHaveBeenCalled();
   });
 });

@@ -13,7 +13,8 @@ public class ObservationChatClient(
     int providerConfigId,
     string modelId,
     string? feature = null,
-    bool auditRequestContent = false
+    bool auditRequestContent = false,
+    Action<long>? onUsageRecorded = null
 ) : DelegatingChatClient(innerClient)
 {
     public override async Task<ChatResponse> GetResponseAsync(IEnumerable<ChatMessage> messages, ChatOptions? options = null,
@@ -46,7 +47,7 @@ public class ObservationChatClient(
                 log.ResponseSummary = response.Text;
             }
 
-            await usageService.TrackAsync(log, CancellationToken.None);
+            await TrackUsage(log);
 
             return response;
         }
@@ -126,7 +127,7 @@ public class ObservationChatClient(
                 log.ResponseSummary = responseText.Length > 0 ? responseText.ToString() : null;
             }
 
-            await usageService.TrackAsync(log, CancellationToken.None);
+            await TrackUsage(log);
         }
     }
 
@@ -149,7 +150,13 @@ public class ObservationChatClient(
             log.RequestSummary = SummarizeMessages(chatMessages);
         }
 
+        await TrackUsage(log);
+    }
+
+    private async Task TrackUsage(LlmUsageLogDbModel log)
+    {
         await usageService.TrackAsync(log, CancellationToken.None);
+        if (log.Id > 0) onUsageRecorded?.Invoke(log.Id);
     }
 
     private static string? SummarizeMessages(IList<ChatMessage> messages)

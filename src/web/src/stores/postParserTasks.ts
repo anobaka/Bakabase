@@ -5,6 +5,8 @@ import _ from "lodash";
 
 interface PostParserTasksState {
   tasks: PostParserTask[];
+  changeVersion: number;
+  notifyChanged: () => void;
   setTasks: (tasks: PostParserTask[]) => void;
   updateTask: (task: PostParserTask) => void;
   deleteTask: (taskId: number) => void;
@@ -13,7 +15,13 @@ interface PostParserTasksState {
 
 export const usePostParserTasksStore = create<PostParserTasksState>((set, get) => ({
   tasks: [],
-  setTasks: (tasks) => set({ tasks: _.sortBy(tasks, (x) => x.id) }),
+  changeVersion: 0,
+  notifyChanged: () => set((state) => ({ changeVersion: state.changeVersion + 1 })),
+  setTasks: (tasks) =>
+    set((state) => ({
+      tasks: _.sortBy(tasks, (x) => x.id),
+      changeVersion: state.changeVersion + 1,
+    })),
   updateTask: (task) =>
     set((state) => {
       const idx = state.tasks.findIndex((t) => t.id == task.id);
@@ -26,8 +34,12 @@ export const usePostParserTasksStore = create<PostParserTasksState>((set, get) =
         newState = _.sortBy(newState, (x) => x.id);
       }
 
-      return { tasks: newState };
+      return { tasks: newState, changeVersion: state.changeVersion + 1 };
     }),
-  deleteTask: (taskId) => set((state) => ({ tasks: state.tasks.filter((t) => t.id !== taskId) })),
-  deleteAll: () => set({ tasks: [] }),
+  deleteTask: (taskId) =>
+    set((state) => ({
+      tasks: state.tasks.filter((t) => t.id !== taskId),
+      changeVersion: state.changeVersion + 1,
+    })),
+  deleteAll: () => set((state) => ({ tasks: [], changeVersion: state.changeVersion + 1 })),
 }));

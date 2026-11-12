@@ -113,9 +113,13 @@ export const UIHubConnection = () => {
           break;
         case "BTask":
           useBTasksStore.getState().setTasks(data);
+          // A new connection no longer receives a full parser snapshot. Refresh the
+          // visible server page after its authoritative execution snapshot arrives.
+          usePostParserTasksStore.getState().notifyChanged();
           break;
         case "PostParserTask":
-          usePostParserTasksStore.getState().setTasks(data);
+          // The active parser page requests its own server page. Do not retain a legacy full snapshot.
+          usePostParserTasksStore.getState().notifyChanged();
           break;
         case "ThirdPartyRequestStatistics":
           useThirdPartyRequestStatisticsStore.getState().setStatistics(data);
@@ -141,7 +145,7 @@ export const UIHubConnection = () => {
           useBTasksStore.getState().updateTask(data);
           break;
         case "PostParserTask":
-          usePostParserTasksStore.getState().updateTask(data);
+          usePostParserTasksStore.getState().notifyChanged();
           break;
         case "PathMark":
           usePathMarksStore.getState().updateMark(data);

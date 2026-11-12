@@ -17,7 +17,7 @@ The policy does not change the inference server.
 Those local Qwen requests default a missing temperature to zero to reduce sampling variation;
 explicit feature or call-specific temperatures retain precedence.
 Unrecognized endpoints/models and other provider kinds receive no added thinking parameters; their
-reasoning behavior remains provider-defined. Other AI features retain their original transport policy.
+reasoning behavior remains provider-defined.
 
 For the same local Qwen targets, plain JSON mode becomes a nonempty `json_schema` with schema
 `{type: object}` and name `post_analysis`. The verified llama.cpp Qwen handler skips JSON grammar for
@@ -36,3 +36,8 @@ options/messages. Identical concurrent cache misses recheck the cache after taki
 gate. Cancelled waiters do not cancel another request; unused gates are removed immediately. Truncated
 outputs, request failures and invalid requested JSON are not cached. Opaque caller SDK factories and
 executable tools bypass caching because their effective settings cannot be safely identified.
+
+Post-download file assessment uses the same five-minute, single-request OpenAI transport when it
+supplies a response schema. Local Qwen receives the file decision schema with thinking disabled.
+The output budget comes from the FileProcessor feature configuration. Other FileProcessor requests
+keep their configured provider defaults.

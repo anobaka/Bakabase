@@ -22,7 +22,7 @@ import EditableFileName from "./components/EditableFileName";
 import RightOperations from "./components/RightOperations";
 
 import { Tooltip, toast } from "@/components/bakaui";
-import { IconType, IwFsType } from "@/sdk/constants";
+import { BTaskStatus, IconType, IwFsType } from "@/sdk/constants";
 
 import "@szhsin/react-menu/dist/index.css";
 import "@szhsin/react-menu/dist/transitions/slide.css";
@@ -33,7 +33,9 @@ import {
   EntryProperty,
   EntryStatus,
   IwFsEntryAction,
+  MainLineHeight,
 } from "@/core/models/FileExplorer/Entry";
+import { pageChildren } from "@/core/models/FileExplorer/DirectoryPage";
 import { buildLogger, humanFileSize, standardizePath, uuidv4 } from "@/components/utils";
 import FileSystemEntryIcon from "@/components/FileSystemEntryIcon";
 import MediaPlayer from "@/components/MediaPlayer";
@@ -63,6 +65,8 @@ export type FileExplorerEntryProps = {
    */
   switchSelective?: (e: Entry) => boolean;
   onChildrenLoaded?: (e: Entry) => void;
+  /** Natural row height, independent of the virtual list's current viewport. */
+  onContentHeightChange?: (height: number) => void;
   filter?: IEntryFilter;
   expandable?: boolean;
   capabilities?: Capability[];
@@ -89,6 +93,7 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
     onDoubleClick,
     capabilities,
     onChildrenLoaded,
+    onContentHeightChange,
     onContextMenu = (e, entry) => {},
     onLoadFail = (rsp, entry) => {},
     expandable = true,
@@ -118,9 +123,12 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
 
   // Version counter to trigger useCallback updates when children/expanded change
   const [childrenVersion, setChildrenVersion] = useState(0);
+  const contentHeightChanged = useRef(onContentHeightChange);
+  contentHeightChanged.current = onContentHeightChange;
 
   // Infrastructures
   const loadingChildrenRef = useRef(false);
+  const childrenRequest = useRef<AbortController>();
   const childrenStylesRef = useRef<Record<string, any>>({});
   const domRef = useRef<HTMLElement | null>(null);
   const hashRef = useRef(uuidv4());
@@ -144,7 +152,7 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
     setLoadError(undefined);
     // console.trace();
 
-    e.path = standardizePath(e.path)!;
+    if (!e.root.directoryPage) e.path = standardizePath(e.path)!;
     log("Initializing", e);
 
     if (entryRef.current) {
@@ -257,6 +265,7 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
 
     return () => {
       mountedRef.current = false;
+      childrenRequest.current?.abort();
       entryRef.current.dispose().catch((cause) => log("Failed to dispose entry", cause));
       clearTimeout(resizeDebounceRef.current);
       resizeObserver.disconnect();
@@ -287,7 +296,7 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
           </Chip>,
         );
       }
-      if (en.size != undefined && en.size > 0 && en.properties.includes(EntryProperty.Size)) {
+      if (en.size != undefined && Number.isFinite(en.size) && en.size >= 0 && en.properties.includes(EntryProperty.Size)) {
         elements.push(
           <Chip key="size" color={"secondary"} size={"sm"} variant={"light"}>
             {humanFileSize(en.size, false)}
@@ -403,6 +412,7 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
       filter,
       switchSelective,
       onContextMenu,
+      onEnterDirectory,
       onLoadFail,
     ],
   );
@@ -456,6 +466,10 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
     }
   }, [log]);
 
+  useEffect(() => {
+    contentHeightChanged.current?.(entryRef.current.filteredChildren.reduce((height, child) => height + child.totalHeight, 0));
+  }, [entry, childrenVersion, loading, initializing]);
+
   const collapse = useCallback(() => {
     if (entryRef.current.expanded) {
       entryRef.current.expanded = false;
@@ -487,36 +501,52 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
           setLoadError(undefined);
           try {
             const requestedEntry = entryRef.current;
-            // @ts-ignore
-            const rsp = await BApi.file.getChildrenIwFsInfo(
-              {
-                root: entryRef.current.path,
-                showHiddenFiles: entryRef.current.root?.showHiddenFiles,
-              },
-              { showErrorToast: () => false },
-            );
-
-            if (!mountedRef.current || entryRef.current !== requestedEntry) return false;
-
-            log(`Loaded ${rsp.data?.entries?.length} children`);
-            if (rsp.code) {
-              setLoadError(rsp.message || t("fileExplorer.directory.loadFailed"));
-              onLoadFail(rsp, entryRef.current);
-
-              return false;
-            }
-            if (rsp.data) {
-              const { entries = [] } = rsp.data || {};
-
+            const source = requestedEntry.root.directoryPage;
+            if (source) {
+              const controller = new AbortController();
+              childrenRequest.current = controller;
+              const listing = await source.loadChildren(requestedEntry.path, controller.signal);
+              if (!mountedRef.current || entryRef.current !== requestedEntry || controller.signal.aborted)
+                return false;
+              // A large directory has its own pagination controls when entered. Never
+              // silently show an incomplete subtree as the contents of the directory.
+              if (listing.childCount > listing.entries.length) {
+                source.onNavigate(requestedEntry.path);
+                return false;
+              }
+              requestedEntry.children = pageChildren(requestedEntry, listing.entries);
+            } else {
               // @ts-ignore
-              entryRef.current.children = entries!.map(
-                (e) =>
-                  new Entry({
-                    ...e,
-                    parent: entryRef.current,
-                    properties: entryRef.current.properties,
-                  }),
+              const rsp = await BApi.file.getChildrenIwFsInfo(
+                {
+                  root: entryRef.current.path,
+                  showHiddenFiles: entryRef.current.root?.showHiddenFiles,
+                },
+                { showErrorToast: () => false },
               );
+
+              if (!mountedRef.current || entryRef.current !== requestedEntry) return false;
+
+              log(`Loaded ${rsp.data?.entries?.length} children`);
+              if (rsp.code) {
+                setLoadError(rsp.message || t("fileExplorer.directory.loadFailed"));
+                onLoadFail(rsp, entryRef.current);
+
+                return false;
+              }
+              if (rsp.data) {
+                const { entries = [] } = rsp.data || {};
+
+                // @ts-ignore
+                entryRef.current.children = entries!.map(
+                  (e) =>
+                    new Entry({
+                      ...e,
+                      parent: entryRef.current,
+                      properties: entryRef.current.properties,
+                    }),
+                );
+              }
             }
           } catch (cause) {
             if (mountedRef.current)
@@ -558,8 +588,8 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
   const renderTaskError = useCallback(() => {
     const task = entryRef.current.task && localizeBTask(entryRef.current.task, i18n.language);
 
-    if (task?.error) {
-      const text = `${task.name}:${task.error}`;
+    if (task && (task.error || task.status === BTaskStatus.Error)) {
+      const text = `${task.name}: ${task.error || task.briefError || task.message || t("common.label.error")}`;
 
       return (
         <Button
@@ -572,7 +602,7 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
               defaultVisible: true,
               size: "xl",
               title: t<string>("common.label.error"),
-              children: <pre>{text}</pre>,
+              children: <pre className="whitespace-pre-wrap break-words">{text}</pre>,
             });
           }}
         >
@@ -699,7 +729,8 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
     >
       {!entryRef.current.isRoot && (
         <div
-          className="entry-main-container relative w-full h-9 min-h-9 max-h-9 border-b border-[var(--theme-file-processor-entry-divider)]"
+          className="entry-main-container relative w-full shrink-0 border-b border-[var(--theme-file-processor-entry-divider)]"
+          style={{ height: MainLineHeight, minHeight: MainLineHeight, maxHeight: MainLineHeight }}
           role="button"
           tabIndex={0}
           onClick={(e) => {
@@ -721,7 +752,11 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
               currentEntryDomRef.current = r;
             }}
             className={`entry-main box-content flex items-center justify-between h-6 py-[5px] pl-1 pr-2 relative rounded-md mx-1 border-l-[3px] border-l-transparent transition-all duration-150 ${entryRef.current?.selected ? "selected" : ""} ${entryRef.current.expanded ? "border-b-[var(--theme-border-color)]" : ""} ${isDragOver ? "bg-primary/20 border-l-primary" : ""} ${clipboardStore.paths.includes(entryRef.current.path) ? (clipboardStore.mode === "cut" ? "opacity-50 border-l-warning" : "border-l-success") : ""}`}
-            draggable={!entryRef.current.isDrive && !entryRef.current.passive}
+            draggable={
+              !!capabilities?.includes("move") &&
+              !entryRef.current.isDrive &&
+              !entryRef.current.passive
+            }
             role="button"
             tabIndex={0}
             onClick={() => {
@@ -765,23 +800,51 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
               setIsDragOver(false);
             }}
             onDragOver={(e) => {
-              if (entryRef.current.isDirectoryOrDrive) {
+              e.stopPropagation();
+              if (
+                capabilities?.includes("move") &&
+                entryRef.current.isDirectoryOrDrive &&
+                !entryRef.current.passive
+              ) {
                 e.preventDefault();
                 e.dataTransfer.dropEffect = "move";
                 setIsDragOver(true);
+              } else {
+                e.dataTransfer.dropEffect = "none";
               }
             }}
             onDragStart={(e) => {
+              e.stopPropagation();
+              if (
+                !capabilities?.includes("move") ||
+                entryRef.current.isDrive ||
+                entryRef.current.passive
+              ) {
+                e.preventDefault();
+                return;
+              }
               e.dataTransfer.setData("text/plain", JSON.stringify([entryRef.current.path]));
               e.dataTransfer.effectAllowed = "copyMove";
             }}
             onDrop={(e) => {
               e.preventDefault();
+              e.stopPropagation();
               setIsDragOver(false);
+              // Read-only explorers and pickers must reject externally supplied drag payloads too.
+              if (
+                !capabilities?.includes("move") ||
+                !entryRef.current.isDirectoryOrDrive ||
+                entryRef.current.passive
+              )
+                return;
               try {
-                const paths = JSON.parse(e.dataTransfer.getData("text/plain")) as string[];
+                const paths: unknown = JSON.parse(e.dataTransfer.getData("text/plain"));
 
-                if (paths.length > 0 && entryRef.current.isDirectoryOrDrive) {
+                if (
+                  Array.isArray(paths) &&
+                  paths.length > 0 &&
+                  paths.every((path) => typeof path === "string" && path.trim().length > 0)
+                ) {
                   BApi.file
                     .moveEntries({
                       destDir: entryRef.current.path,
@@ -813,6 +876,7 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
                     className={`flex items-center justify-center mr-1.5 ${entry.isDirectoryOrDrive ? "w-5 h-5 min-w-5 max-w-5 min-h-5 max-h-5" : "w-4 h-4 min-w-4 max-w-4 min-h-4 max-h-4"}`}
                   >
                     <FileSystemEntryIcon
+                      metadataOnly={!!entry.root.directoryPage}
                       path={entryRef.current.path}
                       size={entry.isDirectoryOrDrive ? 18 : 16}
                       type={entry.isDirectoryOrDrive ? IconType.Directory : IconType.Dynamic}

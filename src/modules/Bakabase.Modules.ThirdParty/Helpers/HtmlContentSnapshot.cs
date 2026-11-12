@@ -16,7 +16,15 @@ public static class HtmlContentSnapshot
         {
             if (!node.HasAttributes) continue;
             foreach (var attribute in node.Attributes.ToArray())
-                node.Cq().Attr(attribute.Key, WebUtility.HtmlEncode(attribute.Value));
+            {
+                var encoded = WebUtility.HtmlEncode(attribute.Value);
+                if (encoded == attribute.Value) continue;
+                // This is serialization of a copy, not a form edit. CQ.Attr applies jQuery's
+                // immutable input/button type hook to full-document clones, even for unchanged
+                // values (CsQuery/CQ_jQuery/Attr.cs). Set only values that need escaping, directly
+                // on the DOM, so type and boolean form-field semantics stay intact.
+                node.SetAttribute(attribute.Key, encoded);
+            }
         }
         return copy.Html();
     }

@@ -95,11 +95,8 @@ public class PostParserController(
 
     [HttpDelete("task/all")]
     [SwaggerOperation(OperationId = "DeleteAllPostParserTasks")]
-    public async Task<BaseResponse> DeleteAll()
-    {
-        await service.DeleteAll();
-        return BaseResponseBuilder.Ok;
-    }
+    public Task<BaseResponse> DeleteAll() =>
+        throw new InvalidOperationException("Bulk deletion now requires a preview and confirmation. Refresh the page and try again.");
 
     [HttpPost("start")]
     [SwaggerOperation(OperationId = "StartAllPostParserTasks")]

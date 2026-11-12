@@ -1,3 +1,4 @@
+using Bakabase.Abstractions.Components.FileSystem;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -25,11 +26,12 @@ public sealed class BuiltInTorrentDownloader : ITorrentDownloader
     private readonly Func<string> _cacheRoot;
     private readonly ILogger<BuiltInTorrentDownloader> _logger;
     private readonly bool _enableDht;
+    private readonly IStorageWriteGuard? _storageWrites;
     private readonly ITorrentNetworkOptionsProvider? _networkOptions;
 
     public BuiltInTorrentDownloader(Func<string> cacheRoot, ILogger<BuiltInTorrentDownloader> logger,
-        IHttpClientFactory httpClientFactory, ITorrentNetworkOptionsProvider? networkOptions = null)
-        : this(cacheRoot, logger, true, networkOptions)
+        IHttpClientFactory httpClientFactory, ITorrentNetworkOptionsProvider? networkOptions = null, IStorageWriteGuard? storageWrites = null)
+        : this(cacheRoot, logger, true, networkOptions, storageWrites)
     {
     }
 
@@ -41,8 +43,9 @@ public sealed class BuiltInTorrentDownloader : ITorrentDownloader
     }
 
     private BuiltInTorrentDownloader(Func<string> cacheRoot, ILogger<BuiltInTorrentDownloader> logger,
-        bool enableDht, ITorrentNetworkOptionsProvider? networkOptions)
+        bool enableDht, ITorrentNetworkOptionsProvider? networkOptions, IStorageWriteGuard? storageWrites = null)
     {
+        _storageWrites = storageWrites;
         _cacheRoot = cacheRoot;
         _logger = logger;
         _networkOptions = networkOptions;
@@ -69,7 +72,13 @@ public sealed class BuiltInTorrentDownloader : ITorrentDownloader
             ? $"{update.CompletedBytes:N0} bytes verified · {speed:N0} B/s · {update.Stage}"
             : update.Stage);
 
-    public async Task<TorrentDownloadResult> DownloadAsync(TorrentDownloadRequest request,
+    public Task<TorrentDownloadResult> DownloadAsync(TorrentDownloadRequest request,
+        Func<TorrentTransferProgress, Task>? progress, CancellationToken ct) => _storageWrites == null
+        ? DownloadCoreAsync(request, progress, ct)
+        : _storageWrites.RunAsync([request.WorkingDirectory, _cacheRoot()], StorageWriteScope.Current,
+            token => DownloadCoreAsync(request, progress, token), ct);
+
+    private async Task<TorrentDownloadResult> DownloadCoreAsync(TorrentDownloadRequest request,
         Func<TorrentTransferProgress, Task>? progress, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(request);

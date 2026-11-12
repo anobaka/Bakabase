@@ -15,6 +15,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Compo
         string? Current { get; }
         double? EstimatedRemainingSeconds { get; }
         double? DownloadSpeedBytesPerSecond { get; }
+        DownloadTransferProgress? TransferProgress => null;
         Task Stop(DownloaderStopBy stopBy);
         /// <summary>Stops and drains the current run before an external caller changes its options.</summary>
         Task StopAndWait(DownloaderStopBy stopBy) => Stop(stopBy);

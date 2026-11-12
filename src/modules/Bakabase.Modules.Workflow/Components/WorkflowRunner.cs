@@ -1,4 +1,5 @@
 using Bakabase.Abstractions.Components.Localization;
+using Bakabase.Abstractions.Components.FileSystem;
 using System.Text.Json;
 using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Abstractions.Components.Telemetry;
@@ -61,7 +62,8 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
         var db = scope.ServiceProvider.GetRequiredService<TDbContext>();
         var localizer = scope.ServiceProvider.GetRequiredService<IBakabaseLocalizer>();
 
-        var run = await db.Set<WorkflowRunDbModel>().FirstOrDefaultAsync(r => r.Id == runId, ct);
+        var run = await db.Set<WorkflowRunDbModel>().Include(r => r.NodeExecutions)
+            .FirstOrDefaultAsync(r => r.Id == runId, ct);
         if (run is null)
         {
             _logger.LogWarning("WorkflowRun {RunId} not found — skipping", runId);
@@ -90,14 +92,18 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
             }, btaskArgs.TelemetryActor);
         }
 
-        var definition = await db.Set<WorkflowDefinitionDbModel>()
-            .FirstOrDefaultAsync(d => d.Id == run.WorkflowDefinitionId, ct);
-        if (definition is null)
+        WorkflowDefinition definition;
+        try { definition = await WorkflowRunPlans.LoadAsync(db, run, ct); }
+        catch (Exception error) when (error is InvalidOperationException or InvalidDataException)
         {
-            await FailRun(db, run, "Workflow definition deleted before run could start", ct);
+            await FailRun(db, run, error.Message, ct);
             TrackCompleted();
             return;
         }
+        // Statistics can still update an existing template, but execution never reads its
+        // mutable activities once the run has a snapshot. Dynamic plans have no template row.
+        var template = run.WorkflowDefinitionId > 0 ? await db.Set<WorkflowDefinitionDbModel>()
+            .FirstOrDefaultAsync(d => d.Id == run.WorkflowDefinitionId, ct) : null;
 
         if (!_triggers.TryGet(definition.TriggerKind, out var trigger))
         {
@@ -121,14 +127,11 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
             return;
         }
 
-        var activityRows = await db.Set<WorkflowActivityDbModel>()
-            .Where(a => a.WorkflowDefinitionId == definition.Id)
-            .OrderBy(a => a.Order)
-            .ToListAsync(ct);
+        var activityRows = definition.Activities;
 
         // Recheck mutable environment/configuration after queueing, before extracting or executing items.
         var validation = scope.ServiceProvider.GetRequiredService<IWorkflowValidationService>();
-        var check = await validation.ValidateAsync(definition.ToDomainModel(activityRows), true, payload, ct, run.CurrentStepIndex ?? 0);
+        var check = await validation.ValidateAsync(definition, true, payload, ct, run.CurrentStepIndex ?? 0);
         if (!check.IsValid)
         {
             await FailRun(db, run, new WorkflowValidationException(check).Message, ct);
@@ -149,6 +152,7 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
         var stepwise = items.Count == 1;
         var startStep = 0;
         var signalJson = run.PendingSignalJson;
+        var resumePromptJson = run.WaitPromptJson;
 
         if (stepwise && run.CurrentStepIndex is { } cursor)
         {
@@ -179,9 +183,24 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
         run.WaitingSince = null;
         await db.SaveChangesAsync(ct);
 
+        var durableCheckpoint = WorkflowCheckpointFailureRecovery.Capture(run);
+
         var totalSteps = Math.Max(1, activityRows.Count);
-        var failedTotal = 0;
-        var stepStats = new List<WorkflowRunStepStat>(activityRows.Count);
+        // Preserve completed upstream funnel entries when a checkpoint is resumed. Durable
+        // node attempts below retain the full history, including earlier failed/waiting attempts.
+        var stepStats = WorkflowExtensions.ParseStepStats(run.StepStatsJson)
+            .Where(s => s.StepIndex < startStep).ToList();
+        var failedTotal = stepStats.Sum(s => s.FailedCount);
+        WorkflowNodeExecutionDbModel? activeNode = null;
+        WorkflowOutputMetadataCapture? activeMetadata = null;
+        object? activeItem = null;
+
+        void SaveMetadata()
+        {
+            if (activeNode == null || activeMetadata == null) return;
+            activeNode.OutputsJson = activeMetadata.Json;
+            activeNode.OutputsTruncated = activeMetadata.Truncated;
+        }
 
         try
         {
@@ -189,6 +208,36 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
             {
                 await btaskArgs.YieldAsync();
                 var activityRow = activityRows[stepIndex];
+                var nodeId = activityRow.NodeId ?? "activity:" + activityRow.Id.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                foreach (var interrupted in run.NodeExecutions.Where(n => n.Status == "running"))
+                {
+                    interrupted.Status = "interrupted";
+                    interrupted.CompletedAt = DateTime.UtcNow;
+                }
+                var node = new WorkflowNodeExecutionDbModel
+                {
+                    WorkflowRunId = run.Id, NodeId = nodeId, StepIndex = stepIndex, Kind = activityRow.Kind,
+                    Attempt = run.NodeExecutions.Where(n => n.NodeId == nodeId).Select(n => n.Attempt).DefaultIfEmpty().Max() + 1,
+                    StartedAt = DateTime.UtcNow, InputCount = items.Count,
+                    ResumeKind = stepIndex == startStep && signalJson != null ? "signal" :
+                        stepIndex == startStep && run.CurrentStepIndex != null ? "checkpoint" : "initial"
+                };
+                run.NodeExecutions.Add(node);
+                activeNode = node;
+                var metadata = activeMetadata = new WorkflowOutputMetadataCapture();
+                // Snapshot the received item's explicit safe projection before an activity can
+                // mutate it. This describes received artifacts, not a guessed previous output
+                // or the subset later selected by a nested file operation.
+                if (items.All(w => w.Item is IWorkflowOutputMetadata))
+                {
+                    var inputMetadata = new WorkflowOutputMetadataCapture();
+                    foreach (var work in items) inputMetadata.AddItem(work.Item, activityRow.Kind);
+                    node.InputsJson = inputMetadata.Json;
+                    node.InputsTruncated = inputMetadata.Truncated;
+                }
+                activeItem = null;
+                await db.SaveChangesAsync(ct);
+                durableCheckpoint = WorkflowCheckpointFailureRecovery.Capture(run);
                 await btaskArgs.UpdateTask(t => t.Data = new WorkflowTaskProgress(run.Id, activityRow.Kind, "running"));
 
                 if (!_activities.TryGet(activityRow.Kind, out var impl))
@@ -226,6 +275,7 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
                 {
                     await btaskArgs.YieldAsync();
                     var item = workItem.Item;
+                    activeItem = item;
 
                     if ((acceptedClrTypes.Count > 0 || contract is not null) &&
                         !acceptedClrTypes.Any(t => t.IsInstanceOfType(item)) &&
@@ -238,15 +288,27 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
 
                     var itemCtx = new WorkflowExecutionContext
                     {
+                        ParameterSnapshot = definition.ParameterSnapshot,
                         RunId = run.Id,
                         WorkflowDefinitionId = definition.Id,
                         TriggerKind = definition.TriggerKind,
                         Payload = payload,
                         ActivityConfigJson = activityRow.ConfigJson,
+                        ResumePromptJson = signalJson != null ? resumePromptJson : null,
+                        FollowingActivities = activityRows.Skip(stepIndex + 1)
+                            .Select(a => new WorkflowPlannedActivity(a.Kind, a.ConfigJson)).ToArray(),
                         TargetItemType = targetItemType,
                         Variables = workItem.Variables,
                         Services = scope.ServiceProvider,
                         Logger = _logger,
+                        ReportOutputMetadata = async blocks =>
+                        {
+                            metadata.Add(blocks);
+                            node.OutputsJson = metadata.Json;
+                            node.OutputsTruncated = metadata.Truncated;
+                            await db.SaveChangesAsync(CancellationToken.None);
+                            durableCheckpoint = WorkflowCheckpointFailureRecovery.Capture(run);
+                        },
                         ReportStage = stage => btaskArgs.UpdateTask(t =>
                             t.Data = new WorkflowTaskProgress(run.Id, activityRow.Kind, stage)),
                         // Scaled into this step's share of the run, so an activity reporting
@@ -301,6 +363,9 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
                                 run.Id, activityRow.Kind);
                             failedTotal++;
                             stepFailed++;
+                            node.FailedCount = stepFailed;
+                            metadata.Add([new() {Kind = "warning", Key = "skipped-items", Code = "WORKFLOW_ITEMS_SKIPPED",
+                                Severity = "warning"}]);
                             continue;
                         }
                         // Fail policy: record the step's partial stats so the funnel still
@@ -313,6 +378,8 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
                             OutputCount = nextItems.Count,
                             FailedCount = stepFailed + 1,
                         });
+                        node.FailedCount = stepFailed + 1;
+                        node.OutputCount = nextItems.Count;
                         throw;
                     }
 
@@ -333,6 +400,13 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
                         run.WaitReason = suspension.Reason;
                         run.WaitPromptJson = suspension.PromptJson;
                         run.WaitingSince = DateTime.Now;
+                        metadata.AddItem(suspension.Item, activityRow.Kind);
+                        node.Status = "waiting";
+                        node.WaitReason = suspension.Reason;
+                        node.CompletedAt = DateTime.UtcNow;
+                        node.OutputCount = nextItems.Count;
+                        node.FailedCount = stepFailed;
+                        SaveMetadata();
                         run.StepStatsJson = JsonSerializer.Serialize(stepStats, WorkflowJson.Options);
                         run.FailedItemCount = failedTotal;
 
@@ -358,14 +432,28 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
                         // see each other's later captures (capability map E2/E4).
                         nextItems.AddRange(children.Select(c =>
                             new WorkItem(c, new Dictionary<string, string>(workItem.Variables))));
+                        foreach (var child in children) metadata.AddItem(child, activityRow.Kind);
                     }
                     else if (outcome.Keep)
                     {
                         nextItems.Add(workItem with {Item = outcome.Replacement ?? item});
+                        metadata.AddItem(outcome.Replacement ?? item, activityRow.Kind);
                     }
                 }
 
                 items = nextItems;
+                node.Status = "succeeded";
+                node.CompletedAt = DateTime.UtcNow;
+                node.OutputCount = items.Count;
+                node.FailedCount = stepFailed;
+                SaveMetadata();
+
+                stepStats.Add(new WorkflowRunStepStat
+                {
+                    StepIndex = stepIndex, Kind = activityRow.Kind, InputCount = stepInput,
+                    OutputCount = items.Count, FailedCount = stepFailed,
+                });
+                run.StepStatsJson = JsonSerializer.Serialize(stepStats, WorkflowJson.Options);
 
                 if (stepwise)
                 {
@@ -376,17 +464,13 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
                     run.CurrentItemJson = items.Count == 1
                         ? WorkflowItemSnapshot.Capture(items[0].Item)
                         : null;
-                    await db.SaveChangesAsync(ct);
                 }
-
-                stepStats.Add(new WorkflowRunStepStat
-                {
-                    StepIndex = stepIndex,
-                    Kind = activityRow.Kind,
-                    InputCount = stepInput,
-                    OutputCount = items.Count,
-                    FailedCount = stepFailed,
-                });
+                // Commit the completed attempt, metadata and checkpoint together.
+                await db.SaveChangesAsync(ct);
+                durableCheckpoint = WorkflowCheckpointFailureRecovery.Capture(run);
+                activeNode = null;
+                activeMetadata = null;
+                activeItem = null;
 
                 await btaskArgs.UpdateTask(t =>
                 {
@@ -404,11 +488,19 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
             run.CompletedAt = DateTime.Now;
             run.CurrentStepIndex = null;
             run.CurrentItemJson = null;
-            definition.LastRunAt = run.CompletedAt;
-            definition.LastError = null;
+            if (template != null) {template.LastRunAt = run.CompletedAt; template.LastError = null;}
+            foreach (var observer in scope.ServiceProvider.GetServices<IWorkflowRunCompletionObserver>())
+                await observer.StageAsync(run, payload, ct);
         }
         catch (OperationCanceledException)
         {
+            if (activeNode is {Status: "running"})
+            {
+                if (activeItem != null) activeMetadata?.AddItem(activeItem, activeNode.Kind);
+                activeNode.Status = "cancelled";
+                activeNode.CompletedAt = DateTime.UtcNow;
+                SaveMetadata();
+            }
             run.Status = WorkflowRunStatus.Cancelled;
             run.CompletedAt = DateTime.Now;
             run.FailedItemCount = failedTotal;
@@ -417,18 +509,27 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
         }
         catch (Exception ex)
         {
+            if (activeNode is {Status: "running"})
+            {
+                if (activeItem != null) activeMetadata?.AddItem(activeItem, activeNode.Kind);
+                activeNode.Status = "failed";
+                activeNode.CompletedAt = DateTime.UtcNow;
+                activeNode.FailedCount = Math.Max(1, activeNode.FailedCount);
+                activeMetadata?.Add([new() {Kind = "warning", Key = "activity-failed",
+                    Code = LocalStorageFailures.Code(ex) ?? "WORKFLOW_ACTIVITY_FAILED", Severity = "error"}]);
+                SaveMetadata();
+            }
             _logger.LogError(ex, "Workflow run {RunId} failed", run.Id);
             run.Status = WorkflowRunStatus.Failed;
             run.ErrorMessage = ex.Message;
             run.FailedItemCount = failedTotal;
             run.StepStatsJson = JsonSerializer.Serialize(stepStats, WorkflowJson.Options);
             run.CompletedAt = DateTime.Now;
-            definition.LastError = ex.Message;
-            definition.LastRunAt = run.CompletedAt;
+            if (template != null) {template.LastError = ex.Message; template.LastRunAt = run.CompletedAt;}
         }
         finally
         {
-            await db.SaveChangesAsync(CancellationToken.None);
+            await WorkflowCheckpointFailureRecovery.SaveFinalAsync(db, _scopeFactory, durableCheckpoint, _logger);
             TrackCompleted();
         }
     }
@@ -441,7 +542,7 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
         await db.SaveChangesAsync(ct);
     }
 
-    private string? PeekNextSingleAcceptedType(int index, IReadOnlyList<WorkflowActivityDbModel> activities)
+    private string? PeekNextSingleAcceptedType(int index, IReadOnlyList<WorkflowActivity> activities)
     {
         if (index + 1 >= activities.Count) return null;
         if (!_activities.TryGet(activities[index + 1].Kind, out var next)) return null;

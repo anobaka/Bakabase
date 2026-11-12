@@ -9,6 +9,7 @@
   <ItemGroup>
     <InternalsVisibleTo Include="Bakabase.Tests" />
     <EmbeddedResource Include="../../tools/BaiduPcsBridge/main.go" LogicalName="Bakabase.BaiduPcsBridge.main.go" />
+    <EmbeddedResource Include="../../tools/ZipPasswordBridge/main.py" LogicalName="Bakabase.ZipPasswordBridge.main.py" />
   </ItemGroup>
 
 <ItemGroup>

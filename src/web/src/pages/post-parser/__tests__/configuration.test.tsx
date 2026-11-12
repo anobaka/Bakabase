@@ -28,6 +28,7 @@ vi.mock("@/components/bakaui", async () => ({
 }));
 vi.mock("@/components/AiProviderPanel", () => ({ default: () => null }));
 vi.mock("@/components/AiFeaturePanel", () => ({ default: () => null }));
+vi.mock("../components/AutoAcquisitionConfiguration", () => ({ default: () => null }));
 vi.mock("@/components/ThirdPartyConfig/platforms/SoulPlusConfig", () => ({
   SoulPlusConfigField: { Accounts: "accounts", Other: "other" },
   SoulPlusConfigPanel: () => null,
@@ -39,6 +40,7 @@ const show = (automaticallyParsingPosts = false) => {
       automaticallyParsingPosts,
       postParserMaxConcurrency: 10,
       postParserAiMaxConcurrency: 1,
+      postParserAcquisition: { enabled: false },
     },
   });
   render(

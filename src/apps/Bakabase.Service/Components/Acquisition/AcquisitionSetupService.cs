@@ -9,11 +9,15 @@ using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
+using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
+using Bakabase.Service.Components.Acquisition.Planning;
 using Bakabase.Modules.Acquisition.Components;
 using Bakabase.Modules.Acquisition.Models.Domain;
 using Bootstrap.Components.Configuration.Abstractions;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using Bakabase.Service.Components.FileProcessing;
+using Bakabase.Modules.Workflow.Artifacts;
 
 namespace Bakabase.Service.Components.Acquisition;
 
@@ -29,9 +33,26 @@ public record AcquisitionSetupInputModel
     /// <summary>The folder name an acquired resource gets.</summary>
     public string? DirectoryTemplate { get; set; }
 
+    /// <summary>Null leaves the override unchanged; empty inherits the download center default for new tasks.</summary>
+    public string? DownloadRootDirectory { get; set; }
+
+    /// <summary>Null leaves the override unchanged; empty clears it to inherit the saved download root plus Acquired.</summary>
+    public string? DeliveryRootDirectory { get; set; }
+    public string? DeliveryDirectoryTemplate { get; set; }
+    public string? DeliveryPartDirectoryTemplate { get; set; }
+    public ArtifactDeliveryPolicy? DeliveryContentLayout { get; set; }
+    public bool? KeepSupersededDeliveryFiles { get; set; }
+
+    /// <summary>Null leaves the override unchanged; empty uses storage alongside the input files for new processing operations.</summary>
+    public string? ProcessingWorkspaceDirectory { get; set; }
+
     public List<AcquisitionDriveKind>? PreferredDriveKinds { get; set; }
 
     public decimal? AutoPurchaseLimit { get; set; }
+    public ArtifactStoragePolicy? StoragePolicy { get; set; }
+    /// <summary>Null keeps the runtime reserve; zero disables the additional reserve.</summary>
+    public long? MinimumFreeSpaceBytes { get; set; }
+    public bool? UseEmergencySpaceReserve { get; set; }
 }
 
 public record AcquisitionSetupResult(bool CreatedInbox, bool CreatedLibrary, int? PathMarkId);
@@ -51,12 +72,55 @@ public class AcquisitionSetupService(
     ILogger<AcquisitionSetupService> logger,
     IUserStoragePolicy storagePolicy)
 {
+    private static readonly SemaphoreSlim OptionsGate = new(1, 1);
+
+    internal async Task ReplaceOptionsAsync(AcquisitionOptions model, CancellationToken ct)
+    {
+        await OptionsGate.WaitAsync(ct);
+        try
+        {
+            model.PreserveUnspecifiedReserveMode(options.Value);
+            await options.SaveAsync(model);
+        }
+        finally { OptionsGate.Release(); }
+    }
+
+    private async Task UpdateOptionsAsync(Action<AcquisitionOptions> change, CancellationToken ct)
+    {
+        await OptionsGate.WaitAsync(ct);
+        try { await options.SaveAsync(change); }
+        finally { OptionsGate.Release(); }
+    }
+
     public async Task<AcquisitionSetupResult> ApplyAsync(AcquisitionSetupInputModel input,
         CancellationToken ct = default)
     {
+        if (input.MinimumFreeSpaceBytes is < 0 or > 9_007_199_254_740_991L)
+            throw new ArgumentException("STORAGE_RESERVE_INVALID");
         var template = input.DirectoryTemplate is {Length: > 0}
             ? input.DirectoryTemplate : options.Value.DirectoryTemplate;
-        AcquisitionDirectoryNamer.ValidateTemplate(template);
+        // Legacy placement settings remain frozen unless explicitly edited. A malformed
+        // historical template must not block modern processing/delivery configuration.
+        if (input.DirectoryTemplate is {Length: > 0} || !string.IsNullOrWhiteSpace(input.LibraryRootDirectory))
+            AcquisitionDirectoryNamer.ValidateTemplate(template);
+        var delivery = new AcquisitionDeliverySettings
+        {
+            RootDirectory = input.DeliveryRootDirectory ?? options.Value.DeliveryRootDirectory ?? "",
+            DirectoryTemplate = input.DeliveryDirectoryTemplate ?? options.Value.DeliveryDirectoryTemplate,
+            PartDirectoryTemplate = input.DeliveryPartDirectoryTemplate ?? options.Value.DeliveryPartDirectoryTemplate,
+            ContentLayout = input.DeliveryContentLayout ?? options.Value.DeliveryContentLayout
+        };
+        AcquisitionDeliveryDirectoryResolver.ValidateSettings(delivery);
+        if (delivery.RootDirectory.Length > 0) storagePolicy.EnsurePathAllowed(delivery.RootDirectory);
+        AcquisitionOutputDirectoryResolver.ValidateConfiguredRoot(input.DownloadRootDirectory, storagePolicy);
+        FileProcessingWorkspaceResolver.ValidateConfiguredRoot(input.ProcessingWorkspaceDirectory, storagePolicy);
+        var policy = input.StoragePolicy ?? (input.ProcessingWorkspaceDirectory == null ? null : options.Value.StoragePolicy with
+            {ProcessingWorkspaceDirectory = input.ProcessingWorkspaceDirectory});
+        if (policy != null)
+        {
+            ArtifactStoragePolicies.Validate(policy);
+            FileProcessingWorkspaceResolver.ValidateConfiguredRoot(policy.ProcessingWorkspaceDirectory, storagePolicy);
+        }
 
         // Check the whole request before creating either directory or saving options.
         foreach (var path in new[] {input.InboxDirectory, input.LibraryRootDirectory})
@@ -64,11 +128,27 @@ public class AcquisitionSetupService(
         var createdInbox = EnsureDirectory(input.InboxDirectory);
         var createdLibrary = EnsureDirectory(input.LibraryRootDirectory);
 
-        await options.SaveAsync(o =>
+        await UpdateOptionsAsync(o =>
         {
             if (input.InboxDirectory is {Length: > 0}) o.InboxDirectory = input.InboxDirectory;
             if (input.LibraryRootDirectory is {Length: > 0}) o.LibraryRootDirectory = input.LibraryRootDirectory;
             if (input.DirectoryTemplate is {Length: > 0}) o.DirectoryTemplate = input.DirectoryTemplate;
+            if (input.DownloadRootDirectory != null)
+                o.DownloadRootDirectory = string.IsNullOrWhiteSpace(input.DownloadRootDirectory)
+                    ? null : Path.GetFullPath(input.DownloadRootDirectory);
+            if (input.DeliveryRootDirectory != null) o.DeliveryRootDirectory = input.DeliveryRootDirectory.Length == 0 ? null : Path.GetFullPath(input.DeliveryRootDirectory);
+            if (input.DeliveryDirectoryTemplate != null) o.DeliveryDirectoryTemplate = delivery.DirectoryTemplate;
+            if (input.DeliveryPartDirectoryTemplate != null) o.DeliveryPartDirectoryTemplate = delivery.PartDirectoryTemplate;
+            if (input.DeliveryContentLayout != null) o.DeliveryContentLayout = input.DeliveryContentLayout;
+            if (input.KeepSupersededDeliveryFiles is { } keep) o.KeepSupersededDeliveryFiles = keep;
+            if (input.ProcessingWorkspaceDirectory != null)
+                o.ProcessingWorkspaceDirectory = string.IsNullOrWhiteSpace(input.ProcessingWorkspaceDirectory)
+                    ? null : Path.GetFullPath(input.ProcessingWorkspaceDirectory.Trim());
+            if (policy != null)
+            {
+                o.StoragePolicy = policy;
+                o.ProcessingWorkspaceDirectory = policy.ProcessingWorkspaceDirectory.Length == 0 ? null : policy.ProcessingWorkspaceDirectory;
+            }
             if (input.PreferredDriveKinds != null)
             {
                 o.PreferredDriveKinds = input.PreferredDriveKinds
@@ -76,11 +156,13 @@ public class AcquisitionSetupService(
                     .Distinct().ToList();
             }
             if (input.AutoPurchaseLimit is { } limit) o.AutoPurchaseLimit = limit;
-        });
+            if (input.MinimumFreeSpaceBytes is { } reserve) o.MinimumFreeSpaceBytes = reserve;
+            if (input.UseEmergencySpaceReserve is { } useEmergency) o.UseEmergencySpaceReserve = useEmergency;
+        }, ct);
 
         // Variable categories and workflow overrides can change depth. Those paths receive a
         // boundary and an exact resource mark when placement knows the final destination.
-        var markId = AcquisitionDirectoryNamer.HasSubdirectories(template)
+        var markId = string.IsNullOrWhiteSpace(input.LibraryRootDirectory) || AcquisitionDirectoryNamer.HasSubdirectories(template)
             ? null
             : await EnsureLibraryMarkAsync(input.LibraryRootDirectory, ct);
 

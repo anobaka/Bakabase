@@ -10,6 +10,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
         public bool SaveTorrentFile { get; set; }
         /// <summary>Applies only to Torrent content transfers; TorrentFile never downloads images.</summary>
         public bool FallbackToDirect { get; set; } = true;
+        /// <summary>Explicit no-torrent policy. Missing on old tasks: preserve their saved legacy mode/fallback semantics.</summary>
+        public ExHentaiNoTorrentAction? NoTorrentAction { get; set; }
         [System.Text.Json.Serialization.JsonIgnore]
         public ExHentaiDownloadMode EffectiveDownloadMode => DownloadMode ??
             (PreferTorrent ? ExHentaiDownloadMode.TorrentFile : ExHentaiDownloadMode.Direct);
@@ -65,6 +67,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
         public ExHentaiDownloadMode? DownloadMode { get; set; }
         public bool? SaveTorrentFile { get; set; }
         public bool? FallbackToDirect { get; set; }
+        public ExHentaiNoTorrentAction? NoTorrentAction { get; set; }
         private int? _downloadResultWorkflowId;
         public int? DownloadResultWorkflowId
         {

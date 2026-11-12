@@ -4,8 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AiOutlineCheck, AiOutlineCopy } from "react-icons/ai";
 
-import { Button, Tooltip, toast } from "@/components/bakaui";
+import { Accordion, AccordionItem, Button, Tooltip, toast } from "@/components/bakaui";
 import { copyTextToClipboard } from "@/core/clipboard";
+import { downloadProblemSummary } from "@/components/CloudDownload/problemLabels";
+import { exHentaiDownloadProblemSummary } from "../exHentaiDownloadProblem";
 
 type Props = {
   message: string;
@@ -33,6 +35,8 @@ export const CLICK_TO_COPY_DELAY_MS = 300;
  */
 const TaskErrorMessage = ({ message, copyTip }: Props) => {
   const { t } = useTranslation();
+  const exHentaiSummary = exHentaiDownloadProblemSummary(message, t);
+  const summary = exHentaiSummary ?? downloadProblemSummary(message, t);
   const [copied, setCopied] = useState(false);
   const resetTimerRef = useRef<ReturnType<typeof setTimeout>>();
   const pendingClickRef = useRef<ReturnType<typeof setTimeout>>();
@@ -61,7 +65,7 @@ const TaskErrorMessage = ({ message, copyTip }: Props) => {
 
   const copyLabel = t<string>(copied ? "common.state.copied" : "common.action.copy");
 
-  return (
+  const diagnostic = (
     <div className="relative">
       <Tooltip content={copyLabel}>
         <Button
@@ -102,6 +106,21 @@ const TaskErrorMessage = ({ message, copyTip }: Props) => {
       >
         {message}
       </pre>
+    </div>
+  );
+
+  return (
+    <div>
+      {summary && <p className="mb-2 text-sm text-warning-600">{summary}</p>}
+      {exHentaiSummary ? (
+        <Accordion isCompact>
+          <AccordionItem key="diagnostic" title={t("downloader.policy.technicalDetails")}>
+            {diagnostic}
+          </AccordionItem>
+        </Accordion>
+      ) : (
+        diagnostic
+      )}
     </div>
   );
 };

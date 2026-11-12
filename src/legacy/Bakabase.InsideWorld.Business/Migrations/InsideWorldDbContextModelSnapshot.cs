@@ -1484,6 +1484,9 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.Property<DateTime?>("CompletedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("ContentReadinessJson")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("ContentSnapshotJson")
                         .HasColumnType("TEXT");
 
@@ -2153,6 +2156,59 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.ToTable("LlmUsageLogs");
                 });
 
+            modelBuilder.Entity("Bakabase.Modules.Acquisition.Abstractions.Models.Db.AcquisitionHandoffDbModel", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("AcquisitionTaskId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Code")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OutputDirectory")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ProducerRunId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("SourceId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SourceKind")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SourceModule")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SourceRevision")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("SourceModule", "SourceKind", "SourceId", "SourceRevision")
+                        .IsUnique();
+
+                    b.ToTable("AcquisitionHandoffs");
+                });
+
             modelBuilder.Entity("Bakabase.Modules.Acquisition.Abstractions.Models.Db.AcquisitionLeadDbModel", b =>
                 {
                     b.Property<int>("Id")
@@ -2199,6 +2255,9 @@ namespace Bakabase.InsideWorld.Business.Migrations
                         .HasMaxLength(2048)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("SourceRefsJson")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Value")
                         .IsRequired()
                         .HasMaxLength(2048)
@@ -2223,6 +2282,12 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.Property<int?>("AcquisitionLeadId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("BuilderId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("BuilderStateJson")
+                        .HasColumnType("TEXT");
+
                     b.Property<int?>("CollectionId")
                         .HasColumnType("INTEGER");
 
@@ -2230,6 +2295,9 @@ namespace Bakabase.InsideWorld.Business.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Error")
@@ -2242,20 +2310,41 @@ namespace Bakabase.InsideWorld.Business.Migrations
                         .HasMaxLength(2048)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Phase")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PlanHistoryJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PlanJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("PlanRevision")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("PreparedContextJson")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("PurchaseRecordJson")
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("RecipeDefinitionId")
+                    b.Property<int?>("RecipeDefinitionId")
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("ResourceId")
+                    b.Property<int?>("ResourceId")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("SourceRefsJson")
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("Status")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("TargetDirectory")
                         .HasMaxLength(1024)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Title")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("UpdatedAt")
@@ -2274,6 +2363,52 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.HasIndex("Status");
 
                     b.ToTable("AcquisitionTasks");
+                });
+
+            modelBuilder.Entity("Bakabase.Modules.Acquisition.Abstractions.Models.Db.ProcessingPlanRevisionDbModel", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("EvidenceJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OriginalPlanJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PlanJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Revision")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("SourceHash")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SourceJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SourceKey")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SourceKey", "Revision")
+                        .IsUnique();
+
+                    b.ToTable("ProcessingPlanRevisions");
                 });
 
             modelBuilder.Entity("Bakabase.Modules.Alias.Abstractions.Models.Db.Alias", b =>
@@ -3705,6 +3840,9 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.Property<int>("Order")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("ParameterBindingsJson")
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("WorkflowDefinitionId")
                         .HasColumnType("INTEGER");
 
@@ -3748,6 +3886,9 @@ namespace Bakabase.InsideWorld.Business.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("ParametersJson")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("TriggerFilterJson")
                         .HasColumnType("TEXT");
 
@@ -3765,6 +3906,78 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.HasIndex("TriggerKind");
 
                     b.ToTable("WorkflowDefinitions");
+                });
+
+            modelBuilder.Entity("Bakabase.Modules.Workflow.Abstractions.Models.Db.WorkflowNodeExecutionDbModel", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Attempt")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("FailedCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("InputCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("InputsJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("InputsTruncated")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("NodeId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("OutputCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("OutputsJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("OutputsTruncated")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ResumeKind")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("StartedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("StepIndex")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("WaitReason")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("WorkflowRunId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("WorkflowRunId", "NodeId", "Attempt")
+                        .IsUnique();
+
+                    b.ToTable("WorkflowNodeExecutions");
                 });
 
             modelBuilder.Entity("Bakabase.Modules.Workflow.Abstractions.Models.Db.WorkflowRunDbModel", b =>
@@ -3809,6 +4022,9 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.Property<string>("PendingSignalJson")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("PlanSnapshotJson")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("StartedAt")
                         .HasColumnType("TEXT");
 
@@ -3841,6 +4057,244 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.ToTable("WorkflowRuns");
                 });
 
+            modelBuilder.Entity("Bakabase.Modules.Workflow.Abstractions.Models.Db.WorkflowRunSourceDbModel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("EntityId")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("EntityKind")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Module")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ResultKey")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Revision")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("WorkflowRunId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Module", "EntityKind", "EntityId", "Revision", "ResultKey");
+
+                    b.HasIndex("WorkflowRunId", "Module", "EntityKind", "EntityId", "Revision", "ResultKey")
+                        .IsUnique();
+
+                    b.ToTable("WorkflowRunSourceDbModel");
+                });
+
+            modelBuilder.Entity("Bakabase.Modules.Workflow.Artifacts.ArtifactConsumerDbModel", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ConsumerKey")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("LeaseUntil")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OperationId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OwnerId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OwnerKind")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ReleasedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OperationId", "ConsumerKey")
+                        .IsUnique();
+
+                    b.HasIndex("OperationId", "LeaseUntil");
+
+                    b.ToTable("ArtifactConsumers");
+                });
+
+            modelBuilder.Entity("Bakabase.Modules.Workflow.Artifacts.ArtifactDbModel", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Fingerprint")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Managed")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ManifestJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("MetadataJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OperationId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("QuarantineSourceRootIsAppData")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("QuarantineSourceRootPath")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("RootIsAppData")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("RootPath")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("State")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OperationId", "State");
+
+                    b.ToTable("Artifacts");
+                });
+
+            modelBuilder.Entity("Bakabase.Modules.Workflow.Artifacts.ArtifactLineageDbModel", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ChildArtifactId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ParentArtifactId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ChildArtifactId");
+
+                    b.HasIndex("ParentArtifactId", "ChildArtifactId")
+                        .IsUnique();
+
+                    b.ToTable("ArtifactLineage");
+                });
+
+            modelBuilder.Entity("Bakabase.Modules.Workflow.Artifacts.ArtifactOperationBindingDbModel", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OperationId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OwnerId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OwnerKind")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Slot")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerKind", "OwnerId", "Slot")
+                        .IsUnique();
+
+                    b.ToTable("ArtifactOperationBindings");
+                });
+
+            modelBuilder.Entity("Bakabase.Modules.Workflow.Artifacts.ArtifactOperationDbModel", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Attempt")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Error")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("InputFingerprint")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("IntentKey")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LeaseOwner")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LeaseToken")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("LeaseUntil")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OutputArtifactId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Restartable")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("State")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IntentKey", "State");
+
+                    b.ToTable("ArtifactOperations");
+                });
+
             modelBuilder.Entity("Bakabase.Abstractions.Models.Db.ResourceProfileDbModel", b =>
                 {
                     b.HasOne("Bakabase.Abstractions.Models.Db.ResourceScopeDbModel", null)
@@ -3865,6 +4319,31 @@ namespace Bakabase.InsideWorld.Business.Migrations
                         .HasForeignKey("DownloadTaskId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Bakabase.Modules.Workflow.Abstractions.Models.Db.WorkflowNodeExecutionDbModel", b =>
+                {
+                    b.HasOne("Bakabase.Modules.Workflow.Abstractions.Models.Db.WorkflowRunDbModel", null)
+                        .WithMany("NodeExecutions")
+                        .HasForeignKey("WorkflowRunId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Bakabase.Modules.Workflow.Abstractions.Models.Db.WorkflowRunSourceDbModel", b =>
+                {
+                    b.HasOne("Bakabase.Modules.Workflow.Abstractions.Models.Db.WorkflowRunDbModel", null)
+                        .WithMany("Sources")
+                        .HasForeignKey("WorkflowRunId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Bakabase.Modules.Workflow.Abstractions.Models.Db.WorkflowRunDbModel", b =>
+                {
+                    b.Navigation("NodeExecutions");
+
+                    b.Navigation("Sources");
                 });
 #pragma warning restore 612, 618
         }

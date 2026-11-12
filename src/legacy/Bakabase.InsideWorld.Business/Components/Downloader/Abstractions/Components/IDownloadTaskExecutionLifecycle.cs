@@ -8,4 +8,6 @@ public interface IDownloadTaskExecutionLifecycle
 {
     Task OnStartedAsync(IReadOnlyCollection<int> taskIds);
     Task OnStoppedAsync(IReadOnlyCollection<int> taskIds);
+    /// <summary>A persisted completion hint. Implementations must not run continuations inline.</summary>
+    Task OnCompletedAsync(IReadOnlyCollection<int> taskIds) => Task.CompletedTask;
 }

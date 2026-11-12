@@ -97,6 +97,26 @@ const newFolderButton = () =>
   screen.getByRole("button", { name: "fileSystemSelector.action.newFolder" });
 
 describe("filesystem picker operations", () => {
+  it("opens manager mode with file operations and no selection confirmation", () => {
+    render(<Panel mode="manage" startPath="/task" />);
+
+    expect(explorer.capabilities).toEqual(
+      expect.arrayContaining([
+        "select",
+        "multi-select",
+        "range-select",
+        "rename",
+        "delete",
+        "move",
+        "decompress",
+        "extract",
+        "create-directory",
+      ]),
+    );
+    expect(screen.queryByRole("button", { name: "OK" })).toBeNull();
+    expect(screen.getByRole("button", { name: "common.action.close" })).toBeVisible();
+  });
+
   it("disables actions and clears the previous selection until the new directory finishes loading", async () => {
     render(<Panel startPath="/parent" targetType="folder" />);
     fireEvent.click(screen.getByRole("button", { name: "Select folder" }));

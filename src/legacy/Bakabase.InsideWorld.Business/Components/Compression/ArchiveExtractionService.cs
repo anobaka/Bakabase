@@ -20,7 +20,10 @@ public record ArchivePasswordProbe(
     string? Password,
     IReadOnlyList<string> WrongPasswords,
     string StandardOutput,
-    string Message);
+    string Message)
+{
+    public bool PasswordRejected { get; init; }
+}
 
 /// <param name="Files">The group's files. The first is the entry point; the rest are its other volumes.</param>
 /// <param name="Directory">Where the files are, and where extraction happens.</param>
@@ -33,7 +36,8 @@ public record ArchiveExtractionRequest(
     bool DecompressToNewFolder = true,
     bool OverwriteExistingFiles = false,
     bool DeleteAfterDecompression = false,
-    bool MoveToParent = false);
+    bool MoveToParent = false,
+    ArchiveOpenOptions? OpenOptions = null);
 
 public record ArchiveExtractionResult(bool Succeeded, string TargetDirectory, string Message);
 
@@ -48,11 +52,35 @@ public record ArchiveExtractionResult(bool Succeeded, string TargetDirectory, st
 public interface IArchiveExtractionService
 {
     /// <summary>
+    /// Read-only, bounded format discovery for an explicitly selected extraction candidate.
+    /// Null means no supported container was recognized; limits must throw rather than claim absence.
+    /// This does not test a password, validate contents, or authorize extraction.
+    /// </summary>
+    Task<string?> ProbeFormatAsync(string entryFile, CancellationToken ct) => Task.FromResult<string?>(null);
+
+    async Task<ArchiveFormatProbeResult?> ProbeAuthorizedFormatAsync(string entryFile, CancellationToken ct)
+    {
+        var format = await ProbeFormatAsync(entryFile, ct);
+        return format == null ? null : new(format);
+    }
+
+    /// <summary>Only a specific extraction instruction may provide passwords for opening an
+    /// encrypted header. This lists metadata under the same discovery budget; full password
+    /// and content validation still belongs to ProbePasswordAsync and ExtractAsync.</summary>
+    Task<ArchiveFormatProbeResult?> ProbeAuthorizedFormatAsync(string entryFile,
+        IReadOnlyList<string?> authorizedPasswords, CancellationToken ct) => ProbeAuthorizedFormatAsync(entryFile, ct);
+
+    /// <summary>
     /// Tries the candidates in order until one opens the archive. A null in the list means "try
     /// without a password", which is worth putting first: most archives do not have one.
     /// </summary>
     Task<ArchivePasswordProbe> ProbePasswordAsync(string entryFile, IReadOnlyList<string?> candidates,
         Action<string>? onOutput, CancellationToken ct);
+
+    Task<ArchivePasswordProbe> ProbePasswordAsync(string entryFile, IReadOnlyList<string?> candidates,
+        Action<string>? onOutput, CancellationToken ct, ArchiveOpenOptions? openOptions) => openOptions == null
+        ? ProbePasswordAsync(entryFile, candidates, onOutput, ct)
+        : throw new NotSupportedException("This archive service does not support the selected opening mode.");
 
     Task<ArchiveExtractionResult> ExtractAsync(ArchiveExtractionRequest request,
         Action<int>? onProgress, CancellationToken ct);
@@ -62,10 +90,25 @@ public class ArchiveExtractionService(CompressedFileService compressedFileServic
 {
     private static readonly Regex ProgressRegex = new(@"\d+\%", RegexOptions.Compiled);
 
+    public Task<string?> ProbeFormatAsync(string entryFile, CancellationToken ct) =>
+        compressedFileService.ProbeArchiveFormatAsync(entryFile, ct);
+
+    public Task<ArchiveFormatProbeResult?> ProbeAuthorizedFormatAsync(string entryFile, CancellationToken ct) =>
+        compressedFileService.ProbeAuthorizedArchiveFormatAsync(entryFile, ct);
+
+    public Task<ArchiveFormatProbeResult?> ProbeAuthorizedFormatAsync(string entryFile,
+        IReadOnlyList<string?> authorizedPasswords, CancellationToken ct) =>
+        compressedFileService.ProbeAuthorizedArchiveFormatAsync(entryFile, authorizedPasswords, ct);
+
+    public Task<ArchivePasswordProbe> ProbePasswordAsync(string entryFile,
+        IReadOnlyList<string?> candidates, Action<string>? onOutput, CancellationToken ct) =>
+        ProbePasswordAsync(entryFile, candidates, onOutput, ct, null);
+
     public async Task<ArchivePasswordProbe> ProbePasswordAsync(string entryFile,
-        IReadOnlyList<string?> candidates, Action<string>? onOutput, CancellationToken ct)
+        IReadOnlyList<string?> candidates, Action<string>? onOutput, CancellationToken ct, ArchiveOpenOptions? openOptions)
     {
         var wrongPasswords = new HashSet<string>();
+        var rejected = false;
         var message = "";
 
         foreach (var candidate in candidates)
@@ -79,13 +122,26 @@ public class ArchiveExtractionService(CompressedFileService compressedFileServic
                 onStandardOutput: null,
                 onStandardError: line =>
                 {
+                    if (line.Trim().Equals("Wrong password", StringComparison.OrdinalIgnoreCase) ||
+                        line.TrimStart().StartsWith("Cannot open encrypted archive", StringComparison.OrdinalIgnoreCase) ||
+                        line.TrimStart().StartsWith("ERROR:", StringComparison.OrdinalIgnoreCase) &&
+                        (line.Contains("Wrong password", StringComparison.OrdinalIgnoreCase) ||
+                         line.Contains("Cannot open encrypted archive", StringComparison.OrdinalIgnoreCase)))
+                        rejected = true;
                     if (line.Contains("Wrong password") && candidate.IsNotEmpty())
                     {
                         wrongPasswords.Add(candidate!);
                     }
                 },
-                ct);
+                ct, openOptions);
 
+            // 7-Zip with a closed stdin and no supplied password can exit after prompting,
+            // without printing a "wrong password" diagnostic. A filename in ordinary output
+            // is not evidence; require its own prompt line and an unsuccessful test.
+            if (candidate == null && result.ExitCode != 0 && result.StandardOutput.Split('\n')
+                    .Any(s => s.Trim().Equals("Enter password:", StringComparison.OrdinalIgnoreCase) ||
+                              s.Trim().Equals("Enter password (will not be echoed):", StringComparison.OrdinalIgnoreCase)))
+                rejected = true;
             message += $"{result.StandardOutput}{Environment.NewLine}{result.StandardError}";
             onOutput?.Invoke(message);
 
@@ -98,12 +154,22 @@ public class ArchiveExtractionService(CompressedFileService compressedFileServic
             }
         }
 
-        return new ArchivePasswordProbe(false, null, wrongPasswords.ToList(), "", message);
+        return new ArchivePasswordProbe(false, null, wrongPasswords.ToList(), "", message) {PasswordRejected = rejected};
     }
 
     public async Task<ArchiveExtractionResult> ExtractAsync(ArchiveExtractionRequest request,
         Action<int>? onProgress, CancellationToken ct)
     {
+        if (request.OpenOptions is {Mode: not null, MemberSelector: not null} && request.DeleteAfterDecompression)
+            throw new InvalidOperationException("Extracting a selected embedded member cannot delete its source container. Unselected bytes must remain available.");
+        if (request.OpenOptions?.Mode != null && request.Files.Count != 1)
+            throw new ArchiveFormatProbeIncompleteException("Parser mode requires one exact source file.");
+        if (request.OpenOptions?.ZipFileNameCodePage != null && request.Files.Count != 1)
+            throw new ArchiveNameEncodingUnsupportedException("Explicit ZIP filename encoding currently requires a single-volume ZIP.");
+        if (request.OpenOptions?.ZipPasswordCodePage != null && request.Files.Count != 1)
+            throw new ArchivePasswordEncodingException("ArchivePasswordEncodingUnsupported");
+        if (request.OpenOptions?.ZipStructure != null && request.Files.Count != 1)
+            throw new ArchivePasswordEncodingException("ArchivePasswordEncodingUnsupported");
         var entry = request.Files[0];
         var targetDir = request.DecompressToNewFolder
             ? Path.Combine(request.Directory, Path.GetFileNameWithoutExtension(entry))
@@ -129,7 +195,7 @@ public class ArchiveExtractionService(CompressedFileService compressedFileServic
                 }
             },
             onStandardError: null,
-            ct);
+            ct, request.OpenOptions);
 
         var message = $"{result.StandardOutput}{Environment.NewLine}{result.StandardError}";
 

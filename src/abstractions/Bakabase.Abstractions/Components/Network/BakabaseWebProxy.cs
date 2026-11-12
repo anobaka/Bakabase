@@ -1,4 +1,6 @@
 using System.Net;
+using System;
+using System.Linq;
 using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.InsideWorld.Models.Constants;
 using Bootstrap.Components.Configuration.Abstractions;
@@ -28,6 +30,15 @@ namespace Bakabase.Abstractions.Components.Network
         /// </remarks>
         public IWebProxy ForThirdParty(ThirdPartyId thirdPartyId) =>
             new ThirdPartyWebProxy(this, options, thirdPartyId);
+
+        /// <summary>Explicit tool selection, then the calling source, then the global selection.
+        /// Missing entries inherit; an explicit direct selection never falls through.</summary>
+        public IWebProxy ForDownloadTool(string toolId, ThirdPartyId? thirdPartyId = null)
+        {
+            var target = DownloadToolProxyTargets.Find(toolId)
+                         ?? throw new ArgumentException("Unknown download tool proxy target.", nameof(toolId));
+            return new DownloadToolWebProxy(this, options, target, thirdPartyId ?? target.ThirdPartyId);
+        }
 
         internal Uri? Resolve(NetworkOptions.ProxyModel model, Uri destination)
         {
@@ -93,6 +104,40 @@ namespace Bakabase.Abstractions.Components.Network
                 get => root.ResolveCredentials(Model);
                 set { }
             }
+        }
+
+        private sealed class DownloadToolWebProxy(BakabaseWebProxy root, IBOptions<NetworkOptions> options,
+            DownloadToolProxyTargets.Target target, ThirdPartyId? thirdPartyId) : IWebProxy
+        {
+            private NetworkOptions.ProxyModel Model
+            {
+                get
+                {
+                    var settings = options.Value;
+                    if (settings.DownloadToolProxies?.TryGetValue(target.Id, out var tool) == true && tool != null)
+                        return tool;
+                    if (thirdPartyId is { } site && settings.ThirdPartyProxies?.TryGetValue((int)site, out var source) == true && source != null)
+                        return source;
+                    return settings.Proxy;
+                }
+            }
+
+            public Uri? GetProxy(Uri destination)
+            {
+                var model = Model;
+                // A broken explicit/inherited selection is not permission to bypass it.
+                if (model.Mode == NetworkOptions.ProxyMode.UseCustom &&
+                    !Uri.TryCreate(options.Value.CustomProxies?.FirstOrDefault(p => p.Id == model.CustomProxyId)?.Address,
+                        UriKind.Absolute, out _))
+                    throw new InvalidOperationException("The selected download-tool proxy is unavailable. Update its network settings.");
+                var endpoint = root.Resolve(model, destination);
+                if (endpoint != null && endpoint != destination && !target.SupportedProxySchemes.Contains(endpoint.Scheme))
+                    throw new InvalidOperationException("The selected proxy protocol is not supported by this download tool.");
+                return endpoint;
+            }
+
+            public bool IsBypassed(Uri host) => false;
+            public ICredentials? Credentials { get => root.ResolveCredentials(Model); set { } }
         }
     }
 }

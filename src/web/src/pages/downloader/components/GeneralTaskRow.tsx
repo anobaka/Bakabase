@@ -11,6 +11,7 @@ import {
   FiTrash2,
 } from "react-icons/fi";
 import { Button, Chip, Progress, Tooltip } from "@/components/bakaui";
+import { downloadProblemSummary } from "@/components/CloudDownload/problemLabels";
 import { formatBtBytes } from "@/pages/bt-downloads/format";
 import { centerStatusColor, type CenterTask, type TaskAction } from "../downloadCenter";
 import { DOWNLOAD_TASK_ROW_HEIGHT } from "./TaskRow";
@@ -39,9 +40,11 @@ const GeneralTaskRow = memo(function GeneralTaskRow({
   const btStageKey = `bt.stage.${task.stage}`;
   const translatedStage = t(stageKey);
   const btStage = t(btStageKey);
-  const stage = translatedStage !== stageKey
-    ? translatedStage
-    : btStage !== btStageKey ? btStage : task.stage;
+  const stage =
+    translatedStage !== stageKey ? translatedStage : btStage !== btStageKey ? btStage : task.stage;
+  const errorSummary = task.error
+    ? (downloadProblemSummary(task.error, t) ?? task.error)
+    : undefined;
   const icons = { start: FiPlay, stop: FiSquare, retry: FiRefreshCw, delete: FiTrash2 };
   return (
     <div
@@ -94,7 +97,7 @@ const GeneralTaskRow = memo(function GeneralTaskRow({
               className={`min-w-0 flex-1 truncate ${task.error ? "text-danger" : "text-default-500"}`}
               title={task.error || undefined}
             >
-              {task.error || stage}
+              {errorSummary || stage}
             </span>
             <span className="shrink-0 tabular-nums text-default-500">
               {formatBtBytes(task.completedBytes)} / {formatBtBytes(task.totalBytes)}

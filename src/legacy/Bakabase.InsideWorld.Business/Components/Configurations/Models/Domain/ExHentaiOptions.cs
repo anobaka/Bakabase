@@ -54,6 +54,7 @@ namespace Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain
         public Downloader.Components.Downloaders.ExHentai.ExHentaiDownloadMode? DownloadMode { get; set; }
         public bool SaveTorrentFile { get; set; }
         public bool FallbackToDirect { get; set; } = true;
+        public Downloader.Components.Downloaders.ExHentai.ExHentaiNoTorrentAction? NoTorrentAction { get; set; }
 
         /// <summary>Use the original-image entry when available. Applied at download time.</summary>
         public bool PreferOriginalImages { get; set; }

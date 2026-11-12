@@ -2645,7 +2645,7 @@ namespace Bakabase.InsideWorld.Business.Services
             // Acquisition tasks are keyed the same way. One left behind would keep showing on the
             // acquisitions page as something being got for a resource that is gone.
             await DbContext.Set<Bakabase.Modules.Acquisition.Abstractions.Models.Db.AcquisitionTaskDbModel>()
-                .Where(t => ids.Contains(t.ResourceId))
+                .Where(t => t.ResourceId != null && ids.Contains(t.ResourceId.Value))
                 .ExecuteDeleteAsync();
 
             // The cache row is keyed by ResourceId with no FK, so it survives the resource

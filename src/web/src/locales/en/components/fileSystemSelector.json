@@ -2,6 +2,15 @@
   "fileSystemSelector.title.selectEntries": "Select file system entries",
   "fileSystemSelector.title.selectFile": "Select file",
   "fileSystemSelector.title.selectFolder": "Select folder",
+  "fileSystemSelector.title.manage": "Manage files",
   "fileSystemSelector.action.newFolder": "New folder",
-  "fileSystemSelector.error.createFolder": "Could not create the folder. Please try again."
+  "fileSystemSelector.error.createFolder": "Could not create the folder. Please try again.",
+  "fileSystemSelector.error.loadPicker": "Could not load the directory picker. Please retry.",
+  "fileSystemSelector.capacity.loading": "Reading storage capacity…",
+  "fileSystemSelector.capacity.summary": "{{available}} free / {{total}} total ({{percent}}% remaining)",
+  "fileSystemSelector.capacity.unavailable": "The directory storage is inaccessible",
+  "fileSystemSelector.capacity.unknown": "Available space is currently unknown",
+  "fileSystemSelector.capacity.scope": "Capacity belongs to the selected path on the Bakabase server, not this browser device. A new path uses its verified existing parent. Values are a snapshot, not a space reservation.",
+  "fileSystemSelector.capacity.remaining": "Percentage of space remaining",
+  "fileSystemSelector.capacity.refresh": "Refresh storage capacity"
 }

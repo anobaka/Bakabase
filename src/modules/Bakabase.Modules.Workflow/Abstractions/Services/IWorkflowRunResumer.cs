@@ -22,6 +22,12 @@ public interface IWorkflowRunResumer
     /// </exception>
     Task RequeueAsync(int runId, CancellationToken ct = default);
 
+    /// <summary>Checks a caller's immutable preview under the run mutation gate immediately before
+    /// continuing the original cursor. The callback must not acquire the owner's task gate.</summary>
+    Task ContinueConditionallyAsync(int runId, bool waiting, string signalJson,
+        Func<CancellationToken, Task> validate, CancellationToken ct = default) =>
+        throw new NotSupportedException("Conditional continuation is not supported by this workflow host.");
+
     /// <summary>
     /// Changes what a waiting run says it is waiting for, without resuming it. For when the
     /// question got harder while nobody was looking — two files turned up in the inbox and the
@@ -29,4 +35,12 @@ public interface IWorkflowRunResumer
     /// </summary>
     /// <exception cref="InvalidOperationException">There is no such run, or it is not waiting.</exception>
     Task UpdateWaitAsync(int runId, string reason, string? promptJson, CancellationToken ct = default);
+
+    /// <summary>
+    /// Re-enters a waiting activity without supplying a human answer. This is used when the
+    /// persisted activity configuration was safely upgraded in place (for example, enabling a
+    /// bounded post-download assessment) and the current input must be inspected again.
+    /// </summary>
+    Task ReprocessWaitingAsync(int runId, CancellationToken ct = default) =>
+        throw new NotSupportedException("Waiting activities cannot be reprocessed by this workflow host.");
 }

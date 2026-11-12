@@ -157,7 +157,8 @@ public sealed class DownloadTaskExecutionLifecycle(IServiceScopeFactory scopes, 
         if (independentBt) return result.Kind == DownloadResultKind.TorrentMetadata &&
             options.EffectiveDownloadMode == ExHentaiDownloadMode.Torrent;
         return result.Kind != DownloadResultKind.TorrentMetadata
-            ? options.EffectiveDownloadMode != ExHentaiDownloadMode.TorrentFile
+            ? options.EffectiveDownloadMode != ExHentaiDownloadMode.TorrentFile ||
+              options.NoTorrentAction == ExHentaiNoTorrentAction.DirectDownload
             : options.EffectiveDownloadMode == ExHentaiDownloadMode.Torrent ||
                options.EffectiveDownloadMode == ExHentaiDownloadMode.TorrentFile &&
                !result.RequiresContentsDownload && result.WorkflowDefinitionId != null;

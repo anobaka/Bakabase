@@ -3,8 +3,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import ProxySelector from "..";
 const change = vi.fn();
 vi.mock("@/components/bakaui", () => ({
-  Select: ({ dataSource, selectedKeys, disabledKeys, onSelectionChange }: any) => (
+  Select: ({ dataSource, selectedKeys, disabledKeys, onSelectionChange, isDisabled }: any) => (
     <select
+      disabled={isDisabled}
       value={selectedKeys[0]}
       onChange={(event) => onSelectionChange(new Set([event.target.value]))}
     >
@@ -61,6 +62,21 @@ describe("shared proxy selector", () => {
     view.rerender(<ProxySelector allowInherit value={{ mode: 0 }} onChange={change} />);
     fireEvent.change(screen.getByRole("combobox"), { target: { value: "inherit" } });
     expect(change).toHaveBeenLastCalledWith(undefined);
+  });
+  it("supports a tool-specific inheritance label and a temporarily disabled selector", () => {
+    render(
+      <ProxySelector
+        allowInherit
+        inheritLabel="Inherit source then global"
+        isDisabled
+        onChange={change}
+      />,
+    );
+    expect(screen.getByRole("option", { name: "Inherit source then global" })).toHaveValue(
+      "inherit",
+    );
+    expect(screen.getByRole("combobox")).toBeDisabled();
+    expect(change).not.toHaveBeenCalled();
   });
   it("keeps custom identifiers distinct from mode values", () => {
     render(

@@ -16,6 +16,7 @@ type Props = {
   description?: ReactNode;
   startPath?: string;
   clearLabel?: string;
+  isDisabled?: boolean;
   onChange: (path: string) => void;
 };
 
@@ -27,6 +28,7 @@ export default function DownloadDirectoryField({
   description,
   startPath,
   clearLabel,
+  isDisabled,
   onChange,
 }: Props) {
   const { t } = useTranslation();
@@ -46,6 +48,7 @@ export default function DownloadDirectoryField({
           aria-describedby={description ? descriptionId : undefined}
           aria-labelledby={labelId}
           className="min-w-0 max-w-full justify-start"
+          isDisabled={isDisabled}
           fileSystemSelectorProps={{
             targetType: "folder",
             defaultSelectedPath: configuredPath,
@@ -60,6 +63,7 @@ export default function DownloadDirectoryField({
         {configuredPath && (
           <Button
             isIconOnly
+            isDisabled={isDisabled}
             aria-label={resetLabel}
             className="shrink-0"
             size="sm"

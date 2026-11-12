@@ -36,7 +36,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
             {
                 var latest = gallery.MaxBy(x => x.Id)!;
                 var available = await CanReuseResultAsync(results, latest, options.UsesTorrent, preferOriginal, ct,
-                    options.EffectiveDownloadMode == ExHentaiDownloadMode.TorrentFile);
+                    options.EffectiveDownloadMode == ExHentaiDownloadMode.TorrentFile &&
+                    options.NoTorrentAction != ExHentaiNoTorrentAction.DirectDownload);
                 if (available && latest.Kind == DownloadResultKind.TorrentMetadata &&
                     (options.EffectiveDownloadMode != ExHentaiDownloadMode.Torrent || options.SaveTorrentFile))
                 {
@@ -123,7 +124,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                                     await OnProgressInternal(newProgress);
                                 }, null, ct, options.UsesTorrent,
                                     resultWorkflowId: options.DownloadResultWorkflowId, downloadMode: options.EffectiveDownloadMode,
-                                    saveTorrentFile: options.SaveTorrentFile, fallbackToDirect: options.FallbackToDirect);
+                                    saveTorrentFile: options.SaveTorrentFile, fallbackToDirect: options.FallbackToDirect,
+                                    noTorrentAction: options.NoTorrentAction);
                                 break;
                             default:
                                 throw new ArgumentOutOfRangeException();

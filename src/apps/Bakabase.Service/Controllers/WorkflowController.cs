@@ -1,3 +1,4 @@
+using Bakabase.Modules.Workflow.Abstractions.Models;
 using Bakabase.Service.Services.Telemetry;
 using System;
 using System.Collections.Generic;
@@ -15,6 +16,7 @@ using Bakabase.Modules.Workflow.Abstractions.Models.Input;
 using Bakabase.Modules.Workflow.Abstractions.Models.View;
 using Bakabase.Modules.Workflow.Abstractions.Services;
 using Bakabase.Modules.Workflow.Extensions;
+using Bakabase.Modules.Workflow.Services;
 using Bakabase.Service.Components.RemoteAccess;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Models.ResponseModels;
@@ -32,7 +34,8 @@ public class WorkflowController(
     IWorkflowActivityRegistry activities,
     IWorkflowItemTypeRegistry itemTypes,
     IWorkflowRunResumer runResumer,
-    Bakabase.Abstractions.Services.IFileRenameEntryService fileRenameEntries) : Controller
+    Bakabase.Abstractions.Services.IFileRenameEntryService fileRenameEntries,
+    Bakabase.Service.Components.Acquisition.Planning.AcquisitionDownloadContinuationService? continuation = null) : Controller
 {
     [HttpGet]
     [SwaggerOperation(OperationId = "SearchWorkflows")]
@@ -141,7 +144,7 @@ public class WorkflowController(
     public async Task<SingletonResponse<WorkflowRunViewModel>> RunManually(
         int id, [FromBody] WorkflowManualRunInputModel model, CancellationToken ct)
     {
-        var run = await service.RunManuallyAsync(id, model.ArgsJson, ct);
+        var run = await service.RunManuallyAsync(id, model.ArgsJson, new WorkflowInvocationInput { Overrides = model.ParameterValues }, ct);
         return new SingletonResponse<WorkflowRunViewModel>(WorkflowRunViewModel.From(run));
     }
 
@@ -294,6 +297,9 @@ public class WorkflowController(
         try
         {
             await runResumer.ResumeAsync(runId, model.SignalJson);
+            if (continuation != null)
+                await continuation.SetBackgroundTaskIntentAsync("workflow.run." + runId,
+                    Bakabase.Service.Components.Acquisition.Planning.AcquisitionDownloadContinuationService.Automatic);
         }
         catch (InvalidOperationException e)
         {
@@ -324,7 +330,7 @@ public class WorkflowController(
         [FromServices] BakabaseDbContext db, [FromServices] BTaskManager backgroundTasks,
         CancellationToken ct)
     {
-        var row = await db.Set<WorkflowRunDbModel>().AsNoTracking()
+        var row = await db.Set<WorkflowRunDbModel>().AsNoTracking().Include(r => r.NodeExecutions)
             .SingleOrDefaultAsync(r => r.Id == runId, ct);
         if (row == null) return new SingletonResponse<WorkflowRunViewModel?>((WorkflowRunViewModel?)null);
 
@@ -344,5 +350,30 @@ public class WorkflowController(
             }
         }
         return new SingletonResponse<WorkflowRunViewModel?>(result);
+    }
+
+    /// <summary>Inspect a recorded artifact manifest already referenced by this run's safe output.</summary>
+    [HttpGet("run/{runId:int}/artifacts/{artifactId}/files")]
+    [RemoteAccessible]
+    [SwaggerOperation(OperationId = "GetWorkflowArtifactFiles")]
+    public async Task<SingletonResponse<WorkflowArtifactFilesView>> GetArtifactFiles(int runId, string artifactId,
+        [FromServices] WorkflowOutputQueryService<BakabaseDbContext> outputs,
+        CancellationToken ct, [FromQuery] int pageIndex = 1, [FromQuery] int pageSize = 100)
+    {
+        var result = await outputs.GetArtifactFilesAsync(runId, artifactId, pageIndex, pageSize, ct);
+        return result == null ? SingletonResponseBuilder<WorkflowArtifactFilesView>.NotFound : new(result);
+    }
+
+    /// <summary>Browse direct children in one run-owned, recorded file manifest.</summary>
+    [HttpGet("run/{runId:int}/artifacts/{artifactId}/directory")]
+    [RemoteAccessible]
+    [SwaggerOperation(OperationId = "GetWorkflowArtifactDirectory")]
+    public async Task<SingletonResponse<WorkflowArtifactDirectoryView>> GetArtifactDirectory(int runId, string artifactId,
+        [FromServices] WorkflowOutputQueryService<BakabaseDbContext> outputs, CancellationToken ct,
+        [FromQuery] string? directory = null, [FromQuery] int pageIndex = 1, [FromQuery] int pageSize = 50,
+        [FromQuery] bool locateSingleFile = false)
+    {
+        var result = await outputs.GetArtifactDirectoryAsync(runId, artifactId, directory, pageIndex, pageSize, ct, locateSingleFile);
+        return result == null ? SingletonResponseBuilder<WorkflowArtifactDirectoryView>.NotFound : new(result);
     }
 }

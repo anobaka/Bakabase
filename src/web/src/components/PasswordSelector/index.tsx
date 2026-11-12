@@ -1,150 +1,159 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-
-import { Badge, Button, Modal, Radio } from "@/components/bakaui";
-import { createPortalOfComponent } from "@/components/utils";
-import BApi from "@/sdk/BApi";
-import { PasswordSearchOrder } from "@/sdk/constants";
-
-import "./index.scss";
+import type { BakabaseAbstractionsModelsDbPasswordDbModel as SavedPassword } from "@/sdk/Api";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { MdDelete } from "react-icons/md";
 
-import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
+import { Button, Modal, Radio, RadioGroup, Spinner, Tooltip } from "@/components/bakaui";
+import { useResourceOwnerScope } from "@/features/management/resourceContext";
+import BApi from "@/sdk/BApi";
 
-interface IProps {
-  onSelect: (password: string) => any;
-  afterClose?: () => any;
+interface Props {
+  onSelect: (password: string) => void;
+  onDestroyed?: () => void;
+  selectionOnly?: boolean;
 }
 
-function PasswordSelector(props: IProps) {
-  const { onSelect, afterClose } = props;
+function PasswordSelector({ onSelect, onDestroyed, selectionOnly }: Props) {
   const { t } = useTranslation();
-  const { createPortal } = useBakabaseContext();
-
-  const [passwords, setPasswords] = useState<
-    { text: string; usedTimes: number; lastUsedAt: string }[]
-  >([]);
+  const owner = useResourceOwnerScope();
+  const device = owner?.key;
+  const canRead = !owner || owner.source.isLocal;
+  const [result, setResult] = useState<{ device?: string; values: SavedPassword[] | null }>();
+  const [order, setOrder] = useState("latest");
+  const [retry, setRetry] = useState(0);
+  const [deleting, setDeleting] = useState<SavedPassword>();
+  const [deleteFailed, setDeleteFailed] = useState(false);
   const [visible, setVisible] = useState(true);
-  const [order, setOrder] = useState(PasswordSearchOrder.Latest);
-
-  const initialize = useCallback(async () => {
-    const rsp = await BApi.password.getAllPasswords();
-
-    // @ts-ignore
-    setPasswords(rsp.data || []);
-  }, []);
+  const close = () => {
+    setVisible(false);
+    onDestroyed?.();
+  };
 
   useEffect(() => {
-    initialize();
-  }, []);
+    if (!canRead) return;
+    const request = new AbortController();
+    setResult(undefined);
+    BApi.password
+      .getAllPasswords({ signal: request.signal })
+      .then((response) => {
+        if (!request.signal.aborted)
+          setResult({ device, values: response.code === 0 ? (response.data ?? []) : null });
+      })
+      .catch(() => {
+        if (!request.signal.aborted) setResult({ device, values: null });
+      });
+    return () => request.abort();
+  }, [canRead, device, retry]);
 
-  const close = useCallback(() => {
-    setVisible(false);
-  }, []);
-
-  const renderPasswords = useCallback(() => {
-    const filtered = passwords.sort((a, b) =>
-      order === PasswordSearchOrder.Latest
-        ? b.lastUsedAt.localeCompare(a.lastUsedAt)
-        : b.usedTimes - a.usedTimes,
+  const passwords = result?.device === device ? result?.values : undefined;
+  const sorted =
+    passwords &&
+    [...passwords].sort((a, b) =>
+      order === "latest" ? b.lastUsedAt.localeCompare(a.lastUsedAt) : b.usedTimes - a.usedTimes,
     );
-
-    return filtered.map((p) => {
-      const handleSelect = () => {
-        onSelect(p.text);
-        close();
-      };
-
-      return (
-        <div
-          key={p.text}
-          className="password"
-          role="button"
-          tabIndex={0}
-          onClick={handleSelect}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              handleSelect();
-            }
-          }}
-        >
-          <div className="top">
-            <div className="text">{p.text}</div>
-            <Button
-              isIconOnly
-              color={"danger"}
-              size={"sm"}
-              variant={"light"}
-              onPress={() => {
-                createPortal(Modal, {
-                  defaultVisible: true,
-                  title: t<string>("Delete password from history?"),
-                  children: t<string>(
-                    "Are you sure you want to delete this password from history?",
-                  ),
-                  onOk: () => BApi.password.deletePassword(p.text),
-                });
-              }}
-            >
-              <MdDelete className={"text-base"} />
-            </Button>
-          </div>
-          <div className="info">
-            <div className="last-used-at">{p.lastUsedAt}</div>
-            <Badge count={p.usedTimes} />
-            {/* <div className="used-times">{p.usedTimes}</div> */}
-          </div>
-        </div>
-      );
-    });
-  }, [passwords, order]);
 
   return (
     <Modal
-      v2
-      afterClose={afterClose}
-      className={"password-selector-dialog"}
-      closeMode={["close", "mask", "esc"]}
-      footerActions={["cancel"]}
-      title={t<string>("Passwords")}
       visible={visible}
-      width={"auto"}
-      onCancel={close}
       onClose={close}
+      size="lg"
+      footer={false}
+      title={t("passwordSelector.title")}
     >
-      <div className="orders">
-        <div className="title">{t<string>("Order")}</div>
-        <div className="content">
-          <Radio.Group
-            dataSource={[
-              {
-                label: t<string>("Used recently"),
-                value: PasswordSearchOrder.Latest,
-              },
-              {
-                label: t<string>("Used frequently"),
-                value: PasswordSearchOrder.Frequency,
-              },
-            ]}
-            value={order}
-            onChange={(v) => {
-              // @ts-ignore
-              setOrder(v);
-            }}
-          />
+      {!canRead || passwords === null ? (
+        <div className="flex items-center gap-2">
+          <span role="status">{t("passwordSelector.unavailable")}</span>
+          {canRead && (
+            <Button size="sm" onPress={() => setRetry((n) => n + 1)}>
+              {t("common.action.retry")}
+            </Button>
+          )}
         </div>
-      </div>
-      <div className="passwords">
-        <div className="title">{t<string>("Passwords")}</div>
-        <div className="content">{renderPasswords()}</div>
-      </div>
+      ) : !sorted ? (
+        <Spinner size="sm" aria-label={t("common.state.loading")} />
+      ) : !sorted.length ? (
+        <p className="text-sm text-default-500">{t("passwordSelector.empty")}</p>
+      ) : (
+        <>
+          <RadioGroup
+            size="sm"
+            label={t("passwordSelector.order")}
+            orientation="horizontal"
+            value={order}
+            onValueChange={setOrder}
+          >
+            <Radio value="latest">{t("passwordSelector.latest")}</Radio>
+            <Radio value="frequent">{t("passwordSelector.frequent")}</Radio>
+          </RadioGroup>
+          <ul className="flex min-w-0 flex-wrap items-start gap-1.5">
+            {sorted.map((item) => (
+              <li className="flex min-w-0 max-w-full items-center" key={item.text}>
+                <Tooltip content={`${t("passwordSelector.latest")} · ${item.lastUsedAt} · ${t("passwordSelector.uses", { count: item.usedTimes })}`}
+                  delay={650} placement="bottom" classNames={{ base: "pointer-events-none", content: "pointer-events-none" }}>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="flat"
+                    className="h-auto min-h-8 min-w-0 max-w-full whitespace-normal px-2.5 py-1 text-start"
+                    onPress={() => {
+                      onSelect(item.text);
+                      close();
+                    }}
+                  >
+                    <span className="min-w-0 whitespace-pre-wrap [overflow-wrap:anywhere]">{item.text}</span>
+                  </Button>
+                </Tooltip>
+                {!selectionOnly && (
+                  <Button
+                    type="button"
+                    isIconOnly
+                    size="sm"
+                    variant="light"
+                    color="danger"
+                    aria-label={t("passwordSelector.remove")}
+                    onPress={() => {
+                      setDeleteFailed(false);
+                      setDeleting(item);
+                    }}
+                  >
+                    <MdDelete aria-hidden />
+                  </Button>
+                )}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      {deleting && canRead && !selectionOnly && (
+        <Modal
+          visible
+          onClose={() => setDeleting(undefined)}
+          title={t("passwordSelector.removeConfirm")}
+          okProps={{ color: "danger" }}
+          onOk={async () => {
+            try {
+              const response = await BApi.password.deletePassword(deleting.text);
+              if (response.code !== 0) throw new Error();
+              setDeleting(undefined);
+              setRetry((n) => n + 1);
+            } catch {
+              setDeleteFailed(true);
+              throw new Error(t("passwordSelector.deleteFailed"));
+            }
+          }}
+        >
+          <span className="break-all">{deleting.text}</span>
+          {deleteFailed && (
+            <span role="alert" className="text-danger">
+              {t("passwordSelector.deleteFailed")}
+            </span>
+          )}
+        </Modal>
+      )}
     </Modal>
   );
 }
-
-PasswordSelector.show = (props) => createPortalOfComponent(PasswordSelector, props);
 
 export default PasswordSelector;

@@ -4,6 +4,8 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import TaskErrorMessage, { CLICK_TO_COPY_DELAY_MS } from "../TaskErrorMessage";
+import cn from "@/locales/cn/pages/cloudDownload.json";
+import downloaderCn from "@/locales/cn/pages/downloader.json";
 
 const toast = vi.hoisted(() => ({ success: vi.fn(), danger: vi.fn() }));
 
@@ -12,7 +14,11 @@ vi.mock("@/components/bakaui", async () => ({
   Button: (await import("@/components/bakaui/components/Button")).Button,
   toast,
 }));
-vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
+vi.mock("react-i18next", () => ({
+  useTranslation: () => ({
+    t: (key: string) => (({ ...cn, ...downloaderCn }) as Record<string, string>)[key] ?? key,
+  }),
+}));
 
 const message = `An error occurred during downloading files.
 System.Net.Http.HttpRequestException: The SSL connection could not be established, see inner exception.
@@ -80,6 +86,43 @@ afterEach(async () => {
 });
 
 describe("download task error message", () => {
+  it("keeps the exact historical ExHentai stack collapsed and copyable after opening details", async () => {
+    const diagnostic =
+      "System.InvalidOperationException: This gallery has no torrent. Direct download fallback is disabled.\n   at Downloader()";
+    await act(async () =>
+      root.render(
+        <HeroUIProvider disableAnimation>
+          <TaskErrorMessage message={diagnostic} />
+        </HeroUIProvider>,
+      ),
+    );
+    expect(container.textContent).toContain(
+      downloaderCn["downloader.problem.exHentaiNoTorrentLegacy"],
+    );
+    const details = container.querySelector<HTMLElement>('button[aria-expanded="false"]');
+    expect(details).not.toBeNull();
+    await click(details!);
+    expect(text().textContent).toBe(diagnostic);
+    await click(copyButton());
+    expect(writeText).toHaveBeenCalledExactlyOnceWith(diagnostic);
+  });
+  it("explains a provider failure in Chinese and keeps the original diagnostic copyable", async () => {
+    const diagnostic = "CloudProviderException: PIKPAK_ORIGINAL_FILE_UNAVAILABLE: no original link";
+    await act(async () =>
+      root.render(
+        <HeroUIProvider disableAnimation>
+          <TaskErrorMessage message={diagnostic} />
+        </HeroUIProvider>,
+      ),
+    );
+    expect(container.textContent).toContain(
+      cn["cloudDownload.problemCode.PIKPAK_ORIGINAL_FILE_UNAVAILABLE"],
+    );
+    expect(text().textContent).toBe(diagnostic);
+    await click(copyButton());
+    expect(writeText).toHaveBeenCalledExactlyOnceWith(diagnostic);
+  });
+
   it("shows the whole message with its line breaks", async () => {
     await show();
 
@@ -100,7 +143,7 @@ describe("download task error message", () => {
     vi.useFakeTimers();
     await show();
 
-    expect(text()).toHaveAttribute("title", "downloader.tip.clickToCopyError");
+    expect(text()).toHaveAttribute("title", downloaderCn["downloader.tip.clickToCopyError"]);
     await click(text(), 1);
     expect(writeText).not.toHaveBeenCalled();
     await afterClickDelay();

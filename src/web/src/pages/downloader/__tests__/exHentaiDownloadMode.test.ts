@@ -1,8 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { parseExHentaiDownloadOptions, resolveExHentaiDownloadMode } from "../exHentaiDownloadMode";
+import {
+  parseExHentaiDownloadOptions,
+  resolveExHentaiDownloadMode,
+  resolveExHentaiPolicyMode,
+  exHentaiStopsWithoutTorrent,
+} from "../exHentaiDownloadMode";
 
-import { ExHentaiDownloadMode } from "@/sdk/constants";
+import { ExHentaiDownloadMode, ExHentaiNoTorrentAction } from "@/sdk/constants";
 
 describe("ExHentai acquisition settings", () => {
   it("preserves legacy torrent-file behavior without silently starting BT", () => {
@@ -60,6 +65,40 @@ describe("ExHentai acquisition settings", () => {
   it("uses the final case-insensitive value just like the server", () => {
     expect(parseExHentaiDownloadOptions('{"downloadMode":3,"DOWNLOADMODE":2}')).toEqual({
       downloadMode: 2,
+    });
+  });
+
+  it("defaults only future tasks to internal BT while existing tasks retain torrent-file semantics", () => {
+    expect(resolveExHentaiPolicyMode()).toBe(ExHentaiDownloadMode.Torrent);
+    expect(resolveExHentaiPolicyMode(undefined, true)).toBe(ExHentaiDownloadMode.TorrentFile);
+    expect(resolveExHentaiPolicyMode({ preferTorrent: false })).toBe(ExHentaiDownloadMode.Direct);
+    expect(resolveExHentaiPolicyMode({ downloadMode: ExHentaiDownloadMode.TorrentFile })).toBe(
+      ExHentaiDownloadMode.TorrentFile,
+    );
+  });
+
+  it("distinguishes explicit fallback, historical torrent-only tasks and future defaults", () => {
+    const legacy = { downloadMode: ExHentaiDownloadMode.TorrentFile, fallbackToDirect: true };
+    expect(exHentaiStopsWithoutTorrent(legacy, true)).toBe(true);
+    expect(exHentaiStopsWithoutTorrent(legacy, false)).toBe(false);
+    expect(
+      exHentaiStopsWithoutTorrent(
+        { ...legacy, noTorrentAction: ExHentaiNoTorrentAction.DirectDownload },
+        true,
+      ),
+    ).toBe(false);
+    expect(
+      exHentaiStopsWithoutTorrent(
+        {
+          downloadMode: ExHentaiDownloadMode.Torrent,
+          noTorrentAction: ExHentaiNoTorrentAction.Fail,
+        },
+        false,
+      ),
+    ).toBe(true);
+    expect(parseExHentaiDownloadOptions('{"NoTorrentAction":1,"CustomSetting":"keep"}')).toEqual({
+      noTorrentAction: 1,
+      CustomSetting: "keep",
     });
   });
 });

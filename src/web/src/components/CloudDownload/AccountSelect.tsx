@@ -1,16 +1,18 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Select, SelectItem } from "@heroui/react";
-import { Button } from "@/components/bakaui";
+import { SelectItem } from "@heroui/react";
+import { Button, Select } from "@/components/bakaui";
 import type { BaiduAccount } from "@/components/ThirdPartyConfig/platforms/BaiduNetdiskConfig";
 import BApi from "@/sdk/BApi";
 
 export default function AccountSelect({
   value,
   onChange,
+  isDisabled = false,
 }: {
   value?: string;
   onChange: (id: string | undefined) => void;
+  isDisabled?: boolean;
 }) {
   const { t } = useTranslation();
   const [accounts, setAccounts] = useState<BaiduAccount[]>([]);
@@ -35,6 +37,7 @@ export default function AccountSelect({
   return (
     <div className="space-y-1">
       <Select
+        isDisabled={isDisabled}
         label={t("cloudDownload.account.label")}
         placeholder={t("cloudDownload.account.useDefault")}
         selectedKeys={value ? [value] : []}
@@ -52,7 +55,12 @@ export default function AccountSelect({
           >{`${account.name}${account.isDefault ? ` (${t("cloudDownload.account.default")})` : ""}${!account.isLoggedIn ? ` · ${t("cloudDownload.account.loggedOut")}` : ""}`}</SelectItem>
         ))}
       </Select>
-      <Button size="sm" variant="light" onPress={() => setRevision((current) => current + 1)}>
+      <Button
+        size="sm"
+        variant="light"
+        isDisabled={isDisabled}
+        onPress={() => setRevision((current) => current + 1)}
+      >
         {t("cloudDownload.account.refresh")}
       </Button>
     </div>

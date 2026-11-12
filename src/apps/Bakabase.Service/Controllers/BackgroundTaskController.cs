@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.Service.Components.Acquisition.Planning;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Models.Constants;
 using Bootstrap.Models.ResponseModels;
@@ -12,13 +13,16 @@ using Swashbuckle.AspNetCore.Annotations;
 namespace Bakabase.Service.Controllers
 {
     [Route("~/background-task")]
-    public class BackgroundTaskController(BTaskManager btm, IBakabaseLocalizer localizer) : Controller
+    public class BackgroundTaskController(BTaskManager btm, IBakabaseLocalizer localizer,
+        AcquisitionDownloadContinuationService? continuation = null) : Controller
     {
         [HttpPost("{id}/run")]
         [SwaggerOperation(OperationId = "StartBackgroundTask")]
         public async Task<BaseResponse> Start(string id)
         {
             await btm.Start(id);
+            if (btm.GetTaskViewModel(id)?.Status is BTaskStatus.Running or BTaskStatus.Resuming or BTaskStatus.NotStarted && continuation != null)
+                await continuation.SetBackgroundTaskIntentAsync(id, AcquisitionDownloadContinuationService.Automatic);
             return BaseResponseBuilder.Ok;
         }
 
@@ -26,6 +30,8 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "PauseBackgroundTask")]
         public async Task<BaseResponse> Pause(string id)
         {
+            if (btm.IsPending(id) && continuation != null)
+                await continuation.SetBackgroundTaskIntentAsync(id, AcquisitionDownloadContinuationService.Paused);
             await btm.Pause(id);
             return BaseResponseBuilder.Ok;
         }
@@ -35,6 +41,8 @@ namespace Bakabase.Service.Controllers
         public async Task<BaseResponse> Resume(string id)
         {
             await btm.Resume(id);
+            if (btm.GetTaskViewModel(id)?.Status is BTaskStatus.Running or BTaskStatus.Resuming && continuation != null)
+                await continuation.SetBackgroundTaskIntentAsync(id, AcquisitionDownloadContinuationService.Automatic);
             return BaseResponseBuilder.Ok;
         }
 
@@ -60,6 +68,8 @@ namespace Bakabase.Service.Controllers
                 }
             }
 
+            if (task != null && continuation != null)
+                await continuation.SetBackgroundTaskIntentAsync(id, AcquisitionDownloadContinuationService.Paused);
             await btm.Stop(id);
             return BaseResponseBuilder.Ok;
         }

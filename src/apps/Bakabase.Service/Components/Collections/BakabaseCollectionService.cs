@@ -88,7 +88,7 @@ public class BakabaseCollectionService(
         {
             foreach (var task in await acquisitions.SearchAsync(status, ct: ct))
             {
-                if (wanted.Contains(task.ResourceId)) live.Add(task.ResourceId);
+                if (task.ResourceId is { } resourceId && wanted.Contains(resourceId)) live.Add(resourceId);
             }
         }
 

@@ -22,6 +22,11 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Model
         public decimal Progress { get; set; }
         /// <summary>Total bytes in files attributed to this task; null until a file is observed.</summary>
         public long? DownloadedBytes { get; set; }
+        /// <summary>Live operation bytes, including partial files; never added to DownloadedBytes.</summary>
+        public long? TransferredBytes { get; set; }
+        /// <summary>Known total for the current transfer operation, otherwise null.</summary>
+        public long? TotalBytes { get; set; }
+        public DateTime? TransferUpdatedAt { get; set; }
         /// <summary>
         /// Recent bytes per second received for this task's active media transfer; null when
         /// no reliable live byte source is available. Transient, never persisted.

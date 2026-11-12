@@ -14,6 +14,7 @@ import {
   AiOutlineStop,
 } from "react-icons/ai";
 
+import { translateKnownMessage } from "../knownMessages";
 import { copyParserText } from "../results";
 import { getDownloadContentGroups } from "../resourceGroups";
 import { getDownloadUrl, getLinkHealthStatus } from "../downloadLinks";
@@ -22,14 +23,20 @@ import { AvailabilityDetails, EvidencePopover } from "./PostDetails";
 import Tooltip from "./PostParserTooltip";
 import DownloadGroupHeader from "./DownloadGroupHeader";
 
-import { Button, toast } from "@/components/bakaui";
+import { Accordion, AccordionItem, Button, toast } from "@/components/bakaui";
 import { openExternalUrl } from "@/utils/openExternalUrl";
+import SourceProcessingPlanPanel from "@/components/ProcessingPlanRevisions/SourceProcessingPlanPanel";
+import type { SourceRef } from "@/components/Acquire/sourceHistory";
+import { processingStepInputs } from "@/components/Workflow/processingStepInputs";
+import SourceHealthBadge from "@/components/SourceAvailability/SourceHealthBadge";
+import { parseServerTime } from "@/core/serverTime";
 
 interface Props {
   data: DownloadInfoData;
   showTitle?: boolean;
   showAvailability?: boolean;
   showGroups?: boolean;
+  source?: SourceRef;
 }
 
 type DisplayStep = Omit<ExtractionPlan["steps"][number], "op"> & {
@@ -42,18 +49,40 @@ const supportedOperations = new Set([
   "renameExtension",
   "extractArchive",
   "renameFile",
+  "renameLiteral",
   "moveFile",
+  "rebaseDirectory",
 ]);
 
 export function LinkHealthIndicator({ health }: { health?: DownloadResource["linkHealth"] }) {
   const { t } = useTranslation();
-  const status = getLinkHealthStatus(health);
+  if (health?.probeId || health?.reasonCode)
+    return (
+      <SourceHealthBadge
+        health={{
+          status:
+            health.status === "unavailable"
+              ? health.probeId
+                ? "confirmedUnavailable"
+                : "unknown"
+              : health.status,
+          code: health.reasonCode ?? health.reason,
+          checkedAt: health.checkedAt,
+          expiresAt: health.expiresAt,
+          evidence: health.evidence,
+        }}
+      />
+    );
+  const legacyUnavailable = health?.status === "unavailable";
+  const status = getLinkHealthStatus(legacyUnavailable ? { ...health, status: "unknown" } : health);
   const label = t(`postParser.linkHealth.${status}`);
-  const reason = health?.reason
-    ? t(`postParser.linkHealth.reason.${health.reason}`, { defaultValue: health.reason })
-    : !health
-      ? t("postParser.linkHealth.notChecked")
-      : undefined;
+  const reason = legacyUnavailable
+    ? t("postParser.linkHealth.reason.legacyObservationNeedsRecheck")
+    : health?.reason
+      ? t(`postParser.linkHealth.reason.${health.reason}`, { defaultValue: health.reason })
+      : !health
+        ? t("postParser.linkHealth.notChecked")
+        : undefined;
   const Icon =
     status === "available"
       ? AiOutlineCheckCircle
@@ -72,21 +101,24 @@ export function LinkHealthIndicator({ health }: { health?: DownloadResource["lin
           {health?.checkedAt && (
             <p className="text-default-400">
               {t("postParser.linkHealth.checkedAt", {
-                time: new Date(health.checkedAt).toLocaleString(),
+                time: parseServerTime(health.checkedAt)?.toLocaleString() ?? health.checkedAt,
               })}
             </p>
           )}
         </div>
       }
     >
-      <button
+      <Button
+        isIconOnly
+        size="sm"
+        variant="light"
         aria-label={label}
-        className={`inline-flex h-6 shrink-0 items-center text-base ${status === "available" ? "text-success" : status === "unavailable" ? "text-danger" : "text-default-400"}`}
+        className={`inline-flex h-6 min-w-6 w-6 shrink-0 items-center text-base ${status === "available" ? "text-success" : status === "unavailable" ? "text-danger" : "text-default-400"}`}
         data-link-health={status}
         type="button"
       >
         <Icon aria-hidden />
-      </button>
+      </Button>
     </Tooltip>
   );
 }
@@ -94,9 +126,11 @@ export function LinkHealthIndicator({ health }: { health?: DownloadResource["lin
 function ProcessingPlan({
   plan,
   copy,
+  original = false,
 }: {
   plan: ExtractionPlan;
   copy: (value: string, successMessage?: string) => Promise<void>;
+  original?: boolean;
 }) {
   const { t } = useTranslation();
   const steps: DisplayStep[] = Array.isArray(plan.steps) ? plan.steps : [];
@@ -112,6 +146,24 @@ function ProcessingPlan({
         return t("postParser.processing.renameFile", { name: step.targetName ?? "?" });
       case "moveFile":
         return t("postParser.processing.moveFile", { directory: step.targetDirectory ?? "?" });
+      case "rebaseDirectory":
+        return t("postParser.processing.rebaseDirectory", {
+          sourceDirectory: step.sourceDirectory ?? "?",
+          directory:
+            step.targetDirectory === "" || step.targetDirectory === "."
+              ? t("postParser.processing.outputRoot")
+              : (step.targetDirectory ?? "?"),
+        });
+      case "renameLiteral":
+        return t(
+          step.replaceText === ""
+            ? "postParser.processing.renameLiteralRemove"
+            : "postParser.processing.renameLiteral",
+          {
+            findText: step.findText ?? "?",
+            replaceText: step.replaceText ?? "?",
+          },
+        );
       default:
         return step.op;
     }
@@ -122,17 +174,22 @@ function ProcessingPlan({
       aria-label={t("postParser.processing.label")}
       className="flex min-w-0 flex-wrap items-center gap-x-1 gap-y-1.5 text-xs"
     >
-      <span className="mr-1 shrink-0 text-default-500">{t("postParser.processing.label")}</span>
+      <span className="mr-1 shrink-0 text-default-500">
+        {t(original ? "processingRevision.original" : "postParser.processing.label")}
+      </span>
       {steps.length > 0 ? (
         <ol aria-label={t("postParser.processing.steps")} className="contents">
           {steps.map((step, index) => {
-            const inputIndex = steps.findIndex((previous) => previous.id === step.input);
-            const input =
-              step.input === "download"
-                ? t("postParser.extraction.download")
-                : inputIndex >= 0
-                  ? t("postParser.extraction.stepOutput", { number: inputIndex + 1 })
-                  : step.input;
+            const input = processingStepInputs(step)
+              .map((reference) => {
+                const inputIndex = steps.findIndex((previous) => previous.id === reference);
+                return reference === "download"
+                  ? t("postParser.extraction.download")
+                  : inputIndex >= 0
+                    ? t("postParser.extraction.stepOutput", { number: inputIndex + 1 })
+                    : reference;
+              })
+              .join(" + ");
             const copyValue =
               step.op === "extractArchive"
                 ? step.password
@@ -142,7 +199,9 @@ function ProcessingPlan({
                     ? step.targetName
                     : step.op === "moveFile"
                       ? step.targetDirectory
-                      : undefined;
+                      : step.op === "renameLiteral" || step.op === "rebaseDirectory"
+                        ? JSON.stringify(step, null, 2)
+                        : undefined;
             const copyLabel = t(`postParser.processing.copy.${step.op}`);
 
             return (
@@ -158,6 +217,9 @@ function ProcessingPlan({
                         <p className="break-all">
                           {t("postParser.processing.selector", { selector: step.selector })}
                         </p>
+                      )}
+                      {step.op === "renameLiteral" && (
+                        <p>{t("postParser.processing.renameLiteralHint")}</p>
                       )}
                       {copyValue ? (
                         <p className="text-default-500">{copyLabel}</p>
@@ -226,6 +288,7 @@ const DownloadInfoResultRenderer: FC<Props> = ({
   showTitle = true,
   showAvailability = true,
   showGroups = true,
+  source,
 }) => {
   const { t } = useTranslation();
   const copy = async (value: string, successMessage?: string) => {
@@ -239,7 +302,11 @@ const DownloadInfoResultRenderer: FC<Props> = ({
       toast.danger(t<string>("postParser.result.copyFailed"));
     }
   };
-  const warnings = Array.isArray(data.warnings) ? data.warnings : [];
+  const warnings = (Array.isArray(data.warnings) ? data.warnings : []).map((warning) =>
+    warning === "PROCESSING_PLAN_INCOMPLETE"
+      ? t<string>("postParser.warning.PROCESSING_PLAN_INCOMPLETE")
+      : translateKnownMessage(t, warning),
+  );
   const sections = getDownloadContentGroups(data);
   const resourceCount = sections.reduce((count, section) => count + section.resources.length, 0);
   const hasGroups = sections.some((section) => section.group);
@@ -260,6 +327,31 @@ const DownloadInfoResultRenderer: FC<Props> = ({
       )}
       {showAvailability && <AvailabilityDetails value={data.availability} />}
       {showTitle && data.title && <p className="text-sm font-medium">{data.title}</p>}
+      {!!data.coverCandidates?.length && (
+        <Accordion isCompact className="px-0">
+          <AccordionItem
+            key="media"
+            title={t("postMedia.candidates", { count: data.coverCandidates.length })}
+          >
+            <p className="mb-2 text-xs text-default-500">{t("postMedia.description")}</p>
+            <div className="flex flex-wrap gap-1">
+              {data.coverCandidates.map((candidate, index) => (
+                <Button
+                  key={candidate.url}
+                  size="sm"
+                  variant="flat"
+                  startContent={<AiOutlineLink aria-hidden />}
+                  onPress={() => openExternalUrl(candidate.url)}
+                >
+                  {t(candidate.kind === "cover" ? "postMedia.cover" : "postMedia.preview", {
+                    number: index + 1,
+                  })}
+                </Button>
+              ))}
+            </div>
+          </AccordionItem>
+        </Accordion>
+      )}
       {!resourceCount && (
         <p className="text-sm text-default-400">{t("postParser.result.noResources")}</p>
       )}
@@ -348,7 +440,17 @@ const DownloadInfoResultRenderer: FC<Props> = ({
                     </Button>
                   )}
                 </div>
-                {resource.extraction && <ProcessingPlan copy={copy} plan={resource.extraction} />}
+                {resource.extraction && (
+                  <ProcessingPlan copy={copy} plan={resource.extraction} original={!!source} />
+                )}
+                {source &&
+                  sourceIndices.map((sourceIndex) => (
+                    <SourceProcessingPlanPanel
+                      key={sourceIndex}
+                      deferUntilVisible
+                      source={{ ...source, resultKey: String(sourceIndex) }}
+                    />
+                  ))}
               </div>
             );
           })}

@@ -1,61 +1,59 @@
-import type { ReactNode } from "react";
-import type { ListRowProps } from "react-virtualized";
+import type { ReactNode, RefObject } from "react";
 import type { PostParserTask } from "@/core/models/PostParserTask";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { AutoSizer, CellMeasurer, CellMeasurerCache, List } from "react-virtualized";
 
 const columns =
   "grid grid-cols-[2.5rem_minmax(15rem,0.85fr)_minmax(22rem,1.65fr)_12.5rem] gap-3 px-3";
 
-export const TASK_ROW_MIN_HEIGHT = 128;
-
 interface Props {
   tasks: PostParserTask[];
   search: string;
+  pageKey?: string;
+  scrollRef?: RefObject<HTMLDivElement>;
   renderTask: (task: PostParserTask) => ReactNode;
   locateRequest?: { taskId: number; sequence: number };
   onLocated?: (sequence: number) => void;
 }
 
-const TaskList = ({ tasks, search, renderTask, locateRequest, onLocated }: Props) => {
-  const { t, i18n } = useTranslation();
-  const list = useRef<List>(null);
-  const [width, setWidth] = useState(0);
+const TaskList = ({
+  tasks,
+  search,
+  pageKey,
+  scrollRef,
+  renderTask,
+  locateRequest,
+  onLocated,
+}: Props) => {
+  const { t } = useTranslation();
+  const scroller = useRef<HTMLDivElement>(null);
+  const rows = useRef(new Map<number, HTMLDivElement>());
   const [highlight, setHighlight] = useState<{ taskId: number; sequence: number }>();
   const lastLocation = useRef<number>();
-  const cache = useMemo(
-    () =>
-      new CellMeasurerCache({
-        fixedWidth: true,
-        defaultHeight: 180,
-        minHeight: TASK_ROW_MIN_HEIGHT,
-      }),
-    [],
-  );
+  useLayoutEffect(() => {
+    const viewport = scrollRef?.current ?? scroller.current;
+    if (viewport) viewport.scrollTop = 0;
+  }, [search, pageKey, scrollRef]);
 
-  useEffect(() => {
-    // Results, line wrapping and translations can all change a row's measured height.
-    cache.clearAll();
-    list.current?.recomputeRowHeights();
-  }, [cache, tasks, width, i18n.language]);
-
-  useEffect(() => {
-    list.current?.scrollToPosition(0);
-  }, [search]);
-
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!locateRequest || lastLocation.current === locateRequest.sequence) return;
-    const index = tasks.findIndex((task) => task.id === locateRequest.taskId);
-
-    if (index < 0 || !list.current) return;
-    // Consume only explicit requests; polling and stage changes must not take over scrolling.
+    const row = rows.current.get(locateRequest.taskId);
+    const viewport = scrollRef?.current ?? scroller.current;
+    if (!row || !viewport) return;
+    // Stable paged rows let the browser anchor live content changes. Only an
+    // explicit navigation request changes the scroll position here.
     lastLocation.current = locateRequest.sequence;
-    list.current.scrollToRow(index);
+    viewport.scrollTop = Math.max(
+      0,
+      viewport.scrollTop +
+        row.getBoundingClientRect().top -
+        viewport.getBoundingClientRect().top -
+        Math.max(0, (viewport.clientHeight - row.getBoundingClientRect().height) / 2),
+    );
     setHighlight(locateRequest);
     onLocated?.(locateRequest.sequence);
-  }, [locateRequest, tasks, onLocated]);
+  }, [locateRequest, tasks, onLocated, scrollRef]);
 
   useEffect(() => {
     if (!highlight) return;
@@ -64,34 +62,17 @@ const TaskList = ({ tasks, search, renderTask, locateRequest, onLocated }: Props
     return () => window.clearTimeout(timer);
   }, [highlight]);
 
-  const rowRenderer = ({ index, key, parent, style }: ListRowProps) => {
-    const task = tasks[index];
-
-    return (
-      <CellMeasurer key={key} cache={cache} columnIndex={0} parent={parent} rowIndex={index}>
-        {({ registerChild }) => (
-          <div
-            ref={registerChild}
-            aria-rowindex={index + 2}
-            className={`${columns} min-h-32 border-b border-default-100 py-3 ${highlight?.taskId === task.id ? "bg-primary/10 ring-1 ring-inset ring-primary/40" : ""}`}
-            data-located={highlight?.taskId === task.id || undefined}
-            data-task-id={task.id}
-            role="row"
-            style={style}
-          >
-            {renderTask(task)}
-          </div>
-        )}
-      </CellMeasurer>
-    );
-  };
-
   return (
-    <div className="flex min-h-72 min-w-0 flex-1 flex-col overflow-x-auto rounded-xl border border-default-200">
+    <div
+      ref={scroller}
+      className={`min-w-0 rounded-xl border border-default-200 ${scrollRef ? "shrink-0" : "min-h-0 flex-1 overflow-auto"}`}
+      data-post-parser-scroll={scrollRef ? undefined : true}
+      tabIndex={scrollRef ? undefined : 0}
+    >
       <div
         aria-label={t<string>("postParser.page.title")}
         aria-rowcount={tasks.length + 1}
-        className="flex min-h-0 min-w-[960px] flex-1 flex-col"
+        className="flex min-w-[960px] flex-col"
         role="table"
       >
         <div
@@ -104,30 +85,27 @@ const TaskList = ({ tasks, search, renderTask, locateRequest, onLocated }: Props
           <span role="columnheader">{t<string>("postParser.table.results")}</span>
           <span role="columnheader">{t<string>("postParser.table.operations")}</span>
         </div>
-        <div className="min-h-0 flex-1">
-          <AutoSizer onResize={({ width: nextWidth }) => setWidth(nextWidth)}>
-            {({ width: listWidth, height }) => (
-              <List
-                ref={list}
-                containerRole="presentation"
-                deferredMeasurementCache={cache}
-                estimatedRowSize={cache.defaultHeight}
-                height={height || 360}
-                overscanRowCount={3}
-                role="rowgroup"
-                rowCount={tasks.length}
-                rowHeight={cache.rowHeight}
-                rowRenderer={rowRenderer}
-                scrollToAlignment="center"
-                style={{ overflowX: "hidden" }}
-                width={listWidth || 960}
-              />
-            )}
-          </AutoSizer>
+        <div className="relative" role="rowgroup">
+          {tasks.map((task, index) => (
+            <div
+              key={task.id}
+              ref={(element) => {
+                if (element) rows.current.set(task.id, element);
+                else rows.current.delete(task.id);
+              }}
+              aria-rowindex={index + 2}
+              className={`${columns} min-h-32 border-b border-default-100 py-3 ${highlight?.taskId === task.id ? "bg-primary/10 ring-1 ring-inset ring-primary/40" : ""}`}
+              data-located={highlight?.taskId === task.id || undefined}
+              data-task-id={task.id}
+              role="row"
+            >
+              {renderTask(task)}
+            </div>
+          ))}
         </div>
       </div>
     </div>
   );
 };
 
-export default TaskList;
+export default memo(TaskList);

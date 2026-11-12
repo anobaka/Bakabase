@@ -167,9 +167,9 @@ public class AcquisitionCandidateService(
             .GroupBy(v => v.ResourceId)
             .ToDictionary(g => g.Key, g => g.First().Name!);
         var active = (await db.Set<AcquisitionTaskDbModel>().AsNoTracking()
-                .Where(t => Enumerable.Contains(pageIds, t.ResourceId) && Enumerable.Contains(Live, t.Status))
+                .Where(t => t.DeletedAt == null && t.ResourceId != null && Enumerable.Contains(pageIds, t.ResourceId.Value) && Enumerable.Contains(Live, t.Status))
                 .OrderByDescending(t => t.Id).ToListAsync(ct))
-            .GroupBy(t => t.ResourceId)
+            .GroupBy(t => t.ResourceId!.Value)
             .ToDictionary(g => g.Key, g => g.First());
 
         var items = pageIds.Select(id =>

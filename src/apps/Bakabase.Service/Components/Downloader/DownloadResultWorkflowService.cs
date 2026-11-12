@@ -146,7 +146,9 @@ public sealed class DownloadResultWorkflowService(BakabaseDbContext db,
             var run = new WorkflowRunDbModel
             {
                 WorkflowDefinitionId = def.Id, Status = WorkflowRunStatus.Pending, StartedAt = DateTime.Now,
-                PayloadJson = payloadJson, PayloadSummary = result.Name
+                PlanSnapshotJson = WorkflowRunPlans.Serialize(WorkflowRunPlans.Capture(def)),
+                PayloadJson = payloadJson, PayloadSummary = result.Name,
+                Sources = WorkflowRunSourceDbModel.From(payload)
             };
             Runs.Add(run);
             await db.SaveChangesAsync(ct);
@@ -188,7 +190,7 @@ public sealed class DownloadResultWorkflowService(BakabaseDbContext db,
         {
             await using var scope = args.RootServiceProvider.CreateAsyncScope();
             await scope.ServiceProvider.GetRequiredService<WorkflowRunner<BakabaseDbContext>>().ExecuteAsync(run.Id, args);
-        }), run.WorkflowDefinitionId, DownloadResultWorkflow.Trigger));
+        }), run.WorkflowDefinitionId, DownloadResultWorkflow.Trigger, run.Id));
 
     public async Task RetryAsync(int id, CancellationToken ct = default)
     {

@@ -27,6 +27,6 @@ public class DownloadInfoHandler(IPostDownloadInfoExtractor extractor) : IPostPa
             r.LinkHealth,
             DriveKind = AcquisitionDriveKinds.Infer(r.Link)
         }).ToList();
-        return new PostParseHandlerResult(new {result.SchemaVersion, result.IsComplete, result.Warnings, result.Availability, result.Groups, resources}, result.Title);
+        return new PostParseHandlerResult(new {result.SchemaVersion, result.IsComplete, result.Warnings, result.Availability, result.Groups, result.CoverCandidates, resources}, result.Title);
     }
 }

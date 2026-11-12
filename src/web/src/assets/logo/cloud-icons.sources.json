@@ -1,0 +1,49 @@
+{
+  "purpose": "Official service icons bundled locally for identification; trademarks belong to their respective owners.",
+  "checkedAt": "2026-10-20",
+  "assets": [
+    {
+      "file": "google-drive.svg",
+      "sourcePage": "https://workspace.google.com/products/drive/",
+      "assetUrl": "https://www.gstatic.com/images/branding/productlogos/drive_2026/v2/web/192px.svg",
+      "sha256": "60a6496d705d8bf010ce126469be89889db331622b14d8ae1645a38c2aaa23f5"
+    },
+    {
+      "file": "gofile.png",
+      "sourcePage": "https://gofile.io/",
+      "assetUrl": "https://gofile.io/assets/img/favicon96.png",
+      "sha256": "40a0628e5673cd81d91142b1b7db3cd9e472efceb1b464dd90c0ca9f627623f2"
+    },
+    {
+      "file": "pikpak.png",
+      "sourcePage": "https://mypikpak.com/en-US",
+      "assetUrl": "https://mypikpak.com/apple-touch-icon.png",
+      "sha256": "c73796c91af6cfed34bf42feadad2d0a0a26ef151ace4646c9635da8f7fc0a8a"
+    },
+    {
+      "file": "onedrive.svg",
+      "sourcePage": "https://www.microsoft.com/en-us/microsoft-365/onedrive/online-cloud-storage",
+      "assetUrl": "https://www.microsoft.com/content/dam/microsoft/bade/images/icons/en-us/m365-app-icons-fy26/OneDrive-Icon-FY26.svg",
+      "sha256": "9f72ac359c7e03ca4723ce1a3b60f932a0bc5d2ce72dbdce365e83223142f6bc"
+    },
+    {
+      "file": "pixeldrain.png",
+      "sourcePage": "https://pixeldrain.com/",
+      "assetUrl": "https://pixeldrain.com/res/img/pixeldrain_256.png",
+      "sha256": "64e37743f4f796f1125b13ec9fc36e4bb0c5856d8363ea509ceaceb1f992b60b"
+    },
+    {
+      "file": "baidu-netdisk.ico",
+      "sourcePage": "https://pan.baidu.com/",
+      "assetUrl": "https://nd-static.bdstatic.com/m-static/wp-brand/favicon.ico",
+      "sha256": "7e352d358af25cacc5bf410c4a9de04056967b83e3fb8defec30d694129cefb3"
+    },
+    {
+      "file": "terabox.png",
+      "sourcePage": "https://www.terabox.com/",
+      "assetUrl": "https://s5.teraboxcdn.com/common-static/favicon.ico",
+      "checkedAt": "2026-10-27",
+      "sha256": "e5870bbb8800f47d8f608f92d33ef7e5f07ff74446d7116f2762fab135ee4e7b"
+    }
+  ]
+}

@@ -1,8 +1,10 @@
-"use client";
+import AcquisitionAttentionTags from "@/components/Acquire/AcquisitionAttentionTags";
+("use client");
 
 import type { AcquisitionRecipeVm, AcquisitionTaskVm } from "../..";
 
 import React from "react";
+import { DeleteOutlined } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
 
 import { recipeLabel } from "../../recipeLabels";
@@ -11,14 +13,26 @@ import BApi from "@/sdk/BApi";
 import { Button, Chip, Progress, toast } from "@/components/bakaui";
 import { getWorkflowActivityUI } from "@/components/Workflow/Activities";
 import { activityDisplayName } from "@/components/Workflow/displayNames";
-import { acquisitionStatusLabel } from "@/components/Workflow/valueLabels";
+import { acquisitionStageLabel, acquisitionDownloadActivity } from "@/components/Acquire/taskStage";
 import { AcquisitionStatus } from "@/sdk/constants";
+import AcquisitionTiming from "@/components/Acquire/AcquisitionTiming";
+import AcquisitionCreationOrigin from "@/components/Acquire/AcquisitionCreationOrigin";
+import DownloadProblemMessage from "@/components/CloudDownload/DownloadProblemMessage";
+import RuntimeOverviewSummary from "@/components/Acquire/PlanTask/RuntimeOverviewSummary";
+import type { RuntimeOverview } from "@/components/Acquire/PlanTask/runtimeOverview";
+import AcquisitionSizeEstimate, { type AcquisitionSizeEstimateValue } from "@/components/Acquire/AcquisitionSizeEstimate";
 
 interface Props {
   task: AcquisitionTaskVm;
   recipes: AcquisitionRecipeVm[];
   onChanged: () => void;
   onEditRecipe: (definitionId: number) => void;
+  inDetail?: boolean;
+  onOpen?: () => void;
+  onOriginNavigate?: () => void;
+  overview?: RuntimeOverview;
+  sizeEstimate?: AcquisitionSizeEstimateValue;
+  onDelete?: () => void;
 }
 
 const StatusColor: Record<
@@ -54,16 +68,32 @@ function waitingFor(since?: string | null): string | null {
  * its own question, and going somewhere else to answer it would be the difference between a page
  * worth leaving open and one worth ignoring.
  */
-const AcquisitionRow: React.FC<Props> = ({ task, recipes, onChanged, onEditRecipe }) => {
+const AcquisitionRow: React.FC<Props> = ({
+  inDetail,
+  task,
+  recipes,
+  onChanged,
+  onEditRecipe,
+  onOpen,
+  onOriginNavigate,
+  overview,
+  sizeEstimate,
+  onDelete,
+}) => {
   const { t } = useTranslation();
   const [submitting, setSubmitting] = React.useState(false);
+  const readOnly = !!(task.isDeleted || task.deletedAt);
 
   const recipe = recipes.find((r) => r.definitionId === task.recipeDefinitionId);
   const stepKind =
     task.currentStepIndex != null ? recipe?.stepKinds?.[task.currentStepIndex] : undefined;
   const ResumeForm = stepKind ? getWorkflowActivityUI(stepKind)?.ResumeForm : undefined;
+  const currentOverview = task.workflowRunId && overview?.taskId === task.id &&
+    overview.workflowRunId === task.workflowRunId ? overview : undefined;
+  const downloadActivity = acquisitionDownloadActivity(task, currentOverview);
 
   const act = async (fn: () => Promise<{ code?: number }>, successKey: string) => {
+    if (readOnly || submitting) return;
     setSubmitting(true);
     try {
       const rsp = await fn();
@@ -85,35 +115,30 @@ const AcquisitionRow: React.FC<Props> = ({ task, recipes, onChanged, onEditRecip
   return (
     <div className="border border-default-200 rounded-lg p-3 flex flex-col gap-2">
       <div className="flex items-center gap-2">
-        <Chip color={StatusColor[task.status] ?? "default"} size="sm" variant="flat">
-          {acquisitionStatusLabel(t, task.status)}
+        <Chip color={downloadActivity ? "primary" : StatusColor[task.status] ?? "default"} size="sm" variant="flat">
+          {acquisitionStageLabel(t, task, currentOverview)}
         </Chip>
-        <span className="font-medium truncate">
+        {!inDetail && <span className="font-medium truncate">
           {task.resourceName ?? t<string>("acquisition.unnamed", { id: task.resourceId })}
-        </span>
-        {task.status === AcquisitionStatus.Waiting && waitingFor(task.waitingSince) && (
+        </span>}
+        {!downloadActivity && task.status === AcquisitionStatus.Waiting && waitingFor(task.waitingSince) && (
           <span className="text-xs text-secondary-600">· {waitingFor(task.waitingSince)}</span>
         )}
 
         <div className="ml-auto flex items-center gap-1">
-          {recipe && (
+          {onDelete && <Button size="sm" variant="light" color="danger" startContent={<DeleteOutlined aria-hidden />}
+            aria-label={`${t("acquisition.actionbar.delete")} #${task.id}`} onPress={onDelete}>{t("acquisition.actionbar.delete")}</Button>}
+          {onOpen && (
+            <Button size="sm" variant="flat" onPress={onOpen}>
+              {t("acquisition.plan.open")}
+            </Button>
+          )}
+          {recipe && !readOnly && (
             <Button size="sm" variant="light" onPress={() => onEditRecipe(recipe.definitionId)}>
               {recipeLabel(recipe, t)}
             </Button>
           )}
-          {isLive && (
-            <Button
-              isDisabled={submitting}
-              size="sm"
-              variant="light"
-              onPress={() =>
-                act(() => BApi.acquisition.cancelAcquisition(task.id), "acquisition.cancelled")
-              }
-            >
-              {t<string>("acquisition.cancel")}
-            </Button>
-          )}
-          {!isLive && (
+          {!isLive && !readOnly && (
             <Button
               isDisabled={submitting}
               size="sm"
@@ -128,7 +153,17 @@ const AcquisitionRow: React.FC<Props> = ({ task, recipes, onChanged, onEditRecip
         </div>
       </div>
 
-      {recipe && task.currentStepIndex != null && (
+      <AcquisitionAttentionTags tags={currentOverview?.attentionTags ?? task.attentionTags} />
+      <AcquisitionSizeEstimate estimate={sizeEstimate} />
+      <AcquisitionCreationOrigin
+        inspectPosts={inDetail}
+        origins={task.creationOrigins}
+        compact
+        onNavigate={onOriginNavigate}
+      />
+      <AcquisitionTiming task={task} />
+      {currentOverview && <RuntimeOverviewSummary overview={currentOverview} />}
+      {!currentOverview && recipe && task.currentStepIndex != null && (
         <div className="flex items-center gap-2">
           <Progress
             aria-label="progress"
@@ -143,13 +178,18 @@ const AcquisitionRow: React.FC<Props> = ({ task, recipes, onChanged, onEditRecip
         </div>
       )}
 
-      {task.error && <div className="text-xs text-danger break-words">{task.error}</div>}
+      {!currentOverview && (!downloadActivity || !!task.attentionTags?.length) && task.error && (
+        <DownloadProblemMessage
+          className="space-y-1 text-xs text-danger break-words"
+          message={task.error}
+        />
+      )}
 
       {task.targetDirectory && (
         <div className="text-xs text-default-400 truncate">{task.targetDirectory}</div>
       )}
 
-      {task.status === AcquisitionStatus.Waiting && (
+      {!readOnly && task.status === AcquisitionStatus.Waiting && (
         <div className="border-t border-default-100 pt-2">
           {ResumeForm ? (
             <ResumeForm

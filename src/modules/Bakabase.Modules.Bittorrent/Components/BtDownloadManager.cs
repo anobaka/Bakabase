@@ -1,3 +1,4 @@
+using Bakabase.Abstractions.Components.FileSystem;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -19,7 +20,8 @@ public sealed class BtDownloadManager(
     Func<int>? concurrencyLimit = null,
     Func<bool>? isShuttingDown = null,
     Func<string>? appDataDirectory = null,
-    Func<BtDownloadJob, CancellationToken, Task<bool>>? canResumeOnStartup = null) : IBtDownloadManager, IAsyncDisposable
+    Func<BtDownloadJob, CancellationToken, Task<bool>>? canResumeOnStartup = null,
+    IStorageWriteGuard? storageWrites = null) : IBtDownloadManager, IAsyncDisposable
 {
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly Dictionary<string, StoredJob> _jobs = new(StringComparer.Ordinal);
@@ -78,6 +80,11 @@ public sealed class BtDownloadManager(
     public async Task<IReadOnlyList<BtDownloadJob>> ListAsync(CancellationToken ct = default)
     {
         await InitializeAsync(ct);
+        return await ReadSnapshotAsync(ct);
+    }
+
+    public async Task<IReadOnlyList<BtDownloadJob>> ReadSnapshotAsync(CancellationToken ct = default)
+    {
         await _gate.WaitAsync(ct);
         try { return _jobs.Values.Select(x => Snapshot(x.Job)).OrderByDescending(x => x.CreatedAt).ToArray(); }
         finally { _gate.Release(); }
@@ -124,14 +131,14 @@ public sealed class BtDownloadManager(
                         existing.Job.DownloadTaskId != request.DownloadTaskId ||
                         existing.Job.DownloadResultId != request.DownloadResultId)
                         throw new InvalidOperationException("The BitTorrent request key is already used for different content, ownership or a different output directory.");
-                    if (existing.Timeout != request.Timeout &&
+                    if ((existing.Timeout != request.Timeout || request.WriteContext != null && existing.WriteContext != request.WriteContext) &&
                         existing.Job.Status is BtDownloadStatus.Stopped or BtDownloadStatus.Failed or BtDownloadStatus.Completed)
                     {
                         // A caller may edit attempt settings before explicitly resuming or rechecking.
                         // Keep live attempts unchanged, and never alter content, ownership or destination.
                         var updated = existing with
                         {
-                            Timeout = request.Timeout,
+                            Timeout = request.Timeout, WriteContext = request.WriteContext ?? existing.WriteContext,
                             Job = existing.Job with { UpdatedAt = DateTime.UtcNow }
                         };
                         await SaveAsync(updated);
@@ -155,7 +162,7 @@ public sealed class BtDownloadManager(
             };
             var stored = new StoredJob
             {
-                Job = job, IdempotencyKey = request.IdempotencyKey, PayloadHash = payloadHash,
+                Job = job, WriteContext = request.WriteContext ?? StorageWriteScope.Current, IdempotencyKey = request.IdempotencyKey, PayloadHash = payloadHash,
                 MagnetUri = request.MagnetUri, TorrentUrl = request.TorrentUrl, Timeout = request.Timeout,
                 MetadataFile = request.Metadata == null ? null : $"metadata/{id}.torrent"
             };
@@ -340,7 +347,7 @@ public sealed class BtDownloadManager(
                 Metadata = stored.MetadataFile == null ? null : await File.ReadAllBytesAsync(ResolveMetadata(stored.MetadataFile), active.Cancellation.Token),
                 WorkingDirectory = stored.Job.OutputDirectory, UseWorkingDirectoryAsDestination = true, Timeout = stored.Timeout
             };
-            result = await downloader.DownloadAsync(request, async progress =>
+            Task<TorrentDownloadResult> Download(CancellationToken token) => downloader.DownloadAsync(request, async progress =>
             {
                 await _gate.WaitAsync(active.Cancellation.Token);
                 try
@@ -355,7 +362,9 @@ public sealed class BtDownloadManager(
                     // Progress stays in memory between transitions; resume rechecks local pieces instead of trusting counters.
                 }
                 finally { _gate.Release(); }
-            }, active.Cancellation.Token);
+            }, token);
+            result = storageWrites == null ? await Download(active.Cancellation.Token) :
+                await storageWrites.RunAsync([stored.Job.OutputDirectory], WriteContext(stored), Download, active.Cancellation.Token);
         }
         catch (Exception ex) { failure = ex; }
 
@@ -556,6 +565,7 @@ public sealed class BtDownloadManager(
     // Exceptions can contain tracker URLs or proxy credentials. Persist only endpoint-free categories.
     private static string SafeError(Exception exception) => exception switch
     {
+        LocalStorageException local => local.Code,
         TimeoutException => "The BitTorrent download timed out. Retry to continue from the existing files.",
         OperationCanceledException => "The BitTorrent transfer was interrupted. Retry to continue from the existing files.",
         UnauthorizedAccessException => "Access to the BitTorrent download directory was denied.",
@@ -575,8 +585,15 @@ public sealed class BtDownloadManager(
         public TaskCompletionSource Completion { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
     }
 
+    private static StorageWriteContext? WriteContext(StoredJob stored) => stored.WriteContext ??
+        (stored.Job.WorkflowRunId is { } runId ? new("workflow", runId.ToString()) :
+        stored.Job.DownloadTaskId is { } taskId ? new("downloadTask", taskId.ToString()) :
+        stored.Job.SourceKind == "workflow" && stored.Job.SourceId is { } operationId
+            ? new("artifactOperation", operationId) : new("independentDownload", stored.Job.Id));
+
     private sealed record StoredJob
     {
+        public StorageWriteContext? WriteContext { get; init; }
         public required BtDownloadJob Job { get; set; }
         public string? IdempotencyKey { get; init; }
         public required string PayloadHash { get; init; }

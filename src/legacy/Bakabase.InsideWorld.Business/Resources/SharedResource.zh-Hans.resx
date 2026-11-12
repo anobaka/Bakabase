@@ -843,6 +843,12 @@
   <data name="BTask_Description_WorkflowRunCleanup" xml:space="preserve">
     <value>每个工作流定义只保留最近 50 条 run 记录，其余删除。</value>
   </data>
+  <data name="Downloader_ExHentai_NoTorrentSeedOnly" xml:space="preserve">
+    <value>此画廊没有种子。任务保留了“仅保存种子文件”的旧策略；请启用“无种子时直接下载”后继续任务。</value>
+  </data>
+  <data name="Downloader_ExHentai_NoTorrentFallbackDisabled" xml:space="preserve">
+    <value>此画廊没有种子，任务当前保存的策略不允许直接下载；请启用“无种子时直接下载”后继续任务。</value>
+  </data>
   <data name="Downloader_ExHentai_DownloadingTorrent" xml:space="preserve">
     <value>正在下载种子文件...</value>
   </data>
@@ -1192,10 +1198,21 @@
   <data name="BTask_Process_ResourceProcessing_Resources" xml:space="preserve"><value>已处理 {0} 个资源</value></data>
   <data name="Dependency_Component_BaiduPcsGo_Name" xml:space="preserve"><value>BaiduPCS-Go</value></data>
   <data name="Dependency_Component_BaiduPcsGo_Description" xml:space="preserve"><value>可选的百度网盘转存与下载适配器。首次安装会编译固定上游版本，提供结构化操作协议。</value></data>
-  <data name="Dependency_Component_CloudPython_Name" xml:space="preserve"><value>Cloud download Python runtime</value></data>
-  <data name="Dependency_Component_CloudPython_Description" xml:space="preserve"><value>供可选网盘下载工具使用的独立 Python 运行环境。</value></data>
+  <data name="Dependency_Component_CloudPython_Name" xml:space="preserve"><value>基础 Python 环境</value></data>
+  <data name="Dependency_Component_CloudPython_Description" xml:space="preserve"><value>供可选应用工具使用的基础 Python 运行环境。</value></data>
   <data name="Dependency_Component_Gdown_Name" xml:space="preserve"><value>gdown</value></data>
   <data name="Dependency_Component_Gdown_Description" xml:space="preserve"><value>可选的 Google Drive 公开文件与目录下载工具。</value></data>
   <data name="Dependency_Component_GalleryDl_Name" xml:space="preserve"><value>gallery-dl</value></data>
-  <data name="Dependency_Component_GalleryDl_Description" xml:space="preserve"><value>可选的 GoFile 分享下载工具，支持递归目录。</value></data>
+  <data name="Dependency_Component_GalleryDl_Description" xml:space="preserve"><value>可选的 GoFile 和 Pixeldrain 分享下载工具，支持递归目录。</value></data>
+  <data name="Dependency_Component_Rclone_Name" xml:space="preserve"><value>rclone</value></data>
+  <data name="Dependency_Component_Rclone_Description" xml:space="preserve"><value>可选的通用网盘传输引擎。公开分享链接还需要对应来源的解析能力。</value></data>
+  <data name="BTask_Name_SourceAvailability" xml:space="preserve"><value>检查下载来源有效性</value></data>
+  <data name="Dependency_Component_PikPakCli_Name" xml:space="preserve"><value>PikPak 官方 CLI</value></data>
+  <data name="Dependency_Component_PikPakCli_Description" xml:space="preserve"><value>PikPak 官方命令行工具，用于浏览器授权、转存分享内容及下载原文件。需要授权账号，并受网盘剩余空间和流量额度限制。</value></data>
+  <data name="Dependency_Component_MegaCmd_Name" xml:space="preserve"><value>MEGAcmd</value></data>
+  <data name="Dependency_Component_MegaCmd_Description" xml:space="preserve"><value>MEGA 官方工具，支持免账号下载公开分享。Linux 支持自动安装；Windows 和 macOS 请先使用官方安装包安装。仍受 MEGA 传输额度限制。</value></data>
+  <data name="Dependency_Component_TeraBoxCli_Name" xml:space="preserve"><value>TeraBox CLI</value></data>
+  <data name="Dependency_Component_TeraBoxCli_Description" xml:space="preserve"><value>TeraBox 命令行工具，用于浏览器授权和分享原文件下载。需要授权账号，并受 TeraBox 服务配额限制。</value></data>
+  <data name="Dependency_Component_Pyzipper_Name" xml:space="preserve"><value>pyzipper</value></data>
+  <data name="Dependency_Component_Pyzipper_Description" xml:space="preserve"><value>可选的 ZIP 兼容读取器，支持明确指定密码字节编码；复用基础 Python 环境，并校验认证码和 CRC。</value></data>
 </root>

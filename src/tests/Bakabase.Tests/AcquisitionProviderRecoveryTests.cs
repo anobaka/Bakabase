@@ -1,0 +1,254 @@
+using System.Text.Json;
+using Bakabase.Abstractions.Components.FileSystem;
+using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants;
+using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
+using Bakabase.InsideWorld.Business.Components.Downloader.Components;
+using Bakabase.InsideWorld.Business.Components.Downloader.Services;
+using Bakabase.Modules.Acquisition.Abstractions.Models.Db;
+using Bakabase.Modules.Downloader.Cloud;
+using Bakabase.Modules.Workflow.Abstractions.Components;
+using Bakabase.Modules.Workflow.Abstractions.Models.Db;
+using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
+using Bakabase.Modules.Workflow.Artifacts;
+using Bakabase.Modules.Workflow.Components;
+using Bakabase.Service.Components.Acquisition.Planning;
+using Bakabase.Service.Components.CloudDownloads;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
+
+namespace Bakabase.Tests;
+
+public sealed partial class AcquisitionRecoveryTests
+{
+    private sealed class RecoverableProvider : ICloudDownloadProvider, ICloudDownloadRecoveryProvider, ICloudDownloadAbandonmentProvider
+    {
+        public string ProviderId => "pikpak";
+        public int Checks;
+        public bool Available = true;
+        public bool CanAbandon = true;
+        public Task<CloudReadiness> CheckCanAbandonAsync(CloudDownloadRequest request, CancellationToken ct) =>
+            Task.FromResult(new CloudReadiness(CanAbandon, CanAbandon ? null : "REMOTE_WRITE_UNCERTAIN"));
+        public Func<Task>? DuringProbe;
+        public bool CanRevalidateDownloadFailure(string code) => code == "PIKPAK_ORIGINAL_FILE_UNAVAILABLE";
+        public Task<CloudReadiness> CheckReadyAsync(string? accountId, CancellationToken ct) => Task.FromResult(new CloudReadiness(true));
+        public async Task<CloudReadiness> RevalidateDownloadAsync(CloudDownloadRequest request, CancellationToken ct)
+        {Checks++; if (DuringProbe != null) await DuringProbe(); return new CloudReadiness(Available, Available ? null : "PIKPAK_ORIGINAL_FILE_UNAVAILABLE");}
+        public Task<CloudDownloadResult> DownloadAsync(CloudDownloadRequest request, Func<CloudDownloadProgress, Task> progress, CancellationToken ct)
+            => throw new AssertFailedException("Diagnosis must never download payloads.");
+    }
+
+    private async Task<(AcquisitionTaskDbModel Task, WorkflowRunDbModel Run, DownloadWorkset Workset,
+        DownloadTaskDbModel Download, CloudOperationDbModel Operation, RecoverableProvider Provider,
+        CloudDownloadRecoveryService Recovery)> SeedRecoverableProvider()
+    {
+        var (task, run, workset) = await Seed("download.awaitCompletion", WorkflowRunStatus.Waiting, error: null);
+        const string failure = "PIKPAK_ORIGINAL_FILE_UNAVAILABLE";
+        var source = new CloudSource {Id = "source", ProviderId = "pikpak", Url = "https://mypikpak.com/s/fixture", Kind = "share"};
+        var target = workset.Targets.Single() with {Sources = [source], AccountId = null, Problem = failure};
+        var intent = DownloadArtifactCoordinator.DownloadIntent(target, _root);
+        var request = new CloudDownloadRequest(intent, source, null, null, Path.Combine(_root, "cloud-original"));
+        var download = new DownloadTaskDbModel {Status = DownloadTaskDbModelStatus.Failed, Message = failure,
+            ThirdPartyId = CloudSites.Site(source.ProviderId), DownloadPath = request.OutputDirectory,
+            Options = JsonSerializer.Serialize(request, JsonSerializerOptions.Web)};
+        _db.DownloadTasks.Add(download); await _db.SaveChangesAsync();
+        var operation = new CloudOperationDbModel {Id = intent, TargetId = target.Id, WorkflowRunId = run.Id,
+            Kind = "download", State = "started", DownloadTaskId = download.Id, RequestJson = download.Options};
+        _db.CloudDownloadOperations.Add(operation);
+        _db.ArtifactOperationBindings.Add(new() {Id = "original-download", OwnerKind = "workflow", OwnerId = run.Id.ToString(),
+            Slot = target.Id + ":download", OperationId = intent});
+        workset = workset with {NoRepeatExistingDownloads = true, Targets = [target with {DownloadTaskId = download.Id}]};
+        run.CurrentItemJson = WorkflowItemSnapshot.Capture(workset);
+        await _db.SaveChangesAsync();
+        var provider = new RecoverableProvider();
+        var recovery = new CloudDownloadRecoveryService(_db, [provider], new UserStoragePolicy(false));
+        _diagnostics = new(_db, new UserStoragePolicy(false), _services.GetRequiredService<IArtifactOperationStore>(), downloads: recovery);
+        return (task, run, workset, download, operation, provider, recovery);
+    }
+
+    [TestMethod]
+    public async Task Provider_recovery_rechecks_readonly_and_authorizes_only_the_original_target_without_removing_no_repeat()
+    {
+        var (task, run, workset, download, operation, provider, _) = await SeedRecoverableProvider();
+        var beforeTask = JsonSerializer.Serialize(task); var beforeRun = JsonSerializer.Serialize(run);
+        var beforeOperation = JsonSerializer.Serialize(operation); var beforeDownload = JsonSerializer.Serialize(download);
+        var cheap = await _diagnostics.DiagnoseAsync(task, run, default, verifyFiles: false);
+        Assert.AreEqual("RECOVERY_RECHECK_SOURCE", cheap.Row.ReasonCode); Assert.AreEqual(0, provider.Checks);
+        var result = await _diagnostics.DiagnoseAsync(task, run, default);
+        Assert.IsTrue(result.Row.CanContinue); Assert.AreEqual(1, provider.Checks);
+        var signal = JsonSerializer.Deserialize<CloudSelectionSignal>(result.SignalJson, JsonSerializerOptions.Web)!;
+        CollectionAssert.AreEqual(new[] {workset.Targets.Single().Id}, signal.ResumeTargetIds!);
+        Assert.IsTrue(signal.ObserveExistingOnly == true); Assert.IsTrue(signal.RevalidateExistingDownloads == true);
+        Assert.IsTrue(workset.NoRepeatExistingDownloads == true);
+        Assert.AreEqual(beforeTask, JsonSerializer.Serialize(task)); Assert.AreEqual(beforeRun, JsonSerializer.Serialize(run));
+        Assert.AreEqual(beforeOperation, JsonSerializer.Serialize(operation)); Assert.AreEqual(beforeDownload, JsonSerializer.Serialize(download));
+        Assert.IsFalse(Directory.Exists(download.DownloadPath)); Assert.AreEqual(1, await _db.DownloadTasks.CountAsync());
+    }
+
+    [TestMethod]
+    public async Task Provider_recovery_allows_empty_staging_directories_but_never_partial_files()
+    {
+        var (task, run, _, download, _, provider, _) = await SeedRecoverableProvider();
+        var staging = Path.Combine(download.DownloadPath, ".bakabase-fixture", "nested");
+        Directory.CreateDirectory(staging);
+        Assert.IsTrue((await _diagnostics.DiagnoseAsync(task, run, default)).Row.CanContinue);
+        Assert.AreEqual(1, provider.Checks);
+        await File.WriteAllTextAsync(Path.Combine(staging, "unfinished.part"), "retain");
+        Assert.AreEqual("RECOVERY_DOWNLOAD_HAS_OUTPUT", (await _diagnostics.DiagnoseAsync(task, run, default)).Row.ReasonCode);
+        Assert.AreEqual(1, provider.Checks);
+        Assert.AreEqual("retain", await File.ReadAllTextAsync(Path.Combine(staging, "unfinished.part")));
+    }
+
+    [DataTestMethod]
+    [DataRow("unknown-failure")]
+    [DataRow("unknown-operation")]
+    [DataRow("unknown-transfer")]
+    [DataRow("changed-source")]
+    [DataRow("changed-options")]
+    [DataRow("retained-file")]
+    [DataRow("download-progress")]
+    [DataRow("download-result")]
+    [DataRow("checkpoint-output")]
+    public async Task Provider_recovery_rejects_unknown_outcomes_changed_requests_and_retained_content(string mode)
+    {
+        var (task, run, workset, download, operation, provider, _) = await SeedRecoverableProvider();
+        switch (mode)
+        {
+            case "unknown-failure": download.Message = "Unknown connection failure"; break;
+            case "unknown-operation": operation.State = "unknown"; break;
+            case "unknown-transfer":
+                _db.CloudDownloadOperations.Add(new() {Id = "unknown-transfer", Kind = "transfer", State = "unknown",
+                    WorkflowRunId = run.Id, TargetId = workset.Targets.Single().Id}); break;
+            case "changed-source":
+                var target = workset.Targets.Single();
+                run.CurrentItemJson = WorkflowItemSnapshot.Capture(workset with {Targets = [target with
+                    {Sources = [target.SelectedSource! with {Url = "https://mypikpak.com/s/other"}]}]}); break;
+            case "changed-options": download.Options = "{}"; break;
+            case "retained-file": Directory.CreateDirectory(download.DownloadPath);
+                await File.WriteAllTextAsync(Path.Combine(download.DownloadPath, "official.bin"), "retained original bytes"); break;
+            case "download-progress": download.Progress = 1; break;
+            case "download-result": _db.DownloadResults.Add(new() {DownloadTaskId = download.Id, FilesJson = "[]"}); break;
+            case "checkpoint-output": run.CurrentItemJson = WorkflowItemSnapshot.Capture(workset with {Targets =
+                [workset.Targets.Single() with {DownloadArtifactId = "original-artifact"}]}); break;
+        }
+        await _db.SaveChangesAsync();
+        var result = await _diagnostics.DiagnoseAsync(task, run, default);
+        Assert.IsFalse(result.Row.CanContinue); Assert.AreEqual(0, provider.Checks);
+        Assert.AreEqual(1, await _db.DownloadTasks.CountAsync());
+        if (mode == "retained-file") Assert.AreEqual("retained original bytes", await File.ReadAllTextAsync(Path.Combine(download.DownloadPath, "official.bin")));
+    }
+
+    [TestMethod]
+    public async Task Provider_recovery_requires_current_access_and_rechecks_before_confirmation()
+    {
+        var (task, run, _, _, _, provider, _) = await SeedRecoverableProvider();
+        provider.Available = false;
+        var blocked = await _diagnostics.DiagnoseAsync(task, run, default);
+        Assert.IsFalse(blocked.Row.CanContinue); Assert.AreEqual("RECOVERY_SOURCE_STILL_BLOCKED", blocked.Row.ReasonCode);
+        Assert.AreEqual("PIKPAK_ORIGINAL_FILE_UNAVAILABLE", blocked.Row.CurrentProblemCode);
+        provider.Available = true;
+        var host = new RecordingHost {BeforeValidation = () => {provider.Available = false; return Task.CompletedTask;}};
+        var service = new AcquisitionRecoveryService(_db, _diagnostics, new(), host);
+        var preview = await service.PreviewAsync(new([task.Id])); Assert.AreEqual(1, preview.ContinuableCount);
+        var result = await service.ApplyAsync(new(preview.PreviewToken, [task.Id]));
+        Assert.AreEqual(0, host.Calls); Assert.AreEqual("RECOVERY_SOURCE_STILL_BLOCKED", result.Skipped.Single().ReasonCode);
+        Assert.AreEqual(1, await _db.DownloadTasks.CountAsync());
+    }
+
+    [TestMethod]
+    public async Task Provider_recovery_revalidates_again_when_the_original_workflow_resumes()
+    {
+        var (_, run, workset, download, _, provider, recovery) = await SeedRecoverableProvider();
+        provider.Available = false;
+        using var services = new ServiceCollection().AddSingleton(recovery).BuildServiceProvider();
+        var context = new WorkflowExecutionContext {RunId = run.Id, WorkflowDefinitionId = 0,
+            TriggerKind = CloudWorkflow.Trigger, Payload = workset, ActivityConfigJson = "{}",
+            Services = services, Logger = NullLogger.Instance};
+        var signal = JsonSerializer.Serialize(new CloudSelectionSignal {ObserveExistingOnly = true,
+            ResumeTargetIds = [workset.Targets.Single().Id], RevalidateExistingDownloads = true}, JsonSerializerOptions.Web);
+        var outcome = await new AwaitCloudDownloadsActivity().ResumeAsync(context, workset, signal, default);
+        Assert.IsNotNull(outcome.Suspension); Assert.AreEqual(1, provider.Checks);
+        Assert.AreEqual(DownloadTaskDbModelStatus.Failed, (await _db.DownloadTasks.AsNoTracking().SingleAsync(d => d.Id == download.Id)).Status);
+        Assert.AreEqual(1, await _db.DownloadTasks.CountAsync());
+        Assert.AreEqual(1, await _db.CloudDownloadOperations.CountAsync());
+    }
+
+    [TestMethod]
+    public async Task Provider_recovery_selects_only_certified_target_and_preserves_completed_and_unknown_siblings()
+    {
+        var (task, run, workset, _, _, provider, recovery) = await SeedRecoverableProvider();
+        var original = workset.Targets.Single();
+        var unknownDownload = new DownloadTaskDbModel {DownloadPath = Path.Combine(_root, "unknown"),
+            Status = DownloadTaskDbModelStatus.Failed, Message = "unknown failure"};
+        _db.DownloadTasks.Add(unknownDownload); await _db.SaveChangesAsync();
+        var unknown = original with {Id = "unknown", DownloadTaskId = unknownDownload.Id, Problem = "unknown failure"};
+        var completed = original with {Id = "complete", DownloadTaskId = null, Problem = null,
+            PublishedArtifactId = "retained-artifact", PublishedFiles = ["retained-file"]};
+        workset = workset with {Targets = [unknown, original, completed]};
+        run.CurrentItemJson = WorkflowItemSnapshot.Capture(workset); await _db.SaveChangesAsync();
+        var diagnosis = await _diagnostics.DiagnoseAsync(task, run, default);
+        Assert.IsTrue(diagnosis.Row.CanContinue);
+        var signal = JsonSerializer.Deserialize<CloudSelectionSignal>(diagnosis.SignalJson, JsonSerializerOptions.Web)!;
+        CollectionAssert.AreEqual(new[] {original.Id}, signal.ResumeTargetIds!);
+        provider.Available = false;
+        using var services = new ServiceCollection().AddSingleton(recovery).BuildServiceProvider();
+        var context = new WorkflowExecutionContext {RunId = run.Id, WorkflowDefinitionId = 0,
+            TriggerKind = CloudWorkflow.Trigger, Payload = workset, ActivityConfigJson = "{}", Services = services, Logger = NullLogger.Instance};
+        var outcome = await new AwaitCloudDownloadsActivity().ResumeAsync(context, workset, diagnosis.SignalJson, default);
+        Assert.IsNotNull(outcome.Suspension);
+        var saved = (DownloadWorkset)outcome.Suspension.Item!;
+        Assert.AreSame(unknown, saved.Targets[0]); Assert.AreSame(completed, saved.Targets[2]);
+        Assert.IsTrue(saved.NoRepeatExistingDownloads == true);
+        Assert.AreEqual(2, await _db.DownloadTasks.CountAsync()); Assert.AreEqual(1, await _db.CloudDownloadOperations.CountAsync());
+    }
+
+    [DataTestMethod]
+    [DataRow("file")]
+    [DataRow("options")]
+    [DataRow("result")]
+    public async Task Provider_probe_cannot_certify_a_local_snapshot_changed_during_network_access(string change)
+    {
+        var (task, run, _, download, _, provider, _) = await SeedRecoverableProvider();
+        provider.DuringProbe = async () =>
+        {
+            if (change == "file")
+            {
+                Directory.CreateDirectory(download.DownloadPath);
+                await File.WriteAllTextAsync(Path.Combine(download.DownloadPath, "partial.bin"), "keep");
+            }
+            else if (change == "options") download.Options = "{}";
+            else _db.DownloadResults.Add(new() {DownloadTaskId = download.Id, FilesJson = "[]"});
+            await _db.SaveChangesAsync();
+        };
+        var result = await _diagnostics.DiagnoseAsync(task, run, default);
+        Assert.IsFalse(result.Row.CanContinue); Assert.AreEqual(1, provider.Checks);
+        Assert.AreEqual(DownloadTaskDbModelStatus.Failed, (await _db.DownloadTasks.AsNoTracking().SingleAsync()).Status);
+    }
+
+    [TestMethod]
+    public async Task Conditional_download_start_validates_under_the_same_action_lock_and_leaves_failed_guard_unchanged()
+    {
+        var (_, run, workset, download, _, _, recovery) = await SeedRecoverableProvider();
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var otherEdit = _services.GetRequiredService<DownloaderManager>().WithTaskActionLock(download.Id, async () =>
+        {
+            entered.SetResult(); await release.Task;
+            download.Options = "{}"; await _db.SaveChangesAsync(); return true;
+        });
+        await entered.Task;
+        var checkedAfterEdit = false;
+        var conditional = _services.GetRequiredService<DownloadTaskService>().StartConditionally(download.Id, async ct =>
+        {
+            checkedAfterEdit = true;
+            var local = await recovery.CheckAsync(run.Id, workset.Targets.Single(), workset.OutputDirectory, false, ct);
+            if (!local.Candidate) throw new InvalidOperationException(local.ReasonCode);
+        });
+        Assert.IsFalse(checkedAfterEdit, "The final guard must wait for an existing task edit to complete.");
+        release.SetResult(); await otherEdit;
+        await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => conditional);
+        Assert.IsTrue(checkedAfterEdit);
+        Assert.AreEqual(DownloadTaskDbModelStatus.Failed, (await _db.DownloadTasks.AsNoTracking().SingleAsync()).Status);
+        Assert.AreEqual(1, await _db.DownloadTasks.CountAsync());
+    }
+}

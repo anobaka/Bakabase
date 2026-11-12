@@ -238,6 +238,12 @@ export type BakabaseAbstractionsModelsDomainConstantsAppNotificationBehavior = 0
 export type BakabaseAbstractionsModelsDomainConstantsAppNotificationSeverity = 0 | 1 | 2 | 3;
 
 /**
+ * [1: SevenZipParser]
+ * @format int32
+ */
+export type BakabaseAbstractionsModelsDomainConstantsArchiveOpenMode = 1;
+
+/**
  * [0: AllInOne, 1: RemoteBrowser, 2: PureClient]
  * @format int32
  */
@@ -492,6 +498,28 @@ export type BakabaseAbstractionsModelsDomainConstantsTextTypeShape = 1 | 2 | 3;
  * @format int32
  */
 export type BakabaseAbstractionsModelsDomainConstantsWellKnownTextType = 1 | 3 | 4 | 6 | 7 | 8 | 9;
+
+/**
+ * [437: DosLatin, 932: JapaneseShiftJis, 936: SimplifiedChineseGbk, 950: TraditionalChineseBig5, 65001: Utf8]
+ * @format int32
+ */
+export type BakabaseAbstractionsModelsDomainConstantsZipFileNameCodePage =
+  | 437
+  | 932
+  | 936
+  | 950
+  | 65001;
+
+/**
+ * [437: DosLatin, 932: JapaneseShiftJis, 936: SimplifiedChineseGbk, 950: TraditionalChineseBig5, 65001: Utf8]
+ * @format int32
+ */
+export type BakabaseAbstractionsModelsDomainConstantsZipPasswordCodePage =
+  | 437
+  | 932
+  | 936
+  | 950
+  | 65001;
 
 export interface BakabaseAbstractionsModelsDomainCustomProperty {
   /** @format int32 */
@@ -898,7 +926,7 @@ export interface BakabaseAbstractionsModelsDomainResourceExternalIdentity {
   id: number;
   /** @format int32 */
   resourceId: number;
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb, 14: BaiduNetdisk, 15: GoogleDrive, 16: Gofile] */
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb, 14: BaiduNetdisk, 15: GoogleDrive, 16: Gofile, 17: PikPak, 18: OneDrive, 19: Pixeldrain, 20: Mega, 21: TeraBox] */
   thirdPartyId: BakabaseInsideWorldModelsConstantsThirdPartyId;
   externalId: string;
   /** @format date-time */
@@ -1890,6 +1918,8 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomain
   downloadMode?: BakabaseInsideWorldBusinessComponentsDownloaderComponentsDownloadersExHentaiExHentaiDownloadMode;
   saveTorrentFile: boolean;
   fallbackToDirect: boolean;
+  /** [1: DirectDownload, 2: Fail] */
+  noTorrentAction?: BakabaseInsideWorldBusinessComponentsDownloaderComponentsDownloadersExHentaiExHentaiNoTorrentAction;
   preferOriginalImages: boolean;
   allowOriginalImageGpSpending: boolean;
   /** @format int64 */
@@ -2164,6 +2194,8 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputE
   downloadMode?: BakabaseInsideWorldBusinessComponentsDownloaderComponentsDownloadersExHentaiExHentaiDownloadMode;
   saveTorrentFile?: boolean;
   fallbackToDirect?: boolean;
+  /** [1: DirectDownload, 2: Fail] */
+  noTorrentAction?: BakabaseInsideWorldBusinessComponentsDownloaderComponentsDownloadersExHentaiExHentaiNoTorrentAction;
   preferOriginalImages?: boolean;
   allowOriginalImageGpSpending?: boolean;
   /** @format int64 */
@@ -2238,6 +2270,7 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputN
   customTestSites?: string[];
   selectedPresetTestSiteIds?: string[];
   thirdPartyProxies?: Record<string, BakabaseInsideWorldModelsConfigsNetworkOptionsProxyModel>;
+  downloadToolProxies?: Record<string, BakabaseInsideWorldModelsConfigsNetworkOptionsProxyModel>;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputNetworkOptionsPatchInputModelProxyOptions {
@@ -2303,6 +2336,7 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputT
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputThirdPartyOptionsPatchInput {
   simpleSearchEngines?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputThirdPartyOptionsPatchInputSimpleSearchEngineOptionsPatchInput[];
   automaticallyParsingPosts?: boolean;
+  postParserAcquisition?: BakabaseInsideWorldModelsConfigsThirdPartyOptionsPostParserAcquisitionOptions;
   /**
    * @format int32
    * @min 1
@@ -2358,10 +2392,67 @@ export interface BakabaseInsideWorldBusinessComponentsDependencyAbstractionsDepe
   installedVersionRecognized: boolean;
 }
 
+/**
+ * [1: NotInstalled, 2: Installed, 3: Installing]
+ * @format int32
+ */
+export type BakabaseInsideWorldBusinessComponentsDependencyAbstractionsModelsConstantsDependentComponentStatus =
+  1 | 2 | 3;
+
+export interface BakabaseInsideWorldBusinessComponentsDependencyImplementationsCloudToolsPythonRuntimeCandidateViewModel {
+  label: string;
+  configuration: BakabaseInsideWorldModelsConfigsPythonRuntimeConfiguration;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsDependencyImplementationsCloudToolsPythonRuntimeConfigurationViewModel {
+  configuration: BakabaseInsideWorldModelsConfigsPythonRuntimeConfiguration;
+  runtime?: BakabaseInsideWorldModelsConfigsPythonRuntimeInfo;
+  error?: string;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsDependencyImplementationsCloudToolsPythonRuntimeValidationViewModel {
+  isValid: boolean;
+  error?: string;
+  runtime?: BakabaseInsideWorldModelsConfigsPythonRuntimeInfo;
+  applied: boolean;
+  configuration: BakabaseInsideWorldModelsConfigsPythonRuntimeConfiguration;
+}
+
 export interface BakabaseInsideWorldBusinessComponentsDependencyImplementationsFfMpegHardwareAccelerationInfo {
   isDetected: boolean;
   preferredCodec: string;
   availableCodecs: string[];
+}
+
+export interface BakabaseInsideWorldBusinessComponentsDependencyModelsDependentComponentTarget {
+  os: string;
+  architecture: string;
+  minimumVersion?: string;
+  canAutoInstall: boolean;
+  runtime?: string;
+  notes?: string;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsDependencyModelsViewDependentComponentContextViewModel {
+  error?: string;
+  /** @format int32 */
+  installationProgress: number;
+  version?: string;
+  location?: string;
+  isRequired: boolean;
+  id: string;
+  name: string;
+  defaultLocation: string;
+  /** [1: NotInstalled, 2: Installed, 3: Installing] */
+  status: BakabaseInsideWorldBusinessComponentsDependencyAbstractionsModelsConstantsDependentComponentStatus;
+  isAvailableOnCurrentPlatform: boolean;
+  canAutoInstallOnCurrentPlatform: boolean;
+  supportedTargets: BakabaseInsideWorldBusinessComponentsDependencyModelsDependentComponentTarget[];
+  dependencyIds: string[];
+  currentOs: string;
+  currentArchitecture: string;
+  currentRuntime?: string;
+  description?: string;
 }
 
 /**
@@ -2405,7 +2496,7 @@ export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsMode
   id: number;
   key: string;
   name?: string;
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb, 14: BaiduNetdisk, 15: GoogleDrive, 16: Gofile] */
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb, 14: BaiduNetdisk, 15: GoogleDrive, 16: Gofile, 17: PikPak, 18: OneDrive, 19: Pixeldrain, 20: Mega, 21: TeraBox] */
   thirdPartyId: BakabaseInsideWorldModelsConstantsThirdPartyId;
   /** @format int32 */
   type: number;
@@ -2413,6 +2504,12 @@ export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsMode
   progress: number;
   /** @format int64 */
   downloadedBytes?: number;
+  /** @format int64 */
+  transferredBytes?: number;
+  /** @format int64 */
+  totalBytes?: number;
+  /** @format date-time */
+  transferUpdatedAt?: string;
   /** @format double */
   downloadSpeedBytesPerSecond?: number;
   /** @format double */
@@ -2471,7 +2568,7 @@ export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsMode
 }
 
 export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloaderDefinition {
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb, 14: BaiduNetdisk, 15: GoogleDrive, 16: Gofile] */
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb, 14: BaiduNetdisk, 15: GoogleDrive, 16: Gofile, 17: PikPak, 18: OneDrive, 19: Pixeldrain, 20: Mega, 21: TeraBox] */
   thirdPartyId: BakabaseInsideWorldModelsConstantsThirdPartyId;
   /** @format int32 */
   taskType: number;
@@ -2509,13 +2606,13 @@ export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsMode
 }
 
 export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsInputDownloadRecordQueryInputModel {
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb, 14: BaiduNetdisk, 15: GoogleDrive, 16: Gofile] */
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb, 14: BaiduNetdisk, 15: GoogleDrive, 16: Gofile, 17: PikPak, 18: OneDrive, 19: Pixeldrain, 20: Mega, 21: TeraBox] */
   thirdPartyId: BakabaseInsideWorldModelsConstantsThirdPartyId;
   keys: string[];
 }
 
 export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsInputDownloadTaskAddInputModel {
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb, 14: BaiduNetdisk, 15: GoogleDrive, 16: Gofile] */
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb, 14: BaiduNetdisk, 15: GoogleDrive, 16: Gofile, 17: PikPak, 18: OneDrive, 19: Pixeldrain, 20: Mega, 21: TeraBox] */
   thirdPartyId: BakabaseInsideWorldModelsConstantsThirdPartyId;
   /** @format int32 */
   type: number;
@@ -2541,7 +2638,7 @@ export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsMode
 
 export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsInputDownloadTaskDeleteInputModel {
   ids?: number[];
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb, 14: BaiduNetdisk, 15: GoogleDrive, 16: Gofile] */
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb, 14: BaiduNetdisk, 15: GoogleDrive, 16: Gofile, 17: PikPak, 18: OneDrive, 19: Pixeldrain, 20: Mega, 21: TeraBox] */
   thirdPartyId?: BakabaseInsideWorldModelsConstantsThirdPartyId;
 }
 
@@ -2588,10 +2685,17 @@ export type BakabaseInsideWorldBusinessComponentsDownloaderComponentsDownloaders
 export type BakabaseInsideWorldBusinessComponentsDownloaderComponentsDownloadersExHentaiExHentaiDownloadTaskType =
   1 | 2 | 3;
 
+/**
+ * [1: DirectDownload, 2: Fail]
+ * @format int32
+ */
+export type BakabaseInsideWorldBusinessComponentsDownloaderComponentsDownloadersExHentaiExHentaiNoTorrentAction =
+  1 | 2;
+
 export interface BakabaseInsideWorldBusinessComponentsDownloaderModelsDbDownloadRecordDbModel {
   /** @format int32 */
   id: number;
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb, 14: BaiduNetdisk, 15: GoogleDrive, 16: Gofile] */
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb, 14: BaiduNetdisk, 15: GoogleDrive, 16: Gofile, 17: PikPak, 18: OneDrive, 19: Pixeldrain, 20: Mega, 21: TeraBox] */
   thirdPartyId: BakabaseInsideWorldModelsConstantsThirdPartyId;
   /** @minLength 1 */
   key: string;
@@ -2631,6 +2735,8 @@ export interface BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntry {
   ext?: string;
   /** [0: Unknown, 100: Directory, 200: Image, 300: CompressedFileEntry, 400: CompressedFilePart, 500: Symlink, 600: Video, 700: Audio, 1000: Drive, 10000: Invalid] */
   type: BakabaseInsideWorldBusinessComponentsFileExplorerIwFsType;
+  /** @format int64 */
+  size?: number;
   passwordsForDecompressing: string[];
 }
 
@@ -2773,6 +2879,44 @@ export interface BakabaseInsideWorldBusinessComponentsPostParserControllersQuery
   links: string[];
 }
 
+export interface BakabaseInsideWorldBusinessComponentsPostParserModelsDomainConfirmPostParserContentReadinessInput {
+  /** @format int32 */
+  revision: number;
+  /** @format int32 */
+  workflowRunId?: number;
+  /**
+   * @minLength 64
+   * @maxLength 64
+   */
+  expectedContentFingerprint: string;
+  /** @format int32 */
+  expectedDecisionVersion: number;
+  /**
+   * @maxItems 256
+   * @minItems 1
+   */
+  notRequiredBlockIds: string[];
+  /** @maxLength 1000 */
+  reason?: string;
+  continueParsing: boolean;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsPostParserModelsDomainConfirmPostParserContentReviewInput {
+  scope: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserContentReviewScope;
+  requestId: string;
+  tasks: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserContentReviewSelection[];
+}
+
+export interface BakabaseInsideWorldBusinessComponentsPostParserModelsDomainConfirmPostParserTaskDeletionInput {
+  scope: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTaskFilterScope;
+  tasks: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTaskDeletionSelection[];
+}
+
+export interface BakabaseInsideWorldBusinessComponentsPostParserModelsDomainConfirmPostParserTaskPurchasesInput {
+  scope: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTaskFilterScope;
+  tasks: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTaskPurchaseSelection[];
+}
+
 /**
  * [1: DownloadInfo]
  * @format int32
@@ -2793,7 +2937,161 @@ export type BakabaseInsideWorldBusinessComponentsPostParserModelsDomainConstants
 export type BakabaseInsideWorldBusinessComponentsPostParserModelsDomainConstantsPostParserTaskStatus =
   0 | 1 | 2 | 3 | 4;
 
+export interface BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserContentReadinessEvent {
+  id: string;
+  /** @format int32 */
+  version: number;
+  action: string;
+  decisionId?: string;
+  contentFingerprint: string;
+  /** @format int32 */
+  sourceRevision: number;
+  /** @format int32 */
+  workflowRunId?: number;
+  blockIds: string[];
+  reason: string;
+  /** @format date-time */
+  createdAt: string;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserContentReadinessView {
+  /** @format int32 */
+  taskId: number;
+  /** @format int32 */
+  revision: number;
+  /** @format int32 */
+  workflowRunId?: number;
+  source?: string;
+  contentSnapshot?: BakabaseModulesPostParserModelsDomainPostContent;
+  contentFingerprint?: string;
+  /** @format int32 */
+  decisionVersion: number;
+  status: string;
+  basis?: string;
+  assessment?: BakabaseModulesPostParserModelsDomainPostContentReadinessAssessment;
+  activeDecisionId?: string;
+  hasStaleDecision: boolean;
+  canConfirm: boolean;
+  canContinue: boolean;
+  canRevoke: boolean;
+  canRefresh: boolean;
+  parsedResultMayBeStale: boolean;
+  history: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserContentReadinessEvent[];
+  evidenceEquivalences: BakabaseModulesPostParserServicesPostContentEvidenceEquivalenceProof[];
+}
+
+export interface BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserContentReviewAction {
+  targetId: string;
+  action: string;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserContentReviewOutcome {
+  /** @format int32 */
+  taskId: number;
+  status: string;
+  /** @format int32 */
+  workflowRunId?: number;
+  reviewId?: string;
+  reason?: string;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserContentReviewPreview {
+  scope: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserContentReviewScope;
+  /** @format int32 */
+  matchedCount: number;
+  /** @format double */
+  autoBuyThreshold: number;
+  /** @format double */
+  minimumRemainingCoins: number;
+  tasks: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserContentReviewTask[];
+}
+
+export interface BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserContentReviewResult {
+  requestId: string;
+  /** @format int32 */
+  requestedCount: number;
+  /** @format int32 */
+  queuedCount: number;
+  /** @format int32 */
+  unchangedCount: number;
+  /** @format int32 */
+  skippedCount: number;
+  /** @format int32 */
+  failedCount: number;
+  items: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserContentReviewOutcome[];
+}
+
+export interface BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserContentReviewScope {
+  keyword?: string;
+  status?: string;
+  reasonCode?: string;
+  taskIds?: number[];
+}
+
+export interface BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserContentReviewSelection {
+  /** @format int32 */
+  taskId: number;
+  /** @format int32 */
+  revision: number;
+  /** @format int32 */
+  workflowRunId: number;
+  /** @format int32 */
+  decisionVersion: number;
+  contentFingerprint: string;
+  quoteHash: string;
+  targets: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserContentReviewAction[];
+}
+
+export interface BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserContentReviewTarget {
+  targetId: string;
+  floor?: string;
+  blockIds: string[];
+  blocks: BakabaseModulesPostParserModelsDomainPostContentLock[];
+  /** @format double */
+  price?: number;
+  priceText?: string;
+  currencyCode?: string;
+  currencyName?: string;
+  canBuy: boolean;
+  canMarkNotRequired: boolean;
+  buyBlockReason?: string;
+  defaultAction: string;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserContentReviewTask {
+  /** @format int32 */
+  taskId: number;
+  /** [5: SoulPlus] */
+  source: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainConstantsPostParserSource;
+  title?: string;
+  link?: string;
+  /** @format int32 */
+  revision: number;
+  /** @format int32 */
+  workflowRunId?: number;
+  /** @format int32 */
+  decisionVersion: number;
+  contentFingerprint?: string;
+  quoteHash: string;
+  canSubmit: boolean;
+  blockReason?: string;
+  alreadyUnlocked: boolean;
+  targets: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserContentReviewTarget[];
+}
+
+export interface BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserCurrencyTotal {
+  currencyCode?: string;
+  currencyName?: string;
+  /** @format double */
+  total: number;
+  totalText: string;
+}
+
 export interface BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserPurchaseQuote {
+  currencyCode?: string;
+  currencyName?: string;
+  eligibleTotalText: string;
+  excludedTotalText: string;
   eligibleLockUrls: string[];
   /** @format double */
   eligibleTotal: number;
@@ -2803,6 +3101,36 @@ export interface BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPost
   excludedCount: number;
   /** @format int32 */
   unknownPriceCount: number;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserReparseBatchItem {
+  /** @format int32 */
+  taskId: number;
+  status: string;
+  /** @format int32 */
+  workflowRunId?: number;
+  reason?: string;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserReparseBatchResult {
+  /** @format int32 */
+  requestedCount: number;
+  /** @format int32 */
+  queuedCount: number;
+  /** @format int32 */
+  skippedCount: number;
+  /** @format int32 */
+  failedCount: number;
+  items: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserReparseBatchItem[];
+}
+
+export interface BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserReparseSelection {
+  /** @format int32 */
+  taskId: number;
+  /** @format int32 */
+  revision: number;
+  /** @format int32 */
+  workflowRunId?: number;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTask {
@@ -2815,6 +3143,7 @@ export interface BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPost
   content?: string;
   contentSnapshot?: BakabaseModulesPostParserModelsDomainPostContent;
   availability?: BakabaseModulesPostParserModelsDomainPostAvailabilityAssessment;
+  attentionReasonCodes: string[];
   parsingState?: string;
   parsingMessage?: string;
   /** @format int32 */
@@ -2835,12 +3164,187 @@ export interface BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPost
   workflowRunId?: number;
   /** [1: Pending, 2: Running, 3: Success, 4: Failed, 5: Cancelled, 6: Interrupted, 7: Waiting] */
   workflowStatus?: BakabaseModulesWorkflowAbstractionsModelsDomainConstantsWorkflowRunStatus;
+  acquisitionHandoff?: BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionHandoffView;
   targets: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainConstantsPostParseTarget[];
   results?: {
     DownloadInfo: SystemTextJsonNodesJsonNode;
   };
+  downloadMedia: BakabaseModulesPostParserModelsDomainPostDownloadMediaView;
   error?: string;
   isDeleted: boolean;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTaskDeletionOutcome {
+  /** @format int32 */
+  taskId: number;
+  outcome: string;
+  reason?: string;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTaskDeletionPreview {
+  scope: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTaskFilterScope;
+  /** @format int32 */
+  count: number;
+  tasks: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTaskDeletionSelection[];
+}
+
+export interface BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTaskDeletionResult {
+  /** @format int32 */
+  requestedCount: number;
+  /** @format int32 */
+  deletedCount: number;
+  /** @format int32 */
+  skippedCount: number;
+  items: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTaskDeletionOutcome[];
+}
+
+export interface BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTaskDeletionSelection {
+  /** @format int32 */
+  taskId: number;
+  /** @format int32 */
+  revision: number;
+  /** @format int32 */
+  workflowRunId?: number;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTaskFilterScope {
+  keyword?: string;
+  status?: string;
+  reasonCode?: string;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTaskPage {
+  items: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTask[];
+  /** @format int32 */
+  pageIndex: number;
+  /** @format int32 */
+  pageSize: number;
+  /** @format int32 */
+  totalCount: number;
+  /** @format int32 */
+  globalTotal: number;
+  attentionReasonCounts: Record<string, number>;
+  statusCounts: Record<string, number>;
+  runningStages: Record<string, number>;
+  /** @format int32 */
+  runningTaskId?: number;
+  /** @format int32 */
+  startableCount: number;
+  /** @format int32 */
+  pendingHandoffCount: number;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTaskPurchaseOutcome {
+  /** @format int32 */
+  taskId: number;
+  status: string;
+  /** @format int32 */
+  workflowRunId?: number;
+  reason?: string;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTaskPurchasePreview {
+  scope: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTaskFilterScope;
+  /** @format int32 */
+  matchedCount: number;
+  /** @format int32 */
+  actionableCount: number;
+  /** @format double */
+  knownTotalCost: number;
+  knownTotalCostText: string;
+  currencyCode?: string;
+  currencyName?: string;
+  currencyTotals: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserCurrencyTotal[];
+  /** @format double */
+  autoBuyThreshold: number;
+  /** @format double */
+  minimumRemainingCoins: number;
+  skipReasonCounts: Record<string, number>;
+  tasks: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTaskPurchaseSelection[];
+  skipped: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTaskPurchaseSkip[];
+}
+
+export interface BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTaskPurchaseResult {
+  /** @format int32 */
+  requestedCount: number;
+  /** @format int32 */
+  queuedCount: number;
+  /** @format int32 */
+  skippedCount: number;
+  /** @format int32 */
+  failedCount: number;
+  items: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTaskPurchaseOutcome[];
+}
+
+export interface BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTaskPurchaseSelection {
+  /** @format int32 */
+  taskId: number;
+  /** @format int32 */
+  revision: number;
+  /** @format int32 */
+  workflowRunId: number;
+  lockUrls: string[];
+  /** @format double */
+  maxTotalCost: number;
+  maxTotalCostText: string;
+  currencyCode?: string;
+  currencyName?: string;
+  quoteHash: string;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTaskPurchaseSkip {
+  /** @format int32 */
+  taskId: number;
+  reason: string;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTaskSearchInput {
+  /** @format int32 */
+  pageIndex: number;
+  /** @format int32 */
+  pageSize: number;
+  keyword?: string;
+  status?: string;
+  reasonCode?: string;
+  /** @format int32 */
+  locateTaskId?: number;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsPostParserModelsDomainReParseFailedPostParserTasksInput {
+  tasks: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserReparseSelection[];
+}
+
+export interface BakabaseInsideWorldBusinessComponentsPostParserModelsDomainRefreshPostParserContentReadinessInput {
+  /** @format int32 */
+  revision: number;
+  /** @format int32 */
+  workflowRunId?: number;
+  /**
+   * @minLength 64
+   * @maxLength 64
+   */
+  expectedContentFingerprint: string;
+  /** @format int32 */
+  expectedDecisionVersion: number;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsPostParserModelsDomainRevokePostParserContentReadinessInput {
+  /** @format int32 */
+  revision: number;
+  /** @format int32 */
+  workflowRunId?: number;
+  /**
+   * @minLength 64
+   * @maxLength 64
+   */
+  expectedContentFingerprint: string;
+  /** @format int32 */
+  expectedDecisionVersion: number;
+  /**
+   * @minLength 1
+   * @maxLength 64
+   */
+  decisionId: string;
 }
 
 export interface BakabaseInsideWorldModelsConfigsFileSystemOptions {
@@ -2888,6 +3392,7 @@ export interface BakabaseInsideWorldModelsConfigsNetworkOptions {
   /** @format int32 */
   btMaxConcurrentDownloads: number;
   thirdPartyProxies?: Record<string, BakabaseInsideWorldModelsConfigsNetworkOptionsProxyModel>;
+  downloadToolProxies?: Record<string, BakabaseInsideWorldModelsConfigsNetworkOptionsProxyModel>;
   customTestSites?: string[];
   selectedPresetTestSiteIds?: string[];
 }
@@ -2917,9 +3422,31 @@ export interface BakabaseInsideWorldModelsConfigsNetworkOptionsProxyOptionsProxy
   domain?: string;
 }
 
+export interface BakabaseInsideWorldModelsConfigsPythonRuntimeConfiguration {
+  /** [0: Managed, 1: External, 2: Conda] */
+  mode: BakabaseInsideWorldModelsConfigsPythonRuntimeMode;
+  pythonExecutable?: string;
+  condaExecutable?: string;
+  condaPrefix?: string;
+}
+
+export interface BakabaseInsideWorldModelsConfigsPythonRuntimeInfo {
+  pythonVersion: string;
+  architecture: string;
+  executable: string;
+  sourceFingerprint: string;
+}
+
+/**
+ * [0: Managed, 1: External, 2: Conda]
+ * @format int32
+ */
+export type BakabaseInsideWorldModelsConfigsPythonRuntimeMode = 0 | 1 | 2;
+
 export interface BakabaseInsideWorldModelsConfigsThirdPartyOptions {
   simpleSearchEngines?: BakabaseInsideWorldModelsConfigsThirdPartyOptionsSimpleSearchEngineOptions[];
   automaticallyParsingPosts: boolean;
+  postParserAcquisition: BakabaseInsideWorldModelsConfigsThirdPartyOptionsPostParserAcquisitionOptions;
   /**
    * @format int32
    * @min 1
@@ -2932,6 +3459,12 @@ export interface BakabaseInsideWorldModelsConfigsThirdPartyOptions {
    * @max 2147483647
    */
   postParserAiMaxConcurrency: number;
+}
+
+export interface BakabaseInsideWorldModelsConfigsThirdPartyOptionsPostParserAcquisitionOptions {
+  enabled: boolean;
+  /** @maxLength 4096 */
+  outputDirectory?: string;
 }
 
 export interface BakabaseInsideWorldModelsConfigsThirdPartyOptionsSimpleSearchEngineOptions {
@@ -3143,7 +3676,7 @@ export type BakabaseInsideWorldModelsConstantsPlaylistItemType = 1 | 2 | 3 | 4;
 export type BakabaseInsideWorldModelsConstantsStartupPage = 0 | 1;
 
 /**
- * [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb, 14: BaiduNetdisk, 15: GoogleDrive, 16: Gofile]
+ * [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb, 14: BaiduNetdisk, 15: GoogleDrive, 16: Gofile, 17: PikPak, 18: OneDrive, 19: Pixeldrain, 20: Mega, 21: TeraBox]
  * @format int32
  */
 export type BakabaseInsideWorldModelsConstantsThirdPartyId =
@@ -3162,7 +3695,12 @@ export type BakabaseInsideWorldModelsConstantsThirdPartyId =
   | 13
   | 14
   | 15
-  | 16;
+  | 16
+  | 17
+  | 18
+  | 19
+  | 20
+  | 21;
 
 export interface BakabaseInsideWorldModelsModelsAosPreviewerItem {
   filePath: string;
@@ -3173,7 +3711,7 @@ export interface BakabaseInsideWorldModelsModelsAosPreviewerItem {
 }
 
 export interface BakabaseInsideWorldModelsModelsAosThirdPartyRequestStatistics {
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb, 14: BaiduNetdisk, 15: GoogleDrive, 16: Gofile] */
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb, 14: BaiduNetdisk, 15: GoogleDrive, 16: Gofile, 17: PikPak, 18: OneDrive, 19: Pixeldrain, 20: Mega, 21: TeraBox] */
   id: BakabaseInsideWorldModelsConstantsThirdPartyId;
   counts?: Record<string, number>;
   /** @format int64 */
@@ -3210,7 +3748,7 @@ export interface BakabaseInsideWorldModelsModelsDtosDashboardStatistics {
 }
 
 export interface BakabaseInsideWorldModelsModelsDtosDashboardStatisticsDownloaderTaskCount {
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb, 14: BaiduNetdisk, 15: GoogleDrive, 16: Gofile] */
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb, 14: BaiduNetdisk, 15: GoogleDrive, 16: Gofile, 17: PikPak, 18: OneDrive, 19: Pixeldrain, 20: Mega, 21: TeraBox] */
   id: BakabaseInsideWorldModelsConstantsThirdPartyId;
   statusAndCounts: Record<string, number>;
 }
@@ -3230,7 +3768,7 @@ export interface BakabaseInsideWorldModelsModelsDtosDashboardStatisticsTextAndCo
 }
 
 export interface BakabaseInsideWorldModelsModelsDtosDashboardStatisticsThirdPartyRequestCount {
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb, 14: BaiduNetdisk, 15: GoogleDrive, 16: Gofile] */
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb, 14: BaiduNetdisk, 15: GoogleDrive, 16: Gofile, 17: PikPak, 18: OneDrive, 19: Pixeldrain, 20: Mega, 21: TeraBox] */
   id: BakabaseInsideWorldModelsConstantsThirdPartyId;
   /** @format int32 */
   resultType: number;
@@ -3865,6 +4403,53 @@ export interface BakabaseModulesAIServicesTranslationResult {
   targetLanguage: string;
 }
 
+export interface BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionCoverCandidate {
+  url: string;
+  kind: string;
+  evidence: string[];
+}
+
+export interface BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionCreationOrigin {
+  kind: string;
+  module?: string;
+  entityKind?: string;
+  entityId?: string;
+  revision?: string;
+  title?: string;
+  url?: string;
+  builderId?: string;
+  sourceState: string;
+}
+
+export interface BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionDeliveryLayout {
+  /** @format int32 */
+  version: number;
+  settings: BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionDeliverySettings;
+  /** @format int32 */
+  taskId: number;
+  rootDirectory: string;
+  taskDirectory: string;
+  partDirectories: Record<string, string>;
+}
+
+export interface BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionDeliverySettings {
+  rootDirectory: string;
+  directoryTemplate: string;
+  partDirectoryTemplate: string;
+  contentLayout?: BakabaseModulesWorkflowArtifactsArtifactDeliveryPolicy;
+}
+
+export interface BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionHandoffView {
+  id: string;
+  source: BakabaseModulesWorkflowAbstractionsModelsDomainWorkflowSourceRef;
+  status: string;
+  code?: string;
+  /** @format int32 */
+  acquisitionTaskId?: number;
+  /** @format date-time */
+  updatedAt: string;
+}
+
 export interface BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionLead {
   /** @format int32 */
   id: number;
@@ -3891,34 +4476,175 @@ export interface BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionLe
   sourceName?: string;
 }
 
+export interface BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionPartDirectories {
+  download?: BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionStageDirectory;
+  processing?: BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionStageDirectory;
+  delivery?: BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionStageDirectory;
+}
+
+export interface BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionPlan {
+  publishRetainedFiles: boolean;
+  /** @format int32 */
+  version: number;
+  extractionLayout?: string;
+  downloadLayout?: string;
+  title: string;
+  outputDirectory: string;
+  delivery: string;
+  deliveryLayout?: BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionDeliveryLayout;
+  stageDirectories?: BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionStageDirectories;
+  storagePolicy?: BakabaseModulesWorkflowArtifactsArtifactStoragePolicy;
+  adaptiveFileProcessing: boolean;
+  /** @format int32 */
+  adaptiveFileProcessingMaxIterations: number;
+  adaptiveFileProcessingContext?: string;
+  sourceProviderPriority?: string[];
+  parts: BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionPlanPart[];
+  coverCandidates: BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionCoverCandidate[];
+}
+
+export interface BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionPlanArtifactEvidence {
+  partId: string;
+  artifactId: string;
+  operationId: string;
+  kind: string;
+  rootDirectory: string;
+  fingerprint: string;
+  manifest: BakabaseModulesWorkflowArtifactsArtifactManifest;
+}
+
+export interface BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionPlanArtifactInput {
+  /** @format int32 */
+  taskId: number;
+  /** @format int32 */
+  previousRunId: number;
+  artifactId: string;
+  operationId: string;
+  fingerprint: string;
+}
+
+export interface BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionPlanPart {
+  id: string;
+  title?: string;
+  sources: BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionPlanSource[];
+  selectedSourceId?: string;
+  selectionMode?: string;
+  storagePolicy?: BakabaseModulesWorkflowArtifactsArtifactStoragePolicyOverride;
+  processing?: BakabaseModulesWorkflowArtifactsFileProcessingPlan;
+  processingSource?: BakabaseModulesWorkflowAbstractionsModelsDomainWorkflowSourceRef;
+  appliedProcessingRevisionId?: string;
+  continueFrom?: BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionPlanArtifactInput;
+  useAdaptiveAssessment?: boolean;
+  deliveryProjectionFingerprint?: string;
+}
+
+export interface BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionPlanRevision {
+  /** @format int32 */
+  revision: number;
+  plan: BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionPlan;
+  sourceRefs: BakabaseModulesWorkflowAbstractionsModelsDomainWorkflowSourceRef[];
+  /** @format date-time */
+  createdAt: string;
+  reason?: string;
+  /** @format int32 */
+  previousRunId?: number;
+  artifactEvidence?: BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionPlanArtifactEvidence[];
+  sourceRevision?: BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionPlanSourceRevisionEvidence;
+}
+
+export interface BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionPlanSource {
+  id: string;
+  url: string;
+  originalUrl?: string;
+  resolutionChain?: string[];
+  kind: string;
+  providerId?: string;
+  accessCode?: string;
+  archivePassword?: string;
+  methodId?: string;
+  accountId?: string;
+  processing?: BakabaseModulesWorkflowArtifactsFileProcessingPlan;
+  originalProcessingPlanJson?: string;
+  processingIssueCode?: string;
+  processingSource?: BakabaseModulesWorkflowAbstractionsModelsDomainWorkflowSourceRef;
+  appliedProcessingRevisionId?: string;
+  sourceCorrection?: any;
+}
+
+export interface BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionPlanSourceRevisionEvidence {
+  decisionId: string;
+  partId: string;
+  previousSourceId: string;
+  selectedSourceId: string;
+  evidence: string;
+  evidenceVersion: string;
+  selectedExecutionIdentity?: string;
+}
+
+export interface BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionStageDirectories {
+  /** @format int32 */
+  version: number;
+  /** @format int32 */
+  taskId: number;
+  parts: Record<
+    string,
+    BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionPartDirectories
+  >;
+}
+
+export interface BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionStageDirectory {
+  directory: string;
+  ownership: string;
+  evidence: string;
+  allocation?: BakabaseModulesWorkflowArtifactsArtifactDirectoryScope;
+}
+
 export interface BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionTask {
   /** @format int32 */
   id: number;
+  /** @format date-time */
+  deletedAt?: string;
+  isDeleted: boolean;
   /** @format int32 */
-  resourceId: number;
+  resourceId?: number;
+  /** @format int32 */
+  originResourceId?: number;
+  creationOrigins: BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionCreationOrigin[];
   /** @format int32 */
   collectionId?: number;
+  title?: string;
+  builderId?: string;
+  phase?: string;
+  /** @format int32 */
+  planRevision: number;
   /** [1: PlatformHolding, 2: SharedPage, 3: SharedDocument, 4: DirectUrl, 5: Magnet, 6: Manual, 7: Torrent] */
   leadKind: BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisitionLeadKind;
   leadValue?: string;
   /** @format int32 */
   acquisitionLeadId?: number;
   /** @format int32 */
-  recipeDefinitionId: number;
+  recipeDefinitionId?: number;
   /** @format int32 */
   workflowRunId?: number;
   /** [1: Pending, 2: Running, 3: Waiting, 4: Completed, 5: Failed, 6: Cancelled] */
   status: BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisitionStatus;
+  downloadActivity?: string;
+  stage: string;
   /** [1: WaitingForFile, 2: AmbiguousInboxFile, 3: PaidContent, 4: NoLinks, 5: ChooseLink, 6: PasswordUnknown, 7: TargetExists, 8: PickDirectory, 9: PlatformFetch, 10: ExtractionPlanUnknown] */
   waitReason?: BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisitionWaitReason;
   targetDirectory?: string;
   error?: string;
+  attentionTags: string[];
   /** @format date-time */
   createdAt: string;
   /** @format date-time */
   updatedAt: string;
   /** @format date-time */
   completedAt?: string;
+  /** @format date-time */
+  executionStartedAt?: string;
+  /** @format date-time */
+  executionCompletedAt?: string;
   purchases: BakabaseModulesAcquisitionAbstractionsModelsDomainPurchaseRecord[];
   resourceName?: string;
   recipeName?: string;
@@ -3931,7 +4657,7 @@ export interface BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionTa
 }
 
 /**
- * [0: Unknown, 1: DirectUrl, 2: Baidu, 3: Xunlei, 4: Feimao, 5: Cloudflare, 6: Mega, 7: PikPak, 8: GoogleDrive, 9: OneDrive, 10: Magnet, 11: OneOneFive, 12: Gofile, 13: Pixeldrain]
+ * [0: Unknown, 1: DirectUrl, 2: Baidu, 3: Xunlei, 4: Feimao, 5: Cloudflare, 6: Mega, 7: PikPak, 8: GoogleDrive, 9: OneDrive, 10: Magnet, 11: OneOneFive, 12: Gofile, 13: Pixeldrain, 14: TeraBox]
  * @format int32
  */
 export type BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisitionDriveKind =
@@ -3948,7 +4674,8 @@ export type BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisiti
   | 10
   | 11
   | 12
-  | 13;
+  | 13
+  | 14;
 
 /**
  * [1: PlatformHolding, 2: SharedPage, 3: SharedDocument, 4: DirectUrl, 5: Magnet, 6: Manual, 7: Torrent]
@@ -4033,7 +4760,19 @@ export interface BakabaseModulesAcquisitionModelsDomainAcquisitionOptions {
   inboxDirectory?: string;
   libraryRootDirectory?: string;
   directoryTemplate: string;
+  downloadRootDirectory?: string;
+  deliveryRootDirectory?: string;
+  deliveryDirectoryTemplate: string;
+  deliveryPartDirectoryTemplate: string;
+  deliveryContentLayout: BakabaseModulesWorkflowArtifactsArtifactDeliveryPolicy;
+  keepSupersededDeliveryFiles: boolean;
+  processingWorkspaceDirectory?: string;
+  storagePolicy: BakabaseModulesWorkflowArtifactsArtifactStoragePolicy;
+  /** @format int64 */
+  minimumFreeSpaceBytes: number;
+  useEmergencySpaceReserve: boolean;
   preferredDriveKinds: BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisitionDriveKind[];
+  sourceProviderPriority: string[];
   recipeByLeadKind: {
     PlatformHolding: string;
     SharedPage: string;
@@ -5404,15 +6143,49 @@ export interface BakabaseModulesDataSyncWireDataSyncSourceAttention {
   awaitingReview: number;
 }
 
+export interface BakabaseModulesDownloaderCloudCloudAccessCodeRevision {
+  correctionId: string;
+  expectedSourceIdentity: string;
+  previousAccessCode?: string;
+  previousFailureCode?: string;
+  newAccessCode?: string;
+  basis: string;
+  evidenceReference?: string;
+  evidence?: string;
+  /** @format date-time */
+  appliedAt: string;
+}
+
 export interface BakabaseModulesDownloaderCloudCloudSource {
   id: string;
   url: string;
+  originalUrl?: string;
+  resolutionChain: string[];
   providerId: string;
+  methodId?: string;
+  methodScope?: string;
+  accountId?: string;
+  accountVersion?: string;
   kind: string;
   accessCode?: string;
+  accessCodeRevisions?: BakabaseModulesDownloaderCloudCloudAccessCodeRevision[];
   archivePassword?: string;
   extractionPlanJson?: string;
   groupId?: string;
+  version?: string;
+}
+
+export interface BakabaseModulesDownloaderCloudSourceAvailabilityResult {
+  status: string;
+  reasonCode: string;
+  probeId: string;
+  /** @format int32 */
+  probeVersion: number;
+  evidence: Record<string, string>;
+  /** @format date-time */
+  checkedAt: string;
+  /** @format date-time */
+  expiresAt: string;
 }
 
 export interface BakabaseModulesDownloaderModelsTasksDownloadTask {
@@ -5908,6 +6681,7 @@ export interface BakabaseModulesPostParserModelsDomainPostAvailabilityAssessment
   status: string;
   evidence: string[];
   reason?: string;
+  contentReadiness?: BakabaseModulesPostParserModelsDomainPostContentReadinessAssessment;
 }
 
 export interface BakabaseModulesPostParserModelsDomainPostComment {
@@ -5931,7 +6705,34 @@ export interface BakabaseModulesPostParserModelsDomainPostContent {
   scope: string;
   /** @format double */
   balance?: number;
+  currencyCode?: string;
+  currencyName?: string;
+  readiness?: BakabaseModulesPostParserModelsDomainPostContentReadinessAssessment;
+  sourceEvidenceFingerprint?: string;
+  readerEvidence?: BakabaseModulesPostParserModelsDomainPostContentReaderEvidence;
   sourceHint?: string;
+}
+
+export interface BakabaseModulesPostParserModelsDomainPostContentBlockDecision {
+  blockId: string;
+  relevance: string;
+  purpose: string;
+  evidence: string[];
+  reason?: string;
+}
+
+export interface BakabaseModulesPostParserModelsDomainPostContentEvidenceSlot {
+  blockId: string;
+  ownerId: string;
+  floor: string;
+  canonicalTargetId: string;
+  purchaseTargetId?: string;
+  isReadable: boolean;
+  /** @format double */
+  price?: number;
+  currencyCode?: string;
+  metadataDigest: string;
+  contentDigest: string;
 }
 
 export interface BakabaseModulesPostParserModelsDomainPostContentLock {
@@ -5941,6 +6742,48 @@ export interface BakabaseModulesPostParserModelsDomainPostContentLock {
   isBought: boolean;
   id?: string;
   floor?: string;
+  blockId?: string;
+  purchaseTargetId?: string;
+  contextText?: string;
+  currencyCode?: string;
+  currencyName?: string;
+  priceText?: string;
+}
+
+export interface BakabaseModulesPostParserModelsDomainPostContentReaderEvidence {
+  version: string;
+  readerId: string;
+  sourceIdentity: string;
+  contentFingerprint: string;
+  outsideSlotsDigest: string;
+  slots: BakabaseModulesPostParserModelsDomainPostContentEvidenceSlot[];
+}
+
+export interface BakabaseModulesPostParserModelsDomainPostContentReadinessAssessment {
+  fingerprint: string;
+  policyVersion: string;
+  basis: string;
+  decisions: BakabaseModulesPostParserModelsDomainPostContentBlockDecision[];
+}
+
+export interface BakabaseModulesPostParserModelsDomainPostCoverCandidate {
+  url: string;
+  kind: string;
+  evidence: string[];
+}
+
+export interface BakabaseModulesPostParserModelsDomainPostDownloadMediaView {
+  coverCandidates: BakabaseModulesPostParserModelsDomainPostCoverCandidate[];
+  excludedResourceIndices: number[];
+}
+
+export interface BakabaseModulesPostParserServicesPostContentEvidenceEquivalenceProof {
+  policyId: string;
+  beforeFingerprint: string;
+  afterFingerprint: string;
+  canonicalFingerprint: string;
+  /** @format date-time */
+  createdAt: string;
 }
 
 /**
@@ -6411,7 +7254,7 @@ export interface BakabaseModulesSubscriptionAbstractionsModelsViewSubscriptionPr
   icon?: string;
   /** [1: PlatformHolding, 2: Catalog, 3: SharingChannel] */
   sourceKind: BakabaseModulesSubscriptionAbstractionsModelsDomainConstantsSubscriptionSourceKind;
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb, 14: BaiduNetdisk, 15: GoogleDrive, 16: Gofile] */
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb, 14: BaiduNetdisk, 15: GoogleDrive, 16: Gofile, 17: PikPak, 18: OneDrive, 19: Pixeldrain, 20: Mega, 21: TeraBox] */
   thirdPartyId?: BakabaseInsideWorldModelsConstantsThirdPartyId;
 }
 
@@ -6514,6 +7357,71 @@ export type BakabaseModulesWorkflowAbstractionsModelsDomainConstantsWorkflowRunS
   | 6
   | 7;
 
+export interface BakabaseModulesWorkflowAbstractionsModelsDomainWorkflowNodeExecution {
+  /** @format int64 */
+  id: number;
+  nodeId: string;
+  /** @format int32 */
+  stepIndex: number;
+  kind: string;
+  /** @format int32 */
+  attempt: number;
+  status: string;
+  /** @format date-time */
+  startedAt: string;
+  /** @format date-time */
+  completedAt?: string;
+  /** @format int32 */
+  inputCount: number;
+  /** @format int32 */
+  outputCount: number;
+  /** @format int32 */
+  failedCount: number;
+  resumeKind: string;
+  waitReason?: string;
+  outputs: BakabaseModulesWorkflowAbstractionsModelsDomainWorkflowOutputBlock[];
+  outputsTruncated: boolean;
+  inputs: BakabaseModulesWorkflowAbstractionsModelsDomainWorkflowOutputBlock[];
+  inputsRecorded: boolean;
+  inputsTruncated: boolean;
+}
+
+export interface BakabaseModulesWorkflowAbstractionsModelsDomainWorkflowOutputBlock {
+  kind: string;
+  key: string;
+  labelKey?: string;
+  label?: string;
+  artifactId?: string;
+  operationId?: string;
+  directory?: string;
+  /** @format int32 */
+  fileCount?: number;
+  /** @format int64 */
+  totalBytes?: number;
+  state?: string;
+  cleanupReceiptId?: string;
+  cleanupStatus?: string;
+  providerId?: string;
+  methodId?: string;
+  engineId?: string;
+  remotePath?: string;
+  url?: string;
+  taskKind?: string;
+  taskId?: string;
+  value?: string;
+  code?: string;
+  severity?: string;
+  message?: string;
+}
+
+export interface BakabaseModulesWorkflowAbstractionsModelsDomainWorkflowRunPlanNodeView {
+  nodeId: string;
+  kind: string;
+  /** @format int32 */
+  order: number;
+  notes?: string;
+}
+
 export interface BakabaseModulesWorkflowAbstractionsModelsDomainWorkflowRunStepStat {
   /** @format int32 */
   stepIndex: number;
@@ -6526,7 +7434,16 @@ export interface BakabaseModulesWorkflowAbstractionsModelsDomainWorkflowRunStepS
   failedCount: number;
 }
 
+export interface BakabaseModulesWorkflowAbstractionsModelsDomainWorkflowSourceRef {
+  module: string;
+  entityKind: string;
+  entityId: string;
+  revision?: string;
+  resultKey?: string;
+}
+
 export interface BakabaseModulesWorkflowAbstractionsModelsInputWorkflowActivityInputModel {
+  parameterBindings: BakabaseModulesWorkflowAbstractionsModelsWorkflowParameterBinding[];
   nodeId?: string;
   kind: string;
   notes?: string;
@@ -6536,6 +7453,7 @@ export interface BakabaseModulesWorkflowAbstractionsModelsInputWorkflowActivityI
 }
 
 export interface BakabaseModulesWorkflowAbstractionsModelsInputWorkflowDefinitionCreationInputModel {
+  parameters: BakabaseModulesWorkflowAbstractionsModelsWorkflowParameterDefinition[];
   name: string;
   description?: string;
   descriptionKey?: string;
@@ -6546,6 +7464,7 @@ export interface BakabaseModulesWorkflowAbstractionsModelsInputWorkflowDefinitio
 }
 
 export interface BakabaseModulesWorkflowAbstractionsModelsInputWorkflowDefinitionUpdateInputModel {
+  parameters?: BakabaseModulesWorkflowAbstractionsModelsWorkflowParameterDefinition[];
   name?: string;
   description?: string;
   triggerFilterJson?: string;
@@ -6554,6 +7473,7 @@ export interface BakabaseModulesWorkflowAbstractionsModelsInputWorkflowDefinitio
 }
 
 export interface BakabaseModulesWorkflowAbstractionsModelsInputWorkflowManualRunInputModel {
+  parameterValues?: Record<string, any>;
   argsJson?: string;
 }
 
@@ -6563,6 +7483,8 @@ export interface BakabaseModulesWorkflowAbstractionsModelsInputWorkflowRunResume
 }
 
 export interface BakabaseModulesWorkflowAbstractionsModelsInputWorkflowValidationInputModel {
+  parameters: BakabaseModulesWorkflowAbstractionsModelsWorkflowParameterDefinition[];
+  parameterValues?: Record<string, any>;
   triggerKind: string;
   triggerFilterJson?: string;
   activities: BakabaseModulesWorkflowAbstractionsModelsInputWorkflowActivityInputModel[];
@@ -6587,6 +7509,7 @@ export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowActivityDe
 }
 
 export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowActivityViewModel {
+  parameterBindings: BakabaseModulesWorkflowAbstractionsModelsWorkflowParameterBinding[];
   /** @format int32 */
   id: number;
   /** @format int32 */
@@ -6598,7 +7521,47 @@ export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowActivityVi
   onItemError: BakabaseModulesWorkflowAbstractionsModelsDomainConstantsWorkflowActivityErrorBehavior;
 }
 
+export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowArtifactDirectoryEntry {
+  relativePath: string;
+  isDirectory: boolean;
+  /** @format int64 */
+  length?: number;
+}
+
+export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowArtifactDirectoryView {
+  artifactId: string;
+  state: string;
+  relativeDirectory: string;
+  /** @format int32 */
+  fileCount: number;
+  /** @format int64 */
+  totalBytes: number;
+  /** @format int32 */
+  childCount: number;
+  /** @format int32 */
+  pageIndex: number;
+  /** @format int32 */
+  pageSize: number;
+  entries: BakabaseModulesWorkflowAbstractionsModelsViewWorkflowArtifactDirectoryEntry[];
+}
+
+export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowArtifactFilesView {
+  artifactId: string;
+  state: string;
+  /** @format int32 */
+  fileCount: number;
+  /** @format int64 */
+  totalBytes: number;
+  /** @format int32 */
+  pageIndex: number;
+  /** @format int32 */
+  pageSize: number;
+  entries: BakabaseModulesWorkflowArtifactsArtifactManifestEntry[];
+  directory?: string;
+}
+
 export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowDefinitionViewModel {
+  parameters: BakabaseModulesWorkflowAbstractionsModelsWorkflowParameterDefinition[];
   /** @format int32 */
   id: number;
   name: string;
@@ -6632,10 +7595,15 @@ export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowItemTypeFi
 }
 
 export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowRunViewModel {
+  parameterSources: BakabaseModulesWorkflowAbstractionsModelsWorkflowParameterSourceView[];
   /** @format int32 */
   id: number;
   /** @format int32 */
   workflowDefinitionId: number;
+  hasPlanSnapshot: boolean;
+  planName?: string;
+  triggerKind?: string;
+  planNodes: BakabaseModulesWorkflowAbstractionsModelsDomainWorkflowRunPlanNodeView[];
   /** [1: Pending, 2: Running, 3: Success, 4: Failed, 5: Cancelled, 6: Interrupted, 7: Waiting] */
   status: BakabaseModulesWorkflowAbstractionsModelsDomainConstantsWorkflowRunStatus;
   /** @format date-time */
@@ -6652,6 +7620,7 @@ export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowRunViewMod
   /** @format int32 */
   failedItemCount: number;
   stepStats: BakabaseModulesWorkflowAbstractionsModelsDomainWorkflowRunStepStat[];
+  nodeExecutions: BakabaseModulesWorkflowAbstractionsModelsDomainWorkflowNodeExecution[];
   errorMessage?: string;
   /** @format int32 */
   progress?: number;
@@ -6696,13 +7665,134 @@ export interface BakabaseModulesWorkflowAbstractionsModelsViewWorkflowValidation
   diagnostics: BakabaseModulesWorkflowAbstractionsModelsViewWorkflowValidationDiagnostic[];
 }
 
+export interface BakabaseModulesWorkflowAbstractionsModelsWorkflowParameterBinding {
+  parameterKey: string;
+  configPath: string;
+}
+
+export interface BakabaseModulesWorkflowAbstractionsModelsWorkflowParameterDefinition {
+  key: string;
+  label?: string;
+  description?: string;
+  type: string;
+  format?: string;
+  required: boolean;
+  defaultValue?: any;
+  allowedValues?: any[];
+  sensitive: boolean;
+  displayInRun: boolean;
+}
+
+export interface BakabaseModulesWorkflowAbstractionsModelsWorkflowParameterSourceView {
+  key: string;
+  type: string;
+  source: string;
+  hasValue: boolean;
+  sensitive: boolean;
+  displayValue?: string;
+}
+
+export interface BakabaseModulesWorkflowArtifactsArtifactDeliveryPathMapping {
+  sourceRelativePath: string;
+  targetRelativePath: string;
+}
+
+export interface BakabaseModulesWorkflowArtifactsArtifactDeliveryPolicy {
+  /** @format int32 */
+  version: number;
+  removeGeneratedDirectories: boolean;
+  collapseSingleRootDirectory: boolean;
+}
+
+export interface BakabaseModulesWorkflowArtifactsArtifactDirectoryScope {
+  ownerKind: string;
+  ownerId: string;
+  role: string;
+  storageRoot: string;
+  directory: string;
+}
+
+export interface BakabaseModulesWorkflowArtifactsArtifactManifest {
+  entries: BakabaseModulesWorkflowArtifactsArtifactManifestEntry[];
+  fingerprint: string;
+  directories?: string[];
+}
+
+export interface BakabaseModulesWorkflowArtifactsArtifactManifestEntry {
+  relativePath: string;
+  /** @format int64 */
+  length: number;
+  sha256: string;
+}
+
+export interface BakabaseModulesWorkflowArtifactsArtifactStoragePolicy {
+  /** @format int32 */
+  version: number;
+  downloadDirectoryTemplate: string;
+  processingDirectoryTemplate: string;
+  processingWorkspaceDirectory: string;
+  cleanupIntermediates: boolean;
+  materialization: string;
+  sourceCleanup: string;
+}
+
+export interface BakabaseModulesWorkflowArtifactsArtifactStoragePolicyOverride {
+  downloadDirectoryTemplate?: string;
+  processingDirectoryTemplate?: string;
+  processingWorkspaceDirectory?: string;
+  cleanupIntermediates?: boolean;
+  materialization?: string;
+  sourceCleanup?: string;
+}
+
+export interface BakabaseModulesWorkflowArtifactsFileProcessingPlan {
+  requirement: string;
+  steps: BakabaseModulesWorkflowArtifactsFileProcessingStep[];
+  evidence: string[];
+}
+
+export interface BakabaseModulesWorkflowArtifactsFileProcessingStep {
+  storagePolicy?: BakabaseModulesWorkflowArtifactsArtifactStoragePolicyOverride;
+  id: string;
+  op: string;
+  input: string;
+  inputs?: string[];
+  selector?: string;
+  extension?: string;
+  password?: string;
+  /** [1: SevenZipParser] */
+  archiveOpenMode?: BakabaseAbstractionsModelsDomainConstantsArchiveOpenMode;
+  archiveMemberSelector?: string;
+  /** [437: DosLatin, 932: JapaneseShiftJis, 936: SimplifiedChineseGbk, 950: TraditionalChineseBig5, 65001: Utf8] */
+  zipFileNameCodePage?: BakabaseAbstractionsModelsDomainConstantsZipFileNameCodePage;
+  /** [437: DosLatin, 932: JapaneseShiftJis, 936: SimplifiedChineseGbk, 950: TraditionalChineseBig5, 65001: Utf8] */
+  zipPasswordCodePage?: BakabaseAbstractionsModelsDomainConstantsZipPasswordCodePage;
+  extractionLayout?: string;
+  targetName?: string;
+  targetDirectory?: string;
+  sourceDirectory?: string;
+  findText?: string;
+  replaceText?: string;
+}
+
 export interface BakabaseServiceComponentsAcquisitionAcquisitionSetupInputModel {
   inboxDirectory?: string;
   libraryRootDirectory?: string;
   directoryTemplate?: string;
+  downloadRootDirectory?: string;
+  deliveryRootDirectory?: string;
+  deliveryDirectoryTemplate?: string;
+  deliveryPartDirectoryTemplate?: string;
+  deliveryContentLayout?: BakabaseModulesWorkflowArtifactsArtifactDeliveryPolicy;
+  keepSupersededDeliveryFiles?: boolean;
+  processingWorkspaceDirectory?: string;
   preferredDriveKinds?: BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisitionDriveKind[];
   /** @format double */
   autoPurchaseLimit?: number;
+  storagePolicy?: BakabaseModulesWorkflowArtifactsArtifactStoragePolicy;
+  /** @format int64 */
+  minimumFreeSpaceBytes?: number;
+  useEmergencySpaceReserve?: boolean;
 }
 
 export interface BakabaseServiceComponentsAcquisitionAcquisitionSetupResult {
@@ -6710,6 +7800,69 @@ export interface BakabaseServiceComponentsAcquisitionAcquisitionSetupResult {
   createdLibrary: boolean;
   /** @format int32 */
   pathMarkId?: number;
+}
+
+export interface BakabaseServiceComponentsAcquisitionHandoffsPostAcquisitionCatchUpConfirmInput {
+  tasks: BakabaseServiceComponentsAcquisitionHandoffsPostAcquisitionCatchUpSelection[];
+}
+
+export interface BakabaseServiceComponentsAcquisitionHandoffsPostAcquisitionCatchUpItem {
+  /** @format int32 */
+  taskId: number;
+  title?: string;
+  status: string;
+  code?: string;
+  selection?: BakabaseServiceComponentsAcquisitionHandoffsPostAcquisitionCatchUpSelection;
+  handoffId?: string;
+  acquisitionTaskIds: number[];
+  link?: string;
+}
+
+export interface BakabaseServiceComponentsAcquisitionHandoffsPostAcquisitionCatchUpPrepareInput {
+  taskIds: number[];
+}
+
+export interface BakabaseServiceComponentsAcquisitionHandoffsPostAcquisitionCatchUpPreview {
+  /** @format int32 */
+  requestedCount: number;
+  /** @format int32 */
+  eligibleCount: number;
+  /** @format int32 */
+  existingCount: number;
+  /** @format int32 */
+  rejectedCount: number;
+  items: BakabaseServiceComponentsAcquisitionHandoffsPostAcquisitionCatchUpItem[];
+}
+
+export interface BakabaseServiceComponentsAcquisitionHandoffsPostAcquisitionCatchUpResult {
+  /** @format int32 */
+  requestedCount: number;
+  /** @format int32 */
+  acceptedCount: number;
+  /** @format int32 */
+  existingCount: number;
+  /** @format int32 */
+  rejectedCount: number;
+  items: BakabaseServiceComponentsAcquisitionHandoffsPostAcquisitionCatchUpItem[];
+}
+
+export interface BakabaseServiceComponentsAcquisitionHandoffsPostAcquisitionCatchUpSelection {
+  /** @format int32 */
+  taskId: number;
+  /** @format int32 */
+  revision: number;
+  /** @format int32 */
+  workflowRunId?: number;
+  resultsHash: string;
+}
+
+export interface BakabaseServiceComponentsAcquisitionHandoffsPostAcquisitionFilteredCatchUpPreview {
+  /** @format int32 */
+  matchedCount: number;
+  /** @format int32 */
+  maxTasks: number;
+  limitExceeded: boolean;
+  preview?: BakabaseServiceComponentsAcquisitionHandoffsPostAcquisitionCatchUpPreview;
 }
 
 export interface BakabaseServiceComponentsAcquisitionInboxCandidate {
@@ -6731,12 +7884,1246 @@ export interface BakabaseServiceComponentsAcquisitionInboxCandidateScore {
   score: number;
 }
 
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionAdaptiveMigrationInput {
+  taskIds?: number[];
+  /** @format int32 */
+  maxIterations: number;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionAdaptiveMigrationPreview {
+  token: string;
+  /** @format date-time */
+  expiresAt: string;
+  rows: BakabaseServiceComponentsAcquisitionPlanningAcquisitionAdaptiveMigrationRow[];
+  /** @format int32 */
+  canMigrateCount: number;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionAdaptiveMigrationResult {
+  migratedTaskIds: number[];
+  skipped: BakabaseServiceComponentsAcquisitionPlanningAcquisitionAdaptiveMigrationRow[];
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionAdaptiveMigrationRow {
+  /** @format int32 */
+  taskId: number;
+  title?: string;
+  /** @format int32 */
+  workflowRunId?: number;
+  /** [1: Pending, 2: Running, 3: Success, 4: Failed, 5: Cancelled, 6: Interrupted, 7: Waiting] */
+  runStatus?: BakabaseModulesWorkflowAbstractionsModelsDomainConstantsWorkflowRunStatus;
+  /** @format int32 */
+  currentStepIndex?: number;
+  canMigrate: boolean;
+  alreadyEnabled: boolean;
+  reasonCode: string;
+  reason?: string;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionAssessmentCallView {
+  /** @format int32 */
+  iteration?: number;
+  inputKind: string;
+  inputPreview?: string;
+  inputTruncated: boolean;
+  outputKind: string;
+  outputPreview?: string;
+  outputTruncated: boolean;
+  validationError?: string;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionAssessmentIoView {
+  calls: BakabaseServiceComponentsAcquisitionPlanningAcquisitionAssessmentCallView[];
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionContinuation {
+  batchId: string;
+  scope: string;
+  /** @format date-time */
+  createdAt: string;
+  /** @format date-time */
+  updatedAt: string;
+  status: string;
+  rows: BakabaseServiceComponentsAcquisitionPlanningAcquisitionContinuationRow[];
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionContinuationApplyInput {
+  previewToken: string;
+  taskIds: number[];
+  useEmergencySpaceReserve?: boolean;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionContinuationPreview {
+  previewToken: string;
+  /** @format date-time */
+  expiresAt: string;
+  scope: string;
+  order: string;
+  rows: BakabaseServiceComponentsAcquisitionPlanningAcquisitionContinuationPreviewRow[];
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionContinuationPreviewInput {
+  taskIds: number[];
+  scope: string;
+  order: string;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionContinuationPreviewRow {
+  /** @format int32 */
+  taskId: number;
+  title?: string;
+  /** @format int32 */
+  workflowRunId?: number;
+  /** @format int32 */
+  planRevision: number;
+  canQueue: boolean;
+  reasonCode: string;
+  canOverrideStorage: boolean;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionContinuationRow {
+  /** @format int32 */
+  taskId: number;
+  title?: string;
+  /** @format int32 */
+  order: number;
+  status: string;
+  /** @format int32 */
+  workflowRunId?: number;
+  reasonCode?: string;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionDownloadDestinationApplyInput {
+  previewToken: string;
+  taskIds: number[];
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionDownloadDestinationItem {
+  /** @format int32 */
+  downloadTaskId?: number;
+  oldDirectory?: string;
+  newDirectory?: string;
+  canApply: boolean;
+  reasonCode: string;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionDownloadDestinationPreview {
+  previewToken: string;
+  /** @format date-time */
+  expiresAt: string;
+  /** @format int32 */
+  taskCount: number;
+  /** @format int32 */
+  downloadCount: number;
+  rows: BakabaseServiceComponentsAcquisitionPlanningAcquisitionDownloadDestinationRow[];
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionDownloadDestinationPreviewInput {
+  taskIds: number[];
+  targetRootDirectory: string;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionDownloadDestinationResult {
+  appliedTaskIds: number[];
+  skipped: BakabaseServiceComponentsAcquisitionPlanningAcquisitionDownloadDestinationSkip[];
+  /** @format int32 */
+  appliedDownloadCount: number;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionDownloadDestinationRow {
+  /** @format int32 */
+  taskId: number;
+  title?: string;
+  canApply: boolean;
+  reasonCode: string;
+  downloads: BakabaseServiceComponentsAcquisitionPlanningAcquisitionDownloadDestinationItem[];
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionDownloadDestinationSkip {
+  /** @format int32 */
+  taskId: number;
+  reasonCode: string;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionDownloadRecoveryOutcome {
+  /** @format int32 */
+  taskId: number;
+  startedDownloadTaskIds: number[];
+  indeterminateDownloadTaskIds: number[];
+  reasonCode?: string;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionDraftBuilderInput {
+  /** @format int32 */
+  expectedRevision: number;
+  builderId: string;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionDraftCreationInput {
+  title?: string;
+  sources?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionDraftSource[];
+  outputDirectory?: string;
+  deliverySettings?: BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionDeliverySettings;
+  storagePolicy?: BakabaseModulesWorkflowArtifactsArtifactStoragePolicy;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionDraftImportResult {
+  /** @format int32 */
+  created: number;
+  /** @format int32 */
+  matched: number;
+  taskIds: number[];
+  problems: string[];
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionDraftListInput {
+  rows: BakabaseServiceComponentsAcquisitionPlanningAcquisitionDraftListRow[];
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionDraftListRow {
+  title?: string;
+  url?: string;
+  password?: string;
+  /** @format int32 */
+  lineNumber: number;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionDraftPreparationInput {
+  /** @format int32 */
+  expectedRevision: number;
+  plan: BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionPlan;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionDraftSource {
+  id: string;
+  title?: string;
+  url: string;
+  kind: string;
+  providerId?: string;
+  methodId?: string;
+  accountId?: string;
+  accessCode?: string;
+  archivePassword?: string;
+  processing?: BakabaseModulesWorkflowArtifactsFileProcessingPlan;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionDraftUpdateInput {
+  /** @format int32 */
+  expectedRevision: number;
+  title?: string;
+  sources?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionDraftSource[];
+  outputDirectory?: string;
+  deliverySettings?: BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionDeliverySettings;
+  storagePolicy?: BakabaseModulesWorkflowArtifactsArtifactStoragePolicy;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionLegacyImportInput {
+  resourceIds: number[];
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionLegacyLeadSnapshot {
+  id: string;
+  /** [1: PlatformHolding, 2: SharedPage, 3: SharedDocument, 4: DirectUrl, 5: Magnet, 6: Manual, 7: Torrent] */
+  kind: BakabaseModulesAcquisitionAbstractionsModelsDomainConstantsAcquisitionLeadKind;
+  value: string;
+  isResolved: boolean;
+  note?: string;
+  accessCode?: string;
+  password?: string;
+  extractionPlanJson?: string;
+  sourceReference?: string;
+  sourceRefs?: BakabaseModulesWorkflowAbstractionsModelsDomainWorkflowSourceRef[];
+  sourceRefsJson?: string;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalFilesRecoveryOutcome {
+  /** @format int32 */
+  taskId: number;
+  /** @format int32 */
+  previousWorkflowRunId: number;
+  /** @format int32 */
+  workflowRunId?: number;
+  /** @format int32 */
+  planRevision: number;
+  status: string;
+  reasonCode?: string;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalFilesRecoveryPart {
+  partId: string;
+  /** @format int32 */
+  downloadTaskId: number;
+  /** @format int32 */
+  downloadResultId: number;
+  fingerprint: string;
+  /** @format int32 */
+  fileCount: number;
+  sourceDirectory: string;
+  originalWorkingDirectory?: string;
+  workingDirectory: string;
+  originalDeliveryDirectory?: string;
+  deliveryDirectory: string;
+  artifactId?: string;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalFilesRecoveryPreview {
+  parts: BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalFilesRecoveryPart[];
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalRecoveryBatch {
+  batchId: string;
+  /** @format date-time */
+  createdAt: string;
+  /** @format date-time */
+  updatedAt: string;
+  status: string;
+  allowStorageOverride: boolean;
+  /** @format date-time */
+  overrideExpiresAt?: string;
+  rows: BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalRecoveryBatchRow[];
+  /** @format int32 */
+  currentTaskId?: number;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalRecoveryBatchApplyInput {
+  previewToken: string;
+  taskIds: number[];
+  allowStorageOverride: boolean;
+  reserveMode?: string;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalRecoveryBatchCapacityInput {
+  previewToken: string;
+  taskIds: number[];
+  reserveMode?: string;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalRecoveryBatchCapacityPreview {
+  previewToken: string;
+  taskIds: number[];
+  volumes: BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalRecoveryBatchVolume[];
+  requiresSpaceConfirmation: boolean;
+  estimateIncomplete: boolean;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalRecoveryBatchPreview {
+  previewToken: string;
+  /** @format date-time */
+  expiresAt: string;
+  rows: BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalRecoveryBatchPreviewRow[];
+  volumes: BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalRecoveryBatchVolume[];
+  requiresSpaceConfirmation: boolean;
+  estimateIncomplete: boolean;
+  useEmergencySpaceReserve: boolean;
+  /** @format int64 */
+  configuredMinimumFreeBytes: number;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalRecoveryBatchPreviewInput {
+  taskIds: number[];
+  mode: string;
+  order: string;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalRecoveryBatchPreviewRow {
+  /** @format int32 */
+  taskId: number;
+  title?: string;
+  /** @format int32 */
+  workflowRunId?: number;
+  canQueue: boolean;
+  reasonCode: string;
+  /** @format int64 */
+  estimatedBytes?: number;
+  estimatePartial: boolean;
+  recoveryScope?: string;
+  workingDirectory?: string;
+  deliveryDirectory?: string;
+  actionCategory?: string;
+  queue?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionRecoveryQueueReference;
+  canOverrideStorage: boolean;
+  currentStepKind?: string;
+  recoveryAction?: string;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalRecoveryBatchRow {
+  /** @format int32 */
+  taskId: number;
+  title?: string;
+  /** @format int32 */
+  order: number;
+  status: string;
+  /** @format int32 */
+  workflowRunId?: number;
+  /** @format int64 */
+  estimatedBytes?: number;
+  reasonCode?: string;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalRecoveryBatchVolume {
+  volumeId: string;
+  paths: string[];
+  /** @format int64 */
+  availableBytes: number;
+  /** @format int64 */
+  totalBytes: number;
+  /** @format int64 */
+  minimumFreeBytes: number;
+  /** @format int64 */
+  usableBytes: number;
+  /** @format int64 */
+  estimatedAdditionalBytes?: number;
+  estimateIncomplete: boolean;
+  exceedsUsable: boolean;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanArtifactCandidate {
+  partId: string;
+  artifactId: string;
+  kind: string;
+  rootDirectory: string;
+  fingerprint: string;
+  /** @format int32 */
+  fileCount: number;
+  canRepublish?: boolean;
+  canRetryDelivery?: boolean;
+  canReadCurrentDirectory?: boolean;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanBuilderDescriptor {
+  id: string;
+  nameKey: string;
+  descriptionKey: string;
+  entryPoints: string[];
+  inputKind: string;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanCandidate {
+  id: string;
+  title: string;
+  url: string;
+  coverUrl?: string;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanCompositeSource {
+  partId: string;
+  artifactId: string;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanCreationInput {
+  title: string;
+  builderId: string;
+  outputDirectory?: string;
+  deliverySettings?: BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionDeliverySettings;
+  storagePolicy?: BakabaseModulesWorkflowArtifactsArtifactStoragePolicy;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanIssue {
+  code: string;
+  message: string;
+  blocking: boolean;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanPreparationAttempt {
+  /** @format int32 */
+  attempt: number;
+  query: string;
+  /** @format date-time */
+  startedAt: string;
+  /** @format date-time */
+  completedAt?: string;
+  status: string;
+  /** @format int32 */
+  candidateCount: number;
+  code?: string;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanProcessingReplacement {
+  partId: string;
+  plan: BakabaseModulesWorkflowArtifactsFileProcessingPlan;
+  artifactEvidenceIds: string[];
+  continueFromArtifactId?: string;
+  expectedDeliveryProjectionFingerprint?: string;
+  useAdaptiveAssessment?: boolean;
+  inputMode?: string;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanReplanInput {
+  /** @format int32 */
+  expectedRevision: number;
+  /** @format int32 */
+  expectedRunId: number;
+  reason: string;
+  items: BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanProcessingReplacement[];
+  useCurrentStorageDefaults: boolean;
+  deliveryContentLayout?: BakabaseModulesWorkflowArtifactsArtifactDeliveryPolicy;
+  compositeInputs?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanCompositeSource[];
+  enableAdaptiveAssessment?: boolean;
+  /** @format int32 */
+  maxAdaptiveIterations?: number;
+  adaptiveContext?: string;
+  deliveryRootDirectory?: string;
+  retryDeliveryOnly?: boolean;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanRunInput {
+  /** @format int32 */
+  expectedRevision: number;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanSearchInput {
+  query: string;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanSelectionInput {
+  candidateId: string;
+  /** @format int32 */
+  expectedRevision: number;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanSourceTasks {
+  source: BakabaseModulesWorkflowAbstractionsModelsDomainWorkflowSourceRef;
+  tasks: BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionTask[];
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanSourcesInput {
+  sources: BakabaseModulesWorkflowAbstractionsModelsDomainWorkflowSourceRef[];
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanStepView {
+  id: string;
+  kind: string;
+  labelKey: string;
+  operation?: string;
+  input?: string;
+  selector?: string;
+  targetName?: string;
+  targetDirectory?: string;
+  extension?: string;
+  inputs?: string[];
+  findText?: string;
+  replaceText?: string;
+  sourceDirectory?: string;
+  stage?: string;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanTaskDetail {
+  task: BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionTask;
+  plan?: BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionPlan;
+  candidates: BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanCandidate[];
+  query?: string;
+  issues: BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanIssue[];
+  steps: BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanStepView[];
+  sourceRefs: BakabaseModulesWorkflowAbstractionsModelsDomainWorkflowSourceRef[];
+  /** @format int32 */
+  id: number;
+  stageAttempts: BakabaseServiceComponentsAcquisitionPlanningAcquisitionStageAttempt[];
+  stageDirectories?: BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionStageDirectories;
+  deliverySettings?: BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionDeliverySettings;
+  canEditDeliverySettings: boolean;
+  storagePolicy?: BakabaseModulesWorkflowArtifactsArtifactStoragePolicy;
+  canEditStoragePolicy: boolean;
+  planHistory: BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionPlanRevision[];
+  preparationAttempts: BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanPreparationAttempt[];
+  replanArtifacts: BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanArtifactCandidate[];
+  draftSources: BakabaseServiceComponentsAcquisitionPlanningAcquisitionDraftSource[];
+  legacyLeads: BakabaseServiceComponentsAcquisitionPlanningAcquisitionLegacyLeadSnapshot[];
+  legacyTitle?: string;
+  importedListRow?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionDraftListRow;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanUpdateInput {
+  /** @format int32 */
+  expectedRevision: number;
+  outputDirectory?: string;
+  deliverySettings?: BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionDeliverySettings;
+  storagePolicy?: BakabaseModulesWorkflowArtifactsArtifactStoragePolicy;
+  storagePolicyOverrides?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionStoragePolicyOverrideInput[];
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionRecoveryApplyInput {
+  previewToken: string;
+  taskIds: number[];
+  useEmergencySpaceReserve?: boolean;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionRecoveryDiagnosisCancellation {
+  diagnosisId: string;
+  status: string;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionRecoveryPreview {
+  previewToken: string;
+  /** @format date-time */
+  expiresAt: string;
+  /** @format int32 */
+  totalCount: number;
+  /** @format int32 */
+  continuableCount: number;
+  /** @format int32 */
+  manualCount: number;
+  rows: BakabaseServiceComponentsAcquisitionPlanningAcquisitionRecoveryRow[];
+  scope: string;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionRecoveryPreviewInput {
+  taskIds: number[];
+  scope?: string;
+  diagnosisId?: string;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionRecoveryQueueReference {
+  kind: string;
+  batchId: string;
+  status: string;
+  rowStatus: string;
+  canRequeue: boolean;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionRecoveryResult {
+  continuedTaskIds: number[];
+  skipped: BakabaseServiceComponentsAcquisitionPlanningAcquisitionRecoverySkip[];
+  downloads?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionDownloadRecoveryOutcome[];
+  localFiles?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalFilesRecoveryOutcome[];
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionRecoveryRow {
+  /** @format int32 */
+  taskId: number;
+  title?: string;
+  /** @format int32 */
+  workflowRunId?: number;
+  canContinue: boolean;
+  action?: string;
+  reasonCode: string;
+  manualAction?: string;
+  /** @format date-time */
+  evidenceAt?: string;
+  currentStepKind?: string;
+  currentProblemCode?: string;
+  localFiles?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalFilesRecoveryPreview;
+  canOverrideStorage: boolean;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionRecoverySkip {
+  /** @format int32 */
+  taskId: number;
+  reasonCode: string;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionRuntimeOverview {
+  /** @format int32 */
+  taskId: number;
+  /** @format int32 */
+  workflowRunId?: number;
+  workflowStatus?: string;
+  /** @format int32 */
+  currentStepIndex?: number;
+  /** @format int32 */
+  stepCount?: number;
+  currentNodeKind?: string;
+  stage?: string;
+  /** @format double */
+  progress?: number;
+  progressScope?: string;
+  /** @format int64 */
+  completedBytes?: number;
+  /** @format int64 */
+  totalBytes?: number;
+  /** @format double */
+  speedBytesPerSecond?: number;
+  bytesPartial: boolean;
+  /** @format int32 */
+  downloadCount: number;
+  /** @format int32 */
+  activeDownloadCount: number;
+  /** @format int32 */
+  completedDownloadCount: number;
+  /** @format int32 */
+  failedDownloadCount: number;
+  downloadActivity?: string;
+  downloadContinuation?: string;
+  downloadsCompletedAwaitingWorkflow: boolean;
+  canDiagnoseDownloadContinuation: boolean;
+  problemCode?: string;
+  problemReasonCode?: string;
+  attentionTags: string[];
+  problem?: string;
+  /** @format date-time */
+  observedAt: string;
+  sources: BakabaseServiceComponentsAcquisitionPlanningAcquisitionRuntimeSourceObservation[];
+  sourcesTruncated: boolean;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionRuntimeOverviewInput {
+  taskIds: number[];
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionRuntimeSourceObservation {
+  partId: string;
+  sourceId: string;
+  url: string;
+  accessCode?: string;
+  providerId: string;
+  selected: boolean;
+  status: string;
+  reasonCode?: string;
+  normalizedReasonCode?: string;
+  message?: string;
+  evidenceKind?: string;
+  /** @format date-time */
+  observedAt?: string;
+  /** @format date-time */
+  expiresAt?: string;
+  isHistorical: boolean;
+  downloadTaskId?: string;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionSizeEstimate {
+  /** @format int64 */
+  bytes?: number;
+  basis: string;
+  partial: boolean;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionSourceCorrectionHistory {
+  correctionId: string;
+  previousAccessCode?: string;
+  newAccessCode?: string;
+  /** @format date-time */
+  appliedAt: string;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionSourceCorrectionInput {
+  /** @format int32 */
+  expectedRevision: number;
+  /** @format int32 */
+  expectedRunId: number;
+  checkpointVersion: string;
+  correctionId: string;
+  targetId: string;
+  sourceId: string;
+  expectedSourceIdentity: string;
+  newAccessCode?: string;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionSourceCorrectionResult {
+  /** @format int32 */
+  taskId: number;
+  /** @format int32 */
+  workflowRunId: number;
+  accepted: boolean;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionSourceCorrectionRow {
+  targetId: string;
+  sourceId: string;
+  expectedSourceIdentity: string;
+  url: string;
+  providerId: string;
+  accessCode?: string;
+  canCorrect: boolean;
+  reasonCode?: string;
+  history: BakabaseServiceComponentsAcquisitionPlanningAcquisitionSourceCorrectionHistory[];
+  currentSource: BakabaseModulesDownloaderCloudCloudSource;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionSourceCorrections {
+  /** @format int32 */
+  taskId: number;
+  /** @format int32 */
+  expectedRevision: number;
+  /** @format int32 */
+  expectedRunId?: number;
+  checkpointVersion?: string;
+  canCorrect: boolean;
+  reasonCode?: string;
+  sources: BakabaseServiceComponentsAcquisitionPlanningAcquisitionSourceCorrectionRow[];
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionSourceRevisionApplyInput {
+  previewToken: string;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionSourceRevisionCandidate {
+  id: string;
+  partId: string;
+  source: BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionPlanSource;
+  sourceRefs: BakabaseModulesWorkflowAbstractionsModelsDomainWorkflowSourceRef[];
+  evidence: string;
+  evidenceVersion: string;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionSourceRevisionOptions {
+  /** @format int32 */
+  taskId: number;
+  /** @format int32 */
+  expectedRevision: number;
+  /** @format int32 */
+  expectedRunId?: number;
+  canRevise: boolean;
+  reasonCode?: string;
+  currentSource?: BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionPlanSource;
+  candidates: BakabaseServiceComponentsAcquisitionPlanningAcquisitionSourceRevisionCandidate[];
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionSourceRevisionPreview {
+  previewToken: string;
+  /** @format date-time */
+  expiresAt: string;
+  /** @format int32 */
+  taskId: number;
+  /** @format int32 */
+  expectedRevision: number;
+  /** @format int32 */
+  expectedRunId: number;
+  partId: string;
+  canApply: boolean;
+  reasonCode?: string;
+  currentSource: BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionPlanSource;
+  proposedSource: BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionPlanSource;
+  currentProcessing?: BakabaseModulesWorkflowArtifactsFileProcessingPlan;
+  proposedProcessing?: BakabaseModulesWorkflowArtifactsFileProcessingPlan;
+  processingChanged: boolean;
+  evidence: string;
+  preflight: BakabaseServiceComponentsDownloadIntentsDownloadIntentPreflight;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionSourceRevisionPreviewInput {
+  /** @format int32 */
+  expectedRevision: number;
+  /** @format int32 */
+  expectedRunId: number;
+  partId: string;
+  candidateId: string;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionSourceRevisionResult {
+  /** @format int32 */
+  taskId: number;
+  /** @format int32 */
+  planRevision: number;
+  /** @format int32 */
+  previousRunId: number;
+  applied: boolean;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionStageAttempt {
+  id: string;
+  stage: string;
+  /** @format int32 */
+  attempt: number;
+  /** @format int32 */
+  runId: number;
+  status: string;
+  /** @format date-time */
+  startedAt?: string;
+  /** @format date-time */
+  completedAt?: string;
+  nodes: string[];
+  outputs: BakabaseModulesWorkflowAbstractionsModelsDomainWorkflowOutputBlock[];
+  outputsTruncated: boolean;
+  legacy: boolean;
+  hasAssessmentCalls: boolean;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionStorageOverrideApplyInput {
+  token: string;
+  confirmed: boolean;
+  reserveMode?: string;
+  useEmergencySpaceReserve?: boolean;
+  signalJson?: string;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionStorageOverridePreview {
+  /** @format int32 */
+  taskId: number;
+  /** @format int32 */
+  workflowRunId: number;
+  token: string;
+  /** @format date-time */
+  expiresAt: string;
+  /** @format int64 */
+  minimumFreeBytes: number;
+  /** @format int64 */
+  overrideMinimumFreeBytes: number;
+  /** @format int32 */
+  durationHours: number;
+  useEmergencySpaceReserve: boolean;
+  effectiveReserveMode: string;
+  scope: string;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionStorageOverrideResult {
+  /** @format int32 */
+  taskId: number;
+  /** @format int32 */
+  workflowRunId: number;
+  status: string;
+  continuationAccepted: boolean;
+  reasonCode?: string;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionStoragePolicyApplyInput {
+  previewId: string;
+  taskIds: number[];
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionStoragePolicyApplyResult {
+  appliedTaskIds: number[];
+  skipped: BakabaseServiceComponentsAcquisitionPlanningAcquisitionStoragePolicySkip[];
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionStoragePolicyOverrideInput {
+  partId: string;
+  policy?: BakabaseModulesWorkflowArtifactsArtifactStoragePolicyOverride;
+  stepId?: string;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionStoragePolicyPreview {
+  previewId: string;
+  /** @format date-time */
+  expiresAt: string;
+  rows: BakabaseServiceComponentsAcquisitionPlanningAcquisitionStoragePolicyRow[];
+  /** @format int32 */
+  eligibleCount: number;
+  policy?: BakabaseModulesWorkflowArtifactsArtifactStoragePolicy;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionStoragePolicyPreviewInput {
+  taskIds: number[];
+  outputDirectory?: string;
+  applyCurrentSettings?: boolean;
+  overrideRetention: boolean;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionStoragePolicyRow {
+  /** @format int32 */
+  taskId: number;
+  title?: string;
+  eligible: boolean;
+  reasonCode?: string;
+  /** @format int32 */
+  revision: number;
+  downloadPreview?: string;
+  processingPreview?: string;
+  deliveryPreview?: string;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionStoragePolicySkip {
+  /** @format int32 */
+  taskId: number;
+  reasonCode: string;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionSupersededDeliveryInput {
+  /** @format int32 */
+  expectedRevision: number;
+  /** @format int32 */
+  expectedRunId: number;
+  previousArtifactId: string;
+  currentArtifactId: string;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionSupersededDeliveryResult {
+  retired: boolean;
+  status: string;
+  /** @format int32 */
+  fileCount: number;
+  /** @format int64 */
+  bytes: number;
+  message?: string;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionTaskDeleteCleanup {
+  /** @format int32 */
+  fileCount: number;
+  /** @format int64 */
+  bytes: number;
+  groups: BakabaseServiceComponentsAcquisitionPlanningAcquisitionTaskDeleteCleanupGroup[];
+  reasonCode?: string;
+  supersededRuns?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionTaskDeleteSupersededRun[];
+  /** @format int32 */
+  identifiedFileCount: number;
+  /** @format int64 */
+  identifiedBytes: number;
+  sizeIncomplete: boolean;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionTaskDeleteCleanupFile {
+  path: string;
+  /** @format int64 */
+  bytes: number;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionTaskDeleteCleanupGroup {
+  artifactId: string;
+  kind: string;
+  directory: string;
+  eligible: boolean;
+  reasonCode?: string;
+  nodes: BakabaseServiceComponentsAcquisitionPlanningAcquisitionTaskDeleteCleanupNode[];
+  files: BakabaseServiceComponentsAcquisitionPlanningAcquisitionTaskDeleteCleanupFile[];
+  /** @format int32 */
+  fileCount: number;
+  /** @format int64 */
+  bytes: number;
+  shared: boolean;
+  filesTruncated: boolean;
+  sizeUnknown: boolean;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionTaskDeleteCleanupNode {
+  /** @format int32 */
+  runId: number;
+  nodeId: string;
+  kind: string;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionTaskDeleteCleanupOutcome {
+  /** @format int32 */
+  taskId: number;
+  completed: boolean;
+  /** @format int32 */
+  removedFiles: number;
+  /** @format int64 */
+  removedBytes: number;
+  reasonCodes: string[];
+  closedRunIds?: number[];
+  retainedDirectories?: string[];
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionTaskDeleteInput {
+  previewId: string;
+  cleanupFiles?: boolean;
+  acceptDeliveredFiles?: boolean;
+  skipFileVerification?: boolean;
+  removeTaskIfCleanupFails?: boolean;
+  retryRetainedFiles?: boolean;
+  deleteDeliveredFiles?: boolean;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionTaskDeletePreview {
+  previewId: string;
+  /** @format date-time */
+  expiresAt: string;
+  /** @format int32 */
+  totalCount: number;
+  /** @format int32 */
+  deletableCount: number;
+  /** @format int32 */
+  blockedCount: number;
+  rows: BakabaseServiceComponentsAcquisitionPlanningAcquisitionTaskDeleteRow[];
+  cleanupFiles: boolean;
+  acceptDeliveredFiles: boolean;
+  /** @format int32 */
+  cleanupFileCount: number;
+  /** @format int64 */
+  cleanupBytes: number;
+  /** @format int32 */
+  identifiedFileCount: number;
+  /** @format int64 */
+  identifiedBytes: number;
+  cleanupSizeIncomplete: boolean;
+  skipFileVerification: boolean;
+  retryRetainedFiles: boolean;
+  deleteDeliveredFiles: boolean;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionTaskDeletePreviewInput {
+  taskIds: number[];
+  cleanupFiles?: boolean;
+  acceptDeliveredFiles?: boolean;
+  skipFileVerification?: boolean;
+  retryRetainedFiles?: boolean;
+  deleteDeliveredFiles?: boolean;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionTaskDeleteProgress {
+  previewId: string;
+  state: string;
+  /** @format int32 */
+  totalTasks: number;
+  /** @format int32 */
+  finishedTasks: number;
+  /** @format int32 */
+  currentTaskId?: number;
+  phase: string;
+  /** @format int32 */
+  completedFiles: number;
+  /** @format int64 */
+  completedBytes: number;
+  /** @format date-time */
+  startedAt?: string;
+  /** @format date-time */
+  updatedAt: string;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionTaskDeleteResult {
+  deletedTaskIds: number[];
+  skipped: BakabaseServiceComponentsAcquisitionPlanningAcquisitionTaskDeleteSkip[];
+  cleanupResults?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionTaskDeleteCleanupOutcome[];
+  /** @format int32 */
+  removedFiles: number;
+  /** @format int64 */
+  removedBytes: number;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionTaskDeleteRow {
+  /** @format int32 */
+  taskId: number;
+  title?: string;
+  canDelete: boolean;
+  reasonCode?: string;
+  cleanup?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionTaskDeleteCleanup;
+  canRemoveTaskIfCleanupFails: boolean;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionTaskDeleteSkip {
+  /** @format int32 */
+  taskId: number;
+  reasonCode: string;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionTaskDeleteSupersededRun {
+  /** @format int32 */
+  runId: number;
+  /** @format int32 */
+  revision: number;
+  /** @format int32 */
+  replacedByRevision: number;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionTaskPage {
+  items: BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionTask[];
+  /** @format int32 */
+  totalCount: number;
+  /** @format int32 */
+  totalTasks: number;
+  /** @format int32 */
+  queueTaskCount: number;
+  /** @format int32 */
+  page: number;
+  /** @format int32 */
+  pageSize: number;
+  stageCounts: Record<string, number>;
+  attentionCounts: Record<string, number>;
+  factCounts: Record<string, number>;
+  taskFacts: Record<string, string[]>;
+  filteredTaskIds: number[];
+  checkableTaskIds: number[];
+  taskIdsTruncated: boolean;
+  sizeEstimates: Record<
+    string,
+    BakabaseServiceComponentsAcquisitionPlanningAcquisitionSizeEstimate
+  >;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionTaskSearchInput {
+  keyword?: string;
+  stage: string;
+  attentionTag?: string;
+  /** @format int32 */
+  page: number;
+  /** @format int32 */
+  pageSize: number;
+  sort?: string;
+  attentionTags?: string[];
+  facts?: string[];
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionWorkspaceCleanupPreview {
+  previewId: string;
+  /** @format date-time */
+  expiresAt: string;
+  rows: BakabaseServiceComponentsAcquisitionPlanningAcquisitionWorkspaceCleanupRow[];
+  /** @format int32 */
+  eligibleCount: number;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionWorkspaceCleanupResult {
+  completedTaskIds: number[];
+  /** @format int32 */
+  removedFiles: number;
+  /** @format int64 */
+  removedBytes: number;
+  skipped: BakabaseServiceComponentsAcquisitionPlanningAcquisitionStoragePolicySkip[];
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionWorkspaceCleanupRow {
+  /** @format int32 */
+  taskId: number;
+  title?: string;
+  eligible: boolean;
+  reasonCode?: string;
+  artifactIds: string[];
+  /** @format int32 */
+  fileCount: number;
+  /** @format int64 */
+  bytes: number;
+}
+
 export interface BakabaseServiceComponentsAcquisitionPostParserAcquisitionResult {
   /** @format int32 */
   resourceId: number;
   created: boolean;
   /** @format int32 */
   leadCount: number;
+}
+
+export interface BakabaseServiceComponentsAcquisitionProcessingPlansApplyProcessingPlanRevisionItem {
+  partId: string;
+  source: BakabaseModulesWorkflowAbstractionsModelsDomainWorkflowSourceRef;
+  revisionId: string;
+}
+
+export interface BakabaseServiceComponentsAcquisitionProcessingPlansApplyProcessingPlanRevisionsInput {
+  /** @format int32 */
+  expectedRevision: number;
+  items: BakabaseServiceComponentsAcquisitionProcessingPlansApplyProcessingPlanRevisionItem[];
+}
+
+export interface BakabaseServiceComponentsAcquisitionProcessingPlansProcessingPlanEvidence {
+  stepId?: string;
+  quote: string;
+}
+
+export interface BakabaseServiceComponentsAcquisitionProcessingPlansProcessingPlanRevisionInput {
+  source: BakabaseModulesWorkflowAbstractionsModelsDomainWorkflowSourceRef;
+  expectedSourceHash: string;
+  /** @format int32 */
+  expectedRevision: number;
+  plan: BakabaseModulesWorkflowArtifactsFileProcessingPlan;
+  evidence: BakabaseServiceComponentsAcquisitionProcessingPlansProcessingPlanEvidence[];
+  reason: string;
+}
+
+export interface BakabaseServiceComponentsAcquisitionProcessingPlansProcessingPlanRevisionView {
+  id: string;
+  /** @format int32 */
+  revision: number;
+  sourceHash: string;
+  originalPlan?: BakabaseModulesWorkflowArtifactsFileProcessingPlan;
+  plan: BakabaseModulesWorkflowArtifactsFileProcessingPlan;
+  evidence: BakabaseServiceComponentsAcquisitionProcessingPlansProcessingPlanEvidence[];
+  reason: string;
+  /** @format date-time */
+  createdAt: string;
+}
+
+export interface BakabaseServiceComponentsAcquisitionProcessingPlansSourceProcessingPlanView {
+  source: BakabaseModulesWorkflowAbstractionsModelsDomainWorkflowSourceRef;
+  sourceHash: string;
+  /** @format int32 */
+  revision: number;
+  originalPlan?: BakabaseModulesWorkflowArtifactsFileProcessingPlan;
+  effectivePlan?: BakabaseModulesWorkflowArtifactsFileProcessingPlan;
+  /** @format int32 */
+  effectiveRevision: number;
+  history: BakabaseServiceComponentsAcquisitionProcessingPlansProcessingPlanRevisionView[];
+  hasStaleRevisions: boolean;
+  sourceAvailable: boolean;
+  sourceProblem?: string;
 }
 
 export interface BakabaseServiceComponentsAcquisitionSharedListImportResult {
@@ -6758,6 +9145,32 @@ export interface BakabaseServiceComponentsAcquisitionSharedListPreviewRow {
   alreadyKnown: boolean;
 }
 
+export interface BakabaseServiceComponentsCloudDownloadsBaiduBaiduDownloadOptions {
+  /**
+   * @format int32
+   * @min 1
+   * @max 5
+   */
+  maxConcurrentTasks: number;
+  /**
+   * @format int32
+   * @min 1
+   * @max 20
+   */
+  connectionsPerFile: number;
+  userConfirmedSvip: boolean;
+}
+
+export interface BakabaseServiceComponentsCloudDownloadsBaiduBaiduMembershipViewModel {
+  kind: string;
+  /** @format date-time */
+  checkedAt?: string;
+  /** @format date-time */
+  lastAttemptAt?: string;
+  probeMethod: string;
+  failureCode?: string;
+}
+
 export interface BakabaseServiceComponentsCloudDownloadsBaiduBaiduPcsAccountViewModel {
   id: string;
   name: string;
@@ -6766,6 +9179,12 @@ export interface BakabaseServiceComponentsCloudDownloadsBaiduBaiduPcsAccountView
   isLoggedIn: boolean;
   /** @format date-time */
   lastValidatedAt?: string;
+  downloadOptions: BakabaseServiceComponentsCloudDownloadsBaiduBaiduDownloadOptions;
+  membership: BakabaseServiceComponentsCloudDownloadsBaiduBaiduMembershipViewModel;
+  /** @format int32 */
+  effectiveMaxConcurrentTasks: number;
+  /** @format int32 */
+  effectiveConnectionsPerFile: number;
 }
 
 export interface BakabaseServiceComponentsCloudDownloadsBaiduBaiduPcsLoginInputModel {
@@ -6774,6 +9193,166 @@ export interface BakabaseServiceComponentsCloudDownloadsBaiduBaiduPcsLoginInputM
   cookies?: string;
   bduss?: string;
   stoken?: string;
+}
+
+export interface BakabaseServiceComponentsCloudDownloadsPikPakCliPikPakCliAccountViewModel {
+  isConfigured: boolean;
+  accountId?: string;
+  accountVersion?: string;
+  displayName?: string;
+  problem?: string;
+  quota?: BakabaseServiceComponentsCloudDownloadsPikPakCliPikPakCliQuotaViewModel;
+}
+
+export interface BakabaseServiceComponentsCloudDownloadsPikPakCliPikPakCliAuthorizationViewModel {
+  id: string;
+  status: string;
+  verificationUri?: string;
+  userCode?: string;
+  /** @format date-time */
+  expiresAt: string;
+  /** @format int32 */
+  intervalSeconds: number;
+  problem?: string;
+}
+
+export interface BakabaseServiceComponentsCloudDownloadsPikPakCliPikPakCliQuotaViewModel {
+  /** @format int64 */
+  usedBytes?: number;
+  /** @format int64 */
+  limitBytes?: number;
+  /** @format int64 */
+  remainingTransferBytes?: number;
+}
+
+export interface BakabaseServiceComponentsCloudDownloadsRcloneRcloneAccountInputModel {
+  id?: string;
+  providerId: string;
+  name: string;
+  username?: string;
+  password?: string;
+  rootFolderId?: string;
+  apiKey?: string;
+}
+
+export interface BakabaseServiceComponentsCloudDownloadsRcloneRcloneAccountViewModel {
+  id: string;
+  name: string;
+  providerId: string;
+  isConfigured: boolean;
+  isDefault: boolean;
+  /** @format date-time */
+  lastValidatedAt?: string;
+  problem?: string;
+}
+
+export interface BakabaseServiceComponentsCloudDownloadsRcloneRcloneAuthorizationAnswerInputModel {
+  questionId: string;
+  value: string;
+}
+
+export interface BakabaseServiceComponentsCloudDownloadsRcloneRcloneAuthorizationSessionViewModel {
+  id: string;
+  accountId: string;
+  status: string;
+  authorizationMode: string;
+  /** @format date-time */
+  expiresAt: string;
+  question?: BakabaseServiceComponentsCloudDownloadsRcloneRcloneConfigurationQuestionViewModel;
+  remoteAuthorizeCommand?: string;
+  problem?: string;
+  browser?: BakabaseServiceComponentsCloudDownloadsRcloneRcloneBrowserAuthorizationViewModel;
+}
+
+export interface BakabaseServiceComponentsCloudDownloadsRcloneRcloneBrowserAuthorizationCallbackInputModel {
+  questionId: string;
+  callbackUrl: string;
+}
+
+export interface BakabaseServiceComponentsCloudDownloadsRcloneRcloneBrowserAuthorizationStartInputModel {
+  questionId: string;
+}
+
+export interface BakabaseServiceComponentsCloudDownloadsRcloneRcloneBrowserAuthorizationViewModel {
+  status: string;
+  authorizationUrl?: string;
+  /** @format date-time */
+  expiresAt: string;
+  problem?: string;
+}
+
+export interface BakabaseServiceComponentsCloudDownloadsRcloneRcloneConfigurationExampleViewModel {
+  value: string;
+  help: string;
+}
+
+export interface BakabaseServiceComponentsCloudDownloadsRcloneRcloneConfigurationQuestionViewModel {
+  id: string;
+  name: string;
+  help: string;
+  type: string;
+  required: boolean;
+  isSecret: boolean;
+  exclusive: boolean;
+  defaultValue?: string;
+  examples: BakabaseServiceComponentsCloudDownloadsRcloneRcloneConfigurationExampleViewModel[];
+}
+
+export interface BakabaseServiceComponentsCloudDownloadsRcloneRcloneDriveCandidateViewModel {
+  driveId: string;
+  name: string;
+  driveType?: string;
+  isPrimary: boolean;
+  accessStatus: string;
+  problem?: string;
+}
+
+export interface BakabaseServiceComponentsCloudDownloadsRcloneRcloneDriveChoicesViewModel {
+  questionId: string;
+  candidates: BakabaseServiceComponentsCloudDownloadsRcloneRcloneDriveCandidateViewModel[];
+  problem?: string;
+}
+
+export interface BakabaseServiceComponentsCloudDownloadsRcloneRcloneDrivePreviewInputModel {
+  questionId: string;
+  driveId: string;
+}
+
+export interface BakabaseServiceComponentsCloudDownloadsRcloneRcloneDrivePreviewItemViewModel {
+  name: string;
+  isDirectory: boolean;
+  /** @format int64 */
+  size?: number;
+}
+
+export interface BakabaseServiceComponentsCloudDownloadsRcloneRcloneDrivePreviewViewModel {
+  questionId: string;
+  driveId: string;
+  name?: string;
+  driveType?: string;
+  items: BakabaseServiceComponentsCloudDownloadsRcloneRcloneDrivePreviewItemViewModel[];
+  hasMore: boolean;
+}
+
+export interface BakabaseServiceComponentsCloudDownloadsTeraBoxTeraBoxAccountViewModel {
+  isConfigured: boolean;
+  accountId?: string;
+  accountVersion?: string;
+  displayName?: string;
+  problem?: string;
+}
+
+export interface BakabaseServiceComponentsCloudDownloadsTeraBoxTeraBoxAuthorizationCompleteInput {
+  code: string;
+}
+
+export interface BakabaseServiceComponentsCloudDownloadsTeraBoxTeraBoxAuthorizationViewModel {
+  id: string;
+  status: string;
+  authorizationUri?: string;
+  /** @format date-time */
+  expiresAt: string;
+  problem?: string;
 }
 
 export interface BakabaseServiceComponentsDataSyncSyncActivityDevice {
@@ -6813,6 +9392,149 @@ export interface BakabaseServiceComponentsDataSyncSyncActivityRow {
   job?: BakabaseServiceComponentsFederationProcessingResourceProcessingJobView;
   /** @format int32 */
   pendingDecisions: number;
+}
+
+export interface BakabaseServiceComponentsDownloadIntentsDownloadCandidate {
+  id: string;
+  url: string;
+  title?: string;
+  groupId?: string;
+  mirrorGroupConfirmed?: boolean;
+  kind: string;
+  providerId?: string;
+  accessCode?: string;
+  archivePassword?: string;
+  extractionPlanJson?: string;
+  version?: string;
+  methodId?: string;
+  accountId?: string;
+  sourceCorrection?: any;
+}
+
+export interface BakabaseServiceComponentsDownloadIntentsDownloadCandidateView {
+  candidate: BakabaseServiceComponentsDownloadIntentsDownloadCandidate;
+  methods: BakabaseServiceComponentsDownloadIntentsDownloadMethodView[];
+  canSelect: boolean;
+  state: string;
+  requirements: BakabaseServiceComponentsDownloadIntentsDownloadRequirement[];
+  resolvedSource?: BakabaseModulesDownloaderCloudCloudSource;
+  selectedMethodId?: string;
+  processingPlan?: BakabaseServiceComponentsDownloadIntentsProcessingPlanPreflightResult;
+  availability?: BakabaseModulesDownloaderCloudSourceAvailabilityResult;
+  sourceDisabled?: boolean;
+}
+
+export interface BakabaseServiceComponentsDownloadIntentsDownloadIntentPreflight {
+  mode: string;
+  candidates: BakabaseServiceComponentsDownloadIntentsDownloadCandidateView[];
+  requirements: BakabaseServiceComponentsDownloadIntentsDownloadRequirement[];
+  canSubmit: boolean;
+}
+
+export interface BakabaseServiceComponentsDownloadIntentsDownloadIntentRequest {
+  availabilityContextKey?: string;
+  checkSourceAvailability?: boolean;
+  ignoreSourceAvailability?: boolean;
+  mode: string;
+  title?: string;
+  accountId?: string;
+  /** @format int32 */
+  workflowDefinitionId?: number;
+  candidates: BakabaseServiceComponentsDownloadIntentsDownloadCandidate[];
+  selectedCandidateIds: string[];
+}
+
+export interface BakabaseServiceComponentsDownloadIntentsDownloadIntentSubmission {
+  mode: string;
+  runs: BakabaseModulesWorkflowAbstractionsModelsViewWorkflowRunViewModel[];
+  resourceIds: number[];
+  acquisitionTaskIds: number[];
+}
+
+export interface BakabaseServiceComponentsDownloadIntentsDownloadMethodView {
+  id: string;
+  displayName: string;
+  providerId: string;
+  transport: string;
+  supported: boolean;
+  ready: boolean;
+  state: string;
+  requirements: BakabaseServiceComponentsDownloadIntentsDownloadRequirement[];
+  dependencyIds: string[];
+  supportsTransfer: boolean;
+  accountProvider?: string;
+  engineId?: string;
+  sourceKinds?: string[];
+  scope?: string;
+}
+
+export interface BakabaseServiceComponentsDownloadIntentsDownloadRequirement {
+  code: string;
+  kind: string;
+  message: string;
+  componentId?: string;
+  accountProvider?: string;
+  actions?: string[];
+}
+
+export interface BakabaseServiceComponentsDownloadIntentsPostCandidateSourceCorrection {
+  /** @format int32 */
+  resourceIndex: number;
+  expectedOriginalUrl: string;
+  url: string;
+  accessCode?: string;
+  codec: string;
+  imageScope: string;
+  /** @format int32 */
+  commentIndex?: number;
+  /** @format int32 */
+  imageIndex: number;
+  imageUrl: string;
+  sourceHtmlSha256: string;
+  imageSha256: string;
+  decodedValue: string;
+}
+
+export interface BakabaseServiceComponentsDownloadIntentsPostDownloadIntentRequest {
+  /** @format int32 */
+  taskId: number;
+  /** @format int32 */
+  revision: number;
+  mode: string;
+  title?: string;
+  accountId?: string;
+  /** @format int32 */
+  workflowDefinitionId?: number;
+  resourceIndices: number[];
+  candidateMethods: Record<string, string>;
+  candidateAccounts: Record<string, string>;
+  candidateProcessingPlans: Record<string, string>;
+  expectedResultsHash?: string;
+  candidateSourceCorrections: Record<
+    string,
+    BakabaseServiceComponentsDownloadIntentsPostCandidateSourceCorrection
+  >;
+}
+
+export interface BakabaseServiceComponentsDownloadIntentsPostLocalProcessingRequest {
+  /** @format int32 */
+  taskId: number;
+  /** @format int32 */
+  revision: number;
+  /** @format int32 */
+  resourceIndex: number;
+  /** @format int32 */
+  workflowDefinitionId: number;
+  files: string[];
+  alreadyProcessed: boolean;
+}
+
+export interface BakabaseServiceComponentsDownloadIntentsProcessingPlanPreflightResult {
+  status: string;
+  /** @format int32 */
+  stepCount: number;
+  issues: BakabaseServiceComponentsDownloadIntentsDownloadRequirement[];
+  blocksSubmission: boolean;
 }
 
 export interface BakabaseServiceComponentsFederationManagedLibraryInfo {
@@ -7107,6 +9829,75 @@ export interface BakabaseServiceComponentsFederationProcessingResourceProcessing
   output?: BakabaseServiceComponentsFederationProcessingResourceProcessingOutput;
 }
 
+export interface BakabaseServiceComponentsFileProcessingArchiveQuarantineReceipt {
+  receiptId: string;
+  artifactId: string;
+  originalRoot: string;
+  quarantineRoot: string;
+  status: string;
+  outputArtifactIds: string[];
+  message?: string;
+}
+
+export interface BakabaseServiceComponentsFileProcessingArchiveQuarantineResult {
+  completed: boolean;
+  status: string;
+  receiptId?: string;
+  message?: string;
+  /** @format int32 */
+  removedFiles: number;
+  /** @format int64 */
+  removedBytes: number;
+}
+
+export interface BakabaseServiceComponentsFileProcessingArtifactWorkspaceCleanupInput {
+  artifactIds: string[];
+}
+
+export interface BakabaseServiceComponentsFileProcessingArtifactWorkspaceCleanupPreview {
+  artifactId: string;
+  operationId: string;
+  resultDirectory: string;
+  eligible: boolean;
+  reason?: string;
+  /** @format int32 */
+  fileCount: number;
+  /** @format int64 */
+  bytes: number;
+  selectionFingerprint?: string;
+  publishedArtifactId?: string;
+}
+
+export interface BakabaseServiceComponentsFileProcessingArtifactWorkspaceCleanupResult {
+  artifactId: string;
+  completed: boolean;
+  reason?: string;
+  /** @format int32 */
+  removedFiles: number;
+  /** @format int64 */
+  removedBytes: number;
+}
+
+export interface BakabaseServiceComponentsOAuthOAuthProviderConfigurationInputModel {
+  mode: string;
+  clientId?: string;
+  tenantId?: string;
+  callbackUrl?: string;
+  clientSecret?: string;
+  clearClientSecret: boolean;
+}
+
+export interface BakabaseServiceComponentsOAuthOAuthProviderConfigurationViewModel {
+  providerId: string;
+  mode: string;
+  clientId?: string;
+  tenantId?: string;
+  callbackUrl?: string;
+  hasClientSecret: boolean;
+  isReady: boolean;
+  problem?: string;
+}
+
 export interface BakabaseServiceComponentsServerDataServerAppDataImportValidation {
   valid: boolean;
   error?: string;
@@ -7114,6 +9905,64 @@ export interface BakabaseServiceComponentsServerDataServerAppDataImportValidatio
   currentPath: string;
   sourceVersion?: string;
   originalDataPath?: string;
+}
+
+export interface BakabaseServiceComponentsSourceAvailabilitySourceAvailabilityApplyInput {
+  batchId: string;
+  selectedKeys: string[];
+  action: string;
+}
+
+export interface BakabaseServiceComponentsSourceAvailabilitySourceAvailabilityApplyResult {
+  appliedKeys: string[];
+  skipped: BakabaseServiceComponentsSourceAvailabilitySourceAvailabilityApplySkip[];
+}
+
+export interface BakabaseServiceComponentsSourceAvailabilitySourceAvailabilityApplySkip {
+  key: string;
+  reason: string;
+}
+
+export interface BakabaseServiceComponentsSourceAvailabilitySourceAvailabilityBatchView {
+  batchId: string;
+  status: string;
+  /** @format int32 */
+  processed: number;
+  /** @format int32 */
+  total: number;
+  /** @format date-time */
+  expiresAt: string;
+  rows: BakabaseServiceComponentsSourceAvailabilitySourceAvailabilityRow[];
+  taskId: string;
+}
+
+export interface BakabaseServiceComponentsSourceAvailabilitySourceAvailabilityPreviewInput {
+  taskIds: number[];
+  force: boolean;
+}
+
+export interface BakabaseServiceComponentsSourceAvailabilitySourceAvailabilityRow {
+  key: string;
+  /** @format int32 */
+  taskId: number;
+  title: string;
+  partId: string;
+  sourceId: string;
+  url: string;
+  accessCode?: string;
+  providerId: string;
+  availability?: BakabaseModulesDownloaderCloudSourceAvailabilityResult;
+  disabled: boolean;
+  canDisable: boolean;
+  canRestore: boolean;
+  protected: boolean;
+  blockReason?: string;
+  decisionVersion?: string;
+}
+
+export interface BakabaseServiceControllersAcquisitionAdaptiveMigrationApplyInput {
+  previewToken: string;
+  taskIds?: number[];
 }
 
 export interface BakabaseServiceControllersAppDataImportControllerImportRequest {
@@ -7203,6 +10052,7 @@ export interface BakabaseServiceControllersCloudProviderView {
   available: boolean;
   problem?: string;
   supportsTransfer: boolean;
+  methodId?: string;
 }
 
 export interface BakabaseServiceControllersCollectionAcquireMissingResult {
@@ -7439,6 +10289,74 @@ export interface BakabaseServiceControllersSharedListImportRow {
   password?: string;
   /** @format int32 */
   lineNumber: number;
+}
+
+export interface BakabaseServiceControllersWorkflowArtifactDeliveryLayoutPreview {
+  inputArtifactId: string;
+  inputFingerprint: string;
+  projectionFingerprint: string;
+  policy: BakabaseModulesWorkflowArtifactsArtifactDeliveryPolicy;
+  changed: boolean;
+  /** @format int32 */
+  fileCount: number;
+  /** @format int32 */
+  changedFileCount: number;
+  /** @format int32 */
+  directoryCount: number;
+  fileMappings: BakabaseModulesWorkflowArtifactsArtifactDeliveryPathMapping[];
+  directoryMappings: BakabaseModulesWorkflowArtifactsArtifactDeliveryPathMapping[];
+  removedDirectories: string[];
+  truncated: boolean;
+  state: string;
+}
+
+export interface BakabaseServiceControllersWorkflowSourceRunLocation {
+  kind: string;
+  directory?: string;
+  artifactId?: string;
+  state?: string;
+  /** @format int32 */
+  fileCount?: number;
+  /** @format int64 */
+  totalBytes?: number;
+  isPlanned: boolean;
+}
+
+export interface BakabaseServiceControllersWorkflowSourceRunView {
+  run: BakabaseModulesWorkflowAbstractionsModelsViewWorkflowRunViewModel;
+  workflowName: string;
+  workflowIsBuiltin: boolean;
+  phase: string;
+  downloadTaskIds: string[];
+  /** @format int32 */
+  completedFileCount: number;
+  reused: boolean;
+  deliveredDirectory?: string;
+  /** @format int64 */
+  downloadedBytes?: number;
+  /** @format int64 */
+  totalBytes?: number;
+  /** @format double */
+  speedBytesPerSecond?: number;
+  outputLocations?: BakabaseServiceControllersWorkflowSourceRunLocation[];
+  problemCodes?: string[];
+}
+
+export interface BakabaseServiceControllersWorkflowSourceRunsQuery {
+  sources: BakabaseModulesWorkflowAbstractionsModelsDomainWorkflowSourceRef[];
+  /** @format int32 */
+  pageIndex: number;
+  /** @format int32 */
+  pageSize: number;
+  excludedTriggerKinds?: string[];
+}
+
+export interface BakabaseServiceControllersWorkflowSourceRunsView {
+  source: BakabaseModulesWorkflowAbstractionsModelsDomainWorkflowSourceRef;
+  /** @format int32 */
+  runCount: number;
+  runs: BakabaseServiceControllersWorkflowSourceRunView[];
+  statusCounts?: Record<string, number>;
 }
 
 export interface BakabaseServiceModelsInputAvSourceTestInputModel {
@@ -7730,7 +10648,7 @@ export interface BakabaseServiceModelsInputResourcePlaceholderInputModel {
 
 export interface BakabaseServiceModelsInputResourcePlaceholderItemInputModel {
   title?: string;
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb, 14: BaiduNetdisk, 15: GoogleDrive, 16: Gofile] */
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb, 14: BaiduNetdisk, 15: GoogleDrive, 16: Gofile, 17: PikPak, 18: OneDrive, 19: Pixeldrain, 20: Mega, 21: TeraBox] */
   thirdPartyId?: BakabaseInsideWorldModelsConstantsThirdPartyId;
   externalId?: string;
   sharedUrl?: string;
@@ -8755,6 +11673,17 @@ export interface BakabaseServiceModelsViewSavedSearchViewModel {
   displayMode: BakabaseAbstractionsModelsDomainConstantsFilterDisplayMode;
 }
 
+export interface BakabaseServiceModelsViewStorageCapacityViewModel {
+  path: string;
+  status: string;
+  volumePath?: string;
+  /** @format int64 */
+  availableBytes?: number;
+  /** @format int64 */
+  totalBytes?: number;
+  errorCode?: string;
+}
+
 export interface BakabaseServiceModelsViewTelemetrySnapshotViewModel {
   appVersion: string;
   releaseChannel: string;
@@ -8953,6 +11882,13 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBu
   code: number;
   message?: string;
   data?: BakabaseInsideWorldBusinessComponentsCompressionCompressedFileEntry[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsDependencyImplementationsCloudToolsPythonRuntimeCandidateViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseInsideWorldBusinessComponentsDependencyImplementationsCloudToolsPythonRuntimeCandidateViewModel[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloadTaskKeyStatus {
@@ -9291,6 +12227,27 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceCompon
   data?: BakabaseServiceComponentsAcquisitionInboxCandidate[];
 }
 
+export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanBuilderDescriptor {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanBuilderDescriptor[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanSourceTasks {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanSourceTasks[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionRuntimeOverview {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionRuntimeOverview[];
+}
+
 export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceComponentsAcquisitionSharedListPreviewRow {
   /** @format int32 */
   code: number;
@@ -9303,6 +12260,13 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceCompon
   code: number;
   message?: string;
   data?: BakabaseServiceComponentsCloudDownloadsBaiduBaiduPcsAccountViewModel[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceComponentsCloudDownloadsRcloneRcloneAccountViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsCloudDownloadsRcloneRcloneAccountViewModel[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceControllersChatControllerChatToolViewModel {
@@ -10056,6 +13020,20 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWo
   data?: BakabaseInsideWorldBusinessComponentsDependencyAbstractionsDependentComponentVersion;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsDependencyImplementationsCloudToolsPythonRuntimeConfigurationViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseInsideWorldBusinessComponentsDependencyImplementationsCloudToolsPythonRuntimeConfigurationViewModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsDependencyImplementationsCloudToolsPythonRuntimeValidationViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseInsideWorldBusinessComponentsDependencyImplementationsCloudToolsPythonRuntimeValidationViewModel;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsDependencyImplementationsFfMpegHardwareAccelerationInfo {
   /** @format int32 */
   code: number;
@@ -10110,6 +13088,76 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWo
   code: number;
   message?: string;
   data?: BakabaseInsideWorldBusinessComponentsPlayListModelsDomainPlayList;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserContentReadinessView {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserContentReadinessView;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserContentReviewPreview {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserContentReviewPreview;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserContentReviewResult {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserContentReviewResult;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserReparseBatchResult {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserReparseBatchResult;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTaskDeletionPreview {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTaskDeletionPreview;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTaskDeletionResult {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTaskDeletionResult;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTaskPage {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTaskPage;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTaskPurchasePreview {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTaskPurchasePreview;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTaskPurchaseResult {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTaskPurchaseResult;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsPostParserModelsDomainReParseFailedPostParserTasksInput {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainReParseFailedPostParserTasksInput;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConfigsFileSystemOptions {
@@ -10299,6 +13347,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesA
   code: number;
   message?: string;
   data?: BakabaseModulesAIServicesTranslationResult;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionHandoffView {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionHandoffView;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionLead {
@@ -10567,6 +13622,20 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesT
   data?: BakabaseModulesThirdPartyAbstractionsHttpCookieCookieCaptureResult;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesWorkflowAbstractionsModelsViewWorkflowArtifactDirectoryView {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesWorkflowAbstractionsModelsViewWorkflowArtifactDirectoryView;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesWorkflowAbstractionsModelsViewWorkflowArtifactFilesView {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesWorkflowAbstractionsModelsViewWorkflowArtifactFilesView;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesWorkflowAbstractionsModelsViewWorkflowDefinitionViewModel {
   /** @format int32 */
   code: number;
@@ -10595,11 +13664,256 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceC
   data?: BakabaseServiceComponentsAcquisitionAcquisitionSetupResult;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionHandoffsPostAcquisitionCatchUpPreview {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsAcquisitionHandoffsPostAcquisitionCatchUpPreview;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionHandoffsPostAcquisitionCatchUpResult {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsAcquisitionHandoffsPostAcquisitionCatchUpResult;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionHandoffsPostAcquisitionFilteredCatchUpPreview {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsAcquisitionHandoffsPostAcquisitionFilteredCatchUpPreview;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionAdaptiveMigrationPreview {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionAdaptiveMigrationPreview;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionAdaptiveMigrationResult {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionAdaptiveMigrationResult;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionAssessmentIoView {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionAssessmentIoView;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionContinuationPreview {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionContinuationPreview;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionContinuation {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionContinuation;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionDownloadDestinationPreview {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionDownloadDestinationPreview;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionDownloadDestinationResult {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionDownloadDestinationResult;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionDraftImportResult {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionDraftImportResult;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalRecoveryBatchCapacityPreview {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalRecoveryBatchCapacityPreview;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalRecoveryBatchPreview {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalRecoveryBatchPreview;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalRecoveryBatch {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalRecoveryBatch;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanTaskDetail {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanTaskDetail;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionRecoveryDiagnosisCancellation {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionRecoveryDiagnosisCancellation;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionRecoveryPreview {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionRecoveryPreview;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionRecoveryResult {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionRecoveryResult;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionSourceCorrectionResult {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionSourceCorrectionResult;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionSourceCorrections {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionSourceCorrections;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionSourceRevisionOptions {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionSourceRevisionOptions;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionSourceRevisionPreview {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionSourceRevisionPreview;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionSourceRevisionResult {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionSourceRevisionResult;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionStorageOverridePreview {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionStorageOverridePreview;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionStorageOverrideResult {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionStorageOverrideResult;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionStoragePolicyApplyResult {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionStoragePolicyApplyResult;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionStoragePolicyPreview {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionStoragePolicyPreview;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionSupersededDeliveryResult {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionSupersededDeliveryResult;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionTaskDeletePreview {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionTaskDeletePreview;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionTaskDeleteProgress {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionTaskDeleteProgress;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionTaskDeleteResult {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionTaskDeleteResult;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionTaskPage {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionTaskPage;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionWorkspaceCleanupPreview {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionWorkspaceCleanupPreview;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionWorkspaceCleanupResult {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionWorkspaceCleanupResult;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPostParserAcquisitionResult {
   /** @format int32 */
   code: number;
   message?: string;
   data?: BakabaseServiceComponentsAcquisitionPostParserAcquisitionResult;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionProcessingPlansSourceProcessingPlanView {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsAcquisitionProcessingPlansSourceProcessingPlanView;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionSharedListImportResult {
@@ -10616,11 +13930,109 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceC
   data?: BakabaseServiceComponentsCloudDownloadsBaiduBaiduPcsAccountViewModel;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsCloudDownloadsPikPakCliPikPakCliAccountViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsCloudDownloadsPikPakCliPikPakCliAccountViewModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsCloudDownloadsPikPakCliPikPakCliAuthorizationViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsCloudDownloadsPikPakCliPikPakCliAuthorizationViewModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsCloudDownloadsRcloneRcloneAccountViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsCloudDownloadsRcloneRcloneAccountViewModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsCloudDownloadsRcloneRcloneAuthorizationSessionViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsCloudDownloadsRcloneRcloneAuthorizationSessionViewModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsCloudDownloadsRcloneRcloneDriveChoicesViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsCloudDownloadsRcloneRcloneDriveChoicesViewModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsCloudDownloadsRcloneRcloneDrivePreviewViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsCloudDownloadsRcloneRcloneDrivePreviewViewModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsCloudDownloadsTeraBoxTeraBoxAccountViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsCloudDownloadsTeraBoxTeraBoxAccountViewModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsCloudDownloadsTeraBoxTeraBoxAuthorizationViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsCloudDownloadsTeraBoxTeraBoxAuthorizationViewModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsDownloadIntentsDownloadIntentPreflight {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsDownloadIntentsDownloadIntentPreflight;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsDownloadIntentsDownloadIntentSubmission {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsDownloadIntentsDownloadIntentSubmission;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsFileProcessingArchiveQuarantineResult {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsFileProcessingArchiveQuarantineResult;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsOAuthOAuthProviderConfigurationViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsOAuthOAuthProviderConfigurationViewModel;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsServerDataServerAppDataImportValidation {
   /** @format int32 */
   code: number;
   message?: string;
   data?: BakabaseServiceComponentsServerDataServerAppDataImportValidation;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsSourceAvailabilitySourceAvailabilityApplyResult {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsSourceAvailabilitySourceAvailabilityApplyResult;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsSourceAvailabilitySourceAvailabilityBatchView {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsSourceAvailabilitySourceAvailabilityBatchView;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceControllersAppDataPathControllerValidateResponse {
@@ -10663,6 +14075,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceC
   code: number;
   message?: string;
   data?: BakabaseServiceControllersPathMarkSyncStatusResponse;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceControllersWorkflowArtifactDeliveryLayoutPreview {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceControllersWorkflowArtifactDeliveryLayoutPreview;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewAcquisitionCandidatePageViewModel {
@@ -10875,6 +14294,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceM
   data?: BakabaseServiceModelsViewSavedSearchViewModel;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewStorageCapacityViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewStorageCapacityViewModel;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewTelemetrySnapshotViewModel {
   /** @format int32 */
   code: number;
@@ -10958,11 +14384,60 @@ export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollection
   data?: Record<string, number>;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericIReadOnlyList1BakabaseServiceComponentsAcquisitionPlanningAcquisitionContinuation {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionContinuation[];
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericIReadOnlyList1BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalRecoveryBatch {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalRecoveryBatch[];
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericIReadOnlyList1BakabaseServiceComponentsFileProcessingArchiveQuarantineReceipt {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsFileProcessingArchiveQuarantineReceipt[];
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericIReadOnlyList1BakabaseServiceComponentsFileProcessingArtifactWorkspaceCleanupPreview {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsFileProcessingArtifactWorkspaceCleanupPreview[];
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericIReadOnlyList1BakabaseServiceComponentsFileProcessingArtifactWorkspaceCleanupResult {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsFileProcessingArtifactWorkspaceCleanupResult[];
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericList1BakabaseServiceComponentsSourceAvailabilitySourceAvailabilityRow {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsSourceAvailabilitySourceAvailabilityRow[];
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericList1BakabaseServiceControllersCloudProviderView {
   /** @format int32 */
   code: number;
   message?: string;
   data?: BakabaseServiceControllersCloudProviderView[];
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericList1BakabaseServiceControllersWorkflowSourceRunsView {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceControllersWorkflowSourceRunsView[];
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1SystemInt32 {
@@ -11721,6 +15196,8 @@ export interface FullRequestParams extends Omit<RequestInit, "body"> {
 
   /** Set false when the caller presents errors inline; callbacks control API business errors. */
   showErrorToast?: boolean | ((response: BaseResponse) => boolean);
+  /** Keep authorization links and other private response data out of development logs. */
+  sensitiveResponse?: boolean;
 }
 
 export type RequestParams = Omit<FullRequestParams, "body" | "method" | "query" | "path">;
@@ -11870,6 +15347,7 @@ export class HttpClient<SecurityDataType = unknown> {
     format,
     baseUrl,
     cancelToken,
+    sensitiveResponse,
     ...params
     } = fullRequestParams;
     const secureParams =
@@ -11980,7 +15458,7 @@ export class HttpClient<SecurityDataType = unknown> {
   protected processResponseData = <T = any>(response: BaseResponse, params: FullRequestParams): T => {
     // Check if the response has a code property (API response structure)
     if (response && typeof response === "object" && "code" in response) {
-      log('[response]', params.path, response)
+      if (!params.sensitiveResponse) log('[response]', params.path, response)
       switch (response.code) {
         case 0:
           break;
@@ -12529,6 +16007,1669 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAcquisitionRecipesUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/acquisition/recipes`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Acquisition
+     * @name PreviewAcquisitionAdaptiveProcessingMigration
+     * @request POST:/acquisition/adaptive-processing/preview
+     */
+    previewAcquisitionAdaptiveProcessingMigration: (
+      data: BakabaseServiceComponentsAcquisitionPlanningAcquisitionAdaptiveMigrationInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionAdaptiveMigrationPreview,
+        any
+      >({
+        path: `/acquisition/adaptive-processing/preview`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for previewAcquisitionAdaptiveProcessingMigration
+     * @name previewAcquisitionAdaptiveProcessingMigrationUrl
+     */
+    previewAcquisitionAdaptiveProcessingMigrationUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/acquisition/adaptive-processing/preview`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Acquisition
+     * @name ApplyAcquisitionAdaptiveProcessingMigration
+     * @request POST:/acquisition/adaptive-processing/apply
+     */
+    applyAcquisitionAdaptiveProcessingMigration: (
+      data: BakabaseServiceControllersAcquisitionAdaptiveMigrationApplyInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionAdaptiveMigrationResult,
+        any
+      >({
+        path: `/acquisition/adaptive-processing/apply`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for applyAcquisitionAdaptiveProcessingMigration
+     * @name applyAcquisitionAdaptiveProcessingMigrationUrl
+     */
+    applyAcquisitionAdaptiveProcessingMigrationUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/acquisition/adaptive-processing/apply`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionAssessment
+     * @name GetAcquisitionAssessmentIo
+     * @request GET:/acquisition/tasks/{taskId}/runs/{runId}/assessment-io
+     */
+    getAcquisitionAssessmentIo: (
+      taskId: number,
+      runId: number,
+      query?: {
+        attemptId?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionAssessmentIoView,
+        any
+      >({
+        path: `/acquisition/tasks/${taskId}/runs/${runId}/assessment-io`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionContinuation
+     * @name PreviewAcquisitionContinuation
+     * @request POST:/acquisition/tasks/recovery/continuations/preview
+     */
+    previewAcquisitionContinuation: (
+      data: BakabaseServiceComponentsAcquisitionPlanningAcquisitionContinuationPreviewInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionContinuationPreview,
+        any
+      >({
+        path: `/acquisition/tasks/recovery/continuations/preview`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for previewAcquisitionContinuation
+     * @name previewAcquisitionContinuationUrl
+     */
+    previewAcquisitionContinuationUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/acquisition/tasks/recovery/continuations/preview`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionContinuation
+     * @name CreateAcquisitionContinuation
+     * @request POST:/acquisition/tasks/recovery/continuations/apply
+     */
+    createAcquisitionContinuation: (
+      data: BakabaseServiceComponentsAcquisitionPlanningAcquisitionContinuationApplyInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionContinuation,
+        any
+      >({
+        path: `/acquisition/tasks/recovery/continuations/apply`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for createAcquisitionContinuation
+     * @name createAcquisitionContinuationUrl
+     */
+    createAcquisitionContinuationUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/acquisition/tasks/recovery/continuations/apply`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionContinuation
+     * @name GetAcquisitionContinuations
+     * @request GET:/acquisition/tasks/recovery/continuations
+     */
+    getAcquisitionContinuations: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericIReadOnlyList1BakabaseServiceComponentsAcquisitionPlanningAcquisitionContinuation,
+        any
+      >({
+        path: `/acquisition/tasks/recovery/continuations`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getAcquisitionContinuations
+     * @name getAcquisitionContinuationsUrl
+     */
+    getAcquisitionContinuationsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/acquisition/tasks/recovery/continuations`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionContinuation
+     * @name GetAcquisitionContinuationByPreview
+     * @request GET:/acquisition/tasks/recovery/continuations/by-preview/{previewToken}
+     */
+    getAcquisitionContinuationByPreview: (previewToken: string, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionContinuation,
+        any
+      >({
+        path: `/acquisition/tasks/recovery/continuations/by-preview/${previewToken}`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionContinuation
+     * @name GetAcquisitionContinuation
+     * @request GET:/acquisition/tasks/recovery/continuations/{batchId}
+     */
+    getAcquisitionContinuation: (batchId: string, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionContinuation,
+        any
+      >({
+        path: `/acquisition/tasks/recovery/continuations/${batchId}`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionContinuation
+     * @name CancelAcquisitionContinuation
+     * @request POST:/acquisition/tasks/recovery/continuations/{batchId}/cancel
+     */
+    cancelAcquisitionContinuation: (batchId: string, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionContinuation,
+        any
+      >({
+        path: `/acquisition/tasks/recovery/continuations/${batchId}/cancel`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionDownloadDestination
+     * @name PreviewAcquisitionDownloadDestinationRevision
+     * @request POST:/acquisition/tasks/download-destination/preview
+     */
+    previewAcquisitionDownloadDestinationRevision: (
+      data: BakabaseServiceComponentsAcquisitionPlanningAcquisitionDownloadDestinationPreviewInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionDownloadDestinationPreview,
+        any
+      >({
+        path: `/acquisition/tasks/download-destination/preview`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for previewAcquisitionDownloadDestinationRevision
+     * @name previewAcquisitionDownloadDestinationRevisionUrl
+     */
+    previewAcquisitionDownloadDestinationRevisionUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/acquisition/tasks/download-destination/preview`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionDownloadDestination
+     * @name ApplyAcquisitionDownloadDestinationRevision
+     * @request POST:/acquisition/tasks/download-destination/apply
+     */
+    applyAcquisitionDownloadDestinationRevision: (
+      data: BakabaseServiceComponentsAcquisitionPlanningAcquisitionDownloadDestinationApplyInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionDownloadDestinationResult,
+        any
+      >({
+        path: `/acquisition/tasks/download-destination/apply`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for applyAcquisitionDownloadDestinationRevision
+     * @name applyAcquisitionDownloadDestinationRevisionUrl
+     */
+    applyAcquisitionDownloadDestinationRevisionUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/acquisition/tasks/download-destination/apply`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionHandoffs
+     * @name PrepareFilteredPostAcquisitionCatchUp
+     * @request POST:/acquisition/handoffs/post-results/prepare-filter
+     */
+    prepareFilteredPostAcquisitionCatchUp: (
+      data: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTaskFilterScope,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionHandoffsPostAcquisitionFilteredCatchUpPreview,
+        any
+      >({
+        path: `/acquisition/handoffs/post-results/prepare-filter`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for prepareFilteredPostAcquisitionCatchUp
+     * @name prepareFilteredPostAcquisitionCatchUpUrl
+     */
+    prepareFilteredPostAcquisitionCatchUpUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/acquisition/handoffs/post-results/prepare-filter`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionHandoffs
+     * @name PreparePostAcquisitionCatchUp
+     * @request POST:/acquisition/handoffs/post-results/prepare
+     */
+    preparePostAcquisitionCatchUp: (
+      data: BakabaseServiceComponentsAcquisitionHandoffsPostAcquisitionCatchUpPrepareInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionHandoffsPostAcquisitionCatchUpPreview,
+        any
+      >({
+        path: `/acquisition/handoffs/post-results/prepare`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for preparePostAcquisitionCatchUp
+     * @name preparePostAcquisitionCatchUpUrl
+     */
+    preparePostAcquisitionCatchUpUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/acquisition/handoffs/post-results/prepare`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionHandoffs
+     * @name ConfirmPostAcquisitionCatchUp
+     * @request POST:/acquisition/handoffs/post-results/confirm
+     */
+    confirmPostAcquisitionCatchUp: (
+      data: BakabaseServiceComponentsAcquisitionHandoffsPostAcquisitionCatchUpConfirmInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionHandoffsPostAcquisitionCatchUpResult,
+        any
+      >({
+        path: `/acquisition/handoffs/post-results/confirm`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for confirmPostAcquisitionCatchUp
+     * @name confirmPostAcquisitionCatchUpUrl
+     */
+    confirmPostAcquisitionCatchUpUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/acquisition/handoffs/post-results/confirm`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionHandoffs
+     * @name GetAcquisitionHandoff
+     * @request GET:/acquisition/handoffs/{id}
+     */
+    getAcquisitionHandoff: (id: string, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionHandoffView,
+        any
+      >({
+        path: `/acquisition/handoffs/${id}`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionHandoffs
+     * @name RetryAcquisitionHandoff
+     * @request POST:/acquisition/handoffs/{id}/retry
+     */
+    retryAcquisitionHandoff: (id: string, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionHandoffView,
+        any
+      >({
+        path: `/acquisition/handoffs/${id}/retry`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionLocalRecoveryBatch
+     * @name PreviewAcquisitionLocalRecoveryBatch
+     * @request POST:/acquisition/tasks/local-recovery-batches/preview
+     */
+    previewAcquisitionLocalRecoveryBatch: (
+      data: BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalRecoveryBatchPreviewInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalRecoveryBatchPreview,
+        any
+      >({
+        path: `/acquisition/tasks/local-recovery-batches/preview`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for previewAcquisitionLocalRecoveryBatch
+     * @name previewAcquisitionLocalRecoveryBatchUrl
+     */
+    previewAcquisitionLocalRecoveryBatchUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/acquisition/tasks/local-recovery-batches/preview`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionLocalRecoveryBatch
+     * @name PreviewAcquisitionLocalRecoveryBatchCapacity
+     * @request POST:/acquisition/tasks/local-recovery-batches/capacity
+     */
+    previewAcquisitionLocalRecoveryBatchCapacity: (
+      data: BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalRecoveryBatchCapacityInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalRecoveryBatchCapacityPreview,
+        any
+      >({
+        path: `/acquisition/tasks/local-recovery-batches/capacity`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for previewAcquisitionLocalRecoveryBatchCapacity
+     * @name previewAcquisitionLocalRecoveryBatchCapacityUrl
+     */
+    previewAcquisitionLocalRecoveryBatchCapacityUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/acquisition/tasks/local-recovery-batches/capacity`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionLocalRecoveryBatch
+     * @name CreateAcquisitionLocalRecoveryBatch
+     * @request POST:/acquisition/tasks/local-recovery-batches/apply
+     */
+    createAcquisitionLocalRecoveryBatch: (
+      data: BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalRecoveryBatchApplyInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalRecoveryBatch,
+        any
+      >({
+        path: `/acquisition/tasks/local-recovery-batches/apply`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for createAcquisitionLocalRecoveryBatch
+     * @name createAcquisitionLocalRecoveryBatchUrl
+     */
+    createAcquisitionLocalRecoveryBatchUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/acquisition/tasks/local-recovery-batches/apply`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionLocalRecoveryBatch
+     * @name GetAcquisitionLocalRecoveryBatches
+     * @request GET:/acquisition/tasks/local-recovery-batches
+     */
+    getAcquisitionLocalRecoveryBatches: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericIReadOnlyList1BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalRecoveryBatch,
+        any
+      >({
+        path: `/acquisition/tasks/local-recovery-batches`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getAcquisitionLocalRecoveryBatches
+     * @name getAcquisitionLocalRecoveryBatchesUrl
+     */
+    getAcquisitionLocalRecoveryBatchesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/acquisition/tasks/local-recovery-batches`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionLocalRecoveryBatch
+     * @name GetAcquisitionLocalRecoveryBatch
+     * @request GET:/acquisition/tasks/local-recovery-batches/{batchId}
+     */
+    getAcquisitionLocalRecoveryBatch: (batchId: string, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalRecoveryBatch,
+        any
+      >({
+        path: `/acquisition/tasks/local-recovery-batches/${batchId}`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionLocalRecoveryBatch
+     * @name PauseAcquisitionLocalRecoveryBatch
+     * @request POST:/acquisition/tasks/local-recovery-batches/{batchId}/pause
+     */
+    pauseAcquisitionLocalRecoveryBatch: (batchId: string, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalRecoveryBatch,
+        any
+      >({
+        path: `/acquisition/tasks/local-recovery-batches/${batchId}/pause`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionLocalRecoveryBatch
+     * @name ResumeAcquisitionLocalRecoveryBatch
+     * @request POST:/acquisition/tasks/local-recovery-batches/{batchId}/resume
+     */
+    resumeAcquisitionLocalRecoveryBatch: (batchId: string, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalRecoveryBatch,
+        any
+      >({
+        path: `/acquisition/tasks/local-recovery-batches/${batchId}/resume`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionLocalRecoveryBatch
+     * @name CancelAcquisitionLocalRecoveryBatch
+     * @request POST:/acquisition/tasks/local-recovery-batches/{batchId}/cancel
+     */
+    cancelAcquisitionLocalRecoveryBatch: (batchId: string, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalRecoveryBatch,
+        any
+      >({
+        path: `/acquisition/tasks/local-recovery-batches/${batchId}/cancel`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionPlans
+     * @name GetAcquisitionPlanBuilders
+     * @request GET:/acquisition/plans/builders
+     */
+    getAcquisitionPlanBuilders: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanBuilderDescriptor,
+        any
+      >({
+        path: `/acquisition/plans/builders`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getAcquisitionPlanBuilders
+     * @name getAcquisitionPlanBuildersUrl
+     */
+    getAcquisitionPlanBuildersUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/acquisition/plans/builders`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionPlans
+     * @name CreateAcquisitionDraft
+     * @request POST:/acquisition/plans/drafts
+     */
+    createAcquisitionDraft: (
+      data: BakabaseServiceComponentsAcquisitionPlanningAcquisitionDraftCreationInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanTaskDetail,
+        any
+      >({
+        path: `/acquisition/plans/drafts`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for createAcquisitionDraft
+     * @name createAcquisitionDraftUrl
+     */
+    createAcquisitionDraftUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/acquisition/plans/drafts`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionPlans
+     * @name UpdateAcquisitionDraft
+     * @request PUT:/acquisition/plans/{id}/draft
+     */
+    updateAcquisitionDraft: (
+      id: number,
+      data: BakabaseServiceComponentsAcquisitionPlanningAcquisitionDraftUpdateInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanTaskDetail,
+        any
+      >({
+        path: `/acquisition/plans/${id}/draft`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionPlans
+     * @name SetAcquisitionDraftBuilder
+     * @request PUT:/acquisition/plans/{id}/builder
+     */
+    setAcquisitionDraftBuilder: (
+      id: number,
+      data: BakabaseServiceComponentsAcquisitionPlanningAcquisitionDraftBuilderInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanTaskDetail,
+        any
+      >({
+        path: `/acquisition/plans/${id}/builder`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionPlans
+     * @name PrepareAcquisitionDraft
+     * @request POST:/acquisition/plans/{id}/prepare
+     */
+    prepareAcquisitionDraft: (
+      id: number,
+      data: BakabaseServiceComponentsAcquisitionPlanningAcquisitionDraftPreparationInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanTaskDetail,
+        any
+      >({
+        path: `/acquisition/plans/${id}/prepare`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionPlans
+     * @name ImportLegacyAcquisitionOverview
+     * @request POST:/acquisition/plans/legacy-overview/import
+     */
+    importLegacyAcquisitionOverview: (
+      data: BakabaseServiceComponentsAcquisitionPlanningAcquisitionLegacyImportInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionDraftImportResult,
+        any
+      >({
+        path: `/acquisition/plans/legacy-overview/import`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for importLegacyAcquisitionOverview
+     * @name importLegacyAcquisitionOverviewUrl
+     */
+    importLegacyAcquisitionOverviewUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/acquisition/plans/legacy-overview/import`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionPlans
+     * @name ImportAcquisitionDraftList
+     * @request POST:/acquisition/plans/shared-list/import
+     */
+    importAcquisitionDraftList: (
+      data: BakabaseServiceComponentsAcquisitionPlanningAcquisitionDraftListInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionDraftImportResult,
+        any
+      >({
+        path: `/acquisition/plans/shared-list/import`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for importAcquisitionDraftList
+     * @name importAcquisitionDraftListUrl
+     */
+    importAcquisitionDraftListUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/acquisition/plans/shared-list/import`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionPlans
+     * @name CreateAcquisitionPlanTask
+     * @request POST:/acquisition/plans
+     */
+    createAcquisitionPlanTask: (
+      data: BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanCreationInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanTaskDetail,
+        any
+      >({
+        path: `/acquisition/plans`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for createAcquisitionPlanTask
+     * @name createAcquisitionPlanTaskUrl
+     */
+    createAcquisitionPlanTaskUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/acquisition/plans`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionPlans
+     * @name GetAcquisitionPlanTask
+     * @request GET:/acquisition/plans/{id}
+     */
+    getAcquisitionPlanTask: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanTaskDetail,
+        any
+      >({
+        path: `/acquisition/plans/${id}`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionPlans
+     * @name UpdateAcquisitionPlanTask
+     * @request PUT:/acquisition/plans/{id}
+     */
+    updateAcquisitionPlanTask: (
+      id: number,
+      data: BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanUpdateInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanTaskDetail,
+        any
+      >({
+        path: `/acquisition/plans/${id}`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionPlans
+     * @name SearchAcquisitionPlanCandidates
+     * @request PUT:/acquisition/plans/{id}/search
+     */
+    searchAcquisitionPlanCandidates: (
+      id: number,
+      data: BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanSearchInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanTaskDetail,
+        any
+      >({
+        path: `/acquisition/plans/${id}/search`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionPlans
+     * @name SelectAcquisitionPlanCandidate
+     * @request POST:/acquisition/plans/{id}/select
+     */
+    selectAcquisitionPlanCandidate: (
+      id: number,
+      data: BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanSelectionInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanTaskDetail,
+        any
+      >({
+        path: `/acquisition/plans/${id}/select`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionPlans
+     * @name ApplyAcquisitionProcessingRevisions
+     * @request POST:/acquisition/plans/{id}/processing-revisions/apply
+     */
+    applyAcquisitionProcessingRevisions: (
+      id: number,
+      data: BakabaseServiceComponentsAcquisitionProcessingPlansApplyProcessingPlanRevisionsInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanTaskDetail,
+        any
+      >({
+        path: `/acquisition/plans/${id}/processing-revisions/apply`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionPlans
+     * @name RunAcquisitionPlan
+     * @request POST:/acquisition/plans/{id}/run
+     */
+    runAcquisitionPlan: (
+      id: number,
+      data: BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanRunInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanTaskDetail,
+        any
+      >({
+        path: `/acquisition/plans/${id}/run`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionPlans
+     * @name ReplanAcquisitionTask
+     * @request POST:/acquisition/plans/{id}/replan
+     */
+    replanAcquisitionTask: (
+      id: number,
+      data: BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanReplanInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanTaskDetail,
+        any
+      >({
+        path: `/acquisition/plans/${id}/replan`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionPlans
+     * @name PreflightAcquisitionPlan
+     * @request POST:/acquisition/plans/{id}/preflight
+     */
+    preflightAcquisitionPlan: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanTaskDetail,
+        any
+      >({
+        path: `/acquisition/plans/${id}/preflight`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionPlans
+     * @name GetAcquisitionPlansBySources
+     * @request POST:/acquisition/plans/by-sources
+     */
+    getAcquisitionPlansBySources: (
+      data: BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanSourcesInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanSourceTasks,
+        any
+      >({
+        path: `/acquisition/plans/by-sources`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getAcquisitionPlansBySources
+     * @name getAcquisitionPlansBySourcesUrl
+     */
+    getAcquisitionPlansBySourcesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/acquisition/plans/by-sources`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionRecovery
+     * @name PreviewAcquisitionTaskRecovery
+     * @request POST:/acquisition/tasks/recovery/preview
+     */
+    previewAcquisitionTaskRecovery: (
+      data: BakabaseServiceComponentsAcquisitionPlanningAcquisitionRecoveryPreviewInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionRecoveryPreview,
+        any
+      >({
+        path: `/acquisition/tasks/recovery/preview`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for previewAcquisitionTaskRecovery
+     * @name previewAcquisitionTaskRecoveryUrl
+     */
+    previewAcquisitionTaskRecoveryUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/acquisition/tasks/recovery/preview`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionRecovery
+     * @name CancelAcquisitionTaskRecoveryDiagnosis
+     * @request POST:/acquisition/tasks/recovery/diagnoses/{diagnosisId}/cancel
+     */
+    cancelAcquisitionTaskRecoveryDiagnosis: (diagnosisId: string, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionRecoveryDiagnosisCancellation,
+        any
+      >({
+        path: `/acquisition/tasks/recovery/diagnoses/${diagnosisId}/cancel`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionRecovery
+     * @name ApplyAcquisitionTaskRecovery
+     * @request POST:/acquisition/tasks/recovery/apply
+     */
+    applyAcquisitionTaskRecovery: (
+      data: BakabaseServiceComponentsAcquisitionPlanningAcquisitionRecoveryApplyInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionRecoveryResult,
+        any
+      >({
+        path: `/acquisition/tasks/recovery/apply`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for applyAcquisitionTaskRecovery
+     * @name applyAcquisitionTaskRecoveryUrl
+     */
+    applyAcquisitionTaskRecoveryUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/acquisition/tasks/recovery/apply`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionRuntimeOverviews
+     * @name GetAcquisitionRuntimeOverviews
+     * @request POST:/acquisition/runtime-overviews
+     */
+    getAcquisitionRuntimeOverviews: (
+      data: BakabaseServiceComponentsAcquisitionPlanningAcquisitionRuntimeOverviewInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionRuntimeOverview,
+        any
+      >({
+        path: `/acquisition/runtime-overviews`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getAcquisitionRuntimeOverviews
+     * @name getAcquisitionRuntimeOverviewsUrl
+     */
+    getAcquisitionRuntimeOverviewsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/acquisition/runtime-overviews`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionSourceCorrections
+     * @name GetAcquisitionSourceCorrections
+     * @request GET:/acquisition/{id}/source-corrections
+     */
+    getAcquisitionSourceCorrections: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionSourceCorrections,
+        any
+      >({
+        path: `/acquisition/${id}/source-corrections`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionSourceCorrections
+     * @name CorrectAcquisitionSourceAccessCode
+     * @request POST:/acquisition/{id}/source-corrections
+     */
+    correctAcquisitionSourceAccessCode: (
+      id: number,
+      data: BakabaseServiceComponentsAcquisitionPlanningAcquisitionSourceCorrectionInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionSourceCorrectionResult,
+        any
+      >({
+        path: `/acquisition/${id}/source-corrections`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionSourceRevisions
+     * @name GetAcquisitionSourceRevisions
+     * @request GET:/acquisition/{id}/source-revisions
+     */
+    getAcquisitionSourceRevisions: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionSourceRevisionOptions,
+        any
+      >({
+        path: `/acquisition/${id}/source-revisions`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionSourceRevisions
+     * @name PreviewAcquisitionSourceRevision
+     * @request POST:/acquisition/{id}/source-revisions/preview
+     */
+    previewAcquisitionSourceRevision: (
+      id: number,
+      data: BakabaseServiceComponentsAcquisitionPlanningAcquisitionSourceRevisionPreviewInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionSourceRevisionPreview,
+        any
+      >({
+        path: `/acquisition/${id}/source-revisions/preview`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionSourceRevisions
+     * @name ApplyAcquisitionSourceRevision
+     * @request POST:/acquisition/{id}/source-revisions/apply
+     */
+    applyAcquisitionSourceRevision: (
+      id: number,
+      data: BakabaseServiceComponentsAcquisitionPlanningAcquisitionSourceRevisionApplyInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionSourceRevisionResult,
+        any
+      >({
+        path: `/acquisition/${id}/source-revisions/apply`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionStorageOverride
+     * @name PreviewAcquisitionStorageOverride
+     * @request POST:/acquisition/{id}/storage-override/preview
+     */
+    previewAcquisitionStorageOverride: (
+      id: number,
+      query?: {
+        /** @default "storage" */
+        scope?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionStorageOverridePreview,
+        any
+      >({
+        path: `/acquisition/${id}/storage-override/preview`,
+        method: "POST",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionStorageOverride
+     * @name ApplyAcquisitionStorageOverride
+     * @request POST:/acquisition/{id}/storage-override/apply
+     */
+    applyAcquisitionStorageOverride: (
+      id: number,
+      data: BakabaseServiceComponentsAcquisitionPlanningAcquisitionStorageOverrideApplyInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionStorageOverrideResult,
+        any
+      >({
+        path: `/acquisition/${id}/storage-override/apply`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionStoragePolicy
+     * @name PreviewAcquisitionStoragePolicy
+     * @request POST:/acquisition/storage-policy/preview
+     */
+    previewAcquisitionStoragePolicy: (
+      data: BakabaseServiceComponentsAcquisitionPlanningAcquisitionStoragePolicyPreviewInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionStoragePolicyPreview,
+        any
+      >({
+        path: `/acquisition/storage-policy/preview`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for previewAcquisitionStoragePolicy
+     * @name previewAcquisitionStoragePolicyUrl
+     */
+    previewAcquisitionStoragePolicyUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/acquisition/storage-policy/preview`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionStoragePolicy
+     * @name ApplyAcquisitionStoragePolicy
+     * @request POST:/acquisition/storage-policy/apply
+     */
+    applyAcquisitionStoragePolicy: (
+      data: BakabaseServiceComponentsAcquisitionPlanningAcquisitionStoragePolicyApplyInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionStoragePolicyApplyResult,
+        any
+      >({
+        path: `/acquisition/storage-policy/apply`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for applyAcquisitionStoragePolicy
+     * @name applyAcquisitionStoragePolicyUrl
+     */
+    applyAcquisitionStoragePolicyUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/acquisition/storage-policy/apply`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionStoragePolicy
+     * @name PreviewAcquisitionWorkspaceCleanup
+     * @request POST:/acquisition/storage-policy/cleanup/preview
+     */
+    previewAcquisitionWorkspaceCleanup: (
+      data: BakabaseServiceComponentsAcquisitionPlanningAcquisitionStoragePolicyPreviewInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionWorkspaceCleanupPreview,
+        any
+      >({
+        path: `/acquisition/storage-policy/cleanup/preview`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for previewAcquisitionWorkspaceCleanup
+     * @name previewAcquisitionWorkspaceCleanupUrl
+     */
+    previewAcquisitionWorkspaceCleanupUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/acquisition/storage-policy/cleanup/preview`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionStoragePolicy
+     * @name ReclaimAcquisitionWorkspaces
+     * @request POST:/acquisition/storage-policy/cleanup/apply
+     */
+    reclaimAcquisitionWorkspaces: (
+      data: BakabaseServiceComponentsAcquisitionPlanningAcquisitionStoragePolicyApplyInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionWorkspaceCleanupResult,
+        any
+      >({
+        path: `/acquisition/storage-policy/cleanup/apply`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for reclaimAcquisitionWorkspaces
+     * @name reclaimAcquisitionWorkspacesUrl
+     */
+    reclaimAcquisitionWorkspacesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/acquisition/storage-policy/cleanup/apply`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionSupersededDelivery
+     * @name RetireSupersededAcquisitionDelivery
+     * @request POST:/acquisition/plans/{id}/superseded-delivery/retire
+     */
+    retireSupersededAcquisitionDelivery: (
+      id: number,
+      data: BakabaseServiceComponentsAcquisitionPlanningAcquisitionSupersededDeliveryInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionSupersededDeliveryResult,
+        any
+      >({
+        path: `/acquisition/plans/${id}/superseded-delivery/retire`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionTaskDeletion
+     * @name PreviewDeleteAcquisitionTasks
+     * @request POST:/acquisition/tasks/delete/preview
+     */
+    previewDeleteAcquisitionTasks: (
+      data: BakabaseServiceComponentsAcquisitionPlanningAcquisitionTaskDeletePreviewInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionTaskDeletePreview,
+        any
+      >({
+        path: `/acquisition/tasks/delete/preview`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for previewDeleteAcquisitionTasks
+     * @name previewDeleteAcquisitionTasksUrl
+     */
+    previewDeleteAcquisitionTasksUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/acquisition/tasks/delete/preview`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionTaskDeletion
+     * @name DeleteAcquisitionTasks
+     * @request POST:/acquisition/tasks/delete
+     */
+    deleteAcquisitionTasks: (
+      data: BakabaseServiceComponentsAcquisitionPlanningAcquisitionTaskDeleteInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionTaskDeleteResult,
+        any
+      >({
+        path: `/acquisition/tasks/delete`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for deleteAcquisitionTasks
+     * @name deleteAcquisitionTasksUrl
+     */
+    deleteAcquisitionTasksUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/acquisition/tasks/delete`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionTaskDeletion
+     * @name GetAcquisitionTaskDeletionProgress
+     * @request GET:/acquisition/tasks/delete/{previewId}/progress
+     */
+    getAcquisitionTaskDeletionProgress: (previewId: string, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionTaskDeleteProgress,
+        any
+      >({
+        path: `/acquisition/tasks/delete/${previewId}/progress`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionTaskSearch
+     * @name SearchAcquisitionTasks
+     * @request POST:/acquisition/tasks/search
+     */
+    searchAcquisitionTasks: (
+      data: BakabaseServiceComponentsAcquisitionPlanningAcquisitionTaskSearchInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionTaskPage,
+        any
+      >({
+        path: `/acquisition/tasks/search`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for searchAcquisitionTasks
+     * @name searchAcquisitionTasksUrl
+     */
+    searchAcquisitionTasksUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/acquisition/tasks/search`;
 
       return baseUrl + path;
     },
@@ -16843,6 +21984,669 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       return baseUrl + path;
     },
   };
+  workflow = {
+    /**
+     * No description
+     *
+     * @tags ArtifactDeliveryLayout
+     * @name PreviewArtifactDeliveryLayout
+     * @request POST:/workflow/run/{runId}/artifacts/{artifactId}/delivery-layout-preview
+     */
+    previewArtifactDeliveryLayout: (
+      runId: number,
+      artifactId: string,
+      data: BakabaseModulesWorkflowArtifactsArtifactDeliveryPolicy,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceControllersWorkflowArtifactDeliveryLayoutPreview,
+        any
+      >({
+        path: `/workflow/run/${runId}/artifacts/${artifactId}/delivery-layout-preview`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Workflow
+     * @name SearchWorkflows
+     * @request GET:/workflow
+     */
+    searchWorkflows: (
+      query?: {
+        triggerKind?: string;
+        enabledOnly?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesWorkflowAbstractionsModelsViewWorkflowDefinitionViewModel,
+        any
+      >({
+        path: `/workflow`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for searchWorkflows
+     * @name searchWorkflowsUrl
+     */
+    searchWorkflowsUrl: (query?: {
+        triggerKind?: string;
+        enabledOnly?: boolean;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/workflow`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Workflow
+     * @name AddWorkflow
+     * @request POST:/workflow
+     */
+    addWorkflow: (
+      data: BakabaseModulesWorkflowAbstractionsModelsInputWorkflowDefinitionCreationInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesWorkflowAbstractionsModelsViewWorkflowDefinitionViewModel,
+        any
+      >({
+        path: `/workflow`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for addWorkflow
+     * @name addWorkflowUrl
+     */
+    addWorkflowUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/workflow`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Workflow
+     * @name GetWorkflow
+     * @request GET:/workflow/{id}
+     */
+    getWorkflow: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesWorkflowAbstractionsModelsViewWorkflowDefinitionViewModel,
+        any
+      >({
+        path: `/workflow/${id}`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Workflow
+     * @name PatchWorkflow
+     * @request PATCH:/workflow/{id}
+     */
+    patchWorkflow: (
+      id: number,
+      data: BakabaseModulesWorkflowAbstractionsModelsInputWorkflowDefinitionUpdateInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesWorkflowAbstractionsModelsViewWorkflowDefinitionViewModel,
+        any
+      >({
+        path: `/workflow/${id}`,
+        method: "PATCH",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Workflow
+     * @name DeleteWorkflow
+     * @request DELETE:/workflow/{id}
+     */
+    deleteWorkflow: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/workflow/${id}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Workflow
+     * @name ValidateWorkflow
+     * @request POST:/workflow/validate
+     */
+    validateWorkflow: (
+      data: BakabaseModulesWorkflowAbstractionsModelsInputWorkflowValidationInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesWorkflowAbstractionsModelsViewWorkflowValidationResult,
+        any
+      >({
+        path: `/workflow/validate`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for validateWorkflow
+     * @name validateWorkflowUrl
+     */
+    validateWorkflowUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/workflow/validate`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Workflow
+     * @name ValidateSavedWorkflow
+     * @request GET:/workflow/{id}/validation
+     */
+    validateSavedWorkflow: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesWorkflowAbstractionsModelsViewWorkflowValidationResult,
+        any
+      >({
+        path: `/workflow/${id}/validation`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Workflow
+     * @name GetWorkflowTriggers
+     * @request GET:/workflow/triggers
+     */
+    getWorkflowTriggers: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesWorkflowAbstractionsModelsViewWorkflowTriggerDescriptorViewModel,
+        any
+      >({
+        path: `/workflow/triggers`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getWorkflowTriggers
+     * @name getWorkflowTriggersUrl
+     */
+    getWorkflowTriggersUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/workflow/triggers`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Workflow
+     * @name RunWorkflowManually
+     * @request POST:/workflow/{id}/run
+     */
+    runWorkflowManually: (
+      id: number,
+      data: BakabaseModulesWorkflowAbstractionsModelsInputWorkflowManualRunInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesWorkflowAbstractionsModelsViewWorkflowRunViewModel,
+        any
+      >({
+        path: `/workflow/${id}/run`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Workflow
+     * @name GetWorkflowActivities
+     * @request GET:/workflow/activities
+     */
+    getWorkflowActivities: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesWorkflowAbstractionsModelsViewWorkflowActivityDescriptorViewModel,
+        any
+      >({
+        path: `/workflow/activities`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getWorkflowActivities
+     * @name getWorkflowActivitiesUrl
+     */
+    getWorkflowActivitiesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/workflow/activities`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Workflow
+     * @name GetWorkflowItemTypes
+     * @request GET:/workflow/item-types
+     */
+    getWorkflowItemTypes: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesWorkflowAbstractionsModelsViewWorkflowItemTypeDescriptorViewModel,
+        any
+      >({
+        path: `/workflow/item-types`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getWorkflowItemTypes
+     * @name getWorkflowItemTypesUrl
+     */
+    getWorkflowItemTypesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/workflow/item-types`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Workflow
+     * @name GetWorkflowRunFileRenameEntries
+     * @request GET:/workflow/run/{runId}/file-rename-entries
+     */
+    getWorkflowRunFileRenameEntries: (runId: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewFileRenameEntryViewModel,
+        any
+      >({
+        path: `/workflow/run/${runId}/file-rename-entries`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Workflow
+     * @name SetFileRenameEntryExcluded
+     * @request PUT:/workflow/file-rename-entry/{id}/excluded
+     */
+    setFileRenameEntryExcluded: (
+      id: number,
+      query?: {
+        excluded?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewFileRenameEntryViewModel,
+        any
+      >({
+        path: `/workflow/file-rename-entry/${id}/excluded`,
+        method: "PUT",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Workflow
+     * @name ApplyWorkflowRunFileRenames
+     * @request POST:/workflow/run/{runId}/file-rename-entries/apply
+     */
+    applyWorkflowRunFileRenames: (runId: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewFileRenameEntryViewModel,
+        any
+      >({
+        path: `/workflow/run/${runId}/file-rename-entries/apply`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Workflow
+     * @name UndoWorkflowRunFileRenames
+     * @request POST:/workflow/run/{runId}/file-rename-entries/undo
+     */
+    undoWorkflowRunFileRenames: (runId: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewFileRenameEntryViewModel,
+        any
+      >({
+        path: `/workflow/run/${runId}/file-rename-entries/undo`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Workflow
+     * @name ResumeWorkflowRun
+     * @request POST:/workflow/run/{runId}/resume
+     */
+    resumeWorkflowRun: (
+      runId: number,
+      data: BakabaseModulesWorkflowAbstractionsModelsInputWorkflowRunResumeInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/workflow/run/${runId}/resume`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Workflow
+     * @name SearchWorkflowRuns
+     * @request GET:/workflow/{id}/runs
+     */
+    searchWorkflowRuns: (
+      id: number,
+      query?: {
+        /** @format int32 */
+        workflowDefinitionId?: number;
+        /** @format int32 */
+        pageIndex?: number;
+        /** @format int32 */
+        pageSize?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSearchResponse1BakabaseModulesWorkflowAbstractionsModelsViewWorkflowRunViewModel,
+        any
+      >({
+        path: `/workflow/${id}/runs`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Workflow
+     * @name GetWorkflowRun
+     * @request GET:/workflow/run/{runId}
+     */
+    getWorkflowRun: (runId: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesWorkflowAbstractionsModelsViewWorkflowRunViewModel,
+        any
+      >({
+        path: `/workflow/run/${runId}`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Workflow
+     * @name GetWorkflowArtifactFiles
+     * @request GET:/workflow/run/{runId}/artifacts/{artifactId}/files
+     */
+    getWorkflowArtifactFiles: (
+      runId: number,
+      artifactId: string,
+      query?: {
+        /**
+         * @format int32
+         * @default 1
+         */
+        pageIndex?: number;
+        /**
+         * @format int32
+         * @default 100
+         */
+        pageSize?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesWorkflowAbstractionsModelsViewWorkflowArtifactFilesView,
+        any
+      >({
+        path: `/workflow/run/${runId}/artifacts/${artifactId}/files`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Workflow
+     * @name GetWorkflowArtifactDirectory
+     * @request GET:/workflow/run/{runId}/artifacts/{artifactId}/directory
+     */
+    getWorkflowArtifactDirectory: (
+      runId: number,
+      artifactId: string,
+      query?: {
+        directory?: string;
+        /**
+         * @format int32
+         * @default 1
+         */
+        pageIndex?: number;
+        /**
+         * @format int32
+         * @default 50
+         */
+        pageSize?: number;
+        /** @default false */
+        locateSingleFile?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesWorkflowAbstractionsModelsViewWorkflowArtifactDirectoryView,
+        any
+      >({
+        path: `/workflow/run/${runId}/artifacts/${artifactId}/directory`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+  };
+  artifacts = {
+    /**
+     * No description
+     *
+     * @tags Artifacts
+     * @name GetArtifactCleanupReceipts
+     * @request GET:/artifacts/cleanup
+     */
+    getArtifactCleanupReceipts: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericIReadOnlyList1BakabaseServiceComponentsFileProcessingArchiveQuarantineReceipt,
+        any
+      >({
+        path: `/artifacts/cleanup`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getArtifactCleanupReceipts
+     * @name getArtifactCleanupReceiptsUrl
+     */
+    getArtifactCleanupReceiptsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/artifacts/cleanup`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Artifacts
+     * @name RestoreArtifactCleanup
+     * @request POST:/artifacts/cleanup/{receiptId}/restore
+     */
+    restoreArtifactCleanup: (receiptId: string, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsFileProcessingArchiveQuarantineResult,
+        any
+      >({
+        path: `/artifacts/cleanup/${receiptId}/restore`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Artifacts
+     * @name PreviewArtifactWorkspaceCleanup
+     * @request GET:/artifacts/cleanup/workspaces/preview
+     */
+    previewArtifactWorkspaceCleanup: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericIReadOnlyList1BakabaseServiceComponentsFileProcessingArtifactWorkspaceCleanupPreview,
+        any
+      >({
+        path: `/artifacts/cleanup/workspaces/preview`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for previewArtifactWorkspaceCleanup
+     * @name previewArtifactWorkspaceCleanupUrl
+     */
+    previewArtifactWorkspaceCleanupUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/artifacts/cleanup/workspaces/preview`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Artifacts
+     * @name ReclaimArtifactWorkspaces
+     * @request POST:/artifacts/cleanup/workspaces/reclaim
+     */
+    reclaimArtifactWorkspaces: (
+      data: BakabaseServiceComponentsFileProcessingArtifactWorkspaceCleanupInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericIReadOnlyList1BakabaseServiceComponentsFileProcessingArtifactWorkspaceCleanupResult,
+        any
+      >({
+        path: `/artifacts/cleanup/workspaces/reclaim`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for reclaimArtifactWorkspaces
+     * @name reclaimArtifactWorkspacesUrl
+     */
+    reclaimArtifactWorkspacesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/artifacts/cleanup/workspaces/reclaim`;
+
+      return baseUrl + path;
+    },
+  };
   av = {
     /**
      * No description
@@ -17095,6 +22899,48 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       >({
         path: `/baidu-pcs/accounts/${id}/validate`,
         method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags BaiduPcs
+     * @name RefreshBaiduPcsMembership
+     * @request POST:/baidu-pcs/accounts/{id}/membership/refresh
+     */
+    refreshBaiduPcsMembership: (id: string, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsCloudDownloadsBaiduBaiduPcsAccountViewModel,
+        any
+      >({
+        path: `/baidu-pcs/accounts/${id}/membership/refresh`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags BaiduPcs
+     * @name SetBaiduPcsDownloadOptions
+     * @request PUT:/baidu-pcs/accounts/{id}/download-options
+     */
+    setBaiduPcsDownloadOptions: (
+      id: string,
+      data: BakabaseServiceComponentsCloudDownloadsBaiduBaiduDownloadOptions,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsCloudDownloadsBaiduBaiduPcsAccountViewModel,
+        any
+      >({
+        path: `/baidu-pcs/accounts/${id}/download-options`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
         format: "json",
         ...params,
       }),
@@ -22812,6 +28658,371 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
       return baseUrl + path;
     },
+
+    /**
+     * No description
+     *
+     * @tags DownloadCenterCloud
+     * @name PreflightDownloadCenterCloud
+     * @request POST:/download-center/cloud/preflight
+     */
+    preflightDownloadCenterCloud: (
+      data: BakabaseServiceComponentsDownloadIntentsDownloadIntentRequest,
+      query?: {
+        outputDirectory?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsDownloadIntentsDownloadIntentPreflight,
+        any
+      >({
+        path: `/download-center/cloud/preflight`,
+        method: "POST",
+        query: query,
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for preflightDownloadCenterCloud
+     * @name preflightDownloadCenterCloudUrl
+     */
+    preflightDownloadCenterCloudUrl: (query?: {
+        outputDirectory?: string;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/download-center/cloud/preflight`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags DownloadCenterCloud
+     * @name CreateDownloadCenterCloudTasks
+     * @request POST:/download-center/cloud/tasks
+     */
+    createDownloadCenterCloudTasks: (
+      data: BakabaseServiceComponentsDownloadIntentsDownloadIntentRequest,
+      query?: {
+        outputDirectory?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsDownloadIntentsDownloadIntentSubmission,
+        any
+      >({
+        path: `/download-center/cloud/tasks`,
+        method: "POST",
+        query: query,
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for createDownloadCenterCloudTasks
+     * @name createDownloadCenterCloudTasksUrl
+     */
+    createDownloadCenterCloudTasksUrl: (query?: {
+        outputDirectory?: string;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/download-center/cloud/tasks`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
+  };
+  downloadIntents = {
+    /**
+     * No description
+     *
+     * @tags DownloadIntents
+     * @name PreflightDownloadIntent
+     * @request POST:/download-intents/preflight
+     */
+    preflightDownloadIntent: (
+      data: BakabaseServiceComponentsDownloadIntentsDownloadIntentRequest,
+      query?: {
+        outputDirectory?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsDownloadIntentsDownloadIntentPreflight,
+        any
+      >({
+        path: `/download-intents/preflight`,
+        method: "POST",
+        query: query,
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for preflightDownloadIntent
+     * @name preflightDownloadIntentUrl
+     */
+    preflightDownloadIntentUrl: (query?: {
+        outputDirectory?: string;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/download-intents/preflight`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags DownloadIntents
+     * @name SubmitDownloadIntent
+     * @request POST:/download-intents/submit
+     */
+    submitDownloadIntent: (
+      data: BakabaseServiceComponentsDownloadIntentsDownloadIntentRequest,
+      query?: {
+        outputDirectory?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsDownloadIntentsDownloadIntentSubmission,
+        any
+      >({
+        path: `/download-intents/submit`,
+        method: "POST",
+        query: query,
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for submitDownloadIntent
+     * @name submitDownloadIntentUrl
+     */
+    submitDownloadIntentUrl: (query?: {
+        outputDirectory?: string;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/download-intents/submit`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags DownloadIntents
+     * @name PreflightPostDownloadIntent
+     * @request POST:/download-intents/from-post/preflight
+     */
+    preflightPostDownloadIntent: (
+      data: BakabaseServiceComponentsDownloadIntentsPostDownloadIntentRequest,
+      query?: {
+        outputDirectory?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsDownloadIntentsDownloadIntentPreflight,
+        any
+      >({
+        path: `/download-intents/from-post/preflight`,
+        method: "POST",
+        query: query,
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for preflightPostDownloadIntent
+     * @name preflightPostDownloadIntentUrl
+     */
+    preflightPostDownloadIntentUrl: (query?: {
+        outputDirectory?: string;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/download-intents/from-post/preflight`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags DownloadIntents
+     * @name SubmitPostDownloadIntent
+     * @request POST:/download-intents/from-post/submit
+     */
+    submitPostDownloadIntent: (
+      data: BakabaseServiceComponentsDownloadIntentsPostDownloadIntentRequest,
+      query?: {
+        outputDirectory?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsDownloadIntentsDownloadIntentSubmission,
+        any
+      >({
+        path: `/download-intents/from-post/submit`,
+        method: "POST",
+        query: query,
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for submitPostDownloadIntent
+     * @name submitPostDownloadIntentUrl
+     */
+    submitPostDownloadIntentUrl: (query?: {
+        outputDirectory?: string;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/download-intents/from-post/submit`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags PostLocalProcessing
+     * @name StartPostLocalProcessing
+     * @request POST:/download-intents/from-post/process-local
+     */
+    startPostLocalProcessing: (
+      data: BakabaseServiceComponentsDownloadIntentsPostLocalProcessingRequest,
+      query?: {
+        directory?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesWorkflowAbstractionsModelsViewWorkflowRunViewModel,
+        any
+      >({
+        path: `/download-intents/from-post/process-local`,
+        method: "POST",
+        query: query,
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for startPostLocalProcessing
+     * @name startPostLocalProcessingUrl
+     */
+    startPostLocalProcessingUrl: (query?: {
+        directory?: string;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/download-intents/from-post/process-local`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
   };
   downloader = {
     /**
@@ -23013,7 +29224,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     getDownloadTaskSummary: (
       query?: {
-        /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb, 14: BaiduNetdisk, 15: GoogleDrive, 16: Gofile] */
+        /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb, 14: BaiduNetdisk, 15: GoogleDrive, 16: Gofile, 17: PikPak, 18: OneDrive, 19: Pixeldrain, 20: Mega, 21: TeraBox] */
         thirdPartyId?: BakabaseInsideWorldModelsConstantsThirdPartyId;
       },
       params: RequestParams = {},
@@ -23034,7 +29245,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name getDownloadTaskSummaryUrl
      */
     getDownloadTaskSummaryUrl: (query?: {
-        /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb, 14: BaiduNetdisk, 15: GoogleDrive, 16: Gofile] */
+        /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb, 12: Steam, 13: Vndb, 14: BaiduNetdisk, 15: GoogleDrive, 16: Gofile, 17: PikPak, 18: OneDrive, 19: Pixeldrain, 20: Mega, 21: TeraBox] */
         thirdPartyId?: BakabaseInsideWorldModelsConstantsThirdPartyId;
       }) => {
       const baseUrl = this.baseUrl || "";
@@ -25973,6 +32184,55 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
       return baseUrl + path;
     },
+
+    /**
+     * No description
+     *
+     * @tags FileStorageCapacity
+     * @name GetPathStorageCapacity
+     * @request GET:/file/storage-capacity
+     */
+    getPathStorageCapacity: (
+      query?: {
+        path?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewStorageCapacityViewModel,
+        any
+      >({
+        path: `/file/storage-capacity`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getPathStorageCapacity
+     * @name getPathStorageCapacityUrl
+     */
+    getPathStorageCapacityUrl: (query?: {
+        path?: string;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/file/storage-capacity`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
   };
   fileNameModifier = {
     /**
@@ -28370,6 +34630,63 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
       return baseUrl + path;
     },
+  };
+  oauth = {
+    /**
+     * No description
+     *
+     * @tags OAuthCallback
+     * @name CallbackDetail
+     * @request GET:/oauth/callback/{providerId}
+     */
+    callbackDetail: (providerId: string, params: RequestParams = {}) =>
+      this.request<void, any>({
+        path: `/oauth/callback/${providerId}`,
+        method: "GET",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags OAuthProviders
+     * @name GetOAuthProviderConfiguration
+     * @request GET:/oauth/providers/{providerId}/configuration
+     */
+    getOAuthProviderConfiguration: (providerId: string, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsOAuthOAuthProviderConfigurationViewModel,
+        any
+      >({
+        path: `/oauth/providers/${providerId}/configuration`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags OAuthProviders
+     * @name SaveOAuthProviderConfiguration
+     * @request PUT:/oauth/providers/{providerId}/configuration
+     */
+    saveOAuthProviderConfiguration: (
+      providerId: string,
+      data: BakabaseServiceComponentsOAuthOAuthProviderConfigurationInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsOAuthOAuthProviderConfigurationViewModel,
+        any
+      >({
+        path: `/oauth/providers/${providerId}/configuration`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
   };
   options = {
     /**
@@ -31102,6 +37419,153 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       return baseUrl + path;
     },
   };
+  pikpakCli = {
+    /**
+     * No description
+     *
+     * @tags PikPakCli
+     * @name GetPikPakCliAccount
+     * @request GET:/pikpak-cli/account
+     */
+    getPikPakCliAccount: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsCloudDownloadsPikPakCliPikPakCliAccountViewModel,
+        any
+      >({
+        path: `/pikpak-cli/account`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getPikPakCliAccount
+     * @name getPikPakCliAccountUrl
+     */
+    getPikPakCliAccountUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/pikpak-cli/account`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags PikPakCli
+     * @name LogoutPikPakCliAccount
+     * @request DELETE:/pikpak-cli/account
+     */
+    logoutPikPakCliAccount: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/pikpak-cli/account`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for logoutPikPakCliAccount
+     * @name logoutPikPakCliAccountUrl
+     */
+    logoutPikPakCliAccountUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/pikpak-cli/account`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags PikPakCli
+     * @name GetActivePikPakCliAuthorization
+     * @request GET:/pikpak-cli/account/authorization
+     */
+    getActivePikPakCliAuthorization: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsCloudDownloadsPikPakCliPikPakCliAuthorizationViewModel,
+        any
+      >({
+        path: `/pikpak-cli/account/authorization`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getActivePikPakCliAuthorization
+     * @name getActivePikPakCliAuthorizationUrl
+     */
+    getActivePikPakCliAuthorizationUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/pikpak-cli/account/authorization`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags PikPakCli
+     * @name StartPikPakCliAuthorization
+     * @request POST:/pikpak-cli/account/authorization
+     */
+    startPikPakCliAuthorization: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsCloudDownloadsPikPakCliPikPakCliAuthorizationViewModel,
+        any
+      >({
+        path: `/pikpak-cli/account/authorization`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for startPikPakCliAuthorization
+     * @name startPikPakCliAuthorizationUrl
+     */
+    startPikPakCliAuthorizationUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/pikpak-cli/account/authorization`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags PikPakCli
+     * @name PollPikPakCliAuthorization
+     * @request POST:/pikpak-cli/account/authorization/{id}/poll
+     */
+    pollPikPakCliAuthorization: (id: string, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsCloudDownloadsPikPakCliPikPakCliAuthorizationViewModel,
+        any
+      >({
+        path: `/pikpak-cli/account/authorization/${id}/poll`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags PikPakCli
+     * @name CancelPikPakCliAuthorization
+     * @request DELETE:/pikpak-cli/account/authorization/{id}
+     */
+    cancelPikPakCliAuthorization: (id: string, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/pikpak-cli/account/authorization/${id}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+  };
   player = {
     /**
      * No description
@@ -31640,6 +38104,58 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     /**
      * No description
      *
+     * @tags PostAcquisitionPlans
+     * @name CreatePostAcquisitionPlan
+     * @request POST:/post-parser/acquisition/plans
+     */
+    createPostAcquisitionPlan: (
+      data: BakabaseServiceComponentsDownloadIntentsPostDownloadIntentRequest,
+      query?: {
+        outputDirectory?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsDownloadIntentsDownloadIntentSubmission,
+        any
+      >({
+        path: `/post-parser/acquisition/plans`,
+        method: "POST",
+        query: query,
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for createPostAcquisitionPlan
+     * @name createPostAcquisitionPlanUrl
+     */
+    createPostAcquisitionPlanUrl: (query?: {
+        outputDirectory?: string;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/post-parser/acquisition/plans`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
      * @tags PostParser
      * @name GetPostParseTargets
      * @request GET:/post-parser/targets
@@ -31901,10 +38417,26 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name RetryPostParserTaskWorkflow
      * @request POST:/post-parser/task/{id}/retry
      */
-    retryPostParserTaskWorkflow: (id: number, params: RequestParams = {}) =>
+    retryPostParserTaskWorkflow: (
+      id: number,
+      query?: {
+        /** @format int32 */
+        expectedRevision?: number;
+        /** @format int32 */
+        expectedRunId?: number;
+        /** @format int32 */
+        expectedStepIndex?: number;
+        /** [1: Pending, 2: Running, 3: Success, 4: Failed, 5: Cancelled, 6: Interrupted, 7: Waiting] */
+        expectedStatus?: BakabaseModulesWorkflowAbstractionsModelsDomainConstantsWorkflowRunStatus;
+        /** @format int32 */
+        expectedDecisionVersion?: number;
+      },
+      params: RequestParams = {},
+    ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/post-parser/task/${id}/retry`,
         method: "POST",
+        query: query,
         format: "json",
         ...params,
       }),
@@ -31926,6 +38458,397 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         any
       >({
         path: `/post-parser/task/${id}/acquisition`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags PostParserBatch
+     * @name SearchPostParserTasks
+     * @request POST:/post-parser/tasks/search
+     */
+    searchPostParserTasks: (
+      data: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTaskSearchInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTaskPage,
+        any
+      >({
+        path: `/post-parser/tasks/search`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for searchPostParserTasks
+     * @name searchPostParserTasksUrl
+     */
+    searchPostParserTasksUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/post-parser/tasks/search`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags PostParserBatch
+     * @name GetFailedPostParserTaskSelection
+     * @request GET:/post-parser/tasks/failed-selection
+     */
+    getFailedPostParserTaskSelection: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsPostParserModelsDomainReParseFailedPostParserTasksInput,
+        any
+      >({
+        path: `/post-parser/tasks/failed-selection`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getFailedPostParserTaskSelection
+     * @name getFailedPostParserTaskSelectionUrl
+     */
+    getFailedPostParserTaskSelectionUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/post-parser/tasks/failed-selection`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags PostParserBatch
+     * @name ReParseFailedPostParserTasks
+     * @request POST:/post-parser/tasks/reparse-failed
+     */
+    reParseFailedPostParserTasks: (
+      data: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainReParseFailedPostParserTasksInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserReparseBatchResult,
+        any
+      >({
+        path: `/post-parser/tasks/reparse-failed`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for reParseFailedPostParserTasks
+     * @name reParseFailedPostParserTasksUrl
+     */
+    reParseFailedPostParserTasksUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/post-parser/tasks/reparse-failed`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags PostParserBatch
+     * @name PreviewPostParserTaskDeletion
+     * @request POST:/post-parser/tasks/delete/preview
+     */
+    previewPostParserTaskDeletion: (
+      data: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTaskFilterScope,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTaskDeletionPreview,
+        any
+      >({
+        path: `/post-parser/tasks/delete/preview`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for previewPostParserTaskDeletion
+     * @name previewPostParserTaskDeletionUrl
+     */
+    previewPostParserTaskDeletionUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/post-parser/tasks/delete/preview`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags PostParserBatch
+     * @name ConfirmPostParserTaskDeletion
+     * @request POST:/post-parser/tasks/delete/confirm
+     */
+    confirmPostParserTaskDeletion: (
+      data: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainConfirmPostParserTaskDeletionInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTaskDeletionResult,
+        any
+      >({
+        path: `/post-parser/tasks/delete/confirm`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for confirmPostParserTaskDeletion
+     * @name confirmPostParserTaskDeletionUrl
+     */
+    confirmPostParserTaskDeletionUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/post-parser/tasks/delete/confirm`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags PostParserBatch
+     * @name PreviewPostParserTaskPurchases
+     * @request POST:/post-parser/tasks/purchase/preview
+     */
+    previewPostParserTaskPurchases: (
+      data: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTaskFilterScope,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTaskPurchasePreview,
+        any
+      >({
+        path: `/post-parser/tasks/purchase/preview`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for previewPostParserTaskPurchases
+     * @name previewPostParserTaskPurchasesUrl
+     */
+    previewPostParserTaskPurchasesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/post-parser/tasks/purchase/preview`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags PostParserBatch
+     * @name ConfirmPostParserTaskPurchases
+     * @request POST:/post-parser/tasks/purchase/confirm
+     */
+    confirmPostParserTaskPurchases: (
+      data: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainConfirmPostParserTaskPurchasesInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTaskPurchaseResult,
+        any
+      >({
+        path: `/post-parser/tasks/purchase/confirm`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for confirmPostParserTaskPurchases
+     * @name confirmPostParserTaskPurchasesUrl
+     */
+    confirmPostParserTaskPurchasesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/post-parser/tasks/purchase/confirm`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags PostParserBatch
+     * @name PreviewPostParserContentReview
+     * @request POST:/post-parser/tasks/content-review/preview
+     */
+    previewPostParserContentReview: (
+      data: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserContentReviewScope,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserContentReviewPreview,
+        any
+      >({
+        path: `/post-parser/tasks/content-review/preview`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for previewPostParserContentReview
+     * @name previewPostParserContentReviewUrl
+     */
+    previewPostParserContentReviewUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/post-parser/tasks/content-review/preview`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags PostParserBatch
+     * @name ConfirmPostParserContentReview
+     * @request POST:/post-parser/tasks/content-review/confirm
+     */
+    confirmPostParserContentReview: (
+      data: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainConfirmPostParserContentReviewInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserContentReviewResult,
+        any
+      >({
+        path: `/post-parser/tasks/content-review/confirm`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for confirmPostParserContentReview
+     * @name confirmPostParserContentReviewUrl
+     */
+    confirmPostParserContentReviewUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/post-parser/tasks/content-review/confirm`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags PostParserContentReadiness
+     * @name GetPostParserContentReadiness
+     * @request GET:/post-parser/task/{id}/content-readiness
+     */
+    getPostParserContentReadiness: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserContentReadinessView,
+        any
+      >({
+        path: `/post-parser/task/${id}/content-readiness`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags PostParserContentReadiness
+     * @name ConfirmPostParserContentReadiness
+     * @request POST:/post-parser/task/{id}/content-readiness/confirm
+     */
+    confirmPostParserContentReadiness: (
+      id: number,
+      data: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainConfirmPostParserContentReadinessInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserContentReadinessView,
+        any
+      >({
+        path: `/post-parser/task/${id}/content-readiness/confirm`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags PostParserContentReadiness
+     * @name RevokePostParserContentReadiness
+     * @request POST:/post-parser/task/{id}/content-readiness/revoke
+     */
+    revokePostParserContentReadiness: (
+      id: number,
+      data: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainRevokePostParserContentReadinessInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserContentReadinessView,
+        any
+      >({
+        path: `/post-parser/task/${id}/content-readiness/revoke`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags PostParserContentReadiness
+     * @name RefreshPostParserContentReadiness
+     * @request POST:/post-parser/task/{id}/content-readiness/refresh
+     */
+    refreshPostParserContentReadiness: (
+      id: number,
+      data: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainRefreshPostParserContentReadinessInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserContentReadinessView,
+        any
+      >({
+        path: `/post-parser/task/${id}/content-readiness/refresh`,
         method: "POST",
         body: data,
         type: ContentType.Json,
@@ -32047,6 +38970,75 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
+
+      return baseUrl + path;
+    },
+  };
+  processingPlans = {
+    /**
+     * No description
+     *
+     * @tags ProcessingPlans
+     * @name GetSourceProcessingPlan
+     * @request POST:/processing-plans/source/query
+     */
+    getSourceProcessingPlan: (
+      data: BakabaseModulesWorkflowAbstractionsModelsDomainWorkflowSourceRef,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionProcessingPlansSourceProcessingPlanView,
+        any
+      >({
+        path: `/processing-plans/source/query`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getSourceProcessingPlan
+     * @name getSourceProcessingPlanUrl
+     */
+    getSourceProcessingPlanUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/processing-plans/source/query`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ProcessingPlans
+     * @name ReviseSourceProcessingPlan
+     * @request POST:/processing-plans/revisions
+     */
+    reviseSourceProcessingPlan: (
+      data: BakabaseServiceComponentsAcquisitionProcessingPlansProcessingPlanRevisionInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionProcessingPlansSourceProcessingPlanView,
+        any
+      >({
+        path: `/processing-plans/revisions`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for reviseSourceProcessingPlan
+     * @name reviseSourceProcessingPlanUrl
+     */
+    reviseSourceProcessingPlanUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/processing-plans/revisions`;
 
       return baseUrl + path;
     },
@@ -32230,6 +39222,455 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
       return baseUrl + path;
     },
+  };
+  pythonRuntime = {
+    /**
+     * No description
+     *
+     * @tags PythonRuntime
+     * @name GetPythonRuntimeConfiguration
+     * @request GET:/python-runtime/configuration
+     */
+    getPythonRuntimeConfiguration: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsDependencyImplementationsCloudToolsPythonRuntimeConfigurationViewModel,
+        any
+      >({
+        path: `/python-runtime/configuration`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getPythonRuntimeConfiguration
+     * @name getPythonRuntimeConfigurationUrl
+     */
+    getPythonRuntimeConfigurationUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/python-runtime/configuration`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags PythonRuntime
+     * @name GetPythonRuntimeCandidates
+     * @request GET:/python-runtime/candidates
+     */
+    getPythonRuntimeCandidates: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsDependencyImplementationsCloudToolsPythonRuntimeCandidateViewModel,
+        any
+      >({
+        path: `/python-runtime/candidates`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getPythonRuntimeCandidates
+     * @name getPythonRuntimeCandidatesUrl
+     */
+    getPythonRuntimeCandidatesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/python-runtime/candidates`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags PythonRuntime
+     * @name ValidatePythonRuntimeConfiguration
+     * @request POST:/python-runtime/validate
+     */
+    validatePythonRuntimeConfiguration: (
+      data: BakabaseInsideWorldModelsConfigsPythonRuntimeConfiguration,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsDependencyImplementationsCloudToolsPythonRuntimeValidationViewModel,
+        any
+      >({
+        path: `/python-runtime/validate`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for validatePythonRuntimeConfiguration
+     * @name validatePythonRuntimeConfigurationUrl
+     */
+    validatePythonRuntimeConfigurationUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/python-runtime/validate`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags PythonRuntime
+     * @name ApplyPythonRuntimeConfiguration
+     * @request POST:/python-runtime/apply
+     */
+    applyPythonRuntimeConfiguration: (
+      data: BakabaseInsideWorldModelsConfigsPythonRuntimeConfiguration,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsDependencyImplementationsCloudToolsPythonRuntimeValidationViewModel,
+        any
+      >({
+        path: `/python-runtime/apply`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for applyPythonRuntimeConfiguration
+     * @name applyPythonRuntimeConfigurationUrl
+     */
+    applyPythonRuntimeConfigurationUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/python-runtime/apply`;
+
+      return baseUrl + path;
+    },
+  };
+  rclone = {
+    /**
+     * No description
+     *
+     * @tags RcloneAccounts
+     * @name GetRcloneAccounts
+     * @request GET:/rclone/accounts
+     */
+    getRcloneAccounts: (
+      query?: {
+        providerId?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseServiceComponentsCloudDownloadsRcloneRcloneAccountViewModel,
+        any
+      >({
+        path: `/rclone/accounts`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getRcloneAccounts
+     * @name getRcloneAccountsUrl
+     */
+    getRcloneAccountsUrl: (query?: {
+        providerId?: string;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/rclone/accounts`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags RcloneAccounts
+     * @name SaveRcloneAccount
+     * @request POST:/rclone/accounts
+     */
+    saveRcloneAccount: (
+      data: BakabaseServiceComponentsCloudDownloadsRcloneRcloneAccountInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsCloudDownloadsRcloneRcloneAccountViewModel,
+        any
+      >({
+        path: `/rclone/accounts`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for saveRcloneAccount
+     * @name saveRcloneAccountUrl
+     */
+    saveRcloneAccountUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/rclone/accounts`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags RcloneAccounts
+     * @name SetDefaultRcloneAccount
+     * @request PUT:/rclone/accounts/{id}/default
+     */
+    setDefaultRcloneAccount: (id: string, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/rclone/accounts/${id}/default`,
+        method: "PUT",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags RcloneAccounts
+     * @name ValidateRcloneAccount
+     * @request POST:/rclone/accounts/{id}/validate
+     */
+    validateRcloneAccount: (id: string, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsCloudDownloadsRcloneRcloneAccountViewModel,
+        any
+      >({
+        path: `/rclone/accounts/${id}/validate`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags RcloneAccounts
+     * @name DeleteRcloneAccount
+     * @request DELETE:/rclone/accounts/{id}
+     */
+    deleteRcloneAccount: (id: string, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/rclone/accounts/${id}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags RcloneAccounts
+     * @name StartRcloneAuthorization
+     * @request POST:/rclone/accounts/{id}/authorization
+     */
+    startRcloneAuthorization: (id: string, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsCloudDownloadsRcloneRcloneAuthorizationSessionViewModel,
+        any
+      >({
+        path: `/rclone/accounts/${id}/authorization`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags RcloneAccounts
+     * @name GetRcloneAuthorization
+     * @request GET:/rclone/accounts/authorization/{sessionId}
+     */
+    getRcloneAuthorization: (sessionId: string, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsCloudDownloadsRcloneRcloneAuthorizationSessionViewModel,
+        any
+      >({
+        path: `/rclone/accounts/authorization/${sessionId}`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags RcloneAccounts
+     * @name CancelRcloneAuthorization
+     * @request DELETE:/rclone/accounts/authorization/{sessionId}
+     */
+    cancelRcloneAuthorization: (sessionId: string, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/rclone/accounts/authorization/${sessionId}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags RcloneAccounts
+     * @name GetRcloneAuthorizationDrives
+     * @request GET:/rclone/accounts/authorization/{sessionId}/drives
+     */
+    getRcloneAuthorizationDrives: (
+      sessionId: string,
+      query?: {
+        questionId?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsCloudDownloadsRcloneRcloneDriveChoicesViewModel,
+        any
+      >({
+        path: `/rclone/accounts/authorization/${sessionId}/drives`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags RcloneAccounts
+     * @name PreviewRcloneAuthorizationDrive
+     * @request POST:/rclone/accounts/authorization/{sessionId}/drives/preview
+     */
+    previewRcloneAuthorizationDrive: (
+      sessionId: string,
+      data: BakabaseServiceComponentsCloudDownloadsRcloneRcloneDrivePreviewInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsCloudDownloadsRcloneRcloneDrivePreviewViewModel,
+        any
+      >({
+        path: `/rclone/accounts/authorization/${sessionId}/drives/preview`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags RcloneAccounts
+     * @name AnswerRcloneAuthorization
+     * @request POST:/rclone/accounts/authorization/{sessionId}/answer
+     */
+    answerRcloneAuthorization: (
+      sessionId: string,
+      data: BakabaseServiceComponentsCloudDownloadsRcloneRcloneAuthorizationAnswerInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsCloudDownloadsRcloneRcloneAuthorizationSessionViewModel,
+        any
+      >({
+        path: `/rclone/accounts/authorization/${sessionId}/answer`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags RcloneAccounts
+     * @name StartRcloneBrowserAuthorization
+     * @request POST:/rclone/accounts/authorization/{sessionId}/browser/start
+     */
+    startRcloneBrowserAuthorization: (
+      sessionId: string,
+      data: BakabaseServiceComponentsCloudDownloadsRcloneRcloneBrowserAuthorizationStartInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsCloudDownloadsRcloneRcloneAuthorizationSessionViewModel,
+        any
+      >({
+        path: `/rclone/accounts/authorization/${sessionId}/browser/start`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags RcloneAccounts
+     * @name SubmitRcloneBrowserAuthorizationCallback
+     * @request POST:/rclone/accounts/authorization/{sessionId}/browser/callback
+     */
+    submitRcloneBrowserAuthorizationCallback: (
+      sessionId: string,
+      data: BakabaseServiceComponentsCloudDownloadsRcloneRcloneBrowserAuthorizationCallbackInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsCloudDownloadsRcloneRcloneAuthorizationSessionViewModel,
+        any
+      >({
+        path: `/rclone/accounts/authorization/${sessionId}/browser/callback`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags RcloneAccounts
+     * @name StopRcloneBrowserAuthorization
+     * @request DELETE:/rclone/accounts/authorization/{sessionId}/browser
+     */
+    stopRcloneBrowserAuthorization: (sessionId: string, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsCloudDownloadsRcloneRcloneAuthorizationSessionViewModel,
+        any
+      >({
+        path: `/rclone/accounts/authorization/${sessionId}/browser`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
   };
   remoteAccess = {
     /**
@@ -33398,6 +40839,111 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         ...params,
       }),
   };
+  sourceAvailability = {
+    /**
+     * No description
+     *
+     * @tags SourceAvailability
+     * @name GetAcquisitionSourceAvailability
+     * @request GET:/source-availability/acquisitions/{id}
+     */
+    getAcquisitionSourceAvailability: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericList1BakabaseServiceComponentsSourceAvailabilitySourceAvailabilityRow,
+        any
+      >({
+        path: `/source-availability/acquisitions/${id}`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags SourceAvailability
+     * @name PreviewAcquisitionSourceAvailability
+     * @request POST:/source-availability/acquisitions/preview
+     */
+    previewAcquisitionSourceAvailability: (
+      data: BakabaseServiceComponentsSourceAvailabilitySourceAvailabilityPreviewInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsSourceAvailabilitySourceAvailabilityBatchView,
+        any
+      >({
+        path: `/source-availability/acquisitions/preview`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for previewAcquisitionSourceAvailability
+     * @name previewAcquisitionSourceAvailabilityUrl
+     */
+    previewAcquisitionSourceAvailabilityUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/source-availability/acquisitions/preview`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags SourceAvailability
+     * @name GetSourceAvailabilityBatch
+     * @request GET:/source-availability/batches/{id}
+     */
+    getSourceAvailabilityBatch: (id: string, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsSourceAvailabilitySourceAvailabilityBatchView,
+        any
+      >({
+        path: `/source-availability/batches/${id}`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags SourceAvailability
+     * @name ApplyAcquisitionSourceAvailability
+     * @request POST:/source-availability/acquisitions/apply
+     */
+    applyAcquisitionSourceAvailability: (
+      data: BakabaseServiceComponentsSourceAvailabilitySourceAvailabilityApplyInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsSourceAvailabilitySourceAvailabilityApplyResult,
+        any
+      >({
+        path: `/source-availability/acquisitions/apply`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for applyAcquisitionSourceAvailability
+     * @name applyAcquisitionSourceAvailabilityUrl
+     */
+    applyAcquisitionSourceAvailabilityUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/source-availability/acquisitions/apply`;
+
+      return baseUrl + path;
+    },
+  };
   source = {
     /**
      * No description
@@ -33935,6 +41481,159 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
       return baseUrl + path;
     },
+  };
+  terabox = {
+    /**
+     * No description
+     *
+     * @tags TeraBox
+     * @name GetTeraBoxAccount
+     * @request GET:/terabox/account
+     */
+    getTeraBoxAccount: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsCloudDownloadsTeraBoxTeraBoxAccountViewModel,
+        any
+      >({
+        path: `/terabox/account`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getTeraBoxAccount
+     * @name getTeraBoxAccountUrl
+     */
+    getTeraBoxAccountUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/terabox/account`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags TeraBox
+     * @name LogoutTeraBoxAccount
+     * @request DELETE:/terabox/account
+     */
+    logoutTeraBoxAccount: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/terabox/account`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for logoutTeraBoxAccount
+     * @name logoutTeraBoxAccountUrl
+     */
+    logoutTeraBoxAccountUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/terabox/account`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags TeraBox
+     * @name GetActiveTeraBoxAuthorization
+     * @request GET:/terabox/account/authorization
+     */
+    getActiveTeraBoxAuthorization: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsCloudDownloadsTeraBoxTeraBoxAuthorizationViewModel,
+        any
+      >({
+        path: `/terabox/account/authorization`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getActiveTeraBoxAuthorization
+     * @name getActiveTeraBoxAuthorizationUrl
+     */
+    getActiveTeraBoxAuthorizationUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/terabox/account/authorization`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags TeraBox
+     * @name StartTeraBoxAuthorization
+     * @request POST:/terabox/account/authorization
+     */
+    startTeraBoxAuthorization: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsCloudDownloadsTeraBoxTeraBoxAuthorizationViewModel,
+        any
+      >({
+        path: `/terabox/account/authorization`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for startTeraBoxAuthorization
+     * @name startTeraBoxAuthorizationUrl
+     */
+    startTeraBoxAuthorizationUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/terabox/account/authorization`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags TeraBox
+     * @name CompleteTeraBoxAuthorization
+     * @request POST:/terabox/account/authorization/{id}/complete
+     */
+    completeTeraBoxAuthorization: (
+      id: string,
+      data: BakabaseServiceComponentsCloudDownloadsTeraBoxTeraBoxAuthorizationCompleteInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsCloudDownloadsTeraBoxTeraBoxAuthorizationViewModel,
+        any
+      >({
+        path: `/terabox/account/authorization/${id}/complete`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags TeraBox
+     * @name CancelTeraBoxAuthorization
+     * @request DELETE:/terabox/account/authorization/{id}
+     */
+    cancelTeraBoxAuthorization: (id: string, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/terabox/account/authorization/${id}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
   };
   text = {
     /**
@@ -34926,74 +42625,23 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       return baseUrl + path;
     },
   };
-  workflow = {
+  workflowSources = {
     /**
      * No description
      *
-     * @tags Workflow
-     * @name SearchWorkflows
-     * @request GET:/workflow
+     * @tags WorkflowSources
+     * @name QueryWorkflowSourceRuns
+     * @request POST:/workflow-sources/runs/query
      */
-    searchWorkflows: (
-      query?: {
-        triggerKind?: string;
-        enabledOnly?: boolean;
-      },
+    queryWorkflowSourceRuns: (
+      data: BakabaseServiceControllersWorkflowSourceRunsQuery,
       params: RequestParams = {},
     ) =>
       this.request<
-        BootstrapModelsResponseModelsListResponse1BakabaseModulesWorkflowAbstractionsModelsViewWorkflowDefinitionViewModel,
+        BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericList1BakabaseServiceControllersWorkflowSourceRunsView,
         any
       >({
-        path: `/workflow`,
-        method: "GET",
-        query: query,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for searchWorkflows
-     * @name searchWorkflowsUrl
-     */
-    searchWorkflowsUrl: (query?: {
-        triggerKind?: string;
-        enabledOnly?: boolean;
-      }) => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/workflow`;
-
-      // Build query string
-      if (query) {
-        // Object.entries rather than indexing by key: the query object is a typed
-        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
-        const queryString = Object.entries(query)
-          .filter(([, value]) => value !== undefined && value !== null)
-          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
-          .join("&");
-
-        return baseUrl + path + (queryString ? `?${queryString}` : "");
-      }
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags Workflow
-     * @name AddWorkflow
-     * @request POST:/workflow
-     */
-    addWorkflow: (
-      data: BakabaseModulesWorkflowAbstractionsModelsInputWorkflowDefinitionCreationInputModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesWorkflowAbstractionsModelsViewWorkflowDefinitionViewModel,
-        any
-      >({
-        path: `/workflow`,
+        path: `/workflow-sources/runs/query`,
         method: "POST",
         body: data,
         type: ContentType.Json,
@@ -35002,382 +42650,14 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }),
 
     /**
-     * @description Build URL for addWorkflow
-     * @name addWorkflowUrl
+     * @description Build URL for queryWorkflowSourceRuns
+     * @name queryWorkflowSourceRunsUrl
      */
-    addWorkflowUrl: () => {
+    queryWorkflowSourceRunsUrl: () => {
       const baseUrl = this.baseUrl || "";
-      let path = `/workflow`;
+      let path = `/workflow-sources/runs/query`;
 
       return baseUrl + path;
     },
-
-    /**
-     * No description
-     *
-     * @tags Workflow
-     * @name GetWorkflow
-     * @request GET:/workflow/{id}
-     */
-    getWorkflow: (id: number, params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesWorkflowAbstractionsModelsViewWorkflowDefinitionViewModel,
-        any
-      >({
-        path: `/workflow/${id}`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Workflow
-     * @name PatchWorkflow
-     * @request PATCH:/workflow/{id}
-     */
-    patchWorkflow: (
-      id: number,
-      data: BakabaseModulesWorkflowAbstractionsModelsInputWorkflowDefinitionUpdateInputModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesWorkflowAbstractionsModelsViewWorkflowDefinitionViewModel,
-        any
-      >({
-        path: `/workflow/${id}`,
-        method: "PATCH",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Workflow
-     * @name DeleteWorkflow
-     * @request DELETE:/workflow/{id}
-     */
-    deleteWorkflow: (id: number, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/workflow/${id}`,
-        method: "DELETE",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Workflow
-     * @name ValidateWorkflow
-     * @request POST:/workflow/validate
-     */
-    validateWorkflow: (
-      data: BakabaseModulesWorkflowAbstractionsModelsInputWorkflowValidationInputModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesWorkflowAbstractionsModelsViewWorkflowValidationResult,
-        any
-      >({
-        path: `/workflow/validate`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for validateWorkflow
-     * @name validateWorkflowUrl
-     */
-    validateWorkflowUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/workflow/validate`;
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags Workflow
-     * @name ValidateSavedWorkflow
-     * @request GET:/workflow/{id}/validation
-     */
-    validateSavedWorkflow: (id: number, params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesWorkflowAbstractionsModelsViewWorkflowValidationResult,
-        any
-      >({
-        path: `/workflow/${id}/validation`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Workflow
-     * @name GetWorkflowTriggers
-     * @request GET:/workflow/triggers
-     */
-    getWorkflowTriggers: (params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsListResponse1BakabaseModulesWorkflowAbstractionsModelsViewWorkflowTriggerDescriptorViewModel,
-        any
-      >({
-        path: `/workflow/triggers`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for getWorkflowTriggers
-     * @name getWorkflowTriggersUrl
-     */
-    getWorkflowTriggersUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/workflow/triggers`;
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags Workflow
-     * @name RunWorkflowManually
-     * @request POST:/workflow/{id}/run
-     */
-    runWorkflowManually: (
-      id: number,
-      data: BakabaseModulesWorkflowAbstractionsModelsInputWorkflowManualRunInputModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesWorkflowAbstractionsModelsViewWorkflowRunViewModel,
-        any
-      >({
-        path: `/workflow/${id}/run`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Workflow
-     * @name GetWorkflowActivities
-     * @request GET:/workflow/activities
-     */
-    getWorkflowActivities: (params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsListResponse1BakabaseModulesWorkflowAbstractionsModelsViewWorkflowActivityDescriptorViewModel,
-        any
-      >({
-        path: `/workflow/activities`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for getWorkflowActivities
-     * @name getWorkflowActivitiesUrl
-     */
-    getWorkflowActivitiesUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/workflow/activities`;
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags Workflow
-     * @name GetWorkflowItemTypes
-     * @request GET:/workflow/item-types
-     */
-    getWorkflowItemTypes: (params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsListResponse1BakabaseModulesWorkflowAbstractionsModelsViewWorkflowItemTypeDescriptorViewModel,
-        any
-      >({
-        path: `/workflow/item-types`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for getWorkflowItemTypes
-     * @name getWorkflowItemTypesUrl
-     */
-    getWorkflowItemTypesUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/workflow/item-types`;
-
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags Workflow
-     * @name GetWorkflowRunFileRenameEntries
-     * @request GET:/workflow/run/{runId}/file-rename-entries
-     */
-    getWorkflowRunFileRenameEntries: (runId: number, params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewFileRenameEntryViewModel,
-        any
-      >({
-        path: `/workflow/run/${runId}/file-rename-entries`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Workflow
-     * @name SetFileRenameEntryExcluded
-     * @request PUT:/workflow/file-rename-entry/{id}/excluded
-     */
-    setFileRenameEntryExcluded: (
-      id: number,
-      query?: {
-        excluded?: boolean;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewFileRenameEntryViewModel,
-        any
-      >({
-        path: `/workflow/file-rename-entry/${id}/excluded`,
-        method: "PUT",
-        query: query,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Workflow
-     * @name ApplyWorkflowRunFileRenames
-     * @request POST:/workflow/run/{runId}/file-rename-entries/apply
-     */
-    applyWorkflowRunFileRenames: (runId: number, params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewFileRenameEntryViewModel,
-        any
-      >({
-        path: `/workflow/run/${runId}/file-rename-entries/apply`,
-        method: "POST",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Workflow
-     * @name UndoWorkflowRunFileRenames
-     * @request POST:/workflow/run/{runId}/file-rename-entries/undo
-     */
-    undoWorkflowRunFileRenames: (runId: number, params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewFileRenameEntryViewModel,
-        any
-      >({
-        path: `/workflow/run/${runId}/file-rename-entries/undo`,
-        method: "POST",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Workflow
-     * @name ResumeWorkflowRun
-     * @request POST:/workflow/run/{runId}/resume
-     */
-    resumeWorkflowRun: (
-      runId: number,
-      data: BakabaseModulesWorkflowAbstractionsModelsInputWorkflowRunResumeInputModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/workflow/run/${runId}/resume`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Workflow
-     * @name SearchWorkflowRuns
-     * @request GET:/workflow/{id}/runs
-     */
-    searchWorkflowRuns: (
-      id: number,
-      query?: {
-        /** @format int32 */
-        workflowDefinitionId?: number;
-        /** @format int32 */
-        pageIndex?: number;
-        /** @format int32 */
-        pageSize?: number;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<
-        BootstrapModelsResponseModelsSearchResponse1BakabaseModulesWorkflowAbstractionsModelsViewWorkflowRunViewModel,
-        any
-      >({
-        path: `/workflow/${id}/runs`,
-        method: "GET",
-        query: query,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Workflow
-     * @name GetWorkflowRun
-     * @request GET:/workflow/run/{runId}
-     */
-    getWorkflowRun: (runId: number, params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesWorkflowAbstractionsModelsViewWorkflowRunViewModel,
-        any
-      >({
-        path: `/workflow/run/${runId}`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
   };
 }

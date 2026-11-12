@@ -7,6 +7,8 @@ import cn from "@/locales/cn/pages/acquisition.json";
 import en from "@/locales/en/pages/acquisition.json";
 import cnWorkflow from "@/locales/cn/pages/workflow.json";
 import enWorkflow from "@/locales/en/pages/workflow.json";
+import cnCloud from "@/locales/cn/pages/cloudDownload.json";
+import enCloud from "@/locales/en/pages/cloudDownload.json";
 
 const instance = createInstance();
 
@@ -15,12 +17,14 @@ await instance.init({
   fallbackLng: "en",
   keySeparator: false,
   resources: {
-    cn: { translation: { ...cn, ...cnWorkflow } },
-    en: { translation: { ...en, ...enWorkflow } },
+    cn: { translation: { ...cn, ...cnWorkflow, ...cnCloud } },
+    en: { translation: { ...en, ...enWorkflow, ...enCloud } },
   },
 });
 
 const builtinNames = [
+  ["Download selected sources (v1)", "下载选定来源"],
+  ["Acquire supported sources (v1)", "获取支持的来源并入库"],
   ["Forum post + cloud drive", "分享内容与网盘"],
   ["Direct download", "直链下载并入库"],
   ["Magnet", "外部下载后入库（磁力链接）"],
@@ -31,6 +35,8 @@ const builtinNames = [
   ["Download torrent contents", "下载种子内容"],
   ["ExHentai download", "ExHentai 下载并入库"],
   ["Parse post download information", "仅解析帖子"],
+  ["Parse post download information (v2)", "仅解析帖子"],
+  ["Process local files using extraction instructions", "按方案处理本地文件"],
 ];
 
 describe("built-in workflow display names", () => {
@@ -61,5 +67,25 @@ describe("built-in workflow display names", () => {
     expect(
       workflowLabel({ name: "Direct download", isBuiltin: true }, instance.getFixedT("en")),
     ).toBe("Direct download and import");
+    expect(
+      workflowLabel(
+        { name: "Acquire supported sources (v1)", isBuiltin: true },
+        instance.getFixedT("en"),
+      ),
+    ).toBe("Acquire supported sources and import");
   });
+});
+
+
+describe("archive delivery assessment translations", () => {
+  for (const [language, workflow, cloud] of [["cn", cnWorkflow, cnCloud], ["en", enWorkflow, enCloud]] as const) {
+    it(`provides ${language} names, descriptions and actionable recovery guidance`, () => {
+      for (const suffix of ["name", "description"])
+        expect(workflow[`workflow.activity.fsAssessDelivery.${suffix}` as keyof typeof workflow]).toBeTruthy();
+      for (const section of ["why", "action", "next"])
+        expect(cloud[`cloudDownload.resumeGuide.archiveDelivery.${section}` as keyof typeof cloud]).toBeTruthy();
+      expect(cloud["cloudDownload.deliveryReview.keepArchives"]).toBeTruthy();
+      expect(cloud["cloudDownload.problemCode.FILE_DELIVERY_REVIEW_INVALID"]).toBeTruthy();
+    });
+  }
 });

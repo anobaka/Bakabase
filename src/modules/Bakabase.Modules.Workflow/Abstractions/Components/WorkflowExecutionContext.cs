@@ -1,5 +1,7 @@
+using Bakabase.Modules.Workflow.Abstractions.Models;
 using Bakabase.Abstractions.Components.Tasks;
 using System.Text.Json;
+using Bakabase.Modules.Workflow.Abstractions.Models.Domain;
 using Microsoft.Extensions.Logging;
 
 namespace Bakabase.Modules.Workflow.Abstractions.Components;
@@ -9,6 +11,9 @@ namespace Bakabase.Modules.Workflow.Abstractions.Components;
 /// </summary>
 public sealed class WorkflowExecutionContext
 {
+    /// <summary>Frozen public invocation values, inherited unchanged by nested execution contexts.</summary>
+    public WorkflowInvocationSnapshot? ParameterSnapshot { get; init; }
+
     public required long RunId { get; init; }
     public required int WorkflowDefinitionId { get; init; }
     public required string TriggerKind { get; init; }
@@ -18,6 +23,22 @@ public sealed class WorkflowExecutionContext
 
     /// <summary>Raw config JSON of the activity currently executing.</summary>
     public required string ActivityConfigJson { get; init; }
+
+    /// <summary>Server-persisted prompt authorizing this resume only. Never supplied by the caller or inherited by nested planners.</summary>
+    public string? ResumePromptJson { get; init; }
+
+    /// <summary>The validated remaining chain. Artifact planning stops at an undeclared step.</summary>
+    public IReadOnlyList<WorkflowPlannedActivity> FollowingActivities { get; init; } = [];
+
+    /// <summary>Rebase planning on the consumer being inspected, so nested planners cannot see themselves or upstream nodes.</summary>
+    public WorkflowExecutionContext ForPlannedActivity(string configJson, IReadOnlyList<WorkflowPlannedActivity> following) => new()
+    {
+        ParameterSnapshot = ParameterSnapshot,
+        RunId = RunId, WorkflowDefinitionId = WorkflowDefinitionId, TriggerKind = TriggerKind,
+        Payload = Payload, ActivityConfigJson = configJson, FollowingActivities = following,
+        TargetItemType = TargetItemType, Variables = Variables, Services = Services, Logger = Logger,
+        ReportProgress = ReportProgress, ReportStage = ReportStage, ReportOutputMetadata = ReportOutputMetadata
+    };
 
     /// <summary>
     /// For <see cref="WorkflowItemTypeBehavior.AdaptToNext"/> activities, the resolved
@@ -53,6 +74,9 @@ public sealed class WorkflowExecutionContext
 
     /// <summary>Transient, machine-readable activity phase; never persisted as a completed result.</summary>
     public Func<string, Task> ReportStage { get; init; } = _ => Task.CompletedTask;
+
+    /// <summary>Explicit safe, bounded output metadata; persisted independently of checkpoint payloads.</summary>
+    public Func<IReadOnlyList<WorkflowOutputBlock>, Task> ReportOutputMetadata { get; init; } = _ => Task.CompletedTask;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {

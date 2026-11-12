@@ -1,0 +1,122 @@
+using System.Text.Json;
+using Bakabase.Abstractions.Components.FileSystem;
+using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
+using Bakabase.Modules.Acquisition.Models.Domain;
+using Bakabase.Modules.Workflow.Abstractions.Components;
+using Bakabase.Modules.Workflow.Abstractions.Models.Db;
+using Bakabase.Modules.Workflow.Artifacts;
+using Bakabase.Modules.Workflow.Components;
+using Bakabase.Service.Components.Acquisition.Planning;
+using Bakabase.Service.Components.CloudDownloads;
+using Bakabase.TestKit.Implementations;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace Bakabase.Tests;
+
+public sealed partial class AcquisitionRecoveryTests
+{
+    [DataTestMethod]
+    [DataRow("automatic", true, false)]
+    [DataRow("automatic", false, false)]
+    [DataRow("localOnly", true, false)]
+    [DataRow("automatic", true, true)]
+    public async Task Batch_changed_storage_defaults_do_not_require_completed_files_to_resume_original_download(string mode, bool available, bool retainedBytes)
+    {
+        var (task, run, workset, download, _, provider, _) = await SeedRecoverableProvider();
+        var storage = new UserStoragePolicy(false);
+        var options = new TestBOptionsManager<AcquisitionOptions>(new()
+        {ProcessingWorkspaceDirectory = Directory.CreateDirectory(Path.Combine(_root, "current-work")).FullName,
+            DeliveryRootDirectory = Directory.CreateDirectory(Path.Combine(_root, "current-delivery")).FullName});
+        var source = workset.Targets.Single().SelectedSource!;
+        task.PlanJson = JsonSerializer.Serialize(new AcquisitionPlan {Title = task.Title!, OutputDirectory = _root,
+            Parts = [new() {Id = "part", SelectedSourceId = source.Id,
+                Sources = [new() {Id = source.Id, Url = source.Url, ProviderId = source.ProviderId, Kind = source.Kind}],
+                Processing = new() {Requirement = "unknown"}}],
+            DeliveryLayout = new() {TaskId = task.Id, RootDirectory = options.Value.DeliveryRootDirectory!,
+                TaskDirectory = Path.Combine(options.Value.DeliveryRootDirectory!, "task"),
+                PartDirectories = new() {{"part", Path.Combine(options.Value.DeliveryRootDirectory!, "task")}}}}, WorkflowJson.Options);
+        run.WaitReason = "cloud.cloudAttention";
+        run.PlanSnapshotJson = WorkflowRunPlans.Serialize(new() {Name = "Download then local work", TriggerKind = CloudWorkflow.Trigger,
+            Nodes = [new() {NodeId = "download", Kind = "download.awaitCompletion"},
+                new() {NodeId = "process", Kind = AcquisitionPlanProcessingActivity.ActivityKind,
+                    ConfigJson = JsonSerializer.Serialize(new AcquisitionPlanProcessingConfig("part", new() {Requirement = "unknown"}), WorkflowJson.Options)},
+                new() {NodeId = "publish", Kind = "fs.publishArtifacts"}]});
+        _db.Set<WorkflowRunSourceDbModel>().Add(new() {WorkflowRunId = run.Id, Module = "acquisition", EntityKind = "task", EntityId = task.Id.ToString(), Revision = "1"});
+        await _db.SaveChangesAsync();
+        var store = _services.GetRequiredService<IArtifactOperationStore>();
+        var plans = new AcquisitionPlanService(_db, [], null!, null!, null!, storage, artifacts: store,
+            deliveryDirectories: new(storage, options), storageDefaults: new(options, storage));
+        var local = new AcquisitionLocalFilesRecoveryService(_db, plans, storage, store, null!, _services);
+        var host = new ProcessingRecoveryHost();
+        var recovery = new AcquisitionRecoveryService(_db, _diagnostics, new(), host, plans, localFiles: local);
+        var continuation = new AcquisitionContinuationService(_db, recovery, new(), null!, null!, null!);
+        var service = new AcquisitionLocalRecoveryBatchService(_db, recovery, _diagnostics, local, plans,
+            options, storage, new PinnedBatchCapacity(), new(), continuations: continuation);
+        var frozen = run.PlanSnapshotJson; var request = download.Options;
+        string? retained = null;
+        if (retainedBytes)
+        {
+            Directory.CreateDirectory(download.DownloadPath);
+            retained = Path.Combine(download.DownloadPath, "retained-original.bin");
+            await File.WriteAllTextAsync(retained, "keep these original bytes");
+        }
+        var preview = await service.PreviewAsync(new([task.Id], mode));
+        var row = preview.Rows.Single();
+        Assert.AreEqual(mode == "automatic" && !retainedBytes, row.CanQueue, row.ReasonCode);
+        if (retainedBytes)
+        {
+            Assert.AreEqual("RECOVERY_DOWNLOAD_HAS_OUTPUT", row.ReasonCode);
+            Assert.AreEqual("keep these original bytes", await File.ReadAllTextAsync(retained!));
+            Assert.AreEqual(0, host.Calls); Assert.AreEqual(0, provider.Checks);
+            Assert.AreEqual(0, (await service.ListAsync()).Count);
+            Assert.AreEqual(1, await _db.DownloadTasks.CountAsync());
+            return;
+        }
+        Assert.AreEqual(0, provider.Checks, "The list preview must not call the provider.");
+        if (mode == "localOnly") {Assert.AreEqual(0, host.Calls); return;}
+        Assert.AreEqual("workflow", row.ActionCategory); Assert.AreEqual("workflow", row.RecoveryScope);
+        Assert.IsTrue(row.CanOverrideStorage);
+        CollectionAssert.AreEqual(new[] {download.DownloadPath}, preview.Volumes.SelectMany(v => v.Paths).ToArray());
+        var batch = await service.ApplyAsync(new(preview.PreviewToken, [task.Id]));
+        provider.Available = available;
+        await service.TickAsync();
+        Assert.AreEqual(available ? 1 : 0, host.Calls, (await service.GetAsync(batch.BatchId)).Rows.Single().ReasonCode);
+        Assert.IsTrue(provider.Checks > 0);
+        if (!available)
+        {
+            var expected = await _diagnostics.DiagnoseAsync(task, run, default);
+            Assert.AreEqual("RECOVERY_SOURCE_STILL_BLOCKED", expected.Row.ReasonCode);
+            Assert.AreEqual(expected.Row.CurrentProblemCode, (await service.GetAsync(batch.BatchId)).Rows.Single().ReasonCode);
+        }
+        if (available)
+        {
+            var signal = JsonSerializer.Deserialize<CloudSelectionSignal>(host.Signal!, WorkflowJson.Options)!;
+            Assert.IsTrue(signal.ObserveExistingOnly == true && signal.RevalidateExistingDownloads == true);
+            CollectionAssert.AreEqual(new[] {"part"}, signal.ResumeTargetIds!);
+        }
+        Assert.AreEqual(1, await _db.DownloadTasks.CountAsync());
+        Assert.AreEqual(download.Id, (await _db.DownloadTasks.AsNoTracking().SingleAsync()).Id);
+        Assert.AreEqual(request, (await _db.DownloadTasks.AsNoTracking().SingleAsync()).Options);
+        Assert.AreEqual(frozen, (await _db.WorkflowRuns.AsNoTracking().SingleAsync(r => r.Id == run.Id)).PlanSnapshotJson);
+        Assert.IsFalse(Directory.Exists(download.DownloadPath), "No payload downloader runs in this fixture.");
+    }
+
+    [TestMethod]
+    public async Task Batch_completed_original_download_still_uses_current_storage_adoption()
+    {
+        var f = await LocalFilesFixture();
+        var continuation = new AcquisitionContinuationService(_db, f.Recovery, new(), null!, null!, null!);
+        var service = new AcquisitionLocalRecoveryBatchService(_db, f.Recovery, _diagnostics, f.Local, f.Plans,
+            f.Options, new UserStoragePolicy(false), new PinnedBatchCapacity(), new(), continuations: continuation);
+        var before = JsonSerializer.Serialize(await _db.DownloadTasks.AsNoTracking().ToArrayAsync());
+        var preview = await service.PreviewAsync(new([f.TaskId], "automatic"));
+        var row = preview.Rows.Single();
+        Assert.IsTrue(row.CanQueue, row.ReasonCode);
+        Assert.AreEqual("localFiles", row.RecoveryScope); Assert.AreEqual("localProcessing", row.ActionCategory);
+        Assert.AreEqual(f.Options.Value.ProcessingWorkspaceDirectory, row.WorkingDirectory);
+        StringAssert.StartsWith(row.DeliveryDirectory!, f.Options.Value.DeliveryRootDirectory!);
+        Assert.AreEqual(before, JsonSerializer.Serialize(await _db.DownloadTasks.AsNoTracking().ToArrayAsync()));
+        Assert.AreEqual(0, f.Host.Calls);
+    }
+}

@@ -29,6 +29,11 @@ internal static class PostAnalysisText
                 : content.CommentHtmlList.Select(Compact),
             scope = content.Scope,
             sourceUrl = content.SourceUrl,
+            restrictedBlocks = content.Locks.Where(l => !l.IsBought).Select(l => new
+            {
+                l.BlockId, l.Floor, l.ContextText, l.PriceText, l.CurrencyName,
+                note = "This is the visible label/context only. The hidden block has not been read."
+            }),
             note = "Only the captured content is available. Hidden content and later pages are unknown."
         }, Json);
     }

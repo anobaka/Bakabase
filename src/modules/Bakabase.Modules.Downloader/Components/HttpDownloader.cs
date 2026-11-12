@@ -1,3 +1,4 @@
+using Bakabase.Abstractions.Components.FileSystem;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Runtime.ExceptionServices;
@@ -11,7 +12,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Bakabase.Modules.Downloader.Components;
 
-public sealed class HttpDownloader(Func<string> cacheDirectory, IHttpClientFactory httpClientFactory, ILoggerFactory loggerFactory)
+public sealed class HttpDownloader(Func<string> cacheDirectory, IHttpClientFactory httpClientFactory, ILoggerFactory loggerFactory, IStorageWriteGuard? storageWrites = null)
     : IHttpDownloader
 {
     private readonly ILogger<HttpDownloader> _logger = loggerFactory.CreateLogger<HttpDownloader>();
@@ -20,7 +21,10 @@ public sealed class HttpDownloader(Func<string> cacheDirectory, IHttpClientFacto
         CancellationToken cancellationToken) => DownloadWithProgressAsync(request,
         progress == null ? null : value => progress(value.Percentage ?? 0, value.Stage), cancellationToken);
 
-    public async Task<string> DownloadWithProgressAsync(HttpDownloadRequest request, Func<HttpTransferProgress, Task>? progress,
+    public Task<string> DownloadWithProgressAsync(HttpDownloadRequest request, Func<HttpTransferProgress, Task>? progress,
+        CancellationToken cancellationToken) => DownloadCoreAsync(request, progress, cancellationToken);
+
+    private async Task<string> DownloadCoreAsync(HttpDownloadRequest request, Func<HttpTransferProgress, Task>? progress,
         CancellationToken cancellationToken)
     {
         Validate(request);
@@ -41,60 +45,12 @@ public sealed class HttpDownloader(Func<string> cacheDirectory, IHttpClientFacto
                 if (progress != null) await progress(new HttpTransferProgress { Percentage = 100, Stage = "Download verified", CompletedBytes = new FileInfo(target).Length, TotalBytes = new FileInfo(target).Length });
                 return target;
             }
-            var key = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(request.Url + "\n" + target + "\n" + request.HttpClientName)));
-            var cache = Path.Combine(Path.GetFullPath(cacheDirectory()), "http", key);
-            Directory.CreateDirectory(cache);
-            // Checkpoints include source URLs, which may contain signed query parameters.
-            if (!OperatingSystem.IsWindows())
-            {
-                var mode = UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute;
-                File.SetUnixFileMode(Path.GetDirectoryName(cache)!, mode);
-                File.SetUnixFileMode(cache, mode);
-            }
-            await using var lease = await AcquireLeaseAsync(cache, deadline.Token);
-            var allowRanges = probe.Identity.CanResume;
-            // A changed source or an ignored range gets one clean retry. The library owns normal
-            // connection retries; this loop only discards an incompatible download representation.
-            for (var attempt = 0; ; attempt++)
-            {
-                try
-                {
-                    await DownloadWithLibraryAsync(host, request, probe.Identity, cache, allowRanges, progress, deadline.Token);
-                    break;
-                }
-                catch (HttpDownloadProtocolException ex) when (attempt == 0 && ex.Failure is HttpGuardFailure.RangeIgnored or HttpGuardFailure.RemoteChanged)
-                {
-                    HttpDownloadCheckpoint.Clear(cache);
-                    probe = await ProbeAsync(host, request.Url, deadline.Token);
-                    allowRanges = ex.Failure != HttpGuardFailure.RangeIgnored && probe.Identity.CanResume;
-                }
-                catch (HttpDownloadProtocolException ex)
-                {
-                    throw new IOException(ex.Message, ex);
-                }
-            }
-            var payload = Path.Combine(cache, "payload");
-            if (probe.Identity.Length is { } length && new FileInfo(payload).Length != length)
-                throw new IOException("The downloaded file length does not match the server response.");
-            if (probe.Identity.Md5Base64 != null && !await MatchesChecksumAsync(payload, probe.Identity, deadline.Token))
-            {
-                HttpDownloadCheckpoint.Clear(cache);
-                throw new IOException("Failed to check MD5 for the downloaded file.");
-            }
-            Directory.CreateDirectory(directory);
-            var staged = Path.Combine(directory, ".bakabase-download-" + Guid.NewGuid().ToString("N") + ".tmp");
-            try
-            {
-                await using (var source = File.OpenRead(payload))
-                await using (var destination = new FileStream(staged, FileMode.CreateNew, FileAccess.Write, FileShare.None))
-                    await source.CopyToAsync(destination, deadline.Token);
-                File.Move(staged, target, request.AllowOverwrite);
-            }
-            finally { if (File.Exists(staged)) File.Delete(staged); }
-            HttpDownloadCheckpoint.Clear(cache);
-            if (progress != null) await progress(new HttpTransferProgress { Percentage = 100, Stage = "Download verified", CompletedBytes = new FileInfo(target).Length, TotalBytes = new FileInfo(target).Length });
-            _logger.LogDebug("HTTP download completed: {File}", target);
-            return target;
+            // A verified existing payload requires no new disk space. Admission begins
+            // only after that read-only reuse check, before any transport/cache payload writes.
+            return storageWrites == null
+                ? await DownloadAndPublishAsync(request, host, probe, directory, target, progress, deadline.Token)
+                : await storageWrites.RunAsync([directory, cacheDirectory()], request.WriteContext ?? StorageWriteScope.Current,
+                    token => DownloadAndPublishAsync(request, host, probe, directory, target, progress, token), deadline.Token);
         }
         catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested &&
             (deadline.IsCancellationRequested || HasTimeoutCause(ex)))
@@ -103,6 +59,66 @@ public sealed class HttpDownloader(Func<string> cacheDirectory, IHttpClientFacto
                 ? $"The download did not finish within {request.Timeout}."
                 : "The HTTP client timed out while downloading the file.", ex);
         }
+    }
+
+    private async Task<string> DownloadAndPublishAsync(HttpDownloadRequest request, HttpClient host, Probe probe,
+        string directory, string target, Func<HttpTransferProgress, Task>? progress, CancellationToken ct)
+    {
+        var key = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(request.Url + "\n" + target + "\n" + request.HttpClientName)));
+        var cache = Path.Combine(Path.GetFullPath(cacheDirectory()), "http", key);
+        Directory.CreateDirectory(cache);
+        // Checkpoints include source URLs, which may contain signed query parameters.
+        if (!OperatingSystem.IsWindows())
+        {
+            var mode = UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute;
+            File.SetUnixFileMode(Path.GetDirectoryName(cache)!, mode);
+            File.SetUnixFileMode(cache, mode);
+        }
+        await using var lease = await AcquireLeaseAsync(cache, ct);
+        var allowRanges = probe.Identity.CanResume;
+        // A changed source or an ignored range gets one clean retry. The library owns normal
+        // connection retries; this loop only discards an incompatible download representation.
+        for (var attempt = 0; ; attempt++)
+        {
+            try
+            {
+                await DownloadWithLibraryAsync(host, request, probe.Identity, cache, allowRanges, progress, ct);
+                break;
+            }
+            catch (HttpDownloadProtocolException ex) when (attempt == 0 && ex.Failure is HttpGuardFailure.RangeIgnored or HttpGuardFailure.RemoteChanged)
+            {
+                HttpDownloadCheckpoint.Clear(cache);
+                probe = await ProbeAsync(host, request.Url, ct);
+                allowRanges = ex.Failure != HttpGuardFailure.RangeIgnored && probe.Identity.CanResume;
+            }
+            catch (HttpDownloadProtocolException ex)
+            {
+                throw new IOException(ex.Message, ex);
+            }
+        }
+        var payload = Path.Combine(cache, "payload");
+        if (probe.Identity.Length is { } length && new FileInfo(payload).Length != length)
+            throw new IOException("The downloaded file length does not match the server response.");
+        if (probe.Identity.Md5Base64 != null && !await MatchesChecksumAsync(payload, probe.Identity, ct))
+        {
+            HttpDownloadCheckpoint.Clear(cache);
+            throw new IOException("Failed to check MD5 for the downloaded file.");
+        }
+        Directory.CreateDirectory(directory);
+        var staged = Path.Combine(directory, ".bakabase-download-" + Guid.NewGuid().ToString("N") + ".tmp");
+        try
+        {
+            await using (var source = File.OpenRead(payload))
+            await using (var destination = new FileStream(staged, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+                if (storageWrites == null) await source.CopyToAsync(destination, ct);
+                else await storageWrites.CopyAsync(source, destination, staged, request.WriteContext ?? StorageWriteScope.Current, ct);
+            File.Move(staged, target, request.AllowOverwrite);
+        }
+        finally { if (File.Exists(staged)) File.Delete(staged); }
+        HttpDownloadCheckpoint.Clear(cache);
+        if (progress != null) await progress(new HttpTransferProgress { Percentage = 100, Stage = "Download verified", CompletedBytes = new FileInfo(target).Length, TotalBytes = new FileInfo(target).Length });
+        _logger.LogDebug("HTTP download completed: {File}", target);
+        return target;
     }
 
     private async Task DownloadWithLibraryAsync(HttpClient host, HttpDownloadRequest request, HttpRemoteIdentity identity,

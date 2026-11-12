@@ -8,6 +8,7 @@ import dependentComponentIds from "@/core/models/Constants/DependentComponentIds
 import { DependentComponentStatus } from "@/sdk/constants";
 import BApi from "@/sdk/BApi";
 import Tooltip from "@/components/bakaui/components/Tooltip";
+import { dependencyManagerPath } from "@/components/Dependency/routes";
 
 /** Header-level LE status indicator: shows install button, installing progress, or ready chip. */
 export function LeStatusIndicator() {
@@ -56,16 +57,24 @@ export function LeStatusIndicator() {
   }
 
   return (
-    <Tooltip content={t("resourceSource.dlsite.le.notReady")}>
-      <Button
-        color="warning"
-        size="sm"
-        startContent={<AiOutlineDownload className="text-lg" />}
-        variant="flat"
-        onPress={handleInstall}
+    <div className="flex items-center gap-2">
+      <Tooltip content={t("resourceSource.dlsite.le.notReady")}>
+        <Button
+          color="warning"
+          size="sm"
+          startContent={<AiOutlineDownload className="text-lg" />}
+          variant="flat"
+          onPress={handleInstall}
+        >
+          {t("resourceSource.dlsite.le.install")}
+        </Button>
+      </Tooltip>
+      <a
+        className="text-xs text-primary"
+        href={`#${dependencyManagerPath(dependentComponentIds.LocaleEmulator)}`}
       >
-        {t("resourceSource.dlsite.le.install")}
-      </Button>
-    </Tooltip>
+        {t("menu.dependencies")}
+      </a>
+    </div>
   );
 }

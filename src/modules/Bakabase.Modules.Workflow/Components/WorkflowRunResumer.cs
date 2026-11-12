@@ -4,6 +4,7 @@ using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Modules.Workflow.Abstractions.Components;
 using Bakabase.Modules.Workflow.Extensions;
 using Bakabase.Modules.Workflow.Abstractions.Models.Db;
+using Bakabase.Modules.Workflow.Abstractions.Models.Domain;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Workflow.Abstractions.Services;
 using Microsoft.EntityFrameworkCore;
@@ -20,13 +21,18 @@ public class WorkflowRunResumer<TDbContext>(
     BTaskManager taskManager,
     WorkflowRunSchedulingPolicyResolver scheduling,
     ILogger<WorkflowRunResumer<TDbContext>> logger,
-    IBakabaseLocalizer localizer) : IWorkflowRunResumer
+    IBakabaseLocalizer localizer,
+    IEnumerable<IWorkflowRunMutationGuard>? mutationGuards = null) : IWorkflowRunResumer
     where TDbContext : DbContext
 {
-    public async Task ResumeAsync(int runId, string signalJson, CancellationToken ct = default)
+    public Task ResumeAsync(int runId, string signalJson, CancellationToken ct = default) =>
+        MutateAsync(runId, () => ResumeCoreAsync(runId, signalJson, ct), ct);
+
+    private async Task ResumeCoreAsync(int runId, string signalJson, CancellationToken ct)
     {
         var run = await db.Set<WorkflowRunDbModel>().FirstOrDefaultAsync(r => r.Id == runId, ct)
                   ?? throw new InvalidOperationException($"Workflow run #{runId} does not exist.");
+        await db.Entry(run).ReloadAsync(ct);
 
         if (run.Status != WorkflowRunStatus.Waiting)
         {
@@ -35,7 +41,7 @@ public class WorkflowRunResumer<TDbContext>(
                 $"Workflow run #{runId} is {run.Status}, not waiting for anything.");
         }
 
-        await ValidateRemaining(run, ct);
+        var definition = await ValidateRemaining(run, ct);
 
         // The signal travels on the row: the runner is re-entered through a background task that
         // carries nothing but the run id.
@@ -43,15 +49,27 @@ public class WorkflowRunResumer<TDbContext>(
         run.Status = WorkflowRunStatus.Pending;
         await db.SaveChangesAsync(ct);
 
-        await Enqueue(runId, run.WorkflowDefinitionId);
+        await Enqueue(runId, definition, ct);
 
         logger.LogInformation("Workflow run {RunId} resumed from step {Step}", runId, run.CurrentStepIndex);
     }
 
-    public async Task RequeueAsync(int runId, CancellationToken ct = default)
+    public Task RequeueAsync(int runId, CancellationToken ct = default) =>
+        MutateAsync(runId, () => RequeueCoreAsync(runId, ct), ct);
+
+    public Task ContinueConditionallyAsync(int runId, bool waiting, string signalJson,
+        Func<CancellationToken, Task> validate, CancellationToken ct = default) => MutateAsync(runId, async () =>
+    {
+        await validate(ct);
+        if (waiting) await ResumeCoreAsync(runId, signalJson, ct);
+        else await RequeueCoreAsync(runId, ct, signalJson);
+    }, ct);
+
+    private async Task RequeueCoreAsync(int runId, CancellationToken ct, string? continuationSignal = null)
     {
         var run = await db.Set<WorkflowRunDbModel>().FirstOrDefaultAsync(r => r.Id == runId, ct)
                   ?? throw new InvalidOperationException($"Workflow run #{runId} does not exist.");
+        await db.Entry(run).ReloadAsync(ct);
 
         if (run.Status is WorkflowRunStatus.Pending or WorkflowRunStatus.Running
             or WorkflowRunStatus.Waiting or WorkflowRunStatus.Success)
@@ -60,23 +78,47 @@ public class WorkflowRunResumer<TDbContext>(
                 $"Workflow run #{runId} is {run.Status} — only a run that stopped can be retried.");
         }
 
-        await ValidateRemaining(run, ct);
+        var definition = await ValidateRemaining(run, ct);
 
         run.Status = WorkflowRunStatus.Pending;
         run.CompletedAt = null;
         run.ErrorMessage = null;
+        if (continuationSignal != null) run.PendingSignalJson = continuationSignal;
         await db.SaveChangesAsync(ct);
 
-        await Enqueue(runId, run.WorkflowDefinitionId);
+        await Enqueue(runId, definition, ct);
 
         logger.LogInformation("Workflow run {RunId} requeued from step {Step}", runId, run.CurrentStepIndex);
     }
 
-    public async Task UpdateWaitAsync(int runId, string reason, string? promptJson,
-        CancellationToken ct = default)
+    public Task UpdateWaitAsync(int runId, string reason, string? promptJson,
+        CancellationToken ct = default) =>
+        MutateAsync(runId, () => UpdateWaitCoreAsync(runId, reason, promptJson, ct), ct);
+
+    public Task ReprocessWaitingAsync(int runId, CancellationToken ct = default) =>
+        MutateAsync(runId, () => ReprocessWaitingCoreAsync(runId, ct), ct);
+
+    private async Task ReprocessWaitingCoreAsync(int runId, CancellationToken ct)
     {
         var run = await db.Set<WorkflowRunDbModel>().FirstOrDefaultAsync(r => r.Id == runId, ct)
                   ?? throw new InvalidOperationException($"Workflow run #{runId} does not exist.");
+        await db.Entry(run).ReloadAsync(ct);
+        if (run.Status != WorkflowRunStatus.Waiting)
+            throw new InvalidOperationException($"Workflow run #{runId} is {run.Status}, not waiting for anything.");
+        var definition = await ValidateRemaining(run, ct);
+        run.PendingSignalJson = null;
+        run.Status = WorkflowRunStatus.Pending;
+        run.ErrorMessage = null;
+        await db.SaveChangesAsync(ct);
+        await Enqueue(runId, definition, ct);
+        logger.LogInformation("Workflow run {RunId} reprocessed waiting activity at step {Step}", runId, run.CurrentStepIndex);
+    }
+
+    private async Task UpdateWaitCoreAsync(int runId, string reason, string? promptJson, CancellationToken ct)
+    {
+        var run = await db.Set<WorkflowRunDbModel>().FirstOrDefaultAsync(r => r.Id == runId, ct)
+                  ?? throw new InvalidOperationException($"Workflow run #{runId} does not exist.");
+        await db.Entry(run).ReloadAsync(ct);
 
         if (run.Status != WorkflowRunStatus.Waiting)
         {
@@ -91,29 +133,39 @@ public class WorkflowRunResumer<TDbContext>(
         await db.SaveChangesAsync(ct);
     }
 
-    private async Task ValidateRemaining(WorkflowRunDbModel run, CancellationToken ct)
+    private async Task MutateAsync(int runId, Func<Task> mutate, CancellationToken ct)
     {
-        var definition = await db.Set<WorkflowDefinitionDbModel>().AsNoTracking()
-            .FirstOrDefaultAsync(d => d.Id == run.WorkflowDefinitionId, ct)
-            ?? throw new InvalidOperationException($"Workflow #{run.WorkflowDefinitionId} not found");
-        var nodes = await db.Set<WorkflowActivityDbModel>().AsNoTracking()
-            .Where(a => a.WorkflowDefinitionId == definition.Id).ToListAsync(ct);
+        var gate = WorkflowRunMutationGate.For(runId);
+        await gate.WaitAsync(ct);
+        try
+        {
+            foreach (var guard in mutationGuards ?? []) await guard.EnsureCanMutateAsync(runId, ct);
+            await mutate();
+        }
+        finally { gate.Release(); }
+    }
+
+    private async Task<WorkflowDefinition> ValidateRemaining(WorkflowRunDbModel run, CancellationToken ct)
+    {
+        var definition = await WorkflowRunPlans.LoadAsync(db, run, ct);
         object? payload = null;
         if (triggers.TryGet(definition.TriggerKind, out var trigger) && !string.IsNullOrEmpty(run.PayloadJson))
         {
             try { payload = JsonSerializer.Deserialize(run.PayloadJson, trigger.PayloadType, WorkflowJson.Options); }
             catch (JsonException ex) { throw new InvalidOperationException($"Run payload is invalid: {ex.Message}", ex); }
         }
-        var check = await validation.ValidateAsync(definition.ToDomainModel(nodes), true, payload, ct, run.CurrentStepIndex ?? 0);
+        var check = await validation.ValidateAsync(definition, true, payload, ct, run.CurrentStepIndex ?? 0);
         if (!check.IsValid) throw new WorkflowValidationException(check);
+        return definition;
     }
 
     /// <summary>Keep the original task identity and source scheduling policy when returning to the queue.</summary>
-    private async Task Enqueue(int runId, int defId)
+    private async Task Enqueue(int runId, WorkflowDefinition definition, CancellationToken ct)
     {
         if (taskManager.IsShuttingDown) return;
-        var triggerKind = await db.Set<WorkflowDefinitionDbModel>().Where(d => d.Id == defId)
-            .Select(d => d.TriggerKind).SingleAsync();
+        var defId = definition.Id;
+        var sources = await db.Set<WorkflowRunSourceDbModel>().AsNoTracking()
+            .Where(s => s.WorkflowRunId == runId).ToListAsync(ct);
         await taskManager.Enqueue(scheduling.Configure(BTaskBuilder.Create($"workflow.run.{runId}")
             .Named(() => localizer["BTask_Name_WorkflowRun", defId, runId])
             .ReplaceIfExists()
@@ -121,6 +173,6 @@ public class WorkflowRunResumer<TDbContext>(
             {
                 await using var scope = args.RootServiceProvider.CreateAsyncScope();
                 await scope.ServiceProvider.GetRequiredService<WorkflowRunner<TDbContext>>().ExecuteAsync(runId, args);
-            }), defId, triggerKind));
+            }), defId, definition.TriggerKind, runId, sources.Select(s => s.ToSourceRef()).ToArray()));
     }
 }

@@ -1,3 +1,4 @@
+using Bakabase.Modules.Workflow.Abstractions.Models;
 using Bakabase.Abstractions.Components.Localization;
 using System.Text.Json;
 using Bakabase.Abstractions.Components.Tasks;
@@ -25,6 +26,7 @@ public class WorkflowDefinitionService<TDbContext> : IWorkflowDefinitionService
     private readonly WorkflowRunner<TDbContext> _runner;
     private readonly WorkflowRunSchedulingPolicyResolver _scheduling;
     private readonly IBakabaseLocalizer _localizer;
+    private readonly IWorkflowActivityRegistry _activities;
 
     public WorkflowDefinitionService(
         TDbContext db,
@@ -33,7 +35,8 @@ public class WorkflowDefinitionService<TDbContext> : IWorkflowDefinitionService
         WorkflowRunner<TDbContext> runner,
         IWorkflowValidationService validation,
         WorkflowRunSchedulingPolicyResolver scheduling,
-        IBakabaseLocalizer localizer)
+        IBakabaseLocalizer localizer,
+        IWorkflowActivityRegistry activities)
     {
         _db = db;
         _triggers = triggers;
@@ -42,6 +45,7 @@ public class WorkflowDefinitionService<TDbContext> : IWorkflowDefinitionService
         _runner = runner;
         _scheduling = scheduling;
         _localizer = localizer;
+        _activities = activities;
     }
 
     private DbSet<WorkflowDefinitionDbModel> Defs => _db.Set<WorkflowDefinitionDbModel>();
@@ -51,10 +55,11 @@ public class WorkflowDefinitionService<TDbContext> : IWorkflowDefinitionService
     public async Task<WorkflowDefinition> CreateAsync(WorkflowDefinitionCreationInputModel input, CancellationToken ct = default)
     {
         ValidateTrigger(input.TriggerKind);
-        ValidateActivities(input.Activities, input.TriggerKind, input.TriggerFilterJson);
+        ValidateActivities(input.Activities, input.TriggerKind, input.TriggerFilterJson, input.Parameters);
 
         var entity = new WorkflowDefinitionDbModel
         {
+            ParametersJson = JsonSerializer.Serialize(input.Parameters, WorkflowJson.Options),
             Name = input.Name,
             Description = input.Description,
             DescriptionKey = input.DescriptionKey,
@@ -80,26 +85,30 @@ public class WorkflowDefinitionService<TDbContext> : IWorkflowDefinitionService
         // that must not silently overwrite someone's edits or silently fail to reach them. Turning
         // one off is still theirs to decide — that is a choice about their setup, not about the seed.
         if (entity.IsBuiltin &&
-            (input.Name is not null || input.Description is not null || input.TriggerFilterJson is not null || input.Activities is not null))
+            (input.Name is not null || input.Description is not null || input.TriggerFilterJson is not null || input.Activities is not null || input.Parameters is not null))
         {
             throw new InvalidOperationException(
                 $"\"{entity.Name}\" ships with Bakabase and cannot be edited. Copy it and change the copy.");
         }
 
         // Validate the effective chain before touching tracked fields or cancelling queued runs.
-        if (input.Activities is not null || input.TriggerFilterJson is not null)
+        if (input.Activities is not null || input.TriggerFilterJson is not null || input.Parameters is not null)
         {
-            if (await Acts.AnyAsync(a => a.WorkflowDefinitionId == id &&
-                    (a.Kind.StartsWith("download.") || a.Kind.StartsWith("baidu.")), ct) &&
+            var existingKinds = await Acts.Where(a => a.WorkflowDefinitionId == id).Select(a => a.Kind).ToListAsync(ct);
+            if (existingKinds.Any(kind => _activities.Get(kind) is IWorkflowCheckpointedActivity) &&
                 await Runs.AnyAsync(r => r.WorkflowDefinitionId == id &&
+                    r.PlanSnapshotJson == null &&
                     (r.Status == WorkflowRunStatus.Pending || r.Status == WorkflowRunStatus.Running || r.Status == WorkflowRunStatus.Waiting), ct))
-                throw new InvalidOperationException("This download workflow has active or waiting runs. Copy it to change the activity chain, or finish the existing runs first.");
+                throw new InvalidOperationException("This workflow has active or waiting durable operations. Copy it to change the activity chain, or finish the existing runs first.");
             var nodes = input.Activities ?? (await Acts.AsNoTracking()
                 .Where(a => a.WorkflowDefinitionId == id).OrderBy(a => a.Order).ToListAsync(ct))
-                .Select(a => new WorkflowActivityInputModel { Kind = a.Kind, ConfigJson = a.ConfigJson }).ToList();
-            ValidateActivities(nodes, entity.TriggerKind, input.TriggerFilterJson ?? entity.TriggerFilterJson);
+                .Select(a => new WorkflowActivityInputModel { Kind = a.Kind, ConfigJson = a.ConfigJson,
+                    ParameterBindings = WorkflowExtensions.ReadParameters<WorkflowParameterBinding>(a.ParameterBindingsJson) }).ToList();
+            ValidateActivities(nodes, entity.TriggerKind, input.TriggerFilterJson ?? entity.TriggerFilterJson,
+                input.Parameters ?? WorkflowExtensions.ReadParameters<WorkflowParameterDefinition>(entity.ParametersJson));
         }
 
+        if (input.Parameters is not null) entity.ParametersJson = JsonSerializer.Serialize(input.Parameters, WorkflowJson.Options);
         if (input.Name is not null) entity.Name = input.Name;
         if (input.Description is not null)
         {
@@ -137,6 +146,7 @@ public class WorkflowDefinitionService<TDbContext> : IWorkflowDefinitionService
 
     public async Task DeleteAsync(int id)
     {
+        if (id <= 0) throw new ArgumentOutOfRangeException(nameof(id));
         if (await Defs.AnyAsync(d => d.Id == id && d.IsBuiltin))
         {
             throw new InvalidOperationException(
@@ -153,7 +163,9 @@ public class WorkflowDefinitionService<TDbContext> : IWorkflowDefinitionService
         }
 
         await Acts.Where(a => a.WorkflowDefinitionId == id).ExecuteDeleteAsync();
-        await Runs.Where(r => r.WorkflowDefinitionId == id).ExecuteDeleteAsync();
+        // Frozen runs are independent records. Removing a reusable template must not remove
+        // their waiting state, outputs or recovery history. Legacy deletion semantics remain.
+        await Runs.Where(r => r.WorkflowDefinitionId == id && r.PlanSnapshotJson == null).ExecuteDeleteAsync();
         await Defs.Where(d => d.Id == id).ExecuteDeleteAsync();
     }
 
@@ -178,7 +190,7 @@ public class WorkflowDefinitionService<TDbContext> : IWorkflowDefinitionService
 
     public async Task<SearchResponse<WorkflowRun>> SearchRunsAsync(WorkflowRunSearchInputModel input)
     {
-        var query = Runs.AsNoTracking();
+        var query = Runs.AsNoTracking().Include(r => r.NodeExecutions).AsQueryable();
         if (input.WorkflowDefinitionId is { } defId)
             query = query.Where(r => r.WorkflowDefinitionId == defId);
 
@@ -197,8 +209,18 @@ public class WorkflowDefinitionService<TDbContext> : IWorkflowDefinitionService
             total, pageIndex, pageSize);
     }
 
-    public async Task<WorkflowRun> RunManuallyAsync(int definitionId, string? argsJson,
-        CancellationToken ct = default)
+    public Task<WorkflowRun> RunManuallyAsync(int definitionId, string? argsJson,
+        CancellationToken ct = default) => RunManuallyWithSourcesAsync(definitionId, argsJson, [], ct);
+
+    public Task<WorkflowRun> RunManuallyAsync(int definitionId, string? argsJson, WorkflowInvocationInput invocation,
+        CancellationToken ct = default) => RunManuallyWithSourcesAsync(definitionId, argsJson, [], invocation, ct);
+
+    public Task<WorkflowRun> RunManuallyWithSourcesAsync(int definitionId, string? argsJson,
+        IReadOnlyList<WorkflowSourceRef> sources, CancellationToken ct = default) =>
+        RunManuallyWithSourcesAsync(definitionId, argsJson, sources, new WorkflowInvocationInput(), ct);
+
+    public async Task<WorkflowRun> RunManuallyWithSourcesAsync(int definitionId, string? argsJson,
+        IReadOnlyList<WorkflowSourceRef> sources, WorkflowInvocationInput invocation, CancellationToken ct = default)
     {
         var def = await Defs.FirstOrDefaultAsync(d => d.Id == definitionId, ct)
                   ?? throw new InvalidOperationException($"Workflow #{definitionId} not found");
@@ -216,6 +238,7 @@ public class WorkflowDefinitionService<TDbContext> : IWorkflowDefinitionService
         // rather than a persisted run that dies the moment it starts.
         var definition = await LoadDomain(definitionId, ct)
             ?? throw new InvalidOperationException($"Workflow #{definitionId} not found");
+        definition = WorkflowRunPlans.ToDefinition(WorkflowInvocationResolver.Resolve(WorkflowRunPlans.Capture(definition), invocation));
         // Reject structural and unconditional configuration errors before the trigger does any
         // payload preparation. Only explicitly input-dependent requirements may be reconsidered
         // once the actual payload is known; an ordinary invalid configuration remains fail-fast.
@@ -225,11 +248,14 @@ public class WorkflowDefinitionService<TDbContext> : IWorkflowDefinitionService
         if (preparationErrors.Count > 0)
             throw new WorkflowValidationException(new WorkflowValidationResult {Diagnostics = preparationErrors});
         var payload = trigger.BuildManualPayload(def.TriggerFilterJson, argsJson);
-        return await StartPreparedRunAsync(definition, payload, ct);
+        return await StartPreparedRunAsync(definition, payload, ct, sources);
     }
 
+    public Task<WorkflowRun> RunManagedAsync(int definitionId, object payload, CancellationToken ct = default) =>
+        RunManagedAsync(definitionId, payload, new WorkflowInvocationInput(), ct);
+
     public async Task<WorkflowRun> RunManagedAsync(int definitionId, object payload,
-        CancellationToken ct = default)
+        WorkflowInvocationInput invocation, CancellationToken ct = default)
     {
         var definition = await LoadDomain(definitionId, ct)
             ?? throw new InvalidOperationException($"Workflow #{definitionId} not found");
@@ -239,12 +265,32 @@ public class WorkflowDefinitionService<TDbContext> : IWorkflowDefinitionService
             throw new InvalidOperationException("This workflow accepts manual input; use its manual-run entry point.");
         if (!trigger.PayloadType.IsInstanceOfType(payload))
             throw new InvalidOperationException($"The input does not match {trigger.PayloadType.Name}.");
+        definition = WorkflowRunPlans.ToDefinition(WorkflowInvocationResolver.Resolve(WorkflowRunPlans.Capture(definition), invocation));
         return await StartPreparedRunAsync(definition, payload, ct);
     }
 
-    private async Task<WorkflowRun> StartPreparedRunAsync(WorkflowDefinition definition, object payload,
-        CancellationToken ct)
+    public Task<WorkflowRun> RunPlanAsync(WorkflowRunPlan plan, object payload,
+        IReadOnlyList<WorkflowSourceRef>? sources = null, CancellationToken ct = default) =>
+        RunPlanAsync(plan, payload, new WorkflowInvocationInput(), sources, ct);
+
+    public Task<WorkflowRun> RunPlanAsync(WorkflowRunPlan plan, object payload, WorkflowInvocationInput invocation,
+        IReadOnlyList<WorkflowSourceRef>? sources = null, CancellationToken ct = default)
     {
+        var frozen = WorkflowInvocationResolver.Resolve(plan, invocation);
+        if (!_triggers.TryGet(frozen.TriggerKind, out var trigger))
+            throw new InvalidOperationException($"Unknown trigger kind: {frozen.TriggerKind}");
+        if (payload == null || !trigger.PayloadType.IsInstanceOfType(payload))
+            throw new InvalidOperationException($"The input does not match {trigger.PayloadType.Name}.");
+        // This is a trusted module API, not the manual-payload endpoint. The owner already
+        // prepared and authorized the input, so BuildManualPayload must not run again.
+        return StartPreparedRunAsync(WorkflowRunPlans.ToDefinition(frozen), payload, ct, sources);
+    }
+
+    private async Task<WorkflowRun> StartPreparedRunAsync(WorkflowDefinition definition, object payload,
+        CancellationToken ct, IReadOnlyList<WorkflowSourceRef>? sources = null)
+    {
+        var snapshot = WorkflowRunPlans.Serialize(WorkflowInvocationResolver.Resolve(WorkflowRunPlans.Capture(definition)));
+        definition = WorkflowRunPlans.ToDefinition(WorkflowRunPlans.Read(snapshot)!);
         var check = await _validation.ValidateAsync(definition, isExecution: true, payload: payload, ct: ct);
         if (!check.IsValid) throw new WorkflowValidationException(check);
         var payloadJson = JsonSerializer.Serialize(payload, WorkflowJson.Options);
@@ -252,10 +298,14 @@ public class WorkflowDefinitionService<TDbContext> : IWorkflowDefinitionService
         var run = new WorkflowRunDbModel
         {
             WorkflowDefinitionId = definition.Id,
+            PlanSnapshotJson = snapshot,
             Status = WorkflowRunStatus.Pending,
             StartedAt = DateTime.Now,
             PayloadJson = payloadJson,
             PayloadSummary = Summarize(payloadJson),
+            Sources = WorkflowRunSourceDbModel.From(payload)
+                .Concat(WorkflowRunSourceDbModel.From(new TrustedSources(sources ?? [])))
+                .GroupBy(s => (s.Module, s.EntityKind, s.EntityId, s.Revision, s.ResultKey)).Select(g => g.First()).ToList(),
         };
         Runs.Add(run);
         await _db.SaveChangesAsync(ct);
@@ -263,13 +313,16 @@ public class WorkflowDefinitionService<TDbContext> : IWorkflowDefinitionService
         var runId = run.Id;
         await _taskManager.Enqueue(_scheduling.Configure(BTaskBuilder.Create($"workflow.run.{runId}")
             .Named(() => _localizer["BTask_Name_WorkflowRun", definition.Id, runId])
-            .Run(args => _runner.ExecuteAsync(runId, args)), definition.Id, definition.TriggerKind));
+            .Run(args => _runner.ExecuteAsync(runId, args)), definition.Id, definition.TriggerKind, runId,
+            run.Sources.Select(s => s.ToSourceRef()).ToArray()));
 
         return run.ToDomainModel();
     }
 
     private static string Summarize(string payloadJson) =>
         payloadJson.Length > 200 ? payloadJson[..200] + "…" : payloadJson;
+
+    private sealed record TrustedSources(IReadOnlyList<WorkflowSourceRef> SourceRefs) : IWorkflowSourcePayload;
 
     // ------- helpers -------
 
@@ -280,11 +333,14 @@ public class WorkflowDefinitionService<TDbContext> : IWorkflowDefinitionService
     }
 
     private void ValidateActivities(
-        IReadOnlyList<WorkflowActivityInputModel> activities, string triggerKind, string? triggerFilterJson)
+        IReadOnlyList<WorkflowActivityInputModel> activities, string triggerKind, string? triggerFilterJson,
+        IReadOnlyList<WorkflowParameterDefinition> parameters)
     {
+        ArgumentNullException.ThrowIfNull(parameters);
         var result = _validation.ValidateStructure(new WorkflowValidationInputModel
         {
             TriggerKind = triggerKind, TriggerFilterJson = triggerFilterJson, Activities = activities.ToList(),
+            Parameters = parameters.ToList(),
         });
         if (!result.IsValid)
             throw new InvalidOperationException(string.Join("; ", result.Diagnostics.Select(d => d.Message)));
@@ -304,6 +360,7 @@ public class WorkflowDefinitionService<TDbContext> : IWorkflowDefinitionService
                 Notes = a.Notes,
                 ConfigJson = string.IsNullOrEmpty(a.ConfigJson) ? "{}" : a.ConfigJson,
                 OnItemError = a.OnItemError,
+                ParameterBindingsJson = JsonSerializer.Serialize(a.ParameterBindings, WorkflowJson.Options),
             });
         }
         await _db.SaveChangesAsync(ct);

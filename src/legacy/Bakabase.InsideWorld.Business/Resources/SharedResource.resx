@@ -843,6 +843,12 @@ Downloads: https://www.ffmpeg.org/</value>
   <data name="BTask_Description_WorkflowRunCleanup" xml:space="preserve">
     <value>Per workflow definition, keep the most recent 50 run rows and delete the rest.</value>
   </data>
+  <data name="Downloader_ExHentai_NoTorrentSeedOnly" xml:space="preserve">
+    <value>This gallery has no torrent. This task uses the saved torrent-file-only policy. Enable direct download when no torrent is available, then continue the task.</value>
+  </data>
+  <data name="Downloader_ExHentai_NoTorrentFallbackDisabled" xml:space="preserve">
+    <value>This gallery has no torrent and this task's saved policy does not allow direct download. Enable direct download when no torrent is available, then continue the task.</value>
+  </data>
   <data name="Downloader_ExHentai_DownloadingTorrent" xml:space="preserve">
     <value>Downloading torrent file...</value>
   </data>
@@ -1192,10 +1198,21 @@ Downloads: https://www.ffmpeg.org/</value>
   <data name="BTask_Process_ResourceProcessing_Resources" xml:space="preserve"><value>Processed: {0} resources</value></data>
   <data name="Dependency_Component_BaiduPcsGo_Name" xml:space="preserve"><value>BaiduPCS-Go</value></data>
   <data name="Dependency_Component_BaiduPcsGo_Description" xml:space="preserve"><value>Optional Baidu netdisk transfer and download adapter. The first installation builds a pinned upstream version with a structured protocol.</value></data>
-  <data name="Dependency_Component_CloudPython_Name" xml:space="preserve"><value>Cloud download Python runtime</value></data>
-  <data name="Dependency_Component_CloudPython_Description" xml:space="preserve"><value>Private Python runtime used by optional cloud download tools.</value></data>
+  <data name="Dependency_Component_CloudPython_Name" xml:space="preserve"><value>Base Python environment</value></data>
+  <data name="Dependency_Component_CloudPython_Description" xml:space="preserve"><value>Shared base Python environment for optional application tools.</value></data>
   <data name="Dependency_Component_Gdown_Name" xml:space="preserve"><value>gdown</value></data>
   <data name="Dependency_Component_Gdown_Description" xml:space="preserve"><value>Optional Google Drive public file and folder downloader.</value></data>
   <data name="Dependency_Component_GalleryDl_Name" xml:space="preserve"><value>gallery-dl</value></data>
-  <data name="Dependency_Component_GalleryDl_Description" xml:space="preserve"><value>Optional GoFile share downloader with recursive directory support.</value></data>
+  <data name="Dependency_Component_GalleryDl_Description" xml:space="preserve"><value>Optional GoFile and Pixeldrain share downloader with recursive directory support.</value></data>
+  <data name="Dependency_Component_Rclone_Name" xml:space="preserve"><value>rclone</value></data>
+  <data name="Dependency_Component_Rclone_Description" xml:space="preserve"><value>Optional shared transfer engine for supported cloud storage remotes. Public shares also require a compatible source resolver.</value></data>
+  <data name="BTask_Name_SourceAvailability" xml:space="preserve"><value>Check download source availability</value></data>
+  <data name="Dependency_Component_PikPakCli_Name" xml:space="preserve"><value>PikPak CLI</value></data>
+  <data name="Dependency_Component_PikPakCli_Description" xml:space="preserve"><value>Official PikPak command-line tool for browser authorization, saving shared files and downloading originals. An authorized account and sufficient storage/transfer allowance are required.</value></data>
+  <data name="Dependency_Component_MegaCmd_Name" xml:space="preserve"><value>MEGAcmd</value></data>
+  <data name="Dependency_Component_MegaCmd_Description" xml:space="preserve"><value>Official MEGA tool for public share downloads without an account. Linux supports managed installation; Windows and macOS use the official installer. MEGA transfer limits still apply.</value></data>
+  <data name="Dependency_Component_TeraBoxCli_Name" xml:space="preserve"><value>TeraBox CLI</value></data>
+  <data name="Dependency_Component_TeraBoxCli_Description" xml:space="preserve"><value>TeraBox command-line tool for browser authorization and downloading original shared files. An authorized account is required; TeraBox service limits still apply.</value></data>
+  <data name="Dependency_Component_Pyzipper_Name" xml:space="preserve"><value>pyzipper</value></data>
+  <data name="Dependency_Component_Pyzipper_Description" xml:space="preserve"><value>Optional ZIP compatibility reader for explicitly configured password byte encodings. Uses the base Python environment and validates authentication and CRC.</value></data>
 </root>

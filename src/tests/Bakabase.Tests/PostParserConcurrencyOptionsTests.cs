@@ -19,6 +19,29 @@ public sealed class PostParserConcurrencyOptionsTests
         Assert.AreEqual(10, options.PostParserMaxConcurrency);
         Assert.AreEqual(1, options.PostParserAiMaxConcurrency);
         Assert.IsTrue(options.AutomaticallyParsingPosts);
+        Assert.IsFalse(options.PostParserAcquisition.Enabled);
+        Assert.IsNull(options.PostParserAcquisition.OutputDirectory);
+    }
+
+    [TestMethod]
+    public async Task AcquisitionSettingsAreAtomicAndDoNotChangeParsingOrConcurrency()
+    {
+        var manager = new StubOptions<ThirdPartyOptions>(new()
+            {AutomaticallyParsingPosts = true, PostParserMaxConcurrency = 4, PostParserAiMaxConcurrency = 1});
+        using var services = new ServiceCollection().BuildServiceProvider();
+        var pool = new BakabaseOptionsManagerPool(services);
+        pool.AllOptionsManagers[typeof(ThirdPartyOptions)] = manager;
+        var controller = new OptionsController(null!, null!, pool, null!, null!, null!, null!, null!);
+        await controller.PatchThirdPartyOptions(new() {PostParserAcquisition = new() {Enabled = true}});
+        Assert.IsTrue(manager.Value.PostParserAcquisition.Enabled);
+        Assert.IsNull(manager.Value.PostParserAcquisition.OutputDirectory);
+        Assert.IsTrue(manager.Value.AutomaticallyParsingPosts);
+        Assert.AreEqual(4, manager.Value.PostParserMaxConcurrency);
+        await controller.PatchThirdPartyOptions(new() {PostParserMaxConcurrency = 2});
+        Assert.IsTrue(manager.Value.PostParserAcquisition.Enabled);
+        await Assert.ThrowsExactlyAsync<ArgumentException>(() => controller.PatchThirdPartyOptions(new()
+            {PostParserAcquisition = new() {Enabled = true, OutputDirectory = "relative/output"}}));
+        Assert.AreEqual(2, manager.SaveCount);
     }
 
     [TestMethod]

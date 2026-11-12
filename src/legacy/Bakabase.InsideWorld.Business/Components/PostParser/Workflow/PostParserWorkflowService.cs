@@ -12,6 +12,7 @@ using Bakabase.InsideWorld.Business.Components.Gui;
 using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bakabase.InsideWorld.Business.Components.PostParser.Extensions;
+using Bakabase.InsideWorld.Business.Components.PostParser.Fetchers;
 using Bakabase.InsideWorld.Business.Components.PostParser.Models.Db;
 using Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants;
@@ -37,13 +38,15 @@ namespace Bakabase.InsideWorld.Business.Components.PostParser.Workflow;
 /// together; the task revision prevents a deleted or superseded execution from publishing results.
 /// The workflow engine owns execution, step snapshots, retry and restart recovery.
 /// </summary>
-public sealed class PostParserWorkflowService<TDbContext>(TDbContext db,
+public sealed partial class PostParserWorkflowService<TDbContext>(TDbContext db,
     FullMemoryCacheResourceService<TDbContext, PostParserTaskDbModel, int> cache,
     PostParserTaskExecutionGate gate, IWorkflowDefinitionService definitions,
     BTaskManager tasks, IWorkflowRunResumer resumer,
     WorkflowRunSchedulingPolicyResolver scheduling,
     IHubContext<WebGuiHub, IWebGuiClient> uiHub, IBOptions<SoulPlusOptions> purchaseOptions,
-    IBakabaseLocalizer localizer) : IPostParserWorkflowTaskBridge
+    IBakabaseLocalizer localizer, IEnumerable<ISharedContentPurchaser> purchasers,
+    Bakabase.Modules.PostParser.Services.IPostContentService contentReader,
+    IEnumerable<Bakabase.Modules.PostParser.Services.IPostContentEvidenceCanonicalizer> evidenceCanonicalizers) : IPostParserWorkflowTaskBridge
     where TDbContext : DbContext
 {
     private DbSet<PostParserTaskDbModel> ParserTasks => db.Set<PostParserTaskDbModel>();
@@ -92,7 +95,8 @@ public sealed class PostParserWorkflowService<TDbContext>(TDbContext db,
                          r.Status == WorkflowRunStatus.Failed || r.Status == WorkflowRunStatus.Interrupted ||
                          r.Status == WorkflowRunStatus.Cancelled))))
                 .OrderBy(t => t.Id).ToListAsync(ct);
-            ids = candidates.Where(t => t.WorkflowRunId != null || t.Error != null || IsPending(t.ToDomainModel()))
+            ids = candidates.Where(t => !(t.Error == null && PostParserSavedResults.HasCompletedDownloadResult(t)) &&
+                    (t.WorkflowRunId != null || t.Error != null || IsPending(t.ToDomainModel())))
                 .Select(t => t.Id).ToList();
         }
         finally { gate.Semaphore.Release(); }
@@ -129,6 +133,7 @@ public sealed class PostParserWorkflowService<TDbContext>(TDbContext db,
         var task = await ParserTasks.AsNoTracking().SingleOrDefaultAsync(t => t.Id == id && !t.IsDeleted, ct);
         if (task == null) return;
         var run = task.WorkflowRunId is { } runId ? await Runs.AsNoTracking().SingleOrDefaultAsync(r => r.Id == runId, ct) : null;
+        if (run == null && task.Error == null && PostParserSavedResults.HasCompletedDownloadResult(task)) return;
         // The snapshot may have changed while the dispatcher paused or a row action ran.
         if (run?.Status is WorkflowRunStatus.Success or WorkflowRunStatus.Waiting or WorkflowRunStatus.Running) return;
         if (run?.Status is WorkflowRunStatus.Failed or WorkflowRunStatus.Interrupted or WorkflowRunStatus.Cancelled)
@@ -148,7 +153,7 @@ public sealed class PostParserWorkflowService<TDbContext>(TDbContext db,
         await DispatchUnderGateAsync([id], ct);
     }
 
-    private async Task RecordDispatchFailureUnderGateAsync(int id, string message, CancellationToken ct)
+    internal async Task RecordDispatchFailureUnderGateAsync(int id, string message, CancellationToken ct)
     {
         var task = await ParserTasks.AsNoTracking().SingleOrDefaultAsync(t => t.Id == id && !t.IsDeleted, ct);
         if (task == null) return;
@@ -194,7 +199,8 @@ public sealed class PostParserWorkflowService<TDbContext>(TDbContext db,
             ct.ThrowIfCancellationRequested();
             definitionId ??= await SeedAsync(ct);
             var task = await ParserTasks.SingleAsync(t => t.Id == snapshot.Id, ct);
-            if (!await db.Set<WorkflowDefinitionDbModel>().AsNoTracking().AnyAsync(d => d.Id == definitionId && d.Enabled, ct))
+            var definition = await definitions.GetAsync(definitionId.Value);
+            if (definition == null || !definition.Enabled)
             {
                 task.Error = "The built-in parsing workflow is disabled. Enable it before parsing this task again.";
                 await db.SaveChangesAsync(ct);
@@ -214,8 +220,10 @@ public sealed class PostParserWorkflowService<TDbContext>(TDbContext db,
             var run = new WorkflowRunDbModel
             {
                 WorkflowDefinitionId = definitionId.Value, Status = WorkflowRunStatus.Pending,
+                PlanSnapshotJson = WorkflowRunPlans.Serialize(WorkflowRunPlans.Capture(definition)),
                 StartedAt = DateTime.Now, PayloadJson = JsonSerializer.Serialize(payload, WorkflowJson.Options),
                 PayloadSummary = task.Title ?? (task.Text is {Length: > 0} text ? text[..Math.Min(120, text.Length)] : task.Link),
+                Sources = WorkflowRunSourceDbModel.From(payload),
                 // Reading has no purchasing side effects. A committed cursor also avoids
                 // an unresumable first step after a restart.
                 CurrentStepIndex = 0
@@ -254,7 +262,7 @@ public sealed class PostParserWorkflowService<TDbContext>(TDbContext db,
                 {
                     await scope.ServiceProvider.GetRequiredService<PostParserWorkflowService<TDbContext>>().RefreshTasksAsync();
                 }
-            }), definitionId, PostParserWorkflow.Trigger));
+            }), definitionId, PostParserWorkflow.Trigger, runId));
     }
 
     public async Task RefreshTasksAsync(CancellationToken ct = default)
@@ -263,6 +271,10 @@ public sealed class PostParserWorkflowService<TDbContext>(TDbContext db,
         try { await RefreshTasksUnderGateAsync(ct); }
         finally { gate.Semaphore.Release(); }
     }
+
+    /// <summary>The caller already holds the parser gate while consuming this saved result.</summary>
+    public Task RefreshTaskUnderGateAsync(int taskId, CancellationToken ct = default) =>
+        RefreshTasksUnderGateAsync(ct, [taskId]);
 
     internal async Task RefreshTasksUnderGateAsync(CancellationToken ct, IReadOnlyCollection<int>? taskIds = null)
     {
@@ -290,11 +302,16 @@ public sealed class PostParserWorkflowService<TDbContext>(TDbContext db,
                         .SetProperty(r => r.CompletedAt, DateTime.Now).SetProperty(r => r.ErrorMessage, message), ct);
                 run = await Runs.AsNoTracking().SingleOrDefaultAsync(r => r.Id == run.Id, ct);
             }
+            var savedComplete = run == null && PostParserSavedResults.HasCompletedDownloadResult(snapshot);
+            // Only this exact historical bookkeeping error is recoverable from a complete saved
+            // result. A genuine parser/dispatch error must never disappear with execution history.
+            if (savedComplete && snapshot.Error is not null && snapshot.Error != PostParserSavedResults.MissingWorkflowRunError)
+                continue;
             var error = run?.Status switch
             {
                 WorkflowRunStatus.Failed or WorkflowRunStatus.Interrupted => run.ErrorMessage ?? "The parsing workflow failed.",
                 WorkflowRunStatus.Cancelled => "The parsing workflow was cancelled.",
-                null => "The parsing workflow run no longer exists. Parse this task again.",
+                null => savedComplete ? null : snapshot.Error ?? PostParserSavedResults.MissingWorkflowRunError,
                 _ => null
             };
             if (run?.Status == WorkflowRunStatus.Success && IsPending(snapshot.ToDomainModel()))
@@ -303,9 +320,8 @@ public sealed class PostParserWorkflowService<TDbContext>(TDbContext db,
             // only after this task's current execution has finished successfully.
             // Workflow timestamps use server-local time, including unspecified values reloaded
             // from SQLite. Parser timestamps are stored and exposed as UTC instants.
-            var completedAt = run?.Status == WorkflowRunStatus.Success && error == null
-                ? run.CompletedAt?.ToUniversalTime()
-                : null;
+            var completedAt = savedComplete ? snapshot.CompletedAt :
+                run?.Status == WorkflowRunStatus.Success && error == null ? run.CompletedAt?.ToUniversalTime() : null;
             if (snapshot.Error == error && snapshot.CompletedAt == completedAt) continue;
             var updated = await ParserTasks.Where(t => t.Id == snapshot.Id && t.Revision == snapshot.Revision &&
                     t.WorkflowRunId == snapshot.WorkflowRunId && !t.IsDeleted)
@@ -319,7 +335,9 @@ public sealed class PostParserWorkflowService<TDbContext>(TDbContext db,
         }
     }
 
-    public async Task RetryAsync(int id, CancellationToken ct = default)
+    public async Task RetryAsync(int id, CancellationToken ct = default, int? expectedRevision = null,
+        int? expectedRunId = null, int? expectedStepIndex = null, WorkflowRunStatus? expectedStatus = null,
+        int? expectedDecisionVersion = null)
     {
         await gate.Semaphore.WaitAsync(ct);
         try
@@ -330,8 +348,18 @@ public sealed class PostParserWorkflowService<TDbContext>(TDbContext db,
                 ?? throw new InvalidOperationException("The parsing task no longer exists.");
             if (task.WorkflowRunId is not { } runId)
                 throw new InvalidOperationException("This task has no workflow run. Start parsing it first.");
-            var status = await Runs.Where(r => r.Id == runId).Select(r => r.Status).SingleAsync(ct);
-            await RetryUnderGateAsync(task, status, ct);
+            var run = await Runs.AsNoTracking().Where(r => r.Id == runId)
+                .Select(r => new {r.Status, r.CurrentStepIndex}).SingleOrDefaultAsync(ct)
+                ?? throw new InvalidOperationException("The parsing workflow run no longer exists.");
+            // Conditional clients approve this exact checkpoint, not whichever run a later
+            // reparse attached to the task. Keep the check and requeue under the parser gate.
+            if (expectedRevision.HasValue && task.Revision != expectedRevision.Value ||
+                expectedRunId.HasValue && runId != expectedRunId.Value ||
+                expectedStepIndex.HasValue && run.CurrentStepIndex != expectedStepIndex.Value ||
+                expectedStatus.HasValue && run.Status != expectedStatus.Value ||
+                expectedDecisionVersion.HasValue && PostParserContentReadinessState.Read(task.ContentReadinessJson).Version != expectedDecisionVersion.Value)
+                throw new InvalidOperationException("The parsing task or workflow checkpoint changed. Refresh it before retrying.");
+            await RetryUnderGateAsync(task, run.Status, ct);
         }
         finally { gate.Semaphore.Release(); }
     }
@@ -362,7 +390,8 @@ public sealed class PostParserWorkflowService<TDbContext>(TDbContext db,
             throw new OperationCanceledException("The parsing task was removed or replaced by a newer request.");
     }
 
-    public async Task SaveResultAsync(PostParserInput input, int runId, PostDownloadInfo result, CancellationToken ct)
+    public async Task SaveResultAsync(PostParserInput input, int runId, PostDownloadInfo result, CancellationToken ct,
+        string? extractedEvidenceFingerprint = null)
     {
         if (input.TaskId is not { } id) return;
         await gate.Semaphore.WaitAsync(ct);
@@ -371,11 +400,16 @@ public sealed class PostParserWorkflowService<TDbContext>(TDbContext db,
             await EnsureCurrentAsync(input, runId, ct);
             var task = await ParserTasks.AsNoTracking().SingleAsync(t => t.Id == id, ct);
             var domain = task.ToDomainModel();
+            var evidenceMatches = domain.ContentSnapshot != null && extractedEvidenceFingerprint != null &&
+                PostParserContentReadinessState.Read(task.ContentReadinessJson).MatchesFingerprint(extractedEvidenceFingerprint,
+                    Bakabase.Modules.PostParser.Services.PostContentReadinessPolicy.Fingerprint(domain.ContentSnapshot));
+            if (extractedEvidenceFingerprint != null && !evidenceMatches)
+                throw new InvalidOperationException("The post evidence changed. Read and parse it again before saving this extraction.");
             domain.Title = string.IsNullOrWhiteSpace(result.Title) ? domain.Title : result.Title;
             domain.Results ??= new();
             domain.Results[PostParseTarget.DownloadInfo] = JsonSerializer.SerializeToNode(new
             {
-                result.SchemaVersion, result.IsComplete, result.Warnings, result.Availability, result.Groups,
+                result.SchemaVersion, result.IsComplete, result.Warnings, result.Availability, result.ContentReadiness, result.Groups, result.CoverCandidates,
                 title = domain.Title,
                 resources = result.Resources.Select(r => new
                 {
@@ -384,10 +418,14 @@ public sealed class PostParserWorkflowService<TDbContext>(TDbContext db,
             }, WorkflowJson.Options);
             domain.ParsingState = result.IsComplete ? "complete" : "partial";
             domain.Error = null;
+            if (result.IsComplete && evidenceMatches)
+                domain.ContentReadinessJson = JsonSerializer.Serialize(
+                    PostParserContentReadinessState.Read(task.ContentReadinessJson) with {ParsedResultMayBeStale = false}, WorkflowJson.Options);
             var results = domain.ToDbModel().Results;
             await ParserTasks.Where(t => t.Id == id && t.Revision == input.Revision && t.WorkflowRunId == runId && !t.IsDeleted)
                 .ExecuteUpdateAsync(s => s.SetProperty(t => t.Title, domain.Title)
                     .SetProperty(t => t.Results, results).SetProperty(t => t.Error, (string?)null)
+                    .SetProperty(t => t.ContentReadinessJson, domain.ContentReadinessJson)
                     .SetProperty(t => t.ParsingState, domain.ParsingState), ct);
             cache.ClearCache();
             await PublishAsync(domain.ToDbModel(), WorkflowRunStatus.Running);
@@ -403,11 +441,23 @@ public sealed class PostParserWorkflowService<TDbContext>(TDbContext db,
         try
         {
             await EnsureCurrentAsync(input, runId, ct);
+            var current = await ParserTasks.AsNoTracking().SingleAsync(t => t.Id == id, ct);
+            var readinessState = PostParserContentReadinessState.Read(current.ContentReadinessJson);
+            if (current.ToDomainModel().ContentSnapshot is { } previous)
+            {
+                readinessState = readinessState.RecordEquivalent(previous, content, evidenceCanonicalizers, out _);
+                if (!Bakabase.Modules.PostParser.Services.PostContentReadinessPolicy.IsCurrent(content, content.Readiness))
+                    content = Bakabase.Modules.PostParser.Services.PostContentReadinessPolicy.Reconcile(content, previous, evidenceCanonicalizers);
+            }
+            content = readinessState.Apply(content);
+            availability = availability == null ? null : availability with {ContentReadiness = content.Readiness};
+            var readinessJson = JsonSerializer.Serialize(readinessState.WithProjection(content), WorkflowJson.Options);
             var snapshotJson = JsonSerializer.Serialize(content, WorkflowJson.Options);
             var assessmentJson = availability == null ? null : JsonSerializer.Serialize(availability, WorkflowJson.Options);
             await ParserTasks.Where(t => t.Id == id && t.Revision == input.Revision && t.WorkflowRunId == runId && !t.IsDeleted)
                 .ExecuteUpdateAsync(s => s.SetProperty(t => t.Title, content.Title)
                     .SetProperty(t => t.ContentSnapshotJson, snapshotJson).SetProperty(t => t.AvailabilityJson, assessmentJson)
+                    .SetProperty(t => t.ContentReadinessJson, readinessJson)
                     .SetProperty(t => t.ParsingState, state).SetProperty(t => t.ParsingMessage, message)
                     .SetProperty(t => t.CompletedAt, (DateTime?)null), ct);
             cache.ClearCache();
@@ -419,58 +469,70 @@ public sealed class PostParserWorkflowService<TDbContext>(TDbContext db,
     public async Task PurchaseAndResumeAsync(int id, int revision, IReadOnlyList<string> lockUrls,
         decimal maxTotalCost, CancellationToken ct)
     {
+        await gate.Semaphore.WaitAsync(ct);
+        try { await PurchaseAndResumeUnderGateAsync(id, revision, null, lockUrls, maxTotalCost, ct); }
+        finally { gate.Semaphore.Release(); }
+    }
+
+    /// <summary>Caller owns the parser gate; queue the same frozen execution, never perform network purchases here.</summary>
+    internal async Task PurchaseAndResumeUnderGateAsync(int id, int revision, int? expectedRunId,
+        IReadOnlyList<string> lockUrls, decimal maxTotalCost, CancellationToken ct, string? expectedAccountKeyHash = null)
+    {
         if (lockUrls.Count is 0 or > 100) throw new ArgumentException("Select between 1 and 100 restricted items.");
         if (maxTotalCost < 0) throw new ArgumentOutOfRangeException(nameof(maxTotalCost), "The approved total cannot be negative.");
-        await gate.Semaphore.WaitAsync(ct);
-        try
-        {
-            if (tasks.IsShuttingDown) throw new InvalidOperationException("The application is shutting down. Try again after restarting.");
-            var task = await ParserTasks.AsNoTracking().SingleOrDefaultAsync(t => t.Id == id && !t.IsDeleted, ct)
-                ?? throw new InvalidOperationException("The parsing task no longer exists.");
-            if (task.Revision != revision) throw new InvalidOperationException("The post changed. Refresh before purchasing.");
-            if (task.WorkflowRunId is not { } runId) throw new InvalidOperationException("Read the post before purchasing.");
-            var run = await Runs.SingleAsync(r => r.Id == runId, ct);
-            // A double click or another client may have already accepted this request.
-            if (run.Status is WorkflowRunStatus.Pending or WorkflowRunStatus.Running) return;
-            if (tasks.Tasks.Any(t => t.Id == $"workflow.run.{runId}" && !t.Task.Status.IsFinished()))
-                throw new InvalidOperationException("The previous operation is still finishing. Retry in a moment.");
-            if (run.Status is not (WorkflowRunStatus.Waiting or WorkflowRunStatus.Failed or WorkflowRunStatus.Interrupted))
-                throw new InvalidOperationException("This parsing task is not waiting for a purchase.");
-            var node = await db.Set<WorkflowActivityDbModel>().AsNoTracking().SingleOrDefaultAsync(a =>
-                a.WorkflowDefinitionId == run.WorkflowDefinitionId && a.Order == run.CurrentStepIndex, ct);
-            if (node?.Kind != PostParserWorkflow.UnlockContent)
-                throw new InvalidOperationException("Refresh or retry this post before purchasing its content.");
-            var domain = task.ToDomainModel();
-            var content = domain.ContentSnapshot ?? throw new InvalidOperationException("No saved purchase quote exists. Read the post first.");
-            if (domain.Availability?.Status != "expired")
-                throw new InvalidOperationException("One-click unlocking is only available for a post assessed as possibly expired. Parse it again to use automatic purchasing.");
-            var quote = PostParserPurchaseQuote.Create(content, purchaseOptions.Value.AutoBuyThreshold,
-                purchaseOptions.Value.MinimumRemainingCoins);
-            var eligible = quote.EligibleLockUrls.ToHashSet(StringComparer.Ordinal);
-            if (lockUrls.Any(url => !eligible.Contains(url)))
-                throw new InvalidOperationException("A selected item is no longer eligible under the quoted price, purchase limit or minimum balance. Refresh the post before purchasing.");
-            var selected = lockUrls.ToHashSet(StringComparer.Ordinal);
-            var currentTotal = PostParserPurchaseQuote.Offers(content).Where(l => l.Url != null && selected.Contains(l.Url))
-                .Sum(l => l.Price!.Value);
-            if (currentTotal > maxTotalCost)
-                throw new InvalidOperationException("The quoted total has increased since approval. Refresh the post before purchasing.");
-            var input = JsonSerializer.Deserialize<PostParserInput>(run.PayloadJson!, WorkflowJson.Options)
-                ?? throw new InvalidOperationException("The parsing input is missing.");
-            run.CurrentItemJson = WorkflowItemSnapshot.Capture(new PostParserContentItem(input, content) {Availability = domain.Availability});
-            run.Status = WorkflowRunStatus.Waiting;
-            run.ErrorMessage = null;
-            run.CompletedAt = null;
-            await db.SaveChangesAsync(ct);
-            await resumer.ResumeAsync(runId, JsonSerializer.Serialize(new PostParserPurchaseSignal
-                {LockUrls = lockUrls.Distinct().ToList(), EnforceConfiguredLimits = true, MaxTotalCost = maxTotalCost}, WorkflowJson.Options), ct);
-            await ParserTasks.Where(t => t.Id == id).ExecuteUpdateAsync(s => s.SetProperty(t => t.Error, (string?)null)
-                .SetProperty(t => t.CompletedAt, (DateTime?)null), ct);
-            cache.ClearCache();
-            task.Error = null;
-            task.CompletedAt = null;
-            await PublishAsync(task, WorkflowRunStatus.Pending);
-        }
-        finally { gate.Semaphore.Release(); }
+        if (tasks.IsShuttingDown) throw new InvalidOperationException("The application is shutting down. Try again after restarting.");
+        var task = await ParserTasks.AsNoTracking().SingleOrDefaultAsync(t => t.Id == id && !t.IsDeleted, ct)
+            ?? throw new InvalidOperationException("The parsing task no longer exists.");
+        if (task.Revision != revision) throw new InvalidOperationException("The post changed. Refresh before purchasing.");
+        if (task.WorkflowRunId is not { } runId) throw new InvalidOperationException("Read the post before purchasing.");
+        if (expectedRunId is { } expected && expected != runId)
+            throw new InvalidOperationException("The parsing execution changed. Refresh before purchasing.");
+        var run = await Runs.Include(r => r.NodeExecutions).SingleAsync(r => r.Id == runId, ct);
+        // A double click or another client may have already accepted this request.
+        if (run.Status is WorkflowRunStatus.Pending or WorkflowRunStatus.Running) return;
+        if (tasks.Tasks.Any(t => t.Id == $"workflow.run.{runId}" && (!t.Task.Status.IsFinished() || t.HasAttachedExecution)))
+            throw new InvalidOperationException("The previous operation is still finishing. Retry in a moment.");
+        if (run.Status is not (WorkflowRunStatus.Waiting or WorkflowRunStatus.Failed or WorkflowRunStatus.Interrupted))
+            throw new InvalidOperationException("This parsing task is not waiting for a purchase.");
+        if (PostParserPurchaseRules.CurrentActivityKind(run) != PostParserWorkflow.UnlockContent)
+            throw new InvalidOperationException("Refresh or retry this post before purchasing its content.");
+        var domain = task.ToDomainModel();
+        var content = domain.ContentSnapshot ?? throw new InvalidOperationException("No saved purchase quote exists. Read the post first.");
+        var input = JsonSerializer.Deserialize<PostParserInput>(run.PayloadJson!, WorkflowJson.Options)
+            ?? throw new InvalidOperationException("The parsing input is missing.");
+        if (input.TaskId != id || input.Revision != revision)
+            throw new InvalidOperationException("The parsing input changed. Refresh before purchasing.");
+        var purchaser = purchasers.FirstOrDefault(p => string.Equals(p.Source.ToString(),
+            content.SourceHint ?? input.SourceHint, StringComparison.OrdinalIgnoreCase));
+        if (purchaser == null)
+            throw new InvalidOperationException("No purchaser is available for this source.");
+        var accountKeyHash = SharedContentPurchasePolicy.HashAccountKey(purchaser.AccountKey);
+        if (expectedAccountKeyHash != null && accountKeyHash != expectedAccountKeyHash)
+            throw new InvalidOperationException("The purchase account changed. Refresh before purchasing.");
+        var quote = PostParserPurchaseQuote.Create(content, purchaseOptions.Value.AutoBuyThreshold,
+            purchaseOptions.Value.MinimumRemainingCoins);
+        var eligible = quote.EligibleLockUrls.ToHashSet(StringComparer.Ordinal);
+        if (lockUrls.Any(url => !eligible.Contains(url)))
+            throw new InvalidOperationException("A selected item is no longer eligible under the quoted price, purchase limit or minimum balance. Refresh the post before purchasing.");
+        var selected = lockUrls.ToHashSet(StringComparer.Ordinal);
+        var currentTotal = PostParserPurchaseQuote.Offers(content).Where(l => l.Url != null && selected.Contains(l.Url))
+            .Sum(l => l.Price!.Value);
+        if (currentTotal > maxTotalCost)
+            throw new InvalidOperationException("The quoted total has increased since approval. Refresh the post before purchasing.");
+        run.CurrentItemJson = WorkflowItemSnapshot.Capture(new PostParserContentItem(input, content) {Availability = domain.Availability});
+        run.Status = WorkflowRunStatus.Waiting;
+        run.ErrorMessage = null;
+        run.CompletedAt = null;
+        await db.SaveChangesAsync(ct);
+        await resumer.ResumeAsync(runId, JsonSerializer.Serialize(new PostParserPurchaseSignal
+            {LockUrls = lockUrls.Distinct().ToList(), EnforceConfiguredLimits = true, MaxTotalCost = maxTotalCost,
+                ExpectedAccountKeyHash = accountKeyHash}, WorkflowJson.Options), ct);
+        await ParserTasks.Where(t => t.Id == id).ExecuteUpdateAsync(s => s.SetProperty(t => t.Error, (string?)null)
+            .SetProperty(t => t.CompletedAt, (DateTime?)null), ct);
+        cache.ClearCache();
+        task.Error = null;
+        task.CompletedAt = null;
+        await PublishAsync(task, WorkflowRunStatus.Pending);
     }
 
     private Task PublishAsync(PostParserTaskDbModel task, WorkflowRunStatus? status)

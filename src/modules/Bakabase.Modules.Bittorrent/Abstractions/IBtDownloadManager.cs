@@ -6,6 +6,8 @@ public interface IBtDownloadManager
 {
     Task InitializeAsync(CancellationToken ct = default);
     Task<IReadOnlyList<BtDownloadJob>> ListAsync(CancellationToken ct = default);
+    /// <summary>Already loaded runtime state only; never initializes or resumes a queue.</summary>
+    Task<IReadOnlyList<BtDownloadJob>> ReadSnapshotAsync(CancellationToken ct = default) => Task.FromResult<IReadOnlyList<BtDownloadJob>>([]);
     Task<BtDownloadJob?> GetAsync(string id, CancellationToken ct = default);
     Task<BtDownloadJob?> FindByIdempotencyKeyAsync(string key, CancellationToken ct = default);
     Task<BtDownloadJob> EnsureQueuedAsync(BtDownloadRequest request, CancellationToken ct = default);

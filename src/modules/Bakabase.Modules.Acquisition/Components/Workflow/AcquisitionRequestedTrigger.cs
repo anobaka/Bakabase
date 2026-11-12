@@ -2,13 +2,14 @@ using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Workflow.Abstractions.Components;
+using Bakabase.Modules.Workflow.Abstractions.Models.Domain;
 
 namespace Bakabase.Modules.Acquisition.Components.Workflow;
 
 /// <summary>
 /// What starting an acquisition looks like to the workflow engine.
 /// </summary>
-public record AcquisitionRequestedPayload
+public record AcquisitionRequestedPayload : IWorkflowSourcePayload
 {
     public int TaskId { get; init; }
     public int ResourceId { get; init; }
@@ -18,6 +19,8 @@ public record AcquisitionRequestedPayload
     public string? Title { get; init; }
 
     public IReadOnlyList<AcquisitionLink> InitialLinks { get; init; } = [];
+    public IReadOnlyDictionary<string, string> InitialVariables { get; init; } = new Dictionary<string, string>();
+    public IReadOnlyList<WorkflowSourceRef> SourceRefs { get; init; } = [];
 
     /// <summary>Where this run may write. Set by the service, which owns the layout.</summary>
     public string WorkingDirectory { get; init; } = "";
@@ -69,6 +72,7 @@ public class AcquisitionRequestedTrigger : IWorkflowTrigger
                 Links = p.InitialLinks.ToList(),
                 WorkingDirectory = p.WorkingDirectory,
                 WorkingName = p.WorkingName,
+                Variables = p.InitialVariables.ToDictionary(kv => kv.Key, kv => kv.Value),
             })
         ];
     }

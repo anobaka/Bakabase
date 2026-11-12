@@ -1,4 +1,5 @@
 import type { WorkflowActivityErrorBehavior } from "@/sdk/constants";
+import type { ParameterBinding, WorkflowParameter } from "../Parameters/model";
 
 /** One activity being edited. `clientId` is a stable React/drag key, never persisted. */
 export interface ActivityDraft {
@@ -7,6 +8,7 @@ export interface ActivityDraft {
   configJson: string;
   notes?: string;
   onItemError: WorkflowActivityErrorBehavior;
+  parameterBindings?: ParameterBinding[];
 }
 
 /** What the inspector is showing: the trigger node, or the activity at an index. */
@@ -23,4 +25,5 @@ export interface EditorSeedLike {
   descriptionKey?: string;
   triggerKind: string;
   drafts: ActivityDraft[];
+  parameters?: WorkflowParameter[];
 }

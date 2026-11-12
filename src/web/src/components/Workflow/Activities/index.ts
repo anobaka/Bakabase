@@ -1,5 +1,9 @@
 import type { WorkflowActivityUI } from "./types";
-import { cloudDownloadActivities } from "./CloudDownload";
+import { cloudDownloadActivities, AcquisitionFetchSupportedUI } from "./CloudDownload";
+import { ProcessFileArtifactsUI } from "./CloudDownload/ProcessFiles";
+import { AcquisitionPlanContinueFilesUI, AcquisitionPlanProcessUI } from "./AcquisitionPlanProcess";
+import { PublishFileArtifactsUI } from "./CloudDownload/PublishArtifacts";
+import { AssessDeliveryUI } from "./AssessDelivery";
 
 import { ExHentaiEnqueueDownloadUI } from "./ExHentaiEnqueueDownload";
 import { DownloaderEnqueueUI } from "./DownloaderEnqueue";
@@ -43,6 +47,11 @@ import {
 
 export const workflowActivityRegistry: Record<string, WorkflowActivityUI<any>> = {
   ...Object.fromEntries(cloudDownloadActivities.map((activity) => [activity.kind, activity])),
+  [ProcessFileArtifactsUI.kind]: ProcessFileArtifactsUI,
+  [AcquisitionPlanProcessUI.kind]: AcquisitionPlanProcessUI,
+  [AcquisitionPlanContinueFilesUI.kind]: AcquisitionPlanContinueFilesUI,
+  [PublishFileArtifactsUI.kind]: PublishFileArtifactsUI,
+  [AssessDeliveryUI.kind]: AssessDeliveryUI,
   [PostParserUnlockContentUI.kind]: PostParserUnlockContentUI,
   [PostParserCheckLinksUI.kind]: PostParserCheckLinksUI,
   [PostParserReadContentUI.kind]: PostParserReadContentUI,
@@ -78,6 +87,7 @@ export const workflowActivityRegistry: Record<string, WorkflowActivityUI<any>> =
   [DownloaderFetchTorrentResultUI.kind]: DownloaderFetchTorrentResultUI,
   [DownloaderPrepareResourceUI.kind]: DownloaderPrepareResourceUI,
   [AcquisitionFetchExHentaiUI.kind]: AcquisitionFetchExHentaiUI,
+  [AcquisitionFetchSupportedUI.kind]: AcquisitionFetchSupportedUI,
   [AcquisitionFetchResultTorrentUI.kind]: AcquisitionFetchResultTorrentUI,
 };
 

@@ -7,6 +7,7 @@ import { UIHubConnection } from "../UIHubConnection";
 import { useDownloadTasksStore } from "@/stores/downloadTasks";
 import { usePathMarksStore } from "@/stores/pathMarks";
 import { useBTasksStore } from "@/stores/bTasks";
+import { usePostParserTasksStore } from "@/stores/postParserTasks";
 
 const { handlers, connection, closed } = vi.hoisted(() => {
   const handlers = new Map<string, (...args: any[]) => void>();
@@ -72,6 +73,23 @@ afterEach(() => {
 });
 
 describe("download task snapshot lifetime", () => {
+  it("invalidates the visible parser page without retaining full or incremental post bodies", async () => {
+    await act(async () => root.render(<UIHubConnection />));
+    usePostParserTasksStore.getState().setTasks([]);
+    const version = usePostParserTasksStore.getState().changeVersion;
+    const post = {
+      id: 71,
+      content: "A large saved post body",
+      results: { DownloadInfo: { resources: [] } },
+    };
+    act(() => handlers.get("GetData")!("PostParserTask", [post]));
+    act(() => handlers.get("GetIncrementalData")!("PostParserTask", post));
+    expect(usePostParserTasksStore.getState().tasks).toEqual([]);
+    expect(usePostParserTasksStore.getState().changeVersion).toBe(version + 2);
+    act(() => handlers.get("GetData")!("BTask", []));
+    expect(usePostParserTasksStore.getState().changeVersion).toBe(version + 3);
+  });
+
   it("removes a deleted path mark and ignores late updates until an authoritative snapshot introduces it again", async () => {
     await act(async () => root.render(<UIHubConnection />));
     const mark = { id: 7, path: "/data/library", syncStatus: 1 } as any;

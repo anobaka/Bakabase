@@ -10,7 +10,7 @@ import BApi from "@/sdk/BApi";
 import BusinessConstants from "@/components/BusinessConstants";
 
 const DefaultMaxChildrenHeight = 600;
-const MainLineHeight = 35;
+export const MainLineHeight = 35;
 
 // pl-[8px] + ml-[18px] in FileExplorerEntry.tsx
 export const ChildrenIndent = 26;

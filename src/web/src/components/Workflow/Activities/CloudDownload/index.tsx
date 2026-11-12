@@ -1,42 +1,87 @@
 import type { WorkflowActivityUI } from "../types";
-import { useState } from "react";
+import { downloadWorksetExecutionLabels } from "../executionLabels";
+import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, Checkbox, Input, Switch } from "@/components/bakaui";
-import { WorkflowActivityCategory } from "@/sdk/constants";
+import {
+  Accordion,
+  AccordionItem,
+  Button,
+  Checkbox,
+  Input,
+  Select,
+  Switch,
+} from "@/components/bakaui";
+import { CloudDownloadSources, WorkflowActivityCategory } from "@/sdk/constants";
 import AccountSelect from "@/components/CloudDownload/AccountSelect";
 import DownloadDirectoryField from "@/components/ThirdPartyConfig/base/DownloadDirectoryField";
-import BaiduNetdiskConfig from "@/components/ThirdPartyConfig/platforms/BaiduNetdiskConfig";
-import { Modal } from "@/components/bakaui";
-import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-import DependencyComponent from "@/pages/configuration/components/Dependency/components/Component";
+import MethodPreparation from "@/components/Acquire/MethodPreparation";
+import { localStorageProblemCode } from "@/components/CloudDownload/problemLabels";
+import type { DownloadMethod } from "@/components/Acquire/models";
+import { downloadMethodLabel } from "@/components/Acquire/methodLabels";
+import AcquisitionSourceDetails, {
+  type AccessCodeRevision,
+} from "@/components/Acquire/AcquisitionSourceDetails";
+import DownloadToolProxies from "@/components/ProxySelector/DownloadToolProxies";
+import { dependencyManagerPath } from "@/components/Dependency/routes";
+import ResumeActions from "../../ResumeActions";
+import {
+  ResumeDetails,
+  ResumeGuidance,
+  ResumeProblem,
+  useResumeActivityKind,
+} from "../../ResumePresentation";
+import { ProcessCloudFilesUI } from "./ProcessFiles";
+import { CleanupArtifactsUI } from "./CleanupArtifacts";
+import ReusePolicyField, { isReusePolicy, type ReusePolicy } from "./ReusePolicy";
+import StoragePolicyFields, {
+  defaultStoragePolicy,
+  storagePolicyIsInvalid,
+  type StoragePolicy,
+} from "../../ArtifactStorage/PolicyFields";
 
 export interface CloudConfig {
+  storagePolicy?: StoragePolicy | null;
   accountId?: string;
   remoteDirectory?: string;
+  downloadLayout?: "currentDirectory" | "separateDirectory";
   outputDirectory?: string;
   sourceIds?: string[];
   preferProviders?: string[];
   allowUngrouped?: boolean;
+  reusePolicy?: ReusePolicy;
 }
 export interface CloudTarget {
   id: string;
   title?: string;
   selectedSourceId?: string;
+  accountId?: string;
   problem?: string;
   downloadTaskId?: number;
+  transportTaskId?: string;
+  downloadOperationId?: string;
+  downloadArtifactId?: string;
+  processedArtifactId?: string;
+  publishedArtifactId?: string;
+  remoteEntry?: unknown;
   files?: string[];
   sources: {
     id: string;
     url: string;
+    originalUrl?: string;
     providerId?: string;
+    kind?: string;
+    methodId?: string;
+    accountId?: string;
     accessCode?: string;
+    accessCodeRevisions?: AccessCodeRevision[];
+    archivePassword?: string;
     groupId?: string;
   }[];
 }
 export interface CloudPrompt {
   reason?: string;
   targets?: CloudTarget[];
-  providers?: { providerId: string; available: boolean; problem?: string }[];
+  providers?: { providerId: string; methodId?: string; available: boolean; problem?: string }[];
 }
 
 export function parseCloudPrompt(json: string | null): CloudPrompt {
@@ -70,146 +115,349 @@ const CloudResumeForm: NonNullable<WorkflowActivityUI<CloudConfig>["ResumeForm"]
   promptJson,
   submitting,
   onSubmit,
+  fileTask = false,
 }) => {
   const { t } = useTranslation();
-  const { createPortal } = useBakabaseContext();
+  const activityKind = useResumeActivityKind();
   const prompt = parseCloudPrompt(promptJson);
   const targets = Array.isArray(prompt.targets) ? prompt.targets : [];
   const canChooseSources = prompt.reason === "chooseSources";
+  const isTransfer = activityKind === "baidu.transfer";
+  const isAwait = activityKind === "download.awaitCompletion";
+  const problems = [
+    ...targets.map((target) => target.problem),
+    ...(prompt.providers ?? []).map((provider) => provider.problem),
+  ]
+    .filter(Boolean)
+    .join("\n");
+  const originalUnavailable = problems.includes("PIKPAK_ORIGINAL_FILE_UNAVAILABLE");
+  const accountProblem = /ACCOUNT|LOGIN|CREDENTIAL|SESSION|Choose a Baidu account/i.test(problems);
+  const dependencyProblem = /DEPENDENCY|COMPONENT|TOOL_NOT_READY|NOT_INSTALLED/i.test(problems);
+  const needsResolverNetwork = problems.includes("SOURCE_NETWORK_REQUIRES_PROXY");
+  const localStorageProblem = localStorageProblemCode(problems);
+  const guide = originalUnavailable
+    ? "originalUnavailable"
+    : canChooseSources
+      ? "chooseSources"
+      : prompt.reason === "chooseDirectory"
+        ? "directory"
+        : localStorageProblem
+          ? localStorageProblem === "LOCAL_STORAGE_RESERVE_LOW" ? "storageReserve" : "localStorage"
+          : accountProblem
+            ? "account"
+            : dependencyProblem
+              ? "dependency"
+              : isAwait
+                ? "downloadStopped"
+                : "source";
   const [selected, setSelected] = useState<string[]>(
     targets.flatMap((target) => (target.selectedSourceId ? [target.selectedSourceId] : [])),
   );
-  const [accountId, setAccountId] = useState<string>();
+  const [sourceMethods, setSourceMethods] = useState<Record<string, string>>({});
+  const [sourceAccounts, setSourceAccounts] = useState<Record<string, string>>({});
+  const [revision, setRevision] = useState(0);
   const [outputDirectory, setOutputDirectory] = useState("");
+  const [retryOpen, setRetryOpen] = useState(false);
+  const [retryApproved, setRetryApproved] = useState(false);
+  useEffect(() => {
+    setSelected(
+      targets.flatMap((target) => (target.selectedSourceId ? [target.selectedSourceId] : [])),
+    );
+    setSourceMethods({});
+    setSourceAccounts({});
+    setOutputDirectory("");
+    setRetryApproved(false);
+    setRetryOpen(false);
+  }, [promptJson, activityKind]);
+  const needsApproval = originalUnavailable || isTransfer || isAwait;
+  const canContinue =
+    !submitting &&
+    (!canChooseSources || selected.length > 0) &&
+    (prompt.reason !== "chooseDirectory" || !!outputDirectory.trim()) &&
+    (!needsApproval || retryApproved);
   return (
-    <div className="space-y-3">
-      <p className="text-sm text-default-500">{t("cloudDownload.resume.description")}</p>
-      {!!prompt.providers?.length && (
-        <div className="space-y-1 text-xs">
-          {prompt.providers.map((provider) => (
-            <p
-              key={provider.providerId}
-              className={provider.available ? "text-success" : "text-warning-600"}
-            >
-              {provider.providerId}:{" "}
-              {provider.available
-                ? t("cloudDownload.available")
-                : provider.problem
-                  ? t(`cloudDownload.problem.${provider.problem}`, {
-                      defaultValue: provider.problem,
-                    })
-                  : t("cloudDownload.unavailable")}
-            </p>
-          ))}
-        </div>
-      )}
-      <div className="max-h-64 space-y-3 overflow-auto">
-        {targets.map((target) => (
-          <div key={target.id} className="space-y-2 rounded-lg bg-default-50 p-3">
-            <p className="text-sm font-medium">{target.title || target.id}</p>
+    <div className={fileTask ? "min-w-0 space-y-3" : "min-w-0 space-y-5"}>
+      {fileTask ? !targets.some(target => target.problem) && (
+        problems ? <ResumeProblem problem={problems} fallback={t(`cloudDownload.resumeGuide.${guide}.why`)} /> :
+          <p className="break-words text-sm text-warning-700">{t(`cloudDownload.resumeGuide.${guide}.why`)}</p>
+      ) : <ResumeGuidance
+        why={t(`cloudDownload.resumeGuide.${guide}.why`)}
+        action={t(`cloudDownload.resumeGuide.${guide}.action`)}
+        next={t(`cloudDownload.resumeGuide.${guide}.next`)}
+      />}
+      <div className="space-y-4">
+        {targets.map((target, targetIndex) => (
+          <section
+            key={target.id}
+            className={fileTask ? "min-w-0 space-y-3" : "min-w-0 space-y-3 rounded-xl border border-default-200 p-4"}
+          >
+            <h3 className="break-words text-sm font-medium">
+              {target.title || t("cloudDownload.resumeGuide.content", { number: targetIndex + 1 })}
+            </h3>
             {target.problem && (
-              <p className="text-xs text-warning-600">
-                {t(`cloudDownload.problem.${target.problem}`, { defaultValue: target.problem })}
-              </p>
+              <ResumeProblem
+                problem={target.problem}
+                fallback={t(`cloudDownload.resumeGuide.${guide}.why`)}
+              />
             )}
-            {target.sources.map((source) => (
-              <Checkbox
-                key={source.id}
-                isDisabled={submitting || !canChooseSources}
-                isSelected={selected.includes(source.id)}
-                onValueChange={(checked) =>
-                  setSelected((previous) =>
-                    toggleCloudSource(previous, targets, target.id, source.id, checked),
-                  )
-                }
+            {(target.transportTaskId || target.downloadTaskId != null) && (
+              <Button
+                as="a"
+                href={`#/downloader?id=${encodeURIComponent(target.transportTaskId ?? `site:${target.downloadTaskId}`)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                size="sm"
+                variant="flat"
+                color="primary"
+                className="h-auto max-w-full whitespace-normal px-3 py-2"
               >
-                <span className="break-all text-xs">
-                  {source.providerId && `${source.providerId} · `}
-                  {source.url}
-                  {source.accessCode && ` · ${source.accessCode}`}
-                </span>
-              </Checkbox>
-            ))}
-            {target.downloadTaskId != null && (
-              <a
-                className="text-xs text-primary"
-                href={`#/downloader?id=site:${target.downloadTaskId}`}
-              >
-                {t("cloudDownload.task", { id: target.downloadTaskId })}
-              </a>
+                {t("cloudDownload.resumeGuide.openTask")}
+              </Button>
             )}
-          </div>
+            {target.sources.map((source) => {
+              const descriptor = CloudDownloadSources.find(
+                (item) => item.providerId === source.providerId,
+              );
+              const choices =
+                descriptor?.methods.filter((method) =>
+                  method.sourceKinds.includes(source.kind === "remote" ? "remote" : "share"),
+                ) ?? [];
+              const methodId = sourceMethods[source.id] ?? source.methodId ?? choices[0]?.id;
+              const method = choices.find((item) => item.id === methodId);
+              const selectedMethod: DownloadMethod[] = method
+                ? [
+                    {
+                      ...method,
+                      providerId: source.providerId!,
+                      transport: "site",
+                      supported: true,
+                      ready: false,
+                      state: "needsSetup",
+                      requirements: [],
+                      supportsTransfer: false,
+                      dependencyIds: [...method.dependencyIds],
+                      sourceKinds: [...method.sourceKinds],
+                      engineId: method.engineId ?? undefined,
+                      accountProvider: method.accountProvider ?? undefined,
+                      scope: method.scope ?? undefined,
+                    },
+                  ]
+                : [];
+              const locked =
+                submitting ||
+                target.downloadTaskId != null ||
+                !!target.transportTaskId ||
+                !!target.downloadOperationId ||
+                !!target.downloadArtifactId ||
+                !!target.processedArtifactId ||
+                !!target.publishedArtifactId ||
+                !!target.remoteEntry;
+              return (
+                <div key={source.id} className="min-w-0 space-y-3">
+                  {canChooseSources ? (
+                    <Checkbox
+                      aria-label={source.url}
+                      isDisabled={submitting}
+                      isSelected={selected.includes(source.id)}
+                      onValueChange={(checked) =>
+                        setSelected((previous) =>
+                          toggleCloudSource(previous, targets, target.id, source.id, checked),
+                        )
+                      }
+                    >
+                      <span className="break-all text-sm">
+                        {method
+                          ? downloadMethodLabel(method, t)
+                          : source.providerId || t("cloudDownload.resumeGuide.sourceLabel")}
+                      </span>
+                    </Checkbox>
+                  ) : (
+                    <p className="text-xs text-default-500">
+                      {t(
+                        target.selectedSourceId && source.id !== target.selectedSourceId
+                          ? "acquisition.sourceDetails.alternativeSource"
+                          : "cloudDownload.resumeGuide.currentSource",
+                      )}
+                      :{" "}
+                      {method
+                        ? downloadMethodLabel(method, t)
+                        : source.providerId || t("cloudDownload.resumeGuide.sourceLabel")}
+                    </p>
+                  )}
+                  <AcquisitionSourceDetails source={source} />
+                  {selected.includes(source.id) && (
+                    <SourcePreparation collapsed={fileTask && locked && !accountProblem && !dependencyProblem}>
+                      {choices.length > 1 && (
+                        <Select
+                          label={t("acquire.method.label")}
+                          selectedKeys={methodId ? [methodId] : []}
+                          isDisabled={locked}
+                          disallowEmptySelection
+                          dataSource={choices.map((choice) => ({
+                            value: choice.id,
+                            label: downloadMethodLabel(choice, t),
+                          }))}
+                          onSelectionChange={(keys) => {
+                            setSourceMethods((current) => ({
+                              ...current,
+                              [source.id]: String(Array.from(keys)[0]),
+                            }));
+                            setSourceAccounts((current) => ({ ...current, [source.id]: "" }));
+                          }}
+                        />
+                      )}
+                      <MethodPreparation
+                        methods={selectedMethod}
+                        requirements={[]}
+                        accountId={
+                          sourceAccounts[source.id] ?? source.accountId ?? target.accountId
+                        }
+                        onAccountChange={(id) => {
+                          if (!locked)
+                            setSourceAccounts((current) => ({ ...current, [source.id]: id ?? "" }));
+                        }}
+                        onRefresh={() => setRevision((value) => value + 1)}
+                        refreshKey={revision}
+                        isDisabled={submitting}
+                        accountSelectionDisabled={locked}
+                      />
+                      {locked && (
+                        <p className="text-xs text-default-500">
+                          {t("cloudDownload.resumeGuide.boundSource")}
+                        </p>
+                      )}
+                    </SourcePreparation>
+                  )}
+                </div>
+              );
+            })}
+          </section>
         ))}
       </div>
-      <AccountSelect value={accountId} onChange={setAccountId} />
-      <Button
-        size="sm"
-        variant="light"
-        onPress={() =>
-          createPortal(Modal, {
-            defaultVisible: true,
-            size: "3xl",
-            title: t("cloudDownload.provider.baidu"),
-            footer: false,
-            children: <BaiduNetdiskConfig />,
-          })
-        }
-      >
-        {t("cloudDownload.account.manage")}
-      </Button>
-      {Array.from(
-        new Set(targets.flatMap((target) => target.sources.map((source) => source.providerId))),
-      ).map((provider) => {
-        const id =
-          provider === "baidu"
-            ? "baidu-pcs-go-component-service"
-            : provider === "googleDrive"
-              ? "gdown-component-service"
-              : provider === "gofile"
-                ? "gallery-dl-component-service"
-                : undefined;
-        return id ? (
-          <details key={id} className="rounded-lg bg-default-50 p-3">
-            <summary className="cursor-pointer text-sm">
-              {t("cloudDownload.dependency", { provider })}
-            </summary>
-            <DependencyComponent id={id} />
-          </details>
-        ) : null;
-      })}
-      <DownloadDirectoryField
-        value={outputDirectory}
-        onChange={setOutputDirectory}
-        label={t("bt.outputDirectory")}
-        description={t("cloudDownload.resume.keepDirectory")}
-      />
-      <a href="#/configuration?tab=dependency" className="inline-block text-sm text-primary">
-        {t("cloudDownload.dependencies")}
-      </a>
-      <Button
-        color="primary"
-        isLoading={submitting}
-        isDisabled={submitting || (canChooseSources && selected.length === 0)}
-        onPress={() =>
-          onSubmit(
-            JSON.stringify({
-              sourceIds: canChooseSources ? selected : undefined,
-              accountId,
-              outputDirectory: outputDirectory.trim() || undefined,
-            }),
-          )
-        }
-      >
-        {t("cloudDownload.resume.continue")}
-      </Button>
+      {needsResolverNetwork && (
+        <div className={fileTask ? "space-y-2" : "space-y-2 rounded-xl border border-default-200 p-4"}>
+          <p className="text-sm font-medium">{t("cloudDownload.resumeGuide.network")}</p>
+          <DownloadToolProxies toolIds={["sourceResolver"]} />
+        </div>
+      )}
+      {!isTransfer && !isAwait && !originalUnavailable && (
+        <DownloadDirectoryField
+          value={outputDirectory}
+          onChange={setOutputDirectory}
+          label={t("bt.outputDirectory")}
+          description={t("cloudDownload.resume.keepDirectory")}
+        />
+      )}
+      <ResumeDetails title={t("cloudDownload.resumeGuide.optionalSettings")}>
+        <p className="text-xs text-default-500">
+          {t(
+            originalUnavailable
+              ? "cloudDownload.resumeGuide.settingsNotFix"
+              : "cloudDownload.resumeGuide.settingsHint",
+          )}
+        </p>
+        <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+          <Button
+            as="a"
+            href={`#${dependencyManagerPath()}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            size="sm"
+            variant="bordered"
+            className="h-auto whitespace-normal px-3 py-2"
+          >
+            {t("cloudDownload.dependencies")}
+          </Button>
+        </div>
+        {!!prompt.providers?.length && (
+          <div>
+            {prompt.providers.map((provider) => (
+              <p key={provider.methodId ?? provider.providerId}>
+                {provider.methodId || provider.providerId}:{" "}
+                {t(provider.available ? "cloudDownload.available" : "cloudDownload.unavailable")}
+              </p>
+            ))}
+          </div>
+        )}
+      </ResumeDetails>
+      <section className={fileTask ? "space-y-3" : "space-y-3 border-t border-default-200 pt-5"}>
+        {!fileTask && <p className="text-sm font-medium">{t("cloudDownload.resumeGuide.continueTitle")}</p>}
+        <p className="text-xs leading-relaxed text-default-500">
+          {t(
+            isTransfer
+              ? "cloudDownload.resumeGuide.transferEffect"
+              : isAwait
+                ? "cloudDownload.resumeGuide.downloadRetryEffect"
+                : "cloudDownload.resumeGuide.continueEffect",
+          )}
+        </p>
+        {originalUnavailable && (
+          <Button size="sm" variant="light" onPress={() => setRetryOpen((value) => !value)}>
+            {t("cloudDownload.resumeGuide.advancedRetry")}
+          </Button>
+        )}
+        {needsApproval && (!originalUnavailable || retryOpen) && (
+          <Checkbox
+            isDisabled={submitting}
+            isSelected={retryApproved}
+            onValueChange={setRetryApproved}
+          >
+            <span className="text-sm">
+              {t(
+                originalUnavailable
+                  ? "cloudDownload.resumeGuide.confirmUnavailableRetry"
+                  : isTransfer
+                    ? "cloudDownload.resumeGuide.confirmTransfer"
+                    : "cloudDownload.resumeGuide.confirmDownloadRetry",
+              )}
+            </span>
+          </Checkbox>
+        )}
+        <ResumeActions busy={submitting}>
+          <Button
+            color="primary"
+            className="h-auto whitespace-normal px-4 py-2.5"
+            isLoading={submitting}
+            isDisabled={!canContinue}
+            onPress={() =>
+              onSubmit(
+                JSON.stringify({
+                  sourceIds: canChooseSources ? selected : undefined,
+                  sourceMethods: Object.keys(sourceMethods).length ? sourceMethods : undefined,
+                  sourceAccounts: Object.keys(sourceAccounts).length ? sourceAccounts : undefined,
+                  outputDirectory: outputDirectory.trim() || undefined,
+                }),
+              )
+            }
+          >
+            {t(
+              isTransfer
+                ? "cloudDownload.resumeGuide.retryTransfer"
+                : isAwait
+                  ? "cloudDownload.resumeGuide.retryDownload"
+                  : "cloudDownload.resume.continue",
+            )}
+          </Button>
+        </ResumeActions>
+      </section>
     </div>
   );
 };
 
+function SourcePreparation({ collapsed, children }: { collapsed: boolean; children: ReactNode }) {
+  const { t } = useTranslation();
+  return collapsed ? <ResumeDetails title={t("cloudDownload.resumeGuide.preparation")}>{children}</ResumeDetails>
+    : <div className="space-y-3">{children}</div>;
+}
+
 function activity(kind: string, defaults: CloudConfig = {}): WorkflowActivityUI<CloudConfig> {
   const isSelection = kind === "download.selectSources";
   const isTransfer = kind === "baidu.transfer";
-  const isDownload = kind === "baidu.download" || kind === "download.enqueueSupported";
+  const isDownload =
+    kind === "baidu.download" ||
+    kind === "download.enqueueSupported" ||
+    kind === "acquisition.fetchSupported";
+  const needsOutputDirectory = isDownload || kind === "download.prepareSources";
   const ConfigForm: WorkflowActivityUI<CloudConfig>["ConfigForm"] = ({ value, onChange }) => {
     const { t } = useTranslation();
     return (
@@ -223,14 +471,37 @@ function activity(kind: string, defaults: CloudConfig = {}): WorkflowActivityUI<
             onChange={(accountId) => onChange({ ...value, accountId })}
           />
         )}
-        {isTransfer && (
-          <Input
-            label={t("cloudDownload.remoteDirectory")}
-            value={value.remoteDirectory ?? "/Bakabase"}
-            onValueChange={(remoteDirectory) => onChange({ ...value, remoteDirectory })}
+        {isDownload && (
+          <ReusePolicyField
+            value={value.reusePolicy}
+            onChange={(reusePolicy) => onChange({ ...value, reusePolicy })}
           />
         )}
-        {isDownload && (
+        {isTransfer && (
+          <>
+            <Input
+              label={t("cloudDownload.remoteDirectory")}
+              value={value.remoteDirectory ?? "/Bakabase"}
+              onValueChange={(remoteDirectory) => onChange({ ...value, remoteDirectory })}
+            />
+            <Select
+              label={t("cloudDownload.downloadLayout.label")}
+              description={t("cloudDownload.downloadLayout.description")}
+              selectedKeys={[value.downloadLayout ?? "currentDirectory"]}
+              disallowEmptySelection
+              dataSource={[
+                { value: "currentDirectory", label: t("cloudDownload.downloadLayout.current") },
+                { value: "separateDirectory", label: t("cloudDownload.downloadLayout.separate") },
+              ]}
+              onSelectionChange={(keys) => {
+                const layout = Array.from(keys)[0];
+                if (layout === "currentDirectory" || layout === "separateDirectory")
+                  onChange({ ...value, downloadLayout: layout });
+              }}
+            />
+          </>
+        )}
+        {needsOutputDirectory && (
           <DownloadDirectoryField
             label={t("bt.outputDirectory")}
             value={value.outputDirectory ?? ""}
@@ -242,7 +513,7 @@ function activity(kind: string, defaults: CloudConfig = {}): WorkflowActivityUI<
           <>
             <Input
               label={t("cloudDownload.preferProviders")}
-              placeholder="baidu,googleDrive,gofile"
+              placeholder={CloudDownloadSources.map((source) => source.providerId).join(",")}
               value={(value.preferProviders ?? []).join(",")}
               onValueChange={(raw) =>
                 onChange({
@@ -260,6 +531,38 @@ function activity(kind: string, defaults: CloudConfig = {}): WorkflowActivityUI<
             >
               {t("cloudDownload.allowUngrouped")}
             </Switch>
+            <Accordion variant="light" className="px-0">
+              <AccordionItem key="storage" title={t("workflow.parameters.nodeStorage")}>
+                <div className="space-y-3 pb-2">
+                  <p className="text-xs text-default-500">
+                    {t("workflow.parameters.selectedSourceStorageHint")}
+                  </p>
+                  <Switch
+                    size="sm"
+                    isSelected={!!value.storagePolicy}
+                    onValueChange={(enabled) =>
+                      onChange({
+                        ...value,
+                        storagePolicy: enabled ? { ...defaultStoragePolicy } : null,
+                      })
+                    }
+                  >
+                    {t("workflow.parameters.customStorage")}
+                  </Switch>
+                  {value.storagePolicy ? (
+                    <StoragePolicyFields
+                      showHint={false}
+                      value={value.storagePolicy}
+                      onChange={(storagePolicy) => onChange({ ...value, storagePolicy })}
+                    />
+                  ) : (
+                    <p className="text-xs text-default-500">
+                      {t("workflow.parameters.inheritStorage")}
+                    </p>
+                  )}
+                </div>
+              </AccordionItem>
+            </Accordion>
           </>
         )}
       </div>
@@ -267,27 +570,51 @@ function activity(kind: string, defaults: CloudConfig = {}): WorkflowActivityUI<
   };
   return {
     kind,
+    executionLabels: downloadWorksetExecutionLabels,
     displayNameKey: `cloudDownload.activity.${kind}.name`,
     category:
       kind === "download.prepareSources"
         ? WorkflowActivityCategory.Transform
         : WorkflowActivityCategory.Action,
-    defaultConfig: () => ({ ...defaults }),
+    defaultConfig: () => ({
+      ...(isDownload ? { reusePolicy: "reuseVerified" as const } : {}),
+      ...defaults,
+    }),
     parseConfig: (json) => {
       try {
-        return { ...defaults, ...JSON.parse(json || "{}") };
+        return {
+          ...(isDownload ? { reusePolicy: "reuseVerified" as const } : {}),
+          ...defaults,
+          ...JSON.parse(json || "{}"),
+        };
       } catch {
-        return { ...defaults };
+        return { ...(isDownload ? { reusePolicy: "reuseVerified" as const } : {}), ...defaults };
       }
     },
     serializeConfig: JSON.stringify,
-    isValid: (config) => !isTransfer || !!config.remoteDirectory?.startsWith("/"),
+    isValid: (config) =>
+      (!config.storagePolicy || !storagePolicyIsInvalid(config.storagePolicy)) &&
+      (!isTransfer || (!!config.remoteDirectory?.startsWith("/") &&
+        (config.downloadLayout == null || config.downloadLayout === "currentDirectory" || config.downloadLayout === "separateDirectory"))) &&
+      (!isDownload || config.reusePolicy == null || isReusePolicy(config.reusePolicy)),
     ConfigForm,
-    Summary: ({ config }) => (
-      <span className="truncate text-xs text-default-500">
-        {isTransfer ? config.remoteDirectory : config.outputDirectory}
-      </span>
-    ),
+    Summary: ({ config }) => {
+      const { t } = useTranslation();
+      return (
+        <span className="truncate text-xs text-default-500">
+          {isTransfer ? config.remoteDirectory : config.outputDirectory}
+          {isDownload && (
+            <span className="ml-2">
+              {t(
+                config.reusePolicy === "force"
+                  ? "cloudDownload.reuse.forceDownload"
+                  : "cloudDownload.reuse.verified",
+              )}
+            </span>
+          )}
+        </span>
+      );
+    },
     ResumeForm: CloudResumeForm,
   };
 }
@@ -302,4 +629,9 @@ export const cloudDownloadActivities = [
   activity("baidu.download"),
   activity("download.enqueueSupported"),
   activity("download.awaitCompletion"),
+  ProcessCloudFilesUI,
+  CleanupArtifactsUI,
 ];
+
+/** Acquisition uses the same durable transfer/download implementation and resume protocol. */
+export const AcquisitionFetchSupportedUI = activity("acquisition.fetchSupported");

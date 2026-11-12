@@ -22,4 +22,5 @@ for name in ('main.go', 'main_test.go'):
 PY
 bridge_source="$bridge_build/source/BaiduPCS-Go-225bdd3b6cb298601c4d5ef7104c3e08cd1d692d"
 BAIDUPCS_GO_CONFIG_DIR="$bridge_build" go -C "$bridge_source" test -mod=readonly ./cmd/bakabase-bridge
-CGO_ENABLED=0 go -C "$bridge_source" build -trimpath -mod=readonly -o "$1" ./cmd/bakabase-bridge
+CGO_ENABLED=0 GOOS="${BAKABASE_BRIDGE_GOOS:-$(go env GOOS)}" GOARCH="${BAKABASE_BRIDGE_GOARCH:-$(go env GOARCH)}" \
+    go -C "$bridge_source" build -trimpath -mod=readonly -o "$1" ./cmd/bakabase-bridge

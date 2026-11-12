@@ -9,6 +9,7 @@ import dependentComponentIds from "@/core/models/Constants/DependentComponentIds
 import { DependentComponentStatus } from "@/sdk/constants";
 import BApi from "@/sdk/BApi";
 import Tooltip from "@/components/bakaui/components/Tooltip";
+import { dependencyManagerPath } from "@/components/Dependency/routes";
 
 /** Launch button with integrated LE configuration tooltip. */
 export function LaunchButton({
@@ -69,15 +70,23 @@ export function LaunchButton({
     }
 
     return (
-      <Button
-        color="warning"
-        size="sm"
-        startContent={<AiOutlineDownload className="text-lg" />}
-        variant="flat"
-        onPress={handleInstallLe}
-      >
-        {t("resourceSource.dlsite.le.install")}
-      </Button>
+      <div className="flex items-center gap-2">
+        <Button
+          color="warning"
+          size="sm"
+          startContent={<AiOutlineDownload className="text-lg" />}
+          variant="flat"
+          onPress={handleInstallLe}
+        >
+          {t("resourceSource.dlsite.le.install")}
+        </Button>
+        <a
+          className="text-xs text-primary"
+          href={`#${dependencyManagerPath(dependentComponentIds.LocaleEmulator)}`}
+        >
+          {t("menu.dependencies")}
+        </a>
+      </div>
     );
   };
 

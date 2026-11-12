@@ -2,11 +2,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { Api } from "../Api";
 
-const notifications = vi.hoisted(() => ({ danger: vi.fn(), clientFailure: vi.fn() }));
+const notifications = vi.hoisted(() => ({ danger: vi.fn(), clientFailure: vi.fn(), log: vi.fn() }));
 
 vi.mock("@/components/bakaui", () => ({ toast: { danger: notifications.danger } }));
 vi.mock("@/components/utils.tsx", () => ({
-  buildLogger: () => () => {},
+  buildLogger: () => notifications.log,
   extractErrorMessage: (error: unknown) => (error instanceof Error ? error.message : String(error)),
 }));
 vi.mock("@/core/clientFailures", () => ({ reportClientFailure: notifications.clientFailure }));
@@ -31,6 +31,44 @@ beforeEach(() => {
 });
 
 describe("API request error reporting", () => {
+  it("returns private authorization data without retaining it in development logs", async () => {
+    const payload = {
+      code: 0,
+      data: { authorizationUrl: "https://login.microsoftonline.com/?state=private-state-canary" },
+    };
+    const customFetch = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(new Response(JSON.stringify(payload)));
+    const client = new Api({ customFetch });
+
+    await expect(
+      client.request({
+        path: "/private-authorization",
+        method: "POST",
+        format: "json",
+        sensitiveResponse: true,
+      }),
+    ).resolves.toEqual(payload);
+
+    expect(notifications.log).not.toHaveBeenCalled();
+    expect(customFetch.mock.calls[0][1]).not.toHaveProperty("sensitiveResponse");
+  });
+
+  it("keeps ordinary response diagnostics available", async () => {
+    const payload = { code: 0, data: { status: "ready" } };
+    const client = new Api({
+      customFetch: vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify(payload))),
+    });
+
+    await client.request({ path: "/ordinary-state", method: "GET", format: "json" });
+
+    expect(notifications.log).toHaveBeenCalledExactlyOnceWith(
+      "[response]",
+      "/ordinary-state",
+      payload,
+    );
+  });
+
   it("rejects a cancelled workflow check without showing a global error", async () => {
     const client = new Api({ customFetch: pendingFetch() });
     const controller = new AbortController();

@@ -30,6 +30,7 @@ public static class AppDataStorage
     public static readonly Location DownloadResultWorkflows = new("fileProcessing", "download-result-workflows");
     public static readonly Location ArtifactOperations = new("fileProcessing", "artifact-operations");
     public static readonly Location ArtifactPlanCheckpoints = new("fileProcessing", "artifact-plan-checkpoints");
+    public static readonly Location ArtifactWorkspaces = new("fileProcessing", "artifact-workspaces");
     public static readonly Location Temporary = new("temporary", "temp");
     public static readonly Location LegacyCache = new("temporary", "data/cache");
     public static readonly Location ImportWork = new("temporary", ".bakabase-import-work");
@@ -49,7 +50,7 @@ public static class AppDataStorage
     public static IReadOnlyList<Location> Locations { get; } = Array.AsReadOnly<Location>([
         Configuration, Logs, Covers, LegacyCovers, EnhancerFiles, LegacyEnhancerFiles, Attachments, Aigc,
         Downloads, TorrentDownloads, HttpDownloads, TorrentCache, LegacyDownloads, CloudDownloads, Acquisition,
-        FileProcessing, DownloadResultWorkflows, ArtifactOperations, ArtifactPlanCheckpoints,
+        FileProcessing, DownloadResultWorkflows, ArtifactOperations, ArtifactPlanCheckpoints, ArtifactWorkspaces,
         Temporary, LegacyCache, ImportWork, RelocationWork, RelocationStaging,
         Dependencies, Backups, DataSync, Federation, RemoteAccess, OAuthAuthorizations, OAuthClients,
         Analytics, WebView2, WebKit

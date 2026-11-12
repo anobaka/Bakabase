@@ -155,6 +155,29 @@ public class SqlitePageCacheBudgetTests
             $"The 1 MiB budget grew to {cacheBytes} bytes after startup changed the page size.");
     }
 
+    [TestMethod]
+    public async Task RestartKeepsIncrementalVacuumWithoutRebuildingAnUnchangedDatabase()
+    {
+        using var database = new DatabaseFile(4096);
+        await using var connection = new SqliteConnection(database.ConnectionString);
+        await connection.OpenAsync();
+        using var command = connection.CreateCommand();
+        command.CommandText = "CREATE TABLE RetainedContent (Id INTEGER PRIMARY KEY)";
+        await command.ExecuteNonQueryAsync();
+        await using var services = new ServiceCollection()
+            .AddDbContext<MigrationBudgetDbContext>(options => options.UseSqlite(database.ConnectionString))
+            .BuildServiceProvider();
+        await services.MigrateSqliteDbContexts<MigrationBudgetDbContext>();
+        command.CommandText = "SELECT count(*) FROM RetainedContent";
+        Assert.AreEqual(0L, Convert.ToInt64(await command.ExecuteScalarAsync()));
+        command.CommandText = "PRAGMA auto_vacuum";
+        Assert.AreEqual(2L, Convert.ToInt64(await command.ExecuteScalarAsync()));
+        command.CommandText = "PRAGMA schema_version";
+        var before = Convert.ToInt64(await command.ExecuteScalarAsync());
+        await services.MigrateSqliteDbContexts<MigrationBudgetDbContext>();
+        Assert.AreEqual(before, Convert.ToInt64(await command.ExecuteScalarAsync()));
+    }
+
     public sealed class MigrationBudgetDbContext : DbContext
     {
         public MigrationBudgetDbContext(DbContextOptions<MigrationBudgetDbContext> options) : base(options) =>

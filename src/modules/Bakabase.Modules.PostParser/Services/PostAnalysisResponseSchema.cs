@@ -10,14 +10,19 @@ internal static class PostAnalysisResponseSchema
 
     internal static readonly JsonElement Availability = JsonSerializer.SerializeToElement(Object(
         ("status", Enum("noExpiryReported", "expired", "restored", "unknown")),
-        ("evidence", Array(String())), ("reason", NullableString())));
+        ("evidence", Array(String(120), 3)), ("reason", NullableString(100)),
+        ("contentReadiness", Object(("decisions", Array(Object(
+            ("blockId", String()), ("relevance", Enum("required", "optional", "unknown")),
+            ("purpose", Enum("purchaseProof", "donation", "unrelated", "supplement", "downloadCredentials", "processingInstructions", "unknown")),
+            ("evidence", Array(String(80), 1)), ("reason", NullableString(60))), 256))))));
 
     private static JsonElement CreateDownloadSchema()
     {
         var step = Object(
-            ("id", String()), ("op", Enum("renameExtension", "renameFile", "moveFile", "extractArchive")),
+            ("id", String()), ("op", Enum("renameExtension", "renameFile", "renameLiteral", "moveFile", "extractArchive")),
             ("input", String()), ("selector", NullableString()), ("extension", NullableString()),
-            ("password", NullableString()), ("targetName", NullableString()), ("targetDirectory", NullableString()));
+            ("password", NullableString()), ("targetName", NullableString()), ("targetDirectory", NullableString()),
+            ("findText", NullableString()), ("replaceText", NullableString()));
         var plan = Object(("requirement", Enum("required", "notRequired", "unknown")),
             ("steps", Array(step)), ("evidence", Array(String())));
         var resource = Object(("link", String()), ("code", NullableString()), ("password", NullableString()),
@@ -25,8 +30,10 @@ internal static class PostAnalysisResponseSchema
         var group = Object(("id", String()), ("title", String()),
             ("kind", Enum("main", "preview", "supplement", "related", "tool", "unknown")),
             ("summary", NullableString()), ("evidence", Array(String())));
+        var cover = Object(("url", String()), ("kind", Enum("cover", "preview")), ("evidence", Array(String())));
         return JsonSerializer.SerializeToElement(Object(
-            ("title", NullableString()), ("resources", Array(resource)), ("groups", Array(group))));
+            ("title", NullableString()), ("resources", Array(resource)), ("groups", Array(group)),
+            ("coverCandidates", Array(cover))));
     }
 
     private static JsonObject Object(params (string Name, JsonNode Schema)[] fields) => new()
@@ -38,8 +45,11 @@ internal static class PostAnalysisResponseSchema
     };
 
     private static JsonObject String() => new() { ["type"] = "string" };
+    private static JsonObject String(int maxLength) => new() { ["type"] = "string", ["maxLength"] = maxLength };
     private static JsonObject NullableString() => new() { ["type"] = new JsonArray("string", "null") };
+    private static JsonObject NullableString(int maxLength) => new() { ["type"] = new JsonArray("string", "null"), ["maxLength"] = maxLength };
     private static JsonObject Array(JsonNode items) => new() { ["type"] = "array", ["items"] = items };
+    private static JsonObject Array(JsonNode items, int maxItems) => new() { ["type"] = "array", ["items"] = items, ["maxItems"] = maxItems };
     private static JsonObject Enum(params string[] values) => new()
     {
         ["type"] = "string", ["enum"] = new JsonArray(values.Select(value => (JsonNode?)JsonValue.Create(value)).ToArray())

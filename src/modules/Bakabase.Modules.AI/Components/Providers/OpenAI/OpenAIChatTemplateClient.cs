@@ -1,5 +1,4 @@
 using System.Text.Json;
-using Bakabase.Modules.AI.Services;
 using Microsoft.Extensions.AI;
 using OpenAI.Chat;
 using ChatMessage = Microsoft.Extensions.AI.ChatMessage;
@@ -47,8 +46,10 @@ internal sealed class OpenAIChatTemplateClient(IChatClient innerClient) : Delega
             rawOptions.ReasoningEffortLevel = configured.Reasoning?.Effort == ReasoningEffort.None
                 ? ChatReasoningEffortLevel.None : ChatReasoningEffortLevel.Low;
 #pragma warning restore OPENAI001
-            rawOptions.MaxOutputTokenCount = PostParserLlmPolicy.ResolveMaxTokens(
-                rawOptions.MaxOutputTokenCount, configured.MaxOutputTokens);
+            // Feature-specific budgets have already been applied to the ChatOptions.
+            if (configured.MaxOutputTokens is int budget && budget > 0)
+                rawOptions.MaxOutputTokenCount = rawOptions.MaxOutputTokenCount is int rawBudget && rawBudget > 0
+                    ? Math.Min(budget, rawBudget) : budget;
             if (configured.ResponseFormat is ChatResponseFormatJson { Schema: { } schema } jsonFormat)
             {
                 // M.E.AI's default mapping transforms schemas for OpenAI strict

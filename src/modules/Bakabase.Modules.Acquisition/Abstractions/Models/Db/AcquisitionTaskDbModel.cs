@@ -4,24 +4,24 @@ using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
 namespace Bakabase.Modules.Acquisition.Abstractions.Models.Db;
 
 /// <summary>
-/// One attempt at obtaining one resource. Deliberately a thin index over the workflow run that does
-/// the work: the run owns the cursor, the item and the history, and this row owns only what the
-/// acquisitions page asks about — which resource, by what route, how it is going.
-/// <para>
-/// The duplication of the run's status is the point. "Show me everything I am currently getting"
-/// must not become a join across the workflow tables, and the acquisitions page outlives the runs
-/// it indexes.
-/// </para>
+/// The stable business identity of one acquisition target. Legacy rows refer to a library resource
+/// and recipe; prepared-plan rows own their title, preparation history and immutable plan revisions.
+/// Workflow runs own execution checkpoints and node history; this row is their user-facing index.
 /// </summary>
 public record AcquisitionTaskDbModel
 {
     [Key] public int Id { get; set; }
 
-    /// <summary>The resource being acquired. Always set — a task with no target is not a task.</summary>
-    public int ResourceId { get; set; }
+    /// <summary>Optional library resource. Plan tasks own an independent title and may deliver files without importing.</summary>
+    public int? ResourceId { get; set; }
 
     /// <summary>Context only: which collection the user started this from, for statistics.</summary>
     public int? CollectionId { get; set; }
+
+    public string? Title { get; set; }
+    public string? BuilderId { get; set; }
+    public string? Phase { get; set; }
+    public int PlanRevision { get; set; }
 
     public AcquisitionLeadKind LeadKind { get; set; }
 
@@ -35,11 +35,19 @@ public record AcquisitionTaskDbModel
     /// <summary>The stored lead this came from, when it came from one.</summary>
     public int? AcquisitionLeadId { get; set; }
 
-    /// <summary>The workflow definition acting as the recipe.</summary>
-    public int RecipeDefinitionId { get; set; }
+    /// <summary>The legacy workflow template, absent for dynamically compiled plans.</summary>
+    public int? RecipeDefinitionId { get; set; }
 
-    /// <summary>The run doing the work. Null only between creating the row and starting the run.</summary>
+    /// <summary>The current execution, absent while a target is being prepared or awaits confirmation.</summary>
     public int? WorkflowRunId { get; set; }
+
+    /// <summary>Server-prepared source selection and provenance, retained while queued and on retry.</summary>
+    public string? PreparedContextJson { get; set; }
+
+    public string? SourceRefsJson { get; set; }
+    public string? PlanJson { get; set; }
+    public string? BuilderStateJson { get; set; }
+    public string? PlanHistoryJson { get; set; }
 
     public AcquisitionStatus Status { get; set; }
 
@@ -58,4 +66,7 @@ public record AcquisitionTaskDbModel
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
     public DateTime? CompletedAt { get; set; }
+
+    /// <summary>UTC tombstone. The task identity, source deduplication and execution history are retained.</summary>
+    public DateTime? DeletedAt { get; set; }
 }

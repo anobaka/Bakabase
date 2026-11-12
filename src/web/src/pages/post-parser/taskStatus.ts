@@ -1,6 +1,7 @@
 import type { BTask } from "@/core/models/BTask";
 import type { PostParserTask } from "@/core/models/PostParserTask";
 
+import { hasBlockingContentLocks } from "./contentReadiness";
 import { getDownloadInfo, getTargetResult } from "./results";
 
 import { BTaskStatus, WorkflowRunStatus } from "@/sdk/constants";
@@ -42,7 +43,7 @@ const attentionStates = new Set(["awaitingAi", "awaitingPurchase", "possiblyExpi
 /** One classification for the row and the global overview; persisted results may precede completion. */
 export function getTaskDisplayStatus(
   task: PostParserTask,
-  liveTask?: BTask,
+  liveTask?: Pick<BTask, "status" | "data">,
   locallyStarting = false,
 ): TaskDisplayStatus {
   const idle = (group: TaskStatusGroup, label: string): TaskDisplayStatus => ({
@@ -91,16 +92,18 @@ export function getTaskDisplayStatus(
     return idle("attention", `postParser.state.${task.parsingState}`);
   const downloadInfo = getDownloadInfo(task);
 
-  if (
-    task.contentSnapshot?.locks.some((lock) => !lock.isBought) ||
-    downloadInfo?.isComplete === false
-  )
+  if (hasBlockingContentLocks(task) || downloadInfo?.isComplete === false)
     return idle("attention", "postParser.state.partial");
   if (task.workflowStatus === WorkflowRunStatus.Waiting)
     return idle("attention", "postParser.state.awaitingAction");
   if (task.parsingState === "snapshotSaved") return idle("ready", "postParser.state.snapshotSaved");
+  const savedCompletionWithoutHistory =
+    task.workflowStatus == null &&
+    task.parsingState === "complete" &&
+    Array.isArray(downloadInfo?.resources);
   if (
     task.workflowStatus === WorkflowRunStatus.Success ||
+    savedCompletionWithoutHistory ||
     (!task.workflowRunId &&
       (task.parsingState === "complete" ||
         (task.targets.length > 0 &&

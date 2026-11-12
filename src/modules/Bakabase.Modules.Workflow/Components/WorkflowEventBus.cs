@@ -73,17 +73,19 @@ public class WorkflowEventBus<TDbContext> : IWorkflowEventBus where TDbContext :
         var matched = new List<WorkflowRunDbModel>();
         var recordedFailure = false;
 
-        void RecordFailure(WorkflowDefinitionDbModel definition, string message)
+        void RecordFailure(WorkflowDefinitionDbModel definition, string snapshot, string message)
         {
             var now = DateTime.Now;
             _db.Set<WorkflowRunDbModel>().Add(new WorkflowRunDbModel
             {
                 WorkflowDefinitionId = definition.Id,
+                PlanSnapshotJson = snapshot,
                 Status = WorkflowRunStatus.Failed,
                 StartedAt = now,
                 CompletedAt = now,
                 PayloadJson = payloadJson,
                 PayloadSummary = payloadSummary,
+                Sources = WorkflowRunSourceDbModel.From(payload),
                 ErrorMessage = message,
             });
             definition.LastError = message;
@@ -93,6 +95,13 @@ public class WorkflowEventBus<TDbContext> : IWorkflowEventBus where TDbContext :
 
         foreach (var def in defs)
         {
+            var nodes = await _db.Set<WorkflowActivityDbModel>()
+                .AsNoTracking().Where(a => a.WorkflowDefinitionId == def.Id).ToListAsync(ct);
+            var definition = def.ToDomainModel(nodes);
+            // Keep the original request even when an old definition exceeds today's limits.
+            // Nonmatching events remain silent; a matching invalid plan records a failed start
+            // rather than aborting dispatch for every other definition or falling back on retry.
+            var snapshot = JsonSerializer.Serialize(WorkflowRunPlans.Capture(definition), WorkflowJson.Options);
             bool matches;
             try { matches = trigger.Matches(payload, def.TriggerFilterJson); }
             catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
@@ -101,22 +110,22 @@ public class WorkflowEventBus<TDbContext> : IWorkflowEventBus where TDbContext :
                 _logger.LogWarning(ex,
                     "Trigger {Kind} filter evaluation failed for workflow #{DefId}",
                     triggerKind, def.Id);
-                RecordFailure(def, $"Automatic start failed while evaluating the trigger filter: {ex.Message}");
+                RecordFailure(def, snapshot, $"Automatic start failed while evaluating the trigger filter: {ex.Message}");
                 continue;
             }
             if (!matches) continue;
 
-            var nodes = await _db.Set<WorkflowActivityDbModel>()
-                .AsNoTracking().Where(a => a.WorkflowDefinitionId == def.Id).ToListAsync(ct);
             try
             {
-                var check = await _validation.ValidateAsync(def.ToDomainModel(nodes), true, payload, ct);
+                snapshot = WorkflowRunPlans.Serialize(WorkflowInvocationResolver.Resolve(WorkflowRunPlans.Read(snapshot)!));
+                definition = WorkflowRunPlans.ToDefinition(WorkflowRunPlans.Read(snapshot)!);
+                var check = await _validation.ValidateAsync(definition, true, payload, ct);
                 if (!check.IsValid)
                 {
                     var errors = string.Join("; ", check.Diagnostics
                         .Where(d => d.Severity == "error").Select(d => d.Message));
                     _logger.LogWarning("Workflow #{DefId} failed preflight: {Errors}", def.Id, errors);
-                    RecordFailure(def, $"Automatic start failed validation: {errors}");
+                    RecordFailure(def, snapshot, $"Automatic start failed validation: {errors}");
                     continue;
                 }
             }
@@ -124,17 +133,19 @@ public class WorkflowEventBus<TDbContext> : IWorkflowEventBus where TDbContext :
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Workflow #{DefId} could not complete preflight", def.Id);
-                RecordFailure(def, $"Automatic start could not complete validation: {ex.Message}");
+                RecordFailure(def, snapshot, $"Automatic start could not complete validation: {ex.Message}");
                 continue;
             }
 
             var run = new WorkflowRunDbModel
             {
                 WorkflowDefinitionId = def.Id,
+                PlanSnapshotJson = snapshot,
                 Status = WorkflowRunStatus.Pending,
                 StartedAt = DateTime.Now,
                 PayloadJson = payloadJson,
                 PayloadSummary = payloadSummary,
+                Sources = WorkflowRunSourceDbModel.From(payload),
             };
             _db.Set<WorkflowRunDbModel>().Add(run);
             matched.Add(run);
@@ -150,7 +161,8 @@ public class WorkflowEventBus<TDbContext> : IWorkflowEventBus where TDbContext :
             var defId = run.WorkflowDefinitionId;
             await _taskManager.Enqueue(_scheduling.Configure(BTaskBuilder.Create($"workflow.run.{runId}")
                 .Named(() => _localizer["BTask_Name_WorkflowRun", defId, runId])
-                .Run(args => _runner.ExecuteAsync(runId, args)), defId, triggerKind));
+                .Run(args => _runner.ExecuteAsync(runId, args)), defId, triggerKind, runId,
+                run.Sources.Select(s => s.ToSourceRef()).ToArray()));
         }
     }
 

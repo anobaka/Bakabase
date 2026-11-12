@@ -29,9 +29,8 @@ export function isProcessingPlanPayloadValid(json: string): boolean {
     return (
       !!plan &&
       typeof plan === "object" &&
-      ["required", "notRequired"].includes(plan.requirement) &&
-      Array.isArray(plan.steps) &&
-      (plan.requirement === "notRequired" || plan.steps.length > 0)
+      ["required", "notRequired", "unknown"].includes(plan.requirement) &&
+      Array.isArray(plan.steps)
     );
   } catch {
     return false;

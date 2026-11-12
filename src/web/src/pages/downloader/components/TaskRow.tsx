@@ -36,6 +36,7 @@ import {
   ThirdPartyId,
 } from "@/sdk/constants";
 import { parseExHentaiDownloadOptions, resolveExHentaiDownloadMode } from "../exHentaiDownloadMode";
+import { exHentaiDownloadProblemSummary } from "../exHentaiDownloadProblem";
 import {
   Button,
   Chip,
@@ -117,6 +118,7 @@ const TaskRow = memo(function TaskRow({
 }: TaskRowProps) {
   const { t } = useTranslation();
   const hasErrorMessage = task.status === DownloadTaskStatus.Failed && !!task.message;
+  const errorSummary = exHentaiDownloadProblemSummary(task.message, t) ?? task.message;
   // A task can complete and still leave notes behind (e.g. items it skipped). The message is a
   // plain-text block whose first line is the summary; the full block opens in the same dialog.
   const hasNotices = task.status === DownloadTaskStatus.Complete && !!task.message;
@@ -289,12 +291,12 @@ const TaskRow = memo(function TaskRow({
                   className="flex h-4 min-h-0 w-full min-w-0 justify-start gap-1 rounded-sm px-0 text-xs"
                   color="danger"
                   size="sm"
-                  title={`${errorLabel}: ${task.message}`}
+                  title={`${errorLabel}: ${errorSummary}`}
                   variant="light"
                   onPress={() => onShowError(task)}
                 >
                   <AiOutlineWarning aria-hidden className="shrink-0 text-sm" />
-                  <span className="truncate">{task.message}</span>
+                  <span className="truncate">{errorSummary}</span>
                 </Button>
               </span>
             ) : hasNotices ? (
@@ -321,7 +323,9 @@ const TaskRow = memo(function TaskRow({
               </span>
             ) : (
               <span className="min-w-0 flex-1 truncate text-default-500" title={task.current}>
-                {task.current || t<string>("common.label.progress")}
+                {task.current
+                  ? t(`downloadCenter.stage.${task.current}`, { defaultValue: task.current })
+                  : t<string>("common.label.progress")}
               </span>
             )}
             {/* Keep the percentage last so it aligns across rows. Each optional value owns the

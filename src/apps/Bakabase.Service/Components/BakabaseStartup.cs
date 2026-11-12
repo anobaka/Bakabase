@@ -120,6 +120,7 @@ namespace Bakabase.Service.Components
             services.TryAddSingleton<Bakabase.Abstractions.Components.FileSystem.IUserStoragePolicy>(sp =>
                 new Bakabase.Abstractions.Components.FileSystem.UserStoragePolicy(
                     () => sp.GetRequiredService<AppService>().AppDataDirectory));
+            services.TryAddSingleton<Bakabase.Service.Services.PathStorageCapacityService>();
             services.AddSingleton(sp => new ResourceUsageService(
                 sp.GetRequiredService<AppService>().AppDataDirectory,
                 sp.GetRequiredService<IHostApplicationLifetime>().ApplicationStopping));
@@ -206,9 +207,16 @@ namespace Bakabase.Service.Components
 
             services.TryAddSingleton<FfMpegService>();
             services.TryAddSingleton<Bakabase.InsideWorld.Business.Components.Dependency.Implementations.BaiduPcsGo.BaiduPcsGoService>();
+            services.TryAddSingleton<Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Rclone.RcloneService>();
+            services.TryAddSingleton<Bakabase.InsideWorld.Business.Components.Dependency.Implementations.PikPakCli.PikPakCliService>();
+            services.TryAddSingleton<Bakabase.InsideWorld.Business.Components.Dependency.Implementations.MegaCmd.MegaCmdService>();
+            services.TryAddSingleton<Bakabase.InsideWorld.Business.Components.Dependency.Implementations.TeraBoxCli.TeraBoxCliService>();
+            services.TryAddSingleton<Bakabase.Service.Components.CloudDownloads.Rclone.RcloneRemoteEngine>();
+            services.TryAddSingleton<Bakabase.InsideWorld.Business.Components.Dependency.Implementations.CloudTools.PythonRuntimeConfigurationService>();
             services.TryAddSingleton<Bakabase.InsideWorld.Business.Components.Dependency.Implementations.CloudTools.CloudPythonRuntimeService>();
             services.TryAddSingleton<Bakabase.InsideWorld.Business.Components.Dependency.Implementations.CloudTools.GdownService>();
             services.TryAddSingleton<Bakabase.InsideWorld.Business.Components.Dependency.Implementations.CloudTools.GalleryDlService>();
+            services.TryAddSingleton<Bakabase.InsideWorld.Business.Components.Dependency.Implementations.CloudTools.PyzipperService>();
             services.TryAddSingleton<HardwareAccelerationService>();
             services.TryAddSingleton<SevenZipService>();
             services.TryAddSingleton<LocaleEmulatorService>();
@@ -263,7 +271,9 @@ namespace Bakabase.Service.Components
                 // Route for profiler results: /profiler/results-index
                 options.RouteBasePath = "/profiler";
                 // Only profile in development or when explicitly enabled
-                options.ShouldProfile = _ => true;
+                // Authorization callbacks carry short-lived credentials. Keep the full
+                // request URL out of stored profiler results.
+                options.ShouldProfile = request => !OAuth.OAuthProviderRegistry.IsCallbackRequest(request);
                 // Track SQL if using EF
                 options.TrackConnectionOpenClose = true;
             });

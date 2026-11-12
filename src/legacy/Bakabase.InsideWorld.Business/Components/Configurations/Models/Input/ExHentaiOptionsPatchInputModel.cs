@@ -15,6 +15,7 @@ public class ExHentaiOptionsPatchInputModel
     public Downloader.Components.Downloaders.ExHentai.ExHentaiDownloadMode? DownloadMode { get; set; }
     public bool? SaveTorrentFile { get; set; }
     public bool? FallbackToDirect { get; set; }
+    public Downloader.Components.Downloaders.ExHentai.ExHentaiNoTorrentAction? NoTorrentAction { get; set; }
     public bool? PreferOriginalImages { get; set; }
     public bool? AllowOriginalImageGpSpending { get; set; }
     public long? OriginalImageMinimumGpBalance { get; set; }

@@ -19,21 +19,12 @@ interface Props extends DestroyableProps {
   onDone?: () => void;
 }
 
-const TEMPLATES = ["{Title}", "{LeadKind}/{Title}", "{Date}/{Title}", "{LeadKind}/{Date}/{Title}"];
-
-/**
- * Four questions, all with defaults. The point is that someone who installed this an hour ago can
- * have their first game filed automatically, and the only thing they have to understand is where
- * their downloads go and where their games live — the path mark that makes the second one mean
- * something is created for them.
- */
+/** Configure manual collection and purchase preferences without changing delivery paths. */
 const SetupWizard = ({ onDone, onDestroyed }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const [step, setStep] = React.useState(0);
   const [inbox, setInbox] = React.useState("");
-  const [library, setLibrary] = React.useState("");
-  const [template, setTemplate] = React.useState(TEMPLATES[0]);
   const [drives, setDrives] = React.useState<AcquisitionDriveKind[]>([]);
   const [limit, setLimit] = React.useState(0);
   const [saving, setSaving] = React.useState(false);
@@ -44,29 +35,10 @@ const SetupWizard = ({ onDone, onDestroyed }: Props) => {
 
       if (!o) return;
       setInbox(o.inboxDirectory ?? "");
-      setLibrary(o.libraryRootDirectory ?? "");
-      setTemplate(o.directoryTemplate ?? TEMPLATES[0]);
       setDrives(normalizePreferredDrives(o.preferredDriveKinds ?? []));
       setLimit(o.autoPurchaseLimit ?? 0);
     });
   }, []);
-
-  const relativeTemplate = template.trim().replace(/\\/g, "/") || TEMPLATES[0];
-  const invalidTemplate =
-    relativeTemplate.startsWith("/") ||
-    /^[a-z]:/i.test(relativeTemplate) ||
-    relativeTemplate.split("/").some((part) => ["", ".", ".."].includes(part.trim()));
-  const previewVariables: Record<string, string> = {
-    title: t<string>("acquisition.setup.template.exampleTitle"),
-    leadkind: "SharedPage",
-    date: new Date().toLocaleDateString("sv-SE"),
-    resourceid: "123",
-  };
-  const preview = relativeTemplate.replace(
-    /\{([A-Za-z0-9_]+)\}/g,
-    (placeholder, key: string) => previewVariables[key.toLowerCase()] ?? placeholder,
-  );
-  const previewPath = `${library.trim().replace(/[\\/]+$/, "") || t<string>("acquisition.setup.library.label")}/${preview}`;
 
   const chooseDirectory = (path: string, onSelected: (value: string) => void) => {
     createPortal(FileSystemSelectorModal, {
@@ -81,13 +53,10 @@ const SetupWizard = ({ onDone, onDestroyed }: Props) => {
   };
 
   const finish = async () => {
-    if (invalidTemplate) return;
     setSaving(true);
     try {
       const rsp = await BApi.acquisition.setUpAcquisition({
         inboxDirectory: inbox.trim() || undefined,
-        libraryRootDirectory: library.trim() || undefined,
-        directoryTemplate: relativeTemplate,
         preferredDriveKinds: normalizePreferredDrives(drives),
         autoPurchaseLimit: limit,
       });
@@ -131,57 +100,6 @@ const SetupWizard = ({ onDone, onDestroyed }: Props) => {
         label={t<string>("acquisition.setup.inbox.help")}
         topic="acquisition"
       />
-    </div>,
-    <div key="library" className="flex flex-col gap-2">
-      <Input
-        description={t<string>("acquisition.setup.library.description")}
-        endContent={
-          <Button
-            isIconOnly
-            aria-label={t<string>("acquisition.setup.library.browse")}
-            size="sm"
-            variant="light"
-            onPress={() => chooseDirectory(library, setLibrary)}
-          >
-            <AiOutlineFolderOpen className="text-lg" />
-          </Button>
-        }
-        label={t<string>("acquisition.setup.library.label")}
-        value={library}
-        onValueChange={setLibrary}
-      />
-      <div className="text-xs text-default-400">{t<string>("acquisition.setup.library.mark")}</div>
-    </div>,
-    <div key="template" className="flex flex-col gap-2">
-      <Input
-        description={t<string>("acquisition.setup.template.description")}
-        errorMessage={t<string>("acquisition.setup.template.invalid")}
-        isInvalid={invalidTemplate}
-        label={t<string>("acquisition.setup.template.label")}
-        value={template}
-        onValueChange={setTemplate}
-      />
-      <div className="flex flex-wrap gap-1">
-        {TEMPLATES.map((x) => (
-          <Button
-            key={x}
-            aria-pressed={template === x}
-            color={template === x ? "primary" : "default"}
-            size="sm"
-            variant="flat"
-            onPress={() => setTemplate(x)}
-          >
-            {x}
-          </Button>
-        ))}
-      </div>
-      <div aria-live="polite" className="rounded-lg bg-default-100 p-3 text-sm">
-        <p className="mb-1 text-xs text-default-500">
-          {t<string>("acquisition.setup.template.previewLabel")}
-        </p>
-        <code className="break-all">{previewPath}</code>
-      </div>
-      <p className="text-xs text-default-500">{t<string>("acquisition.setup.template.example")}</p>
     </div>,
     <div key="drives" className="flex flex-col gap-3">
       <div
@@ -255,7 +173,7 @@ const SetupWizard = ({ onDone, onDestroyed }: Props) => {
             )}
             <Button
               color="primary"
-              isDisabled={saving || (step >= 2 && invalidTemplate)}
+              isDisabled={saving}
               size="sm"
               onPress={() => (isLast ? finish() : setStep(step + 1))}
             >

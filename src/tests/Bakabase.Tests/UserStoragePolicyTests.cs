@@ -16,8 +16,8 @@ public sealed class UserStoragePolicyTests
     [TestInitialize]
     public void Initialize()
     {
-        // /tmp and /var are aliases on macOS; mountinfo itself names the real location.
-        _root = Path.Combine(OperatingSystem.IsMacOS() ? "/private/tmp" : Path.GetTempPath(),
+        // Respect with-scratch's command-scoped storage (ssd1 on the development Mac).
+        _root = Path.Combine(Path.GetTempPath(),
             "bakabase-storage-policy-" + Guid.NewGuid().ToString("N"));
         _data = Directory.CreateDirectory(Path.Combine(_root, "appdata")).FullName;
         _media = Directory.CreateDirectory(Path.Combine(_root, "media")).FullName;
@@ -274,5 +274,120 @@ public sealed class UserStoragePolicyTests
         Assert.IsFalse(unknownData.IsPathAllowed(_media));
         Assert.AreEqual(0, unknownData.GetRoots().Count);
         Assert.IsTrue(unknownData.IsPathAllowed(_media, UserStoragePurpose.Setup));
+    }
+
+    [TestMethod]
+    public void UnavailableNetworkRootDoesNotPoisonHealthyStorageAndRecoversWithoutRemount()
+    {
+        var clock = new StorageClock();
+        var offline = true;
+        var remoteReads = 0;
+        var table = Mounts((_media, "virtiofs", "rw"), (_outside, "cifs", "rw"));
+        var policy = new UserStoragePolicy(true, () => table, () => _data, () => null, path =>
+        {
+            if (path == _outside)
+            {
+                Interlocked.Increment(ref remoteReads);
+                if (offline) throw new IOException("network mount unavailable");
+            }
+            return File.GetAttributes(path);
+        }, clock);
+
+        Assert.IsTrue(policy.IsPathAllowed(Path.Combine(_media, "new")));
+        Assert.AreEqual(0, remoteReads, "SSD authorization must not inspect unrelated NAS roots.");
+        Assert.IsFalse(policy.IsPathAllowed(Path.Combine(_outside, "new")));
+        CollectionAssert.AreEqual(new[] {_media}, policy.GetRoots().Select(r => r.Path).ToArray());
+        Assert.IsTrue(policy.IsPathAllowed(_media));
+
+        offline = false;
+        clock.Now += TimeSpan.FromSeconds(6);
+        Assert.IsTrue(policy.IsPathAllowed(Path.Combine(_outside, "new")));
+        CollectionAssert.AreEquivalent(new[] {_media, _outside}, policy.GetRoots().Select(r => r.Path).ToArray());
+    }
+
+    [TestMethod]
+    public void SlowRootListingHasOneBoundedWaitAndDoesNotProbeRootTwiceWhilePending()
+    {
+        var clock = new StorageClock();
+        using var release = new ManualResetEventSlim();
+        using var entered = new ManualResetEventSlim();
+        var calls = 0;
+        var policy = new UserStoragePolicy(true,
+            () => Mounts((_media, "virtiofs", "rw"), (_outside, "cifs", "rw")), () => _data, () => null,
+            path =>
+            {
+                if (path == _outside && Interlocked.Increment(ref calls) == 1)
+                {
+                    entered.Set();
+                    release.Wait();
+                }
+                return File.GetAttributes(path);
+            }, clock);
+        try
+        {
+            var timer = System.Diagnostics.Stopwatch.StartNew();
+            var roots = policy.GetRoots();
+            Assert.IsTrue(timer.Elapsed < TimeSpan.FromSeconds(2), "The chooser cannot wait for the NAS stat.");
+            Assert.IsTrue(entered.Wait(TimeSpan.FromSeconds(2)));
+            Assert.IsTrue(roots.Any(r => r.Path == _media));
+            Assert.IsFalse(roots.Any(r => r.Path == _outside));
+            clock.Now += TimeSpan.FromSeconds(20);
+            policy.GetRoots();
+            Assert.AreEqual(1, calls, "An expired snapshot must not start another blocked root probe.");
+            Assert.IsTrue(policy.IsPathAllowed(_media));
+        }
+        finally { release.Set(); }
+        Assert.IsTrue(SpinWait.SpinUntil(() => policy.GetRoots().Any(r => r.Path == _outside), 3000));
+    }
+
+    [TestMethod]
+    public void FailedNestedMountCannotFallBackToPersistentParentOrBeEscapedThroughAlias()
+    {
+        var nested = Directory.CreateDirectory(Path.Combine(_media, "disconnected")).FullName;
+        var child = Directory.CreateDirectory(Path.Combine(nested, "inner")).FullName;
+        var calls = 0;
+        var policy = new UserStoragePolicy(true,
+            () => Mounts((_media, "ext4", "rw"), (nested, "cifs", "rw"), (child, "ext4", "rw")),
+            () => _data, () => null, path =>
+            {
+                if (path == nested)
+                {
+                    Interlocked.Increment(ref calls);
+                    throw new UnauthorizedAccessException("fixture mount unavailable");
+                }
+                return File.GetAttributes(path);
+            });
+        Directory.CreateSymbolicLink(Path.Combine(_media, "alias"), child);
+
+        Assert.IsTrue(policy.IsPathAllowed(Path.Combine(_media, "healthy")));
+        Assert.AreEqual(0, calls, "Even discovery of a nested mount must not stat its unavailable parent.");
+        Assert.IsFalse(policy.IsPathAllowed(Path.Combine(nested, "new")));
+        Assert.IsFalse(policy.IsPathAllowed(Path.Combine(child, "new")));
+        Assert.IsFalse(policy.IsPathAllowed(Path.Combine(_media, "alias", "new")));
+        CollectionAssert.AreEqual(new[] {_media}, policy.GetRoots().Select(r => r.Path).ToArray());
+    }
+
+    [TestMethod]
+    public void MountAliasesCannotBypassNestedTemporaryMountsOrChangeWhileCached()
+    {
+        var alias = Path.Combine(_root, "alias");
+        Directory.CreateSymbolicLink(alias, _media);
+        var mounted = Directory.CreateDirectory(Path.Combine(_media, "mounted")).FullName;
+        var blocked = Directory.CreateDirectory(Path.Combine(mounted, "temporary")).FullName;
+        var path = Path.Combine(alias, "mounted");
+        var policy = Container(Mounts((path, "ext4", "rw"), (Path.Combine(path, "temporary"), "tmpfs", "rw")));
+        Assert.IsTrue(policy.IsPathAllowed(Path.Combine(path, "file")));
+        Assert.IsFalse(policy.IsPathAllowed(Path.Combine(path, "temporary", "file")));
+        Assert.IsFalse(policy.IsPathAllowed(Path.Combine(blocked, "file")));
+        Directory.Delete(alias);
+        Directory.CreateDirectory(Path.Combine(_outside, "mounted"));
+        Directory.CreateSymbolicLink(alias, _outside);
+        Assert.IsFalse(policy.IsPathAllowed(Path.Combine(path, "file")), "Stale canonical roots must fail closed.");
+    }
+
+    private sealed class StorageClock : TimeProvider
+    {
+        public DateTimeOffset Now = DateTimeOffset.UtcNow;
+        public override DateTimeOffset GetUtcNow() => Now;
     }
 }

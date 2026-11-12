@@ -353,6 +353,8 @@
   "aigc.runStatus.6": "已取消",
   "menu.system": "系统",
   "menu.configuration": "配置",
+  "menu.dependencies": "依赖管理",
+  "dependency.ffmpeg.required": "此功能需要安装 FFmpeg。",
   "menu.dataSync": "数据同步",
   "menu.thirdParty": "第三方配置",
   "menu.backgroundTask": "后台任务",

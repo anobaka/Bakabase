@@ -26,6 +26,8 @@ const LeftIcon = ({ loading, entry, expandable }: Props) => {
             return (
               <OperationButton
                 isIconOnly
+                aria-label={entry.name}
+                aria-expanded={entry.expanded}
                 onClick={() => {
                   if (entry.expanded) {
                     entry.ref?.collapse();
@@ -65,7 +67,7 @@ const LeftIcon = ({ loading, entry, expandable }: Props) => {
     }
 
     return null;
-  }, [entry, loading, expandable]);
+  }, [entry, entry.expanded, entry.status, loading, expandable]);
 
   return (
     <div className="w-5 h-5 min-w-5 max-w-5 min-h-5 max-h-5 flex items-center justify-center mr-1.5">

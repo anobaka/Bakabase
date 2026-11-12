@@ -8,15 +8,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import ImportSharedListModal from "..";
 import { getSharedListTemplate } from "../template";
 
-const { previewSharedList, importSharedList, getAllCollections } = vi.hoisted(() => ({
+const { previewSharedList, importAcquisitionDraftList, getAllCollections } = vi.hoisted(() => ({
   previewSharedList: vi.fn(),
-  importSharedList: vi.fn(),
+  importAcquisitionDraftList: vi.fn(),
   getAllCollections: vi.fn(),
 }));
 
 vi.mock("@/sdk/BApi", () => ({
   default: {
-    acquisition: { previewSharedList, importSharedList },
+    acquisition: { previewSharedList, importAcquisitionDraftList },
     collection: { getAllCollections },
   },
 }));
@@ -115,7 +115,7 @@ beforeEach(() => {
       { title: "Name only", lineNumber: 3, alreadyKnown: false },
     ],
   });
-  importSharedList.mockResolvedValue({
+  importAcquisitionDraftList.mockResolvedValue({
     code: 0,
     data: { created: 2, matched: 0, started: 0, problems: [] },
   });
@@ -154,18 +154,18 @@ const file = () =>
 const titleInput = () =>
   Array.from(container.querySelectorAll("input")).find((input) => input.value === "My resource");
 
-describe("resource list template and preview", () => {
+describe("task list template and preview", () => {
   it("offers a local CSV download without creating or previewing resources", async () => {
     await mount();
     const link = container.querySelector("a")!;
 
     expect(link.textContent).toBe("acquisition.sharedList.downloadTemplate");
     expect(link.getAttribute("href")).toBe(getSharedListTemplate("en").url);
-    expect(link.getAttribute("download")).toBe("resource-list-template.csv");
+    expect(link.getAttribute("download")).toBe("acquisition-task-template.csv");
     expect(container.textContent).toContain("acquisition.sharedList.templateHelp");
     expect(button("acquisition.sharedList.import").disabled).toBe(true);
     expect(previewSharedList).not.toHaveBeenCalled();
-    expect(importSharedList).not.toHaveBeenCalled();
+    expect(importAcquisitionDraftList).not.toHaveBeenCalled();
   });
 
   it("keeps upload as a preview and imports only after confirmation, with acquisition off", async () => {
@@ -174,10 +174,9 @@ describe("resource list template and preview", () => {
 
     await choose(uploaded);
     expect(previewSharedList).toHaveBeenCalledWith({ file: uploaded });
-    expect(importSharedList).not.toHaveBeenCalled();
-    expect(button("acquisition.sharedList.startAcquiring").getAttribute("aria-pressed")).toBe(
-      "false",
-    );
+    expect(importAcquisitionDraftList).not.toHaveBeenCalled();
+    expect(container.textContent).not.toContain("acquisition.sharedList.startAcquiring");
+    expect(getAllCollections).not.toHaveBeenCalled();
 
     const input = titleInput()!;
 
@@ -189,7 +188,7 @@ describe("resource list template and preview", () => {
       input.dispatchEvent(new Event("input", { bubbles: true }));
     });
     await act(async () => button("acquisition.sharedList.import").click());
-    expect(importSharedList).toHaveBeenCalledWith({
+    expect(importAcquisitionDraftList).toHaveBeenCalledWith({
       rows: [
         {
           title: "Corrected title",
@@ -199,8 +198,6 @@ describe("resource list template and preview", () => {
         },
         { title: "Name only", url: undefined, password: undefined, lineNumber: 3 },
       ],
-      collectionId: undefined,
-      startAcquiring: false,
     });
   });
 
@@ -224,13 +221,13 @@ describe("resource list template and preview", () => {
     await choose(uploaded);
     expect(titleInput()).toBeDefined();
     expect(container.querySelector('[role="alert"]')).toBeNull();
-    expect(importSharedList).not.toHaveBeenCalled();
+    expect(importAcquisitionDraftList).not.toHaveBeenCalled();
   });
 
   it("selects the Chinese template for supported Chinese locale codes", () => {
     const chinese = getSharedListTemplate("cn");
 
-    expect(chinese.fileName).toBe("资源清单模板.csv");
+    expect(chinese.fileName).toBe("获取任务清单模板.csv");
     expect(getSharedListTemplate("zh-CN")).toEqual(chinese);
     expect(getSharedListTemplate("en").url).not.toBe(chinese.url);
   });

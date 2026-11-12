@@ -65,6 +65,74 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("download result presentation", () => {
+  it("renders and copies an exact directory relocation without calling it unsupported", async () => {
+    const step = {
+      id: "rebase",
+      op: "rebaseDirectory" as const,
+      sourceDirectory: "outer/photos",
+      targetDirectory: "",
+    };
+    show({
+      resources: [
+        {
+          link: "https://example.com/resource.zip",
+          extraction: { requirement: "required", steps: [step], evidence: [] },
+        },
+      ],
+    });
+    const button = screen.getByRole("button", {
+      name: "Move contents from outer/photos to this step’s output root, preserving structure and other files",
+    });
+    fireEvent.click(button);
+    await waitFor(() => expect(actions.copy).toHaveBeenCalledWith(JSON.stringify(step, null, 2)));
+    expect(actions.open).not.toHaveBeenCalled();
+  });
+  it("explains incomplete processing instructions without exposing an untranslated warning code", async () => {
+    show({
+      resources: [{ link: "https://example.com/resource.zip" }],
+      warnings: ["PROCESSING_PLAN_INCOMPLETE"],
+    });
+    await userEvent.click(screen.getByRole("button", { name: "Show result details" }));
+    expect(await screen.findByText(/File-processing instructions are incomplete/)).toBeVisible();
+    expect(screen.queryByText("PROCESSING_PLAN_INCOMPLETE")).not.toBeInTheDocument();
+  });
+  it("explains optional unpaid content without presenting it as a completed purchase", async () => {
+    show({
+      isComplete: true,
+      resources: [{ link: "https://example.com/resource.zip" }],
+      warnings: [
+        "Some content remains unpurchased; it was confirmed unnecessary for this acquisition scope.",
+      ],
+    });
+    await userEvent.click(screen.getByRole("button", { name: "Show result details" }));
+    expect(
+      await screen.findByText(
+        /Some content remains unpurchased, but the current content decision confirms/,
+      ),
+    ).toBeVisible();
+    expect(
+      screen.queryByText(
+        "Some content remains unpurchased; it was confirmed unnecessary for this acquisition scope.",
+      ),
+    ).toBeNull();
+    expect(screen.queryByText(/purchased successfully/)).toBeNull();
+  });
+  it("keeps cover candidates separate and omits legacy image download rows", async () => {
+    show({
+      resources: [
+        { link: "https://example.com/screenshot.jpg" },
+        { link: "https://example.com/resource.zip" },
+      ],
+      excludedResourceIndices: [0],
+      coverCandidates: [{ url: "https://example.com/screenshot.jpg", kind: "preview" }],
+    });
+    expect(screen.queryByRole("button", { name: "https://example.com/screenshot.jpg" })).toBeNull();
+    expect(screen.getByRole("button", { name: "https://example.com/resource.zip" })).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "postMedia.candidates" }));
+    expect(screen.getByText("postMedia.description")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "postMedia.preview" })).toBeTruthy();
+    expect(actions.open).not.toHaveBeenCalled();
+  });
   it("prioritizes main content groups while retaining each mirror's credentials and plan", async () => {
     const data: DownloadInfoData = {
       groups: [
@@ -228,7 +296,9 @@ describe("download result presentation", () => {
     });
 
     expect(screen.getByRole("button", { name: "Link available" })).toHaveClass("text-success");
-    expect(screen.getByRole("button", { name: "Link unavailable" })).toHaveClass("text-danger");
+    expect(screen.getByRole("button", { name: "Link status unknown" })).not.toHaveClass(
+      "text-danger",
+    );
     expect(screen.getByRole("button", { name: "Link checking unsupported" })).toHaveAttribute(
       "data-link-health",
       "unsupported",
@@ -291,6 +361,62 @@ describe("download result presentation", () => {
     await user.tab();
     expect(await screen.findByText("Matching files: *.bin", {}, { timeout: 2500 })).toBeVisible();
     expect(screen.getByText("Input: Downloaded files")).toBeVisible();
+  });
+
+  it("explains combined inputs and keeps them intact when copying the plan", async () => {
+    const combined: ExtractionPlan = {
+      requirement: "required",
+      evidence: [],
+      steps: [
+        { id: "move", op: "moveFile", input: "download", targetDirectory: "volumes" },
+        { id: "extract", op: "extractArchive", input: "ignored", inputs: ["download", "move"] },
+      ],
+    };
+    show({ resources: [{ extraction: combined }] });
+    const user = userEvent.setup();
+    await user.tab();
+    await user.tab();
+    expect(
+      await screen.findByText(
+        "Input: Downloaded files + Files produced by step 1",
+        {},
+        { timeout: 2500 },
+      ),
+    ).toBeVisible();
+    expect(document.body).not.toHaveTextContent("Input: ignored");
+    fireEvent.click(screen.getByRole("button", { name: "Copy processing instructions" }));
+    await waitFor(() =>
+      expect(actions.copy).toHaveBeenCalledWith(JSON.stringify(combined, null, 2)),
+    );
+  });
+
+  it.each([
+    ["", "Remove “literal[1]” from file names"],
+    ["After", "Replace “literal[1]” with “After” in file names"],
+  ])("shows literal replacement %j and copies the complete step", async (replaceText, label) => {
+    const step: ExtractionPlan["steps"][number] = {
+      id: "rename",
+      op: "renameLiteral",
+      input: "download",
+      findText: "literal[1]",
+      replaceText,
+    };
+    show({ resources: [{ extraction: { requirement: "required", evidence: [], steps: [step] } }] });
+    const user = userEvent.setup();
+    await user.tab();
+    expect(
+      await screen.findByText(
+        "Replaces every case-sensitive literal match in file names, without regular expressions or directory changes.",
+        {},
+        { timeout: 2500 },
+      ),
+    ).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: label }));
+    await waitFor(() => expect(actions.copy).toHaveBeenCalledWith(JSON.stringify(step, null, 2)));
+    expect(actions.success).toHaveBeenCalledWith({
+      title: "Copied file-name replacement step",
+      timeout: 3000,
+    });
   });
 
   it("does not call a completed check unchecked when the provider omitted a reason", async () => {

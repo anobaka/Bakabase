@@ -21,10 +21,17 @@ public interface IAcquisitionService
         int? leadId = null, int? recipeDefinitionId = null, int? collectionId = null,
         CancellationToken ct = default);
 
+    Task<AcquisitionTask> CreatePreparedAsync(int resourceId, AcquisitionLeadKind leadKind, string leadValue,
+        AcquisitionPreparedContext context, int? leadId = null, int? recipeDefinitionId = null,
+        int? collectionId = null, CancellationToken ct = default) =>
+        throw new NotSupportedException("This acquisition service does not accept prepared context.");
+
     Task<List<AcquisitionTask>> SearchAsync(AcquisitionStatus? status = null, int? resourceId = null,
         CancellationToken ct = default);
 
     Task<AcquisitionTask?> GetAsync(int taskId, CancellationToken ct = default);
+    Task<List<AcquisitionTask>> GetByIdsAsync(IReadOnlyCollection<int> taskIds, CancellationToken ct = default);
+    Task<Dictionary<int, string?>> GetDisplayNamesAsync(IReadOnlyCollection<int> resourceIds, CancellationToken ct = default);
 
     /// <summary>Answers whatever the task's current step is waiting for.</summary>
     Task ResumeAsync(int taskId, string signalJson, CancellationToken ct = default);

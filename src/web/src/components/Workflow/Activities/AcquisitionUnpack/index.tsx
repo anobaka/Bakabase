@@ -7,8 +7,12 @@ import { useTranslation } from "react-i18next";
 
 import { Button, Chip, Input, NumberInput, Switch, Textarea } from "@/components/bakaui";
 import { AcquisitionWaitReason, WorkflowActivityCategory } from "@/sdk/constants";
+import ExtractionLayoutField from "../../ExtractionLayoutField";
+import { isExtractionLayout, type ExtractionLayout } from "../../extractionLayout";
 
 interface Config {
+  extractionLayout?: ExtractionLayout;
+  allowAutomaticDetection: boolean;
   deleteArchive: boolean;
   maxDepth: number;
   tryRecentPasswords: boolean | null;
@@ -22,7 +26,7 @@ interface Prompt {
   extractionPlanJson?: string;
 }
 
-const DEFAULTS: Config = { deleteArchive: true, maxDepth: 2, tryRecentPasswords: null };
+const DEFAULTS: Config = { allowAutomaticDetection: false, deleteArchive: false, maxDepth: 2, tryRecentPasswords: null };
 
 const ConfigForm: React.FC<{ value: Config; onChange: (v: Config) => void }> = ({
   value,
@@ -32,8 +36,16 @@ const ConfigForm: React.FC<{ value: Config; onChange: (v: Config) => void }> = (
 
   return (
     <div className="flex flex-col gap-3">
+      <ExtractionLayoutField
+        value={value.extractionLayout}
+        onChange={extractionLayout => onChange({ ...value, extractionLayout })}
+      />
+      <Switch isSelected={value.allowAutomaticDetection === true} size="sm"
+        onValueChange={(allowAutomaticDetection) => onChange({ ...value, allowAutomaticDetection })}>
+        <span className="text-sm">{t("workflow.acquisition.unpack.allowAutomaticDetection")}</span>
+      </Switch>
       <Switch
-        isSelected={value.deleteArchive !== false}
+        isSelected={value.deleteArchive === true}
         size="sm"
         onValueChange={(deleteArchive) => onChange({ ...value, deleteArchive })}
       >
@@ -68,7 +80,7 @@ const ResumeForm: WorkflowActivityUI<Config>["ResumeForm"] = ({
   } catch {
     prompt = null;
   }
-  const needsPlan = prompt?.reason === "ExtractionPlanUnknown";
+  const needsPlan = prompt?.reason === "ExtractionPlanUnknown" || prompt?.reason === "ExtractionLayoutConflict";
   let validPlan = false;
 
   try {
@@ -117,6 +129,11 @@ const ResumeForm: WorkflowActivityUI<Config>["ResumeForm"] = ({
           <Input
             className="flex-1"
             label={t<string>("workflow.acquisition.unpack.password")}
+            type="text"
+            autoComplete="off"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
             size="sm"
             value={password}
             onValueChange={setPassword}
@@ -151,7 +168,7 @@ export const AcquisitionUnpackUI: WorkflowActivityUI<Config> = {
   kind: "acquisition.unpack",
   displayNameKey: "workflow.acquisition.step.unpack",
   category: WorkflowActivityCategory.Action,
-  defaultConfig: () => ({ ...DEFAULTS }),
+  defaultConfig: () => ({ ...DEFAULTS, extractionLayout: "currentDirectory" }),
   parseConfig: (json) => {
     try {
       return json ? { ...DEFAULTS, ...(JSON.parse(json) as Partial<Config>) } : { ...DEFAULTS };
@@ -160,7 +177,7 @@ export const AcquisitionUnpackUI: WorkflowActivityUI<Config> = {
     }
   },
   serializeConfig: (config) => JSON.stringify(config),
-  isValid: () => true,
+  isValid: config => config.extractionLayout == null || isExtractionLayout(config.extractionLayout),
   ConfigForm,
   Summary: () => null,
   ResumeForm,

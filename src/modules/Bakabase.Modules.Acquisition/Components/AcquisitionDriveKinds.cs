@@ -21,6 +21,8 @@ public static class AcquisitionDriveKinds
         ("yun.baidu.com", AcquisitionDriveKind.Baidu),
         ("gofile.io", AcquisitionDriveKind.Gofile),
         ("pixeldrain.com", AcquisitionDriveKind.Pixeldrain),
+        ("pixeldrain.net", AcquisitionDriveKind.Pixeldrain),
+        ("pixeldra.in", AcquisitionDriveKind.Pixeldrain),
         ("xunlei.com", AcquisitionDriveKind.Xunlei),
         ("feimaoyun.com", AcquisitionDriveKind.Feimao),
         ("fmpan.com", AcquisitionDriveKind.Feimao),
@@ -54,6 +56,8 @@ public static class AcquisitionDriveKinds
         }
 
         var host = uri.Host;
+        if (host.ToLowerInvariant() is "terabox.com" or "www.terabox.com" or "1024terabox.com" or "www.1024terabox.com")
+            return AcquisitionDriveKind.TeraBox;
 
         foreach (var (suffix, kind) in ByHost)
         {

@@ -43,6 +43,118 @@ afterEach(() => {
 });
 
 describe("post-parser preview action boundaries", () => {
+  it("returns bounded pages, global counts and a global failed selection independently of filters", async () => {
+    const first = (await mockApi.postParser.searchPostParserTasks({ pageIndex: 1, pageSize: 3 }))
+      .data!;
+    const second = (await mockApi.postParser.searchPostParserTasks({ pageIndex: 2, pageSize: 3 }))
+      .data!;
+    expect(first.items).toHaveLength(3);
+    expect(first.globalTotal).toBe(tasks().length);
+    expect(second.items.map((row) => row.id)).not.toEqual(first.items.map((row) => row.id));
+    const missing = (
+      await mockApi.postParser.searchPostParserTasks({
+        pageIndex: 1,
+        pageSize: 20,
+        keyword: "no-match-for-this-query",
+      })
+    ).data!;
+    expect(missing.items).toEqual([]);
+    expect(missing.statusCounts).toEqual(first.statusCounts);
+    expect((await mockApi.postParser.getFailedPostParserTaskSelection()).data!.tasks.length).toBe(
+      first.statusCounts.failed,
+    );
+    const located = (
+      await mockApi.postParser.searchPostParserTasks({
+        pageIndex: 1,
+        pageSize: 3,
+        locateTaskId: second.items[0].id,
+      })
+    ).data!;
+    expect(located.pageIndex).toBe(2);
+    expect(located.items[0].id).toBe(second.items[0].id);
+  });
+
+  it("keeps the failed reparse snapshot fenced when the offline action is repeated", async () => {
+    const snapshot = (await mockApi.postParser.getFailedPostParserTaskSelection()).data!;
+    const first = (await mockApi.postParser.reParseFailedPostParserTasks(snapshot)).data!;
+    const second = (await mockApi.postParser.reParseFailedPostParserTasks(snapshot)).data!;
+    expect(first.queuedCount).toBe(snapshot.tasks.length);
+    expect(second.queuedCount).toBe(0);
+    expect(second.skippedCount).toBe(snapshot.tasks.length);
+  });
+  it("returns a complete offline processing-plan view with the selected original source plan", async () => {
+    const source = {
+      module: "postParser",
+      entityKind: "task",
+      entityId: "4",
+      revision: String(task(4).revision),
+      resultKey: "0",
+    };
+    const response = await mockApi.processingPlans.getSourceProcessingPlan(source);
+
+    expect(response.code).toBe(0);
+    expect(response.data).toMatchObject({
+      source,
+      sourceHash: expect.any(String),
+      revision: 0,
+      originalPlan: fixtures.samplePlan,
+      effectivePlan: fixtures.samplePlan,
+      effectiveRevision: 0,
+      history: [],
+      hasStaleRevisions: false,
+      sourceAvailable: true,
+    });
+    expect(response.data?.history.find(() => true)).toBeUndefined();
+    response.data!.originalPlan!.steps[0].id = "mutated-preview-response";
+    const next = await mockApi.processingPlans.getSourceProcessingPlan(source);
+
+    expect(next.data?.originalPlan).toEqual(fixtures.samplePlan);
+    const anotherSource = await mockApi.processingPlans.getSourceProcessingPlan({
+      ...source,
+      entityId: "5",
+      resultKey: "2",
+    });
+
+    expect(anotherSource.data?.originalPlan).toMatchObject({
+      requirement: "notRequired",
+      steps: [],
+    });
+  });
+
+  it("retains the processing-plan view contract for stale or unavailable preview sources", async () => {
+    const source = {
+      module: "postParser",
+      entityKind: "task",
+      entityId: "4",
+      revision: String(task(4).revision),
+      resultKey: "0",
+    };
+    const stale = await mockApi.processingPlans.getSourceProcessingPlan({
+      ...source,
+      revision: "old-revision",
+    });
+
+    expect(stale.data).toMatchObject({
+      sourceAvailable: false,
+      sourceProblem: "PROCESSING_PLAN_SOURCE_CHANGED",
+      history: [],
+      effectiveRevision: 0,
+    });
+    expect(stale.data?.effectivePlan).toBeUndefined();
+    const missing = await mockApi.processingPlans.getSourceProcessingPlan({
+      ...source,
+      resultKey: "99",
+    });
+
+    expect(missing.data).toMatchObject({
+      sourceAvailable: false,
+      sourceProblem: "PROCESSING_PLAN_SOURCE_UNAVAILABLE",
+      history: [],
+      effectiveRevision: 0,
+    });
+    expect(missing.data?.history.find(() => true)).toBeUndefined();
+  });
+
   it("shows an isolated content-group example and preserves groups after reparsing", async () => {
     loadGroupsPreview();
     expect(tasks()).toHaveLength(1);

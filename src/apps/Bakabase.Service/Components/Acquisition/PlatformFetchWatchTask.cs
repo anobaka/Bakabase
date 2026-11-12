@@ -85,11 +85,11 @@ public class PlatformFetchWatchTask(IServiceProvider serviceProvider, IBakabaseL
 
             var connector = connectors.Get(source);
 
-            if (connector == null) continue;
+            if (connector == null || task.ResourceId == null) continue;
 
             try
             {
-                var owned = await ownedDownloads.GetAsync(task.Id, task.ResourceId, args.CancellationToken);
+                var owned = await ownedDownloads.GetAsync(task.Id, task.ResourceId.Value, args.CancellationToken);
                 if (owned != null)
                 {
                     // Metadata is a result too. Wake the original node so its next BT node can run;

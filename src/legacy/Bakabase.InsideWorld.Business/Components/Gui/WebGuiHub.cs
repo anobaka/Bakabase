@@ -126,7 +126,8 @@ namespace Bakabase.InsideWorld.Business.Components.Gui
 
             await Clients.Caller.GetData("BTask", _bTaskManager.GetTasksViewModel());
 
-            await Clients.Caller.GetData(nameof(PostParserTask), await _postParserTaskService.GetAll());
+            // Parser pages fetch bounded pages. Individual task updates still invalidate those
+            // pages; pushing every saved HTML/result here makes every UI connection expensive.
 
             await Clients.Caller.GetData(nameof(ThirdPartyRequestStatistics), _thirdPartyService.GetAllThirdPartyRequestStatistics());
 

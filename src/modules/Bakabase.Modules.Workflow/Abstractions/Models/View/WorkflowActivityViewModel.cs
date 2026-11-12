@@ -5,6 +5,8 @@ namespace Bakabase.Modules.Workflow.Abstractions.Models.View;
 
 public record WorkflowActivityViewModel
 {
+    public IReadOnlyList<WorkflowParameterBinding> ParameterBindings { get; set; } = [];
+
     public int Id { get; set; }
     public int Order { get; set; }
     public string Kind { get; set; } = null!;
@@ -14,6 +16,7 @@ public record WorkflowActivityViewModel
 
     public static WorkflowActivityViewModel From(WorkflowActivity a) => new()
     {
+        ParameterBindings = a.ParameterBindings,
         Id = a.Id,
         Order = a.Order,
         Kind = a.Kind,

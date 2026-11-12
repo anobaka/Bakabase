@@ -1,5 +1,6 @@
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Workflow.Abstractions.Components;
+using Bakabase.Modules.Workflow.Abstractions.Models.Domain;
 
 namespace Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
 
@@ -38,7 +39,7 @@ public record PurchaseRecord(decimal Price, DateTime PurchasedAt, string Where);
 /// <c>==</c>.
 /// </para>
 /// </summary>
-public sealed record AcquisitionWorkItem : ITextWorkpiece, IWorkflowOutputSummary
+public sealed record AcquisitionWorkItem : ITextWorkpiece, IWorkflowOutputSummary, IWorkflowOutputMetadata
 {
     /// <summary>The resource being acquired. A run has exactly one.</summary>
     public required int ResourceId { get; init; }
@@ -97,8 +98,30 @@ public sealed record AcquisitionWorkItem : ITextWorkpiece, IWorkflowOutputSummar
     public object ToWorkflowOutputSummary() => new
     {
         ResourceId, Title, FilesCount = Files.Count, WorkingDirectory,
-        ExtractedDirectory, TargetDirectory, AlreadyProcessed
+        ExtractedDirectory, TargetDirectory, AlreadyProcessed,
+        Artifacts = Variables.Where(kv => SafeArtifactKeys.Contains(kv.Key)).ToDictionary(kv => kv.Key, kv => kv.Value)
     };
+
+    private static readonly HashSet<string> SafeArtifactKeys =
+        ["artifact.inputId", "artifact.outputId", "artifact.publishedId", "artifact.operationId", "artifact.publicationId"];
+
+    public IReadOnlyList<WorkflowOutputBlock> GetWorkflowOutputMetadata(string activityKind)
+    {
+        var blocks = new List<WorkflowOutputBlock>
+        {
+            new() {Kind = "scalar", Key = "resource", LabelKey = "workflow.nodeOutput.resourceId", Value = ResourceId.ToString(System.Globalization.CultureInfo.InvariantCulture)}
+        };
+        foreach (var (key, label, directory) in new[]
+        {
+            ("artifact.inputId", "download", WorkingDirectory),
+            ("artifact.outputId", "processed", ExtractedDirectory),
+            ("artifact.publishedId", "published", TargetDirectory ?? ExtractedDirectory)
+        })
+            if (Variables.GetValueOrDefault(key) is { } id)
+                blocks.Add(new() {Kind = "artifact", Key = key, ArtifactId = id, Directory = directory,
+                    LabelKey = "cloudDownload.artifacts." + label + "ArtifactId"});
+        return blocks;
+    }
 
     /// <summary>The link a step is meant to act on, if one has been chosen.</summary>
     public AcquisitionLink? SelectedLink =>

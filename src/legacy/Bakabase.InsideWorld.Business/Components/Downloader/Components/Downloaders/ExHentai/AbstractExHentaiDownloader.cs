@@ -82,7 +82,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
             Func<Task>? onTorrentDetected = null,
             Func<Task>? onTorrentDownloaded = null,
             int? resultWorkflowId = null,
-            ExHentaiDownloadMode? downloadMode = null, bool saveTorrentFile = false, bool fallbackToDirect = true)
+            ExHentaiDownloadMode? downloadMode = null, bool saveTorrentFile = false, bool fallbackToDirect = true,
+            ExHentaiNoTorrentAction? noTorrentAction = null)
         {
             downloadMode ??= preferTorrent ? ExHentaiDownloadMode.TorrentFile : ExHentaiDownloadMode.Direct;
             var downloadContents = downloadMode == ExHentaiDownloadMode.Torrent;
@@ -97,7 +98,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
             var previous = await results.GetLatestBySourceAsync(downloadTaskId, sourceKey, ct);
             var canReusePrevious = previous != null &&
                 await CanReuseResultAsync(results, previous, preferTorrent, preferOriginal, ct,
-                    downloadMode == ExHentaiDownloadMode.TorrentFile);
+                    downloadMode == ExHentaiDownloadMode.TorrentFile && noTorrentAction != ExHentaiNoTorrentAction.DirectDownload);
             if (canReusePrevious && previous != null)
             {
                 // Reuse only actual source or placed files. A durable row alone cannot prove
@@ -389,15 +390,18 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
             // Under torrent-priority, yield the slot back to the queue so torrent-bearing tasks are
             // drained first. The deferred task is re-selected only once no un-probed task remains, at
             // which point this method is called again with deferIfNoTorrent=false and applies the
-            // chosen route. Seed-only tasks never fall back to paid image downloads.
+            // chosen route. Legacy seed-only tasks still stop here unless the user explicitly
+            // adopts the new no-torrent fallback policy.
             if (deferIfNoTorrent)
             {
                 throw new DownloadDeferredException();
             }
 
-            if (downloadMode == ExHentaiDownloadMode.TorrentFile ||
-                downloadMode == ExHentaiDownloadMode.Torrent && !fallbackToDirect)
-                throw new InvalidOperationException("This gallery has no torrent. Direct download fallback is disabled.");
+            var directFallbackAllowed = noTorrentAction == ExHentaiNoTorrentAction.DirectDownload ||
+                noTorrentAction == null && downloadMode == ExHentaiDownloadMode.Torrent && fallbackToDirect;
+            if (downloadMode != ExHentaiDownloadMode.Direct && !directFallbackAllowed)
+                throw new DownloadPolicyException(Localizer[downloadMode == ExHentaiDownloadMode.TorrentFile
+                    ? "Downloader_ExHentai_NoTorrentSeedOnly" : "Downloader_ExHentai_NoTorrentFallbackDisabled"]);
 
             Directory.CreateDirectory(downloadPath);
             var (galleryDirectoryForImages, stableTemplateDirectory) = await ResolveGalleryDirectoryAsync(downloadPath, detail, sourceKey);

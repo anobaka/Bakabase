@@ -14,6 +14,11 @@ public record SharedContentLock(string? Url, decimal? Price, bool IsBought)
 {
     public string? Id { get; init; }
     public string? Floor { get; init; }
+    public string? BlockId { get; init; }
+    public string? PurchaseTargetId { get; init; }
+    public string? ContextText { get; init; }
+    public string? CurrencyCode { get; init; }
+    public string? CurrencyName { get; init; }
 }
 
 public record PostContent
@@ -26,6 +31,10 @@ public record PostContent
     public DateTimeOffset? CapturedAt { get; set; }
     public string Scope { get; set; } = "firstPage";
     public decimal? Balance { get; set; }
+    public string? CurrencyCode { get; set; }
+    public string? CurrencyName { get; set; }
+    public string? SourceEvidenceFingerprint { get; set; }
+    public PostContentReaderEvidence? ReaderEvidence { get; set; }
 
     [System.Text.Json.Serialization.JsonIgnore]
     [Newtonsoft.Json.JsonIgnore]

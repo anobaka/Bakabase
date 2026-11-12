@@ -22,6 +22,58 @@ class BridgeError(Exception):
     pass
 
 
+def provider_failure(provider, error):
+    """Stable, deliberately conservative diagnostics; never forward exception URLs/tokens.
+
+    gdown's generic permission/many-accesses advice is not proof of a quota failure.
+    Its inner FileURLRetrievalError retains Google's actual error text; only the
+    explicit Google quota phrase maps to quota. gallery-dl exposes typed errors.
+    """
+    if isinstance(error, BridgeError):
+        return str(error)
+    current = error
+    for _ in range(6):
+        name = type(current).__name__
+        module = type(current).__module__
+        if provider == "googleDrive" and module.startswith("gdown") and name == "FileURLRetrievalError":
+            text = " ".join(str(current)[:16384].lower().split())
+            if "too many users have viewed or downloaded this file" in text:
+                return "GOOGLE_DOWNLOAD_QUOTA_EXCEEDED: Google reports a download quota limit; wait or choose another confirmed source"
+            return "GOOGLE_DRIVE_SHARE_UNAVAILABLE_OR_ACCESS_REQUIRED: the share could not be retrieved; verify availability and permission on its official page"
+        if provider == "googleDrive" and module.startswith("gdown") and name == "DownloadError":
+            # gdown 6.4.2's folder discovery embeds the HTTP status in DownloadError
+            # without retaining a response/cause. Match only its exact prefix; its
+            # generic 'many accesses' advice is not evidence of a quota failure.
+            if re.match(r"Failed to retrieve folder contents for folder ID: [\w-]+ \(status code (?:401|403|404|410)\)\.", str(current)[:2048]):
+                return "GOOGLE_DRIVE_SHARE_UNAVAILABLE_OR_ACCESS_REQUIRED: the folder could not be retrieved; verify availability and permission on its official page"
+        if provider == "gofile" and module.startswith("gallery_dl"):
+            if name == "NotFoundError":
+                # gallery-dl 1.32.17's GoFile request_api raises this only for
+                # the provider JSON status error-notFound. Its HTTP request path
+                # uses notfound=None; generic HTTP404 remains a different code.
+                return "GOFILE_CONTENT_NOT_FOUND: GoFile explicitly reported this content missing or no longer shared"
+            if name == "AuthorizationError":
+                return "GOFILE_ACCESS_REQUIRED: GoFile requires additional access information; verify the official share page"
+        if module.startswith(("requests", "urllib3")) and name in ("Timeout", "ConnectTimeout", "ReadTimeout", "ConnectionError", "SSLError", "ProxyError", "NewConnectionError", "MaxRetryError", "ChunkedEncodingError", "ProtocolError"):
+            return "CLOUD_NETWORK_ERROR: the source connection failed; check this source's network mode and try again"
+        status = getattr(current, "status", None)
+        response = getattr(current, "response", None)
+        status = status or getattr(response, "status_code", None)
+        if status == 429:
+            return "CLOUD_RATE_LIMITED: the source rate limit was reached; wait before retrying"
+        if status in (401, 403):
+            return "CLOUD_ACCESS_REQUIRED: the source denied access; check permission on its official page"
+        if provider == "gofile" and status in (404, 410):
+            return "GOFILE_SHARE_NOT_FOUND: GoFile could not find this content; verify the share or provide another source"
+        if provider == "googleDrive" and status in (404, 410):
+            return "GOOGLE_DRIVE_SHARE_UNAVAILABLE_OR_ACCESS_REQUIRED: the share could not be retrieved; verify availability and permission on its official page"
+        next_error = current.__cause__ or current.__context__
+        if next_error is None or next_error is current:
+            break
+        current = next_error
+    return "CLOUD_TOOL_FAILED: the tool did not complete; verify share access and this source's network mode"
+
+
 def emit(value):
     print(json.dumps(value, ensure_ascii=True), file=PROTOCOL_OUTPUT, flush=True)
 
@@ -72,6 +124,15 @@ def validate_url(provider, url):
     elif provider == "gofile":
         if parsed.hostname not in ("gofile.io", "www.gofile.io") or not re.fullmatch(r"/d/[A-Za-z0-9_-]+/?", parsed.path):
             raise BridgeError("Unsupported GoFile share URL")
+    elif provider == "pixeldrain":
+        # Official aliases share the same IDs; the adapter keeps using the canonical API.
+        # https://pixeldrain.com/about, checked 2026-10-25.
+        if parsed.hostname not in ("pixeldrain.com", "www.pixeldrain.com", "pixeldrain.net", "www.pixeldrain.net", "pixeldra.in", "www.pixeldra.in") or not re.fullmatch(r"/(?:[ul]/[A-Za-z0-9_-]+|d/[A-Za-z0-9_-]+(?:/[^/]+)*)/?", parsed.path):
+            raise BridgeError("Unsupported PixelDrain share URL")
+        if parsed.path.startswith("/d/"):
+            relative_path(urllib.parse.unquote(parsed.path[3:].rstrip("/")))
+        if parsed.fragment and (not parsed.path.startswith("/l/") or not re.fullmatch(r"item=\d+", parsed.fragment)):
+            raise BridgeError("Unsupported PixelDrain share fragment")
     else:
         raise BridgeError("Unsupported provider")
 
@@ -201,6 +262,158 @@ def gofile_manifest(request):
     return entries, extractor.session
 
 
+def pixeldrain_failure(status=0, value=""):
+    value = value.lower() if isinstance(value, str) else ""
+    if "captcha" in value or "recaptcha" in value:
+        return BridgeError("PIXELDRAIN_VERIFICATION_REQUIRED: complete verification on the official share page or use another source")
+    if status == 429 or value in ("max_concurrent_downloads", "transfer_limit_exceeded", "download_limit_exceeded"):
+        return BridgeError("PIXELDRAIN_RATE_LIMITED: the current download or transfer limit was reached; wait or use the official share page")
+    if status in (404, 410, 451) or value in ("not_found", "path_not_found", "unavailable_for_legal_reasons"):
+        return BridgeError("PIXELDRAIN_SHARE_UNAVAILABLE: this file or folder is no longer publicly available")
+    if status in (401, 403) or value in ("authentication_required", "permission_denied", "hotlink_detected", "access_required"):
+        return BridgeError("PIXELDRAIN_ACCESS_REQUIRED: this share requires permission, a supported account or access through its official page")
+    return BridgeError("PIXELDRAIN_NETWORK_ERROR: PixelDrain did not return a usable public response; check the source proxy and retry")
+
+
+def pixeldrain_manifest(request):
+    """Use the pinned extractor's isolated HTTP session, with strict whole-list validation.
+
+    gallery-dl's normal job skips unavailable files and changes filenames. A cloud operation
+    instead keeps original names and rejects an incomplete list, rate limit or permission gap.
+    Protocol checked against pixeldrain.com/api and gallery-dl v1.32.17, 2026-10-20.
+    """
+    from gallery_dl import config
+    from gallery_dl.extractor.pixeldrain import PixeldrainFileExtractor
+    if importlib.metadata.version("gallery-dl") != "1.32.17":
+        raise BridgeError("Unsupported gallery-dl version")
+    if request.get("accessCode"):
+        raise BridgeError("PixelDrain password-protected shares require manual access; this adapter supports public files and folders")
+    config.clear()
+    config.set(("cache",), "file", ":memory:")
+    config.set(("extractor",), "proxy-env", False)
+    config.set(("extractor",), "timeout", 60)
+    config.set(("extractor",), "retries", 2)
+    extractor = PixeldrainFileExtractor.from_url("https://pixeldrain.com/u/fixture")
+    extractor.initialize()
+    extractor._init_options()
+    parsed = urllib.parse.urlsplit(request["url"])
+    parts = parsed.path.strip("/").split("/")
+    entries = []
+    visited = set()
+
+    def get(path):
+        try:
+            data = extractor.request_json("https://pixeldrain.com/api/" + path, allow_redirects=False)
+        except Exception as error:
+            # gallery_dl.exception.HttpError carries response/status and embeds the signed URL
+            # in str(error). Never relay that message or arbitrary upstream response text.
+            status = getattr(error, "status", None)
+            if status is None:
+                raise
+            response = getattr(error, "response", None)
+            value = ""
+            if response is not None:
+                try:
+                    body = response.json()
+                    value = body.get("value", "") if isinstance(body, dict) else ""
+                except (ValueError, TypeError):
+                    pass
+            raise pixeldrain_failure(status, value) from None
+        if not isinstance(data, dict) or data.get("success") is False:
+            raise pixeldrain_failure(value=data.get("value", "") if isinstance(data, dict) else "")
+        return data
+
+    def append(data, prefix, filesystem=False):
+        if data.get("availability"):
+            raise pixeldrain_failure(value=data["availability"])
+        if data.get("abuse_type"):
+            raise pixeldrain_failure(value="unavailable_for_legal_reasons")
+        if data.get("can_download") is False:
+            raise pixeldrain_failure(value="access_required")
+        name = segment(data.get("name"))
+        size = data.get("file_size" if filesystem else "size")
+        if not isinstance(size, int) or isinstance(size, bool) or size < 0:
+            raise BridgeError("PixelDrain original file size is missing")
+        checksum = data.get("sha256_sum" if filesystem else "hash_sha256")
+        if checksum is not None and not re.fullmatch(r"[a-fA-F0-9]{64}", checksum):
+            raise BridgeError("Invalid PixelDrain original checksum")
+        if filesystem:
+            remote = remote_path(data.get("path"))
+            identity = remote
+            link = "https://pixeldrain.com/api/filesystem" + urllib.parse.quote(remote, safe="/") + "?attach"
+        else:
+            identity = data.get("id")
+            if not isinstance(identity, str) or not re.fullmatch(r"[A-Za-z0-9_-]+", identity):
+                raise BridgeError("PixelDrain original file ID is missing")
+            link = "https://pixeldrain.com/api/file/" + identity + "?download"
+        entries.append({"id": identity, "path": prefix + name, "size": size, "url": link,
+                        "sha256": checksum})
+        if len(entries) > 100000:
+            raise BridgeError("PixelDrain share exceeds the file limit")
+
+    def remote_path(path):
+        if not isinstance(path, str) or not path.startswith("/"):
+            raise BridgeError("PixelDrain returned an invalid filesystem path")
+        return "/" if path == "/" else "/" + relative_path(path[1:])
+
+    def visit(path, prefix, depth):
+        if depth > 32 or path in visited or len(visited) >= 100000:
+            raise BridgeError("PixelDrain folder cycle or recursion limit")
+        visited.add(path)
+        stat = get("filesystem" + urllib.parse.quote(path, safe="/") + "?stat")
+        chain, index = stat.get("path"), stat.get("base_index")
+        if not isinstance(chain, list) or not isinstance(index, int) or not 0 <= index < len(chain):
+            raise BridgeError("PixelDrain filesystem metadata is incomplete")
+        node = chain[index]
+        if stat.get("permissions", {}).get("read") is False:
+            raise pixeldrain_failure(value="access_required")
+        if node.get("type") == "file":
+            append(node, prefix, True)
+            return
+        children = stat.get("children")
+        if node.get("type") != "dir" or not isinstance(children, list):
+            raise BridgeError("PixelDrain folder listing is incomplete")
+        parent = remote_path(node.get("path"))
+        seen = set()
+        for child in children:
+            name = segment(child.get("name"))
+            child_path = remote_path(child.get("path"))
+            if child_path != parent.rstrip("/") + "/" + name or child_path in seen:
+                raise BridgeError("PixelDrain returned duplicate or non-child filesystem entries")
+            seen.add(child_path)
+            if child.get("type") == "dir":
+                visit(child_path, prefix + name + "/", depth + 1)
+            elif child.get("type") == "file":
+                append(child, prefix, True)
+            else:
+                raise BridgeError("PixelDrain returned an unsupported filesystem entry")
+
+    if parts[0] == "u":
+        file = get("file/" + parts[1] + "/info")
+        if file.get("id") != parts[1]:
+            raise BridgeError("PixelDrain returned a different original file")
+        append(file, "")
+    elif parts[0] == "l":
+        album = get("list/" + parts[1])
+        files, count = album.get("files"), album.get("file_count")
+        if not isinstance(files, list) or not isinstance(count, int) or isinstance(count, bool) or count != len(files) or count > 100000:
+            raise BridgeError("PixelDrain album listing is incomplete")
+        if parsed.fragment:
+            index = int(parsed.fragment[5:])
+            if index >= len(files):
+                raise BridgeError("PixelDrain album item is unavailable")
+            files = files[index:index + 1]
+        seen = set()
+        for file in files:
+            if file.get("id") in seen:
+                raise BridgeError("PixelDrain album returned duplicate entries")
+            seen.add(file.get("id"))
+            append(file, "")
+    else:
+        visit("/" + relative_path(urllib.parse.unquote("/".join(parts[1:]))), "", 0)
+    return entries, extractor.session
+
+
 def file_hash(path, algorithm):
     digest = hashlib.new(algorithm)
     with path.open("rb") as source:
@@ -244,7 +457,8 @@ def run(request):
         original_init(self, *args, **kwargs)
         configure_session(self, request.get("proxy"))
     requests.Session.__init__ = isolated_session
-    entries, session = google_manifest(request) if request["provider"] == "googleDrive" else gofile_manifest(request)
+    resolver = {"googleDrive": google_manifest, "gofile": gofile_manifest, "pixeldrain": pixeldrain_manifest}[request["provider"]]
+    entries, session = resolver(request)
     if not entries:
         raise BridgeError("The share contains no downloadable files; empty directories are not supported")
     paths = [relative_path(e["path"]) for e in entries]
@@ -258,7 +472,8 @@ def run(request):
             raise BridgeError("Share contains conflicting file and directory paths")
         beneath(output, path)
     # URLs can expire; stable identity excludes the transport URL and credentials.
-    manifest = [{k: e.get(k) for k in ("id", "path", "size", "md5")} for e in entries]
+    fields = ("id", "path", "size", "md5", "sha256") if request["provider"] == "pixeldrain" else ("id", "path", "size", "md5")
+    manifest = [{k: e.get(k) for k in fields} for e in entries]
     manifest_path = state / "manifest.json"
     identity = hashlib.sha256(json.dumps([request["provider"], request["url"], request.get("accessCode"), str(output.resolve())]).encode()).hexdigest()
     persisted = {"identity": identity, "files": manifest}
@@ -274,6 +489,9 @@ def run(request):
         raise BridgeError("Symbolic links are not supported")
     staging.mkdir(mode=0o700, exist_ok=True)
     completed = []
+    completed_bytes = 0
+    total_bytes = sum(e["size"] for e in entries) if all(
+        isinstance(e.get("size"), int) and e["size"] >= 0 for e in entries) else None
     last_progress = 0
     for index, entry in enumerate(entries):
         destination = beneath(output, entry["path"])
@@ -282,6 +500,9 @@ def run(request):
             if not destination.is_file() or not receipt or destination.stat().st_size != receipt["size"] or sha256(destination) != receipt["sha256"]:
                 raise BridgeError("Destination already exists and is not a verified result of this operation")
             completed.append(str(destination))
+            completed_bytes += destination.stat().st_size
+            # Reset the network-speed baseline; these bytes were verified locally, not received.
+            emit({"type": "progress", "stage": "reusing", "percentage": 100 * (index + 1) / len(entries)})
             continue
         destination.parent.mkdir(parents=True, exist_ok=True)
         # Partial files stay in a private operation directory; filenames never come from the remote server.
@@ -290,7 +511,7 @@ def run(request):
             nonlocal last_progress
             now = time.monotonic()
             if now - last_progress >= .25 or (total is not None and done == total):
-                emit({"type": "progress", "stage": "downloading", "percentage": 100 * (index + (done / total if total else 0)) / len(entries), "completedBytes": done, "totalBytes": total})
+                emit({"type": "progress", "stage": "downloading", "percentage": 100 * (index + (done / total if total else 0)) / len(entries), "completedBytes": completed_bytes + done, "totalBytes": total_bytes})
                 last_progress = now
         if request["provider"] == "googleDrive":
             import gdown
@@ -302,22 +523,32 @@ def run(request):
         else:
             # Restart the current file; completed files resume from receipts. Requests checks transfer truncation too.
             with session.get(entry["url"], stream=True, timeout=(20, 60), allow_redirects=False) as response:
+                if request["provider"] == "pixeldrain" and getattr(response, "status_code", 200) >= 400:
+                    value = ""
+                    try:
+                        body = response.json()
+                        value = body.get("value", "") if isinstance(body, dict) else ""
+                    except (ValueError, TypeError):
+                        pass
+                    raise pixeldrain_failure(response.status_code, value)
                 response.raise_for_status()
                 if response.is_redirect:
-                    raise BridgeError("Unexpected GoFile download redirect")
+                    raise BridgeError("Unexpected public-share download redirect")
                 written = 0
                 with part.open("wb") as target:
                     for chunk in response.iter_content(512 * 1024):
                         target.write(chunk)
                         written += len(chunk)
                         if written > entry["size"]:
-                            raise BridgeError("GoFile file exceeds manifest size")
+                            raise BridgeError("Original file exceeds manifest size")
                         progress(written, entry["size"])
             if part.stat().st_size != entry["size"]:
-                raise BridgeError("GoFile file is incomplete")
+                raise BridgeError("Original file is incomplete")
             if entry.get("md5"):
                 if file_hash(part, "md5").lower() != entry["md5"].lower():
                     raise BridgeError("GoFile checksum mismatch")
+            if entry.get("sha256") and sha256(part).lower() != entry["sha256"].lower():
+                raise BridgeError("Original file SHA256 mismatch")
         receipts[entry["path"]] = {"size": part.stat().st_size, "sha256": sha256(part)}
         atomic_json(receipt_path, receipts)
         # Hard-link publication fails if anything already exists; never overwrite the user's file.
@@ -328,7 +559,8 @@ def run(request):
             raise BridgeError("Could not publish file atomically without overwriting the destination")
         part.unlink()
         completed.append(str(destination))
-        emit({"type": "progress", "stage": "downloading", "percentage": 100 * (index + 1) / len(entries)})
+        completed_bytes += receipts[entry["path"]]["size"]
+        emit({"type": "progress", "stage": "downloading", "percentage": 100 * (index + 1) / len(entries), "completedBytes": completed_bytes, "totalBytes": total_bytes})
     try:
         staging.rmdir()
     except OSError:
@@ -337,9 +569,11 @@ def run(request):
 
 
 if __name__ == "__main__":
+    request = None
     try:
-        run(json.load(sys.stdin))
+        request = json.load(sys.stdin)
+        run(request)
     except BaseException as error:
         # Third-party exceptions often embed temporary signed URLs or access tokens.
-        emit({"type": "error", "message": str(error) if isinstance(error, BridgeError) else "Cloud tool failed; check share access and network, then retry", "kind": type(error).__name__})
+        emit({"type": "error", "message": provider_failure(request.get("provider") if isinstance(request, dict) else None, error), "kind": type(error).__name__})
         sys.exit(1)

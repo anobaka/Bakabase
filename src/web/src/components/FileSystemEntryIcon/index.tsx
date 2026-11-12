@@ -3,11 +3,11 @@
 import React, { useEffect, useState } from "react";
 import i18n from "i18next";
 import _ from "lodash";
-import { MdFolder, MdInsertDriveFile } from "react-icons/md";
+import { MdFolder, MdInsertDriveFile, MdImage, MdAudiotrack, MdMovie, MdDescription, MdFolderZip } from "react-icons/md";
 
 import "./index.scss";
 
-import { IconType, RuntimeMode } from "@/sdk/constants";
+import { ExtensionMediaTypes, MediaType, IconType, RuntimeMode } from "@/sdk/constants";
 import BApi from "@/sdk/BApi";
 import { splitPathIntoSegments } from "@/components/utils";
 import { useIconsStore } from "@/stores/icons";
@@ -19,6 +19,8 @@ type Props = {
   path?: string;
   size: number | string;
   disableCache?: boolean;
+  /** Use the filename and folder metadata alone, including for historical files. */
+  metadataOnly?: boolean;
 };
 
 const buildCacheKey = (type: IconType, path?: string): string | undefined => {
@@ -74,7 +76,7 @@ const loadIcon = (cacheKey: string, type: IconType, path?: string): Promise<stri
   return request;
 };
 
-const FileSystemEntryIcon = ({ path, type, size = 14, disableCache }: Props) => {
+const FileSystemEntryIcon = ({ path, type, size = 14, disableCache, metadataOnly }: Props) => {
   const cacheKey = buildCacheKey(type, path);
   const iconCache = useIconsStore((state) =>
     cacheKey === undefined ? undefined : (state.icons[cacheKey] as string | null | undefined),
@@ -87,7 +89,7 @@ const FileSystemEntryIcon = ({ path, type, size = 14, disableCache }: Props) => 
   const hasDesktopRuntime = useAppContextStore(
     (state) => state.bApi2 !== null && state.runtimeMode !== RuntimeMode.Docker,
   );
-  const canLoadIcon = userSideActionsRunHere && (isPureClient || hasDesktopRuntime);
+  const canLoadIcon = !metadataOnly && userSideActionsRunHere && (isPureClient || hasDesktopRuntime);
   const [loadedIcon, setLoadedIcon] = useState<{ cacheKey: string; data: string | null }>();
   const iconImgData =
     !disableCache && iconCache !== undefined
@@ -112,6 +114,12 @@ const FileSystemEntryIcon = ({ path, type, size = 14, disableCache }: Props) => 
     };
   }, [add, cacheKey, canLoadIcon, disableCache, iconImgData, path, type]);
 
+  const suffix = path?.split(/[\\/]/).at(-1)?.match(/\.([^.]+)$/)?.[1].toLowerCase();
+  const mediaType = suffix ? ExtensionMediaTypes["." + suffix] : undefined;
+  const fallback = mediaType === MediaType.Image ? MdImage : mediaType === MediaType.Video ? MdMovie :
+    mediaType === MediaType.Audio ? MdAudiotrack : mediaType === MediaType.Text ? MdDescription :
+    suffix && ["zip", "7z", "rar", "gz", "tar", "bz2", "xz"].includes(suffix) ? MdFolderZip : MdInsertDriveFile;
+  const FileIcon = metadataOnly ? fallback : MdInsertDriveFile;
   return (
     <div
       className={"file-system-entry-icon"}
@@ -132,12 +140,12 @@ const FileSystemEntryIcon = ({ path, type, size = 14, disableCache }: Props) => 
           }}
         />
       ) : (
-        <MdInsertDriveFile
+        <FileIcon
           style={{
             color: "#ccc",
             fontSize: size,
           }}
-          title={i18n.t<string>("Unknown file type")}
+          title={metadataOnly && suffix ? suffix.toUpperCase() : i18n.t<string>("Unknown file type")}
         />
       )}
     </div>

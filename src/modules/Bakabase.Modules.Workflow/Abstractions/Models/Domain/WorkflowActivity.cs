@@ -10,7 +10,11 @@ namespace Bakabase.Modules.Workflow.Abstractions.Models.Domain;
 /// </summary>
 public record WorkflowActivity
 {
+    public IReadOnlyList<WorkflowParameterBinding> ParameterBindings { get; set; } = [];
+
     public int Id { get; set; }
+    /// <summary>Frozen execution identity, independent of editable template activity rows.</summary>
+    public string? NodeId { get; set; }
     public int WorkflowDefinitionId { get; set; }
     public int Order { get; set; }
     public string Kind { get; set; } = null!;

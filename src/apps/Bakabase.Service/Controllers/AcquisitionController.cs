@@ -12,6 +12,9 @@ using Bakabase.Modules.Acquisition.Models.Input;
 using Bakabase.Service.Components.Acquisition;
 using Bakabase.Service.Models.View;
 using Bakabase.Service.Components.RemoteAccess;
+using Bakabase.Modules.RemoteAccess.Abstractions.Components;
+using Bakabase.Modules.RemoteAccess.Abstractions.Models;
+using Bakabase.Service.Components.Acquisition.Planning;
 using Microsoft.AspNetCore.Http;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
@@ -29,7 +32,8 @@ public class AcquisitionController(
     Bakabase.Abstractions.Services.IPlaceholderResourceService placeholders,
     Components.Acquisition.AcquisitionInboxService inbox,
     Components.Acquisition.AcquisitionSetupService setup,
-    IBOptionsManager<Bakabase.Modules.Acquisition.Models.Domain.AcquisitionOptions> options)
+    IBOptionsManager<Bakabase.Modules.Acquisition.Models.Domain.AcquisitionOptions> options,
+    AcquisitionDownloadContinuationService? continuation = null)
     : ControllerBase
 {
     /// <summary>
@@ -189,12 +193,14 @@ public class AcquisitionController(
 
     [HttpGet]
     [SwaggerOperation(OperationId = "SearchAcquisitions")]
+    [RemoteAccessible]
     public async Task<ListResponse<AcquisitionTask>> Search([FromQuery] AcquisitionStatus? status,
         [FromQuery] int? resourceId) =>
         new(await service.SearchAsync(status, resourceId));
 
     [HttpGet("{id:int}")]
     [SwaggerOperation(OperationId = "GetAcquisition")]
+    [RemoteAccessible]
     public async Task<SingletonResponse<AcquisitionTask?>> Get(int id) =>
         new(await service.GetAsync(id));
 
@@ -205,6 +211,8 @@ public class AcquisitionController(
         try
         {
             await service.ResumeAsync(id, model.SignalJson);
+            if (continuation != null && (await service.GetAsync(id))?.WorkflowRunId is { } runId)
+                await continuation.SetBackgroundTaskIntentAsync("workflow.run." + runId, AcquisitionDownloadContinuationService.Automatic);
         }
         catch (InvalidOperationException e)
         {
@@ -220,7 +228,10 @@ public class AcquisitionController(
     {
         try
         {
-            return new SingletonResponse<AcquisitionTask>(await service.RetryAsync(id));
+            var task = await service.RetryAsync(id);
+            if (continuation != null && task.WorkflowRunId is { } runId)
+                await continuation.SetBackgroundTaskIntentAsync("workflow.run." + runId, AcquisitionDownloadContinuationService.Automatic);
+            return new SingletonResponse<AcquisitionTask>(task);
         }
         catch (InvalidOperationException e)
         {
@@ -230,6 +241,7 @@ public class AcquisitionController(
 
     [HttpPost("{id:int}/cancel")]
     [SwaggerOperation(OperationId = "CancelAcquisition")]
+    [RemoteAccessible]
     public async Task<BaseResponse> Cancel(int id)
     {
         try
@@ -282,13 +294,39 @@ public class AcquisitionController(
     [SwaggerOperation(OperationId = "PutAcquisitionOptions")]
     public async Task<BaseResponse> PutOptions(
         [FromBody] Bakabase.Modules.Acquisition.Models.Domain.AcquisitionOptions model,
-        [FromServices] IUserStoragePolicy storagePolicy)
+        [FromServices] IUserStoragePolicy storagePolicy,
+        [FromServices] IMediaPathGuard pathGuard)
     {
-        foreach (var path in new[] {model.InboxDirectory, model.LibraryRootDirectory})
-            if (!string.IsNullOrWhiteSpace(path)) storagePolicy.EnsurePathAllowed(path);
-        await options.SaveAsync(model);
-
-        return BaseResponseBuilder.Ok;
+        try
+        {
+            AcquisitionOutputDirectoryResolver.ValidateConfiguredRoot(model.DownloadRootDirectory, storagePolicy);
+            model.DownloadRootDirectory = string.IsNullOrWhiteSpace(model.DownloadRootDirectory)
+                ? null : Path.GetFullPath(model.DownloadRootDirectory);
+            AcquisitionDeliveryDirectoryResolver.ValidateSettings(new AcquisitionDeliverySettings
+            {
+                RootDirectory = model.DeliveryRootDirectory ?? "",
+                DirectoryTemplate = model.DeliveryDirectoryTemplate,
+                PartDirectoryTemplate = model.DeliveryPartDirectoryTemplate,
+                ContentLayout = model.DeliveryContentLayout ?? throw new ArgumentException("DELIVERY_CONTENT_LAYOUT_INVALID")
+            });
+            Bakabase.Modules.Workflow.Artifacts.ArtifactStoragePolicies.Validate(model.StoragePolicy);
+            Components.FileProcessing.FileProcessingWorkspaceResolver.ValidateConfiguredRoot(model.StoragePolicy.ProcessingWorkspaceDirectory, storagePolicy);
+            model.ProcessingWorkspaceDirectory = model.StoragePolicy.ProcessingWorkspaceDirectory;
+            Components.FileProcessing.FileProcessingWorkspaceResolver.ValidateConfiguredRoot(model.ProcessingWorkspaceDirectory, storagePolicy);
+            foreach (var path in new[] {model.InboxDirectory, model.LibraryRootDirectory, model.DownloadRootDirectory, model.DeliveryRootDirectory, model.ProcessingWorkspaceDirectory, model.StoragePolicy?.ProcessingWorkspaceDirectory})
+                if (!string.IsNullOrWhiteSpace(path))
+                {
+                    storagePolicy.EnsurePathAllowed(path);
+                    await GuardSettingsDirectory(path, pathGuard);
+                }
+            // Older full-options clients omit the independently adjustable global switch.
+            await setup.ReplaceOptionsAsync(model, HttpContext.RequestAborted);
+            return BaseResponseBuilder.Ok;
+        }
+        catch (Exception error) when (error is ArgumentException or IOException or UnauthorizedAccessException)
+        {
+            return BaseResponseBuilder.BuildBadRequest(error.Message);
+        }
     }
 
     /// <summary>
@@ -298,24 +336,64 @@ public class AcquisitionController(
     [HttpPost("setup")]
     [SwaggerOperation(OperationId = "SetUpAcquisition")]
     public async Task<SingletonResponse<Components.Acquisition.AcquisitionSetupResult>> SetUp(
-        [FromBody] Components.Acquisition.AcquisitionSetupInputModel model)
+        [FromBody] Components.Acquisition.AcquisitionSetupInputModel model,
+        [FromServices] IMediaPathGuard pathGuard)
     {
         try
         {
+            foreach (var path in new[] {model.InboxDirectory, model.LibraryRootDirectory, model.DownloadRootDirectory, model.DeliveryRootDirectory, model.ProcessingWorkspaceDirectory, model.StoragePolicy?.ProcessingWorkspaceDirectory})
+                if (!string.IsNullOrWhiteSpace(path)) await GuardSettingsDirectory(path, pathGuard);
             return new SingletonResponse<Components.Acquisition.AcquisitionSetupResult>(
                 await setup.ApplyAsync(model));
         }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        catch (Exception e) when (e is ArgumentException or IOException or UnauthorizedAccessException)
         {
             return SingletonResponseBuilder<Components.Acquisition.AcquisitionSetupResult>
                 .BuildBadRequest(e.Message);
         }
     }
 
+    private async Task GuardSettingsDirectory(string path, IMediaPathGuard pathGuard)
+    {
+        var remote = HttpContext.GetRemoteAccessContext();
+        if (remote is {IsUnrestricted: true} or {IsPaired: true}) return;
+        if (!await pathGuard.IsServableAsync(path, HttpContext.RequestAborted))
+            throw new UnauthorizedAccessException("This directory is outside the media libraries Bakabase serves.");
+    }
+
     [HttpGet("recipes")]
     [SwaggerOperation(OperationId = "GetAcquisitionRecipes")]
     public async Task<ListResponse<AcquisitionRecipeSummary>> GetRecipes() =>
         new(await service.GetRecipesAsync());
+
+    /// <summary>Previews bounded AI processing of stopped tasks using their current local files.</summary>
+    [HttpPost("adaptive-processing/preview")]
+    [SwaggerOperation(OperationId = "PreviewAcquisitionAdaptiveProcessingMigration")]
+    public async Task<SingletonResponse<AcquisitionAdaptiveMigrationPreview>> PreviewAdaptiveProcessingMigration(
+        [FromBody] AcquisitionAdaptiveMigrationInput input,
+        [FromServices] AcquisitionAdaptiveMigrationService migration)
+    {
+        try { return new(await migration.PreviewAsync(input, HttpContext.RequestAborted)); }
+        catch (ArgumentException e) { return SingletonResponseBuilder<AcquisitionAdaptiveMigrationPreview>.BuildBadRequest(e.Message); }
+    }
+
+    /// <summary>
+    /// Creates local processing attempts from unambiguous current task directories. Older
+    /// assessment-only runs retain their bounded legacy continuation when no new input is
+    /// selected. No download or transfer is created by a local processing attempt.
+    /// </summary>
+    [HttpPost("adaptive-processing/apply")]
+    [SwaggerOperation(OperationId = "ApplyAcquisitionAdaptiveProcessingMigration")]
+    public async Task<SingletonResponse<AcquisitionAdaptiveMigrationResult>> ApplyAdaptiveProcessingMigration(
+        [FromBody] AcquisitionAdaptiveMigrationApplyInput input,
+        [FromServices] AcquisitionAdaptiveMigrationService migration)
+    {
+        try
+        {
+            return new(await migration.ApplyAsync(input.PreviewToken, input.TaskIds, HttpContext.RequestAborted));
+        }
+        catch (ArgumentException e) { return SingletonResponseBuilder<AcquisitionAdaptiveMigrationResult>.BuildBadRequest(e.Message); }
+    }
 }
 
 /// <param name="Rows">The rows as the user confirmed them, edits and all.</param>
@@ -336,3 +414,6 @@ public record SharedListImportRow
     public string? Password { get; set; }
     public int LineNumber { get; set; }
 }
+
+public sealed record AcquisitionAdaptiveMigrationApplyInput(string PreviewToken,
+    IReadOnlyList<int>? TaskIds = null);

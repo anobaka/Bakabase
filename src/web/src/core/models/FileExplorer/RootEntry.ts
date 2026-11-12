@@ -1,4 +1,5 @@
 import type { IEntryFilter } from "@/core/models/FileExplorer/Entry";
+import type { ExplorerDirectoryPage } from "./DirectoryPage";
 import type { BTask } from "@/core/models/BTask";
 
 import diff from "deep-diff";
@@ -10,6 +11,7 @@ import { buildLogger, getStandardParentPath } from "@/components/utils";
 import { BTaskResourceType, BTaskStatus, IwFsEntryChangeType, IwFsType } from "@/sdk/constants";
 import { useBTasksStore } from "@/stores/bTasks";
 import { useIwFsEntryChangeEventsStore } from "@/stores/iwFsEntryChangeEvents";
+import DirectoryObserver from "./DirectoryObserver";
 
 const log = buildLogger("RootEntry");
 
@@ -62,12 +64,13 @@ class RenderingQueue {
 }
 
 class RootEntry extends Entry {
-  public nodeMap: Record<string, Entry> = {};
+  public nodeMap: Record<string, Entry> = Object.create(null);
   public filter: IEntryFilter = {};
   private _fsWatcher: ReturnType<typeof setInterval> | undefined;
   private _keepAliveInterval: ReturnType<typeof setInterval> | undefined;
   private _processingFsEvents: boolean = false;
   private _resizeObserver: ResizeObserver | undefined;
+  private _directoryObserver?: DirectoryObserver;
   private static readonly KEEP_ALIVE_INTERVAL_MS = 30000; // Send keep-alive every 30 seconds
 
   patchFilter(filter?: Partial<IEntryFilter>) {
@@ -83,16 +86,7 @@ class RootEntry extends Entry {
   async _compareBTasks(renderingQueue: RenderingQueue) {
     const self = this;
     const bTasks = useBTasksStore.getState().tasks;
-    const targetTasks = bTasks.filter(
-      (x) =>
-        x.resourceType == BTaskResourceType.FileSystemEntry &&
-        (x.status == BTaskStatus.Running ||
-          x.status == BTaskStatus.Paused ||
-          x.status == BTaskStatus.Error ||
-          x.status == BTaskStatus.NotStarted ||
-          x.status == BTaskStatus.Completed ||
-          x.status == BTaskStatus.Cancelled),
-    );
+    const targetTasks = bTasks.filter(x => x.resourceType == BTaskResourceType.FileSystemEntry);
     const targetTasksMap: Record<string, BTask[]> = _.flatMap(targetTasks, (t) =>
       (t.resourceKeys ?? []).map((k) => ({
         path: k as string,
@@ -279,7 +273,16 @@ class RootEntry extends Entry {
       await this._stop();
       if (this._disposed) return;
       // @ts-ignore
-      if (this.path) {
+      if (this.path && this.watchChanges === "poll") {
+        this._directoryObserver = new DirectoryObserver(this, () => {
+          const queue = new RenderingQueue();
+          void this._compareBTasks(queue).then(() => {
+            if (!this._disposed) for (const { path } of queue.deQueueAll()) this.nodeMap[path]?.forceUpdate();
+          });
+        });
+        this._directoryObserver.start();
+      }
+      if (this.path && this.watchChanges === true) {
         log("Start watching", this.path, this);
         await BApi.file.startWatchingChangesInFileProcessorWorkspace(
           { path: this.path },
@@ -367,10 +370,12 @@ class RootEntry extends Entry {
     log("Stopping watcher", this, this.path, this._fsWatcher);
     clearInterval(this._fsWatcher);
     clearInterval(this._keepAliveInterval);
+    this._directoryObserver?.stop();
+    this._directoryObserver = undefined;
     // A pathless (virtual multi-root) entry never started the server-side watcher — and the
     // watcher is a global singleton, so calling stop here would kill a watch some other
     // explorer instance legitimately owns.
-    if (!this.path) {
+    if (!this.path || this.watchChanges !== true) {
       return;
     }
     // Best-effort. This releases server-side watcher state, so when the backend is already
@@ -394,7 +399,12 @@ class RootEntry extends Entry {
 
   public showHiddenFiles: boolean = false;
 
-  constructor(path?: string, showHiddenFiles: boolean = false) {
+  constructor(
+    path?: string,
+    showHiddenFiles: boolean = false,
+    private readonly watchChanges: boolean | "poll" = true,
+    readonly directoryPage?: ExplorerDirectoryPage,
+  ) {
     super({ path });
     this.root = this;
     this.expanded = true;

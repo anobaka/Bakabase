@@ -4,6 +4,7 @@ import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import DownloaderPage from "..";
 import GeneralTaskDetailModal from "../components/GeneralTaskDetailModal";
+import CreateDownloadTaskModal from "../components/CreateDownloadTaskModal";
 import { useDownloadTasksStore } from "@/stores/downloadTasks";
 import {
   DownloadTaskActionOnConflict,
@@ -41,7 +42,7 @@ vi.mock("@/config/env", () => ({ toAbsoluteBackendUrl: (value: string) => value 
 vi.mock("../components/Configurations", () => ({ default: () => null }));
 vi.mock("../components/TaskDetailModal", () => ({ default: () => null }));
 vi.mock("../components/BatchEditModal", () => ({ default: () => null }));
-vi.mock("../components/AddGeneralDownloadModal", () => ({ default: () => null }));
+vi.mock("../components/CreateDownloadTaskModal", () => ({ default: () => null }));
 vi.mock("../components/GeneralTaskDetailModal", () => ({ default: () => null }));
 vi.mock("../components/RequestStatistics", () => ({
   default: () => <span>request-statistics</span>,
@@ -242,6 +243,15 @@ afterEach(() => {
   useDownloadTasksStore.getState().setTasks([]);
 });
 describe("unified download center", () => {
+  it("opens the unified creation form directly without a category picker", async () => {
+    mount();
+    await screen.findByText("Gallery");
+    fireEvent.click(screen.getByText("downloader.action.createTask"));
+    expect(mocks.portal).toHaveBeenCalledExactlyOnceWith(CreateDownloadTaskModal, {
+      onCreated: expect.any(Function),
+    });
+  });
+
   it("places task creation before configuration in the header", async () => {
     mount();
     await screen.findByText("Gallery");

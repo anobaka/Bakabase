@@ -1832,21 +1832,10 @@ namespace Bakabase.Service.Controllers
                         };
                     }).ToList();
 
-                    var rand = new Random();
-
                     for (var j = 0; j < allGroups.Count; j++)
                     {
                         var group = allGroups[j];
                         var entry = group.Files.First();
-                        if (group.Files.Count == 1 && Path.GetExtension(entry).IsNullOrEmpty())
-                        {
-                            const string ext = ".iw-decompressing";
-                            var newFile = $"{entry}{ext}";
-                            System.IO.File.Move(entry, newFile);
-                            group.Files[0] = newFile;
-                            entry = newFile;
-                        }
-
                         var taskId = IwFsCompressedFile.BuildDecompressionTaskName(entry);
                         if (_taskManager.IsPending(taskId))
                         {
@@ -1871,155 +1860,29 @@ namespace Bakabase.Service.Controllers
                                     var passwordService = scope.ServiceProvider.GetRequiredService<PasswordService>();
                                     await passwordService.AddUsedTimes(group.Password!);
                                 }
-
-
-                                // var fakeDelay = rand.Next(50, 250);
-                                // for (var i = 0; i < 100; i++)
-                                // {
-                                //     await args.UpdateTask(t => t.Percentage = i + 1);
-                                //     await Task.Delay(fakeDelay, args.CancellationToken);
-                                // }
-                                //
-                                // return;
-
                                 var workingDir = Path.GetDirectoryName(entry);
                                 var targetDir = Path.Combine(workingDir,
                                     group.KeyName);
+                                // An extensionless archive already occupies the usual output path.
+                                // Keep the source name and put its members in a sibling directory.
+                                if (string.Equals(Path.GetFullPath(targetDir), Path.GetFullPath(entry), StringComparison.Ordinal))
+                                    targetDir += ".extracted";
                                 _storagePolicy.EnsurePathAllowed(targetDir);
                                 var processRegex = new Regex(@$"\d+\%");
-                                var tryPSwitch = false;
-
-                                var messageSb = new StringBuilder();
-
-                                BuildCommand:
-                                var result = await _compressedFileService.ExtractWithProgress(
-                                    entry,
-                                    targetDir,
-                                    group.Password,
-                                    usePasswordSwitch: tryPSwitch,
-                                    overwriteMode: tryPSwitch
-                                        ? CompressedFileService.OverwriteMode.SkipExisting
-                                        : CompressedFileService.OverwriteMode.None,
-                                    progressOutput: CompressedFileService.ProgressOutputTarget.StandardError,
-                                    workingDirectory: workingDir,
-                                    onStandardOutput: null,
-                                    onStandardError: async (line) =>
+                                var result = await _compressedFileService.ExtractForFileExplorerAsync(
+                                    entry, targetDir, group.Password,
+                                    onProgress: async line =>
                                     {
                                         var match = processRegex.Match(line);
-                                        if (match.Success)
-                                        {
-                                            var np = int.Parse(match.Value.TrimEnd('%'));
-                                            if (np != args.Task.Percentage)
-                                            {
-                                                await args.UpdateTask(x => x.Percentage = np);
-                                            }
-                                        }
-                                    },
-                                    args.CancellationToken);
-
-                                if (result.ExitCode == 0)
-                                {
-                                    return;
-                                }
-
-                                // 7z exit code 255 is "user break" (Ctrl+C / Break signaled).
-                                // When our CancellationToken fires it's not an unexpected error,
-                                // so let the BTask host handle it as a normal cancellation.
-                                if (result.ExitCode == 255 &&
-                                    args.CancellationToken.IsCancellationRequested)
-                                {
-                                    args.CancellationToken.ThrowIfCancellationRequested();
-                                }
-
-                                messageSb.AppendLine($"Decompression exit with code: {result.ExitCode}");
-                                if (result.StandardOutput.Length > 0)
-                                {
-                                    messageSb.AppendLine(result.StandardOutput);
-                                }
-
-                                if (result.StandardError.Length > 0)
-                                {
-                                    messageSb.AppendLine(result.StandardError);
-                                }
-
-                                var message = messageSb.ToString();
-                                var wrongPassword = message.Contains("Wrong password");
-
-                                if (wrongPassword)
-                                {
-                                    messageSb.AppendLine(
-                                        "Wrong password error occurred, cleaning bad files(0kb, etc).");
-                                    // Clean empty files
-                                    // ERROR: Wrong password : 实际异常-原结果[未检测]-正常-fa1abb4093754661b3931c03d3f1a72a-vibration-2.wav
-                                    const string prefix = "ERROR: Wrong password : ";
-                                    var badFiles = message.Split('\n',
-                                            '\r')
-                                        .Where(a => a.StartsWith(prefix))
-                                        .Select(t => Path.Combine(targetDir,
-                                            t.Replace(prefix,
-                                                    null)
-                                                .Trim()))
-                                        .ToArray();
-                                    foreach (var f in badFiles)
-                                    {
-                                        var fi = new FileInfo(f);
-                                        if (fi.Exists && fi.Length == 0)
-                                        {
-                                            fi.Delete();
-                                            messageSb.AppendLine($"Deleting {fi.FullName}");
-                                        }
-                                    }
-
-                                    // Since we've got directories from paths of files, so we must populate the paths of directories between the files and the targetDir
-                                    var directories = badFiles.Select(Path.GetDirectoryName)
-                                        .Distinct()
-                                        .SelectMany(dir =>
-                                        {
-                                            var chain = dir.Replace(targetDir,
-                                                    null)
-                                                .Split(Path.DirectorySeparatorChar,
-                                                    Path.AltDirectorySeparatorChar)
-                                                .Where(a => a.IsNotEmpty())
-                                                .ToArray();
-                                            return chain.Select((t1,
-                                                        i) =>
-                                                    Path.Combine(new[]
-                                                        {
-                                                            targetDir
-                                                        }.Concat(chain.Take(i + 1))
-                                                        .ToArray()))
-                                                .ToList();
-                                        })
-                                        .ToList();
-                                    directories.Add(targetDir);
-                                    directories = directories.OrderByDescending(t => t.Length)
-                                        .Distinct()
-                                        .ToList();
-                                    foreach (var d in directories)
-                                    {
-                                        var di = new DirectoryInfo(d);
-                                        if (di.Exists &&
-                                            di.GetFileSystemInfos()
-                                                .Length ==
-                                            0)
-                                        {
-                                            di.Delete();
-                                            messageSb.AppendLine($"Deleting {di.FullName}");
-                                        }
-                                    }
-
-                                    // Try -p switch
-                                    if (!tryPSwitch && group.Password.IsNotEmpty())
-                                    {
-                                        tryPSwitch = true;
-                                        messageSb.AppendLine("Try to use -p switch, re-decompressing");
-                                        goto BuildCommand;
-                                    }
-
-                                    throw new BTaskException(_localizer.WrongPassword(), messageSb.ToString());
-                                }
-
-                                throw new BTaskException(null, messageSb.ToString());
+                                        if (match.Success && int.TryParse(match.Value.TrimEnd('%'), out var percentage) &&
+                                            percentage != args.Task.Percentage)
+                                            await args.UpdateTask(x => x.Percentage = percentage);
+                                    }, args.CancellationToken);
+                                if (result.ExitCode == 0) return;
+                                args.CancellationToken.ThrowIfCancellationRequested();
+                                var message = $"Decompression exit with code: {result.ExitCode}\n{result.StandardOutput}\n{result.StandardError}";
+                                throw new BTaskException(message.Contains("Wrong password", StringComparison.OrdinalIgnoreCase)
+                                    ? _localizer.WrongPassword() : null, message);
                             }));
                     }
                 }

@@ -1,6 +1,7 @@
 using Bakabase.Abstractions.Components.Telemetry;
 using Bakabase.Modules.AI.Components.Cache;
 using Bakabase.Modules.AI.Components.Observation;
+using Bakabase.Modules.AI.Components.Providers.OpenAI;
 using Bakabase.Modules.AI.Models.Domain;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
@@ -40,10 +41,13 @@ public class LlmService(
             throw new InvalidOperationException($"Provider '{config.Name}' is disabled");
 
         var rawClient = llmProviderService.CreateChatClient(config, modelId);
-        var usesLocalQwenTemplate = feature == AiFeature.PostParser && PostParserLlmPolicy.UsesLocalQwenTemplate(config, modelId, rawClient);
-        if (feature == AiFeature.PostParser)
-            rawClient = PostParserLlmPolicy.ConfigureTransport(rawClient, config, modelId);
-        var client = BuildPipeline(rawClient, providerConfigId, modelId, feature, config.Kind);
+        var fileAssessment = feature == AiFeature.FileProcessor &&
+            parameters is { UseJsonResponseFormat: true, JsonResponseSchema: not null };
+        var backgroundCompletion = feature == AiFeature.PostParser || fileAssessment;
+        var usesLocalQwenTemplate = backgroundCompletion && OpenAIBackgroundCompletion.UsesLocalQwenTemplate(config, modelId, rawClient);
+        if (backgroundCompletion)
+            rawClient = OpenAIBackgroundCompletion.ConfigureTransport(rawClient, config, modelId);
+        var client = BuildPipeline(rawClient, providerConfigId, modelId, feature, config.Kind, parameters?.OnUsageRecorded);
 
         var chatOptions = new ChatOptions();
         if (parameters != null)
@@ -56,11 +60,13 @@ public class LlmService(
         if (parameters?.UseJsonResponseFormat == true)
         {
             chatOptions.ResponseFormat = usesLocalQwenTemplate && parameters.JsonResponseSchema is { } schema
-                ? new ChatResponseFormatJson(schema, "post_analysis")
+                ? new ChatResponseFormatJson(schema, fileAssessment ? "file_assessment" : "post_analysis")
                 : ChatResponseFormat.Json;
         }
 
         if (feature == AiFeature.PostParser) PostParserLlmPolicy.ApplyOptions(chatOptions, usesLocalQwenTemplate);
+        else if (fileAssessment && usesLocalQwenTemplate)
+            OpenAIBackgroundCompletion.ApplyThinking(chatOptions, enableThinking: false);
 
         return await client.GetResponseAsync(messages.ToList(), chatOptions, ct);
     }
@@ -108,6 +114,7 @@ public class LlmService(
                 ? PostParserLlmPolicy.ResolveMaxTokens(featureConfig?.MaxTokens, parametersOverride?.MaxTokens)
                 : parametersOverride?.MaxTokens ?? featureConfig?.MaxTokens,
             TopP = parametersOverride?.TopP ?? featureConfig?.TopP,
+            OnUsageRecorded = parametersOverride?.OnUsageRecorded,
             UseJsonResponseFormat = parametersOverride?.UseJsonResponseFormat ?? false,
             JsonResponseSchema = parametersOverride?.JsonResponseSchema
         };
@@ -143,9 +150,9 @@ public class LlmService(
             throw new InvalidOperationException($"Provider '{config.Name}' is disabled");
 
         var rawClient = llmProviderService.CreateChatClient(config, modelId);
-        var usesLocalQwenTemplate = feature == AiFeature.PostParser && PostParserLlmPolicy.UsesLocalQwenTemplate(config, modelId, rawClient);
+        var usesLocalQwenTemplate = feature == AiFeature.PostParser && OpenAIBackgroundCompletion.UsesLocalQwenTemplate(config, modelId, rawClient);
         if (feature == AiFeature.PostParser)
-            rawClient = PostParserLlmPolicy.ConfigureTransport(rawClient, config, modelId);
+            rawClient = OpenAIBackgroundCompletion.ConfigureTransport(rawClient, config, modelId);
         // For streaming, skip cache but keep observation
         if (telemetry != null)
             rawClient = new ProductTelemetryChatClient(rawClient, telemetry, telemetryActor, config.Kind, feature);
@@ -169,7 +176,7 @@ public class LlmService(
     }
 
     private IChatClient BuildPipeline(IChatClient rawClient, int providerConfigId, string modelId, AiFeature? feature,
-        AiProviderKind providerKind)
+        AiProviderKind providerKind, Action<long>? onUsageRecorded)
     {
         var opts = aiOptions.CurrentValue;
         IChatClient client = rawClient;
@@ -179,7 +186,7 @@ public class LlmService(
 
         // Observe actual provider calls; the outer cache bypasses inference on a hit.
         client = new ObservationChatClient(client, usageService, providerConfigId, modelId, feature?.ToString(),
-            opts.AuditLogRequestContent);
+            opts.AuditLogRequestContent, onUsageRecorded);
 
         // Cache layer
         if (opts.EnableCache)

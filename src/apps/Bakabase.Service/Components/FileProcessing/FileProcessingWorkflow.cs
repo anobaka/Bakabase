@@ -64,7 +64,7 @@ public sealed class FileProcessingPlanTrigger : IWorkflowTrigger
         catch (JsonException ex) { throw new InvalidOperationException("The processing plan is not valid JSON.", ex); }
         if (!System.IO.Directory.Exists(input.Directory)) throw new InvalidOperationException("The selected directory does not exist on the server.");
         var root = Path.GetFullPath(input.Directory);
-        var files = input.Files.Count == 0 ? FileProcessingFiles.Enumerate(root) :
+        var files = input.Files.Count == 0 ? FileProcessingFiles.Enumerate(root, excludeManagedWorkspaces: true) :
             input.Files.Select(f => FileProcessingFiles.Within(f, root)).ToList();
         if (files.Count == 0 || files.Any(f => !File.Exists(f)))
             throw new InvalidOperationException("Select at least one existing file.");

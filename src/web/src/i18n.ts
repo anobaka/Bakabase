@@ -2,6 +2,7 @@ import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 
 // Modular imports - English
+import enAcquire from "@/locales/en/components/acquire.json";
 import enCloudDownload from "@/locales/en/pages/cloudDownload.json";
 import enCommon from "@/locales/en/common.json";
 import enValidation from "@/locales/en/validation.json";
@@ -36,6 +37,7 @@ import enThirdPartyConfiguration from "@/locales/en/pages/thirdPartyConfiguratio
 import enExtensionGroup from "@/locales/en/pages/extensionGroup.json";
 import enText from "@/locales/en/pages/text.json";
 import enPostParser from "@/locales/en/pages/postParser.json";
+import enPostMedia from "@/locales/en/components/postMedia.json";
 import enPathMarks from "@/locales/en/pages/pathMarks.json";
 import enPathMarkConfig from "@/locales/en/pages/pathMarkConfig.json";
 import enComparison from "@/locales/en/pages/comparison.json";
@@ -46,8 +48,12 @@ import enHealthScore from "@/locales/en/pages/healthScore.json";
 import enAvSources from "@/locales/en/pages/avSources.json";
 import enSubscription from "@/locales/en/pages/subscription.json";
 import enWorkflow from "@/locales/en/pages/workflow.json";
+import enWorkflowArtifactBrowser from "@/locales/en/pages/workflowArtifactBrowser.json";
+import enWorkflowFileRecovery from "@/locales/en/pages/workflowFileRecovery.json";
+import enWorkflowProcessingEditor from "@/locales/en/pages/workflowProcessingEditor.json";
 import enWorkflowTriggers from "@/locales/en/pages/workflowTriggers.json";
 import enAcquisition from "@/locales/en/pages/acquisition.json";
+import enAcquisitionRecords from "@/locales/en/pages/acquisitionRecords.json";
 import enCollection from "@/locales/en/pages/collection.json";
 import enCollectionMemo from "@/locales/en/pages/collectionMemo.json";
 import enFederation from "@/locales/en/pages/federation.json";
@@ -86,6 +92,7 @@ import enNotices from "@/locales/en/components/notices.json";
 import enNavigationEditor from "@/locales/en/components/navigationEditor.json";
 
 // New modular imports - Chinese
+import cnAcquire from "@/locales/cn/components/acquire.json";
 import cnCloudDownload from "@/locales/cn/pages/cloudDownload.json";
 import cnCommon from "@/locales/cn/common.json";
 import cnValidation from "@/locales/cn/validation.json";
@@ -120,6 +127,7 @@ import cnThirdPartyConfiguration from "@/locales/cn/pages/thirdPartyConfiguratio
 import cnExtensionGroup from "@/locales/cn/pages/extensionGroup.json";
 import cnText from "@/locales/cn/pages/text.json";
 import cnPostParser from "@/locales/cn/pages/postParser.json";
+import cnPostMedia from "@/locales/cn/components/postMedia.json";
 import cnPathMarks from "@/locales/cn/pages/pathMarks.json";
 import cnPathMarkConfig from "@/locales/cn/pages/pathMarkConfig.json";
 import cnComparison from "@/locales/cn/pages/comparison.json";
@@ -130,8 +138,12 @@ import cnHealthScore from "@/locales/cn/pages/healthScore.json";
 import cnAvSources from "@/locales/cn/pages/avSources.json";
 import cnSubscription from "@/locales/cn/pages/subscription.json";
 import cnWorkflow from "@/locales/cn/pages/workflow.json";
+import cnWorkflowArtifactBrowser from "@/locales/cn/pages/workflowArtifactBrowser.json";
+import cnWorkflowFileRecovery from "@/locales/cn/pages/workflowFileRecovery.json";
+import cnWorkflowProcessingEditor from "@/locales/cn/pages/workflowProcessingEditor.json";
 import cnWorkflowTriggers from "@/locales/cn/pages/workflowTriggers.json";
 import cnAcquisition from "@/locales/cn/pages/acquisition.json";
+import cnAcquisitionRecords from "@/locales/cn/pages/acquisitionRecords.json";
 import cnCollection from "@/locales/cn/pages/collection.json";
 import cnCollectionMemo from "@/locales/cn/pages/collectionMemo.json";
 import cnFederation from "@/locales/cn/pages/federation.json";
@@ -172,6 +184,7 @@ import cnNavigationEditor from "@/locales/cn/components/navigationEditor.json";
 // Merge all English resources
 const enResources = {
   ...enCloudDownload,
+  ...enAcquire,
   ...enCommon,
   ...enValidation,
   ...enErrors,
@@ -204,6 +217,7 @@ const enResources = {
   ...enExtensionGroup,
   ...enText,
   ...enPostParser,
+  ...enPostMedia,
   ...enPathMarks,
   ...enPathMarkConfig,
   ...enComparison,
@@ -214,8 +228,12 @@ const enResources = {
   ...enAvSources,
   ...enSubscription,
   ...enWorkflow,
+  ...enWorkflowArtifactBrowser,
+  ...enWorkflowFileRecovery,
+  ...enWorkflowProcessingEditor,
   ...enWorkflowTriggers,
   ...enAcquisition,
+  ...enAcquisitionRecords,
   ...enCollection,
   ...enCollectionMemo,
   ...enFederation,
@@ -256,6 +274,7 @@ const enResources = {
 // Merge all Chinese resources
 const cnResources = {
   ...cnCloudDownload,
+  ...cnAcquire,
   ...cnCommon,
   ...cnValidation,
   ...cnErrors,
@@ -288,6 +307,7 @@ const cnResources = {
   ...cnExtensionGroup,
   ...cnText,
   ...cnPostParser,
+  ...cnPostMedia,
   ...cnPathMarks,
   ...cnPathMarkConfig,
   ...cnComparison,
@@ -298,8 +318,12 @@ const cnResources = {
   ...cnAvSources,
   ...cnSubscription,
   ...cnWorkflow,
+  ...cnWorkflowArtifactBrowser,
+  ...cnWorkflowFileRecovery,
+  ...cnWorkflowProcessingEditor,
   ...cnWorkflowTriggers,
   ...cnAcquisition,
+  ...cnAcquisitionRecords,
   ...cnCollection,
   ...cnCollectionMemo,
   ...cnFederation,

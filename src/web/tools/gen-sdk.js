@@ -40,7 +40,9 @@ const BASE_RESPONSE_TYPE = `type BaseResponse = {
 `;
 
 const SHOW_ERROR_TOAST = `  /** Set false when the caller presents errors inline; callbacks control API business errors. */
-  showErrorToast?: boolean | ((response: BaseResponse) => boolean);`;
+  showErrorToast?: boolean | ((response: BaseResponse) => boolean);
+  /** Keep authorization links and other private response data out of development logs. */
+  sensitiveResponse?: boolean;`;
 
 function buildUrlBuilders(content) {
   const methodRegex =
@@ -203,6 +205,7 @@ async function buildApiTs() {
   );
 
   content = content.replace("}: FullRequestParams): Promise<T> => {", "  } = fullRequestParams;");
+  content = content.replace("    ...params\n", "    sensitiveResponse,\n    ...params\n");
 
   // Keep the effective signal, including SDK cancel tokens and security-worker overrides,
   // so normal cancellation remains observable to callers without a failure notification.
@@ -280,7 +283,7 @@ async function buildApiTs() {
   protected processResponseData = <T = any>(response: BaseResponse, params: FullRequestParams): T => {
     // Check if the response has a code property (API response structure)
     if (response && typeof response === "object" && "code" in response) {
-      log('[response]', params.path, response)
+      if (!params.sensitiveResponse) log('[response]', params.path, response)
       switch (response.code) {
         case 0:
           break;

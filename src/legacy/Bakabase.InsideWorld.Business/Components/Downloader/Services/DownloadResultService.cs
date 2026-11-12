@@ -9,16 +9,18 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Infrastructures.Components.App;
+using Bakabase.InsideWorld.Business.Components.Artifacts;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
 using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.Downloader.Components;
+using Bakabase.Modules.Workflow.Artifacts;
 using Microsoft.EntityFrameworkCore;
 
 namespace Bakabase.InsideWorld.Business.Components.Downloader.Services;
 
 /// <summary>Stores source output independently of the source queue and workflow execution.</summary>
-public sealed class DownloadResultService
+public sealed partial class DownloadResultService
 {
     private readonly BakabaseDbContext _db;
     private readonly Func<string> _appData;
@@ -116,18 +118,10 @@ public sealed class DownloadResultService
         var paths = files.Select(System.IO.Path.GetFullPath).Distinct(StringComparer.Ordinal)
             .OrderBy(x => x, StringComparer.Ordinal).ToArray();
         if (paths.Length == 0) throw new ArgumentException("A local-files result must contain at least one file.", nameof(files));
-        var entries = new List<string[]>();
-        foreach (var path in paths)
-        {
-            var relative = System.IO.Path.GetRelativePath(root, path);
-            if (System.IO.Path.IsPathRooted(relative) || relative == ".." ||
-                relative.StartsWith(".." + System.IO.Path.DirectorySeparatorChar, StringComparison.Ordinal))
-                throw new ArgumentException("Every result file must be inside its download directory.", nameof(files));
-            await using var stream = File.OpenRead(path);
-            var hash = Convert.ToHexString(await SHA256.HashDataAsync(stream, ct)).ToLowerInvariant();
-            entries.Add([relative.Replace('\\', '/'), hash]);
-        }
-        var fingerprint = Hash(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(entries)));
+        ArtifactManifest manifest;
+        try { manifest = await ArtifactManifestFiles.CaptureAsync(root, paths, ct); }
+        catch (InvalidDataException error) { throw new ArgumentException(error.Message, nameof(files), error); }
+        var fingerprint = manifest.Fingerprint;
         return await RecordAsync(downloadTaskId, thirdPartyId, sourceKey, name, DownloadResultKind.LocalFiles,
             root, root, paths, fingerprint, workflowDefinitionId, ct);
     }

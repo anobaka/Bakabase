@@ -77,6 +77,7 @@ public class AppStorageUsageTests
             Assert.IsNull(AppDataStorage.GetCategoryPath(_root, category), category);
         Assert.AreEqual("other", AppDataStorage.GetCategoryId("acquisition-old/payload"));
         Assert.AreEqual("other", AppDataStorage.GetCategoryId("data/covers-extra/payload"));
+        Assert.AreEqual("fileProcessing", AppDataStorage.GetCategoryId("artifact-workspaces/locations/operation.json"));
         Assert.IsFalse(Directory.Exists(AppDataStorage.Acquisition.GetPath(_root)), "Resolving paths must not create them.");
         Assert.AreEqual(AppDataStorage.Locations.Select(l => l.RelativePath).Distinct().Count(), AppDataStorage.Locations.Count);
         foreach (var location in AppDataStorage.Locations)

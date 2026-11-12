@@ -51,7 +51,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                 deferIfNoTorrent, () => manager.MarkNoTorrentAsync(task.Id),
                 () => manager.MarkTorrentFoundAsync(task.Id),
                 () => manager.MarkTorrentDownloadedAsync(task.Id),
-                options.DownloadResultWorkflowId, options.EffectiveDownloadMode, options.SaveTorrentFile, options.FallbackToDirect);
+                options.DownloadResultWorkflowId, options.EffectiveDownloadMode, options.SaveTorrentFile, options.FallbackToDirect,
+                options.NoTorrentAction);
         }
     }
 }

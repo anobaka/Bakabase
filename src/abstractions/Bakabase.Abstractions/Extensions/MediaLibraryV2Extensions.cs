@@ -30,10 +30,7 @@ public static class MediaLibraryV2Extensions
         {
             Id = dbModel.Id,
             Name = dbModel.Name,
-            Paths = string.IsNullOrEmpty(dbModel.Paths)
-                ? []
-                : dbModel.Paths.Split(PathListSeparator, StringSplitOptions.RemoveEmptyEntries).Distinct()
-                    .OrderBy(d => d, StringComparer.OrdinalIgnoreCase).ToList(),
+            Paths = ParsePaths(dbModel.Paths),
             TemplateId = dbModel.TemplateId,
             ResourceCount = dbModel.ResourceCount,
             Color = dbModel.Color,
@@ -54,6 +51,10 @@ public static class MediaLibraryV2Extensions
 
         return domain;
     }
+
+    public static List<string> ParsePaths(string? paths) => string.IsNullOrEmpty(paths) ? [] :
+        paths.Split(PathListSeparator, StringSplitOptions.RemoveEmptyEntries).Distinct()
+            .OrderBy(d => d, StringComparer.OrdinalIgnoreCase).ToList();
 
     public static void SetPaths(this MediaLibraryV2DbModel model, IEnumerable<string> paths)
     {

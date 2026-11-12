@@ -1,8 +1,14 @@
-import type { Api } from "@/sdk/Api";
+import type {
+  Api,
+  BakabaseModulesWorkflowAbstractionsModelsDomainWorkflowSourceRef,
+} from "@/sdk/Api";
 import type { PostParserTask } from "@/core/models/PostParserTask";
 import type { PreviewStoredPostParserTask } from "./fixtures";
 
 import { completeResult, createFixtures, createGroupedFixture, groupedResult } from "./fixtures";
+import { getDownloadInfo } from "@/pages/post-parser/results";
+import { buildTaskSearchText } from "@/pages/post-parser/search";
+import { getTaskDisplayStatus, summarizeTaskStatuses } from "@/pages/post-parser/taskStatus";
 
 import {
   PostParserSource,
@@ -58,6 +64,7 @@ const options = {
     automaticallyParsingPosts: false,
     postParserMaxConcurrency: 10,
     postParserAiMaxConcurrency: 1,
+    postParserAcquisition: { enabled: false, outputDirectory: "" },
   },
   soulPlus: {
     autoBuyThreshold: 5,
@@ -227,6 +234,55 @@ const visible = () =>
     )
     .map(withQuote);
 const publish = () => usePostParserTasksStore.getState().setTasks(clone(visible()));
+const previewStatus = (task: PostParserTask) =>
+  getTaskDisplayStatus(
+    task,
+    useBTasksStore
+      .getState()
+      .tasks.find((live) => live.id === `workflow.run.${task.workflowRunId}`),
+  );
+const searchTasks = (
+  input: {
+    pageIndex?: number;
+    pageSize?: number;
+    keyword?: string;
+    status?: string;
+    locateTaskId?: number;
+  } = {},
+) => {
+  const all = visible().sort((a, b) => a.id - b.id);
+  const summary = summarizeTaskStatuses(all.map(previewStatus));
+  const keyword = input.keyword?.trim().toLocaleLowerCase();
+  const matches = all.filter(
+    (task) =>
+      (!keyword || buildTaskSearchText(task).includes(keyword)) &&
+      (!input.status || input.status === "all" || previewStatus(task).group === input.status),
+  );
+  const pageSize = Math.max(1, Math.min(200, input.pageSize || 20));
+  const location =
+    input.locateTaskId == null ? -1 : matches.findIndex((task) => task.id === input.locateTaskId);
+  const pageIndex =
+    location >= 0
+      ? Math.floor(location / pageSize) + 1
+      : Math.min(
+          Math.max(1, input.pageIndex || 1),
+          Math.max(1, Math.ceil(matches.length / pageSize)),
+        );
+  return ok({
+    items: matches.slice((pageIndex - 1) * pageSize, pageIndex * pageSize),
+    pageIndex,
+    pageSize,
+    totalCount: matches.length,
+    globalTotal: all.length,
+    statusCounts: summary.counts,
+    runningStages: Object.fromEntries(summary.stages),
+    startableCount: all.filter(isBatchEligible).length,
+    pendingHandoffCount: all.filter((task) =>
+      ["queued", "prepared"].includes(task.acquisitionHandoff?.status ?? ""),
+    ).length,
+    runningTaskId: all.find((task) => previewStatus(task).canLocate)?.id,
+  });
+};
 const announce = (message: string) =>
   window.dispatchEvent(new CustomEvent("post-parser-preview-action", { detail: message }));
 const update = (id: number, transform: (task: PostParserTask) => PostParserTask) => {
@@ -682,6 +738,47 @@ const mockApi = {
   postParser: group(
     {
       getAllPostParserTasks: () => ok(visible()),
+      searchPostParserTasks: searchTasks,
+      getFailedPostParserTaskSelection: () =>
+        ok({
+          tasks: visible()
+            .filter((task) => previewStatus(task).group === "failed")
+            .map((task) => ({
+              taskId: task.id,
+              revision: task.revision ?? 0,
+              workflowRunId: task.workflowRunId ?? undefined,
+            })),
+        }),
+      reParseFailedPostParserTasks: async (input: {
+        tasks: { taskId: number; revision: number; workflowRunId?: number }[];
+      }) => {
+        const items = [];
+        for (const snapshot of input.tasks) {
+          const task = visible().find((record) => record.id === snapshot.taskId);
+          if (
+            !task ||
+            (task.revision ?? 0) !== snapshot.revision ||
+            task.workflowRunId !== snapshot.workflowRunId ||
+            previewStatus(task).group !== "failed"
+          )
+            items.push({ taskId: snapshot.taskId, status: "skipped" });
+          else {
+            await retry(snapshot.taskId, true);
+            items.push({
+              taskId: snapshot.taskId,
+              status: "queued",
+              workflowRunId: records.find((row) => row.id === snapshot.taskId)?.workflowRunId,
+            });
+          }
+        }
+        return ok({
+          requestedCount: input.tasks.length,
+          queuedCount: items.filter((item) => item.status === "queued").length,
+          skippedCount: items.filter((item) => item.status === "skipped").length,
+          failedCount: 0,
+          items,
+        });
+      },
       searchPostParserWorkflowRuns: searchRuns,
       retryPostParserTaskWorkflow: (id: number) => retry(id),
       reParsePostParserTask: (id: number) => retry(id, true),
@@ -946,6 +1043,49 @@ const mockApi = {
       getAiProviderLlmModels: () => ok([{ id: "preview-model", displayName: "Preview model" }]),
     },
     "ai",
+  ),
+  processingPlans: group(
+    {
+      getSourceProcessingPlan: (
+        source: BakabaseModulesWorkflowAbstractionsModelsDomainWorkflowSourceRef,
+      ) => {
+        const task = records.find(
+          (record) =>
+            !record.isDeleted &&
+            source.module === "postParser" &&
+            source.entityKind === "task" &&
+            String(record.id) === source.entityId,
+        );
+        const sourceChanged = !!task && String(task.revision) !== source.revision;
+        const index = Number(source.resultKey);
+        const resource =
+          Number.isSafeInteger(index) && index >= 0 && String(index) === source.resultKey && task
+            ? getDownloadInfo(task)?.resources?.[index]
+            : undefined;
+        const sourceAvailable = !!resource && !sourceChanged && !!task && !isActive(task);
+        const originalPlan = sourceAvailable ? (resource?.extraction ?? undefined) : undefined;
+
+        return ok({
+          source,
+          sourceHash: sourceAvailable
+            ? `preview:${source.module}:${source.entityKind}:${source.entityId}:${source.revision}:${source.resultKey}`
+            : "",
+          revision: 0,
+          originalPlan,
+          effectivePlan: originalPlan,
+          effectiveRevision: 0,
+          history: [],
+          hasStaleRevisions: false,
+          sourceAvailable,
+          sourceProblem: sourceAvailable
+            ? undefined
+            : sourceChanged
+              ? "PROCESSING_PLAN_SOURCE_CHANGED"
+              : "PROCESSING_PLAN_SOURCE_UNAVAILABLE",
+        });
+      },
+    },
+    "processingPlans",
   ),
   tool: group({ getTlsPresets: () => Promise.resolve([]) }, "tool"),
 };

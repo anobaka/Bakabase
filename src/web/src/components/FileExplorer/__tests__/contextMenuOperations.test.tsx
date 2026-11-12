@@ -13,14 +13,16 @@ import CreateDirectoryModal from "../components/CreateDirectoryModal";
 
 import { EntryStatus } from "@/core/models/FileExplorer/Entry";
 import { IwFsType } from "@/sdk/constants";
+import { useFileExplorerClipboardStore } from "@/stores/fileExplorerClipboard";
 
-const { createPortal, renameFile, removeFiles } = vi.hoisted(() => ({
+const { createPortal, renameFile, removeFiles, copyEntries, moveEntries } = vi.hoisted(() => ({
   createPortal: vi.fn(),
   renameFile: vi.fn(),
   removeFiles: vi.fn(),
+  copyEntries: vi.fn(), moveEntries: vi.fn(),
 }));
 
-vi.mock("@/sdk/BApi", () => ({ default: { file: { renameFile, removeFiles } } }));
+vi.mock("@/sdk/BApi", () => ({ default: { file: { renameFile, removeFiles, copyEntries, moveEntries } } }));
 vi.mock("@/components/utils", () => ({
   buildLogger: () => () => {},
   useTraceUpdate: () => {},
@@ -96,10 +98,48 @@ beforeEach(() => {
   vi.clearAllMocks();
   renameFile.mockResolvedValue({ code: 0 });
   removeFiles.mockResolvedValue({ code: 0 });
+  copyEntries.mockResolvedValue({ code: 0 }); moveEntries.mockResolvedValue({ code: 0 });
+  useFileExplorerClipboardStore.getState().clear();
 });
 afterEach(cleanup);
 
 describe("filesystem context menu operations", () => {
+  it.each(["copy", "cut"])("offers visible %s and paste using the existing filesystem commands", async mode => {
+    const root = entry("/parent", IwFsType.Directory, { expand: vi.fn().mockResolvedValue(undefined) });
+    const { rerender } = render(<ContextMenu capabilities={["move"]} root={root} selectedEntries={[entry("/source/picture.jpg")]} />);
+    fireEvent.click(screen.getByRole("menuitem", { name: `fileExplorer.contextMenu.${mode}Files` }));
+    expect(useFileExplorerClipboardStore.getState()).toMatchObject({ paths: ["/source/picture.jpg"], mode });
+    rerender(<ContextMenu capabilities={["move"]} root={root} selectedEntries={[]} />);
+    fireEvent.click(screen.getByRole("menuitem", { name: "fileExplorer.contextMenu.pasteFiles" }));
+    await waitFor(() => expect(mode === "copy" ? copyEntries : moveEntries).toHaveBeenCalledWith({ destDir: "/parent", entryPaths: ["/source/picture.jpg"] }));
+    await waitFor(() => expect(root.expand).toHaveBeenCalledWith(true));
+    expect(useFileExplorerClipboardStore.getState().paths).toEqual(mode === "copy" ? ["/source/picture.jpg"] : []);
+  });
+  it("keeps cut files in the clipboard after a failed paste and forbids paste in read-only views", async () => {
+    useFileExplorerClipboardStore.getState().cut(["/source/file"]);
+    const root = entry("/parent", IwFsType.Directory);
+    const { rerender } = render(<ContextMenu capabilities={["enter-directory"]} root={root} selectedEntries={[]} />);
+    expect(screen.queryByRole("menuitem", { name: "fileExplorer.contextMenu.pasteFiles" })).toBeNull();
+    moveEntries.mockResolvedValue({ code: 1 });
+    rerender(<ContextMenu capabilities={["move"]} root={root} selectedEntries={[]} />);
+    fireEvent.click(screen.getByRole("menuitem", { name: "fileExplorer.contextMenu.pasteFiles" }));
+    await waitFor(() => expect(moveEntries).toHaveBeenCalled());
+    expect(useFileExplorerClipboardStore.getState().paths).toEqual(["/source/file"]);
+  });
+  it("keeps a read-only browser context free of rename and native file-manager actions", () => {
+    render(
+      <ContextMenu
+        capabilities={["enter-directory"]}
+        selectedEntries={[entry("/parent/file.jpg")]}
+      />,
+    );
+    expect(
+      screen.queryByRole("menuitem", { name: /fileExplorer.contextMenu.batchRename/ }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("menuitem", { name: "fileExplorer.contextMenu.openInFileManager" }),
+    ).toBeNull();
+  });
   it("opens the same inline rename editor as F2 and sends the complete new filename", async () => {
     const ref = createRef<EditableFileNameRef>();
     const selected = entry("/parent/photo.jpg", IwFsType.Image, {

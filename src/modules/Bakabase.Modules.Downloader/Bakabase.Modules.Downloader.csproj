@@ -6,6 +6,7 @@
     <LangVersion>latest</LangVersion>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="../../abstractions/Bakabase.Abstractions/Bakabase.Abstractions.csproj" />
     <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.8" />
     <!-- First upstream release accepting hybrid torrents with final-file padding (MonoTorrent #688). -->
     <PackageReference Include="MonoTorrent" Version="3.0.3-alpha.unstable.rev0024" />

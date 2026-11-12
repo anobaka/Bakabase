@@ -8,6 +8,7 @@ using Bakabase.InsideWorld.Business.Components.PostParser.Workflow;
 using Bakabase.InsideWorld.Business;
 using Bakabase.Service.Components.Acquisition;
 using Bakabase.Service.Components.RemoteAccess;
+using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Models.ResponseModels;
 using Microsoft.AspNetCore.Mvc;
@@ -51,10 +52,19 @@ public class PostParserAcquisitionController(PostParserAcquisitionService servic
     [HttpPost("~/post-parser/task/{id:int}/retry")]
     [RemoteAccessible]
     [SwaggerOperation(OperationId = "RetryPostParserTaskWorkflow")]
-    public async Task<BaseResponse> Retry(int id, [FromServices] IPostParserTaskService tasks)
+    public async Task<BaseResponse> Retry(int id,
+        [FromServices] PostParserWorkflowService<BakabaseDbContext> workflow, CancellationToken ct,
+        [FromQuery] int? expectedRevision = null, [FromQuery] int? expectedRunId = null,
+        [FromQuery] int? expectedStepIndex = null, [FromQuery] WorkflowRunStatus? expectedStatus = null,
+        [FromQuery] int? expectedDecisionVersion = null)
     {
-        await tasks.Retry(id);
-        return BaseResponseBuilder.Ok;
+        try
+        {
+            await workflow.RetryAsync(id, ct, expectedRevision, expectedRunId, expectedStepIndex, expectedStatus, expectedDecisionVersion);
+            return BaseResponseBuilder.Ok;
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
+        { return BaseResponseBuilder.BuildBadRequest(ex.Message); }
     }
 
     [HttpPost]

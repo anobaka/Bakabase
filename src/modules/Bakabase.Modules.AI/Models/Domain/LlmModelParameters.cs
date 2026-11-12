@@ -4,6 +4,10 @@ namespace Bakabase.Modules.AI.Models.Domain;
 
 public record LlmModelParameters
 {
+    /// <summary>Optional in-process receipt for the exact provider call. Cache hits do not create a usage log.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    [Newtonsoft.Json.JsonIgnore]
+    public Action<long>? OnUsageRecorded { get; init; }
     public float? Temperature { get; init; }
     public int? MaxTokens { get; init; }
     public float? TopP { get; init; }

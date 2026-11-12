@@ -808,6 +808,21 @@ export const ExHentaiNamingFieldsLabel: Record<ExHentaiNamingFields, string> = {
   [ExHentaiNamingFields.Extension]: 'Extension'
 };
 
+export enum ExHentaiNoTorrentAction {
+  DirectDownload = 1,
+  Fail = 2
+}
+
+export const exHentaiNoTorrentActions = [
+  { label: 'DirectDownload', value: ExHentaiNoTorrentAction.DirectDownload },
+  { label: 'Fail', value: ExHentaiNoTorrentAction.Fail }
+] as const;
+
+export const ExHentaiNoTorrentActionLabel: Record<ExHentaiNoTorrentAction, string> = {
+  [ExHentaiNoTorrentAction.DirectDownload]: 'DirectDownload',
+  [ExHentaiNoTorrentAction.Fail]: 'Fail'
+};
+
 export enum CienDownloadTaskType {
   Creator = 1,
   Following = 2,
@@ -1235,6 +1250,18 @@ export const AppNotificationSeverityLabel: Record<AppNotificationSeverity, strin
   [AppNotificationSeverity.Success]: 'Success',
   [AppNotificationSeverity.Warning]: 'Warning',
   [AppNotificationSeverity.Error]: 'Error'
+};
+
+export enum ArchiveOpenMode {
+  SevenZipParser = 1
+}
+
+export const archiveOpenModes = [
+  { label: 'SevenZipParser', value: ArchiveOpenMode.SevenZipParser }
+] as const;
+
+export const ArchiveOpenModeLabel: Record<ArchiveOpenMode, string> = {
+  [ArchiveOpenMode.SevenZipParser]: 'SevenZipParser'
 };
 
 export enum BTaskDependencyFailurePolicy {
@@ -2248,6 +2275,54 @@ export const WellKnownTextTypeLabel: Record<WellKnownTextType, string> = {
   [WellKnownTextType.Language]: 'Language'
 };
 
+export enum ZipFileNameCodePage {
+  DosLatin = 437,
+  JapaneseShiftJis = 932,
+  SimplifiedChineseGbk = 936,
+  TraditionalChineseBig5 = 950,
+  Utf8 = 65001
+}
+
+export const zipFileNameCodePages = [
+  { label: 'DosLatin', value: ZipFileNameCodePage.DosLatin },
+  { label: 'JapaneseShiftJis', value: ZipFileNameCodePage.JapaneseShiftJis },
+  { label: 'SimplifiedChineseGbk', value: ZipFileNameCodePage.SimplifiedChineseGbk },
+  { label: 'TraditionalChineseBig5', value: ZipFileNameCodePage.TraditionalChineseBig5 },
+  { label: 'Utf8', value: ZipFileNameCodePage.Utf8 }
+] as const;
+
+export const ZipFileNameCodePageLabel: Record<ZipFileNameCodePage, string> = {
+  [ZipFileNameCodePage.DosLatin]: 'DosLatin',
+  [ZipFileNameCodePage.JapaneseShiftJis]: 'JapaneseShiftJis',
+  [ZipFileNameCodePage.SimplifiedChineseGbk]: 'SimplifiedChineseGbk',
+  [ZipFileNameCodePage.TraditionalChineseBig5]: 'TraditionalChineseBig5',
+  [ZipFileNameCodePage.Utf8]: 'Utf8'
+};
+
+export enum ZipPasswordCodePage {
+  DosLatin = 437,
+  JapaneseShiftJis = 932,
+  SimplifiedChineseGbk = 936,
+  TraditionalChineseBig5 = 950,
+  Utf8 = 65001
+}
+
+export const zipPasswordCodePages = [
+  { label: 'DosLatin', value: ZipPasswordCodePage.DosLatin },
+  { label: 'JapaneseShiftJis', value: ZipPasswordCodePage.JapaneseShiftJis },
+  { label: 'SimplifiedChineseGbk', value: ZipPasswordCodePage.SimplifiedChineseGbk },
+  { label: 'TraditionalChineseBig5', value: ZipPasswordCodePage.TraditionalChineseBig5 },
+  { label: 'Utf8', value: ZipPasswordCodePage.Utf8 }
+] as const;
+
+export const ZipPasswordCodePageLabel: Record<ZipPasswordCodePage, string> = {
+  [ZipPasswordCodePage.DosLatin]: 'DosLatin',
+  [ZipPasswordCodePage.JapaneseShiftJis]: 'JapaneseShiftJis',
+  [ZipPasswordCodePage.SimplifiedChineseGbk]: 'SimplifiedChineseGbk',
+  [ZipPasswordCodePage.TraditionalChineseBig5]: 'TraditionalChineseBig5',
+  [ZipPasswordCodePage.Utf8]: 'Utf8'
+};
+
 export enum TextProcessingOperation {
   Delete = 1,
   SetWithFixedValue = 2,
@@ -3230,7 +3305,12 @@ export enum ThirdPartyId {
   Vndb = 13,
   BaiduNetdisk = 14,
   GoogleDrive = 15,
-  Gofile = 16
+  Gofile = 16,
+  PikPak = 17,
+  OneDrive = 18,
+  Pixeldrain = 19,
+  Mega = 20,
+  TeraBox = 21
 }
 
 export const thirdPartyIds = [
@@ -3249,7 +3329,12 @@ export const thirdPartyIds = [
   { label: 'Vndb', value: ThirdPartyId.Vndb },
   { label: 'BaiduNetdisk', value: ThirdPartyId.BaiduNetdisk },
   { label: 'GoogleDrive', value: ThirdPartyId.GoogleDrive },
-  { label: 'Gofile', value: ThirdPartyId.Gofile }
+  { label: 'Gofile', value: ThirdPartyId.Gofile },
+  { label: 'PikPak', value: ThirdPartyId.PikPak },
+  { label: 'OneDrive', value: ThirdPartyId.OneDrive },
+  { label: 'Pixeldrain', value: ThirdPartyId.Pixeldrain },
+  { label: 'Mega', value: ThirdPartyId.Mega },
+  { label: 'TeraBox', value: ThirdPartyId.TeraBox }
 ] as const;
 
 export const ThirdPartyIdLabel: Record<ThirdPartyId, string> = {
@@ -3268,7 +3353,12 @@ export const ThirdPartyIdLabel: Record<ThirdPartyId, string> = {
   [ThirdPartyId.Vndb]: 'Vndb',
   [ThirdPartyId.BaiduNetdisk]: 'BaiduNetdisk',
   [ThirdPartyId.GoogleDrive]: 'GoogleDrive',
-  [ThirdPartyId.Gofile]: 'Gofile'
+  [ThirdPartyId.Gofile]: 'Gofile',
+  [ThirdPartyId.PikPak]: 'PikPak',
+  [ThirdPartyId.OneDrive]: 'OneDrive',
+  [ThirdPartyId.Pixeldrain]: 'Pixeldrain',
+  [ThirdPartyId.Mega]: 'Mega',
+  [ThirdPartyId.TeraBox]: 'TeraBox'
 };
 
 export enum PasswordSearchOrder {
@@ -3380,6 +3470,24 @@ export const ResourceAdditionalItemLabel: Record<ResourceAdditionalItem, string>
   [ResourceAdditionalItem.PlayableItem]: 'PlayableItem',
   [ResourceAdditionalItem.CollectionName]: 'CollectionName',
   [ResourceAdditionalItem.All]: 'All'
+};
+
+export enum PythonRuntimeMode {
+  Managed = 0,
+  External = 1,
+  Conda = 2
+}
+
+export const pythonRuntimeModes = [
+  { label: 'Managed', value: PythonRuntimeMode.Managed },
+  { label: 'External', value: PythonRuntimeMode.External },
+  { label: 'Conda', value: PythonRuntimeMode.Conda }
+] as const;
+
+export const PythonRuntimeModeLabel: Record<PythonRuntimeMode, string> = {
+  [PythonRuntimeMode.Managed]: 'Managed',
+  [PythonRuntimeMode.External]: 'External',
+  [PythonRuntimeMode.Conda]: 'Conda'
 };
 
 export enum CaptchaType {
@@ -4249,462 +4357,6 @@ export const EnhancerTargetOptionsItemLabel: Record<EnhancerTargetOptionsItem, s
   [EnhancerTargetOptionsItem.CoverSelectOrder]: 'CoverSelectOrder'
 };
 
-export enum AcquisitionRunState {
-  Completed = 1,
-  Waiting = 2,
-  Failed = 3
-}
-
-export const acquisitionRunStates = [
-  { label: 'Completed', value: AcquisitionRunState.Completed },
-  { label: 'Waiting', value: AcquisitionRunState.Waiting },
-  { label: 'Failed', value: AcquisitionRunState.Failed }
-] as const;
-
-export const AcquisitionRunStateLabel: Record<AcquisitionRunState, string> = {
-  [AcquisitionRunState.Completed]: 'Completed',
-  [AcquisitionRunState.Waiting]: 'Waiting',
-  [AcquisitionRunState.Failed]: 'Failed'
-};
-
-export enum PlacementConflictPolicy {
-  Rename = 1,
-  Merge = 2,
-  Ask = 3
-}
-
-export const placementConflictPolicies = [
-  { label: 'Rename', value: PlacementConflictPolicy.Rename },
-  { label: 'Merge', value: PlacementConflictPolicy.Merge },
-  { label: 'Ask', value: PlacementConflictPolicy.Ask }
-] as const;
-
-export const PlacementConflictPolicyLabel: Record<PlacementConflictPolicy, string> = {
-  [PlacementConflictPolicy.Rename]: 'Rename',
-  [PlacementConflictPolicy.Merge]: 'Merge',
-  [PlacementConflictPolicy.Ask]: 'Ask'
-};
-
-export enum AcquisitionDriveKind {
-  Unknown = 0,
-  DirectUrl = 1,
-  Baidu = 2,
-  Xunlei = 3,
-  Feimao = 4,
-  Cloudflare = 5,
-  Mega = 6,
-  PikPak = 7,
-  GoogleDrive = 8,
-  OneDrive = 9,
-  Magnet = 10,
-  OneOneFive = 11,
-  Gofile = 12,
-  Pixeldrain = 13
-}
-
-export const acquisitionDriveKinds = [
-  { label: 'Unknown', value: AcquisitionDriveKind.Unknown },
-  { label: 'DirectUrl', value: AcquisitionDriveKind.DirectUrl },
-  { label: 'Baidu', value: AcquisitionDriveKind.Baidu },
-  { label: 'Xunlei', value: AcquisitionDriveKind.Xunlei },
-  { label: 'Feimao', value: AcquisitionDriveKind.Feimao },
-  { label: 'Cloudflare', value: AcquisitionDriveKind.Cloudflare },
-  { label: 'Mega', value: AcquisitionDriveKind.Mega },
-  { label: 'PikPak', value: AcquisitionDriveKind.PikPak },
-  { label: 'GoogleDrive', value: AcquisitionDriveKind.GoogleDrive },
-  { label: 'OneDrive', value: AcquisitionDriveKind.OneDrive },
-  { label: 'Magnet', value: AcquisitionDriveKind.Magnet },
-  { label: 'OneOneFive', value: AcquisitionDriveKind.OneOneFive },
-  { label: 'Gofile', value: AcquisitionDriveKind.Gofile },
-  { label: 'Pixeldrain', value: AcquisitionDriveKind.Pixeldrain }
-] as const;
-
-export const AcquisitionDriveKindLabel: Record<AcquisitionDriveKind, string> = {
-  [AcquisitionDriveKind.Unknown]: 'Unknown',
-  [AcquisitionDriveKind.DirectUrl]: 'DirectUrl',
-  [AcquisitionDriveKind.Baidu]: 'Baidu',
-  [AcquisitionDriveKind.Xunlei]: 'Xunlei',
-  [AcquisitionDriveKind.Feimao]: 'Feimao',
-  [AcquisitionDriveKind.Cloudflare]: 'Cloudflare',
-  [AcquisitionDriveKind.Mega]: 'Mega',
-  [AcquisitionDriveKind.PikPak]: 'PikPak',
-  [AcquisitionDriveKind.GoogleDrive]: 'GoogleDrive',
-  [AcquisitionDriveKind.OneDrive]: 'OneDrive',
-  [AcquisitionDriveKind.Magnet]: 'Magnet',
-  [AcquisitionDriveKind.OneOneFive]: 'OneOneFive',
-  [AcquisitionDriveKind.Gofile]: 'Gofile',
-  [AcquisitionDriveKind.Pixeldrain]: 'Pixeldrain'
-};
-
-export enum AcquisitionLeadKind {
-  PlatformHolding = 1,
-  SharedPage = 2,
-  SharedDocument = 3,
-  DirectUrl = 4,
-  Magnet = 5,
-  Manual = 6,
-  Torrent = 7
-}
-
-export const acquisitionLeadKinds = [
-  { label: 'PlatformHolding', value: AcquisitionLeadKind.PlatformHolding },
-  { label: 'SharedPage', value: AcquisitionLeadKind.SharedPage },
-  { label: 'SharedDocument', value: AcquisitionLeadKind.SharedDocument },
-  { label: 'DirectUrl', value: AcquisitionLeadKind.DirectUrl },
-  { label: 'Magnet', value: AcquisitionLeadKind.Magnet },
-  { label: 'Manual', value: AcquisitionLeadKind.Manual },
-  { label: 'Torrent', value: AcquisitionLeadKind.Torrent }
-] as const;
-
-export const AcquisitionLeadKindLabel: Record<AcquisitionLeadKind, string> = {
-  [AcquisitionLeadKind.PlatformHolding]: 'PlatformHolding',
-  [AcquisitionLeadKind.SharedPage]: 'SharedPage',
-  [AcquisitionLeadKind.SharedDocument]: 'SharedDocument',
-  [AcquisitionLeadKind.DirectUrl]: 'DirectUrl',
-  [AcquisitionLeadKind.Magnet]: 'Magnet',
-  [AcquisitionLeadKind.Manual]: 'Manual',
-  [AcquisitionLeadKind.Torrent]: 'Torrent'
-};
-
-export enum AcquisitionLeadOrigin {
-  User = 1,
-  Subscription = 2,
-  SharedListImport = 3,
-  PostParser = 4
-}
-
-export const acquisitionLeadOrigins = [
-  { label: 'User', value: AcquisitionLeadOrigin.User },
-  { label: 'Subscription', value: AcquisitionLeadOrigin.Subscription },
-  { label: 'SharedListImport', value: AcquisitionLeadOrigin.SharedListImport },
-  { label: 'PostParser', value: AcquisitionLeadOrigin.PostParser }
-] as const;
-
-export const AcquisitionLeadOriginLabel: Record<AcquisitionLeadOrigin, string> = {
-  [AcquisitionLeadOrigin.User]: 'User',
-  [AcquisitionLeadOrigin.Subscription]: 'Subscription',
-  [AcquisitionLeadOrigin.SharedListImport]: 'SharedListImport',
-  [AcquisitionLeadOrigin.PostParser]: 'PostParser'
-};
-
-export enum AcquisitionLeadResult {
-  Succeeded = 1,
-  Failed = 2
-}
-
-export const acquisitionLeadResults = [
-  { label: 'Succeeded', value: AcquisitionLeadResult.Succeeded },
-  { label: 'Failed', value: AcquisitionLeadResult.Failed }
-] as const;
-
-export const AcquisitionLeadResultLabel: Record<AcquisitionLeadResult, string> = {
-  [AcquisitionLeadResult.Succeeded]: 'Succeeded',
-  [AcquisitionLeadResult.Failed]: 'Failed'
-};
-
-export enum AcquisitionStatus {
-  Pending = 1,
-  Running = 2,
-  Waiting = 3,
-  Completed = 4,
-  Failed = 5,
-  Cancelled = 6
-}
-
-export const acquisitionStatuses = [
-  { label: 'Pending', value: AcquisitionStatus.Pending },
-  { label: 'Running', value: AcquisitionStatus.Running },
-  { label: 'Waiting', value: AcquisitionStatus.Waiting },
-  { label: 'Completed', value: AcquisitionStatus.Completed },
-  { label: 'Failed', value: AcquisitionStatus.Failed },
-  { label: 'Cancelled', value: AcquisitionStatus.Cancelled }
-] as const;
-
-export const AcquisitionStatusLabel: Record<AcquisitionStatus, string> = {
-  [AcquisitionStatus.Pending]: 'Pending',
-  [AcquisitionStatus.Running]: 'Running',
-  [AcquisitionStatus.Waiting]: 'Waiting',
-  [AcquisitionStatus.Completed]: 'Completed',
-  [AcquisitionStatus.Failed]: 'Failed',
-  [AcquisitionStatus.Cancelled]: 'Cancelled'
-};
-
-export enum AcquisitionWaitReason {
-  WaitingForFile = 1,
-  AmbiguousInboxFile = 2,
-  PaidContent = 3,
-  NoLinks = 4,
-  ChooseLink = 5,
-  PasswordUnknown = 6,
-  TargetExists = 7,
-  PickDirectory = 8,
-  PlatformFetch = 9,
-  ExtractionPlanUnknown = 10
-}
-
-export const acquisitionWaitReasons = [
-  { label: 'WaitingForFile', value: AcquisitionWaitReason.WaitingForFile },
-  { label: 'AmbiguousInboxFile', value: AcquisitionWaitReason.AmbiguousInboxFile },
-  { label: 'PaidContent', value: AcquisitionWaitReason.PaidContent },
-  { label: 'NoLinks', value: AcquisitionWaitReason.NoLinks },
-  { label: 'ChooseLink', value: AcquisitionWaitReason.ChooseLink },
-  { label: 'PasswordUnknown', value: AcquisitionWaitReason.PasswordUnknown },
-  { label: 'TargetExists', value: AcquisitionWaitReason.TargetExists },
-  { label: 'PickDirectory', value: AcquisitionWaitReason.PickDirectory },
-  { label: 'PlatformFetch', value: AcquisitionWaitReason.PlatformFetch },
-  { label: 'ExtractionPlanUnknown', value: AcquisitionWaitReason.ExtractionPlanUnknown }
-] as const;
-
-export const AcquisitionWaitReasonLabel: Record<AcquisitionWaitReason, string> = {
-  [AcquisitionWaitReason.WaitingForFile]: 'WaitingForFile',
-  [AcquisitionWaitReason.AmbiguousInboxFile]: 'AmbiguousInboxFile',
-  [AcquisitionWaitReason.PaidContent]: 'PaidContent',
-  [AcquisitionWaitReason.NoLinks]: 'NoLinks',
-  [AcquisitionWaitReason.ChooseLink]: 'ChooseLink',
-  [AcquisitionWaitReason.PasswordUnknown]: 'PasswordUnknown',
-  [AcquisitionWaitReason.TargetExists]: 'TargetExists',
-  [AcquisitionWaitReason.PickDirectory]: 'PickDirectory',
-  [AcquisitionWaitReason.PlatformFetch]: 'PlatformFetch',
-  [AcquisitionWaitReason.ExtractionPlanUnknown]: 'ExtractionPlanUnknown'
-};
-
-export enum WorkflowActivationMode {
-  Unknown = 0,
-  Manual = 1,
-  Module = 2,
-  SystemEvent = 3,
-  Schedule = 4,
-  Watch = 5
-}
-
-export const workflowActivationModes = [
-  { label: 'Unknown', value: WorkflowActivationMode.Unknown },
-  { label: 'Manual', value: WorkflowActivationMode.Manual },
-  { label: 'Module', value: WorkflowActivationMode.Module },
-  { label: 'SystemEvent', value: WorkflowActivationMode.SystemEvent },
-  { label: 'Schedule', value: WorkflowActivationMode.Schedule },
-  { label: 'Watch', value: WorkflowActivationMode.Watch }
-] as const;
-
-export const WorkflowActivationModeLabel: Record<WorkflowActivationMode, string> = {
-  [WorkflowActivationMode.Unknown]: 'Unknown',
-  [WorkflowActivationMode.Manual]: 'Manual',
-  [WorkflowActivationMode.Module]: 'Module',
-  [WorkflowActivationMode.SystemEvent]: 'SystemEvent',
-  [WorkflowActivationMode.Schedule]: 'Schedule',
-  [WorkflowActivationMode.Watch]: 'Watch'
-};
-
-export enum WorkflowActivityCardinality {
-  OneToOne = 1,
-  OneToMany = 2
-}
-
-export const workflowActivityCardinalities = [
-  { label: 'OneToOne', value: WorkflowActivityCardinality.OneToOne },
-  { label: 'OneToMany', value: WorkflowActivityCardinality.OneToMany }
-] as const;
-
-export const WorkflowActivityCardinalityLabel: Record<WorkflowActivityCardinality, string> = {
-  [WorkflowActivityCardinality.OneToOne]: 'OneToOne',
-  [WorkflowActivityCardinality.OneToMany]: 'OneToMany'
-};
-
-export enum WorkflowActivityCategory {
-  Filter = 1,
-  Action = 2,
-  Transform = 3
-}
-
-export const workflowActivityCategories = [
-  { label: 'Filter', value: WorkflowActivityCategory.Filter },
-  { label: 'Action', value: WorkflowActivityCategory.Action },
-  { label: 'Transform', value: WorkflowActivityCategory.Transform }
-] as const;
-
-export const WorkflowActivityCategoryLabel: Record<WorkflowActivityCategory, string> = {
-  [WorkflowActivityCategory.Filter]: 'Filter',
-  [WorkflowActivityCategory.Action]: 'Action',
-  [WorkflowActivityCategory.Transform]: 'Transform'
-};
-
-export enum WorkflowActivityErrorBehavior {
-  Fail = 1,
-  Skip = 2
-}
-
-export const workflowActivityErrorBehaviors = [
-  { label: 'Fail', value: WorkflowActivityErrorBehavior.Fail },
-  { label: 'Skip', value: WorkflowActivityErrorBehavior.Skip }
-] as const;
-
-export const WorkflowActivityErrorBehaviorLabel: Record<WorkflowActivityErrorBehavior, string> = {
-  [WorkflowActivityErrorBehavior.Fail]: 'Fail',
-  [WorkflowActivityErrorBehavior.Skip]: 'Skip'
-};
-
-export enum WorkflowItemTypeBehavior {
-  Passthrough = 1,
-  Fixed = 2,
-  AdaptToNext = 3
-}
-
-export const workflowItemTypeBehaviors = [
-  { label: 'Passthrough', value: WorkflowItemTypeBehavior.Passthrough },
-  { label: 'Fixed', value: WorkflowItemTypeBehavior.Fixed },
-  { label: 'AdaptToNext', value: WorkflowItemTypeBehavior.AdaptToNext }
-] as const;
-
-export const WorkflowItemTypeBehaviorLabel: Record<WorkflowItemTypeBehavior, string> = {
-  [WorkflowItemTypeBehavior.Passthrough]: 'Passthrough',
-  [WorkflowItemTypeBehavior.Fixed]: 'Fixed',
-  [WorkflowItemTypeBehavior.AdaptToNext]: 'AdaptToNext'
-};
-
-export enum WorkflowRunStatus {
-  Pending = 1,
-  Running = 2,
-  Success = 3,
-  Failed = 4,
-  Cancelled = 5,
-  Interrupted = 6,
-  Waiting = 7
-}
-
-export const workflowRunStatuses = [
-  { label: 'Pending', value: WorkflowRunStatus.Pending },
-  { label: 'Running', value: WorkflowRunStatus.Running },
-  { label: 'Success', value: WorkflowRunStatus.Success },
-  { label: 'Failed', value: WorkflowRunStatus.Failed },
-  { label: 'Cancelled', value: WorkflowRunStatus.Cancelled },
-  { label: 'Interrupted', value: WorkflowRunStatus.Interrupted },
-  { label: 'Waiting', value: WorkflowRunStatus.Waiting }
-] as const;
-
-export const WorkflowRunStatusLabel: Record<WorkflowRunStatus, string> = {
-  [WorkflowRunStatus.Pending]: 'Pending',
-  [WorkflowRunStatus.Running]: 'Running',
-  [WorkflowRunStatus.Success]: 'Success',
-  [WorkflowRunStatus.Failed]: 'Failed',
-  [WorkflowRunStatus.Cancelled]: 'Cancelled',
-  [WorkflowRunStatus.Interrupted]: 'Interrupted',
-  [WorkflowRunStatus.Waiting]: 'Waiting'
-};
-
-export enum AttachmentLayout {
-  Tile = 0,
-  Carousel = 1
-}
-
-export const attachmentLayouts = [
-  { label: 'Tile', value: AttachmentLayout.Tile },
-  { label: 'Carousel', value: AttachmentLayout.Carousel }
-] as const;
-
-export const AttachmentLayoutLabel: Record<AttachmentLayout, string> = {
-  [AttachmentLayout.Tile]: 'Tile',
-  [AttachmentLayout.Carousel]: 'Carousel'
-};
-
-export enum PropertyValueMatchPolicy {
-  MatchOnly = 1,
-  AutoCreateOptions = 2
-}
-
-export const propertyValueMatchPolicies = [
-  { label: 'MatchOnly', value: PropertyValueMatchPolicy.MatchOnly },
-  { label: 'AutoCreateOptions', value: PropertyValueMatchPolicy.AutoCreateOptions }
-] as const;
-
-export const PropertyValueMatchPolicyLabel: Record<PropertyValueMatchPolicy, string> = {
-  [PropertyValueMatchPolicy.MatchOnly]: 'MatchOnly',
-  [PropertyValueMatchPolicy.AutoCreateOptions]: 'AutoCreateOptions'
-};
-
-export enum ComparisonMode {
-  StrictEqual = 0,
-  TextSimilarity = 2,
-  RegexExtractNumber = 3,
-  FixedTolerance = 4,
-  RelativeTolerance = 5,
-  SetIntersection = 6,
-  Subset = 7,
-  TimeWindow = 8,
-  SameDay = 9,
-  ExtensionMap = 10
-}
-
-export const comparisonModes = [
-  { label: 'StrictEqual', value: ComparisonMode.StrictEqual },
-  { label: 'TextSimilarity', value: ComparisonMode.TextSimilarity },
-  { label: 'RegexExtractNumber', value: ComparisonMode.RegexExtractNumber },
-  { label: 'FixedTolerance', value: ComparisonMode.FixedTolerance },
-  { label: 'RelativeTolerance', value: ComparisonMode.RelativeTolerance },
-  { label: 'SetIntersection', value: ComparisonMode.SetIntersection },
-  { label: 'Subset', value: ComparisonMode.Subset },
-  { label: 'TimeWindow', value: ComparisonMode.TimeWindow },
-  { label: 'SameDay', value: ComparisonMode.SameDay },
-  { label: 'ExtensionMap', value: ComparisonMode.ExtensionMap }
-] as const;
-
-export const ComparisonModeLabel: Record<ComparisonMode, string> = {
-  [ComparisonMode.StrictEqual]: 'StrictEqual',
-  [ComparisonMode.TextSimilarity]: 'TextSimilarity',
-  [ComparisonMode.RegexExtractNumber]: 'RegexExtractNumber',
-  [ComparisonMode.FixedTolerance]: 'FixedTolerance',
-  [ComparisonMode.RelativeTolerance]: 'RelativeTolerance',
-  [ComparisonMode.SetIntersection]: 'SetIntersection',
-  [ComparisonMode.Subset]: 'Subset',
-  [ComparisonMode.TimeWindow]: 'TimeWindow',
-  [ComparisonMode.SameDay]: 'SameDay',
-  [ComparisonMode.ExtensionMap]: 'ExtensionMap'
-};
-
-export enum NullValueBehavior {
-  Skip = 0,
-  Fail = 1,
-  Pass = 2
-}
-
-export const nullValueBehaviors = [
-  { label: 'Skip', value: NullValueBehavior.Skip },
-  { label: 'Fail', value: NullValueBehavior.Fail },
-  { label: 'Pass', value: NullValueBehavior.Pass }
-] as const;
-
-export const NullValueBehaviorLabel: Record<NullValueBehavior, string> = {
-  [NullValueBehavior.Skip]: 'Skip',
-  [NullValueBehavior.Fail]: 'Fail',
-  [NullValueBehavior.Pass]: 'Pass'
-};
-
-export enum BtDownloadStatus {
-  Queued = 1,
-  Running = 2,
-  Stopping = 3,
-  Stopped = 4,
-  Completed = 5,
-  Failed = 6
-}
-
-export const btDownloadStatuses = [
-  { label: 'Queued', value: BtDownloadStatus.Queued },
-  { label: 'Running', value: BtDownloadStatus.Running },
-  { label: 'Stopping', value: BtDownloadStatus.Stopping },
-  { label: 'Stopped', value: BtDownloadStatus.Stopped },
-  { label: 'Completed', value: BtDownloadStatus.Completed },
-  { label: 'Failed', value: BtDownloadStatus.Failed }
-] as const;
-
-export const BtDownloadStatusLabel: Record<BtDownloadStatus, string> = {
-  [BtDownloadStatus.Queued]: 'Queued',
-  [BtDownloadStatus.Running]: 'Running',
-  [BtDownloadStatus.Stopping]: 'Stopping',
-  [BtDownloadStatus.Stopped]: 'Stopped',
-  [BtDownloadStatus.Completed]: 'Completed',
-  [BtDownloadStatus.Failed]: 'Failed'
-};
-
 export enum ServerHandshakeOutcome {
   Ok = 0,
   Unreachable = 1,
@@ -5051,6 +4703,540 @@ export const ServerKindLabel: Record<ServerKind, string> = {
   [ServerKind.Unknown]: 'Unknown',
   [ServerKind.Desktop]: 'Desktop',
   [ServerKind.Headless]: 'Headless'
+};
+
+export enum AcquisitionRunState {
+  Completed = 1,
+  Waiting = 2,
+  Failed = 3
+}
+
+export const acquisitionRunStates = [
+  { label: 'Completed', value: AcquisitionRunState.Completed },
+  { label: 'Waiting', value: AcquisitionRunState.Waiting },
+  { label: 'Failed', value: AcquisitionRunState.Failed }
+] as const;
+
+export const AcquisitionRunStateLabel: Record<AcquisitionRunState, string> = {
+  [AcquisitionRunState.Completed]: 'Completed',
+  [AcquisitionRunState.Waiting]: 'Waiting',
+  [AcquisitionRunState.Failed]: 'Failed'
+};
+
+export enum PlacementConflictPolicy {
+  Rename = 1,
+  Merge = 2,
+  Ask = 3
+}
+
+export const placementConflictPolicies = [
+  { label: 'Rename', value: PlacementConflictPolicy.Rename },
+  { label: 'Merge', value: PlacementConflictPolicy.Merge },
+  { label: 'Ask', value: PlacementConflictPolicy.Ask }
+] as const;
+
+export const PlacementConflictPolicyLabel: Record<PlacementConflictPolicy, string> = {
+  [PlacementConflictPolicy.Rename]: 'Rename',
+  [PlacementConflictPolicy.Merge]: 'Merge',
+  [PlacementConflictPolicy.Ask]: 'Ask'
+};
+
+export enum AcquisitionDriveKind {
+  Unknown = 0,
+  DirectUrl = 1,
+  Baidu = 2,
+  Xunlei = 3,
+  Feimao = 4,
+  Cloudflare = 5,
+  Mega = 6,
+  PikPak = 7,
+  GoogleDrive = 8,
+  OneDrive = 9,
+  Magnet = 10,
+  OneOneFive = 11,
+  Gofile = 12,
+  Pixeldrain = 13,
+  TeraBox = 14
+}
+
+export const acquisitionDriveKinds = [
+  { label: 'Unknown', value: AcquisitionDriveKind.Unknown },
+  { label: 'DirectUrl', value: AcquisitionDriveKind.DirectUrl },
+  { label: 'Baidu', value: AcquisitionDriveKind.Baidu },
+  { label: 'Xunlei', value: AcquisitionDriveKind.Xunlei },
+  { label: 'Feimao', value: AcquisitionDriveKind.Feimao },
+  { label: 'Cloudflare', value: AcquisitionDriveKind.Cloudflare },
+  { label: 'Mega', value: AcquisitionDriveKind.Mega },
+  { label: 'PikPak', value: AcquisitionDriveKind.PikPak },
+  { label: 'GoogleDrive', value: AcquisitionDriveKind.GoogleDrive },
+  { label: 'OneDrive', value: AcquisitionDriveKind.OneDrive },
+  { label: 'Magnet', value: AcquisitionDriveKind.Magnet },
+  { label: 'OneOneFive', value: AcquisitionDriveKind.OneOneFive },
+  { label: 'Gofile', value: AcquisitionDriveKind.Gofile },
+  { label: 'Pixeldrain', value: AcquisitionDriveKind.Pixeldrain },
+  { label: 'TeraBox', value: AcquisitionDriveKind.TeraBox }
+] as const;
+
+export const AcquisitionDriveKindLabel: Record<AcquisitionDriveKind, string> = {
+  [AcquisitionDriveKind.Unknown]: 'Unknown',
+  [AcquisitionDriveKind.DirectUrl]: 'DirectUrl',
+  [AcquisitionDriveKind.Baidu]: 'Baidu',
+  [AcquisitionDriveKind.Xunlei]: 'Xunlei',
+  [AcquisitionDriveKind.Feimao]: 'Feimao',
+  [AcquisitionDriveKind.Cloudflare]: 'Cloudflare',
+  [AcquisitionDriveKind.Mega]: 'Mega',
+  [AcquisitionDriveKind.PikPak]: 'PikPak',
+  [AcquisitionDriveKind.GoogleDrive]: 'GoogleDrive',
+  [AcquisitionDriveKind.OneDrive]: 'OneDrive',
+  [AcquisitionDriveKind.Magnet]: 'Magnet',
+  [AcquisitionDriveKind.OneOneFive]: 'OneOneFive',
+  [AcquisitionDriveKind.Gofile]: 'Gofile',
+  [AcquisitionDriveKind.Pixeldrain]: 'Pixeldrain',
+  [AcquisitionDriveKind.TeraBox]: 'TeraBox'
+};
+
+export enum AcquisitionLeadKind {
+  PlatformHolding = 1,
+  SharedPage = 2,
+  SharedDocument = 3,
+  DirectUrl = 4,
+  Magnet = 5,
+  Manual = 6,
+  Torrent = 7
+}
+
+export const acquisitionLeadKinds = [
+  { label: 'PlatformHolding', value: AcquisitionLeadKind.PlatformHolding },
+  { label: 'SharedPage', value: AcquisitionLeadKind.SharedPage },
+  { label: 'SharedDocument', value: AcquisitionLeadKind.SharedDocument },
+  { label: 'DirectUrl', value: AcquisitionLeadKind.DirectUrl },
+  { label: 'Magnet', value: AcquisitionLeadKind.Magnet },
+  { label: 'Manual', value: AcquisitionLeadKind.Manual },
+  { label: 'Torrent', value: AcquisitionLeadKind.Torrent }
+] as const;
+
+export const AcquisitionLeadKindLabel: Record<AcquisitionLeadKind, string> = {
+  [AcquisitionLeadKind.PlatformHolding]: 'PlatformHolding',
+  [AcquisitionLeadKind.SharedPage]: 'SharedPage',
+  [AcquisitionLeadKind.SharedDocument]: 'SharedDocument',
+  [AcquisitionLeadKind.DirectUrl]: 'DirectUrl',
+  [AcquisitionLeadKind.Magnet]: 'Magnet',
+  [AcquisitionLeadKind.Manual]: 'Manual',
+  [AcquisitionLeadKind.Torrent]: 'Torrent'
+};
+
+export enum AcquisitionLeadOrigin {
+  User = 1,
+  Subscription = 2,
+  SharedListImport = 3,
+  PostParser = 4
+}
+
+export const acquisitionLeadOrigins = [
+  { label: 'User', value: AcquisitionLeadOrigin.User },
+  { label: 'Subscription', value: AcquisitionLeadOrigin.Subscription },
+  { label: 'SharedListImport', value: AcquisitionLeadOrigin.SharedListImport },
+  { label: 'PostParser', value: AcquisitionLeadOrigin.PostParser }
+] as const;
+
+export const AcquisitionLeadOriginLabel: Record<AcquisitionLeadOrigin, string> = {
+  [AcquisitionLeadOrigin.User]: 'User',
+  [AcquisitionLeadOrigin.Subscription]: 'Subscription',
+  [AcquisitionLeadOrigin.SharedListImport]: 'SharedListImport',
+  [AcquisitionLeadOrigin.PostParser]: 'PostParser'
+};
+
+export enum AcquisitionLeadResult {
+  Succeeded = 1,
+  Failed = 2
+}
+
+export const acquisitionLeadResults = [
+  { label: 'Succeeded', value: AcquisitionLeadResult.Succeeded },
+  { label: 'Failed', value: AcquisitionLeadResult.Failed }
+] as const;
+
+export const AcquisitionLeadResultLabel: Record<AcquisitionLeadResult, string> = {
+  [AcquisitionLeadResult.Succeeded]: 'Succeeded',
+  [AcquisitionLeadResult.Failed]: 'Failed'
+};
+
+export enum AcquisitionStatus {
+  Pending = 1,
+  Running = 2,
+  Waiting = 3,
+  Completed = 4,
+  Failed = 5,
+  Cancelled = 6
+}
+
+export const acquisitionStatuses = [
+  { label: 'Pending', value: AcquisitionStatus.Pending },
+  { label: 'Running', value: AcquisitionStatus.Running },
+  { label: 'Waiting', value: AcquisitionStatus.Waiting },
+  { label: 'Completed', value: AcquisitionStatus.Completed },
+  { label: 'Failed', value: AcquisitionStatus.Failed },
+  { label: 'Cancelled', value: AcquisitionStatus.Cancelled }
+] as const;
+
+export const AcquisitionStatusLabel: Record<AcquisitionStatus, string> = {
+  [AcquisitionStatus.Pending]: 'Pending',
+  [AcquisitionStatus.Running]: 'Running',
+  [AcquisitionStatus.Waiting]: 'Waiting',
+  [AcquisitionStatus.Completed]: 'Completed',
+  [AcquisitionStatus.Failed]: 'Failed',
+  [AcquisitionStatus.Cancelled]: 'Cancelled'
+};
+
+export enum AcquisitionWaitReason {
+  WaitingForFile = 1,
+  AmbiguousInboxFile = 2,
+  PaidContent = 3,
+  NoLinks = 4,
+  ChooseLink = 5,
+  PasswordUnknown = 6,
+  TargetExists = 7,
+  PickDirectory = 8,
+  PlatformFetch = 9,
+  ExtractionPlanUnknown = 10
+}
+
+export const acquisitionWaitReasons = [
+  { label: 'WaitingForFile', value: AcquisitionWaitReason.WaitingForFile },
+  { label: 'AmbiguousInboxFile', value: AcquisitionWaitReason.AmbiguousInboxFile },
+  { label: 'PaidContent', value: AcquisitionWaitReason.PaidContent },
+  { label: 'NoLinks', value: AcquisitionWaitReason.NoLinks },
+  { label: 'ChooseLink', value: AcquisitionWaitReason.ChooseLink },
+  { label: 'PasswordUnknown', value: AcquisitionWaitReason.PasswordUnknown },
+  { label: 'TargetExists', value: AcquisitionWaitReason.TargetExists },
+  { label: 'PickDirectory', value: AcquisitionWaitReason.PickDirectory },
+  { label: 'PlatformFetch', value: AcquisitionWaitReason.PlatformFetch },
+  { label: 'ExtractionPlanUnknown', value: AcquisitionWaitReason.ExtractionPlanUnknown }
+] as const;
+
+export const AcquisitionWaitReasonLabel: Record<AcquisitionWaitReason, string> = {
+  [AcquisitionWaitReason.WaitingForFile]: 'WaitingForFile',
+  [AcquisitionWaitReason.AmbiguousInboxFile]: 'AmbiguousInboxFile',
+  [AcquisitionWaitReason.PaidContent]: 'PaidContent',
+  [AcquisitionWaitReason.NoLinks]: 'NoLinks',
+  [AcquisitionWaitReason.ChooseLink]: 'ChooseLink',
+  [AcquisitionWaitReason.PasswordUnknown]: 'PasswordUnknown',
+  [AcquisitionWaitReason.TargetExists]: 'TargetExists',
+  [AcquisitionWaitReason.PickDirectory]: 'PickDirectory',
+  [AcquisitionWaitReason.PlatformFetch]: 'PlatformFetch',
+  [AcquisitionWaitReason.ExtractionPlanUnknown]: 'ExtractionPlanUnknown'
+};
+
+export enum ArtifactLocationState {
+  Available = 1,
+  Quarantined = 2,
+  Missing = 3,
+  Modified = 4,
+  StorageUnavailable = 5,
+  Retired = 6
+}
+
+export const artifactLocationStates = [
+  { label: 'Available', value: ArtifactLocationState.Available },
+  { label: 'Quarantined', value: ArtifactLocationState.Quarantined },
+  { label: 'Missing', value: ArtifactLocationState.Missing },
+  { label: 'Modified', value: ArtifactLocationState.Modified },
+  { label: 'StorageUnavailable', value: ArtifactLocationState.StorageUnavailable },
+  { label: 'Retired', value: ArtifactLocationState.Retired }
+] as const;
+
+export const ArtifactLocationStateLabel: Record<ArtifactLocationState, string> = {
+  [ArtifactLocationState.Available]: 'Available',
+  [ArtifactLocationState.Quarantined]: 'Quarantined',
+  [ArtifactLocationState.Missing]: 'Missing',
+  [ArtifactLocationState.Modified]: 'Modified',
+  [ArtifactLocationState.StorageUnavailable]: 'StorageUnavailable',
+  [ArtifactLocationState.Retired]: 'Retired'
+};
+
+export enum ArtifactOperationState {
+  Planned = 1,
+  Running = 2,
+  Completed = 3,
+  Failed = 4,
+  Unknown = 5
+}
+
+export const artifactOperationStates = [
+  { label: 'Planned', value: ArtifactOperationState.Planned },
+  { label: 'Running', value: ArtifactOperationState.Running },
+  { label: 'Completed', value: ArtifactOperationState.Completed },
+  { label: 'Failed', value: ArtifactOperationState.Failed },
+  { label: 'Unknown', value: ArtifactOperationState.Unknown }
+] as const;
+
+export const ArtifactOperationStateLabel: Record<ArtifactOperationState, string> = {
+  [ArtifactOperationState.Planned]: 'Planned',
+  [ArtifactOperationState.Running]: 'Running',
+  [ArtifactOperationState.Completed]: 'Completed',
+  [ArtifactOperationState.Failed]: 'Failed',
+  [ArtifactOperationState.Unknown]: 'Unknown'
+};
+
+export enum ArtifactClaimStatus {
+  Acquired = 1,
+  Busy = 2,
+  Completed = 3,
+  NeedsReconciliation = 4,
+  StorageUnavailable = 5
+}
+
+export const artifactClaimStatuses = [
+  { label: 'Acquired', value: ArtifactClaimStatus.Acquired },
+  { label: 'Busy', value: ArtifactClaimStatus.Busy },
+  { label: 'Completed', value: ArtifactClaimStatus.Completed },
+  { label: 'NeedsReconciliation', value: ArtifactClaimStatus.NeedsReconciliation },
+  { label: 'StorageUnavailable', value: ArtifactClaimStatus.StorageUnavailable }
+] as const;
+
+export const ArtifactClaimStatusLabel: Record<ArtifactClaimStatus, string> = {
+  [ArtifactClaimStatus.Acquired]: 'Acquired',
+  [ArtifactClaimStatus.Busy]: 'Busy',
+  [ArtifactClaimStatus.Completed]: 'Completed',
+  [ArtifactClaimStatus.NeedsReconciliation]: 'NeedsReconciliation',
+  [ArtifactClaimStatus.StorageUnavailable]: 'StorageUnavailable'
+};
+
+export enum WorkflowActivationMode {
+  Unknown = 0,
+  Manual = 1,
+  Module = 2,
+  SystemEvent = 3,
+  Schedule = 4,
+  Watch = 5
+}
+
+export const workflowActivationModes = [
+  { label: 'Unknown', value: WorkflowActivationMode.Unknown },
+  { label: 'Manual', value: WorkflowActivationMode.Manual },
+  { label: 'Module', value: WorkflowActivationMode.Module },
+  { label: 'SystemEvent', value: WorkflowActivationMode.SystemEvent },
+  { label: 'Schedule', value: WorkflowActivationMode.Schedule },
+  { label: 'Watch', value: WorkflowActivationMode.Watch }
+] as const;
+
+export const WorkflowActivationModeLabel: Record<WorkflowActivationMode, string> = {
+  [WorkflowActivationMode.Unknown]: 'Unknown',
+  [WorkflowActivationMode.Manual]: 'Manual',
+  [WorkflowActivationMode.Module]: 'Module',
+  [WorkflowActivationMode.SystemEvent]: 'SystemEvent',
+  [WorkflowActivationMode.Schedule]: 'Schedule',
+  [WorkflowActivationMode.Watch]: 'Watch'
+};
+
+export enum WorkflowActivityCardinality {
+  OneToOne = 1,
+  OneToMany = 2
+}
+
+export const workflowActivityCardinalities = [
+  { label: 'OneToOne', value: WorkflowActivityCardinality.OneToOne },
+  { label: 'OneToMany', value: WorkflowActivityCardinality.OneToMany }
+] as const;
+
+export const WorkflowActivityCardinalityLabel: Record<WorkflowActivityCardinality, string> = {
+  [WorkflowActivityCardinality.OneToOne]: 'OneToOne',
+  [WorkflowActivityCardinality.OneToMany]: 'OneToMany'
+};
+
+export enum WorkflowActivityCategory {
+  Filter = 1,
+  Action = 2,
+  Transform = 3
+}
+
+export const workflowActivityCategories = [
+  { label: 'Filter', value: WorkflowActivityCategory.Filter },
+  { label: 'Action', value: WorkflowActivityCategory.Action },
+  { label: 'Transform', value: WorkflowActivityCategory.Transform }
+] as const;
+
+export const WorkflowActivityCategoryLabel: Record<WorkflowActivityCategory, string> = {
+  [WorkflowActivityCategory.Filter]: 'Filter',
+  [WorkflowActivityCategory.Action]: 'Action',
+  [WorkflowActivityCategory.Transform]: 'Transform'
+};
+
+export enum WorkflowActivityErrorBehavior {
+  Fail = 1,
+  Skip = 2
+}
+
+export const workflowActivityErrorBehaviors = [
+  { label: 'Fail', value: WorkflowActivityErrorBehavior.Fail },
+  { label: 'Skip', value: WorkflowActivityErrorBehavior.Skip }
+] as const;
+
+export const WorkflowActivityErrorBehaviorLabel: Record<WorkflowActivityErrorBehavior, string> = {
+  [WorkflowActivityErrorBehavior.Fail]: 'Fail',
+  [WorkflowActivityErrorBehavior.Skip]: 'Skip'
+};
+
+export enum WorkflowItemTypeBehavior {
+  Passthrough = 1,
+  Fixed = 2,
+  AdaptToNext = 3
+}
+
+export const workflowItemTypeBehaviors = [
+  { label: 'Passthrough', value: WorkflowItemTypeBehavior.Passthrough },
+  { label: 'Fixed', value: WorkflowItemTypeBehavior.Fixed },
+  { label: 'AdaptToNext', value: WorkflowItemTypeBehavior.AdaptToNext }
+] as const;
+
+export const WorkflowItemTypeBehaviorLabel: Record<WorkflowItemTypeBehavior, string> = {
+  [WorkflowItemTypeBehavior.Passthrough]: 'Passthrough',
+  [WorkflowItemTypeBehavior.Fixed]: 'Fixed',
+  [WorkflowItemTypeBehavior.AdaptToNext]: 'AdaptToNext'
+};
+
+export enum WorkflowRunStatus {
+  Pending = 1,
+  Running = 2,
+  Success = 3,
+  Failed = 4,
+  Cancelled = 5,
+  Interrupted = 6,
+  Waiting = 7
+}
+
+export const workflowRunStatuses = [
+  { label: 'Pending', value: WorkflowRunStatus.Pending },
+  { label: 'Running', value: WorkflowRunStatus.Running },
+  { label: 'Success', value: WorkflowRunStatus.Success },
+  { label: 'Failed', value: WorkflowRunStatus.Failed },
+  { label: 'Cancelled', value: WorkflowRunStatus.Cancelled },
+  { label: 'Interrupted', value: WorkflowRunStatus.Interrupted },
+  { label: 'Waiting', value: WorkflowRunStatus.Waiting }
+] as const;
+
+export const WorkflowRunStatusLabel: Record<WorkflowRunStatus, string> = {
+  [WorkflowRunStatus.Pending]: 'Pending',
+  [WorkflowRunStatus.Running]: 'Running',
+  [WorkflowRunStatus.Success]: 'Success',
+  [WorkflowRunStatus.Failed]: 'Failed',
+  [WorkflowRunStatus.Cancelled]: 'Cancelled',
+  [WorkflowRunStatus.Interrupted]: 'Interrupted',
+  [WorkflowRunStatus.Waiting]: 'Waiting'
+};
+
+export enum AttachmentLayout {
+  Tile = 0,
+  Carousel = 1
+}
+
+export const attachmentLayouts = [
+  { label: 'Tile', value: AttachmentLayout.Tile },
+  { label: 'Carousel', value: AttachmentLayout.Carousel }
+] as const;
+
+export const AttachmentLayoutLabel: Record<AttachmentLayout, string> = {
+  [AttachmentLayout.Tile]: 'Tile',
+  [AttachmentLayout.Carousel]: 'Carousel'
+};
+
+export enum PropertyValueMatchPolicy {
+  MatchOnly = 1,
+  AutoCreateOptions = 2
+}
+
+export const propertyValueMatchPolicies = [
+  { label: 'MatchOnly', value: PropertyValueMatchPolicy.MatchOnly },
+  { label: 'AutoCreateOptions', value: PropertyValueMatchPolicy.AutoCreateOptions }
+] as const;
+
+export const PropertyValueMatchPolicyLabel: Record<PropertyValueMatchPolicy, string> = {
+  [PropertyValueMatchPolicy.MatchOnly]: 'MatchOnly',
+  [PropertyValueMatchPolicy.AutoCreateOptions]: 'AutoCreateOptions'
+};
+
+export enum ComparisonMode {
+  StrictEqual = 0,
+  TextSimilarity = 2,
+  RegexExtractNumber = 3,
+  FixedTolerance = 4,
+  RelativeTolerance = 5,
+  SetIntersection = 6,
+  Subset = 7,
+  TimeWindow = 8,
+  SameDay = 9,
+  ExtensionMap = 10
+}
+
+export const comparisonModes = [
+  { label: 'StrictEqual', value: ComparisonMode.StrictEqual },
+  { label: 'TextSimilarity', value: ComparisonMode.TextSimilarity },
+  { label: 'RegexExtractNumber', value: ComparisonMode.RegexExtractNumber },
+  { label: 'FixedTolerance', value: ComparisonMode.FixedTolerance },
+  { label: 'RelativeTolerance', value: ComparisonMode.RelativeTolerance },
+  { label: 'SetIntersection', value: ComparisonMode.SetIntersection },
+  { label: 'Subset', value: ComparisonMode.Subset },
+  { label: 'TimeWindow', value: ComparisonMode.TimeWindow },
+  { label: 'SameDay', value: ComparisonMode.SameDay },
+  { label: 'ExtensionMap', value: ComparisonMode.ExtensionMap }
+] as const;
+
+export const ComparisonModeLabel: Record<ComparisonMode, string> = {
+  [ComparisonMode.StrictEqual]: 'StrictEqual',
+  [ComparisonMode.TextSimilarity]: 'TextSimilarity',
+  [ComparisonMode.RegexExtractNumber]: 'RegexExtractNumber',
+  [ComparisonMode.FixedTolerance]: 'FixedTolerance',
+  [ComparisonMode.RelativeTolerance]: 'RelativeTolerance',
+  [ComparisonMode.SetIntersection]: 'SetIntersection',
+  [ComparisonMode.Subset]: 'Subset',
+  [ComparisonMode.TimeWindow]: 'TimeWindow',
+  [ComparisonMode.SameDay]: 'SameDay',
+  [ComparisonMode.ExtensionMap]: 'ExtensionMap'
+};
+
+export enum NullValueBehavior {
+  Skip = 0,
+  Fail = 1,
+  Pass = 2
+}
+
+export const nullValueBehaviors = [
+  { label: 'Skip', value: NullValueBehavior.Skip },
+  { label: 'Fail', value: NullValueBehavior.Fail },
+  { label: 'Pass', value: NullValueBehavior.Pass }
+] as const;
+
+export const NullValueBehaviorLabel: Record<NullValueBehavior, string> = {
+  [NullValueBehavior.Skip]: 'Skip',
+  [NullValueBehavior.Fail]: 'Fail',
+  [NullValueBehavior.Pass]: 'Pass'
+};
+
+export enum BtDownloadStatus {
+  Queued = 1,
+  Running = 2,
+  Stopping = 3,
+  Stopped = 4,
+  Completed = 5,
+  Failed = 6
+}
+
+export const btDownloadStatuses = [
+  { label: 'Queued', value: BtDownloadStatus.Queued },
+  { label: 'Running', value: BtDownloadStatus.Running },
+  { label: 'Stopping', value: BtDownloadStatus.Stopping },
+  { label: 'Stopped', value: BtDownloadStatus.Stopped },
+  { label: 'Completed', value: BtDownloadStatus.Completed },
+  { label: 'Failed', value: BtDownloadStatus.Failed }
+] as const;
+
+export const BtDownloadStatusLabel: Record<BtDownloadStatus, string> = {
+  [BtDownloadStatus.Queued]: 'Queued',
+  [BtDownloadStatus.Running]: 'Running',
+  [BtDownloadStatus.Stopping]: 'Stopping',
+  [BtDownloadStatus.Stopped]: 'Stopped',
+  [BtDownloadStatus.Completed]: 'Completed',
+  [BtDownloadStatus.Failed]: 'Failed'
 };
 
 export enum FederationEndpointKind {
@@ -7385,8 +7571,24 @@ export const ProxyCapableThirdPartyIds: readonly ThirdPartyId[] = [
   ThirdPartyId.DLsite,
   ThirdPartyId.Bangumi,
   ThirdPartyId.SoulPlus,
-  ThirdPartyId.Tmdb
+  ThirdPartyId.Tmdb,
+  ThirdPartyId.BaiduNetdisk,
+  ThirdPartyId.GoogleDrive,
+  ThirdPartyId.Gofile,
+  ThirdPartyId.PikPak,
+  ThirdPartyId.OneDrive,
+  ThirdPartyId.Pixeldrain
 ] as const;
+
+export interface DownloadToolProxyTarget { id: string; name: string; thirdPartyId?: ThirdPartyId | null; supportedProxySchemes: readonly string[] }
+export const DownloadToolProxyTargets: readonly DownloadToolProxyTarget[] = [{"id":"baidu-pcs-go","name":"BaiduPCS-Go","thirdPartyId":14,"supportedProxySchemes":["http","https","socks5","socks5h"]},{"id":"gdown","name":"gdown","thirdPartyId":15,"supportedProxySchemes":["http","https","socks4","socks5","socks5h"]},{"id":"gallery-dl","name":"gallery-dl","thirdPartyId":16,"supportedProxySchemes":["http","https","socks4","socks5","socks5h"]},{"id":"rclone","name":"rclone","thirdPartyId":null,"supportedProxySchemes":["http","https","socks5","socks5h"]},{"id":"megacmd","name":"MEGAcmd","thirdPartyId":20,"supportedProxySchemes":["http","https"]},{"id":"pikpak-cli","name":"PikPak CLI","thirdPartyId":17,"supportedProxySchemes":["http","https","socks5"]},{"id":"terabox-cli","name":"TeraBox CLI","thirdPartyId":21,"supportedProxySchemes":["http","https","socks5"]},{"id":"sourceResolver","name":"Source link resolver","thirdPartyId":null,"supportedProxySchemes":["http","https","socks4","socks5"]}] as const;
+
+export interface CloudDownloadMethod { id: string; displayName: string; engineId?: string | null; accountProvider?: string | null; sourceKinds: readonly string[]; dependencyIds: readonly string[]; scope?: string | null }
+export interface CloudDownloadSource { providerId: string; thirdPartyId: ThirdPartyId; supportsRemote: boolean; dependencyIds: readonly string[]; methods: readonly CloudDownloadMethod[] }
+export const CloudDownloadSources: readonly CloudDownloadSource[] = [{"providerId":"baidu","thirdPartyId":14,"supportsRemote":true,"methods":[{"id":"baidu.pcs","displayName":"BaiduPCS-Go","engineId":null,"accountProvider":"baidu","sourceKinds":["share","remote"],"dependencyIds":["baidu-pcs-go-component-service"],"scope":null}],"dependencyIds":["baidu-pcs-go-component-service"]},{"providerId":"googleDrive","thirdPartyId":15,"supportsRemote":false,"methods":[{"id":"googleDrive.gdown","displayName":"gdown","engineId":null,"accountProvider":null,"sourceKinds":["share"],"dependencyIds":["gdown-component-service"],"scope":null}],"dependencyIds":["gdown-component-service"]},{"providerId":"gofile","thirdPartyId":16,"supportsRemote":false,"methods":[{"id":"gofile.galleryDl","displayName":"gallery-dl","engineId":null,"accountProvider":null,"sourceKinds":["share"],"dependencyIds":["gallery-dl-component-service"],"scope":null}],"dependencyIds":["gallery-dl-component-service"]},{"providerId":"pikpak","thirdPartyId":17,"supportsRemote":true,"methods":[{"id":"pikpak.share","displayName":"PikPak CLI","engineId":"pikpak-cli","accountProvider":"pikpakCli","sourceKinds":["share"],"dependencyIds":["pikpak-cli-component-service"],"scope":"publicShare"},{"id":"pikpak.rclone","displayName":"rclone","engineId":"rclone","accountProvider":"pikpak","sourceKinds":["remote"],"dependencyIds":["rclone-component-service"],"scope":"accountRemote"}],"dependencyIds":["pikpak-cli-component-service","rclone-component-service"]},{"providerId":"oneDrive","thirdPartyId":18,"supportsRemote":true,"methods":[{"id":"oneDrive.sharePoint","displayName":"SharePoint public folder","engineId":null,"accountProvider":null,"sourceKinds":["share"],"dependencyIds":[],"scope":null},{"id":"oneDrive.rclone","displayName":"rclone","engineId":"rclone","accountProvider":"oneDrive","sourceKinds":["remote"],"dependencyIds":["rclone-component-service"],"scope":"accountRemote"}],"dependencyIds":["rclone-component-service"]},{"providerId":"pixeldrain","thirdPartyId":19,"supportsRemote":true,"methods":[{"id":"pixeldrain.galleryDl","displayName":"gallery-dl","engineId":"gallery-dl","accountProvider":null,"sourceKinds":["share"],"dependencyIds":["gallery-dl-component-service"],"scope":"publicShare"},{"id":"pixeldrain.rclone","displayName":"rclone","engineId":"rclone","accountProvider":null,"sourceKinds":["share"],"dependencyIds":["rclone-component-service"],"scope":"publicDirectory"},{"id":"pixeldrain.rcloneRemote","displayName":"rclone","engineId":"rclone","accountProvider":"pixeldrain","sourceKinds":["remote"],"dependencyIds":["rclone-component-service"],"scope":"accountRemote"}],"dependencyIds":["gallery-dl-component-service","rclone-component-service"]},{"providerId":"mega","thirdPartyId":20,"supportsRemote":false,"methods":[{"id":"mega.megacmd","displayName":"MEGAcmd","engineId":"megacmd","accountProvider":null,"sourceKinds":["share"],"dependencyIds":["megacmd-component-service"],"scope":"publicShare"}],"dependencyIds":["megacmd-component-service"]},{"providerId":"terabox","thirdPartyId":21,"supportsRemote":false,"methods":[{"id":"terabox.cli","displayName":"TeraBox CLI","engineId":"terabox-cli","accountProvider":"terabox","sourceKinds":["share"],"dependencyIds":["terabox-cli-component-service"],"scope":"publicShare"}],"dependencyIds":["terabox-cli-component-service"]}] as const;
+export interface DownloadMethodAvailabilityInfo { methodId: string; providerId: string; status: string; reasonCode: string; descriptionKey: string }
+export const DownloadMethodAvailability: readonly DownloadMethodAvailabilityInfo[] = [{"methodId":"terabox.cli","providerId":"terabox","status":"developing","reasonCode":"DOWNLOAD_METHOD_UNAVAILABLE","descriptionKey":"cloudDownload.teraboxIntegrationUnavailable"}] as const;
+export const DownloadSourceProviderIds = ["baidu","googleDrive","gofile","pixeldrain","pikpak","terabox","mega","oneDrive","http","magnet","torrent","exHentai"] as const;
 
 export const DataSyncKinds: readonly string[] = ["extensionGroup", "customProperty"] as const;
 export const DataSyncContractVersion = 1;

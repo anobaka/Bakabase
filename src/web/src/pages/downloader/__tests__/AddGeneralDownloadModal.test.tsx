@@ -27,58 +27,56 @@ vi.mock("@/components/ThirdPartyConfig/base/DownloadDirectoryField", () => ({
     />
   ),
 }));
-vi.mock("@/components/bakaui", () => ({
-  Modal: ({
-    children,
-    onOk,
-    footer,
-  }: {
-    children: ReactNode;
-    onOk: () => Promise<void>;
-    footer: { okProps: { isDisabled: boolean } };
-  }) => (
-    <div>
-      {children}
-      <button
-        disabled={footer.okProps.isDisabled}
-        onClick={() => {
-          void onOk().catch(() => undefined);
-        }}
-      >
-        submit
-      </button>
-    </div>
-  ),
-  Input: ({
-    label,
-    value,
-    onValueChange,
-  }: {
-    label: string;
-    value: string;
-    onValueChange: (value: string) => void;
-  }) => (
-    <input
-      aria-label={label}
-      value={value}
-      onChange={(event) => onValueChange(event.target.value)}
-    />
-  ),
-  Tabs: ({
-    children,
-    onSelectionChange,
-  }: {
-    children: ReactNode;
-    onSelectionChange: (value: string) => void;
-  }) => (
-    <div>
-      <button onClick={() => onSelectionChange("file")}>file-mode</button>
-      <button onClick={() => onSelectionChange("http")}>http-mode</button>
-      {children}
-    </div>
-  ),
-  Tab: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-}));
+vi.mock("@/components/bakaui", async () => {
+  const { Input: HeroInput } = await import("@heroui/react");
+  return {
+    Modal: ({
+      children,
+      onOk,
+      footer,
+    }: {
+      children: ReactNode;
+      onOk: () => Promise<void>;
+      footer: { okProps: { isDisabled: boolean } };
+    }) => (
+      <div>
+        {children}
+        <button
+          disabled={footer.okProps.isDisabled}
+          onClick={() => {
+            void onOk().catch(() => undefined);
+          }}
+        >
+          submit
+        </button>
+      </div>
+    ),
+    Input: ({ label, value, onValueChange, ...props }: any) =>
+      props.type === "file" ? (
+        <HeroInput label={label} {...props} />
+      ) : (
+        <input
+          aria-label={label}
+          value={value}
+          onChange={(event) => onValueChange(event.target.value)}
+        />
+      ),
+    Tabs: ({
+      children,
+      onSelectionChange,
+    }: {
+      children: ReactNode;
+      onSelectionChange: (value: string) => void;
+    }) => (
+      <div>
+        <button onClick={() => onSelectionChange("file")}>file-mode</button>
+        <button onClick={() => onSelectionChange("http")}>http-mode</button>
+        {children}
+      </div>
+    ),
+    Tab: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  };
+});
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -147,7 +145,10 @@ describe("general download creation", () => {
     const file = new File(["torrent"], "gallery.torrent", { type: "application/x-bittorrent" });
     render(<AddGeneralDownloadModal onCreated={mocks.created} />);
     fireEvent.click(screen.getByText("file-mode"));
-    fireEvent.change(screen.getByLabelText("bt.add.file"), { target: { files: [file] } });
+    const picker = screen.getByLabelText("bt.add.file");
+    expect(picker).toHaveAttribute("type", "file");
+    expect(picker).toHaveAttribute("accept", ".torrent,application/x-bittorrent");
+    fireEvent.change(picker, { target: { files: [file] } });
     fireEvent.click(screen.getByText("submit"));
     await waitFor(() =>
       expect(mocks.upload).toHaveBeenCalledWith({

@@ -4,6 +4,8 @@ namespace Bakabase.Modules.Workflow.Abstractions.Models.Db;
 
 public record WorkflowDefinitionDbModel
 {
+    public string? ParametersJson { get; set; }
+
     [Key] public int Id { get; set; }
     public string Name { get; set; } = null!;
     public string? Description { get; set; }

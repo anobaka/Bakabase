@@ -25,6 +25,9 @@ public sealed record PostParserPurchaseSignal
     public List<string> LockUrls { get; init; } = [];
     public bool EnforceConfiguredLimits { get; init; }
     public decimal MaxTotalCost { get; init; }
+    public string? ExpectedAccountKeyHash { get; init; }
+    public string? ContentReadinessDecisionId { get; init; }
+    public string? ContentReviewId { get; init; }
 }
 
 public sealed class UnlockPostContentActivity : IResumableWorkflowActivity
@@ -60,59 +63,120 @@ public sealed class UnlockPostContentActivity : IResumableWorkflowActivity
         var quote = PostParserPurchaseQuote.Offers(item.Content).Where(l => l.Url != null)
             .ToDictionary(l => l.Url!, l => l.Price);
         var content = item.Content;
-        if (refresh && item.Input.Link is {Length: > 0} reference)
+        // A checkpoint can predate a successful purchase whose final read/save was interrupted.
+        // Refresh locked input even without a resume signal, before asking AI or purchasing again.
+        if ((refresh || content.Locks.Any(l => !l.IsBought)) && item.Input.Link is {Length: > 0} reference)
         {
             await ctx.ReportStage("fetching");
-            content = await reader.ReadAsync(reference, item.Input.SourceHint, ct);
+            content = PostContentReadinessPolicy.Reconcile(await reader.ReadAsync(reference, item.Input.SourceHint, ct), content,
+                ctx.Services.GetServices<IPostContentEvidenceCanonicalizer>());
         }
-        item = item with {Content = content};
+        try { content = await bridge.ResolveReadinessAsync(item.Input, runId, content, ct, signal?.ContentReadinessDecisionId); }
+        catch (InvalidOperationException error) when (signal?.ContentReadinessDecisionId != null)
+        {
+            return await WaitAsync(ctx, item with {Content = content with {Readiness = null}}, "awaitingPurchase", error.Message, ct);
+        }
+        item = item with {Content = content, Availability = PostAvailabilityEvidencePolicy.Apply(item.Availability)};
         await bridge.SaveSnapshotAsync(item.Input, runId, content, item.Availability, "snapshotSaved", null, ct);
-        if (!content.Locks.Any(l => !l.IsBought)) return WorkflowItemOutcome.ReplaceWith(item);
+        var review = await bridge.ExecuteContentReviewAsync(item.Input, runId, content, signal?.ContentReviewId, ct);
+        if (review != null)
+        {
+            item = item with {Content = review.Content, Warnings = item.Warnings.Concat(review.Warnings).Distinct().ToList()};
+            await bridge.SaveSnapshotAsync(item.Input, runId, item.Content, item.Availability, "snapshotSaved", null, ct);
+            if (review.CanContinue && !PostContentReadinessPolicy.HasBlockingLocks(item.Content)) return WorkflowItemOutcome.ReplaceWith(item);
+            return await WaitAsync(ctx, item, "awaitingPurchase", review.Warnings.FirstOrDefault() ??
+                "Some restricted content remains unresolved. Review the deferred or required items before continuing.", ct);
+        }
+        if (!PostContentReadinessPolicy.HasBlockingLocks(content)) return WorkflowItemOutcome.ReplaceWith(item);
 
         var options = ctx.Services.GetRequiredService<IBOptions<SoulPlusOptions>>().Value;
         var manual = signal?.LockUrls.Count > 0;
         var enforceLimits = signal?.EnforceConfiguredLimits == true || item.Input.TaskId != null;
-        if (manual && enforceLimits && item.Availability?.Status != "expired")
-            throw new InvalidOperationException("One-click unlocking is only available for a post assessed as possibly expired. Parse it again to use automatic purchasing.");
         var mayBuy = !string.IsNullOrWhiteSpace(item.Input.Link) &&
-            (item.Input.SourceHint == nameof(PostParserSource.SoulPlus) || content.SourceHint == nameof(PostParserSource.SoulPlus)) &&
+            PostParserPurchaseRules.SupportsSource(content.SourceHint ?? item.Input.SourceHint,
+                ctx.Services.GetServices<ISharedContentPurchaser>()) &&
             (manual || ctx.GetConfig<Config>()?.UseConfiguredSoulPlusPurchaseLimit == true);
         if (manual && signal!.LockUrls.Any(url => !quote.ContainsKey(url)))
             throw new InvalidOperationException("The purchase selection does not belong to the saved quote. Refresh the post first.");
 
+        var attemptedFreeUrls = new HashSet<string>(StringComparer.Ordinal);
         if (!manual)
         {
+            // A verified zero-price offer spends no coins. Unlock it before risk assessment,
+            // selecting only these exact endpoints and rechecking an approved price of zero.
+            // Keep the original zero-price ceiling across the refresh as well: a free offer
+            // becoming paid must not fall through into automatic paid purchasing in this attempt.
+            var neededUrls = PostParserPurchaseQuote.Offers(content).Select(l => l.Url).ToHashSet(StringComparer.Ordinal);
+            var free = quote.Where(l => l.Value == 0 && neededUrls.Contains(l.Key)).ToDictionary(l => l.Key, l => l.Value);
+            if (mayBuy && free.Count > 0)
+            {
+                attemptedFreeUrls.UnionWith(free.Keys);
+                await bridge.EnsureCurrentAsync(item.Input, runId, ct);
+                await ctx.ReportStage("purchasing");
+                var unlocked = await ctx.Services.GetRequiredService<SharedContentPurchasePolicy>().PurchaseAsync(
+                    item.Input.Link!, content.SourceHint ?? item.Input.SourceHint, options.AutoBuyThreshold,
+                    options.MinimumRemainingCoins, free, ct, enforceThreshold: true, maxTotalCost: 0);
+                content = await bridge.ResolveReadinessAsync(item.Input, runId,
+                    PostContentReadinessPolicy.Reconcile(unlocked.Content, content, ctx.Services.GetServices<IPostContentEvidenceCanonicalizer>()), ct);
+                item = item with {Content = content, Warnings = unlocked.Warnings};
+                await bridge.SaveSnapshotAsync(item.Input, runId, content, item.Availability, "snapshotSaved", null, ct);
+                if (!PostContentReadinessPolicy.HasBlockingLocks(content)) return WorkflowItemOutcome.ReplaceWith(item);
+            }
             var aiMissing = await PostParserAi.ConfigurationProblemAsync(ctx, ct);
             if (aiMissing != null)
                 return await WaitAsync(ctx, item, "awaitingAi", aiMissing, ct);
             var assessment = await ctx.Services.GetRequiredService<IPostAvailabilityAnalyzer>().AnalyzeAsync(content, ct);
-            item = item with {Availability = assessment};
+            content = await bridge.ResolveReadinessAsync(item.Input, runId,
+                PostContentReadinessPolicy.Apply(content, assessment.ContentReadiness), ct);
+            item = item with {Availability = assessment, Content = content};
             await bridge.SaveSnapshotAsync(item.Input, runId, content, assessment, "snapshotSaved", assessment.Reason, ct);
         }
 
         if (mayBuy && (manual || item.Availability?.Status is "noExpiryReported" or "restored"))
         {
             await bridge.EnsureCurrentAsync(item.Input, runId, ct);
-            var approved = manual ? signal!.LockUrls.Distinct().ToDictionary(url => url, url => quote[url]) : null;
-            await ctx.ReportStage("purchasing");
-            var purchase = await ctx.Services.GetRequiredService<SharedContentPurchasePolicy>().PurchaseAsync(
-                item.Input.Link!, content.SourceHint ?? item.Input.SourceHint, options.AutoBuyThreshold,
-                options.MinimumRemainingCoins, approved, ct, enforceThreshold: enforceLimits,
-                maxTotalCost: manual && enforceLimits ? signal!.MaxTotalCost : null);
-            item = item with {Content = purchase.Content, Warnings = purchase.Warnings};
-            await bridge.SaveSnapshotAsync(item.Input, runId, item.Content, item.Availability, "snapshotSaved", null, ct);
+            var stillNeeded = PostParserPurchaseQuote.Offers(item.Content).Select(l => l.Url).ToHashSet(StringComparer.Ordinal);
+            var approved = manual ? signal!.LockUrls.Where(stillNeeded.Contains).Distinct().ToDictionary(url => url, url => quote[url]) :
+                quote.Where(l => stillNeeded.Contains(l.Key) && !attemptedFreeUrls.Contains(l.Key)).ToDictionary(l => l.Key, l => l.Value);
+            // An interrupted attempt may no longer have a manual signal. Its checkpoint still
+            // bounds automatic URLs/prices; fresh reads must not expand them or retry a free offer.
+            if (approved.Count > 0)
+            {
+                await ctx.ReportStage("purchasing");
+                var purchase = await ctx.Services.GetRequiredService<SharedContentPurchasePolicy>().PurchaseAsync(
+                    item.Input.Link!, content.SourceHint ?? item.Input.SourceHint, options.AutoBuyThreshold,
+                    options.MinimumRemainingCoins, approved, ct, enforceThreshold: enforceLimits || !manual,
+                    maxTotalCost: manual && enforceLimits ? signal!.MaxTotalCost : null,
+                    expectedAccountKeyHash: signal?.ExpectedAccountKeyHash);
+                content = await bridge.ResolveReadinessAsync(item.Input, runId,
+                    PostContentReadinessPolicy.Reconcile(purchase.Content, item.Content, ctx.Services.GetServices<IPostContentEvidenceCanonicalizer>()), ct);
+                item = item with {Content = content, Warnings = item.Warnings.Concat(purchase.Warnings).Distinct().ToList()};
+                await bridge.SaveSnapshotAsync(item.Input, runId, item.Content, item.Availability, "snapshotSaved", null, ct);
+                if (purchase.PurchasedUrls.Count > 0 && PostContentReadinessPolicy.HasBlockingLocks(content) &&
+                    !PostContentReadinessPolicy.IsCurrent(content, content.Readiness) &&
+                    await PostParserAi.ConfigurationProblemAsync(ctx, ct) == null)
+                {
+                    // Buying changes the readable evidence. Reassess once, without authorizing
+                    // another purchase round or re-signing the old evidence as current.
+                    var assessment = await ctx.Services.GetRequiredService<IPostAvailabilityAnalyzer>().AnalyzeAsync(content, ct);
+                    content = await bridge.ResolveReadinessAsync(item.Input, runId,
+                        PostContentReadinessPolicy.Apply(content, assessment.ContentReadiness), ct);
+                    item = item with {Content = content, Availability = assessment};
+                    await bridge.SaveSnapshotAsync(item.Input, runId, content, assessment, "snapshotSaved", assessment.Reason, ct);
+                }
+            }
         }
 
-        if (!item.Content.Locks.Any(l => !l.IsBought)) return WorkflowItemOutcome.ReplaceWith(item);
+        if (!PostContentReadinessPolicy.HasBlockingLocks(item.Content)) return WorkflowItemOutcome.ReplaceWith(item);
 
-        // Expose whatever is readable, but keep this run waiting until every restricted item is resolved.
+        // Expose readable information while acquisition-relevant or unresolved restricted blocks still remain.
         var problem = await PostParserAi.ConfigurationProblemAsync(ctx, ct);
         if (problem == null)
         {
             var partial = await ctx.Services.GetRequiredService<IPostDownloadInfoExtractor>().ExtractAsync(item.Content, ct);
             partial = partial with
             {
-                IsComplete = false, Availability = item.Availability,
+                IsComplete = false, Availability = item.Availability, ContentReadiness = item.Content.Readiness,
                 Warnings = partial.Warnings.Concat(item.Warnings)
                     .Append("Some content is still locked; download codes or extraction instructions may be missing.").Distinct().ToList()
             };
@@ -131,7 +195,7 @@ public sealed class UnlockPostContentActivity : IResumableWorkflowActivity
         await bridge.SaveSnapshotAsync(item.Input, checked((int)ctx.RunId), item.Content, item.Availability, state, message, ct);
         var options = ctx.Services.GetRequiredService<IBOptions<SoulPlusOptions>>().Value;
         return WorkflowItemOutcome.Suspend(new WorkflowSuspension($"postParser.{state}",
-            JsonSerializer.Serialize(new {item.Content, item.Availability, options.AutoBuyThreshold,
+            JsonSerializer.Serialize(new {item.Input.TaskId, item.Input.Revision, WorkflowRunId = ctx.RunId, item.Content, item.Availability, options.AutoBuyThreshold,
                 options.MinimumRemainingCoins, Message = message}, WorkflowJson.Options), item));
     }
 }
@@ -158,6 +222,7 @@ public sealed class ExtractPostDownloadInfoActivity : IResumableWorkflowActivity
         var bridge = ctx.Services.GetRequiredService<IPostParserWorkflowTaskBridge>();
         var runId = checked((int)ctx.RunId);
         await bridge.EnsureCurrentAsync(content.Input, runId, ct);
+        content = content with {Content = await bridge.ResolveReadinessAsync(content.Input, runId, content.Content, ct)};
         using var executionScope = PostParserExecutionScope.Begin((stage, _) => ctx.ReportStage(stage));
         var problem = await PostParserAi.ConfigurationProblemAsync(ctx, ct);
         if (problem != null) return await UnlockPostContentActivity.WaitAsync(ctx, content, "awaitingAi", problem, ct);
@@ -165,11 +230,12 @@ public sealed class ExtractPostDownloadInfoActivity : IResumableWorkflowActivity
         result = result with
         {
             Title = string.IsNullOrWhiteSpace(result.Title) ? content.Content.Title : result.Title,
-            IsComplete = !content.Content.Locks.Any(l => !l.IsBought),
+            IsComplete = !PostContentReadinessPolicy.HasBlockingLocks(content.Content),
+            ContentReadiness = content.Content.Readiness,
             Availability = content.Availability,
             Warnings = result.Warnings.Concat(content.Warnings).Distinct().ToList()
         };
-        await bridge.SaveResultAsync(content.Input, runId, result, ct);
+        await bridge.SaveResultAsync(content.Input, runId, result, ct, PostContentReadinessPolicy.Fingerprint(content.Content));
         if (!result.IsComplete)
             return await UnlockPostContentActivity.WaitAsync(ctx, content, "awaitingPurchase", "The post still contains locked content. Unlock it and retry.", ct);
         return WorkflowItemOutcome.ReplaceWith(new PostParserResultItem(content.Input, result));
@@ -193,10 +259,21 @@ public sealed class CheckPostLinksActivity : IWorkflowActivity
         var checker = ctx.Services.GetRequiredService<IPostLinkHealthChecker>();
         var resources = new List<PostDownloadResource>();
         await ctx.ReportStage("checkingLinks");
-        foreach (var resource in parsed.Result.Resources)
+        // One large post must not hold the parsing lane indefinitely. Observations retain
+        // original order/indices; exceeding the metadata budget is never evidence of expiry.
+        using var budget = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        budget.CancelAfter(TimeSpan.FromSeconds(45));
+        foreach (var chunk in parsed.Result.Resources.Chunk(4))
         {
-            var health = await checker.CheckAsync(resource.Link, resource.Code, ct);
-            resources.Add(resource with {LinkHealth = health});
+            var checkedResources = await Task.WhenAll(chunk.Select(async resource =>
+            {
+                PostLinkHealth health;
+                try {health = await checker.CheckAsync(resource.Link, resource.Code, budget.Token);}
+                catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+                {health = new() {Status = "unknown", Reason = "SOURCE_CHECK_BUDGET_EXHAUSTED", ReasonCode = "SOURCE_CHECK_BUDGET_EXHAUSTED"};}
+                return resource with {LinkHealth = health};
+            }));
+            resources.AddRange(checkedResources);
         }
         var result = parsed.Result with {Resources = resources};
         await bridge.SaveResultAsync(parsed.Input, checked((int)ctx.RunId), result, ct);

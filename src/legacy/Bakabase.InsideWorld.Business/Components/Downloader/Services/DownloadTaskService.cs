@@ -5,6 +5,7 @@ using System.Linq.Expressions;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.InsideWorld.Business;
@@ -42,7 +43,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
     /// <summary>
     /// todo: extract interface
     /// </summary>
-    public class DownloadTaskService : ResourceService<BakabaseDbContext, DownloadTaskDbModel, int>
+    public partial class DownloadTaskService : ResourceService<BakabaseDbContext, DownloadTaskDbModel, int>
     {
         protected DownloaderManager DownloaderManager => GetRequiredService<DownloaderManager>();
 
@@ -134,29 +135,86 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
             bool targeted = false)
             => await StartCore(exp, actionOnConflict, targeted, taskActionLockHeld: false);
 
+        /// <summary>Starts one existing task only after the owner's final, local validation while
+        /// holding the same action lock used by editing, stopping and starting that task. Network
+        /// probes belong before this call; a failed guard must leave task status and files unchanged.</summary>
+        public Task<BaseResponse> StartConditionally(int id, Func<CancellationToken, Task> validate,
+            CancellationToken ct = default, Func<CancellationToken, Task>? validateUnderOwnerLease = null) => DownloaderManager.WithTaskActionLock(id, async () =>
+        {
+            ct.ThrowIfCancellationRequested();
+            await validate(ct);
+            var db = GetRequiredService<BakabaseDbContext>();
+            var before = await db.DownloadTasks.AsNoTracking().SingleOrDefaultAsync(t => t.Id == id, ct);
+            async Task ValidateOwner()
+            {
+                if (validateUnderOwnerLease == null) return;
+                try { await validateUnderOwnerLease(ct); }
+                catch (Exception error) { throw new ConditionalStartValidationException(error); }
+            }
+            try
+            {
+                var result = await StartCore(t => t.Id == id, DownloadTaskActionOnConflict.Ignore,
+                    targeted: true, taskActionLockHeld: true, validateUnderOwnerLease == null ? null : ValidateOwner);
+                if (validateUnderOwnerLease != null && result.Code == 0 &&
+                    DownloaderManager[id]?.IsOccupyingDownloadTaskSource() != true &&
+                    !await db.DownloadTasks.AsNoTracking().AnyAsync(t => t.Id == id && t.Status == DownloadTaskDbModelStatus.Complete, ct))
+                    throw new InvalidOperationException("DOWNLOAD_START_SOURCE_BUSY");
+                return result;
+            }
+            catch (Exception) when (validateUnderOwnerLease != null)
+            {
+                // Enabling precedes the final owner lease. A rejection must not leave an
+                // automatic queue entry; the action lock still prevents another start here.
+                if (before != null && before.Status is DownloadTaskDbModelStatus.Failed or DownloadTaskDbModelStatus.Disabled &&
+                    DownloaderManager[id]?.IsOccupyingDownloadTaskSource() != true)
+                    await db.DownloadTasks.Where(t => t.Id == id && t.Status == DownloadTaskDbModelStatus.InProgress &&
+                        t.Options == before.Options && t.DownloadPath == before.DownloadPath && t.Checkpoint == before.Checkpoint &&
+                        t.Progress == before.Progress && t.CompletedAt == before.CompletedAt)
+                        .ExecuteUpdateAsync(s => s.SetProperty(t => t.Status, before.Status), CancellationToken.None);
+                throw;
+            }
+        });
+
+        private sealed class ConditionalStartValidationException(Exception inner) : InvalidOperationException(inner.Message, inner);
+
         private async Task<BaseResponse> StartCore(Expression<Func<DownloadTaskDbModel, bool>>? exp,
-            DownloadTaskActionOnConflict actionOnConflict, bool targeted, bool taskActionLockHeld)
+            DownloadTaskActionOnConflict actionOnConflict, bool targeted, bool taskActionLockHeld,
+            Func<Task>? validateUnderOwnerLease = null)
         {
             var tasks = await GetAll(exp);
-            var badStatusTasks = tasks.Where(a => a.Status is DownloadTaskDbModelStatus.Disabled or DownloadTaskDbModelStatus.Failed)
-                .ToArray();
+            // Authorization also covers completed tasks: a targeted retry may download them again.
+            var badStatusTasks = tasks.ToArray();
             foreach (var badStatusTask in badStatusTasks)
             {
                 async Task<bool> EnableTask()
                 {
-                    await base.UpdateByKey(badStatusTask.Id, current =>
-                    {
-                        if (current.Status is DownloadTaskDbModelStatus.Disabled or DownloadTaskDbModelStatus.Failed)
-                            current.Status = DownloadTaskDbModelStatus.InProgress;
-                    });
+                    await using var lease = await DownloadTaskStartGuards.AcquireAsync(GetRequiredService<IServiceProvider>(), badStatusTask.Id);
+                    if (validateUnderOwnerLease != null) await validateUnderOwnerLease();
+                    await DownloadTaskStorage.EnsureAllowedAsync(GetRequiredService<IServiceProvider>(),
+                        badStatusTask.ToDomainModel(DownloaderManager)!);
+                    GetRequiredService<IServiceProvider>().GetService<DownloadStorageAdmission>()?
+                        .BeforeStart(badStatusTask.DownloadPath, explicitContinuation: true,
+                            verifyWritable: badStatusTask.Status == DownloadTaskDbModelStatus.Failed);
+                    if (badStatusTask.Status is DownloadTaskDbModelStatus.Disabled or DownloadTaskDbModelStatus.Failed)
+                        await base.UpdateByKey(badStatusTask.Id, current =>
+                        {
+                            if (current.Status is DownloadTaskDbModelStatus.Disabled or DownloadTaskDbModelStatus.Failed)
+                                current.Status = DownloadTaskDbModelStatus.InProgress;
+                        });
                     return true;
                 }
-                if (taskActionLockHeld) await EnableTask();
-                else await DownloaderManager.WithTaskActionLock(badStatusTask.Id, EnableTask);
+                try
+                {
+                    if (taskActionLockHeld) await EnableTask();
+                    else await DownloaderManager.WithTaskActionLock(badStatusTask.Id, EnableTask);
+                }
+                catch (Exception error) when (error is not ConditionalStartValidationException &&
+                    error is InvalidOperationException or IOException or UnauthorizedAccessException)
+                { return BaseResponseBuilder.BuildBadRequest(error.Message); }
             }
 
             var rsp = await TryStartAllTasksCore(DownloadTaskStartMode.ManualStart, tasks.Select(a => a.Id).ToArray(),
-                actionOnConflict, skipSatisfiedTasks: !targeted, taskActionLockHeld);
+                actionOnConflict, skipSatisfiedTasks: !targeted, taskActionLockHeld, validateUnderOwnerLease);
 
             if (rsp.IsSuccess())
                 foreach (var lifecycle in GetRequiredService<IEnumerable<IDownloadTaskExecutionLifecycle>>())
@@ -271,6 +329,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
                 // Best-effort: a recording failure must never break the completion flow.
                 if (newStatus == DownloadTaskDbModelStatus.Complete)
                 {
+                    foreach (var lifecycle in GetRequiredService<IEnumerable<IDownloadTaskExecutionLifecycle>>())
+                        await lifecycle.OnCompletedAsync([task.Id]);
                     try
                     {
                         await DownloadRecordService.Record(task.ThirdPartyId, task.Key);
@@ -282,7 +342,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
                     }
                 }
 
-                // Any downloader reaching a resting state frees its source's single slot, so the queue
+                // Any downloader reaching a resting state frees source capacity, so the queue
                 // has to be looked at again. This used to name only some of those states — a stop
                 // that merely requeued the task left the queue idle with nothing scheduled to notice
                 // — and it ran the next pass inline, nesting a pass inside the completion that
@@ -410,7 +470,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
             => await TryStartAllTasksCore(mode, ids, actionOnConflict, skipSatisfiedTasks, taskActionLockHeld: false);
 
         private async Task<BaseResponse> TryStartAllTasksCore(DownloadTaskStartMode mode, int[]? ids,
-            DownloadTaskActionOnConflict actionOnConflict, bool skipSatisfiedTasks, bool taskActionLockHeld)
+            DownloadTaskActionOnConflict actionOnConflict, bool skipSatisfiedTasks, bool taskActionLockHeld,
+            Func<Task>? validateUnderOwnerLease = null)
         {
             var tasks = (await (ids == null ? GetAll() : GetByKeys(ids))).ToDictionary(a => a.ToDomainModel(DownloaderManager),
                 a => a);
@@ -432,6 +493,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
             var allowedTasks = new List<DownloadTask>();
             foreach (var task in targetTasks)
             {
+                if (mode == DownloadTaskStartMode.AutoStart && DownloaderManager.StorageBlockReason(task.DownloadPath) != null)
+                    continue;
                 try
                 {
                     await DownloadTaskStorage.EnsureAllowedAsync(GetRequiredService<IServiceProvider>(), task);
@@ -465,7 +528,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
             }
 
             var filteredTasks = targetTasks.GroupBy(a => a.ThirdPartyId)
-                .Select(g =>
+                .SelectMany(g =>
                     // Deferred tasks sink to the back so they only start once there is nothing the
                     // source considers more valuable left (for ExHentai: tasks that may still yield a
                     // torrent). Stable FIFO (by id) within each tier.
@@ -473,25 +536,33 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
                                    v.Outcome == DownloadTaskPrecheckOutcome.Defer
                         ? 1
                         : 0)
-                        .ThenBy(t => t.Id)
-                        .First())
+                        .ThenBy(t => t.Id))
                 .ToArray();
             var startedTasks = new List<DownloadTask>();
+            var startedSources = new HashSet<ThirdPartyId>();
 
             foreach (var tt in filteredTasks)
             {
+                // Fill all available slots in FIFO order. After a successful start, the remaining
+                // tasks stay queued instead of StopOthers evicting the task this batch just started.
+                // A full account must not hide a later candidate belonging to a different account.
+                var sourceAlreadyStarted = startedSources.Contains(tt.ThirdPartyId);
+                if ((sourceAlreadyStarted || actionOnConflict == DownloadTaskActionOnConflict.Ignore) &&
+                    DownloaderManager.IsSourceOccupied(tt.ThirdPartyId, tt.Id, tt.Options, tt.DownloadPath))
+                    continue;
+                var stopConflicts = !sourceAlreadyStarted && actionOnConflict == DownloadTaskActionOnConflict.StopOthers;
                 var rsp = taskActionLockHeld
-                    ? await DownloaderManager.StartUnderTaskActionLock(tt,
-                        actionOnConflict == DownloadTaskActionOnConflict.StopOthers)
-                    : await DownloaderManager.Start(tt,
-                        actionOnConflict == DownloadTaskActionOnConflict.StopOthers,
+                    ? await DownloaderManager.StartUnderTaskActionLock(tt, stopConflicts, validateUnderOwnerLease)
+                    : await DownloaderManager.Start(tt, stopConflicts,
                         startAutomatically: mode == DownloadTaskStartMode.AutoStart);
 
                 if (rsp.Code != (int) ResponseCode.Success)
                 {
                     if (rsp.Code == (int) ResponseCode.Conflict)
                     {
-                        if (actionOnConflict == DownloadTaskActionOnConflict.Ignore)
+                        if (validateUnderOwnerLease != null)
+                            throw new InvalidOperationException("DOWNLOAD_START_SOURCE_BUSY");
+                        if (sourceAlreadyStarted || actionOnConflict == DownloadTaskActionOnConflict.Ignore)
                         {
                             continue;
                         }
@@ -515,6 +586,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
                 }
 
                 startedTasks.Add(tt);
+                startedSources.Add(tt.ThirdPartyId);
             }
 
             // set other tasks status
@@ -595,6 +667,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
 
             foreach (var dbModel in updated)
             {
+                foreach (var lifecycle in GetRequiredService<IEnumerable<IDownloadTaskExecutionLifecycle>>())
+                    await lifecycle.OnCompletedAsync([dbModel.Id]);
                 // Best-effort, exactly as on the normal completion path: a recording or trigger
                 // failure must not stop the rest of the batch from being completed.
                 try
@@ -727,6 +801,23 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
         {
             var tasks = await GetAll();
             return await ToDto(tasks);
+        }
+
+        /// <summary>Read only the requested tasks and their attributed file counters.</summary>
+        public async Task<DownloadTask[]> GetDtos(IReadOnlyCollection<int> ids) =>
+            ids.Count == 0 ? [] : await ToDto(await GetByKeys(ids.Distinct().ToArray()));
+
+        /// <summary>Live status/counters without credentials, options or checkpoint manifests.</summary>
+        public async Task<DownloadTask[]> GetRuntimeDtos(IReadOnlyCollection<int> ids, CancellationToken ct = default)
+        {
+            if (ids.Count == 0) return [];
+            var rows = await GetRequiredService<BakabaseDbContext>().DownloadTasks.AsNoTracking()
+                .Where(t => ids.Contains(t.Id)).Select(t => new DownloadTaskDbModel
+                {Id = t.Id, ThirdPartyId = t.ThirdPartyId, Status = t.Status, Progress = t.Progress,
+                    DownloadPath = t.DownloadPath, DownloadStatusUpdateDt = t.DownloadStatusUpdateDt,
+                    Message = t.Message, Interval = t.Interval, AutoRetry = t.AutoRetry, CompletedAt = t.CompletedAt})
+                .ToListAsync(ct);
+            return await ToDto(rows);
         }
 
         public async Task<TaskSummary> GetSummary(ThirdPartyId? thirdPartyId = null)
@@ -933,7 +1024,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
                     ? new JsonObject()
                     : JsonNode.Parse(task.Options) as JsonObject ?? options;
                 var replacedOptions = mode != ExHentaiDownloadMode.Direct
-                    ? new[] {"preferTorrent", "downloadMode", "fallbackToDirect", "noTorrentCheckedAt"}
+                    ? new[] {"preferTorrent", "downloadMode", "fallbackToDirect", "noTorrentAction", "noTorrentCheckedAt"}
                     : new[] {"preferTorrent", "downloadMode"};
                 foreach (var key in options.Select(x => x.Key).Where(x =>
                              replacedOptions.Contains(x, StringComparer.OrdinalIgnoreCase)).ToArray())
@@ -945,6 +1036,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
                     // An explicit BT request probes again even after an old negative verdict,
                     // and never starts paid image requests when the gallery has no torrent.
                     options["fallbackToDirect"] = false;
+                    options["noTorrentAction"] = (int)ExHentaiNoTorrentAction.Fail;
                 }
                 await base.UpdateByKey(id, t =>
                 {

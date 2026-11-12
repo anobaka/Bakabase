@@ -16,6 +16,7 @@ using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions;
 using Bakabase.InsideWorld.Business.Components.Dependency.Discovery;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.CloudTools;
+using Bakabase.InsideWorld.Business.Components.Dependency.Models;
 using Bakabase.InsideWorld.Models.Constants;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -31,15 +32,13 @@ public sealed class BaiduPcsGoService(ILoggerFactory loggerFactory, AppService a
     IHttpClientFactory clients, IServiceProvider services)
     : DependentComponentService(loggerFactory, appService, "baidu-pcs-go", services)
 {
-    public const string BridgeVersion = "4.0.2+bakabase.1";
+    public const string BridgeVersion = "4.0.2+bakabase.13";
     public const string UpstreamCommit = "225bdd3b6cb298601c4d5ef7104c3e08cd1d692d";
     private const string SourceSha256 = "6da5fbee22d3747a8dbc9e78d833f775de839c1ed77f6526642c79f4f6d189cf";
     public override string Id => "baidu-pcs-go-component-service";
     protected override string KeyInLocalizer => "BaiduPcsGo";
     public override bool IsRequired => false;
-    public override bool IsAvailableOnCurrentPlatform =>
-        (OperatingSystem.IsWindows() || OperatingSystem.IsLinux() || OperatingSystem.IsMacOS()) &&
-        RuntimeInformation.ProcessArchitecture is Architecture.X64 or Architecture.Arm64;
+    public override System.Collections.Generic.IReadOnlyList<DependentComponentTarget> SupportedTargets => DependentComponentPlatforms.BaiduPcsGo;
     protected override IDiscoverer Discoverer { get; } = new BaiduPcsGoDiscoverer(loggerFactory);
     public string Executable => Path.Combine(Context.Location ?? DefaultLocation,
         OperatingSystem.IsWindows() ? "bakabase-baidu-pcs.exe" : "bakabase-baidu-pcs");
@@ -54,7 +53,7 @@ public sealed class BaiduPcsGoService(ILoggerFactory loggerFactory, AppService a
         return new DependentComponentVersion
         {
             Version = BridgeVersion,
-            Description = $"BaiduPCS-Go v4.0.2 / Bakabase JSON bridge 1. Upstream latest: {tag}. " +
+            Description = $"BaiduPCS-Go v4.0.2 / Bakabase JSON bridge {BridgeVersion}. Upstream latest: {tag}. " +
                           "Installation downloads a verified Go compiler and builds the pinned source locally."
         };
     }
@@ -83,7 +82,7 @@ public sealed class BaiduPcsGoService(ILoggerFactory loggerFactory, AppService a
             await UpdateContext(c => c.InstallationProgress = 15);
 
             var os = OperatingSystem.IsWindows() ? "windows" : OperatingSystem.IsMacOS() ? "darwin" : "linux";
-            var arch = RuntimeInformation.ProcessArchitecture == Architecture.Arm64 ? "arm64" : "amd64";
+            var arch = RuntimeInformation.OSArchitecture == Architecture.Arm64 ? "arm64" : "amd64";
             using var manifest = JsonDocument.Parse(await client.GetStringAsync("https://go.dev/dl/?mode=json", ct));
             var compiler = manifest.RootElement.EnumerateArray().Where(v => v.GetProperty("stable").GetBoolean())
                 .SelectMany(v => v.GetProperty("files").EnumerateArray())

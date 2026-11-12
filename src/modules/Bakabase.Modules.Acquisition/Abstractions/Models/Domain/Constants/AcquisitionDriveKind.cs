@@ -19,5 +19,6 @@ public enum AcquisitionDriveKind
     Magnet = 10,
     OneOneFive = 11,
     Gofile = 12,
-    Pixeldrain = 13
+    Pixeldrain = 13,
+    TeraBox = 14
 }

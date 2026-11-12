@@ -92,6 +92,7 @@ import { SteamIcon, DLsiteIcon, ExHentaiIcon } from "@/components/SourceIcons";
 
 const BtDownloadsPage = lazy(() => import("@/pages/bt-downloads"));
 const DataSyncPage = lazy(() => import("@/features/data-sync/DataSyncPage"));
+const DependenciesRedirect = lazy(() => import("@/components/Dependency/DependenciesRedirect"));
 
 // Lazy load test page to avoid circular dependency
 const Test = lazy(() => import("@/pages/test"));
@@ -384,10 +385,27 @@ export const routesMenuConfig: RouteMenuItem[] = [
         menu: false,
       },
       {
-        name: "menu.fileMover",
-        path: "/file-mover",
-        component: FileMoverPage,
-        icon: AiOutlineSwap,
+        name: "menu.acquisition",
+        path: "/acquisitions",
+        component: AcquisitionPage,
+        icon: AiOutlineCloudDownload,
+        layout: "basic",
+        menu: true,
+        isBeta: true,
+      },
+      {
+        name: "menu.postParser",
+        path: "/post-parser",
+        component: PostParserPage,
+        icon: MdOutlineArticle,
+        layout: "basic",
+        menu: true,
+      },
+      {
+        name: "menu.collectionMemo",
+        path: "/collection-memo",
+        component: CollectionMemoPage,
+        icon: AiOutlineHistory,
         layout: "basic",
         menu: true,
       },
@@ -401,22 +419,12 @@ export const routesMenuConfig: RouteMenuItem[] = [
         menu: true,
       },
       {
-        name: "menu.subscription",
-        path: "/subscriptions",
-        component: SubscriptionPage,
-        icon: AiOutlineBell,
+        name: "menu.fileMover",
+        path: "/file-mover",
+        component: FileMoverPage,
+        icon: AiOutlineSwap,
         layout: "basic",
         menu: true,
-        isBeta: true,
-      },
-      {
-        name: "menu.acquisition",
-        path: "/acquisitions",
-        component: AcquisitionPage,
-        icon: AiOutlineCloudDownload,
-        layout: "basic",
-        menu: true,
-        isBeta: true,
       },
       {
         name: "menu.workflow",
@@ -435,20 +443,13 @@ export const routesMenuConfig: RouteMenuItem[] = [
         menu: false,
       },
       {
-        name: "menu.postParser",
-        path: "/post-parser",
-        component: PostParserPage,
-        icon: MdOutlineArticle,
+        name: "menu.subscription",
+        path: "/subscriptions",
+        component: SubscriptionPage,
+        icon: AiOutlineBell,
         layout: "basic",
         menu: true,
-      },
-      {
-        name: "menu.collectionMemo",
-        path: "/collection-memo",
-        component: CollectionMemoPage,
-        icon: AiOutlineHistory,
-        layout: "basic",
-        menu: true,
+        isBeta: true,
       },
     ],
   },
@@ -572,6 +573,13 @@ export const routesMenuConfig: RouteMenuItem[] = [
         menu: true,
       },
     ],
+  },
+  {
+    name: "menu.dependencies",
+    path: "/dependencies",
+    component: DependenciesRedirect,
+    layout: "basic",
+    menu: false,
   },
   {
     // The controlling desktop settings now live beside the top device switcher. Keep

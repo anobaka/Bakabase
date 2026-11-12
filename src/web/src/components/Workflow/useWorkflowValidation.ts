@@ -72,6 +72,7 @@ function definitionKey(workflow: Definition, configuration: string) {
     workflow.triggerFilterJson,
     workflow.enabled,
     workflow.activities,
+    workflow.parameters,
   ]);
 }
 function remember(key: string, state: WorkflowCheckState) {

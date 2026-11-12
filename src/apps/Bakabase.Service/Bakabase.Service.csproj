@@ -28,6 +28,7 @@
     </ItemGroup>
     <ItemGroup>
         <PackageReference Include="DotNetEnv" Version="3.1.1" />
+        <PackageReference Include="Jint" Version="4.16.3" />
         <PackageReference Include="Google.Apis.Analytics.v3" Version="1.68.0.1679" />
         <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.0">
             <PrivateAssets>all</PrivateAssets>

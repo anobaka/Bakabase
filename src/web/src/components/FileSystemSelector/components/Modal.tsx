@@ -3,6 +3,7 @@
 import type { DestroyableProps } from "@/components/bakaui/types";
 import type { FileSystemSelectorProps } from "@/components/FileSystemSelector/models";
 import type { ModalProps } from "@/components/bakaui";
+import type { ReactNode } from "react";
 
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -13,6 +14,7 @@ import { FileSystemSelectorPanel } from "@/components/FileSystemSelector";
 interface IProps extends FileSystemSelectorProps, DestroyableProps {
   /** Explicitly opt a nested picker into its caller's overlay layer. */
   modalClassNames?: ModalProps["classNames"];
+  title?: ReactNode;
 }
 const FileSystemSelectorModal = (props: IProps) => {
   const { t } = useTranslation();
@@ -24,7 +26,10 @@ const FileSystemSelectorModal = (props: IProps) => {
     setVisible(false);
   };
 
-  let titleKey = "fileSystemSelector.title.selectEntries";
+  let titleKey =
+    props.mode === "manage"
+      ? "fileSystemSelector.title.manage"
+      : "fileSystemSelector.title.selectEntries";
 
   if (props.targetType != undefined) {
     switch (props.targetType) {
@@ -43,7 +48,7 @@ const FileSystemSelectorModal = (props: IProps) => {
       classNames={modalClassNames}
       footer={false}
       size={"xl"}
-      title={t(titleKey)}
+      title={props.title ?? t(titleKey)}
       visible={visible}
       onClose={close}
       onDestroyed={props.onDestroyed}

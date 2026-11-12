@@ -28,7 +28,7 @@ public class PostAnalysisSafetyTests
         var result = await new PostDownloadInfoExtractor(llm, NullLogger<PostDownloadInfoExtractor>.Instance)
             .ExtractAsync(new PostContent {MainHtml = "Instructions", Locks = [new("https://example.test/buy", 1, false)]});
         Assert.IsFalse(result.IsComplete);
-        Assert.AreEqual(3, result.SchemaVersion);
+        Assert.AreEqual(4, result.SchemaVersion);
         var steps = result.Resources.Single().Extraction!.Steps;
         Assert.AreEqual(6, steps.Count);
         CollectionAssert.AreEqual(new[] {"one", "two", "three"}, steps.Where(s => s.Op == "extractArchive").Select(s => s.Password).ToArray());
@@ -43,6 +43,8 @@ public class PostAnalysisSafetyTests
         using var document = JsonDocument.Parse(json);
         Assert.IsFalse(document.RootElement.TryGetProperty("targetName", out _));
         Assert.IsFalse(document.RootElement.TryGetProperty("targetDirectory", out _));
+        Assert.IsFalse(document.RootElement.TryGetProperty("findText", out _));
+        Assert.IsFalse(document.RootElement.TryGetProperty("replaceText", out _));
         Assert.AreEqual("same", document.RootElement.GetProperty("password").GetString());
     }
 
@@ -64,6 +66,60 @@ public class PostAnalysisSafetyTests
         Assert.AreEqual("documents/notes", steps[1].TargetDirectory);
         Assert.AreEqual("name", steps[1].Input);
         StringAssert.Contains(llm.Prompt!, "纯文件改名或移动可以没有解压");
+    }
+
+    [TestMethod]
+    public async Task ExtractionPreservesLiteralRemovalAndExplicitExeArchiveInstructionsWithoutGuessingNames()
+    {
+        var llm = new FakeLlm("""
+            {"resources":[
+              {"link":"https://example.test/archive","extraction":{"requirement":"required","steps":[
+                {"id":"clean-name","op":"renameLiteral","input":"download","selector":"*删除*","findText":"删除","replaceText":""},
+                {"id":"open","op":"extractArchive","input":"clean-name"}]}},
+              {"link":"https://example.test/second","password":"old-value","extraction":{"requirement":"required","steps":[
+                {"id":"open","op":"extractArchive","input":"download","selector":"*.exe","password":"literal-source-value"}]}}]}
+            """);
+        var result = await new PostDownloadInfoExtractor(llm, NullLogger<PostDownloadInfoExtractor>.Instance)
+            .ExtractAsync(new PostContent {MainHtml = "解压前删除文件名中的固定文字；第二个资源解压.exe文件。"});
+        var rename = result.Resources[0].Extraction!.Steps[0];
+        Assert.AreEqual("renameLiteral", rename.Op); Assert.AreEqual("删除", rename.FindText);
+        Assert.AreEqual("", rename.ReplaceText); Assert.IsNull(rename.TargetName); Assert.IsNull(rename.Extension);
+        Assert.AreEqual("clean-name", result.Resources[0].Extraction!.Steps[1].Input);
+        var extract = result.Resources[1].Extraction!.Steps[0];
+        Assert.AreEqual("*.exe", extract.Selector); Assert.AreEqual("literal-source-value", extract.Password);
+        Assert.AreEqual("old-value", result.Resources[1].Password, "A step override preserves the original parsed resource credential.");
+        StringAssert.Contains(llm.Prompt!, "不处理目录、不支持正则表达式");
+        StringAssert.Contains(llm.Prompt!, "不得声称exe一定是SFX");
+    }
+
+    [DataTestMethod]
+    [DataRow(null, "")]
+    [DataRow("", "")]
+    [DataRow("literal", null)]
+    [DataRow("folder/name", "")]
+    [DataRow("literal", "../other")]
+    [DataRow("literal", "C:\\other")]
+    [DataRow(".*", "")]
+    [DataRow("literal", "*")]
+    [DataRow("literal\n", "")]
+    public void LiteralRenameRequiresExplicitBoundedFilenameFragments(string? find, string? replacement)
+    {
+        Assert.ThrowsExactly<InvalidOperationException>(() => PostExtractionPlanValidator.Validate(new()
+        {
+            Requirement = "required", Steps = [new() {Id = "clean", Op = "renameLiteral", FindText = find, ReplaceText = replacement}]
+        }));
+    }
+
+    [TestMethod]
+    public void LiteralRemovalPreservesEmptyReplacementWithoutNormalizationAndRejectsOversizedFragments()
+    {
+        var step = new PostExtractionStep {Id = "clean", Op = "renameLiteral", FindText = " 字面 ", ReplaceText = ""};
+        var result = PostExtractionPlanValidator.Validate(new() {Requirement = "required", Steps = [step]});
+        Assert.AreEqual(" 字面 ", result!.Steps[0].FindText); Assert.AreEqual("", result.Steps[0].ReplaceText);
+        using var json = JsonDocument.Parse(JsonSerializer.Serialize(step, new JsonSerializerOptions(JsonSerializerDefaults.Web)));
+        Assert.AreEqual("", json.RootElement.GetProperty("replaceText").GetString());
+        Assert.ThrowsExactly<InvalidOperationException>(() => PostExtractionPlanValidator.Validate(new()
+        {Requirement = "required", Steps = [step with {FindText = new string('x', 129)}]}));
     }
 
     [TestMethod]
@@ -145,6 +201,70 @@ public class PostAnalysisSafetyTests
     {
         var result = await new PostAvailabilityAnalyzer(new FakeLlm("{\"status\":\"restored\",\"evidence\":[\"reuploaded\"]}"))
             .AnalyzeAsync(new PostContent {MainHtml = "This link expired."});
+        Assert.AreEqual("unknown", result.Status);
+    }
+
+    [TestMethod]
+    public async Task UnsupportedAvailabilityEvidenceDoesNotDiscardIndependentLocalReadinessEvidence()
+    {
+        var content = new PostContent {MainHtml = "No link health report.", Locks = [
+            new("https://example.test/buy", 999999m, false)
+                {BlockId = "proof", ContextText = "Optional purchase proof"}]};
+        var response = """
+            {"status":"restored","evidence":["invented reupload"],"contentReadiness":{"decisions":[
+              {"blockId":"proof","relevance":"optional","purpose":"purchaseProof",
+               "evidence":["Optional purchase proof"]}]}}
+            """;
+        var result = await new PostAvailabilityAnalyzer(new FakeLlm(response)).AnalyzeAsync(content);
+        Assert.AreEqual("unknown", result.Status);
+        Assert.IsFalse(PostContentReadinessPolicy.HasBlockingLocks(
+            PostContentReadinessPolicy.Apply(content, result.ContentReadiness)));
+        Assert.IsFalse(content.Locks[0].IsBought);
+    }
+
+    [TestMethod]
+    public async Task LiteralButUnrelatedQuoteDoesNotProveAnExpiredDownload()
+    {
+        var result = await new PostAvailabilityAnalyzer(new FakeLlm("{\"status\":\"expired\",\"evidence\":[\"老了\"],\"reason\":\"download expired\"}"))
+            .AnalyzeAsync(new PostContent {Comments = [new() {Html = "老了"}]});
+        Assert.AreEqual("unknown", result.Status);
+        Assert.AreEqual(PostAvailabilityEvidencePolicy.InsufficientEvidence, result.Reason);
+        CollectionAssert.AreEqual(new[] {"老了"}, result.Evidence);
+    }
+
+    [TestMethod]
+    public async Task InlineFormattingDoesNotInvalidateAnExactVisibleAvailabilityQuote()
+    {
+        var result = await new PostAvailabilityAnalyzer(new FakeLlm("{\"status\":\"restored\",\"evidence\":[\"已经补档了\"]}"))
+            .AnalyzeAsync(new PostContent {HtmlEncodingTrusted = true,
+                Comments = [new() {Html = "已经<span>补档</span>了"}]});
+        Assert.AreEqual("restored", result.Status);
+    }
+
+    [TestMethod]
+    public async Task EvidenceCannotJoinSeparateRepliesToAuthorizePurchase()
+    {
+        var result = await new PostAvailabilityAnalyzer(new FakeLlm("{\"status\":\"restored\",\"evidence\":[\"reuploaded the same resource\"]}"))
+            .AnalyzeAsync(new PostContent {Comments = [new() {Html = "reuploaded"}, new() {Html = "the same resource"}]});
+        Assert.AreEqual("unknown", result.Status);
+    }
+
+    [TestMethod]
+    [DataRow("链接 & 已补档", "unknown")]
+    [DataRow("链接 &amp; 已补档", "restored")]
+    public async Task AvailabilityEvidenceDoesNotDecodeEntitiesTwice(string evidence, string expected)
+    {
+        var response = System.Text.Json.JsonSerializer.Serialize(new {status = "restored", evidence = new[] {evidence}});
+        var result = await new PostAvailabilityAnalyzer(new FakeLlm(response)).AnalyzeAsync(new PostContent
+            {HtmlEncodingTrusted = true, MainHtml = "<p>链接 &amp;amp; 已补档</p>"});
+        Assert.AreEqual(expected, result.Status);
+    }
+
+    [TestMethod]
+    public async Task LiteralAngleBracketTextCannotBeRemovedFromAvailabilityEvidence()
+    {
+        var result = await new PostAvailabilityAnalyzer(new FakeLlm("{\"status\":\"restored\",\"evidence\":[\"链接 已补档\"]}"))
+            .AnalyzeAsync(new PostContent {HtmlEncodingTrusted = true, MainHtml = "<p>链接&lt;旧&gt;已补档</p>"});
         Assert.AreEqual("unknown", result.Status);
     }
 

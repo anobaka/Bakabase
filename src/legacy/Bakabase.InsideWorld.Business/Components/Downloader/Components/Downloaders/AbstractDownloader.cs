@@ -66,6 +66,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
             ? _speedEstimator.EstimateBytesPerSecond()
             : null;
         public string? Message { get; protected set; }
+        public virtual DownloadTransferProgress? TransferProgress => null;
         private DownloaderStatus _status = DownloaderStatus.JustCreated;
         protected readonly ILogger Logger;
         private readonly IDownloaderFactory _downloaderFactory;
@@ -542,6 +543,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                 }
                 catch (Exception e)
                 {
+                    ServiceProvider.GetService<DownloadStorageAdmission>()?.ObserveFailure(task.DownloadPath, e);
                     FailureTimes++;
                     Message = BuildFailureMessage(e);
                     // The step that was in flight is over either way; a failed row showing "downloading
@@ -596,6 +598,12 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
 
         private string BuildFailureMessage(Exception e)
         {
+            // Preserve the classified local cause across restarts, including native IO errors.
+            // Clearing a destination's queue hold must not silently retry its failed tasks.
+            if (e is not LocalStorageException && LocalStorageFailures.Code(e) is { } storageCode)
+                e = new LocalStorageException(storageCode, e);
+            if (e is DownloadPolicyException)
+                return BuildNoticesMessage() is { } policyNotices ? $"{e.Message}\n\n{policyNotices}" : e.Message;
             var message = (_transientRetries > 0
                               ? $"An error occurred during downloading files (automatic retries after network errors: {_transientRetries}). "
                               : "An error occurred during downloading files. ") +
@@ -791,7 +799,13 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                     {
                         // Re-check every attempt, including restored tasks and transient retries.
                         await DownloadTaskStorage.EnsureAllowedAsync(ServiceProvider, task);
-                        await StartCore(task, runCts.Token);
+                        var writes = ServiceProvider.GetService<IStorageWriteGuard>();
+                        if (writes == null) await StartCore(task, runCts.Token);
+                        else await writes.RunAsync([task.DownloadPath], new("downloadTask", task.Id.ToString()), async ct =>
+                        {
+                            await StartCore(task, ct);
+                            return true;
+                        }, runCts.Token);
                         return;
                     }
                     catch (Exception e) when (IsRetryableFailure(e, token) &&
@@ -895,6 +909,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
             // A stop that raced the failure wins: nothing should start again behind the user's back.
             Status == DownloaderStatus.Downloading &&
             e is not DownloadDeferredException &&
+            LocalStorageFailures.Code(e) == null &&
             TransientNetworkError.IsTransient(e, token);
 
         protected abstract Task StartCore(DownloadTask task, CancellationToken ct);

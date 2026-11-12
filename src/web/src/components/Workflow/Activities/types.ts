@@ -23,6 +23,12 @@ export interface WorkflowActivityUI<TConfig = unknown> {
   displayNameKey?: string;
   /** Display name used by the picker / card header. Falls back to the server's value. */
   displayName?: string;
+  /** Labels describe engine WorkItem counts, never inferred file/task counts inside a payload. */
+  executionLabels?: {
+    inputLabelKey: string;
+    outputLabelKey: string;
+    explanationKey?: string;
+  };
   category: WorkflowActivityCategory;
   defaultConfig: () => TConfig;
   parseConfig: (json: string) => TConfig;
@@ -33,7 +39,10 @@ export interface WorkflowActivityUI<TConfig = unknown> {
    * IWorkflowActivity.ResolveAdaptedOutputType. Default behavior (returning
    * `nextActivityRequiredType`) is built into chainWalk, so most activities can omit this.
    */
-  resolveAdaptedOutputType?: (configJson: string, nextActivityRequiredType: string | null) => string | null;
+  resolveAdaptedOutputType?: (
+    configJson: string,
+    nextActivityRequiredType: string | null,
+  ) => string | null;
   /**
    * `upstream` (the steps before this position) is provided so variable-aware forms
    * (capture/template) can offer "variables available here" hints — the E4 soft contract.
@@ -55,6 +64,8 @@ export interface WorkflowActivityUI<TConfig = unknown> {
    * the file where you asked") gets the drawer's generic Continue button for free.
    */
   ResumeForm?: React.FC<{
+    /** Show only the decision for the current files inside an acquisition task. */
+    fileTask?: boolean;
     promptJson: string | null;
     submitting: boolean;
     onSubmit: (signalJson: string) => void;

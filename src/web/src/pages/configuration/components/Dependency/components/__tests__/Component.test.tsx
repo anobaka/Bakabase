@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import Component from "../Component";
 
+import { resetDependencyChecks } from "@/components/Dependency/dependencyChecks";
 import { useDependentComponentContextsStore } from "@/stores/dependentComponentContexts";
 import { DependentComponentStatus } from "@/sdk/constants";
 
@@ -97,6 +98,7 @@ const latest = (
 
 describe("Dependency component", () => {
   beforeEach(() => {
+    resetDependencyChecks();
     discover.mockReset().mockResolvedValue({ code: 0 });
     getLatestVersion.mockReset();
     install.mockReset();
@@ -346,7 +348,7 @@ describe("Dependency component", () => {
       await waitFor(() => expect(getLatestVersion).toHaveBeenCalledTimes(1));
       first.unmount();
       render(<Component id={id} />);
-      await waitFor(() => expect(getLatestVersion).toHaveBeenCalledTimes(2));
+      await waitFor(() => expect(getLatestVersion).toHaveBeenCalledTimes(1));
 
       expect(screen.getByRole("alert")).toHaveTextContent("configuration.dependency.installFailed");
       expect(screen.getByTestId("error-details")).toHaveTextContent("Prior extraction failure");

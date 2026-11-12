@@ -12,6 +12,7 @@ using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Business.Components.Downloader.Services;
 using Bootstrap.Components.DependencyInjection;
 using Bootstrap.Components.Orm;
+using Bakabase.Abstractions.Components.FileSystem;
 
 namespace Bakabase.InsideWorld.Business.Components.Downloader.Extensions
 {
@@ -43,6 +44,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Extensions
             services.AddSingleton<IDownloadTaskPrecheck, ExHentaiDownloadTaskPrecheck>();
             services.AddSingleton<DownloadTaskPrecheckRunner>();
             services.AddSingleton<DownloadQueuePump>();
+            services.AddSingleton<DownloadStorageAdmission>();
             services.AddHostedService<DownloaderQueueDaemon>();
 
             return services;
@@ -65,7 +67,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Extensions
                     // Asked rather than scanned: reading the whole downloader map here allocated a
                     // copy of it per task, so projecting a list of a thousand tasks copied it a
                     // thousand times — on every pushed progress tick.
-                    DownloadTaskDbModelStatus.InProgress => downloaderManager.IsSourceOccupied(task.ThirdPartyId)
+                    DownloadTaskDbModelStatus.InProgress => downloaderManager.IsSourceOccupied(task.ThirdPartyId, task.Id, task.Options, task.DownloadPath)
                         ? DownloadTaskStatus.InQueue
                         : DownloadTaskStatus.Idle,
                     DownloadTaskDbModelStatus.Disabled => DownloadTaskStatus.Disabled,
@@ -85,7 +87,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Extensions
                     status = downloader.Status switch
                     {
                         DownloaderStatus.JustCreated =>
-                            downloaderManager.IsSourceOccupied(task.ThirdPartyId, task.Id)
+                            downloaderManager.IsSourceOccupied(task.ThirdPartyId, task.Id, task.Options, task.DownloadPath)
                                 ? DownloadTaskStatus.InQueue
                                 : DownloadTaskStatus.Idle,
                         DownloaderStatus.Starting => DownloadTaskStatus.Starting,
@@ -104,7 +106,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Extensions
                             StoppedBy: DownloaderStopBy.AppendToTheQueue or DownloaderStopBy.Defer
                         })
                     {
-                        status = downloaderManager.IsSourceOccupied(task.ThirdPartyId, task.Id)
+                        status = downloaderManager.IsSourceOccupied(task.ThirdPartyId, task.Id, task.Options, task.DownloadPath)
                             ? DownloadTaskStatus.InQueue
                             : DownloadTaskStatus.Idle;
                     }
@@ -128,7 +130,12 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Extensions
                 }
                 case DownloadTaskStatus.Failed:
                 {
-                    if (downloader?.FailureTimes > 0 && task.AutoRetry)
+                    // Clearing a volume hold lets queued work proceed, but does not authorize
+                    // replaying another failed task. This survives a server restart through the
+                    // persisted typed error; explicit start clears that task's current failure.
+                    var requiresStorageReview = LocalStorageFailures.PersistedCode(downloader?.Message) != null ||
+                                                LocalStorageFailures.PersistedCode(task.Message) != null;
+                    if (downloader?.FailureTimes > 0 && task.AutoRetry && !requiresStorageReview)
                     {
                         if (!DownloaderUtils.IntervalsOnContinuousFailures.TryGetValue(downloader.FailureTimes,
                                 out var ts))
@@ -162,6 +169,17 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Extensions
                 }
             }
 
+            var storageBlock = status is DownloadTaskStatus.Idle or DownloadTaskStatus.InQueue or DownloadTaskStatus.Failed
+                ? downloaderManager.StorageBlockReason(task.DownloadPath) : null;
+            if (storageBlock != null)
+            {
+                if (task.Status == DownloadTaskDbModelStatus.InProgress &&
+                    status is DownloadTaskStatus.Idle or DownloadTaskStatus.InQueue)
+                    status = DownloadTaskStatus.InQueue;
+                actions.Remove(DownloadTaskAction.StartAutomatically);
+                nextStartDt = null;
+            }
+            var transfer = status == DownloadTaskStatus.Downloading ? downloader?.TransferProgress : null;
             var dto = new DownloadTask
             {
                 Id = task.Id,
@@ -174,6 +192,9 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Extensions
                 Name = task.Name,
                 Checkpoint = task.Checkpoint,
                 Progress = task.Progress,
+                TransferredBytes = transfer?.CompletedBytes,
+                TotalBytes = transfer?.TotalBytes,
+                TransferUpdatedAt = transfer?.ObservedAt,
                 EstimatedRemainingSeconds = status == DownloadTaskStatus.Downloading
                     ? downloader?.EstimatedRemainingSeconds
                     : null,
@@ -184,7 +205,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Extensions
                 Type = task.Type,
                 Status = status,
                 DownloadPath = task.DownloadPath,
-                Current = downloader?.Current,
+                Current = storageBlock ?? downloader?.Current,
                 FailureTimes = downloader?.FailureTimes ?? 0,
                 NextStartDt = nextStartDt,
                 AvailableActions = actions,

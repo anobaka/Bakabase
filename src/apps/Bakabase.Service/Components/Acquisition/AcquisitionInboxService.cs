@@ -150,6 +150,17 @@ public class AcquisitionInboxService(
     /// </summary>
     public async Task<int> UnclaimAsync(int taskId, CancellationToken ct = default)
     {
+        var gate = AcquisitionTaskGate.For(taskId);
+        await gate.WaitAsync(ct);
+        int moved;
+        try { moved = await MoveUnclaimedFilesAsync(taskId, ct); }
+        finally { gate.Release(); }
+        await acquisitions.CancelAsync(taskId, ct);
+        return moved;
+    }
+
+    private async Task<int> MoveUnclaimedFilesAsync(int taskId, CancellationToken ct)
+    {
         var inbox = InboxDirectory;
 
         if (string.IsNullOrWhiteSpace(inbox))
@@ -160,6 +171,7 @@ public class AcquisitionInboxService(
         var task = await acquisitions.GetAsync(taskId, ct)
                    ?? throw new InvalidOperationException($"Acquisition #{taskId} does not exist.");
 
+        if (task.IsDeleted) throw new InvalidOperationException("ACQUISITION_TASK_DELETED");
         storagePolicy.EnsurePathAllowed(inbox);
         Directory.CreateDirectory(inbox);
 
@@ -179,8 +191,6 @@ public class AcquisitionInboxService(
                 moved++;
             }
         }
-
-        await acquisitions.CancelAsync(taskId, ct);
 
         return moved;
     }

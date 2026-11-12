@@ -30,7 +30,9 @@ No hard thinking-token budget is imposed: real-data evaluation found that disabl
 cutting it short could lose passwords or processing steps. The SDK template override is applied
 inside the cache boundary. Other provider/model combinations
 keep their reasoning settings. Download extraction is capped at 16,384 output tokens and
-availability assessment at 2,048; a smaller configured budget still applies.
+availability assessment reserves 4,096 tokens plus 256 per unread block, capped at 8,192;
+already purchased blocks do not increase that budget, and a smaller configured limit still applies.
+Its response schema bounds the short evidence and reasons separately from download extraction.
 Reaching the output limit fails the step instead of accepting incomplete links or credentials.
 OpenAI-compatible post parsing uses a five-minute network timeout with SDK retries disabled,
 so a slow generation is not automatically cancelled and repeated every 100 seconds. Other
@@ -71,16 +73,54 @@ spending. Manual approval can override the automatic threshold and expiry assess
 still respects the minimum balance and the previously reviewed price. Partially purchased
 posts remain incomplete, including when a visible URL could still lack a hidden access code
 or archive password.
-The parser interface sends users to the original post for manual purchase and then refreshes
-the captured content. Existing explicit-purchase APIs remain available for compatibility.
+The parser interface supports reviewing uncertain or possibly expired posts and explicitly
+approving their saved eligible purchase quote. It rechecks the task revision, selected items,
+approved total, per-item limit and remaining balance before continuing the same run. This
+approval does not rewrite the evidence-based availability assessment. Users can also unlock
+content at the original post and refresh the captured content.
 Standalone manual runs do not inherit permission to purchase locked content.
+
+## Required content readiness
+
+Readable source content and acquisition-relevant content are separate concepts. A page may
+still contain unpurchased proof, donation or optional blocks after all necessary download
+information is available. `PostContentReadinessPolicy` decides which blocks still prevent
+complete extraction without changing their actual `IsBought` state.
+
+The existing availability call also assesses each restricted block's purpose. Its base
+prompt is source-independent; `IPostAnalysisPromptContributor` adds source conventions and
+`IPostContentDecisionValidator` can impose stricter source evidence requirements. SoulPlus
+recognizes explicit local proof/donation labels, never price alone or a title saying that
+the author bought the resource. Optional decisions need literal evidence in that block's
+context. Mixed credentials, necessary processing steps and unknown purposes remain blocking.
+
+Block IDs identify page content; payment targets identify purchase actions. Several blocks
+can share one target. Purchase quotes retain all unread prices for a relevant target, so
+ignoring a proof block cannot hide a conflicting price or imply a cheaper charge. Price text
+and source currency are carried separately to preserve exact display amounts.
+
+Task-owned manual confirmations record the exact source fingerprint, block set, revision,
+run, reason and decision version. Confirm/revoke uses compare-and-swap checks and append-only
+history. Continuing signals only that decision ID, never purchase approval. A fresh read
+must still match it. Source readers may exclude volatile payment nonces/counters from the
+fingerprint; editorial content, credentials and prices remain significant. Changed evidence
+requires reassessment, including after another block is unlocked. Revocation prevents future
+consumption of that proof while preserving saved results, existing acquisitions and files.
 
 ## Versioned instructions
 
-New results use `schemaVersion: 3`. The `resources` array remains flat and each resource may
+New results use `schemaVersion: 4`. The `resources` array remains flat and each resource may
 reference a content group with `groupId`. The accompanying `groups` array contains `id`,
 `title`, `kind`, an optional one-sentence `summary`, and short original-text `evidence`.
 Kinds are `main`, `preview`, `supplement`, `related`, `tool`, and `unknown`.
+
+Embedded screenshots and cover images belong in `coverCandidates` (`url`, `kind`, `evidence`),
+not download resources. Explicit image-file downloads and disguised archives remain resources
+when supported by captured instructions. Old saved arrays are never reordered: the task's
+read-only `downloadMedia.excludedResourceIndices` projection hides embedded images while
+preserving original source identities. Acquisition plans carry cover candidates as separate
+metadata, including candidates supplied by search builders; these do not generate download
+nodes or automatically set a final resource cover.
 
 The existing extraction call assesses content identity and purpose together. Only links
 that refer to the same actual content may share a group, including mirrors across different
@@ -107,6 +147,10 @@ containing only rename/move operations. An explicit `notRequired` plan has no st
 
 Every step has a unique `id`, an `op`, an `input` (`download` or any prior step id), and an
 optional `selector` matching file names or relative paths within that input's outputs.
+An omitted selector selects every input file; it does not mean the intended scope is
+unknown. Preserve source restrictions from the post: "change MP4 to ZIP" selects
+`*.mp4` and leaves companion `.z01` volumes untouched. If a stated restriction cannot
+be represented reliably, retain its evidence as an incomplete plan for review.
 
 | Operation | Parameters | Effect |
 | --- | --- | --- |

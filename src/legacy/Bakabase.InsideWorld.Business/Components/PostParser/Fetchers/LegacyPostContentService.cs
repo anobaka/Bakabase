@@ -33,12 +33,17 @@ public class LegacyPostContentService(IEnumerable<ISharedContentReader> readers)
         MainHtml = content.MainHtml ?? "",
         CommentHtmlList = content.CommentHtmlList?.ToList() ?? [],
         Comments = content.Comments?.ToList() ?? [],
-        Locks = content.Locks?.Select(l => new PostContentLock(l.Url, l.Price, l.IsBought) {Id = l.Id, Floor = l.Floor}).ToList() ?? [],
+        Locks = content.Locks?.Select(l => new PostContentLock(l.Url, l.Price, l.IsBought) {Id = l.Id, Floor = l.Floor,
+            BlockId = l.BlockId, PurchaseTargetId = l.PurchaseTargetId, ContextText = l.ContextText,
+            CurrencyCode = l.CurrencyCode, CurrencyName = l.CurrencyName}).ToList() ?? [],
         SourceUrl = content.SourceUrl,
         CapturedAt = content.CapturedAt,
         Scope = content.Scope,
         HtmlEncodingTrusted = content.HtmlEncodingTrusted,
         Balance = content.Balance,
+        CurrencyCode = content.CurrencyCode, CurrencyName = content.CurrencyName,
+        SourceEvidenceFingerprint = content.SourceEvidenceFingerprint,
+        ReaderEvidence = content.ReaderEvidence,
         SourceHint = sourceHint
     };
 

@@ -237,6 +237,9 @@ public sealed class DownloadTaskExecutionLifecycleTests
         task.Options = "{\"downloadMode\":3}";
         Assert.IsFalse(DownloadTaskExecutionLifecycle.CanContinue(task, result),
             "An old image result must not resume processing after selecting seed-only output.");
+        task.Options = "{\"downloadMode\":3,\"noTorrentAction\":1}";
+        Assert.IsTrue(DownloadTaskExecutionLifecycle.CanContinue(task, result),
+            "Explicit fallback permits continuing the downloaded image result.");
     }
 
     [TestMethod]

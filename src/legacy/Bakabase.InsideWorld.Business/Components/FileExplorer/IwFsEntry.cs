@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.InsideWorld.Business.Extensions;
@@ -57,6 +58,7 @@ namespace Bakabase.InsideWorld.Business.Components.FileExplorer
 
             Ext = type == IwFsType.Unknown ? System.IO.Path.GetExtension(Name) : null;
             Type = type;
+            Size = ReadFileSize(path, type);
             MeaningfulName = System.IO.Path.GetFileNameWithoutExtension(Name);
             // CreationTime = fileSystemInfo?.CreationTime;
             // LastWriteTime = fileSystemInfo?.LastWriteTime;
@@ -77,7 +79,22 @@ namespace Bakabase.InsideWorld.Business.Components.FileExplorer
         public string? Ext { get; set; }
         // public IwFsAttribute[] Attributes { get; set; }
         public IwFsType Type { get; set; }
-        // public long? Size { get; set; }
+        /// <summary>Current regular-file length; directories and unavailable files have no size.</summary>
+        public long? Size { get; set; }
+
+        internal static long? ReadFileSize(string path, IwFsType type)
+        {
+            if (type is IwFsType.Directory or IwFsType.Drive or IwFsType.Symlink or IwFsType.Invalid)
+                return null;
+            try
+            {
+                var file = new FileInfo(path);
+                return file.Exists && (file.Attributes & (FileAttributes.Directory | FileAttributes.ReparsePoint)) == 0
+                    ? file.Length : null;
+            }
+            catch (IOException) { return null; }
+            catch (UnauthorizedAccessException) { return null; }
+        }
 
         // public int? ChildrenCount { get; set; }
 

@@ -1,0 +1,56 @@
+using System;
+using System.Buffers;
+using System.IO;
+using System.Security.Cryptography;
+using System.Threading;
+using System.Threading.Tasks;
+
+namespace Bakabase.Service.Components.CloudDownloads;
+
+/// <summary>Bounded sequential verification of large local or network-mounted payloads.</summary>
+internal static class CloudPayloadHash
+{
+    internal const int BufferSize = 1024 * 1024;
+
+    internal static async Task<(long Length, string Sha256)> ComputeFileAsync(string path, CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        await using var file = new FileStream(path, new FileStreamOptions
+        {
+            Mode = FileMode.Open,
+            Access = FileAccess.Read,
+            Share = FileShare.Read,
+            // The pooled read buffer below supplies full-size reads. Disable a second
+            // managed buffer; SequentialScan lets the filesystem optimize readahead.
+            BufferSize = 1,
+            Options = FileOptions.Asynchronous | FileOptions.SequentialScan
+        });
+        var length = file.Length;
+        return (length, await ComputeAsync(file, ct));
+    }
+
+    // The caller owns the stream. HashDataAsync uses small reads on some runtimes;
+    // explicit large requests avoid that overhead on network-mounted payloads.
+    internal static async Task<string> ComputeAsync(Stream source, CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        var buffer = ArrayPool<byte>.Shared.Rent(BufferSize);
+        try
+        {
+            while (true)
+            {
+                ct.ThrowIfCancellationRequested();
+                var read = await source.ReadAsync(buffer.AsMemory(0, BufferSize), ct).ConfigureAwait(false);
+                if (read == 0) break;
+                hash.AppendData(buffer, 0, read);
+            }
+            ct.ThrowIfCancellationRequested();
+            return Convert.ToHexString(hash.GetHashAndReset());
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(buffer, clearArray: true);
+        }
+    }
+}

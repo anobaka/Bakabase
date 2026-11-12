@@ -1,4 +1,5 @@
 import type { PostParseTarget, PostParserSource, WorkflowRunStatus } from "@/sdk/constants";
+import type { BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionHandoffView } from "@/sdk/Api";
 
 export interface PostAvailability {
   status: "noExpiryReported" | "expired" | "restored" | "unknown";
@@ -6,7 +7,30 @@ export interface PostAvailability {
   reason?: string | null;
 }
 
+export interface PostContentReadinessAssessment {
+  basis: "analysis" | "manual";
+  fingerprint: string;
+  policyVersion: string;
+  decisions: {
+    blockId: string;
+    relevance: "required" | "optional" | "unknown";
+    purpose:
+      | "purchaseProof"
+      | "donation"
+      | "unrelated"
+      | "supplement"
+      | "downloadCredentials"
+      | "processingInstructions"
+      | "unknown";
+    evidence: string[];
+    reason?: string | null;
+  }[];
+}
+
 export interface PostContentSnapshot {
+  currencyCode?: string | null;
+  currencyName?: string | null;
+  readiness?: PostContentReadinessAssessment | null;
   title?: string;
   mainHtml?: string;
   commentHtmlList?: string[];
@@ -16,6 +40,11 @@ export interface PostContentSnapshot {
   scope?: string;
   balance?: number | null;
   locks: {
+    blockId?: string | null;
+    contextText?: string | null;
+    currencyCode?: string | null;
+    currencyName?: string | null;
+    priceText?: string | null;
     url?: string | null;
     price?: number | null;
     isBought: boolean;
@@ -32,6 +61,10 @@ export interface PostParserTask {
   title?: string;
   content?: string;
   contentSnapshot?: PostContentSnapshot | null;
+  downloadMedia?: {
+    coverCandidates?: { url: string; kind: string; evidence?: string[] }[];
+    excludedResourceIndices?: number[];
+  } | null;
   availability?: PostAvailability | null;
   parsingState?:
     | "snapshotSaved"
@@ -42,9 +75,14 @@ export interface PostParserTask {
     | "complete"
     | null;
   parsingMessage?: string | null;
+  attentionReasonCodes?: string[];
   minimumRemainingCoins?: number;
   autoBuyThreshold?: number;
   purchaseQuote?: {
+    currencyCode?: string | null;
+    currencyName?: string | null;
+    eligibleTotalText?: string;
+    excludedTotalText?: string;
     eligibleLockUrls: string[];
     eligibleTotal: number;
     excludedTotal: number;
@@ -61,4 +99,5 @@ export interface PostParserTask {
   workflowDefinitionId?: number | null;
   workflowStatus?: WorkflowRunStatus | null;
   revision?: number;
+  acquisitionHandoff?: BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionHandoffView | null;
 }

@@ -25,6 +25,10 @@ export type Capability =
   | "create-directory"
   | "enter-directory";
 
+/** The existing selector's manage mode and task directories share these operations. */
+export const managedFileCapabilities: Capability[] = ["select", "multi-select", "range-select",
+  "enter-directory", "rename", "delete", "move", "decompress", "extract", "create-directory"];
+
 export const FileSystemTreeEntryCapabilityMap: Record<Capability, CapabilityDefinition> = {
   select: {
     shortcut: { nameI18nKey: "fileExplorer.shortcutKey.leftClick", mouseButton: 0 },

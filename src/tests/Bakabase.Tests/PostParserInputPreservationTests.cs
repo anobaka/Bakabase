@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text;
 using System.Text.Json;
 using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.PostParser.Fetchers;
@@ -162,6 +163,69 @@ public class PostParserInputPreservationTests
         Assert.IsFalse(LegacyPostContentService.ToContent(restored).HtmlEncodingTrusted);
         Assert.AreEqual(fresh.MainHtml, restored.MainHtml);
     }
+
+    [TestMethod]
+    [DataRow("a")]
+    [DataRow("span")]
+    public async Task ProtectedVisibleTextIsDecodedAsEvidenceWithoutChangingOriginalSnapshot(string tag)
+    {
+        const string password = "  解压&amp;pass@example.test  ";
+        var encoded = EncodeProtectedText(password);
+        var body = $"<p>密码：first 和 <{tag} class=\"other __cf_email__\" data-cfemail=\"{encoded}\">[email protected]</{tag}></p>";
+        var content = new PostContent
+        {
+            MainHtml = body, HtmlEncodingTrusted = true,
+            Comments = [new() {Floor = "1", Html = $"<blockquote>{body}</blockquote>"}]
+        };
+        using var prompt = JsonDocument.Parse(await ExtractPromptAsync(content));
+        var main = prompt.RootElement.GetProperty("mainHtml").GetString()!;
+        StringAssert.Contains(main, "密码：first 和");
+        StringAssert.Contains(main, $"[decoded-data-cfemail={password}]");
+        StringAssert.Contains(main, $"[data-cfemail={encoded}]");
+        StringAssert.Contains(main, "[email protected]");
+        var comment = prompt.RootElement.GetProperty("comments")[0].GetProperty("Html").GetString()!;
+        Assert.IsTrue(comment.IndexOf("<blockquote>", StringComparison.Ordinal) < comment.IndexOf("decoded-data-cfemail", StringComparison.Ordinal));
+        Assert.IsTrue(comment.IndexOf("</blockquote>", StringComparison.Ordinal) > comment.IndexOf("decoded-data-cfemail", StringComparison.Ordinal));
+        Assert.AreEqual(body, content.MainHtml, "Analysis enrichment must not rewrite stored evidence or purchase-review fingerprints.");
+    }
+
+    [TestMethod]
+    [DataRow("missing-marker")]
+    [DataRow("other-element")]
+    [DataRow("odd-hex")]
+    [DataRow("invalid-hex")]
+    [DataRow("invalid-utf8")]
+    [DataRow("control-character")]
+    [DataRow("excessive")]
+    [DataRow("pasted")]
+    [DataRow("historical")]
+    public async Task UnrecognizedProtectedTextIsNotDecodedOrDropped(string variant)
+    {
+        var encoded = variant switch
+        {
+            "odd-hex" => "00a",
+            "invalid-hex" => "00xz",
+            "invalid-utf8" => "00ff",
+            "control-character" => "0000",
+            "excessive" => new string('0', 8196),
+            _ => EncodeProtectedText("secret@example.test")
+        };
+        var tag = variant == "other-element" ? "div" : "span";
+        var marker = variant == "missing-marker" ? "other" : "__cf_email__";
+        var body = $"<{tag} class=\"{marker}\" data-cfemail=\"{encoded}\">[email protected]</{tag}>";
+        using var prompt = JsonDocument.Parse(await ExtractPromptAsync(new PostContent
+        {
+            MainHtml = body, HtmlEncodingTrusted = variant != "historical",
+            Scope = variant == "pasted" ? "pastedText" : "firstPage"
+        }));
+        var text = prompt.RootElement.GetProperty("mainHtml").GetString()!;
+        Assert.IsFalse(text.Contains("decoded-data-cfemail", StringComparison.Ordinal));
+        StringAssert.Contains(text, encoded);
+        StringAssert.Contains(text, "[email protected]");
+    }
+
+    private static string EncodeProtectedText(string text) =>
+        Convert.ToHexString(new byte[] {0x73}.Concat(Encoding.UTF8.GetBytes(text).Select(b => (byte)(b ^ 0x73))).ToArray());
 
     private static void AssertPreservedBody(string text)
     {

@@ -34,6 +34,9 @@ public record AcquisitionLeadDbModel
     public bool IsResolved { get; set; }
     public string? ExtractionPlanJson { get; set; }
 
+    /// <summary>Server-stamped provenance; ordinary lead edits cannot supply these references.</summary>
+    public string? SourceRefsJson { get; set; }
+
     public DateTime? LastUsedAt { get; set; }
 
     public AcquisitionLeadResult? LastResult { get; set; }

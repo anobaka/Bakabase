@@ -53,8 +53,9 @@ public sealed class PostParserPurchaseQuoteTests
 
     [TestMethod]
     [DataRow(0, 1)]
-    [DataRow(1, 0)]
-    public void UnknownBalanceOnlyAllowsFreeUnlocksWithoutAReserve(int reserve, int expectedEligible)
+    [DataRow(1, 1)]
+    [DataRow(1000, 1)]
+    public void UnknownBalanceAllowsOnlyExplicitFreeUnlocksRegardlessOfReserve(int reserve, int expectedEligible)
     {
         var quote = PostParserPurchaseQuote.Create(new PostContent {Locks =
             [new("free", 0, false), new("paid", 1, false)]}, 10, reserve);

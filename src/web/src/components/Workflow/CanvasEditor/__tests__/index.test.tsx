@@ -139,6 +139,7 @@ vi.mock("../InspectorPanel", () => ({
 }));
 vi.mock("../../ItemTypePill", () => ({ default: () => null }));
 vi.mock("../../ManualRunModal", () => ({ default: () => null }));
+vi.mock("../../Parameters/ParameterDefinitionsEditor", () => ({ default: () => null }));
 vi.mock("../../WorkflowRunsDrawer", () => ({ default: () => null }));
 vi.mock("../useChainDrag", () => ({
   useChainDrag: () => ({ canvasRef: { current: null } }),
@@ -151,12 +152,14 @@ vi.mock("@/components/bakaui", () => ({
     children,
     isDisabled,
     onPress,
+    "aria-label": ariaLabel,
   }: {
     children?: ReactNode;
     isDisabled?: boolean;
     onPress?: () => void;
+    "aria-label"?: string;
   }) => (
-    <button disabled={isDisabled} type="button" onClick={onPress}>
+    <button aria-label={ariaLabel} disabled={isDisabled} type="button" onClick={onPress}>
       {children}
     </button>
   ),
@@ -292,6 +295,7 @@ describe("workflow editor without native crypto.randomUUID", () => {
         triggerKind: "fs.manualScan",
         enabled: true,
         isBuiltin: true,
+        parameters: [],
         createdAt: "2026-09-13T00:00:00Z",
         activities: [1, 2].map((id) => ({
           id,
@@ -299,6 +303,7 @@ describe("workflow editor without native crypto.randomUUID", () => {
           kind: directKind,
           configJson: JSON.stringify({ existing: id }),
           onItemError: WorkflowActivityErrorBehavior.Fail,
+          parameterBindings: [],
         })),
       },
     });
@@ -364,6 +369,7 @@ describe("workflow name presentation", () => {
     id: 21,
     name,
     isBuiltin,
+    parameters: [],
     triggerKind: "fs.manualScan",
     enabled: true,
     createdAt: "2026-09-13T00:00:00Z",
@@ -374,6 +380,7 @@ describe("workflow name presentation", () => {
         kind: directKind,
         configJson: "{}",
         onItemError: WorkflowActivityErrorBehavior.Fail,
+        parameterBindings: [],
       },
     ],
   });
@@ -408,18 +415,48 @@ describe("workflow name presentation", () => {
       enabled: true,
       triggerKind: workflow.triggerKind,
       triggerFilterJson: "{}",
+      parameters: [],
       activities: [
         {
           kind: directKind,
           configJson: '{"timeoutMinutes":120}',
           notes: "My node note",
           onItemError: WorkflowActivityErrorBehavior.Fail,
+          parameterBindings: [],
         },
       ],
     });
     expect(navigate).toHaveBeenCalledExactlyOnceWith("/workflows/editor?id=99", { replace: true });
     expect(workflow.activities[0].configJson).toBe("{}");
     expect(workflow.name).toBe("Direct download");
+  });
+
+  it("lets a modal host save a preset copy and return without navigating or writing on open", async () => {
+    const saved = vi.fn();
+    const back = vi.fn();
+    await render({
+      workflow: definition("Direct download", true),
+      embedded: true,
+      onSaved: saved,
+      onBack: back,
+    });
+    expect(addWorkflow).not.toHaveBeenCalled();
+    expect(patchWorkflow).not.toHaveBeenCalled();
+    expect(navigate).not.toHaveBeenCalled();
+    const save = [...container.querySelectorAll("button")].find(
+      (button) => button.textContent === "workflow.editor.saveAsCopy",
+    )!;
+    await act(async () => save.click());
+    expect(addWorkflow).toHaveBeenCalledTimes(1);
+    expect(saved).toHaveBeenCalledExactlyOnceWith(99);
+    expect(patchWorkflow).not.toHaveBeenCalled();
+    expect(navigate).not.toHaveBeenCalled();
+    const goBack = container.querySelector(
+      '[aria-label="workflow.browser.back"]',
+    ) as HTMLButtonElement;
+    await act(async () => goBack.click());
+    expect(back).toHaveBeenCalledTimes(1);
+    expect(navigate).not.toHaveBeenCalled();
   });
 
   it("keeps a modified built-in draft when copy creation fails and allows retry", async () => {
@@ -474,6 +511,55 @@ describe("workflow name presentation", () => {
     expect(workflow.name).toBe("Direct download");
     expect(addWorkflow).not.toHaveBeenCalled();
   });
+
+  it("preserves the invocation contract and node binding when editing or copying existing workflows", async () => {
+    const parameters = [
+      {
+        key: "timeout",
+        type: "integer",
+        defaultValue: 30,
+        required: false,
+        sensitive: false,
+        displayInRun: true,
+      },
+    ];
+    const parameterBindings = [{ parameterKey: "timeout", configPath: "/timeoutMinutes" }];
+    const workflow = definition("Parameterized workflow", false);
+    workflow.parameters = parameters;
+    workflow.activities[0] = {
+      ...workflow.activities[0],
+      configJson: '{"timeoutMinutes":10}',
+      parameterBindings,
+    };
+    await render({ workflow });
+    const buttons = () => [...container.querySelectorAll("button")];
+    await act(async () =>
+      buttons()
+        .find((button) => button.textContent === "Customize node")!
+        .click(),
+    );
+    await act(async () =>
+      buttons()
+        .find((button) => button.textContent === "workflow.editor.save")!
+        .click(),
+    );
+    expect(patchWorkflow).toHaveBeenCalledWith(
+      workflow.id,
+      expect.objectContaining({
+        parameters,
+        activities: [
+          expect.objectContaining({ configJson: '{"timeoutMinutes":120}', parameterBindings }),
+        ],
+      }),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 550));
+    expect(validateWorkflow.mock.lastCall?.[0]).toEqual(
+      expect.objectContaining({
+        parameters,
+        activities: [expect.objectContaining({ parameterBindings })],
+      }),
+    );
+  });
 });
 
 describe("workflow metadata and configuration checks", () => {
@@ -481,6 +567,7 @@ describe("workflow metadata and configuration checks", () => {
     id: 31,
     name: "My workflow",
     isBuiltin: false,
+    parameters: [],
     triggerKind: "fs.manualScan",
     enabled: true,
     description: "Original purpose",
@@ -493,6 +580,7 @@ describe("workflow metadata and configuration checks", () => {
         configJson: "{}",
         notes: "Keep this node note",
         onItemError: WorkflowActivityErrorBehavior.Fail,
+        parameterBindings: [],
       },
     ],
   });

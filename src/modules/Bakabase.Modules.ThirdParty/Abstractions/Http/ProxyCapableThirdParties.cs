@@ -12,7 +12,8 @@ namespace Bakabase.Modules.ThirdParty.Abstractions.Http
     /// HTTP client and therefore always follows the global proxy — offering them the setting would
     /// mean offering one that silently does nothing.
     ///
-    /// Keep this in step with the concrete handlers under <c>ThirdParties/*/…HttpMessageHandler.cs</c>.
+    /// Keep this in step with the concrete handlers and cloud providers which explicitly
+    /// resolve <c>BakabaseWebProxy.ForThirdParty</c> (or the tool override above it).
     /// </remarks>
     public static class ProxyCapableThirdParties
     {
@@ -25,6 +26,12 @@ namespace Bakabase.Modules.ThirdParty.Abstractions.Http
             ThirdPartyId.Bangumi,
             ThirdPartyId.SoulPlus,
             ThirdPartyId.Tmdb,
+            ThirdPartyId.BaiduNetdisk,
+            ThirdPartyId.GoogleDrive,
+            ThirdPartyId.Gofile,
+            ThirdPartyId.PikPak,
+            ThirdPartyId.OneDrive,
+            ThirdPartyId.Pixeldrain,
         };
     }
 }

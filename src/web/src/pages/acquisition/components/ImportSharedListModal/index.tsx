@@ -1,10 +1,9 @@
 "use client";
 
 import type { DestroyableProps } from "@/components/bakaui/types";
-import type { CollectionModel } from "@/stores/collections";
 import type { components } from "@/sdk/BApi2";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AiOutlineDownload, AiOutlineUpload } from "react-icons/ai";
 
@@ -13,10 +12,8 @@ import { getSharedListTemplate } from "./template";
 import BApi from "@/sdk/BApi";
 import {
   Button,
-  Chip,
   Input,
   Modal,
-  Select,
   Spinner,
   Switch,
   Table,
@@ -36,7 +33,6 @@ type Row = {
   url?: string;
   password?: string;
   lineNumber: number;
-  alreadyKnown: boolean;
   include: boolean;
 };
 
@@ -45,10 +41,10 @@ type Props = DestroyableProps & {
 };
 
 /**
- * Importing somebody's list of things to get.
+ * Import a reviewed snapshot into draft tasks without touching the resource library.
  *
  * The preview is the point: a spreadsheet is read wrongly far more often than it fails to be read,
- * and a list of twenty rows silently turning into twenty wrong resources is worse than not
+ * and a list of twenty rows silently turning into twenty wrong tasks is worse than not
  * importing it at all. So nothing is created until the user has seen what was understood — and can
  * correct any of it in place.
  */
@@ -61,15 +57,6 @@ const ImportSharedListModal = ({ onImported, onDestroyed }: Props) => {
   const [reading, setReading] = useState(false);
   const [readError, setReadError] = useState<string>();
   const [importing, setImporting] = useState(false);
-  const [collections, setCollections] = useState<CollectionModel[]>([]);
-  const [collectionId, setCollectionId] = useState<number>();
-  const [startAcquiring, setStartAcquiring] = useState(false);
-
-  useEffect(() => {
-    BApi.collection
-      .getAllCollections({ withProgress: false })
-      .then((r) => setCollections((r.data ?? []) as CollectionModel[]));
-  }, []);
 
   const read = async (file: File) => {
     setReading(true);
@@ -90,10 +77,8 @@ const ImportSharedListModal = ({ onImported, onDestroyed }: Props) => {
           url: r.url ?? undefined,
           password: r.password ?? undefined,
           lineNumber: r.lineNumber,
-          alreadyKnown: r.alreadyKnown,
-          // Something already known is not an error, but importing it again is rarely what the
-          // user wants; unchecking it by default says so without hiding it.
-          include: !r.alreadyKnown,
+          // The old preview flag describes library resources, not acquisition tasks.
+          include: true,
         })),
       );
     } catch (error) {
@@ -115,20 +100,17 @@ const ImportSharedListModal = ({ onImported, onDestroyed }: Props) => {
 
     setImporting(true);
     try {
-      const result = (
-        await BApi.acquisition.importSharedList({
-          rows: chosen.map((r) => ({
-            title: r.title,
-            url: r.url,
-            password: r.password,
-            lineNumber: r.lineNumber,
-          })),
-          collectionId,
-          startAcquiring,
-        })
-      ).data;
-
-      if (!result) return;
+      const response = await BApi.acquisition.importAcquisitionDraftList({
+        rows: chosen.map((r) => ({
+          title: r.title,
+          url: r.url,
+          password: r.password,
+          lineNumber: r.lineNumber,
+        })),
+      });
+      if (response.code || !response.data)
+        throw new Error(response.message || t("acquisition.sharedList.readFailed"));
+      const result = response.data;
 
       toast.success(
         t<string>("acquisition.sharedList.imported", {
@@ -238,11 +220,6 @@ const ImportSharedListModal = ({ onImported, onDestroyed }: Props) => {
                           size="sm"
                           onValueChange={(include) => edit(row.lineNumber, { include })}
                         />
-                        {row.alreadyKnown && (
-                          <Chip size="sm" variant="flat">
-                            {t<string>("acquisition.sharedList.alreadyKnown")}
-                          </Chip>
-                        )}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -270,30 +247,6 @@ const ImportSharedListModal = ({ onImported, onDestroyed }: Props) => {
                 ))}
               </TableBody>
             </Table>
-
-            <div className="flex items-center gap-3">
-              <Select
-                className="max-w-xs"
-                dataSource={collections.map((c) => ({
-                  value: String(c.id),
-                  label: c.name,
-                  textValue: c.name,
-                }))}
-                label={t<string>("acquisition.sharedList.collection")}
-                selectedKeys={collectionId ? [String(collectionId)] : []}
-                size="sm"
-                onSelectionChange={(keys) => {
-                  const raw = Array.from(keys)[0];
-
-                  setCollectionId(raw == null ? undefined : Number(raw));
-                }}
-              />
-              <Switch isSelected={startAcquiring} size="sm" onValueChange={setStartAcquiring}>
-                <span className="text-sm">
-                  {t<string>("acquisition.sharedList.startAcquiring")}
-                </span>
-              </Switch>
-            </div>
           </>
         )}
       </div>

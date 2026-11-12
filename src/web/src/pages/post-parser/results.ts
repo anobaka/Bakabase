@@ -1,4 +1,8 @@
-import type { PostAvailability, PostParserTask } from "@/core/models/PostParserTask";
+import type {
+  PostAvailability,
+  PostContentReadinessAssessment,
+  PostParserTask,
+} from "@/core/models/PostParserTask";
 
 import { getDownloadUrl } from "./downloadLinks";
 import { groupDownloadResources } from "./resourceDeduplication";
@@ -16,9 +20,21 @@ export interface DownloadResource {
   driveKind?: number;
   extraction?: ExtractionPlan | null;
   linkHealth?: {
-    status: "available" | "unavailable" | "unknown";
+    status:
+      | "available"
+      | "unavailable"
+      | "unknown"
+      | "confirmedUnavailable"
+      | "accessRequired"
+      | "temporarilyUnavailable"
+      | "unsupported";
     reason?: string | null;
     checkedAt?: string;
+    expiresAt?: string;
+    reasonCode?: string;
+    probeId?: string;
+    probeVersion?: number;
+    evidence?: Record<string, string>;
   } | null;
 }
 
@@ -35,12 +51,22 @@ export interface ExtractionPlan {
   requirement: "required" | "notRequired" | "unknown";
   steps: {
     id: string;
-    op: "renameExtension" | "renameFile" | "moveFile" | "extractArchive";
-    input: string;
+    op:
+      | "renameExtension"
+      | "renameFile"
+      | "renameLiteral"
+      | "moveFile"
+      | "rebaseDirectory"
+      | "extractArchive";
+    input?: string;
+    inputs?: string[] | null;
     selector?: string | null;
     extension?: string | null;
     targetName?: string | null;
     targetDirectory?: string | null;
+    sourceDirectory?: string | null;
+    findText?: string | null;
+    replaceText?: string | null;
     password?: string | null;
   }[];
   evidence: string[];
@@ -50,10 +76,13 @@ export interface DownloadInfoData {
   [key: string]: unknown;
   schemaVersion?: number;
   isComplete?: boolean;
+  contentReadiness?: PostContentReadinessAssessment | null;
   warnings?: string[];
   availability?: PostAvailability | null;
   title?: string;
   resources?: DownloadResource[] | null;
+  coverCandidates?: { url: string; kind: string; evidence?: string[] }[];
+  excludedResourceIndices?: number[];
   groups?: DownloadContentGroup[] | null;
 }
 
@@ -126,6 +155,12 @@ export function getDownloadInfo(task: PostParserTask): DownloadInfoData | undefi
 
   return {
     ...data,
+    ...(task.downloadMedia?.coverCandidates?.length
+      ? { coverCandidates: task.downloadMedia.coverCandidates }
+      : {}),
+    ...(task.downloadMedia?.excludedResourceIndices?.length
+      ? { excludedResourceIndices: task.downloadMedia.excludedResourceIndices }
+      : {}),
     title: typeof data.title === "string" ? data.title : undefined,
     groups: Array.isArray(data.groups) ? groups : undefined,
     resources: resources.map((resource) => ({
@@ -176,7 +211,10 @@ export function buildExportRows(tasks: PostParserTask[], targetLabel: (key: stri
           ? getDownloadInfo({ ...task, results: { [key]: value } })
           : undefined;
       const resources = downloadInfo
-        ? groupDownloadResources(downloadInfo.resources ?? []).map((group) => group.resource)
+        ? groupDownloadResources(
+            downloadInfo.resources ?? [],
+            downloadInfo.excludedResourceIndices,
+          ).map((group) => group.resource)
         : data?.resources;
 
       if (Array.isArray(resources) && resources.length > 0) {
@@ -237,16 +275,18 @@ export const buildInstructionsJson = (tasks: PostParserTask[]) =>
         error: task.error,
         downloadInfo: (() => {
           const data = getDownloadInfo(task);
-
-          return data
-            ? {
-                ...data,
-                resources: groupDownloadResources(data.resources ?? []).map(({ resource }) => ({
-                  ...resource,
-                  link: getDownloadUrl(resource.link, resource.code),
-                })),
-              }
-            : undefined;
+          if (!data) return undefined;
+          const { excludedResourceIndices, ...exportData } = data;
+          return {
+            ...exportData,
+            resources: groupDownloadResources(
+              data.resources ?? [],
+              data.excludedResourceIndices,
+            ).map(({ resource }) => ({
+              ...resource,
+              link: getDownloadUrl(resource.link, resource.code),
+            })),
+          };
         })(),
       })),
     },

@@ -153,6 +153,7 @@ public static class TestServiceBuilder
         services.TryAddSingleton<FfMpegService>();
         services.TryAddSingleton<HardwareAccelerationService>();
         services.TryAddSingleton<SevenZipService>();
+        services.TryAddSingleton<Bakabase.InsideWorld.Business.Components.Dependency.Implementations.TeraBoxCli.TeraBoxCliService>();
         services.TryAddSingleton<Bakabase.InsideWorld.Business.Components.Dependency.Implementations.LocaleEmulator.LocaleEmulatorService>();
         services.RegisterAllRegisteredTypeAs<IDependentComponentService>();
 
@@ -258,6 +259,12 @@ public static class TestServiceBuilder
         // (mirrors what ConfigurationRegistrations does in production, but with empty values).
         // TryAdd so manual registrations above (FileSystemOptions, ResourceOptions, etc.) win.
         RegisterAllOptionsTypes(services);
+
+        // Source health checks in ordinary service tests are offline. Probe-specific fixtures
+        // explicitly install bounded fake transports/providers through their override below.
+        services.RemoveAll<Bakabase.Modules.Downloader.Cloud.ISourceAvailabilityProbe>();
+        services.AddSingleton(new Bakabase.Service.Components.SourceAvailability.SourceAvailabilityStore(
+            Path.Combine(testDir, "source-availability")));
 
         // Per-test overrides last so they win over both production and stubs.
         configure?.Invoke(services);

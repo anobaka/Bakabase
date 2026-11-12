@@ -3,6 +3,12 @@ namespace Bakabase.Modules.Downloader.Cloud;
 /// <summary>Recognition does not imply that a provider is installed or a share is accessible.</summary>
 public static class CloudSourceClassifier
 {
+    // Official alternate domains: https://pixeldrain.com/about (checked 2026-10-25).
+    // Use an exact allowlist, never arbitrary subdomains or lookalike suffixes.
+    public static bool IsPixeldrainHost(string host) => host.ToLowerInvariant() is
+        "pixeldrain.com" or "www.pixeldrain.com" or "pixeldrain.net" or "www.pixeldrain.net" or
+        "pixeldra.in" or "www.pixeldra.in";
+
     public static string Classify(string url)
     {
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)) return "unknown";
@@ -17,9 +23,17 @@ public static class CloudSourceClassifier
         if (host == "docs.google.com" && new[] {"/document/d/", "/spreadsheets/d/", "/presentation/d/"}
             .Any(prefix => path.StartsWith(prefix, StringComparison.Ordinal))) return "googleDrive";
         if (host is "gofile.io" or "www.gofile.io" && path.StartsWith("/d/", StringComparison.Ordinal)) return "gofile";
-        if (host is "mypikpak.com" or "www.mypikpak.com" or "pikpak.com") return "pikpak";
+        if (host is "feemoo.com" or "www.feemoo.com" &&
+            System.Text.RegularExpressions.Regex.IsMatch(path, @"^/s/[A-Za-z0-9_-]+/?$")) return "feemoo";
+        if (host is "e-hentai.org" or "exhentai.org" &&
+            System.Text.RegularExpressions.Regex.IsMatch(path, @"^/g/[1-9][0-9]*/[a-zA-Z0-9]+/?$")) return "exHentai";
+        if (PikPakShareLocator.TryParse(url, out _)) return "pikpak";
+        if (TeraBoxShareLocator.TryParse(url, out _)) return "terabox";
         if (host is "1drv.ms" or "onedrive.live.com" || host.EndsWith(".sharepoint.com", StringComparison.Ordinal)) return "oneDrive";
-        if (host is "pixeldrain.com" or "www.pixeldrain.com") return "pixeldrain";
+        if (IsPixeldrainHost(host) &&
+            (System.Text.RegularExpressions.Regex.IsMatch(path, @"^/(u|l)/[A-Za-z0-9_-]+/?$") ||
+             path.StartsWith("/d/", StringComparison.Ordinal) && path.Length > 3 &&
+             !Uri.UnescapeDataString(path).Split('/').Any(part => part is "." or ".."))) return "pixeldrain";
         if (host is "mega.nz" or "mega.co.nz") return "mega";
         if (Path.GetExtension(path).Equals(".torrent", StringComparison.OrdinalIgnoreCase)) return "torrent";
         if (new[] {".zip", ".7z", ".rar", ".tar", ".gz", ".xz", ".pdf", ".epub", ".mp4", ".mkv", ".mp3", ".flac", ".iso"}

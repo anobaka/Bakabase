@@ -80,6 +80,7 @@ export function getDownloadContentGroups(data: DownloadInfoData): DownloadConten
       ...resource,
       groupId: resolveDownloadGroupId(resource.groupId, groups),
     })),
+    data.excludedResourceIndices,
   );
 
   for (const resource of merged) {

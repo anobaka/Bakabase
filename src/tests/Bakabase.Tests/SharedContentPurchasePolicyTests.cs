@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -53,6 +54,46 @@ public class SharedContentPurchasePolicyTests
         account.Parts.Add(new("free", 0, false));
         var result = await account.Policy().PurchaseAsync("thread", "SoulPlus", 0, 0);
         Assert.AreEqual("free", result.PurchasedUrls.Single());
+    }
+
+    [TestMethod]
+    [DataRow(true)]
+    [DataRow(false)]
+    public async Task ExplicitFreeOffersDoNotConsumeOrRequireTheMinimumBalance(bool unknownBalance)
+    {
+        var account = new Account {Balance = unknownBalance ? null : 1};
+        account.Parts.AddRange([new("free", 0, false), new("unknown", null, false), new("paid", 1, false)]);
+        var result = await account.Policy().PurchaseAsync("thread", "SoulPlus", 10, 1000);
+        CollectionAssert.AreEqual(new[] {"free"}, result.PurchasedUrls);
+        Assert.AreEqual(unknownBalance ? null : (decimal?)1, account.Balance);
+    }
+
+    [TestMethod]
+    public async Task FreeApprovalRejectsFreshPaidOrConflictingPriceAndDoesNotBypassReadFailure()
+    {
+        var account = new Account {Balance = 100};
+        account.Parts.AddRange([new("increased", 1, false), new("conflict", 0, false), new("conflict", 1, false)]);
+        var result = await account.Policy().PurchaseAsync("thread", "SoulPlus", 10, 0,
+            new Dictionary<string, decimal?> {["increased"] = 0, ["conflict"] = 0}, maxTotalCost: 0);
+        Assert.AreEqual(0, result.PurchasedUrls.Count);
+        Assert.AreEqual(100m, account.Balance);
+        account.Parts = [new("free", 0, false)];
+        account.ReadFailure = new InvalidOperationException("Post unavailable or permission denied");
+        await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => account.Policy().PurchaseAsync("thread", "SoulPlus", 0, 0));
+        Assert.IsFalse(account.Parts.Single().IsBought);
+    }
+
+    [TestMethod]
+    public async Task QueuedApprovalCannotSpendWithAChangedAccount()
+    {
+        var account = new Account {Balance = 100};
+        account.Parts.Add(new("paid", 1, false));
+        var hash = SharedContentPurchasePolicy.HashAccountKey(account.AccountKey);
+        account.AccountKey = "another-account";
+        await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => account.Policy().PurchaseAsync("thread", "SoulPlus", 10, 0,
+            new Dictionary<string, decimal?> {["paid"] = 1}, expectedAccountKeyHash: hash));
+        Assert.IsFalse(account.Parts.Single().IsBought);
+        Assert.AreEqual(100m, account.Balance);
     }
 
     [TestMethod]
@@ -118,29 +159,64 @@ public class SharedContentPurchasePolicyTests
         Assert.IsTrue(result.Content.Locks.All(l => l.IsBought));
     }
 
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task RetryAfterCommittedPurchaseAndInterruptedReadDoesNotBuyAgain(bool cancelled)
+    {
+        var account = new Account {Balance = 100};
+        account.Parts.Add(new("approved", 5, false));
+        account.ReadFailureAfterPurchase = cancelled
+            ? new OperationCanceledException("Fixture cancellation after the site committed the purchase.")
+            : new IOException("Fixture connection failure after the site committed the purchase.");
+        var approval = new Dictionary<string, decimal?> {["approved"] = 5};
+        Task<SharedContentPurchaseResult> Purchase() => account.Policy().PurchaseAsync("thread", "SoulPlus", 10, 0,
+            approval, enforceThreshold: true, maxTotalCost: 5,
+            expectedAccountKeyHash: SharedContentPurchasePolicy.HashAccountKey(account.AccountKey));
+
+        if (cancelled) await Assert.ThrowsExceptionAsync<OperationCanceledException>(() => Purchase());
+        else await Assert.ThrowsExceptionAsync<IOException>(() => Purchase());
+        Assert.AreEqual(1, account.Purchases);
+        Assert.IsTrue(account.Parts.Single().IsBought);
+
+        account.ReadFailure = null;
+        var recovered = await Purchase();
+
+        Assert.AreEqual(1, account.Purchases, "A new policy instance must re-read site state, not repeat the approved purchase.");
+        Assert.AreEqual(95m, account.Balance);
+        Assert.AreEqual(0, recovered.PurchasedUrls.Count);
+        Assert.IsTrue(recovered.Content.Locks.Single().IsBought);
+    }
+
     private sealed class Account : IPostContentService, ISharedContentPurchaser
     {
         public decimal? Balance;
         public bool FilterByReference;
         public bool UnlockAll;
-        public List<PostContentLock> Parts { get; } = [];
-        public string AccountKey { get; } = Guid.NewGuid().ToString();
+        public List<PostContentLock> Parts { get; set; } = [];
+        public Exception? ReadFailure;
+        public Exception? ReadFailureAfterPurchase;
+        public int Purchases;
+        public string AccountKey { get; set; } = Guid.NewGuid().ToString();
         public PostParserSource Source => PostParserSource.SoulPlus;
         public SharedContentPurchasePolicy Policy() => new(this, [this]);
         public bool CanRead(string reference, string? sourceHint = null) => true;
         public async Task<PostContent> ReadAsync(string reference, string? sourceHint = null, CancellationToken ct = default)
         {
             await Task.Yield();
+            if (ReadFailure != null) throw ReadFailure;
             return new() {SourceHint = "SoulPlus", Balance = Balance, Locks = Parts.Where(l => !FilterByReference || l.Url == reference).ToList()};
         }
         public async Task BuyAsync(string lockUrl, CancellationToken ct)
         {
             await Task.Yield();
+            Purchases++;
             var index = Parts.FindIndex(l => l.Url == lockUrl);
             var part = Parts[index];
             if (Balance != null) Balance -= part.Price;
             for (var i = 0; i < Parts.Count; i++)
                 if (UnlockAll || Parts[i].Url == lockUrl) Parts[i] = Parts[i] with {IsBought = true};
+            ReadFailure = ReadFailureAfterPurchase;
         }
     }
 }

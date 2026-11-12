@@ -20,6 +20,7 @@ using Bakabase.Modules.Notification.Abstractions.Models.Db;
 using Bakabase.Modules.Property.Abstractions.Models.Db;
 using Bakabase.Modules.Subscription.Abstractions.Models.Db;
 using Bakabase.Modules.Workflow.Abstractions.Models.Db;
+using Bakabase.Modules.Workflow.Artifacts;
 using Microsoft.EntityFrameworkCore;
 using EnhancementRecord = Bakabase.Abstractions.Models.Db.EnhancementRecord;
 using ReservedPropertyValue = Bakabase.Abstractions.Models.Db.ReservedPropertyValue;
@@ -47,6 +48,11 @@ namespace Bakabase.InsideWorld.Business
         public DbSet<DownloadResultDbModel> DownloadResults { get; set; }
         public DbSet<DownloadResultOwnerDbModel> DownloadResultOwners { get; set; }
         public DbSet<DownloadResultProcessingDbModel> DownloadResultProcessing { get; set; }
+        public DbSet<ArtifactOperationDbModel> ArtifactOperations { get; set; }
+        public DbSet<ArtifactDbModel> Artifacts { get; set; }
+        public DbSet<ArtifactConsumerDbModel> ArtifactConsumers { get; set; }
+        public DbSet<ArtifactLineageDbModel> ArtifactLineage { get; set; }
+        public DbSet<ArtifactOperationBindingDbModel> ArtifactOperationBindings { get; set; }
 
         public DbSet<PasswordDbModel> Passwords { get; set; }
 
@@ -130,6 +136,7 @@ namespace Bakabase.InsideWorld.Business
         public DbSet<WorkflowDefinitionDbModel> WorkflowDefinitions { get; set; }
         public DbSet<WorkflowActivityDbModel> WorkflowActivities { get; set; }
         public DbSet<WorkflowRunDbModel> WorkflowRuns { get; set; }
+        public DbSet<WorkflowNodeExecutionDbModel> WorkflowNodeExecutions { get; set; }
 
         // Comparison module tables
         public DbSet<ComparisonPlanDbModel> ComparisonPlans { get; set; }
@@ -146,6 +153,8 @@ namespace Bakabase.InsideWorld.Business
         // Acquisition module tables
         public DbSet<Modules.Acquisition.Abstractions.Models.Db.AcquisitionLeadDbModel> AcquisitionLeads { get; set; }
         public DbSet<Modules.Acquisition.Abstractions.Models.Db.AcquisitionTaskDbModel> AcquisitionTasks { get; set; }
+        public DbSet<Modules.Acquisition.Abstractions.Models.Db.ProcessingPlanRevisionDbModel> ProcessingPlanRevisions { get; set; }
+        public DbSet<Modules.Acquisition.Abstractions.Models.Db.AcquisitionHandoffDbModel> AcquisitionHandoffs { get; set; }
 
         // Collection module tables
         public DbSet<Modules.Collection.Abstractions.Models.Db.CollectionDbModel> Collections { get; set; }
@@ -184,6 +193,13 @@ namespace Bakabase.InsideWorld.Business
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+            modelBuilder.Entity<ArtifactOperationDbModel>().HasIndex(x => new {x.IntentKey, x.State});
+            modelBuilder.Entity<ArtifactDbModel>().HasIndex(x => new {x.OperationId, x.State});
+            modelBuilder.Entity<ArtifactConsumerDbModel>().HasIndex(x => new {x.OperationId, x.ConsumerKey}).IsUnique();
+            modelBuilder.Entity<ArtifactConsumerDbModel>().HasIndex(x => new {x.OperationId, x.LeaseUntil});
+            modelBuilder.Entity<ArtifactLineageDbModel>().HasIndex(x => new {x.ParentArtifactId, x.ChildArtifactId}).IsUnique();
+            modelBuilder.Entity<ArtifactLineageDbModel>().HasIndex(x => x.ChildArtifactId);
+            modelBuilder.Entity<ArtifactOperationBindingDbModel>().HasIndex(x => new {x.OwnerKind, x.OwnerId, x.Slot}).IsUnique();
             modelBuilder.Entity<Bakabase.Modules.Downloader.Cloud.CloudOperationDbModel>(t =>
             {
                 t.HasIndex(o => o.WorkflowRunId);
@@ -296,6 +312,17 @@ namespace Bakabase.InsideWorld.Business
                 // asks "is this one being got?" — both are one indexed lookup.
                 t.HasIndex(a => a.Status);
                 t.HasIndex(a => a.ResourceId);
+            });
+
+            modelBuilder.Entity<Modules.Acquisition.Abstractions.Models.Db.ProcessingPlanRevisionDbModel>(t =>
+            {
+                // Competing append operations for the same expected head cannot both commit.
+                t.HasIndex(r => new {r.SourceKey, r.Revision}).IsUnique();
+            });
+            modelBuilder.Entity<Modules.Acquisition.Abstractions.Models.Db.AcquisitionHandoffDbModel>(t =>
+            {
+                t.HasIndex(h => new {h.SourceModule, h.SourceKind, h.SourceId, h.SourceRevision}).IsUnique();
+                t.HasIndex(h => h.Status);
             });
 
             modelBuilder.Entity<Modules.Collection.Abstractions.Models.Db.CollectionResourceMappingDbModel>(t =>
@@ -631,9 +658,23 @@ namespace Bakabase.InsideWorld.Business
 
             modelBuilder.Entity<WorkflowRunDbModel>(t =>
             {
+                t.HasMany(x => x.Sources).WithOne().HasForeignKey(x => x.WorkflowRunId).OnDelete(DeleteBehavior.Cascade);
+                t.HasMany(x => x.NodeExecutions).WithOne().HasForeignKey(x => x.WorkflowRunId).OnDelete(DeleteBehavior.Cascade);
                 t.HasIndex(x => x.WorkflowDefinitionId);
                 t.HasIndex(x => x.Status);
                 t.HasIndex(x => x.StartedAt);
+            });
+
+            modelBuilder.Entity<WorkflowRunSourceDbModel>(t =>
+            {
+                t.HasIndex(x => new {x.Module, x.EntityKind, x.EntityId, x.Revision, x.ResultKey});
+                t.HasIndex(x => new {x.WorkflowRunId, x.Module, x.EntityKind, x.EntityId, x.Revision, x.ResultKey}).IsUnique();
+            });
+
+            modelBuilder.Entity<WorkflowNodeExecutionDbModel>(t =>
+            {
+                t.HasIndex(x => new {x.WorkflowRunId, x.NodeId, x.Attempt}).IsUnique();
+                t.HasIndex(x => x.Status);
             });
 
             modelBuilder.Entity<ResourceMoveRecordDbModel>(t =>

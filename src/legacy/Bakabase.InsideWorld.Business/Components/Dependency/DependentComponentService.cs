@@ -15,6 +15,7 @@ using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions;
 using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions.Models.Constants;
 using Bakabase.InsideWorld.Business.Components.Dependency.Discovery;
 using Bakabase.InsideWorld.Business.Components.Dependency.Exceptions;
+using Bakabase.InsideWorld.Business.Components.Dependency.Models;
 using Bakabase.InsideWorld.Models.Constants;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -84,6 +85,8 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency
         /// The dependencies will be automatically installed during the installation process.
         /// </summary>
         protected virtual IEnumerable<Type> Dependencies => Enumerable.Empty<Type>();
+        public IReadOnlyList<string> DependencyIds => Dependencies.Select(type =>
+            ((IDependentComponentService)_globalServiceProvider.GetRequiredService(type)).Id).ToArray();
 
         protected abstract Task InstallCore(CancellationToken ct);
 
@@ -175,6 +178,10 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency
 
         private async Task InstallWhileLocked(CancellationToken ct)
         {
+            if (!CanAutoInstallOnCurrentPlatform)
+            {
+                throw new PlatformNotSupportedException($"Automatic installation of {DisplayName} is not available on this platform.");
+            }
             Status = DependentComponentStatus.Installing;
             try
             {
@@ -306,7 +313,10 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency
 
         protected abstract IDiscoverer Discoverer { get; }
 
-        public virtual bool IsAvailableOnCurrentPlatform => true;
+        public virtual IReadOnlyList<DependentComponentTarget> SupportedTargets => DependentComponentPlatforms.Desktop64;
+        public virtual bool IsAvailableOnCurrentPlatform => DependentComponentPlatforms.IsAvailable(SupportedTargets);
+        public virtual bool CanAutoInstallOnCurrentPlatform => IsAvailableOnCurrentPlatform &&
+            DependentComponentPlatforms.CanAutoInstall(SupportedTargets);
 
         public DependentComponentStatus Status { get; protected set; } = DependentComponentStatus.NotInstalled;
 
@@ -381,7 +391,7 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency
             var installed = Context.Version;
             return latest with
             {
-                CanUpdate = IsAvailableOnCurrentPlatform &&
+                CanUpdate = CanAutoInstallOnCurrentPlatform &&
                             ComponentVersionComparison.IsUpdateAvailable(installed, latest.Version),
                 InstalledVersionRecognized = string.IsNullOrWhiteSpace(installed) ||
                                              ComponentVersionComparison.TryParse(installed) != null

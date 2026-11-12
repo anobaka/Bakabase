@@ -1,4 +1,5 @@
 import type { DependentComponentStatus } from "@/sdk/constants";
+import type { BakabaseInsideWorldBusinessComponentsDependencyModelsViewDependentComponentContextViewModel as ContextDto } from "@/sdk/Api";
 
 import { create } from "zustand";
 
@@ -14,6 +15,12 @@ interface IContext {
   location?: string;
   version?: string;
   error?: string;
+  supportedTargets?: ContextDto["supportedTargets"];
+  currentOs?: ContextDto["currentOs"];
+  currentArchitecture?: ContextDto["currentArchitecture"];
+  currentRuntime?: ContextDto["currentRuntime"];
+  dependencyIds?: ContextDto["dependencyIds"];
+  canAutoInstallOnCurrentPlatform?: ContextDto["canAutoInstallOnCurrentPlatform"];
 }
 
 interface DependentComponentContextsState {

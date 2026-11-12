@@ -8,6 +8,7 @@ using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business;
 using Bakabase.Modules.Acquisition.Abstractions.Components;
+using Bakabase.Modules.Acquisition.Abstractions.Models.Db;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Acquisition.Abstractions.Services;
@@ -258,9 +259,23 @@ public sealed class AcquisitionPipelineTests
         Assert.AreEqual("/library/Something I do not have", done.TargetDirectory,
             "what the steps learned reaches the task row");
 
-        // Nothing runs after a recipe's last step, so only the queue tick can notice it finished.
-        Assert.AreNotEqual(AcquisitionStatus.Completed, done.Status);
+        // Reads project the authoritative run immediately; the queue tick updates the persisted index.
+        Assert.AreEqual(AcquisitionStatus.Completed, done.Status);
+        await using (var scope = _sp.CreateAsyncScope())
+        {
+            var stored = await scope.ServiceProvider.GetRequiredService<BakabaseDbContext>()
+                .Set<AcquisitionTaskDbModel>().AsNoTracking().SingleAsync(t => t.Id == created.Id);
+            Assert.AreEqual(AcquisitionStatus.Running, stored.Status);
+            Assert.IsNull(stored.CompletedAt);
+        }
         await Reconcile();
+        await using (var scope = _sp.CreateAsyncScope())
+        {
+            var stored = await scope.ServiceProvider.GetRequiredService<BakabaseDbContext>()
+                .Set<AcquisitionTaskDbModel>().AsNoTracking().SingleAsync(t => t.Id == created.Id);
+            Assert.AreEqual(AcquisitionStatus.Completed, stored.Status);
+            Assert.IsNotNull(stored.CompletedAt);
+        }
         Assert.AreEqual(AcquisitionStatus.Completed, (await Task_(created.Id)).Status);
         Assert.IsNotNull((await Task_(created.Id)).CompletedAt);
     }

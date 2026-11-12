@@ -6,13 +6,14 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ExHentaiConfigField, ExHentaiConfigPanel } from "../ExHentaiConfig";
-import { ExHentaiDownloadMode } from "@/sdk/constants";
+import { ExHentaiDownloadMode, ExHentaiNoTorrentAction } from "@/sdk/constants";
 
 type OriginalImageOptions = {
   preferTorrent?: boolean;
   downloadMode?: ExHentaiDownloadMode;
   saveTorrentFile?: boolean;
   fallbackToDirect?: boolean;
+  noTorrentAction?: ExHentaiNoTorrentAction;
   preferOriginalImages?: boolean;
   allowOriginalImageGpSpending?: boolean;
   originalImageMinimumGpBalance?: number | null;
@@ -123,7 +124,7 @@ afterEach(() => {
 });
 
 describe("ExHentai original image configuration", () => {
-  it("saves the shared BT checkbox combination as the default acquisition preference", async () => {
+  it("saves the shared BT actions with automatic direct fallback for future tasks", async () => {
     state.options = {
       downloadMode: ExHentaiDownloadMode.Torrent,
       saveTorrentFile: true,
@@ -134,31 +135,36 @@ describe("ExHentai original image configuration", () => {
     expect(screen.queryByRole("checkbox", { name: keys.prefer })).toBeNull();
     expect(screen.queryByLabelText("Follow-up workflow")).toBeNull();
     expect(screen.queryByText("ExHentai proxy")).toBeNull();
-    expect(screen.getByRole("checkbox", { name: "downloader.mode.downloadTorrent" })).toBeChecked();
-    expect(screen.getByRole("checkbox", { name: "downloader.mode.createBtTask" })).toBeChecked();
-    await user.click(screen.getByRole("checkbox", { name: "downloader.mode.createBtTask" }));
+    expect(screen.getByRole("checkbox", { name: "downloader.policy.preferBt" })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "downloader.policy.saveTorrent" })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "downloader.policy.downloadBt" })).toBeChecked();
+    expect(patchExHentai).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("checkbox", { name: "downloader.policy.downloadBt" }));
     expect(patchExHentai).toHaveBeenLastCalledWith({
       downloadMode: ExHentaiDownloadMode.TorrentFile,
+      preferTorrent: true,
       saveTorrentFile: false,
+      fallbackToDirect: true,
+      noTorrentAction: ExHentaiNoTorrentAction.DirectDownload,
     });
     state.options = { ...state.options, ...patchExHentai.mock.calls.at(-1)![0] };
     view.rerender(panel(ExHentaiConfigField.Download));
-    expect(
-      screen.getByRole("checkbox", { name: "downloader.mode.downloadTorrent" }),
-    ).toBeDisabled();
-    expect(screen.queryByRole("checkbox", { name: "downloader.mode.fallbackToDirect" })).toBeNull();
-    await user.click(screen.getByRole("checkbox", { name: "downloader.mode.createBtTask" }));
+    expect(screen.getByRole("checkbox", { name: "downloader.policy.saveTorrent" })).toBeDisabled();
+    expect(screen.queryByRole("combobox", { name: "downloader.mode.label" })).toBeNull();
+    await user.click(screen.getByRole("checkbox", { name: "downloader.policy.downloadBt" }));
     expect(patchExHentai).toHaveBeenLastCalledWith({
       downloadMode: ExHentaiDownloadMode.Torrent,
+      preferTorrent: true,
       saveTorrentFile: true,
-      fallbackToDirect: false,
+      fallbackToDirect: true,
+      noTorrentAction: ExHentaiNoTorrentAction.DirectDownload,
     });
   });
 
   it("keeps original image settings, acquisition, follow-up processing and proxy in the full panel", () => {
     render(panel("all"));
     expect(screen.getByRole("checkbox", { name: keys.prefer })).toBeVisible();
-    expect(screen.getByLabelText("downloader.mode.label")).toBeVisible();
+    expect(screen.getByRole("checkbox", { name: "downloader.policy.preferBt" })).toBeVisible();
     expect(screen.getByLabelText("Follow-up workflow")).toBeVisible();
     expect(screen.getByText("ExHentai proxy")).toBeVisible();
   });
@@ -166,7 +172,7 @@ describe("ExHentai original image configuration", () => {
   it("keeps the proxy in request settings without exposing download preferences", () => {
     render(panel(ExHentaiConfigField.DataFetch));
     expect(screen.getByText("ExHentai proxy")).toBeVisible();
-    expect(screen.queryByLabelText("downloader.mode.label")).toBeNull();
+    expect(screen.queryByRole("checkbox", { name: "downloader.policy.preferBt" })).toBeNull();
     expect(screen.queryByRole("checkbox", { name: keys.prefer })).toBeNull();
     expect(screen.queryByLabelText("Follow-up workflow")).toBeNull();
   });
@@ -174,7 +180,7 @@ describe("ExHentai original image configuration", () => {
   it("saves and clears the default follow-up workflow from its own section", async () => {
     const user = userEvent.setup();
     const view = render(panel(ExHentaiConfigField.PostProcessing));
-    expect(screen.queryByLabelText("downloader.mode.label")).toBeNull();
+    expect(screen.queryByRole("checkbox", { name: "downloader.policy.preferBt" })).toBeNull();
     expect(screen.queryByRole("checkbox", { name: keys.prefer })).toBeNull();
     expect(screen.queryByText("ExHentai proxy")).toBeNull();
     await user.selectOptions(screen.getByLabelText("Follow-up workflow"), "42");
@@ -188,7 +194,7 @@ describe("ExHentai original image configuration", () => {
 
   it("defaults to normal images and makes the spending warning visible before opt-in", async () => {
     render(panel());
-    expect(screen.queryByLabelText("downloader.mode.label")).toBeNull();
+    expect(screen.queryByRole("checkbox", { name: "downloader.policy.preferBt" })).toBeNull();
     expect(screen.getByRole("checkbox", { name: keys.prefer })).not.toBeChecked();
     expect(screen.getByRole("note")).toHaveTextContent(
       "thirdPartyConfig.exHentai.originalImages.warning",

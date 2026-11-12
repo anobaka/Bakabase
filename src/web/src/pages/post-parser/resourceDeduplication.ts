@@ -180,11 +180,16 @@ function mergeResources(
 }
 
 /** Group compatible duplicates without changing persisted resource indices or mutating their contents. */
-export function groupDownloadResources(resources: DownloadResource[]): DownloadResourceGroup[] {
+export function groupDownloadResources(
+  resources: DownloadResource[],
+  excludedIndices: readonly number[] = [],
+): DownloadResourceGroup[] {
+  const excluded = new Set(excludedIndices);
   const groups: DownloadResourceGroup[] = [];
   const byLink = new Map<string, DownloadResourceGroup[]>();
 
   resources.forEach((resource, index) => {
+    if (excluded.has(index)) return;
     const key = identity(resource)?.key;
 
     for (const candidate of key ? (byLink.get(key) ?? []) : []) {

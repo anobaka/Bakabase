@@ -3,16 +3,20 @@ import { useTranslation } from "react-i18next";
 
 import { Button, Input, Spinner, Switch } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
-import DependencyComponent from "@/pages/configuration/components/Dependency/components/Component";
+import DependencyComponent from "@/components/Dependency/DependencyManager";
 import ExternalLink from "@/components/ExternalLink";
+import DownloadToolProxies from "@/components/ProxySelector/DownloadToolProxies";
+import { ThirdPartyId } from "@/sdk/constants";
 import type { BakabaseServiceComponentsCloudDownloadsBaiduBaiduPcsAccountViewModel } from "@/sdk/Api";
+import ProxyField from "../base/ProxyField";
+import BaiduDownloadSettings from "./BaiduDownloadSettings";
 
 export type BaiduAccount = BakabaseServiceComponentsCloudDownloadsBaiduBaiduPcsAccountViewModel;
 
 export const BAIDU_COMPONENT_ID = "baidu-pcs-go-component-service";
 
 /** Credentials are write-only: an existing account is reauthenticated with a fresh input. */
-export default function BaiduNetdiskConfig() {
+export default function BaiduNetdiskConfig({ onChanged }: { onChanged?: () => void } = {}) {
   const { t } = useTranslation();
   const [accounts, setAccounts] = useState<BaiduAccount[]>();
   const [editingId, setEditingId] = useState<string>();
@@ -39,6 +43,7 @@ export default function BaiduNetdiskConfig() {
       const response = await operation();
       if (response.code) throw new Error(response.message ?? t("cloudDownload.error"));
       await load();
+      onChanged?.();
     } catch (e) {
       setError(e instanceof Error ? e.message : t("cloudDownload.error"));
     } finally {
@@ -49,6 +54,8 @@ export default function BaiduNetdiskConfig() {
     <div className="space-y-4">
       <p className="text-sm text-default-500">{t("cloudDownload.account.description")}</p>
       <DependencyComponent id={BAIDU_COMPONENT_ID} />
+      <ProxyField thirdPartyId={ThirdPartyId.BaiduNetdisk} />
+      <DownloadToolProxies toolIds={["baidu-pcs-go"]} />
       {!accounts && !error && <Spinner size="sm" />}
       {accounts?.map((account) => (
         <div
@@ -117,6 +124,18 @@ export default function BaiduNetdiskConfig() {
           >
             {t("common.action.delete")}
           </Button>
+          <div className="w-full">
+            <BaiduDownloadSettings
+              account={account}
+              busy={busy}
+              onRefresh={() =>
+                void perform(() => BApi.baiduPcs.refreshBaiduPcsMembership(account.id))
+              }
+              onSave={(settings) =>
+                void perform(() => BApi.baiduPcs.setBaiduPcsDownloadOptions(account.id, settings))
+              }
+            />
+          </div>
         </div>
       ))}
       <div className="space-y-3 rounded-lg border border-default-200 p-3">

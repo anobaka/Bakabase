@@ -1,0 +1,357 @@
+using System.Reflection;
+using Bootstrap.Models.Constants;
+using System.Text.Json;
+using Bakabase.InsideWorld.Business;
+using Bakabase.InsideWorld.Business.Components;
+using Microsoft.Extensions.Localization;
+using Bakabase.InsideWorld.Business.Components.Downloader.Services;
+using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
+using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants;
+using Bakabase.Modules.Acquisition.Abstractions.Models.Db;
+using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
+using Bakabase.Modules.Acquisition.Abstractions.Services;
+using Bakabase.Modules.Acquisition.Components;
+using Bakabase.Modules.Bittorrent.Abstractions;
+using Bakabase.Modules.Bittorrent.Models;
+using Bakabase.Modules.HttpDownloads.Abstractions;
+using Bakabase.Modules.HttpDownloads.Models;
+using Bakabase.Modules.Workflow.Abstractions.Models.Db;
+using Bakabase.Modules.Workflow.Abstractions.Models.Domain;
+using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
+using Bakabase.Modules.Workflow.Artifacts;
+using Bakabase.Modules.Workflow.Components;
+using Bakabase.Service.Components.Acquisition.Planning;
+using Bakabase.TestKit.Utils;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace Bakabase.Tests;
+
+[TestClass]
+public sealed class AcquisitionTaskDeletionTests
+{
+    private IServiceProvider _services = null!;
+    private BakabaseDbContext _db = null!;
+    private AcquisitionTaskDeletionService _delete = null!;
+    private AcquisitionDeletionActivityReader _activity = null!;
+    private SnapshotProxy _bt = null!;
+    private SnapshotProxy _http = null!;
+    [TestInitialize]
+    public async Task Setup()
+    {
+        _services = await TestServiceBuilder.BuildServiceProvider(s => s.AddTransient(provider =>
+            new BakabaseLocalizer(provider.GetRequiredService<IStringLocalizer<SharedResource>>())));
+        _db = _services.GetRequiredService<BakabaseDbContext>();
+        var bt = DispatchProxy.Create<IBtDownloadManager, SnapshotProxy>(); _bt = (SnapshotProxy)(object)bt;
+        var http = DispatchProxy.Create<IHttpDownloadManager, SnapshotProxy>(); _http = (SnapshotProxy)(object)http;
+        _activity = new(_db, _services.GetRequiredService<DownloadTaskService>(), bt, http);
+        _delete = new(_db, _activity, new());
+    }
+    [TestCleanup] public void Cleanup() => (_services as IDisposable)?.Dispose();
+
+    private async Task<(AcquisitionTaskDbModel Task, WorkflowRunDbModel Run)> Seed(WorkflowRunStatus status = WorkflowRunStatus.Waiting)
+    {
+        var run = new WorkflowRunDbModel {Status = status, StartedAt = DateTime.Now, WaitingSince = DateTime.Now,
+            CurrentStepIndex = 1, CurrentItemJson = "preserve private checkpoint", WaitPromptJson = "preserve prompt"};
+        _db.WorkflowRuns.Add(run); await _db.SaveChangesAsync();
+        var task = new AcquisitionTaskDbModel {Title = "Fixture", BuilderId = "prepared", Phase = "attention", Status = AcquisitionStatus.Waiting,
+            WorkflowRunId = run.Id, CreatedAt = DateTime.Now, UpdatedAt = DateTime.Now, PlanHistoryJson = "[]", PurchaseRecordJson = "[]",
+            SourceRefsJson = "[{\"module\":\"postParser\",\"entityKind\":\"task\",\"entityId\":\"fixture\",\"revision\":\"1\"}]"};
+        _db.AcquisitionTasks.Add(task); await _db.SaveChangesAsync();
+        _db.Set<WorkflowRunSourceDbModel>().Add(new() {WorkflowRunId = run.Id, Module = "acquisition", EntityKind = "task", EntityId = task.Id.ToString()});
+        _db.WorkflowNodeExecutions.Add(new() {WorkflowRunId = run.Id, NodeId = "wait", StepIndex = 1, Attempt = 1, Status = "waiting"});
+        await _db.SaveChangesAsync(); return (task, run);
+    }
+    private async Task<AcquisitionTaskDeletePreview> Preview(params int[] ids) => await _delete.PreviewAsync(new(ids));
+
+    [TestMethod]
+    public async Task ConfirmationUsesFixedIdsAndOnlyAddsTombstonePreservingFilesHistoryAndDeduplication()
+    {
+        var (task, run) = await Seed(); var before = JsonSerializer.Serialize(await _db.AcquisitionTasks.AsNoTracking().SingleAsync(t => t.Id == task.Id)); var checkpoint = run.CurrentItemJson;
+        var file = Path.Combine(Path.GetTempPath(), "acquisition-delete-" + Guid.NewGuid().ToString("N"));
+        await File.WriteAllTextAsync(file, "official file");
+        try
+        {
+            var preview = await Preview(task.Id, task.Id, 999999);
+            Assert.AreEqual(2, preview.TotalCount); Assert.AreEqual(1, preview.DeletableCount);
+            Assert.IsNull(task.DeletedAt, "Preview must not mutate any task.");
+            var (later, _) = await Seed();
+            Assert.AreEqual("preview", _delete.GetProgress(preview.PreviewId).State);
+            var result = await _delete.DeleteAsync(new(preview.PreviewId));
+            var progress = _delete.GetProgress(preview.PreviewId);
+            Assert.AreEqual("completed", progress.State);
+            Assert.AreEqual(2, progress.FinishedTasks, "Skipped rows are handled, not reported as successfully deleted.");
+            Assert.AreEqual(0, progress.CompletedFiles);
+            Assert.IsNull(progress.CurrentTaskId);
+            CollectionAssert.AreEqual(new[] {task.Id}, result.DeletedTaskIds.ToArray());
+            Assert.AreEqual("ACQUISITION_TASK_NOT_FOUND", result.Skipped.Single().ReasonCode);
+            await _db.Entry(task).ReloadAsync(); Assert.IsNotNull(task.DeletedAt);
+            var persisted = await _db.AcquisitionTasks.AsNoTracking().SingleAsync(t => t.Id == task.Id);
+            Assert.AreEqual(before, JsonSerializer.Serialize(persisted with {DeletedAt = null}));
+            Assert.IsNull(later.DeletedAt); Assert.AreEqual(checkpoint, run.CurrentItemJson);
+            Assert.AreEqual(2, await _db.WorkflowNodeExecutions.CountAsync());
+            Assert.AreEqual(2, await _db.Set<WorkflowRunSourceDbModel>().CountAsync());
+            Assert.AreEqual("official file", await File.ReadAllTextAsync(file));
+            var replay = await _delete.DeleteAsync(new(preview.PreviewId));
+            CollectionAssert.AreEqual(result.DeletedTaskIds.ToArray(), replay.DeletedTaskIds.ToArray());
+            var acquisitions = _services.GetRequiredService<IAcquisitionService>();
+            Assert.IsTrue((await acquisitions.GetAsync(task.Id))!.IsDeleted);
+            Assert.IsFalse((await acquisitions.SearchAsync()).Any(t => t.Id == task.Id));
+            Assert.AreEqual(0, (await acquisitions.GetByIdsAsync([task.Id])).Count);
+            var page = await new AcquisitionTaskSearchService(_db, acquisitions).SearchAsync(new());
+            Assert.AreEqual(1, page.TotalTasks); Assert.IsFalse(page.FilteredTaskIds.Contains(task.Id));
+        }
+        finally { File.Delete(file); }
+    }
+
+    [TestMethod]
+    public async Task InterruptedDeletionRemainsObservableAndCannotBeAutomaticallyReplayed()
+    {
+        var (task, _) = await Seed();
+        var preview = await Preview(task.Id);
+        using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
+        await Assert.ThrowsAsync<OperationCanceledException>(() => _delete.DeleteAsync(new(preview.PreviewId), cancelled.Token));
+        var progress = _delete.GetProgress(preview.PreviewId);
+        Assert.AreEqual("interrupted", progress.State);
+        Assert.AreEqual(0, progress.FinishedTasks);
+        Assert.IsNull(task.DeletedAt);
+        await Assert.ThrowsExceptionAsync<ArgumentException>(() => _delete.DeleteAsync(new(preview.PreviewId)));
+    }
+
+    [TestMethod]
+    public async Task ChangedTaskAndNewlyRunningWorkflowAreSkippedAtConfirmation()
+    {
+        var (changed, _) = await Seed(); var (active, run) = await Seed();
+        var preview = await Preview(changed.Id, active.Id);
+        changed.Title = "Reviewed after preview"; changed.PlanRevision++; run.Status = WorkflowRunStatus.Pending;
+        await _db.SaveChangesAsync();
+        var result = await _delete.DeleteAsync(new(preview.PreviewId));
+        Assert.AreEqual(0, result.DeletedTaskIds.Count);
+        Assert.AreEqual("ACQUISITION_TASK_CHANGED", result.Skipped.Single(s => s.TaskId == changed.Id).ReasonCode);
+        Assert.AreEqual("ACQUISITION_TASK_ACTIVE", result.Skipped.Single(s => s.TaskId == active.Id).ReasonCode);
+    }
+
+    [TestMethod]
+    public async Task BusyTaskAndRunGatesAreSkippedWithoutWaitingOrCancelling()
+    {
+        var (busy, _) = await Seed(); var (other, run) = await Seed(); var preview = await Preview(busy.Id, other.Id);
+        var taskGate = AcquisitionTaskGate.For(busy.Id); var runGate = WorkflowRunMutationGate.For(run.Id);
+        await taskGate.WaitAsync(); await runGate.WaitAsync();
+        try
+        {
+            var result = await _delete.DeleteAsync(new(preview.PreviewId));
+            Assert.AreEqual(0, result.DeletedTaskIds.Count); Assert.AreEqual(2, result.Skipped.Count);
+            Assert.IsTrue(result.Skipped.All(s => s.ReasonCode == "ACQUISITION_TASK_ACTIVE"));
+        }
+        finally { taskGate.Release(); runGate.Release(); }
+    }
+
+    [TestMethod]
+    public async Task DeletedTaskCannotResumeRetryCancelOrMutateHistoricalWorkflow()
+    {
+        var (task, run) = await Seed(); var preview = await Preview(task.Id);
+        await _delete.DeleteAsync(new(preview.PreviewId));
+        var service = _services.GetRequiredService<IAcquisitionService>();
+        await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => service.ResumeAsync(task.Id, "{}"));
+        await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => service.RetryAsync(task.Id));
+        await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => service.CancelAsync(task.Id));
+        await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => new AcquisitionWorkflowRunMutationGuard(_db).EnsureCanMutateAsync(run.Id));
+        await _db.Entry(run).ReloadAsync(); Assert.AreEqual(WorkflowRunStatus.Waiting, run.Status);
+    }
+
+    [TestMethod]
+    public async Task HistoricalRunningRunAndDamagedHistoryFailClosed()
+    {
+        var (task, old) = await Seed(WorkflowRunStatus.Running);
+        task.WorkflowRunId = null; await _db.SaveChangesAsync();
+        Assert.AreEqual("ACQUISITION_TASK_ACTIVE", (await Preview(task.Id)).Rows.Single().ReasonCode);
+        old.Status = WorkflowRunStatus.Success; task.PlanHistoryJson = "invalid historical associations"; await _db.SaveChangesAsync();
+        Assert.AreEqual("ACQUISITION_EXECUTION_STATE_UNKNOWN", (await Preview(task.Id)).Rows.Single().ReasonCode);
+    }
+
+    [TestMethod]
+    public async Task NativeIntentWithoutRunIdOrParentStillProtectsTask()
+    {
+        var (task, run) = await Seed(); const string intent = "shared-download-intent";
+        _db.ArtifactOperations.Add(new() {Id = "operation", IntentKey = intent, State = ArtifactOperationState.Completed});
+        _db.ArtifactOperationBindings.Add(new() {Id = "binding", OwnerKind = "workflow", OwnerId = run.Id.ToString(), OperationId = "operation"});
+        await _db.SaveChangesAsync();
+        _bt.Bt = [new() {Id = "native", Name = "fixture", OutputDirectory = "/fixture", SourceKind = "workflow", SourceId = intent, Status = BtDownloadStatus.Running}];
+        Assert.AreEqual("ACQUISITION_DOWNLOAD_ACTIVE", (await Preview(task.Id)).Rows.Single().ReasonCode);
+        _bt.Bt = [_bt.Bt[0] with {Status = BtDownloadStatus.Completed}];
+        Assert.IsTrue((await Preview(task.Id)).Rows.Single().CanDelete);
+        Assert.IsTrue(_bt.Reads > 0); Assert.IsTrue(_http.Reads > 0);
+    }
+
+    [TestMethod]
+    public async Task PendingNativeFromAnOldSiteResultGenerationIsNeverIgnored()
+    {
+        var (task, run) = await Seed();
+        var site = new DownloadTaskDbModel {Key = "fixture", Status = DownloadTaskDbModelStatus.Complete, DownloadPath = "/fixture"};
+        _db.DownloadTasks.Add(site); await _db.SaveChangesAsync();
+        _db.DownloadResultOwners.Add(new() {DownloadTaskId = site.Id, AcquisitionTaskId = task.Id, WorkflowRunId = run.Id});
+        var old = new DownloadResultDbModel {DownloadTaskId = site.Id, SourceKey = "same", DeduplicationKey = "old", Path = "/fixture"};
+        _db.DownloadResults.Add(old); await _db.SaveChangesAsync();
+        _db.DownloadResults.Add(new() {DownloadTaskId = site.Id, SourceKey = "same", DeduplicationKey = "new", Path = "/fixture"});
+        await _db.SaveChangesAsync();
+        _http.Http = [new() {Id = "old-child", Name = "fixture", OutputDirectory = "/fixture", SourceKind = "download-result", SourceId = old.Id.ToString(), Status = HttpDownloadStatus.Queued}];
+        Assert.AreEqual("ACQUISITION_DOWNLOAD_ACTIVE", (await Preview(task.Id)).Rows.Single().ReasonCode);
+    }
+
+    [TestMethod]
+    public async Task UnloadedNativeRegistryAndUnobservedLeaseFailClosedWithoutStartingEngines()
+    {
+        var (task, run) = await Seed();
+        _db.ManagedDownloadTasks.Add(new() {Id = "bt:unloaded", Category = "bt", Provider = "bt", ProviderTaskId = "unloaded", WorkflowRunId = run.Id});
+        await _db.SaveChangesAsync();
+        Assert.AreEqual("ACQUISITION_DOWNLOAD_STATE_UNKNOWN", (await Preview(task.Id)).Rows.Single().ReasonCode);
+        var (leased, leasedRun) = await Seed();
+        _db.ArtifactOperations.Add(new() {Id = "unregistered", IntentKey = "native-unregistered", State = ArtifactOperationState.Running,
+            LeaseOwner = $"workflow:{leasedRun.Id}:target", LeaseUntil = DateTime.UtcNow.AddMinutes(-1)});
+        await _db.SaveChangesAsync();
+        Assert.AreEqual("ACQUISITION_DOWNLOAD_STATE_UNKNOWN", (await Preview(leased.Id)).Rows.Single().ReasonCode);
+    }
+
+    [DataTestMethod]
+    [DataRow("files.process")]
+    [DataRow("files.publish")]
+    public async Task ExpiredLocalClaimDoesNotRequireAnUnrelatedDownloadEngine(string kind)
+    {
+        var (task, run) = await Seed(WorkflowRunStatus.Success);
+        task.Status = AcquisitionStatus.Completed;
+        var claim = new ArtifactOperationDbModel {Id = "local-claim", Kind = kind, IntentKey = "local-intent",
+            State = ArtifactOperationState.Running, LeaseOwner = $"workflow:{run.Id}:files",
+            LeaseUntil = DateTime.UtcNow.AddMinutes(-1)};
+        _db.ArtifactOperations.Add(claim); await _db.SaveChangesAsync();
+        var before = JsonSerializer.Serialize(claim);
+        var preview = await Preview(task.Id);
+        Assert.IsTrue(preview.Rows.Single().CanDelete);
+        var result = await _delete.DeleteAsync(new(preview.PreviewId));
+        CollectionAssert.AreEqual(new[] {task.Id}, result.DeletedTaskIds.ToArray());
+        await _db.Entry(claim).ReloadAsync();
+        Assert.AreEqual(before, JsonSerializer.Serialize(claim), "Deleting the task must retain the abandoned operation history.");
+    }
+
+    [DataTestMethod]
+    [DataRow("files.process")]
+    [DataRow("files.publish")]
+    public async Task LiveLocalClaimStillBlocksDeletionAndIsRecheckedAtConfirmation(string kind)
+    {
+        var (task, run) = await Seed(WorkflowRunStatus.Success);
+        var claim = new ArtifactOperationDbModel {Id = "local-claim", Kind = kind, IntentKey = "local-intent",
+            State = ArtifactOperationState.Running, LeaseOwner = $"workflow:{run.Id}:files",
+            LeaseUntil = DateTime.UtcNow.AddMinutes(-1)};
+        _db.ArtifactOperations.Add(claim); await _db.SaveChangesAsync();
+        var preview = await Preview(task.Id);
+        Assert.IsTrue(preview.Rows.Single().CanDelete);
+        claim.LeaseUntil = DateTime.UtcNow.AddMinutes(5); await _db.SaveChangesAsync();
+        Assert.AreEqual("ACQUISITION_DOWNLOAD_ACTIVE", (await Preview(task.Id)).Rows.Single().ReasonCode);
+        var result = await _delete.DeleteAsync(new(preview.PreviewId));
+        Assert.AreEqual(0, result.DeletedTaskIds.Count);
+        Assert.AreEqual("ACQUISITION_DOWNLOAD_ACTIVE", result.Skipped.Single().ReasonCode);
+    }
+
+    [TestMethod]
+    public async Task LocalClaimWithoutLeaseExpiryStillFailsClosed()
+    {
+        var (task, run) = await Seed(WorkflowRunStatus.Success);
+        _db.ArtifactOperations.Add(new() {Id = "local-claim", Kind = "files.publish", IntentKey = "local-intent",
+            State = ArtifactOperationState.Running, LeaseOwner = $"workflow:{run.Id}:files", LeaseUntil = null});
+        await _db.SaveChangesAsync();
+        Assert.AreEqual("ACQUISITION_DOWNLOAD_STATE_UNKNOWN", (await Preview(task.Id)).Rows.Single().ReasonCode);
+    }
+
+    [TestMethod]
+    public async Task InvalidPreviewCannotDeleteOrExpandSelection()
+    {
+        var (task, _) = await Seed();
+        await Assert.ThrowsExceptionAsync<ArgumentException>(() => _delete.DeleteAsync(new(Guid.NewGuid().ToString("N"))));
+        await Assert.ThrowsExceptionAsync<ArgumentException>(() => Preview());
+        Assert.IsNull(task.DeletedAt);
+    }
+
+    [TestMethod]
+    public async Task Waiting_run_with_an_accepted_signal_protects_the_task_even_before_the_scheduler_claims_it()
+    {
+        var (task, run) = await Seed(WorkflowRunStatus.Waiting);
+        var initial = await Preview(task.Id);
+        Assert.IsTrue(initial.Rows.Single().CanDelete);
+        await _db.WorkflowRuns.Where(r => r.Id == run.Id).ExecuteUpdateAsync(set =>
+            set.SetProperty(r => r.PendingSignalJson, "{}"));
+        var updated = (await Preview(task.Id)).Rows.Single();
+        Assert.AreEqual("ACQUISITION_TASK_ACTIVE", updated.ReasonCode);
+        Assert.IsFalse(updated.CanRemoveTaskIfCleanupFails);
+        var result = await _delete.DeleteAsync(new(initial.PreviewId));
+        Assert.AreEqual("ACQUISITION_TASK_ACTIVE", result.Skipped.Single().ReasonCode);
+        Assert.IsNull(await _db.AcquisitionTasks.Where(t => t.Id == task.Id).Select(t => t.DeletedAt).SingleAsync());
+    }
+
+    [DataTestMethod]
+    [DataRow(DownloadTaskDbModelStatus.Disabled)]
+    [DataRow(DownloadTaskDbModelStatus.Failed)]
+    [DataRow(DownloadTaskDbModelStatus.Complete)]
+    public async Task EverySiteStartRejectsDeletedOwnerBeforeChangingStatusOrDoingPrechecks(DownloadTaskDbModelStatus status)
+    {
+        var (task, run) = await Seed(WorkflowRunStatus.Success);
+        task.DeletedAt = DateTime.UtcNow;
+        var site = new DownloadTaskDbModel {Key = "fixture", Status = status, DownloadPath = "/fixture", Message = "original", Options = "{}"};
+        _db.DownloadTasks.Add(site); await _db.SaveChangesAsync();
+        _db.CloudDownloadOperations.Add(new() {Id = "download", WorkflowRunId = run.Id, DownloadTaskId = site.Id, Kind = "download"});
+        await _db.SaveChangesAsync();
+        var response = await _services.GetRequiredService<DownloadTaskService>().Start(t => t.Id == site.Id, targeted: true);
+        Assert.AreNotEqual((int)ResponseCode.Success, response.Code);
+        StringAssert.Contains(response.Message!, "ACQUISITION_TASK_DELETED");
+        await _db.Entry(site).ReloadAsync();
+        Assert.AreEqual(status, site.Status); Assert.AreEqual("original", site.Message); Assert.AreEqual("{}", site.Options);
+        Assert.AreEqual(0, await _db.DownloadResults.CountAsync());
+    }
+
+    [TestMethod]
+    public async Task DownloadStartLeaseAndDeletionAreMutuallyExclusive()
+    {
+        var (task, run) = await Seed(WorkflowRunStatus.Success);
+        var site = new DownloadTaskDbModel {Key = "fixture", Status = DownloadTaskDbModelStatus.Complete, DownloadPath = "/fixture"};
+        _db.DownloadTasks.Add(site); await _db.SaveChangesAsync();
+        _db.CloudDownloadOperations.Add(new() {Id = "download", WorkflowRunId = run.Id, DownloadTaskId = site.Id, Kind = "download"});
+        await _db.SaveChangesAsync();
+        var startGuard = new WorkflowOwnedDownloadStartGuard(_db, [new AcquisitionWorkflowRunMutationGuard(_db)]);
+        var first = await Preview(task.Id);
+        await using (await startGuard.AcquireAsync(site.Id))
+        {
+            var skipped = await _delete.DeleteAsync(new(first.PreviewId));
+            Assert.AreEqual("ACQUISITION_TASK_ACTIVE", skipped.Skipped.Single().ReasonCode);
+            Assert.AreEqual(0, skipped.DeletedTaskIds.Count);
+        }
+        var second = await Preview(task.Id);
+        Assert.AreEqual(1, (await _delete.DeleteAsync(new(second.PreviewId))).DeletedTaskIds.Count);
+        await Assert.ThrowsExceptionAsync<InvalidOperationException>(async () => { await using var lease = await startGuard.AcquireAsync(site.Id); });
+    }
+
+    [TestMethod]
+    public async Task SchedulerPolicyRejectionDoesNotRewriteRetainedCompletionAsFailure()
+    {
+        var (task, run) = await Seed(WorkflowRunStatus.Success); task.DeletedAt = DateTime.UtcNow;
+        var site = new DownloadTaskDbModel {Key = "fixture", Status = DownloadTaskDbModelStatus.Complete,
+            DownloadPath = Path.GetTempPath(), Message = "retained completion"};
+        _db.DownloadTasks.Add(site); await _db.SaveChangesAsync();
+        _db.CloudDownloadOperations.Add(new() {Id = "download", WorkflowRunId = run.Id, DownloadTaskId = site.Id, Kind = "download"});
+        await _db.SaveChangesAsync();
+        await _services.GetRequiredService<DownloadTaskService>().TryStartAllTasks(DownloadTaskStartMode.ManualStart,
+            [site.Id], DownloadTaskActionOnConflict.Ignore, skipSatisfiedTasks: false);
+        await _db.Entry(site).ReloadAsync();
+        Assert.AreEqual(DownloadTaskDbModelStatus.Complete, site.Status);
+        Assert.AreEqual("retained completion", site.Message);
+        Assert.AreEqual(0, await _db.DownloadResults.CountAsync());
+    }
+
+    public class SnapshotProxy : DispatchProxy
+    {
+        public IReadOnlyList<BtDownloadJob> Bt = []; public IReadOnlyList<HttpDownloadJob> Http = []; public int Reads;
+        protected override object? Invoke(MethodInfo? method, object?[]? args)
+        {
+            if (method?.Name != "ReadSnapshotAsync") throw new AssertFailedException("Deletion must never initialize or mutate download engines: " + method?.Name);
+            Reads++;
+            return method.DeclaringType == typeof(IBtDownloadManager) ? Task.FromResult(Bt) : Task.FromResult(Http);
+        }
+    }
+}

@@ -6,7 +6,11 @@ namespace Bakabase.Modules.Workflow.Abstractions.Models.Db;
 public record WorkflowRunDbModel
 {
     [Key] public int Id { get; set; }
+    public List<WorkflowRunSourceDbModel> Sources { get; set; } = [];
+    public List<WorkflowNodeExecutionDbModel> NodeExecutions { get; set; } = [];
     public int WorkflowDefinitionId { get; set; }
+    /// <summary>Private frozen trigger and ordered node configurations; null only on legacy runs.</summary>
+    public string? PlanSnapshotJson { get; set; }
 
     public WorkflowRunStatus Status { get; set; }
 

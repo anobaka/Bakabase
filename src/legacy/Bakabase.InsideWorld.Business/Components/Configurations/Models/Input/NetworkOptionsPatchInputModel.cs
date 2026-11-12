@@ -42,4 +42,7 @@ public record NetworkOptionsPatchInputModel
     /// dictionary clears them all back to inheriting the global proxy.
     /// </summary>
     public Dictionary<int, NetworkOptions.ProxyModel>? ThirdPartyProxies { get; set; }
+
+    /// <summary>Null leaves saved overrides untouched; an empty dictionary restores inheritance.</summary>
+    public Dictionary<string, NetworkOptions.ProxyModel>? DownloadToolProxies { get; set; }
 }

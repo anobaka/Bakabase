@@ -16,6 +16,9 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IWorkflowActivityRegistry, WorkflowActivityRegistry>();
         services.AddSingleton<IWorkflowItemTypeRegistry, WorkflowItemTypeRegistry>();
         services.AddSingleton<WorkflowRunSchedulingPolicyResolver>();
+        services.AddSingleton<WorkflowSourceIndexCursor>();
+        services.AddScoped<WorkflowSourceIndex<TDbContext>>();
+        services.AddScoped<WorkflowOutputQueryService<TDbContext>>();
         services.AddScoped<IWorkflowValidationService, WorkflowValidationService>();
         services.AddScoped<WorkflowRunner<TDbContext>>();
         services.AddScoped<IWorkflowEventBus, WorkflowEventBus<TDbContext>>();

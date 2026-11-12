@@ -110,6 +110,12 @@ internal static class PostAnalysisHtml
     private static void AppendContentAttributes(StringBuilder output, IDomObject node)
     {
         if (!node.HasAttributes) return;
+        // Some CDNs replace visible text (including password-looking email addresses) with
+        // a reversible placeholder. Expose that browser-visible text as source evidence,
+        // alongside the original attributes; never execute page scripts or alter snapshots.
+        if (TryDecodeProtectedText(node) is { } decoded)
+            output.Append(" [decoded-data-cfemail=").Append(decoded).Append(']');
+        if (node.NodeName.Equals("img", StringComparison.OrdinalIgnoreCase)) output.Append(" [embedded-image]");
         foreach (var attribute in node.Attributes)
         {
             if (!LayoutAttributes.Contains(attribute.Key) || ContainsUrl(attribute.Value))
@@ -119,6 +125,26 @@ internal static class PostAnalysisHtml
                 output.Append(" [").Append(attribute.Key).Append('=').Append(attribute.Value).Append(']');
             }
         }
+    }
+
+    private static string? TryDecodeProtectedText(IDomObject node)
+    {
+        if (node.NodeName.ToLowerInvariant() is not ("a" or "span") ||
+            !(node.GetAttribute("class") ?? "").Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)
+                .Contains("__cf_email__", StringComparer.Ordinal)) return null;
+        var encoded = node.GetAttribute("data-cfemail");
+        // One key byte, then UTF-8 text XORed with that key. Invalid or excessive input
+        // remains untouched and available to the reader rather than becoming guessed text.
+        if (encoded == null || encoded.Length is < 4 or > 8194 || encoded.Length % 2 != 0 ||
+            encoded.Any(c => !Uri.IsHexDigit(c))) return null;
+        try
+        {
+            var bytes = Convert.FromHexString(encoded);
+            for (var i = 1; i < bytes.Length; i++) bytes[i] ^= bytes[0];
+            var text = new UTF8Encoding(false, true).GetString(bytes, 1, bytes.Length - 1);
+            return text.Any(char.IsControl) ? null : text;
+        }
+        catch (DecoderFallbackException) { return null; }
     }
 
     private static bool ContainsUrl(string value) =>

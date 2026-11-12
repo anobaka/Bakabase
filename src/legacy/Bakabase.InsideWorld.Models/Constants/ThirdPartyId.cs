@@ -23,6 +23,11 @@ namespace Bakabase.InsideWorld.Models.Constants
         Vndb = 13,
         BaiduNetdisk = 14,
         GoogleDrive = 15,
-        Gofile = 16
+        Gofile = 16,
+        PikPak = 17,
+        OneDrive = 18,
+        Pixeldrain = 19,
+        Mega = 20,
+        TeraBox = 21
     }
 }

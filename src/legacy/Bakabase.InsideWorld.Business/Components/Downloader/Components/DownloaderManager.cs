@@ -2,6 +2,7 @@ using System;
 using Bakabase.Abstractions.Components.FileSystem;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -31,6 +32,10 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
         private readonly IServiceProvider _serviceProvider;
         private readonly ConcurrentDictionary<int, IDownloader> _downloaders = new();
         private readonly ConcurrentDictionary<int, SemaphoreSlim> _taskActionLocks = new();
+        private readonly ConcurrentDictionary<ThirdPartyId, SemaphoreSlim> _sourceStartLocks = new();
+        // Keep the partition selected at admission even if the account's default later changes.
+        private readonly ConcurrentDictionary<int, DownloadTaskConcurrencyLimits> _taskConcurrencyLimits = new();
+        private readonly ConcurrentDictionary<int, string> _taskDownloadPaths = new();
         // The gate has the downloader's lifetime, so deleted tasks do not leave lock entries behind.
         private readonly ConditionalWeakTable<IDownloader, SemaphoreSlim> _taskDataLocks = new();
         private readonly ConcurrentDictionary<int, TaskCompletionSource> _downloadBTaskCompletionSources = new();
@@ -47,6 +52,9 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
 
         private readonly ILogger<DownloaderManager> _logger;
 
+        public string? StorageBlockReason(string path) =>
+            _serviceProvider.GetService<DownloadStorageAdmission>()?.BlockReason(path);
+
         /// <summary>
         /// A snapshot of the live downloaders.
         /// </summary>
@@ -59,21 +67,62 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
         public IDictionary<int, IDownloader> Downloaders => new Dictionary<int, IDownloader>(_downloaders);
 
         /// <summary>
-        /// Whether some downloader other than <paramref name="exceptTaskId"/> currently holds
-        /// <paramref name="thirdPartyId"/>'s single download slot. Answers without copying the map.
+        /// Whether the source or this task's account/partition has no remaining capacity.
+        /// This is a projection only; admission is rechecked atomically when starting.
         /// </summary>
-        public bool IsSourceOccupied(ThirdPartyId thirdPartyId, int? exceptTaskId = null)
+        public bool IsSourceOccupied(ThirdPartyId thirdPartyId, int? exceptTaskId = null, string? options = null,
+            string? downloadPath = null)
         {
+            var limits = GetConcurrencyLimits(thirdPartyId, exceptTaskId ?? 0, options);
+            var targetPath = NormalizeDownloadPath(downloadPath);
+            var sourceCount = 0;
+            var partitionCount = 0;
             foreach (var (taskId, downloader) in _downloaders)
             {
                 if (taskId != exceptTaskId && downloader.ThirdPartyId == thirdPartyId &&
                     downloader.IsOccupyingDownloadTaskSource())
                 {
-                    return true;
+                    if (OverlapsDownloadPath(taskId, targetPath)) return true;
+                    sourceCount++;
+                    if (OccupiesPartition(taskId, limits.PartitionKey)) partitionCount++;
+                    if (sourceCount >= limits.SourceLimit ||
+                        limits.PartitionKey != null && partitionCount >= limits.PartitionLimit)
+                        return true;
                 }
             }
 
             return false;
+        }
+
+        private DownloadTaskConcurrencyLimits GetConcurrencyLimits(ThirdPartyId source, int taskId, string? options)
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var policy = scope.ServiceProvider.GetServices<IDownloadTaskConcurrencyPolicy>()
+                .FirstOrDefault(p => p.ThirdPartyId == source);
+            var limits = policy?.GetLimits(taskId, options) ?? new DownloadTaskConcurrencyLimits();
+            return limits with {SourceLimit = Math.Max(1, limits.SourceLimit), PartitionLimit = Math.Max(1, limits.PartitionLimit)};
+        }
+
+        private bool OccupiesPartition(int taskId, string? partitionKey) => partitionKey != null &&
+            (!_taskConcurrencyLimits.TryGetValue(taskId, out var limits) || limits.PartitionKey == null ||
+             limits.PartitionKey == partitionKey);
+
+        private static string? NormalizeDownloadPath(string? path)
+        {
+            if (string.IsNullOrWhiteSpace(path)) return null;
+            try { return Path.TrimEndingDirectorySeparator(Path.GetFullPath(path)); }
+            catch (Exception error) when (error is ArgumentException or NotSupportedException) { return null; }
+        }
+
+        private bool OverlapsDownloadPath(int taskId, string? path)
+        {
+            if (path == null || !_taskDownloadPaths.TryGetValue(taskId, out var activePath)) return false;
+            var comparison = OperatingSystem.IsWindows() || OperatingSystem.IsMacOS()
+                ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+            static string WithSeparator(string value) => Path.EndsInDirectorySeparator(value)
+                ? value : value + Path.DirectorySeparatorChar;
+            return path.Equals(activePath, comparison) || path.StartsWith(WithSeparator(activePath), comparison) ||
+                   activePath.StartsWith(WithSeparator(path), comparison);
         }
 
         public DownloaderManager(IServiceProvider serviceProvider, IStringLocalizer<SharedResource> localizer,
@@ -297,6 +346,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
             if (_downloaders.TryGetValue(taskId, out var downloader) && !downloader.IsOccupyingDownloadTaskSource())
             {
                 _downloaders.TryRemove(taskId, out _);
+                _taskConcurrencyLimits.TryRemove(taskId, out _);
+                _taskDownloadPaths.TryRemove(taskId, out _);
             }
         }
 
@@ -328,8 +379,30 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
             finally { gate.Release(); }
         }
 
-        private async Task<BaseResponse> _tryStart(DownloadTask task, bool stopConflicts, bool startAutomatically)
+        private async Task<BaseResponse> _tryStart(DownloadTask task, bool stopConflicts, bool startAutomatically,
+            Func<Task>? validateUnderOwnerLease = null)
         {
+            await using var scope = _serviceProvider.CreateAsyncScope();
+            IAsyncDisposable lease;
+            try { lease = await DownloadTaskStartGuards.AcquireAsync(scope.ServiceProvider, task.Id); }
+            catch (InvalidOperationException error)
+            {
+                if (validateUnderOwnerLease != null) throw;
+                return BaseResponseBuilder.Build(ResponseCode.Conflict, error.Message);
+            }
+            await using (lease)
+            {
+                if (validateUnderOwnerLease != null) await validateUnderOwnerLease();
+                return await TryStartOwnedTask(task, stopConflicts, startAutomatically);
+            }
+        }
+
+        private async Task<BaseResponse> TryStartOwnedTask(DownloadTask task, bool stopConflicts, bool startAutomatically)
+        {
+            // Starting an already active task is idempotent, including after its capacity was lowered.
+            if (this[task.Id]?.Status is DownloaderStatus.Downloading or DownloaderStatus.Starting)
+                return BaseResponseBuilder.Ok;
+
             // A scheduler may have prepared this DTO before an explicit task action changed
             // its options. The per-task action gate makes this fresh snapshot authoritative.
             await using (var scope = _serviceProvider.CreateAsyncScope())
@@ -346,6 +419,11 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
             try
             {
                 await DownloadTaskStorage.EnsureAllowedAsync(_serviceProvider, task);
+                if (startAutomatically && StorageBlockReason(task.DownloadPath) is { } held)
+                    return BaseResponseBuilder.Build(ResponseCode.Conflict, held);
+                _serviceProvider.GetService<DownloadStorageAdmission>()?
+                    .BeforeStart(task.DownloadPath, explicitContinuation: !startAutomatically,
+                        verifyWritable: task.Status == DownloadTaskStatus.Failed);
             }
             catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException)
             {
@@ -358,24 +436,61 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
                 return validation;
             }
 
-            var activeConflictDownloaders = _downloaders.Where(a => a.Key != task.Id)
-                .Where(a => a.Value.ThirdPartyId == task.ThirdPartyId && a.Value.IsOccupyingDownloadTaskSource())
-                .ToDictionary(a => a.Key, a => a.Value);
+            // Task/owner locks protect identities and options; this separate source gate protects
+            // the shared capacity across concurrent manual and automatic starts. Status callbacks
+            // only request a queue pass and never await it, so draining a conflict cannot reenter it.
+            var sourceGate = _sourceStartLocks.GetOrAdd(task.ThirdPartyId, _ => new SemaphoreSlim(1, 1));
+            await sourceGate.WaitAsync();
+            try { return await TryStartWithinSourceCapacity(task, stopConflicts); }
+            finally { sourceGate.Release(); }
+        }
 
-            if (activeConflictDownloaders.Any())
+        private async Task<BaseResponse> TryStartWithinSourceCapacity(DownloadTask task, bool stopConflicts)
+        {
+            if (this[task.Id]?.Status is DownloaderStatus.Downloading or DownloaderStatus.Starting)
+                return BaseResponseBuilder.Ok;
+            if (this[task.Id]?.Status == DownloaderStatus.Stopping)
+                return BaseResponseBuilder.Build(ResponseCode.Conflict,
+                    $"The downloader of task {task.DisplayName} is {DownloaderStatus.Stopping}.");
+
+            var limits = GetConcurrencyLimits(task.ThirdPartyId, task.Id, task.Options);
+            var targetPath = NormalizeDownloadPath(task.DownloadPath);
+            var activeDownloaders = _downloaders.Where(a => a.Key != task.Id)
+                .Where(a => a.Value.ThirdPartyId == task.ThirdPartyId && a.Value.IsOccupyingDownloadTaskSource())
+                .OrderBy(a => a.Key).ToArray();
+            var partitionDownloaders = activeDownloaders
+                .Where(a => OccupiesPartition(a.Key, limits.PartitionKey)).ToArray();
+            var overlappingDownloaders = activeDownloaders.Where(a => OverlapsDownloadPath(a.Key, targetPath)).ToArray();
+            var sourceFull = activeDownloaders.Length >= limits.SourceLimit;
+            var partitionFull = limits.PartitionKey != null && partitionDownloaders.Length >= limits.PartitionLimit;
+
+            if (sourceFull || partitionFull || overlappingDownloaders.Length > 0)
             {
                 if (stopConflicts)
                 {
-                    foreach (var (key, dd) in activeConflictDownloaders)
-                    {
-                        await dd.Stop(DownloaderStopBy.AppendToTheQueue);
-                    }
+                    // Free only the slots this start needs. Drain them before allowing another
+                    // transfer to begin: Stopping still consumes source and account capacity.
+                    var victims = overlappingDownloaders.ToList();
+                    victims.AddRange(partitionDownloaders.Where(a => victims.All(v => v.Key != a.Key))
+                        .Take(partitionFull ? Math.Max(0, partitionDownloaders.Length -
+                            victims.Count(a => OccupiesPartition(a.Key, limits.PartitionKey)) - limits.PartitionLimit + 1) : 0));
+                    victims.AddRange(activeDownloaders.Where(a => victims.All(v => v.Key != a.Key))
+                        .Take(Math.Max(0, activeDownloaders.Length - victims.Count - limits.SourceLimit + 1)));
+                    foreach (var (_, dd) in victims)
+                        await dd.StopAndWait(DownloaderStopBy.AppendToTheQueue);
+                    // A provider that has not drained yet still occupies its slot. Also apply a
+                    // configuration decrease that happened while waiting for a stopped transfer.
+                    if (IsSourceOccupied(task.ThirdPartyId, task.Id, task.Options, task.DownloadPath))
+                        return BaseResponseBuilder.Build(ResponseCode.Conflict, "Download capacity is still occupied.");
+                    limits = GetConcurrencyLimits(task.ThirdPartyId, task.Id, task.Options);
                 }
                 else
                 {
                     await using var scope = _serviceProvider.CreateAsyncScope();
                     var service = scope.ServiceProvider.GetRequiredService<DownloadTaskService>();
-                    var occupiedTasks = await service.GetByKeys(activeConflictDownloaders.Keys);
+                    var occupiedTasks = await service.GetByKeys((sourceFull ? activeDownloaders :
+                            partitionDownloaders.Concat(overlappingDownloaders))
+                        .Select(a => a.Key).Distinct());
                     var message = _localizer[SharedResource.Downloader_DownloaderCountExceeded, task.ThirdPartyId,
                         $"{Environment.NewLine}{string.Join(Environment.NewLine, occupiedTasks.Select(a => a.Name ?? a.Key))}"];
                     // An occupied source needs a download-order choice, not a failure message.
@@ -402,6 +517,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
                 return BaseResponseBuilder.Ok;
             }
 
+            _taskConcurrencyLimits[task.Id] = limits;
+            if (targetPath != null) _taskDownloadPaths[task.Id] = targetPath;
             if (!await downloader.Start(task))
             {
                 // Start refuses while the downloader is mid-transition (Stopping). Reporting Ok here
@@ -424,14 +541,15 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
             return await WithTaskActionLock(task.Id, () => _tryStart(task, stopConflicts, startAutomatically));
         }
 
-        internal Task<BaseResponse> StartUnderTaskActionLock(DownloadTask task, bool stopConflicts) =>
-            _tryStart(task, stopConflicts, startAutomatically: false);
+        internal Task<BaseResponse> StartUnderTaskActionLock(DownloadTask task, bool stopConflicts,
+            Func<Task>? validateUnderOwnerLease = null) =>
+            _tryStart(task, stopConflicts, startAutomatically: false, validateUnderOwnerLease);
 
         /// <summary>
         /// Force-releases downloaders that claim to be busy but have shown no sign of life for
         /// <paramref name="stallThreshold"/>. A downloader stuck in Downloading / Starting / Stopping
-        /// occupies its source's only slot and makes every later start attempt a silent no-op, so
-        /// without this the queue stays frozen until the user starts everything by hand.
+        /// consumes source capacity with no useful work, potentially freezing the queue until the
+        /// user starts everything by hand.
         /// </summary>
         /// <returns>The ids of the tasks that were released.</returns>
         public async Task<IReadOnlyList<int>> ReleaseStalledDownloaders(TimeSpan stallThreshold)

@@ -12,6 +12,7 @@ using Bakabase.Modules.PostParser.Services;
 using Bakabase.Modules.AI.Models.Domain;
 using Bakabase.Modules.AI.Services;
 using Bakabase.Modules.Workflow.Abstractions.Components;
+using Bakabase.Modules.Workflow.Abstractions.Models.Domain;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
 using Bootstrap.Components.Configuration.Abstractions;
 using Microsoft.EntityFrameworkCore;
@@ -51,7 +52,7 @@ public static class PostParserWorkflow
 }
 
 /// <summary>The task reference is checked against the persisted run; manual input cannot impersonate a task.</summary>
-public sealed record PostParserInput
+public sealed record PostParserInput : IWorkflowSourcePayload, IWorkflowOutputSummary, IWorkflowOutputMetadata
 {
     public string? Link { get; init; }
     public string? Text { get; init; }
@@ -59,23 +60,79 @@ public sealed record PostParserInput
     public string? SourceHint { get; init; }
     public int? TaskId { get; init; }
     public int Revision { get; init; }
+    public object ToWorkflowOutputSummary() => PostParserOutputInspection.Summary(this, "input");
+    public IReadOnlyList<WorkflowOutputBlock> GetWorkflowOutputMetadata(string activityKind) =>
+        PostParserOutputInspection.Metadata(this);
+    IReadOnlyList<WorkflowSourceRef> IWorkflowSourcePayload.SourceRefs => TaskId is { } id
+        ? [new("postParser", "task", id.ToString(System.Globalization.CultureInfo.InvariantCulture), Revision.ToString(System.Globalization.CultureInfo.InvariantCulture))] : [];
 }
 
-public sealed record PostParserContentItem(PostParserInput Input, PostContent Content)
+public sealed record PostParserContentItem(PostParserInput Input, PostContent Content) : IWorkflowOutputSummary, IWorkflowOutputMetadata
 {
     public PostAvailabilityAssessment? Availability { get; init; }
     public List<string> Warnings { get; init; } = [];
+    public object ToWorkflowOutputSummary() => PostParserOutputInspection.Summary(Input, "content");
+    public IReadOnlyList<WorkflowOutputBlock> GetWorkflowOutputMetadata(string activityKind) =>
+        PostParserOutputInspection.Metadata(Input);
 }
-public sealed record PostParserResultItem(PostParserInput Input, PostDownloadInfo Result);
+public sealed record PostParserResultItem(PostParserInput Input, PostDownloadInfo Result) : IWorkflowOutputSummary, IWorkflowOutputMetadata
+{
+    public object ToWorkflowOutputSummary() => PostParserOutputInspection.Summary(Input, "downloadInformation", Result);
+    public IReadOnlyList<WorkflowOutputBlock> GetWorkflowOutputMetadata(string activityKind) =>
+        PostParserOutputInspection.Metadata(Input, Result);
+}
+
+/// <summary>Counts and trusted task references only; links, credentials and readable content stay in the source module.</summary>
+internal static class PostParserOutputInspection
+{
+    public static object Summary(PostParserInput input, string stage, PostDownloadInfo? result = null) => new
+    {
+        input.TaskId, input.Revision, Stage = stage, IsComplete = result?.IsComplete,
+        SourceCount = result?.Resources.Count, GroupCount = result?.Groups.Count,
+        ProcessingRequiredCount = Count(result, "required"),
+        ProcessingUnknownCount = Count(result, "unknown"),
+        ProcessingNotRequiredCount = Count(result, "notRequired")
+    };
+
+    public static IReadOnlyList<WorkflowOutputBlock> Metadata(PostParserInput input, PostDownloadInfo? result = null)
+    {
+        var blocks = new List<WorkflowOutputBlock>();
+        if (input.TaskId is { } taskId)
+            blocks.Add(new() {Kind = "task", Key = "postParser.task", TaskKind = "postParser",
+                TaskId = taskId.ToString(System.Globalization.CultureInfo.InvariantCulture), LabelKey = "workflow.nodeOutput.postParser.task"});
+        Add("revision", input.Revision);
+        if (result != null)
+        {
+            Add("sources", result.Resources.Count);
+            Add("groups", result.Groups.Count);
+            Add("processingRequired", Count(result, "required")!.Value);
+            Add("processingUnknown", Count(result, "unknown")!.Value);
+            Add("processingNotRequired", Count(result, "notRequired")!.Value);
+        }
+        return blocks;
+
+        void Add(string key, int value) => blocks.Add(new() {Kind = "scalar", Key = "postParser." + key,
+            LabelKey = "workflow.nodeOutput.postParser." + key,
+            Value = value.ToString(System.Globalization.CultureInfo.InvariantCulture)});
+    }
+
+    private static int? Count(PostDownloadInfo? result, string requirement) => result?.Resources.Count(r =>
+        (r.Extraction?.Requirement is "required" or "notRequired" ? r.Extraction.Requirement : "unknown") == requirement);
+}
 public sealed record PostParserItemTypeDescriptor(string ItemType, string DisplayName, Type ClrType) : IWorkflowItemTypeDescriptor;
 public sealed class PostParserTaskExecutionGate { public SemaphoreSlim Semaphore { get; } = new(1, 1); }
 
 public interface IPostParserWorkflowTaskBridge
 {
     Task EnsureCurrentAsync(PostParserInput input, int runId, CancellationToken ct);
-    Task SaveResultAsync(PostParserInput input, int runId, PostDownloadInfo result, CancellationToken ct);
+    Task SaveResultAsync(PostParserInput input, int runId, PostDownloadInfo result, CancellationToken ct,
+        string? extractedEvidenceFingerprint = null);
+    Task<PostContent> ResolveReadinessAsync(PostParserInput input, int runId, PostContent content, CancellationToken ct, string? expectedDecisionId = null) =>
+        Task.FromResult(PostContentReadinessPolicy.Apply(content, content.Readiness?.Basis == "analysis" ? content.Readiness : null));
     Task SaveSnapshotAsync(PostParserInput input, int runId, PostContent content,
         PostAvailabilityAssessment? availability, string state, string? message, CancellationToken ct) => Task.CompletedTask;
+    Task<PostParserContentReviewExecution?> ExecuteContentReviewAsync(PostParserInput input, int runId, PostContent content,
+        string? expectedReviewId, CancellationToken ct) => Task.FromResult<PostParserContentReviewExecution?>(null);
 }
 
 public sealed class PostParserManualTrigger : IWorkflowTrigger
@@ -158,6 +215,7 @@ public sealed class ReadPostContentActivity : IWorkflowActivity
             ? new PostContent {Title = input.Title ?? "", MainHtml = text, SourceHint = input.SourceHint, Scope = "pastedText"}
             : await service.ReadAsync(input.Link!, input.SourceHint, ct);
         await bridge.EnsureCurrentAsync(input, runId, ct);
+        content = await bridge.ResolveReadinessAsync(input, runId, content, ct);
         await bridge.SaveSnapshotAsync(input, runId, content, null, "snapshotSaved", null, ct);
         return WorkflowItemOutcome.ReplaceWith(new PostParserContentItem(input, content));
     }

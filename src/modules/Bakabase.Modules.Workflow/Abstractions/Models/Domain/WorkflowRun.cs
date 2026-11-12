@@ -4,8 +4,14 @@ namespace Bakabase.Modules.Workflow.Abstractions.Models.Domain;
 
 public record WorkflowRun
 {
+    public IReadOnlyList<WorkflowParameterSourceView> ParameterSources { get; set; } = [];
+
     public int Id { get; set; }
     public int WorkflowDefinitionId { get; set; }
+    public bool HasPlanSnapshot { get; set; }
+    public string? PlanName { get; set; }
+    public string? TriggerKind { get; set; }
+    public List<WorkflowRunPlanNodeView> PlanNodes { get; set; } = [];
     public WorkflowRunStatus Status { get; set; }
     public DateTime StartedAt { get; set; }
     public DateTime? CompletedAt { get; set; }
@@ -17,6 +23,7 @@ public record WorkflowRun
     public bool OutputPreviewTruncated { get; set; }
     public int FailedItemCount { get; set; }
     public List<WorkflowRunStepStat> StepStats { get; set; } = [];
+    public List<WorkflowNodeExecution> NodeExecutions { get; set; } = [];
     public string? ErrorMessage { get; set; }
     public int? CurrentStepIndex { get; set; }
     public string? WaitReason { get; set; }

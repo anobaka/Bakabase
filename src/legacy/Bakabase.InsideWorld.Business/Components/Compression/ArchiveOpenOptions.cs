@@ -1,0 +1,77 @@
+using System.IO;
+using System;
+using System.Globalization;
+using Bakabase.Abstractions.Models.Domain.Constants;
+
+namespace Bakabase.InsideWorld.Business.Components.Compression;
+
+/// <summary>A closed set of archive-tool opening modes, never caller-supplied command switches.</summary>
+public sealed record ArchiveOpenOptions
+{
+    private readonly string? _archiveType;
+    private readonly long? _verifiedZipPrefix;
+    private ArchiveOpenOptions(string? archiveType) => _archiveType = archiveType;
+    private ArchiveOpenOptions(long verifiedZipPrefix)
+    {
+        if (verifiedZipPrefix <= 0 || verifiedZipPrefix >= BoundedZipStructureProbe.MaximumPrefixBytes)
+            throw new ArgumentOutOfRangeException(nameof(verifiedZipPrefix));
+        _archiveType = "zip";
+        _verifiedZipPrefix = verifiedZipPrefix;
+    }
+    internal static ArchiveOpenOptions VerifiedZipPrefix(long prefix) => new(prefix);
+    internal static ArchiveOpenOptions VerifiedZipStructure(ZipStructureDescriptor structure) =>
+        new ArchiveOpenOptions((string?)null) {ZipStructure = structure};
+    internal ZipStructureDescriptor? ZipStructure { get; private init; }
+    internal bool UsesZipCompatibilityReader => ZipPasswordCodePage != null || ZipStructure != null;
+    internal long? ExpectedZipOffset => _verifiedZipPrefix;
+    public static ArchiveOpenOptions BoundedPrefix { get; } = new("*");
+
+    public ZipFileNameCodePage? ZipFileNameCodePage { get; private init; }
+    public ZipPasswordCodePage? ZipPasswordCodePage { get; private init; }
+    public ArchiveOpenMode? Mode { get; private init; }
+    public string? MemberSelector { get; private init; }
+
+    public static ArchiveOpenOptions Parser(string? memberSelector = null)
+    {
+        if (memberSelector != null && !ParserArchiveCatalog.SafeMemberName(memberSelector))
+            throw new ArgumentException("Choose one exact parser member name.", nameof(memberSelector));
+        return new ArchiveOpenOptions((string?)null) {Mode = ArchiveOpenMode.SevenZipParser, MemberSelector = memberSelector};
+    }
+
+    /// <summary>Compose a validated ZIP name decoder with an already authorized opening mode.</summary>
+    public static ArchiveOpenOptions? WithZipFileNameCodePage(ArchiveOpenOptions? opening,
+        ZipFileNameCodePage? codePage)
+    {
+        if (codePage is null) return opening;
+        if (!Enum.IsDefined(codePage.Value)) throw new ArgumentOutOfRangeException(nameof(codePage));
+        if (opening?.Mode != null) throw new ArgumentException("Parser mode and ZIP filename decoding belong in separate extraction steps.");
+        return (opening ?? new ArchiveOpenOptions((string?)null)) with {ZipFileNameCodePage = codePage};
+    }
+
+    public static ArchiveOpenOptions? WithZipPasswordCodePage(ArchiveOpenOptions? opening,
+        ZipPasswordCodePage? codePage)
+    {
+        if (codePage is null) return opening;
+        if (!Enum.IsDefined(codePage.Value)) throw new ArgumentOutOfRangeException(nameof(codePage));
+        if (opening?.Mode != null) throw new ArgumentException("Parser mode and ZIP password encoding belong in separate extraction steps.");
+        return (opening ?? new ArchiveOpenOptions((string?)null)) with {ZipPasswordCodePage = codePage};
+    }
+
+    // A known filename suffix still changes 7-Zip's wildcard opening path. Preserve that
+    // explicit format with the enlarged limit; do not allow arbitrary command-line types.
+    public static ArchiveOpenOptions BoundedPrefixFor(string path) => Path.GetExtension(path).ToLowerInvariant() switch
+    {
+        ".zip" => new("zip"), ".rar" => new("rar"), ".7z" => new("7z"), _ => BoundedPrefix
+    };
+
+    // Preserve the default embedded-archive behavior (:r), with a finite start-position limit.
+    // https://github.com/ip7z/7zip/blob/main/CPP/7zip/UI/Common/OpenArchive.cpp
+    // A validated ZIP may have another format appended to it. Open exactly that ZIP,
+    // without :r descending into another container. The bound comes from its structure,
+    // not caller-supplied switches, a filename suffix or an unrestricted media scan.
+    internal string? TypeArgument => Mode == ArchiveOpenMode.SevenZipParser ? "-t#" : _verifiedZipPrefix is { } prefix
+        ? "-tzip:s" + (prefix + 1).ToString(CultureInfo.InvariantCulture) + "b"
+        : _archiveType == null ? null : $"-t{_archiveType}:s32m:r";
+}
+
+public sealed record ArchiveFormatProbeResult(string Extension, ArchiveOpenOptions? OpenOptions = null);

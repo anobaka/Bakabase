@@ -7,16 +7,21 @@ using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Workflow.Abstractions.Models.View;
 using Bakabase.Modules.Workflow.Components;
 using Bakabase.Modules.Workflow.Extensions;
+using Bakabase.Modules.Workflow.Abstractions.Components;
 
 namespace Bakabase.Tests;
 
 [TestClass]
 public sealed class WorkflowOutputPreviewTests
 {
+    private sealed record Summary(object Value) : IWorkflowOutputSummary
+    {
+        public object ToWorkflowOutputSummary() => Value;
+    }
     [TestMethod]
     public void StructuredOutputAndEmptyRunsRemainValidJson()
     {
-        var result = WorkflowOutputPreview.Capture([new {Name = "item", Links = new[] {"a", "b"}}]);
+        var result = WorkflowOutputPreview.Capture([new Summary(new {Name = "item", Links = new[] {"a", "b"}})]);
         using var json = JsonDocument.Parse(result.Json);
         Assert.AreEqual("item", json.RootElement[0].GetProperty("name").GetString());
         Assert.IsFalse(result.Truncated);
@@ -26,7 +31,7 @@ public sealed class WorkflowOutputPreviewTests
     [TestMethod]
     public void PreviewStopsAtTwentyItems()
     {
-        var result = WorkflowOutputPreview.Capture(Enumerable.Range(0, 21).Cast<object>());
+        var result = WorkflowOutputPreview.Capture(Enumerable.Range(0, 21).Select(i => new Summary(i)));
         using var json = JsonDocument.Parse(result.Json);
         Assert.AreEqual(20, json.RootElement.GetArrayLength());
         Assert.IsTrue(result.Truncated);
@@ -35,7 +40,7 @@ public sealed class WorkflowOutputPreviewTests
     [TestMethod]
     public void OversizedItemIsOmittedWithoutBreakingLaterItemsOrJson()
     {
-        var result = WorkflowOutputPreview.Capture([new string('x', 65536), new {Name = "small"}]);
+        var result = WorkflowOutputPreview.Capture([new Summary(new string('x', 65536)), new Summary(new {Name = "small"})]);
         using var json = JsonDocument.Parse(result.Json);
         Assert.IsTrue(result.Json.Length <= WorkflowOutputPreview.MaximumCharacters);
         Assert.AreEqual(1, json.RootElement.GetArrayLength());
@@ -46,7 +51,7 @@ public sealed class WorkflowOutputPreviewTests
     [TestMethod]
     public void BudgetIncludesArrayPunctuationAndNeverCutsAString()
     {
-        var result = WorkflowOutputPreview.Capture([new string('a', 32765), new string('b', 32765)]);
+        var result = WorkflowOutputPreview.Capture([new Summary(new string('a', 32765)), new Summary(new string('b', 32765))]);
         using var json = JsonDocument.Parse(result.Json);
         Assert.IsTrue(result.Json.Length <= 65536);
         Assert.AreEqual(1, json.RootElement.GetArrayLength());
@@ -66,9 +71,9 @@ public sealed class WorkflowOutputPreviewTests
         };
         var snapshot = WorkflowItemSnapshot.Capture(item);
         Assert.IsTrue(snapshot.Length > WorkflowOutputPreview.MaximumCharacters);
-        var result = WorkflowOutputPreview.Capture([item, new {Name = "following item"}]);
+        var result = WorkflowOutputPreview.Capture([item, new Summary(new {Name = "following item"})]);
         using var json = JsonDocument.Parse(result.Json);
-        Assert.IsTrue(result.Truncated);
+        Assert.IsFalse(result.Truncated);
         Assert.IsTrue(result.Json.Length <= WorkflowOutputPreview.MaximumCharacters);
         Assert.AreEqual(2, json.RootElement.GetArrayLength());
         var summary = json.RootElement[0];
@@ -92,5 +97,13 @@ public sealed class WorkflowOutputPreviewTests
             {OutputItemsJson = "[1]", OutputPreviewTruncated = true}.ToDomainModel());
         Assert.AreEqual("[1]", current.OutputItemsJson);
         Assert.IsTrue(current.OutputPreviewTruncated);
+    }
+
+    [TestMethod]
+    public void ArbitraryExecutionPayloadIsNeverSerializedForInspection()
+    {
+        var result = WorkflowOutputPreview.Capture([new {Password = "secret-canary", Token = "token-canary"}]);
+        Assert.AreEqual("[]", result.Json);
+        Assert.IsTrue(result.Truncated);
     }
 }

@@ -210,9 +210,8 @@ afterEach(async () => {
 });
 
 describe("SetupWizard", () => {
-  it("opens single-folder selectors with asynchronously loaded server paths and saves their selections", async () => {
+  it("opens the manual inbox selector with the loaded path and saves only the visible settings", async () => {
     let completeLoad!: (response: { code: number; data: typeof defaultOptions }) => void;
-
     getOptions.mockReturnValueOnce(
       new Promise((resolve) => {
         completeLoad = resolve;
@@ -220,12 +219,10 @@ describe("SetupWizard", () => {
     );
     await renderWizard();
     expect(input("acquisition.setup.inbox.label")).toHaveValue("");
-
     await act(async () => completeLoad({ code: 0, data: defaultOptions }));
     expect(input("acquisition.setup.inbox.label")).toHaveValue("/server/pending");
     await click(button("acquisition.setup.inbox.browse"));
-    expect(createPortal).toHaveBeenNthCalledWith(
-      1,
+    expect(createPortal).toHaveBeenCalledExactlyOnceWith(
       FileSystemSelectorModal,
       expect.objectContaining({
         targetType: "folder",
@@ -234,37 +231,19 @@ describe("SetupWizard", () => {
         defaultSelectedPath: "/server/pending",
       }),
     );
-
-    const pendingSelector = createPortal.mock.calls[0][1] as DirectorySelection;
-
-    await act(async () => pendingSelector.onSelected({ path: "/mnt/downloads/ready" }));
+    const selection = createPortal.mock.calls[0][1] as DirectorySelection;
+    await act(async () => selection.onSelected({ path: "/mnt/downloads/ready" }));
     expect(input("acquisition.setup.inbox.label")).toHaveValue("/mnt/downloads/ready");
     await next();
-    expect(input("acquisition.setup.library.label")).toHaveValue("/server/library");
-    await click(button("acquisition.setup.library.browse"));
-    expect(createPortal).toHaveBeenNthCalledWith(
-      2,
-      FileSystemSelectorModal,
-      expect.objectContaining({
-        targetType: "folder",
-        multiple: false,
-        startPath: "/server/library",
-        defaultSelectedPath: "/server/library",
-      }),
-    );
-
-    const librarySelector = createPortal.mock.calls[1][1] as DirectorySelection;
-
-    await act(async () => librarySelector.onSelected({ path: "/mnt/resources" }));
-    expect(input("acquisition.setup.library.label")).toHaveValue("/mnt/resources");
-    await next();
-    await next();
+    expect(container.textContent).toContain("acquisition.setup.drives.label");
+    expect(container.textContent).not.toContain("acquisition.setup.library");
+    expect(container.textContent).not.toContain("acquisition.setup.template");
+    await setInput(input("acquisition.setup.limit.label"), "8");
     await click(button("acquisition.setup.finish"));
-
     expect(setUpAcquisition).toHaveBeenCalledExactlyOnceWith({
-      ...defaultOptions,
       inboxDirectory: "/mnt/downloads/ready",
-      libraryRootDirectory: "/mnt/resources",
+      preferredDriveKinds: [],
+      autoPurchaseLimit: 8,
     });
     expect(onDone).toHaveBeenCalledOnce();
     expect(onDestroyed).toHaveBeenCalledOnce();
@@ -287,14 +266,10 @@ describe("SetupWizard", () => {
     });
     await renderWizard();
     await next();
-    await next();
-    await next();
-
     expect(container.textContent).not.toContain("acquisition.drive.unknown");
     expect(driveButton("mega")).toHaveAttribute("aria-pressed", "true");
     expect(driveButton("mega").textContent).toBe("acquisition.drive.mega1");
     expect(driveButton("baidu").textContent).toBe("acquisition.drive.baidu2");
-
     await click(driveButton("mega"));
     expect(driveButton("mega")).toHaveAttribute("aria-pressed", "false");
     expect(driveButton("baidu").textContent).toBe("acquisition.drive.baidu1");
@@ -303,9 +278,9 @@ describe("SetupWizard", () => {
     expect(driveButton("pikpak").textContent).toBe("acquisition.drive.pikpak2");
     expect(driveButton("mega").textContent).toBe("acquisition.drive.mega3");
     await click(button("acquisition.setup.finish"));
-
     expect(setUpAcquisition).toHaveBeenCalledExactlyOnceWith({
-      ...defaultOptions,
+      inboxDirectory: defaultOptions.inboxDirectory,
+      autoPurchaseLimit: defaultOptions.autoPurchaseLimit,
       preferredDriveKinds: [
         AcquisitionDriveKind.Baidu,
         AcquisitionDriveKind.PikPak,
@@ -314,56 +289,45 @@ describe("SetupWizard", () => {
     });
   });
 
-  it("previews a nested preset and preserves the complete custom relative template when saving", async () => {
+  it("ignores legacy archive settings without overwriting them or blocking setup", async () => {
+    getOptions.mockResolvedValueOnce({
+      code: 0,
+      data: {
+        ...defaultOptions,
+        libraryRootDirectory: "/old/resource-library",
+        directoryTemplate: "../legacy/{Title}",
+      },
+    });
     await renderWizard();
+    expect(container.textContent).not.toContain("acquisition.setup.library");
     await next();
-    await next();
-    await click(button("{LeadKind}/{Date}/{Title}"));
-
-    expect(input("acquisition.setup.template.label")).toHaveValue("{LeadKind}/{Date}/{Title}");
-    expect(container.querySelector("code")?.textContent).toMatch(
-      /^\/server\/library\/SharedPage\/\d{4}-\d{2}-\d{2}\/acquisition\.setup\.template\.exampleTitle$/,
-    );
-
-    const template = "Games/{LeadKind}/{Date}/{Title}";
-
-    await setInput(input("acquisition.setup.template.label"), template);
-    expect(container.querySelector("code")?.textContent).toContain(
-      "/server/library/Games/SharedPage/",
-    );
+    expect(container.textContent).not.toContain("acquisition.setup.template");
+    expect(button("acquisition.setup.finish")).toBeEnabled();
+    await click(button("acquisition.setup.back"));
+    expect(input("acquisition.setup.inbox.label")).toHaveValue(defaultOptions.inboxDirectory);
     await next();
     await click(button("acquisition.setup.finish"));
-
     expect(setUpAcquisition).toHaveBeenCalledExactlyOnceWith({
-      ...defaultOptions,
-      directoryTemplate: template,
+      inboxDirectory: defaultOptions.inboxDirectory,
+      preferredDriveKinds: [],
+      autoPurchaseLimit: 5,
     });
+    expect(setUpAcquisition.mock.calls[0][0]).not.toHaveProperty("libraryRootDirectory");
+    expect(setUpAcquisition.mock.calls[0][0]).not.toHaveProperty("directoryTemplate");
   });
 
-  it.each([
-    "/outside/{Title}",
-    "C:\\outside\\{Title}",
-    "../{Title}",
-    "{LeadKind}/../{Title}",
-    "{LeadKind}\\..\\{Title}",
-  ])("blocks advancing with an absolute or parent-traversing template: %s", async (template) => {
+  it("completes a new setup without requiring legacy archive configuration", async () => {
+    getOptions.mockResolvedValueOnce({ code: 0, data: {} });
     await renderWizard();
+    await setInput(input("acquisition.setup.inbox.label"), "/manual/inbox");
     await next();
-    await next();
-    await setInput(input("acquisition.setup.template.label"), template);
-
-    expect(input("acquisition.setup.template.label")).toHaveAttribute("aria-invalid", "true");
-    expect(container.querySelector('[role="alert"]')).toHaveTextContent(
-      "acquisition.setup.template.invalid",
-    );
-    expect(button("acquisition.setup.next")).toBeDisabled();
-    await next();
-    expect(input("acquisition.setup.template.label")).toHaveValue(template);
-    expect(setUpAcquisition).not.toHaveBeenCalled();
-
-    await setInput(input("acquisition.setup.template.label"), "Games/{Title}");
-    expect(button("acquisition.setup.next")).toBeEnabled();
-    await next();
-    expect(button("acquisition.setup.finish")).toBeEnabled();
+    await click(driveButton("baidu"));
+    await click(button("acquisition.setup.finish"));
+    expect(setUpAcquisition).toHaveBeenCalledExactlyOnceWith({
+      inboxDirectory: "/manual/inbox",
+      preferredDriveKinds: [AcquisitionDriveKind.Baidu],
+      autoPurchaseLimit: 0,
+    });
+    expect(onDone).toHaveBeenCalledOnce();
   });
 });

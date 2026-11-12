@@ -2,6 +2,8 @@ namespace Bakabase.Modules.Workflow.Abstractions.Models.Input;
 
 public record WorkflowDefinitionCreationInputModel
 {
+    public List<WorkflowParameterDefinition> Parameters { get; set; } = [];
+
     public string Name { get; set; } = null!;
     public string? Description { get; set; }
     public string? DescriptionKey { get; set; }

@@ -23,9 +23,16 @@ public sealed class UserStoragePolicy : IUserStoragePolicy
     private readonly Func<string> _readMountInfo;
     private readonly Func<string?> _readDeploymentMetadata;
     private readonly Func<string?>? _appDataDirectory;
+    private readonly Func<string, FileAttributes> _readAttributes;
+    private readonly TimeProvider _clock;
     private readonly object _snapshotLock = new();
+    private readonly Dictionary<string, RootProbe> _rootProbes = new(StringComparer.Ordinal);
+    private static readonly TimeSpan ProbeLifetime = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan RootListingWait = TimeSpan.FromMilliseconds(100);
+    private const int MaximumPendingRootProbes = 32;
     private string? _lastMountInfo;
     private string? _lastMetadata;
+    private DateTimeOffset _snapshotReadAt;
     private Snapshot _snapshot = Snapshot.Empty;
 
     public UserStoragePolicy(Func<string?>? appDataDirectory = null)
@@ -33,12 +40,15 @@ public sealed class UserStoragePolicy : IUserStoragePolicy
 
     /// <summary>Explicit environment seams, also used by offline Setup and deterministic tests.</summary>
     public UserStoragePolicy(bool isContainer, Func<string>? readMountInfo = null,
-        Func<string?>? appDataDirectory = null, Func<string?>? readDeploymentMetadata = null)
+        Func<string?>? appDataDirectory = null, Func<string?>? readDeploymentMetadata = null,
+        Func<string, FileAttributes>? readAttributes = null, TimeProvider? timeProvider = null)
     {
         IsRestricted = isContainer;
         _appDataDirectory = appDataDirectory;
         _readMountInfo = readMountInfo ?? (() => File.ReadAllText("/proc/self/mountinfo"));
         _readDeploymentMetadata = readDeploymentMetadata ?? (() => Environment.GetEnvironmentVariable(MountsVariable));
+        _readAttributes = readAttributes ?? File.GetAttributes;
+        _clock = timeProvider ?? TimeProvider.System;
     }
 
     public bool IsRestricted { get; }
@@ -48,9 +58,18 @@ public sealed class UserStoragePolicy : IUserStoragePolicy
         if (!IsRestricted) return NativeRoots();
         var snapshot = ReadSnapshot();
         if (!TryAppDataBoundary(purpose, out var appData, out var realAppData)) return [];
-        return snapshot.Mounts.Where(m => m.Allowed &&
+        var candidates = snapshot.Mounts.Where(m => m.Allowed &&
                 !snapshot.AmbiguousPaths.Any(p => Within(m.Path, p) || Within(m.ResolvedPath, p)) &&
                 (appData == null || !Within(m.Path, appData) && !Within(m.ResolvedPath, realAppData!)))
+            .ToArray();
+        // A disconnected network mount must not hold up the entire storage chooser.
+        // Keep at most one probe per root, bound outstanding work and wait once for
+        // the whole set. A late/failed root stays unavailable until a later probe.
+        var probes = GetRootProbes(candidates);
+        try { Task.WaitAll(probes.Values.Distinct().ToArray(), RootListingWait); }
+        catch (AggregateException) { /* A failed probe never authorizes storage. */ }
+        return candidates.Where(m => probes.TryGetValue(m, out var probe) &&
+                probe.IsCompletedSuccessfully && probe.Result)
             .Select(m => new UserStorageRoot(m.Path, Path.GetFileName(m.Path), m.Kind, m.ReadOnly))
             .OrderBy(r => r.Path, StringComparer.Ordinal).ToArray();
     }
@@ -66,7 +85,13 @@ public sealed class UserStoragePolicy : IUserStoragePolicy
             var snapshot = ReadSnapshot();
             // Both matter: a symlink cannot leave a persistent mount, and a symlink
             // inside tmpfs/rootfs cannot turn that temporary entry into user storage.
-            return AllowedByMount(snapshot, lexical!, canonical: false) && AllowedByMount(snapshot, resolved!, canonical: true);
+            var lexicalMount = AllowedMount(snapshot, lexical!, canonical: false);
+            var resolvedMount = AllowedMount(snapshot, resolved!, canonical: true);
+            // Probe only the mounts this path actually uses. In particular, checking
+            // an SSD file must never stat unrelated CIFS/NFS roots.
+            return lexicalMount != null && resolvedMount != null &&
+                   IsDirectoryMount(lexicalMount) &&
+                   (ReferenceEquals(lexicalMount, resolvedMount) || IsDirectoryMount(resolvedMount));
         }
         catch (Exception e) when (IsPathError(e)) { return false; }
     }
@@ -115,19 +140,22 @@ public sealed class UserStoragePolicy : IUserStoragePolicy
         catch (Exception e) when (IsPathError(e)) { return Snapshot.Empty; }
         lock (_snapshotLock)
         {
-            if (text == _lastMountInfo && metadata == _lastMetadata) return _snapshot;
+            var now = _clock.GetUtcNow();
+            if (text == _lastMountInfo && metadata == _lastMetadata && now - _snapshotReadAt < ProbeLifetime)
+                return _snapshot;
             _lastMountInfo = text;
             _lastMetadata = metadata;
+            _snapshotReadAt = now;
             return _snapshot = ParseMountInfo(text, metadata);
         }
     }
 
-    private static Snapshot ParseMountInfo(string text, string? metadata)
+    private Snapshot ParseMountInfo(string text, string? metadata)
     {
         try
         {
             var kinds = ReadMountKinds(metadata);
-            var mounts = new List<Mount>();
+            var entries = new List<(string Path, bool Persistent, string Kind, bool ReadOnly)>();
             var ids = new HashSet<int>();
             foreach (var line in text.Split('\n', StringSplitOptions.RemoveEmptyEntries))
             {
@@ -141,18 +169,40 @@ public sealed class UserStoragePolicy : IUserStoragePolicy
                     !TryAbsolute(UnescapeMountField(fields[4]), out var original)) return Snapshot.Empty;
                 var options = fields[5].Split(',');
                 if (!options.Contains("ro") && !options.Contains("rw")) return Snapshot.Empty;
-                if (!TryResolve(original!, out var canonical)) return Snapshot.Empty;
                 var filesystem = fields[separator + 1];
                 var persistent = PersistentFileSystems.Contains(filesystem) || filesystem.StartsWith("fuse.", StringComparison.Ordinal);
-                var allowed = canonical != "/" &&
-                              !SystemDirectories.Any(p => Within(original!, p) || Within(canonical!, p)) &&
-                              persistent && Directory.Exists(canonical);
                 var readOnly = options.Contains("ro") || fields[separator + 3].Split(',').Contains("ro");
                 var kind = kinds.GetValueOrDefault(original!, "mount");
-                mounts.Add(new(original!, canonical!, allowed, kind, readOnly));
-                if (mounts.Count > 16384) return Snapshot.Empty;
+                entries.Add((original!, persistent, kind, readOnly));
+                if (entries.Count > 16384) return Snapshot.Empty;
             }
-            if (!mounts.Any(m => m.Path == "/")) return Snapshot.Empty;
+            if (!entries.Any(m => m.Path == "/")) return Snapshot.Empty;
+            var mounts = new List<Mount>();
+            foreach (var entry in entries.OrderBy(m => m.Path.Length))
+            {
+                // mountinfo describes the kernel namespace, including nested mounts.
+                // Resolve aliases above its first boundary, never probe inside another
+                // mount while discovering this one. The target's live resolution and
+                // directory type are still checked before authorizing any operation.
+                var parent = mounts.Where(m => m.Path != "/" && m.Path != entry.Path && Within(entry.Path, m.Path))
+                    .MaxBy(m => m.Path.Length);
+                string? canonical;
+                var resolved = true;
+                if (entry.Path == "/") canonical = "/";
+                else if (parent != null)
+                {
+                    canonical = parent.ResolvedPath + entry.Path[parent.Path.Length..];
+                    resolved = parent.NamespaceResolved;
+                }
+                else
+                {
+                    resolved = TryResolve(Path.GetDirectoryName(entry.Path)!, out var parentPath);
+                    canonical = resolved ? Path.Combine(parentPath!, Path.GetFileName(entry.Path)) : entry.Path;
+                }
+                var allowed = resolved && entry.Persistent && canonical != "/" &&
+                    !SystemDirectories.Any(p => Within(entry.Path, p) || Within(canonical!, p));
+                mounts.Add(new(entry.Path, canonical!, allowed, entry.Kind, entry.ReadOnly, resolved));
+            }
             // A stacked mount can hide descendants listed for the underlying mount.
             // Without proving which layer is visible, refuse that entire subtree.
             var ambiguous = mounts.GroupBy(m => m.Path, StringComparer.Ordinal).Where(g => g.Count() > 1)
@@ -186,9 +236,9 @@ public sealed class UserStoragePolicy : IUserStoragePolicy
         return result;
     }
 
-    private static bool AllowedByMount(Snapshot snapshot, string path, bool canonical)
+    private static Mount? AllowedMount(Snapshot snapshot, string path, bool canonical)
     {
-        if (SystemDirectories.Any(p => Within(path, p)) || snapshot.AmbiguousPaths.Any(p => Within(path, p))) return false;
+        if (SystemDirectories.Any(p => Within(path, p)) || snapshot.AmbiguousPaths.Any(p => Within(path, p))) return null;
         Mount? deepest = null;
         var length = -1;
         foreach (var mount in snapshot.Mounts)
@@ -196,7 +246,44 @@ public sealed class UserStoragePolicy : IUserStoragePolicy
             var root = canonical ? mount.ResolvedPath : mount.Path;
             if (root.Length > length && Within(path, root)) { deepest = mount; length = root.Length; }
         }
-        return deepest is {Allowed: true};
+        return deepest is {Allowed: true} ? deepest : null;
+    }
+
+    private bool IsDirectoryMount(Mount mount)
+    {
+        try
+        {
+            return TryResolve(mount.Path, out var canonical) && canonical == mount.ResolvedPath &&
+                   (_readAttributes(canonical!) & FileAttributes.Directory) != 0;
+        }
+        catch (Exception e) when (IsPathError(e)) { return false; }
+    }
+
+    private Dictionary<Mount, Task<bool>> GetRootProbes(IReadOnlyList<Mount> mounts)
+    {
+        lock (_snapshotLock)
+        {
+            var now = _clock.GetUtcNow();
+            var keys = mounts.Select(m => m.Path + "\0" + m.ResolvedPath).ToHashSet(StringComparer.Ordinal);
+            foreach (var key in _rootProbes.Where(p => p.Value.Task.IsCompleted && !keys.Contains(p.Key))
+                         .Select(p => p.Key).ToArray()) _rootProbes.Remove(key);
+            var pending = _rootProbes.Values.Count(p => !p.Task.IsCompleted);
+            var result = new Dictionary<Mount, Task<bool>>();
+            foreach (var mount in mounts)
+            {
+                var key = mount.Path + "\0" + mount.ResolvedPath;
+                _rootProbes.TryGetValue(key, out var probe);
+                if ((probe == null || probe.Task.IsCompleted && now - probe.StartedAt >= ProbeLifetime) &&
+                    pending < MaximumPendingRootProbes)
+                {
+                    probe = new(Task.Run(() => IsDirectoryMount(mount)), now);
+                    _rootProbes[key] = probe;
+                    pending++;
+                }
+                if (probe != null) result[mount] = probe.Task;
+            }
+            return result;
+        }
     }
 
     private static bool Within(string path, string root) => path.Equals(root, StringComparison.Ordinal) ||
@@ -214,7 +301,7 @@ public sealed class UserStoragePolicy : IUserStoragePolicy
         catch (Exception e) when (IsPathError(e)) { return false; }
     }
 
-    private static bool TryResolve(string path, out string? resolved)
+    private bool TryResolve(string path, out string? resolved)
     {
         resolved = null;
         if (!TryAbsolute(path, out _)) return false;
@@ -232,7 +319,7 @@ public sealed class UserStoragePolicy : IUserStoragePolicy
                 if (item.Value == "..") { current = Path.GetDirectoryName(current) ?? "/"; continue; }
                 var next = Path.Combine(current, item.Value);
                 FileAttributes attributes;
-                try { attributes = File.GetAttributes(next); }
+                try { attributes = _readAttributes(next); }
                 catch (Exception e) when (e is FileNotFoundException or DirectoryNotFoundException)
                 {
                     current = next; // A new target still resolves every existing ancestor.
@@ -285,7 +372,9 @@ public sealed class UserStoragePolicy : IUserStoragePolicy
         return result;
     }
 
-    private sealed record Mount(string Path, string ResolvedPath, bool Allowed, string Kind, bool ReadOnly);
+    private sealed record RootProbe(Task<bool> Task, DateTimeOffset StartedAt);
+    private sealed record Mount(string Path, string ResolvedPath, bool Allowed, string Kind, bool ReadOnly,
+        bool NamespaceResolved);
     private sealed record Snapshot(IReadOnlyList<Mount> Mounts, IReadOnlyList<string> AmbiguousPaths)
     {
         public static readonly Snapshot Empty = new([], []);

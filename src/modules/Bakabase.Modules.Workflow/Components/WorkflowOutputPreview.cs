@@ -18,9 +18,16 @@ public static class WorkflowOutputPreview
         foreach (var item in items)
         {
             if (++seen > MaximumItems) { truncated = true; break; }
+            // The original item is an execution payload and may contain passwords or tokens.
+            // Only an explicitly implemented safe inspection projection may cross this boundary.
+            if (item is not IWorkflowOutputSummary summary) { truncated = true; continue; }
             string json;
-            try { json = JsonSerializer.Serialize(item, item?.GetType() ?? typeof(object), WorkflowJson.Options); }
-            catch (Exception ex) when (ex is JsonException or NotSupportedException)
+            try
+            {
+                var compact = summary.ToWorkflowOutputSummary();
+                json = JsonSerializer.Serialize(compact, compact?.GetType() ?? typeof(object), WorkflowJson.Options);
+            }
+            catch (Exception)
             {
                 truncated = true;
                 continue;
@@ -29,18 +36,7 @@ public static class WorkflowOutputPreview
             if (required > MaximumCharacters - length)
             {
                 truncated = true;
-                if (item is not IWorkflowOutputSummary summary) continue;
-                try
-                {
-                    var compact = summary.ToWorkflowOutputSummary();
-                    json = JsonSerializer.Serialize(compact, compact?.GetType() ?? typeof(object), WorkflowJson.Options);
-                }
-                catch (Exception ex) when (ex is JsonException or NotSupportedException)
-                {
-                    continue;
-                }
-                required = json.Length + (serialized.Count == 0 ? 0 : 1);
-                if (required > MaximumCharacters - length) continue;
+                continue;
             }
             serialized.Add(json);
             length += required;

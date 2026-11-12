@@ -121,7 +121,7 @@ public sealed partial class ExHentaiDownloadResultTests
         var options = JsonSerializer.Deserialize<ExHentaiTaskOptions>(legacy
             ? "{\"preferTorrent\":true,\"fallbackToDirect\":true}"
             : "{\"downloadMode\":3,\"fallbackToDirect\":true}", JsonSerializerOptions.Web)!;
-        await Assert.ThrowsExceptionAsync<System.InvalidOperationException>(() => RunProducer(producer,
+        await Assert.ThrowsExceptionAsync<Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloaders.DownloadPolicyException>(() => RunProducer(producer,
             "https://exhentai.org/g/12345/abcdef0123/", _ => Task.CompletedTask,
             preferTorrent: probeTorrent, resultWorkflowId: null,
             downloadMode: options.EffectiveDownloadMode, fallbackToDirect: options.FallbackToDirect));
@@ -194,7 +194,7 @@ public sealed partial class ExHentaiDownloadResultTests
     {
         var handler = new GalleryHandler();
         using var producer = await BuildProducer(handler);
-        await Assert.ThrowsExceptionAsync<System.InvalidOperationException>(() => RunProducer(producer,
+        await Assert.ThrowsExceptionAsync<Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloaders.DownloadPolicyException>(() => RunProducer(producer,
             "https://exhentai.org/g/12345/abcdef0123/", _ => Task.CompletedTask,
             resultWorkflowId: null, downloadMode: ExHentaiDownloadMode.Torrent, fallbackToDirect: false));
         Assert.AreEqual(0, handler.ImageRequests);
@@ -220,11 +220,15 @@ public sealed partial class ExHentaiDownloadResultTests
         static ExHentaiTaskOptions Read(string? json, ExHentaiDownloadMode? mode = null) =>
             JsonSerializer.Deserialize<ExHentaiTaskOptions>(ExHentaiDownloaderHelper.ApplyDefaultTaskOptions(
                 json, true, null, mode, true, false), JsonSerializerOptions.Web)!;
-        Assert.AreEqual(ExHentaiDownloadMode.TorrentFile, Read(null).EffectiveDownloadMode);
+        Assert.AreEqual(ExHentaiDownloadMode.Torrent, Read(null).EffectiveDownloadMode);
         Assert.AreEqual(ExHentaiDownloadMode.Torrent, Read(null, ExHentaiDownloadMode.Torrent).EffectiveDownloadMode);
         Assert.AreEqual(ExHentaiDownloadMode.Direct, Read("{\"preferTorrent\":false}", ExHentaiDownloadMode.Torrent).EffectiveDownloadMode);
         Assert.AreEqual(ExHentaiDownloadMode.TorrentFile, Read("{\"downloadMode\":3}", ExHentaiDownloadMode.Direct).EffectiveDownloadMode);
         Assert.IsTrue(Read(null).SaveTorrentFile);
         Assert.IsFalse(Read(null).FallbackToDirect);
+        Assert.AreEqual(ExHentaiNoTorrentAction.DirectDownload, Read(null).NoTorrentAction);
+        var legacy = JsonSerializer.Deserialize<ExHentaiTaskOptions>("{\"preferTorrent\":true,\"fallbackToDirect\":true}", JsonSerializerOptions.Web)!;
+        Assert.AreEqual(ExHentaiDownloadMode.TorrentFile, legacy.EffectiveDownloadMode);
+        Assert.IsNull(legacy.NoTorrentAction, "Reading an existing task must not adopt the creation default.");
     }
 }

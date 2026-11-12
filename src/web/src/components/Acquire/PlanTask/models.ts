@@ -1,0 +1,12 @@
+import type {
+  BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionTask,
+  BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanBuilderDescriptor,
+  BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanTaskDetail,
+  BakabaseServiceComponentsAcquisitionPlanningAcquisitionDraftSource,
+} from "@/sdk/Api";
+
+export type PlanTask = BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionTask;
+export type PlanBuilder =
+  BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanBuilderDescriptor;
+export type DraftSource = BakabaseServiceComponentsAcquisitionPlanningAcquisitionDraftSource;
+export type PlanTaskDetail = BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanTaskDetail;

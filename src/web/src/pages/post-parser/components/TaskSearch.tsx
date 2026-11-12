@@ -6,11 +6,12 @@ import { Input } from "@/components/bakaui";
 interface Props {
   value: string;
   onChange: (value: string) => void;
-  total: number;
-  shown: number;
+  total?: number;
+  shown?: number;
+  isFiltered?: boolean;
 }
 
-const TaskSearch = ({ value, onChange, total, shown }: Props) => {
+const TaskSearch = ({ value, onChange, total, shown, isFiltered }: Props) => {
   const { t } = useTranslation();
 
   return (
@@ -30,10 +31,17 @@ const TaskSearch = ({ value, onChange, total, shown }: Props) => {
         aria-live="polite"
         className="shrink-0 whitespace-nowrap text-xs tabular-nums text-default-500"
       >
-        {t<string>(value.trim() ? "postParser.search.filteredCount" : "postParser.search.total", {
-          count: total,
-          shown,
-        })}
+        {total == null
+          ? t("postParser.loading.counts")
+          : t<string>(
+              value.trim() || isFiltered
+                ? "postParser.search.filteredCount"
+                : "postParser.search.total",
+              {
+                count: total,
+                shown,
+              },
+            )}
       </span>
     </div>
   );

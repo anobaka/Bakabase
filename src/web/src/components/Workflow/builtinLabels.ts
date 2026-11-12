@@ -9,6 +9,7 @@ export type WorkflowLabelSource = {
 // Database IDs vary by installation; user definitions with the same name are not seeds.
 const BUILTIN_NAME_KEYS = new Map([
   ["Download selected sources (v1)", "cloudDownload.recipe.name"],
+  ["Acquire supported sources (v1)", "workflow.recipe.acquireSupportedSources.name"],
   ["Forum post + cloud drive", "acquisition.recipe.sharedContent"],
   ["Direct download", "acquisition.recipe.directDownload"],
   ["Magnet", "acquisition.recipe.magnet"],
@@ -19,6 +20,7 @@ const BUILTIN_NAME_KEYS = new Map([
   ["Download torrent contents", "workflow.recipe.downloadTorrentContents.name"],
   ["ExHentai download", "acquisition.recipe.exHentai"],
   ["Parse post download information", "workflow.recipe.postParser.name"],
+  ["Parse post download information (v2)", "workflow.recipe.postParser.name"],
   ["Process local files using extraction instructions", "workflow.template.localProcessing.name"],
 ]);
 

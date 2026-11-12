@@ -11,6 +11,7 @@ using Bakabase.Infrastructures.Components.App.Models.Constants;
 using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions;
 using Bakabase.InsideWorld.Business.Components.Dependency.Discovery;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.SevenZip.Models;
+using Bakabase.InsideWorld.Business.Components.Dependency.Models;
 using Bootstrap.Components.Storage;
 using Bootstrap.Components.Tasks;
 using Microsoft.Extensions.Logging;
@@ -28,6 +29,7 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Se
         public override string Id => "7z-archiver-component-service";
         protected override string KeyInLocalizer => "7z";
         public override bool IsRequired => false;
+        public override IReadOnlyList<DependentComponentTarget> SupportedTargets => DependentComponentPlatforms.SevenZip;
 
         protected override IDiscoverer Discoverer { get; } = new SevenZipDiscoverer(loggerFactory);
 
@@ -51,16 +53,7 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Se
                 return;
             }
 
-            foreach (var fullFilename in filePaths)
-            {
-                if (fullFilename.EndsWith(".exe"))
-                {
-                    // Windows .exe files are standalone executables, no extraction needed
-                    // Just keep the file as-is
-                }
-            }
-
-            await DirectoryUtils.MoveAsync(TempDirectory, DefaultLocation, true, null, PauseToken.None, ct);
+            await SevenZipWindowsInstaller.InstallAsync(filePaths.Single(), DefaultLocation, loggerFactory, ct);
         }
 
         public override async Task<DependentComponentVersion> GetLatestVersion(CancellationToken ct)

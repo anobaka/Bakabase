@@ -8,12 +8,16 @@ using System.Threading.Tasks;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components.PostParser.Models.Db;
+using Bakabase.InsideWorld.Business.Components.PostParser.Extensions;
+using Bakabase.InsideWorld.Business.Components.PostParser.Services;
 using Bakabase.InsideWorld.Business.Components.PostParser.Workflow;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Acquisition.Abstractions.Services;
 using Bakabase.Modules.Acquisition.Extensions;
 using Bakabase.Modules.Acquisition.Models.Input;
+using Bakabase.Modules.Acquisition.Abstractions.Models.Db;
+using Bakabase.Modules.Workflow.Abstractions.Models.Domain;
 using Bakabase.Modules.PostParser.Models.Domain;
 using Bakabase.Modules.PostParser.Services;
 using Microsoft.EntityFrameworkCore;
@@ -24,7 +28,8 @@ public record PostParserAcquisitionResult(int ResourceId, bool Created, int Lead
 
 /// <summary>Imports the user's selected links without fetching, parsing or downloading again.</summary>
 public class PostParserAcquisitionService(BakabaseDbContext db, IPlaceholderResourceService placeholders,
-    IAcquisitionLeadService leads, IResourceService resources, PostParserTaskExecutionGate gate)
+    IAcquisitionLeadService leads, IResourceService resources, PostParserTaskExecutionGate gate,
+    PostParserWorkflowService<BakabaseDbContext> workflow)
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
     private static readonly HashSet<string> FileExtensions = new(StringComparer.OrdinalIgnoreCase)
@@ -36,6 +41,7 @@ public class PostParserAcquisitionService(BakabaseDbContext db, IPlaceholderReso
         await gate.Semaphore.WaitAsync(ct);
         try
         {
+            await workflow.RefreshTaskUnderGateAsync(taskId, ct);
             var task = await db.Set<PostParserTaskDbModel>().AsNoTracking()
                 .SingleOrDefaultAsync(t => t.Id == taskId && !t.IsDeleted, ct)
                 ?? throw new ArgumentException("The parsed post no longer exists.");
@@ -44,7 +50,10 @@ public class PostParserAcquisitionService(BakabaseDbContext db, IPlaceholderReso
             if (task.Error != null || string.IsNullOrWhiteSpace(task.Results) ||
                 task.ParsingState is not null and not "complete")
                 throw new ArgumentException("Parse this post successfully before importing its results.");
-            var parsed = ReadResources(task.Results);
+            var parsed = PostDownloadGroupNormalizer.Normalize(PostParserSavedResults.ReadDownloadInfo(task)).Resources;
+            var excluded = task.ToDomainModel().DownloadMedia.ExcludedResourceIndices.ToHashSet();
+            if (resourceIndices.Any(excluded.Contains))
+                throw new ArgumentException("POST_PREVIEW_NOT_DOWNLOAD: Embedded previews are cover candidates, not download sources.");
             if (resourceIndices.Count is 0 or > 500 || resourceIndices.Any(i => i < 0 || i >= parsed.Count))
                 throw new ArgumentException("Select valid download links from the current result.");
             var originals = resourceIndices.Distinct().Select(i => parsed[i]).ToList();
@@ -107,6 +116,18 @@ public class PostParserAcquisitionService(BakabaseDbContext db, IPlaceholderReso
                 });
                 if (added.ConflictingResourceId != null)
                     throw new InvalidOperationException("A selected link was just attached to another resource. Refresh and try again.");
+                if (added.Lead != null)
+                {
+                    var row = await db.Set<AcquisitionLeadDbModel>().SingleAsync(l => l.Id == added.Lead.Id, ct);
+                    List<WorkflowSourceRef> prior;
+                    try {prior = row.SourceRefsJson == null ? [] : JsonSerializer.Deserialize<List<WorkflowSourceRef>>(row.SourceRefsJson, Json) ?? [];}
+                    catch (JsonException) {prior = [];}
+                    var source = new WorkflowSourceRef("postParser", "task", task.Id.ToString(System.Globalization.CultureInfo.InvariantCulture), task.Revision.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                    var refs = resourceIndices.Where(i => parsed[i].Link.NormalizeLeadValue() == link.Link.NormalizeLeadValue())
+                        .Select(i => source with {ResultKey = i.ToString(System.Globalization.CultureInfo.InvariantCulture)}).Prepend(source);
+                    row.SourceRefsJson = JsonSerializer.Serialize(prior.Concat(refs).Distinct().ToList(), Json);
+                    await db.SaveChangesAsync(ct);
+                }
             }
             return new PostParserAcquisitionResult(result.ResourceId, result.Created, imports.Count);
         }
@@ -115,34 +136,9 @@ public class PostParserAcquisitionService(BakabaseDbContext db, IPlaceholderReso
 
     internal static List<PostDownloadResource> ReadResources(string json)
     {
-        const string invalidFormat = "The stored parsing result has an invalid format. Parse the post again.";
-        try
-        {
-            using var document = JsonDocument.Parse(json);
-            var root = document.RootElement;
-            if (root.ValueKind != JsonValueKind.Object)
-                throw new ArgumentException(invalidFormat);
-            if (!root.TryGetProperty("DownloadInfo", out var data) && !root.TryGetProperty("1", out data))
-                throw new ArgumentException("The post has no download-information result. Parse the post again.");
-            if (data.ValueKind != JsonValueKind.Object)
-                throw new ArgumentException(invalidFormat);
-            if (data.TryGetProperty("data", out var nested) || data.TryGetProperty("Data", out nested))
-            {
-                if (nested.ValueKind != JsonValueKind.Object)
-                    throw new ArgumentException(invalidFormat);
-                data = nested;
-            }
-            var info = data.Deserialize<PostDownloadInfo>(Json) ?? new PostDownloadInfo();
-            var resources = info.Resources ?? [];
-            if (resources.Any(resource => resource == null))
-                throw new ArgumentException(invalidFormat);
-            // Normalize group membership before merging selected entries, but preserve original array indices.
-            return PostDownloadGroupNormalizer.Normalize(info with {Resources = resources}).Resources;
-        }
-        catch (JsonException ex)
-        {
-            throw new ArgumentException(invalidFormat, ex);
-        }
+        var info = PostParserSavedResults.ReadDownloadInfo(json);
+        // Normalize group membership before merging selected entries, but preserve original array indices.
+        return PostDownloadGroupNormalizer.Normalize(info).Resources;
     }
 
     internal static AcquisitionLeadKind Classify(string link)

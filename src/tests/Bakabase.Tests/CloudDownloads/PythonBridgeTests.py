@@ -33,6 +33,182 @@ class FakeExtractor:
 
 
 class BridgeTests(unittest.TestCase):
+    def test_google_folder_http_errors_use_explicit_status_without_exposing_source(self):
+        cls = type("DownloadError", (Exception,), {"__module__": "gdown.exceptions"})
+        for status in (401, 403, 404, 410):
+            safe = bridge.provider_failure("googleDrive", cls(
+                f"Failed to retrieve folder contents for folder ID: private-id (status code {status}). You may need to change permission or have had many accesses. https://private.test/?token=secret"))
+            self.assertTrue(safe.startswith("GOOGLE_DRIVE_SHARE_UNAVAILABLE_OR_ACCESS_REQUIRED:"))
+            self.assertNotIn("private-id", safe)
+            self.assertNotIn("secret", safe)
+        for error in (cls("Failed to download the following files: 404.bin"),
+                      cls("Failed to retrieve folder contents for folder ID: private-id (status code 500)."),
+                      Exception("Failed to retrieve folder contents for folder ID: private-id (status code 404).")):
+            self.assertTrue(bridge.provider_failure("googleDrive", error).startswith("CLOUD_TOOL_FAILED:"))
+
+    def test_interrupted_streams_are_network_failures_not_generic_tool_failures(self):
+        for module, name in (("requests.exceptions", "ChunkedEncodingError"), ("urllib3.exceptions", "ProtocolError")):
+            cls = type(name, (Exception,), {"__module__": module})
+            safe = bridge.provider_failure("pixeldrain", cls("https://private.test/?token=secret"))
+            self.assertTrue(safe.startswith("CLOUD_NETWORK_ERROR:"))
+            self.assertNotIn("secret", safe)
+
+    def test_provider_errors_distinguish_actual_google_quota_from_generic_advice(self):
+        cls = type("FileURLRetrievalError", (Exception,), {"__module__": "gdown.exceptions"})
+        generic = cls("Cannot retrieve the public link. You may need to change permission or have had many accesses. https://private.test/?token=secret")
+        actual = cls("Failed to retrieve file url:\n\n Too many users have viewed or downloaded this file recently.\n\n https://private.test/?token=secret")
+        self.assertTrue(bridge.provider_failure("googleDrive", actual).startswith("GOOGLE_DOWNLOAD_QUOTA_EXCEEDED:"))
+        safe = bridge.provider_failure("googleDrive", generic)
+        self.assertTrue(safe.startswith("GOOGLE_DRIVE_SHARE_UNAVAILABLE_OR_ACCESS_REQUIRED:"))
+        self.assertNotIn("secret", safe)
+        self.assertNotIn("https://", safe)
+
+    def test_typed_gofile_errors_and_transport_errors_do_not_expose_urls(self):
+        for name, code in [("NotFoundError", "GOFILE_CONTENT_NOT_FOUND"), ("AuthorizationError", "GOFILE_ACCESS_REQUIRED")]:
+            cls = type(name, (Exception,), {"__module__": "gallery_dl.exception"})
+            safe = bridge.provider_failure("gofile", cls("https://private.test/?token=secret"))
+            self.assertTrue(safe.startswith(code + ":"))
+            self.assertNotIn("secret", safe)
+        cls = type("SSLError", (Exception,), {"__module__": "requests.exceptions"})
+        safe = bridge.provider_failure("gofile", cls("https://private.test/?token=secret"))
+        self.assertTrue(safe.startswith("CLOUD_NETWORK_ERROR:"))
+        self.assertNotIn("secret", safe)
+        self.assertTrue(bridge.provider_failure("gofile", Exception("quota https://private.test/?token=secret")).startswith("CLOUD_TOOL_FAILED:"))
+
+    def test_generic_http_gofile_404_is_not_provider_confirmed_absence(self):
+        error = Exception("https://private.test/?token=secret")
+        for status in (404, 410):
+            error.status = status
+            safe = bridge.provider_failure("gofile", error)
+            self.assertTrue(safe.startswith("GOFILE_SHARE_NOT_FOUND:"))
+            self.assertNotIn("secret", safe)
+
+    def pixel_fixture(self, responses):
+        calls = []
+        extractor = types.SimpleNamespace(session=object(), initialize=lambda: None, _init_options=lambda: None)
+        def request_json(url, **kwargs):
+            calls.append((url, kwargs))
+            return responses[url.removeprefix("https://pixeldrain.com/api/")]
+        extractor.request_json = request_json
+        cls = types.SimpleNamespace(from_url=lambda url: extractor)
+        config = types.SimpleNamespace(clear=lambda: None, set=lambda *args: None)
+        modules = {"gallery_dl": types.SimpleNamespace(config=config),
+                   "gallery_dl.extractor.pixeldrain": types.SimpleNamespace(PixeldrainFileExtractor=cls)}
+        return modules, calls
+
+    def test_pixeldrain_list_keeps_original_names_and_checks_whole_list_count(self):
+        file = {"id": "one", "name": "original.rar", "size": 5, "hash_sha256": hashlib.sha256(b"abcde").hexdigest()}
+        album = {"file_count": 1, "files": [file]}
+        modules, calls = self.pixel_fixture({"list/fixture": album})
+        with patch.dict(sys.modules, modules), patch.object(bridge.importlib.metadata, "version", return_value="1.32.17"):
+            entries, _ = bridge.pixeldrain_manifest({"url": "https://pixeldrain.com/l/fixture"})
+            self.assertEqual("original.rar", entries[0]["path"])
+            self.assertEqual("https://pixeldrain.com/api/file/one?download", entries[0]["url"])
+            self.assertEqual(False, calls[0][1]["allow_redirects"])
+            album["file_count"] = 2
+            with self.assertRaisesRegex(bridge.BridgeError, "incomplete"):
+                bridge.pixeldrain_manifest({"url": "https://pixeldrain.com/l/fixture"})
+
+    def test_pixeldrain_album_item_fragment_selects_only_the_requested_original(self):
+        files = [{"id": str(i), "name": f"{i}.bin", "size": 1} for i in range(2)]
+        modules, _ = self.pixel_fixture({"list/fixture": {"file_count": 2, "files": files}})
+        with patch.dict(sys.modules, modules), patch.object(bridge.importlib.metadata, "version", return_value="1.32.17"):
+            entries, _ = bridge.pixeldrain_manifest({"url": "https://pixeldrain.com/l/fixture#item=1"})
+            self.assertEqual(["1.bin"], [e["path"] for e in entries])
+
+    def test_pixeldrain_official_aliases_keep_item_selection_on_the_canonical_api(self):
+        files = [{"id": str(i), "name": f"{i}.bin", "size": 1} for i in range(2)]
+        for host in ("pixeldra.in", "www.pixeldra.in", "pixeldrain.net", "www.pixeldrain.net"):
+            url = f"https://{host}/l/fixture#item=1"
+            modules, calls = self.pixel_fixture({"list/fixture": {"file_count": 2, "files": files}})
+            with self.subTest(host=host), patch.dict(sys.modules, modules), patch.object(bridge.importlib.metadata, "version", return_value="1.32.17"):
+                bridge.validate_url("pixeldrain", url)
+                entries, _ = bridge.pixeldrain_manifest({"url": url})
+                self.assertEqual(["1.bin"], [e["path"] for e in entries])
+                self.assertEqual("https://pixeldrain.com/api/list/fixture", calls[0][0])
+                self.assertEqual("https://pixeldrain.com/api/file/1?download", entries[0]["url"])
+
+    def test_pixeldrain_aliases_do_not_relax_url_validation(self):
+        for url in ("https://pixeldra.in.attacker.test/u/fixture", "https://other.pixeldra.in/u/fixture",
+                    "https://pixeldrain.net.attacker.test/u/fixture", "https://pixeldra.in/account",
+                    "http://pixeldra.in/u/fixture", "https://user:secret@pixeldra.in/u/fixture",
+                    "https://pixeldra.in:8443/u/fixture", "https://pixeldra.in/u/fixture#item=1",
+                    "https://pixeldra.in/d/fixture/%2e%2e/other"):
+            with self.subTest(url=url), self.assertRaises(bridge.BridgeError):
+                bridge.validate_url("pixeldrain", url)
+
+    def test_pixeldrain_recurses_filesystem_without_silently_skipping_unavailable_files(self):
+        child = {"type": "file", "path": "/fixture/sub/file.bin", "name": "file.bin", "file_size": 3}
+        responses = {
+            "filesystem/fixture?stat": {"base_index": 0, "path": [{"type": "dir", "path": "/fixture"}],
+                "children": [{"type": "dir", "path": "/fixture/sub", "name": "sub"}]},
+            "filesystem/fixture/sub?stat": {"base_index": 0, "path": [{"type": "dir", "path": "/fixture/sub"}], "children": [child]}}
+        modules, _ = self.pixel_fixture(responses)
+        with patch.dict(sys.modules, modules), patch.object(bridge.importlib.metadata, "version", return_value="1.32.17"):
+            entries, _ = bridge.pixeldrain_manifest({"url": "https://pixeldrain.com/d/fixture"})
+            self.assertEqual(["sub/file.bin"], [e["path"] for e in entries])
+            child["availability"] = "transfer_limit_exceeded"
+            with self.assertRaisesRegex(bridge.BridgeError, "PIXELDRAIN_RATE_LIMITED"):
+                bridge.pixeldrain_manifest({"url": "https://pixeldrain.com/d/fixture"})
+
+    def test_pixeldrain_http_failures_have_stable_codes_and_never_relay_signed_urls(self):
+        modules, _ = self.pixel_fixture({})
+        extractor = modules["gallery_dl.extractor.pixeldrain"].PixeldrainFileExtractor.from_url("unused")
+        for status, code in ((404, "SHARE_UNAVAILABLE"), (410, "SHARE_UNAVAILABLE"),
+                             (401, "ACCESS_REQUIRED"), (403, "ACCESS_REQUIRED"), (429, "RATE_LIMITED")):
+            error = Exception("HTTP failure for https://pixeldrain.com/private-id?token=secret")
+            error.status = status
+            extractor.request_json = lambda *a, _error=error, **kw: (_ for _ in ()).throw(_error)
+            with self.subTest(status=status), patch.dict(sys.modules, modules), patch.object(bridge.importlib.metadata, "version", return_value="1.32.17"):
+                with self.assertRaisesRegex(bridge.BridgeError, "PIXELDRAIN_" + code) as raised:
+                    bridge.pixeldrain_manifest({"url": "https://pixeldrain.com/u/fixture"})
+                self.assertNotIn("secret", str(raised.exception))
+                self.assertNotIn("https://", str(raised.exception))
+
+    def test_pixeldrain_api_captcha_and_limit_flags_are_not_silently_skipped(self):
+        for value, code in (("file_rate_limited_captcha_required", "VERIFICATION_REQUIRED"),
+                            ("transfer_limit_exceeded", "RATE_LIMITED"), ("hotlink_detected", "ACCESS_REQUIRED")):
+            file = {"id": "fixture", "name": "a.rar", "size": 3, "availability": value}
+            modules, _ = self.pixel_fixture({"file/fixture/info": file})
+            with self.subTest(value=value), patch.dict(sys.modules, modules), patch.object(bridge.importlib.metadata, "version", return_value="1.32.17"):
+                with self.assertRaisesRegex(bridge.BridgeError, "PIXELDRAIN_" + code):
+                    bridge.pixeldrain_manifest({"url": "https://pixeldrain.com/u/fixture"})
+
+    def test_pixeldrain_filesystem_rejects_nonchild_traversal_and_missing_listings(self):
+        child = {"type": "file", "path": "/other/escape.bin", "name": "escape.bin", "file_size": 3}
+        stat = {"base_index": 0, "path": [{"type": "dir", "path": "/fixture"}], "children": [child]}
+        modules, _ = self.pixel_fixture({"filesystem/fixture?stat": stat})
+        with patch.dict(sys.modules, modules), patch.object(bridge.importlib.metadata, "version", return_value="1.32.17"):
+            with self.assertRaisesRegex(bridge.BridgeError, "non-child"):
+                bridge.pixeldrain_manifest({"url": "https://pixeldrain.com/d/fixture"})
+            del stat["children"]
+            with self.assertRaisesRegex(bridge.BridgeError, "incomplete"):
+                bridge.pixeldrain_manifest({"url": "https://pixeldrain.com/d/fixture"})
+
+    def test_pixeldrain_checksum_failure_is_not_published_and_retry_can_finish(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            request = {"provider": "pixeldrain", "url": "https://pixeldrain.com/u/fixture", "output": str(root / "output"), "state": str(root / "state")}
+            entries = [{"id": "fixture", "path": "original.rar", "size": 5, "url": "https://pixeldrain.com/api/file/fixture?download", "sha256": hashlib.sha256(b"abcde").hexdigest()}]
+            class Response:
+                is_redirect = False
+                body = b"wrong"
+                def __enter__(self): return self
+                def __exit__(self, *args): pass
+                def raise_for_status(self): pass
+                def iter_content(self, size): yield self.body
+            response = Response()
+            session = types.SimpleNamespace(get=lambda *args, **kwargs: response)
+            class Session:
+                pass
+            with patch.dict(sys.modules, {"requests": types.SimpleNamespace(Session=Session)}), patch.object(bridge, "pixeldrain_manifest", return_value=(entries, session)), patch.object(bridge, "PROTOCOL_OUTPUT", io.StringIO()):
+                with self.assertRaisesRegex(bridge.BridgeError, "SHA256"):
+                    bridge.run(request)
+                self.assertFalse((root / "output/original.rar").exists())
+                response.body = b"abcde"
+                bridge.run(request)
+                self.assertEqual(b"abcde", (root / "output/original.rar").read_bytes())
+
     def test_paginates_more_than_1000_entries(self):
         pages = [{"type": "folder", "childrenCount": 1001, "children": {str(i): {} for i in range(1000)}},
                  {"type": "folder", "childrenCount": 1001, "children": {"1000": {}}}]
@@ -96,6 +272,70 @@ class BridgeTests(unittest.TestCase):
                 with self.assertRaises(bridge.BridgeError):
                     bridge.run(request)
                 self.assertEqual(b"user-edit", (output / "folder/file.zip").read_bytes())
+
+    def test_multiple_files_report_operation_bytes_and_unknown_totals_stay_unknown(self):
+        for known in (True, False):
+            with self.subTest(known=known), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                request = {"provider": "googleDrive", "url": "https://drive.google.com/drive/folders/fixture",
+                           "output": str(root / "output"), "state": str(root / "state")}
+                entries = [{"id": str(i), "path": str(i) + ".zip", "size": 8 if known else None} for i in range(2)]
+                def download(**options):
+                    Path(options["output"]).write_bytes(b"complete")
+                    options["progress"](8, 8)
+                    return options["output"]
+                class Session:
+                    pass
+                modules = {"requests": types.SimpleNamespace(Session=Session), "gdown": types.SimpleNamespace(download=download)}
+                with patch.dict(sys.modules, modules), patch.object(bridge, "google_manifest", return_value=(entries, None)), patch.object(bridge, "PROTOCOL_OUTPUT", io.StringIO()) as stdout:
+                    bridge.run(request)
+                    messages = [json.loads(line) for line in stdout.getvalue().splitlines()]
+                    counters = [m for m in messages if "completedBytes" in m]
+                    self.assertEqual([8, 8, 16, 16], [m["completedBytes"] for m in counters])
+                    self.assertTrue(all(m["totalBytes"] == (16 if known else None) for m in counters))
+                    # Resume with the first completed file retained. Its bytes count once, not twice.
+                    (root / "output/1.zip").unlink()
+                    stdout.truncate(0)
+                    stdout.seek(0)
+                    bridge.run(request)
+                    messages = [json.loads(line) for line in stdout.getvalue().splitlines()]
+                    counters = [m for m in messages if "completedBytes" in m]
+                    self.assertEqual([16, 16], [m["completedBytes"] for m in counters])
+
+    def test_reused_file_between_transfers_resets_speed_without_counting_it_as_network_bytes(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            request = {"provider": "googleDrive", "url": "https://drive.google.com/drive/folders/fixture",
+                       "output": str(root / "output"), "state": str(root / "state")}
+            entries = [{"id": str(i), "path": str(i) + ".zip", "size": 8} for i in range(3)]
+            downloads = []
+            def download(**options):
+                downloads.append(options["output"])
+                Path(options["output"]).write_bytes(b"complete")
+                options["progress"](8, 8)
+                return options["output"]
+            class Session:
+                pass
+            modules = {"requests": types.SimpleNamespace(Session=Session), "gdown": types.SimpleNamespace(download=download)}
+            with patch.dict(sys.modules, modules), patch.object(bridge, "google_manifest", return_value=(entries, None)), patch.object(bridge, "PROTOCOL_OUTPUT", io.StringIO()) as stdout:
+                bridge.run(request)
+                (root / "output/0.zip").unlink()
+                (root / "output/2.zip").unlink()
+                stdout.truncate(0)
+                stdout.seek(0)
+                downloads.clear()
+                bridge.run(request)
+                progress = [json.loads(line) for line in stdout.getvalue().splitlines()
+                            if json.loads(line)["type"] == "progress"]
+                self.assertEqual(2, len(downloads), "The verified middle file must not be downloaded again")
+                reuse = next(i for i, message in enumerate(progress) if message["stage"] == "reusing")
+                self.assertGreater(reuse, 0)
+                self.assertLess(reuse, len(progress) - 1)
+                self.assertNotIn("completedBytes", progress[reuse])
+                self.assertNotIn("totalBytes", progress[reuse])
+                self.assertEqual(8, progress[reuse - 1]["completedBytes"])
+                self.assertEqual(24, progress[reuse + 1]["completedBytes"])
+                self.assertEqual(b"complete", (root / "output/1.zip").read_bytes())
 
     def test_empty_directory_returns_an_explicit_unsupported_error(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -170,6 +410,20 @@ class BridgeTests(unittest.TestCase):
             entries, session = bridge.gofile_manifest({"url": "https://gofile.io/d/fixture"})
             self.assertEqual("Root/file.txt", entries[0]["path"])
             self.assertFalse(session.trust_env)
+            session.close()
+
+    def test_pinned_pixeldrain_library_contract_without_network(self):
+        try:
+            from gallery_dl.extractor.pixeldrain import PixeldrainFileExtractor
+        except ImportError:
+            self.skipTest("Optional gallery-dl runtime is not installed in this interpreter")
+        fixture = {"success": True, "id": "fixture", "name": "original.rar", "size": 3,
+                   "hash_sha256": hashlib.sha256(b"abc").hexdigest()}
+        with patch.object(PixeldrainFileExtractor, "request_json", return_value=fixture) as request:
+            entries, session = bridge.pixeldrain_manifest({"url": "https://pixeldrain.com/u/fixture"})
+            self.assertEqual("original.rar", entries[0]["path"])
+            self.assertFalse(session.trust_env)
+            request.assert_called_once_with("https://pixeldrain.com/api/file/fixture/info", allow_redirects=False)
             session.close()
 
     def test_never_overwrites_unrelated_existing_file(self):

@@ -13,6 +13,8 @@ import { getWorkflowTriggerUI } from "../Triggers";
 import { activityDisplayName, triggerDisplayName } from "../displayNames";
 import { workflowDescription } from "../metadata";
 import TriggerUsageSummary from "../TriggerUsageSummary";
+import ParameterBindingsEditor from "../Parameters/ParameterBindingsEditor";
+import { preserveConfigFields, type WorkflowParameter } from "../Parameters/model";
 
 import { CategoryTone } from "./CanvasNode";
 
@@ -35,6 +37,7 @@ interface Props {
   // Activity side
   descriptors: (WorkflowDescription & { kind: string })[];
   drafts: ActivityDraft[];
+  parameters: WorkflowParameter[];
   onDraftChange: (idx: number, next: ActivityDraft) => void;
 }
 
@@ -52,6 +55,7 @@ const InspectorPanel: React.FC<Props> = ({
   onTriggerKindChange,
   onFilterChange,
   drafts,
+  parameters,
   descriptors,
   onDraftChange,
 }) => {
@@ -141,7 +145,10 @@ const InspectorPanel: React.FC<Props> = ({
             .map((d) => ({ kind: d.kind, configJson: d.configJson }))}
           value={ui.parseConfig(draft.configJson)}
           onChange={(next) =>
-            onDraftChange(selection, { ...draft, configJson: ui.serializeConfig(next) })
+            onDraftChange(selection, {
+              ...draft,
+              configJson: preserveConfigFields(draft.configJson, ui.serializeConfig(next)),
+            })
           }
         />
       ) : (
@@ -149,6 +156,13 @@ const InspectorPanel: React.FC<Props> = ({
           {t<string>("workflow.activity.unknownKind.noEditor")}
         </p>
       )}
+
+      <ParameterBindingsEditor
+        configJson={draft.configJson}
+        parameters={parameters}
+        bindings={draft.parameterBindings ?? []}
+        onChange={(parameterBindings) => onDraftChange(selection, { ...draft, parameterBindings })}
+      />
 
       <div className="border-t border-default-200 pt-2 flex flex-col gap-2">
         <Switch

@@ -2,6 +2,7 @@ using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Modules.Workflow.Abstractions.Models.Db;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
+using Bakabase.Modules.Workflow.Abstractions.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -19,8 +20,8 @@ namespace Bakabase.Modules.Workflow.Components;
 ///   Source policies may instead require a new request after restart: pending and running
 ///   rows become Interrupted while keeping their saved cursor and item.
 /// - <see cref="ReEnqueuePendingRunsAsync"/>: re-enqueue
-///   <see cref="WorkflowRunStatus.Pending"/> rows whose definition still exists and is
-///   enabled, so an event that arrived just before shutdown isn't dropped.
+///   <see cref="WorkflowRunStatus.Pending"/> rows using their frozen plan. Legacy rows still
+///   require an enabled definition, so an event arriving before shutdown isn't dropped.
 ///
 /// Call sites should invoke both in order: Interrupted first,
 /// then Pending re-enqueue.
@@ -33,6 +34,8 @@ public class WorkflowRunRehydrator<TDbContext> where TDbContext : DbContext
     private readonly ILogger<WorkflowRunRehydrator<TDbContext>> _logger;
     private readonly WorkflowRunSchedulingPolicyResolver _scheduling;
     private readonly IBakabaseLocalizer _localizer;
+    private readonly IEnumerable<IWorkflowRunMutationGuard> _mutationGuards;
+    private readonly IEnumerable<IWorkflowRunStartupPolicy> _startupPolicies;
 
     public WorkflowRunRehydrator(
         TDbContext db,
@@ -40,7 +43,9 @@ public class WorkflowRunRehydrator<TDbContext> where TDbContext : DbContext
         WorkflowRunner<TDbContext> runner,
         ILogger<WorkflowRunRehydrator<TDbContext>> logger,
         WorkflowRunSchedulingPolicyResolver scheduling,
-        IBakabaseLocalizer localizer)
+        IBakabaseLocalizer localizer,
+        IEnumerable<IWorkflowRunMutationGuard>? mutationGuards = null,
+        IEnumerable<IWorkflowRunStartupPolicy>? startupPolicies = null)
     {
         _db = db;
         _taskManager = taskManager;
@@ -48,19 +53,39 @@ public class WorkflowRunRehydrator<TDbContext> where TDbContext : DbContext
         _logger = logger;
         _scheduling = scheduling;
         _localizer = localizer;
+        _mutationGuards = mutationGuards ?? [];
+        _startupPolicies = startupPolicies ?? [];
     }
 
     public async Task MarkInterruptedRunsAsync(CancellationToken ct = default)
     {
+        // Attempts are history, not restart checkpoints. A process loss ends the old attempt;
+        // re-entering the cursor creates another attempt rather than editing this one.
+        await _db.Set<WorkflowNodeExecutionDbModel>().Where(n => n.Status == "running")
+            .ExecuteUpdateAsync(s => s.SetProperty(n => n.Status, "interrupted")
+                .SetProperty(n => n.CompletedAt, (DateTime?)DateTime.UtcNow), ct);
         // Some sources only process a queue explicitly requested during the current session.
         // Preserve their checkpoints, but require another user action after a restart.
         var definitions = await _db.Set<WorkflowDefinitionDbModel>().AsNoTracking()
             .Select(d => new {d.Id, d.TriggerKind}).ToListAsync(ct);
-        var manualRestartIds = definitions.Where(d => !_scheduling.ResumeOnStartup(d.TriggerKind))
-            .Select(d => d.Id).ToList();
+        var definitionKinds = definitions.ToDictionary(d => d.Id, d => d.TriggerKind);
+        var active = await _db.Set<WorkflowRunDbModel>().AsNoTracking()
+            .Where(r => r.Status == WorkflowRunStatus.Pending || r.Status == WorkflowRunStatus.Running).ToListAsync(ct);
+        var manualRestartIds = active.Where(r =>
+        {
+            try
+            {
+                var kind = WorkflowRunPlans.Read(r.PlanSnapshotJson)?.TriggerKind ?? definitionKinds.GetValueOrDefault(r.WorkflowDefinitionId);
+                return kind != null && !_scheduling.ResumeOnStartup(kind);
+            }
+            catch (InvalidDataException) { return true; }
+        }).Select(r => r.Id).ToList();
+        foreach (var run in active.Where(r => !manualRestartIds.Contains(r.Id)))
+            foreach (var policy in _startupPolicies)
+                if (!await policy.CanResumeOnStartupAsync(run.Id, ct)) {manualRestartIds.Add(run.Id); break;}
         if (manualRestartIds.Count > 0)
             await _db.Set<WorkflowRunDbModel>()
-                .Where(r => manualRestartIds.Contains(r.WorkflowDefinitionId) &&
+                .Where(r => manualRestartIds.Contains(r.Id) &&
                     (r.Status == WorkflowRunStatus.Pending || r.Status == WorkflowRunStatus.Running))
                 .ExecuteUpdateAsync(s => s
                     .SetProperty(r => r.Status, _ => WorkflowRunStatus.Interrupted)
@@ -97,29 +122,58 @@ public class WorkflowRunRehydrator<TDbContext> where TDbContext : DbContext
     public async Task ReEnqueuePendingRunsAsync(CancellationToken ct = default)
     {
         if (_taskManager.IsShuttingDown) return;
-        // Only re-enqueue runs whose definition still exists AND is enabled — a disabled
-        // definition's pending runs would feel surprising to resume silently.
+        // Snapshots are independent execution requests. Explicitly disabling a template
+        // already cancels its pending rows; legacy rows still require an enabled definition.
         var rows = await _db.Set<WorkflowRunDbModel>()
             .Where(r => r.Status == WorkflowRunStatus.Pending)
-            .Join(
-                _db.Set<WorkflowDefinitionDbModel>().Where(d => d.Enabled),
-                r => r.WorkflowDefinitionId,
-                d => d.Id,
-                (r, d) => new {Run = r, d.TriggerKind})
+            .Include(r => r.Sources)
             .ToListAsync(ct);
+        var definitions = await _db.Set<WorkflowDefinitionDbModel>().AsNoTracking()
+            .Where(d => d.Enabled).ToDictionaryAsync(d => d.Id, d => d.TriggerKind, ct);
 
         if (rows.Count == 0) return;
 
-        foreach (var entry in rows)
+        foreach (var run in rows)
         {
             if (_taskManager.IsShuttingDown) return;
-            if (!_scheduling.ResumeOnStartup(entry.TriggerKind)) continue;
-            var run = entry.Run;
+            var gate = WorkflowRunMutationGate.For(run.Id);
+            await gate.WaitAsync(ct);
+            try
+            {
+                await _db.Entry(run).ReloadAsync(ct);
+                if (run.Status != WorkflowRunStatus.Pending) continue;
+                var startupAllowed = true;
+                foreach (var policy in _startupPolicies)
+                    if (!await policy.CanResumeOnStartupAsync(run.Id, ct)) {startupAllowed = false; break;}
+                if (!startupAllowed)
+                {
+                    run.Status = WorkflowRunStatus.Interrupted;
+                    run.CompletedAt = DateTime.Now;
+                    await _db.SaveChangesAsync(ct);
+                    continue;
+                }
+                try
+                {
+                    foreach (var guard in _mutationGuards) await guard.EnsureCanMutateAsync(run.Id, ct);
+                }
+                catch (InvalidOperationException)
+                {
+                    // Keep the owner's history intact, without admitting removed work to the queue.
+                    _logger.LogInformation("Owner policy prevents restoring workflow run {RunId}", run.Id);
+                    continue;
+                }
+            string? triggerKind;
+            try { triggerKind = WorkflowRunPlans.Read(run.PlanSnapshotJson)?.TriggerKind ?? definitions.GetValueOrDefault(run.WorkflowDefinitionId); }
+            catch (InvalidDataException) { continue; }
+            if (triggerKind == null || !_scheduling.ResumeOnStartup(triggerKind)) continue;
             var runId = run.Id;
             var defId = run.WorkflowDefinitionId;
             await _taskManager.Enqueue(_scheduling.Configure(BTaskBuilder.Create($"workflow.run.{runId}")
                 .Named(() => _localizer["BTask_Name_WorkflowRun", defId, runId])
-                .Run(args => _runner.ExecuteAsync(runId, args)), defId, entry.TriggerKind));
+                .Run(args => _runner.ExecuteAsync(runId, args)), defId, triggerKind, runId,
+                run.Sources.Select(s => s.ToSourceRef()).ToArray()));
+            }
+            finally { gate.Release(); }
         }
         _logger.LogInformation("Re-enqueued {Count} pending workflow runs on startup", rows.Count);
     }

@@ -52,6 +52,12 @@ dlldata.c
 # DNX
 project.lock.json
 artifacts/
+# These workflow artifact contracts are source files, not build output.
+!modules/Bakabase.Modules.Workflow/Artifacts/
+!modules/Bakabase.Modules.Workflow/Artifacts/*.cs
+# Artifact processing regression tests are source files too.
+!tests/Bakabase.Tests/Artifacts/
+!tests/Bakabase.Tests/Artifacts/*.cs
 
 *_i.c
 *_p.c

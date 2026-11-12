@@ -20,6 +20,12 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Extensions
                 DefaultLocation = service.DefaultLocation,
                 Status = service.Status,
                 IsAvailableOnCurrentPlatform = service.IsAvailableOnCurrentPlatform,
+                CanAutoInstallOnCurrentPlatform = service.CanAutoInstallOnCurrentPlatform,
+                SupportedTargets = service.SupportedTargets,
+                DependencyIds = service.DependencyIds,
+                CurrentOs = DependentComponentPlatforms.CurrentOs,
+                CurrentArchitecture = DependentComponentPlatforms.CurrentArchitecture,
+                CurrentRuntime = DependentComponentPlatforms.CurrentRuntime,
                 Description = service.Description,
                 IsRequired = service.IsRequired,
 

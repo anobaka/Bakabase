@@ -51,7 +51,7 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0.11-noble
 # Noble supplies the required 7zz executable in 7zip-standalone, not 7zip.
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     rm -f /etc/apt/apt.conf.d/docker-clean && \
-    apt-get update && apt-get install -y --no-install-recommends ffmpeg 7zip-standalone && \
+    apt-get update && apt-get install -y --no-install-recommends ffmpeg 7zip-standalone libfuse2t64 && \
     command -v ffmpeg && command -v ffprobe && command -v 7zz && command -v which && \
     rm -rf /var/lib/apt/lists/*
 WORKDIR /app

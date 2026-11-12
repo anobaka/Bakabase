@@ -168,7 +168,12 @@ internal sealed class LlmHarness
 
     private sealed class Usage : ILlmUsageService
     {
-        public Task TrackAsync(LlmUsageLogDbModel log, CancellationToken ct = default) => Task.CompletedTask;
+        private long _nextId;
+        public Task TrackAsync(LlmUsageLogDbModel log, CancellationToken ct = default)
+        {
+            log.Id = Interlocked.Increment(ref _nextId);
+            return Task.CompletedTask;
+        }
         public Task<IReadOnlyList<LlmUsageLogDbModel>> SearchAsync(LlmUsageSearchCriteria criteria, CancellationToken ct = default) => throw new NotSupportedException();
         public Task<LlmUsageSummary> GetSummaryAsync(CancellationToken ct = default) => throw new NotSupportedException();
         public Task<long> GetTodayTokenUsageAsync(CancellationToken ct = default) => Task.FromResult(0L);

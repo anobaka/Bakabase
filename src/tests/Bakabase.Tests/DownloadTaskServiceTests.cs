@@ -73,6 +73,34 @@ public sealed class DownloadTaskServiceTests
     #region CRUD
 
     [TestMethod]
+    public async Task RuntimeSnapshotUsesCurrentEnabledQueueWithoutLoadingOptionsOrRevivingCompletedRows()
+    {
+        var old = System.DateTime.Now.AddDays(-3);
+        var queued = new DownloadTaskDbModel {Key = "queued", ThirdPartyId = ThirdPartyId.BaiduNetdisk,
+            Status = DownloadTaskDbModelStatus.InProgress, DownloadStatusUpdateDt = old,
+            Options = "private large manifest", Checkpoint = "private checkpoint", Message = "LOCAL_STORAGE_FULL"};
+        var completed = new DownloadTaskDbModel {Key = "completed", ThirdPartyId = ThirdPartyId.BaiduNetdisk,
+            Status = DownloadTaskDbModelStatus.Complete, DownloadStatusUpdateDt = old};
+        var failed = new DownloadTaskDbModel {Key = "failed", ThirdPartyId = ThirdPartyId.BaiduNetdisk,
+            Status = DownloadTaskDbModelStatus.Failed, DownloadStatusUpdateDt = old, Message = "LOCAL_STORAGE_FULL"};
+        _db.DownloadTasks.AddRange(queued, completed, failed); await _db.SaveChangesAsync();
+        var ids = new[] {queued.Id, completed.Id, failed.Id};
+        var dtos = await _service.GetRuntimeDtos(ids);
+        Assert.IsTrue(dtos.All(t => t.Options == null && t.Checkpoint == null));
+        await using var bt = new Bakabase.Modules.Bittorrent.Components.BtDownloadManager(null!, () => throw new AssertFailedException("Read started BT."));
+        await using var http = new Bakabase.Modules.HttpDownloads.Components.HttpDownloadManager(null!, () => throw new AssertFailedException("Read started HTTP."));
+        var before = System.DateTimeOffset.UtcNow;
+        var reader = new Bakabase.Service.Components.Acquisition.Planning.AcquisitionRuntimeDownloadReader(_db, _service, bt, http);
+        var rows = (await reader.ReadAsync(ids, [], [], default)).ToDictionary(r => r.Id);
+        Assert.AreEqual("queued", rows["site:" + queued.Id].Status);
+        Assert.IsTrue(rows["site:" + queued.Id].ObservedAt >= before);
+        Assert.IsNull(rows["site:" + queued.Id].ProblemCode, "The prior failure message is not a current queued failure.");
+        Assert.AreEqual("completed", rows["site:" + completed.Id].Status, "DB Complete=300 must not be treated as API Starting=300.");
+        Assert.AreEqual("failed", rows["site:" + failed.Id].Status);
+        Assert.IsTrue(rows["site:" + failed.Id].ObservedAt < before);
+    }
+
+    [TestMethod]
     public async Task GetAllDto_EmptyWhenNoTasks()
         => Assert.AreEqual(0, (await _service.GetAllDto()).Length);
 
@@ -153,6 +181,12 @@ public sealed class DownloadTaskServiceTests
         Assert.AreEqual(taskCount, dtos.Count);
         Assert.AreEqual(37L, dtos[rows[0].Id].DownloadedBytes);
         Assert.AreEqual(37L, (await _service.GetDto(rows[0].Id)).DownloadedBytes);
+        var scoped = await _service.GetDtos([rows[0].Id, rows[0].Id, int.MaxValue]);
+        Assert.AreEqual(1, scoped.Length);
+        Assert.AreEqual(37L, scoped[0].DownloadedBytes);
+        Assert.IsNull(scoped[0].TransferredBytes);
+        Assert.IsNull(scoped[0].TotalBytes);
+        Assert.AreEqual(0, (await _service.GetDtos([])).Length);
         if (taskCount > 1)
         {
             Assert.AreEqual(50L, dtos[rows[1].Id].DownloadedBytes);

@@ -8,6 +8,14 @@ import ThirdPartyConfigurationPage from "..";
 vi.mock("@/components/ThirdPartyIcon", () => ({
   default: () => <span data-testid="source-icon" />,
 }));
+vi.mock("@/components/ThirdPartyConfig/platforms/BaiduNetdiskConfig", () => ({
+  default: () => <div data-testid="cloud-source-settings">baidu</div>,
+}));
+vi.mock("@/components/ThirdPartyConfig/platforms/CloudSourceConfig", () => ({
+  default: ({ providerId }: { providerId: string }) => (
+    <div data-testid="cloud-source-settings">{providerId}</div>
+  ),
+}));
 vi.mock("@/components/ThirdPartyConfig", () => {
   const panel = (name: string) => () => <input aria-label={`${name} setting`} defaultValue="" />;
 
@@ -69,6 +77,28 @@ describe("third-party configuration navigation", () => {
       "thirdPartyConfig.navigation.source.label",
     );
     expect(screen.getByRole("tablist")).toHaveAttribute("aria-orientation", "vertical");
+  });
+
+  it.each([
+    ["enum.thirdPartyId.pikPak PikPak CLI · rclone", "pikpak"],
+    ["enum.thirdPartyId.pixeldrain", "pixeldrain"],
+    ["OneDrive SharePoint", "oneDrive"],
+    ["enum.thirdPartyId.baiduNetdisk BaiduPCS-Go", "baidu"],
+    ["enum.thirdPartyId.googleDrive", "googleDrive"],
+    ["enum.thirdPartyId.gofile", "gofile"],
+    ["enum.thirdPartyId.teraBox TeraBox CLI", "terabox"],
+  ])("opens shared preparation settings for %s", async (accessibleName, providerId) => {
+    const user = userEvent.setup();
+    renderPage();
+    const tab = screen.getByRole("tab", { name: accessibleName });
+    await user.click(tab);
+    if (providerId === "baidu") expect(within(tab).getByText("BaiduPCS-Go")).toBeInTheDocument();
+    if (providerId === "oneDrive") expect(within(tab).getByText("SharePoint")).toBeInTheDocument();
+    if (providerId === "terabox")
+      expect(within(tab).getByText("cloudDownload.integration.unavailable")).toBeInTheDocument();
+    expect(screen.getByTestId("cloud-source-settings")).toHaveTextContent(providerId);
+    expect(screen.getAllByRole("tabpanel")).toHaveLength(1);
+    expect(localStorage.getItem(storageKey)).toBe(providerId);
   });
 
   it("falls back from a stale stored source and persists full-row tab selection", async () => {
