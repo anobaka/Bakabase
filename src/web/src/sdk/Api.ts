@@ -8138,6 +8138,12 @@ export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionDraftUpd
   storagePolicy?: BakabaseModulesWorkflowArtifactsArtifactStoragePolicy;
 }
 
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionKeepPreparedFilesInput {
+  /** @format int32 */
+  expectedRevision: number;
+  reason?: string;
+}
+
 export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionLegacyImportInput {
   resourceIds: number[];
 }
@@ -8189,6 +8195,7 @@ export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalFil
 
 export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalFilesRecoveryPreview {
   parts: BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalFilesRecoveryPart[];
+  supportsPrepareOnly?: boolean;
 }
 
 export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalRecoveryBatch {
@@ -8446,6 +8453,7 @@ export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanTask
   canEditDeliverySettings: boolean;
   storagePolicy?: BakabaseModulesWorkflowArtifactsArtifactStoragePolicy;
   canEditStoragePolicy: boolean;
+  canKeepPreparedFiles?: boolean;
   planHistory: BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionPlanRevision[];
   preparationAttempts: BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanPreparationAttempt[];
   replanArtifacts: BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanArtifactCandidate[];
@@ -8471,6 +8479,7 @@ export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionRecovery
   analyzeFilesFirst?: boolean;
   /** @format int32 */
   maxAdaptiveIterations?: number;
+  prepareOnly?: boolean;
 }
 
 export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionRecoveryDiagnosisCancellation {
@@ -17196,6 +17205,30 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         any
       >({
         path: `/acquisition/plans/${id}/run`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionPlans
+     * @name KeepPreparedAcquisitionFiles
+     * @request POST:/acquisition/plans/{id}/prepared-files/keep
+     */
+    keepPreparedAcquisitionFiles: (
+      id: number,
+      data: BakabaseServiceComponentsAcquisitionPlanningAcquisitionKeepPreparedFilesInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanTaskDetail,
+        any
+      >({
+        path: `/acquisition/plans/${id}/prepared-files/keep`,
         method: "POST",
         body: data,
         type: ContentType.Json,

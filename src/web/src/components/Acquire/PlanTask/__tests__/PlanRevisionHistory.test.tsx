@@ -117,3 +117,11 @@ it("translates a user-confirmed mirror revision without replacing human-entered 
   for (const messages of [cnAcquisition, enAcquisition])
     expect(messages["acquisition.plan.history.reason.sourceSelection.userRevision"]).toBeTruthy();
 });
+
+it("translates the default as-is delivery note and preserves a task's custom scope note", () => {
+  const translate = vi.fn((key: string) => key);
+  const key = "acquisition.plan.history.reason.delivery.keepPreparedFiles";
+  expect(planRevisionReason("delivery.keepPreparedFiles", translate as unknown as TFunction)).toBe(key);
+  expect(planRevisionReason("Accepted 9 of 10 packages.", translate as unknown as TFunction)).toBe("Accepted 9 of 10 packages.");
+  for (const messages of [cnAcquisition, enAcquisition]) expect(messages[key]).toBeTruthy();
+});

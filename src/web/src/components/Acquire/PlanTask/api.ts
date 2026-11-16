@@ -38,6 +38,9 @@ export const planTaskApi = {
   create: (body: CreationInput) => requireResult(BApi.acquisition.createAcquisitionPlanTask(body)),
   get: (id: number) =>
     requireResult(BApi.acquisition.getAcquisitionPlanTask(id, { sensitiveResponse: true })),
+  keepPreparedFiles: (id: number, expectedRevision: number, reason?: string) =>
+    requireResult(BApi.acquisition.keepPreparedAcquisitionFiles(id, { expectedRevision, reason },
+      { sensitiveResponse: true, showErrorToast: false })),
   sourceCorrections: (id: number, signal?: AbortSignal) =>
     requireResult(
       BApi.acquisition.getAcquisitionSourceCorrections(id, {

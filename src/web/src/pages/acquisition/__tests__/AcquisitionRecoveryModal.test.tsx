@@ -489,6 +489,7 @@ it("shows partial and unknown download outcomes without counting foreign task re
 });
 
 const localFiles = {
+  supportsPrepareOnly: true,
   parts: [
     {
       partId: "main",
@@ -535,6 +536,99 @@ const chooseLocalAnalysis = async () => {
     fireEvent.change(method, { target: { value: "analyze" } });
   });
 };
+
+it("registers existing files without starting processing or inheriting a previous AI or reserve choice", async () => {
+  api.preview.mockResolvedValue(preview({ scope: "localFiles", rows: [{ ...localRow, canOverrideStorage: true }] }));
+  api.apply.mockResolvedValue({
+    continuedTaskIds: [], skipped: [], localFiles: [
+      { taskId: 1, planRevision: 2, previousWorkflowRunId: 101, workflowRunId: null, status: "prepared", reasonCode: null },
+    ],
+  });
+  render(<AcquisitionRecoveryModal taskIds={[1]} initialScope="localFiles" />);
+  await chooseLocalAnalysis();
+  fireEvent.click(await screen.findByRole("checkbox", { name: "acquisition.reserve.operation.label" }));
+  fireEvent.change(screen.getByRole("combobox", { name: "acquisition.recovery.localFiles.processingMode" }), {
+    target: { value: "prepareOnly" },
+  });
+  expect(screen.getByText("acquisition.recovery.localFiles.prepareHint")).toBeVisible();
+  expect(screen.queryByRole("combobox", { name: "acquisition.adaptive.iterations" })).toBeNull();
+  expect(screen.queryByRole("checkbox", { name: "acquisition.reserve.operation.label" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "acquisition.recovery.localFiles.confirm" })).toBeNull();
+  expect(api.apply).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "acquisition.recovery.localFiles.prepareConfirm" }));
+  await screen.findByText("acquisition.recovery.localFiles.prepareResult");
+  expect(screen.getByText("acquisition.recovery.localFiles.status.registered")).toBeVisible();
+  expect(screen.getByText("acquisition.recovery.localFiles.prepareResultHint")).toBeVisible();
+  expect(screen.queryByRole("button", { name: "acquisition.recovery.recheck" })).toBeNull();
+  expect(api.apply).toHaveBeenCalledExactlyOnceWith("fixed-token", [1], undefined, { prepareOnly: true });
+  expect(continuation.create).not.toHaveBeenCalled();
+});
+
+it("reports the actual started run if a register-only submission receives an unexpected receipt", async () => {
+  api.preview.mockResolvedValue(preview({ scope: "localFiles", rows: [localRow] }));
+  api.apply.mockResolvedValue({
+    continuedTaskIds: [1], skipped: [], localFiles: [
+      { taskId: 1, planRevision: 2, previousWorkflowRunId: 101, workflowRunId: 202, status: "started" },
+    ],
+  });
+  render(<AcquisitionRecoveryModal taskIds={[1]} initialScope="localFiles" />);
+  fireEvent.change(await screen.findByRole("combobox", { name: "acquisition.recovery.localFiles.processingMode" }), {
+    target: { value: "prepareOnly" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "acquisition.recovery.localFiles.prepareConfirm" }));
+  await screen.findByText("acquisition.recovery.localFiles.status.started");
+  expect(screen.queryByText("acquisition.recovery.localFiles.prepareResult")).toBeNull();
+});
+
+it("does not switch a prepare-only recheck into the automatic processing queue", async () => {
+  api.preview.mockResolvedValueOnce(preview({ scope: "localFiles", rows: [localRow] }))
+    .mockReturnValueOnce(new Promise(() => {}));
+  render(<AcquisitionRecoveryModal taskIds={[1]} initialScope="localFiles" />);
+  fireEvent.change(await screen.findByRole("combobox", { name: "acquisition.recovery.localFiles.processingMode" }), {
+    target: { value: "prepareOnly" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "acquisition.recovery.recheck" }));
+  await waitFor(() => expect(api.preview).toHaveBeenCalledTimes(2));
+  expect(screen.queryByRole("button", { name: "acquisition.continue.skipDiagnosis" })).toBeNull();
+  expect(continuation.create).not.toHaveBeenCalled();
+  expect(api.apply).not.toHaveBeenCalled();
+});
+
+it("only offers registration for opted-in previews and never silently falls back when the selection changes", async () => {
+  api.preview.mockResolvedValue(preview({ scope: "localFiles", rows: [
+    localRow, { ...localRow, taskId: 2, title: "Older server preview", localFiles: { parts: localFiles.parts } },
+  ] }));
+  render(<AcquisitionRecoveryModal taskIds={[1, 2]} initialScope="localFiles" />);
+  const method = await screen.findByRole("combobox", { name: "acquisition.recovery.localFiles.processingMode" });
+  expect(screen.queryByRole("option", { name: "acquisition.recovery.localFiles.prepareOnly" })).toBeNull();
+  fireEvent.click(checkbox(1));
+  fireEvent.change(method, { target: { value: "prepareOnly" } });
+  const submit = screen.getByRole("button", { name: "acquisition.recovery.localFiles.prepareConfirm" });
+  expect(submit).toBeEnabled();
+  fireEvent.click(checkbox(1));
+  expect(submit).toBeDisabled();
+  expect(method).toHaveValue("prepareOnly");
+  expect(screen.getByText("acquisition.recovery.localFiles.prepareUnavailable")).toBeVisible();
+  fireEvent.click(submit);
+  expect(api.apply).not.toHaveBeenCalled();
+});
+
+it("shows the server reason for skipped registrations and invalid prepare-only submissions", async () => {
+  api.preview.mockResolvedValue(preview({ scope: "localFiles", rows: [localRow] }));
+  api.apply.mockRejectedValueOnce(new Error("RECOVERY_PREPARE_OPTIONS_INVALID"))
+    .mockResolvedValueOnce({ continuedTaskIds: [], skipped: [{ taskId: 1, reasonCode: "RECOVERY_PREPARATION_CONFLICT" }], localFiles: [] });
+  render(<AcquisitionRecoveryModal taskIds={[1]} initialScope="localFiles" />);
+  fireEvent.change(await screen.findByRole("combobox", { name: "acquisition.recovery.localFiles.processingMode" }), {
+    target: { value: "prepareOnly" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "acquisition.recovery.localFiles.prepareConfirm" }));
+  expect(await screen.findByText("acquisition.recovery.reason.RECOVERY_PREPARE_OPTIONS_INVALID")).toBeVisible();
+  api.preview.mockResolvedValue(preview({ previewToken: "another-token", scope: "localFiles", rows: [localRow] }));
+  fireEvent.click(screen.getByRole("button", { name: "acquisition.recovery.recheck" }));
+  fireEvent.click(await screen.findByRole("button", { name: "acquisition.recovery.localFiles.prepareConfirm" }));
+  expect(await screen.findByText("acquisition.recovery.reason.RECOVERY_PREPARATION_CONFLICT")).toBeVisible();
+  expect(screen.queryByText("acquisition.recovery.localFiles.prepareResultHint")).toBeNull();
+});
 
 it("requires an explicit AI choice for verified local files and preserves the unchecked configured reserve", async () => {
   api.preview.mockResolvedValue(preview({ scope: "localFiles", rows: [{ ...localRow, canOverrideStorage: true }] }));

@@ -31,6 +31,8 @@ public sealed record AcquisitionPlanTaskDetail(AcquisitionTask Task, Acquisition
     public bool CanEditDeliverySettings { get; init; }
     public ArtifactStoragePolicy? StoragePolicy { get; init; }
     public bool CanEditStoragePolicy { get; init; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? CanKeepPreparedFiles { get; init; }
     public IReadOnlyList<AcquisitionPlanRevision> PlanHistory { get; init; } = [];
     public IReadOnlyList<AcquisitionPlanPreparationAttempt> PreparationAttempts { get; init; } = [];
     public IReadOnlyList<AcquisitionPlanArtifactCandidate> ReplanArtifacts { get; init; } = [];
@@ -58,6 +60,7 @@ public sealed record AcquisitionPlanCreationInput(string Title, string BuilderId
 public sealed record AcquisitionPlanSearchInput(string Query);
 public sealed record AcquisitionPlanSelectionInput(string CandidateId, int ExpectedRevision);
 public sealed record AcquisitionPlanRunInput(int ExpectedRevision, bool? UseEmergencySpaceReserve = null);
+public sealed record AcquisitionKeepPreparedFilesInput(int ExpectedRevision, string? Reason = null);
 public sealed record AcquisitionPlanUpdateInput(int ExpectedRevision, string? OutputDirectory = null,
     AcquisitionDeliverySettings? DeliverySettings = null, ArtifactStoragePolicy? StoragePolicy = null,
     IReadOnlyList<AcquisitionStoragePolicyOverrideInput>? StoragePolicyOverrides = null);

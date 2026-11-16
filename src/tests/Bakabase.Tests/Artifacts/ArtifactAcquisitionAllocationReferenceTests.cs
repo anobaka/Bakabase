@@ -53,6 +53,39 @@ public sealed class ArtifactAcquisitionAllocationReferenceTests
     [TestMethod]
     [DataRow("current")]
     [DataRow("historical")]
+    [DataRow("unknown-directory")]
+    [DataRow("wrong-task")]
+    [DataRow("borrowed-directory")]
+    [DataRow("download")]
+    public void Checkpoint_queue_keeps_concrete_paths_protected_beside_the_policy_root(string variant)
+    {
+        var stage = Path.Combine(Root, "task-seven");
+        var plan = Plan() with {StageDirectories = new() {TaskId = variant == "wrong-task" ? 8 : 7,
+            Parts = new() {["part"] = new() {Processing = variant == "borrowed-directory"
+                ? new(stage, "borrowed", "userDirectoryRevision")
+                : new(stage, "exclusive", "taskAllocation") {BindingId = Guid.NewGuid().ToString("N"),
+                    Allocation = new("acquisition", "7", "processing-part", Root, stage)}}}}};
+        var directory = variant == "unknown-directory" ? Path.Combine(Root, "foreign") : stage;
+        var value = new AcquisitionLocalRecoveryQueueEntry {BatchId = Guid.NewGuid().ToString("N"), Version = Fingerprint,
+            StorageStamp = Fingerprint, Signal = "{}", RecoveryScope = "workflow", PlanRevision = 2, WorkflowRunId = 12,
+            ActionCategory = variant == "download" ? "originalDownload" : "localProcessing",
+            WorkingDirectories = [Root, directory], DeliveryDirectories = [Root], Status = "completed"};
+        var historical = variant == "historical";
+        var key = historical ? "localRecoveryQueueHistory" : "localRecoveryQueue";
+        var queue = JsonSerializer.SerializeToNode(value, WorkflowJson.Options);
+        using var document = JsonDocument.Parse(new JsonObject {[key] = historical ? new JsonArray(queue) : queue}.ToJsonString());
+        var task = new ArtifactAcquisitionAllocationReferences.TaskContext(7, historical ? 13 : 12, historical ? 3 : 2,
+            JsonSerializer.Serialize(historical ? Plan(12) : plan, WorkflowJson.Options), JsonSerializer.Serialize(History(plan), WorkflowJson.Options));
+        var roles = ArtifactAcquisitionAllocationReferences.QueueValues(document.RootElement, task, Owners, default);
+        var raw = historical ? document.RootElement.GetProperty(key)[0] : document.RootElement.GetProperty(key);
+        Assert.AreEqual(variant is "current" or "historical", roles.Contains(raw.GetProperty("workingDirectories")[0]));
+        Assert.IsFalse(roles.Contains(raw.GetProperty("workingDirectories")[1]));
+        Assert.IsFalse(roles.Contains(raw.GetProperty("deliveryDirectories")[0]));
+    }
+
+    [TestMethod]
+    [DataRow("current")]
+    [DataRow("historical")]
     [DataRow("unbound")]
     [DataRow("wrong-history-owner")]
     [DataRow("wrong-task-input")]

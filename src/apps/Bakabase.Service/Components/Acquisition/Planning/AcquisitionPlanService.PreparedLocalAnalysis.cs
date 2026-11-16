@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business.Components.Artifacts;
+using Bakabase.Modules.Acquisition.Components;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Db;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
@@ -14,6 +15,59 @@ namespace Bakabase.Service.Components.Acquisition.Planning;
 
 public sealed partial class AcquisitionPlanService
 {
+    private static bool HasPreparedDownloads(AcquisitionTaskDbModel row, AcquisitionPlan? plan, AcquisitionPlanBuilderState state)
+    {
+        var receipt = state.LocalFilesRecovery;
+        return receipt?.ResultingRevision != null && row.PlanRevision >= receipt.ResultingRevision.Value &&
+            row.DeletedAt == null && row.WorkflowRunId == null && row.Status == AcquisitionStatus.Waiting && row.Phase == "ready" &&
+            state.DirectoryChange == null && state.ProcessingStageCommitId == null && state.ProcessingStageInputId == null &&
+            state.LocalRecoveryQueue is not {IsOpen: true} && AcquisitionContinuationEntry.Read(row) is not {IsOpen: true} &&
+            plan is {Parts.Count: > 0} && receipt.Parts.Count == plan.Parts.Count && plan.Parts.All(p =>
+                p.ContinueFrom is { } input && input.TaskId == row.Id && input.PreviousRunId == receipt.PreviousRunId &&
+                receipt.Parts.Any(r => r.PartId == p.Id && r.ArtifactId == input.ArtifactId &&
+                    r.OperationId == input.OperationId && r.Fingerprint == input.Fingerprint));
+    }
+
+    public async Task<AcquisitionPlanTaskDetail> KeepPreparedFilesAsync(int id, AcquisitionKeepPreparedFilesInput input,
+        CancellationToken ct, Func<string?, Task>? guardDirectory = null)
+    {
+        var reason = string.IsNullOrWhiteSpace(input.Reason) ? "delivery.keepPreparedFiles" : input.Reason.Trim();
+        if (reason.Length > 1000) throw new ArgumentException("PLAN_REPLAN_INVALID");
+        var gate = AcquisitionTaskGate.For(id);
+        await gate.WaitAsync(ct);
+        try
+        {
+            var row = await Tasks.AsNoTracking().SingleOrDefaultAsync(t => t.Id == id, ct)
+                ?? throw new ArgumentException("ACQUISITION_TASK_NOT_FOUND");
+            if (row.PlanJson == null) throw new InvalidOperationException("PLAN_REPLAN_EVIDENCE_UNAVAILABLE");
+            var plan = Plan(row);
+            var state = State(row);
+            if (!HasPreparedDownloads(row, plan, state)) throw new InvalidOperationException("PLAN_REPLAN_EVIDENCE_UNAVAILABLE");
+            var alreadyKept = !plan.AdaptiveFileProcessing && !plan.PublishRetainedFiles && plan.Parts.All(p =>
+                p.UseAdaptiveAssessment == false && p.Processing is {Requirement: "notRequired", Steps.Count: 0});
+            var same = alreadyKept && ReadHistory(row).LastOrDefault()?.Reason == reason;
+            // A lost save response can be replayed for that exact revision and choice. Never
+            // reinterpret a stale approval of a different note or differently bound inputs.
+            if (!same || input.ExpectedRevision != row.PlanRevision - 1) Revision(row, input.ExpectedRevision);
+            if (guardDirectory != null)
+                foreach (var part in state.LocalFilesRecovery!.Preview.Parts)
+                    await guardDirectory(part.SourceDirectory);
+            if (!await CanAnalyzePreparedFilesAsync(row, ct)) throw new InvalidOperationException("PLAN_REPLAN_EVIDENCE_UNAVAILABLE");
+            if (!same)
+            {
+                var updated = plan with
+                {
+                    PublishRetainedFiles = false, AdaptiveFileProcessing = false, AdaptiveFileProcessingContext = null,
+                    Parts = plan.Parts.Select(p => p with {Processing = new() {Requirement = "notRequired"}, UseAdaptiveAssessment = false,
+                        AppliedProcessingRevisionId = null, DeliveryProjectionFingerprint = null}).ToList()
+                };
+                await SavePreparedChoiceAsync(row, updated, reason, "PLAN_VERSION_CONFLICT", ct);
+            }
+            return (await GetAsync(row.Id, ct))!;
+        }
+        finally { gate.Release(); }
+    }
+
     // A prepared revision can already own all inputs through older runs even though it has
     // no run of its own. A new task or a plan with an outstanding acquisition cannot enter here.
     internal async Task<bool> CanAnalyzePreparedFilesAsync(AcquisitionTaskDbModel row, CancellationToken ct)
@@ -61,26 +115,32 @@ public sealed partial class AcquisitionPlanService
             plan.Parts.All(p => p.UseAdaptiveAssessment == true && p.Processing is {Requirement: "unknown", Steps.Count: 0});
         if (!alreadyConfigured)
         {
-            var expected = row.PlanRevision;
-            var previousPlan = row.PlanJson;
-            var previousState = row.BuilderStateJson;
             var updated = plan with
             {
                 PublishRetainedFiles = false, AdaptiveFileProcessing = true, AdaptiveFileProcessingMaxIterations = maxIterations,
                 Parts = plan.Parts.Select(p => p with {Processing = new() {Requirement = "unknown"}, UseAdaptiveAssessment = true,
                     AppliedProcessingRevisionId = null, DeliveryProjectionFingerprint = null}).ToList()
             };
-            SavePlan(row, updated, Sources(row), "analysis.preparedLocalFiles");
-            var changed = await Tasks.Where(t => t.Id == row.Id && t.DeletedAt == null && t.WorkflowRunId == null &&
-                    t.Status == AcquisitionStatus.Waiting && t.Phase == "ready" && t.PlanRevision == expected &&
-                    t.PlanJson == previousPlan && t.BuilderStateJson == previousState)
-                .ExecuteUpdateAsync(update => update.SetProperty(t => t.PlanRevision, row.PlanRevision)
-                    .SetProperty(t => t.PlanJson, row.PlanJson).SetProperty(t => t.PlanHistoryJson, row.PlanHistoryJson)
-                    .SetProperty(t => t.BuilderStateJson, row.BuilderStateJson).SetProperty(t => t.UpdatedAt, row.UpdatedAt), ct);
-            if (changed != 1) throw new InvalidOperationException("ADAPTIVE_MIGRATION_CHANGED");
+            await SavePreparedChoiceAsync(row, updated, "analysis.preparedLocalFiles", "ADAPTIVE_MIGRATION_CHANGED", ct);
         }
         // This action offers no reserve override. Keep the configured reserve even
         // when a global temporary emergency mode was selected for other work.
         return await RunWhileLockedAsync(row.Id, row.PlanRevision, null, ct, useEmergencySpaceReserve: false);
+    }
+
+    private async Task SavePreparedChoiceAsync(AcquisitionTaskDbModel row, AcquisitionPlan updated, string reason,
+        string conflictCode, CancellationToken ct)
+    {
+        var expected = row.PlanRevision;
+        var previousPlan = row.PlanJson;
+        var previousState = row.BuilderStateJson;
+        SavePlan(row, updated, Sources(row), reason);
+        var changed = await Tasks.Where(t => t.Id == row.Id && t.DeletedAt == null && t.WorkflowRunId == null &&
+                t.Status == AcquisitionStatus.Waiting && t.Phase == "ready" && t.PlanRevision == expected &&
+                t.PlanJson == previousPlan && t.BuilderStateJson == previousState)
+            .ExecuteUpdateAsync(update => update.SetProperty(t => t.PlanRevision, row.PlanRevision)
+                .SetProperty(t => t.PlanJson, row.PlanJson).SetProperty(t => t.PlanHistoryJson, row.PlanHistoryJson)
+                .SetProperty(t => t.BuilderStateJson, row.BuilderStateJson).SetProperty(t => t.UpdatedAt, row.UpdatedAt), ct);
+        if (changed != 1) throw new InvalidOperationException(conflictCode);
     }
 }

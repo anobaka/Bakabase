@@ -972,6 +972,7 @@ public sealed partial class AcquisitionPlanService(BakabaseDbContext db, IEnumer
             DeliverySettings = plan?.DeliveryLayout?.Settings ?? state.DeliverySettings,
             StoragePolicy = plan?.StoragePolicy ?? state.StoragePolicy,
             CanEditStoragePolicy = row.DeletedAt == null && row.Status != AcquisitionStatus.Cancelled && await HasNeverExecutedAsync(row, ct),
+            CanKeepPreparedFiles = HasPreparedDownloads(row, plan, state) ? true : null,
             CanEditDeliverySettings = row.DeletedAt == null && row.Status != AcquisitionStatus.Cancelled && await HasNeverExecutedAsync(row, ct),
             DraftSources = state.DraftSources, LegacyLeads = state.LegacyLeads, LegacyTitle = state.LegacyTitle, ImportedListRow = state.ImportedListRow,
             PreparationAttempts = state.Attempts, ReplanArtifacts = await ReplanArtifactsAsync(task, plan, ct), PlanHistory = row.PlanHistoryJson == null ? [] :

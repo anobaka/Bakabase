@@ -107,6 +107,12 @@ public sealed class AcquisitionPlansController(AcquisitionPlanService service, I
         Respond(async () => {await GuardSavedDirectory(id); return await service.RunAsync(id, input.ExpectedRevision, HttpContext.RequestAborted,
             input.UseEmergencySpaceReserve);});
 
+    [HttpPost("{id:int}/prepared-files/keep")]
+    [RemoteAccessible]
+    [SwaggerOperation(OperationId = "KeepPreparedAcquisitionFiles")]
+    public Task<SingletonResponse<AcquisitionPlanTaskDetail>> KeepPreparedFiles(int id, [FromBody] AcquisitionKeepPreparedFilesInput input) =>
+        Respond(async () => {await GuardSavedDirectory(id); return await service.KeepPreparedFilesAsync(id, input, HttpContext.RequestAborted, GuardDirectory);});
+
     [HttpPost("{id:int}/replan")]
     [RemoteAccessible]
     [SwaggerOperation(OperationId = "ReplanAcquisitionTask")]

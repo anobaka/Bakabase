@@ -10,6 +10,8 @@ import { AcquisitionStatus, WorkflowRunStatus } from "@/sdk/constants";
 import AcquisitionRecoveryModal from "@/pages/acquisition/components/AcquisitionRecoveryModal";
 const mocks = vi.hoisted(() => ({
   preflight: vi.fn(),
+  keepPreparedFiles: vi.fn(),
+  options: vi.fn(),
   get: vi.fn(),
   search: vi.fn(),
   select: vi.fn(),
@@ -53,7 +55,7 @@ vi.mock("../CompletedProcessingRevisionForm", async (importOriginal) => ({
 }));
 vi.mock("@/sdk/BApi", () => ({
   default: {
-    acquisition: { cancelAcquisition: mocks.cancel, getAcquisitionAssessmentIo: mocks.assessmentIo },
+    acquisition: { cancelAcquisition: mocks.cancel, getAcquisitionAssessmentIo: mocks.assessmentIo, getAcquisitionOptions: mocks.options },
     workflowSources: { queryWorkflowSourceRuns: mocks.querySourceRuns },
   },
 }));
@@ -121,6 +123,11 @@ vi.mock("@/components/bakaui", async () => ({
   ),
   Popover: ({ trigger }: { trigger: ReactNode }) => <>{trigger}</>,
   Tooltip: ({ children }: { children: ReactNode }) => <>{children}</>,
+  Textarea: ({label, value, onValueChange}: any) => <textarea aria-label={label} value={value}
+    onChange={event => onValueChange(event.target.value)} />,
+  Checkbox: ({children, isSelected, onValueChange, "aria-label": label}: any) =>
+    <label><input type="checkbox" aria-label={label} checked={isSelected}
+      onChange={event => onValueChange(event.target.checked)} />{children}</label>,
   Spinner: () => null,
   Input: ({
     label,
@@ -232,6 +239,7 @@ const detail = {
 };
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.options.mockResolvedValue({ code: 0, data: { useEmergencySpaceReserve: true, minimumFreeSpaceBytes: 50 * 1024 ** 3 } });
   mocks.get.mockResolvedValue(detail);
   mocks.runtimeOverviews.mockResolvedValue([]);
   mocks.revisionOptions.mockResolvedValue({ taskId: 42, expectedRunId: 75, expectedRevision: 3, canRevise: false, candidates: [] });
@@ -511,6 +519,68 @@ it("never auto-selects a candidate and uses task revision when a user chooses", 
   expect(mocks.select).not.toHaveBeenCalled();
   fireEvent.click(screen.getAllByRole("button", { name: "acquisition.plan.choose" })[1]);
   await waitFor(() => expect(mocks.select).toHaveBeenCalledExactlyOnceWith(42, "c2", 3));
+  expect(mocks.run).not.toHaveBeenCalled();
+});
+
+const asIsInput = { taskId: 42, artifactId: "local", operationId: "op", previousRunId: 101, fingerprint: "hash" };
+const readyWithFiles = {
+  ...detail, task: { ...detail.task, phase: "ready" }, canKeepPreparedFiles: true,
+  plan: { parts: [{ id: "part", title: "Bound download", sources: [], continueFrom: asIsInput,
+    processing: { requirement: "required", steps: [{ op: "extractArchive" }] } }] },
+  planHistory: [{ revision: 3, plan: { parts: [] }, sourceRefs: [], artifactEvidence: [
+    { partId: "part", artifactId: "local", fingerprint: "hash", manifest: { entries: [{}, {}] } },
+  ] }],
+};
+const keepRevision = {
+  ...readyWithFiles, task: { ...readyWithFiles.task, planRevision: 4 }, plan: {
+    parts: [{...readyWithFiles.plan.parts[0], processing: { requirement: "notRequired", steps: [] } }],
+  },
+  planHistory: [{ revision: 4, reason: "delivery.keepPreparedFiles" }],
+};
+
+it.each(["原帖 10 项，当前登记 9 个包。", ""])("uses the saved as-is revision and current reserve choice only after confirmation (%s)", async note => {
+  mocks.get.mockResolvedValue(readyWithFiles);
+  mocks.keepPreparedFiles.mockResolvedValue({ ...keepRevision,
+    planHistory: [{ revision: 4, reason: note || "delivery.keepPreparedFiles" }] });
+  mocks.run.mockResolvedValue(keepRevision);
+  render(<PlanTaskDetailModal taskId={42} />);
+  fireEvent.click(await screen.findByRole("button", { name: "acquisition.keepPrepared.title" }));
+  const modal = within(screen.getByRole("dialog", { name: "acquisition.keepPrepared.title" }));
+  expect(modal.getByText("acquisition.keepPrepared.fileCount")).toBeVisible();
+  if (note) fireEvent.change(modal.getByRole("textbox", {name: "acquisition.keepPrepared.note"}), {target: {value: `  ${note}  `}});
+  fireEvent.click(await modal.findByRole("checkbox", { name: "acquisition.reserve.operation.label" }));
+  expect(mocks.keepPreparedFiles).not.toHaveBeenCalled();
+  expect(mocks.run).not.toHaveBeenCalled();
+  fireEvent.click(modal.getByRole("button", { name: "acquisition.keepPrepared.confirm" }));
+  await waitFor(() => expect(mocks.run).toHaveBeenCalledExactlyOnceWith(42, 4, false));
+  expect(mocks.keepPreparedFiles).toHaveBeenCalledExactlyOnceWith(42, 3, note || undefined);
+});
+
+it.each(["unbound", "missingCapability", "differentOwner"])("hides as-is delivery when the source is not an eligible ready task (%s)", async mode => {
+  mocks.get.mockResolvedValue({ ...readyWithFiles, canKeepPreparedFiles: mode !== "missingCapability" ? true : undefined,
+    plan: { parts: [{ ...readyWithFiles.plan.parts[0], continueFrom: mode === "unbound" ? undefined : {
+      ...asIsInput, taskId: mode === "differentOwner" ? 43 : 42,
+    } }] } });
+  render(<PlanTaskDetailModal taskId={42} />);
+  await screen.findByRole("region", { name: "acquisition.timeline.title" });
+  expect(screen.queryByRole("button", { name: "acquisition.keepPrepared.title" })).toBeNull();
+});
+
+it.each(["changedInput", "stillExtracts", "stillAdaptive", "missingNote", "failedSave"])("does not start or resubmit an unconfirmed as-is revision (%s)", async mode => {
+  mocks.get.mockResolvedValue(readyWithFiles);
+  if (mode === "failedSave") mocks.keepPreparedFiles.mockRejectedValueOnce(new Error("Request failed"));
+  else mocks.keepPreparedFiles.mockResolvedValue({ ...keepRevision, planHistory: mode === "missingNote" ? [] : keepRevision.planHistory,
+    plan: { adaptiveFileProcessing: mode === "stillAdaptive",
+    parts: [{ ...keepRevision.plan.parts[0], continueFrom: { ...asIsInput, fingerprint: mode === "changedInput" ? "changed" : "hash" },
+      processing: mode === "stillExtracts" ? readyWithFiles.plan.parts[0].processing : keepRevision.plan.parts[0].processing }] } });
+  render(<PlanTaskDetailModal taskId={42} />);
+  fireEvent.click(await screen.findByRole("button", { name: "acquisition.keepPrepared.title" }));
+  const modal = within(screen.getByRole("dialog", { name: "acquisition.keepPrepared.title" }));
+  await modal.findByRole("checkbox", { name: "acquisition.reserve.operation.label" });
+  const submit = modal.getByRole("button", { name: "acquisition.keepPrepared.confirm" });
+  fireEvent.click(submit);
+  await modal.findByRole("alert");
+  expect(submit).toBeDisabled();
   expect(mocks.run).not.toHaveBeenCalled();
 });
 

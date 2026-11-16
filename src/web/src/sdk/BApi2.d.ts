@@ -900,6 +900,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/acquisition/plans/{id}/prepared-files/keep": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["KeepPreparedAcquisitionFiles"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/acquisition/plans/{id}/replan": {
         parameters: {
             query?: never;
@@ -19375,6 +19391,11 @@ export interface components {
             deliverySettings?: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionDeliverySettings"];
             storagePolicy?: components["schemas"]["Bakabase.Modules.Workflow.Artifacts.ArtifactStoragePolicy"];
         };
+        "Bakabase.Service.Components.Acquisition.Planning.AcquisitionKeepPreparedFilesInput": {
+            /** Format: int32 */
+            expectedRevision: number;
+            reason?: string;
+        };
         "Bakabase.Service.Components.Acquisition.Planning.AcquisitionLegacyImportInput": {
             resourceIds: number[];
         };
@@ -19421,6 +19442,7 @@ export interface components {
         };
         "Bakabase.Service.Components.Acquisition.Planning.AcquisitionLocalFilesRecoveryPreview": {
             parts: components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionLocalFilesRecoveryPart"][];
+            supportsPrepareOnly?: boolean;
         };
         "Bakabase.Service.Components.Acquisition.Planning.AcquisitionLocalRecoveryBatch": {
             batchId: string;
@@ -19653,6 +19675,7 @@ export interface components {
             canEditDeliverySettings: boolean;
             storagePolicy?: components["schemas"]["Bakabase.Modules.Workflow.Artifacts.ArtifactStoragePolicy"];
             canEditStoragePolicy: boolean;
+            canKeepPreparedFiles?: boolean;
             planHistory: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionPlanRevision"][];
             preparationAttempts: components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionPlanPreparationAttempt"][];
             replanArtifacts: components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionPlanArtifactCandidate"][];
@@ -19676,6 +19699,7 @@ export interface components {
             analyzeFilesFirst?: boolean;
             /** Format: int32 */
             maxAdaptiveIterations?: number;
+            prepareOnly?: boolean;
         };
         "Bakabase.Service.Components.Acquisition.Planning.AcquisitionRecoveryDiagnosisCancellation": {
             diagnosisId: string;
@@ -27182,6 +27206,37 @@ export interface operations {
                 "application/json": components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionPlanRunInput"];
                 "text/json": components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionPlanRunInput"];
                 "application/*+json": components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionPlanRunInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.Planning.AcquisitionPlanTaskDetail]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.Planning.AcquisitionPlanTaskDetail]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.Planning.AcquisitionPlanTaskDetail]"];
+                };
+            };
+        };
+    };
+    KeepPreparedAcquisitionFiles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionKeepPreparedFilesInput"];
+                "application/json": components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionKeepPreparedFilesInput"];
+                "text/json": components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionKeepPreparedFilesInput"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionKeepPreparedFilesInput"];
             };
         };
         responses: {

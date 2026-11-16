@@ -30,6 +30,7 @@ import CompletedProcessingRevisionForm, {
   hasStageDirectoryInputs,
 } from "./CompletedProcessingRevisionForm";
 import TaskDirectoriesModal from "./TaskDirectoriesModal";
+import KeepPreparedFilesModal, { canKeepPreparedFiles } from "./KeepPreparedFilesModal";
 import DraftPreparation from "./DraftPreparation";
 import TaskDeliverySettings from "./TaskDeliverySettings";
 import TaskStoragePolicySettings from "./TaskStoragePolicySettings";
@@ -119,7 +120,7 @@ export default function PlanTaskDetailModal({
     inputStage: AcquisitionStage;
   }>();
   const [editor, setEditor] = useState<{
-    stage: "plan" | "delivery";
+    stage: "plan" | "delivery" | "keepPrepared";
     snapshot: PlanTaskDetail;
   }>();
   const replanSnapshot = editor?.snapshot;
@@ -514,6 +515,12 @@ export default function PlanTaskDetailModal({
     stageHeaderActions[stage] = <>
       {currentStage === stage && currentControls}
       {stage === "processing" && detail && processingOffered && (!continueCurrent || deliveryWait) && processingAction("processing")}
+      {stage === "delivery" && detail && canKeepPreparedFiles(detail) && (
+        <Button size="sm" color="primary" variant="flat" aria-haspopup="dialog" isDisabled={busy || replanOpen}
+          onPress={() => setEditor({ stage: "keepPrepared", snapshot: detail })}>
+          {t("acquisition.keepPrepared.title")}
+        </Button>
+      )}
       {stage === "delivery" && deliveryAvailable && (
         <Button size="sm" variant="flat" isDisabled={busy || replanOpen}
           onPress={() => setEditor({ stage: "delivery", snapshot: detail! })}>
@@ -933,6 +940,10 @@ export default function PlanTaskDetailModal({
           </div>
         )}
       </Modal>
+      {!readOnly && editor?.stage === "keepPrepared" && replanSnapshot && (
+        <KeepPreparedFilesModal detail={replanSnapshot} stale={editorStale || !canKeepPreparedFiles(detail)}
+          onClose={closeEditor} onSaved={startRevision} onRefresh={() => void load()} />
+      )}
       {!readOnly && editor?.stage === "delivery" && replanSnapshot && (
         <Modal visible size="5xl" scrollBehavior="inside" title={t("acquisition.timeline.retry.delivery")}
           footer={false} onClose={closeEditor}>

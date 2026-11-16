@@ -156,13 +156,27 @@ internal static class ArtifactAcquisitionAllocationReferences
             if (plan?.StoragePolicy == null) return new HashSet<JsonElement>();
             var roots = plan.Parts.Select(part => ArtifactStoragePolicies.Resolve(plan.StoragePolicy, part.StoragePolicy).ProcessingWorkspaceDirectory)
                 .Where(p => !string.IsNullOrWhiteSpace(p)).ToHashSet(StringComparer.Ordinal);
-            if (!roots.SetEquals(entry.WorkingDirectories) || Property(raw, "workingDirectories") is not {ValueKind: JsonValueKind.Array} paths)
-                return new HashSet<JsonElement>();
-            // A typed queue's captured policy roots allocate sibling workspaces. Its
-            // deliveryDirectories, signal, inputs and any unknown JSON remain references.
-            return paths.EnumerateArray().ToHashSet();
+            if (Property(raw, "workingDirectories") is not {ValueKind: JsonValueKind.Array} paths ||
+                !QueueWorkingDirectoriesMatch(entry, plan, task.Id, roots)) return new HashSet<JsonElement>();
+            // Only the configured roots allocate sibling workspaces. A checkpoint's
+            // specific stage directory still protects all its contents.
+            return paths.EnumerateArray().Where(p => roots.Contains(p.GetString())).ToHashSet();
         }
         catch (Exception e) when (Invalid(e)) { return new HashSet<JsonElement>(); }
+    }
+
+    private static bool QueueWorkingDirectoriesMatch(AcquisitionLocalRecoveryQueueEntry entry, AcquisitionPlan plan,
+        int taskId, HashSet<string> roots)
+    {
+        if (roots.SetEquals(entry.WorkingDirectories)) return true;
+        if (entry.RecoveryScope != "workflow" || entry.ActionCategory != "localProcessing" ||
+            plan.StageDirectories is not { } stages || stages.TaskId != taskId ||
+            !roots.IsSubsetOf(entry.WorkingDirectories)) return false;
+        AcquisitionStageDirectoryResolver.Validate(stages, plan);
+        var stagePaths = stages.Parts.Values.Select(p => p.Processing)
+            .Where(p => p is {Ownership: "exclusive", Evidence: "taskAllocation", BindingId: not null, Allocation: not null})
+            .Select(p => p!.Directory).ToHashSet(StringComparer.Ordinal);
+        return entry.WorkingDirectories.All(p => roots.Contains(p) || stagePaths.Contains(p));
     }
 
     private static IReadOnlySet<JsonElement> LocalFilesValues(JsonElement raw, TaskContext task,

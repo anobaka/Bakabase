@@ -37,22 +37,28 @@ public sealed partial class AcquisitionReplanTests
                 [new() {Id = "extract", Op = "extractArchive", Selector = "original.bin"}]}, [artifactId], artifactId)]);
 
     [DataTestMethod]
-    [DataRow(false)]
-    [DataRow(true)]
-    public async Task Completed_download_continues_through_processing_and_publication_without_downloader_or_replacement(bool useCurrentStorage)
+    [DataRow(false, false)]
+    [DataRow(true, false)]
+    [DataRow(true, true)]
+    public async Task Completed_download_continues_through_processing_and_publication_without_downloader_or_replacement(
+        bool useCurrentStorage, bool keepOriginal)
     {
         var (task, old, input) = await DownloadedInput();
         _continuationArchives.ExpectedInput = "original bytes";
         var plans = useCurrentStorage ? CurrentStoragePlans(Directory.CreateDirectory(Path.Combine(_root, "new-work")).FullName,
             Directory.CreateDirectory(Path.Combine(_root, "new-delivery")).FullName) : Plans;
-        var revised = await plans.ReplanAsync(task.Id, ContinueDownload(task, old.Id, input.Id) with
-            {UseCurrentStorageDefaults = useCurrentStorage}, default);
+        var request = ContinueDownload(task, old.Id, input.Id) with {UseCurrentStorageDefaults = useCurrentStorage};
+        if (keepOriginal) request = request with {Items = [request.Items[0] with
+            {Plan = new() {Requirement = "notRequired"}, UseAdaptiveAssessment = false}]};
+        var revised = await plans.ReplanAsync(task.Id, request, default);
         var preflight = await plans.PreflightAsync(task.Id, default);
         Assert.IsFalse(preflight.Issues.Any(i => i.Blocking));
         var compiled = AcquisitionPlanCompiler.Compile(revised.Plan!);
-        CollectionAssert.AreEqual(new[] {AcquisitionPlanContinueFilesActivity.ActivityKind,
-            AcquisitionPlanProcessingActivity.ActivityKind, AssessFileArtifactDeliveryActivity.ActivityKind,
-            "fs.publishArtifacts"}, compiled.Nodes.Select(n => n.Kind).ToArray());
+        string[] nodes = keepOriginal
+            ? [AcquisitionPlanContinueFilesActivity.ActivityKind, AcquisitionPlanProcessingActivity.ActivityKind, "fs.publishArtifacts"]
+            : [AcquisitionPlanContinueFilesActivity.ActivityKind, AcquisitionPlanProcessingActivity.ActivityKind,
+                AssessFileArtifactDeliveryActivity.ActivityKind, "fs.publishArtifacts"];
+        CollectionAssert.AreEqual(nodes, compiled.Nodes.Select(n => n.Kind).ToArray());
         var workset = AcquisitionPlanCompiler.Workset(task.Id, revised.Task.PlanRevision, revised.Plan!, revised.SourceRefs);
         var run = new WorkflowRunDbModel {WorkflowDefinitionId = 0, Status = WorkflowRunStatus.Running, StartedAt = DateTime.UtcNow,
             Sources = [new() {Module = "acquisition", EntityKind = "task", EntityId = task.Id.ToString(), Revision = revised.Task.PlanRevision.ToString()}]};
@@ -66,19 +72,27 @@ public sealed partial class AcquisitionReplanTests
         Assert.IsNull(restored.Targets.Single().DownloadTaskId, "Continuation must not reattach a downloader.");
         var processed = await new AcquisitionPlanProcessingActivity().ProcessItemAsync(Context(1), restored, default);
         Assert.IsNull(processed.Suspension);
-        var assessed = await new AssessFileArtifactDeliveryActivity().ProcessItemAsync(Context(2), processed.Replacement!, default);
+        var assessed = keepOriginal ? processed : await new AssessFileArtifactDeliveryActivity().ProcessItemAsync(Context(2), processed.Replacement!, default);
         Assert.IsNull(assessed.Suspension, assessed.Suspension?.PromptJson);
-        var published = await new PublishFileArtifactsActivity().ProcessItemAsync(Context(3), assessed.Replacement!, default);
+        var published = await new PublishFileArtifactsActivity().ProcessItemAsync(Context(nodes.Length - 1), assessed.Replacement!, default);
         Assert.IsNull(published.Suspension, published.Suspension?.PromptJson);
         var target = ((DownloadWorkset)published.Replacement!).Targets.Single();
         Assert.IsNotNull(target.PublishedArtifactId);
-        Assert.AreEqual("remaining extraction", await File.ReadAllTextAsync(target.PublishedFiles!.Single()));
+        Assert.AreEqual(keepOriginal ? "original bytes" : "remaining extraction", await File.ReadAllTextAsync(target.PublishedFiles!.Single()));
         Assert.AreEqual("original bytes", await File.ReadAllTextAsync(input.Files.Single()));
-        Assert.AreEqual(1, _continuationArchives.Extractions);
+        Assert.AreEqual(keepOriginal ? 0 : 1, _continuationArchives.Extractions);
         Assert.AreEqual(0, await Db.DownloadTasks.CountAsync());
         Assert.AreEqual(0, await Db.DownloadResults.CountAsync());
         Assert.AreEqual(input.Id, (await Artifacts.GetOperationAsync(input.OperationId))!.OutputArtifactId);
         Assert.AreEqual(WorkflowRunStatus.Failed, (await Db.WorkflowRuns.AsNoTracking().SingleAsync(r => r.Id == old.Id)).Status);
+        if (keepOriginal)
+        {
+            // Publication borrowed the staged result. Its continuation pin remains valid
+            // until the runner records the successful terminal state.
+            Assert.IsTrue(await Artifacts.HasActiveConsumersAsync(input.OperationId));
+            await Db.WorkflowRuns.Where(r => r.Id == run.Id).ExecuteUpdateAsync(s =>
+                s.SetProperty(r => r.Status, WorkflowRunStatus.Success).SetProperty(r => r.CompletedAt, DateTime.UtcNow));
+        }
         Assert.IsFalse(await Artifacts.HasActiveConsumersAsync(input.OperationId));
     }
 

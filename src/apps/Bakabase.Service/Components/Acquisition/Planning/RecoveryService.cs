@@ -29,6 +29,7 @@ public sealed class AcquisitionRecoveryPreviewStore
         internal bool? UseEmergencySpaceReserve;
         internal bool AnalyzeFilesFirst;
         internal int? MaxAdaptiveIterations;
+        internal bool PrepareOnly;
         internal AcquisitionRecoveryResult? Result;
     }
     private readonly ConcurrentDictionary<string, Entry> _entries = new();
@@ -39,12 +40,15 @@ public sealed class AcquisitionRecoveryPreviewStore
         _entries[entry.Preview.PreviewToken] = entry;
     }
     internal Entry Claim(string token, int[] selected, bool? useEmergencySpaceReserve = null,
-        bool analyzeFilesFirst = false, int? maxAdaptiveIterations = null)
+        bool analyzeFilesFirst = false, int? maxAdaptiveIterations = null, bool prepareOnly = false)
     {
         if (!Guid.TryParseExact(token, "N", out _) || !_entries.TryGetValue(token, out var entry) || entry.Preview.ExpiresAt <= DateTimeOffset.UtcNow)
             throw new ArgumentException("RECOVERY_PREVIEW_EXPIRED");
         lock (entry)
         {
+            if (prepareOnly && (entry.Preview.Scope != "localFiles" || analyzeFilesFirst ||
+                                maxAdaptiveIterations != null || useEmergencySpaceReserve != null))
+                throw new ArgumentException("RECOVERY_PREPARE_OPTIONS_INVALID");
             if (analyzeFilesFirst && entry.Preview.Scope != "localFiles" ||
                 maxAdaptiveIterations != null && !analyzeFilesFirst || maxAdaptiveIterations is < 1 or > 5)
                 throw new ArgumentException("RECOVERY_ANALYSIS_OPTIONS_INVALID");
@@ -52,10 +56,11 @@ public sealed class AcquisitionRecoveryPreviewStore
             if (selected.Any(id => !entry.Versions.ContainsKey(id))) throw new ArgumentException("RECOVERY_SELECTION_INVALID");
             if (entry.Claimed && (entry.Result == null || !selected.SequenceEqual(entry.Selected!) ||
                 useEmergencySpaceReserve != entry.UseEmergencySpaceReserve || analyzeFilesFirst != entry.AnalyzeFilesFirst ||
-                maxAdaptiveIterations != entry.MaxAdaptiveIterations))
+                maxAdaptiveIterations != entry.MaxAdaptiveIterations || prepareOnly != entry.PrepareOnly))
                 throw new ArgumentException("RECOVERY_OUTCOME_UNKNOWN");
             entry.Claimed = true; entry.Selected = selected; entry.UseEmergencySpaceReserve = useEmergencySpaceReserve;
             entry.AnalyzeFilesFirst = analyzeFilesFirst; entry.MaxAdaptiveIterations = maxAdaptiveIterations;
+            entry.PrepareOnly = prepareOnly;
             return entry;
         }
     }
@@ -71,10 +76,17 @@ public sealed class AcquisitionRecoveryService(BakabaseDbContext db, IAcquisitio
         var ids = Ids(input.TaskIds);
         var scope = input.Scope ?? "workflow";
         if (scope is not ("workflow" or "downloads" or "localFiles")) throw new ArgumentException("RECOVERY_SCOPE_INVALID");
-        async Task<AcquisitionRecoveryDiagnosis> Diagnose(AcquisitionTaskDbModel task, WorkflowRunDbModel? run, bool verify, CancellationToken token) =>
-            scope == "localFiles" ? localFiles == null ? throw new ArgumentException("RECOVERY_LOCAL_FILES_UNAVAILABLE") :
-                await localFiles.DiagnoseAsync(task, run, verify, token, guardDirectory) :
-                ForScope(await diagnostics.DiagnoseAsync(task, run, token, verifyFiles: verify, includeStoppedDownloads: scope == "downloads"), run, scope);
+        async Task<AcquisitionRecoveryDiagnosis> Diagnose(AcquisitionTaskDbModel task, WorkflowRunDbModel? run, bool verify, CancellationToken token)
+        {
+            if (scope != "localFiles")
+                return ForScope(await diagnostics.DiagnoseAsync(task, run, token, verifyFiles: verify, includeStoppedDownloads: scope == "downloads"), run, scope);
+            if (localFiles == null) throw new ArgumentException("RECOVERY_LOCAL_FILES_UNAVAILABLE");
+            var diagnosis = await localFiles.DiagnoseAsync(task, run, verify, token, guardDirectory);
+            if (diagnosis.Row.CanContinue && diagnosis.Row.LocalFiles is { } files &&
+                AcquisitionLocalFilesRecoveryService.CanPrepareWithoutFileOperations(task))
+                return diagnosis with {Row = diagnosis.Row with {LocalFiles = files with {SupportsPrepareOnly = true}}};
+            return diagnosis;
+        }
         var rows = new List<AcquisitionRecoveryRow>(); var versions = new Dictionary<int, string>(); var signals = new Dictionary<int, string>();
         var verification = new List<(int Id, int Index, string Version)>();
         // Fetch private checkpoints in bounded batches, not one query per row or one unbounded
@@ -209,7 +221,8 @@ public sealed class AcquisitionRecoveryService(BakabaseDbContext db, IAcquisitio
         string? processingPlacementStamp = null, bool preserveReserve = false)
     {
         var ids = Ids(input.TaskIds).Order().ToArray();
-        var entry = previews.Claim(input.PreviewToken, ids, input.UseEmergencySpaceReserve, input.AnalyzeFilesFirst == true, input.MaxAdaptiveIterations);
+        var entry = previews.Claim(input.PreviewToken, ids, input.UseEmergencySpaceReserve, input.AnalyzeFilesFirst == true,
+            input.MaxAdaptiveIterations, input.PrepareOnly == true);
         if (entry.Result is {} saved) return saved;
         var continued = new List<int>(); var skipped = new List<AcquisitionRecoverySkip>();
         var downloadOutcomes = new List<AcquisitionDownloadRecoveryOutcome>();
@@ -229,7 +242,7 @@ public sealed class AcquisitionRecoveryService(BakabaseDbContext db, IAcquisitio
                         throw new RecoveryBlockedException("RECOVERY_LOCAL_FILES_UNAVAILABLE");
                     var outcome = await localFiles.ApplyWhileLockedAsync(id, entry.Versions[id], entry.Signals[id], guardDirectory, ct,
                         analyzeFilesFirst: entry.AnalyzeFilesFirst, maxAdaptiveIterations: entry.MaxAdaptiveIterations,
-                        useEmergencySpaceReserve: input.UseEmergencySpaceReserve);
+                        useEmergencySpaceReserve: input.UseEmergencySpaceReserve, prepareOnly: entry.PrepareOnly);
                     localOutcomes.Add(outcome);
                     if (outcome.Status == "started") continued.Add(id);
                     continue;

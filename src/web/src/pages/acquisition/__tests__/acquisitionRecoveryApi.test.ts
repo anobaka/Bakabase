@@ -68,3 +68,9 @@ it("forwards explicit AI analysis and its round limit with the unchanged local-f
     analyzeFilesFirst: true, maxAdaptiveIterations: 5,
   }, { sensitiveResponse: true, showErrorToast: false });
 });
+it("sends only prepareOnly alongside the authorized preview and tasks when registering files for later", async () => {
+  await api.apply("verified-local-files", [7, 12], undefined, { prepareOnly: true });
+  expect(mocks.apply).toHaveBeenCalledExactlyOnceWith({
+    previewToken: "verified-local-files", taskIds: [7, 12], prepareOnly: true,
+  }, { sensitiveResponse: true, showErrorToast: false });
+});
