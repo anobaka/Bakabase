@@ -1,3 +1,4 @@
+import ManualSourceAction from "./ManualSourceAction";
 import PostImageSourceAction, { type ReviewedImageSource } from "./PostImageSourceAction";
 import { useTranslation } from "react-i18next";
 import { Button, Chip } from "@/components/bakaui";
@@ -23,7 +24,7 @@ export default function TaskPlanSources({
   corrections?: SourceCorrections;
   sourceHealth: SourceAvailabilityRow[];
   onReview?: () => void;
-  onReplace?: (partId: string, sourceId: string, source: ReviewedImageSource) => Promise<void>;
+  onReplace?: (partId: string, sourceId: string, source: Pick<ReviewedImageSource, "url" | "accessCode">) => Promise<void>;
   onApply?: (
     partId: string,
     source: NonNullable<Part["processingSource"]>,
@@ -108,8 +109,11 @@ export default function TaskPlanSources({
                     }
                   />
                   {onReplace && source.id === part.selectedSourceId && (
-                    <PostImageSourceAction key={task.planRevision} origins={task.creationOrigins}
-                      imageUrl={source.url} initialAccessCode={source.accessCode} disabled={busy} onUse={reviewed => onReplace(part.id, source.id, reviewed)} />
+                    <div key={task.planRevision} className="flex flex-wrap items-center gap-2">
+                      <PostImageSourceAction origins={task.creationOrigins}
+                        imageUrl={source.url} initialAccessCode={source.accessCode} disabled={busy} onUse={reviewed => onReplace(part.id, source.id, reviewed)} />
+                      <ManualSourceAction disabled={busy} onUse={reviewed => onReplace(part.id, source.id, reviewed)} />
+                    </div>
                   )}
                   {correctionReason && (
                     <p className="text-xs text-default-500">
