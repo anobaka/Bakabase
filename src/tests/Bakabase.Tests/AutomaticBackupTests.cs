@@ -1,3 +1,5 @@
+using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using Bakabase.Infrastructures.Components.App;
 using Bakabase.Infrastructures.Components.App.Models.Constants;
 using Bakabase.Infrastructures.Components.App.SingleInstance;
@@ -294,6 +296,61 @@ public class AutomaticBackupTests
         Assert.IsNull(new DirectoryInfo(snapshotDirectory).LinkTarget);
         Assert.AreEqual("outside", File.ReadAllText(Path.Combine(snapshotDirectory, "keep.txt")));
     }
+
+    [TestMethod]
+    public void VersionChange_SkipsUnixSpecialFilesAndPreservesRegularFiles()
+    {
+        using var h = new BackupHarness();
+        h.WithFile("empty", "");
+        h.WithFile("profile/config", "saved");
+        var socketPath = Path.Combine(h.Root, "profile", "ipc");
+        var fifoPath = Path.Combine(h.Root, "messages");
+        if (!OperatingSystem.IsWindows())
+        {
+            // Unix-domain socket addresses have a shorter path limit than ordinary files.
+            // Bind on the same volume, then move the entry into the nested fixture.
+            var address = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+            using var socket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
+            socket.Bind(new UnixDomainSocketEndPoint(address));
+            try { File.Move(address, socketPath); }
+            finally { File.Delete(address); }
+            Assert.AreEqual(0, MkFifo(fifoPath, 0x180)); // 0600
+            File.CreateSymbolicLink(Path.Combine(h.Root, "profile", "device"), "/dev/null");
+            File.CreateSymbolicLink(Path.Combine(h.Root, "pipe-link"), fifoPath);
+        }
+        // Fail immediately if enumeration hands a FIFO to the copier; a real open would block.
+        h.Run(previousVersion: "1.0.0", currentVersion: "2.0.0", copyFile: (source, destination) =>
+        {
+            Assert.IsTrue(Path.GetFileName(source) is "config" or "empty", source);
+            File.Copy(source, destination);
+        });
+        var backup = Path.Combine(h.Backups, "1.0.0");
+        Assert.AreEqual(0, new FileInfo(Path.Combine(backup, "empty")).Length);
+        Assert.AreEqual("saved", File.ReadAllText(Path.Combine(backup, "profile", "config")));
+        Assert.AreEqual(2, Directory.EnumerateFiles(backup, "*", SearchOption.AllDirectories).Count());
+        if (!OperatingSystem.IsWindows())
+        {
+            Assert.IsTrue(File.Exists(socketPath));
+            Assert.IsTrue(File.Exists(fifoPath));
+        }
+    }
+
+    [TestMethod]
+    public void VersionChange_RegularFilePermissionErrorPreservesThePreviousSnapshot()
+    {
+        using var h = new BackupHarness();
+        h.AddBackup("1.0.0", 1);
+        h.WithFile("profile/permissions", "must be backed up");
+        var expected = new UnauthorizedAccessException("Access denied for this ordinary file.");
+        var error = Assert.ThrowsExactly<UnauthorizedAccessException>(() =>
+            h.Run(previousVersion: "1.0.0", currentVersion: "2.0.0", copyFile: (_, _) => throw expected));
+        Assert.AreSame(expected, error);
+        Assert.AreEqual("original 1.0.0", File.ReadAllText(Path.Combine(h.Backups, "1.0.0", "saved.txt")));
+        Assert.AreEqual(1, Directory.EnumerateDirectories(h.Backups).Count());
+    }
+
+    [DllImport("libc", EntryPoint = "mkfifo")]
+    private static extern int MkFifo([MarshalAs(UnmanagedType.LPUTF8Str)] string path, uint mode);
 
     [TestMethod]
     public void InvalidPersistedLimit_FallsBackToSevenVersions()
