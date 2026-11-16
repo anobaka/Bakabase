@@ -130,7 +130,9 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
             else if (!(selected.Current && !authorization.Consent.AbandonUnfinishedFiles && stage == "processing" && entry.Evidence == "processingRecord"))
                 return Result("CLEANUP_DIRECTORY_OWNERSHIP_UNCONFIRMED");
             await new AcquisitionStageDirectoryReferenceGuard(db, artifacts, storage, workspaces)
-                .RequireAsync(task, owners.ToArray(), partId, root, ct, ownDownload, explicitTaskCleanup: owners.Count > 0, abandonUnfinishedFiles: authorization.Consent.AbandonUnfinishedFiles);
+                .RequireAsync(task, owners.ToArray(), partId, root, ct, ownDownload, explicitTaskCleanup: owners.Count > 0,
+                    abandonUnfinishedFiles: authorization.Consent.AbandonUnfinishedFiles,
+                    hasActiveConsumers: authorization.HasActiveConsumersAsync);
             if (!exists)
                 return Result(ArtifactCleanupAbsence.Probe(parent, root, ct) == ArtifactCleanupPathPresence.ConfirmedAbsent
                     ? "AlreadyAbsent" : "WorkspaceUnavailable");
@@ -192,7 +194,11 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
         if (AcquisitionLocalRecoveryQueueEntry.Read(task) is {IsOpen: true} || AcquisitionContinuationEntry.Read(task) is {IsOpen: true})
             throw new InvalidOperationException("STAGE_DIRECTORY_TASK_ACTIVE");
         using var state = JsonDocument.Parse(task.BuilderStateJson ?? "{}");
-        if (state.RootElement.ValueKind == JsonValueKind.Object && state.RootElement.EnumerateObject().Any(p =>
+        // A pending stage journal is a recoverable intent, not a live writer. Explicit
+        // whole-task deletion may abandon an interrupted move/input after the task/run
+        // gates and runtime checks have quiesced it. Keep the journal as history; normal
+        // stage edits and automatic cleanup must still wait for the hand-off to finish.
+        if (!authorization.Consent.WholeTaskFiles && state.RootElement.ValueKind == JsonValueKind.Object && state.RootElement.EnumerateObject().Any(p =>
             p.Name is "processingStageCommitId" or "processingStageInputId" or "directoryChange" && p.Value.ValueKind != JsonValueKind.Null))
             throw new InvalidOperationException("STAGE_DIRECTORY_TASK_ACTIVE");
         var keys = owners.Select(i => i.ToString(CultureInfo.InvariantCulture)).ToArray();
@@ -200,8 +206,12 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
             .Select(b => b.OperationId).Distinct().ToArrayAsync(ct);
         if (await db.ArtifactOperations.AnyAsync(o => operations.Contains(o.Id) && (o.State == ArtifactOperationState.Running || o.LeaseUntil > DateTime.UtcNow), ct))
             throw new InvalidOperationException("STAGE_DIRECTORY_TASK_ACTIVE");
-        foreach (var operation in operations)
-            if (await authorization.HasActiveConsumersAsync(operation, ct)) throw new InvalidOperationException("STAGE_DIRECTORY_TASK_ACTIVE");
+        // A task can have read an independently owned source elsewhere. Its consumer
+        // does not hold every current stage directory. Whole-task deletion checks these
+        // leases/pins only on registrations overlapping each selected directory below.
+        if (!authorization.Consent.WholeTaskFiles)
+            foreach (var operation in operations)
+                if (await authorization.HasActiveConsumersAsync(operation, ct)) throw new InvalidOperationException("STAGE_DIRECTORY_TASK_ACTIVE");
         var downloads = await db.CloudDownloadOperations.AsNoTracking().Where(o => owners.Contains(o.WorkflowRunId) && o.DownloadTaskId != null)
             .Select(o => o.DownloadTaskId!.Value).ToArrayAsync(ct);
         var resultDownloads = await db.DownloadResultOwners.AsNoTracking().Where(o => o.AcquisitionTaskId == task.Id)

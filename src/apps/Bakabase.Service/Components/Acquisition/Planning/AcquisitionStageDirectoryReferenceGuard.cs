@@ -21,7 +21,8 @@ internal sealed class AcquisitionStageDirectoryReferenceGuard(BakabaseDbContext 
 {
     internal async Task RequireAsync(AcquisitionTaskDbModel row, int[] owners,
         string partId, string directory, CancellationToken ct, int? ownedDownloadTaskId = null,
-        bool explicitTaskCleanup = false, bool abandonUnfinishedFiles = false, int? processingCaptureRun = null)
+        bool explicitTaskCleanup = false, bool abandonUnfinishedFiles = false, int? processingCaptureRun = null,
+        Func<string, CancellationToken, Task<bool>>? hasActiveConsumers = null)
     {
         directory = Path.TrimEndingDirectorySeparator(Path.GetFullPath(directory));
         storage.EnsurePathAllowed(directory); ArtifactManifestFiles.RejectLinks(directory);
@@ -71,6 +72,13 @@ internal sealed class AcquisitionStageDirectoryReferenceGuard(BakabaseDbContext 
             {
                 if (!sameTask || !explicitTaskCleanup && bindings.Any(b => !b.Slot.StartsWith(partId + ":", StringComparison.Ordinal)))
                     throw new InvalidOperationException("STAGE_DIRECTORY_SHARED");
+                // Called only after this artifact's concrete root/manifest overlaps the
+                // selected directory. Durable workflow pins outlive their lease clock;
+                // use the store/cleanup authorization's lifecycle-aware reader, including
+                // the narrowly proven superseded-own-run exception during a preview.
+                if (explicitTaskCleanup && await (hasActiveConsumers?.Invoke(artifact.OperationId, ct) ??
+                    artifacts.HasActiveConsumersAsync(artifact.OperationId, ct)))
+                    throw new InvalidOperationException("STAGE_DIRECTORY_TASK_ACTIVE");
                 var consumers = await db.ArtifactConsumers.AsNoTracking().Where(c => c.OperationId == artifact.OperationId && c.ReleasedAt == null).ToListAsync(ct);
                 // Pinned workflow consumers follow their durable run, not their old
                 // lease timestamp. The complete task scope is checked for live runs,
