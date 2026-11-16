@@ -34,15 +34,27 @@ public sealed class FileProcessingLiteralRenameTests
         foreach (var original in new[] {source, unaffected, outside}) Assert.AreEqual("original", await File.ReadAllTextAsync(original));
     }
 
-    [TestMethod]
-    public async Task CollisionWithUnselectedManifestEntryFailsBeforeWritingOutputs()
+    [DataTestMethod]
+    [DataRow("original")]
+    [DataRow("distinct")]
+    public async Task CollisionWithUnselectedManifestEntryFailsBeforeWritingOutputs(string existingContent)
     {
-        var source = await Input("remove-name.txt"); var existing = await Input("name.txt");
-        await Assert.ThrowsAsync<InvalidOperationException>(() => new FileProcessingPlanExecutor(new Archives())
-            .ExecuteAsync(Plan("remove-", "", "remove-name.txt"), _input, [source, existing], _state));
+        var source = await Input("remove-name.txt");
+        var existing = await Input("name.txt", existingContent);
+        var result = await new FileProcessingPlanExecutor(new Archives())
+            .ExecuteAsync(Plan("remove-", "", "remove-name.txt"), _input, [source, existing], _state);
+
+        Assert.IsFalse(result.Completed);
+        Assert.AreEqual("ProcessingPathConflict", result.FailureCode);
+        Assert.IsNotNull(result.PathConflict);
+        Assert.AreEqual("PlannedTargetCollision", result.PathConflict.Kind);
+        Assert.AreEqual("rename", result.PathConflict.StepId);
+        Assert.AreEqual("name.txt", result.PathConflict.TargetPath);
+        CollectionAssert.AreEquivalent(new[] {"remove-name.txt", "name.txt"},
+            result.PathConflict.Entries.Select(entry => entry.SourcePath).ToArray());
         Assert.AreEqual("original", await File.ReadAllTextAsync(source));
-        Assert.AreEqual("original", await File.ReadAllTextAsync(existing));
-        Assert.AreEqual(0, Directory.GetDirectories(_state, "outputs", SearchOption.AllDirectories).Length);
+        Assert.AreEqual(existingContent, await File.ReadAllTextAsync(existing));
+        Assert.IsFalse(Directory.Exists(_state));
     }
 
     [DataTestMethod]
@@ -92,10 +104,10 @@ public sealed class FileProcessingLiteralRenameTests
 
     private static FileProcessingPlan Plan(string find, string replacement, string? selector = null) => new()
     {Requirement = "required", Steps = [new() {Id = "rename", Op = "renameLiteral", FindText = find, ReplaceText = replacement, Selector = selector}]};
-    private async Task<string> Input(string relative)
+    private async Task<string> Input(string relative, string content = "original")
     {
         var file = Path.Combine(_input, relative); Directory.CreateDirectory(Path.GetDirectoryName(file)!);
-        await File.WriteAllTextAsync(file, "original"); return file;
+        await File.WriteAllTextAsync(file, content); return file;
     }
     private sealed class Archives : IArchiveExtractionService
     {
