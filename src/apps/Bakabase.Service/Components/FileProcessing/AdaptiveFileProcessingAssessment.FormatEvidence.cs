@@ -95,6 +95,7 @@ public sealed partial class AdaptiveFileProcessingAssessmentService
         }
         using var mediaBudget = CancellationTokenSource.CreateLinkedTokenSource(ct);
         mediaBudget.CancelAfter(TimeSpan.FromSeconds(3));
+        var inspectVideoArchives = FileArtifactDeliveryAssessment.MayContainDisguisedVideoArchive(artifact.Manifest);
         foreach (var index in selected)
         {
             ct.ThrowIfCancellationRequested();
@@ -109,13 +110,25 @@ public sealed partial class AdaptiveFileProcessingAssessmentService
                     {
                         format = await AuthorizedArchiveDetection.SignatureAsync(file.Path, ct);
                         var movie = false;
-                        if (format == null && extractedMovies != null && !mediaBudget.IsCancellationRequested)
+                        var videoArchive = false;
+                        if (inspectVideoArchives && FileArtifactDeliveryAssessment.HasVideoSuffix(file.Path) &&
+                            !mediaBudget.IsCancellationRequested)
+                        {
+                            try { videoArchive = await FileArtifactDeliveryAssessment.IsDisguisedVideoArchiveAsync(file.Path, file.Length, mediaBudget.Token); }
+                            catch (OperationCanceledException) when (!ct.IsCancellationRequested) { }
+                        }
+                        if (!videoArchive && format == null && extractedMovies != null && !mediaBudget.IsCancellationRequested)
                         {
                             try { movie = await QuickTimeDeliveryProbe.IsMp4Async(file.Path, file.Length, mediaBudget.Token); }
                             catch (OperationCanceledException) when (!ct.IsCancellationRequested) { }
                         }
                         ArtifactManifestFiles.RejectLinks(file.Path);
-                        if (new FileInfo(file.Path).Length == file.Length && movie)
+                        if (new FileInfo(file.Path).Length == file.Length && videoArchive)
+                        {
+                            status = "recognizedOuterZipInVideoFile";
+                            format = ".zip";
+                        }
+                        else if (new FileInfo(file.Path).Length == file.Length && movie)
                         {
                             status = "recognizedMp4Container";
                             extractedMovies!.Add(visiblePaths[index]);
@@ -134,7 +147,7 @@ public sealed partial class AdaptiveFileProcessingAssessmentService
         }
         return JsonSerializer.Serialize(new
         {
-            scope = "Archive evidence reads at most 8 bytes at offset zero per selected file. After a committed extraction, " +
+            scope = "Archive signatures use eight bytes at offset zero. For at most two video candidates in a small manifest, bounded ZIP directory and media box checks can establish a separate outer ZIP. After a committed extraction, " +
                     "MP4 evidence checks bounded box metadata and a bounded file tail without decoding media. Unclassified files remain unknown.",
             maximumFiles = MaxFormatEvidenceFiles,
             uninspectedFiles = artifact.Manifest.Entries.Count - selected.Length,

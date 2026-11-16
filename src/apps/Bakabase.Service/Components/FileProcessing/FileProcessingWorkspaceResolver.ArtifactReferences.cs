@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -11,12 +12,12 @@ namespace Bakabase.Service.Components.FileProcessing;
 
 public sealed partial class FileProcessingWorkspaceResolver
 {
-    internal string ResolveStoredArtifactRoot(string path, bool relative)
+    internal string ResolveStoredArtifactRoot(string path, bool relative, IReadOnlyList<Relocation>? mappings = null)
     {
-        if (!relative) return Relocate(Path.GetFullPath(path));
+        if (!relative) return Map(Path.GetFullPath(path), false, mappings);
         if (Path.IsPathRooted(path) || path.Replace('\\', '/').Split('/').Any(p => p == ".."))
             throw new InvalidDataException("The artifact path escapes application data.");
-        return Relocate(FileProcessingFiles.Within(Path.Combine(appData, path), appData));
+        return Map(FileProcessingFiles.Within(Path.Combine(appData, path), appData), false, mappings);
     }
     // This only identifies an existing input container. It neither revives a retired artifact
     // nor establishes that its removed bytes remain available for processing or reuse.

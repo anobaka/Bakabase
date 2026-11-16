@@ -201,9 +201,9 @@ public sealed partial class FileProcessingWorkspaceResolver(string appData, IUse
     public string Relocate(string path) => Map(path, reverse: false);
     /// <summary>Old absolute paths remain the stable identity of a migrated checkpoint.</summary>
     public string IdentityPath(string path) => Map(path, reverse: true);
-    private string Map(string path, bool reverse)
+    private string Map(string path, bool reverse, IReadOnlyList<Relocation>? mappings = null)
     {
-        foreach (var mapping in ReadRelocations())
+        foreach (var mapping in mappings ?? ReadRelocations())
         {
             var from = reverse ? mapping.DestinationRoot : mapping.SourceRoot;
             var to = reverse ? mapping.SourceRoot : mapping.DestinationRoot;

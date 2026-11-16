@@ -29,6 +29,36 @@ internal static class QuickTimeDeliveryProbe
     internal static Task<bool> IsMp4Async(string path, long expectedLength, CancellationToken ct) =>
         IsMovieAsync(path, true, expectedLength, ct);
 
+    // A valid video can contain ZIP bytes inside mdat, free or a private box. Only recognize
+    // an appended archive at a box boundary after the movie, never inside a declared payload.
+    internal static async Task<bool> HasSeparateArchiveAsync(string path, long length, long offset, CancellationToken ct)
+    {
+        if (offset == 0) return true;
+        await using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read,
+            4096, FileOptions.Asynchronous | FileOptions.RandomAccess);
+        if (stream.Length != length) return false;
+        var budget = new Budget();
+        var movie = false;
+        var media = false;
+        var atArchive = false;
+        while (stream.Position < length)
+        {
+            var start = stream.Position;
+            if (start == offset) atArchive = movie && media;
+            var atom = await ReadAtomAsync(stream, length, budget, ct);
+            if (atom == null) return atArchive && budget.Remaining >= 0;
+            if (start < offset)
+            {
+                if (atom.End > offset) return false;
+                movie |= atom.Type == Moov;
+                media |= atom.Type == Mdat && atom.End > atom.Payload;
+            }
+            stream.Position = atom.End;
+        }
+        // The entire file is already accounted for by top-level container boxes.
+        return false;
+    }
+
     private static async Task<bool> IsMovieAsync(string path, bool mp4, long? expectedLength, CancellationToken ct)
     {
         var before = new FileInfo(path);

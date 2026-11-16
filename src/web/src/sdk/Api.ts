@@ -10034,6 +10034,15 @@ export interface BakabaseServiceComponentsPostSourcesSavedPostImageList {
   /** @format int32 */
   revision: number;
   images: BakabaseServiceComponentsPostSourcesSavedPostImage[];
+  links: BakabaseServiceComponentsPostSourcesSavedPostLink[];
+}
+
+export interface BakabaseServiceComponentsPostSourcesSavedPostLink {
+  url: string;
+  methodId: string;
+  /** @format int32 */
+  floor: number;
+  accessCode?: string;
 }
 
 export interface BakabaseServiceComponentsServerDataServerAppDataImportValidation {

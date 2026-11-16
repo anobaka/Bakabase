@@ -85,21 +85,37 @@ internal static partial class AcquisitionCurrentDirectoryFiles
         // Exact task ownership cannot be inferred from a common parent directory. Another
         // registered part/task under or above this root keeps directory discovery disabled.
         var records = await db.Artifacts.AsNoTracking().Where(a => a.State != ArtifactLocationState.Retired &&
-            a.Id != source.Id && a.Id != ignoredArtifactId).ToListAsync(ct);
+            a.Id != source.Id && a.Id != ignoredArtifactId)
+            .Select(a => new {a.Id, a.OperationId, a.RootPath, a.RootIsAppData, a.State, a.Fingerprint}).ToListAsync(ct);
+        var relocations = workspaces?.ReadRelocations();
         foreach (var record in records)
         {
-            var directory = record.RootIsAppData
-                ? workspaces == null ? (await store.GetArtifactAsync(record.Id, ct))!.RootDirectory
-                    : await workspaces.ReadOriginalArtifactDirectoryAsync(record, ct)
-                : workspaces?.Relocate(Path.GetFullPath(record.RootPath)) ?? Path.GetFullPath(record.RootPath);
-            if (directory == null || !Overlap(source.RootDirectory, directory)) continue;
+            ct.ThrowIfCancellationRequested();
+            string directory;
+            if (workspaces != null)
+            {
+                directory = workspaces.ResolveStoredArtifactRoot(record.RootPath, record.RootIsAppData, relocations);
+                // A quarantined AppData location no longer identifies an original directory.
+                if (record.RootIsAppData && record.State == ArtifactLocationState.Quarantined) continue;
+            }
+            else if (record.RootIsAppData)
+                directory = await store.GetArtifactDirectoryAsync(record.Id, ct)
+                    ?? throw new InvalidOperationException("PLAN_CURRENT_DIRECTORY_SHARED");
+            else directory = Path.GetFullPath(record.RootPath);
+            if (!Overlap(source.RootDirectory, directory)) continue;
             if (ArtifactCleanupPathReferences.StrictlyUnder(source.RootDirectory, directory))
             {
                 // An artifact's manifest base may be a shared parent (for example, a
                 // composition of sibling downloads). It claims its exact registered
                 // leaves and intentional empty directories, not every child of that base.
                 // Only a complete, structurally valid producer receipt can narrow it.
-                var manifest = JsonSerializer.Deserialize<ArtifactManifest>(record.ManifestJson, Json);
+                // Only an ancestor needs its manifest. Refuse a changed location or receipt
+                // between the root scan and the targeted read.
+                var manifestJson = await db.Artifacts.AsNoTracking().Where(a => a.Id == record.Id &&
+                    a.OperationId == record.OperationId && a.RootPath == record.RootPath && a.RootIsAppData == record.RootIsAppData &&
+                    a.Fingerprint == record.Fingerprint && a.State == record.State).Select(a => a.ManifestJson).SingleOrDefaultAsync(ct);
+                if (manifestJson == null) throw new InvalidOperationException("PLAN_CURRENT_DIRECTORY_SHARED");
+                var manifest = JsonSerializer.Deserialize<ArtifactManifest>(manifestJson, Json);
                 var producer = await store.GetOperationAsync(record.OperationId, ct);
                 if (manifest == null || manifest.Fingerprint != record.Fingerprint ||
                     producer is not {State: ArtifactOperationState.Completed} || producer.OutputArtifactId != record.Id)

@@ -167,12 +167,14 @@ public static class AcquisitionPlanCompiler
         var targetDirectories = plan.Parts.ToDictionary(p => p.Id, p =>
             plan.StageDirectories?.Parts.GetValueOrDefault(p.Id)?.Delivery is {BindingId: not null} binding
                 ? binding.Directory : plan.DeliveryLayout?.PartDirectories.GetValueOrDefault(p.Id));
-        var hasDeliveryDirectories = targetDirectories.Values.All(p => p != null);
-        var deliveryDirectories = hasDeliveryDirectories
-            ? targetDirectories.ToDictionary(p => p.Key, p => p.Value!, StringComparer.Ordinal) : null;
+        var resolvedDirectories = targetDirectories.Where(p => p.Value != null)
+            .ToDictionary(p => p.Key, p => p.Value!, StringComparer.Ordinal);
+        // A null map opts into legacy publication. An explicitly configured but unresolved
+        // part must wait for its destination, even when a sibling already has a binding.
+        var deliveryDirectories = plan.DeliveryLayout != null || resolvedDirectories.Count != 0 ? resolvedDirectories : null;
         var deliveryBindingsByPart = plan.Parts.Where(p => plan.StageDirectories?.Parts.GetValueOrDefault(p.Id)?.Delivery?.BindingId != null)
             .ToDictionary(p => p.Id, p => plan.StageDirectories!.Parts[p.Id].Delivery!.BindingId!, StringComparer.Ordinal);
-        var bindsDelivery = parameterized && hasDeliveryDirectories;
+        var bindsDelivery = parameterized && resolvedDirectories.Count == plan.Parts.Count;
         if (bindsDelivery)
         {
             declarations.Add(new() {Key = "storage.deliveryDirectories", Type = "object", Required = true});
@@ -225,7 +227,9 @@ public static class AcquisitionPlanCompiler
             " (input: " + string.Join(", ", processing.Steps.Single(s => s.Id == stepId).GetInputReferences()) + ")",
         ConfigJson = JsonSerializer.Serialize(new AcquisitionPlanProcessingConfig(part.Id, processing, stepId, part.ContinueFrom, Policy(plan, part), plan.ExtractionLayout,
             UseVerifiedInput: part.ContinueFrom != null && (part.UseAdaptiveAssessment == true ||
-                part.UseAdaptiveAssessment == false && processing.Requirement == "notRequired")), WorkflowJson.Options),
+                part.UseAdaptiveAssessment == false && processing.Requirement == "notRequired"),
+            ExplicitlyKeepFiles: processing.Requirement == "notRequired" &&
+                (part.UseAdaptiveAssessment == false || part.AppliedProcessingRevisionId != null)), WorkflowJson.Options),
         ParameterBindings = plan.StoragePolicy == null ? [] : ArtifactWorkflowParameters.Bindings(part.StoragePolicy)
     };
 

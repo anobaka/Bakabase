@@ -21,6 +21,45 @@ public sealed class PostSourceImageTests
     private const string Cdn = "https://cdn.example/download-code.png";
 
     [TestMethod]
+    public async Task Lists_saved_body_and_reply_shares_for_review_without_parser_results_or_network()
+    {
+        await using var db = new BakabaseDbContext(new DbContextOptionsBuilder<BakabaseDbContext>()
+            .UseSqlite("Data Source=:memory:").Options);
+        await db.Database.OpenConnectionAsync(); await db.Database.EnsureCreatedAsync();
+        const string signed = "https://pan.baidu.com/s/1fixture?pwd=Ab12&x=1";
+        const string magnet = "magnet:?xt=urn:btih:0123456789abcdef0123456789abcdef01234567";
+        var body = new PostContent
+        {
+            MainHtml = "<blockquote>下载地址：<a href='" + signed.Replace("&", "&amp;") +
+                "'>" + Share + "</a></blockquote>" +
+                "<p>https://example.org/image.jpg <a href='https://docs.google.com'>文档</a></p>",
+            CommentHtmlList = [$"<div>备用：{magnet}。</div><p>{signed.Replace("&", "&amp;")}</p>"]
+        };
+        db.PostParserTasks.Add(new PostParserTaskDbModel {Id = 2, Revision = 9, Link = "https://forum.example/post",
+            ContentSnapshotJson = JsonSerializer.Serialize(body, WorkflowJson.Options)});
+        await db.SaveChangesAsync();
+        var transport = new Factory([]);
+        var list = (await new PostSourceImagesController(db, transport).Get(2, default)).Value!.Data!;
+        CollectionAssert.AreEqual(new[] {new SavedPostLink(signed, "baidu.pcs", 0, "Ab12"), new SavedPostLink(magnet, "bt.native", 1)},
+            list.Links.ToArray());
+        Assert.AreEqual(0, transport.Uris.Count);
+        Assert.IsFalse(await db.WorkflowRuns.AnyAsync());
+    }
+
+    [TestMethod]
+    public void Body_share_review_ignores_unrelated_attributes_ordinary_urls_and_incomplete_shares()
+    {
+        var links = new SavedPostLinks();
+        SavedPostImages.Read(new PostContent {MainHtml =
+            $"<script>{Share}</script><style>{Share}</style><img src='{Share}' alt='{Share}'>" +
+            $"<a href='https://example.org/site'>{Share}</a>" +
+            "<span>https://pan.baidu.com/s/ https://pan.baidu.com/s/not-a-share.jpg https://gofile.io/d/ https://drive.google.com/open " +
+            "https://example.org/file.zip https://pan.baidu.com.fake.test/s/foo " +
+            "https://private:secret@pan.baidu.com/s/foo magnet:?dn=missing-hash</span>"}, links);
+        Assert.AreEqual(0, links.Items.Count);
+    }
+
+    [TestMethod]
     public void Lists_saved_images_including_lazy_and_linked_codes_without_using_a_cover_as_a_source()
     {
         var images = SavedPostImages.Read(new PostContent

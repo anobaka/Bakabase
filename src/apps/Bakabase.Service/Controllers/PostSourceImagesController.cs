@@ -28,7 +28,7 @@ public sealed class PostSourceImagesController(BakabaseDbContext db, IHttpClient
     [SwaggerOperation(OperationId = "GetPostSourceImages")]
     public async Task<ActionResult<SingletonResponse<SavedPostImageList>>> Get(int id, CancellationToken ct)
     {
-        var list = await Read(id, ct);
+        var list = await Read(id, ct, includeLinks: true);
         return list == null ? NotFound() : new SingletonResponse<SavedPostImageList>(list);
     }
 
@@ -45,13 +45,15 @@ public sealed class PostSourceImagesController(BakabaseDbContext db, IHttpClient
         return new SingletonResponse<PostImageDecodeResult>(await PostSourceQr.ReadAsync(client, image, input.ImageData, ct));
     }
 
-    private async Task<SavedPostImageList?> Read(int id, CancellationToken ct)
+    private async Task<SavedPostImageList?> Read(int id, CancellationToken ct, bool includeLinks = false)
     {
         var row = await db.PostParserTasks.AsNoTracking().Where(t => t.Id == id && !t.IsDeleted)
             .Select(t => new {t.Revision, t.ContentSnapshotJson}).SingleOrDefaultAsync(ct);
         if (row == null) return null;
         var content = row.ContentSnapshotJson == null ? null :
             JsonSerializer.Deserialize<PostContent>(row.ContentSnapshotJson, WorkflowJson.Options);
-        return new(row.Revision, SavedPostImages.Read(content));
+        var links = includeLinks ? new SavedPostLinks() : null;
+        var images = SavedPostImages.Read(content, links);
+        return new(row.Revision, images, links?.Items ?? []);
     }
 }

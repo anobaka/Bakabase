@@ -187,10 +187,56 @@ public sealed class MegaCmdProviderTests
                      $"1|{root}/a.bin|50.00% of 2.00 GB|ACTIVE\n" +
                      $"2|{root}/b.bin|100.00% of 2.00 GB|COMPLETED\n" +
                      $"3|{root}-other/c.bin|0.00% of 2.00 GB|ACTIVE\n";
-        Assert.AreEqual(75d, MegaCmdCloudProvider.ReadProgress(sample, root));
-        Assert.IsNull(MegaCmdCloudProvider.ReadProgress(sample + "Showing first 1000 transfers", root));
-        Assert.IsNull(MegaCmdCloudProvider.ReadProgress(sample.Replace("50.00%", "----%"), root));
-        Assert.IsNull(MegaCmdCloudProvider.ReadProgress(sample.Replace("a.bin", "ambiguous|name"), root));
-        Assert.IsNull(MegaCmdCloudProvider.ReadProgress("No transfers", root));
+        Assert.AreEqual(new CloudDownloadProgress(75, Stage: "Downloading"), MegaCmdCloudProvider.ReadTransferSnapshot(sample, root));
+        Assert.IsNull(MegaCmdCloudProvider.ReadTransferSnapshot(sample + "Showing first 1000 transfers", root));
+        Assert.AreEqual(new CloudDownloadProgress(null, Stage: "Downloading"),
+            MegaCmdCloudProvider.ReadTransferSnapshot(sample.Replace("50.00%", "----%"), root));
+        Assert.IsNull(MegaCmdCloudProvider.ReadTransferSnapshot(sample.Replace("a.bin", "ambiguous|name"), root));
+        Assert.IsNull(MegaCmdCloudProvider.ReadTransferSnapshot(sample.Replace("2|", "1|"), root));
+        Assert.IsNull(MegaCmdCloudProvider.ReadTransferSnapshot("No transfers", root));
+    }
+
+    [DataTestMethod]
+    [DataRow("ACTIVE", "Downloading")]
+    [DataRow("QUEUED", "Queued")]
+    [DataRow("PAUSED", "TransferPaused")]
+    [DataRow("RETRYING", "TransferRetrying")]
+    [DataRow("COMPLETING", "TransferFinishing")]
+    [DataRow("COMPLETED", "TransferFinishing")]
+    [DataRow("CANCELLED", "TransferCancelled")]
+    [DataRow("FAILED", "TransferFailed")]
+    [DataRow("secret or unsupported CLI output", "TransferStateUnavailable")]
+    public void Reports_the_matching_transfer_state_among_unrelated_or_completed_transfers(string state, string expected)
+    {
+        var root = Path.Combine(Path.GetTempPath(), "mega-progress");
+        var sample = $"TAG|DESTINYPATH|PROGRESS|STATE\n1|{root}/a|100.00% of 1 B|COMPLETED\n" +
+                     $"2|{root}/b|100.00% of 1 B|{state}\n3|{root}-other/x|5.00% of 1 GB|ACTIVE";
+        var snapshot = MegaCmdCloudProvider.ReadTransferSnapshot(sample, root);
+        Assert.AreEqual(new CloudDownloadProgress(99.9, Stage: expected), snapshot);
+        Assert.AreEqual(expected, Bakabase.Service.Components.Acquisition.Planning.AcquisitionRuntimeDownloadReader.SafeStage(snapshot!.Stage));
+    }
+
+    [TestMethod]
+    public void Only_this_gets_official_quota_notice_changes_the_stage_until_progress_resumes()
+    {
+        var log = Path.GetTempFileName();
+        try
+        {
+            const string notice = "2026-11-15_12-15-16.194502 cmd WARN Reached bandwidth quota. Your download could not proceed because it would take you over the current free transfer allowance for your IP address.";
+            File.WriteAllText(log, notice + "\n");
+            using var observer = MegaCmdQuotaNotice.Observe(log)!;
+            var stalled = new CloudDownloadProgress(11.1, Stage: "Downloading");
+            File.AppendAllText(log, "filename: " + notice + "\n");
+            Assert.AreEqual(stalled, observer.Apply(stalled));
+            File.AppendAllText(log, notice[..50]);
+            Assert.AreEqual(stalled, observer.Apply(stalled));
+            File.AppendAllText(log, notice[50..] + "\n");
+            Assert.AreEqual("WaitingForTransferQuota", observer.Apply(stalled).Stage);
+            Assert.AreEqual("WaitingForTransferQuota", observer.Apply(stalled).Stage);
+            Assert.AreEqual("WaitingForTransferQuota", Bakabase.Service.Components.Acquisition.Planning.AcquisitionRuntimeDownloadReader.SafeStage("WaitingForTransferQuota"));
+            Assert.AreEqual("Downloading", observer.Apply(stalled with { Percentage = 11.2 }).Stage);
+            Assert.AreEqual("Downloading", observer.Apply(stalled).Stage);
+        }
+        finally { File.Delete(log); }
     }
 }

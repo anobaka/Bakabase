@@ -57,6 +57,13 @@ public sealed class ArtifactOperationStore : IArtifactOperationStore
         return row == null ? null : await Project(row, ct);
     }
 
+    public async Task<string?> GetArtifactDirectoryAsync(string artifactId, CancellationToken ct = default)
+    {
+        var location = await _db.Set<ArtifactDbModel>().AsNoTracking().Where(a => a.Id == artifactId)
+            .Select(a => new {a.RootPath, a.RootIsAppData}).SingleOrDefaultAsync(ct);
+        return location == null ? null : ResolveRoot(location.RootPath, location.RootIsAppData);
+    }
+
     public async Task<bool> HasOtherRegisteredFilesAsync(IReadOnlyList<string> files, string excludedArtifactId,
         IReadOnlyList<string> excludedViewIds, CancellationToken ct = default)
     {

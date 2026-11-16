@@ -18,7 +18,7 @@ using CsQuery;
 namespace Bakabase.Service.Components.PostSources;
 
 public sealed record SavedPostImage(string Id, string Url, string? Context, int Floor);
-public sealed record SavedPostImageList(int Revision, IReadOnlyList<SavedPostImage> Images);
+public sealed record SavedPostImageList(int Revision, IReadOnlyList<SavedPostImage> Images, IReadOnlyList<SavedPostLink> Links);
 
 internal static class SavedPostImages
 {
@@ -39,7 +39,7 @@ internal static class SavedPostImages
             throw new HttpRequestException("Image target is outside the public network.");
     }
 
-    internal static IReadOnlyList<SavedPostImage> Read(PostContent? snapshot)
+    internal static IReadOnlyList<SavedPostImage> Read(PostContent? snapshot, SavedPostLinks? links = null)
     {
         if (snapshot == null || snapshot.Scope == "pastedText") return [];
         Uri.TryCreate(snapshot.SourceUrl, UriKind.Absolute, out var page);
@@ -63,6 +63,7 @@ internal static class SavedPostImages
         {
             if (string.IsNullOrWhiteSpace(html)) return;
             var document = CQ.CreateFragment(html);
+            links?.Collect(document, floor);
             foreach (var node in document.Find("img, a[href]").Union(document.Filter("img, a[href]")))
             {
                 var isImage = node.NodeName.Equals("img", StringComparison.OrdinalIgnoreCase);

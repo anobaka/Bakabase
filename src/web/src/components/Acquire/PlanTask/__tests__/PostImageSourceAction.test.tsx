@@ -63,6 +63,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(postImageSourceApi.list).mockResolvedValue({
     revision: 3,
+    links: [],
     images: [
       { id: "one", url: image, floor: 0 },
       { id: "two", url: "https://example.test/two.png", floor: 1 },
@@ -71,6 +72,61 @@ beforeEach(() => {
   vi.mocked(postImageSourceApi.decode).mockResolvedValue({
     status: "decoded",
     sources: [{ url, methodId: "http.native" }],
+  });
+});
+it("offers a supported link from the saved post without selecting it, probing it or saving automatically", async () => {
+  const link = "https://pan.baidu.com/s/example?pwd=keep";
+  vi.mocked(postImageSourceApi.list).mockResolvedValue({
+    revision: 4,
+    images: [],
+    links: [{ url: link, methodId: "baidu.pcs", floor: 0, accessCode: "keep" }],
+  });
+  const use = vi.fn();
+  renderAction(use);
+  const pick = await screen.findByRole("button", { name: /pan\.baidu\.com/ });
+  const confirm = screen.getByRole("button", { name: "acquisition.sourceImage.use" });
+  expect(pick).toHaveAttribute("aria-pressed", "false");
+  expect(confirm).toBeDisabled();
+  expect(screen.queryByText("acquisition.sourceImage.empty")).toBeNull();
+  fireEvent.click(pick);
+  expect(confirm).toBeEnabled();
+  expect(screen.getByLabelText("acquisition.draft.accessCode")).toHaveValue("keep");
+  expect(use).not.toHaveBeenCalled();
+  fireEvent.change(screen.getByLabelText("acquisition.draft.accessCode"), {
+    target: { value: "reviewed" },
+  });
+  fireEvent.click(confirm);
+  expect(use).toHaveBeenCalledExactlyOnceWith({
+    url: link,
+    methodId: "baidu.pcs",
+    accessCode: "reviewed",
+  });
+  expect(postImageSourceApi.decode).not.toHaveBeenCalled();
+});
+it("keeps the selected text link when a previously requested QR decode finishes", async () => {
+  const link = "https://mega.nz/file/example#key";
+  vi.mocked(postImageSourceApi.list).mockResolvedValue({
+    revision: 4,
+    images: [{ id: "one", url: image, floor: 0 }],
+    links: [{ url: link, methodId: "mega.public", floor: 2 }],
+  });
+  let finish: ((response: any) => void) | undefined;
+  vi.mocked(postImageSourceApi.decode).mockReturnValueOnce(
+    new Promise((resolve) => {
+      finish = resolve;
+    }),
+  );
+  const use = vi.fn();
+  renderAction(use);
+  fireEvent.click(await screen.findByRole("button", { name: "acquisition.sourceImage.decode" }));
+  fireEvent.click(screen.getByRole("button", { name: /mega\.nz/ }));
+  expect(vi.mocked(postImageSourceApi.decode).mock.calls[0][3].aborted).toBe(true);
+  finish?.({ status: "decoded", sources: [{ url, methodId: "http.native" }] });
+  fireEvent.click(screen.getByRole("button", { name: "acquisition.sourceImage.use" }));
+  expect(use).toHaveBeenCalledExactlyOnceWith({
+    url: link,
+    methodId: "mega.public",
+    accessCode: "",
   });
 });
 it("loads only image metadata, decodes the selected image on request, and saves only on explicit use", async () => {
@@ -88,6 +144,7 @@ it("loads only image metadata, decodes the selected image on request, and saves 
     undefined,
   );
   expect(use).not.toHaveBeenCalled();
+  expect(screen.getByLabelText("acquisition.draft.accessCode")).toHaveValue("post-code");
   fireEvent.change(screen.getByLabelText("acquisition.draft.accessCode"), {
     target: { value: "corrected" },
   });

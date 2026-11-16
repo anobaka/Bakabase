@@ -21136,6 +21136,14 @@ export interface components {
             /** Format: int32 */
             revision: number;
             images: components["schemas"]["Bakabase.Service.Components.PostSources.SavedPostImage"][];
+            links: components["schemas"]["Bakabase.Service.Components.PostSources.SavedPostLink"][];
+        };
+        "Bakabase.Service.Components.PostSources.SavedPostLink": {
+            url: string;
+            methodId: string;
+            /** Format: int32 */
+            floor: number;
+            accessCode?: string;
         };
         "Bakabase.Service.Components.ServerData.ServerAppDataImport+Validation": {
             valid: boolean;

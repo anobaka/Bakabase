@@ -24,7 +24,9 @@ public sealed record AcquisitionPlanProcessingConfig(string TargetId, FileProces
     [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     string? ExtractionLayout = null,
     [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
-    bool UseVerifiedInput = false);
+    bool UseVerifiedInput = false,
+    [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    bool ExplicitlyKeepFiles = false);
 
 /// <summary>One recorded node per known instruction, sharing the complete plan's exact input references.</summary>
 public sealed class AcquisitionPlanProcessingActivity : IResumableWorkflowActivity,
@@ -138,7 +140,7 @@ public sealed class AcquisitionPlanProcessingActivity : IResumableWorkflowActivi
         }
         // A user's explicit choice to keep a downloaded artifact completes the initial review.
         // Bind that choice to these bytes so a downstream AI-enabled assessment respects it.
-        if (config.Plan.Requirement == "unknown" && config.ContinueFrom == null &&
+        if ((config.ExplicitlyKeepFiles || config.Plan.Requirement == "unknown" && config.ContinueFrom == null) &&
             plan.Requirement == "notRequired" && target.ProcessedArtifactId != null && target.DeliveryReview == null)
         {
             artifact ??= await ctx.Services.GetRequiredService<IArtifactOperationStore>().ResolveByIdAsync(target.ProcessedArtifactId, ct)
@@ -146,8 +148,12 @@ public sealed class AcquisitionPlanProcessingActivity : IResumableWorkflowActivi
             target = target with {DeliveryReview = new(artifact.Id, artifact.Fingerprint, Accepted: true)};
         }
         var result = Replace(workset, target);
-        if (target.PublishedArtifactId != null || !NeedsInlineReview(ctx, result, config) ||
-            !plan.Steps.Any(s => s.Op == "extractArchive"))
+        if (target.PublishedArtifactId != null || !NeedsInlineReview(ctx, result, config))
+            return WorkflowItemOutcome.ReplaceWith(result);
+        var checkUnprocessedMedia = config.ContinueFrom == null && plan.Requirement == "notRequired" &&
+            target.DeliveryReview?.Accepted != true && artifact != null &&
+            (await FileArtifactDeliveryAssessment.DisguisedVideoArchivesAsync(artifact, ct)).Count > 0;
+        if (!checkUnprocessedMedia && !plan.Steps.Any(s => s.Op == "extractArchive"))
             return WorkflowItemOutcome.ReplaceWith(result);
         // The shared assessor handles mixed/large unknown results and finished applications
         // as well as a single signed archive. Narrowing this gate to a confirmed single group

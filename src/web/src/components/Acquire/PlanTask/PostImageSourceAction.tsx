@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { AiOutlineQrcode } from "react-icons/ai";
+import { AiOutlineLink } from "react-icons/ai";
 import { Button, Input, Modal, Select, Spinner } from "@/components/bakaui";
 import ExternalLink from "@/components/ExternalLink";
 import { postTaskId } from "../AcquisitionCreationOrigin";
@@ -44,7 +44,7 @@ function ImagePicker({
   const [list, setList] = useState<ImageList>();
   const [imageId, setImageId] = useState("");
   const [sources, setSources] = useState<ReviewedImageSource[]>([]);
-  const [sourceUrl, setSourceUrl] = useState("");
+  const [chosen, setChosen] = useState<ReviewedImageSource>();
   const [accessCode, setAccessCode] = useState(initialAccessCode ?? "");
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
@@ -53,7 +53,6 @@ function ImagePicker({
   const request = useRef<AbortController>();
   const fileInput = useRef<HTMLInputElement>(null);
   const selected = list?.images.find((image) => image.id === imageId);
-  const chosen = sources.find((source) => source.url === sourceUrl);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -61,7 +60,7 @@ function ImagePicker({
     setStatus("");
     setImageId("");
     setSources([]);
-    setSourceUrl("");
+    setChosen(undefined);
     void postImageSourceApi
       .list(postId, controller.signal)
       .then((value) => {
@@ -73,7 +72,7 @@ function ImagePicker({
         );
       })
       .catch(() => {
-        if (!controller.signal.aborted) setStatus("imageUnavailable");
+        if (!controller.signal.aborted) setStatus("listUnavailable");
       });
     return () => {
       controller.abort();
@@ -85,7 +84,8 @@ function ImagePicker({
     request.current?.abort();
     setStatus("");
     setSources([]);
-    setSourceUrl("");
+    setChosen(undefined);
+    setAccessCode(initialAccessCode ?? "");
     setBusy(false);
   };
   const decode = async (file?: File) => {
@@ -111,7 +111,7 @@ function ImagePicker({
       if (controller.signal.aborted) return;
       const values = result.sources ?? [];
       setSources(values);
-      setSourceUrl(values.length === 1 ? values[0].url : "");
+      setChosen(values.length === 1 ? values[0] : undefined);
       setStatus(result.status === "decoded" && values.length ? "" : result.status);
     } catch {
       if (!controller.signal.aborted) setStatus("imageUnavailable");
@@ -123,7 +123,7 @@ function ImagePicker({
     if (!chosen || busy || saving) return;
     setSaving(true);
     try {
-      await onUse({ ...chosen, accessCode });
+      await onUse({ url: chosen.url, methodId: chosen.methodId, accessCode });
       onClose();
     } catch (error) {
       const code = error instanceof Error ? error.message : "";
@@ -139,6 +139,37 @@ function ImagePicker({
     }
   };
 
+  const choose = (source: ReviewedImageSource, suggestedCode?: string | null) => {
+    request.current?.abort();
+    setBusy(false);
+    setStatus("");
+    setAccessCode(source.accessCode ?? suggestedCode ?? "");
+    setChosen(source);
+  };
+  const choice = (source: ReviewedImageSource, floor?: number) => (
+    <Button
+      key={source.url}
+      size="sm"
+      variant="flat"
+      className="h-auto w-full justify-start py-2"
+      aria-pressed={chosen === source}
+      color={chosen === source ? "primary" : "default"}
+      isDisabled={saving}
+      onPress={() => choose(source, floor === undefined ? initialAccessCode : undefined)}
+    >
+      <span className="min-w-0 whitespace-normal text-start [overflow-wrap:anywhere]">
+        {downloadMethodLabel({ id: source.methodId, displayName: source.methodId }, t)} ·{" "}
+        {source.url}
+        {floor !== undefined && (
+          <span className="ms-2 text-default-500">
+            {floor > 0
+              ? t("acquisition.sourceImage.floor", { floor })
+              : t("acquisition.origin.postBody")}
+          </span>
+        )}
+      </span>
+    </Button>
+  );
   return (
     <Modal
       visible
@@ -166,7 +197,17 @@ function ImagePicker({
       }
     >
       {!list && !status && <Spinner size="sm" aria-label={t("common.state.loading")} />}
-      {list && !list.images.length && <p role="status">{t("acquisition.sourceImage.empty")}</p>}
+      {list && !list.images.length && !list.links?.length && (
+        <p role="status">{t("acquisition.sourceImage.empty")}</p>
+      )}
+      {!!list?.links?.length && (
+        <section aria-label={t("acquisition.sourceImage.postLinks")} className="space-y-2">
+          <p className="text-sm font-medium">{t("acquisition.sourceImage.postLinks")}</p>
+          <div className="max-h-48 space-y-1 overflow-y-auto">
+            {list.links.map((source) => choice(source, source.floor))}
+          </div>
+        </section>
+      )}
       {!!list?.images.length && (
         <>
           <Select
@@ -235,32 +276,18 @@ function ImagePicker({
       {!!sources.length && (
         <div className="space-y-2">
           <p className="text-sm font-medium">{t("acquisition.sourceImage.found")}</p>
-          {sources.map((source) => (
-            <Button
-              key={source.url}
-              size="sm"
-              variant="flat"
-              className="h-auto max-w-full justify-start py-2"
-              aria-pressed={sourceUrl === source.url}
-              color={sourceUrl === source.url ? "primary" : "default"}
-              isDisabled={saving}
-              onPress={() => setSourceUrl(source.url)}
-            >
-              <span className="min-w-0 whitespace-normal text-start [overflow-wrap:anywhere]">
-                {downloadMethodLabel({ id: source.methodId, displayName: source.methodId }, t)} ·{" "}
-                {source.url}
-              </span>
-            </Button>
-          ))}
-          <Input
-            size="sm"
-            label={t("acquisition.draft.accessCode")}
-            maxLength={512}
-            value={accessCode}
-            onValueChange={setAccessCode}
-            isDisabled={saving}
-          />
+          {sources.map((source) => choice(source))}
         </div>
+      )}
+      {chosen && (
+        <Input
+          size="sm"
+          label={t("acquisition.draft.accessCode")}
+          maxLength={512}
+          value={accessCode}
+          onValueChange={setAccessCode}
+          isDisabled={saving}
+        />
       )}
       {status && (
         <div className="flex flex-wrap items-center gap-2 text-sm text-warning-600" role="alert">
@@ -315,7 +342,7 @@ export default function PostImageSourceAction({
         size="sm"
         variant="flat"
         isDisabled={disabled}
-        startContent={<AiOutlineQrcode aria-hidden />}
+        startContent={<AiOutlineLink aria-hidden />}
         onPress={() => setOpen(true)}
       >
         {t("acquisition.sourceImage.title")}

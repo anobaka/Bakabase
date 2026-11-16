@@ -3,6 +3,32 @@ namespace Bakabase.Modules.Downloader.Cloud;
 /// <summary>Recognition does not imply that a provider is installed or a share is accessible.</summary>
 public static class CloudSourceClassifier
 {
+    /// <summary>Automatic discovery requires a concrete share target; interactive routing can also recognize
+    /// incomplete provider links so the user can repair them. Call with the normalized source.</summary>
+    public static bool IsCompleteShare(CloudSource source)
+    {
+        if (source.Kind != "share" || !Uri.TryCreate(source.Url, UriKind.Absolute, out var uri)) return false;
+        var path = uri.AbsolutePath.TrimEnd('/');
+        switch (source.ProviderId)
+        {
+            case "magnet":
+                return Components.TorrentMetadata.IsValidMagnet(source.Url);
+            case "baidu":
+                var key = path == "/share/init" ? "1" + System.Web.HttpUtility.ParseQueryString(uri.Query)["surl"] :
+                    path.StartsWith("/s/", StringComparison.Ordinal) ? path[3..] : "";
+                return System.Text.RegularExpressions.Regex.IsMatch(key, @"\A1[A-Za-z0-9_-]{1,22}\z");
+            case "gofile":
+                return System.Text.RegularExpressions.Regex.IsMatch(path, @"\A/d/[A-Za-z0-9_-]{6,128}\z");
+            case "googleDrive":
+                if (path is "/open" or "/uc")
+                    return !string.IsNullOrWhiteSpace(System.Web.HttpUtility.ParseQueryString(uri.Query)["id"]);
+                return System.Text.RegularExpressions.Regex.IsMatch(path,
+                    @"/(?:folders|file/d)/[A-Za-z0-9_-]+(?:/|\z)");
+            default:
+                return source.ProviderId != "unknown";
+        }
+    }
+
     // Official alternate domains: https://pixeldrain.com/about (checked 2026-10-25).
     // Use an exact allowlist, never arbitrary subdomains or lookalike suffixes.
     public static bool IsPixeldrainHost(string host) => host.ToLowerInvariant() is

@@ -6,6 +6,8 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business.Components.Artifacts;
+using Bakabase.InsideWorld.Business.Components.Compression;
+using Bakabase.Service.Components.Acquisition.Planning;
 using Bakabase.Modules.Workflow.Artifacts;
 using Bakabase.Modules.Workflow.Abstractions.Components;
 
@@ -72,6 +74,9 @@ internal static class FileArtifactDeliveryAssessment
     internal static async Task<Assessment> AssessAsync(ArtifactRecord artifact,
         CancellationToken ct, bool extractionWasReviewed = false)
     {
+        // Structure proves packaging, not whether it should be extracted or with which password.
+        var wrappers = await DisguisedVideoArchivesAsync(artifact, ct);
+        if (wrappers.Count > 0) return new(wrappers);
         if (artifact.Kind is not ("processedFiles" or "publishedFiles") || artifact.Manifest.Entries.Count == 0)
             return new([]);
         var metadata = artifact.MetadataJson;
@@ -101,6 +106,43 @@ internal static class FileArtifactDeliveryAssessment
         if (!await IsFinishedResultAsync(artifact, ct))
             return new(unclassifiedFiles, Uncertain: true);
         return new([]);
+    }
+
+    // Never scan a gallery, software installation or a video collection for embedded payloads.
+    // A small delivery can contain an archive carrier beside a cover or a readme.
+    internal static bool MayContainDisguisedVideoArchive(ArtifactManifest manifest) =>
+        manifest.Entries.Count is > 0 and <= MaximumFiles &&
+        !manifest.Entries.Any(e => ApplicationFormats.Contains(Path.GetExtension(e.RelativePath))) &&
+        manifest.Entries.Count(IsVideoContainer) is 1 or 2;
+
+    internal static async Task<IReadOnlyList<string>> DisguisedVideoArchivesAsync(ArtifactRecord artifact, CancellationToken ct)
+    {
+        if (artifact.Kind is not ("processedFiles" or "publishedFiles" or AcquisitionCurrentDirectoryFiles.Kind) ||
+            !MayContainDisguisedVideoArchive(artifact.Manifest)) return [];
+        var exact = ArtifactManifestFiles.ResolveFiles(artifact.RootDirectory, artifact.Manifest);
+        var wrappers = new List<string>();
+        foreach (var (entry, path) in artifact.Manifest.Entries.Zip(exact))
+            if (IsVideoContainer(entry) && await IsDisguisedVideoArchiveAsync(path, entry.Length, ct))
+                wrappers.Add(entry.RelativePath);
+        return wrappers;
+    }
+
+    private static bool IsVideoContainer(ArtifactManifestEntry entry) => entry.Length >= 22 && HasVideoSuffix(entry.RelativePath);
+
+    internal static bool HasVideoSuffix(string path) =>
+        Path.GetExtension(path).ToLowerInvariant() is ".mp4" or ".mov" or ".m4v";
+
+    internal static async Task<bool> IsDisguisedVideoArchiveAsync(string path, long length, CancellationToken ct)
+    {
+        try
+        {
+            ArtifactManifestFiles.RejectLinks(path);
+            var before = File.GetLastWriteTimeUtc(path);
+            var offset = await ArchiveSignature.FindDominantZipAsync(path, length, ct);
+            return offset.HasValue && await QuickTimeDeliveryProbe.HasSeparateArchiveAsync(path, length, offset.Value, ct) &&
+                new FileInfo(path).Length == length && before == File.GetLastWriteTimeUtc(path);
+        }
+        catch (ArchiveFormatProbeIncompleteException) { return false; }
     }
 
     private static async Task<bool> IsFinishedResultAsync(ArtifactRecord artifact, CancellationToken ct)

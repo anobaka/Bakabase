@@ -65,6 +65,9 @@ public interface IArtifactOperationStore
     Task<ArtifactRecord?> ResolveAsync(string intentKey, CancellationToken ct = default);
     Task<ArtifactRecord?> ResolveByIdAsync(string artifactId, CancellationToken ct = default);
     Task<ArtifactRecord?> GetArtifactAsync(string artifactId, CancellationToken ct = default);
+    /// <summary>Resolves the registered directory without enumerating the artifact's files.</summary>
+    async Task<string?> GetArtifactDirectoryAsync(string artifactId, CancellationToken ct = default) =>
+        (await GetArtifactAsync(artifactId, ct))?.RootDirectory;
     Task<ArtifactOperationDbModel?> GetOperationAsync(string operationId, CancellationToken ct = default);
     Task<ArtifactOperationClaim> ClaimAsync(ArtifactOperationRequest request, string ownerId,
         TimeSpan leaseDuration, CancellationToken ct = default);

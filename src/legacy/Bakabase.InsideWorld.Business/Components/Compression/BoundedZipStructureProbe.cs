@@ -42,7 +42,7 @@ internal static class BoundedZipStructureProbe
     }
 
     internal static async Task<ZipStructureDescriptor?> FindStructureAsync(string path, long expectedLength,
-        CancellationToken ct, bool requireImageHeader = false)
+        CancellationToken ct, bool requireImageHeader = false, bool includeStandaloneZip = false)
     {
         await using var file = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read,
             1, FileOptions.Asynchronous | FileOptions.RandomAccess);
@@ -63,7 +63,8 @@ internal static class BoundedZipStructureProbe
         // An archive already starting at byte zero takes precedence over a ZIP embedded
         // in its payload or trailer. Leave validation to its ordinary archive handler.
         var header = (await Read(0, (int)Math.Min(512, expectedLength)))!;
-        if (ArchiveSignature.HasKnownContainerHeader(header))
+        var standaloneZip = includeStandaloneZip && header.AsSpan().StartsWith("PK\x03\x04"u8);
+        if (ArchiveSignature.HasKnownContainerHeader(header) && !standaloneZip)
             return null;
         if (requireImageHeader && !header.AsSpan().StartsWith(new byte[] {0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a}) &&
             !header.AsSpan().StartsWith(new byte[] {0xff, 0xd8, 0xff}))
@@ -116,10 +117,10 @@ internal static class BoundedZipStructureProbe
                      centralOffset == uint.MaxValue || U16(tail, e + 8) != count) continue;
             if (count == 0 || count > MaximumEntries || centralSize == 0 ||
                 centralSize > MaximumCentralBytes || centralSize > (ulong)centralEnd ||
-                centralOffset >= (ulong)centralEnd - centralSize) continue;
+                centralOffset > (ulong)centralEnd - centralSize) continue;
             var centralStart = centralEnd - (long)centralSize;
             var prefix = centralStart - (long)centralOffset;
-            if (prefix <= 0 || centralStart <= prefix) continue;
+            if ((prefix == 0) != standaloneZip || centralStart <= prefix) continue;
             var central = await Read(centralStart, (int)centralSize);
             if (central == null) continue;
             var position = 0;

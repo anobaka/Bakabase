@@ -5,8 +5,6 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using Bakabase.Modules.Downloader.Cloud;
-using Bakabase.Service.Components.DownloadIntents;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats;
 using SixLabors.ImageSharp.PixelFormats;
@@ -121,19 +119,9 @@ internal static class PostSourceQr
         return codes is {Length: > 0} ? codes : reader.Decode(luminance) is { } single ? [single] : [];
     }
 
-    internal static DecodedPostImageSource? SupportedSource(string? text)
+    private static DecodedPostImageSource? SupportedSource(string? text)
     {
         var url = text?.Trim();
-        if (string.IsNullOrEmpty(url) || url.Length > 2048 || url.Any(char.IsWhiteSpace) ||
-            !Uri.TryCreate(url, UriKind.Absolute, out var uri)) return null;
-        try
-        {
-            if (uri.Scheme != "magnet") PublicCloudHttp.EnsureSafeUri(uri);
-            var source = DownloadMethodRegistry.Normalize(new DownloadCandidate {Id = "qr", Url = url});
-            var method = DownloadMethodCatalog.Select(source);
-            return method != null && method.Availability == null && method.ValidateSource?.Invoke(source) == null
-                ? new(url, method.Id) : null;
-        }
-        catch (ArgumentException) { return null; }
+        return PostSourceUrl.MatchMethod(url) is { } method ? new(url!, method) : null;
     }
 }

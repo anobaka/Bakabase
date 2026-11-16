@@ -50,16 +50,18 @@ public sealed class FileProcessingRenameRecoveryTests
         var paths = await Inputs(); var files = new TrackingFiles();
         var result = await Execute(Plan(), paths, files);
         Assert.IsTrue(result.Completed);
-        Assert.AreEqual(2, files.Moves);
-        Assert.AreEqual(2, files.Copies, "Only the original isolation and final publication need materialization.");
+        var state = await State();
+        var privateSources = new[] {"download", "rename", "finish"}.Select(k => state.Outputs[k].Single().Path).ToArray();
+        CollectionAssert.AreEqual(privateSources, files.MovedFrom.ToArray(),
+            "Each private version is moved once, including the final assembly.");
+        CollectionAssert.AreEqual(paths, files.CopiedFrom.ToArray(), "Only the external original needs a private copy.");
         Assert.AreEqual("original:original-0.bin", await File.ReadAllTextAsync(paths[0]));
         Assert.AreEqual("original:original-0.bin", await File.ReadAllTextAsync(result.Files.Single()));
-        var state = await State();
-        Assert.IsFalse(File.Exists(state.Outputs["download"].Single().Path));
-        Assert.IsFalse(File.Exists(state.Outputs["rename"].Single().Path));
+        Assert.IsFalse(privateSources.Any(File.Exists));
         var replay = await Execute(Plan(), paths, files);
         CollectionAssert.AreEqual(result.Files.ToArray(), replay.Files.ToArray());
-        Assert.AreEqual(2, files.Moves);
+        CollectionAssert.AreEqual(privateSources, files.MovedFrom.ToArray());
+        CollectionAssert.AreEqual(paths, files.CopiedFrom.ToArray());
     }
 
     [TestMethod]
@@ -68,9 +70,16 @@ public sealed class FileProcessingRenameRecoveryTests
         var paths = await Inputs(); var files = new TrackingFiles();
         var result = await Execute(Plan(branch: true), paths, files);
         Assert.IsTrue(result.Completed);
-        Assert.AreEqual(0, files.Moves);
-        Assert.IsTrue(File.Exists((await State()).Outputs["download"].Single().Path));
-        Assert.AreEqual(2, result.Files.Count);
+        var state = await State();
+        var shared = state.Outputs["download"].Single().Path;
+        var privateBranches = new[] {"rename", "finish"}.Select(k => state.Outputs[k].Single().Path).ToArray();
+        CollectionAssert.AreEquivalent(privateBranches, files.MovedFrom.ToArray(),
+            "Only the two independently owned final outputs may move.");
+        CollectionAssert.AreEquivalent(new[] {paths.Single(), shared, shared}, files.CopiedFrom.ToArray());
+        var expected = await File.ReadAllTextAsync(paths.Single());
+        Assert.AreEqual(expected, await File.ReadAllTextAsync(shared));
+        CollectionAssert.AreEquivalent(new[] {"original-0.dat", "original-0.bin"}, result.Files.Select(Path.GetFileName).ToArray());
+        Assert.IsTrue(result.Files.All(f => File.ReadAllText(f) == expected));
     }
 
     [TestMethod]
@@ -78,13 +87,23 @@ public sealed class FileProcessingRenameRecoveryTests
     {
         var paths = await Inputs(); var files = new TrackingFiles();
         var first = await Execute(Plan(), paths, files, "rename");
-        Assert.AreEqual(1, files.Moves);
+        var protectedOutput = first.Files.Single();
+        var initialState = await State();
+        CollectionAssert.AreEqual(new[] {initialState.Outputs["download"].Single().Path}, files.MovedFrom.ToArray());
+        var before = files.Moves;
         var final = await Execute(Plan(), paths, files);
         Assert.IsTrue(final.Completed);
-        Assert.AreEqual(1, files.Moves, "An exposed operation output is no longer exclusively owned.");
-        Assert.AreEqual("original:original-0.bin", await File.ReadAllTextAsync(first.Files.Single()));
+        var state = await State();
+        CollectionAssert.AreEqual(new[] {state.Outputs["finish"].Single().Path}, files.MovedFrom.Skip(before).ToArray(),
+            "Final assembly may move its private result while the earlier published boundary stays in place.");
+        Assert.AreEqual("original:original-0.bin", await File.ReadAllTextAsync(protectedOutput));
+        Assert.AreEqual("original:original-0.bin", await File.ReadAllTextAsync(final.Files.Single()));
+        var movedBeforeReplay = files.MovedFrom.ToArray();
+        var copiedBeforeReplay = files.CopiedFrom.ToArray();
         var replay = await Execute(Plan(), paths, files, "rename");
         CollectionAssert.AreEqual(first.Files.ToArray(), replay.Files.ToArray());
+        CollectionAssert.AreEqual(movedBeforeReplay, files.MovedFrom.ToArray());
+        CollectionAssert.AreEqual(copiedBeforeReplay, files.CopiedFrom.ToArray());
     }
 
     [DataTestMethod]
@@ -124,8 +143,11 @@ public sealed class FileProcessingRenameRecoveryTests
         var retry = new TrackingFiles();
         var result = await Execute(Plan(), paths, retry);
         Assert.IsTrue(result.Completed);
-        Assert.AreEqual(1, retry.Moves, "Only the following step still needs a move.");
-        Assert.AreEqual(1, retry.Copies, "Existing input isolation and renamed bytes must be reused.");
+        var state = await State();
+        CollectionAssert.AreEqual(new[] {state.Outputs["rename"].Single().Path, state.Outputs["finish"].Single().Path},
+            retry.MovedFrom.ToArray(), "The retry adopts the first rename and moves only the following step and final output.");
+        Assert.AreEqual(0, retry.CopiedFrom.Count, "A resumed private rename chain needs no new copies.");
+        Assert.AreEqual(await File.ReadAllTextAsync(paths.Single()), await File.ReadAllTextAsync(result.Files.Single()));
     }
 
     [DataTestMethod]
@@ -209,8 +231,9 @@ public sealed class FileProcessingRenameRecoveryTests
     private sealed class TrackingFiles : IFileArtifactMaterializer
     {
         private readonly FileArtifactMaterializer actual = new();
-        public int Copies;
-        public int Moves;
+        public List<string> CopiedFrom {get;} = [];
+        public List<string> MovedFrom {get;} = [];
+        public int Moves => MovedFrom.Count;
         public int InterruptAfterMove;
         public bool UnsupportedMove;
         public bool InterruptCopy;
@@ -218,7 +241,7 @@ public sealed class FileProcessingRenameRecoveryTests
         public bool InjectNextTarget;
         public async Task<FileMaterializationResult> MaterializeAsync(string source, string target, string mode, CancellationToken ct)
         {
-            Copies++;
+            CopiedFrom.Add(source);
             if (InterruptCopy && target.Contains(".copying"))
             {
                 await File.WriteAllTextAsync(target, "partial", ct);
@@ -231,7 +254,7 @@ public sealed class FileProcessingRenameRecoveryTests
             if (UnsupportedMove) return false;
             if (MutateBeforeMove) await File.WriteAllTextAsync(source, new string('x', (int)new FileInfo(source).Length), ct);
             Assert.IsTrue(await actual.TryMoveAsync(source, target, ct), "The local test filesystem must support exclusive rename.");
-            Moves++;
+            MovedFrom.Add(source);
             if (InjectNextTarget && Moves == 1)
                 await File.WriteAllTextAsync(Path.Combine(Path.GetDirectoryName(target)!, "original-1.dat"), "unrelated file", ct);
             if (Moves == InterruptAfterMove) throw new OperationCanceledException("Interrupted after atomic rename.");
