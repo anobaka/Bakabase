@@ -1,3 +1,4 @@
+using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -39,7 +40,7 @@ internal sealed partial class ArtifactCleanupReferenceGuard(BakabaseDbContext db
     public async Task<bool> HasReferencesAsync(ArtifactRecord source, IReadOnlyList<int> owners, CancellationToken ct,
         IReadOnlyList<string>? privatePaths = null, IReadOnlyList<int>? previewSupersededRuns = null,
         int? directoryOwnerTaskId = null, int? directoryOwnerRunId = null, bool deletedDirectoryOwner = false,
-        int? directoryDownloadTaskId = null, bool explicitTaskDirectoryCleanup = false)
+        int? directoryDownloadTaskId = null, bool explicitTaskDirectoryCleanup = false, bool abandonUnfinishedFiles = false)
     {
         bool Found(string location) { referenceFound?.Invoke(location); return true; }
         var aliases = workspaces?.ReadRelocations() ?? [];
@@ -195,7 +196,7 @@ internal sealed partial class ArtifactCleanupReferenceGuard(BakabaseDbContext db
         if (explicitTaskDirectoryCleanup && (directoryOwnerTaskId is not { } cleanupOwner ||
             directoryOwnerRunId != null || privatePaths != null || owners.Count == 0 ||
             !await db.AcquisitionTasks.AnyAsync(t => t.Id == cleanupOwner &&
-                t.Status == Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionStatus.Completed, ct) ||
+                (t.Status == AcquisitionStatus.Completed || abandonUnfinishedFiles), ct) ||
             await db.WorkflowRuns.CountAsync(r => owners.Contains(r.Id), ct) != owners.Distinct().Count() ||
             await db.WorkflowRuns.AnyAsync(r => owners.Contains(r.Id) &&
                 (r.Status == WorkflowRunStatus.Pending || r.Status == WorkflowRunStatus.Running || r.PendingSignalJson != null ||

@@ -6,14 +6,14 @@ namespace Bakabase.Tests.Artifacts;
 public sealed partial class PublishedArtifactAncestorCleanupTests
 {
     [TestMethod]
-    public async Task A_historical_unavailable_delivery_requires_acceptance_instead_of_silently_omitting_ancestors()
+    public async Task A_historical_unavailable_delivery_still_includes_owned_inputs_without_acceptance()
     {
         var fixture = await DeletionFixture();
         await db.Artifacts.Where(a => a.Id == fixture.Final.Id).ExecuteUpdateAsync(update =>
             update.SetProperty(a => a.State, ArtifactLocationState.Missing));
         var unaccepted = await fixture.Service.PreviewAsync(new([fixture.Task.Id], true, false));
-        Assert.IsFalse(unaccepted.Rows.Single().CanDelete);
-        Assert.AreEqual("CLEANUP_DELIVERY_ACCEPTANCE_REQUIRED", unaccepted.Rows.Single().ReasonCode);
+        Assert.IsTrue(unaccepted.Rows.Single().CanDelete);
+        Assert.IsTrue(unaccepted.Rows.Single().Cleanup!.Groups.SelectMany(group => group.Files).Any(file => file.Path == fixture.Source.Files.Single()));
         Assert.AreEqual(ArtifactLocationState.Missing, (await store.GetArtifactAsync(fixture.Final.Id))!.State,
             "Preview must not rewrite an old observation as a side effect of inspecting metadata.");
         var accepted = await fixture.Service.PreviewAsync(new([fixture.Task.Id], true, true));
@@ -24,7 +24,7 @@ public sealed partial class PublishedArtifactAncestorCleanupTests
     }
 
     [TestMethod]
-    public async Task Deletion_preview_does_not_read_delivery_bytes_or_mutate_observation_and_apply_still_verifies_them()
+    public async Task Intermediate_cleanup_does_not_read_or_require_bytes_of_an_unselected_delivery()
     {
         var fixture = await DeletionFixture();
         var before = await db.Artifacts.AsNoTracking().SingleAsync(a => a.Id == fixture.Final.Id);
@@ -42,8 +42,8 @@ public sealed partial class PublishedArtifactAncestorCleanupTests
         await File.WriteAllTextAsync(file, "fake bytes"); // Same length as "same bytes".
         File.SetLastWriteTimeUtc(file, timestamp);
         var result = await fixture.Service.DeleteAsync(new(previewId));
-        Assert.AreEqual(0, result.DeletedTaskIds.Count);
-        Assert.IsTrue(File.Exists(fixture.Source.Files.Single()));
+        Assert.AreEqual(1, result.DeletedTaskIds.Count);
+        Assert.IsFalse(File.Exists(fixture.Source.Files.Single()));
         Assert.AreEqual("fake bytes", await File.ReadAllTextAsync(file));
     }
 }

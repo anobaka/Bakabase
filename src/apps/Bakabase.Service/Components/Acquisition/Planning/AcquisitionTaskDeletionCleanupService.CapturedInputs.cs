@@ -26,7 +26,7 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
         ArtifactDeliveryCleanupAuthorization authorization, ArtifactCleanupReferenceGuard references,
         CancellationToken ct, Func<string, Task>? guardDirectory = null)
     {
-        if (workspaces == null || !authorization.Consent.DeliveryAccepted) return [];
+        if (workspaces == null || !authorization.Consent.DeliveryAccepted && !authorization.Consent.WholeTaskFiles) return [];
         var owners = authorization.Consent.OwnerRunIds.Select(v => v.ToString(CultureInfo.InvariantCulture)).ToArray();
         var ids = await db.Artifacts.AsNoTracking().Where(a => !a.Managed && a.Kind == AcquisitionCurrentDirectoryFiles.Kind &&
             db.ArtifactOperationBindings.Any(b => b.OperationId == a.OperationId && b.OwnerKind == "workflow" && owners.Contains(b.OwnerId)))
@@ -45,7 +45,7 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
     private async Task<CapturedInputCandidate?> InspectCapturedInputAsync(string id,
         ArtifactDeliveryCleanupAuthorization authorization, ArtifactCleanupReferenceGuard references, CancellationToken ct)
     {
-        if (workspaces == null || !authorization.Consent.DeliveryAccepted) return null;
+        if (workspaces == null || !authorization.Consent.DeliveryAccepted && !authorization.Consent.WholeTaskFiles) return null;
         var capture = await artifacts.GetArtifactAsync(id, ct);
         if (capture is not {Managed: false, Kind: AcquisitionCurrentDirectoryFiles.Kind} ||
             capture.State is ArtifactLocationState.Quarantined or ArtifactLocationState.Retired) return null;
@@ -136,8 +136,8 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
             }
             // Historical captures can contain intermediate files already removed by the
             // user. A confirmed empty selection is an idempotent no-op, not an uncovered
-            // deletion. Existing files still require complete publication coverage.
-            if (selected.Count > 0 && !(await ArtifactFileCoverage.EvaluateAsync(artifacts, capture,
+            // deletion. Publication-based retention requires complete coverage; explicit task cleanup uses the private allocation above.
+            if (selected.Count > 0 && !authorization.Consent.WholeTaskFiles && !(await ArtifactFileCoverage.EvaluateAsync(artifacts, capture,
                     authorization.Consent.Publications.Select(p => p.ArtifactId).ToArray(), ct)).Complete)
                 return Block(ArtifactFileCoverage.IncompleteCode);
             var fingerprint = ArtifactManifestFiles.Hash(JsonSerializer.Serialize(new {capture.Id, capture.Fingerprint,

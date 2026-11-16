@@ -13,6 +13,9 @@ internal sealed record AcquisitionStageDirectoryCleanupReceipt(string Id, int Ta
     string Stage, string Directory, string BindingFingerprint, DateTime StartedAt, string Status,
     IReadOnlyList<AcquisitionTaskDeleteCleanupFile> Files, ArtifactDeliveryCleanupConsent Consent, DateTime? FinishedAt = null)
 {
+    public int? RemovedFiles { get; init; }
+    public long? RemovedBytes { get; init; }
+
     internal static async Task SaveAsync(string directory, AcquisitionStageDirectoryCleanupReceipt receipt, CancellationToken ct)
     {
         ArtifactManifestFiles.RejectLinks(directory);

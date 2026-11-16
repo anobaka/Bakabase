@@ -20248,6 +20248,7 @@ export interface components {
             reasonCode?: string;
             cleanup?: components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionTaskDeleteCleanup"];
             canRemoveTaskIfCleanupFails: boolean;
+            willStopExecution: boolean;
         };
         "Bakabase.Service.Components.Acquisition.Planning.AcquisitionTaskDeleteSkip": {
             /** Format: int32 */

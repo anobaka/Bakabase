@@ -76,17 +76,17 @@ const preview = (overrides: any = {}) => ({
 const button = (key: string) => screen.getByRole("button", { name: key });
 const next = () => button("acquisition.delete.next");
 const confirm = () =>
-  screen.getByRole("button", { name: /^acquisition\.delete\.final\.(submit|acceptAndSubmit)$/ });
+  button("acquisition.delete.final.submit");
 const inspect = () => button("acquisition.delete.cleanup.inspect");
 const checkbox = (key: string) =>
   screen.getByRole("checkbox", { name: "acquisition.delete.cleanup." + key });
-const finishReview = () => {
-  fireEvent.click(next());
-  fireEvent.click(confirm());
+const finishReview = async () => {
+  await act(async () => { fireEvent.click(next()); });
+  await act(async () => { fireEvent.click(confirm()); });
 };
 beforeEach(() => {
   vi.clearAllMocks();
-  api.preview.mockReset().mockResolvedValue(preview());
+  api.preview.mockReset().mockImplementation(async (_ids, options) => preview(options));
   api.remove.mockReset().mockResolvedValue({ deletedTaskIds: [1], skipped: [] });
   api.progress.mockReset().mockImplementation(async (previewId: string) => ({
     previewId,
@@ -200,7 +200,7 @@ it("recovers an interrupted deletion's task, reason and counts before offering a
   const changed = vi.fn();
   render(<DeleteAcquisitionTasksModal taskIds={[1, 2, 3]} onChanged={changed} />);
   await screen.findByText("Completed task");
-  finishReview();
+  await finishReview();
   await screen.findByText("acquisition.delete.receipt.interrupted");
   expect(screen.getByText("acquisition.delete.reason.CLEANUP_PATH_NOT_AUTHORIZED")).toBeVisible();
   expect(screen.getByText("#2")).toBeVisible();
@@ -230,7 +230,7 @@ it("follows the same running deletion after a lost response until it finishes wi
   expect(screen.getByText("acquisition.delete.receipt.completed")).toBeVisible();
   expect(screen.queryByText("acquisition.delete.result")).toBeNull();
   expect(api.remove).toHaveBeenCalledTimes(1);
-  expect(api.preview).toHaveBeenCalledTimes(1);
+  expect(api.preview).toHaveBeenCalledTimes(2);
   const reads = api.progress.mock.calls.length;
   await act(async () => vi.advanceTimersByTime(5000));
   expect(api.progress).toHaveBeenCalledTimes(reads);
@@ -241,14 +241,14 @@ it("rechecks only the submitted token when offline and allows a fresh review whe
   api.progress.mockRejectedValue(new Error("offline"));
   render(<DeleteAcquisitionTasksModal taskIds={[1, 2, 3]} />);
   await screen.findByText("Completed task");
-  finishReview();
+  await finishReview();
   await screen.findByText("acquisition.delete.receipt.unavailable");
   api.progress.mockRejectedValueOnce(new Error("ACQUISITION_DELETE_PREVIEW_EXPIRED"));
   fireEvent.click(button("acquisition.delete.receipt.checkAgain"));
   await screen.findByText("acquisition.delete.receipt.expired");
   expect(api.progress.mock.lastCall?.[0]).toBe("fixed-preview");
   expect(api.remove).toHaveBeenCalledTimes(1);
-  expect(api.preview).toHaveBeenCalledTimes(1);
+  expect(api.preview).toHaveBeenCalledTimes(2);
   expect(button("acquisition.delete.recheck")).toBeEnabled();
 });
 
@@ -271,7 +271,6 @@ const cleanupPreview = (overrides: any = {}) =>
   preview({
     previewId: "cleanup-preview",
     cleanupFiles: true,
-    acceptDeliveredFiles: true,
     skipFileVerification: true,
     cleanupFileCount: 2,
     cleanupBytes: 1024,
@@ -303,15 +302,8 @@ const cleanupPreview = (overrides: any = {}) =>
     ...overrides,
   });
 const cleanupCheckbox = () => checkbox("option");
-const acceptedCheckbox = () => checkbox("accepted");
+const cleanupOpts = () => ({ removeTaskIfCleanupFails: true });
 const skipVerificationCheckbox = () => checkbox("skipVerification");
-const cleanupOpts = (overrides = {}) => ({
-  cleanupFiles: true,
-  acceptDeliveredFiles: true,
-  skipFileVerification: true,
-  removeTaskIfCleanupFails: true,
-  ...overrides,
-});
 const openTask = async () => {
   render(<DeleteAcquisitionTasksModal taskIds={[1, 2, 3]} />);
   await screen.findByText("Completed task");
@@ -319,72 +311,11 @@ const openTask = async () => {
 
 const deliveredCheckbox = () => screen.getByRole("checkbox", { name: "acquisition.delete.delivered.option" });
 
-it("keeps final files by default regardless of skipped verification or delivery acceptance", async () => {
-  await openTask();
-  expect(deliveredCheckbox()).not.toBeChecked();
-  fireEvent.click(skipVerificationCheckbox());
-  fireEvent.click(acceptedCheckbox());
-  expect(deliveredCheckbox()).not.toBeChecked();
-  expect(api.preview).toHaveBeenCalledTimes(1);
-});
-
-it("confirms final-only deletion immediately without an inventory when verification is skipped", async () => {
-  await openTask();
-  fireEvent.click(cleanupCheckbox());
-  fireEvent.click(deliveredCheckbox());
-  fireEvent.click(next());
-  expect(screen.getByText("acquisition.delete.delivered.confirmationUnlisted")).toBeVisible();
-  expect(screen.getByText("acquisition.delete.delivered.skip")).toBeVisible();
-  expect(screen.queryByText("acquisition.delete.delivered.confirmation")).toBeNull();
-  expect(screen.queryByText("acquisition.delete.cleanup.listingSkip")).toBeNull();
-  expect(screen.getByText("#1")).toBeVisible();
-  expect(screen.queryByText("#2")).toBeNull();
-  expect(api.preview).toHaveBeenCalledExactlyOnceWith([1, 2, 3], {}, expect.any(AbortSignal));
-  expect(api.remove).not.toHaveBeenCalled();
-  fireEvent.click(confirm());
-  await waitFor(() => expect(api.remove).toHaveBeenCalledExactlyOnceWith("fixed-preview", {
-    cleanupFiles: false, deleteDeliveredFiles: true, acceptDeliveredFiles: true, skipFileVerification: true,
-    removeTaskIfCleanupFails: true,
-  }));
-});
-
-it("requires a bound final-file inventory when verification is enabled", async () => {
-  await openTask();
-  fireEvent.click(cleanupCheckbox());
-  let finish!: (value: any) => void;
-  api.preview.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
-  fireEvent.click(deliveredCheckbox());
-  fireEvent.click(skipVerificationCheckbox());
-  expect(api.preview).toHaveBeenCalledTimes(1);
-  expect(next()).toBeEnabled();
-  fireEvent.click(next());
-  expect(next()).toBeDisabled();
-  expect(screen.getByText("acquisition.delete.cleanup.listing")).toBeVisible();
-  expect(cleanupCheckbox()).not.toBeChecked();
-  expect(api.preview).toHaveBeenLastCalledWith([1, 2, 3], {
-    cleanupFiles: false, deleteDeliveredFiles: true, acceptDeliveredFiles: false, skipFileVerification: false,
-  }, expect.any(AbortSignal));
-  const detailed = cleanupPreview({ cleanupFiles: false, deleteDeliveredFiles: true,
-    acceptDeliveredFiles: false, skipFileVerification: false });
-  detailed.rows[0].cleanup.groups[0].kind = "publishedFiles";
-  await act(async () => finish(detailed));
-  await screen.findByText("acquisition.delete.delivered.confirmation");
-  expect(screen.getByText("acquisition.delete.delivered.confirmation")).toBeVisible();
-  expect(translate).toHaveBeenCalledWith("acquisition.delete.delivered.confirmation", {count: 2, size: bytesToSize(1024)});
-  expect(screen.getByText("acquisition.delete.delivered.verify")).toBeVisible();
-  expect(screen.queryByText("acquisition.delete.final.acceptAndSubmit")).toBeNull();
-  fireEvent.click(confirm());
-  await waitFor(() => expect(api.remove).toHaveBeenCalledExactlyOnceWith("cleanup-preview", {
-    cleanupFiles: false, deleteDeliveredFiles: true, acceptDeliveredFiles: false, skipFileVerification: false,
-    removeTaskIfCleanupFails: true,
-  }));
-});
-
 it("reuses an unexpired final-file inventory when returning to exactly the same deletion options", async () => {
   await openTask();
   fireEvent.click(skipVerificationCheckbox());
   api.preview.mockResolvedValueOnce(cleanupPreview({ deleteDeliveredFiles: true,
-    acceptDeliveredFiles: false, skipFileVerification: false }));
+    skipFileVerification: false }));
   fireEvent.click(deliveredCheckbox());
   expect(api.preview).toHaveBeenCalledTimes(1);
   fireEvent.click(next());
@@ -397,22 +328,8 @@ it("reuses an unexpired final-file inventory when returning to exactly the same 
   await screen.findByText("acquisition.delete.delivered.confirmation");
   expect(api.preview).toHaveBeenCalledTimes(2);
   expect(screen.queryByText("acquisition.delete.cleanup.listingSkip")).toBeNull();
-  fireEvent.click(button("acquisition.delete.final.back"));
-  api.preview.mockResolvedValueOnce(cleanupPreview({ deleteDeliveredFiles: true,
-    previewId: "accepted-final", skipFileVerification: false, acceptDeliveredFiles: true }));
-  fireEvent.click(acceptedCheckbox());
-  expect(api.preview).toHaveBeenCalledTimes(2);
-  fireEvent.click(next());
-  await screen.findByText("acquisition.delete.delivered.confirmation");
-  expect(api.preview).toHaveBeenCalledTimes(3);
-  fireEvent.click(button("acquisition.delete.final.back"));
-  fireEvent.click(acceptedCheckbox());
-  fireEvent.click(next());
-  await screen.findByText("acquisition.delete.delivered.confirmation");
-  expect(api.preview).toHaveBeenCalledTimes(3);
   fireEvent.click(confirm());
-  await waitFor(() => expect(api.remove).toHaveBeenCalledExactlyOnceWith("cleanup-preview",
-    cleanupOpts({ deleteDeliveredFiles: true, acceptDeliveredFiles: false, skipFileVerification: false })));
+  await waitFor(() => expect(api.remove).toHaveBeenCalledExactlyOnceWith("cleanup-preview", cleanupOpts()));
 });
 
 it("does not reuse expired cached final-file inventories", async () => {
@@ -420,7 +337,7 @@ it("does not reuse expired cached final-file inventories", async () => {
   fireEvent.click(skipVerificationCheckbox());
   const initialNow = Date.now();
   api.preview.mockResolvedValueOnce(cleanupPreview({ deleteDeliveredFiles: true,
-    acceptDeliveredFiles: false, skipFileVerification: false,
+    skipFileVerification: false,
     expiresAt: new Date(initialNow + 1000).toISOString() }));
   fireEvent.click(deliveredCheckbox());
   fireEvent.click(next());
@@ -430,7 +347,7 @@ it("does not reuse expired cached final-file inventories", async () => {
   const clock = vi.spyOn(Date, "now").mockReturnValue(initialNow + 2000);
   try {
     api.preview.mockResolvedValueOnce(cleanupPreview({ deleteDeliveredFiles: true, previewId: "fresh-final",
-      acceptDeliveredFiles: false, skipFileVerification: false }));
+      skipFileVerification: false }));
     fireEvent.click(deliveredCheckbox());
     expect(api.preview).toHaveBeenCalledTimes(2);
     fireEvent.click(next());
@@ -443,7 +360,7 @@ it("does not reuse expired cached final-file inventories", async () => {
 it("refuses a stale final-delete inventory that did not include final files", async () => {
   await openTask();
   fireEvent.click(skipVerificationCheckbox());
-  api.preview.mockResolvedValueOnce(cleanupPreview({ acceptDeliveredFiles: false, skipFileVerification: false }));
+  api.preview.mockResolvedValueOnce(cleanupPreview({ skipFileVerification: false }));
   fireEvent.click(deliveredCheckbox());
   fireEvent.click(next());
   await screen.findByText("acquisition.delete.cleanup.inventoryFailed");
@@ -469,7 +386,7 @@ it.each(["final", "cleanup", "skip", "failurePolicy", "close"])(
     expect(signal.aborted).toBe(true);
     if (choice !== "close") expect(next()).toBeEnabled();
     await act(async () => finish(cleanupPreview({ deleteDeliveredFiles: true,
-      acceptDeliveredFiles: false, skipFileVerification: false })));
+      skipFileVerification: false })));
     expect(screen.queryByRole("button", { name: "acquisition.delete.final.submit" })).toBeNull();
     expect(screen.queryByText("/work/A1/archive.zip")).toBeNull();
     expect(api.preview).toHaveBeenCalledTimes(2);
@@ -482,7 +399,7 @@ it("does not reopen confirmation after a cached preparation is invalidated in th
   await openTask();
   fireEvent.click(skipVerificationCheckbox());
   api.preview.mockResolvedValueOnce(cleanupPreview({ deleteDeliveredFiles: true,
-    acceptDeliveredFiles: false, skipFileVerification: false }));
+    skipFileVerification: false }));
   fireEvent.click(deliveredCheckbox());
   fireEvent.click(next());
   await screen.findByText("acquisition.delete.delivered.confirmation");
@@ -503,7 +420,7 @@ it("reuses an explicitly requested final-file inventory instead of issuing a dup
   api.preview.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
   fireEvent.click(deliveredCheckbox());
   fireEvent.click(inspect());
-  expect(next()).toBeEnabled();
+  expect(next()).toBeDisabled();
   expect(api.preview).toHaveBeenCalledTimes(2);
   await act(async () => finish(cleanupPreview({ deleteDeliveredFiles: true })));
   expect(next()).toBeEnabled();
@@ -513,34 +430,11 @@ it("reuses an explicitly requested final-file inventory instead of issuing a dup
   expect(api.remove).not.toHaveBeenCalled();
 });
 
-it("aborts an unfinished final-file inspection and immediately confirms the fixed task scope in skip mode", async () => {
-  await openTask();
-  let finish!: (value: any) => void;
-  api.preview.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
-  fireEvent.click(deliveredCheckbox());
-  fireEvent.click(inspect());
-  const signal = api.preview.mock.calls[1][2] as AbortSignal;
-  expect(signal.aborted).toBe(false);
-  expect(next()).toBeEnabled();
-  fireEvent.click(next());
-  expect(signal.aborted).toBe(true);
-  expect(screen.getByText("acquisition.delete.delivered.confirmationUnlisted")).toBeVisible();
-  expect(confirm()).toBeEnabled();
-  expect(api.remove).not.toHaveBeenCalled();
-  await act(async () => finish(cleanupPreview({ deleteDeliveredFiles: true })));
-  expect(screen.getByText("acquisition.delete.delivered.confirmationUnlisted")).toBeVisible();
-  expect(screen.queryByText("/work/A1/archive.zip")).toBeNull();
-  expect(api.preview).toHaveBeenCalledTimes(2);
-  fireEvent.click(confirm());
-  await waitFor(() => expect(api.remove).toHaveBeenCalledExactlyOnceWith("fixed-preview",
-    cleanupOpts({ deleteDeliveredFiles: true })));
-});
-
 it.each(["failure", "wrongTask", "expired"])("never widens to the task-only token when final inventory returns %s", async outcome => {
   await openTask();
   fireEvent.click(skipVerificationCheckbox());
   const fixed = cleanupPreview({ deleteDeliveredFiles: true,
-    acceptDeliveredFiles: false, skipFileVerification: false });
+    skipFileVerification: false });
   if (outcome === "failure") api.preview.mockRejectedValueOnce(new Error("scan unavailable"));
   else {
     if (outcome === "wrongTask") fixed.rows[0] = { ...fixed.rows[0], taskId: 999 };
@@ -555,41 +449,6 @@ it.each(["failure", "wrongTask", "expired"])("never widens to the task-only toke
   expect(api.remove).not.toHaveBeenCalled();
 });
 
-it("defaults cleanup, verification skip and removal on failure without assuming acceptance before the final action", async () => {
-  await openTask();
-  expect(cleanupCheckbox()).toBeChecked();
-  expect(skipVerificationCheckbox()).toBeChecked();
-  expect(checkbox("removeOnFailure")).toBeChecked();
-  expect(
-    screen.queryByRole("checkbox", { name: "acquisition.delete.cleanup.accepted" }),
-  ).toBeNull();
-  fireEvent.click(next());
-  expect(button("acquisition.delete.final.acceptAndSubmit")).toBeEnabled();
-  expect(screen.getByText("acquisition.delete.final.skip")).toBeVisible();
-  expect(api.remove).not.toHaveBeenCalled();
-  fireEvent.click(button("acquisition.delete.final.back"));
-  fireEvent.click(skipVerificationCheckbox());
-  expect(acceptedCheckbox()).not.toBeChecked();
-  fireEvent.click(acceptedCheckbox());
-  fireEvent.click(checkbox("removeOnFailure"));
-  fireEvent.click(next());
-  expect(screen.getByText("acquisition.delete.final.verifyAccepted")).toBeVisible();
-  expect(screen.getByText("acquisition.delete.final.keepOnFailure")).toBeVisible();
-  expect(button("acquisition.delete.final.submit")).toBeEnabled();
-  expect(api.remove).not.toHaveBeenCalled();
-  fireEvent.click(button("acquisition.delete.final.back"));
-  expect(skipVerificationCheckbox()).not.toBeChecked();
-  fireEvent.click(skipVerificationCheckbox());
-  finishReview();
-  await waitFor(() =>
-    expect(api.remove).toHaveBeenCalledExactlyOnceWith(
-      "fixed-preview",
-      cleanupOpts({ removeTaskIfCleanupFails: false }),
-    ),
-  );
-  expect(api.preview).toHaveBeenCalledTimes(1);
-});
-
 it("keeps file cleanup off for selections larger than the server's limit", async () => {
   const ids = Array.from({ length: 101 }, (_, i) => i + 1);
   api.preview.mockResolvedValue(
@@ -602,7 +461,7 @@ it("keeps file cleanup off for selections larger than the server's limit", async
   expect(
     screen.queryByRole("checkbox", { name: "acquisition.delete.cleanup.skipVerification" }),
   ).toBeNull();
-  finishReview();
+  await finishReview();
   await screen.findByText("acquisition.delete.result");
   expect(api.remove).toHaveBeenCalledExactlyOnceWith("fixed-preview", {});
 });
@@ -614,86 +473,24 @@ it("freezes a reviewed file inventory in the final confirmation and never reques
   await screen.findByText("/work/A1/archive.zip");
   expect(api.preview).toHaveBeenLastCalledWith(
     [1, 2, 3],
-    { cleanupFiles: true, acceptDeliveredFiles: true, skipFileVerification: true },
+    { cleanupFiles: true, deleteDeliveredFiles:false, skipFileVerification: true },
     expect.any(AbortSignal),
   );
   expect(screen.getAllByText(/part1\/nested.download/).length).toBeGreaterThan(0);
   expect(screen.getByText("acquisition.delete.cleanup.truncated")).toBeVisible();
   expect(screen.getByText("acquisition.delete.cleanup.supersededHint")).toBeVisible();
   fireEvent.click(next());
-  expect(screen.getByText("acquisition.delete.final.boundInventory")).toBeVisible();
+  await screen.findByText("acquisition.delete.final.boundInventory");
   expect(screen.getByText("acquisition.delete.final.removeOnFailure")).toBeVisible();
   fireEvent.click(confirm());
   await waitFor(() =>
     expect(api.remove).toHaveBeenCalledExactlyOnceWith(
       "cleanup-preview",
-      cleanupOpts({ removeTaskIfCleanupFails: true }),
+      cleanupOpts(),
     ),
   );
   expect(api.preview).toHaveBeenCalledTimes(2);
 });
-
-it("keeps reviewed file and record eligibility separate when removing after incomplete cleanup", async () => {
-  await openTask();
-  const rich = cleanupPreview();
-  rich.rows[0] = {
-    ...rich.rows[0],
-    canDelete: false,
-    canRemoveTaskIfCleanupFails: true,
-    reasonCode: "SharedOwner",
-  };
-  api.preview.mockResolvedValueOnce(rich);
-  fireEvent.click(inspect());
-  await screen.findByText("/work/A1/archive.zip");
-  expect(next()).toBeEnabled();
-  fireEvent.click(checkbox("removeOnFailure"));
-  expect(next()).toBeDisabled();
-  fireEvent.click(checkbox("removeOnFailure"));
-  fireEvent.click(next());
-  expect(screen.getByText("#1")).toBeVisible();
-  expect(screen.queryByText("#2")).toBeNull();
-  expect(api.remove).not.toHaveBeenCalled();
-});
-
-it("discards a stale file list when choices change and discloses the new scope before submission", async () => {
-  await openTask();
-  api.preview.mockResolvedValueOnce(cleanupPreview());
-  fireEvent.click(inspect());
-  await screen.findByText("/work/A1/archive.zip");
-  fireEvent.click(skipVerificationCheckbox());
-  expect(screen.queryByText("/work/A1/archive.zip")).toBeNull();
-  expect(next()).toBeEnabled();
-  fireEvent.click(next());
-  expect(screen.getByText("acquisition.delete.final.updatedInventory")).toBeVisible();
-  expect(api.preview).toHaveBeenCalledTimes(2);
-  fireEvent.click(button("acquisition.delete.final.back"));
-  expect(api.remove).not.toHaveBeenCalled();
-});
-
-it.each(["accept", "next", "close"])(
-  "aborts an optional inspection on %s and never lets it block or replace the fixed scope",
-  async (action) => {
-    await openTask();
-    let finish!: (value: any) => void;
-    api.preview.mockReturnValueOnce(
-      new Promise((resolve) => {
-        finish = resolve;
-      }),
-    );
-    fireEvent.click(inspect());
-    const signal = api.preview.mock.calls[1][2] as AbortSignal;
-    expect(signal.aborted).toBe(false);
-    expect(next()).toBeEnabled();
-    if (action === "accept") fireEvent.click(skipVerificationCheckbox());
-    else if (action === "next") fireEvent.click(next());
-    else fireEvent.click(button("common.action.close"));
-    expect(signal.aborted).toBe(true);
-    await act(async () => finish(cleanupPreview()));
-    expect(screen.queryByText("/work/A1/archive.zip")).toBeNull();
-    expect(api.remove).not.toHaveBeenCalled();
-    expect(api.preview).toHaveBeenCalledTimes(2);
-  },
-);
 
 it("polls real cleanup progress only during submission and never repeats or aborts the delete request", async () => {
   vi.useFakeTimers();
@@ -783,7 +580,7 @@ it("aborts a pending progress read on unmount, without canceling the deletion or
   const changed = vi.fn();
   const view = render(<DeleteAcquisitionTasksModal taskIds={[1, 2, 3]} onChanged={changed} />);
   await screen.findByText("Completed task");
-  finishReview();
+  await finishReview();
   const signal = api.progress.mock.calls[0][1] as AbortSignal;
   view.unmount();
   expect(signal.aborted).toBe(true);
@@ -829,27 +626,6 @@ it("separates identified totals from eligible cleanup sizes and marks incomplete
   expect(api.remove).not.toHaveBeenCalled();
 });
 
-it.each([
-  { rows: preview().rows.slice(0, 2) },
-  { rows: [preview().rows[0], preview().rows[0], preview().rows[2]] },
-  { cleanupFiles: false },
-  { acceptDeliveredFiles: false },
-  { skipFileVerification: false },
-])(
-  "rejects mismatched task IDs and cleanup choices instead of accepting a weaker confirmation (%j)",
-  async (invalid) => {
-    render(<DeleteAcquisitionTasksModal taskIds={[1, 2, 3]} />);
-    await screen.findByText("Completed task");
-    api.preview.mockResolvedValueOnce(cleanupPreview(invalid));
-    fireEvent.click(inspect());
-    await screen.findByText("acquisition.delete.cleanup.inventoryFailed");
-    expect(next()).toBeEnabled();
-    fireEvent.click(next());
-    expect(screen.getByText("acquisition.delete.final.serverInventory")).toBeVisible();
-    expect(api.remove).not.toHaveBeenCalled();
-  },
-);
-
 it.each([false, true])(
   "reports exactly which records and directories remain (remove on failure = %s)",
   async (hide) => {
@@ -872,7 +648,7 @@ it.each([false, true])(
         },
       ],
     });
-    finishReview();
+    await finishReview();
     await screen.findByText(
       hide ? "acquisition.delete.cleanup.partialRemoved" : "acquisition.delete.cleanup.partial",
     );
@@ -904,18 +680,11 @@ it("keeps all deletion protection reasons translated and unknown reasons generic
 it("translates the confirmation and every progress phase", () => {
   for (const suffix of [
     "final.title",
-    "final.acceptAndSubmit",
-    "final.verify",
-    "final.verifyAccepted",
-    "final.updatedInventory",
-    "final.skip",
     "final.removeOnFailure",
     "final.keepOnFailure",
     "cleanup.partialRemoved",
     "retained.preserveHistory",
     "retained.scopeRequired",
-    "delivered.accepted",
-    "delivered.confirmationUnlisted",
     "progress.starting",
     "progress.phase.rechecking",
     "progress.phase.cleaning",
@@ -947,12 +716,12 @@ it("reviews only removed tasks with retained files and requires a fresh file-bou
     cleanupResults: [{ taskId: 1, completed: false, removedFiles: 0, removedBytes: 0,
       reasonCodes: ["ReferencedPath"], retainedDirectories: ["/work/A1"] }],
   });
-  finishReview();
+  await finishReview();
   const recheck = await screen.findByRole("button", { name: "acquisition.delete.retained.title" });
   const data = cleanupPreview();
   api.preview.mockResolvedValueOnce({ ...data, previewId: "retained-inventory", rows: data.rows.slice(0, 1),
     retryRetainedFiles: true, totalCount: 1, deletableCount: 1, blockedCount: 0 });
-  const options = { cleanupFiles: true, acceptDeliveredFiles: true, skipFileVerification: true, retryRetainedFiles: true };
+  const options = { cleanupFiles: true, deleteDeliveredFiles: false, skipFileVerification: true, retryRetainedFiles: true };
   fireEvent.click(recheck);
   await screen.findByText("/work/A1/archive.zip");
   expect(api.preview).toHaveBeenLastCalledWith([1], options, expect.any(AbortSignal));
@@ -965,38 +734,13 @@ it("reviews only removed tasks with retained files and requires a fresh file-bou
   fireEvent.click(await screen.findByRole("button", { name: "acquisition.delete.retained.confirm" }));
   await screen.findByText("acquisition.delete.retained.result");
   expect(api.remove).toHaveBeenCalledTimes(2);
-  expect(api.remove).toHaveBeenLastCalledWith("retained-inventory", options);
+  expect(api.remove).toHaveBeenLastCalledWith("retained-inventory", {});
   expect(screen.queryByRole("button", { name: "acquisition.delete.retained.title" })).toBeNull();
-});
-
-it("opens retained files from history with verification enabled and freezes any approved proof change", async () => {
-  const model = cleanupPreview(), ids = [1];
-  api.preview.mockImplementation(async (taskIds, options) => ({
-    ...model, ...options, previewId: options.acceptDeliveredFiles ? "accepted-move" : "verify-final",
-    rows: model.rows.slice(0, 1), totalCount: 1, deletableCount: 1, blockedCount: 0,
-  }));
-  render(<DeleteAcquisitionTasksModal taskIds={ids} retryRetainedFiles />);
-  await screen.findByText("/work/A1/archive.zip");
-  expect(api.preview.mock.calls[0][1]).toEqual({ cleanupFiles: true, acceptDeliveredFiles: false,
-    skipFileVerification: false, retryRetainedFiles: true });
-  expect(acceptedCheckbox()).not.toBeChecked();
-  expect(deliveredCheckbox()).not.toBeChecked();
-  fireEvent.click(acceptedCheckbox());
-  expect(api.preview).toHaveBeenCalledTimes(1);
-  expect(screen.queryByText("/work/A1/archive.zip")).toBeNull();
-  expect(skipVerificationCheckbox()).toBeChecked();
-  fireEvent.click(next());
-  await waitFor(() => expect(api.preview).toHaveBeenCalledTimes(2));
-  expect(api.remove).not.toHaveBeenCalled();
-  fireEvent.click(await screen.findByRole("button", { name: "acquisition.delete.retained.confirm" }));
-  await waitFor(() => expect(api.remove).toHaveBeenCalledWith("accepted-move", {
-    cleanupFiles: true, acceptDeliveredFiles: true, skipFileVerification: true, retryRetainedFiles: true,
-  }));
 });
 
 it("lets a reopened deleted task explicitly select final-only cleanup and requires its new bound inventory", async () => {
   const model = cleanupPreview();
-  const options = { cleanupFiles: true, acceptDeliveredFiles: false, skipFileVerification: false, retryRetainedFiles: true };
+  const options = { cleanupFiles: true, skipFileVerification: false, retryRetainedFiles: true };
   const retained = (values: any, token: string) => ({ ...model, ...values, previewId: token,
     rows: model.rows.slice(0, 1), totalCount: 1, deletableCount: 1, blockedCount: 0 });
   api.preview.mockResolvedValueOnce(retained(options, "initial-retained"));
@@ -1027,47 +771,15 @@ it("lets a reopened deleted task explicitly select final-only cleanup and requir
   await act(async () => finish(finalPreview));
   await screen.findByText("/Acquired/A1/final.jpg");
   expect(screen.getByText("acquisition.delete.delivered.confirmation")).toBeVisible();
-  expect(screen.getByText("acquisition.delete.delivered.verify")).toBeVisible();
   expect(screen.getByText("acquisition.delete.retained.preserveHistory")).toBeVisible();
   expect(screen.queryByText("acquisition.delete.retained.preserve")).toBeNull();
   fireEvent.click(button("acquisition.delete.retained.confirm"));
-  await waitFor(() => expect(api.remove).toHaveBeenCalledExactlyOnceWith("final-retained", finalOptions));
-});
-
-it("retains final-only and skip choices when retrying retained files from the original deletion result", async () => {
-  await openTask();
-  fireEvent.click(cleanupCheckbox());
-  fireEvent.click(deliveredCheckbox());
-  api.remove.mockResolvedValueOnce({ deletedTaskIds: [1], skipped: [], cleanupResults: [{
-    taskId: 1, completed: false, removedFiles: 0, removedBytes: 0, reasonCodes: ["ReferencedPath"],
-  }] });
-  fireEvent.click(next());
-  await screen.findByText("acquisition.delete.delivered.confirmationUnlisted");
-  fireEvent.click(confirm());
-  const recheck = await screen.findByRole("button", { name: "acquisition.delete.retained.title" });
-  const data = cleanupPreview({ cleanupFiles: false, deleteDeliveredFiles: true, retryRetainedFiles: true });
-  const options = { cleanupFiles: false, deleteDeliveredFiles: true, acceptDeliveredFiles: true,
-    skipFileVerification: true, retryRetainedFiles: true };
-  api.preview.mockResolvedValueOnce({ ...data, previewId: "same-final-scope", rows: data.rows.slice(0, 1),
-    totalCount: 1, deletableCount: 1, blockedCount: 0 });
-  fireEvent.click(recheck);
-  await waitFor(() => expect(next()).toBeEnabled());
-  expect(api.preview).toHaveBeenLastCalledWith([1], options, expect.any(AbortSignal));
-  expect(deliveredCheckbox()).toBeChecked();
-  expect(cleanupCheckbox()).not.toBeChecked();
-  expect(skipVerificationCheckbox()).toBeChecked();
-  expect(screen.getByRole("checkbox", { name: "acquisition.delete.delivered.accepted" })).toBeChecked();
-  expect(api.remove).toHaveBeenCalledTimes(1);
-  fireEvent.click(next());
-  expect(await screen.findByText("acquisition.delete.delivered.skip")).toBeVisible();
-  expect(screen.queryByText("acquisition.delete.retained.preserve")).toBeNull();
-  fireEvent.click(button("acquisition.delete.retained.confirm"));
-  await waitFor(() => expect(api.remove).toHaveBeenLastCalledWith("same-final-scope", options));
+  await waitFor(() => expect(api.remove).toHaveBeenCalledExactlyOnceWith("final-retained", {}));
 });
 
 it("hides an initial retained inventory if options changed while it was loading, then prepares only the current scope", async () => {
   const model = cleanupPreview();
-  const initial = { cleanupFiles: true, acceptDeliveredFiles: false, skipFileVerification: false, retryRetainedFiles: true };
+  const initial = { cleanupFiles: true, skipFileVerification: false, retryRetainedFiles: true };
   let finish!: (value: any) => void;
   api.preview.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
   render(<DeleteAcquisitionTasksModal taskIds={[1]} retryRetainedFiles />);
@@ -1105,4 +817,59 @@ it("can prepare another retained review for the same task after a retained clean
   expect(api.preview).toHaveBeenCalledTimes(2);
   expect(next()).toBeEnabled();
   expect(api.remove).toHaveBeenCalledTimes(1);
+});
+
+it("offers the same task-wide download, processing and delivery scopes for every stage", async () => {
+  const rows = ["download", "processing", "delivery", "completed"].map((title, i) =>
+    ({taskId: i + 10, title, canDelete: true, willStopExecution: i === 0}));
+  const ids = rows.map(row => row.taskId);
+  api.preview.mockImplementation(async (_ids, options) => preview({rows, totalCount: 4, deletableCount: 4,
+    previewId: options.cleanupFiles ? "all-associated-files" : "overview", ...options}));
+  render(<DeleteAcquisitionTasksModal taskIds={ids} />);
+  await screen.findByText("download");
+  expect(cleanupCheckbox()).toBeChecked();
+  expect(skipVerificationCheckbox()).toBeChecked();
+  expect(checkbox("removeOnFailure")).toBeChecked();
+  expect(deliveredCheckbox()).not.toBeChecked();
+  fireEvent.click(deliveredCheckbox());
+  fireEvent.click(skipVerificationCheckbox());
+  for (const removed of ["selected.option", "abandon.option", "cleanup.accepted", "delivered.accepted"])
+    expect(screen.queryByRole("checkbox", {name:`acquisition.delete.${removed}`})).toBeNull();
+  expect(api.preview).toHaveBeenCalledTimes(1);
+  fireEvent.click(next());
+  await screen.findByText("acquisition.delete.final.boundInventory");
+  expect(screen.getByText("acquisition.delete.stopOnConfirm")).toBeVisible();
+  expect(screen.getByText("acquisition.delete.delivered.afterStop")).toBeVisible();
+  expect(api.preview).toHaveBeenLastCalledWith(ids,
+    {cleanupFiles:true, deleteDeliveredFiles:true, skipFileVerification:false}, expect.any(AbortSignal));
+  expect(api.remove).not.toHaveBeenCalled();
+  fireEvent.click(confirm());
+  await waitFor(() => expect(api.remove).toHaveBeenCalledExactlyOnceWith("all-associated-files", {removeTaskIfCleanupFails:true}));
+});
+
+it("can delete only delivery files from an unfinished task with no acceptance or file picker", async () => {
+  const rows = [{taskId:2, title:"Waiting for delivery", canDelete:true}];
+  api.preview.mockImplementation(async (_ids, options) => preview({rows, ...options, previewId:options.deleteDeliveredFiles ? "delivery-only" : "task"}));
+  render(<DeleteAcquisitionTasksModal taskIds={[2]} />);
+  await screen.findByText("Waiting for delivery");
+  fireEvent.click(cleanupCheckbox());
+  fireEvent.click(deliveredCheckbox());
+  fireEvent.click(checkbox("removeOnFailure"));
+  fireEvent.click(next());
+  fireEvent.click(await screen.findByRole("button", {name:"acquisition.delete.final.submit"}));
+  expect(api.preview).toHaveBeenLastCalledWith([2],
+    {cleanupFiles:false,deleteDeliveredFiles:true,skipFileVerification:true}, expect.any(AbortSignal));
+  await waitFor(() => expect(api.remove).toHaveBeenCalledExactlyOnceWith("delivery-only", {removeTaskIfCleanupFails:false}));
+});
+
+it.each([
+  {cleanupFiles:false}, {deleteDeliveredFiles:true}, {skipFileVerification:false},
+  {rows:preview().rows.slice(0,2)}, {rows:[preview().rows[0],preview().rows[0],preview().rows[2]]},
+])("requires a receipt for the reviewed tasks and cleanup options (%j)", async mismatch => {
+  await openTask();
+  api.preview.mockResolvedValueOnce(cleanupPreview(mismatch));
+  fireEvent.click(next());
+  await screen.findByText("acquisition.delete.cleanup.inventoryFailed");
+  expect(screen.queryByRole("button", {name:"acquisition.delete.final.submit"})).toBeNull();
+  expect(api.remove).not.toHaveBeenCalled();
 });

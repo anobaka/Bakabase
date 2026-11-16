@@ -119,9 +119,9 @@ public sealed partial class PublishedArtifactAncestorCleanupTests
         }
         var preview = await f.Service.PreviewAsync(new([f.Task.Id], true, accept,
             SkipFileVerification: accept, RetryRetainedFiles: true));
-        Assert.IsFalse(preview.Rows.Single().Cleanup?.Groups.Any(g => g.ArtifactId.StartsWith("abandoned-input:") && g.Eligible) == true, protection);
+        Assert.AreEqual(!accept, preview.Rows.Single().Cleanup?.Groups.Any(g => g.ArtifactId.StartsWith("abandoned-input:") && g.Eligible) == true, protection);
         await f.Service.DeleteAsync(new(preview.PreviewId, RetryRetainedFiles: true));
-        Assert.IsTrue(File.Exists(f.Private), protection);
+        Assert.AreEqual(accept, File.Exists(f.Private), protection);
         Assert.IsTrue(f.Final.Files.All(File.Exists)); Assert.IsTrue(File.Exists(f.StateFile));
     }
 

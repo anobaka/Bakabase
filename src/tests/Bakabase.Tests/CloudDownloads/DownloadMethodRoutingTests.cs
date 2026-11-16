@@ -77,6 +77,29 @@ public sealed class DownloadMethodRoutingTests
     }
 
     [TestMethod]
+    [DataRow("file", 43)]
+    [DataRow("folder", 22)]
+    public async Task Cloud_download_creation_validates_the_same_separate_key_as_preflight(string kind, int keyLength)
+    {
+        var provider = new Provider("mega.megacmd", "mega");
+        var helper = new CloudDownloaderHelper(new UserStoragePolicy(false), new DefaultGlobalOptions(), [provider]);
+        var source = DownloadSourceResolver.Normalize(new()
+        {
+            Id = "s", Url = $"https://mega.nz/{kind}/abcd1234", AccessCode = new string('A', keyLength)
+        });
+        var request = new CloudDownloadRequest("operation", source, null, null, Path.GetTempPath());
+        var tasks = await helper.BuildTasks(new()
+        {
+            ThirdPartyId = ThirdPartyId.Mega, Type = 1, Keys = [source.Id], DownloadPath = Path.GetTempPath(),
+            Options = JsonSerializer.Serialize(request, JsonSerializerOptions.Web)
+        });
+        var queued = JsonSerializer.Deserialize<CloudDownloadRequest>(tasks.Single().Options!, JsonSerializerOptions.Web)!;
+        Assert.AreEqual(source.Url, queued.Source.Url);
+        Assert.AreEqual(source.AccessCode, queued.Source.AccessCode);
+        Assert.AreEqual(1, provider.ReadyCalls);
+    }
+
+    [TestMethod]
     [DataRow("https://pixeldrain.com/d/abcd1234", "pixeldrain.rclone")]
     [DataRow("https://pixeldrain.com/u/abcd1234", "pixeldrain.galleryDl")]
     [DataRow("https://pixeldrain.com/l/abcd1234", "pixeldrain.galleryDl")]

@@ -88,7 +88,7 @@ public sealed partial class PublishedArtifactAncestorCleanupTests
         var preview = await f.Service.PreviewAsync(new([f.Task.Id], true,
             scenario != "no-acceptance", scenario is not ("no-skip" or "no-acceptance")));
         Assert.IsFalse(preview.Rows.Single().Cleanup!.Groups.Single().Eligible);
-        Assert.AreEqual(scenario is "no-acceptance" or "no-skip" ? "FILE_CLEANUP_COVERAGE_INCOMPLETE" : "WorkspaceUnavailable",
+        Assert.AreEqual(scenario == "no-skip" ? "FILE_CLEANUP_COVERAGE_INCOMPLETE" : "WorkspaceUnavailable",
             preview.Rows.Single().Cleanup!.Groups.Single().ReasonCode);
         var result = await f.Service.DeleteAsync(new(preview.PreviewId));
         Assert.AreEqual(0, result.DeletedTaskIds.Count); Assert.AreEqual(0, result.RemovedFiles);

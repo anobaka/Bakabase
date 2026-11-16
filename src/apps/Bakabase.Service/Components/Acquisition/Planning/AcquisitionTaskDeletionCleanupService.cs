@@ -59,19 +59,24 @@ public sealed partial class AcquisitionTaskDeletionCleanupService(BakabaseDbCont
                 if (aliases.TryGetValue(parent, out var target)) return Path.GetFullPath(Path.Combine(target, Path.GetRelativePath(parent, full)));
             return full;
         }
-        if (task.Status != AcquisitionStatus.Completed || task.WorkflowRunId is not { } runId ||
-            !await db.WorkflowRuns.AnyAsync(r => r.Id == runId && r.Status == WorkflowRunStatus.Success && r.FailedItemCount == 0, ct))
-            return Block("CLEANUP_TASK_NOT_COMPLETED");
-        if (!owners.Contains(runId) || await db.WorkflowRuns.CountAsync(r => owners.Contains(r.Id), ct) != owners.Count)
+        // Older accepted cleanups retain their persisted receipts and replacement proofs.
+        // A normal delete preview grants only the selected task's own files.
+        var wholeTask = !acceptDelivery || task.Status != AcquisitionStatus.Completed || task.WorkflowRunId == null;
+        var runId = task.WorkflowRunId ?? 0;
+        if (runId != 0 && !owners.Contains(runId) || await db.WorkflowRuns.CountAsync(r => owners.Contains(r.Id), ct) != owners.Count)
             return Block("ACQUISITION_EXECUTION_STATE_UNKNOWN");
         AcquisitionSupersededRunCleanup.Plan? superseded = null;
         if (await db.WorkflowRuns.AnyAsync(r => owners.Contains(r.Id) &&
                 (r.Status == WorkflowRunStatus.Pending || r.Status == WorkflowRunStatus.Running || r.Status == WorkflowRunStatus.Waiting), ct))
         {
             if (retryRetainedFiles) return Block("CLEANUP_OLD_EXECUTION_REQUIRES_REVIEW");
-            superseded = supersededRuns == null ? null : await supersededRuns.PreviewAsync(task, owners, ct);
+            superseded = supersededRuns == null ? null : await supersededRuns.PreviewAsync(task, owners, ct, abandonUnfinishedFiles: wholeTask);
             if (superseded == null) return Block("CLEANUP_OLD_EXECUTION_REQUIRES_REVIEW");
         }
+        if (wholeTask) return await PreviewWholeTaskFilesAsync(task, owners, superseded, cleanupIntermediates, deleteDeliveredFiles,
+            skipFileVerification, retryRetainedFiles, ct, guardDirectory);
+        if (!await db.WorkflowRuns.AnyAsync(r => r.Id == runId && r.Status == WorkflowRunStatus.Success && r.FailedItemCount == 0, ct))
+            return Block("CLEANUP_TASK_NOT_COMPLETED");
         var ownerKeys = owners.Select(id => id.ToString(CultureInfo.InvariantCulture)).ToArray();
         var bindings = await db.ArtifactOperationBindings.AsNoTracking()
             .Where(b => b.OwnerKind == "workflow" && ownerKeys.Contains(b.OwnerId)).ToListAsync(ct);
@@ -461,8 +466,10 @@ public sealed partial class AcquisitionTaskDeletionCleanupService(BakabaseDbCont
         {
             var current = await db.AcquisitionTasks.AsNoTracking().SingleOrDefaultAsync(t => t.Id == task.Id, ct);
             return current != null && (current.DeletedAt != null) == retryRetainedFiles && Version(current) == version &&
-                current.Status == AcquisitionStatus.Completed && current.WorkflowRunId == consent.CompletedRunId &&
-                await db.WorkflowRuns.AnyAsync(r => r.Id == consent.CompletedRunId && r.Status == WorkflowRunStatus.Success && r.FailedItemCount == 0, ct) &&
+                (current.WorkflowRunId == consent.CompletedRunId || consent.WholeTaskFiles && consent.CompletedRunId == 0 && current.WorkflowRunId == null) &&
+                (consent.WholeTaskFiles || (consent.AbandonUnfinishedFiles ? current.Status is AcquisitionStatus.Waiting or AcquisitionStatus.Failed or AcquisitionStatus.Cancelled :
+                    current.Status == AcquisitionStatus.Completed && await db.WorkflowRuns.AnyAsync(r => r.Id == consent.CompletedRunId &&
+                        r.Status == WorkflowRunStatus.Success && r.FailedItemCount == 0, ct))) &&
                 await db.WorkflowRuns.CountAsync(r => consent.OwnerRunIds.Contains(r.Id) &&
                     (r.Status != WorkflowRunStatus.Pending && r.Status != WorkflowRunStatus.Running && r.Status != WorkflowRunStatus.Waiting ||
                      r.Status == WorkflowRunStatus.Waiting && r.PendingSignalJson == null && previewInactive.Contains(r.Id)), ct) == consent.OwnerRunIds.Count;

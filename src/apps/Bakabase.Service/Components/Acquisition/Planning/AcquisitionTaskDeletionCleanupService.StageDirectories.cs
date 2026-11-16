@@ -27,7 +27,11 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
         string Stage, string RootDirectory, string BindingFingerprint,
         IReadOnlyList<AcquisitionTaskDeleteCleanupFile> Files, IReadOnlyList<string> Directories,
         IReadOnlyDictionary<string, string> FileIdentities, AcquisitionTaskDeleteCleanupGroup Group,
-        string SelectionId, bool CleanupIntermediates, bool DeleteDeliveredFiles);
+        string SelectionId, bool CleanupIntermediates, bool DeleteDeliveredFiles)
+    {
+        public string? ManifestArtifactId { get; init; }
+        public IReadOnlyList<string> CoveredRoots { get; init; } = [];
+    }
 
     // An explicit accepted whole-task cleanup owns directory selections, not an old
     // extraction manifest. This does not opt automatic intermediate cleanup into tree deletion.
@@ -36,13 +40,13 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
         bool cleanupIntermediates, bool deleteDeliveredFiles, CancellationToken ct,
         Func<string, Task>? guardDirectory = null)
     {
-        if (workspaces == null || !authorization.Consent.DeliveryAccepted || !authorization.Consent.SkipFileVerification) return [];
+        if (workspaces == null || !authorization.Consent.CanDeleteWorkspace) return [];
         var plan = JsonSerializer.Deserialize<AcquisitionPlan>(task.PlanJson ?? "null", JsonSerializerOptions.Web);
         if (plan == null) return [];
         var selection = await StageCleanupSelectionsAsync(task, plan, owners, cleanupIntermediates, deleteDeliveredFiles, ct);
         // With no persisted stage map, a publication alone cannot account for old
         // intermediate files. Use exact-file cleanup unless there is a recorded download.
-        if (plan.StageDirectories == null && cleanupIntermediates &&
+        if (!authorization.Consent.WholeTaskFiles && plan.StageDirectories == null && cleanupIntermediates &&
             !selection.Selected.Any(s => s.Stage == "download")) return [];
         var result = new List<StageDirectoryCandidate>();
         // Inspect maximal roots first. A proven parent covers its selected descendants;
@@ -104,7 +108,7 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
                 if (workspaces == null || exists && !await workspaces.HasOwnedLocationAsync(workspace, ct))
                     return Result("CLEANUP_DIRECTORY_OWNERSHIP_UNCONFIRMED");
             }
-            else if (entry.Evidence == "userDirectoryRevision" && !string.IsNullOrEmpty(entry.BindingId))
+            else if (!authorization.Consent.AbandonUnfinishedFiles && entry.Evidence == "userDirectoryRevision" && !string.IsNullOrEmpty(entry.BindingId))
             {
                 // The user explicitly bound this exact directory, and selected its stage
                 // for accepted deletion. 'borrowed' controls processing reuse, not this
@@ -113,7 +117,7 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
             }
             else if (stage == "delivery" && entry.Evidence is "taskLayout" or "plannedDelivery" or "deliveryRecord" or "publicationRecord")
             {
-                if (!selections.PublicationRoots.Contains(root, ArtifactManifestFiles.PathComparer) ||
+                if ((!authorization.Consent.WholeTaskFiles || !selected.Current) && !selections.PublicationRoots.Contains(root, ArtifactManifestFiles.PathComparer) ||
                     !selections.DeliveryLayoutRoots.Contains(root, ArtifactManifestFiles.PathComparer))
                     return Result("CLEANUP_DIRECTORY_OWNERSHIP_UNCONFIRMED");
             }
@@ -122,10 +126,10 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
                 ownDownload = await StageOwnedDownloadAsync(task, owners, partId, root, plan, ct);
                 if (ownDownload == null) return Result("CLEANUP_DIRECTORY_OWNERSHIP_UNCONFIRMED");
             }
-            else if (!(selected.Current && stage == "processing" && entry.Evidence == "processingRecord"))
+            else if (!(selected.Current && !authorization.Consent.AbandonUnfinishedFiles && stage == "processing" && entry.Evidence == "processingRecord"))
                 return Result("CLEANUP_DIRECTORY_OWNERSHIP_UNCONFIRMED");
             await new AcquisitionStageDirectoryReferenceGuard(db, artifacts, storage, workspaces)
-                .RequireAsync(task, owners.ToArray(), partId, root, ct, ownDownload, explicitTaskCleanup: true);
+                .RequireAsync(task, owners.ToArray(), partId, root, ct, ownDownload, explicitTaskCleanup: owners.Count > 0, abandonUnfinishedFiles: authorization.Consent.AbandonUnfinishedFiles);
             if (!exists)
                 return Result(ArtifactCleanupAbsence.Probe(parent, root, ct) == ArtifactCleanupPathPresence.ConfirmedAbsent
                     ? "AlreadyAbsent" : "WorkspaceUnavailable");
@@ -168,7 +172,10 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
         ArtifactDeliveryCleanupAuthorization authorization, CancellationToken ct)
     {
         var previewInactive = authorization.PreviewSupersededRuns;
-        if (task.Status != AcquisitionStatus.Completed || task.WorkflowRunId == null || !owners.Contains(task.WorkflowRunId.Value))
+        var taskInactive = authorization.Consent.WholeTaskFiles || authorization.Consent.AbandonUnfinishedFiles
+            ? await authorization.IsCurrentAsync(ct) : task.Status == AcquisitionStatus.Completed;
+        var noCurrentRun = authorization.Consent.WholeTaskFiles && task.WorkflowRunId == null;
+        if (!taskInactive || !noCurrentRun && (task.WorkflowRunId == null || !owners.Contains(task.WorkflowRunId.Value)))
             throw new InvalidOperationException("STAGE_DIRECTORY_TASK_ACTIVE");
         var taskKey = task.Id.ToString(CultureInfo.InvariantCulture);
         var sources = await db.Set<WorkflowRunSourceDbModel>().AsNoTracking().Where(s => s.Module == "acquisition" &&
@@ -205,7 +212,7 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
     private async Task<int?> StageOwnedDownloadAsync(AcquisitionTaskDbModel task, IReadOnlyList<int> owners,
         string partId, string root, AcquisitionPlan plan, CancellationToken ct)
     {
-        var rows = await db.DownloadTasks.AsNoTracking().Where(d => d.Status == DownloadTaskDbModelStatus.Complete).ToListAsync(ct);
+        var rows = await db.DownloadTasks.AsNoTracking().Where(d => d.Status != DownloadTaskDbModelStatus.InProgress).ToListAsync(ct);
         var matches = rows.Where(d => !string.IsNullOrWhiteSpace(d.DownloadPath) &&
             ArtifactManifestFiles.PathComparer.Equals(Path.TrimEndingDirectorySeparator(Path.GetFullPath(d.DownloadPath)), root)).ToArray();
         if (matches.Length != 1) return null;
@@ -227,55 +234,97 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
     internal async Task<ArtifactWorkspaceCleanupResult> DeleteStageDirectoryAsync(StageDirectoryCandidate expected,
         ArtifactDeliveryCleanupAuthorization authorization, CancellationToken ct)
     {
-        if (!authorization.Consent.DeliveryAccepted || !authorization.Consent.SkipFileVerification || !expected.Group.Eligible)
+        if (!authorization.Consent.CanDeleteWorkspace || !expected.Group.Eligible)
             return new(expected.Id, false, "CLEANUP_DELIVERY_PROOF_MISSING");
         AcquisitionStageDirectoryCleanupReceipt? receipt = null;
+        var removed = 0;
+        long removedBytes = 0;
         try
         {
             await using var fence = await artifacts.AcquireMaintenanceAsync(ct);
             var task = await db.AcquisitionTasks.AsNoTracking().SingleOrDefaultAsync(t => t.Id == expected.TaskId, ct);
-            if (task == null || task.PlanRevision != expected.TaskRevision || workspaces == null) return new(expected.Id, false, "SelectionChanged");
-            var plan = JsonSerializer.Deserialize<AcquisitionPlan>(task.PlanJson ?? "null", JsonSerializerOptions.Web);
-            if (plan == null) return new(expected.Id, false, "SelectionChanged");
-            var selections = await StageCleanupSelectionsAsync(task, plan, authorization.Consent.OwnerRunIds,
-                expected.CleanupIntermediates, expected.DeleteDeliveredFiles, ct);
-            var selected = selections.Selected.SingleOrDefault(s => s.Id == expected.SelectionId);
-            if (selected == null) return new(expected.Id, false, "SelectionChanged");
-            var current = await InspectStageDirectoryForDeletionAsync(task, plan, selected, selections,
-                authorization.Consent.OwnerRunIds, authorization, expected.CleanupIntermediates,
-                expected.DeleteDeliveredFiles, ct, null);
+            if (task == null || task.PlanRevision != expected.TaskRevision) return new(expected.Id, false, "SelectionChanged");
+            StageDirectoryCandidate? current;
+            if (expected.ManifestArtifactId is {} artifactId)
+                current = await WholeTaskArtifactAsync(task, authorization, artifactId, expected.CleanupIntermediates, expected.CoveredRoots,
+                    new ArtifactCleanupReferenceGuard(db, workspaces), ct, null);
+            else
+            {
+                var plan = JsonSerializer.Deserialize<AcquisitionPlan>(task.PlanJson ?? "null", JsonSerializerOptions.Web);
+                if (plan == null) return new(expected.Id, false, "SelectionChanged");
+                var selections = await StageCleanupSelectionsAsync(task, plan, authorization.Consent.OwnerRunIds,
+                    expected.CleanupIntermediates, expected.DeleteDeliveredFiles, ct);
+                var selected = selections.Selected.SingleOrDefault(s => s.Id == expected.SelectionId);
+                if (selected == null) return new(expected.Id, false, "SelectionChanged");
+                current = await InspectStageDirectoryForDeletionAsync(task, plan, selected, selections,
+                    authorization.Consent.OwnerRunIds, authorization, expected.CleanupIntermediates, expected.DeleteDeliveredFiles, ct, null);
+            }
+            if (current == null) return new(expected.Id, false, "SelectionChanged");
             if (!current.Group.Eligible) return new(expected.Id, false, current.Group.ReasonCode);
             if (current.RootDirectory != expected.RootDirectory || current.BindingFingerprint != expected.BindingFingerprint ||
                 current.FileIdentities.Any(p => !expected.FileIdentities.TryGetValue(p.Key, out var prior) || p.Value != prior) ||
                 current.Directories.Any(p => !expected.Directories.Contains(p, ArtifactManifestFiles.PathComparer)))
                 return new(expected.Id, false, "SelectionChanged");
             if (current.Group.ReasonCode == "AlreadyAbsent") return new(expected.Id, true, "AlreadyAbsent");
+            if (expected.ManifestArtifactId != null && !authorization.Consent.SkipFileVerification)
+            {
+                var source = await artifacts.GetArtifactAsync(expected.ManifestArtifactId, ct);
+                if (source == null) return new(expected.Id, false, "SelectionChanged");
+                var snapshot = await ArtifactManifestFiles.CaptureAsync(current.RootDirectory, current.Files.Select(f => f.Path).ToArray(), ct);
+                var registered = source.Manifest.Entries.ToHashSet();
+                if (snapshot.Entries.Any(e => !registered.Contains(e))) return new(expected.Id, false, "SelectionChanged");
+            }
             receipt = new(Guid.NewGuid().ToString("N"), task.Id, task.PlanRevision, expected.PartId, expected.Stage,
                 current.RootDirectory, current.BindingFingerprint, DateTime.UtcNow, "Prepared", current.Files,
                 authorization.Consent);
-            await AcquisitionStageDirectoryCleanupReceipt.SaveAsync(workspaces.StageCleanupMetadataDirectory, receipt, ct);
+            await AcquisitionStageDirectoryCleanupReceipt.SaveAsync(maintenance.StageCleanupMetadataDirectory, receipt, ct);
             ct.ThrowIfCancellationRequested();
             // Every current descendant was inspected for links and foreign claims above.
             // Root selection is frozen; there is no hash or old-manifest reconstruction.
-            Directory.Delete(current.RootDirectory, recursive: true);
-            var absent = ArtifactCleanupAbsence.Probe(Path.GetDirectoryName(current.RootDirectory)!, current.RootDirectory, ct)
+            if (!authorization.Consent.WholeTaskFiles)
+                Directory.Delete(current.RootDirectory, recursive: true);
+            else
+            {
+                // Delete only entries present in the confirmed inventory. A new child
+                // arriving after the last inspection makes the nonrecursive rmdir fail.
+                foreach (var file in current.Files)
+                {
+                    ct.ThrowIfCancellationRequested(); ArtifactManifestFiles.RejectLinks(file.Path);
+                    var leaf = new FileInfo(file.Path); leaf.Refresh();
+                    if (!leaf.Exists || JsonSerializer.Serialize(new {leaf.Length, leaf.CreationTimeUtc, leaf.LastWriteTimeUtc}) != current.FileIdentities[file.Path])
+                        throw new IOException("The selected file changed.");
+                    File.Delete(file.Path);
+                    removed++;
+                    removedBytes += file.Bytes;
+                }
+                if (current.ManifestArtifactId == null)
+                    foreach (var directory in current.Directories.OrderByDescending(d => d.Length).Append(current.RootDirectory))
+                    {
+                        ct.ThrowIfCancellationRequested(); ArtifactManifestFiles.RejectLinks(directory);
+                        Directory.Delete(directory, recursive: false);
+                    }
+            }
+            var absent = current.ManifestArtifactId != null ? ArtifactCleanupAbsence.AllConfirmedAbsent(current.RootDirectory, current.Files.Select(f => f.Path).ToArray(), ct) :
+                ArtifactCleanupAbsence.Probe(Path.GetDirectoryName(current.RootDirectory)!, current.RootDirectory, ct)
                 == ArtifactCleanupPathPresence.ConfirmedAbsent;
-            await AcquisitionStageDirectoryCleanupReceipt.SaveAsync(workspaces.StageCleanupMetadataDirectory,
-                receipt with {Status = absent ? "Completed" : "Partial", FinishedAt = DateTime.UtcNow}, CancellationToken.None);
-            return new(expected.Id, absent, absent ? null : "CLEANUP_FILES_RETAINED", absent ? current.Files.Count : 0,
-                absent ? current.Files.Sum(f => f.Bytes) : 0);
+            await AcquisitionStageDirectoryCleanupReceipt.SaveAsync(maintenance.StageCleanupMetadataDirectory,
+                receipt with {Status = absent ? "Completed" : "Partial", FinishedAt = DateTime.UtcNow,
+                    RemovedFiles = absent ? current.Files.Count : removed, RemovedBytes = absent ? current.Group.Bytes : removedBytes}, CancellationToken.None);
+            return new(expected.Id, absent, absent ? null : "CLEANUP_FILES_RETAINED", absent ? current.Files.Count : removed,
+                absent ? current.Group.Bytes : removedBytes);
         }
         catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException or JsonException or ArgumentException or InvalidOperationException or OperationCanceledException)
         {
-            if (receipt != null && workspaces != null)
+            if (receipt != null)
                 try
                 {
-                    await AcquisitionStageDirectoryCleanupReceipt.SaveAsync(workspaces.StageCleanupMetadataDirectory,
-                        receipt with {Status = error is OperationCanceledException ? "Interrupted" : "Failed", FinishedAt = DateTime.UtcNow}, CancellationToken.None);
+                    await AcquisitionStageDirectoryCleanupReceipt.SaveAsync(maintenance.StageCleanupMetadataDirectory,
+                        receipt with {Status = error is OperationCanceledException ? "Interrupted" : removed > 0 ? "Partial" : "Failed",
+                            FinishedAt = DateTime.UtcNow, RemovedFiles = removed, RemovedBytes = removedBytes}, CancellationToken.None);
                 }
                 catch (Exception journalError) when (journalError is IOException or UnauthorizedAccessException or InvalidOperationException) { }
             if (error is OperationCanceledException) throw;
-            return new(expected.Id, false, "CLEANUP_FILES_RETAINED");
+            return new(expected.Id, false, "CLEANUP_FILES_RETAINED", removed, removedBytes);
         }
     }
 

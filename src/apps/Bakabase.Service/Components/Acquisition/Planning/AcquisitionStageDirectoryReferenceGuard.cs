@@ -21,7 +21,7 @@ internal sealed class AcquisitionStageDirectoryReferenceGuard(BakabaseDbContext 
 {
     internal async Task RequireAsync(AcquisitionTaskDbModel row, int[] owners,
         string partId, string directory, CancellationToken ct, int? ownedDownloadTaskId = null,
-        bool explicitTaskCleanup = false)
+        bool explicitTaskCleanup = false, bool abandonUnfinishedFiles = false)
     {
         directory = Path.TrimEndingDirectorySeparator(Path.GetFullPath(directory));
         storage.EnsurePathAllowed(directory); ArtifactManifestFiles.RejectLinks(directory);
@@ -91,7 +91,7 @@ internal sealed class AcquisitionStageDirectoryReferenceGuard(BakabaseDbContext 
         var references = new ArtifactCleanupReferenceGuard(db, workspaces);
         if (await references.HasReferencesAsync(representative, owners, ct, previewSupersededRuns: owners,
                 directoryOwnerTaskId: row.Id, deletedDirectoryOwner: row.DeletedAt != null,
-                directoryDownloadTaskId: ownedDownloadTaskId, explicitTaskDirectoryCleanup: explicitTaskCleanup))
+                directoryDownloadTaskId: ownedDownloadTaskId, explicitTaskDirectoryCleanup: explicitTaskCleanup, abandonUnfinishedFiles: abandonUnfinishedFiles))
             throw new InvalidOperationException("STAGE_DIRECTORY_REFERENCED");
     }
     private static bool Overlap(string a, string b) => ArtifactManifestFiles.PathComparer.Equals(a, b) ||

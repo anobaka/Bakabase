@@ -1,3 +1,4 @@
+using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -24,7 +25,14 @@ internal sealed record AcquisitionDeletionRun(int Id, WorkflowRunStatus Status, 
     DateTime? WaitingSince, string? PendingSignalJson, DateTime? CompletedAt);
 public sealed record AcquisitionDeletionActivity(IReadOnlyList<int> RunIds, string Version, string? BlockReason)
 {
+    internal AcquisitionDeletionWriters? Writers { get; init; }
     internal IReadOnlyList<AcquisitionDeletionRun>? ObservedRuns { get; init; }
+    internal bool CanAbandon(AcquisitionTaskDbModel task) =>
+        task.DeletedAt == null && BlockReason == null && ObservedRuns is {Count: > 0} &&
+        ObservedRuns.All(r => r.PendingSignalJson == null && r.Status is not (WorkflowRunStatus.Running or WorkflowRunStatus.Pending)) &&
+        (task.WorkflowRunId == null || ObservedRuns.Any(r => r.Id == task.WorkflowRunId)) &&
+        AcquisitionLocalRecoveryQueueEntry.Read(task) is not {IsOpen: true} && AcquisitionContinuationEntry.Read(task) is not {IsOpen: true};
+
     internal bool MatchesAfterCleanup(AcquisitionDeletionActivity now, IReadOnlyList<int>? closedRuns)
     {
         if (!RunIds.SequenceEqual(now.RunIds)) return false;
@@ -46,7 +54,7 @@ public interface IAcquisitionDeletionActivityReader
 }
 
 /// <summary>Conservative ownership audit. Never initializes transports or changes download state.</summary>
-public sealed class AcquisitionDeletionActivityReader(BakabaseDbContext db, DownloadTaskService sites,
+public sealed partial class AcquisitionDeletionActivityReader(BakabaseDbContext db, DownloadTaskService sites,
     IBtDownloadManager bt, IHttpDownloadManager http, BTaskManager? bTasks = null) : IAcquisitionDeletionActivityReader
 {
     public async Task<IReadOnlyDictionary<int, AcquisitionDeletionActivity>> ReadAsync(IReadOnlyList<AcquisitionTaskDbModel> tasks, CancellationToken ct)
@@ -141,7 +149,30 @@ public sealed class AcquisitionDeletionActivityReader(BakabaseDbContext db, Down
                     !linkedNative.Any(n => Origin(n.Kind, n.SourceId)))
                     ? "ACQUISITION_DOWNLOAD_STATE_UNKNOWN" : null;
             var observed = runs.Where(r => ownedRuns.Contains(r.Id)).OrderBy(r => r.Id).ToArray();
-            output[task.Id] = new(ownedRuns, JsonSerializer.Serialize(observed), blocked) { ObservedRuns = observed };
+            AcquisitionDeletionWriters? writers = null;
+            if (bTasks != null && blocked is ("ACQUISITION_TASK_ACTIVE" or "ACQUISITION_DOWNLOAD_ACTIVE"))
+            {
+                var writingRuns = observed.Where(r => bTasks.IsPending("workflow.run." + r.Id) ||
+                    r.Status is WorkflowRunStatus.Pending or WorkflowRunStatus.Running ||
+                    r.Status == WorkflowRunStatus.Waiting && r.PendingSignalJson != null).Select(r => r.Id).ToArray();
+                var writingSites = persistentSites.Where(s => siteIds.Contains(s.Id) && s.Status == DownloadTaskDbModelStatus.InProgress).Select(s => s.Id)
+                    .Concat(liveSites.Where(s => siteIds.Contains(s.Id) && (int)s.Status is >= 200 and <= 500).Select(s => s.Id)).Distinct().ToArray();
+                var writingNative = linkedNative.Where(n => n.Status is 1 or 2 or 3).ToArray();
+                // A workflow may observe an independently owned download. Only stop transports
+                // explicitly owned by this acquisition, its workflow, or its owned site download.
+                bool OwnsSite(int id) => owners.Any(o => o.DownloadTaskId == id && o.AcquisitionTaskId == task.Id) ||
+                    clouds.Any(o => o.DownloadTaskId == id && ownedRuns.Contains(o.WorkflowRunId));
+                if (writingSites.All(OwnsSite) &&
+                    writingNative.All(n => (n.RunId == null || ownedRuns.Contains(n.RunId.Value)) &&
+                        (n.Kind != "acquisition" || Origin(n.Kind, n.SourceId)) &&
+                        (Origin(n.Kind, n.SourceId) || n.RunId != null || n.SiteId is {} site &&
+                            OwnsSite(site))) &&
+                    (writingRuns.Length + writingSites.Length + writingNative.Length > 0) &&
+                    await ExclusivelyOwnedAsync(task, ownedRuns, writingSites, ownOperations.Where(o => o.State == ArtifactOperationState.Running ||
+                        writingNative.Any(n => n.Kind == "workflow" && n.SourceId == o.IntentKey)).Select(o => o.Id).ToArray(), ct))
+                    writers = new(writingRuns, writingSites, writingNative.Select(n => n.Id).ToArray());
+            }
+            output[task.Id] = new(ownedRuns, JsonSerializer.Serialize(observed), blocked) { ObservedRuns = observed, Writers = writers };
         }
         return output;
     }

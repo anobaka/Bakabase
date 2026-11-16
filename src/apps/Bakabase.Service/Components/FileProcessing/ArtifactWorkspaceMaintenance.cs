@@ -46,6 +46,7 @@ public sealed partial class ArtifactWorkspaceMaintenance
     private readonly ArtifactWorkspaceCleanupJournal journal;
     private readonly ArtifactCleanupReferenceGuard references;
     private readonly FileProcessingWorkspaceResolver workspaces;
+    internal string StageCleanupMetadataDirectory => workspaces.StageCleanupMetadataDirectory;
 
     public ArtifactWorkspaceMaintenance(BakabaseDbContext db, IArtifactOperationStore store,
         FileProcessingPlanExecutor plans, RecursiveArchiveExecutor recursive, AppService app, FileProcessingWorkspaceResolver? workspaces = null)

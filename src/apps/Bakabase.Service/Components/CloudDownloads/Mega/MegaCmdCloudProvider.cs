@@ -41,12 +41,21 @@ public sealed class MegaCmdCloudProvider(AppService app, MegaCmdService dependen
             // Other systems retain dependency/manual-install information until equally isolated.
             if (!OperatingSystem.IsLinux()) return new(false, "MEGA_ISOLATED_RUNTIME_REQUIRED");
             MegaCmdProfile.Ensure(NativeProfile, Profile, false);
-            if (File.Exists(Path.Combine(Root, "uncertain-server.json"))) return new(false, "MEGA_SERVER_REVIEW_REQUIRED");
+            if (NeedsServerReview(_gate, Path.Combine(Root, "uncertain-server.json"))) return new(false, "MEGA_SERVER_REVIEW_REQUIRED");
             ValidateProxy(ResolveProxy());
             return new(true);
         }
         catch (OperationCanceledException) { throw; }
         catch (Exception e) { return new(false, e.Message is "MEGA_PROFILE_CONFLICT" or "MEGA_PROXY_UNSUPPORTED" ? e.Message : "MEGA_DEPENDENCY_REQUIRED"); }
+    }
+
+    internal static bool NeedsServerReview(SemaphoreSlim gate, string markerPath)
+    {
+        // A running managed transfer writes this marker before issuing get. A second
+        // transfer can queue behind its owner and will recheck the marker under the lock.
+        if (!gate.Wait(0)) return false;
+        try { return File.Exists(markerPath); }
+        finally { gate.Release(); }
     }
 
     private sealed record LocalFile(string Path, long Size, string Sha256);

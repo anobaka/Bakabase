@@ -188,11 +188,11 @@ public sealed partial class PublishedArtifactAncestorCleanupTests
     [DataTestMethod]
     [DataRow(false)]
     [DataRow(true)]
-    public async Task Stage_root_deletion_requires_acceptance_and_skip_content_checks(bool accepted)
+    public async Task Explicit_final_scope_can_use_a_private_delivery_root_without_skipping_checks(bool accepted)
     {
         var f = await StageDeletion();
         var preview = await f.Service.PreviewAsync(new([f.Task.Id], false, accepted, false, DeleteDeliveredFiles: true));
-        Assert.IsTrue(preview.Rows.Single().Cleanup!.Groups.All(g => !g.ArtifactId.StartsWith("stage-directory:", StringComparison.Ordinal)));
+        Assert.AreEqual(!accepted, preview.Rows.Single().Cleanup!.Groups.Any(g => g.ArtifactId.StartsWith("stage-directory:", StringComparison.Ordinal)));
         Assert.IsTrue(Directory.Exists(f.Download));
         Assert.IsTrue(Directory.Exists(f.Processing));
         Assert.IsTrue(f.Publication.Files.All(File.Exists));

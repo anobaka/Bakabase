@@ -27,14 +27,11 @@ function matchesScope(
   options: AcquisitionDeletionOptions,
 ) {
   const returnedIds = new Set(preview.rows.map((row) => row.taskId));
+  if (!preview.previewId || preview.rows.length !== ids.length || returnedIds.size !== ids.length ||
+      !ids.every(id => returnedIds.has(id))) return false;
   return (
-    !!preview.previewId &&
-    preview.rows.length === ids.length &&
-    returnedIds.size === ids.length &&
-    ids.every((id) => returnedIds.has(id)) &&
     !!preview.retryRetainedFiles === !!options.retryRetainedFiles &&
     !!preview.cleanupFiles === !!options.cleanupFiles &&
-    !!preview.acceptDeliveredFiles === !!options.acceptDeliveredFiles &&
     !!preview.skipFileVerification === !!options.skipFileVerification &&
     !!preview.deleteDeliveredFiles === !!options.deleteDeliveredFiles
   );
@@ -81,12 +78,12 @@ export default function DeleteAcquisitionTasksModal({
   const [inventory, setInventory] = useState<AcquisitionDeletionPreview>();
   const [inventoryLoading, setInventoryLoading] = useState(false);
   const [inventoryFailed, setInventoryFailed] = useState(false);
-  const [reviewedOptionsChanged, setReviewedOptionsChanged] = useState(false);
+  const [inventoryError, setInventoryError] = useState<string>();
   const [confirmation, setConfirmation] = useState<Confirmation>();
   const [result, setResult] = useState<AcquisitionDeletionResult>();
   const [retainedReview, setRetainedReview] = useState<{ taskIds: number[]; options: AcquisitionDeletionOptions } | undefined>(
     () => retryRetainedFiles ? { taskIds: captured.current, options: {
-      cleanupFiles: true, retryRetainedFiles: true, acceptDeliveredFiles: false, skipFileVerification: false,
+      cleanupFiles: true, retryRetainedFiles: true, skipFileVerification: false,
     } } : undefined,
   );
 
@@ -98,17 +95,9 @@ export default function DeleteAcquisitionTasksModal({
   const cleanupAllowed = captured.current.length > 0 && captured.current.length <= 100;
   const [cleanupFiles, setCleanupFiles] = useState(cleanupAllowed);
   const [deleteDeliveredFiles, setDeleteDeliveredFiles] = useState(false);
-  const [acceptDeliveredFiles, setAcceptDeliveredFiles] = useState(false);
   const [skipFileVerification, setSkipFileVerification] = useState(true);
   const [removeTaskIfCleanupFails, setRemoveTaskIfCleanupFails] = useState(true);
-  // Inspect the inventory for the selected mode. In skip mode, the final button asks the
-  // user to accept delivered files before these options may be submitted for deletion.
-  const fileOptions = {
-    cleanupFiles,
-    ...(deleteDeliveredFiles ? { deleteDeliveredFiles: true } : {}),
-    acceptDeliveredFiles: skipFileVerification || acceptDeliveredFiles,
-    skipFileVerification,
-  };
+  const fileOptions: AcquisitionDeletionOptions = { cleanupFiles, deleteDeliveredFiles, skipFileVerification };
   const [progress, setProgress] = useState<AcquisitionDeletionProgress>();
   const [progressUnavailable, setProgressUnavailable] = useState(false);
   const backButton = useRef<HTMLButtonElement>(null);
@@ -137,6 +126,7 @@ export default function DeleteAcquisitionTasksModal({
     setInventory(undefined);
     setInventoryLoading(false);
     setInventoryFailed(false);
+    setInventoryError(undefined);
   }, [cancelPreparation]);
 
   const load = useCallback(async () => {
@@ -146,7 +136,6 @@ export default function DeleteAcquisitionTasksModal({
     scopeRequest.current = controller;
     inventoryCache.current.clear();
     resetInventory();
-    setReviewedOptionsChanged(false);
     setScope(undefined);
     setConfirmation(undefined);
     setLoading(true);
@@ -189,16 +178,16 @@ export default function DeleteAcquisitionTasksModal({
     // Keep a previously reviewed file scope while refreshing it (including if refresh fails).
     inventoryRequest.current?.abort();
     setInventoryFailed(false);
+    setInventoryError(undefined);
     const controller = new AbortController();
     inventoryRequest.current = controller;
     const cacheKey = JSON.stringify([ids, !!options.cleanupFiles, !!options.deleteDeliveredFiles,
-      !!options.acceptDeliveredFiles, !!options.skipFileVerification, !!options.retryRetainedFiles]);
+      !!options.skipFileVerification, !!options.retryRetainedFiles]);
     const existing = inventory ?? scope;
     const cached = allowCached ? (matchesScope(existing, ids, options) ? existing : inventoryCache.current.get(cacheKey)) : undefined;
     if (cached && !attempted.current.has(cached.previewId) && millisecondsUntil(cached.expiresAt) > 0 &&
       matchesScope(cached, ids, options)) {
       setInventory(cached);
-      setReviewedOptionsChanged(false);
       setInventoryLoading(false);
       setNow(Date.now());
       setPage(1);
@@ -217,12 +206,15 @@ export default function DeleteAcquisitionTasksModal({
       if (inventoryCache.current.size >= 8) inventoryCache.current.clear();
       inventoryCache.current.set(cacheKey, next);
       setInventory(next);
-      setReviewedOptionsChanged(false);
       setNow(Date.now());
       setPage(1);
       return next;
-    } catch {
-      if (!controller.signal.aborted) setInventoryFailed(true);
+    } catch (cause) {
+      if (!controller.signal.aborted) {
+        setInventoryFailed(true);
+        const code = extractErrorMessage(cause);
+        setInventoryError(deletionReasonCodes.has(code) ? code : undefined);
+      }
     } finally {
       if (!controller.signal.aborted) setInventoryLoading(false);
     }
@@ -230,7 +222,6 @@ export default function DeleteAcquisitionTasksModal({
   // Checkboxes only change local choices. A final-file inventory is prepared once
   // when advancing to confirmation, not on every option change.
   const changeFileOptions = () => {
-    if (inventory) setReviewedOptionsChanged(true);
     resetInventory();
   };
   const changeRetainedOptions = (options: AcquisitionDeletionOptions) => {
@@ -246,10 +237,13 @@ export default function DeleteAcquisitionTasksModal({
   const eligible = (row: AcquisitionDeletionPreview["rows"][number]) =>
     recordEligible(row, !retainedReview && (cleanupFiles || deleteDeliveredFiles) && removeTaskIfCleanupFails);
   const eligibleRows = rows.filter(eligible);
+  const stoppingIds = confirmation?.preview.rows
+    .filter(row => row.willStopExecution && confirmation.taskIds.includes(row.taskId)).map(row => row.taskId) ?? [];
+
   const selectionReady =
     !!preview &&
     !preparing &&
-    !(inventoryLoading && (!skipFileVerification || retainedReview)) &&
+    !inventoryLoading &&
     !loading &&
     !error &&
     !expired &&
@@ -314,11 +308,8 @@ export default function DeleteAcquisitionTasksModal({
     reviewPending.current = true;
     const options = retainedReview?.options ?? (cleanupFiles || deleteDeliveredFiles ? { ...fileOptions, removeTaskIfCleanupFails } : {});
     try {
-      // Skipped file verification confirms the fixed task scope and explicit deletion
-      // choices immediately. Build its authorized file plan once, during execution.
-      let selected = options.skipFileVerification && !retainedReview && scope &&
-        !matchesScope(preview, captured.current, options) ? scope : preview;
-      if ((options.deleteDeliveredFiles && !options.skipFileVerification) || retainedReview) {
+      let selected = preview;
+      if (options.cleanupFiles || options.deleteDeliveredFiles) {
         setPreparing(true);
         const prepared = await inspectFiles(true);
         if (!prepared) return;
@@ -328,8 +319,6 @@ export default function DeleteAcquisitionTasksModal({
       if (millisecondsUntil(selected.expiresAt) <= 0) { setNow(Date.now()); return; }
       const ready = selected.rows.filter(row => recordEligible(row, !retainedReview && !!options.removeTaskIfCleanupFails));
       if (ready.length === 0) return;
-      // A reviewed inventory stays exact; a task-only token binds the task versions
-      // and the explicit final confirmation supplies the file-deletion choices.
       inventoryRequest.current?.abort();
       setInventoryLoading(false);
       setConfirmation({
@@ -362,7 +351,7 @@ export default function DeleteAcquisitionTasksModal({
     try {
       const next = await acquisitionDeletionApi.remove(
         confirmation.preview.previewId,
-        confirmation.options,
+        confirmation.options.removeTaskIfCleanupFails === undefined ? {} : { removeTaskIfCleanupFails: confirmation.options.removeTaskIfCleanupFails },
       );
       if (mounted.current) setResult(next);
     } catch (cause) {
@@ -404,7 +393,7 @@ export default function DeleteAcquisitionTasksModal({
       title={t(
         retainedReview ? "acquisition.delete.retained.title" : confirmation && !submitting ? "acquisition.delete.final.title" : "acquisition.delete.title",
       )}
-      size={confirmation && !confirmation.options.deleteDeliveredFiles && !retainedReview ? "lg" : "4xl"}
+      size="4xl"
       classNames={{ body: "min-w-0" }}
       onClose={close}
       onDestroyed={onDestroyed}
@@ -421,11 +410,7 @@ export default function DeleteAcquisitionTasksModal({
               isDisabled={expired}
               onPress={() => void remove()}
             >
-              {t(
-                retainedReview ? "acquisition.delete.retained.confirm" : confirmation.options.skipFileVerification && !confirmation.options.deleteDeliveredFiles
-                  ? "acquisition.delete.final.acceptAndSubmit"
-                  : "acquisition.delete.final.submit",
-              )}
+              {t(retainedReview ? "acquisition.delete.retained.confirm" : "acquisition.delete.final.submit")}
             </Button>
             <Button
               key="back"
@@ -499,57 +484,39 @@ export default function DeleteAcquisitionTasksModal({
           <p className="max-h-16 overflow-auto break-words text-xs text-default-500">
             {confirmation.taskIds.map((id) => `#${id}`).join(", ")}
           </p>
-          <p>
-            {t(
-              !confirmation.options.cleanupFiles && !confirmation.options.deleteDeliveredFiles
-                ? "acquisition.delete.final.taskOnly"
-                : confirmation.preview.cleanupFiles || confirmation.preview.deleteDeliveredFiles
-                  ? "acquisition.delete.final.boundInventory"
-                  : reviewedOptionsChanged
-                    ? "acquisition.delete.final.updatedInventory"
-                    : "acquisition.delete.final.serverInventory",
-            )}
-          </p>
-          {confirmation.options.deleteDeliveredFiles && <p role="alert" className="font-medium text-danger">
-            {t(confirmation.preview.deleteDeliveredFiles ? "acquisition.delete.delivered.confirmation" : "acquisition.delete.delivered.confirmationUnlisted", {
-              count: confirmation.preview.rows.filter(row => confirmation.taskIds.includes(row.taskId)).reduce((total, row) => total + (row.cleanup?.groups
-                .filter(group => group.kind === "publishedFiles" && group.eligible)
-                .reduce((sum, group) => sum + group.fileCount, 0) ?? 0), 0),
-              size: bytesToSize(confirmation.preview.rows.filter(row => confirmation.taskIds.includes(row.taskId)).reduce((total, row) => total + (row.cleanup?.groups
-                .filter(group => group.kind === "publishedFiles" && group.eligible)
-                .reduce((sum, group) => sum + group.bytes, 0) ?? 0), 0)),
-            })}
-          </p>}
-          {(confirmation.preview.deleteDeliveredFiles || retainedReview) && <div className="max-h-80 min-w-0 overflow-y-auto space-y-3">
-            {confirmation.preview.rows.filter(row => confirmation.taskIds.includes(row.taskId)).map(row =>
-              <section key={row.taskId} className="min-w-0 rounded-lg border border-default-200 p-2">
-                <p className="text-sm font-medium [overflow-wrap:anywhere]">#{row.taskId} {row.title}</p>
+          <p>{t(confirmation.options.cleanupFiles || confirmation.options.deleteDeliveredFiles
+            ? "acquisition.delete.final.boundInventory" : "acquisition.delete.final.taskOnly")}</p>
+          {stoppingIds.length > 0 &&
+            <p role="alert" className="text-warning-700">{t("acquisition.delete.stopOnConfirm", {
+              ids: stoppingIds.map(id => `#${id}`).join(", "),
+            })}</p>}
+          {(confirmation.options.cleanupFiles || confirmation.options.deleteDeliveredFiles) && <>
+            {(!stoppingIds.length || !!confirmation.preview.cleanupFileCount) && <p className="text-sm">{t("acquisition.delete.cleanup.total", {
+              count: confirmation.preview.cleanupFileCount ?? 0, size: bytesToSize(confirmation.preview.cleanupBytes ?? 0),
+            })}</p>}
+            {confirmation.preview.cleanupSizeIncomplete &&
+              <p className="text-xs text-warning-600">{t("acquisition.delete.cleanup.incompleteSize")}</p>}
+            {confirmation.options.deleteDeliveredFiles && <p role="alert" className="font-medium text-danger">
+              {t(stoppingIds.length ? "acquisition.delete.delivered.afterStop" : "acquisition.delete.delivered.confirmation", {
+                count: confirmation.preview.rows.filter(row => confirmation.taskIds.includes(row.taskId))
+                  .flatMap(row => row.cleanup?.groups ?? []).filter(group => group.kind === "publishedFiles" && group.eligible)
+                  .reduce((sum, group) => sum + group.fileCount, 0),
+                size: bytesToSize(confirmation.preview.rows.filter(row => confirmation.taskIds.includes(row.taskId))
+                  .flatMap(row => row.cleanup?.groups ?? []).filter(group => group.kind === "publishedFiles" && group.eligible)
+                  .reduce((sum, group) => sum + group.bytes, 0)),
+              })}
+            </p>}
+            <div className="max-h-80 min-w-0 overflow-y-auto space-y-2">
+              {confirmation.preview.rows.map(row => <section key={row.taskId} className="min-w-0 rounded-lg border border-default-200 p-2">
+                <p className="font-medium [overflow-wrap:anywhere]">#{row.taskId} {row.title}</p>
+                {row.reasonCode && <p className="text-xs text-warning-600">{reason(row.reasonCode)}</p>}
                 {row.cleanup && <AcquisitionDeletionCleanupSummary cleanup={row.cleanup} reason={reason} />}
               </section>)}
-          </div>}
-          {(confirmation.options.cleanupFiles || confirmation.options.deleteDeliveredFiles) && (
-            <ul className="list-disc space-y-1 pl-5">
-              <li>
-                {t(
-                  confirmation.options.deleteDeliveredFiles
-                    ? (confirmation.options.skipFileVerification ? "acquisition.delete.delivered.skip" : "acquisition.delete.delivered.verify")
-                    : confirmation.options.skipFileVerification
-                    ? "acquisition.delete.final.skip"
-                    : confirmation.options.acceptDeliveredFiles
-                      ? "acquisition.delete.final.verifyAccepted"
-                      : "acquisition.delete.final.verify",
-                )}
-              </li>
-              <li>
-                {t(
-                  retainedReview ? (confirmation.options.deleteDeliveredFiles
-                    ? "acquisition.delete.retained.preserveHistory" : "acquisition.delete.retained.preserve") : confirmation.options.removeTaskIfCleanupFails
-                    ? "acquisition.delete.final.removeOnFailure"
-                    : "acquisition.delete.final.keepOnFailure",
-                )}
-              </li>
-            </ul>
-          )}
+            </div>
+            <p className="text-xs text-default-500">{t(retainedReview ? "acquisition.delete.retained.preserveHistory" :
+              confirmation.options.removeTaskIfCleanupFails ? "acquisition.delete.final.removeOnFailure" :
+                "acquisition.delete.final.keepOnFailure")}</p>
+          </>}
           {expired && (
             <p role="alert" className="text-warning-600">
               {t("acquisition.delete.expired")}
@@ -666,17 +633,10 @@ export default function DeleteAcquisitionTasksModal({
                 <p className="text-xs text-default-500">{t("acquisition.delete.delivered.hint")}</p>
               </div>
               <p className="text-xs text-default-500">{t("acquisition.delete.retained.scopeRequired")}</p>
-              <Checkbox size="sm" isSelected={!!retainedReview.options.acceptDeliveredFiles}
-                onValueChange={accepted => changeRetainedOptions({ acceptDeliveredFiles: accepted, skipFileVerification: accepted })}>
-                {t(retainedReview.options.deleteDeliveredFiles
-                  ? "acquisition.delete.delivered.accepted" : "acquisition.delete.cleanup.accepted")}
+              <Checkbox size="sm" color="warning" isSelected={!!retainedReview.options.skipFileVerification}
+                onValueChange={skipFileVerification => changeRetainedOptions({skipFileVerification})}>
+                {t("acquisition.delete.cleanup.skipVerification")}
               </Checkbox>
-              {retainedReview.options.acceptDeliveredFiles && (
-                <Checkbox size="sm" color="warning" isSelected={!!retainedReview.options.skipFileVerification}
-                  onValueChange={skip => changeRetainedOptions({ skipFileVerification: skip })}>
-                  {t("acquisition.delete.cleanup.skipVerification")}
-                </Checkbox>
-              )}
             </div>
           )}
           {!retainedReview && <div className="space-y-2">
@@ -688,7 +648,6 @@ export default function DeleteAcquisitionTasksModal({
                 changeFileOptions();
                 setPage(1);
                 setCleanupFiles(checked);
-                if (!checked && !deleteDeliveredFiles) setAcceptDeliveredFiles(false);
               }}
             >
               {t("acquisition.delete.cleanup.option")}
@@ -697,7 +656,6 @@ export default function DeleteAcquisitionTasksModal({
               <Checkbox size="sm" color="danger" isSelected={deleteDeliveredFiles} isDisabled={!cleanupAllowed}
                 onValueChange={(checked) => {
                   changeFileOptions(); setPage(1); setDeleteDeliveredFiles(checked);
-                  if (!checked && !cleanupFiles) setAcceptDeliveredFiles(false);
                 }}>
                 {t("acquisition.delete.delivered.option")}
               </Checkbox>
@@ -724,18 +682,6 @@ export default function DeleteAcquisitionTasksModal({
                     {t("acquisition.delete.cleanup.skipVerificationHint")}
                   </p>
                 </div>
-                {!skipFileVerification && (
-                  <Checkbox
-                    size="sm"
-                    isSelected={acceptDeliveredFiles}
-                    onValueChange={(checked) => {
-                      changeFileOptions();
-                      setAcceptDeliveredFiles(checked);
-                    }}
-                  >
-                    {t("acquisition.delete.cleanup.accepted")}
-                  </Checkbox>
-                )}
                 <Checkbox
                   size="sm"
                   color="warning"
@@ -758,7 +704,7 @@ export default function DeleteAcquisitionTasksModal({
                 </p>}
                 {inventoryFailed && (
                   <p className="text-xs text-warning-600" role="alert">
-                    {t("acquisition.delete.cleanup.inventoryFailed")}
+                    {inventoryError ? reason(inventoryError) : t("acquisition.delete.cleanup.inventoryFailed")}
                   </p>
                 )}
               </div>
@@ -771,7 +717,7 @@ export default function DeleteAcquisitionTasksModal({
             {t(retainedReview.options.skipFileVerification ? "acquisition.delete.cleanup.listingSkip" : "acquisition.delete.cleanup.listing")}
           </p>}
           {retainedReview && inventoryFailed && <p role="alert" className="text-xs text-warning-600">
-            {t("acquisition.delete.cleanup.inventoryFailed")}
+            {inventoryError ? reason(inventoryError) : t("acquisition.delete.cleanup.inventoryFailed")}
           </p>}
           {scopeLabel && <p className="break-words text-xs text-default-500">{scopeLabel}</p>}
           {error && (
@@ -854,6 +800,9 @@ export default function DeleteAcquisitionTasksModal({
                     >
                       {!retainedOptionsChanged && (eligible(row) ? t(retainedReview ? "acquisition.delete.retained.ready" : "acquisition.delete.rowEligible") : reason(row.reasonCode))}
                     </span>
+                    {row.willStopExecution && <p className="w-full text-xs text-warning-700">
+                      {t("acquisition.delete.stopOnConfirm", { ids: `#${row.taskId}` })}
+                    </p>}
                     {row.cleanup && !retainedOptionsChanged && (
                       <AcquisitionDeletionCleanupSummary cleanup={row.cleanup} reason={reason} />
                     )}

@@ -21,9 +21,8 @@ internal sealed record FileProcessingMovedInput(string InputRelativePath, string
 
 public sealed partial class FileProcessingPlanExecutor
 {
-    internal static async Task<FileProcessingCheckpointInput?> ReadPinnedInputAsync(string checkpointRoot,
-        FileProcessingPlan plan, ArtifactRecord input, ArtifactRecord previous, string previousStep,
-        Func<string, string>? identityPath, CancellationToken ct)
+    internal static string CheckpointInputDirectory(string checkpointRoot, FileProcessingPlan plan, ArtifactRecord input,
+        Func<string, string>? identityPath)
     {
         var files = input.Files.OrderBy(p => p, FileProcessingFiles.PathComparer).ToArray();
         var identity = CheckpointIdentity(plan, files, identityPath);
@@ -32,7 +31,14 @@ public sealed partial class FileProcessingPlanExecutor
         if (directories.Length > 0)
             identity = ArtifactManifestFiles.Hash(identity + "\ndirectories-v1\n" + JsonSerializer.Serialize(
                 directories.Select(p => Path.GetRelativePath(input.RootDirectory, p).Replace('\\', '/')).ToArray()));
-        var directory = Path.Combine(checkpointRoot, identity);
+        return Path.Combine(checkpointRoot, identity);
+    }
+
+    internal static async Task<FileProcessingCheckpointInput?> ReadPinnedInputAsync(string checkpointRoot,
+        FileProcessingPlan plan, ArtifactRecord input, ArtifactRecord previous, string previousStep,
+        Func<string, string>? identityPath, CancellationToken ct)
+    {
+        var directory = CheckpointInputDirectory(checkpointRoot, plan, input, identityPath);
         var state = await ReadPinnedStateAsync(directory, ct);
         // Old states do not acquire new trust from current files or instructions.
         if (state.LineageVersion != 1 || state.InputManifest == null ||

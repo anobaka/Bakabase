@@ -48,12 +48,12 @@ public static class FileArtifactDeliveryLayout
             // Compare complete subtree membership without an O(files²) evidence search.
             generatedCandidates.AddRange(measured.Keys.Where(p => actual[p] > 0 && actual[p] == measured[p]));
         }
-        var generated = policy?.RemoveGeneratedDirectories == true ? generatedCandidates : [];
-        var generatedSet = generated.ToHashSet(StringComparer.Ordinal);
-        string Project(string path) => RemoveAncestors(path, generatedSet);
+        var generated = policy?.RemoveGeneratedDirectories == true
+            ? generatedCandidates.ToHashSet(StringComparer.Ordinal) : new HashSet<string>(StringComparer.Ordinal);
+        ResolveWrapperCollisions(files, directories, generated);
+        string Project(string path) => generated.Count == 0 ? path : RemoveAncestors(path, generated);
         var projectedFiles = files.Select(Project).ToArray();
         var projectedDirectories = directories.Select(Project).ToArray();
-        ValidatePaths(projectedFiles, projectedDirectories.Where(p => p.Length > 0), policy != null);
         string? singleRoot = null;
         if (policy?.CollapseSingleRootDirectory == true && projectedFiles.Length > 0 && projectedFiles.All(p => p.Contains('/')))
         {
@@ -99,23 +99,114 @@ public static class FileArtifactDeliveryLayout
     private static bool Safe(string path) => !string.IsNullOrWhiteSpace(path) && !path.Contains('\\') &&
         !path.Contains(':') && !path.Any(char.IsControl) && path.Split('/').All(p => p is not ("" or "." or ".."));
 
-    private static void ValidatePaths(IEnumerable<string> files, IEnumerable<string> directories, bool portable = true)
+    private static void ResolveWrapperCollisions(string[] files, string[] directories, HashSet<string> generated)
     {
-        var entries = files.ToArray(); var folders = directories.ToArray();
-        string Key(string value) => portable ? value.Normalize(NormalizationForm.FormC).ToUpperInvariant() : value;
-        if (entries.Concat(folders).Any(p => !Safe(p)) || folders.Select(Key).Distinct().Count() != folders.Length)
-            throw new InvalidDataException("Delivery projection contains unsafe or colliding paths.");
-        var nodes = new Dictionary<string, (string Path, bool File)>(StringComparer.Ordinal);
-        foreach (var (path, directory) in entries.Select(p => (p, false)).Concat(folders.Select(p => (p, true))))
+        if (generated.Count == 0) return;
+        string Project(string path) => generated.Count == 0 ? path : RemoveAncestors(path, generated);
+        var sources = files.Concat(directories).ToArray();
+        // Keep the smallest separating wrapper when, for example, two archives each
+        // contain a file called cover.png. The source namespace was validated above.
+        // Common wrappers cannot separate the two paths and can still be removed.
+        var retained = new Dictionary<string, Conflict>(StringComparer.Ordinal);
+        while (generated.Count > 0)
         {
+            var separators = new Dictionary<string, Conflict>(StringComparer.Ordinal);
+            foreach (var conflict in FindConflicts(sources.Select(Project), files.Length, true))
+            {
+                var left = sources[conflict.First];
+                var right = sources[conflict.Second];
+                var wrapper = SeparatingWrapper(right, left, conflict.Path, generated) ??
+                              SeparatingWrapper(left, right, conflict.Path, generated);
+                if (wrapper == null) throw conflict.Error(sources);
+                separators.TryAdd(wrapper, conflict);
+            }
+            if (separators.Count == 0) break;
+            foreach (var (wrapper, witness) in separators)
+            {
+                generated.Remove(wrapper);
+                retained.Add(wrapper, witness);
+            }
+        }
+        // Restoring a later ancestor can make an earlier separator unnecessary.
+        var dropped = true;
+        while (dropped)
+        {
+            dropped = false;
+            foreach (var (wrapper, witness) in retained)
+            {
+                if (!generated.Add(wrapper)) continue;
+                var witnessFiles = (witness.First < files.Length ? 1 : 0) + (witness.Second < files.Length ? 1 : 0);
+                if (FindConflicts([Project(sources[witness.First]), Project(sources[witness.Second])], witnessFiles, true).Any() ||
+                    FindConflicts(sources.Select(Project), files.Length, true).Any())
+                    generated.Remove(wrapper);
+                else dropped = true;
+            }
+        }
+    }
+
+    private static string? SeparatingWrapper(string source, string other, string target,
+        IReadOnlySet<string> generated)
+    {
+        var depth = target.Count(c => c == '/') + 1;
+        var visible = 0;
+        string? wrapper = null;
+        var prefix = "";
+        foreach (var part in source.Split('/'))
+        {
+            prefix = prefix.Length == 0 ? part : prefix + "/" + part;
+            if (generated.Contains(prefix))
+            {
+                if (visible < depth && !Within(other, prefix, true)) wrapper = prefix;
+            }
+            else if (++visible == depth) break;
+        }
+        // An explicitly recorded empty directory may itself be the removed layer.
+        if (visible == depth && generated.Contains(source) && !Within(other, source, true) &&
+            RemoveAncestors(source, generated).Count(c => c == '/') + 1 == depth) return source;
+        return wrapper;
+    }
+
+    private sealed record Conflict(int First, int Second, string Path)
+    {
+        public InvalidDataException Error(string[] sources) => new(
+            $"Delivery projection conflicts at '{Path}' for '{sources[First]}' and '{sources[Second]}'.");
+    }
+
+    private static void ValidatePaths(IEnumerable<string> files, IEnumerable<string> directories, bool portable)
+    {
+        var entries = files.ToArray();
+        var paths = entries.Concat(directories).ToArray();
+        if (paths.Any(p => !Safe(p))) throw new InvalidDataException("Delivery projection contains an unsafe path.");
+        if (FindConflicts(paths, entries.Length, portable).FirstOrDefault() is { } conflict) throw conflict.Error(paths);
+    }
+
+    private static IEnumerable<Conflict> FindConflicts(IEnumerable<string> paths, int fileCount, bool portable)
+    {
+        string Key(string value) => portable ? value.Normalize(NormalizationForm.FormC).ToUpperInvariant() : value;
+        var nodes = new Dictionary<string, (string Path, bool File, bool ExplicitDirectory, int Index)>(StringComparer.Ordinal);
+        var index = -1;
+        foreach (var path in paths)
+        {
+            index++;
+            if (path.Length == 0) continue; // a generated empty directory projected onto the delivery root
             var parts = path.Split('/');
+            var candidate = "";
             for (var count = 1; count <= parts.Length; count++)
             {
-                var candidate = string.Join('/', parts.Take(count)); var key = Key(candidate);
-                var file = !directory && count == parts.Length;
-                if (nodes.TryGetValue(key, out var prior) && (file || prior.File || prior.Path != candidate))
-                    throw new InvalidDataException("Delivery projection conflicts with a file or directory.");
-                nodes[key] = (candidate, file);
+                candidate = count == 1 ? parts[0] : candidate + "/" + parts[count - 1];
+                var key = Key(candidate);
+                var file = index < fileCount && count == parts.Length;
+                var explicitDirectory = index >= fileCount && count == parts.Length;
+                if (nodes.TryGetValue(key, out var prior))
+                {
+                    if (file || prior.File || prior.Path != candidate || explicitDirectory && prior.ExplicitDirectory)
+                    {
+                        yield return new(prior.Index, index, candidate);
+                        break;
+                    }
+                    if (!explicitDirectory) continue;
+                }
+                nodes[key] = (candidate, file, explicitDirectory, index);
             }
         }
     }

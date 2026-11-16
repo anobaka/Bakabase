@@ -33,7 +33,7 @@ internal sealed class ArtifactWorkspaceCleanupJournal(string appData)
         CheckpointBoundary? checkpoint = null;
         if (checkpointDirectory != null)
         {
-            if (consent?.DeliveryAccepted != true || files.Keys.Any(path => !FileProcessingPlanExecutor.IsInside(checkpointDirectory, path)))
+            if (!MayReleaseCheckpoint(consent, relatedArtifactId) || files.Keys.Any(path => !FileProcessingPlanExecutor.IsInside(checkpointDirectory, path)))
                 throw new InvalidDataException("The accepted cleanup files must belong to their retained checkpoint.");
             checkpoint = await CaptureCheckpointAsync(checkpointDirectory, ct);
         }
@@ -67,7 +67,7 @@ internal sealed class ArtifactWorkspaceCleanupJournal(string appData)
         if (receipt.CleanupCheckpoint is { } checkpoint)
         {
             boundary = Decode(checkpoint.Directory);
-            if (receipt.Consent?.DeliveryAccepted != true || await CaptureCheckpointAsync(boundary, ct) != checkpoint)
+            if (!MayReleaseCheckpoint(receipt.Consent, receipt.RelatedArtifactId) || await CaptureCheckpointAsync(boundary, ct) != checkpoint)
                 throw new IOException("The retained cleanup checkpoint changed or became unavailable.");
         }
         else
@@ -82,6 +82,10 @@ internal sealed class ArtifactWorkspaceCleanupJournal(string appData)
         await Save(updated, ct);
         return updated;
     }
+
+    private static bool MayReleaseCheckpoint(ArtifactDeliveryCleanupConsent? consent, string? relatedArtifactId) =>
+        consent?.DeliveryAccepted == true || (consent?.AbandonUnfinishedFiles == true || consent?.WholeTaskFiles == true) &&
+        relatedArtifactId?.StartsWith("operation:", StringComparison.Ordinal) == true;
 
     private async Task<CheckpointBoundary> CaptureCheckpointAsync(string directory, CancellationToken ct)
     {

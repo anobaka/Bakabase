@@ -9,6 +9,24 @@ namespace Bakabase.Tests;
 public sealed class MegaCmdProviderTests
 {
     [TestMethod]
+    public void Managed_transfer_can_queue_another_download_but_an_abandoned_server_still_needs_review()
+    {
+        var marker = Path.GetTempFileName();
+        using var gate = new SemaphoreSlim(1, 1);
+        try
+        {
+            gate.Wait();
+            Assert.IsFalse(MegaCmdCloudProvider.NeedsServerReview(gate, marker));
+            gate.Release();
+            Assert.IsTrue(MegaCmdCloudProvider.NeedsServerReview(gate, marker));
+            File.Delete(marker);
+            Assert.IsFalse(MegaCmdCloudProvider.NeedsServerReview(gate, marker));
+            Assert.AreEqual(1, gate.CurrentCount);
+        }
+        finally { File.Delete(marker); }
+    }
+
+    [TestMethod]
     public void Public_share_requires_complete_decryption_key_and_rejects_ambiguous_or_foreign_locators()
     {
         var key = new string('a', 43);

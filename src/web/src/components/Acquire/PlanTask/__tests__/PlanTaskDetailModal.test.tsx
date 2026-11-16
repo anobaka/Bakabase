@@ -690,6 +690,23 @@ it("allows execution to reach a later nonblocking processing confirmation", asyn
   await waitFor(() => expect(mocks.run).toHaveBeenCalledExactlyOnceWith(42, 3));
 });
 
+it("allows a blocked prepared plan to be checked again before its first run", async () => {
+  const prepared = { ...detail, task: { ...detail.task, phase: "attention", builderId: "prepared" },
+    plan: { parts: [{ id: "part", sources: [] }] },
+    steps: [{ id: "n1", kind: "download.enqueueSupported" }],
+    issues: [{ code: "SOURCE_UNSUPPORTED", blocking: true }],
+  };
+  mocks.get.mockResolvedValue(prepared);
+  mocks.preflight.mockResolvedValue({ ...prepared, task: { ...prepared.task, phase: "ready" }, issues: [] });
+  render(<PlanTaskDetailModal taskId={42} />);
+  const check = await screen.findByRole("button", { name: "acquisition.plan.preflight" });
+  expect(screen.queryByRole("button", { name: "acquisition.plan.run" })).toBeNull();
+  fireEvent.click(check);
+  expect(await screen.findByRole("button", { name: "acquisition.plan.run" })).toBeEnabled();
+  expect(mocks.preflight).toHaveBeenCalledWith(42);
+  expect(mocks.run).not.toHaveBeenCalled();
+});
+
 it("does not execute a ready plan with a blocking prerequisite", async () => {
   mocks.get.mockResolvedValue({
     ...detail,
@@ -1527,7 +1544,27 @@ it("resumes a complete saved space checkpoint by default and offers explicit rea
   expect(mocks.applyProcessingRevision).not.toHaveBeenCalled();
 });
 
-it.each(["ExtractionPlanUnknown", "PasswordUnknown", "FutureProcessingWait"])("defaults readable current files to the AI-capable processing form for %s without an old action allowlist", async reason => {
+it.each(["acquisition.plan.process", "fs.assessDelivery"])("answers the current password wait in place before offering a new file attempt on %s", async kind => {
+  mocks.get.mockResolvedValue({ ...detail, task: { ...detail.task, workflowRunId: 77, phase: "attention", currentStepIndex: 1,
+    status: AcquisitionStatus.Waiting, waitPromptJson: JSON.stringify({ targetId: "part", reason: "PasswordUnknown",
+      canEditPlan: false, allowedActions: [], allowedArchivePolicies: ["instructions", "keep"] }),
+  }, plan: { parts: [{ id: "part", sources: [] }] },
+    replanArtifacts: [{ artifactId: "current-input", partId: "part", kind: "processedFiles", canReadCurrentDirectory: true }] });
+  mocks.runtimeOverviews.mockResolvedValue([{ taskId: 42, workflowRunId: 77, currentStepIndex: 1,
+    currentNodeKind: kind, workflowStatus: "waiting", problemCode: "SOURCE_ATTENTION_REQUIRED" }]);
+  render(<PlanTaskDetailModal taskId={42} />);
+  fireEvent.click(await screen.findByRole("button", { name: "acquisition.continue.open" }));
+  const modal = within(await screen.findByRole("dialog", { name: /acquisition\.continue\.open$/ }));
+  expect(modal.getByText("inline run 77")).toBeVisible();
+  expect(modal.getByRole("radio", { name: "acquisition.continue.providePassword" })).toBeChecked();
+  expect(mocks.runContent).toHaveBeenLastCalledWith(expect.objectContaining({ runId: 77, respondInitially: true }));
+  fireEvent.click(modal.getByRole("radio", { name: "acquisition.continue.checkpoint.files" }));
+  expect(modal.getByText("completed revision 3")).toBeVisible();
+  expect(modal.queryByText("inline run 77")).toBeNull();
+  expect(mocks.run).not.toHaveBeenCalled();
+});
+
+it.each(["ExtractionPlanUnknown", "FutureProcessingWait"])("defaults readable current files to the AI-capable processing form for %s without an old action allowlist", async reason => {
   mocks.get.mockResolvedValue({ ...detail, task: { ...detail.task, workflowRunId: 77, phase: "attention",
     status: AcquisitionStatus.Waiting, waitPromptJson: JSON.stringify({ targetId: "part", reason,
       canEditPlan: true, allowedActions: [], allowedArchivePolicies: ["instructions", "keep"] }),

@@ -111,21 +111,26 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
         var directories = DeliveryDirectories(artifact, includeRegistered: removeOwnedRoot)
             .Concat(removeOwnedRoot ? currentDirectories ?? [] : []).Distinct(ArtifactManifestFiles.PathComparer)
             .Where(path => ArtifactCleanupPathReferences.StrictlyUnder(path, root)).ToArray();
-        foreach (var directory in (removeOwnedRoot ? directories.Append(root) : directories).OrderByDescending(p => p.Length))
+        RemoveConfirmedEmptyDirectories(removeOwnedRoot ? directories.Append(root) : directories, ct);
+        return !removeOwnedRoot || Path.GetDirectoryName(root) is { } parent &&
+            ArtifactCleanupAbsence.Probe(parent, root, ct) == ArtifactCleanupPathPresence.ConfirmedAbsent;
+    }
+
+    private static void RemoveConfirmedEmptyDirectories(IEnumerable<string> confirmedDirectories, CancellationToken ct)
+    {
+        foreach (var directory in confirmedDirectories.OrderByDescending(p => p.Length))
         {
             ct.ThrowIfCancellationRequested();
             ArtifactManifestFiles.RejectLinks(directory);
             try
             {
                 // Never discover or recursively delete unknown children. rmdir also
-                // refuses additions racing this observation, and never reaches Acquired.
+                // refuses additions racing this observation.
                 if (Directory.Exists(directory) && !Directory.EnumerateFileSystemEntries(directory).Any())
                     Directory.Delete(directory, recursive: false);
             }
             catch (DirectoryNotFoundException) { }
             catch (IOException) { }
         }
-        return !removeOwnedRoot || Path.GetDirectoryName(root) is { } parent &&
-            ArtifactCleanupAbsence.Probe(parent, root, ct) == ArtifactCleanupPathPresence.ConfirmedAbsent;
     }
 }

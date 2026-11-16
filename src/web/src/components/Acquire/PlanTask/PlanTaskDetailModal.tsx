@@ -412,6 +412,10 @@ export default function PlanTaskDetailModal({
   const continueCurrent = resolveWaiting && !canDiagnoseRecovery;
   const continueFiles = processingOffered && processingAvailable;
   const savedProcessingCheckpoint = hasSavedStorageProcessingCheckpoint(detail, overview);
+  const canAnswerProcessingPassword = currentRunMatches && localProcessingPrompt?.reason === "PasswordUnknown" &&
+    (task?.currentStepIndex == null || overview.currentStepIndex == null || task.currentStepIndex === overview.currentStepIndex) &&
+    ["acquisition.plan.process", "fs.assessDelivery"].includes(overview.currentNodeKind ?? "") &&
+    detail?.plan?.parts.some(part => part.id === localProcessingPrompt.targetId) === true;
   const canReviewExistingOutput = overview?.currentNodeKind === "fs.assessDelivery" &&
     localProcessingPrompt?.reason === "FILE_DELIVERY_RESULT_UNCERTAIN" &&
     localProcessingPrompt.deliveryReview === true && !!localProcessingPrompt.artifactId &&
@@ -623,28 +627,29 @@ export default function PlanTaskDetailModal({
             <Button variant="light" onPress={() => setVisible(false)}>
               {t("acquisition.plan.close")}
             </Button>
-            {editable && detail && task?.phase === "ready" && (
-              <>
-                <Button
-                  variant="flat"
-                  isLoading={busy}
-                  onPress={() => void mutate(() => planTaskApi.preflight(taskId))}
-                >
-                  {t("acquisition.plan.preflight")}
-                </Button>
-                <Button
-                  color="primary"
-                  isLoading={busy}
-                  isDisabled={
-                    detail.issues.some((issue) => issue.blocking !== false) || !detail.steps.length
-                  }
-                  onPress={() => void mutate(() => attemptRunOverride?.revision === task.planRevision
-                    ? planTaskApi.run(taskId, task.planRevision, attemptRunOverride.options.useEmergencySpaceReserve)
-                    : planTaskApi.run(taskId, task.planRevision))}
-                >
-                  {t("acquisition.plan.run")}
-                </Button>
-              </>
+            {editable && (task.phase === "ready" ||
+              (task.phase === "attention" && detail?.plan && detail.steps.length > 0)) && (
+              <Button
+                variant="flat"
+                isLoading={busy}
+                onPress={() => void mutate(() => planTaskApi.preflight(taskId))}
+              >
+                {t("acquisition.plan.preflight")}
+              </Button>
+            )}
+            {editable && detail && task.phase === "ready" && (
+              <Button
+                color="primary"
+                isLoading={busy}
+                isDisabled={
+                  detail.issues.some((issue) => issue.blocking !== false) || !detail.steps.length
+                }
+                onPress={() => void mutate(() => attemptRunOverride?.revision === task.planRevision
+                  ? planTaskApi.run(taskId, task.planRevision, attemptRunOverride.options.useEmergencySpaceReserve)
+                  : planTaskApi.run(taskId, task.planRevision))}
+              >
+                {t("acquisition.plan.run")}
+              </Button>
             )}
           </div>
         }
@@ -997,10 +1002,11 @@ export default function PlanTaskDetailModal({
           processAgain={continuation.purpose === "reprocess"}
           delivery={continuation.purpose === "delivery"}
           reviewOutput={canReviewExistingOutput}
+          passwordRequested={canAnswerProcessingPassword}
           allowModeChoice={continuation.purpose === "processing" && continuation.current && continuation.files &&
-            (canReviewExistingOutput || (!hasStageDirectoryInputs(continuation.snapshot, continuation.inputStage) &&
+            (canAnswerProcessingPassword || canReviewExistingOutput || (!hasStageDirectoryInputs(continuation.snapshot, continuation.inputStage) &&
               savedProcessingCheckpoint && hasSavedStorageProcessingCheckpoint(continuation.snapshot, overview)))}
-          preferFiles={continuation.purpose !== "delivery" && continuation.files &&
+          preferFiles={!canAnswerProcessingPassword && continuation.purpose !== "delivery" && continuation.files &&
             (hasStageDirectoryInputs(continuation.snapshot, continuation.inputStage) ||
               hasReadableCurrentDirectoryInputs(continuation.snapshot) && !savedProcessingCheckpoint)}
           current={continuation.current && (continuationStale || continueCurrent) && (

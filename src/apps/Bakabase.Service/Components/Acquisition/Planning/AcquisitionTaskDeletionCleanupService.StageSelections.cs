@@ -23,6 +23,20 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
         IReadOnlyList<string> ProtectedRoots, IReadOnlyList<string> ConfiguredRoots,
         IReadOnlyList<string> PublicationRoots, IReadOnlyList<string> DeliveryLayoutRoots);
 
+    internal async Task AuthorizeWriterDirectoriesAsync(AcquisitionTaskDbModel task, IReadOnlyList<int> owners,
+        bool cleanupIntermediates, bool deleteDeliveredFiles, Func<string, Task>? guardDirectory, CancellationToken ct)
+    {
+        if (guardDirectory == null) return;
+        if (JsonSerializer.Deserialize<AcquisitionPlan>(task.PlanJson ?? "null", JsonSerializerOptions.Web) is {} plan)
+        {
+            var selections = await StageCleanupSelectionsAsync(task, plan, owners, cleanupIntermediates, deleteDeliveredFiles, ct);
+            foreach (var selected in selections.Selected)
+                await EnsureDirectoryAuthorizedAsync(selected.Entry.Directory, guardDirectory);
+        }
+        if (deleteDeliveredFiles && !string.IsNullOrWhiteSpace(task.TargetDirectory))
+            await EnsureDirectoryAuthorizedAsync(task.TargetDirectory, guardDirectory);
+    }
+
     // An exact binding/allocation is authority; a task title, directory prefix or
     // artifact's containing folder is not. This bounded metadata discovery replaces
     // the old early return that silently forgot roots after a directory revision.

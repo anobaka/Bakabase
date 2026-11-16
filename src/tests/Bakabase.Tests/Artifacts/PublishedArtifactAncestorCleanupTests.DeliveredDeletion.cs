@@ -390,7 +390,7 @@ public sealed partial class PublishedArtifactAncestorCleanupTests
             await db.SaveChangesAsync(); db.ChangeTracker.Clear();
         }
         if (scenario == "active-consumer") Assert.IsTrue(await store.AttachConsumerAsync(f.Final.OperationId, "other-reader", TimeSpan.FromHours(1)));
-        if (scenario == "task-running") await db.AcquisitionTasks.Where(t => t.Id == f.Task.Id).ExecuteUpdateAsync(u => u.SetProperty(t => t.Status, AcquisitionStatus.Running));
+        if (scenario == "task-running") await db.WorkflowRuns.Where(r => r.Id == 1).ExecuteUpdateAsync(u => u.SetProperty(r => r.Status, Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants.WorkflowRunStatus.Running));
         var preview = await f.Service.PreviewAsync(new([f.Task.Id], DeleteDeliveredFiles: true));
         Assert.IsFalse(preview.Rows.Single().Cleanup?.Groups.Any(g => g.Eligible) == true);
         var result = await f.Service.DeleteAsync(new(preview.PreviewId));

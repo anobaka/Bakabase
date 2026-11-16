@@ -23,14 +23,17 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
     internal sealed record AbandonedInputCandidate(string Id, string OperationId, int Attempt,
         string InputArtifactId, string CheckpointDirectory, string StateFingerprint, string ClaimIdentity,
         IReadOnlyList<AcquisitionTaskDeleteCleanupFile> Files, IReadOnlyDictionary<string, string> FileIdentities,
-        AcquisitionTaskDeleteCleanupGroup Group);
+        AcquisitionTaskDeleteCleanupGroup Group)
+    {
+        public IReadOnlyList<string> InputDirectories { get; init; } = [];
+    }
 
     private async Task<IReadOnlyList<AbandonedInputCandidate>> PreviewAbandonedInputsAsync(
         IReadOnlyList<string> operationIds, ArtifactDeliveryCleanupAuthorization authorization,
         ArtifactCleanupReferenceGuard references, CancellationToken ct, Func<string, Task>? guardDirectory = null,
         IReadOnlyList<string>? stageDirectories = null)
     {
-        if (workspaces == null || !authorization.Consent.DeliveryAccepted) return [];
+        if (workspaces == null || !authorization.Consent.DeliveryAccepted && !authorization.Consent.AbandonUnfinishedFiles && !authorization.Consent.WholeTaskFiles) return [];
         var now = DateTime.UtcNow;
         var operations = await db.ArtifactOperations.AsNoTracking().Where(o =>
             o.Kind == "files.process" && o.OutputArtifactId == null && o.Attempt > 0 &&
@@ -53,23 +56,30 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
             {
                 var location = await workspaces.InspectExistingAsync("operations", operation.Id, operation.Attempt, ct);
                 if (location == null || !await workspaces.HasOwnedLocationAsync(location, ct)) continue;
-                if (stageDirectories?.Any(directory => SamePath(location.Directory, directory) ||
-                    ArtifactCleanupPathReferences.StrictlyUnder(location.Directory, directory)) == true) continue;
-                await EnsureDirectoryAuthorizedAsync(location.Directory, guardDirectory);
                 owned = location;
+                var checkpoints = new List<string>();
                 var plans = Path.Combine(location.Directory, "plan");
                 ArtifactManifestFiles.RejectLinks(plans);
-                if (!Directory.Exists(plans)) continue;
-                // Inspect only the executor's immediate plan checkpoints below the exact
-                // registered attempt. Never search a download root for guessed state files.
-                var checkpoints = Directory.EnumerateDirectories(plans).Take(257).ToArray();
-                if (checkpoints.Length > 256) continue;
-                foreach (var checkpoint in checkpoints.Where(p => HexKey(Path.GetFileName(p))))
+                if (!OverlapsStageCleanupSelection(location.Directory, stageDirectories) && Directory.Exists(plans))
+                {
+                    await EnsureDirectoryAuthorizedAsync(location.Directory, guardDirectory);
+                    var children = Directory.EnumerateDirectories(plans).Take(257).ToArray();
+                    if (children.Length <= 256) checkpoints.AddRange(children.Where(path => HexKey(Path.GetFileName(path))));
+                }
+                var boundary = await ReadAbandonedBoundaryAsync(operation, authorization, ct);
+                if (boundary?.Shared == true && !OverlapsStageCleanupSelection(boundary.Directory, stageDirectories))
+                {
+                    await EnsureDirectoryAuthorizedAsync(boundary.Directory, guardDirectory);
+                    result.Add(BlockedAbandonedInput(operation.Id, operation.Attempt, boundary.Directory, "ReferencedPath", boundary: true));
+                }
+                else if (boundary != null) checkpoints.Add(boundary.Directory);
+                foreach (var checkpoint in checkpoints.Distinct(ArtifactManifestFiles.PathComparer))
                 {
                     if (OverlapsStageCleanupSelection(checkpoint, stageDirectories)) continue;
+                    await EnsureDirectoryAuthorizedAsync(checkpoint, guardDirectory);
                     var candidate = await InspectAbandonedInputAsync(operation.Id, operation.Attempt, checkpoint,
                         authorization, references, ct);
-                    if (candidate != null && candidate.Files.Count > 0) result.Add(candidate);
+                    if (candidate != null && (candidate.Files.Count > 0 || candidate.InputDirectories.Count > 0)) result.Add(candidate);
                     else if (candidate == null && HasAbandonedCheckpointPayload(checkpoint, ct))
                         result.Add(BlockedAbandonedInput(operation.Id, operation.Attempt, checkpoint, "CLEANUP_FILES_RETAINED"));
                 }
@@ -89,7 +99,11 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
     private async Task<ArtifactOperationDbModel?> InactiveAbandonedOperationAsync(string id, int attempt,
         ArtifactDeliveryCleanupAuthorization authorization, CancellationToken ct)
     {
-        if (!authorization.Consent.DeliveryAccepted || authorization.Consent.Publications.Count == 0) return null;
+        if (authorization.Consent.AbandonUnfinishedFiles || authorization.Consent.WholeTaskFiles)
+        {
+            if (!await authorization.IsCurrentAsync(ct)) return null;
+        }
+        else if (!authorization.Consent.DeliveryAccepted || authorization.Consent.Publications.Count == 0) return null;
         // Matches rechecks the task version, completed delivery and all fixed owner runs.
         foreach (var expected in authorization.Consent.Publications)
             if (await artifacts.GetArtifactAsync(expected.ArtifactId, ct) is not { } publication ||
@@ -111,8 +125,9 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
             !authorization.Consent.OwnerRunIds.Contains(owner) ||
             await db.ArtifactConsumers.AsNoTracking().AnyAsync(c => c.OperationId == id, ct)) return null;
         var run = await db.WorkflowRuns.AsNoTracking().SingleOrDefaultAsync(r => r.Id == owner, ct);
-        return run != null && run.PendingSignalJson == null && run.Status is WorkflowRunStatus.Success or
-            WorkflowRunStatus.Failed or WorkflowRunStatus.Cancelled or WorkflowRunStatus.Interrupted ? operation : null;
+        return run != null && run.PendingSignalJson == null && (run.Status is WorkflowRunStatus.Success or
+            WorkflowRunStatus.Failed or WorkflowRunStatus.Cancelled or WorkflowRunStatus.Interrupted ||
+            authorization.Consent.AbandonUnfinishedFiles && run.Status == WorkflowRunStatus.Waiting && authorization.PreviewSupersededRuns.Contains(owner)) ? operation : null;
     }
 
     private async Task<AbandonedInputCandidate?> InspectAbandonedInputAsync(string operationId, int attempt,
@@ -122,9 +137,14 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
         var operation = await InactiveAbandonedOperationAsync(operationId, attempt, authorization, ct);
         if (operation == null || workspaces == null) return null;
         var location = await workspaces.InspectExistingAsync("operations", operationId, attempt, ct);
-        if (location == null || !await workspaces.HasOwnedLocationAsync(location, ct) ||
-            !SamePath(Path.GetDirectoryName(checkpoint)!, Path.Combine(location.Directory, "plan")) ||
-            !HexKey(Path.GetFileName(checkpoint))) return null;
+        if (location == null || !await workspaces.HasOwnedLocationAsync(location, ct) || !HexKey(Path.GetFileName(checkpoint))) return null;
+        var boundary = !SamePath(Path.GetDirectoryName(checkpoint)!, Path.Combine(location.Directory, "plan"));
+        if (boundary)
+        {
+            var recorded = await ReadAbandonedBoundaryAsync(operation, authorization, ct);
+            if (recorded == null || recorded.Shared || !SamePath(checkpoint, recorded.Directory)) return null;
+            location = recorded.Location;
+        }
         var stateFile = Path.Combine(checkpoint, "state.json");
         ArtifactManifestFiles.RejectLinks(stateFile);
         if (!File.Exists(stateFile) || new FileInfo(stateFile).Length > 16 * 1024 * 1024) return null;
@@ -233,10 +253,20 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
         }
         var allowed = byPath.Keys.Append(stateFile).ToHashSet(ArtifactManifestFiles.PathComparer);
         var actual = new List<string>();
+        var inputDirectories = new HashSet<string>(ArtifactManifestFiles.PathComparer);
+        if (authorization.Consent.AbandonUnfinishedFiles || authorization.Consent.WholeTaskFiles)
+        {
+            foreach (var start in expected.Select(Path.GetDirectoryName).Concat(ArtifactManifestFiles.ResolveDirectories(inputs, state.InputManifest)))
+                for (var path = start; path != null && (SamePath(path, inputs) || ArtifactCleanupPathReferences.StrictlyUnder(path, inputs));
+                     path = Path.GetDirectoryName(path))
+                    if (!inputDirectories.Add(path)) break;
+        }
+        var observedDirectories = new List<string>();
         var pending = new Stack<string>(); pending.Push(checkpoint); var entries = 0;
         while (pending.TryPop(out var directory))
         {
             ct.ThrowIfCancellationRequested(); ArtifactManifestFiles.RejectLinks(directory);
+            if (inputDirectories.Contains(directory)) observedDirectories.Add(directory);
             foreach (var path in Directory.EnumerateFileSystemEntries(directory))
             {
                 if (++entries > 200000) return null;
@@ -265,15 +295,31 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
         if (reason == null && await references.HasReferencesAsync(input, authorization.Consent.OwnerRunIds, ct,
                 privatePaths: SamePath(input.RootDirectory, location.StorageRoot) ? null : actual,
                 previewSupersededRuns: authorization.PreviewSupersededRuns)) reason = "ReferencedPath";
+        if (reason == null && observedDirectories.Count > 0)
+        {
+            // An external task or resource may own an empty directory even when it
+            // owns no staged file. Its directory cannot be released by this consent.
+            var ownerTask = await db.AcquisitionTasks.AsNoTracking().SingleAsync(t => t.Id == authorization.Consent.TaskId, ct);
+            try
+            {
+                await new AcquisitionStageDirectoryReferenceGuard(db, artifacts, storage, workspaces)
+                    .RequireAsync(ownerTask, authorization.Consent.OwnerRunIds.ToArray(), "", inputs, ct,
+                        explicitTaskCleanup: true, abandonUnfinishedFiles: true);
+            }
+            catch (InvalidOperationException error) when (error.Message is "STAGE_DIRECTORY_SHARED" or
+                "STAGE_DIRECTORY_REFERENCED" or "STAGE_DIRECTORY_OWNERSHIP_UNKNOWN" or "STAGE_DIRECTORY_TASK_ACTIVE")
+            { observedDirectories.Clear(); }
+        }
         var bindings = await db.ArtifactOperationBindings.AsNoTracking().Where(b => b.OperationId == operationId).ToListAsync(ct);
         var nodes = bindings.Select(b => new AcquisitionTaskDeleteCleanupNode(int.Parse(b.OwnerId, CultureInfo.InvariantCulture),
             NodeId(b.Slot), "processingWorkspace")).Distinct().ToArray();
         if (nodes.Length == 0 && AcquisitionDeletionActivityReader.WorkflowLeaseOwnerRun(operation.LeaseOwner) is {} owner)
             nodes = [new(owner, "", "processingWorkspace")];
-        var identity = "abandoned-input:" + operationId + ":" + Path.GetFileName(checkpoint);
+        var identity = (boundary ? "abandoned-boundary:" : "abandoned-input:") + operationId + ":" + Path.GetFileName(checkpoint);
         return new(identity, operationId, attempt, input.Id, checkpoint, ArtifactManifestFiles.Hash(stateJson), ClaimIdentity(operation), files, identities,
-            new(identity, "intermediate", completedCopy ? checkpoint : inputs, reason == null, reason ?? (files.Count == 0 ? "AlreadyAbsent" : null),
-                nodes, files, files.Count, files.Sum(f => f.Bytes), Shared: reason is "ReferencedArtifact" or "ReferencedPath"));
+            new(identity, "intermediate", completedCopy ? checkpoint : inputs, reason == null, reason ?? (files.Count == 0 && observedDirectories.Count == 0 ? "AlreadyAbsent" : null),
+                nodes, files, files.Count, files.Sum(f => f.Bytes), Shared: reason is "ReferencedArtifact" or "ReferencedPath"))
+            {InputDirectories = observedDirectories};
     }
 
     private async Task<ArtifactWorkspaceCleanupResult> DeleteAbandonedInputsAsync(AbandonedInputCandidate expected,
@@ -290,7 +336,7 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
                 current.FileIdentities.Any(p => !expected.FileIdentities.TryGetValue(p.Key, out var before) || before != p.Value))
                 return new(expected.Id, false, "SelectionChanged");
             if (!current.Group.Eligible) return new(expected.Id, false, current.Group.ReasonCode);
-            if (current.Files.Count == 0) return new(expected.Id, true, "AlreadyAbsent");
+            if (current.Files.Count == 0 && current.InputDirectories.Count == 0) return new(expected.Id, true, "AlreadyAbsent");
             var snapshot = new ArtifactCleanupFileSnapshot();
             foreach (var file in current.Files) snapshot.Observe(file.Path, file.Bytes, ct);
             var input = await artifacts.GetArtifactAsync(current.InputArtifactId, ct);
@@ -322,9 +368,9 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
                 if (!snapshot.Matches(file.Path, file.Bytes, ct)) throw new IOException("The failed input snapshot changed.");
                 File.Delete(file.Path); removed++; bytes += file.Bytes;
             }
+            var confirmedDirectories = refreshed.InputDirectories.Intersect(expected.InputDirectories, ArtifactManifestFiles.PathComparer);
+            RemoveConfirmedEmptyDirectories(confirmedDirectories, ct);
             await maintenance.FinishDeliveredCleanupAsync(receipt, "Completed", ct);
-            // Keep the complete failed executor state and all recorded paths as history.
-            // Even empty directories are not recursively swept by this focused operation.
             return new(expected.Id, true, null, removed, bytes);
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or JsonException or InvalidOperationException or ArgumentException or OperationCanceledException)
@@ -343,11 +389,11 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
     private static bool SamePath(string left, string right) => ArtifactManifestFiles.PathComparer.Equals(
         Path.TrimEndingDirectorySeparator(Path.GetFullPath(left)), Path.TrimEndingDirectorySeparator(Path.GetFullPath(right)));
 
-    private static AbandonedInputCandidate BlockedAbandonedInput(string operation, int attempt, string directory, string reason)
+    private static AbandonedInputCandidate BlockedAbandonedInput(string operation, int attempt, string directory, string reason, bool boundary = false)
     {
-        var id = "abandoned-input:" + operation + ":" + Path.GetFileName(directory);
+        var id = (boundary ? "abandoned-boundary:" : "abandoned-input:") + operation + ":" + Path.GetFileName(directory);
         return new(id, operation, attempt, "", directory, "", "", [], new Dictionary<string, string>(),
-            new(id, "intermediate", directory, false, reason, [], [], 0, 0, SizeUnknown: true));
+            new(id, "intermediate", directory, false, reason, [], [], 0, 0, Shared: reason == "ReferencedPath", SizeUnknown: true));
     }
 
     private static bool HasAbandonedCheckpointPayload(string checkpoint, CancellationToken ct)

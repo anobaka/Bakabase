@@ -18,11 +18,11 @@ beforeEach(() => {
   mocks.progress.mockResolvedValue({ code: 0, data: { previewId: "fixed" } });
 });
 
-it("forwards preview cancellation with the fixed IDs and acceptance choices", async () => {
+it("forwards preview cancellation with the fixed IDs and file scopes", async () => {
   const controller = new AbortController();
-  await api.preview([2, 5], { cleanupFiles: true, acceptDeliveredFiles: true }, controller.signal);
+  await api.preview([2, 5], { cleanupFiles: true, deleteDeliveredFiles: true }, controller.signal);
   expect(mocks.preview).toHaveBeenCalledExactlyOnceWith(
-    { taskIds: [2, 5], cleanupFiles: true, acceptDeliveredFiles: true },
+    { taskIds: [2, 5], cleanupFiles: true, deleteDeliveredFiles: true },
     { sensitiveResponse: true, showErrorToast: false, signal: controller.signal },
   );
   expect(mocks.remove).not.toHaveBeenCalled();
@@ -37,9 +37,6 @@ it("uses a cancellable read for progress, while deletion remains a single token-
     signal: controller.signal,
   });
   const choices = {
-    cleanupFiles: true,
-    acceptDeliveredFiles: true,
-    skipFileVerification: true,
     removeTaskIfCleanupFails: true,
   };
   await api.remove("fixed", choices);

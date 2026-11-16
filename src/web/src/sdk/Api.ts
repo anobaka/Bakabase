@@ -9082,6 +9082,7 @@ export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionTaskDele
   reasonCode?: string;
   cleanup?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionTaskDeleteCleanup;
   canRemoveTaskIfCleanupFails: boolean;
+  willStopExecution: boolean;
 }
 
 export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionTaskDeleteSkip {
