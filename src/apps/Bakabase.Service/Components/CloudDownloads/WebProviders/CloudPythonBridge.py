@@ -439,7 +439,145 @@ def atomic_json(path, value):
         os.chmod(path, 0o600)
 
 
-def http_original(session, entry, part, provider, progress):
+# Sparse partials left by interrupted storage writes sometimes contain long zero runs.
+# These are only candidates: an official bounded range and the whole SHA must both agree.
+MIN_ZERO_RUN = 64 * 1024
+ZERO_RUN = re.compile(b'\x00{16,}')
+MAX_REPAIR_INTERVALS = 16
+MAX_REPAIR_BYTES = 32 * 1024 * 1024
+MAX_PREFIX_SCAN_BYTES = 16 * 1024 ** 3
+
+
+def zero_ranges(file, length):
+    if length < MIN_ZERO_RUN:
+        return []
+    ranges = []
+    total = 0
+    def record(start, count):
+        nonlocal total
+        if count >= MIN_ZERO_RUN:
+            total += count
+            ranges.append((start, count))
+        return total <= MAX_REPAIR_BYTES and len(ranges) <= MAX_REPAIR_INTERVALS
+
+    file.seek(0)
+    offset = trailing = 0
+    limit = min(length, MAX_PREFIX_SCAN_BYTES)
+    while offset < limit:
+        data = file.read(min(1024 * 1024, limit - offset))
+        if not data:
+            raise BridgeError('CLOUD_PARTIAL_IDENTITY_UNVERIFIED: The partial file changed while being read')
+        leading = len(data) - len(data.lstrip(b'\x00'))
+        if leading == len(data):
+            trailing += leading
+            if total + trailing > MAX_REPAIR_BYTES:
+                return []
+        else:
+            if not record(offset - trailing, trailing + leading):
+                return []
+            trailing = len(data) - len(data.rstrip(b'\x00'))
+            for match in ZERO_RUN.finditer(data, leading, len(data) - trailing):
+                if not record(offset + match.start(), match.end() - match.start()):
+                    return []
+        offset += len(data)
+    return ranges if record(offset - trailing, trailing) else []
+
+
+@contextlib.contextmanager
+def original_response(session, entry, provider, start, end, ranged, open_ended=False):
+    headers = {'Accept-Encoding': 'identity'}
+    if ranged:
+        headers['Range'] = 'bytes=%d-%s' % (start, '' if open_ended else end)
+    with session.get(entry['url'], headers=headers, stream=True, timeout=(20, 60), allow_redirects=False) as response:
+        status = getattr(response, 'status_code', 200)
+        if ranged and status == 416:
+            raise BridgeError('CLOUD_RANGE_UNCONFIRMED: The source rejected the requested byte range. The existing partial file was retained.')
+        if provider == 'pixeldrain' and status >= 400:
+            try:
+                body = response.json()
+                value = body.get('value', '') if isinstance(body, dict) else ''
+            except (ValueError, TypeError):
+                value = ''
+            raise pixeldrain_failure(status, value)
+        response.raise_for_status()
+        metadata = getattr(response, 'headers', {})
+        span = metadata.get('Content-Range')
+        if ranged:
+            match = re.fullmatch(r'bytes ([0-9]{1,20})-([0-9]{1,20})/([0-9]{1,20})', span or '', re.I)
+            if status != 206 or not match or tuple(map(int, match.groups())) != (start, end, entry['size']):
+                raise BridgeError('CLOUD_RANGE_UNCONFIRMED: The source did not confirm the requested byte range. The existing partial file was retained.')
+        elif status != 200 or span:
+            raise BridgeError('Unexpected public-share response to the original file request')
+        if metadata.get('Content-Encoding', 'identity').lower() != 'identity':
+            raise BridgeError('CLOUD_RANGE_UNCONFIRMED: The source returned encoded bytes instead of the original representation')
+        length = metadata.get('Content-Length')
+        if length is not None and (not re.fullmatch(r'[0-9]{1,20}', length) or int(length) != end - start + 1):
+            raise BridgeError('CLOUD_RANGE_UNCONFIRMED: The original response length does not match the file manifest')
+        yield response
+
+
+def repair_ranges(file, prefix, entry, record):
+    if not record.exists() and not record.is_symlink():
+        return zero_ranges(file, prefix), False
+    message = 'CLOUD_PARTIAL_IDENTITY_UNVERIFIED: The prior range repair does not match this original file'
+    if record.is_symlink() or not record.is_file() or record.stat().st_size > 8192:
+        raise BridgeError(message)
+    try:
+        data = json.loads(record.read_text())
+        ranges = data['ranges']
+        if data['size'] != entry['size'] or data['sha256'] != entry['sha256'] or prefix != entry['size'] or not 0 < len(ranges) <= MAX_REPAIR_INTERVALS:
+            raise ValueError()
+        end = total = 0
+        for start, length in ranges:
+            if type(start) is not int or type(length) is not int or length <= 0 or start < end or start + length > prefix:
+                raise ValueError()
+            total += length
+            end = start + length
+        if total > MAX_REPAIR_BYTES:
+            raise ValueError()
+    except (ValueError, TypeError, KeyError):
+        raise BridgeError(message) from None
+    return ranges, True
+
+
+def read_repair_patches(session, entry, file, ranges, continuing_commit):
+    patches = []
+    for start, length in ranges:
+        with original_response(session, entry, 'pixeldrain', start, start + length - 1, True) as response:
+            remote = bytearray()
+            for block in response.iter_content(512 * 1024):
+                if len(remote) + len(block) > length:
+                    raise BridgeError('CLOUD_RANGE_UNCONFIRMED: Repair response exceeded the requested byte range')
+                remote.extend(block)
+            if len(remote) != length:
+                raise BridgeError('CLOUD_RANGE_UNCONFIRMED: Repair response did not cover the requested byte range')
+        file.seek(start)
+        original = file.read(length)
+        if original == remote:
+            continue
+        # A stopped commit can contain a mix of the original zeros and verified bytes.
+        if len(original) != length or (original.strip(b'\x00') and
+                (not continuing_commit or any(a and a != b for a, b in zip(original, remote)))):
+            raise BridgeError('CLOUD_PARTIAL_IDENTITY_UNVERIFIED: The candidate repair range changed locally')
+        patches.append((start, remote))
+    return patches
+
+
+def overlay_sha256(file, patches, length):
+    digest = hashlib.sha256()
+    file.seek(0)
+    for start, replacement in [*patches, (length, b'')]:
+        while file.tell() < start:
+            block = file.read(min(start - file.tell(), 1024 * 1024))
+            if not block:
+                raise BridgeError('CLOUD_PARTIAL_IDENTITY_UNVERIFIED: The partial file changed during verification')
+            digest.update(block)
+        digest.update(replacement)
+        file.seek(start + len(replacement))
+    return digest.hexdigest()
+
+
+def http_original(session, entry, part, provider, progress, repair_record=None):
     # A resumed body is publishable only after the provider's checksum validates the entire file.
     # operation/URL/destination/manifest have already been matched by run().
     expected_size = entry["size"]
@@ -455,35 +593,18 @@ def http_original(session, entry, part, provider, progress):
         checksum = entry.get("sha256")
         if offset and (offset > expected_size or not checksum):
             raise BridgeError("CLOUD_PARTIAL_IDENTITY_UNVERIFIED: Cannot verify the existing partial file against the original. Its bytes were retained.")
+        patches = []
+        record = repair_record or part.with_suffix('.repair.json')
+        already_valid = offset and offset == expected_size and sha256(part) == checksum.lower()
+        journal_present = provider == 'pixeldrain' and (record.exists() or record.is_symlink())
+        if journal_present and not offset:
+            raise BridgeError('CLOUD_PARTIAL_IDENTITY_UNVERIFIED: The previously verified repair has no original partial file')
+        if offset and (not already_valid or journal_present):
+            ranges, continuing_commit = repair_ranges(target, offset, entry, record)
+            if not already_valid:
+                patches = read_repair_patches(session, entry, target, ranges, continuing_commit)
         if not offset or offset < expected_size:
-            headers = {"Accept-Encoding": "identity"}
-            if offset:
-                headers["Range"] = f"bytes={offset}-"
-            with session.get(entry["url"], headers=headers, stream=True, timeout=(20, 60), allow_redirects=False) as response:
-                status = getattr(response, "status_code", 200)
-                if offset and status == 416:
-                    raise BridgeError("CLOUD_RANGE_UNCONFIRMED: The source rejected the requested byte range. The existing partial file was retained.")
-                if provider == "pixeldrain" and status >= 400:
-                    try:
-                        body = response.json()
-                        value = body.get("value", "") if isinstance(body, dict) else ""
-                    except (ValueError, TypeError):
-                        value = ""
-                    raise pixeldrain_failure(status, value)
-                response.raise_for_status()
-                response_headers = getattr(response, "headers", {})
-                content_range = response_headers.get("Content-Range")
-                if offset:
-                    match = re.fullmatch(r"bytes ([0-9]{1,20})-([0-9]{1,20})/([0-9]{1,20})", content_range or "", re.I)
-                    if status != 206 or not match or tuple(map(int, match.groups())) != (offset, expected_size - 1, expected_size):
-                        raise BridgeError("CLOUD_RANGE_UNCONFIRMED: The source did not confirm the requested byte range. The existing partial file was retained.")
-                elif status != 200 or content_range:
-                    raise BridgeError("Unexpected public-share response to the original file request")
-                if response_headers.get("Content-Encoding", "identity").lower() != "identity":
-                    raise BridgeError("CLOUD_RANGE_UNCONFIRMED: The source returned encoded bytes instead of the original representation")
-                length = response_headers.get("Content-Length")
-                if length is not None and (not re.fullmatch(r"[0-9]{1,20}", length) or int(length) != expected_size - offset):
-                    raise BridgeError("CLOUD_RANGE_UNCONFIRMED: The original response length does not match the file manifest")
+            with original_response(session, entry, provider, offset, expected_size - 1, bool(offset), open_ended=True) as response:
                 target.seek(offset)
                 if not offset:
                     target.truncate(0)
@@ -498,10 +619,33 @@ def http_original(session, entry, part, provider, progress):
                 if target.tell() != expected_size:
                     raise BridgeError("Original file is incomplete")
         target.flush()
-        actual_hash = sha256(part)
+        if already_valid:
+            actual_hash = checksum.lower()
+        elif patches:
+            actual_hash = overlay_sha256(target, patches, expected_size)
+        else:
+            actual_hash = sha256(part)
         if checksum and actual_hash.lower() != checksum.lower():
             target.truncate(offset)
             raise BridgeError("CLOUD_DOWNLOAD_CHECKSUM_MISMATCH: Original file SHA256 mismatch")
+        if patches:
+            # All proposed changes are authorized together by the original whole-file digest.
+            # Persist only the intervals before the first in-place write, so a terminated
+            # process can finish the same commit without retrieving the suffix again.
+            os.fsync(target.fileno())
+            temporary = record.with_suffix('.new')
+            if temporary.is_symlink() or (temporary.exists() and (not temporary.is_file() or temporary.stat().st_nlink != 1)):
+                raise BridgeError('CLOUD_PARTIAL_IDENTITY_UNVERIFIED: The range repair journal is not exclusive')
+            atomic_json(record, {'size': expected_size, 'sha256': checksum, 'ranges': [[p, len(data)] for p, data in patches]})
+            for start, data in patches:
+                target.seek(start)
+                target.write(data)
+            target.flush()
+            os.fsync(target.fileno())
+            if sha256(part) != actual_hash:
+                raise BridgeError('CLOUD_DOWNLOAD_CHECKSUM_MISMATCH: The repaired file changed while committing; its recovery record was retained')
+        if provider == 'pixeldrain' and record.exists():
+            record.unlink()
         if entry.get("md5") and file_hash(part, "md5").lower() != entry["md5"].lower():
             target.truncate(offset)
             raise BridgeError("CLOUD_DOWNLOAD_CHECKSUM_MISMATCH: Original file checksum mismatch")
@@ -608,7 +752,7 @@ def run(request):
                 raise BridgeError("gdown did not produce the expected file")
             checksum = sha256(part)
         else:
-            checksum = http_original(session, entry, part, request["provider"], progress)
+            checksum = http_original(session, entry, part, request["provider"], progress, state / (part.stem + ".repair.json"))
         receipts[entry["path"]] = {"size": part.stat().st_size, "sha256": checksum}
         atomic_json(receipt_path, receipts)
         # Hard-link publication fails if anything already exists; never overwrite the user's file.

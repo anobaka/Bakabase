@@ -45,6 +45,35 @@ class RangeSession:
             yield chunk
 
 
+class OriginalRanges:
+    def __init__(self, original, failure=None):
+        self.original = original
+        self.failure = failure
+        self.requests = []
+        self.entry = {'id': 'same-file', 'url': 'https://pixeldrain.com/api/file/fixture', 'size': len(original),
+                      'sha256': hashlib.sha256(original).hexdigest()}
+
+    def get(self, url, **options):
+        assert url == self.entry['url'] and options['allow_redirects'] is False
+        headers = options['headers']
+        assert headers['Accept-Encoding'] == 'identity'
+        span = headers['Range']
+        self.requests.append(span)
+        a, b = span.removeprefix('bytes=').split('-')
+        start = int(a)
+        end = int(b) if b else len(self.original) - 1
+        data = self.original[start:end + 1]
+        status = 206
+        response_headers = {'Content-Range': f'bytes {start}-{end}/{len(self.original)}', 'Content-Length': str(len(data))}
+        if b:
+            if self.failure == '200': status = 200
+            if self.failure == 'wrong range': response_headers['Content-Range'] = f'bytes 0-{end}/{len(self.original)}'
+            if self.failure == 'short': data = data[:-1]
+            if self.failure == 'oversized': data += b'more'
+            if self.failure == 'different bytes': data = b'Q' * len(data)
+        return RangeSession(status, response_headers, [data])
+
+
 class FakeExtractor:
     api_token = "private-fixture-token"
 
@@ -250,6 +279,130 @@ class BridgeTests(unittest.TestCase):
                 response.body = b"abcde"
                 bridge.run(request)
                 self.assertEqual(b"abcde", (root / "output/original.rar").read_bytes())
+
+    def test_pixeldrain_zero_ranges_restore_verified_original_and_preserve_legitimate_zeros(self):
+        start = 1024 * 1024 - 19
+        original = b'A' * start + b'B' * 180000 + b'C' * 21000 + bytes(78000) + b'D' * 120000
+        prefix = len(original) - 25000
+        partial = original[:start] + bytes(180000) + original[start + 180000:prefix]
+        with tempfile.TemporaryDirectory() as temp:
+            part = Path(temp) / 'file.part'
+            part.write_bytes(partial)
+            session = OriginalRanges(original)
+            result = bridge.http_original(session, session.entry, part, 'pixeldrain', lambda *_: None)
+            self.assertEqual(session.entry['sha256'], result)
+            self.assertEqual(original, part.read_bytes())
+            self.assertEqual([f'bytes={start}-{start+179999}', f'bytes={start+201000}-{start+278999}', f'bytes={prefix}-'], session.requests)
+            self.assertFalse(part.with_suffix('.repair.json').exists())
+
+    def test_pixeldrain_zero_repair_uses_original_operation_and_publishes_no_duplicate_sibling(self):
+        original = b'header' + b'X' * 80000 + b'remaining payload'
+        session = OriginalRanges(original)
+        sibling = b'already complete'
+        entries = [dict(session.entry, id='sibling', path='sibling.rar', size=len(sibling),
+                        sha256=hashlib.sha256(sibling).hexdigest()),
+                   dict(session.entry, path='current.rar')]
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            output = root / 'output'
+            state = root / 'private-operation'
+            staging = output / ('.bakabase-cloud-' + state.name)
+            staging.mkdir(parents=True)
+            state.mkdir()
+            request = {'provider': 'pixeldrain', 'url': 'https://pixeldrain.com/l/original',
+                       'output': str(output), 'state': str(state)}
+            identity = hashlib.sha256(json.dumps(['pixeldrain', request['url'], None, str(output.resolve())]).encode()).hexdigest()
+            manifest = [{k: e.get(k) for k in ('id', 'path', 'size', 'md5', 'sha256')} for e in entries]
+            receipts = {'sibling.rar': {'size': len(sibling), 'sha256': entries[0]['sha256']}}
+            (state / 'manifest.json').write_text(json.dumps({'identity': identity, 'files': manifest}))
+            (state / 'completed.json').write_text(json.dumps(receipts))
+            (output / 'sibling.rar').write_bytes(sibling)
+            partial = b'header' + bytes(80000) + b'remaining '
+            part = staging / (hashlib.sha256(b'current.rar').hexdigest() + '.part')
+            part.write_bytes(partial)
+            class Session: pass
+            with patch.dict(sys.modules, {'requests': types.SimpleNamespace(Session=Session)}), \
+                    patch.object(bridge, 'pixeldrain_manifest', return_value=(entries, session)), \
+                    patch.object(bridge, 'PROTOCOL_OUTPUT', io.StringIO()):
+                with self.assertRaises(bridge.BridgeError):
+                    bridge.run(dict(request, url='https://pixeldrain.com/l/changed'))
+                self.assertFalse(session.requests)
+                self.assertEqual(partial, part.read_bytes())
+                bridge.run(request)
+            self.assertEqual(['bytes=6-80005', f'bytes={len(partial)}-'], session.requests)
+            self.assertEqual(sibling, (output / 'sibling.rar').read_bytes())
+            self.assertEqual(original, (output / 'current.rar').read_bytes())
+            saved = json.loads((state / 'completed.json').read_text())
+            self.assertEqual(receipts['sibling.rar'], saved['sibling.rar'])
+            self.assertEqual(session.entry['sha256'], saved['current.rar']['sha256'])
+            self.assertFalse(staging.exists())
+
+    def test_pixeldrain_zero_repairs_require_confirmed_ranges_and_correct_whole_content(self):
+        original = b'prefix' + b'X'*70000 + b'abcdefghij'
+        partial = b'prefix' + bytes(70000) + b'abc'
+        with tempfile.TemporaryDirectory() as temp:
+            part = Path(temp) / 'file.part'
+            for failure in ('200', 'wrong range', 'short', 'oversized', 'different bytes', 'other local corruption'):
+                with self.subTest(failure=failure):
+                    local = (b'Q'+partial[1:]) if failure=='other local corruption' else partial
+                    part.write_bytes(local)
+                    session = OriginalRanges(original, failure)
+                    with self.assertRaises(bridge.BridgeError):
+                        bridge.http_original(session, session.entry, part, 'pixeldrain', lambda *_: None)
+                    self.assertEqual(local, part.read_bytes())
+                    self.assertFalse(part.with_suffix('.repair.json').exists())
+                    self.assertEqual(2 if failure in ('different bytes', 'other local corruption') else 1, len(session.requests))
+
+    def test_pixeldrain_zero_range_budget_preserves_ordinary_files_and_limits_requests(self):
+        for original, max_ranges, max_bytes in [(b'a' + bytes(75000) + b'bcde', 16, 70000),
+                ((b'a' + bytes(70000))*3 + b'end', 2, 1000000)]:
+            with self.subTest(max_ranges=max_ranges), tempfile.TemporaryDirectory() as temp:
+                part = Path(temp) / 'file.part'
+                part.write_bytes(original[:-2])
+                session = OriginalRanges(original)
+                with patch.object(bridge, 'MAX_REPAIR_BYTES', max_bytes), patch.object(bridge, 'MAX_REPAIR_INTERVALS', max_ranges):
+                    bridge.http_original(session, session.entry, part, 'pixeldrain', lambda *_: None)
+                self.assertEqual(original, part.read_bytes())
+                self.assertEqual([f'bytes={len(original)-2}-'], session.requests)
+
+    def test_pixeldrain_zero_commit_resumes_interrupted_write_with_no_suffix_request(self):
+        original = b'head' + b'X'*70000 + b'end'
+        with tempfile.TemporaryDirectory() as temp:
+            part = Path(temp) / 'file.part'
+            record = Path(temp) / 'receipt.json'
+            session = OriginalRanges(original)
+            # Power loss after all but 127 bytes of a proven interval were written.
+            current = original[:4+70000-127] + bytes(127) + original[-3:]
+            part.write_bytes(current)
+            journal = {'size':len(original), 'sha256':session.entry['sha256'], 'ranges':[[4,70000]]}
+            record.write_text(json.dumps(journal))
+            for bad in ('different identity','changed data','oversized range'):
+                with self.subTest(bad=bad):
+                    data = dict(journal)
+                    local = current
+                    if bad=='different identity': data['sha256']='a'*64
+                    if bad=='changed data': local=current[:4]+b'Y'+current[5:]
+                    if bad=='oversized range': data['ranges']=[[4,9999999]]
+                    record.write_text(json.dumps(data))
+                    part.write_bytes(local)
+                    with self.assertRaisesRegex(bridge.BridgeError,'CLOUD_PARTIAL_IDENTITY_UNVERIFIED'):
+                        bridge.http_original(session, session.entry, part, 'pixeldrain', lambda *_: None, record)
+                    self.assertEqual(local, part.read_bytes())
+                    self.assertTrue(record.exists())
+            part.write_bytes(b'')
+            record.write_text(json.dumps(journal))
+            session.requests.clear()
+            with self.assertRaisesRegex(bridge.BridgeError, 'CLOUD_PARTIAL_IDENTITY_UNVERIFIED'):
+                bridge.http_original(session, session.entry, part, 'pixeldrain', lambda *_: None, record)
+            self.assertFalse(session.requests)
+            self.assertTrue(record.exists())
+            part.write_bytes(current)
+            record.write_text(json.dumps(journal))
+            session.requests.clear()
+            bridge.http_original(session, session.entry, part, 'pixeldrain', lambda *_:None, record)
+            self.assertEqual(['bytes=4-70003'],session.requests)
+            self.assertEqual(original, part.read_bytes())
+            self.assertFalse(record.exists())
 
     def test_http_resumes_a_verified_original_at_the_exact_offset_and_reuses_completed_part(self):
         body = b"abcdefghij"
