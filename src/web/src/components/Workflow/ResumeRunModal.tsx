@@ -108,6 +108,7 @@ export const ResumeRunContent = ({
   const form = ResumeForm && (
     <ResumeActivityContext.Provider value={activityKind}>
       <ResumeForm
+        runId={runId}
         key={JSON.stringify([runId, currentStepIndex, activityKind])}
         promptJson={waitPromptJson ?? null}
         submitting={submitting}

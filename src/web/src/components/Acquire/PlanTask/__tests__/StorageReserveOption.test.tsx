@@ -72,6 +72,29 @@ function DownloadAnswer() {
   </div>;
 }
 
+it("passes the original target preview and the selected group through the same acquisition confirmation", async () => {
+  const downloadTargets = [
+    { targetId: "finished", downloadId: "site:1", status: "completed", canRetry: false },
+    { targetId: "stopped", downloadId: "site:2", status: "stopped", canRetry: true },
+  ];
+  api.preview.mockResolvedValue({ ...preview(), scope: "download", useEmergencySpaceReserve: false, downloadTargets });
+  api.resumeDownload.mockResolvedValue({ taskId: 42, workflowRunId: 77, status: "applied", continuationAccepted: true });
+  function SelectedOriginal() {
+    const owner = useContext(ResumeSubmissionContext);
+    const original = owner?.downloadTargets?.find(row => row.canRetry);
+    if (!original || !owner) return null;
+    return <button onClick={() => void owner.submit(JSON.stringify({ observeExistingOnly: true, resumeTargetIds: [original.targetId] }))}>
+      {original.downloadId}
+    </button>;
+  }
+  render(<StorageReserveOption taskId={42} workflowRunId={77} scope="download" actionLabel="Continue">
+    <SelectedOriginal />
+  </StorageReserveOption>);
+  fireEvent.click(await screen.findByRole("button", { name: "site:2" }));
+  await waitFor(() => expect(api.resumeDownload).toHaveBeenCalledExactlyOnceWith(42, "only-this-run",
+    '{"observeExistingOnly":true,"resumeTargetIds":["stopped"]}', false));
+});
+
 it("keeps a portalled download action locked until its original-signal storage preview succeeds", async () => {
   let finish!: (value: unknown) => void;
   api.preview.mockImplementation(() => new Promise(resolve => { finish = resolve; }));

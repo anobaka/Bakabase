@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import TaskContinuationModal from "@/components/Acquire/PlanTask/TaskContinuationModal";
 import { describe, expect, it, vi } from "vitest";
 
@@ -11,6 +11,8 @@ import {
 import type { WorkflowActivityUI } from "../Activities/types";
 import { DownloadSourcesTriggerUI } from "../Triggers/DownloadSources";
 import { ResumeActivityContext } from "../ResumePresentation";
+import { ResumeSubmissionContext } from "../ResumeSubmissionContext";
+import BApi from "@/sdk/BApi";
 import WorksetResults from "@/components/CloudDownload/WorksetResults";
 import cn from "@/locales/cn/pages/cloudDownload.json";
 import en from "@/locales/en/pages/cloudDownload.json";
@@ -126,6 +128,85 @@ vi.mock("@/components/bakaui", () => ({
 }));
 
 describe("cloud source workflow UI", () => {
+  const groupPrompt = JSON.stringify({ reason: "cloudAttention", targets: [
+    { id: "main", title: "Main", downloadTaskId: 31, downloadArtifactId: "saved", sources: [] },
+    { id: "alternate", title: "Alternate", downloadTaskId: 32, sources: [] },
+    { id: "other", title: "Other", downloadTaskId: 33, sources: [] },
+    { id: "active", title: "In use", downloadTaskId: 34, sources: [] },
+  ] });
+  const groups = [
+    { targetId: "main", downloadId: "site:31", status: "completed", canRetry: false },
+    { targetId: "alternate", downloadId: "site:32", status: "failed", canRetry: true },
+    { targetId: "other", downloadId: "site:33", status: "stopped", canRetry: true },
+    { targetId: "active", downloadId: "site:34", status: "running", canRetry: false },
+  ];
+  const GroupForm = cloudDownloadActivities.find(activity => activity.kind === "download.awaitCompletion")!.ResumeForm!;
+  const groupForm = (submit: () => void, rows = groups, prompt = groupPrompt) => (
+    <ResumeSubmissionContext.Provider value={{ runId: 12, submit: vi.fn(), downloadTargets: rows }}>
+      <ResumeActivityContext.Provider value="download.awaitCompletion">
+        <GroupForm runId={12} promptJson={prompt} submitting={false} onSubmit={submit} />
+      </ResumeActivityContext.Provider>
+    </ResumeSubmissionContext.Provider>
+  );
+
+  it("resumes only explicitly selected original groups and preserves completed, active and unselected siblings", () => {
+    const submit = vi.fn();
+    render(groupForm(submit));
+    const check = (name: string) => screen.getByRole("checkbox", { name });
+    expect(check("Main · #31")).toBeDisabled();
+    expect(check("In use · #34")).toBeDisabled();
+    expect(check("Alternate · #32")).not.toBeChecked();
+    expect(check("Other · #33")).not.toBeChecked();
+    const button = screen.getByRole("button", { name: "cloudDownload.resumeGuide.retryDownload" });
+    const confirm = check("cloudDownload.resumeGuide.confirmSelectedDownloads");
+    expect(confirm).toBeDisabled();
+    fireEvent.click(check("Alternate · #32"));
+    fireEvent.click(confirm);
+    fireEvent.click(check("Other · #33"));
+    expect(button).toBeDisabled();
+    fireEvent.click(check("Other · #33"));
+    fireEvent.click(confirm);
+    fireEvent.click(button);
+    expect(submit).toHaveBeenCalledExactlyOnceWith(JSON.stringify({ observeExistingOnly: true, resumeTargetIds: ["alternate"] }));
+  });
+
+  it("requires current target and download identities, including when a group was never queued", () => {
+    const submit = vi.fn();
+    const prompt = JSON.parse(groupPrompt);
+    delete prompt.targets[2].downloadTaskId;
+    const { rerender } = render(groupForm(submit, groups, JSON.stringify(prompt)));
+    const confirmed = screen.getByRole("checkbox", { name: "cloudDownload.resumeGuide.confirmSelectedDownloads" });
+    expect(screen.getByRole("checkbox", { name: "Other" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("checkbox", { name: "Alternate · #32" }));
+    fireEvent.click(confirmed);
+    rerender(groupForm(submit, groups.map(row => ({ ...row, downloadId: "site:99" })), JSON.stringify(prompt)));
+    expect(screen.getByRole("button", { name: "cloudDownload.resumeGuide.retryDownload" })).toBeDisabled();
+    expect(confirmed).not.toBeChecked();
+    expect(submit).not.toHaveBeenCalled();
+  });
+
+  it("only observes pending or completed downloads when all target identities are accounted for", () => {
+    const submit = vi.fn();
+    render(groupForm(submit, groups.map(row => ({ ...row, status: "queued", canRetry: false }))));
+    fireEvent.click(screen.getByRole("button", { name: "cloudDownload.resumeGuide.observeDownloads" }));
+    expect(submit).toHaveBeenCalledExactlyOnceWith(JSON.stringify({ observeExistingOnly: true }));
+  });
+
+  it("checks standalone workflow group ownership before allowing a restart", async () => {
+    const read = vi.spyOn(BApi.downloadCenter, "getDownloadCenterTask").mockImplementation(async id => ({
+      code: 0, data: { id, workflowRunId: id === "site:33" ? 99 : 12, status: id === "site:34" ? "running" : "failed" },
+    }) as any);
+    try {
+      render(<ResumeActivityContext.Provider value="download.awaitCompletion">
+        <GroupForm runId={12} promptJson={groupPrompt} submitting={false} onSubmit={vi.fn()} />
+      </ResumeActivityContext.Provider>);
+      await waitFor(() => expect(screen.getByRole("checkbox", { name: "Alternate · #32" })).toBeEnabled());
+      expect(screen.getByRole("checkbox", { name: "Other · #33" })).toBeDisabled();
+      expect(screen.getByRole("checkbox", { name: "In use · #34" })).toBeDisabled();
+      expect(read.mock.calls.map(([id]) => id)).toEqual(["site:32", "site:33", "site:34"]);
+    } finally { read.mockRestore(); }
+  });
+
   it("keeps a storage-stopped download source and authorization with one outer submit footer", () => {
     const Form = cloudDownloadActivities.find(activity => activity.kind === "download.awaitCompletion")!.ResumeForm!;
     const submit = vi.fn();

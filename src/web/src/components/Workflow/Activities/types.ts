@@ -64,6 +64,7 @@ export interface WorkflowActivityUI<TConfig = unknown> {
    * the file where you asked") gets the drawer's generic Continue button for free.
    */
   ResumeForm?: React.FC<{
+    runId?: number;
     /** Show only the decision for the current files inside an acquisition task. */
     fileTask?: boolean;
     promptJson: string | null;

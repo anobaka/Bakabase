@@ -206,7 +206,7 @@ export default function StorageReserveOption({
         <>
           {scope === "download" ? (
             <fieldset disabled={locked} className="min-w-0">
-              <ResumeSubmissionContext.Provider value={{ runId: captured.current.workflowRunId, submit }}>
+              <ResumeSubmissionContext.Provider value={{ runId: captured.current.workflowRunId, downloadTargets: preview?.downloadTargets, submit }}>
                 <ResumeActionsGuard disabled={locked}>{children}</ResumeActionsGuard>
               </ResumeSubmissionContext.Provider>
             </fieldset>
