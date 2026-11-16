@@ -285,6 +285,22 @@ public sealed class BtDownloadManagerTests
     }
 
     [TestMethod]
+    public async Task HashCheckFailurePreservesTheLastStageWithoutInferringTheCauseFromExceptionText()
+    {
+        var transport = new ControlledTransport();
+        var manager = Create(transport);
+        var job = await manager.EnsureQueuedAsync(Request());
+        var transfer = await transport.NextAsync();
+        await transfer.ReportAsync(new TorrentTransferProgress {Stage = "Hashing", Percentage = 58});
+        transfer.Fail(new IOException("LOCAL_STORAGE_FULL https://user:secret@tracker.invalid"));
+        var failed = (await Assert.ThrowsExceptionAsync<BtDownloadJobException>(() => manager.WaitForCompletionAsync(job.Id))).Job;
+        Assert.AreEqual("FailedWhileHashing", failed.Stage);
+        Assert.AreEqual("The BitTorrent transfer failed while accessing files or the network.", failed.Error);
+        Assert.AreEqual(58, failed.Percentage);
+        Assert.IsFalse((await File.ReadAllTextAsync(Path.Combine(_root, "store", job.Id + ".json"))).Contains("secret"));
+    }
+
+    [TestMethod]
     public async Task RemovalNeverDeletesDataAndRejectsLinkedJobs()
     {
         var transport = new ControlledTransport();

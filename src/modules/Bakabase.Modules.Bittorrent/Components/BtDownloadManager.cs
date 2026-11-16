@@ -382,7 +382,8 @@ public sealed class BtDownloadManager(
             else if (failure != null)
                 next = stored.Job with
                 {
-                    Status = BtDownloadStatus.Failed, Stage = "Failed", Error = SafeError(failure),
+                    Status = BtDownloadStatus.Failed, Stage = stored.Job.Stage == "Hashing" ? "FailedWhileHashing" : "Failed",
+                    Error = SafeError(failure),
                     SpeedBytesPerSecond = null, Peers = null, UpdatedAt = DateTime.UtcNow
                 };
             else
@@ -565,6 +566,7 @@ public sealed class BtDownloadManager(
     // Exceptions can contain tracker URLs or proxy credentials. Persist only endpoint-free categories.
     private static string SafeError(Exception exception) => exception switch
     {
+        TorrentFileException torrent => torrent.Message,
         LocalStorageException local => local.Code,
         TimeoutException => "The BitTorrent download timed out. Retry to continue from the existing files.",
         OperationCanceledException => "The BitTorrent transfer was interrupted. Retry to continue from the existing files.",

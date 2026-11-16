@@ -48,6 +48,7 @@
   "bt.stage.ReadingMetadata": "Reading torrent metadata",
   "bt.stage.FindingMetadata": "Finding torrent metadata",
   "bt.stage.Hashing": "Checking existing files",
+  "bt.stage.FailedWhileHashing": "Last reported step: checking existing files",
   "bt.stage.HashingPaused": "File checking stopped",
   "bt.stage.Downloading": "Downloading contents",
   "bt.stage.DownloadingMetadata": "Downloading metadata",

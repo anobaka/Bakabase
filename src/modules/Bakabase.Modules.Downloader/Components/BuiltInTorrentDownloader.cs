@@ -202,7 +202,17 @@ public sealed class BuiltInTorrentDownloader : ITorrentDownloader
             {
                 ct.ThrowIfCancellationRequested();
                 if (manager.State == TorrentState.Error)
-                    throw new IOException($"The torrent download failed: {manager.Error?.Exception.Message}", manager.Error?.Exception);
+                {
+                    if (manager.Error is { Reason: Reason.ReadFailure or Reason.WriteFailure } error)
+                    {
+                        var cause = error.Exception?.GetBaseException();
+                        _logger.LogWarning("BT {Operation} failed in {Component} ({Cause}, HRESULT {ErrorCode:X8})",
+                            error.Reason, cause?.TargetSite?.DeclaringType?.FullName, cause?.GetType().Name,
+                            cause?.HResult);
+                        throw new TorrentFileException(error);
+                    }
+                    throw new IOException("The torrent engine reported an I/O error.");
+                }
 
                 if (progress != null)
                 {
@@ -220,25 +230,20 @@ public sealed class BuiltInTorrentDownloader : ITorrentDownloader
                 await Task.WhenAny(finished.Task, Task.Delay(TimeSpan.FromMilliseconds(500), ct));
             }
 
-            // Seeding means every piece has passed its torrent hash. Stop before handing the
-            // paths to placement, so no writer or uploader retains the files as they are moved.
+            // MonoTorrent can report Seeding before closing its writers and raising the event.
+            // Wait for that hand-off before inspecting or finalizing any filenames.
+            await finished.Task.WaitAsync(ct);
+            if (!manager.Bitfield.AllTrue || manager.State != TorrentState.Seeding)
+                throw new IOException("The torrent has not verified all requested pieces.");
             await manager.StopAsync(TimeSpan.FromSeconds(2));
             var files = new List<string>();
+            var finalPaths = manager.Files.Select(f => Path.GetFullPath(f.DownloadCompleteFullPath))
+                .ToHashSet(OperatingSystem.IsWindows() || OperatingSystem.IsMacOS()
+                    ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
             foreach (var file in manager.Files)
-            {
-                var fullPath = Path.GetFullPath(file.FullPath);
-                var relative = Path.GetRelativePath(payloadDirectory, fullPath);
-                if (Path.IsPathRooted(relative) || relative == ".." || relative.StartsWith(".." + Path.DirectorySeparatorChar))
-                    throw new IOException("The torrent contains a file outside its download directory.");
-                if (file.Length == 0 && !File.Exists(fullPath))
-                {
-                    Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
-                    using var empty = File.Create(fullPath);
-                }
-                if (!File.Exists(fullPath) || new FileInfo(fullPath).Length != file.Length)
-                    throw new IOException($"The completed torrent file is missing or incomplete: {relative}");
-                files.Add(fullPath);
-            }
+                files.Add(FinalizeVerifiedFile(payloadDirectory, file.DownloadCompleteFullPath,
+                    finalPaths.Contains(Path.GetFullPath(file.DownloadIncompleteFullPath))
+                        ? file.DownloadCompleteFullPath : file.DownloadIncompleteFullPath, file.Length));
             if (files.Count == 0) throw new IOException("The torrent completed without any files.");
             if (progress != null) await progress(new TorrentTransferProgress
             {
@@ -255,6 +260,44 @@ public sealed class BuiltInTorrentDownloader : ITorrentDownloader
                 catch (Exception ex) { _logger.LogWarning(ex, "Could not cleanly stop the torrent; disposing its engine"); }
             }
         }
+    }
+
+    internal static string FinalizeVerifiedFile(string root, string completePath, string partialPath, long length)
+    {
+        string InRoot(string path)
+        {
+            var full = Path.GetFullPath(path);
+            var relative = Path.GetRelativePath(root, full);
+            if (Path.IsPathRooted(relative) || relative is "." or ".." || relative.StartsWith(".." + Path.DirectorySeparatorChar))
+                throw new IOException("The torrent contains a file outside its download directory.");
+            var directory = Path.GetFullPath(root);
+            foreach (var segment in relative.Split(Path.DirectorySeparatorChar).SkipLast(1))
+            {
+                directory = Path.Combine(directory, segment);
+                if (new DirectoryInfo(directory).LinkTarget != null)
+                    throw new IOException("The torrent file is inside a linked directory.");
+            }
+            return full;
+        }
+
+        var complete = new FileInfo(InRoot(completePath));
+        var partial = new FileInfo(InRoot(partialPath));
+        if (!string.Equals(complete.FullName, partial.FullName, StringComparison.Ordinal) && partial.Exists)
+        {
+            if (complete.Exists || partial.Length != length || partial.LinkTarget != null)
+                throw new IOException("The verified torrent file cannot be finalized without changing another file.");
+            try { File.Move(partial.FullName, complete.FullName, overwrite: false); }
+            catch (FileNotFoundException) when (File.Exists(complete.FullName)) { } // Engine finished its rename.
+        }
+        else if (length == 0 && !complete.Exists)
+        {
+            Directory.CreateDirectory(complete.DirectoryName!);
+            using var empty = new FileStream(complete.FullName, FileMode.CreateNew, FileAccess.Write);
+        }
+        complete.Refresh();
+        if (!complete.Exists || complete.LinkTarget != null || complete.Length != length)
+            throw new IOException("The verified torrent file is missing or incomplete.");
+        return complete.FullName;
     }
 
     private static void ValidateTimeout(TimeSpan timeout)
