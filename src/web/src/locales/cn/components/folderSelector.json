@@ -1,3 +1,7 @@
 {
-  "folderSelector.placeholder.manuallyEnterPath": "手动输入路径"
+  "folderSelector.placeholder.manuallyEnterPath": "手动输入路径",
+  "folderSelector.title": "选择目标目录",
+  "folderSelector.source.mediaLibrary": "媒体库目录",
+  "folderSelector.source.custom": "其他目录",
+  "folderSelector.useDirectory": "使用此目录"
 }

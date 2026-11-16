@@ -11,6 +11,11 @@ import { storageError, validateUserStoragePaths } from "@/stores/userStorage";
 
 type Source = "custom" | "media library";
 
+const sourceLabels: Record<Source, string> = {
+  "media library": "folderSelector.source.mediaLibrary",
+  custom: "folderSelector.source.custom",
+};
+
 type Props = {
   sources: Source[];
   onSelect: (path: string) => any;
@@ -34,7 +39,7 @@ const FolderSelectorInner = ({ sources, onSelect: propsOnSelect }: Props) => {
     try {
       await validateUserStoragePaths([path]);
       await BApi.options.addLatestMovingDestination(path);
-      propsOnSelect(path);
+      await propsOnSelect(path);
     } catch (cause) {
       setError(storageError(cause, t).message || t("fileExplorer.storage.pathRejected"));
     } finally {
@@ -65,7 +70,7 @@ const FolderSelectorInner = ({ sources, onSelect: propsOnSelect }: Props) => {
       <Accordion hideIndicator selectedKeys={sources.map((s) => s)} variant="splitted">
         {sources.map((s) => {
           return (
-            <AccordionItem key={s} aria-label={t(s)} title={t(s)}>
+            <AccordionItem key={s} aria-label={t(sourceLabels[s])} title={t(sourceLabels[s])}>
               {renderSourceInner(s)}
             </AccordionItem>
           );

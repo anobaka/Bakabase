@@ -46,7 +46,7 @@ const MediaLibraryPathSelectorInner = (props: Props) => {
                           variant="light"
                           onPress={() => {
                             navigator.clipboard.writeText(p);
-                            toast.success(t<string>("Path copied to clipboard"));
+                            toast.success(t<string>("common.tip.pathCopied"));
                           }}
                         >
                           <AiOutlineCopy className="text-lg" />

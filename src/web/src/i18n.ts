@@ -65,6 +65,7 @@ import enDataSync from "@/locales/en/pages/dataSync.json";
 
 // English - Components
 import enFileExplorer from "@/locales/en/components/fileExplorer.json";
+import enFolderSelector from "@/locales/en/components/folderSelector.json";
 import enResourceFilter from "@/locales/en/components/resourceFilter.json";
 import enEnhancer from "@/locales/en/components/enhancer.json";
 import enProperty from "@/locales/en/components/property.json";
@@ -155,6 +156,7 @@ import cnDataSync from "@/locales/cn/pages/dataSync.json";
 
 // Chinese - Components
 import cnFileExplorer from "@/locales/cn/components/fileExplorer.json";
+import cnFolderSelector from "@/locales/cn/components/folderSelector.json";
 import cnResourceFilter from "@/locales/cn/components/resourceFilter.json";
 import cnEnhancer from "@/locales/cn/components/enhancer.json";
 import cnProperty from "@/locales/cn/components/property.json";
@@ -244,6 +246,7 @@ const enResources = {
   ...enDataSync,
   // Components
   ...enFileExplorer,
+  ...enFolderSelector,
   ...enResourceFilter,
   ...enEnhancer,
   ...enProperty,
@@ -334,6 +337,7 @@ const cnResources = {
   ...cnDataSync,
   // Components
   ...cnFileExplorer,
+  ...cnFolderSelector,
   ...cnResourceFilter,
   ...cnEnhancer,
   ...cnProperty,

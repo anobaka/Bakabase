@@ -7,6 +7,8 @@ import { Modal } from "../bakaui";
 
 import FolderSelectorInner from "./components/FolderSelectorInner";
 
+import { storageError } from "@/stores/userStorage";
+
 type Source = "custom" | "media library";
 
 type Props = {
@@ -23,7 +25,7 @@ const FolderSelector = (props: Props) => {
     <Modal
       footer={false}
       size="lg"
-      title={t('Select Path')}
+      title={t("folderSelector.title")}
       onClose={() => setVisible(false)}
       // onClose={() => {
       //   setVisible(false);
@@ -34,7 +36,9 @@ const FolderSelector = (props: Props) => {
       <FolderSelectorInner
         sources={sources}
         onSelect={async (path) => {
-          propsOnSelect(path);
+          const result = await propsOnSelect(path);
+
+          if (result?.code) throw storageError(result);
           setVisible(false);
         }}
       />

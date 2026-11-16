@@ -83,7 +83,9 @@ const CustomPathSelectorInner = (props: Props) => {
         />
         <Button
           isIconOnly
+          aria-label={t("folderSelector.useDirectory")}
           color="success"
+          isDisabled={!manualPath.trim()}
           size="sm"
           variant="flat"
           onPress={() => onSelect(manualPath)}

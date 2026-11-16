@@ -76,6 +76,20 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("storage selection confirmation", () => {
+  it("keeps the selected folder available when the asynchronous move fails", async () => {
+    const onSelect = vi.fn().mockRejectedValueOnce(new Error("The destination is unavailable"))
+      .mockResolvedValueOnce(undefined);
+
+    render(<FolderSelectorInner sources={["custom"]} onSelect={onSelect} />);
+    const confirm = screen.getByRole("button", { name: "Confirm typed path" });
+
+    fireEvent.click(confirm);
+    expect(await screen.findByRole("alert")).toHaveTextContent("The destination is unavailable");
+    fireEvent.click(confirm);
+    await waitFor(() => expect(onSelect).toHaveBeenCalledTimes(2));
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
   it("translates the storage boundary error while preserving paths and filesystem errors", () => {
     const translate = (key: string) =>
       key === "fileExplorer.storage.pathRejected" ? "请选择挂载目录" : key;

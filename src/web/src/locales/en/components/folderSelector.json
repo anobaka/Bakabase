@@ -1,3 +1,7 @@
 {
-  "folderSelector.placeholder.manuallyEnterPath": "Manually enter a path"
+  "folderSelector.placeholder.manuallyEnterPath": "Manually enter a path",
+  "folderSelector.title": "Select destination folder",
+  "folderSelector.source.mediaLibrary": "Media library folders",
+  "folderSelector.source.custom": "Other folders",
+  "folderSelector.useDirectory": "Use this folder"
 }
