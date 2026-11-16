@@ -42,7 +42,7 @@ public sealed partial class AcquisitionRecoveryTests
             OwnerId = run.Id.ToString(), OperationId = intent, Slot = CloudOperationService.OperationSlot(target, "download")});
         var file = Path.Combine(directory, "official.bin"); await File.WriteAllTextAsync(file, "verified existing bytes");
         var manifest = await ArtifactManifestFiles.CaptureAsync(directory, [file]);
-        _db.DownloadResults.Add(new() {DownloadTaskId = download.Id, DownloadDirectory = directory, Path = directory,
+        _db.DownloadResults.Add(new() {DownloadTaskId = download.Id, DeduplicationKey = intent, DownloadDirectory = directory, Path = directory,
             FilesJson = JsonSerializer.Serialize(new[] {file}), Fingerprint = manifest.Fingerprint});
         workset = workset with {Targets = [target with {DownloadTaskId = download.Id}]};
         run.CurrentItemJson = WorkflowItemSnapshot.Capture(workset);

@@ -5,6 +5,7 @@ import { useState } from "react";
 import RuntimeOverviewSummary from "../RuntimeOverviewSummary";
 import type { RuntimeOverview } from "../runtimeOverview";
 import acquisition from "@/locales/cn/pages/acquisition.json";
+import directories from "@/locales/cn/pages/acquisitionDirectories.json";
 import cloud from "@/locales/cn/pages/cloudDownload.json";
 import downloader from "@/locales/cn/pages/downloader.json";
 import workflow from "@/locales/cn/pages/workflow.json";
@@ -48,7 +49,7 @@ beforeAll(async () => {
     fallbackLng: false,
     keySeparator: false,
     interpolation: { escapeValue: false },
-    resources: { cn: { translation: { ...acquisition, ...cloud, ...downloader, ...workflow } } },
+    resources: { cn: { translation: { ...acquisition, ...directories, ...cloud, ...downloader, ...workflow } } },
   });
 });
 afterEach(cleanup);
@@ -95,6 +96,24 @@ it("shows the structured password wait and replaces it with the actual current-d
   expect(screen.getByText(acquisition["acquisition.plan.replan.error.PLAN_CURRENT_DIRECTORY_CHANGED"])).toBeVisible();
   expect(screen.queryByText(workflow["workflow.metadata.warning.PasswordUnknown"])).toBeNull();
   expect(screen.queryByText("PLAN_CURRENT_DIRECTORY_CHANGED")).toBeNull();
+});
+it.each([
+  ["PROCESSING_CONFIRMATION_REQUIRED", "acquisition.plan.issue.PROCESSING_CONFIRMATION_REQUIRED"],
+  ["PROCESSING_STEPS_MISSING", "acquisition.plan.issue.PROCESSING_STEPS_MISSING"],
+])("uses existing plan issue translations for runtime problem %s", (code, key) => {
+  render(<RuntimeOverviewSummary overview={overview({ currentNodeKind: "fs.assessDelivery",
+    workflowStatus: "waiting", problemCode: code, problem: code })} />);
+  expect(screen.getByText(acquisition[key as keyof typeof acquisition])).toBeVisible();
+  expect(screen.queryByText(code)).toBeNull();
+});
+it.each([
+  ["STAGE_DIRECTORY_COMMIT_PENDING", "acquisition.directories.error.STAGE_DIRECTORY_COMMIT_PENDING"],
+  ["STAGE_COMMIT_TARGET_CONFLICT", "acquisition.plan.replan.error.STAGE_COMMIT_TARGET_CONFLICT"],
+])("shows the actionable directory explanation for %s", (code, key) => {
+  render(<RuntimeOverviewSummary overview={overview({ currentNodeKind: "acquisition.plan.process",
+    workflowStatus: "failed", problemCode: code, problem: code })} />);
+  expect(screen.getByText(directories[key as keyof typeof directories])).toBeVisible();
+  expect(screen.queryByText(code)).toBeNull();
 });
 it.each([
   ["failed", "acquisition.plan.process", "LOCAL_STORAGE_FULL"],
@@ -184,6 +203,22 @@ it("renders only measured download progress, localizes its stage and does not in
   expect(screen.queryByRole("progressbar")).toBeNull();
   expect(screen.queryByText(/80%|已下载/)).toBeNull();
 });
+it("distinguishes live input preparation from the archive tool's measured extraction percentage", () => {
+  const running = { currentNodeKind: "acquisition.plan.process", workflowStatus: "running" };
+  const view = render(<RuntimeOverviewSummary overview={overview({ ...running,
+    stage: "preparingFiles", progressScope: "processing", progress: null })} />);
+  expect(screen.getByText("正在准备处理文件")).toBeVisible();
+  expect(screen.getByRole("progressbar")).not.toHaveAttribute("aria-valuenow");
+  view.rerender(<RuntimeOverviewSummary overview={overview({ ...running,
+    stage: "extractingArchive", progressScope: "archive", progress: 62 })} />);
+  expect(screen.getByText("当前压缩包已解压 62%")).toBeVisible();
+  expect(screen.getByRole("progressbar", { name: "当前压缩包解压进度" })).toHaveAttribute("aria-valuenow", "62");
+  view.rerender(<RuntimeOverviewSummary overview={overview({ ...running, workflowStatus: "waiting",
+    stage: "extractingArchive", progressScope: "archive", progress: 62 })} />);
+  expect(screen.queryByRole("progressbar")).toBeNull();
+  expect(screen.queryByText("正在解压当前压缩包")).toBeNull();
+});
+
 it("uses the server's generic classification for both task and source reasons", () => {
   render(
     <RuntimeOverviewSummary

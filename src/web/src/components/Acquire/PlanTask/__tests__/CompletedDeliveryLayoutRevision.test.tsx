@@ -4,13 +4,15 @@ import Form, { canReviseDeliveryLayout } from "../CompletedDeliveryLayoutRevisio
 import type { PlanTaskDetail } from "../models";
 import { AcquisitionStatus } from "@/sdk/constants";
 
-const api = vi.hoisted(() => ({ preview: vi.fn(), replan: vi.fn(), run: vi.fn() }));
+const api = vi.hoisted(() => ({ preview: vi.fn(), replan: vi.fn(), run: vi.fn(), reserveDefaults: vi.fn() }));
+vi.mock("../../useStorageReserveDefaults", () => ({ default: api.reserveDefaults }));
 vi.mock("@/components/FileSystemSelector/components/Button", () => ({ default: ({ fileSystemSelectorProps }: any) => <button onClick={() => fileSystemSelectorProps.onSelected({path: "/work/new"})}>Choose /work/new</button> }));
 vi.mock("../api", () => ({ planTaskApi: api }));
 vi.mock("@/sdk/BApi", () => ({
   default: { workflow: { previewArtifactDeliveryLayout: api.preview } },
 }));
 vi.mock("@/components/bakaui", () => ({
+  Tooltip: ({children}: any) => <>{children}</>,
   Button: ({ children, onPress, isDisabled, isLoading }: any) => (
     <button disabled={isDisabled || isLoading} onClick={onPress}>
       {children}
@@ -109,6 +111,7 @@ const review = async (name: string, id: string) => {
 };
 beforeEach(() => {
   vi.resetAllMocks();
+  api.reserveDefaults.mockReturnValue({ value: { selected: false, minimumBytes: 50 * 1024 ** 3 }, failed: false, reload: vi.fn() });
   api.preview.mockImplementation(async (_run, id, policy) => preview(id, policy));
   api.replan.mockResolvedValue(detail);
 });
@@ -241,6 +244,7 @@ it("does not retry a rejected replan automatically or run after a conflict", asy
 
 it("can deliver the reviewed output again with an unchanged layout to a task-specific directory", async () => {
   const accept = vi.fn();
+  api.reserveDefaults.mockReturnValue({ value: { selected: true, minimumBytes: 50 * 1024 ** 3 }, failed: false, reload: vi.fn() });
   api.preview.mockImplementation(async (_run, id, policy) => preview(id, policy, {changed:false}));
   render(<Form detail={detail} retry onCancel={vi.fn()} onSaved={accept} />);
   pick();
@@ -252,8 +256,12 @@ it("can deliver the reviewed output again with an unchanged layout to a task-spe
   expect(screen.getByRole("button",{name:"common.action.apply"})).toBeDisabled();
   fireEvent.click(screen.getByRole("button",{name:"Choose /work/new"}));
   applyPlacement();
+  const reserve = screen.getByRole("checkbox", {name:"acquisition.reserve.operation.label"});
+  expect(reserve).toBeChecked();
+  fireEvent.click(reserve);
   fireEvent.click(submit);
   await waitFor(()=>expect(accept).toHaveBeenCalledOnce());
+  expect(accept).toHaveBeenCalledWith(detail, {useEmergencySpaceReserve:false});
   expect(api.replan).toHaveBeenCalledWith(42,expect.objectContaining({expectedRunId:100, expectedRevision:3, retryDeliveryOnly:true, deliveryRootDirectory:"/work/new"}));
 });
 

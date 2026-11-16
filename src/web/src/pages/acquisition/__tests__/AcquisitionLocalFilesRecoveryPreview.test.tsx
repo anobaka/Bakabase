@@ -40,6 +40,7 @@ it.each([
     const { container } = render(
       <AcquisitionLocalFilesRecoveryPreview
         preview={{
+          supportsPrepareOnly: true,
           parts: [
             {
               partId: "main",

@@ -1353,6 +1353,33 @@ func TestRetainedInspectionPreservesFullAndCheckpointedFiles(t *testing.T) {
 	}
 }
 
+func TestRetainedInspectionAcceptsOnlyAnUnstartedEmptyCheckpointPair(t *testing.T) {
+	root := t.TempDir()
+	local := filepath.Join(root, "file")
+	sidecar := local + pcsdownload.DownloadSuffix
+	if err := os.WriteFile(local, nil, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(sidecar, nil, 0600); err != nil {
+		t.Fatal(err)
+	}
+	entries := []entry{{ID: 1, Path: "/file", Size: 4}}
+	if err := inspectLocalDownload(context.Background(), root, "/file", entries); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{local, sidecar} {
+		if info, err := os.Stat(name); err != nil || info.Size() != 0 {
+			t.Fatalf("inspection changed %s", name)
+		}
+	}
+	if err := os.WriteFile(local, []byte{1}, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := inspectLocalDownload(context.Background(), root, "/file", entries); err == nil || err.Error() != "BAIDU_DOWNLOAD_CHECKPOINT_INVALID" {
+		t.Fatalf("nonempty partial with empty checkpoint accepted: %v", err)
+	}
+}
+
 func TestRetainedInspectionRejectsUnexpectedFilesSymlinksAndChangedManifest(t *testing.T) {
 	root := t.TempDir()
 	entries := []entry{{ID: 1, Path: "/saved/file", Size: 4}}
@@ -1440,6 +1467,108 @@ func TestPortableManifestPreservesFamiliesBoundsAndOriginalManifest(t *testing.T
 	b, _ := json.Marshal(other)
 	if !bytes.Equal(a, b) {
 		t.Fatal("manifest order affected mapping")
+	}
+}
+
+func TestMaskedRarVolumesPreserveDistinctFamilyStems(t *testing.T) {
+	remote := "/saved/set"
+	names := []string{"bundle.part01.rar删除", "bundle.part02.rar删除", "bundle.part01.rar改", "bundle.part02.rar改",
+		"bundle.part01.rar", "bundle.part02.rar", "bundle.part01.rar删除.txt", "bundle.part03.rar删除"}
+	entries := []entry{{1, remote, 0, true}}
+	for i, name := range names {
+		entries = append(entries, entry{int64(i + 2), path.Join(remote, name), 7, i == len(names)-1})
+	}
+	mapped, err := portableManifestPaths(remote, entries)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stem := func(i int) string {
+		t.Helper()
+		name := path.Base(mapped[path.Join(remote, names[i])])
+		suffix := strings.TrimPrefix(names[i], "bundle")
+		if !strings.HasSuffix(name, suffix) {
+			t.Fatalf("lost suffix %q: %q", suffix, name)
+		}
+		return strings.TrimSuffix(name, suffix)
+	}
+	if stem(0) != stem(1) || stem(2) != stem(3) || stem(0) == stem(2) ||
+		stem(4) != stem(5) || stem(4) == stem(0) {
+		t.Fatalf("wrong archive groups: %v", mapped)
+	}
+	// Directories and files with further extensions keep their prior family rules.
+	old, err := portableManifestPathsForVersion(remote, entries, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, i := range []int{6, 7} {
+		k := path.Join(remote, names[i])
+		if mapped[k] != old[k] {
+			t.Fatalf("unrelated name changed: %q", k)
+		}
+	}
+}
+
+func TestMaskedRarPathJournalRetainsExactOldNamesAndRejectsModifiedMaps(t *testing.T) {
+	root, profile := t.TempDir(), t.TempDir()
+	r := request{OperationID: "masked-archive", RemotePath: "/saved/set"}
+	entries := []entry{{1, r.RemotePath, 0, true}, {2, r.RemotePath + "/bundle.part1.rar删除", 4, false},
+		{3, r.RemotePath + "/bundle.part2.rar删除", 3, false}, {4, r.RemotePath + "/说明.txt", 4, false}}
+	current, err := resolveDownloadPaths(context.Background(), profile, "17", root, r, entries, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	journals, _ := filepath.Glob(filepath.Join(profile, "operations", "*.paths-v1.json"))
+	if len(journals) != 1 {
+		t.Fatal("expected a bound journal")
+	}
+	newJSON, err := os.ReadFile(journals[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	var journal localPathJournal
+	if err := json.Unmarshal(newJSON, &journal); err != nil || journal.Version != 2 {
+		t.Fatal("expected current format", err)
+	}
+	// Literal old names guard against silently changing the historical algorithm
+	// together with its compatibility verifier.
+	legacy := map[string]string{r.RemotePath: "set", entries[1].Path: "set/bundle.part1~7f3787d40e7eb6ac.rar删除",
+		entries[2].Path: "set/bundle.part2~46590b8c80a6b8d5.rar删除", entries[3].Path: "set/说明~f659f45391ad4d0b.txt"}
+	journal.Version, journal.Paths = 1, sortedLocalPathPairs(legacy)
+	oldJSON, _ := json.Marshal(journal)
+	if err := os.WriteFile(journals[0], oldJSON, 0600); err != nil {
+		t.Fatal(err)
+	}
+	local := filepath.Join(root, filepath.FromSlash(legacy[entries[1].Path]))
+	if err := os.MkdirAll(filepath.Dir(local), 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(local, []byte("data"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	for _, persist := range []bool{false, true} {
+		v, err := resolveDownloadPaths(context.Background(), profile, "17", root, r, entries, persist)
+		if err != nil || v[entries[1].Path] != legacy[entries[1].Path] || v[entries[2].Path] != legacy[entries[2].Path] ||
+			v[entries[1].Path] == current[entries[1].Path] {
+			t.Fatal("old map did not resume", err)
+		}
+	}
+	stillOld, _ := os.ReadFile(journals[0])
+	if !bytes.Equal(stillOld, oldJSON) {
+		t.Fatal("historical journal rewritten")
+	}
+	for _, version := range []int{1, 2} {
+		journal.Version = version
+		journal.Paths[1].Relative = "../elsewhere"
+		tampered, _ := json.Marshal(journal)
+		if err := os.WriteFile(journals[0], tampered, 0600); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := resolveDownloadPaths(context.Background(), profile, "17", root, r, entries, false); err == nil || err.Error() != "BAIDU_LOCAL_PATH_MAPPING_INVALID" {
+			t.Fatalf("tampered v%d map accepted: %v", version, err)
+		}
+	}
+	if content, err := os.ReadFile(local); err != nil || string(content) != "data" {
+		t.Fatal("original payload changed")
 	}
 }
 

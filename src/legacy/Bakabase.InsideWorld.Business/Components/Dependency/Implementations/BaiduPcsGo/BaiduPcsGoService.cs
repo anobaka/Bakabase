@@ -32,7 +32,7 @@ public sealed class BaiduPcsGoService(ILoggerFactory loggerFactory, AppService a
     IHttpClientFactory clients, IServiceProvider services)
     : DependentComponentService(loggerFactory, appService, "baidu-pcs-go", services)
 {
-    public const string BridgeVersion = "4.0.2+bakabase.13";
+    public const string BridgeVersion = "4.0.2+bakabase.15";
     public const string UpstreamCommit = "225bdd3b6cb298601c4d5ef7104c3e08cd1d692d";
     private const string SourceSha256 = "6da5fbee22d3747a8dbc9e78d833f775de839c1ed77f6526642c79f4f6d189cf";
     public override string Id => "baidu-pcs-go-component-service";

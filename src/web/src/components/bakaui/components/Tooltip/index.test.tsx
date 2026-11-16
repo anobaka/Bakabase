@@ -1,4 +1,4 @@
-import React, { createRef } from "react";
+import React, { createRef, useState } from "react";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HeroUIProvider } from "@heroui/react";
@@ -143,5 +143,35 @@ describe("shared Tooltip", () => {
     expect(container.querySelector("[data-overlay-container]")?.firstElementChild).toBe(trigger);
     await user.click(trigger);
     expect(onClick).toHaveBeenCalledOnce();
+  });
+
+  it("keeps a nested dialog's portaled tooltip accessible without exposing the underlying dialog", async () => {
+    const { default: Modal } = await import("../Modal");
+    const user = userEvent.setup();
+    const closeInner = vi.fn();
+    function NestedDialogs() {
+      const [inner, setInner] = useState(false);
+      return <>
+        <Modal visible disableAnimation title="Task details" footer={false}>
+          <Button onPress={() => setInner(true)}>Continue task</Button>
+          <p>Underlying task information</p>
+        </Modal>
+        {inner && <Modal visible disableAnimation title="Continue task files" footer={false} onClose={closeInner}>
+          <Tooltip isOpen content="Could not open archive; check password and volumes." placement="bottom">
+            <Button>Original diagnostic</Button>
+          </Tooltip>
+        </Modal>}
+      </>;
+    }
+    renderTooltip(<NestedDialogs />);
+    await user.click(screen.getByRole("button", { name: "Continue task" }));
+    const trigger = await screen.findByRole("button", { name: "Original diagnostic" });
+    const overlay = await screen.findByRole("tooltip");
+    expect(overlay).toHaveTextContent("Could not open archive; check password and volumes.");
+    expect(trigger).toHaveAttribute("aria-describedby", overlay.id);
+    expect(overlay.closest('[aria-hidden="true"]')).toBeNull();
+    expect(screen.queryByRole("dialog", { name: "Task details" })).toBeNull();
+    expect(screen.getByRole("dialog", { name: "Continue task files" })).toBeVisible();
+    expect(closeInner).not.toHaveBeenCalled();
   });
 });

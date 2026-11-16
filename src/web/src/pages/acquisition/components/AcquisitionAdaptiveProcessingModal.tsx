@@ -72,7 +72,7 @@ export default function AcquisitionAdaptiveProcessingModal({
         return localized === key ? row.reason : localized;
       }
       return t(`acquisition.adaptive.reason.${row.reasonCode}`, {
-        defaultValue: row.reasonCode,
+        defaultValue: row.canMigrate ? t("acquisition.adaptive.ready") : row.reasonCode,
       });
     },
     [t],
@@ -238,7 +238,7 @@ export default function AcquisitionAdaptiveProcessingModal({
                     className={`ml-2 text-xs ${row.canMigrate ? "text-success-700" : "text-warning-700"}`}
                   >
                     {row.canMigrate
-                      ? t("acquisition.adaptive.ready")
+                      ? reasonLabel(row)
                       : `${t("acquisition.adaptive.manualReview")}：${reasonLabel(row)}`}
                   </span>
                 </span>

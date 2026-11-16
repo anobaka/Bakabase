@@ -11,6 +11,22 @@ namespace Bakabase.Service.Components.FileProcessing;
 
 public sealed partial class FileProcessingWorkspaceResolver
 {
+    /// <summary>Read-only proof of an already-created allocation. Selecting a path never
+    /// creates this receipt or turns an existing borrowed directory into an owned one.</summary>
+    internal async Task<bool> HasScopedDirectoryAsync(ArtifactDirectoryScope scope, CancellationToken ct)
+    {
+        ValidateDirectoryScope(scope);
+        var normalized = scope with {StorageRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(scope.StorageRoot)),
+            Directory = Path.TrimEndingDirectorySeparator(Path.GetFullPath(scope.Directory))};
+        ValidateConfiguredRoot(normalized.StorageRoot, storage);
+        storage?.EnsurePathAllowed(normalized.Directory); ArtifactManifestFiles.RejectLinks(normalized.Directory);
+        var receipt = Path.Combine(MetadataRoot, "task-directories",
+            ArtifactManifestFiles.Hash(normalized.Directory.ToUpperInvariant()) + ".json");
+        ArtifactManifestFiles.RejectLinks(receipt);
+        return Directory.Exists(normalized.Directory) && File.Exists(receipt) && new FileInfo(receipt).Length <= 32768 &&
+            JsonSerializer.Deserialize<ArtifactDirectoryScope>(await File.ReadAllTextAsync(receipt, ct), Json) == normalized;
+    }
+
     public static void ValidateDirectoryScope(ArtifactDirectoryScope scope)
     {
         static bool Identity(string text) => !string.IsNullOrWhiteSpace(text) && text.Length <= 128 &&

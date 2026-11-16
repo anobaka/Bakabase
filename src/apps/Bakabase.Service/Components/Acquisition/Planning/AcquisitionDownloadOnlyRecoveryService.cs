@@ -49,7 +49,7 @@ public sealed class AcquisitionDownloadOnlyRecoveryService(BakabaseDbContext db,
 {
     private static readonly SemaphoreSlim Admission = new(1, 1);
 
-    internal static CloudDownloadTarget[]? Targets(WorkflowRunDbModel? run, string signalJson)
+    internal static CloudDownloadTarget[]? Targets(WorkflowRunDbModel? run, string signalJson, bool verificationOnly = false)
     {
         if (run?.Status != WorkflowRunStatus.Waiting || run.PendingSignalJson != null ||
             WorkflowRunPlans.Read(run.PlanSnapshotJson)?.Nodes.ElementAtOrDefault(run.CurrentStepIndex ?? -1)?.Kind != "download.awaitCompletion") return null;
@@ -57,7 +57,10 @@ public sealed class AcquisitionDownloadOnlyRecoveryService(BakabaseDbContext db,
         {
             var signal = JsonSerializer.Deserialize<CloudSelectionSignal>(signalJson, WorkflowJson.Options);
             var workset = AcquisitionRecoveryDiagnostics.ReadWorkset(run.CurrentItemJson);
-            if (signal?.ObserveExistingOnly != true || signal.RevalidateExistingDownloads != true || signal.VerifyExistingFilesOnly == true ||
+            var matchesMode = verificationOnly
+                ? signal is {VerifyExistingFilesOnly: true, RevalidateExistingDownloads: not true}
+                : signal is {RevalidateExistingDownloads: true, VerifyExistingFilesOnly: not true};
+            if (signal?.ObserveExistingOnly != true || !matchesMode ||
                 signal.ResumeTargetIds is not {Count: > 0 and <= 100} ids || ids.Distinct().Count() != ids.Count || workset == null ||
                 signal.SourceIds.Count > 0 || signal.SourceMethods.Count > 0 || signal.SourceAccounts.Count > 0 ||
                 signal.SourceCredentialCorrections.Count > 0 || signal.AccountId != null || signal.OutputDirectory != null) return null;
@@ -83,7 +86,7 @@ public sealed class AcquisitionDownloadOnlyRecoveryService(BakabaseDbContext db,
             using var remoteBudget = CancellationTokenSource.CreateLinkedTokenSource(ct);
             remoteBudget.CancelAfter(TimeSpan.FromSeconds(15));
             CloudDownloadRecoveryCheck check;
-            try { check = await recovery.CheckAsync(run.Id, target, workset.OutputDirectory, true, remoteBudget.Token); }
+            try { check = await recovery.CheckAsync(run.Id, target, workset.OutputDirectory, true, remoteBudget.Token, includeStopped: true); }
             catch (OperationCanceledException) when (!ct.IsCancellationRequested)
             { reason = "RECOVERY_CHECK_INCOMPLETE"; break; }
             if (!check.CanRetry || check.VerifyExistingOnly) {reason = check.ReasonCode; break;}
@@ -100,7 +103,7 @@ public sealed class AcquisitionDownloadOnlyRecoveryService(BakabaseDbContext db,
                     try
                     {
                         await validateOwner(token);
-                        var local = await recovery.CheckAsync(run.Id, target, workset.OutputDirectory, false, token);
+                        var local = await recovery.CheckAsync(run.Id, target, workset.OutputDirectory, false, token, includeStopped: true);
                         if (!local.Candidate || local.VerifyExistingOnly) throw new InvalidOperationException(local.ReasonCode);
                         await EnsureAdmission(id, token); await CheckCapacity(id, target, workset, token);
                     }

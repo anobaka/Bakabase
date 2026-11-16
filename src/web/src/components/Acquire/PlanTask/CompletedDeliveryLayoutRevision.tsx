@@ -8,6 +8,7 @@ import type { PlanTaskDetail } from "./models";
 import { planTaskApi } from "./api";
 import RevisionPlacementDialog from "./RevisionPlacementDialog";
 import { AcquisitionStatus } from "@/sdk/constants";
+import useAttemptStorageReserve, { type AttemptRunOptions } from "./useAttemptStorageReserve";
 
 const published = (detail: PlanTaskDetail, partId: string) =>
   (detail.replanArtifacts ?? []).filter(
@@ -54,7 +55,7 @@ export default function CompletedDeliveryLayoutRevision({
 }: {
   detail: PlanTaskDetail;
   currentDeliveryRoot?: string | null;
-  onSaved: (next: PlanTaskDetail) => void;
+  onSaved: (next: PlanTaskDetail, options: AttemptRunOptions) => void;
   onBack?: () => void;
   retry?: boolean;
   inDialog?: boolean;
@@ -77,9 +78,11 @@ export default function CompletedDeliveryLayoutRevision({
   const [useCurrentStorageDefaults, setUseCurrentStorageDefaults] = useState(false);
   const [deliveryRootDirectory, setDeliveryRootDirectory] = useState<string>();
   const [saving, setSaving] = useState(false);
+  const reserve = useAttemptStorageReserve(saving);
   const submitting = useRef(false);
   const [error, setError] = useState<string>();
   const valid =
+    reserve.ready &&
     !saving &&
     deliveryRootDirectory !== "" &&
     canReviseDeliveryLayout(snapshot) &&
@@ -118,7 +121,7 @@ export default function CompletedDeliveryLayoutRevision({
           expectedDeliveryProjectionFingerprint: proofs[part.id]!.projectionFingerprint,
         })),
       });
-      onSaved(next);
+      onSaved(next, reserve.options!);
     } catch (cause) {
       setError(
         cause instanceof Error && Object.prototype.hasOwnProperty.call(errors, cause.message)
@@ -223,6 +226,7 @@ export default function CompletedDeliveryLayoutRevision({
       <p className="text-xs text-default-500">
         {t(retry ? "acquisition.timeline.reviewDelivery" : "artifact.deliveryLayout.reviewAll")}
       </p>
+      {reserve.control}
       <ResumeActions busy={saving} cancel={<Button variant="light" isDisabled={saving} onPress={onCancel}>
           {t("common.action.cancel")}
         </Button>}>

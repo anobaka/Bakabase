@@ -11,6 +11,9 @@ export type AcquisitionLocalFilesRecoveryPreview = NonNullable<
   AcquisitionRecoveryRow["localFiles"]
 >;
 export type AcquisitionRecoveryScope = "workflow" | "downloads" | "localFiles";
+type LocalFilesRecoveryOptions =
+  | { analyzeFilesFirst: true; maxAdaptiveIterations: number; prepareOnly?: never }
+  | { prepareOnly: true; analyzeFilesFirst?: never; maxAdaptiveIterations?: never };
 
 async function unwrap<T>(request: Promise<{ code?: number; message?: string | null; data?: T }>) {
   const response = await request;
@@ -31,7 +34,9 @@ export const acquisitionRecoveryApi = {
     )),
   cancelDiagnosis: (diagnosisId: string) =>
     unwrap(BApi.acquisition.cancelAcquisitionTaskRecoveryDiagnosis(diagnosisId, options)),
-  apply: (previewToken: string, taskIds: number[], useEmergencySpaceReserve?: boolean): Promise<AcquisitionRecoveryResult> =>
+  apply: (previewToken: string, taskIds: number[], useEmergencySpaceReserve?: boolean,
+    localFiles?: LocalFilesRecoveryOptions): Promise<AcquisitionRecoveryResult> =>
     unwrap(BApi.acquisition.applyAcquisitionTaskRecovery({ previewToken, taskIds,
-      ...(useEmergencySpaceReserve !== undefined && { useEmergencySpaceReserve }) }, options)),
+      ...(useEmergencySpaceReserve !== undefined && { useEmergencySpaceReserve }),
+      ...localFiles }, options)),
 };

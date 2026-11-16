@@ -206,9 +206,10 @@ public sealed partial class PublishedArtifactAncestorCleanupTests
         var preview = await service.PreviewAsync(new([f.Task.Id], true, true, true, DeleteDeliveredFiles: true));
         var groups = preview.Rows.Single().Cleanup!.Groups;
         Assert.IsTrue(groups.Single(g => g.Kind == "publishedFiles").Eligible);
-        var blocked = groups.Single(g => g.ArtifactId == broken.Id);
-        Assert.IsFalse(blocked.Eligible); Assert.IsTrue(blocked.SizeUnknown);
-        Assert.AreEqual("WorkspaceUnavailable", blocked.ReasonCode);
+        var blocked = groups.Where(g => g.ArtifactId == broken.Id).ToArray();
+        CollectionAssert.AreEquivalent(new[] {"intermediate", "processedFiles"}, blocked.Select(g => g.Kind).ToArray());
+        Assert.IsTrue(blocked.All(g => !g.Eligible && g.SizeUnknown));
+        Assert.IsTrue(blocked.All(g => g.ReasonCode == "WorkspaceUnavailable"));
         Assert.IsTrue(logger.Errors.Any(e => e is JsonException), "Retain the diagnostic exception, not only a generic failure code.");
         var result = await service.DeleteAsync(new(preview.PreviewId, RemoveTaskIfCleanupFails: true));
         Assert.IsFalse(File.Exists(f.Final.Files.Single())); Assert.IsTrue(File.Exists(retained));
@@ -256,15 +257,65 @@ public sealed partial class PublishedArtifactAncestorCleanupTests
     }
 
     [TestMethod]
-    public async Task Final_deletion_cannot_be_added_to_a_task_only_token_or_changed_after_detailed_preview()
+    public async Task Final_deletion_requires_explicit_skip_acceptance_or_a_matching_detailed_preview()
     {
         var f = await DeletionFixture();
         var taskOnly = await f.Service.PreviewAsync(new([f.Task.Id]));
         await Assert.ThrowsExceptionAsync<ArgumentException>(() => f.Service.DeleteAsync(new(taskOnly.PreviewId, DeleteDeliveredFiles: true)));
+        var intermediatesOnly = await f.Service.PreviewAsync(new([f.Task.Id], true, true, true));
+        await Assert.ThrowsExceptionAsync<ArgumentException>(() => f.Service.DeleteAsync(new(intermediatesOnly.PreviewId, DeleteDeliveredFiles: true)));
         var explicitFinal = await f.Service.PreviewAsync(new([f.Task.Id], DeleteDeliveredFiles: true));
         await Assert.ThrowsExceptionAsync<ArgumentException>(() => f.Service.DeleteAsync(new(explicitFinal.PreviewId, DeleteDeliveredFiles: false)));
         await Assert.ThrowsExceptionAsync<ArgumentException>(() => f.Service.DeleteAsync(new(explicitFinal.PreviewId, CleanupFiles: true)));
         Assert.IsTrue(File.Exists(f.Source.Files.Single()));
+        Assert.IsTrue(File.Exists(f.Final.Files.Single()));
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task Skipped_final_deletion_can_confirm_task_scope_without_a_second_file_inventory(bool intermediates)
+    {
+        var f = await DeletionFixture();
+        var unknown = Path.Combine(f.Final.RootDirectory, "manual.key");
+        await File.WriteAllTextAsync(unknown, "keep unregistered user content");
+        var preview = await f.Service.PreviewAsync(new([f.Task.Id]));
+        Assert.IsNull(preview.Rows.Single().Cleanup);
+        Assert.IsFalse(preview.DeleteDeliveredFiles);
+        var input = new AcquisitionTaskDeleteInput(preview.PreviewId, CleanupFiles: intermediates,
+            AcceptDeliveredFiles: true, SkipFileVerification: true, DeleteDeliveredFiles: true);
+        var result = await f.Service.DeleteAsync(input);
+        Assert.AreEqual(intermediates ? 2 : 1, result.RemovedFiles);
+        Assert.IsTrue(result.DeletedTaskIds.Contains(f.Task.Id));
+        Assert.AreEqual(!intermediates, File.Exists(f.Source.Files.Single()));
+        Assert.IsFalse(File.Exists(f.Final.Files.Single()));
+        Assert.IsTrue(File.Exists(unknown));
+        Assert.IsTrue(await db.WorkflowRuns.AnyAsync(r => r.Id == 1));
+        Assert.AreEqual(result, await f.Service.DeleteAsync(input));
+    }
+
+    [TestMethod]
+    [DataRow("registered-file")]
+    [DataRow("resource")]
+    [DataRow("active-consumer")]
+    public async Task Skipped_task_scope_still_checks_new_references_before_removing_final_files(string scenario)
+    {
+        var f = await DeletionFixture();
+        var preview = await f.Service.PreviewAsync(new([f.Task.Id]));
+        if (scenario == "registered-file")
+            await store.AdoptAsync(new("foreign-file", "foreign-file", "files.process", "fixture"),
+                new(f.Final.RootDirectory, f.Final.Files, "processedFiles", true), "foreign-owner");
+        if (scenario == "resource")
+        {
+            db.ResourcesV2.Add(new() {Path = f.Final.Files.Single(), IsFile = true});
+            await db.SaveChangesAsync(); db.ChangeTracker.Clear();
+        }
+        if (scenario == "active-consumer")
+            Assert.IsTrue(await store.AttachConsumerAsync(f.Final.OperationId, "another-reader", TimeSpan.FromHours(1)));
+        var result = await f.Service.DeleteAsync(new(preview.PreviewId, AcceptDeliveredFiles: true,
+            SkipFileVerification: true, DeleteDeliveredFiles: true));
+        Assert.AreEqual(0, result.RemovedFiles);
+        Assert.AreEqual(0, result.DeletedTaskIds.Count);
         Assert.IsTrue(File.Exists(f.Final.Files.Single()));
     }
 
@@ -339,7 +390,7 @@ public sealed partial class PublishedArtifactAncestorCleanupTests
             await db.SaveChangesAsync(); db.ChangeTracker.Clear();
         }
         if (scenario == "active-consumer") Assert.IsTrue(await store.AttachConsumerAsync(f.Final.OperationId, "other-reader", TimeSpan.FromHours(1)));
-        if (scenario == "task-running") await db.AcquisitionTasks.Where(t => t.Id == f.Task.Id).ExecuteUpdateAsync(u => u.SetProperty(t => t.Status, AcquisitionStatus.Running));
+        if (scenario == "task-running") await db.WorkflowRuns.Where(r => r.Id == 1).ExecuteUpdateAsync(u => u.SetProperty(r => r.Status, Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants.WorkflowRunStatus.Running));
         var preview = await f.Service.PreviewAsync(new([f.Task.Id], DeleteDeliveredFiles: true));
         Assert.IsFalse(preview.Rows.Single().Cleanup?.Groups.Any(g => g.Eligible) == true);
         var result = await f.Service.DeleteAsync(new(preview.PreviewId));

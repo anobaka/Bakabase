@@ -149,6 +149,7 @@ const FilesystemExplorer = forwardRef<FileExplorerRef, FileExplorerProps & { dir
     const [navigationError, setNavigationError] = useState<string>();
 
     const initializedRootRef = useRef<RootEntry>();
+    const keyboardScopeRef = useRef<HTMLDivElement>(null);
     const initializeSeqRef = useRef(0);
     const acceptedRootRef = useRef<{ model: RootEntry; sequence: number }>();
     const onNavigationStartRef = useRef(onNavigationStart);
@@ -389,7 +390,27 @@ const FilesystemExplorer = forwardRef<FileExplorerRef, FileExplorerProps & { dir
     // Listen for rootPath changes from parent
     useUpdateEffect(() => {
       if (!directoryPage) initialize(rootPath);
-    }, [rootPath, watchChanges]);
+    }, [rootPath]);
+
+    useUpdateEffect(() => {
+      if (directoryPage) return;
+      const current = rootRef.current;
+      // The first initialization reads watchChangesRef. Permission checks completing
+      // later only start/stop observation; they must not load the same directory again.
+      if (current && !current.updateIndependentObservation(watchChanges))
+        initialize(current.path, false);
+    }, [watchChanges]);
+
+    useUpdateEffect(() => {
+      if (selectable !== "disabled") return;
+      selectedEntriesRef.current.forEach(entry => entry.select(false));
+      selectedEntriesRef.current = [];
+      shiftSelectionStartRef.current = undefined;
+      selectionModeRef.current = SelectionMode.Normal;
+      contextMenuEntryRef.current = undefined;
+      toggleMenu(false);
+      setSelectedEntries([]);
+    }, [selectable]);
 
     // Re-initialize when showHiddenFiles option changes
     useUpdateEffect(() => {
@@ -505,7 +526,7 @@ const FilesystemExplorer = forwardRef<FileExplorerRef, FileExplorerProps & { dir
             return true;
           }
           case SelectionMode.Shift: {
-            shiftSelectionStartRef.current ??= e.parent!.filteredChildren![0]!;
+            shiftSelectionStartRef.current ??= e.parent?.filteredChildren[0] ?? e;
             let startParent = shiftSelectionStartRef.current.parent;
             const startParentSet = new Set<Entry>();
 
@@ -533,16 +554,18 @@ const FilesystemExplorer = forwardRef<FileExplorerRef, FileExplorerProps & { dir
             };
             const preorderTraversal: Entry[] = [];
 
-            buildPreorderTraversal(endParent!, preorderTraversal);
+            if (endParent) buildPreorderTraversal(endParent, preorderTraversal);
             const startIdx = preorderTraversal.indexOf(shiftSelectionStartRef.current);
             const endIdx = preorderTraversal.indexOf(e);
-            const minIdx = Math.min(startIdx, endIdx);
-            const maxIdx = Math.max(startIdx, endIdx);
-            const newSelectedEntries = preorderTraversal.slice(minIdx, maxIdx + 1);
+            const hasVisibleAnchor = startIdx >= 0 && endIdx >= 0;
+            // Filtering and live refreshes can remove the previous anchor. Start a
+            // new range at this row instead of indexing a stale or detached entry.
+            if (!hasVisibleAnchor) shiftSelectionStartRef.current = e;
+            const newSelectedEntries = hasVisibleAnchor
+              ? preorderTraversal.slice(Math.min(startIdx, endIdx), Math.max(startIdx, endIdx) + 1)
+              : [e];
 
-            for (let i = minIdx; i <= maxIdx; i++) {
-              const en = preorderTraversal[i]!;
-
+            for (const en of newSelectedEntries) {
               en.select(true);
             }
 
@@ -621,6 +644,7 @@ const FilesystemExplorer = forwardRef<FileExplorerRef, FileExplorerProps & { dir
         </ControlledMenu>}
         {keyboard && (
           <EventListener
+            scopeRef={keyboardScopeRef}
             onClick={(evt) => {
               if (ignoreClickEvent(evt.target as HTMLElement)) {
                 return;
@@ -795,6 +819,7 @@ const FilesystemExplorer = forwardRef<FileExplorerRef, FileExplorerProps & { dir
                     break;
                   }
                   case "c": {
+                    if (!capabilities?.includes("move")) break;
                     if (matchesPrimaryShortcut(evt, "c") && selectedEntriesRef.current.length > 0) {
                       evt.preventDefault();
                       const paths = selectedEntriesRef.current.map((e) => e.path);
@@ -805,6 +830,7 @@ const FilesystemExplorer = forwardRef<FileExplorerRef, FileExplorerProps & { dir
                     break;
                   }
                   case "x": {
+                    if (!capabilities?.includes("move")) break;
                     if (matchesPrimaryShortcut(evt, "x") && selectedEntriesRef.current.length > 0) {
                       evt.preventDefault();
                       const paths = selectedEntriesRef.current.map((e) => e.path);
@@ -815,6 +841,7 @@ const FilesystemExplorer = forwardRef<FileExplorerRef, FileExplorerProps & { dir
                     break;
                   }
                   case "v": {
+                    if (!capabilities?.includes("move")) break;
                     if (matchesPrimaryShortcut(evt, "v") && clipboardStore.paths.length > 0) {
                       evt.preventDefault();
                       const { paths, mode } = clipboardStore;
@@ -1129,7 +1156,14 @@ const FilesystemExplorer = forwardRef<FileExplorerRef, FileExplorerProps & { dir
           </p>
         )}
         {/* Keep the viewport independent of virtual rows, which derive their height from it. */}
-        <div className={`min-h-0 overflow-hidden ${fitContent ? "shrink-0" : "flex-1"} ${compact ? "file-explorer-list" : ""}`}
+        <div ref={keyboardScopeRef} data-file-explorer-keyboard-scope="" tabIndex={keyboard ? 0 : undefined}
+          className={`min-h-0 overflow-hidden outline-none ${fitContent ? "shrink-0" : "flex-1"} ${compact ? "file-explorer-list" : ""}`}
+          onPointerDownCapture={event => {
+            if (keyboard && event.target instanceof Element &&
+              !event.target.closest("input, textarea, select, button, a, [role='button'], [contenteditable]")) {
+              event.currentTarget.focus({ preventScroll: true });
+            }
+          }}
           style={fitContent ? { height: Math.min(maxContentHeight!, Math.max(MainLineHeight,
             contentHeight?.rootId === root.id ? contentHeight.height : MainLineHeight * 6)) } : undefined}>
           <FileExplorerEntry

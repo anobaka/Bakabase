@@ -116,7 +116,7 @@ public sealed partial class CloudOperationService(BakabaseDbContext db, IEnumera
     public async Task<int> EnqueueAsync(int runId, CloudDownloadTarget target, string outputRoot, CancellationToken ct,
         bool existingOnly = false, bool noRepeat = false)
     {
-        storage.EnsurePathAllowed(outputRoot);
+        storage.EnsurePathAllowed(CloudStageDirectoryPath.Download(target) ?? outputRoot);
         var source = target.SelectedSource ?? throw new ArgumentException("Choose a source first.");
         var id = DownloadArtifactCoordinator.DownloadIntent(target, outputRoot, services?.GetService<FileProcessingWorkspaceResolver>());
         if (!await new ArtifactOperationBindingService(db).BindAsync("workflow", runId.ToString(), OperationSlot(target, "download"), id, ct))
@@ -143,7 +143,10 @@ public sealed partial class CloudOperationService(BakabaseDbContext db, IEnumera
                 // No durable download operation exists: the ordinary code below may perform its
                 // first enqueue. Subsequent entries into this gate only reuse that same identity.
             }
-            var directory = target.DownloadDirectoryScope is { } scope
+            var directory = CloudStageDirectoryPath.Download(target) != null
+                ? await CloudStageDirectoryPath.PrepareDownloadAsync(target, storage,
+                    services?.GetService<FileProcessingWorkspaceResolver>(), ct)
+                : target.DownloadDirectoryScope is { } scope
                 ? await (services?.GetService<FileProcessingWorkspaceResolver>() ??
                     throw new InvalidOperationException("Task directory allocation is unavailable.")).EnsureScopedDirectoryAsync(scope, ct)
                 : Path.Combine(outputRoot, target.StoragePolicy == null ? "cloud-" + id[..16] :
@@ -163,6 +166,8 @@ public sealed partial class CloudOperationService(BakabaseDbContext db, IEnumera
                 var previous = await db.DownloadTasks.AsNoTracking().SingleOrDefaultAsync(t => t.Id == previousId, ct);
                 if (previous == null || previous.Status == DownloadTaskDbModelStatus.Complete && !await HasValidResult(previousId, ct))
                 {
+                    if (CloudStageDirectoryPath.Download(target) != null)
+                        throw new InvalidOperationException("DOWNLOAD_DESTINATION_COMPLETED_OUTPUT_CHANGED");
                     if (request.DestinationRevisions is {Count: > 0})
                         throw new InvalidOperationException("DOWNLOAD_DESTINATION_COMPLETED_OUTPUT_CHANGED");
                     // A missing/modified completed output is a new acquisition generation. Never

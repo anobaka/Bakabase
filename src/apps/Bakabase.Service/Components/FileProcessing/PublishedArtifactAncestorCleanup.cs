@@ -104,13 +104,27 @@ public sealed partial class PublishedArtifactAncestorCleanup(BakabaseDbContext d
             return;
         }
         var owners = await PublicationOwnersAsync(publicationId, ct);
+        var privateResults = await PrepareAutomaticPrivateCleanupAsync(publicationId, owners, ct);
         var candidates = await PreviewAsync([publicationId], owners, ct);
         var eligible = candidates.Where(c => c.Eligible).ToArray();
-        var outcomes = new List<ArtifactWorkspaceCleanupResult>();
-        foreach (var candidate in eligible.Take(2)) outcomes.Add(await ReclaimAutomaticAsync(candidate, owners, ct));
+        var outcomes = new List<ArtifactWorkspaceCleanupResult>(privateResults);
+        var retiredInput = false;
+        foreach (var candidate in eligible.Take(2))
+        {
+            var beforeState = await db.Artifacts.AsNoTracking().Where(a => a.Id == candidate.ArtifactId)
+                .Select(a => (ArtifactLocationState?)a.State).SingleOrDefaultAsync(ct);
+            var outcome = await ReclaimAutomaticPreparedAsync(candidate, owners, privateResults, ct);
+            outcomes.Add(outcome);
+            // A completed stage move can leave no bytes at the old registered path.
+            // Retiring that registration still releases ancestors, unlike an already
+            // retired/no-op result. Count only a freshly observed state transition.
+            if (outcome.Completed && beforeState.HasValue && beforeState != ArtifactLocationState.Retired &&
+                await db.Artifacts.AsNoTracking().AnyAsync(a => a.Id == candidate.ArtifactId &&
+                    a.State == ArtifactLocationState.Retired, ct)) retiredInput = true;
+        }
         // Retiring a nearer snapshot may release a previously blocked ancestor. Reevaluate
         // once after actual progress; AlreadyRetired/no-op results cannot perpetuate the queue.
-        var pending = outcomes.Any(o => o.Completed && o.RemovedFiles > 0) || eligible.Length > outcomes.Count ||
+        var pending = retiredInput || outcomes.Any(o => o.Completed && o.RemovedFiles > 0) || eligible.Length > Math.Min(eligible.Length, 2) ||
             candidates.Any(c => c.Reason is "ActiveOwner" or "ActiveConsumer" or "UnboundArtifact") ||
             outcomes.Any(r => !r.Completed && r.Reason is "ActiveOwner" or "ActiveConsumer");
         var reasons = candidates.Where(c => !c.Eligible && c.Reason != "AlreadyRetired").Select(c => c.Reason)
@@ -197,12 +211,27 @@ public sealed partial class PublishedArtifactAncestorCleanup(BakabaseDbContext d
                     }
                     catch (JsonException) { /* Unknown metadata grants no additional cleanup candidate. */ }
                 }
+            // Explicit deletion includes completed branches superseded by a newer plan.
+            // Every candidate still passes ownership, consumer and exact-reference guards.
+            if (authorization?.IncludesHistoricalProcessing == true)
+            {
+                var ownerKeys = ownerRunIds.Select(id => id.ToString(CultureInfo.InvariantCulture)).ToArray();
+                var historicalIds = await db.Artifacts.AsNoTracking().Where(a => a.Managed && a.Kind == "processedFiles" &&
+                        a.State != ArtifactLocationState.Retired && db.ArtifactOperationBindings.Any(b =>
+                            b.OperationId == a.OperationId && b.OwnerKind == "workflow" && ownerKeys.Contains(b.OwnerId)))
+                    .OrderByDescending(a => a.CreatedAt).ThenBy(a => a.Id).Select(a => a.Id).Take(10001).ToListAsync(ct);
+                if (historicalIds.Count > 10000) throw new InvalidDataException("CLEANUP_LINEAGE_TOO_LARGE");
+                foreach (var id in historicalIds)
+                    if (!graph.ContainsKey(id) && siblings.All(s => s.Id != id) &&
+                        await store.GetArtifactAsync(id, ct) is { } historical)
+                        siblings.Add(historical);
+            }
             // Nearer descendants first. Once retired, their immutable manifests still prove
             // coverage for older ancestors; no input has to be reacquired to prove the graph.
             // Siblings are a separate candidate list, never fabricated ancestry. In particular
             // a raw parent remains protected by any still-retained sibling child.
-            foreach (var registered in siblings.Concat(graph.Values).Where(a => a.Id != output.Id && a.Managed &&
-                         a.Kind is "processedFiles" or "download"))
+            foreach (var registered in DescendantsFirst(siblings.Concat(graph.Values).Where(a => a.Id != output.Id && a.Managed &&
+                         a.Kind is "processedFiles" or "download")))
             {
                 if (!included.Add(registered.Id)) continue;
                 var source = registered;
@@ -238,6 +267,26 @@ public sealed partial class PublishedArtifactAncestorCleanup(BakabaseDbContext d
             }
         }
         return rows;
+    }
+
+    private static IReadOnlyList<ArtifactRecord> DescendantsFirst(IEnumerable<ArtifactRecord> records)
+    {
+        var unique = records.GroupBy(a => a.Id, StringComparer.Ordinal).Select(g => g.First()).ToArray();
+        var children = unique.SelectMany(a => a.ParentArtifactIds.Select(parent => (Parent: parent, Child: a)))
+            .ToLookup(edge => edge.Parent, edge => edge.Child, StringComparer.Ordinal);
+        var recordsById = unique.ToDictionary(a => a.Id, StringComparer.Ordinal);
+        var remaining = unique.ToDictionary(a => a.Id, a => children[a.Id].Select(c => c.Id).Distinct().Count(), StringComparer.Ordinal);
+        var ready = new Queue<ArtifactRecord>(unique.Where(a => remaining[a.Id] == 0));
+        var ordered = new List<ArtifactRecord>();
+        while (ready.TryDequeue(out var record))
+        {
+            ordered.Add(record);
+            foreach (var parent in record.ParentArtifactIds.Distinct(StringComparer.Ordinal))
+                if (remaining.TryGetValue(parent, out var count) && (remaining[parent] = count - 1) == 0)
+                    ready.Enqueue(recordsById[parent]);
+        }
+        if (ordered.Count != unique.Length) throw new InvalidDataException("CLEANUP_LINEAGE_INVALID");
+        return ordered;
     }
 
     public Task<ArtifactWorkspaceCleanupResult> ReclaimAsync(ArtifactWorkspaceCleanupPreview expected,
@@ -286,7 +335,11 @@ public sealed partial class PublishedArtifactAncestorCleanup(BakabaseDbContext d
             return await PrerequisitesRetiredAsync(prerequisites, token) &&
                 Fingerprint(original, latestOutput, ownerRunIds, latestProof, prerequisites) == expected.SelectionFingerprint &&
                 await IneligibleAsync(original, latestOutput, latestGraph, ownerRunIds, token, authorization) == null;
-        }, ct, authorization);
+        }, ct, authorization, async (original, token) => workspaces == null ? new HashSet<string>(StringComparer.Ordinal) :
+            (await Bakabase.Service.Components.Acquisition.Planning.AcquisitionProcessingStageCommit.ReadMovedEntriesAsync(
+                db, store, workspaces, original, token))?.RelativePaths.ToHashSet(StringComparer.Ordinal) ?? [],
+            async token => await store.GetArtifactAsync(output.Id, token) is {} latest
+                ? await ReadReleasedStageViewsAsync(latest, await AncestorsAsync(latest, token), ownerRunIds, token) : []);
         return new(source.Id, result.Completed, result.Completed ? null : result.Message ?? result.Status,
             result.RemovedFiles, result.RemovedBytes);
     }
@@ -294,16 +347,12 @@ public sealed partial class PublishedArtifactAncestorCleanup(BakabaseDbContext d
     internal async Task<ArtifactWorkspaceCleanupResult> ReclaimAutomaticAsync(ArtifactWorkspaceCleanupPreview expected,
         IReadOnlyList<int> owners, CancellationToken ct)
     {
-        var files = 0; long bytes = 0;
-        if (maintenance != null)
-        {
-            var privateResult = (await maintenance.ReclaimAsync([expected.ArtifactId], ct)).Single();
-            files += privateResult.RemovedFiles; bytes += privateResult.RemovedBytes;
-            if (!privateResult.Completed && privateResult.Reason is not ("NotManagedProcessedArtifact" or "RetentionPolicyKeep"))
-                return new(expected.ArtifactId, false, privateResult.Reason, files, bytes);
-        }
-        var result = await ReclaimAsync(expected, owners, ct);
-        return result with {RemovedFiles = result.RemovedFiles + files, RemovedBytes = result.RemovedBytes + bytes};
+        if (expected.PublishedArtifactId == null || !expected.Eligible || expected.SelectionFingerprint == null)
+            throw new ArgumentException("A registered-input cleanup needs its exact publication preview.");
+        var prepared = await PrepareAutomaticPrivateCleanupAsync(expected.PublishedArtifactId, owners, ct);
+        var result = await ReclaimAutomaticPreparedAsync(expected, owners, prepared, ct);
+        return result with {RemovedFiles = result.RemovedFiles + prepared.Sum(p => p.RemovedFiles),
+            RemovedBytes = result.RemovedBytes + prepared.Sum(p => p.RemovedBytes)};
     }
 
     private async Task<string?> IneligibleAsync(ArtifactRecord source, ArtifactRecord output,
@@ -334,9 +383,10 @@ public sealed partial class PublishedArtifactAncestorCleanup(BakabaseDbContext d
             publication?.State != ArtifactOperationState.Completed || publication.Kind != "files.publish" ||
             publication.OutputArtifactId != output.Id) return "OperationNotCompleted";
         if (await (authorization?.HasActiveConsumersAsync(source.OperationId, ct) ?? store.HasActiveConsumersAsync(source.OperationId, ct))) return "ActiveConsumer";
+        var releasedViews = authorization == null ? await ReadReleasedStageViewsAsync(output, graph, owners, ct) : [];
         if (source.Files.Intersect(output.Files, ArtifactManifestFiles.PathComparer).Any() ||
             await (authorization?.HasOtherRegisteredFilesAsync(source.Files, source.Id, ct) ??
-                store.HasOtherRegisteredFilesAsync(source.Files, source.Id, ct))) return "ReferencedArtifact";
+                store.HasOtherRegisteredFilesAsync(source.Files, source.Id, releasedViews, ct))) return "ReferencedArtifact";
         var graphIds = graph.Keys.ToArray();
         var planned = (previewRetirements ?? []).Concat(authorization == null ? [] :
             await authorization.ReleasableViewIdsAsync(ct)).Distinct(StringComparer.Ordinal).ToArray();

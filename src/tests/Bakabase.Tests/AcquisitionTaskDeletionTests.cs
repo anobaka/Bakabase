@@ -169,6 +169,72 @@ public sealed class AcquisitionTaskDeletionTests
         Assert.AreEqual("ACQUISITION_EXECUTION_STATE_UNKNOWN", (await Preview(task.Id)).Rows.Single().ReasonCode);
     }
 
+    private AcquisitionTaskDeletionService AllowConfirmedStop()
+    {
+        var activity = new AcquisitionDeletionActivityReader(_db, _services.GetRequiredService<DownloadTaskService>(),
+            (IBtDownloadManager)(object)_bt, (IHttpDownloadManager)(object)_http,
+            _services.GetRequiredService<Bakabase.Abstractions.Components.Tasks.BTaskManager>());
+        return new(_db, activity, new());
+    }
+
+    [TestMethod]
+    public async Task ConfirmedDeletionStopsOnlyItsOwnRunAndRetainsNodeHistory()
+    {
+        var (owner, run) = await Seed(WorkflowRunStatus.Running);
+        var (_, other) = await Seed(WorkflowRunStatus.Running);
+        var service = AllowConfirmedStop();
+        var preview = await service.PreviewAsync(new([owner.Id]));
+        Assert.IsTrue(preview.Rows.Single().WillStopExecution);
+        await _db.Entry(run).ReloadAsync();
+        Assert.AreEqual(WorkflowRunStatus.Running, run.Status);
+        var result = await service.DeleteAsync(new(preview.PreviewId));
+        CollectionAssert.AreEqual(new[] {owner.Id}, result.DeletedTaskIds.ToArray());
+        await _db.Entry(run).ReloadAsync(); await _db.Entry(other).ReloadAsync();
+        Assert.AreEqual(WorkflowRunStatus.Cancelled, run.Status);
+        Assert.AreEqual("preserve private checkpoint", run.CurrentItemJson);
+        Assert.AreEqual(WorkflowRunStatus.Running, other.Status);
+        Assert.AreEqual(1, await _db.WorkflowNodeExecutions.CountAsync(n => n.WorkflowRunId == run.Id));
+    }
+
+    [TestMethod]
+    public async Task NewlySharedExecutionIsNotStoppedByOriginalDeletionConfirmation()
+    {
+        var (owner, run) = await Seed(WorkflowRunStatus.Running);
+        var (other, _) = await Seed();
+        var service = AllowConfirmedStop();
+        var preview = await service.PreviewAsync(new([owner.Id]));
+        Assert.IsTrue(preview.Rows.Single().WillStopExecution);
+        _db.Set<WorkflowRunSourceDbModel>().Add(new() {WorkflowRunId = run.Id, Module = "acquisition",
+            EntityKind = "task", EntityId = other.Id.ToString()});
+        await _db.SaveChangesAsync();
+        var result = await service.DeleteAsync(new(preview.PreviewId));
+        Assert.AreEqual(0, result.DeletedTaskIds.Count);
+        var next = await service.PreviewAsync(new([owner.Id]));
+        Assert.IsFalse(next.Rows.Single().CanDelete);
+        await _db.Entry(run).ReloadAsync();
+        Assert.AreEqual(WorkflowRunStatus.Running, run.Status);
+    }
+
+    [TestMethod]
+    public async Task ConfirmingStopsOnlyTheSelectedAcquisitionsNativeDownload()
+    {
+        var (owner, _) = await Seed();
+        var (other, _) = await Seed();
+        _bt.AllowConfirmedStop = true;
+        _bt.Bt = [new() {Id = "selected", Name = "A", OutputDirectory = "/fixture/a", SourceKind = "acquisition",
+                SourceId = owner.Id.ToString(), Status = BtDownloadStatus.Running},
+            new() {Id = "unrelated", Name = "B", OutputDirectory = "/fixture/b", SourceKind = "acquisition",
+                SourceId = other.Id.ToString(), Status = BtDownloadStatus.Running}];
+        var service = AllowConfirmedStop();
+        var preview = await service.PreviewAsync(new([owner.Id]));
+        Assert.IsTrue(preview.Rows.Single().WillStopExecution);
+        Assert.IsTrue(_bt.Bt.All(j => j.Status == BtDownloadStatus.Running));
+        var result = await service.DeleteAsync(new(preview.PreviewId));
+        CollectionAssert.AreEqual(new[] {owner.Id}, result.DeletedTaskIds.ToArray());
+        Assert.AreEqual(BtDownloadStatus.Stopped, _bt.Bt[0].Status);
+        Assert.AreEqual(BtDownloadStatus.Running, _bt.Bt[1].Status);
+    }
+
     [TestMethod]
     public async Task NativeIntentWithoutRunIdOrParentStillProtectsTask()
     {
@@ -347,8 +413,15 @@ public sealed class AcquisitionTaskDeletionTests
     public class SnapshotProxy : DispatchProxy
     {
         public IReadOnlyList<BtDownloadJob> Bt = []; public IReadOnlyList<HttpDownloadJob> Http = []; public int Reads;
+        public bool AllowConfirmedStop;
         protected override object? Invoke(MethodInfo? method, object?[]? args)
         {
+            if (AllowConfirmedStop && method?.Name == "StopAsync" && method.DeclaringType == typeof(IBtDownloadManager))
+            {
+                var id = (string)args![0]!;
+                Bt = Bt.Select(j => j.Id == id ? j with {Status = BtDownloadStatus.Stopped} : j).ToArray();
+                return Task.FromResult(Bt.Single(j => j.Id == id));
+            }
             if (method?.Name != "ReadSnapshotAsync") throw new AssertFailedException("Deletion must never initialize or mutate download engines: " + method?.Name);
             Reads++;
             return method.DeclaringType == typeof(IBtDownloadManager) ? Task.FromResult(Bt) : Task.FromResult(Http);

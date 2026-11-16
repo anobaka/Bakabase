@@ -60,6 +60,20 @@ public sealed partial class AdaptiveAssessmentInventoryTests
     }
 
     [DataTestMethod]
+    [DataRow("提取码：2012", false)]
+    [DataRow("https://example.test/s/share?pwd=2012", false)]
+    [DataRow("{\"accessCode\":\"2012\"}", false)]
+    [DataRow("提取码：2012，解压密码：2012", true)]
+    [DataRow("{\"accessCode\":\"2012\",\"archivePassword\":\"2012\"}", true)]
+    public void Share_code_requires_separate_archive_password_evidence(string source, bool accepted)
+    {
+        var context = AdaptiveFileProcessingAssessmentService.DescribeContext(null, null, null, source);
+        Assert.AreEqual(accepted, PasswordDecision("2012", context).ShouldContinue);
+        var overrideContext = AdaptiveFileProcessingAssessmentService.DescribeContext(null, null, "解压密码：2012", source);
+        Assert.IsTrue(PasswordDecision("2012", overrideContext).ShouldContinue);
+    }
+
+    [DataTestMethod]
     [DataRow(null)]
     [DataRow("another literal")]
     [DataRow("Exact password: CASE")]

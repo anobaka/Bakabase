@@ -19,7 +19,7 @@ public sealed record ArchiveQuarantineReceipt(string ReceiptId, string ArtifactI
     string QuarantineRoot, string Status, IReadOnlyList<string> OutputArtifactIds, string? Message = null);
 
 /// <summary>Exact-file source retirement. Quarantine is recoverable; explicit deletion requires verified final delivery.</summary>
-public sealed class ArchiveQuarantineService
+public sealed partial class ArchiveQuarantineService
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> Gates = new(StringComparer.Ordinal);
@@ -43,7 +43,8 @@ public sealed class ArchiveQuarantineService
 
     private async Task<ArchiveQuarantineResult> QuarantineCoreAsync(string artifactId,
         IReadOnlyList<string> verifiedOutputArtifactIds, bool allowRegisteredBoundaryProof, CancellationToken ct,
-        ArtifactDeliveryCleanupAuthorization? authorization = null, ArtifactCleanupFileSnapshot? snapshot = null)
+        ArtifactDeliveryCleanupAuthorization? authorization = null, ArtifactCleanupFileSnapshot? snapshot = null,
+        Func<ArtifactRecord, CancellationToken, Task<IReadOnlySet<string>>>? movedEntries = null)
     {
         var gate = Gates.GetOrAdd(artifactId, _ => new SemaphoreSlim(1, 1));
         await gate.WaitAsync(ct);
@@ -66,17 +67,24 @@ public sealed class ArchiveQuarantineService
                 if (artifact.State != ArtifactLocationState.Available)
                     return new(false, "Blocked", Message: "The source artifact is not available for quarantine.");
                 await VerifyOutputs(artifact, verifiedOutputArtifactIds, ct, allowRegisteredBoundaryProof, authorization);
-                await VerifyManifest(artifact.RootDirectory, artifact.Manifest, ct, snapshot);
+                var moved = movedEntries == null ? new HashSet<string>(StringComparer.Ordinal) :
+                    (await movedEntries(artifact, ct)).ToHashSet(StringComparer.Ordinal);
+                var absent = snapshot != null || moved.Count > 0
+                    ? ConfirmAbsentEntries(artifact.RootDirectory, artifact.Manifest, ct) : [];
+                if (snapshot == null) absent.IntersectWith(moved);
+                await VerifyManifest(artifact.RootDirectory, artifact.Manifest, ct, snapshot, absent);
                 EnsureAllowed(artifact.RootDirectory, artifact.Managed);
                 var id = Guid.NewGuid().ToString("N");
                 var destination = Path.Combine(artifact.RootDirectory, ".bakabase-quarantine", id);
                 receipt = new Receipt { Id = id, ArtifactId = artifact.Id, OriginalRoot = Encode(artifact.RootDirectory),
                     QuarantineRoot = Encode(destination), Manifest = artifact.Manifest,
-                    OutputIds = verifiedOutputArtifactIds.Distinct(StringComparer.Ordinal).ToList(), Managed = artifact.Managed };
+                    OutputIds = verifiedOutputArtifactIds.Distinct(StringComparer.Ordinal).ToList(), Managed = artifact.Managed,
+                    AbsentBeforeDeletion = absent.ToList(), MovedBeforeDeletion = absent.Intersect(moved, StringComparer.Ordinal).ToList() };
                 if (authorization != null) receipt.Consents.Add(authorization.Consent);
                 await Save(receipt, ct); // A crash after the fence still leaves a recoverable intent.
             }
             await VerifyOutputs(artifact, receipt.OutputIds, ct, allowRegisteredBoundaryProof, authorization);
+            await VerifyMovedEntriesAsync(receipt, artifact, movedEntries, ct);
             if (artifact.State != ArtifactLocationState.Quarantined && !await _store.TryQuarantineAsync(artifact.Id, ct))
             {
                 receipt.Status = "Blocked"; receipt.Message = "This artifact or a shared input has active consumers.";
@@ -91,7 +99,7 @@ public sealed class ArchiveQuarantineService
             // TryQuarantine already fences consumers, this durable receipt records both paths,
             // and the terminal Retired commit below records the final location. Interruption
             // resumes/restores through that same receipt, never by guessing the old root.
-            if (snapshot == null)
+            if (snapshot == null && receipt.MovedBeforeDeletion.Count == 0)
                 await _store.SetLocationAsync(artifact.Id, Decode(receipt.QuarantineRoot), ArtifactLocationState.Quarantined, ct);
             await VerifyOutputs(artifact, receipt.OutputIds, ct, allowRegisteredBoundaryProof, authorization);
             receipt.Status = "Quarantined"; receipt.Message = null;
@@ -121,13 +129,17 @@ public sealed class ArchiveQuarantineService
     // all durable owners, including completed workflows whose consumer lease has expired.
     internal Task<ArchiveQuarantineResult> DeleteManagedAncestorAfterDeliveryAsync(string artifactId,
         IReadOnlyList<string> publishedArtifactIds, Func<ArtifactRecord, CancellationToken, Task<bool>> canRetire,
-        CancellationToken ct, ArtifactDeliveryCleanupAuthorization? authorization = null) =>
-        DeleteAfterDeliveryCoreAsync(artifactId, publishedArtifactIds, true, canRetire, ct, authorization);
+        CancellationToken ct, ArtifactDeliveryCleanupAuthorization? authorization = null,
+        Func<ArtifactRecord, CancellationToken, Task<IReadOnlySet<string>>>? movedEntries = null,
+        Func<CancellationToken, Task<IReadOnlyList<string>>>? releasedViews = null) =>
+        DeleteAfterDeliveryCoreAsync(artifactId, publishedArtifactIds, true, canRetire, ct, authorization, movedEntries, releasedViews);
 
     private async Task<ArchiveQuarantineResult> DeleteAfterDeliveryCoreAsync(string artifactId,
         IReadOnlyList<string> publishedArtifactIds, bool allowProcessed,
         Func<ArtifactRecord, CancellationToken, Task<bool>>? canRetire, CancellationToken ct,
-        ArtifactDeliveryCleanupAuthorization? authorization = null)
+        ArtifactDeliveryCleanupAuthorization? authorization = null,
+        Func<ArtifactRecord, CancellationToken, Task<IReadOnlySet<string>>>? movedEntries = null,
+        Func<CancellationToken, Task<IReadOnlyList<string>>>? releasedViews = null)
     {
         var snapshot = ArtifactCleanupFileSnapshot.For(authorization);
         var source = await _store.GetArtifactAsync(artifactId, ct)
@@ -145,7 +157,7 @@ public sealed class ArchiveQuarantineService
                 await VerifyPublishedOutputs(source, prior?.Status == "Deleting" ? prior.OutputIds : publishedArtifactIds, ct, allowProcessed, authorization);
                 if (source.State == ArtifactLocationState.Available &&
                     await (authorization?.HasOtherRegisteredFilesAsync(source.Files, artifactId, ct) ??
-                        _store.HasOtherRegisteredFilesAsync(source.Files, artifactId, ct)))
+                        _store.HasOtherRegisteredFilesAsync(source.Files, artifactId, releasedViews == null ? [] : await releasedViews(ct), ct)))
                     return new(false, "Blocked", Message: "The source files are also registered by another artifact; they were retained.");
             }
             catch (Exception error) when (error is InvalidOperationException or IOException or UnauthorizedAccessException)
@@ -153,7 +165,7 @@ public sealed class ArchiveQuarantineService
         }
         if (prior?.Status is not ("Deleting" or "Purged"))
         {
-            var quarantined = await QuarantineCoreAsync(artifactId, publishedArtifactIds, allowProcessed, ct, authorization, snapshot);
+            var quarantined = await QuarantineCoreAsync(artifactId, publishedArtifactIds, allowProcessed, ct, authorization, snapshot, movedEntries);
             if (!quarantined.Completed) return quarantined;
         }
         var gate = Gates.GetOrAdd(artifactId, _ => new SemaphoreSlim(1, 1));
@@ -181,7 +193,7 @@ public sealed class ArchiveQuarantineService
             {
                 if (await _store.HasActiveConsumersAsync(source.OperationId, ct) ||
                     await (authorization?.HasOtherRegisteredFilesAsync(guardedPaths, artifactId, ct) ??
-                        _store.HasOtherRegisteredFilesAsync(guardedPaths, artifactId, ct)) ||
+                        _store.HasOtherRegisteredFilesAsync(guardedPaths, artifactId, releasedViews == null ? [] : await releasedViews(ct), ct)) ||
                     canRetire != null && !await canRetire(source, ct))
                     return new(false, "Blocked", receipt.Id, "The quarantined inputs are still referenced by another artifact or consumer.");
                 var outputs = receipt.Status == "Deleting" ? receipt.OutputIds : publishedArtifactIds;
@@ -191,9 +203,11 @@ public sealed class ArchiveQuarantineService
                     receipt.Consents.Add(authorization.Consent);
                     await Save(receipt, ct);
                 }
+                await VerifyMovedEntriesAsync(receipt, source, movedEntries, ct);
+                VerifyRecordedAbsence(receipt, ct);
                 if (receipt.Status != "Deleting")
                 {
-                    await VerifyManifest(root, receipt.Manifest, ct, snapshot);
+                    await VerifyManifest(root, receipt.Manifest, ct, snapshot, MissingDeletionEntries(receipt));
                     receipt.OutputIds = outputs.Distinct(StringComparer.Ordinal).ToList();
                     receipt.Status = "Deleting"; receipt.Message = null;
                     if (authorization != null && receipt.Consents.All(c => c.Id != authorization.Consent.Id))
@@ -216,6 +230,8 @@ public sealed class ArchiveQuarantineService
                     File.Delete(file);
                     removedFiles++; removedBytes += entry.Length;
                 }
+                await VerifyMovedEntriesAsync(receipt, source, movedEntries, ct);
+                VerifyRecordedAbsence(receipt, ct);
                 if (files.Length > 0 && !ArtifactCleanupAbsence.AllConfirmedAbsent(root, files, ct))
                     throw new IOException("A cleanup path reappeared or its storage became unavailable before retirement.");
             }
@@ -257,7 +273,7 @@ public sealed class ArchiveQuarantineService
         try
         {
             receipt = await Read(receiptId, ct);
-            if (receipt.Status is "Deleting" or "Purged")
+            if (receipt.Status is "Deleting" or "Purged" || receipt.AbsentBeforeDeletion.Count > 0)
                 return new(false, "ReceiptPurged", receipt.Id, "Permanent source cleanup has begun; this receipt cannot be restored.");
             if (receipt.Status == "Restored")
             {
@@ -290,14 +306,65 @@ public sealed class ArchiveQuarantineService
     {
         if (!Directory.Exists(_receipts)) return [];
         var results = new List<ArchiveQuarantineReceipt>();
+        Func<string, string>? relocate = null;
         foreach (var file in Directory.EnumerateFiles(_receipts, "*.json").OrderBy(f => f, StringComparer.Ordinal))
         {
-            ct.ThrowIfCancellationRequested();
-            var receipt = await Read(Path.GetFileNameWithoutExtension(file), ct);
-            results.Add(new(receipt.Id, receipt.ArtifactId, Decode(receipt.OriginalRoot), Decode(receipt.QuarantineRoot),
+            var receipt = await ReadReceiptHeaderAsync(file, ct);
+            // Both locations of every result use one validated mapping for this query.
+            // A later safety check gets a fresh snapshot; no aliases survive this call.
+            relocate ??= ReadReceiptLocationSnapshot(ct);
+            results.Add(new(receipt.Id, receipt.ArtifactId,
+                DecodeLocation(receipt.OriginalRoot, _appData, relocate),
+                DecodeLocation(receipt.QuarantineRoot, _appData, relocate),
                 receipt.Status, receipt.OutputIds, receipt.Message));
         }
         return results;
+    }
+
+    private static async Task<ReceiptHeader> ReadReceiptHeaderAsync(string file, CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        var id = Path.GetFileNameWithoutExtension(file);
+        if (!Guid.TryParseExact(id, "N", out _)) throw new ArgumentException("Invalid quarantine receipt identity.");
+        ArtifactManifestFiles.RejectLinks(file);
+        await using var stream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read,
+            16 * 1024, FileOptions.Asynchronous | FileOptions.SequentialScan);
+        // Validate the whole JSON stream without materializing unrelated manifests or
+        // consent histories. Headers select candidates, never authorize file deletion:
+        // selected operations still Read() their complete receipt and verify its inputs.
+        var receipt = await JsonSerializer.DeserializeAsync<ReceiptHeader>(stream, Json, ct);
+        if (receipt == null || receipt.Id != id || string.IsNullOrWhiteSpace(receipt.ArtifactId) ||
+            string.IsNullOrWhiteSpace(receipt.OriginalRoot) || string.IsNullOrWhiteSpace(receipt.QuarantineRoot) ||
+            string.IsNullOrWhiteSpace(receipt.Status) || receipt.OutputIds == null ||
+            receipt.OutputIds.Any(string.IsNullOrWhiteSpace))
+            throw new InvalidDataException("The quarantine receipt header is invalid.");
+        return receipt;
+    }
+
+    private Func<string, string> ReadReceiptLocationSnapshot(CancellationToken ct)
+    {
+        var mappings = new FileProcessingWorkspaceResolver(_appData, _storage).ReadRelocations();
+        return path =>
+        {
+            ct.ThrowIfCancellationRequested();
+            foreach (var mapping in mappings)
+                if (ArtifactManifestFiles.PathComparer.Equals(mapping.SourceRoot, path) ||
+                    ArtifactCleanupPathReferences.StrictlyUnder(path, mapping.SourceRoot))
+                    return Path.GetFullPath(Path.Combine(mapping.DestinationRoot,
+                        Path.GetRelativePath(mapping.SourceRoot, path)));
+            return path;
+        };
+    }
+
+    private sealed class ReceiptHeader
+    {
+        public string Id { get; init; } = "";
+        public string ArtifactId { get; init; } = "";
+        public string OriginalRoot { get; init; } = "";
+        public string QuarantineRoot { get; init; } = "";
+        public string Status { get; init; } = "Moving";
+        public List<string> OutputIds { get; init; } = [];
+        public string? Message { get; init; }
     }
 
     /// <summary>Prune only receipt-owned empty directories. Unknown files and all quarantine contents remain untouched.</summary>
@@ -370,17 +437,34 @@ public sealed class ArchiveQuarantineService
         // unregistered contents stay untouched; terminal pruning removes only empty owned paths.
         ct.ThrowIfCancellationRequested();
         ArtifactManifestFiles.CreateDirectories(destinationRoot, receipt.Manifest);
+        var absent = MissingDeletionEntries(receipt);
+        if (absent.Count > 0 && restoring)
+            throw new InvalidOperationException("This permanent cleanup includes already removed files and cannot be restored.");
+        if (absent.Count > 0)
+        {
+            // The first manifest entry may already be gone, before any move has created
+            // the private destination. Probe a real owned directory, not a missing root.
+            ArtifactManifestFiles.RejectLinks(destinationRoot);
+            CreatePrivate(destinationRoot);
+            ArtifactManifestFiles.RejectLinks(destinationRoot);
+        }
         // For a single-file archive, the post-move verification is also the complete
         // destination check. Use the full manifest here (including empty directories)
         // rather than immediately hashing the same bytes a second time.
         var singleFile = receipt.Manifest.Entries.Count == 1;
         Task VerifyDestination(string path, ArtifactManifestEntry entry) => singleFile
-            ? VerifyManifest(destinationRoot, receipt.Manifest, ct, snapshot) : VerifyFile(path, entry, ct, snapshot);
+            ? VerifyManifest(destinationRoot, receipt.Manifest, ct, snapshot, absent) : VerifyFile(path, entry, ct, snapshot);
         foreach (var entry in receipt.Manifest.Entries)
         {
             ct.ThrowIfCancellationRequested();
             var source = FileProcessingFiles.Within(Path.Combine(sourceRoot, entry.RelativePath), sourceRoot);
             var destination = FileProcessingFiles.Within(Path.Combine(destinationRoot, entry.RelativePath), destinationRoot);
+            if (absent.Contains(entry.RelativePath))
+            {
+                RequireAbsent(sourceRoot, source, ct);
+                RequireAbsent(destinationRoot, destination, ct);
+                continue;
+            }
             if (!File.Exists(source))
             {
                 await VerifyDestination(destination, entry); // A crash may have committed this atomic move before its receipt.
@@ -417,7 +501,7 @@ public sealed class ArchiveQuarantineService
             // field changes per file: recovery verifies an existing destination before
             // accepting a move that committed before the terminal receipt was saved.
         }
-        if (!singleFile) await VerifyManifest(destinationRoot, receipt.Manifest, ct, snapshot);
+        if (!singleFile) await VerifyManifest(destinationRoot, receipt.Manifest, ct, snapshot, absent);
     }
 
     private async Task VerifyOutputs(ArtifactRecord source, IReadOnlyList<string> ids, CancellationToken ct,
@@ -438,7 +522,9 @@ public sealed class ArchiveQuarantineService
                 boundaryProofs[id] = await FileProcessingPlanExecutor.BoundaryPublicationProofAsync(_store, source,
                     output, graph, await GetReceiptsAsync(ct), ct) != null;
             }
-            if (output.Id == source.Id || !ancestors.Contains(source.Id) && !boundaryProofs.GetValueOrDefault(id))
+            var acceptedHistorical = allowRegisteredBoundaryProof && authorization != null &&
+                await authorization.CoversHistoricalProcessingAsync(source, [id], ct);
+            if (output.Id == source.Id || !ancestors.Contains(source.Id) && !boundaryProofs.GetValueOrDefault(id) && !acceptedHistorical)
                 throw new InvalidOperationException("The successful output is not derived from this source.");
             if (output.Files.Any(sourceFiles.Contains))
                 throw new InvalidOperationException("The successful output still references a source selected for quarantine.");
@@ -476,13 +562,18 @@ public sealed class ArchiveQuarantineService
     }
 
     private static async Task VerifyManifest(string root, ArtifactManifest manifest, CancellationToken ct,
-        ArtifactCleanupFileSnapshot? snapshot = null)
+        ArtifactCleanupFileSnapshot? snapshot = null, IReadOnlySet<string>? confirmedAbsent = null)
     {
-        if (snapshot != null)
+        if (snapshot != null || confirmedAbsent is {Count: > 0})
         {
             var paths = ArtifactManifestFiles.ResolveFiles(root, manifest);
             ArtifactManifestFiles.VerifyDirectories(root, manifest);
-            for (var index = 0; index < paths.Count; index++) snapshot.Observe(paths[index], manifest.Entries[index].Length, ct);
+            for (var index = 0; index < paths.Count; index++)
+            {
+                if (confirmedAbsent?.Contains(manifest.Entries[index].RelativePath) == true)
+                    RequireAbsent(root, paths[index], ct);
+                else await VerifyFile(paths[index], manifest.Entries[index], ct, snapshot);
+            }
             return;
         }
         var validation = await ArtifactManifestFiles.ValidateAsync(root, manifest, ct);
@@ -521,7 +612,9 @@ public sealed class ArchiveQuarantineService
         OperatingSystem.IsWindows() || OperatingSystem.IsMacOS() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
     private string Encode(string path) => IsUnderAppData(path) ? "appdata:" + Path.GetRelativePath(_appData, path) : "absolute:" + Path.GetFullPath(path);
     private string Decode(string path) => DecodeLocation(path, _appData, new FileProcessingWorkspaceResolver(_appData, _storage));
-    internal static string DecodeLocation(string path, string appData, FileProcessingWorkspaceResolver locations)
+    internal static string DecodeLocation(string path, string appData, FileProcessingWorkspaceResolver locations) =>
+        DecodeLocation(path, appData, locations.Relocate);
+    private static string DecodeLocation(string path, string appData, Func<string, string> relocate)
     {
         var original = path.StartsWith("appdata:", StringComparison.Ordinal)
             ? FileProcessingFiles.Within(Path.Combine(appData, path[8..]), appData)
@@ -529,18 +622,27 @@ public sealed class ArchiveQuarantineService
                 : throw new InvalidDataException("Invalid quarantine location.");
         // Receipt journals stay in AppData. Only the referenced payload follows its verified
         // relocation aliases; retain the original encoded paths as historical evidence.
-        return locations.Relocate(original);
+        return relocate(original);
     }
     private async Task<Receipt?> FindPending(string artifactId, CancellationToken ct)
     {
         if (!Directory.Exists(_receipts)) return null;
         foreach (var path in Directory.EnumerateFiles(_receipts, "*.json"))
         {
-            var receipt = await Read(Path.GetFileNameWithoutExtension(path), ct);
-            if (receipt.ArtifactId == artifactId && receipt.Status is "Moving" or "Quarantined" or "Restoring" or "Deleting" or "Purged") return receipt;
+            var header = await ReadReceiptHeaderAsync(path, ct);
+            if (header.ArtifactId != artifactId || !IsPendingReceiptStatus(header.Status)) continue;
+            var receipt = await Read(header.Id, ct);
+            // Atomic journal replacement between the two reads must not turn a selected
+            // header into evidence for another artifact or an already restored receipt.
+            if (receipt.Id != header.Id || receipt.ArtifactId != artifactId ||
+                !IsPendingReceiptStatus(receipt.Status))
+                throw new InvalidDataException("The quarantine receipt changed during lookup; retry with its current state.");
+            return receipt;
         }
         return null;
     }
+    private static bool IsPendingReceiptStatus(string status) =>
+        status is "Moving" or "Quarantined" or "Restoring" or "Deleting" or "Purged";
     private async Task<Receipt> Read(string id, CancellationToken ct)
     {
         if (!Guid.TryParseExact(id, "N", out _)) throw new ArgumentException("Invalid quarantine receipt identity.");
@@ -575,5 +677,7 @@ public sealed class ArchiveQuarantineService
         public ArtifactManifest Manifest { get; set; } = null!;
         public List<string> OutputIds { get; set; } = [];
         public List<ArtifactDeliveryCleanupConsent> Consents { get; set; } = [];
+        public List<string> AbsentBeforeDeletion { get; set; } = [];
+        public List<string> MovedBeforeDeletion { get; set; } = [];
     }
 }

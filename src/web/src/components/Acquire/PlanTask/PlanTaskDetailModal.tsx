@@ -1,7 +1,8 @@
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { acquisitionTaskTitle } from "@/components/Acquire/acquisitionTaskTitle";
 import { useTranslation } from "react-i18next";
-import { Button, Chip, Input, Modal, Popover, Spinner } from "@/components/bakaui";
+import { Button, Chip, Input, Modal, Popover, Spinner, Tooltip } from "@/components/bakaui";
+import { LuFolderCog, LuInfo } from "react-icons/lu";
 import type { DestroyableProps } from "@/components/bakaui/types";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import FileSystemSelectorButton from "@/components/FileSystemSelector/components/Button";
@@ -26,7 +27,10 @@ import CompletedProcessingRevisionForm, {
   hasStoppedProcessingInputs,
   hasPublicationStorageInputs,
   hasReadableCurrentDirectoryInputs,
+  hasStageDirectoryInputs,
 } from "./CompletedProcessingRevisionForm";
+import TaskDirectoriesModal from "./TaskDirectoriesModal";
+import KeepPreparedFilesModal, { canKeepPreparedFiles } from "./KeepPreparedFilesModal";
 import DraftPreparation from "./DraftPreparation";
 import TaskDeliverySettings from "./TaskDeliverySettings";
 import TaskStoragePolicySettings from "./TaskStoragePolicySettings";
@@ -50,9 +54,10 @@ import AcquisitionExecutionTimeline, {
   asAcquisitionStage,
   type AcquisitionStage,
 } from "./AcquisitionExecutionTimeline";
-import CompletedDeliveryLayoutRevision, {
+import {
   canReviseDeliveryLayout,
 } from "./CompletedDeliveryLayoutRevision";
+import type { AttemptRunOptions } from "./useAttemptStorageReserve";
 
 export default function PlanTaskDetailModal({
   taskId,
@@ -98,8 +103,13 @@ export default function PlanTaskDetailModal({
   const [busy, setBusy] = useState(false);
   const [actionFailed, setActionFailed] = useState(false);
   const [directoryRevision, setDirectoryRevision] = useState(0);
+  const [directoriesOpen, setDirectoriesOpen] = useState(false);
   const [diagnostics, setDiagnostics] = useState<DiagnosticsPage>();
   const [reserveSubmitting, setReserveSubmitting] = useState(false);
+  const [attemptRunOverride, setAttemptRunOverride] = useState<{
+    revision: number;
+    options: AttemptRunOptions;
+  }>();
   const [currentRunView, setCurrentRunView] = useState<number>();
   const showRun = (id: number) => setDiagnostics({ tab: "files", runId: id });
   const [continuation, setContinuation] = useState<{
@@ -107,9 +117,10 @@ export default function PlanTaskDetailModal({
     current: boolean;
     files: boolean;
     purpose: "processing" | "delivery" | "reprocess";
+    inputStage: AcquisitionStage;
   }>();
   const [editor, setEditor] = useState<{
-    stage: "plan" | "delivery";
+    stage: "plan" | "delivery" | "keepPrepared";
     snapshot: PlanTaskDetail;
   }>();
   const replanSnapshot = editor?.snapshot;
@@ -295,7 +306,8 @@ export default function PlanTaskDetailModal({
   const canReviseLocalProcessing =
     task?.status === AcquisitionStatus.Waiting &&
     overview?.workflowStatus === "waiting" &&
-    isProcessingStep &&
+    (isProcessingStep || hasCurrentDirectoryInputs && overview.currentNodeKind === "fs.publishArtifacts" &&
+      !(overview.activeDownloadCount > 0) && !["running", "queued"].includes(overview.downloadActivity ?? "")) &&
     (hasCurrentDirectoryInputs || localProcessingReasons.includes(localProcessingProblem ?? "")) &&
     task.workflowRunId != null;
   const waitingLocalProcessing =
@@ -338,12 +350,15 @@ export default function PlanTaskDetailModal({
       task?.status !== replanSnapshot.task.status ||
       task?.waitPromptJson !== replanSnapshot.task.waitPromptJson);
   const closeEditor = () => setEditor(undefined);
-  const startRevision = (next: PlanTaskDetail) => {
+  const startRevision = (next: PlanTaskDetail, options?: AttemptRunOptions) => {
     closeEditor();
     setContinuation(undefined);
     setDetail(next);
+    setAttemptRunOverride(options ? { revision: next.task.planRevision, options } : undefined);
     // If start fails, the server keeps the saved revision ready for retry.
-    void mutate(() => planTaskApi.run(taskId, next.task.planRevision));
+    void mutate(() => options
+      ? planTaskApi.run(taskId, next.task.planRevision, options.useEmergencySpaceReserve)
+      : planTaskApi.run(taskId, next.task.planRevision));
   };
   const currentAttempt = detail?.stageAttempts
     ?.slice()
@@ -382,7 +397,7 @@ export default function PlanTaskDetailModal({
       ),
     );
   const deliveryAvailable =
-    !!detail && !readOnly && (canReviseDeliveryLayout(detail) || canRetryRecordedDelivery);
+    !!detail && !readOnly && (hasStageDirectoryInputs(detail, "delivery") || canReviseDeliveryLayout(detail) || canRetryRecordedDelivery);
   const refreshAfterAction = () => {
     void load();
     void loadHealth();
@@ -396,26 +411,38 @@ export default function PlanTaskDetailModal({
     task.status === AcquisitionStatus.Waiting;
   const continueCurrent = resolveWaiting && !canDiagnoseRecovery;
   const continueFiles = processingOffered && processingAvailable;
+  const retryStageCommit = stopped && overview?.workflowRunId === task?.workflowRunId &&
+    overview?.currentNodeKind === "acquisition.plan.process" &&
+    (overview.problemReasonCode === "STAGE_COMMIT_REFERENCED" || task?.error === "STAGE_COMMIT_REFERENCED");
   const savedProcessingCheckpoint = hasSavedStorageProcessingCheckpoint(detail, overview);
+  const canAnswerProcessingPassword = currentRunMatches && localProcessingPrompt?.reason === "PasswordUnknown" &&
+    (task?.currentStepIndex == null || overview.currentStepIndex == null || task.currentStepIndex === overview.currentStepIndex) &&
+    ["acquisition.plan.process", "fs.assessDelivery"].includes(overview.currentNodeKind ?? "") &&
+    detail?.plan?.parts.some(part => part.id === localProcessingPrompt.targetId) === true;
+  const canReviewExistingOutput = overview?.currentNodeKind === "fs.assessDelivery" &&
+    localProcessingPrompt?.reason === "FILE_DELIVERY_RESULT_UNCERTAIN" &&
+    localProcessingPrompt.deliveryReview === true && !!localProcessingPrompt.artifactId &&
+    !!localProcessingPrompt.fingerprint && !!localProcessingPrompt.reviewToken &&
+    Array.isArray(localProcessingPrompt.allowedArchivePolicies) && localProcessingPrompt.allowedArchivePolicies.includes("keep");
   const latestProcessingAttempt = detail?.stageAttempts?.filter(
     (attempt) => attempt.stage === "processing" && attempt.runId === task?.workflowRunId
   ).pop();
   const deliveryWait = continueCurrent && overview?.currentNodeKind === "fs.publishArtifacts";
   const processAgain = task?.status === AcquisitionStatus.Completed ||
     (continueFiles && (deliveryWait || (!continueCurrent && latestProcessingAttempt?.status === "completed")));
-  const openContinuation = (purpose: "processing" | "delivery" | "reprocess") => {
+  const openContinuation = (purpose: "processing" | "delivery" | "reprocess", inputStage: AcquisitionStage = "processing") => {
     if (!detail) return;
     setContinuation({
-      snapshot: detail, purpose,
+      snapshot: detail, purpose, inputStage,
       current: purpose !== "reprocess" && continueCurrent,
-      files: purpose !== "delivery" && continueFiles,
+      files: purpose !== "delivery" && (hasStageDirectoryInputs(detail, inputStage) || continueFiles),
     });
   };
-  const processingAction = detail && (
+  const processingAction = (inputStage: AcquisitionStage = "processing") => detail && (
     <Button size="sm" color={processAgain ? "default" : "primary"} variant="flat"
       aria-haspopup="dialog"
-      isDisabled={busy || replanOpen || (!continueFiles && (!continueCurrent || deliveryWait))}
-      onPress={() => openContinuation(processAgain ? "reprocess" : "processing")}>
+      isDisabled={busy || replanOpen || (!retryStageCommit && !continueFiles && (!continueCurrent || deliveryWait))}
+      onPress={() => retryStageCommit ? diagnoseContinuation() : openContinuation(processAgain ? "reprocess" : "processing", inputStage)}>
       {t(processAgain ? "acquisition.continue.again" : "acquisition.continue.open")}
     </Button>
   );
@@ -425,7 +452,8 @@ export default function PlanTaskDetailModal({
     task?.planRevision !== continuation.snapshot.task.planRevision ||
     task?.status !== continuation.snapshot.task.status ||
     task?.waitPromptJson !== continuation.snapshot.task.waitPromptJson ||
-    !((continuation.current && continueCurrent) || (continuation.files && continueFiles))
+    !((continuation.current && continueCurrent) || (continuation.files && (continueFiles ||
+      !!detail && hasStageDirectoryInputs(detail, continuation.inputStage))))
   );
   const currentControls = (
     <>
@@ -434,7 +462,7 @@ export default function PlanTaskDetailModal({
           isDisabled={busy || replanOpen} onPress={() => openContinuation("delivery")}>
           {t("acquisition.continue.delivery")}
         </Button>
-      ) : processingAction)}
+      ) : processingAction(currentStage ?? "processing"))}
       {!!task?.workflowRunId && !continueCurrent && !(continueFiles && currentStage === "processing") && (
         <Button
           size="sm"
@@ -493,7 +521,13 @@ export default function PlanTaskDetailModal({
   for (const stage of ["download", "processing", "delivery"] as const) {
     stageHeaderActions[stage] = <>
       {currentStage === stage && currentControls}
-      {stage === "processing" && detail && processingOffered && (!continueCurrent || deliveryWait) && processingAction}
+      {stage === "processing" && detail && processingOffered && (!continueCurrent || deliveryWait) && processingAction("processing")}
+      {stage === "delivery" && detail && canKeepPreparedFiles(detail) && (
+        <Button size="sm" color="primary" variant="flat" aria-haspopup="dialog" isDisabled={busy || replanOpen}
+          onPress={() => setEditor({ stage: "keepPrepared", snapshot: detail })}>
+          {t("acquisition.keepPrepared.title")}
+        </Button>
+      )}
       {stage === "delivery" && deliveryAvailable && (
         <Button size="sm" variant="flat" isDisabled={busy || replanOpen}
           onPress={() => setEditor({ stage: "delivery", snapshot: detail! })}>
@@ -596,26 +630,29 @@ export default function PlanTaskDetailModal({
             <Button variant="light" onPress={() => setVisible(false)}>
               {t("acquisition.plan.close")}
             </Button>
-            {editable && detail && task?.phase === "ready" && (
-              <>
-                <Button
-                  variant="flat"
-                  isLoading={busy}
-                  onPress={() => void mutate(() => planTaskApi.preflight(taskId))}
-                >
-                  {t("acquisition.plan.preflight")}
-                </Button>
-                <Button
-                  color="primary"
-                  isLoading={busy}
-                  isDisabled={
-                    detail.issues.some((issue) => issue.blocking !== false) || !detail.steps.length
-                  }
-                  onPress={() => void mutate(() => planTaskApi.run(taskId, task.planRevision))}
-                >
-                  {t("acquisition.plan.run")}
-                </Button>
-              </>
+            {editable && (task.phase === "ready" ||
+              (task.phase === "attention" && detail?.plan && detail.steps.length > 0)) && (
+              <Button
+                variant="flat"
+                isLoading={busy}
+                onPress={() => void mutate(() => planTaskApi.preflight(taskId))}
+              >
+                {t("acquisition.plan.preflight")}
+              </Button>
+            )}
+            {editable && detail && task.phase === "ready" && (
+              <Button
+                color="primary"
+                isLoading={busy}
+                isDisabled={
+                  detail.issues.some((issue) => issue.blocking !== false) || !detail.steps.length
+                }
+                onPress={() => void mutate(() => attemptRunOverride?.revision === task.planRevision
+                  ? planTaskApi.run(taskId, task.planRevision, attemptRunOverride.options.useEmergencySpaceReserve)
+                  : planTaskApi.run(taskId, task.planRevision))}
+              >
+                {t("acquisition.plan.run")}
+              </Button>
             )}
           </div>
         }
@@ -645,7 +682,13 @@ export default function PlanTaskDetailModal({
                 )}
               </div>
             )}
-            {originLinks}
+            <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+              <div className="min-w-0">{originLinks}</div>
+              {!readOnly && <Button size="sm" variant="light" startContent={<LuFolderCog aria-hidden size={16} />}
+                isDisabled={busy || replanOpen} onPress={() => setDirectoriesOpen(true)}>
+                {t("acquisition.directories.open")}
+              </Button>}
+            </div>
             {!currentStage && <div className="flex flex-wrap gap-2">{currentControls}</div>}
             {task && (
               <AcquisitionExecutionTimeline
@@ -678,8 +721,9 @@ export default function PlanTaskDetailModal({
                     <PlanReplanForm
                       detail={replanSnapshot}
                       onCancel={closeEditor}
-                      onSaved={(next) => {
+                      onSaved={(next, options) => {
                         closeEditor();
+                        setAttemptRunOverride(options ? { revision: next.task.planRevision, options } : undefined);
                         void mutate(async () => next);
                       }}
                     />
@@ -697,7 +741,7 @@ export default function PlanTaskDetailModal({
                 className="space-y-2 rounded-lg border border-warning-200 bg-warning-50 p-3"
               >
                 {detail.issues.map((issue) => (
-                  <div key={issue.code}>
+                  <div key={issue.code} className="flex min-w-0 flex-wrap items-center gap-1">
                     <p className="text-sm">
                       {t(`acquisition.plan.issue.${issue.code}`, {
                         defaultValue: t(`acquire.requirement.${issue.code}`, {
@@ -705,7 +749,10 @@ export default function PlanTaskDetailModal({
                         }),
                       })}
                     </p>
-                    <span className="text-xs text-default-500">{issue.code}</span>
+                    <Tooltip placement="bottom" content={<span className="[overflow-wrap:anywhere]">{issue.code}</span>}>
+                      <Button isIconOnly size="sm" variant="light" className="h-6 min-w-6 w-6 text-default-500"
+                        aria-label={t("workflow.processing.problem.details")}><LuInfo aria-hidden size={14} /></Button>
+                    </Tooltip>
                   </div>
                 ))}
               </div>
@@ -818,6 +865,12 @@ export default function PlanTaskDetailModal({
                   sourceHealth={sourceHealth}
                   onReview={reviewSources}
                   busy={busy}
+                  onReplace={detail.canEditStoragePolicy === false || task.workflowRunId || detail.planHistory?.some(revision => revision.previousRunId != null) || detail.replanArtifacts?.length
+                    ? undefined : async (partId, sourceId, reviewed) => {
+                      const next = await planTaskApi.replaceSource(taskId, task.planRevision,
+                        { partId, sourceId, url: reviewed.url, accessCode: reviewed.accessCode ?? undefined });
+                      await mutate(async () => next);
+                    }}
                   onApply={
                     task.phase === "ready"
                       ? (partId, source, revision) =>
@@ -902,22 +955,20 @@ export default function PlanTaskDetailModal({
           </div>
         )}
       </Modal>
+      {!readOnly && editor?.stage === "keepPrepared" && replanSnapshot && (
+        <KeepPreparedFilesModal detail={replanSnapshot} stale={editorStale || !canKeepPreparedFiles(detail)}
+          onClose={closeEditor} onSaved={startRevision} onRefresh={() => void load()} />
+      )}
       {!readOnly && editor?.stage === "delivery" && replanSnapshot && (
         <Modal visible size="5xl" scrollBehavior="inside" title={t("acquisition.timeline.retry.delivery")}
           footer={false} onClose={closeEditor}>
           {editorStale && <p role="alert" className="text-sm text-warning-700">{t("acquisition.plan.replan.error.PLAN_VERSION_CONFLICT")}</p>}
           <fieldset disabled={editorStale} className="min-w-0">
-            {replanSnapshot.task.status === AcquisitionStatus.Completed ? (
-              <CompletedDeliveryLayoutRevision
-                detail={replanSnapshot} currentDeliveryRoot={acquisitionOptions && (acquisitionOptions.deliveryRootDirectory ?? null)}
-                retry inDialog onCancel={closeEditor} onSaved={startRevision} />
-            ) : (
               <CompletedProcessingRevisionForm
                 detail={replanSnapshot} currentDeliveryRoot={acquisitionOptions && (acquisitionOptions.deliveryRootDirectory ?? null)}
-                retryStage="delivery" mode="stopped" inDialog
+                retryStage="delivery" inputStage="delivery" mode={replanSnapshot.task.status === AcquisitionStatus.Completed ? "completed" : "stopped"} inDialog
                 waitingPathConflict={waitingPathConflict} waitingLocalProcessing={waitingLocalProcessing}
                 waitingPublicationStorage={waitingPublicationStorage} onCancel={closeEditor} onSaved={startRevision} />
-            )}
           </fieldset>
         </Modal>
       )}
@@ -950,14 +1001,23 @@ export default function PlanTaskDetailModal({
       )}
       {continuation && (
         <TaskContinuationModal
-          origin={originLinks}
+          taskTitle={acquisitionTaskTitle(taskId, continuation.snapshot.task)}
+          origin={<div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+            <div className="min-w-0">{originLinks}</div>
+            <Button size="sm" variant="light" startContent={<LuFolderCog aria-hidden size={16} />}
+              isDisabled={reserveSubmitting} onPress={() => setDirectoriesOpen(true)}>{t("acquisition.directories.open")}</Button>
+          </div>}
           busy={reserveSubmitting}
           processAgain={continuation.purpose === "reprocess"}
           delivery={continuation.purpose === "delivery"}
+          reviewOutput={canReviewExistingOutput}
+          passwordRequested={canAnswerProcessingPassword}
           allowModeChoice={continuation.purpose === "processing" && continuation.current && continuation.files &&
-            savedProcessingCheckpoint && hasSavedStorageProcessingCheckpoint(continuation.snapshot, overview)}
-          preferFiles={continuation.purpose !== "delivery" && continuation.files &&
-            hasReadableCurrentDirectoryInputs(continuation.snapshot) && !savedProcessingCheckpoint}
+            (canAnswerProcessingPassword || canReviewExistingOutput || (!hasStageDirectoryInputs(continuation.snapshot, continuation.inputStage) &&
+              savedProcessingCheckpoint && hasSavedStorageProcessingCheckpoint(continuation.snapshot, overview)))}
+          preferFiles={!canAnswerProcessingPassword && continuation.purpose !== "delivery" && continuation.files &&
+            (hasStageDirectoryInputs(continuation.snapshot, continuation.inputStage) ||
+              hasReadableCurrentDirectoryInputs(continuation.snapshot) && !savedProcessingCheckpoint)}
           current={continuation.current && (continuationStale || continueCurrent) && (
             <>
             <WorkflowRunDetailContent
@@ -1010,16 +1070,18 @@ export default function PlanTaskDetailModal({
               )}
             </>
           )}
-          files={continuation.files && (continuationStale || continueFiles) && (
+          files={continuation.files && (
             <>
             {!continuationStale && processingWaitExplanation && <ProcessingProblemSummary
               message={processingWaitExplanation}
-              summary={runtimeProblemLabel(t, overview?.problemReasonCode ?? overview?.problemCode, overview?.problem)} />}
+              reason={localProcessingProblem ?? overview?.problemReasonCode ?? overview?.problemCode ?? undefined}
+              summary={runtimeProblemLabel(t, localProcessingProblem ?? overview?.problemReasonCode ?? overview?.problemCode, overview?.problem)} />}
             <CompletedProcessingRevisionForm
               inDialog
               detail={continuation.snapshot}
               currentDeliveryRoot={acquisitionOptions && (acquisitionOptions.deliveryRootDirectory ?? null)}
               retryStage="processing"
+              inputStage={continuation.inputStage}
               preferAi={savedProcessingCheckpoint}
               mode={continuation.snapshot.task.status === AcquisitionStatus.Completed ? "completed" : "stopped"}
               waitingPathConflict={waitingPathConflict}
@@ -1034,6 +1096,8 @@ export default function PlanTaskDetailModal({
           onClose={() => setContinuation(undefined)}
         />
       )}
+      {directoriesOpen && <TaskDirectoriesModal taskId={taskId} onClose={() => setDirectoriesOpen(false)}
+        onChanged={() => { setContinuation(undefined); closeEditor(); refreshAfterAction(); }} />}
       {currentRunView != null && (
         <Modal
           visible

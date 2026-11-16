@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
-import type { FileExplorerProps } from "../FileExplorer";
+import type { FileExplorerProps, FileExplorerRef } from "../FileExplorer";
 
+import { createRef } from "react";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -62,6 +63,7 @@ vi.mock("@/core/models/FileExplorer/RootEntry", () => ({
   default: class {
     path?: string;
     id?: string;
+    expanded = true;
     children = ["alpha", "nas-bakabase", "nas-anobaka"].map((name) => ({
       path: `/media/${name}`,
       name,
@@ -76,11 +78,13 @@ vi.mock("@/core/models/FileExplorer/RootEntry", () => ({
       this.path = path;
       this.id = path ?? "locations";
       if (path === "/empty") this.children = [];
+      this.children.forEach(child => Object.assign(child, { parent: this }));
       this.childrenCount = this.children.length;
     }
     patchFilter(filter: { keyword?: string }) {
       this.filter = { ...this.filter, ...filter };
     }
+    updateIndependentObservation() { return true; }
     async dispose() {}
   },
 }));
@@ -465,6 +469,36 @@ describe("compact file processor toolbar", () => {
     expect(screen.getByRole("button", { name: "alpha" })).toBeInTheDocument();
   });
 
+  it.each(["filtered", "removed", "detached"])("restarts a Shift range when its anchor is %s", async change => {
+    const onSelected = vi.fn<NonNullable<FileExplorerProps["onSelected"]>>();
+    const ref = createRef<FileExplorerRef>();
+    const props: FileExplorerProps = { appearance: "compact", rootPath: "/media", selectable: "multiple", onSelected };
+    const view = render(<FileExplorer {...props} ref={ref} />);
+    fireEvent.click(await screen.findByRole("button", { name: "alpha" }));
+    expect(onSelected.mock.lastCall?.[0].map(entry => entry.name)).toEqual(["alpha"]);
+
+    if (change === "filtered") {
+      view.rerender(<FileExplorer {...props} ref={ref} filter={{ keyword: "nas-" }} />);
+    } else {
+      const root = ref.current!.root!;
+      const anchor = root.children![0];
+      root.children = root.children!.filter(entry => entry !== anchor);
+      if (change === "detached") anchor.parent = undefined;
+      view.rerender(<FileExplorer {...props} ref={ref} />);
+    }
+    await waitFor(() => expect(screen.queryByRole("button", { name: "alpha" })).toBeNull());
+
+    const last = screen.getByRole("button", { name: "nas-anobaka" });
+    fireEvent.mouseDown(last, { shiftKey: true });
+    fireEvent.click(last, { shiftKey: true });
+    expect(onSelected.mock.lastCall?.[0].map(entry => entry.name)).toEqual(["nas-anobaka"]);
+
+    const first = screen.getByRole("button", { name: "nas-bakabase" });
+    fireEvent.mouseDown(first, { shiftKey: true });
+    fireEvent.click(first, { shiftKey: true });
+    expect(onSelected.mock.lastCall?.[0].map(entry => entry.name)).toEqual(["nas-bakabase", "nas-anobaka"]);
+  });
+
   it("preserves a host-provided filter and applies it after changing directories", async () => {
     const props = {
       appearance: "compact" as const,
@@ -496,7 +530,7 @@ describe("compact file processor toolbar", () => {
       render(
         <FileExplorer
           appearance="compact"
-          capabilities={["select", "wrap"]}
+          capabilities={["select", "wrap", "move"]}
           rootPath="/media"
           selectable="multiple"
         />,
@@ -530,17 +564,29 @@ describe("compact file processor toolbar", () => {
       fireEvent.keyDown(fileName, { key: "w" });
       expect(createPortal).toHaveBeenCalledTimes(1);
 
-      // Keep the real HeroUI button: its keyboard handling must not swallow
-      // primary shortcuts merely because a toolbar control has focus.
+      // Toolbar controls own their focus; file operations require the file list.
       select.mockClear();
       const shortcuts = screen.getByRole("button", { name: "fileExplorer.label.shortcuts" });
 
       shortcuts.focus();
       expect(shortcuts).toHaveFocus();
-      expect(fireEvent.keyDown(shortcuts, { key: "a", [primary]: true })).toBe(false);
-      expect(select).toHaveBeenCalledTimes(3);
+      expect(fireEvent.keyDown(shortcuts, { key: "a", [primary]: true })).toBe(true);
+      expect(select).not.toHaveBeenCalled();
     },
   );
+
+  it("does not cut or paste into an explorer without file mutation capabilities", async () => {
+    vi.stubGlobal("navigator", { platform: "MacIntel" });
+    render(<div role="dialog"><FileExplorer rootPath="/media" selectable="multiple"
+      capabilities={["enter-directory"]} /></div>);
+    const row = await screen.findByRole("button", { name: "alpha" });
+    fireEvent.click(row);
+    fireEvent.keyDown(row, { key: "x", metaKey: true });
+    expect(useFileExplorerClipboardStore.getState().paths).toHaveLength(0);
+    useFileExplorerClipboardStore.getState().cut(["/other/file.zip"]);
+    fireEvent.keyDown(row, { key: "v", metaKey: true });
+    expect(moveEntries).not.toHaveBeenCalled();
+  });
 
   it("protects actual filename editing while preserving row keyboard selection afterwards", async () => {
     vi.stubGlobal("navigator", { platform: "MacIntel" });
@@ -618,4 +664,21 @@ describe("compact file processor toolbar", () => {
     await waitFor(() => expect(onSelected).toHaveBeenLastCalledWith([]));
     expect(screen.queryByRole("button", { name: "fileExplorer.selection.clear" })).toBeNull();
   });
+});
+
+it("preserves the loaded root when task permissions enable polling, and clears selection when editing is revoked", async () => {
+  const initialized = vi.fn(), onSelected = vi.fn();
+  const props = { rootPath: "/files", keyboard: false, capabilities: ["enter-directory"] as any, onInitialized: initialized, onSelected };
+  const view = render(<FileExplorer {...props} watchChanges={false} selectable="disabled" />);
+  await screen.findByRole("button", { name: "row alpha" });
+  await waitFor(() => expect(initialized).toHaveBeenCalledOnce());
+  expect(checkPath).toHaveBeenCalledOnce();
+  view.rerender(<FileExplorer {...props} watchChanges="poll" selectable="multiple" />);
+  fireEvent.click(screen.getByRole("button", { name: "row alpha" }));
+  await waitFor(() => expect(onSelected).toHaveBeenLastCalledWith([expect.objectContaining({ name: "alpha" })]));
+  expect(checkPath).toHaveBeenCalledOnce(); expect(initialized).toHaveBeenCalledOnce();
+  view.rerender(<FileExplorer {...props} watchChanges={false} selectable="disabled" />);
+  await waitFor(() => expect(select).toHaveBeenLastCalledWith(false));
+  expect(onSelected).toHaveBeenLastCalledWith([]);
+  expect(checkPath).toHaveBeenCalledOnce(); expect(initialized).toHaveBeenCalledOnce();
 });

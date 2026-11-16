@@ -16,8 +16,10 @@ public sealed partial class PublishedArtifactAncestorCleanupTests
             [new(publication.Id, publication.OperationId, publication.Fingerprint, publication.RootDirectory)]),
         _ => Task.FromResult(true), store, boundaryCoverage: cleanup.HasBoundaryCoverageAsync);
 
-    [TestMethod]
-    public async Task Deletion_boundary_coverage_reclaims_four_stage_lineage_in_one_reviewed_plan()
+    [DataTestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task Deletion_boundary_coverage_reclaims_four_stage_lineage_in_one_reviewed_plan(bool skip)
     {
         var f = await BoundaryFixture();
         Assert.IsTrue(await new ArtifactOperationBindingService(db).BindAsync("workflow", "1", "part:artifact.publish", f.Publication.OperationId));
@@ -27,7 +29,7 @@ public sealed partial class PublishedArtifactAncestorCleanupTests
         var maintenance = new ArtifactWorkspaceMaintenance(db, store, new(extraction), new(extraction), root);
         var service = new AcquisitionTaskDeletionService(db, new FinishedDeletionActivity(), new(),
             new(db, store, maintenance, cleanup, new Storage()));
-        var preview = await service.PreviewAsync(new([task.Id], true, true));
+        var preview = await service.PreviewAsync(new([task.Id], true, true, SkipFileVerification: skip));
         var groups = preview.Rows.Single().Cleanup!.Groups;
         Assert.IsFalse(groups.Any(g => !g.Eligible), string.Join(",", groups.Where(g => !g.Eligible).Select(g => g.ReasonCode)));
         Assert.IsTrue(groups.Any(g => g.ArtifactId == f.Boundary.Id && g.Eligible));

@@ -2,7 +2,9 @@ using System.Text.Json;
 using Bakabase.InsideWorld.Business.Components.Artifacts;
 using Bakabase.InsideWorld.Business.Components.Compression;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Db;
+using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
+using Bakabase.Modules.Workflow.Abstractions.Models.Db;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Workflow.Artifacts;
 using Bakabase.Service.Components.Acquisition.Planning;
@@ -25,11 +27,11 @@ public sealed partial class PublishedArtifactAncestorCleanupTests
     private async Task<(AcquisitionTaskDbModel Task, ArtifactRecord Raw, ArtifactRecord Final,
         string OperationId, string Private, string StateFile, AcquisitionTaskDeletionService Service)>
         AbandonedDeletionFixture(string? unboundLeaseOwner = null, IReadOnlyList<int>? ownerRuns = null,
-            string? currentInputScenario = null)
+            string? currentInputScenario = null, bool completedNoTransform = false, bool stagedOnly = false)
     {
         ArtifactRecord raw;
         if (currentInputScenario == null)
-            raw = await Artifact("download", filename: "archive.zip", contents: "archive bytes");
+            raw = await Artifact(stagedOnly ? "processedFiles" : "download", filename: stagedOnly ? "image.png" : "archive.zip", contents: "archive bytes");
         else
         {
             var currentDirectory = Path.Combine(root, "manual-current-files");
@@ -45,7 +47,7 @@ public sealed partial class PublishedArtifactAncestorCleanupTests
             Assert.IsTrue(await new ArtifactOperationBindingService(db).BindAsync("workflow",
                 currentInputScenario == "foreign-owner" ? "2" : "1", inputBinding, raw.OperationId));
         }
-        var final = await Artifact("publishedFiles", raw, filename: "archive.zip", contents: "archive bytes");
+        var final = await Artifact("publishedFiles", raw, filename: stagedOnly ? "image.png" : "archive.zip", contents: "archive bytes");
         var operationId = ArtifactManifestFiles.Hash("failed-private-input");
         var claim = await store.ClaimAsync(new(operationId, "failed-private-input", "files.process", raw.Fingerprint),
             unboundLeaseOwner ?? "fixture", TimeSpan.FromMinutes(2));
@@ -55,11 +57,29 @@ public sealed partial class PublishedArtifactAncestorCleanupTests
             raw.RootDirectory, default, newAttempt: true);
         var extraction = new AbandonedExtraction();
         var executor = new FileProcessingPlanExecutor(extraction);
-        var failure = await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => executor.ExecuteAsync(new()
+        if (completedNoTransform)
         {
-            Requirement = "required", Steps = [new() {Id = "extract", Op = "extractArchive", Selector = "archive.zip"}],
-        }, raw.RootDirectory, raw.Files, Path.Combine(attempt, "plan")));
-        Assert.AreEqual("Fixture extraction failed.", failure.Message);
+            var done = await executor.ExecuteAsync(new() {Requirement = "notRequired", Steps = []},
+                raw.RootDirectory, raw.Files, Path.Combine(attempt, "plan"));
+            Assert.IsTrue(done.Completed);
+            // Simulate failure between the executor's complete journal and the operation's
+            // durable output registration, leaving its staged and result copies unregistered.
+        }
+        else if (stagedOnly)
+        {
+            var failure = await executor.ExecuteAsync(new() {Requirement = "required", Steps =
+                [new() {Id = "extract", Op = "extractArchive", Selector = "image.png"}]},
+                raw.RootDirectory, raw.Files, Path.Combine(attempt, "plan"));
+            Assert.IsFalse(failure.Completed); Assert.AreEqual("ArchiveInputRequired", failure.FailureCode);
+        }
+        else
+        {
+            var failure = await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => executor.ExecuteAsync(new()
+            {
+                Requirement = "required", Steps = [new() {Id = "extract", Op = "extractArchive", Selector = "archive.zip"}],
+            }, raw.RootDirectory, raw.Files, Path.Combine(attempt, "plan")));
+            Assert.AreEqual("Fixture extraction failed.", failure.Message);
+        }
         if (unboundLeaseOwner == null)
             Assert.IsTrue(await store.FailAsync(claim.Lease!, "Fixture extraction failed."));
         var stateFile = Directory.GetFiles(attempt, "state.json", SearchOption.AllDirectories).Single();
@@ -110,6 +130,42 @@ public sealed partial class PublishedArtifactAncestorCleanupTests
         var again = await f.Service.PreviewAsync(new([f.Task.Id], true, true, true, RetryRetainedFiles: true));
         var repeated = await f.Service.DeleteAsync(new(again.PreviewId, RetryRetainedFiles: true));
         Assert.AreEqual(0, repeated.RemovedFiles);
+        Assert.IsTrue(f.Final.Files.All(File.Exists));
+    }
+
+    [DataTestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task Stage_cleanup_includes_only_proven_unbound_copies_outside_the_selected_roots(bool extraFile)
+    {
+        var f = await AbandonedDeletionFixture("workflow:1:adaptive:part:0");
+        await db.ArtifactOperations.Where(o => o.Id == f.OperationId).ExecuteUpdateAsync(s =>
+            s.SetProperty(o => o.LeaseUntil, DateTime.UtcNow.AddDays(-1)));
+        var otherStage = Directory.CreateDirectory(Path.Combine(root, "processing")).FullName;
+        await File.WriteAllTextAsync(Path.Combine(otherStage, "working.bin"), "stage output");
+        var plan = new AcquisitionPlan {Parts = [new() {Id = "part"}], StageDirectories = new() {TaskId = f.Task.Id,
+            Parts = new() {["part"] = new() {Processing = new(otherStage, "borrowed", "userDirectoryRevision")
+                {BindingId = Guid.NewGuid().ToString("N")}}}}};
+        await db.AcquisitionTasks.Where(t => t.Id == f.Task.Id)
+            .ExecuteUpdateAsync(s => s.SetProperty(t => t.PlanJson, JsonSerializer.Serialize(plan, Json)));
+        db.Set<WorkflowRunSourceDbModel>().Add(new() {WorkflowRunId = 1, Module = "acquisition", EntityKind = "task",
+            EntityId = f.Task.Id.ToString(), Revision = "2"});
+        await db.SaveChangesAsync(); db.ChangeTracker.Clear();
+        var state = await File.ReadAllTextAsync(f.StateFile);
+        var extra = Path.Combine(Path.GetDirectoryName(f.Private)!, "manual.key");
+        if (extraFile) await File.WriteAllTextAsync(extra, "manual file");
+
+        var preview = await f.Service.PreviewAsync(new([f.Task.Id], true, true, true, RetryRetainedFiles: true));
+        var groups = preview.Rows.Single().Cleanup!.Groups;
+        Assert.IsTrue(groups.Single(g => g.Directory == otherStage).Eligible);
+        Assert.AreEqual(!extraFile, groups.Single(g => g.ArtifactId.StartsWith("abandoned-input:")).Eligible);
+        var result = await f.Service.DeleteAsync(new(preview.PreviewId, RetryRetainedFiles: true));
+
+        Assert.AreEqual(!extraFile, result.CleanupResults!.Single().Completed);
+        Assert.AreEqual(extraFile, File.Exists(f.Private));
+        Assert.AreEqual(extraFile, File.Exists(extra));
+        Assert.IsFalse(Directory.Exists(otherStage));
+        Assert.AreEqual(state, await File.ReadAllTextAsync(f.StateFile));
         Assert.IsTrue(f.Final.Files.All(File.Exists));
     }
 

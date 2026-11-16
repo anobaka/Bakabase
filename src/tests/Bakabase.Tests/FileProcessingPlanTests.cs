@@ -70,7 +70,14 @@ public class FileProcessingPlanTests
         var note = await Input("download-note.txt", "keep");
         var archives = new FakeArchives();
         var executor = new FileProcessingPlanExecutor(archives);
-        var result = await executor.ExecuteAsync(NestedPlan(), _input, [original, note], _state);
+        var stages = new List<string>();
+        var measured = new List<(string Stage, int Progress)>();
+        var result = await executor.ExecuteAsync(NestedPlan(), _input, [original, note], _state,
+            progress: value => measured.Add((stages.Last(), value)),
+            reportStage: stage => { stages.Add(stage); return Task.CompletedTask; });
+        CollectionAssert.AreEqual(new[] {"preparingFiles", "processingFiles", "checkingArchive", "extractingArchive",
+            "processingFiles", "checkingArchive", "extractingArchive", "processingFiles"}, stages);
+        CollectionAssert.AreEqual(new[] {("extractingArchive", 39), ("extractingArchive", 39)}, measured);
         Assert.IsTrue(result.Completed, result.Message);
         Assert.AreEqual(2, archives.Extractions);
         CollectionAssert.AreEqual(new[] {"first", "second"}, archives.Passwords.ToArray());
@@ -389,6 +396,7 @@ public class FileProcessingPlanTests
             Action<int>? onProgress, CancellationToken ct)
         {
             Extractions++;
+            onProgress?.Invoke(39);
             GroupSizes.Add(request.Files.Count);
             Passwords.Add(request.Password!);
             if (Path.GetFileName(request.Files[0]).StartsWith("outer"))

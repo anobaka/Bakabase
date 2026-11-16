@@ -42,7 +42,7 @@ import { AcquisitionContinuationStatus } from "./AcquisitionContinuationJobsModa
 const pageSize = 20;
 const knownRequestError = (error: unknown) =>
   error instanceof Error &&
-  /^RECOVERY_(PREVIEW_LIMIT|PREVIEW_EXPIRED|SELECTION_INVALID|OUTCOME_UNKNOWN|SCOPE_MISMATCH|SCOPE_INVALID|DIAGNOSIS_STOP_UNCONFIRMED)$/.test(
+  /^RECOVERY_(PREVIEW_LIMIT|PREVIEW_EXPIRED|SELECTION_INVALID|OUTCOME_UNKNOWN|SCOPE_MISMATCH|SCOPE_INVALID|DIAGNOSIS_STOP_UNCONFIRMED|PREPARATION_CONFLICT|PREPARE_OPTIONS_INVALID)$/.test(
     error.message,
   )
     ? error.message
@@ -80,7 +80,11 @@ export default function AcquisitionRecoveryModal({
   const captured = useRef([...new Set(taskIds.filter((id) => Number.isSafeInteger(id) && id > 0))]);
   const [visible, setVisible] = useState(true);
   const [scope, setScope] = useState<AcquisitionRecoveryScope>(initialScope);
-  const reserveDefaults = useStorageReserveDefaults(scope !== "localFiles" && !reserveRunId);
+  const [localMethod, setLocalMethod] = useState<"original" | "analyze" | "prepareOnly">("original");
+  const [maxAdaptiveIterations, setMaxAdaptiveIterations] = useState(5);
+  const localAnalysis = scope === "localFiles" && localMethod === "analyze";
+  const prepareOnly = scope === "localFiles" && localMethod === "prepareOnly";
+  const reserveDefaults = useStorageReserveDefaults(localAnalysis || scope !== "localFiles" && !reserveRunId);
   const [reserveChoice, setReserveChoice] = useState<boolean>();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -167,7 +171,10 @@ export default function AcquisitionRecoveryModal({
   const consumed = !!preview && attempted.current.has(preview.previewToken);
   const rows = (preview?.rows ?? []).filter((row) => captured.current.includes(row.taskId));
   const eligible = rows.filter((row) => isSafelyContinuable(row, scope));
-  const selectedIds = eligible.filter((row) => selected.has(row.taskId)).map((row) => row.taskId);
+  const selectedRows = eligible.filter((row) => selected.has(row.taskId));
+  const selectedIds = selectedRows.map((row) => row.taskId);
+  const canPrepareOnly = selectedRows.length > 0 &&
+    selectedRows.every(row => row.localFiles?.supportsPrepareOnly === true);
   const locked = loading || submitting || !!transition || !preview || expired || consumed;
   const changeScopeOrClose = async (next?: AcquisitionContinuationScope) => {
     if (busy.current || receiptToken || (next === scope && visible)) return;
@@ -186,6 +193,8 @@ export default function AcquisitionRecoveryModal({
         setError(undefined);
         setErrorCode(undefined);
         setReserveChoice(undefined);
+        setLocalMethod("original");
+        setMaxAdaptiveIterations(5);
         setLoading(true);
         setScope(next);
       }
@@ -206,7 +215,7 @@ export default function AcquisitionRecoveryModal({
     changed.current?.();
   };
   const skipDiagnosis = async () => {
-    if (busy.current || !loading || captured.current.length > 1000) return;
+    if (busy.current || !loading || prepareOnly || captured.current.length > 1000) return;
     busy.current = true;
     sequence.current++;
     setTransition("stopping");
@@ -258,18 +267,23 @@ export default function AcquisitionRecoveryModal({
     }
   };
   const submit = async () => {
-    if (!preview || busy.current || locked || !selectedIds.length) return;
+    if (!preview || busy.current || locked || !selectedIds.length || (prepareOnly && !canPrepareOnly)) return;
     busy.current = true;
     attempted.current.add(preview.previewToken);
     setSubmitting(true);
     setError(undefined);
     setErrorCode(undefined);
     try {
-      const explicitReserve = eligible.some(row => selected.has(row.taskId) && row.canOverrideStorage === true)
+      const explicitReserve = (scope !== "localFiles" || localAnalysis) &&
+        eligible.some(row => selected.has(row.taskId) && row.canOverrideStorage === true)
         ? reserveChoice : undefined;
-      const next = explicitReserve === undefined
-        ? await acquisitionRecoveryApi.apply(preview.previewToken, selectedIds)
-        : await acquisitionRecoveryApi.apply(preview.previewToken, selectedIds, explicitReserve);
+      const localOptions = prepareOnly ? { prepareOnly: true as const }
+        : localAnalysis ? { analyzeFilesFirst: true as const, maxAdaptiveIterations } : undefined;
+      const next = localOptions
+        ? await acquisitionRecoveryApi.apply(preview.previewToken, selectedIds, explicitReserve, localOptions)
+        : explicitReserve !== undefined
+          ? await acquisitionRecoveryApi.apply(preview.previewToken, selectedIds, explicitReserve)
+          : await acquisitionRecoveryApi.apply(preview.previewToken, selectedIds);
       if (mounted.current)
         setResult({
           ...next,
@@ -305,13 +319,16 @@ export default function AcquisitionRecoveryModal({
   const shown = rows.slice((page - 1) * pageSize, page * pageSize);
   const scopePrefix =
     scope === "workflow" ? "acquisition.recovery" : `acquisition.recovery.${scope}`;
-  const showReserve = !result && !deferred && !reserveRunId && scope !== "localFiles" &&
+  const showReserve = !result && !deferred && (localAnalysis || !reserveRunId && scope !== "localFiles") &&
     (!preview || eligible.some(row => row.canOverrideStorage === true));
+  const preparedAsRequested = prepareOnly && result != null && result.continuedTaskIds.length === 0 &&
+    (result.localFiles?.length ?? 0) + result.skipped.length === selectedIds.length &&
+    (result.localFiles ?? []).every(row => row.status === "prepared" && row.workflowRunId == null && !row.reasonCode);
 
   const confirmSelection = (
-    <Button color="primary" isLoading={submitting} isDisabled={locked || !selectedIds.length}
+    <Button color="primary" isLoading={submitting} isDisabled={locked || !selectedIds.length || (prepareOnly && !canPrepareOnly)}
       onPress={() => void submit()}>
-      {t(`${scopePrefix}.confirm`, { count: selectedIds.length })}
+      {t(prepareOnly ? "acquisition.recovery.localFiles.prepareConfirm" : `${scopePrefix}.confirm`, { count: selectedIds.length })}
     </Button>
   );
 
@@ -383,6 +400,43 @@ export default function AcquisitionRecoveryModal({
           </p>
         </div>
       )}
+      {scope === "localFiles" && !result && !deferred && !loading && preview && (
+        <div className="space-y-2 rounded-lg border border-default-200 p-3">
+          <Select size="sm" className="max-w-sm"
+            label={t("acquisition.recovery.localFiles.processingMode")}
+            aria-label={t("acquisition.recovery.localFiles.processingMode")}
+            selectedKeys={[localMethod]}
+            disallowEmptySelection isDisabled={locked}
+            dataSource={[
+              { value: "original", label: t("acquisition.recovery.localFiles.useOriginalPlan") },
+              { value: "analyze", label: t("acquisition.processingChoice.ai") },
+              ...(canPrepareOnly || prepareOnly ? [{ value: "prepareOnly", label: t("acquisition.recovery.localFiles.prepareOnly") }] : []),
+            ]}
+            onSelectionChange={keys => {
+              const value = Array.from(keys)[0];
+              if (value !== "original" && value !== "analyze" && value !== "prepareOnly") return;
+              if (value === "prepareOnly" && !canPrepareOnly) return;
+              setLocalMethod(value);
+              setReserveChoice(undefined);
+            }} />
+          {prepareOnly && <p className="text-xs text-default-500">{t(!canPrepareOnly && selectedIds.length
+            ? "acquisition.recovery.localFiles.prepareUnavailable" : "acquisition.recovery.localFiles.prepareHint")}</p>}
+          {localAnalysis && <>
+            <p className="text-xs text-default-500">{t("acquisition.recovery.localFiles.aiHint")}</p>
+            <Select size="sm" className="max-w-xs"
+              label={t("acquisition.adaptive.iterations")}
+              aria-label={t("acquisition.adaptive.iterations")}
+              description={t("acquisition.adaptive.iterationsHint")}
+              selectedKeys={[String(maxAdaptiveIterations)]}
+              disallowEmptySelection isDisabled={locked}
+              dataSource={[1, 2, 3, 4, 5].map(value => ({ value: String(value), label: String(value) }))}
+              onSelectionChange={keys => {
+                const value = Number(Array.from(keys)[0]);
+                if (Number.isInteger(value) && value >= 1 && value <= 5) setMaxAdaptiveIterations(value);
+              }} />
+          </>}
+        </div>
+      )}
       {showReserve && (
         <div className="min-w-0 max-w-full">
           {reserveDefaults.value && reserveDefaults.value.minimumBytes > emergencyReserveBytes && <StorageReserveCheckbox scope="operation"
@@ -446,15 +500,16 @@ export default function AcquisitionRecoveryModal({
             )}
           </p>
           <p className="text-xs text-default-500">{t("acquisition.continue.requiredChecks")}</p>
-          <Button variant="flat" color="primary" isDisabled={captured.current.length > 1000} onPress={() => void skipDiagnosis()}>
+          {!prepareOnly && <Button variant="flat" color="primary" isDisabled={captured.current.length > 1000} onPress={() => void skipDiagnosis()}>
             {t("acquisition.continue.skipDiagnosis", { count: captured.current.length })}
-          </Button>
+          </Button>}
         </div>
       ) : (
         <>
           {error && (
             <div role="alert" className="flex flex-wrap items-center gap-2 text-sm text-danger">
-              <span>{t(`acquisition.recovery.error.${errorCode ?? error}`)}</span>
+              <span>{errorCode === "RECOVERY_PREPARE_OPTIONS_INVALID" || errorCode === "RECOVERY_PREPARATION_CONFLICT"
+                ? reason(errorCode) : t(`acquisition.recovery.error.${errorCode ?? error}`)}</span>
               <Button size="sm" variant="flat" onPress={() => void load(true)}>
                 {t("acquisition.recovery.recheck")}
               </Button>
@@ -463,7 +518,7 @@ export default function AcquisitionRecoveryModal({
           {result ? (
             <>
               <p role="status" className="text-sm">
-                {t(`${scopePrefix}.result`, {
+                {t(preparedAsRequested ? "acquisition.recovery.localFiles.prepareResult" : `${scopePrefix}.result`, {
                   count: result.continuedTaskIds.length,
                   skipped: result.skipped.length,
                   started: result.localFiles?.filter((row) => row.status === "started").length ?? 0,
@@ -471,7 +526,9 @@ export default function AcquisitionRecoveryModal({
                     result.localFiles?.filter((row) => row.status === "prepared").length ?? 0,
                 })}
               </p>
-              <p className="text-xs text-default-500">{t(`${scopePrefix}.resultHint`)}</p>
+              {(!preparedAsRequested || !!result.localFiles?.length) && <p className="text-xs text-default-500">
+                {t(preparedAsRequested ? "acquisition.recovery.localFiles.prepareResultHint" : `${scopePrefix}.resultHint`)}
+              </p>}
               {scope === "localFiles" && !!result.localFiles?.length && (
                 <div className="max-h-64 divide-y divide-default-200 overflow-y-auto text-xs">
                   {result.localFiles.map((row) => (
@@ -483,7 +540,7 @@ export default function AcquisitionRecoveryModal({
                       <span>
                         {t(
                           `acquisition.recovery.localFiles.status.${
-                            row.status === "started" || row.status === "prepared"
+                            preparedAsRequested ? "registered" : row.status === "started" || row.status === "prepared"
                               ? row.status
                               : "unknown"
                           }`,
@@ -505,7 +562,7 @@ export default function AcquisitionRecoveryModal({
                   ))}
                 </div>
               )}
-              {scope === "localFiles" &&
+              {scope === "localFiles" && !preparedAsRequested &&
                 result.localFiles?.some((row) => row.status === "prepared") && (
                   <Button size="sm" variant="flat" onPress={() => void load(true)}>
                     {t("acquisition.recovery.recheck")}
@@ -614,13 +671,13 @@ export default function AcquisitionRecoveryModal({
                   </Button>
                 </div>
               )}
-              <p className="text-xs text-default-500">
+              {!prepareOnly && <p className="text-xs text-default-500">
                 {t(
                   scope === "localFiles"
                     ? `${scopePrefix}.notGuaranteed`
                     : "acquisition.recovery.notGuaranteed",
                 )}
-              </p>
+              </p>}
               <div className="divide-y divide-default-200 rounded-lg border border-default-200">
                 {shown.map((row) => (
                   <article key={row.taskId} className="flex items-start gap-2 p-2.5">

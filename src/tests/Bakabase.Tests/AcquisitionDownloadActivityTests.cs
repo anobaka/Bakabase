@@ -85,9 +85,45 @@ public sealed class AcquisitionDownloadActivityTests
         var settled = await _search.SearchAsync(new());
         Assert.AreEqual(0, settled.StageCounts["running"]); Assert.AreEqual(2, settled.StageCounts["attention"]);
         Assert.IsTrue(settled.Items.All(i => i.DownloadActivity == null));
+        Assert.AreEqual(0, settled.AttentionCounts["localStorage"]);
         await _db.Entry(run).ReloadAsync(); await _db.Entry(running).ReloadAsync();
         Assert.AreEqual(WorkflowRunStatus.Waiting, run.Status); Assert.AreEqual(AcquisitionStatus.Failed, running.Status);
         Assert.AreEqual("immutable history", running.PlanHistoryJson);
+    }
+
+    [TestMethod]
+    public async Task CompletedDownloadsBecomePendingLocalFilesAndOnlySupersedeOlderPerPartWarnings()
+    {
+        var targets = new List<CloudDownloadTarget>
+            {Target("one", 11, problem: "LOCAL_STORAGE_RESERVE_LOW"), Target("two", 12, problem: "LOCAL_STORAGE_RESERVE_LOW")};
+        var (task, run) = await Seed(targets);
+        task.PlanRevision = 1;
+        task.PlanJson = JsonSerializer.Serialize(new {parts = targets.Select(t => new {id = t.Id})}, Json);
+        run.PlanSnapshotJson = WorkflowRunPlans.Serialize(new() {Name = "Completed download", TriggerKind = CloudWorkflow.Trigger, Nodes = [
+            new() {NodeId = "node", Kind = "download.awaitCompletion"},
+            new() {NodeId = "publish", Kind = "fs.publishArtifacts"}]});
+        run.CurrentItemJson = JsonSerializer.Serialize(new {type = typeof(DownloadWorkset).FullName + ", " +
+            typeof(DownloadWorkset).Assembly.GetName().Name, item = new DownloadWorkset {Targets = targets}}, Json);
+        _db.Set<WorkflowRunSourceDbModel>().Add(new() {WorkflowRunId = run.Id, Module = "acquisition", EntityKind = "task",
+            EntityId = task.Id.ToString(), Revision = "1"});
+        await _db.SaveChangesAsync();
+
+        _reader.Values = [Download("site:11", "completed"), Download("site:12", "failed")];
+        var mixed = await _search.SearchAsync(new());
+        Assert.AreEqual(0, mixed.FactCounts["downloadedPending"]);
+        Assert.AreEqual(1, mixed.FactCounts["spaceInsufficient"]);
+
+        _reader.Values = [Download("site:11", "completed"), Download("site:12", "completed")];
+        var finished = await _search.SearchAsync(new());
+        Assert.AreEqual(1, finished.FactCounts["downloadedPending"]);
+        Assert.AreEqual(0, finished.FactCounts["spaceInsufficient"]);
+        Assert.IsNull(finished.Items.Single().DownloadActivity);
+        Assert.AreEqual("attention", finished.Items.Single().Stage);
+
+        var latest = await _db.WorkflowNodeExecutions.SingleAsync(n => n.WorkflowRunId == run.Id);
+        latest.CompletedAt = DateTime.UtcNow.AddMinutes(1);
+        await _db.SaveChangesAsync();
+        Assert.AreEqual(1, (await _search.SearchAsync(new())).FactCounts["spaceInsufficient"]);
     }
 
     [TestMethod]
@@ -129,11 +165,13 @@ public sealed class AcquisitionDownloadActivityTests
         var (task, run) = await Seed([Target("excluded", 11, excluded: true), Target("real", 12)]);
         _reader.Values = [Download("site:11", "running"), Download("site:12", "completed"),
             Download("http:old", "running", run.Id + 100, "site:12")];
-        Assert.AreEqual(0, (await _activity.ReadAsync([task.Id])).Count);
+        var finished = (await _activity.ReadAsync([task.Id]))[task.Id];
+        Assert.IsNull(finished.Activity);
+        CollectionAssert.AreEqual(new[] {"real"}, finished.CompletedPartIds.ToArray());
         _db.ManagedDownloadTasks.Add(new() {Id = "http:stopped", Category = "http", Provider = "http", ProviderTaskId = "stopped",
             ParentId = "site:12", WorkflowRunId = run.Id, UserStopped = true});
         await _db.SaveChangesAsync();
-        _reader.Values = [Download("http:stopped", "running", run.Id, "site:12")];
+        _reader.Values = [Download("site:12", "completed"), Download("http:stopped", "running", run.Id, "site:12")];
         Assert.AreEqual(0, (await _activity.ReadAsync([task.Id])).Count);
     }
 

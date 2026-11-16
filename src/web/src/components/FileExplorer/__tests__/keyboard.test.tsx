@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -38,6 +38,57 @@ afterEach(() => {
 });
 
 describe("file explorer keyboard listener", () => {
+  function ScopedExplorer({ name, onKeyDown, onDelete, children }: {
+    name: string; onKeyDown: (key: string, event: KeyboardEvent) => void; onDelete?: () => boolean; children?: ReactNode;
+  }) {
+    const scopeRef = useRef<HTMLDivElement>(null);
+    return <div ref={scopeRef} data-file-explorer-keyboard-scope="">
+      <EventListener scopeRef={scopeRef} onKeyDown={onKeyDown} onDelete={onDelete} onSelectionModeChange={() => {}} />
+      <div role="button" tabIndex={0}>{name}</div>{children}
+    </div>;
+  }
+
+  it("handles the focused explorer in a dialog without invoking another explorer", () => {
+    const main = vi.fn(), modal = vi.fn(), remove = vi.fn().mockReturnValue(true);
+    render(<><ScopedExplorer name="Main files" onKeyDown={main} />
+      <div role="dialog"><ScopedExplorer name="Modal files" onKeyDown={modal} onDelete={remove} /></div></>);
+    const row = screen.getByRole("button", { name: "Modal files" });
+    row.focus();
+    fireEvent.keyDown(row, { key: "a", ctrlKey: true });
+    expect(modal).toHaveBeenCalledWith("a", expect.any(KeyboardEvent));
+    expect(main).not.toHaveBeenCalled();
+    fireEvent.keyDown(row, { key: "Delete" });
+    expect(remove).toHaveBeenCalledTimes(1);
+    fireEvent.keyDown(document.body, { key: "Delete" });
+    expect(remove).toHaveBeenCalledTimes(1);
+  });
+
+  it("leaves text editors, menus, nested dialogs, and handled or composing keys alone", () => {
+    const key = vi.fn(), remove = vi.fn();
+    render(<div role="dialog"><ScopedExplorer name="Files" onKeyDown={key} onDelete={remove}>
+      <input aria-label="Rename" /><div contentEditable data-testid="content-editor" />
+      <div role="menu"><button role="menuitem">Paste menu</button></div>
+      <div role="dialog"><button>Confirmation</button></div>
+      <button onKeyDown={event => event.preventDefault()}>Handled</button>
+    </ScopedExplorer></div>);
+    for (const target of [screen.getByRole("textbox"), screen.getByTestId("content-editor"),
+      screen.getByRole("menuitem"), screen.getByText("Confirmation"), screen.getByText("Handled")]) {
+      fireEvent.keyDown(target, { key: "Delete" }); fireEvent.keyDown(target, { key: "v", ctrlKey: true });
+    }
+    fireEvent.keyDown(screen.getByText("Files"), { key: "w", isComposing: true });
+    fireEvent.keyDown(screen.getByText("Files"), { key: "w", repeat: true });
+    expect(key).not.toHaveBeenCalled(); expect(remove).not.toHaveBeenCalled();
+  });
+
+  it("lets only the inner file explorer handle a nested file list", () => {
+    const outer = vi.fn(), inner = vi.fn();
+    render(<ScopedExplorer name="Outer files" onKeyDown={outer}>
+      <ScopedExplorer name="Inner files" onKeyDown={inner} />
+    </ScopedExplorer>);
+    fireEvent.keyDown(screen.getByText("Inner files"), { key: "ArrowDown" });
+    expect(inner).toHaveBeenCalledTimes(1); expect(outer).not.toHaveBeenCalled();
+  });
+
   it.each([
     ["MacIntel", "metaKey", "ctrlKey"],
     ["Win32", "ctrlKey", "metaKey"],

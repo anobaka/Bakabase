@@ -84,10 +84,13 @@ public sealed partial class AcquisitionExecutionFactProjection
 
     // Full manifests remain in SQLite. Available is a recorded lifecycle state, not a fresh
     // stat/hash result. A retained old manifest on a Retired/Quarantined artifact is excluded.
+    // Thousands of valid nested paths can exceed 1 MiB after JSON Unicode escaping.
+    // Keep a 4 MiB text bound plus the independent entry/path bounds below; only compact
+    // identities leave SQLite, never the full manifest or a filesystem scan.
     private const string ArtifactSql = """
         WITH c AS (
           SELECT a.*,o.Kind OperationKind,o.State OperationState,o.OutputArtifactId,
-            CASE WHEN length(a.ManifestJson)<=1048576 AND json_valid(a.ManifestJson) THEN a.ManifestJson ELSE '{{}}' END Manifest
+            CASE WHEN length(a.ManifestJson)<=4194304 AND json_valid(a.ManifestJson) THEN a.ManifestJson ELSE '{{}}' END Manifest
           FROM Artifacts a JOIN ArtifactOperations o ON a.OperationId=o.Id
           WHERE a.OperationId IN (SELECT value FROM json_each({0}))
         ), normalized AS (

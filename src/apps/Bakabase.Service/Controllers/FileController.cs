@@ -274,7 +274,11 @@ namespace Bakabase.Service.Controllers
                 prevPath = path;
             }
 
-            var specifiedFileGroups = CompressedFileHelper.DetectCompressedFileGroups(specifiedFiles.ToArray(), model.IncludeUnknownFiles);
+            // Explicitly selected files are candidates regardless of their names. The
+            // unknown-extension filter only limits directory discovery; the archive tool
+            // decides whether a selected file can actually be opened.
+            var specifiedFileGroups = CompressedFileHelper.DetectCompressedFileGroups(
+                specifiedFiles.ToArray(), ignoreUnknownExtensions: false);
             foreach (var group in specifiedFileGroups.Where(g => g.FileSizes.Sum() >= thresholdBytes))
             {
                 var vm = group.ToViewModel();
@@ -1868,14 +1872,11 @@ namespace Bakabase.Service.Controllers
                                 if (string.Equals(Path.GetFullPath(targetDir), Path.GetFullPath(entry), StringComparison.Ordinal))
                                     targetDir += ".extracted";
                                 _storagePolicy.EnsurePathAllowed(targetDir);
-                                var processRegex = new Regex(@$"\d+\%");
                                 var result = await _compressedFileService.ExtractForFileExplorerAsync(
                                     entry, targetDir, group.Password,
-                                    onProgress: async line =>
+                                    onProgress: async percentage =>
                                     {
-                                        var match = processRegex.Match(line);
-                                        if (match.Success && int.TryParse(match.Value.TrimEnd('%'), out var percentage) &&
-                                            percentage != args.Task.Percentage)
+                                        if (percentage != args.Task.Percentage)
                                             await args.UpdateTask(x => x.Percentage = percentage);
                                     }, args.CancellationToken);
                                 if (result.ExitCode == 0) return;

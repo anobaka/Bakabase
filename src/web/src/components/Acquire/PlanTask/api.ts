@@ -38,6 +38,9 @@ export const planTaskApi = {
   create: (body: CreationInput) => requireResult(BApi.acquisition.createAcquisitionPlanTask(body)),
   get: (id: number) =>
     requireResult(BApi.acquisition.getAcquisitionPlanTask(id, { sensitiveResponse: true })),
+  keepPreparedFiles: (id: number, expectedRevision: number, reason?: string) =>
+    requireResult(BApi.acquisition.keepPreparedAcquisitionFiles(id, { expectedRevision, reason },
+      { sensitiveResponse: true, showErrorToast: false })),
   sourceCorrections: (id: number, signal?: AbortSignal) =>
     requireResult(
       BApi.acquisition.getAcquisitionSourceCorrections(id, {
@@ -66,6 +69,10 @@ export const planTaskApi = {
     requireResult(
       BApi.acquisition.updateAcquisitionPlanTask(id, { expectedRevision, outputDirectory }),
     ),
+  replaceSource: (id: number, expectedRevision: number, sourceReplacement: NonNullable<
+    Parameters<typeof BApi.acquisition.updateAcquisitionPlanTask>[1]["sourceReplacement"]
+  >) => requireResult(BApi.acquisition.updateAcquisitionPlanTask(id, { expectedRevision, sourceReplacement },
+    { sensitiveResponse: true, showErrorToast: false })),
   updateDelivery: (
     id: number,
     expectedRevision: number,
@@ -93,8 +100,11 @@ export const planTaskApi = {
         storagePolicyOverrides,
       }),
     ),
-  run: (id: number, expectedRevision: number) =>
-    requireResult(BApi.acquisition.runAcquisitionPlan(id, { expectedRevision })),
+  run: (id: number, expectedRevision: number, useEmergencySpaceReserve?: boolean) =>
+    requireResult(BApi.acquisition.runAcquisitionPlan(id, {
+      expectedRevision,
+      ...(useEmergencySpaceReserve !== undefined ? { useEmergencySpaceReserve } : {}),
+    })),
   preflight: (id: number) => requireResult(BApi.acquisition.preflightAcquisitionPlan(id)),
   replan: (
     id: number,

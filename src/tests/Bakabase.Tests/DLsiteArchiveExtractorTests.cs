@@ -192,15 +192,46 @@ public class DLsiteArchiveExtractorTests
     }
 
     [TestMethod]
-    public void SplitArchiveGrouping_PartExeAndPartRar_ShouldGroup()
+    public async Task SplitArchiveGrouping_PartExeAndPartRar_ShouldGroup()
     {
         // VJ006100.part1.exe + VJ006100.part2.rar should form one group
         var exe = CreateFakeRarExe("VJ006100.part1.exe");
         var rar = CreateFile("VJ006100.part2.rar");
 
-        // Both files should resolve to the same split archive key
-        // We test this indirectly - the extractor should try to extract them as one set
-        // Direct key testing would require exposing the private method
+        var probe = new FormatProbe(".rar");
+        var extractor = new DLsiteArchiveExtractor(null!, NullLogger<DLsiteArchiveExtractor>.Instance, probe);
+        var group = (await extractor.GroupArchiveFilesAsync([rar, exe], default)).Single();
+        Assert.AreEqual("VJ006100", group.KeyName);
+        CollectionAssert.AreEqual(new[] {exe, rar}, group.Files.ToArray());
+        CollectionAssert.AreEqual(new[] {exe}, probe.Files.ToArray());
+        Assert.IsTrue(File.Exists(exe)); Assert.IsTrue(File.Exists(rar));
+    }
+
+    [DataTestMethod]
+    [DataRow(null)]
+    [DataRow(".zip")]
+    public async Task SiblingRarCannotSupplyAnUnverifiedExecutableFormat(string? format)
+    {
+        var exe = CreateFile("same.part1.exe", "ordinary executable");
+        var rar = CreateFile("same.part2.rar"); var probe = new FormatProbe(format);
+        var extractor = new DLsiteArchiveExtractor(null!, NullLogger<DLsiteArchiveExtractor>.Instance, probe);
+        await Assert.ThrowsAsync<InvalidDataException>(() => extractor.ExtractAsync([exe, rar], _outputDir, default));
+        CollectionAssert.AreEqual(new[] {exe}, probe.Files.ToArray());
+        Assert.IsTrue(File.Exists(exe)); Assert.IsTrue(File.Exists(rar));
+        Assert.AreEqual(0, Directory.GetFiles(_outputDir).Length);
+    }
+
+    [TestMethod]
+    public async Task SharedGroupingDoesNotMergeDifferentFormatsAndRejectsMissingSfxPartBeforeProbe()
+    {
+        var zip = CreateZipArchive("same.zip"); var rar = CreateFile("same.rar");
+        var probe = new FormatProbe(".rar");
+        var extractor = new DLsiteArchiveExtractor(null!, NullLogger<DLsiteArchiveExtractor>.Instance, probe);
+        var groups = await extractor.GroupArchiveFilesAsync([zip, rar], default);
+        Assert.AreEqual(2, groups.Count); Assert.IsTrue(groups.All(group => group.Files.Count == 1));
+        var exe = CreateFakeRarExe("game.part1.exe"); var third = CreateFile("game.part3.rar");
+        await Assert.ThrowsAsync<InvalidDataException>(() => extractor.GroupArchiveFilesAsync([exe, third], default));
+        Assert.AreEqual(0, probe.Files.Count);
     }
 
     [TestMethod]
@@ -219,5 +250,16 @@ public class DLsiteArchiveExtractorTests
         return new DLsiteArchiveExtractor(
             null!,
             NullLogger<DLsiteArchiveExtractor>.Instance);
+    }
+
+    private sealed class FormatProbe(string? format) : IArchiveExtractionService
+    {
+        internal List<string> Files { get; } = [];
+        public Task<ArchiveFormatProbeResult?> ProbeAuthorizedFormatAsync(string file, CancellationToken ct)
+        { Files.Add(file); return Task.FromResult(format == null ? null : new ArchiveFormatProbeResult(format)); }
+        public Task<ArchivePasswordProbe> ProbePasswordAsync(string entryFile, IReadOnlyList<string?> candidates,
+            Action<string>? onOutput, CancellationToken ct) => throw new NotSupportedException();
+        public Task<ArchiveExtractionResult> ExtractAsync(ArchiveExtractionRequest request,
+            Action<int>? onProgress, CancellationToken ct) => throw new NotSupportedException();
     }
 }

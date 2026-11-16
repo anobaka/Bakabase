@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { Button, Tooltip } from "@/components/bakaui";
+import { taskTag } from "@/components/Acquire/taskTags";
 import {
   acquisitionFactFilters,
   toggleAcquisitionFilter,
@@ -22,69 +23,47 @@ export default function AcquisitionAttentionFilters({
   matchingCount?: number;
 }) {
   const { t } = useTranslation();
+  const tags = [
+    ...acquisitionFactFilters.map(id => ({ ...taskTag("facts", id), count: factCounts?.[id] })),
+    ...Object.entries(counts).map(([id, count]) => ({ ...taskTag("attentionTags", id), count })),
+  ];
+  const selectedCount = value.attentionTags.length + value.facts.length;
+
   return (
-    <div
-      role="group"
-      aria-label={t("acquisition.filters.title")}
-      className="flex flex-wrap items-center gap-x-4 gap-y-1"
-    >
-      <div role="group" aria-label={t("acquisition.attention.title")} className="flex flex-wrap items-center gap-1">
-      <Tooltip content={t("acquisition.attention.countsHint")} delay={1000} placement="bottom">
-        <span className="mr-1 text-xs text-default-500">{t("acquisition.attention.title")}</span>
+    <div role="group" aria-label={t("acquisition.filters.title")} className="flex flex-wrap items-center gap-1">
+      <Tooltip content={t("acquisition.filters.countsHint")} delay={1000} placement="bottom">
+        <span className="mr-1 text-xs text-default-500">{t("acquisition.filters.title")}</span>
       </Tooltip>
-      {Object.entries(counts).map(([tag, count]) => (
-        <Tooltip
-          key={tag}
-          content={t(`acquisition.attention.hint.${tag}`)}
-          delay={1000}
-          placement="bottom"
-        >
-          <Button
-            aria-label={`${t(`acquisition.attention.tag.${tag}`)} ${count}`}
-            aria-pressed={value.attentionTags.includes(tag)}
-            className="h-7 min-w-0 gap-1.5 px-2 text-xs"
-            size="sm"
-            variant={value.attentionTags.includes(tag) ? "flat" : "light"}
-            color={value.attentionTags.includes(tag) ? "primary" : "default"}
-            isDisabled={disabled}
-            onPress={() => onChange({ ...value, attentionTags: toggleAcquisitionFilter(value.attentionTags, tag) })}
-          >
-            <span>{t(`acquisition.attention.tag.${tag}`)}</span>
-            <span className="tabular-nums">{count}</span>
-          </Button>
-        </Tooltip>
-      ))}
-      </div>
-      <div role="group" aria-label={t("acquisition.filters.factsTitle")} className="flex flex-wrap items-center gap-1">
-        <Tooltip content={t("acquisition.filters.factsHint")} delay={1000} placement="bottom">
-          <span className="mr-1 text-xs text-default-500">{t("acquisition.filters.factsTitle")}</span>
-        </Tooltip>
-        {acquisitionFactFilters.map(fact => {
-          const selected = value.facts.includes(fact);
-          const count = factCounts?.[fact] ?? "—";
-          return <Tooltip key={fact} content={t(`acquisition.filters.hint.${fact}`)} delay={1000} placement="bottom">
-            <Button aria-label={`${t(`acquisition.filters.fact.${fact}`)} ${count}`} aria-pressed={selected}
-              className="h-7 min-w-0 gap-1.5 px-2 text-xs" size="sm"
-              variant={selected ? "flat" : "light"} color={selected ? "primary" : "default"}
-              isDisabled={disabled || !factCounts}
-              onPress={() => onChange({ ...value, facts: toggleAcquisitionFilter(value.facts, fact) })}>
-              <span>{t(`acquisition.filters.fact.${fact}`)}</span><span className="tabular-nums">{count}</span>
+      {tags.map(({ kind, id, label, hint, count }) => {
+        const selected = value[kind].includes(id);
+        return (
+          <Tooltip key={`${kind}:${id}`} content={t(hint)} delay={1000} placement="bottom">
+            <Button
+              aria-label={`${t(label)} ${count ?? "—"}`}
+              aria-pressed={selected}
+              className="h-7 min-w-0 gap-1.5 px-2 text-xs"
+              size="sm"
+              variant={selected ? "flat" : "light"}
+              color={selected ? "primary" : "default"}
+              isDisabled={disabled || count == null}
+              onPress={() => onChange({ ...value, [kind]: toggleAcquisitionFilter(value[kind], id) })}
+            >
+              <span>{t(label)}</span>
+              <span className="tabular-nums">{count ?? "—"}</span>
             </Button>
-          </Tooltip>;
-        })}
-      </div>
-      <div className="flex items-center gap-1 text-xs text-default-500">
-        <Tooltip content={t("acquisition.filters.matchAllHint")} delay={1000} placement="bottom">
+          </Tooltip>
+        );
+      })}
+      {selectedCount > 1 && (
+        <span role="status" className={`ml-1 flex gap-1 text-xs ${matchingCount === 0 ? "text-warning-600" : "text-default-500"}`}>
           <span>{t("acquisition.filters.matchAll")}</span>
-        </Tooltip>
-        {!!(value.attentionTags.length || value.facts.length) && <Button size="sm" variant="light"
-          className="h-7 min-w-0 px-2 text-xs" isDisabled={disabled}
-          onPress={() => onChange({ attentionTags: [], facts: [] })}>{t("acquisition.filters.clear")}</Button>}
-      </div>
-      {value.facts.length > 1 && <span role="status"
-        className={`text-xs ${matchingCount === 0 ? "text-warning-600" : "text-default-500"}`}>
-        {t("acquisition.filters.matchCount", { count: matchingCount ?? "—" })}
-      </span>}
+          {matchingCount != null && <span>{t("acquisition.filters.matchCount", { count: matchingCount })}</span>}
+        </span>
+      )}
+      {selectedCount > 0 && (
+        <Button size="sm" variant="light" className="h-7 min-w-0 px-2 text-xs" isDisabled={disabled}
+          onPress={() => onChange({ attentionTags: [], facts: [] })}>{t("acquisition.filters.clear")}</Button>
+      )}
     </div>
   );
 }

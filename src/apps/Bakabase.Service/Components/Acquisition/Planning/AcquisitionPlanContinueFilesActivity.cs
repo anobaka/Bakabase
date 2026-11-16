@@ -55,6 +55,7 @@ public sealed class AcquisitionPlanContinueFilesActivity : IWorkflowActivity
             config.StoragePolicy, config.TargetStorageOverrides).ToDictionary(t => t.Id, StringComparer.Ordinal);
         config = config with {Targets = config.Targets.Select(t => t with {Target = effective[t.Target.Id]}).ToArray()};
         var workset = (DownloadWorkset)item;
+        await ctx.ReportStage("verifyingFiles");
         var store = ctx.Services.GetRequiredService<IArtifactOperationStore>();
         var db = ctx.Services.GetRequiredService<BakabaseDbContext>();
         var targets = workset.Targets.ToList();

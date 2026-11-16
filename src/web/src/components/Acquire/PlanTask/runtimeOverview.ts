@@ -66,7 +66,9 @@ export function runtimeProblemLabel(
     for (const prefix of [
       "acquisition.runtime.problem",
       "acquisition.plan.replan.error",
+      "acquisition.directories.error",
       "acquisition.recovery.reason",
+      "acquisition.plan.issue",
       "acquire.requirement",
       "sourceAvailability.reason",
       "cloudDownload.problemCode",

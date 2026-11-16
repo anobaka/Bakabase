@@ -704,7 +704,7 @@
   "workflow.metadata.warning.WORKFLOW_ITEMS_SKIPPED": "Some items were skipped according to this node's error policy. See its failed-item count.",
   "workflow.metadata.warning.WORKFLOW_ACTIVITY_FAILED": "This node failed. Its historical summaries are retained.",
   "workflow.metadata.warning.ArchiveInputRequired": "Archive instructions need input or correction. Review the selector and inputs in the response form; acquire missing volumes first.",
-  "workflow.metadata.warning.PasswordUnknown": "The current archive needs a password. Provide it in the response form.",
+  "workflow.metadata.warning.PasswordUnknown": "Could not open the archive. Check its password and whether all volumes are present.",
   "workflow.metadata.warning.ExtractionPlanUnknown": "The processing plan is unconfirmed or invalid. Edit the exact instructions in the response form.",
   "workflow.metadata.warning.WaitingShared": "Another workflow is processing the same inputs. Recheck and reuse its result after it commits.",
   "workflow.metadata.warning.NeedsReconciliation": "The shared operation's state needs reconciliation. Inspect its execution and artifacts before continuing; an empty response cannot bypass this check.",
@@ -878,5 +878,11 @@
   "workflow.files.taskDirectory.historical": "This is a historical location or no longer a current task directory. Open the directory from the task’s current stage to edit files.",
   "workflow.files.taskDirectory.unavailable": "The current task state could not be verified. File operations are unavailable.",
   "workflow.files.taskDirectory.refresh": "Refresh files",
-  "workflow.timing.duration": "Elapsed {{duration}}"
+  "workflow.timing.duration": "Elapsed {{duration}}",
+  "workflow.processing.problem.details": "Original diagnostic",
+  "workflow.files.taskDirectory.compact.editable": "File operations available",
+  "workflow.files.taskDirectory.compact.active": "Read-only: task running",
+  "workflow.files.taskDirectory.compact.checking": "Checking access",
+  "workflow.files.taskDirectory.compact.historical": "Read-only: historical directory",
+  "workflow.files.taskDirectory.compact.unavailable": "Temporarily read-only"
 }

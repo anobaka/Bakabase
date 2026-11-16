@@ -13,14 +13,15 @@ namespace Bakabase.Service.Components.FileProcessing;
 
 public sealed partial class ArtifactWorkspaceMaintenance
 {
-    private sealed record RetiredWorkspaceAbsence(string OriginalRoot, string Fingerprint);
+    private sealed record RetiredWorkspaceAbsence(string OriginalRoot, string Fingerprint,
+        ArtifactRecord? Original = null, IReadOnlyList<string>? PrivateFiles = null);
 
     // Retirement moves the registered root to its now-empty quarantine location. It says
     // nothing by itself about private inputs next to the original result. A purged receipt,
     // the installation-owned locator and the executor's completed cleanup state together
     // let deletion acknowledge an empty workspace without resurrecting or deleting files.
     private async Task<RetiredWorkspaceAbsence?> InspectRetiredWorkspaceAbsenceAsync(ArtifactRecord artifact,
-        ArtifactDeliveryCleanupAuthorization authorization, CancellationToken ct)
+        ArtifactDeliveryCleanupAuthorization authorization, CancellationToken ct, bool includePrivateFiles = false)
     {
         if (artifact is not {State: ArtifactLocationState.Retired, Managed: true, Kind: "processedFiles"} ||
             artifact.OperationId.Length != 64 || !artifact.OperationId.All(Uri.IsHexDigit) ||
@@ -38,24 +39,36 @@ public sealed partial class ArtifactWorkspaceMaintenance
         if (original == null) return null;
         var metadata = JsonSerializer.Deserialize<FileArtifactProcessingMetadata>(artifact.MetadataJson ?? "null", Json);
         FileProcessingWorkspaceResolver.Location? location;
+        var recordedPlanIdentity = false;
         if (metadata?.CompletedThroughStepId != null)
         {
             var plan = JsonSerializer.Deserialize<FileProcessingPlan>(metadata.PlanJson, Json);
             if (plan == null || !plan.Steps.Any(step => step.Id == metadata.CompletedThroughStepId)) return null;
             location = await workspaces.InspectCompletedCheckpointAsync(FileArtifactProcessor.CheckpointKey(operation.InputFingerprint, plan),
                 operation.Id, operation.Attempt, metadata.WorkspaceDirectoryScope?.Directory ?? metadata.StoragePolicy?.ProcessingWorkspaceDirectory, ct);
+            if (location == null)
+            {
+                // New optional plan fields can change today's serialization of an old
+                // completed recipe. Its immutable recorded JSON may still identify the
+                // original locator. This fallback proves only an empty-workspace no-op;
+                // surviving private payload always keeps the existing review requirement.
+                location = await workspaces.InspectCompletedCheckpointAsync(
+                    ArtifactManifestFiles.Hash(operation.InputFingerprint + "\n" + metadata.PlanJson),
+                    operation.Id, operation.Attempt, metadata.WorkspaceDirectoryScope?.Directory ?? metadata.StoragePolicy?.ProcessingWorkspaceDirectory, ct);
+                recordedPlanIdentity = location != null;
+            }
         }
         else location = await workspaces.InspectExistingAsync("operations", operation.Id, operation.Attempt, ct);
         if (location == null || !ArtifactCleanupPathReferences.StrictlyUnder(original, location.Directory) ||
             !await workspaces.HasOwnedLocationAsync(location, ct)) return null;
         var proof = await ReadRetiredCheckpointAsync(original, artifact, metadata, location.Directory, ct);
         if (proof == null) return null;
-        var (stateFile, stateJson) = proof.Value;
+        var (stateFile, stateIdentity, hasPendingOperation) = proof.Value;
         // Check the whole exact operation/checkpoint, not a guessed parent and not just
         // the files a previous manifest happened to list. Any unknown payload or extra
         // journal remains visible for review. Empty author directories are left intact.
         var pending = new Stack<string>(); pending.Push(location.Directory);
-        var directories = new List<string>(); var count = 0; var foundState = false;
+        var directories = new List<string>(); var otherFiles = new List<string>(); var count = 0; var foundState = false;
         while (pending.TryPop(out var directory))
         {
             ct.ThrowIfCancellationRequested();
@@ -69,16 +82,69 @@ public sealed partial class ArtifactWorkspaceMaintenance
                 if (attributes.HasFlag(FileAttributes.Directory))
                 { directories.Add(Path.GetRelativePath(location.Directory, entry)); pending.Push(entry); }
                 else if (ArtifactManifestFiles.PathComparer.Equals(entry, stateFile)) foundState = true;
+                else if (!recordedPlanIdentity && includePrivateFiles && authorization.Consent.SkipFileVerification && authorization.Consent.DeliveryAccepted)
+                    otherFiles.Add(entry);
                 else return null;
             }
         }
-        if (!foundState || await File.ReadAllTextAsync(stateFile, ct) != stateJson) return null;
+        if (!foundState || ReadStateIdentity(stateFile) != stateIdentity) return null;
+        // A stopped run can leave a stale pending marker after its proven successful
+        // boundary was purged. It permits only an explicitly accepted empty-workspace
+        // no-op, never deletion of surviving private files or the executor's history.
+        if (hasPendingOperation && (otherFiles.Count > 0 ||
+                !authorization.Consent.DeliveryAccepted || !authorization.Consent.SkipFileVerification)) return null;
+        ArtifactRecord? originalView = null;
+        if (otherFiles.Count > 0)
+        {
+            originalView = artifact with {State = ArtifactLocationState.Available, RootDirectory = original,
+                Files = ArtifactManifestFiles.ResolveFiles(original, artifact.Manifest)};
+            var reclaimable = await Paths(originalView, ct, overrideRetention: true, previewOnly: true);
+            // Only executor-recorded private files with complete replacement coverage are
+            // eligible. Unknown additions, surviving registered outputs and outside readers
+            // still keep this workspace for review even after its main result was purged.
+            if (!otherFiles.ToHashSet(ArtifactManifestFiles.PathComparer).SetEquals(reclaimable) ||
+                await authorization.HasOtherRegisteredFilesAsync(otherFiles, artifact.Id, ct) ||
+                await references.HasReferencesAsync(originalView, authorization.Consent.OwnerRunIds, ct, otherFiles)) return null;
+        }
+        var selection = CaptureSelection(otherFiles, ct);
         return new(original, ArtifactManifestFiles.Hash(JsonSerializer.Serialize(new {artifact.Id, artifact.OperationId,
-            artifact.Fingerprint, OriginalRoot = original, location, State = stateJson,
-            Directories = directories.OrderBy(p => p, ArtifactManifestFiles.PathComparer)}, Json)));
+            artifact.Fingerprint, OriginalRoot = original, location, State = stateIdentity,
+            Selection = selection.Fingerprint,
+            Directories = directories.OrderBy(p => p, ArtifactManifestFiles.PathComparer)}, Json)), originalView, otherFiles);
     }
 
-    private async Task<(string StateFile, string StateJson)?> ReadRetiredCheckpointAsync(string original,
+    private sealed record RetiredStateIdentity(long Length, DateTime CreationTimeUtc, DateTime LastWriteTimeUtc);
+    private static RetiredStateIdentity ReadStateIdentity(string file)
+    {
+        ArtifactManifestFiles.RejectLinks(file);
+        var info = new FileInfo(file); info.Refresh();
+        return new(info.Length, info.CreationTimeUtc, info.LastWriteTimeUtc);
+    }
+
+    // Large histories repeat per-file transitions and origins. Read only the committed
+    // result identity needed for an absence proof, skipping unrelated values as a stream.
+    // These state files remain history and are never selected for deletion.
+    private sealed class RetiredStateProjection
+    {
+        public bool Completed { get; init; }
+        public int LineageVersion { get; init; }
+        public string? PendingOperation { get; init; }
+        public ArtifactManifest? FinalManifest { get; init; }
+        public List<string> FinalFiles { get; init; } = [];
+        public Dictionary<string, RetiredBoundaryProjection> BoundaryResults { get; init; } = [];
+    }
+    private sealed class RetiredBoundaryProjection
+    {
+        public string Directory { get; init; } = "";
+        public ArtifactManifest? Manifest { get; init; }
+        public List<RetiredFileProjection> Files { get; init; } = [];
+    }
+    private sealed class RetiredFileProjection
+    {
+        public string Path { get; init; } = "";
+    }
+
+    private async Task<(string StateFile, RetiredStateIdentity Identity, bool HasPendingOperation)?> ReadRetiredCheckpointAsync(string original,
         ArtifactRecord artifact, FileArtifactProcessingMetadata? metadata, string ownedRoot, CancellationToken ct)
     {
         // A step output can sit below named directories inside a shared checkpoint. Its
@@ -96,11 +162,14 @@ public sealed partial class ArtifactWorkspaceMaintenance
             var stateFile = Path.Combine(directory, "state.json");
             ArtifactManifestFiles.RejectLinks(stateFile);
             if (!File.Exists(stateFile)) continue;
-            if (new FileInfo(stateFile).Length > 64 * 1024 * 1024) return null;
-            var stateJson = await File.ReadAllTextAsync(stateFile, ct);
-            var state = JsonSerializer.Deserialize<FileProcessingPlanExecutor.State>(stateJson, Json);
-            if (state is not {Completed: true, LineageVersion: 1, PendingOperation: null}) return null;
-            var final = state.FinalManifest != null && state.FinalFiles.Count > 0 &&
+            var identity = ReadStateIdentity(stateFile);
+            if (identity.Length > 256 * 1024 * 1024) return null;
+            await using var stream = new FileStream(stateFile, FileMode.Open, FileAccess.Read, FileShare.Read,
+                16 * 1024, FileOptions.Asynchronous | FileOptions.SequentialScan);
+            var state = await JsonSerializer.DeserializeAsync<RetiredStateProjection>(stream, Json, ct);
+            if (ReadStateIdentity(stateFile) != identity) return null;
+            if (state is not {LineageVersion: 1}) return null;
+            var final = state.Completed && state.FinalManifest != null && state.FinalFiles.Count > 0 &&
                 FileDispositionProofs.SameManifest(state.FinalManifest, artifact.Manifest) &&
                 state.FinalFiles.Select(workspaces.Relocate).ToHashSet(ArtifactManifestFiles.PathComparer).SetEquals(expected);
             var boundary = metadata?.CompletedThroughStepId is { } step &&
@@ -112,7 +181,7 @@ public sealed partial class ArtifactWorkspaceMaintenance
             // IntermediatesReclaimedAt can be absent when moves/final assembly consumed
             // every private input. The positive, whole-workspace absence scan above is
             // the evidence for this no-op; a timestamp cannot substitute for that scan.
-            return final || boundary ? (stateFile, stateJson) : null;
+            return final || boundary ? (stateFile, identity, state.PendingOperation != null) : null;
         }
         return null;
     }

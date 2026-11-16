@@ -20,6 +20,9 @@ public sealed record AcquisitionPartDirectories
 
 public sealed record AcquisitionStageDirectory(string Directory, string Ownership, string Evidence)
 {
+    /// <summary>A server-issued explicit current-directory binding. Historical execution
+    /// paths cannot replace this binding; it does not by itself grant file ownership.</summary>
+    public string? BindingId { get; init; }
     /// <summary>Present only for new, explicitly allocated task storage. Borrowed historical
     /// paths must not be promoted into exclusive ownership from a directory name.</summary>
     public ArtifactDirectoryScope? Allocation { get; init; }

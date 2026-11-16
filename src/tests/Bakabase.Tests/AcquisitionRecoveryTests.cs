@@ -311,7 +311,7 @@ public sealed partial class AcquisitionRecoveryTests
     {
         public readonly List<int> CheapIds = [];
         public Task<AcquisitionRecoveryDiagnosis> DiagnoseAsync(AcquisitionTaskDbModel task, WorkflowRunDbModel? run,
-            CancellationToken ct, bool verifyFiles = true, bool verifyContent = false)
+            CancellationToken ct, bool verifyFiles = true, bool verifyContent = false, bool includeStoppedDownloads = false)
         {
             if (!verifyFiles) CheapIds.Add(task.Id);
             else CollectionAssert.AreEqual(new[] {deepId, cheapId}, CheapIds,

@@ -85,6 +85,43 @@ public sealed class AcquisitionTaskTimingTests
         }
     }
 
+    [DataTestMethod]
+    [DataRow(WorkflowRunStatus.Pending, AcquisitionStatus.Running)]
+    [DataRow(WorkflowRunStatus.Waiting, AcquisitionStatus.Waiting)]
+    [DataRow(WorkflowRunStatus.Success, AcquisitionStatus.Completed)]
+    [DataRow(WorkflowRunStatus.Failed, AcquisitionStatus.Failed)]
+    public async Task ReconcileTracksOriginalRunRetriedAfterRecordedFailure(
+        WorkflowRunStatus current, AcquisitionStatus expected)
+    {
+        var ended = current is WorkflowRunStatus.Success or WorkflowRunStatus.Failed;
+        var run = new WorkflowRunDbModel {Status = current, StartedAt = Submitted,
+            CompletedAt = ended ? Finished : null, ErrorMessage = current == WorkflowRunStatus.Failed ? "new cause" : null};
+        _db.WorkflowRuns.Add(run);
+        await _db.SaveChangesAsync();
+        var task = TaskRow(true, run.Id);
+        task.Status = AcquisitionStatus.Failed;
+        task.Error = "first failure";
+        var deleted = TaskRow(true, run.Id);
+        deleted.DeletedAt = Finished;
+        deleted.Status = AcquisitionStatus.Failed;
+        _db.AcquisitionTasks.AddRange(task, deleted);
+        await _db.SaveChangesAsync();
+
+        var queue = (Bakabase.Modules.Acquisition.Components.IAcquisitionQueue)_acquisitions;
+        await queue.ReconcileAsync();
+        await _db.Entry(task).ReloadAsync();
+        Assert.AreEqual(expected, task.Status);
+        Assert.AreEqual(run.ErrorMessage, task.Error);
+        Assert.AreEqual(run.CompletedAt, task.CompletedAt);
+        var updated = task.UpdatedAt;
+        await queue.ReconcileAsync();
+        await _db.Entry(task).ReloadAsync();
+        Assert.AreEqual(updated, task.UpdatedAt);
+        await _db.Entry(deleted).ReloadAsync();
+        Assert.AreEqual(AcquisitionStatus.Failed, deleted.Status);
+        Assert.AreEqual(Finished.AddDays(-1), deleted.CompletedAt);
+    }
+
     [TestMethod]
     public async Task SourceSummariesKeepEachTasksExactRunDatesAndPreserveUnstartedAndMissingHistory()
     {

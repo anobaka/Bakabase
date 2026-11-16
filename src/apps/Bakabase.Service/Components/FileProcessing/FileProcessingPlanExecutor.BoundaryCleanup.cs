@@ -86,7 +86,8 @@ public sealed partial class FileProcessingPlanExecutor
     }
 
     internal async Task ReclaimBoundaryIntermediatesAsync(string root, ArtifactManifest manifest,
-        IReadOnlySet<string> approvedFiles, CancellationToken ct, bool overrideRetention = false, ArtifactCleanupFileSnapshot? snapshot = null)
+        IReadOnlySet<string> approvedFiles, CancellationToken ct, bool overrideRetention = false, ArtifactCleanupFileSnapshot? snapshot = null,
+        FileProcessingRelocatedResult? relocatedResult = null)
     {
         var before = await ReadBoundaryCleanupState(root, manifest, ct);
         if (before == null) return;
@@ -97,7 +98,9 @@ public sealed partial class FileProcessingPlanExecutor
             var current = await ReadBoundaryCleanupState(root, manifest, ct);
             if (current == null || current.Directory != before.Directory) return;
             var files = await BoundaryCandidates(current, ct, overrideRetention, verifyContents: snapshot == null);
-            if (files.Any(p => !approvedFiles.Contains(p)) || snapshot == null && !(await ArtifactManifestFiles.ValidateAsync(root, manifest, ct)).Available) return;
+            if (relocatedResult != null && !relocatedResult.Matches(root, manifest)) return;
+            if (files.Any(p => !approvedFiles.Contains(p)) || snapshot == null &&
+                !(await ArtifactManifestFiles.ValidateAsync(relocatedResult?.VerificationRoot ?? root, manifest, ct)).Available) return;
             foreach (var path in files)
             {
                 ct.ThrowIfCancellationRequested();

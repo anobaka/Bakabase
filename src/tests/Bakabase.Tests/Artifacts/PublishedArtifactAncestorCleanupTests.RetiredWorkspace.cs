@@ -14,7 +14,7 @@ public sealed partial class PublishedArtifactAncestorCleanupTests
 {
     private async Task<(AcquisitionTaskDbModel Task, ArtifactRecord Source, ArtifactRecord Final,
         AcquisitionTaskDeletionService Service, string OperationRoot, string StateFile, string ReceiptFile)>
-        EmptyRetiredWorkspaceFixture(bool boundary = false)
+        EmptyRetiredWorkspaceFixture(bool boundary = false, bool keepPrivateInputs = false, bool recordedPlanIdentity = false)
     {
         var inputRoot = Directory.CreateDirectory(Path.Combine(root, "input")).FullName;
         var inputFile = Path.Combine(inputRoot, "content.bin");
@@ -27,18 +27,24 @@ public sealed partial class PublishedArtifactAncestorCleanupTests
             new() {Id = "first", Op = "renameFile", TargetName = "content.bin"},
             new() {Id = "second", Op = "renameFile", TargetName = "content.bin", Input = "first"}]} :
             new FileProcessingPlan {Requirement = "notRequired"};
+        // Older committed plan JSON did not serialize optional fields introduced later.
+        var recordedPlanJson = recordedPlanIdentity
+            ? "{\"requirement\":\"required\",\"steps\":[{\"id\":\"first\",\"op\":\"renameFile\",\"targetName\":\"content.bin\"},{\"id\":\"second\",\"op\":\"renameFile\",\"targetName\":\"content.bin\",\"input\":\"first\"}]}"
+            : JsonSerializer.Serialize(recipe, Json);
+        var checkpointKey = FileArtifactProcessor.CheckpointKey("input", recipe);
         var operationRoot = await workspaces.ResolveAsync(boundary ? "checkpoints" : "operations",
-            boundary ? FileArtifactProcessor.CheckpointKey("input", recipe) : key, 1, inputRoot, workRoot, default);
+            boundary ? checkpointKey : key, 1, inputRoot, workRoot, default);
+        var inputPolicy = keepPrivateInputs ? new ArtifactStoragePolicy {Materialization = "copy", CleanupIntermediates = false} : null;
         var output = await executor.ExecuteAsync(recipe, inputRoot, [inputFile], Path.Combine(operationRoot, "plan"),
-            stopAfterStepId: boundary ? "first" : null);
+            stopAfterStepId: boundary ? "first" : null, storagePolicy: inputPolicy);
         Assert.IsTrue(output.Completed, output.Message);
         var completed = boundary ? await executor.ExecuteAsync(recipe, inputRoot, [inputFile],
-            Path.Combine(operationRoot, "plan")) : output;
+            Path.Combine(operationRoot, "plan"), storagePolicy: inputPolicy) : output;
         Assert.IsTrue(completed.Completed, completed.Message);
         var source = await store.AdoptAsync(new(key, "retired-workspace", "files.process", "input"),
             new(output.OutputDirectory!, output.Files, "processedFiles", true,
                 MetadataJson: JsonSerializer.Serialize(new FileArtifactProcessingMetadata(null,
-                    JsonSerializer.Serialize(recipe, Json), null, CompletedThroughStepId: boundary ? "first" : null,
+                    recordedPlanJson, null, CompletedThroughStepId: boundary ? "first" : null,
                     StoragePolicy: new()), Json)), "fixture");
         await new ArtifactOperationBindingService(db).BindAsync("workflow", "1", "main:process", source.OperationId);
         ArtifactRecord? completedResult = null;
@@ -52,8 +58,11 @@ public sealed partial class PublishedArtifactAncestorCleanupTests
         var final = await Artifact("publishedFiles", completedResult ?? source, contents: "preserved content");
         await new ArtifactOperationBindingService(db).BindAsync("workflow", "1", "main:artifact.publish", final.OperationId);
         var maintenance = new ArtifactWorkspaceMaintenance(db, store, executor, new(new NoDeletionExtraction()), root, workspaces);
-        var reclaim = (await maintenance.ReclaimAsync([source.Id], default)).Single();
-        Assert.IsTrue(reclaim.Completed, reclaim.Reason);
+        if (!keepPrivateInputs)
+        {
+            var reclaim = (await maintenance.ReclaimAsync([source.Id], default)).Single();
+            Assert.IsTrue(reclaim.Completed, reclaim.Reason);
+        }
         var quarantine = new ArchiveQuarantineService(store, root, new Storage());
         if (completedResult != null)
         {
@@ -68,6 +77,16 @@ public sealed partial class PublishedArtifactAncestorCleanupTests
         var purge = await quarantine.DeleteManagedAncestorAfterDeliveryAsync(source.Id, [final.Id],
             (_, _) => Task.FromResult(true), default);
         Assert.IsTrue(purge.Completed, purge.Message);
+        if (recordedPlanIdentity)
+        {
+            var recordedKey = ArtifactManifestFiles.Hash("input\n" + recordedPlanJson);
+            Assert.AreNotEqual(checkpointKey, recordedKey);
+            var currentLocator = Path.Combine(root, "artifact-workspaces", "locations", $"checkpoints-{checkpointKey}-1.json");
+            var locator = JsonNode.Parse(await File.ReadAllTextAsync(currentLocator))!;
+            locator["key"] = recordedKey;
+            await File.WriteAllTextAsync(Path.Combine(Path.GetDirectoryName(currentLocator)!, $"checkpoints-{recordedKey}-1.json"), locator.ToJsonString());
+            File.Delete(currentLocator);
+        }
         var task = new AcquisitionTaskDbModel {Title = "Purged processing workspace", Status = AcquisitionStatus.Completed,
             WorkflowRunId = 1, PlanRevision = 1};
         db.AcquisitionTasks.Add(task); await db.SaveChangesAsync(); db.ChangeTracker.Clear();

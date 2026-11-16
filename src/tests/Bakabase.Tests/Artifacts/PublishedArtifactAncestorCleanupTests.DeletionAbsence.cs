@@ -62,23 +62,23 @@ public sealed partial class PublishedArtifactAncestorCleanupTests
     }
 
     [TestMethod]
-    public async Task Missing_final_before_preview_still_requires_explicit_delivery_acceptance()
+    public async Task Missing_final_before_preview_does_not_block_explicit_task_file_cleanup()
     {
         var fixture = await DeletionFixture(); File.Delete(fixture.Source.Files.Single()); File.Delete(fixture.Final.Files.Single());
         var preview = await fixture.Service.PreviewAsync(new([fixture.Task.Id], true, false));
-        Assert.IsFalse(preview.Rows.Single().CanDelete);
-        Assert.AreEqual("CLEANUP_DELIVERY_ACCEPTANCE_REQUIRED", preview.Rows.Single().ReasonCode);
+        Assert.IsTrue(preview.Rows.Single().CanDelete);
+        Assert.AreEqual("AlreadyAbsent", preview.Rows.Single().Cleanup!.Groups.Single().ReasonCode);
     }
 
     [TestMethod]
-    public async Task Missing_final_after_preview_cannot_be_implicitly_accepted_by_the_absence_noop()
+    public async Task Missing_unselected_final_after_preview_does_not_block_the_absence_noop()
     {
         var fixture = await DeletionFixture(); File.Delete(fixture.Source.Files.Single());
         var preview = await fixture.Service.PreviewAsync(new([fixture.Task.Id], true, false));
         Assert.AreEqual("AlreadyAbsent", preview.Rows.Single().Cleanup!.Groups.Single().ReasonCode);
         File.Delete(fixture.Final.Files.Single());
         var result = await fixture.Service.DeleteAsync(new(preview.PreviewId));
-        Assert.AreEqual(0, result.DeletedTaskIds.Count); Assert.AreEqual(0, result.RemovedFiles);
-        CollectionAssert.Contains(result.CleanupResults!.Single().ReasonCodes.ToArray(), "CLEANUP_DELIVERY_ACCEPTANCE_REQUIRED");
+        Assert.AreEqual(1, result.DeletedTaskIds.Count); Assert.AreEqual(0, result.RemovedFiles);
+        Assert.IsTrue(result.CleanupResults!.Single().Completed);
     }
 }

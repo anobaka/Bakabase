@@ -38,6 +38,53 @@ public sealed class AcquisitionPlanServiceTests
             _services.GetRequiredService<IWorkflowDefinitionService>(), _services.GetRequiredService<Bakabase.Service.Components.DownloadIntents.DownloadIntentService>(), _services.GetRequiredService<IUserStoragePolicy>());
     }
 
+    [DataTestMethod]
+    [DataRow("1234", "1234")]
+    [DataRow("", "")]
+    [DataRow(null, "old-image-code")]
+    public async Task ConfirmingDecodedSourceReplacesOnlySelectedLocatorAndKeepsSourceInstructionsAndHistory(
+        string? submittedCode, string expectedCode)
+    {
+        var root = Directory.CreateTempSubdirectory("acquisition-image-").FullName;
+        try
+        {
+            var snapshot = new WorkflowSourceRef("postParser", "task", "47", "1", "0");
+            var plan = _builder.BuildPlan(new("image", "Picture", "https://example.org/post.png"), "QR", root);
+            var original = plan.Parts.Single();
+            var image = original.Sources.Single() with {AccessCode = "old-image-code", ArchivePassword = "posted-password", ProcessingSource = snapshot};
+            plan = plan with {Parts = [original with {Sources = [image], ProcessingSource = snapshot},
+                original with {Id = "second", SelectedSourceId = "other", Sources = [image with {Id = "other", Url = "https://elsewhere.invalid/else.zip"}]}]};
+            var created = await _plans.CreatePreparedPlanAsync(plan, [snapshot]);
+            var request = new AcquisitionPlanUpdateInput(created.Task.PlanRevision, SourceReplacement:
+                new("main", "image", "https://example.org/game.7z", submittedCode));
+            var revised = await _plans.UpdateAsync(created.Id, request, default);
+            var part = revised.Plan!.Parts[0];
+            Assert.AreEqual(2, part.Sources.Count);
+            var chosen = part.Sources.Single(s => s.Id == part.SelectedSourceId);
+            Assert.AreEqual("https://example.org/game.7z", chosen.Url);
+            Assert.AreEqual("http.native", chosen.MethodId);
+            Assert.AreEqual(expectedCode, chosen.AccessCode);
+            Assert.AreEqual(image.ArchivePassword, chosen.ArchivePassword);
+            Assert.AreEqual(snapshot, chosen.ProcessingSource);
+            Assert.AreEqual(snapshot, part.ProcessingSource);
+            Assert.AreEqual(image.Url, part.Sources.Single(s => s.Id == image.Id).Url);
+            Assert.AreEqual("other", revised.Plan.Parts[1].SelectedSourceId);
+            Assert.IsTrue(revised.PlanHistory.Any(h => h.Plan.Parts[0].SelectedSourceId == image.Id));
+            Assert.IsNull(revised.Task.WorkflowRunId);
+            await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => _plans.UpdateAsync(created.Id, request, default));
+
+            var stage = revised.Plan.StageDirectories!.Parts["main"].Download!.Directory;
+            Directory.CreateDirectory(stage);
+            File.WriteAllText(Path.Combine(stage, "user-file.txt"), "untouched");
+            var second = new AcquisitionPlanUpdateInput(revised.Task.PlanRevision,
+                SourceReplacement: new("main", chosen.Id, "https://example.org/different.7z"));
+            var rejected = await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => _plans.UpdateAsync(created.Id, second, default));
+            Assert.AreEqual("SOURCE_REPLACEMENT_LOCAL_FILES", rejected.Message);
+            Assert.AreEqual("untouched", File.ReadAllText(Path.Combine(stage, "user-file.txt")));
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
     [TestMethod]
     public async Task PreparedTasksAllocateSeparateStageDirectoriesWithoutCreatingOrTrustingProducerFolders()
     {

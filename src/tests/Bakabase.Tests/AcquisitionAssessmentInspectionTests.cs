@@ -59,7 +59,8 @@ public class AcquisitionAssessmentInspectionTests
         var recorded = (await Read(task.Id, retry.Id))!.Calls;
         Assert.AreEqual(2,recorded.Count);
         Assert.AreEqual("modelInput", recorded[0].InputKind);
-        Assert.IsFalse(recorded[0].InputPreview!.Contains("private context"));
+        StringAssert.Contains(recorded[0].InputPreview!, "private context");
+        Assert.AreEqual("complete", recorded[0].InputAvailability);
         Assert.AreEqual("modelOutput", recorded[0].OutputKind);
         StringAssert.Contains(recorded[0].OutputPreview!, "Broken JSON");
         Assert.IsFalse(recorded[0].OutputPreview!.Contains("secret"));

@@ -6,6 +6,8 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business;
+using Bakabase.Modules.Acquisition.Abstractions.Models.Db;
+using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Workflow.Abstractions.Components;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Workflow.Artifacts;
@@ -47,18 +49,23 @@ internal sealed record AcquisitionExecutionFacts(bool AllRequiredInputsLocal,
     {Scopes = Scopes.Append(new("", "", 0, false, true)).ToArray()};
 }
 
-/// <summary>Database-recorded local input facts, never a filesystem inspection or downloader
-/// probe. SQLite reduces bounded private checkpoints/manifests before returning compact rows.</summary>
-public sealed partial class AcquisitionExecutionFactProjection(BakabaseDbContext db)
+/// <summary>Local input facts from recorded artifacts and the current download snapshot, without
+/// filesystem inspection. SQLite reduces bounded private checkpoints/manifests before returning compact rows.</summary>
+public sealed partial class AcquisitionExecutionFactProjection(BakabaseDbContext db, IArtifactOperationStore? store = null)
 {
     public static readonly string[] FactTags = ["downloadedPending", "spaceInsufficient"];
-    internal async Task<Dictionary<int, AcquisitionExecutionFacts>> ReadAsync(IReadOnlyCollection<int> ids, CancellationToken ct)
+    internal async Task<Dictionary<int, AcquisitionExecutionFacts>> ReadAsync(IReadOnlyCollection<int> ids, CancellationToken ct,
+        IReadOnlyDictionary<int, AcquisitionDownloadActivity>? downloads = null, IReadOnlyCollection<int>? preparedIds = null)
     {
         var result = ids.Distinct().ToDictionary(id => id, _ => AcquisitionExecutionFacts.Unknown);
+        if (store != null)
+            foreach (var batch in (preparedIds ?? ids).Chunk(50))
+                await ReadPreparedFactsAsync(batch, result, store, ct);
         foreach (var batch in result.Keys.ToArray().Chunk(50))
         {
             var current = await db.Database.SqlQueryRaw<CurrentFact>(CurrentSql, JsonSerializer.Serialize(batch),
                 typeof(DownloadWorkset).FullName + ", " + typeof(DownloadWorkset).Assembly.GetName().Name).ToListAsync(ct);
+            await PreserveDirectoryOnlyRunFactsAsync(current, ct);
             var runIds = current.Select(r => r.RunId).ToArray();
             var owners = runIds.Select(r => r.ToString(System.Globalization.CultureInfo.InvariantCulture)).ToArray();
             var desired = new HashSet<string>(StringComparer.Ordinal);
@@ -85,7 +92,7 @@ public sealed partial class AcquisitionExecutionFactProjection(BakabaseDbContext
             {
                 var ownBindings = bindings.Where(b => b.Owner == row.RunId.ToString(System.Globalization.CultureInfo.InvariantCulture)).ToArray();
                 if (ownBindings.Length > 1024) continue;
-                try {result[row.TaskId] = Project(row, ownBindings, artifacts);}
+                try {result[row.TaskId] = Project(row, ownBindings, artifacts, downloads?.GetValueOrDefault(row.TaskId)?.CompletedPartIds);}
                 catch (Exception e) when (e is JsonException or ArgumentException or InvalidOperationException or IOException)
                 { /* Missing/inconsistent historical evidence remains unknown. */ }
             }
@@ -93,8 +100,33 @@ public sealed partial class AcquisitionExecutionFactProjection(BakabaseDbContext
         return result;
     }
 
+    // A ready local-only revision has no current workflow. Its inputs remain registered on
+    // earlier runs. Search uses the same database ownership/manifest checks as continuation;
+    // only execution opens the files. A completed download for just one part is insufficient.
+    private async Task ReadPreparedFactsAsync(int[] ids, Dictionary<int, AcquisitionExecutionFacts> result,
+        IArtifactOperationStore artifactStore, CancellationToken ct)
+    {
+        var candidates = await db.AcquisitionTasks.AsNoTracking()
+            .Where(t => ids.Contains(t.Id) && t.DeletedAt == null && t.WorkflowRunId == null &&
+                t.Phase == "ready" && t.Status == AcquisitionStatus.Waiting && t.BuilderId != null && t.PlanJson != null)
+            .Select(t => new AcquisitionTaskDbModel {Id = t.Id, Phase = t.Phase, Status = t.Status, BuilderId = t.BuilderId,
+                PlanJson = t.PlanJson, BuilderStateJson = t.BuilderStateJson, PlanRevision = t.PlanRevision})
+            .ToListAsync(ct);
+        foreach (var task in candidates)
+        {
+            try
+            {
+                var registered = await AcquisitionPlanService.RegisteredPreparedInputsAsync(db, artifactStore, task, ct);
+                if (registered.Count > 0)
+                    result[task.Id] = new(true, registered.Select(p => new AcquisitionExecutionFactScope(p.PartId, "", 0, true, false)).ToArray());
+            }
+            catch (Exception e) when (e is ArgumentException or InvalidOperationException or InvalidDataException or JsonException)
+            { /* Stale registrations and invalid old plans cannot supply a positive fact. */ }
+        }
+    }
+
     private static AcquisitionExecutionFacts Project(CurrentFact row, IReadOnlyList<Binding> bindings,
-        IReadOnlyList<ArtifactFact> artifacts)
+        IReadOnlyList<ArtifactFact> artifacts, IReadOnlySet<string>? completedDownloads)
     {
         if (row.RunStatus is not ((int)WorkflowRunStatus.Waiting or (int)WorkflowRunStatus.Failed or (int)WorkflowRunStatus.Interrupted) ||
             row.HasPendingSignal != 0 || row.NodeStatus is not ("waiting" or "failed") || row.NodeKind == null ||
@@ -124,14 +156,14 @@ public sealed partial class AcquisitionExecutionFactProjection(BakabaseDbContext
         foreach (var part in pending)
         {
             var consumer = nodes.FirstOrDefault(n => Consumes(n, part.Id));
-            inputs[part.Id] = consumer != null && HasInput(consumer, part, bindings, artifacts);
+            inputs[part.Id] = consumer != null && HasInput(consumer, part, bindings, artifacts, completedDownloads);
         }
         var allLocal = localRemainder && pending.All(p => inputs.GetValueOrDefault(p.Id));
         var scopes = new List<AcquisitionExecutionFactScope>();
         foreach (var target in pending)
         {
             if (!Consumes(nodes[0], target.Id)) continue;
-            var local = localRemainder && HasInput(nodes[0], target, bindings, artifacts);
+            var local = localRemainder && HasInput(nodes[0], target, bindings, artifacts, completedDownloads);
             var space = SpaceAtCurrentScope(row, nodes[0], target);
             scopes.Add(new(target.Id, row.NodeId, row.NodeAttempt, local, space));
         }
@@ -157,7 +189,7 @@ public sealed partial class AcquisitionExecutionFactProjection(BakabaseDbContext
         _ => false,
     };
     private static bool HasInput(NodeFact node, TargetFact target, IReadOnlyList<Binding> bindings,
-        IReadOnlyList<ArtifactFact> artifacts)
+        IReadOnlyList<ArtifactFact> artifacts, IReadOnlySet<string>? completedDownloads)
     {
         if (target.AcquisitionNonce != null) return false;
         if (node.Kind == "fs.publishArtifacts" && node.Source is not (null or "processed" or "download")) return false;
@@ -185,14 +217,23 @@ public sealed partial class AcquisitionExecutionFactProjection(BakabaseDbContext
             {
                 "continuation" => slots.Contains(target.Id + ":artifact.continuation"),
                 "download" => artifact.Kind == "download" && artifact.OperationKind == "download" && slots.Contains(target.Id + ":artifact.download"),
-                "processed" => artifact.Kind is "processedFiles" or "publishedFiles" &&
-                    (slots.Contains(target.Id + ":artifact.process") || slots.Any(s => s.StartsWith(target.Id + ":process:", StringComparison.Ordinal))),
+                // Current-directory captures are immutable local inputs, not newly
+                // processed artifacts. Their exact continuation binding proves this
+                // run/part adopted them before assessment or direct publication.
+                "processed" => artifact.Kind == AcquisitionCurrentDirectoryFiles.Kind
+                    ? slots.Contains(target.Id + ":artifact.continuation")
+                    : artifact.Kind is "processedFiles" or "publishedFiles" &&
+                      (slots.Contains(target.Id + ":artifact.process") || slots.Any(s => s.StartsWith(target.Id + ":process:", StringComparison.Ordinal)) ||
+                       // Assessment can execute another processing round before pausing.
+                       // Only its exact successful output binding is local result evidence.
+                       artifact.Kind == "processedFiles" && slots.Contains(target.Id + ":adaptive:output:" + artifact.Id)),
                 _ => false,
             };
         }
-        // A completed downloader without a registered artifact remains eligible for normal
-        // diagnosis, but is not a positive list fact until its exact files are registered.
-        return false;
+        // The downloader may have finished since the workflow last waited. Only its bound
+        // await step can use this observation; continuation still verifies the actual files.
+        return node.Kind == "download.awaitCompletion" && target.DownloadOperationId == null &&
+            completedDownloads?.Contains(target.Id) == true;
     }
 
     private static bool SupportedArtifact(ArtifactFact artifact) => artifact.Kind switch
@@ -200,6 +241,7 @@ public sealed partial class AcquisitionExecutionFactProjection(BakabaseDbContext
         "download" => artifact.OperationKind == "download",
         "processedFiles" => artifact.OperationKind == "files.process",
         "publishedFiles" => artifact.OperationKind == "files.publish",
+        AcquisitionCurrentDirectoryFiles.Kind => artifact.OperationKind == AcquisitionCurrentDirectoryFiles.OperationKind,
         _ => false,
     };
 

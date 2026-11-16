@@ -16,12 +16,14 @@ export default function PlanTaskRow({
   onOpen,
   overview,
   sizeEstimate,
+  facts,
   onDelete,
 }: {
   task: PlanTask;
   onOpen: () => void;
   overview?: RuntimeOverview;
   sizeEstimate?: AcquisitionSizeEstimateValue;
+  facts?: string[];
   onDelete?: () => void;
 }) {
   const { t } = useTranslation();
@@ -64,7 +66,7 @@ export default function PlanTaskRow({
               })}{" "}
           · {t("acquisition.plan.revision", { revision: task.planRevision })}
         </p>
-        <AcquisitionAttentionTags tags={currentOverview?.attentionTags ?? task.attentionTags} />
+        <AcquisitionAttentionTags tags={currentOverview?.attentionTags ?? task.attentionTags} facts={facts} />
         <AcquisitionCreationOrigin origins={task.creationOrigins} compact />
         <RuntimeOverviewSummary overview={currentOverview} />
         <AcquisitionTiming task={task} />

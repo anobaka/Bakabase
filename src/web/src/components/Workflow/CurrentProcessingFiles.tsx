@@ -119,9 +119,10 @@ export default function CurrentProcessingFiles({ run }: { run: Run }) {
 export function ProcessingDirectoryFiles({ path, taskContext }: { path: string; taskContext?: TaskDirectoryContext }) {
   const { t } = useTranslation();
   return <section aria-label={t("workflow.processing.inputFiles.title")} className="min-w-0 space-y-1">
-    <h4 className="text-sm font-medium">{t("workflow.processing.inputFiles.title")}</h4>
+    {!taskContext && <h4 className="text-sm font-medium">{t("workflow.processing.inputFiles.title")}</h4>}
     <div className="min-w-0">
-      {taskContext ? <TaskDirectoryExplorer path={path} context={taskContext} maxContentHeight={288} /> : <Suspense fallback={<Spinner size="sm" />}>
+      {taskContext ? <TaskDirectoryExplorer path={path} context={taskContext} maxContentHeight={288}
+        heading={<h4 className="shrink-0 text-sm font-medium text-foreground">{t("workflow.processing.inputFiles.title")}</h4>} /> : <Suspense fallback={<Spinner size="sm" />}>
         <FileExplorer rootPath={path} maxContentHeight={288} expandable capabilities={["enter-directory"]}
           keyboard={false} watchChanges={false} selectable="disabled" />
       </Suspense>}

@@ -72,25 +72,23 @@ public partial class CompressedFileService
             // scans. A verified offset needs only one exact, nonrecursive confirmation; a
             // large media prefix must not consume the budget in two unsuccessful scans first.
             // Ordinary discovery calls ProbeArchiveFormatAsync and never requests this hint.
-            var structure = await BoundedZipStructureProbe.FindStructureAsync(entryFile, length, stop.Token);
+            var opening = await FindStructuralOpeningAsync(entryFile, length, stop.Token);
             var after = new FileInfo(entryFile);
             if (!after.Exists || (after.Attributes & FileAttributes.ReparsePoint) != 0 ||
                 after.Length != length || after.LastWriteTimeUtc != modified)
                 throw new InvalidDataException("The file changed during archive structure discovery.");
-            if (structure is {ZipOffset: >= BoundedZipStructureProbe.MaximumPrefixBytes})
+            if (opening?.ZipStructure != null)
             {
                 // A metadata-verified ZIP can be opened by seeking to its catalog. Never
                 // increase 7-Zip's scan limit or copy the prefixed input to strip its header.
-                var opening = ArchiveOpenOptions.VerifiedZipStructure(structure);
                 var catalog = await RunZipCompatibilityAsync("list", entryFile, null, null, opening, null, stop.Token);
                 ZipPasswordCompatibility.RequireSuccess(catalog);
                 return new(".zip", opening);
             }
-            if (structure is {ZipOffset: var verifiedPrefix})
+            if (opening != null)
             {
-                var exactOptions = ArchiveOpenOptions.VerifiedZipPrefix(verifiedPrefix);
-                var guided = await Probe(exactOptions);
-                return guided.Extension == null ? null : new(guided.Extension, exactOptions);
+                var guided = await Probe(opening);
+                return guided.Extension == null ? null : new(guided.Extension, opening);
             }
             var first = await Probe();
             if (first.Extension != null) return new(first.Extension);
@@ -103,6 +101,18 @@ public partial class CompressedFileService
                 throw new InvalidDataException("The file changed during archive format discovery.");
             var options = ArchiveOpenOptions.BoundedPrefixFor(entryFile);
             var retry = await Probe(options);
+            // A known suffix can be wrong, while wildcard opening can also miss a
+            // correctly named prefixed archive. Preserve the typed attempt, then broaden
+            // only an explicit unrecognized result within this same time/output budget.
+            if (retry.Unrecognized && options != ArchiveOpenOptions.BoundedPrefix)
+            {
+                after.Refresh();
+                if (!after.Exists || (after.Attributes & FileAttributes.ReparsePoint) != 0 ||
+                    after.Length != length || after.LastWriteTimeUtc != modified)
+                    throw new InvalidDataException("The file changed during archive format discovery.");
+                options = ArchiveOpenOptions.BoundedPrefix;
+                retry = await Probe(options);
+            }
             return retry.Extension == null ? null : new(retry.Extension, options);
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
@@ -228,7 +238,12 @@ public partial class CompressedFileService
                     @"(?:Cannot|Can not) open encrypted archive\.\s*Wrong password\??",
                     RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
                 return new(null, PasswordRequired: true);
+            // A generic cannot-open line can accompany explicit damage or a missing
+            // volume. Those diagnostics are not permission for another opening mode.
             if (exitCode == 2 && !error.Contains("Wrong password", StringComparison.OrdinalIgnoreCase) &&
+                !Regex.IsMatch(error,
+                    @"^(?:ERROR:\s*)?(?:Headers Error|Data Error|CRC Failed|Unexpected end of archive|Missing volume)(?:\s*$|\s*:\s)",
+                    RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant) &&
                 Regex.IsMatch(error, @"(?:Cannot|Can not) open the file as (?:\[(?:zip|rar|rar5|7z)\] )?archive",
                     RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
                 return new(null, Unrecognized: true);
@@ -240,11 +255,11 @@ public partial class CompressedFileService
             .TakeWhile(line => line != "----------").ToArray();
         var type = header
             .FirstOrDefault(line => line.StartsWith("Type = ", StringComparison.Ordinal))?[7..];
-        if (openOptions?.ExpectedZipOffset is { } expected &&
-            (!string.Equals(type, "zip", StringComparison.OrdinalIgnoreCase) ||
+        if (openOptions?.ExpectedPrefixOffset is { } expected &&
+            (!string.Equals(type, openOptions.ExpectedPrefixType, StringComparison.OrdinalIgnoreCase) ||
              !long.TryParse(header.FirstOrDefault(line => line.StartsWith("Offset = ", StringComparison.Ordinal))?[9..],
                  NumberStyles.None, CultureInfo.InvariantCulture, out var offset) || offset != expected))
-            throw new ArchiveFormatProbeIncompleteException("The archive tool did not confirm the expected ZIP structure. Revise the extraction step.");
+            throw new ArchiveFormatProbeIncompleteException($"The archive tool did not confirm the expected {openOptions.ExpectedPrefixType!.ToUpperInvariant()} structure. Revise the extraction step.");
         return new(type?.ToLowerInvariant() switch
         {
             "zip" => ".zip", "7z" => ".7z", "rar" or "rar5" => ".rar",

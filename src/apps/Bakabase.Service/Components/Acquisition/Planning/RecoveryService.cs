@@ -27,6 +27,9 @@ public sealed class AcquisitionRecoveryPreviewStore
         internal bool Claimed;
         internal int[]? Selected;
         internal bool? UseEmergencySpaceReserve;
+        internal bool AnalyzeFilesFirst;
+        internal int? MaxAdaptiveIterations;
+        internal bool PrepareOnly;
         internal AcquisitionRecoveryResult? Result;
     }
     private readonly ConcurrentDictionary<string, Entry> _entries = new();
@@ -36,16 +39,28 @@ public sealed class AcquisitionRecoveryPreviewStore
         if (_entries.Count >= 50) throw new ArgumentException("RECOVERY_PREVIEW_LIMIT");
         _entries[entry.Preview.PreviewToken] = entry;
     }
-    internal Entry Claim(string token, int[] selected, bool? useEmergencySpaceReserve = null)
+    internal Entry Claim(string token, int[] selected, bool? useEmergencySpaceReserve = null,
+        bool analyzeFilesFirst = false, int? maxAdaptiveIterations = null, bool prepareOnly = false)
     {
         if (!Guid.TryParseExact(token, "N", out _) || !_entries.TryGetValue(token, out var entry) || entry.Preview.ExpiresAt <= DateTimeOffset.UtcNow)
             throw new ArgumentException("RECOVERY_PREVIEW_EXPIRED");
         lock (entry)
         {
+            if (prepareOnly && (entry.Preview.Scope != "localFiles" || analyzeFilesFirst ||
+                                maxAdaptiveIterations != null || useEmergencySpaceReserve != null))
+                throw new ArgumentException("RECOVERY_PREPARE_OPTIONS_INVALID");
+            if (analyzeFilesFirst && entry.Preview.Scope != "localFiles" ||
+                maxAdaptiveIterations != null && !analyzeFilesFirst || maxAdaptiveIterations is < 1 or > 5)
+                throw new ArgumentException("RECOVERY_ANALYSIS_OPTIONS_INVALID");
+            maxAdaptiveIterations = analyzeFilesFirst ? maxAdaptiveIterations ?? 5 : null;
             if (selected.Any(id => !entry.Versions.ContainsKey(id))) throw new ArgumentException("RECOVERY_SELECTION_INVALID");
-            if (entry.Claimed && (entry.Result == null || (!selected.SequenceEqual(entry.Selected!) || useEmergencySpaceReserve != entry.UseEmergencySpaceReserve)))
+            if (entry.Claimed && (entry.Result == null || !selected.SequenceEqual(entry.Selected!) ||
+                useEmergencySpaceReserve != entry.UseEmergencySpaceReserve || analyzeFilesFirst != entry.AnalyzeFilesFirst ||
+                maxAdaptiveIterations != entry.MaxAdaptiveIterations || prepareOnly != entry.PrepareOnly))
                 throw new ArgumentException("RECOVERY_OUTCOME_UNKNOWN");
             entry.Claimed = true; entry.Selected = selected; entry.UseEmergencySpaceReserve = useEmergencySpaceReserve;
+            entry.AnalyzeFilesFirst = analyzeFilesFirst; entry.MaxAdaptiveIterations = maxAdaptiveIterations;
+            entry.PrepareOnly = prepareOnly;
             return entry;
         }
     }
@@ -61,10 +76,22 @@ public sealed class AcquisitionRecoveryService(BakabaseDbContext db, IAcquisitio
         var ids = Ids(input.TaskIds);
         var scope = input.Scope ?? "workflow";
         if (scope is not ("workflow" or "downloads" or "localFiles")) throw new ArgumentException("RECOVERY_SCOPE_INVALID");
-        async Task<AcquisitionRecoveryDiagnosis> Diagnose(AcquisitionTaskDbModel task, WorkflowRunDbModel? run, bool verify, CancellationToken token) =>
-            scope == "localFiles" ? localFiles == null ? throw new ArgumentException("RECOVERY_LOCAL_FILES_UNAVAILABLE") :
-                await localFiles.DiagnoseAsync(task, run, verify, token, guardDirectory) :
-                ForScope(await diagnostics.DiagnoseAsync(task, run, token, verifyFiles: verify), run, scope);
+        async Task<AcquisitionRecoveryDiagnosis> Diagnose(AcquisitionTaskDbModel task, WorkflowRunDbModel? run, bool verify, CancellationToken token)
+        {
+            if (scope != "localFiles")
+            {
+                var current = await diagnostics.DiagnoseAsync(task, run, token, verifyFiles: verify, includeStoppedDownloads: scope == "downloads");
+                if (guardDirectory != null)
+                    foreach (var directory in current.InitialDownloadDirectories) await guardDirectory(directory);
+                return ForScope(current, run, scope);
+            }
+            if (localFiles == null) throw new ArgumentException("RECOVERY_LOCAL_FILES_UNAVAILABLE");
+            var diagnosis = await localFiles.DiagnoseAsync(task, run, verify, token, guardDirectory);
+            if (diagnosis.Row.CanContinue && diagnosis.Row.LocalFiles is { } files &&
+                AcquisitionLocalFilesRecoveryService.CanPrepareWithoutFileOperations(task))
+                return diagnosis with {Row = diagnosis.Row with {LocalFiles = files with {SupportsPrepareOnly = true}}};
+            return diagnosis;
+        }
         var rows = new List<AcquisitionRecoveryRow>(); var versions = new Dictionary<int, string>(); var signals = new Dictionary<int, string>();
         var verification = new List<(int Id, int Index, string Version)>();
         // Fetch private checkpoints in bounded batches, not one query per row or one unbounded
@@ -87,7 +114,7 @@ public sealed class AcquisitionRecoveryService(BakabaseDbContext db, IAcquisitio
         }
         // Finish inexpensive diagnosis for every fixed task before spending the bounded budget
         // hashing retained files. Large files cannot starve unrelated scope-recovery checks.
-        // A user inspecting a single local file step can wait for the complete NAS hash.
+        // When the user explicitly inspects one local file set, its hash may take longer on a large download or NAS.
         // The short per-row budget exists to keep a batch of independent tasks responsive.
         using var budget = CancellationTokenSource.CreateLinkedTokenSource(ct);
         budget.CancelAfter(TimeSpan.FromSeconds(45));
@@ -95,8 +122,9 @@ public sealed class AcquisitionRecoveryService(BakabaseDbContext db, IAcquisitio
         {
             using var itemBudget = CancellationTokenSource.CreateLinkedTokenSource(budget.Token);
             itemBudget.CancelAfter(TimeSpan.FromSeconds(rows[pending.Index].ReasonCode == "RECOVERY_RECHECK_SOURCE" ? 12 : 4));
-            var checkToken = ids.Length == 1 && scope == "workflow" &&
-                IsLocalFileStep(rows[pending.Index].CurrentStepKind) ? ct : itemBudget.Token;
+            var inspectingOneFileSet = ids.Length == 1 && (scope == "localFiles" ||
+                scope == "workflow" && IsLocalFileStep(rows[pending.Index].CurrentStepKind));
+            var checkToken = inspectingOneFileSet ? ct : itemBudget.Token;
             try
             {
                 checkToken.ThrowIfCancellationRequested();
@@ -139,10 +167,11 @@ public sealed class AcquisitionRecoveryService(BakabaseDbContext db, IAcquisitio
             if (scope == "localFiles")
             {
                 if (localFiles == null) return new([], [new(id, "RECOVERY_LOCAL_FILES_UNAVAILABLE")]);
-                var outcome = await localFiles.ApplyWhileLockedAsync(id, Version(task, run), null, guardDirectory, ct, expectedStorageJson);
+                var outcome = await localFiles.ApplyWhileLockedAsync(id, Version(task, run), null, guardDirectory, ct, expectedStorageJson,
+                    useEmergencySpaceReserve: useEmergencySpaceReserve);
                 return new(outcome.Status == "started" ? [id] : [], [], LocalFiles: [outcome]);
             }
-            var diagnosis = ForScope(await diagnostics.DiagnoseAsync(task, run, ct, verifyContent: true), run, scope);
+            var diagnosis = ForScope(await diagnostics.DiagnoseAsync(task, run, ct, verifyContent: true, includeStoppedDownloads: scope == "downloads"), run, scope);
             if (!diagnosis.Row.CanContinue) return new([], [new(id, diagnosis.Row.ReasonCode)]);
             return await DispatchVerifiedWhileLockedAsync(task, run, scope, guardDirectory, diagnosis, ct, useEmergencySpaceReserve);
         }
@@ -196,7 +225,9 @@ public sealed class AcquisitionRecoveryService(BakabaseDbContext db, IAcquisitio
         Func<string?, Task>? guardDirectory, int? heldTask = null, AcquisitionRecoveryDiagnosis? verified = null,
         string? processingPlacementStamp = null, bool preserveReserve = false)
     {
-        var ids = Ids(input.TaskIds).Order().ToArray(); var entry = previews.Claim(input.PreviewToken, ids, input.UseEmergencySpaceReserve);
+        var ids = Ids(input.TaskIds).Order().ToArray();
+        var entry = previews.Claim(input.PreviewToken, ids, input.UseEmergencySpaceReserve, input.AnalyzeFilesFirst == true,
+            input.MaxAdaptiveIterations, input.PrepareOnly == true);
         if (entry.Result is {} saved) return saved;
         var continued = new List<int>(); var skipped = new List<AcquisitionRecoverySkip>();
         var downloadOutcomes = new List<AcquisitionDownloadRecoveryOutcome>();
@@ -214,7 +245,9 @@ public sealed class AcquisitionRecoveryService(BakabaseDbContext db, IAcquisitio
                 {
                     if (localFiles == null || expected.Action != "localFiles")
                         throw new RecoveryBlockedException("RECOVERY_LOCAL_FILES_UNAVAILABLE");
-                    var outcome = await localFiles.ApplyWhileLockedAsync(id, entry.Versions[id], entry.Signals[id], guardDirectory, ct);
+                    var outcome = await localFiles.ApplyWhileLockedAsync(id, entry.Versions[id], entry.Signals[id], guardDirectory, ct,
+                        analyzeFilesFirst: entry.AnalyzeFilesFirst, maxAdaptiveIterations: entry.MaxAdaptiveIterations,
+                        useEmergencySpaceReserve: input.UseEmergencySpaceReserve, prepareOnly: entry.PrepareOnly);
                     localOutcomes.Add(outcome);
                     if (outcome.Status == "started") continued.Add(id);
                     continue;
@@ -227,7 +260,7 @@ public sealed class AcquisitionRecoveryService(BakabaseDbContext db, IAcquisitio
                     if (task == null || run == null) throw new RecoveryBlockedException("ACQUISITION_TASK_CHANGED");
                     using var validationBudget = CancellationTokenSource.CreateLinkedTokenSource(ct);
                     validationBudget.CancelAfter(TimeSpan.FromSeconds(15));
-                    var current = verified ?? ForScope(await diagnostics.DiagnoseAsync(task, run, validationBudget.Token), run, "downloads");
+                    var current = verified ?? ForScope(await diagnostics.DiagnoseAsync(task, run, validationBudget.Token, includeStoppedDownloads: true), run, "downloads");
                     if (!current.Row.CanContinue || current.SignalJson != entry.Signals[id])
                         throw new RecoveryBlockedException(current.Row.CanContinue ? "ACQUISITION_TASK_CHANGED" : current.Row.ReasonCode);
                     // Persist the requested boundary before starting a child. A lost response or
@@ -237,6 +270,8 @@ public sealed class AcquisitionRecoveryService(BakabaseDbContext db, IAcquisitio
                     try
                     {
                         await EnsureCurrentVersion(id, entry.Versions[id], ct);
+                        if (guardDirectory != null)
+                            foreach (var directory in current.InitialDownloadDirectories) await guardDirectory(directory);
                         task = await AcquisitionContinuationReserve.SaveWhileLockedAsync(db, task, run, input.UseEmergencySpaceReserve,
                             "recovery:" + input.PreviewToken, ct, preserveReserve);
                         task = await new AcquisitionDownloadContinuationService(db).SaveWhileLockedAsync(task, run.Id,

@@ -25,5 +25,12 @@
   "acquisition.records.emptyResponse": "The model returned an empty response.",
   "acquisition.records.futureAudit": "This older record only kept a structural summary; its original values cannot be recovered. New AI assessments keep inspectable response text with the task.",
   "acquisition.records.previewTruncated": "Showing the recorded excerpt.",
-  "acquisition.records.validationError": "Validation failure"
+  "acquisition.records.validationError": "Validation failure",
+  "acquisition.records.text.complete": "Complete text saved",
+  "acquisition.records.text.preview": "Only an excerpt was saved; missing text cannot be recovered",
+  "acquisition.records.text.notRecorded": "Text not recorded",
+  "acquisition.records.text.redacted": "Sensitive values hidden",
+  "acquisition.records.text.open": "View saved text",
+  "acquisition.records.text.more": "Load next section",
+  "acquisition.records.text.copyVisible": "Copy displayed text"
 }

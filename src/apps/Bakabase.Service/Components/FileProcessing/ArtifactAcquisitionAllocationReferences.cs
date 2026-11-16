@@ -34,6 +34,33 @@ internal static class ArtifactAcquisitionAllocationReferences
         catch (Exception e) when (Invalid(e)) { return new HashSet<JsonElement>(); }
     }
 
+    internal static IReadOnlySet<JsonElement> OwnedProcessingValues(JsonElement document, string? planJson,
+        int taskId, ArtifactDirectoryScope expected, CancellationToken ct)
+    {
+        try
+        {
+            using var planDocument = JsonDocument.Parse(planJson ?? "null");
+            var plan = ReadPlan(planDocument.RootElement, ct);
+            if (plan == null || !Unique(document, ct) ||
+                Property(document, "stageDirectories") is not {ValueKind: JsonValueKind.Object} raw) return new HashSet<JsonElement>();
+            var stages = JsonSerializer.Deserialize<AcquisitionStageDirectories>(raw.GetRawText(), Strict);
+            if (stages == null || stages.TaskId != taskId) return new HashSet<JsonElement>();
+            AcquisitionStageDirectoryResolver.Validate(stages, plan);
+            var parts = Property(raw, "parts")!.Value;
+            var values = new HashSet<JsonElement>();
+            foreach (var (partId, directories) in stages.Parts)
+            {
+                if (directories.Processing is not {Ownership: "exclusive", Evidence: "taskAllocation", Allocation: { } allocation} ||
+                    allocation != expected || plan.StageDirectories?.Parts.GetValueOrDefault(partId)?.Processing != directories.Processing) continue;
+                var entry = Property(Property(parts, partId)!.Value, "processing")!.Value;
+                values.Add(Property(entry, "directory")!.Value);
+                values.Add(Property(Property(entry, "allocation")!.Value, "directory")!.Value);
+            }
+            return values;
+        }
+        catch (Exception error) when (Invalid(error)) { return new HashSet<JsonElement>(); }
+    }
+
     // A validated layout allocates sibling task directories below its root. Its concrete
     // task/part destinations still claim files, and unknown layout members never acquire
     // allocation semantics merely by being named rootDirectory.
@@ -129,13 +156,27 @@ internal static class ArtifactAcquisitionAllocationReferences
             if (plan?.StoragePolicy == null) return new HashSet<JsonElement>();
             var roots = plan.Parts.Select(part => ArtifactStoragePolicies.Resolve(plan.StoragePolicy, part.StoragePolicy).ProcessingWorkspaceDirectory)
                 .Where(p => !string.IsNullOrWhiteSpace(p)).ToHashSet(StringComparer.Ordinal);
-            if (!roots.SetEquals(entry.WorkingDirectories) || Property(raw, "workingDirectories") is not {ValueKind: JsonValueKind.Array} paths)
-                return new HashSet<JsonElement>();
-            // A typed queue's captured policy roots allocate sibling workspaces. Its
-            // deliveryDirectories, signal, inputs and any unknown JSON remain references.
-            return paths.EnumerateArray().ToHashSet();
+            if (Property(raw, "workingDirectories") is not {ValueKind: JsonValueKind.Array} paths ||
+                !QueueWorkingDirectoriesMatch(entry, plan, task.Id, roots)) return new HashSet<JsonElement>();
+            // Only the configured roots allocate sibling workspaces. A checkpoint's
+            // specific stage directory still protects all its contents.
+            return paths.EnumerateArray().Where(p => roots.Contains(p.GetString())).ToHashSet();
         }
         catch (Exception e) when (Invalid(e)) { return new HashSet<JsonElement>(); }
+    }
+
+    private static bool QueueWorkingDirectoriesMatch(AcquisitionLocalRecoveryQueueEntry entry, AcquisitionPlan plan,
+        int taskId, HashSet<string> roots)
+    {
+        if (roots.SetEquals(entry.WorkingDirectories)) return true;
+        if (entry.RecoveryScope != "workflow" || entry.ActionCategory != "localProcessing" ||
+            plan.StageDirectories is not { } stages || stages.TaskId != taskId ||
+            !roots.IsSubsetOf(entry.WorkingDirectories)) return false;
+        AcquisitionStageDirectoryResolver.Validate(stages, plan);
+        var stagePaths = stages.Parts.Values.Select(p => p.Processing)
+            .Where(p => p is {Ownership: "exclusive", Evidence: "taskAllocation", BindingId: not null, Allocation: not null})
+            .Select(p => p!.Directory).ToHashSet(StringComparer.Ordinal);
+        return entry.WorkingDirectories.All(p => roots.Contains(p) || stagePaths.Contains(p));
     }
 
     private static IReadOnlySet<JsonElement> LocalFilesValues(JsonElement raw, TaskContext task,
@@ -154,10 +195,12 @@ internal static class ArtifactAcquisitionAllocationReferences
             var original = OwnedPlan(task, receipt.PreviousRunId, receipt.PreviousRevision, ownedRevisions, ct);
             if (original == null) return new HashSet<JsonElement>();
             var runs = ownedRevisions.Where(o => o.TaskId == task.Id && o.Revision == revision).ToArray();
-            if (runs.Length != 1) return new HashSet<JsonElement>();
-            var plan = OwnedPlan(task, runs[0].RunId, revision, ownedRevisions, ct);
             var history = ReadHistory(task, ct);
-            if (plan?.StoragePolicy == null || history?.SingleOrDefault(h => h.Revision == revision)?.PreviousRunId != receipt.PreviousRunId ||
+            if (history == null || history.SingleOrDefault(h => h.Revision == revision) is not {} frozen ||
+                frozen.PreviousRunId != receipt.PreviousRunId || runs.Length > 1) return new HashSet<JsonElement>();
+            var plan = runs.Length == 1 ? OwnedPlan(task, runs[0].RunId, revision, ownedRevisions, ct) :
+                UnstartedAdoptionPlan(task, receipt, frozen, history, ct);
+            if (plan?.StoragePolicy == null ||
                 receipt.Parts.Any(p => p == null || string.IsNullOrWhiteSpace(p.PartId)) ||
                 receipt.Preview.Parts.Any(p => p == null || string.IsNullOrWhiteSpace(p.PartId)) ||
                 receipt.Parts.Select(p => p.PartId).Distinct().Count() != receipt.Parts.Count ||
@@ -200,6 +243,34 @@ internal static class ArtifactAcquisitionAllocationReferences
             return values;
         }
         catch (Exception e) when (Invalid(e)) { return new HashSet<JsonElement>(); }
+    }
+
+    // Preparing files can save a revision without starting any run. Its immutable adoption
+    // evidence binds the same download as the original owned run, even after a later edit.
+    private static AcquisitionPlan? UnstartedAdoptionPlan(TaskContext task, AcquisitionLocalFilesRecoveryReceipt receipt,
+        AcquisitionPlanRevision frozen, IReadOnlyList<AcquisitionPlanRevision> history, CancellationToken ct)
+    {
+        if (frozen.Reason != AcquisitionLocalFilesRecoveryReceipt.RevisionReason ||
+            frozen.ArtifactEvidence is not {Count: > 0} evidence || evidence.Count != receipt.Parts.Count) return null;
+        var recorded = JsonSerializer.SerializeToElement(frozen.Plan, Strict);
+        if (frozen.Revision == task.Revision)
+        {
+            using var current = JsonDocument.Parse(task.PlanJson ?? "null");
+            var active = ReadPlan(current.RootElement, ct);
+            if (task.RunId != null || active == null ||
+                !JsonElement.DeepEquals(recorded, JsonSerializer.SerializeToElement(active, Strict))) return null;
+        }
+        else if (history.SingleOrDefault(h => h.Revision == frozen.Revision + 1) is not {PreviousRunId: null}) return null;
+        foreach (var part in receipt.Parts)
+        {
+            var input = evidence.SingleOrDefault(e => e?.PartId == part?.PartId);
+            var preview = receipt.Preview.Parts.SingleOrDefault(p => p?.PartId == part?.PartId);
+            if (part == null || preview == null || input is not {Kind: "download", Manifest.Entries: not null} ||
+                input.ArtifactId != part.ArtifactId || input.OperationId != part.OperationId ||
+                input.RootDirectory != preview.SourceDirectory || input.Fingerprint != part.Fingerprint ||
+                input.Manifest.Fingerprint != part.Fingerprint || input.Manifest.Entries.Count != preview.FileCount) return null;
+        }
+        return ReadPlan(recorded, ct);
     }
 
     private static AcquisitionPlan? OwnedPlan(TaskContext task, int run, int revision,

@@ -8,7 +8,7 @@ using Bakabase.InsideWorld.Business.Components.Artifacts;
 namespace Bakabase.Service.Components.FileProcessing;
 
 /// <summary>
-/// Bounded container recognition for MOV delivery, not playback validation or archive discovery.
+/// Bounded QuickTime/MP4 container recognition, not playback validation or archive discovery.
 /// Reads atom headers and seeks over payloads; no media decoding, shell commands or directory scans.
 /// https://developer.apple.com/documentation/quicktime-file-format/atoms
 /// https://developer.apple.com/documentation/quicktime-file-format/movie_atom
@@ -21,12 +21,50 @@ internal static class QuickTimeDeliveryProbe
     private const uint Ftyp = 0x66747970, Moov = 0x6d6f6f76, Mdat = 0x6d646174;
     private const uint Mvhd = 0x6d766864, Trak = 0x7472616b, QtBrand = 0x71742020;
 
-    internal static async Task<bool> IsMovieAsync(string path, CancellationToken ct)
+    internal static Task<bool> IsMovieAsync(string path, CancellationToken ct) =>
+        IsMovieAsync(path, false, null, ct);
+
+    // MP4RA, https://mp4ra.org/registered-types/brands. Only use the stricter MP4 result as
+    // positive evidence against replaying instructions for an already extracted outer archive.
+    internal static Task<bool> IsMp4Async(string path, long expectedLength, CancellationToken ct) =>
+        IsMovieAsync(path, true, expectedLength, ct);
+
+    // A valid video can contain ZIP bytes inside mdat, free or a private box. Only recognize
+    // an appended archive at a box boundary after the movie, never inside a declared payload.
+    internal static async Task<bool> HasSeparateArchiveAsync(string path, long length, long offset, CancellationToken ct)
+    {
+        if (offset == 0) return true;
+        await using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read,
+            4096, FileOptions.Asynchronous | FileOptions.RandomAccess);
+        if (stream.Length != length) return false;
+        var budget = new Budget();
+        var movie = false;
+        var media = false;
+        var atArchive = false;
+        while (stream.Position < length)
+        {
+            var start = stream.Position;
+            if (start == offset) atArchive = movie && media;
+            var atom = await ReadAtomAsync(stream, length, budget, ct);
+            if (atom == null) return atArchive && budget.Remaining >= 0;
+            if (start < offset)
+            {
+                if (atom.End > offset) return false;
+                movie |= atom.Type == Moov;
+                media |= atom.Type == Mdat && atom.End > atom.Payload;
+            }
+            stream.Position = atom.End;
+        }
+        // The entire file is already accounted for by top-level container boxes.
+        return false;
+    }
+
+    private static async Task<bool> IsMovieAsync(string path, bool mp4, long? expectedLength, CancellationToken ct)
     {
         var before = new FileInfo(path);
         if (!before.Exists || (before.Attributes & FileAttributes.ReparsePoint) != 0) return false;
         var length = before.Length; var modified = before.LastWriteTimeUtc;
-        if (length < 32) return false;
+        if (length < 32 || expectedLength != null && length != expectedLength) return false;
         try
         {
             ArtifactManifestFiles.RejectLinks(path);
@@ -37,7 +75,7 @@ internal static class QuickTimeDeliveryProbe
             while (stream.Position < length)
             {
                 var atom = await ReadAtomAsync(stream, length, budget, ct);
-                if (atom == null) return false;
+                if (atom == null || mp4 && !fileType && atom.Type != Ftyp) return false;
                 switch (atom.Type)
                 {
                     case Ftyp:
@@ -47,24 +85,32 @@ internal static class QuickTimeDeliveryProbe
                         if (fileType || size is < 8 or > 256 || size % 4 != 0) return false;
                         var brands = new byte[(int)size];
                         await stream.ReadExactlyAsync(brands, ct);
-                        var compatible = BinaryPrimitives.ReadUInt32BigEndian(brands) == QtBrand;
+                        var compatible = AcceptsBrand(BinaryPrimitives.ReadUInt32BigEndian(brands), mp4);
                         for (var i = 8; i < brands.Length; i += 4)
-                            compatible |= BinaryPrimitives.ReadUInt32BigEndian(brands.AsSpan(i, 4)) == QtBrand;
+                            compatible |= AcceptsBrand(BinaryPrimitives.ReadUInt32BigEndian(brands.AsSpan(i, 4)), mp4);
                         if (!compatible) return false;
                         fileType = true;
                         break;
                     case Moov:
-                        if (movie || !await HasMovieStructureAsync(stream, atom.End, budget, ct)) return false;
+                        if (movie || !await HasMovieStructureAsync(stream, atom.End, budget, mp4, ct)) return false;
                         movie = true;
                         break;
                     case Mdat:
                         data |= atom.End > atom.Payload;
+                        break;
+                    default:
+                        // Unknown/extended boxes and nonempty padding can hold another format.
+                        // Leave them unclassified. MOV delivery keeps its original acceptance rules.
+                        if (mp4 && (atom.Type != 0x66726565 /* free */ || atom.End != atom.Payload))
+                            return false;
                         break;
                 }
                 stream.Position = atom.End;
             }
             // Legacy QuickTime may omit ftyp; it still needs the movie header, track,
             // media data and a completely bounded top-level atom structure.
+            if (mp4 && (!fileType || !movie || !data || await HasZipEndMarkerAsync(stream, length, ct)))
+                return false;
             var after = new FileInfo(path);
             return movie && data && after.Exists && (after.Attributes & FileAttributes.ReparsePoint) == 0 &&
                    after.Length == length && after.LastWriteTimeUtc == modified;
@@ -72,7 +118,21 @@ internal static class QuickTimeDeliveryProbe
         catch (Exception error) when (error is IOException or UnauthorizedAccessException) { return false; }
     }
 
-    private static async Task<bool> HasMovieStructureAsync(FileStream stream, long end, Budget budget, CancellationToken ct)
+    private static bool AcceptsBrand(uint brand, bool mp4) => mp4
+        ? brand is 0x69736f6d or 0x6d703431 or 0x6d703432 or 0x61766331 // isom, mp41, mp42, avc1
+        : brand == QtBrand;
+
+    private static async Task<bool> HasZipEndMarkerAsync(FileStream stream, long length, CancellationToken ct)
+    {
+        // A valid movie can also carry a prefixed ZIP, including inside an mdat that covers
+        // the file tail. A possible ZIP end marker is enough to abstain; don't scan payloads.
+        var tail = new byte[(int)Math.Min(length, 65535 + 22 + 32768)];
+        stream.Position = length - tail.Length;
+        await stream.ReadExactlyAsync(tail, ct);
+        return tail.AsSpan().IndexOf("PK\x05\x06"u8) >= 0;
+    }
+
+    private static async Task<bool> HasMovieStructureAsync(FileStream stream, long end, Budget budget, bool mp4, CancellationToken ct)
     {
         var header = false; var track = false;
         while (stream.Position < end)
@@ -87,10 +147,41 @@ internal static class QuickTimeDeliveryProbe
                 if (version[0] > 1 || atom.End - atom.Payload < (version[0] == 1 ? 112 : 100)) return false;
                 header = true;
             }
-            else if (atom.Type == Trak) track |= atom.End - atom.Payload >= 8;
+            else if (atom.Type == Trak)
+                track |= mp4 ? await HasMediaTrackAsync(stream, atom.End, budget, ct) : atom.End - atom.Payload >= 8;
             stream.Position = atom.End;
         }
         return header && track;
+    }
+
+    private static async Task<bool> HasMediaTrackAsync(FileStream stream, long end, Budget budget, CancellationToken ct)
+    {
+        var trackHeader = false;
+        var mediaHandler = false;
+        while (stream.Position < end)
+        {
+            var child = await ReadAtomAsync(stream, end, budget, ct);
+            if (child == null) return false;
+            if (child.Type == 0x746b6864 /* tkhd */) trackHeader |= child.End - child.Payload >= 84;
+            if (child.Type == 0x6d646961 /* mdia */)
+            {
+                while (stream.Position < child.End)
+                {
+                    var box = await ReadAtomAsync(stream, child.End, budget, ct);
+                    if (box == null) return false;
+                    if (box.Type == 0x68646c72 /* hdlr */ && box.End - box.Payload >= 24)
+                    {
+                        stream.Position += 8;
+                        var handler = new byte[4];
+                        await stream.ReadExactlyAsync(handler, ct);
+                        mediaHandler |= handler.AsSpan().SequenceEqual("vide"u8) || handler.AsSpan().SequenceEqual("soun"u8);
+                    }
+                    stream.Position = box.End;
+                }
+            }
+            stream.Position = child.End;
+        }
+        return trackHeader && mediaHandler;
     }
 
     private static async Task<Atom?> ReadAtomAsync(FileStream stream, long end, Budget budget, CancellationToken ct)

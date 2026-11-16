@@ -39,6 +39,12 @@ public static class CloudDownloadRegistration
         services.AddSingleton<ICloudDownloadProvider>(sp => sp.GetRequiredService<TeraBox.TeraBoxCloudProvider>());
         services.AddSingleton<ICloudDownloadProvider, SharePointCloudProvider>();
         services.AddPublicShareDownloadClients();
+        services.AddHttpClient(Bakabase.Service.Components.PostSources.PostSourceQr.Client, c =>
+        {
+            c.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 Bakabase-SavedPostImage/1.0");
+        }).RemoveAllLoggers().ConfigurePrimaryHttpMessageHandler(sp => new ProxyAwarePublicHttpHandler(
+            sp.GetRequiredService<Bakabase.Abstractions.Components.Network.BakabaseWebProxy>(),
+            checkProxyTarget: Bakabase.Service.Components.PostSources.SavedPostImages.CheckProxyTargetAsync));
         services.AddSingleton<RcloneRemoteEngine>();
         services.AddSingleton<RcloneDownloadSnapshotStore>();
         services.AddRcloneAccounts();
@@ -52,7 +58,6 @@ public static class CloudDownloadRegistration
         services.AddSingleton<Bakabase.Service.Components.SourceAvailability.SourceAvailabilityStore>();
         services.AddSingleton<Bakabase.Service.Components.SourceAvailability.SourceAvailabilityService>();
         services.AddScoped<Bakabase.Service.Components.SourceAvailability.SourceAvailabilityBatchService>();
-        services.AddScoped<Bakabase.Modules.PostParser.Services.PostLinkHealthChecker>();
         services.AddScoped<Bakabase.Modules.PostParser.Services.IPostLinkHealthChecker, Bakabase.Service.Components.SourceAvailability.SharedPostLinkHealthChecker>();
         services.AddScoped<CloudOperationService>();
         services.AddScoped<CloudDownloadRecoveryService>();

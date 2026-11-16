@@ -115,3 +115,36 @@ it("pauses directory reads in a background tab and refreshes on focus without di
   window.dispatchEvent(new Event("focus")); await Promise.resolve(); await Promise.resolve();
   expect(mocks.children).toHaveBeenCalledOnce(); expect(root.children).toEqual([file]);
 });
+
+it("enables and pauses independent observation without rebuilding loaded files or expanded subtrees", async () => {
+  const root = new RootEntry("/work", false, false);
+  root.children = []; root.ref = ref(); roots.push(root);
+  await root.initialize();
+  const nested = add(root, "/work/sub"); nested.expanded = true; nested.selected = true; nested.children = [];
+  const old = add(nested, "/work/sub/old.txt", IwFsType.Unknown);
+  mocks.children.mockImplementation(({ root: path }: any) => Promise.resolve({ data: { entries:
+    path === "/work" ? [row("/work/sub")] : [row(old.path, IwFsType.Unknown), row("/work/sub/new.txt", IwFsType.Unknown)] } }));
+  expect(root.updateIndependentObservation("poll")).toBe(true);
+  expect(root.children?.[0]).toBe(nested);
+  await vi.advanceTimersByTimeAsync(2000);
+  expect(nested.children?.[0]).toBe(old);
+  expect(nested.children?.[1].name).toBe("new.txt");
+  expect(nested.expanded).toBe(true); expect(nested.selected).toBe(true);
+  const calls = mocks.children.mock.calls.length;
+  expect(root.updateIndependentObservation(false)).toBe(true);
+  await vi.advanceTimersByTimeAsync(4000);
+  expect(mocks.children).toHaveBeenCalledTimes(calls);
+  expect(root.children?.[0]).toBe(nested);
+  expect(root.updateIndependentObservation(true)).toBe(false);
+  expect(mocks.watch).not.toHaveBeenCalled(); expect(mocks.stop).not.toHaveBeenCalled();
+});
+
+it("starts exactly one observer when permission changes before initialization finishes", async () => {
+  const root = new RootEntry("/work", false, false);
+  root.children = []; root.ref = ref(); roots.push(root);
+  const initialized = root.initialize();
+  root.updateIndependentObservation("poll");
+  await initialized;
+  await vi.advanceTimersByTimeAsync(2000);
+  expect(mocks.children).toHaveBeenCalledOnce();
+});

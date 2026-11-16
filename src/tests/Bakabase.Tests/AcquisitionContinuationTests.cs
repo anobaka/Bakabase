@@ -174,7 +174,7 @@ public sealed partial class AcquisitionContinuationTests
     {
         internal int Calls;
         public Task<AcquisitionRecoveryDiagnosis> DiagnoseAsync(AcquisitionTaskDbModel task, WorkflowRunDbModel? run,
-            CancellationToken ct, bool verifyFiles = true, bool verifyContent = false)
+            CancellationToken ct, bool verifyFiles = true, bool verifyContent = false, bool includeStoppedDownloads = false)
         {
             Assert.IsTrue(verifyFiles && verifyContent); Calls++;
             return Task.FromResult(new AcquisitionRecoveryDiagnosis(new(task.Id, task.Title, run?.Id, true, "resume", "READY")));

@@ -25,6 +25,7 @@ using Bakabase.Service.Components.FileProcessing;
 using Bakabase.Service.Components.Acquisition.ProcessingPlans;
 using Bakabase.Service.Components.DownloadIntents;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions;
 
 namespace Bakabase.Service.Components.Acquisition.Planning;
@@ -37,7 +38,8 @@ public sealed partial class AcquisitionPlanService(BakabaseDbContext db, IEnumer
     FileProcessingWorkspaceResolver? workspaces = null, AcquisitionCreationOriginService? creationOrigins = null,
     AcquisitionStoragePolicyDefaults? storageDefaults = null, AcquisitionDeliveryRetirementQueue? deliveryRetirements = null,
     IEnumerable<IDependentComponentService>? processingDependencies = null,
-    AcquisitionDownloadActivityProjection? downloadActivity = null)
+    AcquisitionDownloadActivityProjection? downloadActivity = null, IStorageWriteGuard? stageWriteGuard = null,
+    IServiceScopeFactory? stageScopeFactory = null)
 {
     private static readonly JsonSerializerOptions Json = WorkflowJson.Options;
     private AcquisitionDeliveryDirectoryResolver DeliveryDirectories => deliveryDirectories ?? new(storage);
@@ -162,6 +164,12 @@ public sealed partial class AcquisitionPlanService(BakabaseDbContext db, IEnumer
         try
         {
             var row = await Editable(id, ct); Revision(row, input.ExpectedRevision);
+            if (input.SourceReplacement is { } source)
+            {
+                if (input.OutputDirectory != null || input.StoragePolicy != null || input.StoragePolicyOverrides != null || input.DeliverySettings != null)
+                    throw new ArgumentException("Update the source separately from storage settings.");
+                return await ReplaceUnstartedSourceAsync(row, input.ExpectedRevision, source, ct);
+            }
             if (input.OutputDirectory != null)
             { ValidateDirectory(input.OutputDirectory, allowEmpty: true); row.TargetDirectory = input.OutputDirectory; }
             await UpdateDeliverySettingsAsync(row, input.DeliverySettings, ct);
@@ -249,19 +257,23 @@ public sealed partial class AcquisitionPlanService(BakabaseDbContext db, IEnumer
     {
         if (artifacts == null || string.IsNullOrWhiteSpace(input.Reason) || input.Reason.Length > 8000 ||
             input.Items == null || input.Items.Count is < 1 or > 100 || input.Items.Any(i => i == null || i.Plan == null ||
-                i.ArtifactEvidenceIds == null || i.ArtifactEvidenceIds.Count is < 1 or > 10 ||
+                i.ArtifactEvidenceIds == null || i.ArtifactEvidenceIds.Count > 10 ||
+                i.InputMode != "stageDirectory" && i.ArtifactEvidenceIds.Count == 0 ||
                 i.ArtifactEvidenceIds.Any(a => string.IsNullOrWhiteSpace(a) || a.Length > 128) ||
                 i.ArtifactEvidenceIds.Distinct().Count() != i.ArtifactEvidenceIds.Count) ||
-            input.Items.Any(i => i.InputMode is not (null or "verifiedArtifact" or "currentDirectory")) ||
+            input.Items.Any(i => i.InputMode is not (null or "verifiedArtifact" or "currentDirectory" or "stageDirectory") ||
+                i.InputMode == "stageDirectory" && (!AcquisitionCurrentDirectoryFiles.ValidStage(i.InputStage) || i.ContinueFromArtifactId != null ||
+                    i.ArtifactEvidenceIds.Count != 0 || i.ExpectedDeliveryProjectionFingerprint != null) ||
+                i.InputMode != "stageDirectory" && i.InputStage != null) ||
             input.Items.Select(i => i.PartId).Distinct().Count() != input.Items.Count ||
             input.Items.Any(i => i.ContinueFromArtifactId != null && !i.ArtifactEvidenceIds.Contains(i.ContinueFromArtifactId)) ||
             input.Items.Sum(i => i.ArtifactEvidenceIds.Count) > 100 ||
             input.Items.Any(i => i.UseAdaptiveAssessment == true &&
-                (i.Plan.Requirement != "unknown" || i.Plan.Steps is not {Count: 0} || i.ContinueFromArtifactId == null)) ||
+                (i.Plan.Requirement != "unknown" || i.Plan.Steps is not {Count: 0} || i.ContinueFromArtifactId == null && i.InputMode != "stageDirectory")) ||
             input.MaxAdaptiveIterations is < 1 or > 5 ||
             input.AdaptiveContext?.Length > 16384 ||
             (input.EnableAdaptiveAssessment != null || input.MaxAdaptiveIterations != null) &&
-            input.Items.Any(i => i.ContinueFromArtifactId == null))
+            input.Items.Any(i => i.ContinueFromArtifactId == null && i.InputMode != "stageDirectory"))
             throw new ArgumentException("PLAN_REPLAN_INVALID");
         var gate = AcquisitionTaskGate.For(id);
         if (localFilesStorage == null) await gate.WaitAsync(ct);
@@ -277,13 +289,32 @@ public sealed partial class AcquisitionPlanService(BakabaseDbContext db, IEnumer
             var row = await Tasks.AsNoTracking().SingleOrDefaultAsync(t => t.Id == id && t.BuilderId != null, ct)
                 ?? throw new ArgumentException("PLAN_REPLAN_INVALID");
             AcquisitionTaskGuard.EnsureNotDeleted(row);
+            if (State(row).ProcessingStageInputId != null)
+            {
+                if (workspaces == null || stageScopeFactory == null) throw new InvalidOperationException("STAGE_DIRECTORY_COMMIT_PENDING");
+                await AcquisitionProcessingStageInput.RecoverAsync(db, artifacts, storage, workspaces, id,
+                    new FileArtifactMaterializer(stageWriteGuard ?? throw new InvalidOperationException("STAGE_COMMIT_STORAGE_GUARD_UNAVAILABLE")),
+                    stageScopeFactory, ct);
+                row = await Tasks.AsNoTracking().SingleAsync(t => t.Id == id, ct);
+            }
+            if (State(row).ProcessingStageCommitId != null)
+            {
+                if (workspaces == null) throw new InvalidOperationException("STAGE_DIRECTORY_COMMIT_PENDING");
+                using var stageWriteScope = StorageWriteScope.Enter(new("workflow", input.ExpectedRunId.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+                await AcquisitionProcessingStageCommit.RecoverAsync(db, artifacts, storage, workspaces, id, ct,
+                    new FileArtifactMaterializer(stageWriteGuard ?? throw new InvalidOperationException("STAGE_COMMIT_STORAGE_GUARD_UNAVAILABLE")));
+                row = await Tasks.AsNoTracking().SingleAsync(t => t.Id == id, ct);
+            }
+            if (State(row).DirectoryChange != null) throw new InvalidOperationException("STAGE_DIRECTORY_CHANGE_PENDING");
             Revision(row, input.ExpectedRevision);
             if (row.WorkflowRunId != input.ExpectedRunId) throw new InvalidOperationException("PLAN_VERSION_CONFLICT");
             var run = await db.Set<WorkflowRunDbModel>().AsNoTracking().SingleOrDefaultAsync(r => r.Id == input.ExpectedRunId, ct);
             bool Allowed(AcquisitionTaskDbModel task, WorkflowRunDbModel candidate) =>
                 CanReplan(task.Status, candidate) && (candidate.Status != WorkflowRunStatus.Waiting ||
                     AcquisitionProcessingConflictWait.MatchesForLocalContinuation(candidate) || AcquisitionPublicationStorageWait.Matches(candidate) ||
-                    input.Items.All(i => i.InputMode == "currentDirectory")) ||
+                    input.Items.All(i => i.InputMode is "currentDirectory" or "stageDirectory")) ||
+                task.Status == AcquisitionStatus.Waiting && candidate.Status == WorkflowRunStatus.Waiting && candidate.PendingSignalJson == null &&
+                    input.Items.All(i => i.InputMode == "stageDirectory") ||
                 localFilesStorage != null && AcquisitionLocalFilesRecoveryReceipt.CanReplan(task, candidate);
             if (run == null || !Allowed(row, run)) throw new InvalidOperationException("PLAN_REPLAN_NOT_STOPPED");
             var publicationStorageWait = AcquisitionPublicationStorageWait.Matches(run);
@@ -293,14 +324,15 @@ public sealed partial class AcquisitionPlanService(BakabaseDbContext db, IEnumer
             var previousRunStatus = run.Status;
             var completedRevision = row.Status == AcquisitionStatus.Completed;
             var deliveryOnly = input.RetryDeliveryOnly is true;
+            var stageRevision = input.Items.All(i => i.InputMode == "stageDirectory");
             var useCurrentPublicationStorage = publicationStorageWait ||
                 deliveryOnly && !completedRevision && input.UseCurrentStorageDefaults;
             var reviewedStorage = localFilesStorage ?? (useCurrentPublicationStorage ? CaptureLocalFilesStorage(row) : null);
-            if (deliveryOnly && (!completedRevision && !AcquisitionPublicationStorageWait.CanRetryDelivery(run) ||
-                completedRevision && input.DeliveryContentLayout == null || input.CompositeInputs != null ||
+            if (deliveryOnly && (!stageRevision && !completedRevision && !AcquisitionPublicationStorageWait.CanRetryDelivery(run) ||
+                !stageRevision && completedRevision && input.DeliveryContentLayout == null || input.CompositeInputs != null ||
                 input.EnableAdaptiveAssessment != null || input.MaxAdaptiveIterations != null || input.AdaptiveContext != null ||
                 input.Items.Any(item => item.Plan.Requirement != "notRequired" || item.Plan.Steps is not {Count: 0} ||
-                    item.ContinueFromArtifactId == null || item.ArtifactEvidenceIds.Count != 1)))
+                    !stageRevision && (item.ContinueFromArtifactId == null || item.ArtifactEvidenceIds.Count != 1))))
                 throw new ArgumentException("PLAN_REPLAN_INVALID");
             if (input.DeliveryRootDirectory != null)
             {
@@ -317,7 +349,7 @@ public sealed partial class AcquisitionPlanService(BakabaseDbContext db, IEnumer
             if ((input.EnableAdaptiveAssessment != null || input.MaxAdaptiveIterations != null) &&
                 (!input.Items.Select(i => i.PartId).ToHashSet(StringComparer.Ordinal)
                      .SetEquals(plan.Parts.Select(p => p.Id)) ||
-                 input.Items.Any(i => i.ContinueFromArtifactId == null)))
+                 input.Items.Any(i => i.ContinueFromArtifactId == null && i.InputMode != "stageDirectory")))
                 throw new ArgumentException("PLAN_REPLAN_INVALID");
             if (input.EnableAdaptiveAssessment is { } adaptive)
                 plan = plan with {AdaptiveFileProcessing = adaptive,
@@ -327,7 +359,7 @@ public sealed partial class AcquisitionPlanService(BakabaseDbContext db, IEnumer
             if (input.EnableAdaptiveAssessment != false && input.AdaptiveContext is { } adaptiveContext)
                 plan = plan with {AdaptiveFileProcessingContext = string.IsNullOrWhiteSpace(adaptiveContext) ? null : adaptiveContext.Trim()};
             if (run.Status == WorkflowRunStatus.Waiting &&
-                (input.Items.Any(item => item.ContinueFromArtifactId == null) ||
+                (input.Items.Any(item => item.ContinueFromArtifactId == null && item.InputMode != "stageDirectory") ||
                  !input.Items.Select(item => item.PartId).ToHashSet().SetEquals(plan.Parts.Select(part => part.Id))))
                 throw new ArgumentException("PLAN_REPLAN_INVALID");
             (plan, input) = await PrepareCompositeInputsAsync(row, plan, input, guardDirectory, ct);
@@ -335,6 +367,9 @@ public sealed partial class AcquisitionPlanService(BakabaseDbContext db, IEnumer
             var currentDirectoryRevision = input.Items.Any(i => i.InputMode == "currentDirectory");
             if (currentDirectoryRevision)
             {
+                // A new current-directory attempt uses today's default layout. Frozen old
+                // executions retain their null layout; an explicit archive-directory choice survives.
+                plan = plan with {ExtractionLayout = plan.ExtractionLayout ?? FileExtractionLayouts.CurrentDirectory};
                 plan = PrepareCurrentDirectoryStorage(row, plan);
                 if (guardDirectory != null) await guardDirectory(plan.StoragePolicy?.ProcessingWorkspaceDirectory);
             }
@@ -449,7 +484,9 @@ public sealed partial class AcquisitionPlanService(BakabaseDbContext db, IEnumer
             Revision(current, input.ExpectedRevision);
             if (current.WorkflowRunId != input.ExpectedRunId) throw new InvalidOperationException("PLAN_VERSION_CONFLICT");
             var currentRun = await db.Set<WorkflowRunDbModel>().AsNoTracking().SingleAsync(r => r.Id == input.ExpectedRunId, ct);
-            if (current.Status != previousStatus || currentRun.Status != previousRunStatus ||
+            var waitWasProjected = current.Status == AcquisitionStatus.Waiting &&
+                previousStatus is AcquisitionStatus.Pending or AcquisitionStatus.Running && IsStoppedFileWait(run);
+            if ((current.Status != previousStatus && !waitWasProjected) || currentRun.Status != previousRunStatus ||
                 !Allowed(current, currentRun) || currentRun.PendingSignalJson != run.PendingSignalJson ||
                 currentRun.WaitPromptJson != run.WaitPromptJson || currentRun.CurrentStepIndex != run.CurrentStepIndex)
                 throw new InvalidOperationException("PLAN_REPLAN_NOT_STOPPED");
@@ -473,8 +510,7 @@ public sealed partial class AcquisitionPlanService(BakabaseDbContext db, IEnumer
                     publishedOutputOnly: input.DeliveryContentLayout != null, publicationInputOnly: deliveryOnly && !completedRevision);
             try { SavePlan(row, plan, Sources(row), input.Reason.Trim(), input.ExpectedRunId, referenceOnlyReview || input.DeliveryContentLayout != null ? null : evidence,
                 preserveStorageOverrides: !input.UseCurrentStorageDefaults,
-                currentDirectoryBindings: currentDirectoryRevision ? AcquisitionStageDirectoryResolver.FromRecorded(row.Id,
-                    plan, AcquisitionEffectiveSourceProjection.Read(run.CurrentItemJson)) : null); }
+                currentDirectoryBindings: currentDirectoryRevision ? await CurrentStageDirectoriesAsync(row, Plan(row), ct) : null); }
             catch (ArgumentException) { throw new ArgumentException("PLAN_REPLAN_INVALID"); }
             var revisedState = State(row);
             row.BuilderStateJson = Serialize(revisedState with {Issues = [], LocalFilesRecovery = localFilesStorage == null
@@ -482,7 +518,7 @@ public sealed partial class AcquisitionPlanService(BakabaseDbContext db, IEnumer
             // Keep the old run, attempts, outputs and frozen snapshot. Only the task's current association changes.
             // The transaction plus predicates fences cross-scope retry; the shared gate also covers the legacy retry API.
             var changed = await Tasks.Where(t => t.Id == id && t.DeletedAt == null && t.PlanRevision == input.ExpectedRevision &&
-                t.WorkflowRunId == input.ExpectedRunId && t.Status == previousStatus &&
+                t.WorkflowRunId == input.ExpectedRunId && t.Status == current.Status &&
                 db.Set<WorkflowRunDbModel>().Any(r => r.Id == input.ExpectedRunId &&
                     r.Status == previousRunStatus))
                 .ExecuteUpdateAsync(update => update
@@ -511,8 +547,13 @@ public sealed partial class AcquisitionPlanService(BakabaseDbContext db, IEnumer
         task is AcquisitionStatus.Failed or AcquisitionStatus.Cancelled && Replannable(run);
 
     private static bool CanReplan(AcquisitionStatus task, WorkflowRunDbModel run) =>
-        CanReplan(task, run.Status) || task == AcquisitionStatus.Waiting &&
-        (AcquisitionProcessingConflictWait.MatchesForLocalContinuation(run) || AcquisitionProcessingConflictWait.MatchesCurrentDirectoryWait(run) || AcquisitionPublicationStorageWait.Matches(run));
+        CanReplan(task, run.Status) ||
+        task is AcquisitionStatus.Waiting or AcquisitionStatus.Running or AcquisitionStatus.Pending && IsStoppedFileWait(run);
+
+    // The workflow commits its wait before the acquisition list projects it.
+    private static bool IsStoppedFileWait(WorkflowRunDbModel run) =>
+        AcquisitionProcessingConflictWait.MatchesForLocalContinuation(run) ||
+        AcquisitionProcessingConflictWait.MatchesCurrentDirectoryWait(run) || AcquisitionPublicationStorageWait.Matches(run);
 
     private async Task<bool> HasArtifactBindingAsync(int runId, string partId, string operationId, CancellationToken ct)
     {
@@ -534,8 +575,7 @@ public sealed partial class AcquisitionPlanService(BakabaseDbContext db, IEnumer
 
     private async Task<IReadOnlyList<AcquisitionPlanArtifactCandidate>> ReplanArtifactsAsync(AcquisitionTask task, AcquisitionPlan? plan, CancellationToken ct)
     {
-        if (artifacts == null || plan == null || task.WorkflowRunId is not { } runId ||
-            task.Status is not (AcquisitionStatus.Failed or AcquisitionStatus.Cancelled or AcquisitionStatus.Completed or AcquisitionStatus.Waiting)) return [];
+        if (artifacts == null || plan == null || task.WorkflowRunId is not { } runId) return [];
         var run = await db.Set<WorkflowRunDbModel>().AsNoTracking().SingleOrDefaultAsync(r => r.Id == runId, ct);
         if (run == null || !CanReplan(task.Status, run)) return [];
         var publicationStorageWait = AcquisitionPublicationStorageWait.Matches(run);
@@ -625,13 +665,15 @@ public sealed partial class AcquisitionPlanService(BakabaseDbContext db, IEnumer
         return candidates;
     }
 
-    public async Task<AcquisitionPlanTaskDetail> RunAsync(int id, int expectedRevision, CancellationToken ct)
-        => await RunGuardedAsync(id, expectedRevision, ct, false);
+    public async Task<AcquisitionPlanTaskDetail> RunAsync(int id, int expectedRevision, CancellationToken ct,
+        bool? useEmergencySpaceReserve = null)
+        => await RunGuardedAsync(id, expectedRevision, ct, false, useEmergencySpaceReserve: useEmergencySpaceReserve);
 
     // Recovery already owns the acquisition gate. Keep the same execution/preflight path
     // without recursively taking the semaphore or manufacturing a replacement workflow.
-    internal Task<AcquisitionPlanTaskDetail> RunWhileLockedAsync(int id, int expectedRevision, string? expectedInputs, CancellationToken ct)
-        => RunGuardedAsync(id, expectedRevision, ct, true, expectedInputs);
+    internal Task<AcquisitionPlanTaskDetail> RunWhileLockedAsync(int id, int expectedRevision, string? expectedInputs, CancellationToken ct,
+        bool? useEmergencySpaceReserve = null)
+        => RunGuardedAsync(id, expectedRevision, ct, true, expectedInputs, useEmergencySpaceReserve);
 
     internal async Task<(string? Problem, string? Inputs)> CheckUnstartedRecoveryAsync(AcquisitionTaskDbModel row, CancellationToken ct)
     {
@@ -655,12 +697,14 @@ public sealed partial class AcquisitionPlanService(BakabaseDbContext db, IEnumer
         plan.OutputDirectory, Serialize(check.Candidates.Where(c => plan.Parts.Any(p => p.SelectedSourceId == c.Candidate.Id))
             .OrderBy(c => c.Candidate.Id).Select(c => c.ResolvedSource).ToArray()));
 
-    private async Task<AcquisitionPlanTaskDetail> RunGuardedAsync(int id, int expectedRevision, CancellationToken ct, bool gateHeld, string? expectedInputs = null)
+    private async Task<AcquisitionPlanTaskDetail> RunGuardedAsync(int id, int expectedRevision, CancellationToken ct, bool gateHeld,
+        string? expectedInputs = null, bool? useEmergencySpaceReserve = null)
     {
         var gate = AcquisitionTaskGate.For(id); if (!gateHeld) await gate.WaitAsync(ct);
         try
         {
             var row = await Editable(id, ct); Revision(row, expectedRevision);
+            if (State(row).DirectoryChange != null) throw new InvalidOperationException("STAGE_DIRECTORY_CHANGE_PENDING");
             var plan = Plan(row); AcquisitionPlanCompiler.Validate(plan);
             await ValidateContinuationInputsAsync(row.Id, plan, ct, verifyContents: true);
             var dependencyIssues = await FileProcessingDependencyPreflight.InspectAsync(plan.Parts.Select(AcquisitionPlanCompiler.Processing),
@@ -683,7 +727,9 @@ public sealed partial class AcquisitionPlanService(BakabaseDbContext db, IEnumer
             if (existingRunId != null)
             {
                 row.WorkflowRunId = existingRunId; row.Status = AcquisitionStatus.Running; row.Phase = "executing";
+                BindRunReserve(row, useEmergencySpaceReserve);
                 await db.SaveChangesAsync(ct);
+                if (useEmergencySpaceReserve != null) AcquisitionStorageWritePolicyProvider.Invalidate();
                 return await DetailAsync(row, ct);
             }
             // Never change a task that has any historical execution, including a lost association
@@ -735,9 +781,24 @@ public sealed partial class AcquisitionPlanService(BakabaseDbContext db, IEnumer
             row.WorkflowRunId = run.Id; row.Status = AcquisitionStatus.Running; row.Phase = "executing";
             row.BuilderStateJson = Serialize(State(row) with {Issues = [], DownloadContinuation =
                 new(run.Id, AcquisitionDownloadContinuationService.Automatic, DateTimeOffset.UtcNow)}); row.UpdatedAt = DateTime.Now;
-            await db.SaveChangesAsync(ct); return await DetailAsync(row, ct);
+            // The new association and its explicit reserve are published atomically. Before
+            // this save, writers cannot find a current owner and use the configured reserve.
+            // In particular, false must override a globally enabled emergency reserve.
+            BindRunReserve(row, useEmergencySpaceReserve);
+            await db.SaveChangesAsync(ct);
+            if (useEmergencySpaceReserve != null) AcquisitionStorageWritePolicyProvider.Invalidate();
+            return await DetailAsync(row, ct);
         }
         finally {if (!gateHeld) gate.Release();}
+    }
+
+    private static void BindRunReserve(AcquisitionTaskDbModel row, bool? useEmergencySpaceReserve)
+    {
+        if (useEmergencySpaceReserve is not {} emergency || row.WorkflowRunId is not {} runId) return;
+        var now = DateTimeOffset.UtcNow;
+        row.BuilderStateJson = AcquisitionStorageOverrideGrant.WithState(row.BuilderStateJson,
+            new(runId, row.PlanRevision, "start:" + Guid.NewGuid().ToString("N"), now, now.AddHours(24),
+                ReserveMode: emergency ? AcquisitionSpaceReserve.Emergency : AcquisitionSpaceReserve.Configured));
     }
 
     private async Task<bool> HasNeverExecutedAsync(AcquisitionTaskDbModel row, CancellationToken ct)
@@ -828,10 +889,15 @@ public sealed partial class AcquisitionPlanService(BakabaseDbContext db, IEnumer
             join operation in db.Set<ArtifactOperationDbModel>().AsNoTracking() on binding.OperationId equals operation.Id
             where binding.OwnerKind == "workflow" && binding.OwnerId == owner && operation.Kind == "download"
             select new {binding.Slot, operation.IntentKey}).ToListAsync(ct);
-        return workset.Targets.Count > 0 && workset.Targets.All(target => target.SelectedSource != null &&
-            bindings.Count(b => b.Slot == target.Id + ":artifact.download") == 1 &&
-            bindings.Single(b => b.Slot == target.Id + ":artifact.download").IntentKey ==
-                DownloadArtifactCoordinator.DownloadIntent(target, workset.OutputDirectory, workspaces));
+        try
+        {
+            return workset.Targets.Count > 0 && workset.Targets.All(target => target.SelectedSource != null &&
+                bindings.Count(b => b.Slot == target.Id + ":artifact.download") == 1 &&
+                bindings.Single(b => b.Slot == target.Id + ":artifact.download").IntentKey ==
+                    DownloadArtifactCoordinator.DownloadIntent(target, workset.OutputDirectory, workspaces));
+        }
+        catch (Exception error) when (error is ArgumentException or InvalidOperationException)
+        {return false;}
     }
 
     public async Task<IReadOnlyList<AcquisitionPlanSourceTasks>> BySourcesAsync(IReadOnlyList<WorkflowSourceRef> sources, CancellationToken ct)
@@ -912,16 +978,13 @@ public sealed partial class AcquisitionPlanService(BakabaseDbContext db, IEnumer
             steps[0] = steps[0] with { Stage = localStage };
         // Stage locations describe the current task, while attempt manifests remain historical.
         // Reading old tasks binds their recorded locations without moving or adopting files.
-        var currentItem = row.WorkflowRunId is { } currentRunId
-            ? await db.Set<WorkflowRunDbModel>().AsNoTracking().Where(r => r.Id == currentRunId)
-                .Select(r => r.CurrentItemJson).SingleOrDefaultAsync(ct) : null;
         return new(task, plan, state.Candidates, state.Query, issues.DistinctBy(i => i.Code).ToList(), steps, Sources(row))
         {StageAttempts = await AcquisitionStageHistory.ReadAsync(db, row.Id, row.WorkflowRunId, ct),
-            StageDirectories = plan == null ? null : AcquisitionStageDirectoryResolver.FromRecorded(row.Id, plan,
-                AcquisitionEffectiveSourceProjection.Read(currentItem)),
+            StageDirectories = plan == null ? null : await CurrentStageDirectoriesAsync(row, plan, ct),
             DeliverySettings = plan?.DeliveryLayout?.Settings ?? state.DeliverySettings,
             StoragePolicy = plan?.StoragePolicy ?? state.StoragePolicy,
             CanEditStoragePolicy = row.DeletedAt == null && row.Status != AcquisitionStatus.Cancelled && await HasNeverExecutedAsync(row, ct),
+            CanKeepPreparedFiles = HasPreparedDownloads(row, plan, state) ? true : null,
             CanEditDeliverySettings = row.DeletedAt == null && row.Status != AcquisitionStatus.Cancelled && await HasNeverExecutedAsync(row, ct),
             DraftSources = state.DraftSources, LegacyLeads = state.LegacyLeads, LegacyTitle = state.LegacyTitle, ImportedListRow = state.ImportedListRow,
             PreparationAttempts = state.Attempts, ReplanArtifacts = await ReplanArtifactsAsync(task, plan, ct), PlanHistory = row.PlanHistoryJson == null ? [] :
@@ -1017,14 +1080,15 @@ public sealed partial class AcquisitionPlanService(BakabaseDbContext db, IEnumer
                 .Where(p => currentParts.Contains(p.Key)).ToDictionary(p => p.Key, p => p.Value, StringComparer.Ordinal)};
         }
         if (recordedDirectories != null && refreshStageDirectories)
-            recordedDirectories = AcquisitionStageDirectoryResolver.Allocate(row.Id, plan, DeliveryDirectories);
+            recordedDirectories = PreserveBoundDirectories(recordedDirectories, AcquisitionStageDirectoryResolver.Allocate(row.Id, plan, DeliveryDirectories));
         else if (recordedDirectories != null && previousRunId != null)
         {
-            var nextProcessing = !preserveStorageOverrides || currentDirectoryBindings != null
+            var nextProcessing = (!preserveStorageOverrides || currentDirectoryBindings != null) &&
+                recordedDirectories.Parts.Values.Any(p => p.Processing?.BindingId == null)
                 ? AcquisitionStageDirectoryResolver.AllocateProcessingOnly(row.Id, plan, DeliveryDirectories) : null;
             recordedDirectories = recordedDirectories with {Parts = recordedDirectories.Parts.ToDictionary(p => p.Key,
-                p => p.Value with {Processing = nextProcessing?.GetValueOrDefault(p.Key) ?? p.Value.Processing,
-                    Delivery = layout?.PartDirectories.GetValueOrDefault(p.Key) is { } destination
+                p => p.Value with {Processing = p.Value.Processing?.BindingId != null ? p.Value.Processing : nextProcessing?.GetValueOrDefault(p.Key) ?? p.Value.Processing,
+                    Delivery = p.Value.Delivery?.BindingId != null ? p.Value.Delivery : layout?.PartDirectories.GetValueOrDefault(p.Key) is { } destination
                         ? p.Value.Delivery is { } previous && string.Equals(
                             Path.TrimEndingDirectorySeparator(Path.GetFullPath(previous.Directory)),
                             Path.TrimEndingDirectorySeparator(Path.GetFullPath(destination)), StringComparison.OrdinalIgnoreCase)

@@ -41,12 +41,21 @@ public sealed class MegaCmdCloudProvider(AppService app, MegaCmdService dependen
             // Other systems retain dependency/manual-install information until equally isolated.
             if (!OperatingSystem.IsLinux()) return new(false, "MEGA_ISOLATED_RUNTIME_REQUIRED");
             MegaCmdProfile.Ensure(NativeProfile, Profile, false);
-            if (File.Exists(Path.Combine(Root, "uncertain-server.json"))) return new(false, "MEGA_SERVER_REVIEW_REQUIRED");
+            if (NeedsServerReview(_gate, Path.Combine(Root, "uncertain-server.json"))) return new(false, "MEGA_SERVER_REVIEW_REQUIRED");
             ValidateProxy(ResolveProxy());
             return new(true);
         }
         catch (OperationCanceledException) { throw; }
         catch (Exception e) { return new(false, e.Message is "MEGA_PROFILE_CONFLICT" or "MEGA_PROXY_UNSUPPORTED" ? e.Message : "MEGA_DEPENDENCY_REQUIRED"); }
+    }
+
+    internal static bool NeedsServerReview(SemaphoreSlim gate, string markerPath)
+    {
+        // A running managed transfer writes this marker before issuing get. A second
+        // transfer can queue behind its owner and will recheck the marker under the lock.
+        if (!gate.Wait(0)) return false;
+        try { return File.Exists(markerPath); }
+        finally { gate.Release(); }
     }
 
     private sealed record LocalFile(string Path, long Size, string Sha256);
@@ -127,6 +136,7 @@ public sealed class MegaCmdCloudProvider(AppService app, MegaCmdService dependen
                 await progress(new(null, Stage: "Downloading"));
                 using (var download = CancellationTokenSource.CreateLinkedTokenSource(ct))
                 {
+                    using var quota = MegaCmdQuotaNotice.Observe(Path.Combine(NativeProfile, "megacmdserver.log"));
                     var get = Command(server, socket, ["get", publicLink, request.OutputDirectory], download.Token);
                     try
                     {
@@ -142,8 +152,8 @@ public sealed class MegaCmdCloudProvider(AppService app, MegaCmdService dependen
                                 var sample = await Command(server, socket,
                                     ["transfers", "--only-downloads", "--show-completed", "--limit=1000", "--col-separator=|",
                                         "--output-cols=TAG,DESTINYPATH,PROGRESS,STATE"], sampleTimeout.Token);
-                                var percentage = ReadProgress(sample, request.OutputDirectory);
-                                if (percentage.HasValue) await progress(new(percentage, Stage: "Downloading"));
+                                if (ReadTransferSnapshot(sample, request.OutputDirectory) is { } snapshot)
+                                    await progress(quota?.Apply(snapshot) ?? snapshot);
                             }
                             catch (CloudProviderException) { /* A progress snapshot cannot fail an otherwise valid transfer. */ }
                             catch (OperationCanceledException) when (!download.IsCancellationRequested) { }
@@ -302,26 +312,53 @@ public sealed class MegaCmdCloudProvider(AppService app, MegaCmdService dependen
     // embedded quotation marks/backslashes. ProcessStartInfo alone cannot make these safe.
     private static bool HasProtocolCharacters(string value) => value.Any(c => char.IsControl(c) || c is '\'' or '"' or '\\');
 
-    internal static double? ReadProgress(string output, string outputDirectory)
+    internal static CloudDownloadProgress? ReadTransferSnapshot(string output, string outputDirectory)
     {
         var lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         var header = Array.FindIndex(lines, line => line.Replace(" ", "") == "TAG|DESTINYPATH|PROGRESS|STATE");
         if (header < 0 || output.Contains("Showing first", StringComparison.Ordinal)) return null;
         double total = 0, completed = 0;
+        var hasAllSizes = true;
+        var tags = new HashSet<long>();
+        var states = new HashSet<string>(StringComparer.Ordinal);
         var root = Path.GetFullPath(outputDirectory).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
         foreach (var line in lines.Skip(header + 1))
         {
             var cols = line.Split('|', StringSplitOptions.TrimEntries);
-            if (cols.Length != 4 || !long.TryParse(cols[0], out _) || !Path.IsPathFullyQualified(cols[1])) return null;
+            if (cols.Length != 4 || !long.TryParse(cols[0], out var tag) || !Path.IsPathFullyQualified(cols[1])) return null;
             if (!Path.GetFullPath(cols[1]).StartsWith(root, StringComparison.Ordinal)) continue;
+            if (!tags.Add(tag)) return null;
+            states.Add(cols[3]);
             var match = Regex.Match(cols[2], @"\A([0-9]+(?:\.[0-9]+)?)%\s+of\s+([0-9]+(?:\.[0-9]+)?)\s*(B|KB|MB|GB|TB)\z");
             if (!match.Success || !double.TryParse(match.Groups[1].Value, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var percent) ||
-                percent is < 0 or > 100 || !double.TryParse(match.Groups[2].Value, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var size)) return null;
+                percent is < 0 or > 100 || !double.TryParse(match.Groups[2].Value, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var size))
+            {
+                hasAllSizes = false;
+                continue;
+            }
             var exponent = match.Groups[3].Value switch {"KB" => 1, "MB" => 2, "GB" => 3, "TB" => 4, _ => 0};
             var weight = size * Math.Pow(1024, exponent);
             total += weight; completed += weight * percent / 100;
         }
+        if (tags.Count == 0) return null;
+        // Completed siblings should not hide a paused or retrying transfer. Final completion is
+        // reported separately after get exits and the local manifest is verified.
+        states.Remove("COMPLETED");
+        var stage = states.Count switch
+        {
+            0 => "TransferFinishing",
+            _ when states.Contains("ACTIVE") => "Downloading",
+            1 => states.Single() switch
+            {
+                "QUEUED" => "Queued", "RETRYING" => "TransferRetrying", "PAUSED" => "TransferPaused",
+                "COMPLETING" => "TransferFinishing", "CANCELLED" => "TransferCancelled", "FAILED" => "TransferFailed",
+                _ => "TransferStateUnavailable"
+            },
+            _ => "TransferMixed"
+        };
         // The CLI exposes rounded sizes, so emit progress only, never invent exact byte counts.
-        return total > 0 && double.IsFinite(total) ? Math.Clamp(completed / total * 100, 0, 99.9) : null;
+        double? percentage = hasAllSizes && total > 0 && double.IsFinite(total)
+            ? Math.Clamp(completed / total * 100, 0, 99.9) : null;
+        return new(percentage, Stage: stage);
     }
 }

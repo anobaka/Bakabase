@@ -17,7 +17,13 @@ public partial class CompressedFileService
 
     /// <summary>Manual extraction retains its source and existing output. A successful tool exit
     /// is only accepted when every declared member exists with its declared length.</summary>
-    public async Task<TestResult> ExtractForFileExplorerAsync(string entry, string targetDirectory,
+    public Task<TestResult> ExtractForFileExplorerAsync(string entry, string targetDirectory,
+        string? password, Func<int, Task>? onProgress, CancellationToken ct) => onProgress == null
+        ? ExtractForFileExplorerCoreAsync(entry, targetDirectory, password, null, ct)
+        : ArchiveExtractionProgress.RunAsync((output, token) =>
+            ExtractForFileExplorerCoreAsync(entry, targetDirectory, password, output, token), onProgress, ct);
+
+    private async Task<TestResult> ExtractForFileExplorerCoreAsync(string entry, string targetDirectory,
         string? password, Action<string>? onProgress, CancellationToken ct)
     {
         entry = Path.GetFullPath(entry);

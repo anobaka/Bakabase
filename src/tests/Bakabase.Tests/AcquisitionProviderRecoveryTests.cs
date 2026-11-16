@@ -40,11 +40,10 @@ public sealed partial class AcquisitionRecoveryTests
 
     private async Task<(AcquisitionTaskDbModel Task, WorkflowRunDbModel Run, DownloadWorkset Workset,
         DownloadTaskDbModel Download, CloudOperationDbModel Operation, RecoverableProvider Provider,
-        CloudDownloadRecoveryService Recovery)> SeedRecoverableProvider()
+        CloudDownloadRecoveryService Recovery)> SeedRecoverableProvider(CloudSource? testSource = null, string failure = "PIKPAK_ORIGINAL_FILE_UNAVAILABLE")
     {
         var (task, run, workset) = await Seed("download.awaitCompletion", WorkflowRunStatus.Waiting, error: null);
-        const string failure = "PIKPAK_ORIGINAL_FILE_UNAVAILABLE";
-        var source = new CloudSource {Id = "source", ProviderId = "pikpak", Url = "https://mypikpak.com/s/fixture", Kind = "share"};
+        var source = testSource ?? new CloudSource {Id = "source", ProviderId = "pikpak", Url = "https://mypikpak.com/s/fixture", Kind = "share"};
         var target = workset.Targets.Single() with {Sources = [source], AccountId = null, Problem = failure};
         var intent = DownloadArtifactCoordinator.DownloadIntent(target, _root);
         var request = new CloudDownloadRequest(intent, source, null, null, Path.Combine(_root, "cloud-original"));

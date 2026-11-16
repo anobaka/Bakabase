@@ -23,6 +23,9 @@ public record ArchivePasswordProbe(
     string Message)
 {
     public bool PasswordRejected { get; init; }
+    // Internal pipeline diagnostic, not an API field or permission to skip validation.
+    [System.Text.Json.Serialization.JsonIgnore]
+    public string? FailureCode { get; init; }
 }
 
 /// <param name="Files">The group's files. The first is the entry point; the rest are its other volumes.</param>
@@ -88,8 +91,6 @@ public interface IArchiveExtractionService
 
 public class ArchiveExtractionService(CompressedFileService compressedFileService) : IArchiveExtractionService
 {
-    private static readonly Regex ProgressRegex = new(@"\d+\%", RegexOptions.Compiled);
-
     public Task<string?> ProbeFormatAsync(string entryFile, CancellationToken ct) =>
         compressedFileService.ProbeArchiveFormatAsync(entryFile, ct);
 
@@ -122,15 +123,10 @@ public class ArchiveExtractionService(CompressedFileService compressedFileServic
                 onStandardOutput: null,
                 onStandardError: line =>
                 {
-                    if (line.Trim().Equals("Wrong password", StringComparison.OrdinalIgnoreCase) ||
-                        line.TrimStart().StartsWith("Cannot open encrypted archive", StringComparison.OrdinalIgnoreCase) ||
-                        line.TrimStart().StartsWith("ERROR:", StringComparison.OrdinalIgnoreCase) &&
-                        (line.Contains("Wrong password", StringComparison.OrdinalIgnoreCase) ||
-                         line.Contains("Cannot open encrypted archive", StringComparison.OrdinalIgnoreCase)))
-                        rejected = true;
-                    if (line.Contains("Wrong password") && candidate.IsNotEmpty())
+                    if (IsPasswordDiagnostic(line))
                     {
-                        wrongPasswords.Add(candidate!);
+                        rejected = true;
+                        if (candidate.IsNotEmpty()) wrongPasswords.Add(candidate!);
                     }
                 },
                 ct, openOptions);
@@ -152,9 +148,51 @@ public class ArchiveExtractionService(CompressedFileService compressedFileServic
                 return new ArchivePasswordProbe(true, candidate, wrongPasswords.ToList(),
                     result.StandardOutput, message);
             }
+            if (NonPasswordFailureCode(result.StandardError) is { } failure)
+                return new(false, null, wrongPasswords.ToList(), "", message)
+                    {PasswordRejected = rejected, FailureCode = failure};
         }
 
         return new ArchivePasswordProbe(false, null, wrongPasswords.ToList(), "", message) {PasswordRejected = rejected};
+    }
+
+    internal static string? NonPasswordFailureCode(string standardError)
+    {
+        // Recognize tool diagnostics, not filenames in the ordinary member listing. A
+        // structural opening failure is not evidence that another password should be tried.
+        var lines = standardError.Split('\n').Select(line => line.Trim()).ToArray();
+        if (lines.Any(line => Regex.IsMatch(line,
+                @"^(?:ERROR:\s*)?(?:Missing volume\s*:|Unexpected end of archive\s*$)",
+                RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))) return "MissingVolumes";
+        // Encrypted headers may also print the generic cannot-open line. Preserve
+        // explicit password evidence and allow the next approved candidate to run.
+        if (lines.Any(IsPasswordDiagnostic)) return null;
+        if (lines.Any(line => Regex.IsMatch(line,
+                @"^(?:ERROR:\s*(?:.+\s+:\s*)?)?(?:Cannot|Can not) open the file as (?:\[(?:7z|zip|rar|rar5)\] )?archive\s*$",
+                RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))) return "ArchiveInputRequired";
+        return null;
+    }
+
+    private static bool IsPasswordDiagnostic(string line)
+    {
+        var text = line.Trim();
+        if (!text.StartsWith("ERROR:", StringComparison.OrdinalIgnoreCase)) return Exact(text);
+        text = text[6..].Trim();
+        if (Exact(text)) return true;
+        // 7-Zip can put the path before or after its diagnostic. Never search
+        // arbitrary filenames for password words (e.g. "Wrong password.zip").
+        var first = text.IndexOf(" : ", StringComparison.Ordinal);
+        var last = text.LastIndexOf(" : ", StringComparison.Ordinal);
+        if (last >= 0 && Regex.IsMatch(text[(last + 3)..].Trim(),
+                @"^(?:Cannot|Can not) open the file as (?:\[(?:7z|zip|rar|rar5)\] )?archive\s*$",
+                RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)) return false;
+        return first >= 0 && (Exact(text[..first].Trim()) || Exact(text[(last + 3)..].Trim()));
+
+        static bool Exact(string value) => value.Equals("Wrong password", StringComparison.OrdinalIgnoreCase) ||
+            value.Equals("Wrong password?", StringComparison.OrdinalIgnoreCase) ||
+            value.Equals("Cannot open encrypted archive", StringComparison.OrdinalIgnoreCase) ||
+            value.Equals("Cannot open encrypted archive. Wrong password?", StringComparison.OrdinalIgnoreCase) ||
+            value.Equals("Data Error in encrypted file. Wrong password?", StringComparison.OrdinalIgnoreCase);
     }
 
     public async Task<ArchiveExtractionResult> ExtractAsync(ArchiveExtractionRequest request,
@@ -171,8 +209,27 @@ public class ArchiveExtractionService(CompressedFileService compressedFileServic
         if (request.OpenOptions?.ZipStructure != null && request.Files.Count != 1)
             throw new ArchivePasswordEncodingException("ArchivePasswordEncodingUnsupported");
         var entry = request.Files[0];
+        string? confirmedSfxFormat = null;
+        var candidates = CompressedFileHelper.DetectSfxMultipartCandidates(request.Files);
+        if (candidates.Count > 0)
+        {
+            var candidate = candidates.Count == 1 ? candidates[0] : null;
+            if (candidate is not {IsComplete: true, IsAmbiguous: false} ||
+                candidate.EntryFile != entry || candidate.Files.Count != request.Files.Count)
+                throw new InvalidDataException("The multipart archive filenames are incomplete or ambiguous.");
+            // The request explicitly authorizes these paths. Do not discover, add, or
+            // delete neighboring files that an archive tool might otherwise find itself.
+            var probe = await compressedFileService.ProbeAuthorizedArchiveFormatAsync(
+                Path.IsPathRooted(entry) ? entry : Path.Combine(request.Directory, entry), [request.Password], ct);
+            if (!CompressedFileHelper.SfxFormatMatches(candidate, probe?.Extension))
+                throw new InvalidDataException("The selected executable was not confirmed as this multipart RAR archive.");
+            confirmedSfxFormat = probe!.Extension;
+        }
+        if (request.DeleteAfterDecompression && request.Files.Count > 1 &&
+            CompressedFileHelper.GetCompleteMultipartArchiveGroup(request.Files, confirmedSfxFormat) == null)
+            throw new InvalidDataException("Only one explicitly selected, consecutively named archive family can be removed after extraction.");
         var targetDir = request.DecompressToNewFolder
-            ? Path.Combine(request.Directory, Path.GetFileNameWithoutExtension(entry))
+            ? Path.Combine(request.Directory, CompressedFileHelper.GetExtractionDirectoryName(request.Files, confirmedSfxFormat))
             : request.Directory;
 
         var result = await compressedFileService.ExtractWithProgress(
@@ -187,9 +244,7 @@ public class ArchiveExtractionService(CompressedFileService compressedFileServic
             workingDirectory: request.Directory,
             onStandardOutput: line =>
             {
-                var match = ProgressRegex.Match(line);
-
-                if (match.Success && int.TryParse(match.Value.TrimEnd('%'), out var percentage))
+                if (SevenZipProgressOutput.TryPercentage(line, out var percentage))
                 {
                     onProgress?.Invoke(percentage);
                 }

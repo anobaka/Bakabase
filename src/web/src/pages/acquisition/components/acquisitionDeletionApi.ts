@@ -2,10 +2,11 @@ import BApi from "@/sdk/BApi";
 
 type Api = typeof BApi.acquisition;
 type PreviewOptions = Omit<Parameters<Api["previewDeleteAcquisitionTasks"]>[0], "taskIds">;
-export type AcquisitionDeletionOptions = Omit<
+type SubmitOptions = Omit<
   Parameters<Api["deleteAcquisitionTasks"]>[0],
   "previewId"
 >;
+export type AcquisitionDeletionOptions = PreviewOptions & Pick<SubmitOptions, "removeTaskIfCleanupFails">;
 export type AcquisitionDeletionPreview = NonNullable<
   Awaited<ReturnType<Api["previewDeleteAcquisitionTasks"]>>["data"]
 >;
@@ -34,7 +35,7 @@ export const acquisitionDeletionApi = {
   },
   remove: (
     previewId: string,
-    choices: AcquisitionDeletionOptions = {},
+    choices: SubmitOptions = {},
   ): Promise<AcquisitionDeletionResult> => {
     const request = { previewId, ...choices };
     return unwrap(BApi.acquisition.deleteAcquisitionTasks(request, options));

@@ -25,5 +25,12 @@
   "acquisition.records.emptyResponse": "模型返回了空正文。",
   "acquisition.records.futureAudit": "此旧记录只保存了结构摘要，无法还原原值。后续 AI 分析会在任务内保存可查看的返回内容。",
   "acquisition.records.previewTruncated": "仅显示已保存的部分内容。",
-  "acquisition.records.validationError": "未通过校验的位置"
+  "acquisition.records.validationError": "未通过校验的位置",
+  "acquisition.records.text.complete": "已保存完整正文",
+  "acquisition.records.text.preview": "仅保存部分内容，无法还原缺失内容",
+  "acquisition.records.text.notRecorded": "未保存正文",
+  "acquisition.records.text.redacted": "敏感信息已隐藏",
+  "acquisition.records.text.open": "查看已保存全文",
+  "acquisition.records.text.more": "加载下一段",
+  "acquisition.records.text.copyVisible": "复制当前显示内容"
 }

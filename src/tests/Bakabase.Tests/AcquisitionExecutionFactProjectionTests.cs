@@ -15,7 +15,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Bakabase.Tests;
 
 [TestClass]
-public sealed class AcquisitionExecutionFactProjectionTests
+public sealed partial class AcquisitionExecutionFactProjectionTests
 {
     private SqliteConnection _connection = null!;
     private BakabaseDbContext _db = null!;
@@ -70,7 +70,8 @@ public sealed class AcquisitionExecutionFactProjectionTests
             ManifestJson = Serialize(new ArtifactManifest(entries, fingerprint))};
         _db.Artifacts.Add(artifact);
         _db.ArtifactOperations.Add(new() {Id = id, State = ArtifactOperationState.Completed, OutputArtifactId = id,
-            Kind = kind switch {"download" => "download", "publishedFiles" => "files.publish", _ => "files.process"}, InputFingerprint = "bound-input"});
+            Kind = kind switch {"download" => "download", "publishedFiles" => "files.publish",
+                AcquisitionCurrentDirectoryFiles.Kind => AcquisitionCurrentDirectoryFiles.OperationKind, _ => "files.process"}, InputFingerprint = "bound-input"});
         _db.ArtifactOperationBindings.Add(new() {Id = id, OwnerKind = "workflow", OwnerId = item.Run.Id.ToString(),
             Slot = slot ?? part + (kind == "download" ? ":artifact.download" : kind == "publishedFiles" ? ":artifact.publish" : ":process:step"), OperationId = id});
         await _db.SaveChangesAsync(); return artifact;

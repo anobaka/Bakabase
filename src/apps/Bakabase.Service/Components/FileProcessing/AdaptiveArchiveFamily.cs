@@ -22,7 +22,12 @@ internal sealed record AdaptiveArchiveFamily(IReadOnlyList<string> Paths, bool C
     internal static IReadOnlyList<AdaptiveArchiveFamily> From(IReadOnlyList<string> paths)
     {
         var result = new List<AdaptiveArchiveFamily>();
-        foreach (var group in CompressedFileHelper.DetectCompressedFileGroups(paths.ToArray(), inspectFileSizes: false))
+        var sfx = CompressedFileHelper.DetectSfxMultipartCandidates(paths);
+        result.AddRange(sfx.Select(candidate => new AdaptiveArchiveFamily(candidate.Files,
+            candidate.IsComplete && !candidate.IsAmbiguous)));
+        var sfxPaths = sfx.SelectMany(candidate => candidate.Files).ToHashSet(StringComparer.Ordinal);
+        foreach (var group in CompressedFileHelper.DetectCompressedFileGroups(
+                     paths.Where(path => !sfxPaths.Contains(path)).ToArray(), inspectFileSizes: false))
         {
             // These are established archive families. Generic .001 application assets have
             // no archive extension and do not acquire an extraction requirement by their name.

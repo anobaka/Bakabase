@@ -27,8 +27,8 @@ public sealed class DownloadArtifactCoordinator(BakabaseDbContext db, IArtifactO
         target.SelectedSource ?? throw new InvalidOperationException("Choose a source."), target.AccountId);
     public static string DownloadIntent(CloudDownloadTarget target, string directory,
         FileProcessingWorkspaceResolver? workspaces = null) => CloudOperationService.Key(
-        "download.intent.v1", Source(target), workspaces?.IdentityPath(Path.GetFullPath(target.DownloadDirectoryScope?.Directory ?? directory)) ??
-            Path.GetFullPath(target.DownloadDirectoryScope?.Directory ?? directory),
+        "download.intent.v1", Source(target), workspaces?.IdentityPath(Path.GetFullPath(CloudStageDirectoryPath.Download(target) ?? target.DownloadDirectoryScope?.Directory ?? directory)) ??
+            Path.GetFullPath(CloudStageDirectoryPath.Download(target) ?? target.DownloadDirectoryScope?.Directory ?? directory),
         target.AcquisitionNonce ?? "");
 
     // Transport identity remains unchanged, so changing presentation never queues a new download.

@@ -66,7 +66,7 @@ public sealed partial class AcquisitionReplanTests
     }
 
     [TestMethod]
-    public async Task Current_directory_AI_continuation_attaches_fresh_input_in_place_without_processing_copy()
+    public async Task Current_directory_AI_continuation_initializes_processing_without_modifying_selected_download()
     {
         var (task, old, original) = await CurrentDirectoryInput();
         await File.WriteAllTextAsync(original.Files.Single(), "manually updated content");
@@ -77,6 +77,7 @@ public sealed partial class AcquisitionReplanTests
         var run = new WorkflowRunDbModel {Status = WorkflowRunStatus.Running,
             Sources = [new() {Module = "acquisition", EntityKind = "task", EntityId = task.Id.ToString(), Revision = "2"}]};
         Db.WorkflowRuns.Add(run); await Db.SaveChangesAsync();
+        await Db.AcquisitionTasks.Where(t => t.Id == task.Id).ExecuteUpdateAsync(s => s.SetProperty(t => t.WorkflowRunId, run.Id));
         WorkflowExecutionContext Context(int n) => new() {RunId = run.Id, WorkflowDefinitionId = 0,
             TriggerKind = CloudWorkflow.Trigger, Payload = workset, ActivityConfigJson = compiled.Nodes[n].ConfigJson,
             Services = _services, Logger = NullLogger.Instance};
@@ -84,8 +85,10 @@ public sealed partial class AcquisitionReplanTests
         var processed = await new AcquisitionPlanProcessingActivity().ProcessItemAsync(Context(1), attached.Replacement!, default);
         Assert.IsNull(processed.Suspension, processed.Suspension?.PromptJson);
         var target = ((DownloadWorkset) processed.Replacement!).Targets.Single();
-        Assert.AreEqual(captured.Id, target.ProcessedArtifactId);
-        Assert.AreEqual(original.RootDirectory, target.ProcessedDirectory);
+        Assert.AreNotEqual(captured.Id, target.ProcessedArtifactId);
+        Assert.AreEqual(revised.Plan.StageDirectories!.Parts["main"].Processing!.Directory, target.ProcessedDirectory);
+        Assert.AreEqual("manually updated content", await File.ReadAllTextAsync(target.ProcessedFiles!.Single()));
+        Assert.AreEqual("manually updated content", await File.ReadAllTextAsync(original.Files.Single()));
         Assert.IsFalse(Directory.Exists(Path.Combine(original.RootDirectory, ".bakabase-work")));
         var assessment = JsonSerializer.Deserialize<FileArtifactDeliveryAssessmentConfig>(compiled.Nodes[2].ConfigJson, WorkflowJson.Options)!;
         Assert.IsTrue(assessment.EnableAdaptiveAssessment);

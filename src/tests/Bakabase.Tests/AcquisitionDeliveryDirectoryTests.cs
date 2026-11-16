@@ -171,6 +171,30 @@ public sealed class AcquisitionDeliveryDirectoryTests
         Assert.AreEqual(Path.Combine(Root, "Acquired", "A title [A1]"), configured.TaskDirectory);
     }
 
+    [DataTestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public void A_bound_part_keeps_its_destination_and_an_unresolved_sibling_never_uses_the_download_directory(bool callerPolicy)
+    {
+        var plan = Plan();
+        var first = plan.Parts.Single();
+        var other = first with {Id = "other", SelectedSourceId = "two", Sources = [first.Sources.Single() with {Id = "two"}]};
+        var destination = Path.Combine(Root, "manually-selected");
+        plan = plan with {Parts = [first, other], StoragePolicy = callerPolicy ? new() : null,
+            StageDirectories = new() {TaskId = 1, Parts = new()
+            {
+                ["main"] = new() {Delivery = new(destination, "borrowed", "userDirectoryRevision") {BindingId = Guid.NewGuid().ToString("N")}},
+                ["other"] = new()
+            }}};
+        var node = AcquisitionPlanCompiler.Compile(plan).Nodes.Single(n => n.Kind == "fs.publishArtifacts");
+        var config = JsonSerializer.Deserialize<FileArtifactPublicationConfig>(node.ConfigJson, WorkflowJson.Options)!;
+        var item = AcquisitionPlanCompiler.Workset(1, 1, plan, []);
+        Assert.AreEqual(destination, PublishFileArtifactsActivity.CloudTargetDirectory(item, item.Targets.Single(t => t.Id == "main"), config));
+        var error = Assert.ThrowsExactly<InvalidOperationException>(() =>
+            PublishFileArtifactsActivity.CloudTargetDirectory(item, item.Targets.Single(t => t.Id == "other"), config));
+        StringAssert.StartsWith(error.Message, "DELIVERY_DIRECTORY_UNRESOLVED");
+    }
+
     [TestMethod]
     public async Task NewPlansCaptureDefaultsAndExplicitEditsNeverChangeDownloadIdentity()
     {

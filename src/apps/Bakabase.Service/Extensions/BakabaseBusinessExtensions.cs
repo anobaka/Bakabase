@@ -275,6 +275,7 @@ namespace Bakabase.Service.Extensions
             services.AddAcquisitionStep<Components.Acquisition.Steps.UnpackStep>();
             services.AddSingleton<Components.FileProcessing.FileProcessingPlanExecutor>();
             services.AddScoped<Components.FileProcessing.AdaptiveFileProcessingAssessmentService>();
+            services.AddScoped<Components.FileProcessing.AssessmentCallSnapshotStore>();
             services.AddSingleton<IWorkflowTrigger, Components.FileProcessing.FileProcessingPlanTrigger>();
             services.AddScoped<Components.FileProcessing.FileProcessingWorkflowSeeder>();
             services.AddAcquisitionStep<Bakabase.Modules.Acquisition.Components.Steps.PickLocalDirectoryStep>();

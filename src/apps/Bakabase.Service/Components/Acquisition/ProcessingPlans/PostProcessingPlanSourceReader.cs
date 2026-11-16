@@ -13,8 +13,6 @@ using Bakabase.Modules.Workflow.Abstractions.Models.Domain;
 using Bakabase.Modules.Workflow.Abstractions.Components;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Workflow.Artifacts;
-using CsQuery;
-using System.Text;
 using Microsoft.EntityFrameworkCore;
 
 namespace Bakabase.Service.Components.Acquisition.ProcessingPlans;
@@ -60,6 +58,8 @@ public sealed class PostProcessingPlanSourceReader(BakabaseDbContext db) : IProc
         if (html.Count == 0 && !string.IsNullOrWhiteSpace(task.Text)) html.Add(task.Text);
         var texts = (content?.Scope == "pastedText" || content == null
                 ? html : html.SelectMany(VisibleText)).Where(t => !string.IsNullOrWhiteSpace(t)).Distinct().ToList();
+        var publisherText = content == null ? task.Text : content.Scope == "pastedText"
+            ? content.MainHtml : ProcessingPlanSourceText.Visible(content.MainHtml);
         return indices.Select(index =>
         {
         var resource = resources[index];
@@ -68,26 +68,16 @@ public sealed class PostProcessingPlanSourceReader(BakabaseDbContext db) : IProc
         // Full saved resource binds URL, code, archive password and original instructions, including multiple
         // resources in one post. These values are hashed by the store; they are not copied to the audit row.
         var fingerprint = JsonSerializer.Serialize(new {resource, task.ContentSnapshotJson, task.Text}, WorkflowJson.Options);
-        return new ProcessingPlanSourceSnapshot(source, resource.Extraction, texts, fingerprint, resource.Link);
+        return new ProcessingPlanSourceSnapshot(source, resource.Extraction, texts, fingerprint, resource.Link)
+        {
+            PublisherText = publisherText
+        };
         }).ToList();
     }
 
     private static IEnumerable<string> VisibleText(string html)
     {
-        var text = new StringBuilder();
-        void Visit(IDomObject node)
-        {
-            if (node.NodeType == NodeType.TEXT_NODE) {text.Append(node.NodeValue); return;}
-            if (node.NodeType != NodeType.ELEMENT_NODE || node.NodeName is "SCRIPT" or "STYLE") return;
-            var block = node.NodeName is "P" or "DIV" or "BR" or "LI" or "TR" or "HR";
-            if (block) text.Append('\n');
-            foreach (var child in node.ChildNodes) Visit(child);
-            if (block) text.Append('\n');
-        }
-        foreach (var node in CQ.CreateFragment(html)) Visit(node);
-        // The HTML parser decodes entities once. Never HTML-decode this text again: an entity-looking
-        // password can be literal source text. This projection is only quote matching, not plan inference.
-        yield return text.ToString();
+        yield return ProcessingPlanSourceText.Visible(html);
     }
     private static bool CanonicalInt(string? value, out int number) => int.TryParse(value, NumberStyles.None,
         CultureInfo.InvariantCulture, out number) && number >= 0 && number.ToString(CultureInfo.InvariantCulture) == value;

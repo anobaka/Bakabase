@@ -80,6 +80,9 @@ public static class PostDownloadResourceDeduplicator
 
     private sealed record LinkIdentity(string Key, string? Code, bool HasConflictingCode = false);
 
+    /// <summary>Read an unambiguous access code carried by the link itself.</summary>
+    public static string? ReadEmbeddedAccessCode(string link) => Identify(link, null).Code;
+
     private static LinkIdentity Identify(string? link, string? code)
     {
         var value = link?.Trim() ?? "";

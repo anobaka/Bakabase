@@ -32,6 +32,21 @@ public sealed class AcquisitionRuntimeOverviewTests
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
     private static readonly DateTime At = new(2026, 10, 25, 9, 0, 0, DateTimeKind.Local);
 
+    [TestMethod]
+    public void FileProgressOnlyReportsTheCurrentArchiveAndNeverBorrowsWorkflowPercentages()
+    {
+        const string kind = "acquisition.plan.process";
+        var live = new WorkflowTaskProgress(17, kind, "extractingArchive", 1, 62);
+        Assert.AreEqual(("extractingArchive", (int?)62), AcquisitionRuntimeOverviewService.CurrentFileProgress(17, 1, kind, live));
+        Assert.AreEqual(("preparingFiles", (int?)null), AcquisitionRuntimeOverviewService.CurrentFileProgress(17, 1, kind,
+            live with {Stage = "preparingFiles"}));
+        Assert.AreEqual(("extractingArchive", (int?)null), AcquisitionRuntimeOverviewService.CurrentFileProgress(17, 1, kind,
+            live with {StageProgress = 120}));
+        Assert.IsNull(AcquisitionRuntimeOverviewService.CurrentFileProgress(17, 2, kind, live).Stage);
+        Assert.IsNull(AcquisitionRuntimeOverviewService.CurrentFileProgress(17, 1, "download.wait", live).Stage);
+        Assert.IsNull(AcquisitionRuntimeOverviewService.CurrentFileProgress(18, 1, kind, live).Stage);
+    }
+
     [TestInitialize]
     public async Task Setup()
     {
@@ -460,6 +475,22 @@ public sealed class AcquisitionRuntimeOverviewTests
         Assert.IsFalse(JsonSerializer.Serialize(result).Contains("SECRET_PASSWORD"));
     }
 
+    [DataTestMethod]
+    [DataRow(WorkflowRunStatus.Running)]
+    [DataRow(WorkflowRunStatus.Pending)]
+    public async Task Active_processing_retry_does_not_display_its_previous_directory_failure(WorkflowRunStatus status)
+    {
+        var (task, run) = await Seed([Target() with {DownloadArtifactId = "already-downloaded"}],
+            "acquisition.plan.process", status);
+        task.Status = AcquisitionStatus.Failed;
+        task.Error = run.ErrorMessage = "STAGE_COMMIT_REFERENCED";
+        await _db.SaveChangesAsync();
+        var current = await Read(task.Id);
+        Assert.AreEqual(status.ToString().ToLowerInvariant(), current.WorkflowStatus);
+        Assert.IsNull(current.ProblemCode);
+        CollectionAssert.DoesNotContain(current.AttentionTags.ToArray(), "fileProcessing");
+    }
+
     [TestMethod]
     public async Task CurrentFailedInvocationWinsOverAnEarlierPasswordWait()
     {
@@ -499,6 +530,7 @@ public sealed class AcquisitionRuntimeOverviewTests
     [DataRow("A different current failure at SECRET_PATH", "SOURCE_ATTENTION_REQUIRED")]
     [DataRow("A remote response mentioned LOCAL_STORAGE_FULL without an OS cause.", "SOURCE_ATTENTION_REQUIRED")]
     [DataRow("PLAN_CURRENT_DIRECTORY_CHANGED", "PLAN_CURRENT_DIRECTORY_CHANGED")]
+    [DataRow("System.InvalidOperationException: STAGE_COMMIT_REFERENCED", "STAGE_COMMIT_REFERENCED")]
     public async Task FailedInvocationCannotInheritThePreviousStorageWait(string error, string expected)
     {
         var (task, run) = await Seed([Target(problem: "LOCAL_STORAGE_FULL")], "acquisition.plan.process", WorkflowRunStatus.Failed);

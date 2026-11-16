@@ -2,6 +2,7 @@ import { Children, isValidElement, type ReactNode } from "react";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, expect, it, vi } from "vitest";
 import PlanTaskDetailModal from "../PlanTaskDetailModal";
+import type { PlanTaskDetail } from "../models";
 import AcquisitionExecutionTimeline from "../AcquisitionExecutionTimeline";
 import TaskPlanSnapshot from "../TaskPlanSnapshot";
 import AcquisitionSourceDetails from "../../AcquisitionSourceDetails";
@@ -9,6 +10,8 @@ import { AcquisitionStatus, WorkflowRunStatus } from "@/sdk/constants";
 import AcquisitionRecoveryModal from "@/pages/acquisition/components/AcquisitionRecoveryModal";
 const mocks = vi.hoisted(() => ({
   preflight: vi.fn(),
+  keepPreparedFiles: vi.fn(),
+  options: vi.fn(),
   get: vi.fn(),
   search: vi.fn(),
   select: vi.fn(),
@@ -52,7 +55,7 @@ vi.mock("../CompletedProcessingRevisionForm", async (importOriginal) => ({
 }));
 vi.mock("@/sdk/BApi", () => ({
   default: {
-    acquisition: { cancelAcquisition: mocks.cancel, getAcquisitionAssessmentIo: mocks.assessmentIo },
+    acquisition: { cancelAcquisition: mocks.cancel, getAcquisitionAssessmentIo: mocks.assessmentIo, getAcquisitionOptions: mocks.options },
     workflowSources: { queryWorkflowSourceRuns: mocks.querySourceRuns },
   },
 }));
@@ -65,6 +68,7 @@ vi.mock("../DraftPreparation", () => ({
 }));
 vi.mock("@/components/bakaui", async () => ({
   ...(await import("@/test/radioControls")),
+  Select: () => null,
   Accordion: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   AccordionItem: ({ children, title }: { children: ReactNode; title: string }) => (
     <section aria-label={title}>{children}</section>
@@ -120,6 +124,11 @@ vi.mock("@/components/bakaui", async () => ({
   ),
   Popover: ({ trigger }: { trigger: ReactNode }) => <>{trigger}</>,
   Tooltip: ({ children }: { children: ReactNode }) => <>{children}</>,
+  Textarea: ({label, value, onValueChange}: any) => <textarea aria-label={label} value={value}
+    onChange={event => onValueChange(event.target.value)} />,
+  Checkbox: ({children, isSelected, onValueChange, "aria-label": label}: any) =>
+    <label><input type="checkbox" aria-label={label} checked={isSelected}
+      onChange={event => onValueChange(event.target.checked)} />{children}</label>,
   Spinner: () => null,
   Input: ({
     label,
@@ -231,6 +240,7 @@ const detail = {
 };
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.options.mockResolvedValue({ code: 0, data: { useEmergencySpaceReserve: true, minimumFreeSpaceBytes: 50 * 1024 ** 3 } });
   mocks.get.mockResolvedValue(detail);
   mocks.runtimeOverviews.mockResolvedValue([]);
   mocks.revisionOptions.mockResolvedValue({ taskId: 42, expectedRunId: 75, expectedRevision: 3, canRevise: false, candidates: [] });
@@ -418,6 +428,23 @@ it.each([false, undefined])("keeps workflow diagnosis when completed-download ev
   }));
 });
 
+it("checks the original processing cursor before retrying a failed stage handoff", async () => {
+  mocks.get.mockResolvedValue({ ...detail, task: { ...detail.task, workflowRunId: 77,
+    phase: "attention", status: AcquisitionStatus.Failed, error: "STAGE_COMMIT_REFERENCED" },
+    steps: [{ id: "part.process", kind: "acquisition.plan.process", stage: "processing" }],
+    plan: { parts: [{ id: "part", sources: [] }] }, replanArtifacts: [
+      { artifactId: "download", partId: "part", kind: "download", canReadCurrentDirectory: true },
+    ] });
+  mocks.runtimeOverviews.mockResolvedValue([{ taskId: 42, workflowRunId: 77, currentStepIndex: 0,
+    currentNodeKind: "acquisition.plan.process", workflowStatus: "failed", problemCode: "STAGE_COMMIT_REFERENCED" }]);
+  render(<PlanTaskDetailModal taskId={42} />);
+  fireEvent.click(await screen.findByRole("button", { name: "acquisition.continue.open" }));
+  expect(mocks.createPortal).toHaveBeenCalledWith(AcquisitionRecoveryModal, expect.objectContaining({
+    taskIds: [42], initialScope: "workflow",
+  }));
+  expect(mocks.run).not.toHaveBeenCalled();
+});
+
 it.each([
   ["ProcessingPathConflict", "acquisition.plan.process", true],
   ["ProcessingPathConflict", "download.awaitCompletion", false],
@@ -510,6 +537,68 @@ it("never auto-selects a candidate and uses task revision when a user chooses", 
   expect(mocks.select).not.toHaveBeenCalled();
   fireEvent.click(screen.getAllByRole("button", { name: "acquisition.plan.choose" })[1]);
   await waitFor(() => expect(mocks.select).toHaveBeenCalledExactlyOnceWith(42, "c2", 3));
+  expect(mocks.run).not.toHaveBeenCalled();
+});
+
+const asIsInput = { taskId: 42, artifactId: "local", operationId: "op", previousRunId: 101, fingerprint: "hash" };
+const readyWithFiles = {
+  ...detail, task: { ...detail.task, phase: "ready" }, canKeepPreparedFiles: true,
+  plan: { parts: [{ id: "part", title: "Bound download", sources: [], continueFrom: asIsInput,
+    processing: { requirement: "required", steps: [{ op: "extractArchive" }] } }] },
+  planHistory: [{ revision: 3, plan: { parts: [] }, sourceRefs: [], artifactEvidence: [
+    { partId: "part", artifactId: "local", fingerprint: "hash", manifest: { entries: [{}, {}] } },
+  ] }],
+};
+const keepRevision = {
+  ...readyWithFiles, task: { ...readyWithFiles.task, planRevision: 4 }, plan: {
+    parts: [{...readyWithFiles.plan.parts[0], processing: { requirement: "notRequired", steps: [] } }],
+  },
+  planHistory: [{ revision: 4, reason: "delivery.keepPreparedFiles" }],
+};
+
+it.each(["原帖 10 项，当前登记 9 个包。", ""])("uses the saved as-is revision and current reserve choice only after confirmation (%s)", async note => {
+  mocks.get.mockResolvedValue(readyWithFiles);
+  mocks.keepPreparedFiles.mockResolvedValue({ ...keepRevision,
+    planHistory: [{ revision: 4, reason: note || "delivery.keepPreparedFiles" }] });
+  mocks.run.mockResolvedValue(keepRevision);
+  render(<PlanTaskDetailModal taskId={42} />);
+  fireEvent.click(await screen.findByRole("button", { name: "acquisition.keepPrepared.title" }));
+  const modal = within(screen.getByRole("dialog", { name: "acquisition.keepPrepared.title" }));
+  expect(modal.getByText("acquisition.keepPrepared.fileCount")).toBeVisible();
+  if (note) fireEvent.change(modal.getByRole("textbox", {name: "acquisition.keepPrepared.note"}), {target: {value: `  ${note}  `}});
+  fireEvent.click(await modal.findByRole("checkbox", { name: "acquisition.reserve.operation.label" }));
+  expect(mocks.keepPreparedFiles).not.toHaveBeenCalled();
+  expect(mocks.run).not.toHaveBeenCalled();
+  fireEvent.click(modal.getByRole("button", { name: "acquisition.keepPrepared.confirm" }));
+  await waitFor(() => expect(mocks.run).toHaveBeenCalledExactlyOnceWith(42, 4, false));
+  expect(mocks.keepPreparedFiles).toHaveBeenCalledExactlyOnceWith(42, 3, note || undefined);
+});
+
+it.each(["unbound", "missingCapability", "differentOwner"])("hides as-is delivery when the source is not an eligible ready task (%s)", async mode => {
+  mocks.get.mockResolvedValue({ ...readyWithFiles, canKeepPreparedFiles: mode !== "missingCapability" ? true : undefined,
+    plan: { parts: [{ ...readyWithFiles.plan.parts[0], continueFrom: mode === "unbound" ? undefined : {
+      ...asIsInput, taskId: mode === "differentOwner" ? 43 : 42,
+    } }] } });
+  render(<PlanTaskDetailModal taskId={42} />);
+  await screen.findByRole("region", { name: "acquisition.timeline.title" });
+  expect(screen.queryByRole("button", { name: "acquisition.keepPrepared.title" })).toBeNull();
+});
+
+it.each(["changedInput", "stillExtracts", "stillAdaptive", "missingNote", "failedSave"])("does not start or resubmit an unconfirmed as-is revision (%s)", async mode => {
+  mocks.get.mockResolvedValue(readyWithFiles);
+  if (mode === "failedSave") mocks.keepPreparedFiles.mockRejectedValueOnce(new Error("Request failed"));
+  else mocks.keepPreparedFiles.mockResolvedValue({ ...keepRevision, planHistory: mode === "missingNote" ? [] : keepRevision.planHistory,
+    plan: { adaptiveFileProcessing: mode === "stillAdaptive",
+    parts: [{ ...keepRevision.plan.parts[0], continueFrom: { ...asIsInput, fingerprint: mode === "changedInput" ? "changed" : "hash" },
+      processing: mode === "stillExtracts" ? readyWithFiles.plan.parts[0].processing : keepRevision.plan.parts[0].processing }] } });
+  render(<PlanTaskDetailModal taskId={42} />);
+  fireEvent.click(await screen.findByRole("button", { name: "acquisition.keepPrepared.title" }));
+  const modal = within(screen.getByRole("dialog", { name: "acquisition.keepPrepared.title" }));
+  await modal.findByRole("checkbox", { name: "acquisition.reserve.operation.label" });
+  const submit = modal.getByRole("button", { name: "acquisition.keepPrepared.confirm" });
+  fireEvent.click(submit);
+  await modal.findByRole("alert");
+  expect(submit).toBeDisabled();
   expect(mocks.run).not.toHaveBeenCalled();
 });
 
@@ -616,6 +705,23 @@ it("allows execution to reach a later nonblocking processing confirmation", asyn
   expect(start).toBeEnabled();
   fireEvent.click(start);
   await waitFor(() => expect(mocks.run).toHaveBeenCalledExactlyOnceWith(42, 3));
+});
+
+it("allows a blocked prepared plan to be checked again before its first run", async () => {
+  const prepared = { ...detail, task: { ...detail.task, phase: "attention", builderId: "prepared" },
+    plan: { parts: [{ id: "part", sources: [] }] },
+    steps: [{ id: "n1", kind: "download.enqueueSupported" }],
+    issues: [{ code: "SOURCE_UNSUPPORTED", blocking: true }],
+  };
+  mocks.get.mockResolvedValue(prepared);
+  mocks.preflight.mockResolvedValue({ ...prepared, task: { ...prepared.task, phase: "ready" }, issues: [] });
+  render(<PlanTaskDetailModal taskId={42} />);
+  const check = await screen.findByRole("button", { name: "acquisition.plan.preflight" });
+  expect(screen.queryByRole("button", { name: "acquisition.plan.run" })).toBeNull();
+  fireEvent.click(check);
+  expect(await screen.findByRole("button", { name: "acquisition.plan.run" })).toBeEnabled();
+  expect(mocks.preflight).toHaveBeenCalledWith(42);
+  expect(mocks.run).not.toHaveBeenCalled();
 });
 
 it("does not execute a ready plan with a blocking prerequisite", async () => {
@@ -1228,6 +1334,28 @@ it("keeps the completed review snapshot mounted when polling changes the task st
   }
 });
 
+it.each([false, true])("retains the stopped-file reserve choice (%s) from saving until explicit start", async useEmergencySpaceReserve => {
+  const stopped = {
+    ...completedDetail,
+    task: { ...completedDetail.task, status: AcquisitionStatus.Failed, phase: "attention" },
+  };
+  mocks.get.mockResolvedValue(stopped);
+  render(<PlanTaskDetailModal taskId={42} />);
+  fireEvent.click(await screen.findByRole("button", { name: "acquisition.plan.replan.title" }));
+  fireEvent.click(await screen.findByRole("button", { name: "acquisition.plan.continueStopped.title" }));
+  const ready = {
+    ...stopped,
+    task: { ...stopped.task, status: AcquisitionStatus.Waiting, phase: "ready", workflowRunId: undefined, planRevision: 4 },
+    steps: [{ id: "continue", kind: "acquisition.plan.continueFiles" }],
+  };
+  mocks.get.mockResolvedValue(ready);
+  mocks.run.mockResolvedValue(ready);
+  await act(async () => { mocks.completedRevision.mock.lastCall![0].onSaved(ready, { useEmergencySpaceReserve }); });
+  expect(mocks.run).not.toHaveBeenCalled();
+  fireEvent.click(await screen.findByRole("button", { name: "acquisition.plan.run" }));
+  await waitFor(() => expect(mocks.run).toHaveBeenCalledExactlyOnceWith(42, 4, useEmergencySpaceReserve));
+});
+
 it("starts only the returned plan revision after confirming a stage retry", async () => {
   mocks.get.mockResolvedValue(completedDetail);
   render(<PlanTaskDetailModal taskId={42} />);
@@ -1247,9 +1375,9 @@ it("starts only the returned plan revision after confirming a stage retry", asyn
   };
   mocks.run.mockResolvedValue(next);
   await act(async () => {
-    mocks.completedRevision.mock.lastCall?.[0].onSaved(next);
+    mocks.completedRevision.mock.lastCall?.[0].onSaved(next, { useEmergencySpaceReserve: false });
   });
-  expect(mocks.run).toHaveBeenCalledExactlyOnceWith(42, 4);
+  expect(mocks.run).toHaveBeenCalledExactlyOnceWith(42, 4, false);
   expect(mocks.select).not.toHaveBeenCalled();
   expect(mocks.cancel).not.toHaveBeenCalled();
 });
@@ -1262,6 +1390,7 @@ it("opens the actionable current run directly in the continuation dialog", async
   render(<PlanTaskDetailModal taskId={42} />);
   const review = await screen.findByRole("button", { name: "acquisition.continue.open" });
   fireEvent.click(review);
+  expect(screen.getByRole("dialog", { name: "#42 Chosen content · acquisition.continue.open" })).toBeVisible();
   expect(screen.queryByRole("dialog", { name: "acquisition.plan.diagnostics.title" })).toBeNull();
   expect(screen.getByText("inline run 75")).toBeVisible();
   expect(mocks.runContent).toHaveBeenLastCalledWith(
@@ -1318,7 +1447,7 @@ it.each([
   const button = await screen.findByRole("button", { name: "acquisition.continue.open" });
   expect(button).toBeEnabled();
   fireEvent.click(button);
-  const dialog = within(screen.getByRole("dialog", { name: "acquisition.continue.open" }));
+  const dialog = within(screen.getByRole("dialog", { name: /acquisition\.continue\.open$/ }));
   expect(dialog.queryByText("inline run 77")).toBeNull();
   expect(dialog.queryByRole("tab")).toBeNull();
   expect(mocks.completedRevision).toHaveBeenLastCalledWith(expect.objectContaining({
@@ -1326,7 +1455,7 @@ it.each([
   }));
   expect(dialog.getByText("completed revision 3")).toBeVisible();
   fireEvent.click(dialog.getByRole("button", { name: "acquisition.plan.close" }));
-  expect(screen.queryByRole("dialog", { name: "acquisition.continue.open" })).toBeNull();
+  expect(screen.queryByRole("dialog", { name: /acquisition\.continue\.open$/ })).toBeNull();
   expect(mocks.run).not.toHaveBeenCalled();
 });
 
@@ -1344,11 +1473,34 @@ it("shows the current AI file mismatch in the task and its existing-file continu
   render(<PlanTaskDetailModal taskId={42} />);
   expect(await screen.findByText(message)).toBeVisible();
   fireEvent.click(screen.getByRole("button", { name: "acquisition.continue.open" }));
-  const form = within(screen.getByRole("dialog", { name: "acquisition.continue.open" }));
+  const form = within(screen.getByRole("dialog", { name: /acquisition\.continue\.open$/ }));
   expect(form.getByText(message)).toBeVisible();
   expect(form.getByText("completed revision 3")).toBeVisible();
   expect(mocks.run).not.toHaveBeenCalled();
   expect(mocks.assessmentIo).not.toHaveBeenCalled();
+});
+
+it("can review the original output without creating a new attempt when the server offers a bound keep action", async () => {
+  mocks.get.mockResolvedValue({ ...detail, task: { ...detail.task, workflowRunId: 77,
+    status: AcquisitionStatus.Waiting, phase: "attention", currentStepIndex: 0,
+    waitPromptJson: JSON.stringify({ targetId: "part", reason: "FILE_DELIVERY_RESULT_UNCERTAIN",
+      adaptiveAssessment: true, deliveryReview: true, artifactId: "processed-output", fingerprint: "manifest",
+      reviewToken: "review", allowedArchivePolicies: ["instructions", "keep"] }),
+  }, plan: { parts: [{ id: "part", sources: [] }] },
+    steps: [{ id: "part.assess", kind: "fs.assessDelivery", stage: "processing" }],
+    replanArtifacts: [{ artifactId: "processed-output", partId: "part", kind: "processedFiles", canReadCurrentDirectory: true }] });
+  mocks.runtimeOverviews.mockResolvedValue([{ taskId: 42, workflowRunId: 77, currentStepIndex: 0,
+    currentNodeKind: "fs.assessDelivery", workflowStatus: "waiting", problemCode: "FILE_DELIVERY_RESULT_UNCERTAIN" }]);
+  render(<PlanTaskDetailModal taskId={42} />);
+  await screen.findByRole("button", { name: "acquisition.continue.open" });
+  await act(async () => {});
+  fireEvent.click(screen.getByRole("button", { name: "acquisition.continue.open" }));
+  const dialog = within(await screen.findByRole("dialog", { name: /acquisition\.continue\.open$/ }));
+  expect(dialog.getByText("completed revision 3")).toBeVisible();
+  fireEvent.click(dialog.getByRole("radio", { name: "acquisition.continue.reviewOutput" }));
+  expect(dialog.getByText("inline run 77")).toBeVisible();
+  expect(dialog.queryByText("completed revision 3")).toBeNull();
+  expect(mocks.run).not.toHaveBeenCalled();
 });
 
 it.each([false, undefined, "missing-part"])("preserves the current password answer form when old inputs cannot be read as a fresh directory (%s)", async availability => {
@@ -1360,11 +1512,25 @@ it.each([false, undefined, "missing-part"])("preserves the current password answ
     currentNodeKind: "fs.assessDelivery", workflowStatus: "waiting", problemCode: "PasswordUnknown" }]);
   render(<PlanTaskDetailModal taskId={42} />);
   fireEvent.click(await screen.findByRole("button", { name: "acquisition.continue.open" }));
-  const dialog = within(screen.getByRole("dialog", { name: "acquisition.continue.open" }));
+  const dialog = within(screen.getByRole("dialog", { name: /acquisition\.continue\.open$/ }));
   expect(dialog.getByText("inline run 77")).toBeVisible();
   expect(dialog.queryByText("completed revision 3")).toBeNull();
   expect(dialog.queryByRole("tab")).toBeNull();
   expect(mocks.runContent).toHaveBeenLastCalledWith(expect.objectContaining({ runId: 77, respondInitially: true }));
+  expect(mocks.run).not.toHaveBeenCalled();
+});
+
+it("can reopen current manual processing files during a stopped delivery without any historical artifact", async () => {
+  mocks.get.mockResolvedValue({ ...detail, task: { ...detail.task, workflowRunId: 77, phase: "attention",
+    status: AcquisitionStatus.Waiting, waitPromptJson: JSON.stringify({targetId:"part",reason:"PublicationConflict"}) },
+    plan:{parts:[{id:"part",sources:[]}]},steps:[{stage:"delivery"}],replanArtifacts:[],
+    stageDirectories:{version:1,taskId:42,parts:{part:{processing:{directory:"/manual/current",ownership:"borrowed",evidence:"configured",bindingId:"fixed"}}}},
+  });
+  mocks.runtimeOverviews.mockResolvedValue([{taskId:42,workflowRunId:77,currentStepIndex:0,currentNodeKind:"fs.publishArtifacts",workflowStatus:"waiting",activeDownloadCount:0}]);
+  render(<PlanTaskDetailModal taskId={42}/>);
+  fireEvent.click(await screen.findByRole("button",{name:"acquisition.continue.again"}));
+  expect(mocks.completedRevision).toHaveBeenLastCalledWith(expect.objectContaining({inputStage:"processing",retryStage:"processing"}));
+  expect(screen.queryByRole("radio",{name:"acquisition.continue.checkpoint.current"})).toBeNull();
   expect(mocks.run).not.toHaveBeenCalled();
 });
 
@@ -1381,7 +1547,7 @@ it("resumes a complete saved space checkpoint by default and offers explicit rea
   await screen.findByRole("button", { name: "acquisition.continue.open" });
   await act(async () => {});
   fireEvent.click(screen.getByRole("button", { name: "acquisition.continue.open" }));
-  const dialog = within(screen.getByRole("dialog", { name: "acquisition.continue.open" }));
+  const dialog = within(screen.getByRole("dialog", { name: /acquisition\.continue\.open$/ }));
   expect(dialog.getByRole("radio", { name: "acquisition.continue.checkpoint.current" })).toBeChecked();
   expect(dialog.getByText("inline run 77")).toBeVisible();
   expect(mocks.completedRevision).not.toHaveBeenCalled();
@@ -1395,7 +1561,27 @@ it("resumes a complete saved space checkpoint by default and offers explicit rea
   expect(mocks.applyProcessingRevision).not.toHaveBeenCalled();
 });
 
-it.each(["ExtractionPlanUnknown", "PasswordUnknown", "FutureProcessingWait"])("defaults readable current files to the AI-capable processing form for %s without an old action allowlist", async reason => {
+it.each(["acquisition.plan.process", "fs.assessDelivery"])("answers the current password wait in place before offering a new file attempt on %s", async kind => {
+  mocks.get.mockResolvedValue({ ...detail, task: { ...detail.task, workflowRunId: 77, phase: "attention", currentStepIndex: 1,
+    status: AcquisitionStatus.Waiting, waitPromptJson: JSON.stringify({ targetId: "part", reason: "PasswordUnknown",
+      canEditPlan: false, allowedActions: [], allowedArchivePolicies: ["instructions", "keep"] }),
+  }, plan: { parts: [{ id: "part", sources: [] }] },
+    replanArtifacts: [{ artifactId: "current-input", partId: "part", kind: "processedFiles", canReadCurrentDirectory: true }] });
+  mocks.runtimeOverviews.mockResolvedValue([{ taskId: 42, workflowRunId: 77, currentStepIndex: 1,
+    currentNodeKind: kind, workflowStatus: "waiting", problemCode: "SOURCE_ATTENTION_REQUIRED" }]);
+  render(<PlanTaskDetailModal taskId={42} />);
+  fireEvent.click(await screen.findByRole("button", { name: "acquisition.continue.open" }));
+  const modal = within(await screen.findByRole("dialog", { name: /acquisition\.continue\.open$/ }));
+  expect(modal.getByText("inline run 77")).toBeVisible();
+  expect(modal.getByRole("radio", { name: "acquisition.continue.providePassword" })).toBeChecked();
+  expect(mocks.runContent).toHaveBeenLastCalledWith(expect.objectContaining({ runId: 77, respondInitially: true }));
+  fireEvent.click(modal.getByRole("radio", { name: "acquisition.continue.checkpoint.files" }));
+  expect(modal.getByText("completed revision 3")).toBeVisible();
+  expect(modal.queryByText("inline run 77")).toBeNull();
+  expect(mocks.run).not.toHaveBeenCalled();
+});
+
+it.each(["ExtractionPlanUnknown", "FutureProcessingWait"])("defaults readable current files to the AI-capable processing form for %s without an old action allowlist", async reason => {
   mocks.get.mockResolvedValue({ ...detail, task: { ...detail.task, workflowRunId: 77, phase: "attention",
     status: AcquisitionStatus.Waiting, waitPromptJson: JSON.stringify({ targetId: "part", reason,
       canEditPlan: true, allowedActions: [], allowedArchivePolicies: ["instructions", "keep"] }),
@@ -1405,7 +1591,7 @@ it.each(["ExtractionPlanUnknown", "PasswordUnknown", "FutureProcessingWait"])("d
     currentNodeKind: "acquisition.plan.process", workflowStatus: "waiting", problemCode: "SOURCE_ATTENTION_REQUIRED" }]);
   render(<PlanTaskDetailModal taskId={42} />);
   fireEvent.click(await screen.findByRole("button", { name: "acquisition.continue.open" }));
-  const dialog = within(screen.getByRole("dialog", { name: "acquisition.continue.open" }));
+  const dialog = within(screen.getByRole("dialog", { name: /acquisition\.continue\.open$/ }));
   expect(dialog.getByText("completed revision 3")).toBeVisible();
   expect(dialog.queryByText("inline run 77")).toBeNull();
   expect(mocks.completedRevision).toHaveBeenLastCalledWith(expect.objectContaining({ inDialog: true,
@@ -1533,6 +1719,7 @@ it.each([2, undefined])("marks a previous delivery as an earlier result while th
     hasAssessmentCalls: false,
     outputs: [{ kind: "scalar", key: id, value: id }],
   });
+  // This isolated timeline fixture intentionally supplies only the fields it renders.
   const saved = { ...detail, task: { ...detail.task, workflowRunId: 80 },
     steps: [{ id: "input", kind: "acquisition.plan.continueFiles", labelKey: "input", stage: "processing" },
       { id: "process", kind: "acquisition.plan.process", labelKey: "process", stage: "processing" },
@@ -1544,7 +1731,7 @@ it.each([2, undefined])("marks a previous delivery as an earlier result while th
     stageDirectories: { version: 1, taskId: 42, parts: { main: { delivery: {
       directory: "/Acquired/previous", ownership: "borrowed", evidence: "recorded",
     } } } },
-  };
+  } as unknown as PlanTaskDetail;
   const view = render(<AcquisitionExecutionTimeline detail={saved} currentStepIndex={currentStepIndex}
     actions={{}} onOpenRun={vi.fn()} />);
   const rows = screen.getAllByRole("listitem");
@@ -1572,10 +1759,14 @@ it("keeps the saved local revision available if starting a stage attempt fails",
     phase:"ready",workflowRunId:undefined,planRevision:4},steps:[{id:"continue",kind:"acquisition.plan.continueFiles"}]};
   mocks.get.mockResolvedValue(ready);
   mocks.run.mockRejectedValueOnce(new Error("start failed"));
-  await act(async () => { mocks.completedRevision.mock.lastCall?.[0].onSaved(ready); });
+  await act(async () => { mocks.completedRevision.mock.lastCall?.[0].onSaved(ready, {useEmergencySpaceReserve:false}); });
   expect(await screen.findByRole("button", {name:"acquisition.plan.run"})).toBeEnabled();
-  expect(mocks.run).toHaveBeenCalledExactlyOnceWith(42,4);
+  expect(mocks.run).toHaveBeenCalledExactlyOnceWith(42,4,false);
   expect(screen.getByRole("alert")).toHaveTextContent("acquisition.plan.actionFailed");
+  mocks.run.mockResolvedValue(ready);
+  fireEvent.click(screen.getByRole("button", {name:"acquisition.plan.run"}));
+  await waitFor(() => expect(mocks.run).toHaveBeenCalledTimes(2));
+  expect(mocks.run).toHaveBeenLastCalledWith(42,4,false);
 });
 
 it("shows only the latest AI diagnosis while retaining every attempt in execution details", async () => {
@@ -1641,9 +1832,9 @@ it("keeps the latest AI inspection entry without repeating the same current fail
   render(<AcquisitionExecutionTimeline detail={{ ...detail,
     task: { ...detail.task, workflowRunId: 77 },
     stageAttempts: [{ id: "77/1", runId: 77, stage: "processing", attempt: 1, status: "waiting",
-      legacy: false, outputsTruncated: false, nodes: ["fs.assessDelivery"],
+      legacy: false, outputsTruncated: false, hasAssessmentCalls: true, nodes: ["fs.assessDelivery"],
       outputs: [{ kind: "warning", key: "adaptive-assessment", code: "LLM_DECISION_INVALID_JSON" }] }],
-  }} actions={{ processing: <p>cloudDownload.problemCode.LLM_DECISION_INVALID_JSON</p> }}
+  } as unknown as PlanTaskDetail} actions={{ processing: <p>cloudDownload.problemCode.LLM_DECISION_INVALID_JSON</p> }}
     currentProblemCode="LLM_DECISION_INVALID_JSON" onOpenRun={vi.fn()} />);
   expect(screen.getAllByText("cloudDownload.problemCode.LLM_DECISION_INVALID_JSON")).toHaveLength(1);
   expect(screen.getByRole("button", { name: "acquisition.records.viewIo" })).toBeVisible();

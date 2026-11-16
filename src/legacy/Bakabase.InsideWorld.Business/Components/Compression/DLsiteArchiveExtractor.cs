@@ -19,7 +19,8 @@ namespace Bakabase.InsideWorld.Business.Components.Compression;
 /// </summary>
 public class DLsiteArchiveExtractor(
     SevenZipService sevenZipService,
-    ILogger<DLsiteArchiveExtractor> logger)
+    ILogger<DLsiteArchiveExtractor> logger,
+    IArchiveExtractionService? archiveExtraction = null)
 {
     private enum ArchiveFormat
     {
@@ -50,7 +51,7 @@ public class DLsiteArchiveExtractor(
         if (downloadedFiles.Count == 0) return false;
 
         // Group files into archive sets (split archives belong together)
-        var archiveSets = GroupIntoArchiveSets(downloadedFiles);
+        var archiveSets = await GroupIntoArchiveSets(downloadedFiles, ct);
 
         var extracted = false;
         foreach (var set in archiveSets)
@@ -120,41 +121,17 @@ public class DLsiteArchiveExtractor(
     /// Groups downloaded files into archive sets. Files that form a split archive
     /// are grouped together; standalone archives and non-archives are each their own set.
     /// </summary>
-    private List<ArchiveSet> GroupIntoArchiveSets(List<string> files)
+    private async Task<List<ArchiveSet>> GroupIntoArchiveSets(List<string> files, CancellationToken ct)
     {
         var result = new List<ArchiveSet>();
-
-        // Group by directory + base name (without .partN and extension)
-        var groups = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var file in files)
+        foreach (var group in await GroupArchiveFilesAsync(files, ct))
         {
-            var key = GetSplitArchiveKey(file);
-            if (!groups.TryGetValue(key, out var list))
-            {
-                list = [];
-                groups[key] = list;
-            }
-
-            list.Add(file);
-        }
-
-        foreach (var (_, groupFiles) in groups)
-        {
-            // Sort: .exe first (it's the SFX entry), then by name
-            var sorted = groupFiles
-                .OrderBy(f => f.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ? 0 : 1)
-                .ThenBy(f => f, StringComparer.OrdinalIgnoreCase)
-                .ToList();
-
+            var sorted = group.Files;
             var entryFile = sorted[0];
-            var format = DetectFormat(entryFile);
-
-            // If entry is .exe but we can't detect format from it, try sibling files
-            if (format == ArchiveFormat.Unknown && sorted.Count > 1)
-            {
-                format = InferFormatFromSiblings(sorted);
-            }
+            // Only the shared helper may form a split family. In particular, a same-stem
+            // ZIP and RAR are separate archives; sibling suffixes never prove an EXE's format.
+            var confirmedSfx = sorted.Count > 1 && entryFile.EndsWith(".exe", StringComparison.OrdinalIgnoreCase);
+            var format = confirmedSfx ? ArchiveFormat.Rar : DetectFormat(entryFile);
 
             // Also try format detection from extension for known archive extensions
             if (format == ArchiveFormat.Unknown)
@@ -174,31 +151,22 @@ public class DLsiteArchiveExtractor(
         return result;
     }
 
-    /// <summary>
-    /// Returns a grouping key for split archive detection.
-    /// E.g., "VJ006100.part1.exe" and "VJ006100.part2.rar" both return "/full/path/VJ006100".
-    /// A standalone "RJ123456.zip" returns "/full/path/RJ123456".
-    /// </summary>
-    private static string GetSplitArchiveKey(string filePath)
+    internal async Task<IReadOnlyList<CompressedFileGroup>> GroupArchiveFilesAsync(IReadOnlyList<string> files, CancellationToken ct)
     {
-        var dir = Path.GetDirectoryName(filePath) ?? "";
-        var fileName = Path.GetFileName(filePath);
-
-        // Remove extension
-        var name = Path.GetFileNameWithoutExtension(fileName);
-
-        // Remove .partN suffix (case-insensitive)
-        var partIdx = name.LastIndexOf(".part", StringComparison.OrdinalIgnoreCase);
-        if (partIdx >= 0)
+        var confirmed = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var candidate in CompressedFileHelper.DetectSfxMultipartCandidates(files))
         {
-            var afterPart = name[(partIdx + 5)..];
-            if (afterPart.Length > 0 && afterPart.All(char.IsDigit))
-            {
-                name = name[..partIdx];
-            }
+            ct.ThrowIfCancellationRequested();
+            if (!candidate.IsComplete || candidate.IsAmbiguous)
+                throw new InvalidDataException("The multipart archive filenames are incomplete or ambiguous.");
+            var format = archiveExtraction == null ? null :
+                await archiveExtraction.ProbeAuthorizedFormatAsync(candidate.EntryFile, ct);
+            if (!CompressedFileHelper.SfxFormatMatches(candidate, format?.Extension))
+                throw new InvalidDataException("The selected executable was not confirmed as this multipart RAR archive.");
+            confirmed[candidate.EntryFile] = format!.Extension;
         }
-
-        return Path.Combine(dir, name);
+        return CompressedFileHelper.DetectCompressedFileGroups(files.ToArray(), ignoreUnknownExtensions: false,
+            confirmedSfxFormats: confirmed);
     }
 
     /// <summary>
@@ -243,27 +211,6 @@ public class DLsiteArchiveExtractor(
         }
 
         return true;
-    }
-
-    /// <summary>
-    /// Infers archive format from sibling file extensions (for when the entry file
-    /// is an undetectable .exe but other parts have known extensions).
-    /// </summary>
-    private static ArchiveFormat InferFormatFromSiblings(List<string> files)
-    {
-        foreach (var file in files)
-        {
-            var ext = Path.GetExtension(file).ToLowerInvariant();
-            switch (ext)
-            {
-                case ".rar":
-                    return ArchiveFormat.Rar;
-                case ".zip":
-                    return ArchiveFormat.Zip;
-            }
-        }
-
-        return ArchiveFormat.Unknown;
     }
 
     private static ArchiveFormat InferFormatFromExtension(string filePath)

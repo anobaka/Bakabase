@@ -4,14 +4,17 @@ import { Button, Modal, Radio, RadioGroup, Tooltip } from "@/components/bakaui";
 import { ResumeActionsContext } from "@/components/Workflow/ResumeActions";
 
 export default function TaskContinuationModal({
-  current, files, stale, origin, processAgain, delivery, busy = false, preferFiles = false, allowModeChoice = false, onClose,
+  current, files, stale, origin, taskTitle, processAgain, delivery, busy = false, preferFiles = false, allowModeChoice = false, reviewOutput = false, passwordRequested = false, onClose,
 }: {
+  taskTitle?: string;
   origin?: ReactNode;
   processAgain?: boolean;
   delivery?: boolean;
   busy?: boolean;
   preferFiles?: boolean;
   allowModeChoice?: boolean;
+  reviewOutput?: boolean;
+  passwordRequested?: boolean;
   current?: ReactNode;
   files?: ReactNode;
   stale: boolean;
@@ -24,11 +27,14 @@ export default function TaskContinuationModal({
   const isBusy = busy || formBusy;
   const canChoose = allowModeChoice && !!current && !!files;
   const mode = canChoose && selectedMode ? selectedMode : files && (preferFiles || !current) ? "files" : "current";
+  const currentLabel = passwordRequested ? "acquisition.continue.providePassword" :
+    reviewOutput ? "acquisition.continue.reviewOutput" : "acquisition.continue.checkpoint.current";
+  const action = t(delivery ? "acquisition.continue.delivery" : processAgain ? "acquisition.continue.again" : "acquisition.continue.open");
   return (
     <Modal
       visible
       size="6xl"
-      title={t(delivery ? "acquisition.continue.delivery" : processAgain ? "acquisition.continue.again" : "acquisition.continue.open")}
+      title={taskTitle ? `${taskTitle} · ${action}` : action}
       onClose={() => { if (!isBusy) onClose(); }}
       isDismissable={!isBusy}
       isKeyboardDismissDisabled={isBusy}
@@ -43,12 +49,12 @@ export default function TaskContinuationModal({
         <RadioGroup label={t("acquisition.continue.checkpointChoice")} size="sm" orientation="horizontal"
           value={mode} isDisabled={isBusy || stale}
           onValueChange={value => { if (value === "current" || value === "files") setSelectedMode(value); }}>
-          <Radio value="current">{t("acquisition.continue.checkpoint.current")}</Radio>
+          <Radio value="current">{t(currentLabel)}</Radio>
           <Radio value="files"><Tooltip content={t("acquisition.continue.checkpoint.filesHint")}>
             <span>{t("acquisition.continue.checkpoint.files")}</span>
           </Tooltip></Radio>
         </RadioGroup>
-        {mode === "current" && <p className="text-xs text-default-500">{t("acquisition.continue.checkpoint.currentHint")}</p>}
+        {mode === "current" && !passwordRequested && <p className="text-xs text-default-500">{t(reviewOutput ? "acquisition.continue.reviewOutputHint" : "acquisition.continue.checkpoint.currentHint")}</p>}
       </div>}
       {stale && (
         <p role="alert" className="text-sm text-warning-700">

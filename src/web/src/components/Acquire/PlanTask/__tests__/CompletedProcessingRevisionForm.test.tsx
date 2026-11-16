@@ -7,8 +7,9 @@ import CompletedProcessingRevisionForm, {
 import type { PlanTaskDetail } from "../models";
 import { AcquisitionStatus } from "@/sdk/constants";
 
-const mocks = vi.hoisted(() => ({ replan: vi.fn(), run: vi.fn(), select: vi.fn() }));
+const mocks = vi.hoisted(() => ({ replan: vi.fn(), run: vi.fn(), select: vi.fn(), reserveDefaults: vi.fn() }));
 vi.mock("../api", () => ({ planTaskApi: mocks }));
+vi.mock("../../useStorageReserveDefaults", () => ({ default: mocks.reserveDefaults }));
 vi.mock("@/components/Workflow/CurrentProcessingFiles", () => ({
   ProcessingDirectoryFiles: ({ path }: { path: string }) => <span data-testid="current-directory-files">{path}</span>,
   ProcessingFileList: ({ artifactId }: { artifactId: string }) => <span data-testid="selected-file-manifest">{artifactId}</span>,
@@ -16,6 +17,8 @@ vi.mock("@/components/Workflow/CurrentProcessingFiles", () => ({
 vi.mock("@/components/bakaui", async () => ({
   ...(await import("@/test/radioControls")),
   Modal: ({title,children,footer}: any) => <div role="dialog" aria-label={title}>{children}{footer}</div>,
+  Tooltip: ({children}: any) => <>{children}</>,
+  Spinner: ({"aria-label": label}: any) => <span role="status" aria-label={label} />,
   Checkbox: ({ children, isSelected, onValueChange, isDisabled }: any) => (
     <label>
       <input
@@ -244,6 +247,129 @@ it("always processes the selected directories' current files without asking for 
   ]);
 });
 
+it("uses the clicked stage's current directory for every part without selecting historical artifacts", async () => {
+  const current = { ...detail, replanArtifacts: [], stageDirectories: {version:1,taskId:4,parts:{
+    main:{processing:{directory:"/current/main",ownership:"exclusive",evidence:"configured"}},
+    extra:{processing:{directory:"/current/extra",ownership:"exclusive",evidence:"configured"}},
+  }} };
+  render(<CompletedProcessingRevisionForm detail={current} retryStage="processing" inputStage="processing"
+    onSaved={vi.fn()} onCancel={vi.fn()} />);
+  expect(screen.queryByRole("combobox")).toBeNull();
+  expect(screen.getAllByTestId("current-directory-files").map(item=>item.textContent)).toEqual(["/current/main","/current/extra"]);
+  for (const control of screen.getAllByRole("radio",{name:"acquisition.processingChoice.keep"})) fireEvent.click(control);
+  fireEvent.click(screen.getByRole("button",{name:"acquisition.timeline.startAttempt"}));
+  await waitFor(()=>expect(mocks.replan).toHaveBeenCalledOnce());
+  expect(mocks.replan.mock.calls[0][1].items).toEqual(expect.arrayContaining([
+    expect.objectContaining({partId:"main",inputStage:"processing",inputMode:"stageDirectory",artifactEvidenceIds:[]}),
+    expect.objectContaining({partId:"extra",inputStage:"processing",inputMode:"stageDirectory",artifactEvidenceIds:[]}),
+  ]));
+  expect(mocks.replan.mock.calls[0][1].items.every((item:any)=>!item.continueFromArtifactId)).toBe(true);
+});
+
+it("requires an explicit readable result for every completed part when its processing stage was never bound", async () => {
+  render(<CompletedProcessingRevisionForm detail={detail} retryStage="processing" inputStage="processing"
+    onSaved={vi.fn()} onCancel={vi.fn()} />);
+  expect(screen.getByText("acquisition.processingInput.chooseRegisteredDirectory")).toBeVisible();
+  expect(screen.getAllByRole("combobox", { name: "acquisition.plan.continueCompleted.input" })).toHaveLength(2);
+  expect(screen.queryByTestId("current-directory-files")).toBeNull();
+  expect(screen.getByRole("button",{name:"acquisition.timeline.startAttempt"})).toBeDisabled();
+  fill();
+  fireEvent.click(screen.getByRole("button",{name:"acquisition.timeline.startAttempt"}));
+  await waitFor(()=>expect(mocks.replan).toHaveBeenCalledOnce());
+  expect(mocks.replan.mock.calls[0][1].items).toMatchObject([
+    {partId:"main",inputMode:"currentDirectory",artifactEvidenceIds:["main-output"],continueFromArtifactId:"main-output"},
+    {partId:"extra",inputMode:"currentDirectory",artifactEvidenceIds:["extra-output"],continueFromArtifactId:"extra-output"},
+  ]);
+});
+
+it.each(["unreadable", "partialBindings", "unrelatedOwner"])("keeps stage-based processing if any completed part lacks safe fallback evidence (%s)", mode => {
+  const current = { ...detail, stageDirectories: {version:1,taskId:4,parts:{
+    main:{processing:mode === "partialBindings" ? {directory:"/current/main",ownership:"exclusive",evidence:"configured"} : undefined,
+      download:{directory:"/raw/main",ownership:"exclusive",evidence:"configured"}},
+    extra:{download:{directory:"/raw/extra",ownership:"exclusive",evidence:"configured"}},
+  }}, replanArtifacts: detail.replanArtifacts.map(item => item.partId !== "extra" ? item : {
+    ...item, canReadCurrentDirectory: mode !== "unreadable", partId: mode === "unrelatedOwner" ? "unrelated" : item.partId,
+  }) };
+  render(<CompletedProcessingRevisionForm detail={current} retryStage="processing" inputStage="processing"
+    onSaved={vi.fn()} onCancel={vi.fn()} />);
+  expect(screen.queryByRole("combobox")).toBeNull();
+  expect(screen.queryByText("acquisition.processingInput.chooseRegisteredDirectory")).toBeNull();
+  expect(screen.getAllByRole("alert")).toHaveLength(mode === "partialBindings" ? 1 : 2);
+  for (const control of screen.getAllByRole("radio",{name:"acquisition.processingChoice.keep"})) fireEvent.click(control);
+  expect(screen.getByRole("button",{name:"acquisition.timeline.startAttempt"})).toBeDisabled();
+});
+
+function initialProcessingDetail(): PlanTaskDetail {
+  return {
+    ...detail,
+    task: { ...detail.task, status: AcquisitionStatus.Waiting, stage: "attention", isFinished: false },
+    stageDirectories: {version:1, taskId:4, parts:{
+      main:{download:{directory:"/raw/main",ownership:"borrowed",evidence:"downloadRecord"}},
+      extra:{download:{directory:"/raw/extra",ownership:"borrowed",evidence:"downloadRecord"}},
+    }},
+    replanArtifacts: detail.replanArtifacts.slice(0, 2).map(item => ({ ...item,
+      kind: "download", rootDirectory: `/raw/${item.partId}`, canReadCurrentDirectory: true,
+    })),
+  };
+}
+
+it("starts first processing from each readable downloaded directory and submits the displayed stage", async () => {
+  render(<CompletedProcessingRevisionForm detail={initialProcessingDetail()} retryStage="processing"
+    inputStage="processing" mode="stopped" preferAi onSaved={vi.fn()} onCancel={vi.fn()} />);
+  expect(screen.getAllByTestId("current-directory-files").map(item => item.textContent))
+    .toEqual(["/raw/main", "/raw/extra"]);
+  expect(screen.queryByRole("combobox")).toBeNull();
+  expect(screen.queryByRole("alert")).toBeNull();
+  fireEvent.click(screen.getByRole("button", {name:"acquisition.timeline.startAttempt"}));
+  await waitFor(() => expect(mocks.replan).toHaveBeenCalledOnce());
+  expect(mocks.replan.mock.calls[0][1].items).toEqual(expect.arrayContaining([
+    expect.objectContaining({partId:"main", inputStage:"download", inputMode:"stageDirectory", artifactEvidenceIds:[], useAdaptiveAssessment:true}),
+    expect.objectContaining({partId:"extra", inputStage:"download", inputMode:"stageDirectory", artifactEvidenceIds:[], useAdaptiveAssessment:true}),
+  ]));
+});
+
+it("keeps existing processing inputs while another part starts from its completed download", async () => {
+  const current = initialProcessingDetail();
+  current.stageDirectories!.parts.extra.processing = {directory:"/current/extra",ownership:"exclusive",evidence:"configured"};
+  render(<CompletedProcessingRevisionForm detail={current} retryStage="processing" inputStage="processing"
+    mode="stopped" preferAi onSaved={vi.fn()} onCancel={vi.fn()} />);
+  expect(screen.getAllByTestId("current-directory-files").map(item => item.textContent))
+    .toEqual(["/raw/main", "/current/extra"]);
+  fireEvent.click(screen.getByRole("button", {name:"acquisition.timeline.startAttempt"}));
+  await waitFor(() => expect(mocks.replan).toHaveBeenCalledOnce());
+  expect(mocks.replan.mock.calls[0][1].items).toEqual(expect.arrayContaining([
+    expect.objectContaining({partId:"main", inputStage:"download"}),
+    expect.objectContaining({partId:"extra", inputStage:"processing"}),
+  ]));
+});
+
+it("does not replace a bound processing directory with a readable download after processing becomes unreadable", () => {
+  const current = initialProcessingDetail();
+  current.stageDirectories!.parts.main.processing = {directory:"/unavailable/main",ownership:"borrowed",evidence:"processingRecord"};
+  current.replanArtifacts.push({...current.replanArtifacts[0], artifactId:"unavailable-processing",
+    kind:"processedFiles", rootDirectory:"/unavailable/main", canReadCurrentDirectory:false});
+  render(<CompletedProcessingRevisionForm detail={current} retryStage="processing" inputStage="processing"
+    mode="stopped" preferAi onSaved={vi.fn()} onCancel={vi.fn()} />);
+  expect(screen.getAllByTestId("current-directory-files").map(item => item.textContent))
+    .toEqual(["/unavailable/main", "/raw/extra"]);
+});
+
+it.each(["unreadable", "differentRoot", "notDownload", "otherTask", "completed"])(
+  "does not start first processing from unconfirmed download inputs: %s", (reason) => {
+    const current = initialProcessingDetail();
+    if (reason === "unreadable") current.replanArtifacts[0].canReadCurrentDirectory = false;
+    if (reason === "differentRoot") current.replanArtifacts[0].rootDirectory = "/older/main";
+    if (reason === "notDownload") current.replanArtifacts[0].kind = "processedFiles";
+    if (reason === "otherTask") current.stageDirectories!.taskId = 999;
+    if (reason === "completed") current.task.status = AcquisitionStatus.Completed;
+    render(<CompletedProcessingRevisionForm detail={current} retryStage="processing" inputStage="processing"
+      mode="stopped" preferAi onSaved={vi.fn()} onCancel={vi.fn()} />);
+    expect(screen.getByRole("button", {name:"acquisition.timeline.startAttempt"})).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", {name:"acquisition.timeline.startAttempt"}));
+    expect(mocks.replan).not.toHaveBeenCalled();
+  },
+);
+
 it("does not silently fall back when a selected current directory is unavailable or shared", async () => {
   const unavailable = { ...detail, replanArtifacts: detail.replanArtifacts.map(item => ({ ...item, canReadCurrentDirectory: false })) };
   render(<CompletedProcessingRevisionForm detail={unavailable} retryStage="processing" onSaved={vi.fn()} onCancel={vi.fn()} />);
@@ -291,6 +417,7 @@ it("offers the separate delivery-only mode only when every part has a published 
 });
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.reserveDefaults.mockReturnValue({ value: { selected: false, minimumBytes: 50 * 1024 ** 3 }, failed: false, reload: vi.fn() });
   mocks.replan.mockResolvedValue({
     ...detail,
     task: {
@@ -300,6 +427,204 @@ beforeEach(() => {
       workflowRunId: undefined,
     },
   });
+});
+
+function emptyProcessingReview(): PlanTaskDetail {
+  return {
+    ...detail,
+    task: { ...detail.task, status: AcquisitionStatus.Waiting, waitPromptJson: JSON.stringify({
+      targetId: "main", artifactId: "main-output", fingerprint: "main-fp",
+      deliveryReview: true, reviewToken: "current-review", reason: "PasswordUnknown",
+    }) },
+    plan: { ...detail.plan!, parts: [detail.plan!.parts[0]] },
+    stageDirectories: { version: 1, taskId: 4, parts: {
+      main: { processing: { directory: "/current/main", ownership: "exclusive",
+        evidence: "taskAllocation", bindingId: "main-directory" } },
+    } },
+    replanArtifacts: [{ ...detail.replanArtifacts[0], kind: "currentFiles" }],
+  };
+}
+
+it("offers the exact current review directory only after an empty stage input and preserves the user's attempt options", async () => {
+  mocks.reserveDefaults.mockReturnValue({ value: { selected: true, minimumBytes: 50 * 1024 ** 3 }, failed: false, reload: vi.fn() });
+  mocks.replan.mockRejectedValueOnce(new Error("PLAN_CURRENT_DIRECTORY_EMPTY"));
+  const saved = vi.fn();
+  render(<CompletedProcessingRevisionForm detail={emptyProcessingReview()} retryStage="processing" inputStage="processing"
+    mode="stopped" preferAi waitingLocalProcessing={{ taskId: 4, runId: 100, planRevision: 3 }}
+    onSaved={saved} onCancel={vi.fn()} />);
+  expect(screen.queryByRole("button", { name: "acquisition.processingInput.useReviewedDirectory" })).toBeNull();
+  expect(screen.getByTestId("current-directory-files")).toHaveTextContent("/current/main");
+  fireEvent.click(screen.getByRole("checkbox", { name: "acquisition.reserve.operation.label" }));
+  fireEvent.change(screen.getByLabelText("acquisition.plan.continueCompleted.adaptiveIterations"), { target: { value: "2" } });
+  fireEvent.change(screen.getByLabelText("acquisition.plan.continueCompleted.adaptiveContext"), { target: { value: "Inspect the current archive only." } });
+  const submit = screen.getByRole("button", { name: "acquisition.timeline.startAttempt" });
+  fireEvent.click(submit);
+  const recover = await screen.findByRole("button", { name: "acquisition.processingInput.useReviewedDirectory" });
+  expect(mocks.replan).toHaveBeenCalledOnce();
+  expect(mocks.replan.mock.calls[0][1].items).toEqual([expect.objectContaining({
+    inputMode: "stageDirectory", inputStage: "processing", artifactEvidenceIds: [],
+  })]);
+  expect(screen.getByTestId("current-directory-files")).toHaveTextContent("/current/main");
+  expect(saved).not.toHaveBeenCalled();
+  fireEvent.click(recover);
+  expect(mocks.replan).toHaveBeenCalledOnce();
+  expect(screen.getByTestId("current-directory-files")).toHaveTextContent("/processed/main");
+  expect(screen.getByRole("combobox", { name: "acquisition.plan.continueStopped.input" })).toHaveValue("main-output");
+  expect(screen.getByLabelText("acquisition.plan.continueCompleted.adaptiveIterations")).toHaveValue(2);
+  expect(screen.getByLabelText("acquisition.plan.continueCompleted.adaptiveContext")).toHaveValue("Inspect the current archive only.");
+  expect(screen.getByRole("checkbox", { name: "acquisition.reserve.operation.label" })).not.toBeChecked();
+  fireEvent.click(submit);
+  await waitFor(() => expect(saved).toHaveBeenCalledOnce());
+  expect(mocks.replan.mock.calls[1][1]).toMatchObject({
+    expectedRevision: 3, expectedRunId: 100, enableAdaptiveAssessment: true, maxAdaptiveIterations: 2,
+    adaptiveContext: "Inspect the current archive only.",
+    items: [{ partId: "main", inputMode: "currentDirectory", artifactEvidenceIds: ["main-output"],
+      continueFromArtifactId: "main-output", useAdaptiveAssessment: true }],
+  });
+  expect(mocks.replan.mock.calls[1][1].items[0]).not.toHaveProperty("inputStage");
+  expect(saved.mock.calls[0][1]).toEqual({ useEmergencySpaceReserve: false });
+  expect(mocks.run).not.toHaveBeenCalled();
+  expect(mocks.select).not.toHaveBeenCalled();
+});
+
+it.each(["unreadable", "changedFingerprint", "ambiguous", "sameDirectory", "unboundDirectory", "differentPart", "multipleParts", "differentError"])(
+  "does not offer an empty-directory recovery without an exact distinct current review: %s", async reason => {
+    const current = emptyProcessingReview();
+    if (reason === "unreadable") current.replanArtifacts[0].canReadCurrentDirectory = false;
+    if (reason === "changedFingerprint") current.replanArtifacts[0].fingerprint = "changed";
+    if (reason === "ambiguous") current.replanArtifacts.push({ ...current.replanArtifacts[0] });
+    if (reason === "sameDirectory") current.replanArtifacts[0].rootDirectory = "/current/main";
+    if (reason === "unboundDirectory") current.stageDirectories!.parts.main.processing!.bindingId = undefined;
+    if (reason === "differentPart") current.replanArtifacts[0].partId = "extra";
+    if (reason === "multipleParts") {
+      current.plan!.parts.push(detail.plan!.parts[1]);
+      current.stageDirectories!.parts.extra = { processing: { directory: "/current/extra", ownership: "exclusive",
+        evidence: "taskAllocation", bindingId: "extra-directory" } };
+    }
+    mocks.replan.mockRejectedValueOnce(new Error(reason === "differentError" ? "PLAN_CURRENT_DIRECTORY_UNAVAILABLE" : "PLAN_CURRENT_DIRECTORY_EMPTY"));
+    render(<CompletedProcessingRevisionForm detail={current} retryStage="processing" inputStage="processing"
+      mode="stopped" preferAi waitingLocalProcessing={{ taskId: 4, runId: 100, planRevision: 3 }}
+      onSaved={vi.fn()} onCancel={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "acquisition.timeline.startAttempt" }));
+    await screen.findByRole("alert");
+    expect(screen.queryByRole("button", { name: "acquisition.processingInput.useReviewedDirectory" })).toBeNull();
+    expect(mocks.replan).toHaveBeenCalledOnce();
+  },
+);
+
+function borrowedProcessingReview(): PlanTaskDetail {
+  const current = emptyProcessingReview();
+  current.stageDirectories!.parts.main.processing = {
+    directory: "/processed/main", ownership: "borrowed", evidence: "processingRecord",
+  };
+  current.replanArtifacts = [{ ...detail.replanArtifacts[0] }, { ...detail.replanArtifacts[2] }];
+  return current;
+}
+
+it("offers explicit exact-artifact capture when the current borrowed directory is protected", async () => {
+  const current = borrowedProcessingReview();
+  mocks.replan.mockRejectedValueOnce(new Error("STAGE_DIRECTORY_REFERENCED"));
+  const saved = vi.fn();
+  render(<CompletedProcessingRevisionForm detail={current} retryStage="processing" inputStage="processing"
+    mode="stopped" waitingLocalProcessing={{ taskId: 4, runId: 100, planRevision: 3 }}
+    onSaved={saved} onCancel={vi.fn()} />);
+  const recoveryLabel = "acquisition.processingInput.useReviewedDirectory";
+  const submit = screen.getByRole("button", { name: "acquisition.timeline.startAttempt" });
+  expect(screen.queryByRole("button", { name: recoveryLabel })).toBeNull();
+  fireEvent.click(screen.getByRole("radio", { name: "acquisition.processingChoice.manual" }));
+  fireEvent.click(screen.getByRole("button", { name: "workflow.processing.editor.advanced" }));
+  fireEvent.change(screen.getByLabelText("workflow.processing.plan"), { target: { value: JSON.stringify(remaining) } });
+  fireEvent.click(submit);
+  const recover = await screen.findByRole("button", { name: recoveryLabel });
+  expect(mocks.replan.mock.calls[0][1].items[0].inputMode).toBe("stageDirectory");
+  expect(screen.getByText("acquisition.processingInput.referencedDirectoryRecoveryHint")).toBeVisible();
+  fireEvent.click(recover);
+  expect(mocks.replan).toHaveBeenCalledOnce();
+  const selector = screen.getByRole("combobox", { name: "acquisition.plan.continueStopped.input" });
+  expect(selector).toBeDisabled();
+  expect(selector).toHaveValue("main-output");
+  expect(within(selector).queryByText("/raw/main")).toBeNull();
+  fireEvent.click(submit);
+  await waitFor(() => expect(saved).toHaveBeenCalledOnce());
+  expect(mocks.replan.mock.calls[1][1]).toMatchObject({
+    expectedRevision: 3, expectedRunId: 100, enableAdaptiveAssessment: false,
+    items: [{ partId: "main", plan: remaining, inputMode: "currentDirectory",
+      artifactEvidenceIds: ["main-output"], continueFromArtifactId: "main-output" }],
+  });
+});
+
+it.each(["bound", "exclusive", "differentDirectory", "differentEvidence", "changedReview", "otherPart",
+  "oldRun", "differentTask", "unreadable", "ambiguous", "noFiles", "differentError"])(
+  "keeps a referenced directory protected when the paused input cannot be identified: %s", async reason => {
+    const current = borrowedProcessingReview();
+    const directory = current.stageDirectories!.parts.main.processing!;
+    if (reason === "bound") directory.bindingId = "explicit-binding";
+    if (reason === "exclusive") directory.ownership = "exclusive";
+    if (reason === "differentDirectory") directory.directory = "/another/directory";
+    if (reason === "differentEvidence") directory.evidence = "plannedDelivery";
+    if (reason === "changedReview") current.replanArtifacts[0].fingerprint = "old";
+    if (reason === "otherPart") current.replanArtifacts[0].partId = "another";
+    if (reason === "differentTask") current.stageDirectories!.taskId = 5;
+    if (reason === "unreadable") current.replanArtifacts[0].canReadCurrentDirectory = false;
+    if (reason === "ambiguous") current.replanArtifacts.push({ ...current.replanArtifacts[0] });
+    if (reason === "noFiles") current.replanArtifacts[0].fileCount = 0;
+    if (reason !== "differentTask")
+      mocks.replan.mockRejectedValueOnce(new Error(reason === "differentError" ? "STAGE_DIRECTORY_SHARED" : "STAGE_DIRECTORY_REFERENCED"));
+    render(<CompletedProcessingRevisionForm detail={current} retryStage="processing" inputStage="processing"
+      mode="stopped" preferAi waitingLocalProcessing={{ taskId: 4, runId: reason === "oldRun" ? 99 : 100, planRevision: 3 }}
+      onSaved={vi.fn()} onCancel={vi.fn()} />);
+    const submit = screen.getByRole("button", { name: "acquisition.timeline.startAttempt" });
+    fireEvent.click(submit);
+    if (reason !== "differentTask") await screen.findByRole("alert");
+    expect(screen.queryByRole("button", { name: "acquisition.processingInput.useReviewedDirectory" })).toBeNull();
+    expect(mocks.replan).toHaveBeenCalledTimes(reason === "differentTask" ? 0 : 1);
+  },
+);
+
+it("starts AI with an explicit configured reserve when the global emergency default is unchecked", async () => {
+  mocks.reserveDefaults.mockReturnValue({ value: { selected: true, minimumBytes: 50 * 1024 ** 3 }, failed: false, reload: vi.fn() });
+  const saved = vi.fn();
+  render(<CompletedProcessingRevisionForm detail={detail} retryStage="processing" preferAi
+    onSaved={saved} onCancel={vi.fn()} />);
+  const reserve = screen.getByRole("checkbox", {name:"acquisition.reserve.operation.label"});
+  expect(reserve).toBeChecked();
+  fireEvent.click(reserve);
+  fireEvent.click(screen.getByRole("button", {name:"acquisition.timeline.startAttempt"}));
+  await waitFor(() => expect(saved).toHaveBeenCalledOnce());
+  expect(saved.mock.calls[0][1]).toEqual({useEmergencySpaceReserve:false});
+  expect(mocks.replan.mock.calls[0][1].enableAdaptiveAssessment).toBe(true);
+  expect(mocks.replan.mock.calls[0][1]).not.toHaveProperty("useEmergencySpaceReserve");
+});
+
+it("passes a one-time emergency reserve choice for ordinary file processing", async () => {
+  const saved = vi.fn();
+  render(<CompletedProcessingRevisionForm detail={detail} onSaved={saved} onCancel={vi.fn()} />);
+  fill();
+  fireEvent.click(screen.getByRole("checkbox", {name:"acquisition.reserve.operation.label"}));
+  fireEvent.click(confirm());
+  await waitFor(() => expect(saved).toHaveBeenCalledOnce());
+  expect(saved.mock.calls[0][1]).toEqual({useEmergencySpaceReserve:true});
+});
+
+it("does not save or start until the current reserve default is known, and allows reloading a failed read", () => {
+  const reload = vi.fn();
+  mocks.reserveDefaults.mockReturnValue({value:undefined, failed:false, reload});
+  const props = {detail, retryStage:"processing" as const, preferAi:true, onSaved:vi.fn(), onCancel:vi.fn()};
+  const view = render(<CompletedProcessingRevisionForm {...props} />);
+  const submit = screen.getByRole("button", {name:"acquisition.timeline.startAttempt"});
+  expect(submit).toBeDisabled();
+  expect(screen.getByRole("status", {name:"acquisition.plan.loading"})).toBeVisible();
+  fireEvent.click(submit);
+  expect(mocks.replan).not.toHaveBeenCalled();
+  mocks.reserveDefaults.mockReturnValue({value:undefined, failed:true, reload});
+  view.rerender(<CompletedProcessingRevisionForm {...props} />);
+  fireEvent.click(screen.getByRole("button", {name:"acquisition.reserve.reload"}));
+  expect(reload).toHaveBeenCalledOnce();
+  expect(submit).toBeDisabled();
+  mocks.reserveDefaults.mockReturnValue({value:{selected:true, minimumBytes:50 * 1024 ** 3}, failed:false, reload});
+  view.rerender(<CompletedProcessingRevisionForm {...props} />);
+  expect(submit).toBeEnabled();
+  expect(screen.getByRole("checkbox", {name:"acquisition.reserve.operation.label"})).toBeChecked();
 });
 
 it("preselects AI only after an explicit reanalysis choice without submitting or changing task-level defaults", () => {
@@ -1325,6 +1650,22 @@ it("preserves an explicit task root and distinguishes unavailable settings from 
 function openPlacement() {
   fireEvent.click(screen.getByRole("button", {name: "acquisition.placement.open"}));
 }
+
+it("omits a redundant single-part title inside the task dialog, retaining standalone and multi-part headings", () => {
+  const single = { ...detail, plan: { ...detail.plan!, parts: [detail.plan!.parts[0]] } };
+  const view = render(<CompletedProcessingRevisionForm inDialog detail={single} retryStage="processing"
+    onSaved={vi.fn()} onCancel={vi.fn()} />);
+  expect(screen.getByRole("region", { name: "Main files" })).toBeVisible();
+  expect(screen.queryByRole("heading", { name: "Main files" })).toBeNull();
+  view.rerender(<CompletedProcessingRevisionForm detail={single} retryStage="processing"
+    onSaved={vi.fn()} onCancel={vi.fn()} />);
+  expect(screen.getByRole("heading", { name: "Main files" })).toBeVisible();
+  view.unmount();
+  render(<CompletedProcessingRevisionForm inDialog detail={detail} retryStage="processing"
+    onSaved={vi.fn()} onCancel={vi.fn()} />);
+  expect(screen.getByRole("heading", { name: "Main files" })).toBeVisible();
+  expect(screen.getByRole("heading", { name: "Extra files" })).toBeVisible();
+});
 function applyPlacement() {
   fireEvent.click(screen.getByRole("button", {name: "common.action.apply"}));
 }

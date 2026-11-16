@@ -37,6 +37,16 @@ public sealed class AcquisitionLocalFilesRecoveryService(BakabaseDbContext db, A
         bool verifyFiles, CancellationToken ct, Func<string?, Task>? guardDirectory = null) =>
         (await CheckAsync(task, run, verifyFiles, guardDirectory, ct)).Diagnosis;
 
+    internal static bool CanPrepareWithoutFileOperations(AcquisitionTaskDbModel task)
+    {
+        // Replanning normally finishes pending stage file moves. Registration alone must never do that,
+        // nor supersede another user's queued continuation.
+        var state = AcquisitionLocalFilesRecoveryReceipt.Read<AcquisitionPlanBuilderState>(task.BuilderStateJson);
+        return state?.DirectoryChange == null && state?.ProcessingStageInputId == null &&
+            state?.ProcessingStageCommitId == null && state?.LocalRecoveryQueue is not {IsOpen: true} &&
+            AcquisitionContinuationEntry.Read(task) is not {IsOpen: true};
+    }
+
     private async Task<Checked> CheckAsync(AcquisitionTaskDbModel task, WorkflowRunDbModel? run,
         bool verifyFiles, Func<string?, Task>? guardDirectory, CancellationToken ct)
     {
@@ -137,8 +147,13 @@ public sealed class AcquisitionLocalFilesRecoveryService(BakabaseDbContext db, A
     // Caller owns the acquisition gate. All original-run mutation is fenced for the
     // entire adoption/replan, then the existing run path starts the new local revision.
     public async Task<AcquisitionLocalFilesRecoveryOutcome> ApplyWhileLockedAsync(int taskId, string expectedVersion,
-        string? expectedEvidence, Func<string?, Task>? guardDirectory, CancellationToken ct, string? expectedStorageJson = null)
+        string? expectedEvidence, Func<string?, Task>? guardDirectory, CancellationToken ct, string? expectedStorageJson = null,
+        bool analyzeFilesFirst = false, int? maxAdaptiveIterations = null, bool? useEmergencySpaceReserve = null,
+        bool prepareOnly = false)
     {
+        if (maxAdaptiveIterations != null && !analyzeFilesFirst || maxAdaptiveIterations is < 1 or > 5)
+            throw new ArgumentException("RECOVERY_ANALYSIS_OPTIONS_INVALID");
+        maxAdaptiveIterations = analyzeFilesFirst ? maxAdaptiveIterations ?? 5 : null;
         var task = await db.AcquisitionTasks.AsNoTracking().SingleAsync(t => t.Id == taskId, ct);
         var originalRunId = task.WorkflowRunId ?? AcquisitionLocalFilesRecoveryReceipt.Read(task)?.PreviousRunId
             ?? throw new InvalidOperationException("RECOVERY_LOCAL_FILES_UNAVAILABLE");
@@ -149,11 +164,23 @@ public sealed class AcquisitionLocalFilesRecoveryService(BakabaseDbContext db, A
             var run = task.WorkflowRunId is { } id ? await db.WorkflowRuns.AsNoTracking().SingleAsync(r => r.Id == id, ct) : null;
             if (AcquisitionRecoveryService.Version(task, run) != expectedVersion)
                 throw new InvalidOperationException("ACQUISITION_TASK_CHANGED");
+            if (prepareOnly && !CanPrepareWithoutFileOperations(task))
+                throw new InvalidOperationException("RECOVERY_PREPARATION_CONFLICT");
             var check = await CheckAsync(task, run, true, guardDirectory, ct);
             if (!check.Diagnosis.Row.CanContinue) throw new InvalidOperationException(check.Diagnosis.Row.ReasonCode);
             if (expectedStorageJson != null && JsonSerializer.Serialize(check.Storage, WorkflowJson.Options) != expectedStorageJson)
                 throw new InvalidOperationException("RECOVERY_STORAGE_SETTINGS_CHANGED");
             if (expectedEvidence != null && check.Diagnosis.SignalJson != expectedEvidence) throw new InvalidOperationException("RECOVERY_STORAGE_SETTINGS_CHANGED");
+            // A prepared revision is immutable. Never silently start old operations when
+            // a fresh confirmation explicitly requests analysis first after a restart.
+            if (run == null && analyzeFilesFirst)
+            {
+                var prepared = AcquisitionLocalFilesRecoveryReceipt.Read<AcquisitionPlan>(task.PlanJson)!;
+                if (!prepared.AdaptiveFileProcessing || prepared.AdaptiveFileProcessingMaxIterations != maxAdaptiveIterations ||
+                    prepared.Parts.Any(p => p.UseAdaptiveAssessment != true ||
+                        AcquisitionPlanCompiler.Processing(p) is not {Requirement: "unknown", Steps.Count: 0}))
+                    throw new InvalidOperationException("RECOVERY_ANALYSIS_OPTIONS_CHANGED");
+            }
             if (run != null)
             {
                 task = await new AcquisitionDownloadContinuationService(db).SaveWhileLockedAsync(task, run.Id,
@@ -189,24 +216,30 @@ public sealed class AcquisitionLocalFilesRecoveryService(BakabaseDbContext db, A
                     .ExecuteUpdateAsync(u => u.SetProperty(t => t.BuilderStateJson, json), ct);
                 if (changed != 1) throw new InvalidOperationException("ACQUISITION_TASK_CHANGED");
                 var plan = AcquisitionLocalFilesRecoveryReceipt.Read<AcquisitionPlan>(task.PlanJson)!;
-                var input = new AcquisitionPlanReplanInput(task.PlanRevision, run.Id, "recovery.localFiles.currentStorage",
+                var input = new AcquisitionPlanReplanInput(task.PlanRevision, run.Id, AcquisitionLocalFilesRecoveryReceipt.RevisionReason,
                     provenance.Select(p => new AcquisitionPlanProcessingReplacement(p.PartId,
-                        AcquisitionPlanCompiler.Processing(plan.Parts.Single(part => part.Id == p.PartId)), [p.ArtifactId], p.ArtifactId)).ToArray(),
-                    UseCurrentStorageDefaults: true);
+                        analyzeFilesFirst ? new() {Requirement = "unknown", Steps = []} :
+                            AcquisitionPlanCompiler.Processing(plan.Parts.Single(part => part.Id == p.PartId)),
+                        [p.ArtifactId], p.ArtifactId, UseAdaptiveAssessment: analyzeFilesFirst ? true : null)).ToArray(),
+                    UseCurrentStorageDefaults: true, EnableAdaptiveAssessment: analyzeFilesFirst ? true : null,
+                    MaxAdaptiveIterations: maxAdaptiveIterations);
                 await plans.ReplanLocalFilesWhileLockedAsync(taskId, input, check.Storage!, guardDirectory, ct);
             }
         }
         finally {gate.Release();}
         task = await db.AcquisitionTasks.AsNoTracking().SingleAsync(t => t.Id == taskId, ct);
-        // Unknown instructions are preserved verbatim. Their normal processing node asks
-        // for review before creating an input snapshot or running any file operation.
-        var detail = await plans.RunWhileLockedAsync(taskId, task.PlanRevision, null, ct);
+        // The replan transaction already bound the verified inputs and left this local revision ready.
+        // A deliberate preparation (including replay after a restart) needs no host or run preflight.
+        if (prepareOnly) return new(taskId, originalRunId, null, task.PlanRevision, "prepared");
+        // The explicit AI revision passes verified inputs directly to assessment; the
+        // default path keeps its original processing/review behavior.
+        var detail = await plans.RunWhileLockedAsync(taskId, task.PlanRevision, null, ct, useEmergencySpaceReserve);
         return new(taskId, originalRunId, detail.Task.WorkflowRunId, detail.Task.PlanRevision,
             detail.Task.WorkflowRunId == null ? "prepared" : "started", detail.Task.WorkflowRunId == null
                 ? detail.Issues.FirstOrDefault(i => i.Blocking)?.Code ?? "RECOVERY_PREPARED_PLAN_BLOCKED" : null);
     }
 
-    private static bool LocalOnly(AcquisitionPlan plan) => plan.Parts.All(p => p.ContinueFrom != null) &&
+    internal static bool LocalOnly(AcquisitionPlan plan) => plan.Parts.All(p => p.ContinueFrom != null) &&
         AcquisitionPlanCompiler.Compile(plan).Nodes.All(n => n.Kind is AcquisitionPlanContinueFilesActivity.ActivityKind or
             AcquisitionPlanProcessingActivity.ActivityKind or AssessFileArtifactDeliveryActivity.ActivityKind or "fs.publishArtifacts");
 }

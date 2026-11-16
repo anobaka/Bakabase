@@ -4596,6 +4596,7 @@ export interface BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionSt
   directory: string;
   ownership: string;
   evidence: string;
+  bindingId?: string;
   allocation?: BakabaseModulesWorkflowArtifactsArtifactDirectoryScope;
 }
 
@@ -7932,10 +7933,30 @@ export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionAssessme
   outputPreview?: string;
   outputTruncated: boolean;
   validationError?: string;
+  callId?: string;
+  inputAvailability: string;
+  outputAvailability: string;
+  inputRedacted: boolean;
+  outputRedacted: boolean;
+  inputTextAvailable: boolean;
+  outputTextAvailable: boolean;
 }
 
 export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionAssessmentIoView {
   calls: BakabaseServiceComponentsAcquisitionPlanningAcquisitionAssessmentCallView[];
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionAssessmentTextPage {
+  text: string;
+  /** @format int32 */
+  offset: number;
+  /** @format int32 */
+  nextOffset?: number;
+  /** @format int32 */
+  totalCharacters: number;
+  contentId: string;
+  availability: string;
+  redacted: boolean;
 }
 
 export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionContinuation {
@@ -8119,6 +8140,12 @@ export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionDraftUpd
   storagePolicy?: BakabaseModulesWorkflowArtifactsArtifactStoragePolicy;
 }
 
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionKeepPreparedFilesInput {
+  /** @format int32 */
+  expectedRevision: number;
+  reason?: string;
+}
+
 export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionLegacyImportInput {
   resourceIds: number[];
 }
@@ -8170,6 +8197,7 @@ export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalFil
 
 export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalFilesRecoveryPreview {
   parts: BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalFilesRecoveryPart[];
+  supportsPrepareOnly?: boolean;
 }
 
 export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalRecoveryBatch {
@@ -8348,6 +8376,7 @@ export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanProc
   expectedDeliveryProjectionFingerprint?: string;
   useAdaptiveAssessment?: boolean;
   inputMode?: string;
+  inputStage?: string;
 }
 
 export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanReplanInput {
@@ -8371,6 +8400,7 @@ export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanRepl
 export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanRunInput {
   /** @format int32 */
   expectedRevision: number;
+  useEmergencySpaceReserve?: boolean;
 }
 
 export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanSearchInput {
@@ -8381,6 +8411,13 @@ export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanSele
   candidateId: string;
   /** @format int32 */
   expectedRevision: number;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanSourceReplacement {
+  partId: string;
+  sourceId: string;
+  url: string;
+  accessCode?: string;
 }
 
 export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanSourceTasks {
@@ -8425,6 +8462,7 @@ export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanTask
   canEditDeliverySettings: boolean;
   storagePolicy?: BakabaseModulesWorkflowArtifactsArtifactStoragePolicy;
   canEditStoragePolicy: boolean;
+  canKeepPreparedFiles?: boolean;
   planHistory: BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionPlanRevision[];
   preparationAttempts: BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanPreparationAttempt[];
   replanArtifacts: BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanArtifactCandidate[];
@@ -8441,12 +8479,17 @@ export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanUpda
   deliverySettings?: BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionDeliverySettings;
   storagePolicy?: BakabaseModulesWorkflowArtifactsArtifactStoragePolicy;
   storagePolicyOverrides?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionStoragePolicyOverrideInput[];
+  sourceReplacement?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanSourceReplacement;
 }
 
 export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionRecoveryApplyInput {
   previewToken: string;
   taskIds: number[];
   useEmergencySpaceReserve?: boolean;
+  analyzeFilesFirst?: boolean;
+  /** @format int32 */
+  maxAdaptiveIterations?: number;
+  prepareOnly?: boolean;
 }
 
 export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionRecoveryDiagnosisCancellation {
@@ -8729,6 +8772,76 @@ export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionStageAtt
   hasAssessmentCalls: boolean;
 }
 
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionStageDirectoryChangeInput {
+  /** @format int32 */
+  expectedRevision: number;
+  parts: BakabaseServiceComponentsAcquisitionPlanningAcquisitionStageDirectoryPartChange[];
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionStageDirectoryChangeItem {
+  partId: string;
+  stage: string;
+  sourceDirectory?: string;
+  directory: string;
+  moveFiles: boolean;
+  changed: boolean;
+  /** @format int64 */
+  fileCount: number;
+  /** @format int64 */
+  totalBytes: number;
+  eligible: boolean;
+  code?: string;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionStageDirectoryChangePreview {
+  /** @format int32 */
+  taskId: number;
+  /** @format int32 */
+  expectedRevision: number;
+  changes: BakabaseServiceComponentsAcquisitionPlanningAcquisitionStageDirectoryChangeItem[];
+  canApply: boolean;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionStageDirectoryChangeResult {
+  /** @format int32 */
+  taskId: number;
+  /** @format int32 */
+  revision: number;
+  directories: BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionStageDirectories;
+  changes: BakabaseServiceComponentsAcquisitionPlanningAcquisitionStageDirectoryChangeItem[];
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionStageDirectoryChoice {
+  directory: string;
+  moveFiles: boolean;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionStageDirectoryPartChange {
+  partId: string;
+  download?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionStageDirectoryChoice;
+  processing?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionStageDirectoryChoice;
+  delivery?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionStageDirectoryChoice;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionStageDirectoryPartSnapshot {
+  partId: string;
+  title?: string;
+  downloadDirectory?: string;
+  processingDirectory?: string;
+  deliveryDirectory?: string;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionStageDirectorySnapshot {
+  /** @format int32 */
+  taskId: number;
+  /** @format int32 */
+  expectedRevision: number;
+  parts: BakabaseServiceComponentsAcquisitionPlanningAcquisitionStageDirectoryPartSnapshot[];
+  canChange: boolean;
+  blockers: string[];
+  pendingChange?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionStageDirectoryChangeInput;
+}
+
 export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionStorageOverrideApplyInput {
   token: string;
   confirmed: boolean;
@@ -8979,6 +9092,7 @@ export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionTaskDele
   reasonCode?: string;
   cleanup?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionTaskDeleteCleanup;
   canRemoveTaskIfCleanupFails: boolean;
+  willStopExecution: boolean;
 }
 
 export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionTaskDeleteSkip {
@@ -9900,6 +10014,39 @@ export interface BakabaseServiceComponentsOAuthOAuthProviderConfigurationViewMod
   problem?: string;
 }
 
+export interface BakabaseServiceComponentsPostSourcesDecodedPostImageSource {
+  url: string;
+  methodId: string;
+}
+
+export interface BakabaseServiceComponentsPostSourcesPostImageDecodeResult {
+  status: string;
+  sources: BakabaseServiceComponentsPostSourcesDecodedPostImageSource[];
+}
+
+export interface BakabaseServiceComponentsPostSourcesSavedPostImage {
+  id: string;
+  url: string;
+  context?: string;
+  /** @format int32 */
+  floor: number;
+}
+
+export interface BakabaseServiceComponentsPostSourcesSavedPostImageList {
+  /** @format int32 */
+  revision: number;
+  images: BakabaseServiceComponentsPostSourcesSavedPostImage[];
+  links: BakabaseServiceComponentsPostSourcesSavedPostLink[];
+}
+
+export interface BakabaseServiceComponentsPostSourcesSavedPostLink {
+  url: string;
+  methodId: string;
+  /** @format int32 */
+  floor: number;
+  accessCode?: string;
+}
+
 export interface BakabaseServiceComponentsServerDataServerAppDataImportValidation {
   valid: boolean;
   error?: string;
@@ -10079,6 +10226,13 @@ export interface BakabaseServiceControllersCollectionRulePreviewInputModel {
   ruleSearchJson?: string;
   /** @format int32 */
   sampleSize: number;
+}
+
+export interface BakabaseServiceControllersDecodePostSourceImageInput {
+  /** @format int32 */
+  revision: number;
+  imageId: string;
+  imageData?: string;
 }
 
 export interface BakabaseServiceControllersDiscoverySubscribeRequest {
@@ -13708,6 +13862,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceC
   data?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionAssessmentIoView;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionAssessmentTextPage {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionAssessmentTextPage;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionContinuationPreview {
   /** @format int32 */
   code: number;
@@ -13825,6 +13986,27 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceC
   code: number;
   message?: string;
   data?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionSourceRevisionResult;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionStageDirectoryChangePreview {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionStageDirectoryChangePreview;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionStageDirectoryChangeResult {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionStageDirectoryChangeResult;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionStageDirectorySnapshot {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionStageDirectorySnapshot;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionStorageOverridePreview {
@@ -14014,6 +14196,20 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceC
   code: number;
   message?: string;
   data?: BakabaseServiceComponentsOAuthOAuthProviderConfigurationViewModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsPostSourcesPostImageDecodeResult {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsPostSourcesPostImageDecodeResult;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsPostSourcesSavedPostImageList {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsPostSourcesSavedPostImageList;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsServerDataServerAppDataImportValidation {
@@ -16110,6 +16306,45 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     /**
      * No description
      *
+     * @tags AcquisitionAssessment
+     * @name GetAcquisitionAssessmentText
+     * @request GET:/acquisition/tasks/{taskId}/runs/{runId}/assessment-io/text
+     */
+    getAcquisitionAssessmentText: (
+      taskId: number,
+      runId: number,
+      query?: {
+        attemptId?: string;
+        callId?: string;
+        direction?: string;
+        /**
+         * @format int32
+         * @default 0
+         */
+        offset?: number;
+        /**
+         * @format int32
+         * @default 32768
+         */
+        length?: number;
+        contentId?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionAssessmentTextPage,
+        any
+      >({
+        path: `/acquisition/tasks/${taskId}/runs/${runId}/assessment-io/text`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
      * @tags AcquisitionContinuation
      * @name PreviewAcquisitionContinuation
      * @request POST:/acquisition/tasks/recovery/continuations/preview
@@ -17046,6 +17281,30 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags AcquisitionPlans
+     * @name KeepPreparedAcquisitionFiles
+     * @request POST:/acquisition/plans/{id}/prepared-files/keep
+     */
+    keepPreparedAcquisitionFiles: (
+      id: number,
+      data: BakabaseServiceComponentsAcquisitionPlanningAcquisitionKeepPreparedFilesInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanTaskDetail,
+        any
+      >({
+        path: `/acquisition/plans/${id}/prepared-files/keep`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionPlans
      * @name ReplanAcquisitionTask
      * @request POST:/acquisition/plans/{id}/replan
      */
@@ -17339,6 +17598,72 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         any
       >({
         path: `/acquisition/${id}/source-revisions/apply`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionStageDirectories
+     * @name GetAcquisitionStageDirectories
+     * @request GET:/acquisition/plans/{id}/directories
+     */
+    getAcquisitionStageDirectories: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionStageDirectorySnapshot,
+        any
+      >({
+        path: `/acquisition/plans/${id}/directories`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionStageDirectories
+     * @name PreviewAcquisitionStageDirectoryChange
+     * @request POST:/acquisition/plans/{id}/directories/preview
+     */
+    previewAcquisitionStageDirectoryChange: (
+      id: number,
+      data: BakabaseServiceComponentsAcquisitionPlanningAcquisitionStageDirectoryChangeInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionStageDirectoryChangePreview,
+        any
+      >({
+        path: `/acquisition/plans/${id}/directories/preview`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionStageDirectories
+     * @name ApplyAcquisitionStageDirectoryChange
+     * @request POST:/acquisition/plans/{id}/directories/apply
+     */
+    applyAcquisitionStageDirectoryChange: (
+      id: number,
+      data: BakabaseServiceComponentsAcquisitionPlanningAcquisitionStageDirectoryChangeInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionStageDirectoryChangeResult,
+        any
+      >({
+        path: `/acquisition/plans/${id}/directories/apply`,
         method: "POST",
         body: data,
         type: ContentType.Json,
@@ -38975,6 +39300,48 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
       return baseUrl + path;
     },
+
+    /**
+     * No description
+     *
+     * @tags PostSourceImages
+     * @name GetPostSourceImages
+     * @request GET:/post-parser/task/{id}/source-images
+     */
+    getPostSourceImages: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsPostSourcesSavedPostImageList,
+        any
+      >({
+        path: `/post-parser/task/${id}/source-images`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags PostSourceImages
+     * @name DecodePostSourceImage
+     * @request POST:/post-parser/task/{id}/source-images/decode
+     */
+    decodePostSourceImage: (
+      id: number,
+      data: BakabaseServiceControllersDecodePostSourceImageInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsPostSourcesPostImageDecodeResult,
+        any
+      >({
+        path: `/post-parser/task/${id}/source-images/decode`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
   };
   processingPlans = {
     /**

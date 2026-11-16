@@ -66,7 +66,7 @@ public sealed class AssessFileArtifactDeliveryActivity : IResumableWorkflowActiv
     private static DownloadWorkset Replace(DownloadWorkset workset, CloudDownloadTarget target) =>
         workset with {Targets = workset.Targets.Select(t => t.Id == target.Id ? target : t).ToList()};
     private static bool CanRevise(string? reason) => reason is FileArtifactDeliveryAssessment.ReviewRequired or FileArtifactDeliveryAssessment.ResultUncertain or
-        "ExtractionPlanUnknown" or "ArchiveInputRequired" or "ProcessingInputNotMatched" or "RepeatedContent" or "ExtractionLayoutConflict";
+        "ExtractionPlanUnknown" or "ArchiveInputRequired" or "MissingVolumes" or "ProcessingInputNotMatched" or "RepeatedContent" or "ExtractionLayoutConflict";
 
     private static bool BudgetWait(string? reason) => reason is "DepthLimit" or "ArchiveCountLimit" or
         "FileCountLimit" or "ExpandedBytesLimit" or "DiskSpaceLimit";
@@ -135,26 +135,14 @@ public sealed class AssessFileArtifactDeliveryActivity : IResumableWorkflowActiv
         var review = target.DeliveryReview;
         if (review != null && review.ArtifactId != target.ProcessedArtifactId)
             throw new InvalidOperationException("FILE_DELIVERY_INPUT_CHANGED");
+        await ctx.ReportStage("verifyingFiles");
         var id = review?.ArtifactId ?? target.ProcessedArtifactId;
         var input = id == null ? null : await store.ResolveByIdAsync(id, ct);
         if (input == null || review != null && (input.Fingerprint != review.Fingerprint || input.Kind is not ("processedFiles" or "publishedFiles" or AcquisitionCurrentDirectoryFiles.Kind)))
             throw new InvalidOperationException("FILE_DELIVERY_INPUT_CHANGED");
         if (input.Kind == AcquisitionCurrentDirectoryFiles.Kind)
             await AcquisitionCurrentDirectoryFiles.ValidateSelectionAsync(input, ctx.Services.GetService<FileProcessingWorkspaceResolver>(), ct);
-        if (input.Kind == "publishedFiles")
-        {
-            var publication = JsonSerializer.Deserialize<FileArtifactPublicationMetadata>(input.MetadataJson ?? "{}", WorkflowJson.Options);
-            if (publication != null && FileArtifactDeliveryAssessment.HasExecutedExtraction(publication.SourceMetadataJson))
-            {
-                // The original bytes may have been cleaned; their immutable receipt must still
-                // bind the embedded processing evidence to these exact delivered leaves.
-                var source = await store.GetArtifactAsync(publication.SourceArtifactId, ct);
-                if (source == null || source.Kind != "processedFiles" || source.OperationId != publication.SourceOperationId ||
-                    source.MetadataJson != publication.SourceMetadataJson ||
-                    !FileArtifactDeliveryLayout.PreservesSource(source, input, publication.DeliveryLayout))
-                    throw new InvalidOperationException("FILE_DELIVERY_INPUT_CHANGED");
-            }
-        }
+        var wasExtracted = await FileArtifactDeliveryAssessment.WasExtractedBeforeDeliveryAsync(input, store, ct);
         if (review?.Accepted == true) return WorkflowItemOutcome.ReplaceWith(workset);
         // Protect the immutable input through human review and publication.
         // Terminal workflow states release the durable owner without a timing gap between nodes.
@@ -190,7 +178,7 @@ public sealed class AssessFileArtifactDeliveryActivity : IResumableWorkflowActiv
 
         if (review == null)
         {
-            var assessment = await FileArtifactDeliveryAssessment.AssessAsync(input, ct);
+            var assessment = await FileArtifactDeliveryAssessment.AssessAsync(input, ct, extractionWasReviewed: wasExtracted);
             if (assessment.Files.Count == 0) return WorkflowItemOutcome.ReplaceWith(workset);
             var inherited = input.Kind == "processedFiles" && input.MetadataJson != null
                 ? JsonSerializer.Deserialize<FileArtifactProcessingMetadata>(input.MetadataJson, WorkflowJson.Options)?.InheritedExtractionLayout : null;
@@ -268,12 +256,13 @@ public sealed class AssessFileArtifactDeliveryActivity : IResumableWorkflowActiv
             review.AutomaticOuter ? null : answer?.Processing.Password,
             value => ctx.ReportProgress(value, target.Title).GetAwaiter().GetResult(), ct,
             replan: false, stopAfterStepId: null, recovery: savedAdaptive == null ? null : new(savedAdaptive.OperationId, savedAdaptive.Attempt), onlyOuterPackaging: review.AutomaticOuter,
-            passwordEvidence: AcquisitionArchivePasswordEvidence.Bind(ctx, target.Id, target.SelectedSource?.Url));
+            passwordEvidence: AcquisitionArchivePasswordEvidence.Bind(ctx, target.Id, target.SelectedSource?.Url), reportStage: ctx.ReportStage);
         if (result.Artifact == null)
             return Suspend(workset, target, review with {ArchiveId = result.ArchiveId}, result.WaitReason ?? "ExtractionPlanUnknown",
                 input.Manifest.Entries.Select(e => e.RelativePath).Take(FileArtifactDeliveryAssessment.MaximumFiles).ToArray(), result.Message, config.EnableAdaptiveAssessment);
         var artifact = result.Artifact;
         await ArtifactWorkflowBindings.BindAsync(ctx, target.Id + ":process:delivery-result:" + artifact.Id, artifact.OperationId, ct);
+        artifact = await AcquisitionProcessingStageCommit.CommitAsync(ctx, target, artifact, ct);
         target = target with
         {
             ProcessedArtifactId = artifact.Id, ProcessedDirectory = artifact.RootDirectory,
@@ -334,10 +323,15 @@ public sealed class AssessFileArtifactDeliveryActivity : IResumableWorkflowActiv
             new List<AdaptiveCompletedProcessing>();
         for (var iteration = startIteration; iteration < maxIterations; iteration++)
         {
+            var executionEvidence = AdaptiveProcessingExecutionEvidence.ForCurrent(current, completedProcessing);
             var assessmentContext = AdaptiveFileProcessingAssessmentService.DescribeContext(
                 target.Title, config.AdaptiveContext, userContext, sourceEvidence,
-                AdaptiveProcessingExecutionEvidence.ForCurrent(current, completedProcessing));
-            var decision = await adaptive.AssessAsync(current, assessmentContext, iteration, ct);
+                executionEvidence);
+            var inspectImagePackaging = !string.IsNullOrWhiteSpace(target.SelectedSource?.ArchivePassword) ||
+                AdaptiveFileProcessingAssessmentService.HasExtractionStep(target.SelectedSource?.ExtractionPlanJson) ||
+                executionEvidence?.CompletedProcessing.Any(round => round.Operations.Any(op => op.Kind == "extractArchive")) == true;
+            await ctx.ReportStage("analyzingFiles");
+            var decision = await adaptive.AssessAsync(current, assessmentContext, iteration, ct, inspectImagePackaging, executionEvidence);
             var blocks = new List<WorkflowOutputBlock>();
             if (AdaptiveAssessmentDiagnostic.FromCode(decision.DiagnosticCode) is { } diagnostic) blocks.Add(diagnostic);
             if (decision.Call is {} call) blocks.Add(call.Block(currentTarget.Id));
@@ -426,7 +420,7 @@ public sealed class AssessFileArtifactDeliveryActivity : IResumableWorkflowActiv
                 "workflow:" + ctx.RunId + ":adaptive:" + currentTarget.Id + ":" + iteration,
                 null, null, value => ctx.ReportProgress(value, currentTarget.Title).GetAwaiter().GetResult(), ct,
                 replan: false, stopAfterStepId: null, recovery: null, onlyOuterPackaging: false,
-                passwordEvidence: AcquisitionArchivePasswordEvidence.Bind(ctx, currentTarget.Id, currentTarget.SelectedSource?.Url));
+                passwordEvidence: AcquisitionArchivePasswordEvidence.Bind(ctx, currentTarget.Id, currentTarget.SelectedSource?.Url), reportStage: ctx.ReportStage);
             if (result.Artifact == null)
             {
                 return Suspend(Replace(workset, currentTarget), currentTarget,
@@ -440,7 +434,9 @@ public sealed class AssessFileArtifactDeliveryActivity : IResumableWorkflowActiv
                 await store.GetOperationAsync(result.Artifact.OperationId, ct));
             if (completed == null) completedProcessing.Clear();
             else completedProcessing.Add(completed);
-            current = result.Artifact;
+            current = await AcquisitionProcessingStageCommit.CommitAsync(ctx, currentTarget, result.Artifact, ct);
+            if (completed != null && current.Id != result.Artifact.Id)
+                completedProcessing[^1] = completed with {OutputArtifactId = current.Id, OutputFingerprint = current.Fingerprint};
             await ArtifactWorkflowBindings.BindAsync(ctx, currentTarget.Id + ":adaptive:output:" + current.Id,
                 current.OperationId, ct);
             if (!await store.PinConsumerAsync(current.OperationId,

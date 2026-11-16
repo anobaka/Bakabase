@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Bakabase.Service.Components.Acquisition.Planning;
 
@@ -14,7 +15,7 @@ public sealed record AcquisitionTaskDeleteProgress(string PreviewId, string Stat
     int? CurrentTaskId, string Phase, int CompletedFiles, long CompletedBytes,
     DateTimeOffset? StartedAt, DateTimeOffset UpdatedAt);
 public sealed record AcquisitionTaskDeleteRow(int TaskId, string? Title, bool CanDelete, string? ReasonCode,
-    AcquisitionTaskDeleteCleanup? Cleanup = null, bool CanRemoveTaskIfCleanupFails = false);
+    AcquisitionTaskDeleteCleanup? Cleanup = null, bool CanRemoveTaskIfCleanupFails = false, bool WillStopExecution = false);
 public sealed record AcquisitionTaskDeletePreview(string PreviewId, DateTimeOffset ExpiresAt, int TotalCount,
     int DeletableCount, int BlockedCount, IReadOnlyList<AcquisitionTaskDeleteRow> Rows,
     bool CleanupFiles = false, bool AcceptDeliveredFiles = false, int CleanupFileCount = 0, long CleanupBytes = 0,

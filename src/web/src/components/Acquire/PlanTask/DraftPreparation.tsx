@@ -7,6 +7,7 @@ import AcquireModal from "../AcquireModal";
 import { defaultAcquireAdapter } from "../api";
 import { planTaskApi } from "./api";
 import type { DraftSource, PlanBuilder, PlanTaskDetail } from "./models";
+import PostImageSourceAction, { type ReviewedImageSource } from "./PostImageSourceAction";
 import { draftPlanFromRequest } from "./draftPlan";
 
 export default function DraftPreparation({
@@ -59,6 +60,14 @@ export default function DraftPreparation({
   }, [retry]);
   const patch = (id: string, fields: Partial<DraftSource>) =>
     setSources((items) => items.map((item) => (item.id === id ? { ...item, ...fields } : item)));
+  const addReviewed = (reviewed: ReviewedImageSource, original?: DraftSource) => {
+    if (sources.some(source => source.url === reviewed.url)) throw new Error("SOURCE_REPLACEMENT_DUPLICATE");
+    setSources(current => [...current, {
+      id: crypto.randomUUID(), kind: "auto", url: reviewed.url, methodId: reviewed.methodId,
+      accessCode: reviewed.accessCode ?? original?.accessCode, archivePassword: original?.archivePassword,
+      title: original?.title, processing: original?.processing,
+    }]);
+  };
   const save = () =>
     planTaskApi.updateDraft(detail.task.id, {
       expectedRevision: detail.task.planRevision,
@@ -68,6 +77,8 @@ export default function DraftPreparation({
         .map((source) => ({ ...source, url: source.url.trim() })),
     });
   const hasInput = !!title.trim() || sources.some((source) => source.url.trim());
+  const canReviewImage = detail.canEditStoragePolicy !== false && !detail.task.workflowRunId &&
+    !detail.planHistory?.some(revision => revision.previousRunId != null) && !detail.replanArtifacts?.length;
   return (
     <section
       className="space-y-4 rounded-lg border border-primary-200 p-3"
@@ -108,6 +119,9 @@ export default function DraftPreparation({
                 </div>
               </AccordionItem>
             </Accordion>
+            {canReviewImage && <PostImageSourceAction key={source.id + ":" + detail.task.planRevision}
+              origins={detail.task.creationOrigins} imageUrl={source.url} initialAccessCode={source.accessCode} disabled={busy}
+              onUse={reviewed => addReviewed(reviewed, source)} />}
             <Button
               size="sm"
               variant="light"
@@ -118,6 +132,7 @@ export default function DraftPreparation({
             </Button>
           </div>
         ))}
+        {canReviewImage && !sources.length && <PostImageSourceAction origins={detail.task.creationOrigins} disabled={busy} onUse={addReviewed} />}
         <Button
           size="sm"
           variant="flat"

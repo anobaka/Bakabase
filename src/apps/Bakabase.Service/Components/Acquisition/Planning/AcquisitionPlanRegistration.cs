@@ -41,6 +41,7 @@ public static class AcquisitionPlanRegistration
         services.AddHostedService<AcquisitionContinuationWorker>();
         services.AddSingleton<AcquisitionStorageOverridePreviewStore>();
         services.AddScoped<AcquisitionStorageOverrideService>();
+        services.AddScoped<AcquisitionTransferredDownloadRecovery>();
         services.AddScoped<IAcquisitionRecoveryDiagnostics, AcquisitionRecoveryDiagnostics>();
         services.AddScoped<AcquisitionRecoveryService>();
         services.AddSingleton<AcquisitionLocalRecoveryBatchPreviewStore>();

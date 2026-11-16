@@ -59,14 +59,50 @@ public sealed class FileArtifactDeliveryLayoutTests
             preview.OutputManifest.Entries.Select(e => e.RelativePath).ToArray());
     }
 
-    [TestMethod] public void Duplicate_output_file_and_portable_directory_alias_block_without_changing_the_source()
+    [TestMethod] public void Only_the_required_archive_wrapper_is_kept_for_duplicate_filenames()
     {
-        var collision = Input(["one/save.dat", "two/save.dat"], evidence: [
-            new("one/save.dat", false, ["one"]), new("two/save.dat", false, ["two"])]);
-        Assert.ThrowsExactly<InvalidDataException>(() => FileArtifactDeliveryLayout.Preview(collision, new()));
-        Assert.AreEqual(2, collision.Manifest.Entries.Count);
-        var alias = Input(["one/Game/a", "two/game/b"], evidence: [new("one/Game/a", false, ["one"]), new("two/game/b", false, ["two"])]);
-        Assert.ThrowsExactly<InvalidDataException>(() => FileArtifactDeliveryLayout.Preview(alias, new()));
+        var collision = Input(["outer/one/save.dat", "outer/two/save.dat", "outer/three/game.dat"], evidence: [
+            new("outer/one/save.dat", false, ["outer", "outer/one"]), new("outer/two/save.dat", false, ["outer", "outer/two"]),
+            new("outer/three/game.dat", false, ["outer", "outer/three"])]);
+        var preview = FileArtifactDeliveryLayout.Preview(collision, new());
+        CollectionAssert.AreEquivalent(new[] {"save.dat", "two/save.dat", "game.dat"},
+            preview.OutputManifest.Entries.Select(e => e.RelativePath).ToArray());
+        Assert.AreEqual(3, preview.RemovedGeneratedDirectories!.Count);
+        Assert.AreEqual(preview.ProjectionFingerprint, FileArtifactDeliveryLayout.Preview(collision, new()).ProjectionFingerprint);
+        var evidence = FileArtifactDeliveryLayout.ProjectProvenance(collision, preview)!;
+        Assert.AreEqual("two", evidence.Entries.Single().GeneratedAncestors.Single());
+        foreach (var map in preview.FileMappings)
+            Assert.AreEqual(collision.Manifest.Entries.Single(e => e.RelativePath == map.SourceRelativePath).Sha256,
+                preview.OutputManifest.Entries.Single(e => e.RelativePath == map.TargetRelativePath).Sha256);
+    }
+
+    [DataTestMethod]
+    [DataRow("Game/a", "game/b")]
+    [DataRow("café/a", "cafe\u0301/b")]
+    [DataRow("game", "game/b")]
+    public void Projection_keeps_one_separating_wrapper_for_portable_alias_and_file_directory_conflicts(string first, string second)
+    {
+        var source = Input(["one/" + first, "two/" + second], evidence: [
+            new("one/" + first, false, ["one"]), new("two/" + second, false, ["two"])]);
+        var preview = FileArtifactDeliveryLayout.Preview(source, new());
+        CollectionAssert.AreEquivalent(new[] {first, "two/" + second}, preview.OutputManifest.Entries.Select(e => e.RelativePath).ToArray());
+        Assert.IsFalse(FileArtifactDeliveryLayout.Preview(source, new() {RemoveGeneratedDirectories = false}).Changed);
+    }
+
+    [TestMethod] public void Colliding_empty_directories_keep_the_minimum_wrapper()
+    {
+        var source = Input([], ["group", "pack/group/empty"], [new("pack/group/empty", true, ["pack", "pack/group/empty"])]);
+        var preview = FileArtifactDeliveryLayout.Preview(source, new());
+        CollectionAssert.AreEquivalent(new[] {"group", "group/empty"}, preview.OutputManifest.Directories!.ToArray());
+        CollectionAssert.AreEquivalent(new[] {"pack"}, preview.RemovedGeneratedDirectories!.ToArray());
+    }
+
+    [TestMethod] public void An_ambiguous_source_namespace_still_identifies_the_conflicting_inputs()
+    {
+        var alias = Input(["Game/a", "game/b"]);
+        var error = Assert.ThrowsExactly<InvalidDataException>(() => FileArtifactDeliveryLayout.Preview(alias, new()));
+        StringAssert.Contains(error.Message, "Game/a");
+        StringAssert.Contains(error.Message, "game/b");
     }
 
     [TestMethod] public void Stale_or_malformed_provenance_cannot_remove_a_directory()

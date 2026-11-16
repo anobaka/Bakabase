@@ -164,11 +164,21 @@ public static class AcquisitionPlanCompiler
                     RequiresAdaptiveDecision: part.UseAdaptiveAssessment == true,
                     MaxAdaptiveIterations: Math.Clamp(plan.AdaptiveFileProcessingMaxIterations, 1, 5),
                     AdaptiveContext: plan.AdaptiveFileProcessingContext), WorkflowJson.Options)});
-        var bindsDelivery = parameterized && plan.DeliveryLayout != null;
+        var targetDirectories = plan.Parts.ToDictionary(p => p.Id, p =>
+            plan.StageDirectories?.Parts.GetValueOrDefault(p.Id)?.Delivery is {BindingId: not null} binding
+                ? binding.Directory : plan.DeliveryLayout?.PartDirectories.GetValueOrDefault(p.Id));
+        var resolvedDirectories = targetDirectories.Where(p => p.Value != null)
+            .ToDictionary(p => p.Key, p => p.Value!, StringComparer.Ordinal);
+        // A null map opts into legacy publication. An explicitly configured but unresolved
+        // part must wait for its destination, even when a sibling already has a binding.
+        var deliveryDirectories = plan.DeliveryLayout != null || resolvedDirectories.Count != 0 ? resolvedDirectories : null;
+        var deliveryBindingsByPart = plan.Parts.Where(p => plan.StageDirectories?.Parts.GetValueOrDefault(p.Id)?.Delivery?.BindingId != null)
+            .ToDictionary(p => p.Id, p => plan.StageDirectories!.Parts[p.Id].Delivery!.BindingId!, StringComparer.Ordinal);
+        var bindsDelivery = parameterized && resolvedDirectories.Count == plan.Parts.Count;
         if (bindsDelivery)
         {
             declarations.Add(new() {Key = "storage.deliveryDirectories", Type = "object", Required = true});
-            callerValues.Add("storage.deliveryDirectories", JsonSerializer.SerializeToElement(plan.DeliveryLayout!.PartDirectories));
+            callerValues.Add("storage.deliveryDirectories", JsonSerializer.SerializeToElement(deliveryDirectories));
         }
         var contentLayout = plan.DeliveryLayout?.Settings.ContentLayout;
         var deliveryBindings = bindsDelivery ? new List<WorkflowParameterBinding>
@@ -179,8 +189,9 @@ public static class AcquisitionPlanCompiler
             callerValues.Add("delivery.contentLayout", JsonSerializer.SerializeToElement(contentLayout, WorkflowJson.Options));
             deliveryBindings.Add(new() {ParameterKey = "delivery.contentLayout", ConfigPath = "/contentLayout"});
         }
-        nodes.Add(new() {NodeId = "files.deliver", Kind = "fs.publishArtifacts", ConfigJson = plan.DeliveryLayout == null ? "{}" :
-            JsonSerializer.Serialize(new FileArtifactPublicationConfig {TargetDirectories = plan.DeliveryLayout.PartDirectories,
+        nodes.Add(new() {NodeId = "files.deliver", Kind = "fs.publishArtifacts", ConfigJson = deliveryDirectories == null && contentLayout == null ? "{}" :
+            JsonSerializer.Serialize(new FileArtifactPublicationConfig {TargetDirectories = deliveryDirectories,
+                StageDirectoryBindingIds = deliveryBindingsByPart.Count == 0 ? null : deliveryBindingsByPart,
                 ContentLayout = contentLayout}, WorkflowJson.Options),
             ParameterBindings = deliveryBindings});
         // A local continuation borrows a previously verified artifact. It neither downloads
@@ -216,7 +227,9 @@ public static class AcquisitionPlanCompiler
             " (input: " + string.Join(", ", processing.Steps.Single(s => s.Id == stepId).GetInputReferences()) + ")",
         ConfigJson = JsonSerializer.Serialize(new AcquisitionPlanProcessingConfig(part.Id, processing, stepId, part.ContinueFrom, Policy(plan, part), plan.ExtractionLayout,
             UseVerifiedInput: part.ContinueFrom != null && (part.UseAdaptiveAssessment == true ||
-                part.UseAdaptiveAssessment == false && processing.Requirement == "notRequired")), WorkflowJson.Options),
+                part.UseAdaptiveAssessment == false && processing.Requirement == "notRequired"),
+            ExplicitlyKeepFiles: processing.Requirement == "notRequired" &&
+                (part.UseAdaptiveAssessment == false || part.AppliedProcessingRevisionId != null)), WorkflowJson.Options),
         ParameterBindings = plan.StoragePolicy == null ? [] : ArtifactWorkflowParameters.Bindings(part.StoragePolicy)
     };
 
@@ -232,6 +245,7 @@ public static class AcquisitionPlanCompiler
         Id = p.Id, Title = p.Title ?? plan.Title, SelectedSourceId = p.SelectedSourceId, StoragePolicy = Policy(plan, p),
         DownloadDirectoryScope = plan.StageDirectories?.Parts.GetValueOrDefault(p.Id)?.Download?.Allocation,
         ProcessingDirectoryScope = plan.StageDirectories?.Parts.GetValueOrDefault(p.Id)?.Processing?.Allocation,
+        StageDirectories = plan.StageDirectories?.Parts.GetValueOrDefault(p.Id),
         // Alternatives remain in the versioned plan, outside the frozen execution.
         Sources = p.Sources.Where(s => s.Id == p.SelectedSourceId).Select(s => ToSource(s, p)).ToList(),
         AccountId = p.Sources.Single(s => s.Id == p.SelectedSourceId).AccountId,

@@ -34,10 +34,15 @@ public sealed partial class AcquisitionReplanTests
         await Db.SaveChangesAsync(); return (task, run, input);
     }
 
-    [TestMethod]
-    public async Task Initial_unknown_wait_without_prompt_artifact_can_prepare_local_AI_from_verified_download()
+    [DataTestMethod]
+    [DataRow(AcquisitionStatus.Waiting)]
+    [DataRow(AcquisitionStatus.Running)]
+    [DataRow(AcquisitionStatus.Pending)]
+    public async Task Initial_unknown_wait_without_prompt_artifact_can_prepare_local_AI_from_verified_download(AcquisitionStatus projectedStatus)
     {
         var (task, run, input) = await InitialUnknownInput();
+        (await Db.AcquisitionTasks.FindAsync(task.Id))!.Status = projectedStatus;
+        await Db.SaveChangesAsync();
         var original = (run.PlanSnapshotJson, run.CurrentItemJson, run.WaitPromptJson);
         var detail = (await Plans.GetAsync(task.Id, default))!;
         Assert.AreEqual(input.Id, detail.ReplanArtifacts.Single().ArtifactId);
@@ -65,6 +70,8 @@ public sealed partial class AcquisitionReplanTests
     public async Task Initial_unknown_fallback_rejects_stale_checkpoint_or_unowned_input(string fault)
     {
         var (task, run, input) = await InitialUnknownInput();
+        if (fault is "running" or "pending")
+            (await Db.AcquisitionTasks.FindAsync(task.Id))!.Status = AcquisitionStatus.Running;
         if (fault == "target") run.WaitPromptJson = "{\"reason\":\"ExtractionPlanUnknown\",\"targetId\":\"other\"}";
         if (fault == "pending") run.PendingSignalJson = "{}";
         if (fault == "running") run.Status = WorkflowRunStatus.Running;

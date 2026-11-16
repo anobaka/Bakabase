@@ -8,7 +8,7 @@ using Bakabase.Abstractions.Components.Configuration;
 
 namespace Bakabase.InsideWorld.Business.Components.Compression
 {
-    public static class CompressedFileHelper
+    public static partial class CompressedFileHelper
     {
         private static readonly Regex PartPattern =
             new Regex(@"\.part(?<index>\d+)(?=\.|$)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
@@ -25,9 +25,15 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
         public static List<CompressedFileGroup> DetectCompressedFileGroups(
             string[] filePaths,
             bool ignoreUnknownExtensions = true,
-            bool inspectFileSizes = true)
+            bool inspectFileSizes = true,
+            IReadOnlyDictionary<string, string>? confirmedSfxFormats = null)
         {
             var allGroups = new List<CompressedFileGroup>();
+            var confirmedSfx = DetectSfxMultipartCandidates(filePaths)
+                .Where(candidate => candidate.IsComplete && !candidate.IsAmbiguous &&
+                    confirmedSfxFormats != null && confirmedSfxFormats.TryGetValue(candidate.EntryFile, out var format) &&
+                    SfxFormatMatches(candidate, format)).ToArray();
+            var sfxMembers = confirmedSfx.SelectMany(candidate => candidate.Files).ToHashSet(StringComparer.Ordinal);
 
             foreach (var dirGroup in filePaths.GroupBy(d => Path.GetDirectoryName(d)!))
             {
@@ -35,8 +41,18 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
 
                 foreach (var path in dirGroup.OrderBy(p => p, StringComparer.OrdinalIgnoreCase))
                 {
+                    if (sfxMembers.Contains(path)) continue;
                     var fileName = Path.GetFileName(path);
                     string ext = GetArchiveExtension(fileName);
+
+                    // An executable name, including .part1.exe, is not an archive. A
+                    // bounded format probe must confirm the exact named SFX family first.
+                    if (ext.Equals(".exe", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (!ignoreUnknownExtensions)
+                            AddToGroup(groups, Path.GetFileNameWithoutExtension(fileName), null, path, fileName);
+                        continue;
+                    }
 
                     bool isKnown = InternalOptions.CompressedFileExtensions.Contains(ext) || InternalOptions.CompoundCompressedFileExtensions.Contains(ext);
                     bool isPart = PartPattern.IsMatch(fileName) ||
@@ -101,7 +117,7 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
                 // Finalize groups
                 foreach (var g in groups.Values)
                 {
-                    var ordered = g.Files.OrderBy(f => f, StringComparer.OrdinalIgnoreCase).ToList();
+                    var ordered = OrderArchiveVolumes(g.Files).ToList();
 
                     // Prefer the file with the main archive extension as the entry
                     if (!string.IsNullOrEmpty(g.Extension))
@@ -124,6 +140,13 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
 
                 allGroups.AddRange(groups.Values);
             }
+
+            allGroups.AddRange(confirmedSfx.Select(candidate => new CompressedFileGroup
+            {
+                KeyName = candidate.KeyName, Extension = candidate.ExpectedFormat,
+                Files = candidate.Files.ToList(),
+                FileSizes = inspectFileSizes ? candidate.Files.Select(file => new FileInfo(file).Length).ToList() : []
+            }));
 
             return allGroups;
         }

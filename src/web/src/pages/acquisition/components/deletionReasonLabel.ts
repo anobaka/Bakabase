@@ -11,7 +11,8 @@ export const deletionReasonCodes = new Set([
   "IntermediateResultRetained", "OperationNotCompleted", "NotManagedInput", "NotManagedProcessedArtifact",
   "BoundaryOwnerUnconfirmed", "ArtifactMissing", "UnrelatedArtifact", "FILE_CLEANUP_COVERAGE_INCOMPLETE",
   "CLEANUP_OLD_EXECUTION_REQUIRES_REVIEW", "CLEANUP_RETIRED_WORKSPACE_REQUIRES_REVIEW",
-  "CLEANUP_PATH_NOT_AUTHORIZED",
+  "CLEANUP_PATH_NOT_AUTHORIZED", "ACQUISITION_DELETE_OPTIONS_CHANGED", "CLEANUP_SELECTION_LIMIT",
+  "CLEANUP_DIRECTORY_OWNERSHIP_UNCONFIRMED",
   "AlreadyAbsent", "CLEANUP_TASK_NOT_DELETED", "CLEANUP_ONLY_RETIRED_WORKSPACE_RECORDS",
 ]);
 

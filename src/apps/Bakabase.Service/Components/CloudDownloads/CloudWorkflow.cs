@@ -165,6 +165,17 @@ public abstract class CloudActivity(string kind, string name, string description
 
     private async Task<WorkflowItemOutcome> Run(WorkflowExecutionContext ctx, DownloadWorkset workset, CloudSelectionSignal? signal, CancellationToken ct)
     {
+        if (signal?.TransferredDownloadPlacement is {} placement)
+        {
+            // The public workflow resume endpoint also accepts JSON. The receipt alone cannot
+            // authorize combining a new source/account, an arbitrary path, or a second download.
+            var expected = new CloudSelectionSignal {TransferredDownloadPlacement = placement};
+            if (kind != "download.enqueueSupported" ||
+                JsonSerializer.Serialize(expected, WorkflowJson.Options) != JsonSerializer.Serialize(signal, WorkflowJson.Options))
+                throw new InvalidOperationException("RECOVERY_DOWNLOAD_IDENTITY_CHANGED");
+            workset = await ctx.Services.GetRequiredService<Bakabase.Service.Components.Acquisition.Planning.AcquisitionTransferredDownloadRecovery>()
+                .RestoreAsync(checked((int)ctx.RunId), workset, placement, ct);
+        }
         if (signal?.ObserveExistingOnly == true || signal?.RevalidateExistingDownloads == true || signal?.VerifyExistingFilesOnly == true)
             workset = workset with {NoRepeatExistingDownloads = true};
         if (signal?.VerifyExistingFilesOnly == true && (signal.ResumeTargetIds == null || signal.RevalidateExistingDownloads == true))
@@ -299,7 +310,10 @@ public abstract class CloudActivity(string kind, string name, string description
             if (resolutionFailed) return Wait(workset, "cloudAttention");
         }
         if (string.IsNullOrWhiteSpace(workset.OutputDirectory) && kind != "baidu.transfer") return Wait(workset, "chooseDirectory");
-        if (!string.IsNullOrWhiteSpace(workset.OutputDirectory)) ctx.Services.GetRequiredService<IUserStoragePolicy>().EnsurePathAllowed(workset.OutputDirectory);
+        if (!string.IsNullOrWhiteSpace(workset.OutputDirectory))
+            foreach (var target in workset.Targets.Where(t => !t.Excluded))
+                ctx.Services.GetRequiredService<IUserStoragePolicy>().EnsurePathAllowed(
+                    CloudStageDirectoryPath.Download(target) ?? workset.OutputDirectory);
         if (kind != "download.awaitCompletion" && workset.Targets.Any(t => !t.Excluded && t.SelectedSource is { } selected &&
                 DownloadMethodCatalog.Select(selected) is {EngineId: "rclone", AccountProvider: not null}) &&
             ctx.Services.GetService<DownloadMethodRegistry>() is { } accountRegistry)
@@ -500,11 +514,17 @@ public abstract class CloudActivity(string kind, string name, string description
         }
         else if (item.NoRepeatExistingDownloads == true) throw new InvalidOperationException("RECOVERY_DOWNLOAD_REVIEW_REQUIRED");
         var key = intent + ":" + generation;
-        var directory = target.DownloadDirectoryScope is { } scope
+        var explicitDirectory = CloudStageDirectoryPath.Download(target);
+        var directory = explicitDirectory != null
+            ? await CloudStageDirectoryPath.PrepareDownloadAsync(target, ctx.Services.GetRequiredService<IUserStoragePolicy>(),
+                ctx.Services.GetService<FileProcessingWorkspaceResolver>(), ct)
+            : target.DownloadDirectoryScope is { } scope
             ? await ctx.Services.GetRequiredService<FileProcessingWorkspaceResolver>().EnsureScopedDirectoryAsync(scope, ct)
             : Path.Combine(item.OutputDirectory, target.StoragePolicy == null ? "cloud-" + intent[..16] :
                 ArtifactStoragePolicies.RenderDownload(target.StoragePolicy, target.Title, intent, source.ProviderId), generation.ToString());
-        if (target.DownloadDirectoryScope != null && generation > 1)
+        if (explicitDirectory != null && generation > 1 && Directory.EnumerateFileSystemEntries(directory).Any())
+            throw new InvalidOperationException("RECOVERY_DOWNLOAD_REVIEW_REQUIRED");
+        if (explicitDirectory == null && target.DownloadDirectoryScope != null && generation > 1)
             directory = Path.Combine(directory, "attempt-" + generation.ToString(System.Globalization.CultureInfo.InvariantCulture));
         if (source.ProviderId == "magnet" || source.Kind == "torrent")
         {

@@ -24,7 +24,9 @@ public sealed record AcquisitionPlanProcessingConfig(string TargetId, FileProces
     [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     string? ExtractionLayout = null,
     [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
-    bool UseVerifiedInput = false);
+    bool UseVerifiedInput = false,
+    [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    bool ExplicitlyKeepFiles = false);
 
 /// <summary>One recorded node per known instruction, sharing the complete plan's exact input references.</summary>
 public sealed class AcquisitionPlanProcessingActivity : IResumableWorkflowActivity,
@@ -79,6 +81,7 @@ public sealed class AcquisitionPlanProcessingActivity : IResumableWorkflowActivi
             await PublishFileArtifactsActivity.ResolveFollowingPublicationAsync(context, workset, target, intent, ct);
         if (artifact == null) return workset;
         await Bind(context, target, artifact, finalId, ct);
+        artifact = await AcquisitionProcessingStageCommit.CommitAsync(context, target, artifact, ct);
         await ReleaseContinuationAsync(context, target, config.ContinueFrom, ct);
         return Replace(workset, Apply(target, artifact, intent, finalId) with {ExecutionStatus = "reused"});
     }
@@ -124,9 +127,20 @@ public sealed class AcquisitionPlanProcessingActivity : IResumableWorkflowActivi
     private static async Task<WorkflowItemOutcome> CompleteProcessing(WorkflowExecutionContext ctx, DownloadWorkset workset,
         CloudDownloadTarget target, AcquisitionPlanProcessingConfig config, FileProcessingPlan plan, ArtifactRecord? artifact, CancellationToken ct)
     {
+        if (target.ProcessedArtifactId != null && (config.StopAfterStepId == null || config.StopAfterStepId == plan.Steps.LastOrDefault()?.Id))
+        {
+            var store = ctx.Services.GetRequiredService<IArtifactOperationStore>();
+            artifact ??= await store.GetArtifactAsync(target.ProcessedArtifactId, ct);
+            if (artifact != null)
+            {
+                var current = await AcquisitionProcessingStageCommit.CommitAsync(ctx, target, artifact, ct);
+                if (current.Id != artifact.Id) target = Apply(target, current, target.ProcessingIntentKey!, config.StopAfterStepId);
+                artifact = current;
+            }
+        }
         // A user's explicit choice to keep a downloaded artifact completes the initial review.
         // Bind that choice to these bytes so a downstream AI-enabled assessment respects it.
-        if (config.Plan.Requirement == "unknown" && config.ContinueFrom == null &&
+        if ((config.ExplicitlyKeepFiles || config.Plan.Requirement == "unknown" && config.ContinueFrom == null) &&
             plan.Requirement == "notRequired" && target.ProcessedArtifactId != null && target.DeliveryReview == null)
         {
             artifact ??= await ctx.Services.GetRequiredService<IArtifactOperationStore>().ResolveByIdAsync(target.ProcessedArtifactId, ct)
@@ -134,8 +148,12 @@ public sealed class AcquisitionPlanProcessingActivity : IResumableWorkflowActivi
             target = target with {DeliveryReview = new(artifact.Id, artifact.Fingerprint, Accepted: true)};
         }
         var result = Replace(workset, target);
-        if (target.PublishedArtifactId != null || !NeedsInlineReview(ctx, result, config) ||
-            !plan.Steps.Any(s => s.Op == "extractArchive"))
+        if (target.PublishedArtifactId != null || !NeedsInlineReview(ctx, result, config))
+            return WorkflowItemOutcome.ReplaceWith(result);
+        var checkUnprocessedMedia = config.ContinueFrom == null && plan.Requirement == "notRequired" &&
+            target.DeliveryReview?.Accepted != true && artifact != null &&
+            (await FileArtifactDeliveryAssessment.DisguisedVideoArchivesAsync(artifact, ct)).Count > 0;
+        if (!checkUnprocessedMedia && !plan.Steps.Any(s => s.Op == "extractArchive"))
             return WorkflowItemOutcome.ReplaceWith(result);
         // The shared assessor handles mixed/large unknown results and finished applications
         // as well as a single signed archive. Narrowing this gate to a confirmed single group
@@ -174,6 +192,7 @@ public sealed class AcquisitionPlanProcessingActivity : IResumableWorkflowActivi
         if (signal?.ArchivePolicy is not (null or "keep" or "instructions"))
             throw new ArgumentException("Choose explicit file-processing instructions or keep the downloaded files.");
         if (target.PublishedArtifactId != null) return WorkflowItemOutcome.ReplaceWith(Replace(workset, target));
+        await ctx.ReportStage("verifyingFiles");
         var finalId = plan.Steps.LastOrDefault()?.Id;
         var finalIntent = Intent(ctx.Services, workset, target, plan, finalId, config.ContinueFrom);
         if (signal?.StorageRecovery == null && target.ProcessedArtifactId != null && target.ProcessingIntentKey == finalIntent)
@@ -239,8 +258,15 @@ public sealed class AcquisitionPlanProcessingActivity : IResumableWorkflowActivi
             input = target.DownloadArtifactId == null ? null : await store.ResolveByIdAsync(target.DownloadArtifactId, ct);
         }
         if (input == null) throw new InvalidOperationException("The downloaded file artifact is missing or modified.");
-        if (input.Kind == AcquisitionCurrentDirectoryFiles.Kind)
+        // A pinned checkpoint has already bound and verified its private input. Do
+        // not require the original selected directory again after that hand-off.
+        if (checkpoint == null && checkpointFailure == null && input.Kind == AcquisitionCurrentDirectoryFiles.Kind)
             await AcquisitionCurrentDirectoryFiles.ValidateSelectionAsync(input, ctx.Services.GetService<FileProcessingWorkspaceResolver>(), ct);
+        if (checkpoint == null && checkpointFailure == null && signal?.StorageRecovery == null)
+        {
+            await ctx.ReportStage("preparingFiles");
+            input = await AcquisitionProcessingStageInput.PrepareAsync(ctx, target, input, ct, processingConfig.StoragePolicy);
+        }
         if (config.UseVerifiedInput && config.ContinueFrom != null && input.Kind is "processedFiles" or "publishedFiles" or AcquisitionCurrentDirectoryFiles.Kind)
         {
             // The attachment node has already pinned this task's immutable artifact until the run ends.
@@ -262,7 +288,7 @@ public sealed class AcquisitionPlanProcessingActivity : IResumableWorkflowActivi
             DownloadArtifactCoordinator.Consumer(ctx, target), null, signal?.Password,
             value => ctx.ReportProgress(value, target.Title).GetAwaiter().GetResult(), ct,
             replan: false, stopAfterStepId: boundary, recovery: signal?.StorageRecovery, checkpointContinuation: checkpoint,
-            passwordEvidence: AcquisitionArchivePasswordEvidence.Bind(ctx, target.Id, target.SelectedSource?.Url));
+            passwordEvidence: AcquisitionArchivePasswordEvidence.Bind(ctx, target.Id, target.SelectedSource?.Url), reportStage: ctx.ReportStage);
         if (result.Artifact == null)
         {
             var reason = result.WaitReason ?? "ExtractionPlanUnknown";

@@ -321,34 +321,25 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
             string? currentPath = null;
             long currentSize = 0;
             string? currentAttributes = null;
-
+            bool? folder = null;
+            void FinishEntry()
+            {
+                // RAR5 can report an empty Attributes field for a regular member.
+                // Prefer its explicit Folder flag; some other handlers expose only Attributes.
+                if (currentPath != null && (folder == false || (folder == null &&
+                        currentAttributes != null && !currentAttributes.Contains('D'))))
+                    fileEntries.Add(new CompressedFileEntry {Path = currentPath, Size = currentSize});
+                currentPath = null;
+                currentSize = 0;
+                currentAttributes = null;
+                folder = null;
+            }
             foreach (var rawLine in lines)
             {
                 var line = rawLine.Trim();
-
-                if (string.IsNullOrEmpty(line))
+                if (line.Length == 0)
                 {
-                    // End of current entry block - save if it's a file (not a directory)
-                    if (currentPath != null && currentAttributes != null)
-                    {
-                        // Check if it's a file (not a directory)
-                        // In 7z technical listing, directories have 'D' in attributes, files have 'A'
-                        if (!currentAttributes.Contains('D'))
-                        {
-                            fileEntries.Add(new CompressedFileEntry
-                            {
-                                // Keep the original path from the archive - don't standardize
-                                // This ensures the path matches exactly what 7z expects for extraction
-                                Path = currentPath,
-                                Size = currentSize
-                            });
-                        }
-                    }
-
-                    // Reset for next entry
-                    currentPath = null;
-                    currentSize = 0;
-                    currentAttributes = null;
+                    FinishEntry();
                     continue;
                 }
 
@@ -370,6 +361,9 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
                                 currentSize = size;
                             }
                             break;
+                        case "Folder":
+                            folder = value switch {"+" => true, "-" => false, _ => null};
+                            break;
                         case "Attributes":
                             currentAttributes = value;
                             break;
@@ -377,17 +371,7 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
                 }
             }
 
-            // Handle last entry if output doesn't end with blank line
-            if (currentPath != null && currentAttributes != null && !currentAttributes.Contains('D'))
-            {
-                fileEntries.Add(new CompressedFileEntry
-                {
-                    // Keep the original path from the archive
-                    Path = currentPath,
-                    Size = currentSize
-                });
-            }
-
+            FinishEntry();
             return fileEntries;
         }
 
@@ -437,6 +421,7 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
                 await zip.ReadAsync(null, onStandardOutput, ct);
                 return new TestResult {ExitCode = 0};
             }
+            await EnsureAutomaticZipNamesAsync(compressedFilePath, openOptions, ct);
             var sevenZipExe = await GetSevenZipExecutableAsync(ct);
             if (sevenZipExe == null)
             {
@@ -556,6 +541,7 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
                     progressOutput == ProgressOutputTarget.StandardError ? onStandardError : onStandardOutput, ct);
                 return new TestResult {ExitCode = 0};
             }
+            await EnsureAutomaticZipNamesAsync(compressedFilePath, openOptions, ct);
             var sevenZipExe = await GetSevenZipExecutableAsync(ct);
             if (sevenZipExe == null)
             {
@@ -609,13 +595,13 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
             var stdoutTargets = new List<PipeTarget> { PipeTarget.ToStringBuilder(osb, Encoding.UTF8) };
             if (onStandardOutput != null)
             {
-                stdoutTargets.Add(PipeTarget.ToDelegate(onStandardOutput, Encoding.UTF8));
+                stdoutTargets.Add(SevenZipProgressOutput.CreatePipe(onStandardOutput));
             }
 
             var stderrTargets = new List<PipeTarget> { PipeTarget.ToStringBuilder(esb, Encoding.UTF8) };
             if (onStandardError != null)
             {
-                stderrTargets.Add(PipeTarget.ToDelegate(onStandardError, Encoding.UTF8));
+                stderrTargets.Add(SevenZipProgressOutput.CreatePipe(onStandardError));
             }
 
             command = command
@@ -623,13 +609,17 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
                 .WithStandardErrorPipe(PipeTarget.Merge(stderrTargets.ToArray()));
 
             var result = await command.ExecuteAsync(ct);
-
-            return new TestResult
+            var diagnostic = new TestResult
             {
                 ExitCode = result.ExitCode,
                 StandardOutput = osb.ToString(),
                 StandardError = esb.ToString()
             };
+            if (HasZipNameDecodingFailure(diagnostic))
+                throw new ArchiveNameEncodingUnsupportedException(
+                    "The ZIP tool could not create files with the decoded names. Confirm the archive's filename encoding in this extraction step; the original archive has been preserved."
+                    + Environment.NewLine + diagnostic.StandardError);
+            return diagnostic;
         }
     }
 }

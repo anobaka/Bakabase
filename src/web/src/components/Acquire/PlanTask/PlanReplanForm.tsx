@@ -5,6 +5,7 @@ import ProcessingPlanField, {
   isCompleteProcessingPlan,
 } from "@/components/Workflow/ProcessingPlanField";
 import type { PlanTaskDetail } from "./models";
+import type { AttemptRunOptions } from "./useAttemptStorageReserve";
 import { planTaskApi } from "./api";
 import CompletedProcessingRevisionForm, {
   hasStoppedProcessingInputs,
@@ -17,7 +18,7 @@ export default function PlanReplanForm({
   onCancel,
 }: {
   detail: PlanTaskDetail;
-  onSaved: (next: PlanTaskDetail) => void;
+  onSaved: (next: PlanTaskDetail, options?: AttemptRunOptions) => void;
   onCancel: () => void;
 }) {
   const { t } = useTranslation();

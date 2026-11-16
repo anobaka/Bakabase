@@ -11,7 +11,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Bakabase.Service.Components.Acquisition.Planning;
 
-public sealed record AcquisitionDownloadActivity(string Activity, IReadOnlySet<string> RecoveredPartIds);
+public sealed record AcquisitionDownloadActivity(string? Activity, IReadOnlySet<string> RecoveredPartIds,
+    IReadOnlySet<string> CompletedPartIds);
 
 /// <summary>Read-only activity of current-run downloads. JSON extraction stays in SQLite: global facets
 /// never materialize checkpoint file lists, frozen plans, downloader options or historical outputs.</summary>
@@ -74,22 +75,27 @@ public sealed class AcquisitionDownloadActivityProjection(BakabaseDbContext db, 
             foreach (var group in eligible.GroupBy(f => f.TaskId))
             {
                 var first = group.First(); var bound = bindings[first.TaskId];
-                var matching = snapshots.Where(d => !stoppedIds.Contains(d.Id) &&
-                    (d.WorkflowRunId == null || d.WorkflowRunId == first.RunId) &&
+                var matching = snapshots.Where(d => (d.WorkflowRunId == null || d.WorkflowRunId == first.RunId) &&
                     (bound.ContainsKey(d.Id) || d.ParentId != null && bound.ContainsKey(d.ParentId))).ToArray();
                 var parents = matching.Where(d => d.ParentId != null).Select(d => d.ParentId!).ToHashSet();
                 var leaves = matching.Where(d => !parents.Contains(d.Id)).ToArray();
-                var activity = Activity(leaves);
-                if (activity == null) continue;
+                var activity = Activity(leaves.Where(d => !stoppedIds.Contains(d.Id)));
+                var completed = new HashSet<string>(StringComparer.Ordinal);
+                var latestWait = first.NodeCompletedAt is {} nodeAt ? AcquisitionRuntimeDownloadReader.Utc(nodeAt) :
+                    first.WaitAt is {} waitAt ? AcquisitionRuntimeDownloadReader.Local(waitAt) : (DateTimeOffset?)null;
                 var recovered = new HashSet<string>(StringComparer.Ordinal);
                 foreach (var part in bound.Where(b => b.Value != null))
                 {
                     var children = leaves.Where(d => d.Id == part.Key || d.ParentId == part.Key).ToArray();
-                    if (Activity(children) != null && children.All(d => d.Status is "running" or "queued" or "completed" && d.ProblemCode == null) &&
-                        children.All(d => first.WaitAt == null || d.ObservedAt >= AcquisitionRuntimeDownloadReader.Local(first.WaitAt.Value)))
+                    if (children.Length == 0 || children.Any(d => stoppedIds.Contains(d.Id) || d.ProblemCode != null ||
+                        d.Status is not ("running" or "queued" or "completed"))) continue;
+                    var finished = first.NodeKind == "download.awaitCompletion" && children.All(d => d.Status == "completed");
+                    if (finished) completed.Add(part.Value!);
+                    if ((finished || Activity(children) != null) && (latestWait is {} at
+                            ? children.All(d => d.ObservedAt >= at) : !finished))
                         recovered.Add(part.Value!);
                 }
-                result[first.TaskId] = new(activity, recovered);
+                if (activity != null || completed.Count > 0) result[first.TaskId] = new(activity, recovered, completed);
             }
         }
         return result;
@@ -108,6 +114,7 @@ public sealed class AcquisitionDownloadActivityProjection(BakabaseDbContext db, 
         public string? NodeKind { get; set; }
         public string? WaitReason { get; set; }
         public DateTime? WaitAt { get; set; }
+        public DateTime? NodeCompletedAt { get; set; }
         public string? TargetId { get; set; }
         public bool Excluded { get; set; }
         public int? SiteId { get; set; }
@@ -135,6 +142,8 @@ public sealed class AcquisitionDownloadActivityProjection(BakabaseDbContext db, 
             FROM envelope
         )
         SELECT w.TaskId, w.RunId, w.RunStatus, w.WaitReason, w.WaitAt,
+            (SELECT n.CompletedAt FROM WorkflowNodeExecutions n WHERE n.WorkflowRunId = w.RunId AND n.StepIndex = w.CurrentStepIndex
+                ORDER BY n.Attempt DESC, n.Id DESC LIMIT 1) NodeCompletedAt,
             COALESCE(json_extract(w.Plan, '$.nodes[' || w.CurrentStepIndex || '].kind'),
                 (SELECT n.Kind FROM WorkflowNodeExecutions n WHERE n.WorkflowRunId = w.RunId AND n.StepIndex = w.CurrentStepIndex
                     ORDER BY n.Attempt DESC, n.Id DESC LIMIT 1),

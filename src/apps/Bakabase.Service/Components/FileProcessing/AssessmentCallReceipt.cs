@@ -11,7 +11,7 @@ namespace Bakabase.Service.Components.FileProcessing;
 /// The receipt is saved on the exact node invocation, including on cache hits and provider failures.</summary>
 internal sealed record AssessmentCallReceipt(string ArtifactId, int Iteration, long? UsageId, string OutputKind,
     string? Shape, bool ShapeTruncated, string? OutputPreview = null, bool OutputTruncated = false,
-    string? ValidationError = null)
+    string? ValidationError = null, string? SnapshotId = null)
 {
     private static readonly HashSet<string> Vocabulary = new(StringComparer.Ordinal)
     { "status", "reason", "confidence", "operations", "type", "file", "fileIndex", "input", "destination",

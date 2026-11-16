@@ -48,9 +48,11 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
         Func<string, string>? identityPath = null, ArtifactStoragePolicy? storagePolicy = null, string? storageTitle = null,
         bool extractionContentsAsRoot = false, IReadOnlyList<string>? inputDirectories = null,
         FileProcessingCheckpointInput? checkpointInput = null, ArtifactDirectoryProvenance? inputDirectoryProvenance = null,
-        Func<CancellationToken, Task<IReadOnlyList<string>>>? passwordEvidence = null)
+        Func<string, CancellationToken, Task<IReadOnlyList<string>>>? passwordEvidence = null,
+        Func<string, Task>? reportStage = null)
     {
         Validate(plan);
+        if (reportStage != null) await reportStage("preparingFiles");
         if (stopAfterStepId != null && !plan.Steps.Any(s => s.Id == stopAfterStepId))
             throw new ArgumentException("The requested processing boundary is not part of the plan.");
         if (plan.Requirement == "unknown" || (plan.Requirement == "required" && plan.Steps.Count == 0))
@@ -89,7 +91,7 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
         try
         {
             if (checkpointInput != null) await ValidatePinnedInputAsync(directory, plan, checkpointInput, ct);
-            return await Run(plan, root, normalized, directory, password, progress, ct, stopAfterStepId, storagePolicy, storageTitle, extractionContentsAsRoot, directories, inputDirectoryProvenance, passwordEvidence);
+            return await Run(plan, root, normalized, directory, password, progress, ct, stopAfterStepId, storagePolicy, storageTitle, extractionContentsAsRoot, directories, inputDirectoryProvenance, passwordEvidence, reportStage);
         }
         catch (LocalStorageException error)
         { return new(false, normalized, null, error.Code, FailureCode: "StorageUnavailable"); }
@@ -110,7 +112,7 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
     private async Task<FileProcessingPlanResult> Run(FileProcessingPlan plan, string root,
         List<string> files, string directory, string? password, Action<int>? progress, CancellationToken ct, string? stopAfterStepId, ArtifactStoragePolicy? storagePolicy, string? storageTitle, bool extractionContentsAsRoot,
         IReadOnlyList<string> inputDirectories, ArtifactDirectoryProvenance? inputDirectoryProvenance,
-        Func<CancellationToken, Task<IReadOnlyList<string>>>? passwordEvidence)
+        Func<string, CancellationToken, Task<IReadOnlyList<string>>>? passwordEvidence, Func<string, Task>? reportStage)
     {
         FileProcessingFiles.Within(directory, directory);
         var stateFile = Path.Combine(directory, "state.json");
@@ -233,6 +235,7 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
         }
 
         var detectionBudget = new ArchiveDetectionBudget();
+        if (reportStage != null) await reportStage("processingFiles");
         foreach (var step in plan.Steps.Take(boundaryIndex + 1))
         {
             ct.ThrowIfCancellationRequested();
@@ -246,6 +249,8 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
                 CheckProjection(step.Id, supplied.Select(PathEntry));
             var selected = supplied.Where(a => step.Op == "rebaseDirectory"
                 ? IsWithinRelativeDirectory(a.RelativePath, step.SourceDirectory!) : Matches(a, step.Selector)).ToList();
+            if (step.Op == "extractArchive" && step.ArchiveOpenMode != ArchiveOpenMode.SevenZipParser)
+                selected = ExpandAuthorizedArchiveSelection(supplied, selected);
             var selectedDirectories = step.Op == "rebaseDirectory" ? suppliedDirectories.Where(d =>
                 IsWithinRelativeDirectory(d.RelativePath, step.SourceDirectory!, includeSelf: true)).ToList() : [];
             // Check logical names before rereading potentially large input contents. A journal
@@ -386,20 +391,26 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
                 // A source instruction may identify only the .exe family, not exact names. An explicit
                 // bounded selector authorizes archive-tool inspection, never program execution.
                 var executableSelector = step.Selector?.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) == true;
+                var sfxCandidates = CompressedFileHelper.DetectSfxMultipartCandidates(extractionInputs.Select(a => a.Path).ToArray());
+                var oneSelectedSfxFamily = sfxCandidates.Count == 1 &&
+                    sfxCandidates[0].Files.ToHashSet(FileProcessingFiles.PathComparer).SetEquals(extractionInputs.Select(a => a.Path));
                 var stepKey = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(step.Id)))[..16];
                 if (HasUnboundArchiveResponse(state, stepKey))
                     return ArchiveGroupChanged(state, step.Id);
-                // A single selected input has an unambiguous group-zero answer. Do not lend
-                // one archive group's manual password to another group's format discovery.
+                // One entry or one complete SFX family has an unambiguous group-zero answer.
+                // Bind header-password evidence to every member, not just the executable.
+                var formatFiles = oneSelectedSfxFamily ? sfxCandidates[0].Files : extractionInputs.Count == 1
+                    ? new[] {extractionInputs[0].Path} : Array.Empty<string>();
+                var formatKeys = formatFiles.Select(file => ContentKey(state, originalPaths[file])).ToArray();
                 var formatPasswords = new List<string?>();
-                if (extractionInputs.Count == 1 && state.Operations.TryGetValue(stepKey + "-0", out var formatOperation) &&
-                    formatOperation.ArchiveInputs?.SequenceEqual(
-                        [ContentKey(state, originalPaths[extractionInputs[0].Path])], FileProcessingFiles.PathComparer) == true)
+                if (formatKeys.Length > 0 && state.Operations.TryGetValue(stepKey + "-0", out var formatOperation) &&
+                    formatOperation.ArchiveInputs?.SequenceEqual(formatKeys, FileProcessingFiles.PathComparer) == true)
                 {
                     if (password != null && state.PendingOperation == stepKey + "-0") formatPasswords.Add(password);
                     if (state.Passwords.TryGetValue(stepKey + "-0", out var formatAnswer)) formatPasswords.Add(formatAnswer);
                 }
-                var formatInput = extractionInputs.Count == 1 ? ContentKey(state, originalPaths[extractionInputs[0].Path]) : null;
+                var formatInput = formatKeys.Length == 1 ? formatKeys[0] : formatKeys.Length > 1
+                    ? "archive-family:" + ArtifactManifestFiles.Hash(JsonSerializer.Serialize(formatKeys)) : null;
                 if (formatInput != null && state.SourceFormatEvidence.TryGetValue(stepKey, out var priorFormat))
                 {
                     if (priorFormat.Input != formatInput) return ArchiveGroupChanged(state, step.Id);
@@ -409,7 +420,7 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
                 formatPasswords.Add(step.Password);
                 Task<IReadOnlyList<DetectedArchiveGroup>> DetectGroups() => AuthorizedArchiveDetection.DetectAsync(
                     extractionInputs.Select(a => a.Path).ToArray(), recursive: false, ct, extraction, detectionBudget,
-                    exactExtractionSelection: selected.Count == 1 || literalSelector || executableSelector, authorizedPasswords: formatPasswords);
+                    exactExtractionSelection: selected.Count == 1 || literalSelector || executableSelector || oneSelectedSfxFamily, authorizedPasswords: formatPasswords);
                 try
                 {
                     if (step.ArchiveOpenMode == ArchiveOpenMode.SevenZipParser)
@@ -430,7 +441,7 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
                             state.SourceFormatEvidence[stepKey] = new(formatInput, null);
                             await Save();
                             if (passwordEvidence == null || state.SourceFormatEvidence.Count > 3) throw;
-                            var verified = await ProbeEvidenceAsync(extractionInputs[0].Path, formatPasswords, null, passwordEvidence, ct);
+                            var verified = await ProbeEvidenceAsync(formatFiles[0], formatPasswords, null, passwordEvidence, ct);
                             if (verified == null) throw;
                             state.SourceFormatEvidence[stepKey] = new(formatInput, verified.Password);
                             await Save();
@@ -501,6 +512,7 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
                     }
                     if (!operation.Completed && !Directory.Exists(destination))
                     {
+                        if (reportStage != null) await reportStage("checkingArchive");
                         var candidates = new List<string?>();
                         if (state.Passwords.TryGetValue(key, out var answered)) candidates.Add(answered);
                         if (formatInput != null && state.SourceFormatEvidence.TryGetValue(stepKey, out var recognized) && recognized.Input == formatInput)
@@ -512,7 +524,11 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
                         candidates.Add(step.Password);
                         candidates = candidates.Distinct().ToList();
                         ArchivePasswordProbe probe;
-                        try { probe = await extraction.ProbePasswordAsync(group.Files[0], candidates, null, ct, opening); }
+                        try
+                        {
+                            AuthorizedArchiveDetection.ValidateCurrentSfxFamilies(group.Files, ct);
+                            probe = await extraction.ProbePasswordAsync(group.Files[0], candidates, null, ct, opening);
+                        }
                         catch (ArchiveNameEncodingUnsupportedException error)
                         {
                             return new(false, state.Active.Select(x => x.Path).ToList(), null, error.Message, step.Id,
@@ -533,7 +549,7 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
                             return new(false, state.Active.Select(x => x.Path).ToList(), null, error.Message, step.Id,
                                 FailureCode: error.Code);
                         }
-                        if (!probe.Succeeded && passwordEvidence != null && !operation.SourcePasswordEvidenceChecked &&
+                        if (!probe.Succeeded && probe.FailureCode == null && passwordEvidence != null && !operation.SourcePasswordEvidenceChecked &&
                             (probe.PasswordRejected || probe.WrongPasswords.Count > 0) &&
                             state.Operations.Values.Count(o => o.SourcePasswordEvidenceChecked) < 3)
                         {
@@ -553,6 +569,12 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
                         {
                             state.PendingOperation = key;
                             await Save();
+                            if (probe.FailureCode is "MissingVolumes" or "ArchiveInputRequired")
+                                return new(false, state.Active.Select(x => x.Path).ToList(), null,
+                                    probe.FailureCode == "MissingVolumes"
+                                        ? "The archive is incomplete or a required volume could not be found. Check all volume names and parts; this does not establish a wrong password."
+                                        : "The archive tool could not open the selected file. Check the actual format and multipart filenames before retrying; this does not establish a wrong password.",
+                                    step.Id, FailureCode: probe.FailureCode);
                             return new(false, state.Active.Select(x => x.Path).ToList(), null,
                                 $"Could not open {Path.GetFileName(group.Files[0])}. Check the password and all archive parts.",
                                 step.Id, true, candidates.Where(x => x != null).Cast<string>().ToList());
@@ -564,10 +586,23 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
                         ArchiveExtractionResult result;
                         try
                         {
+                            async Task<ArchiveExtractionResult> Extract(CancellationToken token)
+                            {
+                                AuthorizedArchiveDetection.ValidateCurrentSfxFamilies(group.Files, token);
+                                if (reportStage != null) await reportStage("extractingArchive");
+                                var extracted = await extraction.ExtractAsync(request, progress, token);
+                                if (reportStage != null) await reportStage("processingFiles");
+                                return extracted;
+                            }
                             result = writeGuard == null
-                                ? await extraction.ExtractAsync(request, progress, ct)
+                                ? await Extract(ct)
                                 : await writeGuard.RunAsync([pending], StorageWriteScope.Current,
-                                    token => extraction.ExtractAsync(request, progress, token), ct);
+                                    Extract, ct);
+                        }
+                        catch (ArchiveNameEncodingUnsupportedException error)
+                        {
+                            return new(false, state.Active.Select(x => x.Path).ToList(), null, error.Message, step.Id,
+                                FailureCode: "ArchiveNameEncodingUnsupported");
                         }
                         catch (DependencyNotInstalledException error)
                         {
@@ -575,6 +610,11 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
                                 FailureCode: "DEPENDENCY_REQUIRED", RequiredComponentId: error.ComponentId);
                         }
                         catch (ArchivePasswordEncodingException error)
+                        {
+                            return new(false, state.Active.Select(x => x.Path).ToList(), null, error.Message, step.Id,
+                                FailureCode: error.Code);
+                        }
+                        catch (ArchiveFormatProbeIncompleteException error)
                         {
                             return new(false, state.Active.Select(x => x.Path).ToList(), null, error.Message, step.Id,
                                 FailureCode: error.Code);
@@ -602,7 +642,7 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
                         await VerifyOutputManifest(destination, operation.OutputManifest, ct, operation.Completed ? null : group.Files);
                     }
                     var entry = extractionInputs.First(a => FileProcessingFiles.PathComparer.Equals(a.Path, group.Files[0]));
-                    var wrapperName = Path.GetFileNameWithoutExtension(entry.RelativePath);
+                    var wrapperName = CompressedFileHelper.GetExtractionDirectoryName(group.Files, group.Extension);
                     var parent = Path.GetDirectoryName(entry.RelativePath) ?? "";
                     var prefix = step.ExtractionLayout == FileExtractionLayouts.CurrentDirectory ? parent :
                         state.ExtractionContentsAsRoot && step.ExtractionLayout == null ? "" : Path.Combine(parent, wrapperName);
@@ -753,7 +793,8 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
         ReclaimCompletedIntermediatesAsync(resultRoot, expected, approvedFiles, ct, overrideRetention, null);
 
     internal async Task ReclaimCompletedIntermediatesAsync(string? resultRoot, ArtifactManifest expected,
-        IReadOnlySet<string> approvedFiles, CancellationToken ct, bool overrideRetention, ArtifactCleanupFileSnapshot? snapshot)
+        IReadOnlySet<string> approvedFiles, CancellationToken ct, bool overrideRetention, ArtifactCleanupFileSnapshot? snapshot,
+        FileProcessingRelocatedResult? relocatedResult = null)
     {
         if (resultRoot == null || Path.GetFileName(resultRoot) != "result") return;
         var directory = Path.GetDirectoryName(resultRoot)!;
@@ -784,7 +825,8 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
             var coverage = new ReplacementCoverage(state, ct);
             files = files.Where(coverage.IsComplete).ToArray();
             if (files.Any(path => !approvedFiles.Contains(path))) return;
-            if (snapshot == null && !(await ArtifactManifestFiles.ValidateAsync(resultRoot, expected, ct)).Available) return;
+            if (relocatedResult != null && !relocatedResult.Matches(resultRoot, expected)) return;
+            if (snapshot == null && !(await ArtifactManifestFiles.ValidateAsync(relocatedResult?.VerificationRoot ?? resultRoot, expected, ct)).Available) return;
             foreach (var path in files)
             {
                 ct.ThrowIfCancellationRequested();
@@ -1177,13 +1219,13 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
     public sealed record DirectoryArtifact(string Path, string RelativePath, IReadOnlyList<string>? GeneratedDirectories = null);
     public sealed record RenameFile(string Source, string RelativePath, ArtifactManifestEntry Content, bool Move);
     private async Task<ArchivePasswordProbe?> ProbeEvidenceAsync(string archive, IReadOnlyList<string?> attempted,
-        ArchiveOpenOptions? opening, Func<CancellationToken, Task<IReadOnlyList<string>>> readEvidence, CancellationToken ct)
+        ArchiveOpenOptions? opening, Func<string, CancellationToken, Task<IReadOnlyList<string>>> readEvidence, CancellationToken ct)
     {
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(ct);
         deadline.CancelAfter(TimeSpan.FromMinutes(2));
         try
         {
-            var evidence = await readEvidence(deadline.Token);
+            var evidence = await readEvidence(Path.GetFileName(archive), deadline.Token);
             if (evidence.Count is 0 or > 3) return null;
             var candidates = evidence.Where(v => !string.IsNullOrWhiteSpace(v) && v.Length <= 128 &&
                     !v.Any(char.IsControl) && !attempted.Contains(v, StringComparer.Ordinal))

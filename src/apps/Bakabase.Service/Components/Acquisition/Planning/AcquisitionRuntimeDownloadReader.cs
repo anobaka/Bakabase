@@ -71,6 +71,10 @@ public sealed class AcquisitionRuntimeDownloadReader(BakabaseDbContext db, Downl
         "completed" => "Completed", "failed" => "Failed", "stopped" => "Stopped", "stopping" => "Stopping",
         "fetchingmetadata" => "FetchingMetadata", "connecting" => "Connecting", "checking" => "Checking",
         "preparing" or "discovering" => "Preparing", "reusing" => "Reusing",
+        "transferpaused" => "TransferPaused", "transferretrying" => "TransferRetrying",
+        "transferfinishing" => "TransferFinishing", "transferfailed" => "TransferFailed",
+        "transfercancelled" => "TransferCancelled", "transfermixed" => "TransferMixed",
+        "transferstateunavailable" => "TransferStateUnavailable", "waitingfortransferquota" => "WaitingForTransferQuota",
         "downloading" or "downloading original files" or "downloading original files with rclone" => "Downloading",
         _ => null
     };

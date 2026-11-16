@@ -86,6 +86,26 @@ public sealed class FileProcessingRarVolumeTests
         StringAssert.Contains(error.Message, "still downloading");
     }
 
+    [TestMethod]
+    public async Task PrefixedRar5OpeningRequiresAnAdjacentChecksummedStandaloneHeaderWithinTheJpegLimit()
+    {
+        var valid = Rar5(false);
+        var corrupt = (byte[])valid.Clone(); corrupt[8] ^= 1;
+        byte[] prefix = [0xff, 0xd8, 0xff, 0xfe, 0, 2, 0xff, 0xd9];
+        var path = Save("archive.rar", [..prefix, ..valid]);
+        Assert.AreEqual((long)prefix.Length, await Check());
+        foreach (byte[] unsafeInput in new byte[][]
+                 {
+                     [..prefix, 0, ..valid], [..prefix, ..corrupt], [..prefix, ..Rar5(true)], [..prefix, ..Rar5(false, type: 4)],
+                     [..prefix[..3], ..valid, ..prefix, ..valid], [..prefix[..3], ..new byte[1024 * 1024], ..prefix, ..valid]
+                 })
+        {
+            File.WriteAllBytes(path, unsafeInput);
+            Assert.IsNull(await Check());
+        }
+        Task<long?> Check() => RarVolumeHeader.FindJpegPrefixedRar5Async(path, new FileInfo(path).Length, default);
+    }
+
     private string Save(string name, byte[] bytes)
     {
         var path = Path.Combine(_root, name);

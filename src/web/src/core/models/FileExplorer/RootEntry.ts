@@ -71,6 +71,7 @@ class RootEntry extends Entry {
   private _processingFsEvents: boolean = false;
   private _resizeObserver: ResizeObserver | undefined;
   private _directoryObserver?: DirectoryObserver;
+  private _observationReady = false;
   private static readonly KEEP_ALIVE_INTERVAL_MS = 30000; // Send keep-alive every 30 seconds
 
   patchFilter(filter?: Partial<IEntryFilter>) {
@@ -265,6 +266,29 @@ class RootEntry extends Entry {
     }
   }
 
+  /** Changing task permissions must not discard the current selection or expanded tree.
+   * Singleton watcher changes still use the normal root lifecycle. */
+  updateIndependentObservation(watchChanges: boolean | "poll"): boolean {
+    if (this.watchChanges === true || watchChanges === true) return false;
+    if (this.watchChanges === watchChanges) return true;
+    this._directoryObserver?.stop();
+    this._directoryObserver = undefined;
+    this.watchChanges = watchChanges;
+    this._startDirectoryObservation();
+    return true;
+  }
+
+  private _startDirectoryObservation() {
+    if (!this._observationReady || this._disposed || !this.path || this.watchChanges !== "poll" || this._directoryObserver) return;
+    this._directoryObserver = new DirectoryObserver(this, () => {
+      const queue = new RenderingQueue();
+      void this._compareBTasks(queue).then(() => {
+        if (!this._disposed) for (const { path } of queue.deQueueAll()) this.nodeMap[path]?.forceUpdate();
+      });
+    });
+    this._directoryObserver.start();
+  }
+
   async initialize() {
     if (!this._initialized) {
       this._disposed = false;
@@ -272,16 +296,8 @@ class RootEntry extends Entry {
       log("Initializing...", this);
       await this._stop();
       if (this._disposed) return;
-      // @ts-ignore
-      if (this.path && this.watchChanges === "poll") {
-        this._directoryObserver = new DirectoryObserver(this, () => {
-          const queue = new RenderingQueue();
-          void this._compareBTasks(queue).then(() => {
-            if (!this._disposed) for (const { path } of queue.deQueueAll()) this.nodeMap[path]?.forceUpdate();
-          });
-        });
-        this._directoryObserver.start();
-      }
+      this._observationReady = true;
+      this._startDirectoryObservation();
       if (this.path && this.watchChanges === true) {
         log("Start watching", this.path, this);
         await BApi.file.startWatchingChangesInFileProcessorWorkspace(
@@ -393,6 +409,7 @@ class RootEntry extends Entry {
 
   async dispose(): Promise<void> {
     this._disposed = true;
+    this._observationReady = false;
     this._resizeObserver?.disconnect();
     await this._stop();
   }
@@ -402,7 +419,7 @@ class RootEntry extends Entry {
   constructor(
     path?: string,
     showHiddenFiles: boolean = false,
-    private readonly watchChanges: boolean | "poll" = true,
+    private watchChanges: boolean | "poll" = true,
     readonly directoryPage?: ExplorerDirectoryPage,
   ) {
     super({ path });

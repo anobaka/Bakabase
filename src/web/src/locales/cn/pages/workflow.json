@@ -703,7 +703,7 @@
   "workflow.metadata.warning.WORKFLOW_ITEMS_SKIPPED": "本节点已按错误策略跳过部分项目，数量见失败项目统计。",
   "workflow.metadata.warning.WORKFLOW_ACTIVITY_FAILED": "节点执行失败，历史摘要已保留。",
   "workflow.metadata.warning.ArchiveInputRequired": "需要补充或修正归档处理指令。请在恢复表单中核对文件选择器和输入，缺失分卷需先获取。",
-  "workflow.metadata.warning.PasswordUnknown": "当前压缩包需要密码，请在恢复表单中提供。",
+  "workflow.metadata.warning.PasswordUnknown": "无法打开压缩包，请核对解压密码和分卷是否齐全。",
   "workflow.metadata.warning.ExtractionPlanUnknown": "处理方案尚未确认或无效，请在恢复表单中编辑确切指令。",
   "workflow.metadata.warning.WaitingShared": "正在等待其他工作流提交相同输入的处理结果，之后可重新检查并复用。",
   "workflow.metadata.warning.NeedsReconciliation": "共享操作需要核对状态，请先检查已有执行和产物，不能直接用空响应跳过。",
@@ -877,5 +877,11 @@
   "workflow.files.taskDirectory.historical": "这是历史文件位置，或已不属于本次任务目录；仅可查看。请从任务当前阶段打开目录。",
   "workflow.files.taskDirectory.unavailable": "暂时无法核实当前任务状态，文件操作暂不可用。",
   "workflow.files.taskDirectory.refresh": "刷新文件",
-  "workflow.timing.duration": "历时 {{duration}}"
+  "workflow.timing.duration": "历时 {{duration}}",
+  "workflow.processing.problem.details": "原始诊断",
+  "workflow.files.taskDirectory.compact.editable": "可操作文件",
+  "workflow.files.taskDirectory.compact.active": "只读：任务执行中",
+  "workflow.files.taskDirectory.compact.checking": "核对状态中",
+  "workflow.files.taskDirectory.compact.historical": "只读：历史目录",
+  "workflow.files.taskDirectory.compact.unavailable": "暂时只读"
 }

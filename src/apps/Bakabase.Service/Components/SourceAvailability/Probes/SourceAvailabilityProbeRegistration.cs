@@ -28,6 +28,10 @@ public static class SourceAvailabilityProbeRegistration
             sp.GetRequiredService<BakabaseWebProxy>().ForDownloadTool(DownloadToolProxyTargets.GalleryDl, ThirdPartyId.Pixeldrain),
             uri => uri.Scheme == "https" && uri.IdnHost == "pixeldrain.com" && uri.IsDefaultPort &&
                    uri.UserInfo.Length == 0 && uri.AbsolutePath.StartsWith("/api/", StringComparison.Ordinal), followRedirects: false));
+        services.AddHttpClient(MegaAvailabilityProbe.ClientName, client => client.Timeout = Timeout.InfiniteTimeSpan)
+            .RemoveAllLoggers().ConfigurePrimaryHttpMessageHandler(sp => ProxyAwarePublicHttpHandler.ForFixedMetadataEndpoints(
+                sp.GetRequiredService<BakabaseWebProxy>().ForDownloadTool(DownloadToolProxyTargets.MegaCmd, ThirdPartyId.Mega),
+                uri => uri.AbsoluteUri == MegaPublicShare.MetadataEndpoint.AbsoluteUri));
         services.AddHttpClient(HttpSourceAvailabilityProbe.ClientName, client =>
         {
             client.Timeout = Timeout.InfiniteTimeSpan;
@@ -35,7 +39,9 @@ public static class SourceAvailabilityProbeRegistration
         }).RemoveAllLoggers().ConfigurePrimaryHttpMessageHandler(sp => new ProxyAwarePublicHttpHandler(sp.GetRequiredService<BakabaseWebProxy>()));
         services.AddSingleton<ISourceAvailabilityProbe, BaiduShareAvailabilityProbe>();
         services.AddSingleton<ISourceAvailabilityProbe, GoFileAvailabilityProbe>();
-        services.AddSingleton<ISourceAvailabilityProbe, PixeldrainAvailabilityProbe>();
+        services.AddSingleton<PixeldrainAvailabilityProbe>();
+        services.AddSingleton<ISourceAvailabilityProbe>(sp => sp.GetRequiredService<PixeldrainAvailabilityProbe>());
+        services.AddSingleton<ISourceAvailabilityProbe, MegaAvailabilityProbe>();
         services.AddSingleton<ISourceAvailabilityProbe, SharePointAvailabilityProbe>();
         services.AddSingleton<ISourceAvailabilityProbe, CloudDownloads.TeraBox.TeraBoxSourceAvailabilityProbe>();
         services.AddSingleton<ISourceAvailabilityProbe, HttpSourceAvailabilityProbe>();

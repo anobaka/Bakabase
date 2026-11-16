@@ -1,20 +1,21 @@
 import { useTranslation } from "react-i18next";
 import { Chip, Tooltip } from "@/components/bakaui";
+import { taskTag } from "./taskTags";
 
-export default function AcquisitionAttentionTags({ tags }: { tags?: string[] | null }) {
+export default function AcquisitionAttentionTags({ tags, facts }: { tags?: string[] | null; facts?: string[] }) {
   const { t } = useTranslation();
-  if (!tags?.length) return null;
+  const entries = [
+    ...(facts ?? []).map(id => taskTag("facts", id)),
+    ...(tags ?? []).map(id => taskTag("attentionTags", id)),
+  ];
+  if (!entries.length) return null;
   return (
-    <div className="flex flex-wrap gap-1" aria-label={t("acquisition.attention.title")}>
-      {tags.map((tag) => (
-        <Tooltip
-          key={tag}
-          content={t(`acquisition.attention.hint.${tag}`)}
-          delay={1000}
-          placement="bottom"
-        >
-          <Chip size="sm" variant="flat" color={tag === "sourceUnavailable" ? "danger" : "warning"}>
-            {t(`acquisition.attention.tag.${tag}`)}
+    <div role="list" className="flex flex-wrap gap-1" aria-label={t("acquisition.filters.title")}>
+      {entries.map(({ kind, id, label, hint }) => (
+        <Tooltip key={`${kind}:${id}`} content={t(hint)} delay={1000} placement="bottom">
+          <Chip role="listitem" size="sm" variant="flat"
+            color={id === "sourceUnavailable" ? "danger" : id === "downloadedPending" ? "primary" : "warning"}>
+            {t(label)}
           </Chip>
         </Tooltip>
       ))}

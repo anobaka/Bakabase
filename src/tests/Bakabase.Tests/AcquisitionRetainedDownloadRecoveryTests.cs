@@ -87,6 +87,48 @@ public sealed partial class AcquisitionRecoveryTests
     }
 
     [TestMethod]
+    public async Task OnlyExplicitDownloadRecoveryCanResumeAStoppedTransferWithItsSavedFailure()
+    {
+        var (run, target, download, _, _, provider, service) = await SeedRetainedDownload();
+        download.Status = DownloadTaskDbModelStatus.Disabled;
+        download.Message = null;
+        target = target with {Problem = "LOCAL_STORAGE_FULL"};
+        var workset = AcquisitionRecoveryDiagnostics.ReadWorkset(run.CurrentItemJson!)! with {Targets = [target]};
+        run.CurrentItemJson = WorkflowItemSnapshot.Capture(workset);
+        await _db.SaveChangesAsync();
+        var task = await _db.AcquisitionTasks.SingleAsync(t => t.WorkflowRunId == run.Id);
+        var diagnostics = new AcquisitionRecoveryDiagnostics(_db, new UserStoragePolicy(false),
+            _services.GetRequiredService<IArtifactOperationStore>(), downloads: service);
+        var starter = new OnlyDownloadStarter(this, run.Id);
+        var recovery = new AcquisitionRecoveryService(_db, diagnostics, new(), new RecordingHost(),
+            downloadOnly: OnlyDownloads(service, starter, new()));
+
+        Assert.AreEqual(0, (await recovery.PreviewAsync(new([task.Id], "workflow"))).ContinuableCount);
+        var preview = await recovery.PreviewAsync(new([task.Id], "downloads"));
+        Assert.AreEqual(1, preview.ContinuableCount, preview.Rows.Single().ReasonCode);
+        Assert.AreEqual(0, starter.Calls.Count);
+        var result = await recovery.ApplyAsync(new(preview.PreviewToken, [task.Id]));
+        CollectionAssert.AreEqual(new[] {download.Id}, result.Downloads!.Single().StartedDownloadTaskIds.ToArray());
+        Assert.AreEqual(1, await _db.DownloadTasks.CountAsync());
+        Assert.IsTrue(provider.Checks.Contains(true));
+    }
+
+    [TestMethod]
+    public async Task StoppedDownloadStillRequiresARecoverableFailureAndValidOriginalCheckpoint()
+    {
+        var (run, target, download, _, _, provider, service) = await SeedRetainedDownload();
+        download.Status = DownloadTaskDbModelStatus.Disabled;
+        download.Message = null;
+        await _db.SaveChangesAsync();
+        var missing = await service.CheckAsync(run.Id, target with {Problem = null}, _root, true, default, includeStopped: true);
+        Assert.IsFalse(missing.CanRetry);
+        provider.Problem = "BAIDU_DOWNLOAD_CHECKPOINT_INVALID";
+        var invalid = await service.CheckAsync(run.Id, target with {Problem = "LOCAL_STORAGE_FULL"}, _root, true, default, includeStopped: true);
+        Assert.IsFalse(invalid.CanRetry);
+        Assert.AreEqual(provider.Problem, invalid.FailureCode);
+    }
+
+    [TestMethod]
     public async Task Retained_recovery_preserves_original_ids_bytes_and_receipts_and_revalidates_under_action_guard()
     {
         var (run, target, download, operation, transfer, provider, service) = await SeedRetainedDownload();

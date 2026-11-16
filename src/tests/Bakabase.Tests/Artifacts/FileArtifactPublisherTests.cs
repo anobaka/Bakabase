@@ -18,7 +18,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Bakabase.Tests.Artifacts;
 
 [TestClass]
-public sealed class FileArtifactPublisherTests
+public sealed partial class FileArtifactPublisherTests
 {
     private string _root = null!;
     private string _appData = null!;

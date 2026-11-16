@@ -16,6 +16,8 @@ public sealed record CloudDownloadTarget
     public Bakabase.Modules.Workflow.Artifacts.ArtifactDirectoryScope? DownloadDirectoryScope { get; init; }
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public Bakabase.Modules.Workflow.Artifacts.ArtifactDirectoryScope? ProcessingDirectoryScope { get; init; }
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionPartDirectories? StageDirectories { get; init; }
     public List<CloudSource> Sources { get; init; } = [];
     public string? SelectedSourceId { get; init; }
     public string? AccountId { get; init; }
@@ -130,6 +132,8 @@ public sealed record DownloadWorkset : IWorkflowOutputSummary, IWorkflowSourcePa
 
 public sealed record CloudSelectionSignal
 {
+    /// <summary>Frozen server proof for a transferred share whose first local enqueue has not happened.</summary>
+    public string? TransferredDownloadPlacement { get; init; }
     /// <summary>Observe existing downloads and persist the no-repeat guard. Restarting selected failed
     /// tasks requires the separate revalidated recovery capability.</summary>
     public bool? ObserveExistingOnly { get; init; }

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { FolderOpenOutlined } from "@ant-design/icons";
+import { LuFolderCog } from "react-icons/lu";
 import { Button, Checkbox, Modal } from "@/components/bakaui";
 import type { PlanTaskDetail } from "./models";
 import RetryDeliveryRootField from "./RetryDeliveryRootField";
@@ -17,7 +17,7 @@ export default function RevisionPlacementDialog({ detail, currentRoot, useCurren
   const [draft, setDraft] = useState<Placement>();
   return (
     <>
-      <Button size="sm" variant="light" startContent={<FolderOpenOutlined aria-hidden />}
+      <Button size="sm" variant="light" startContent={<LuFolderCog aria-hidden size={16} />}
         aria-haspopup="dialog" isDisabled={disabled} onPress={() => setDraft({ useCurrent, override })}>
         {t("acquisition.placement.open")}
       </Button>

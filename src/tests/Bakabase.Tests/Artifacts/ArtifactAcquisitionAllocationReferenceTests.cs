@@ -53,6 +53,77 @@ public sealed class ArtifactAcquisitionAllocationReferenceTests
     [TestMethod]
     [DataRow("current")]
     [DataRow("historical")]
+    [DataRow("unknown-directory")]
+    [DataRow("wrong-task")]
+    [DataRow("borrowed-directory")]
+    [DataRow("download")]
+    public void Checkpoint_queue_keeps_concrete_paths_protected_beside_the_policy_root(string variant)
+    {
+        var stage = Path.Combine(Root, "task-seven");
+        var plan = Plan() with {StageDirectories = new() {TaskId = variant == "wrong-task" ? 8 : 7,
+            Parts = new() {["part"] = new() {Processing = variant == "borrowed-directory"
+                ? new(stage, "borrowed", "userDirectoryRevision")
+                : new(stage, "exclusive", "taskAllocation") {BindingId = Guid.NewGuid().ToString("N"),
+                    Allocation = new("acquisition", "7", "processing-part", Root, stage)}}}}};
+        var directory = variant == "unknown-directory" ? Path.Combine(Root, "foreign") : stage;
+        var value = new AcquisitionLocalRecoveryQueueEntry {BatchId = Guid.NewGuid().ToString("N"), Version = Fingerprint,
+            StorageStamp = Fingerprint, Signal = "{}", RecoveryScope = "workflow", PlanRevision = 2, WorkflowRunId = 12,
+            ActionCategory = variant == "download" ? "originalDownload" : "localProcessing",
+            WorkingDirectories = [Root, directory], DeliveryDirectories = [Root], Status = "completed"};
+        var historical = variant == "historical";
+        var key = historical ? "localRecoveryQueueHistory" : "localRecoveryQueue";
+        var queue = JsonSerializer.SerializeToNode(value, WorkflowJson.Options);
+        using var document = JsonDocument.Parse(new JsonObject {[key] = historical ? new JsonArray(queue) : queue}.ToJsonString());
+        var task = new ArtifactAcquisitionAllocationReferences.TaskContext(7, historical ? 13 : 12, historical ? 3 : 2,
+            JsonSerializer.Serialize(historical ? Plan(12) : plan, WorkflowJson.Options), JsonSerializer.Serialize(History(plan), WorkflowJson.Options));
+        var roles = ArtifactAcquisitionAllocationReferences.QueueValues(document.RootElement, task, Owners, default);
+        var raw = historical ? document.RootElement.GetProperty(key)[0] : document.RootElement.GetProperty(key);
+        Assert.AreEqual(variant is "current" or "historical", roles.Contains(raw.GetProperty("workingDirectories")[0]));
+        Assert.IsFalse(roles.Contains(raw.GetProperty("workingDirectories")[1]));
+        Assert.IsFalse(roles.Contains(raw.GetProperty("deliveryDirectories")[0]));
+    }
+
+    [TestMethod]
+    [DataRow("ready")]
+    [DataRow("superseded-before-start")]
+    [DataRow("existing-run")]
+    [DataRow("missing-owner")]
+    [DataRow("superseded-after-run")]
+    [DataRow("changed-save")]
+    [DataRow("wrong-input")]
+    [DataRow("wrong-source-root")]
+    [DataRow("missing-evidence")]
+    public void Unstarted_adoption_requires_frozen_download_evidence_and_keeps_concrete_paths(string variant)
+    {
+        var adopted = Plan();
+        var history = History(adopted);
+        var manifest = new ArtifactManifest([new("file.7z", 123, Fingerprint)], Fingerprint);
+        var evidence = new AcquisitionPlanArtifactEvidence("part", variant == "wrong-input" ? "other" : "artifact",
+            "operation", "download", variant == "wrong-source-root" ? Path.Combine(Root, "other") : Root, Fingerprint, manifest);
+        history[1] = history[1] with {Reason = AcquisitionLocalFilesRecoveryReceipt.RevisionReason,
+            ArtifactEvidence = variant == "missing-evidence" ? [] : [evidence]};
+        var historical = variant.StartsWith("superseded-", StringComparison.Ordinal);
+        if (!historical) history.RemoveAt(2);
+        else if (variant == "superseded-before-start") history[2] = history[2] with {PreviousRunId = null};
+        var active = variant == "changed-save" ? adopted with {OutputDirectory = Path.Combine(Root, "changed")} : history.Last().Plan;
+        var context = new ArtifactAcquisitionAllocationReferences.TaskContext(7, historical ? 13 : variant == "existing-run" ? 12 : null,
+            historical ? 3 : 2, JsonSerializer.Serialize(active, WorkflowJson.Options), JsonSerializer.Serialize(history, WorkflowJson.Options));
+        var preview = new AcquisitionLocalFilesRecoveryPart("part", 21, 22, Fingerprint, 1, Root, Root, Root, Root, Root, "artifact");
+        var receipt = new AcquisitionLocalFilesRecoveryReceipt(11, 1, Fingerprint,
+            new(new() {ProcessingWorkspaceDirectory = Root}, new()), [new("part", 21, 22, "intent", Fingerprint, Fingerprint, "artifact", "operation")],
+            new([preview]), 2);
+        using var document = JsonDocument.Parse(JsonSerializer.Serialize(new {localFilesRecovery = receipt}, WorkflowJson.Options));
+        var owners = Owners.Where(o => o.Revision != 2 && (variant != "missing-owner" || o.RunId != 11)).ToHashSet();
+        var values = ArtifactAcquisitionAllocationReferences.QueueValues(document.RootElement, context, owners, default);
+        var part = document.RootElement.GetProperty("localFilesRecovery").GetProperty("preview").GetProperty("parts")[0];
+        Assert.AreEqual(variant is "ready" or "superseded-before-start", values.Contains(part.GetProperty("workingDirectory")));
+        Assert.IsFalse(values.Contains(part.GetProperty("sourceDirectory")));
+        Assert.IsFalse(values.Contains(part.GetProperty("deliveryDirectory")));
+    }
+
+    [TestMethod]
+    [DataRow("current")]
+    [DataRow("historical")]
     [DataRow("unbound")]
     [DataRow("wrong-history-owner")]
     [DataRow("wrong-task-input")]

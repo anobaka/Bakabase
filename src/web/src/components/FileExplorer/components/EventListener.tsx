@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, type RefObject } from "react";
 
 import {
   isDeleteShortcut,
+  isEditableTarget,
   isPrimaryModifierPressed,
   shouldIgnoreGlobalShortcut,
 } from "@/core/keyboard";
@@ -15,11 +16,21 @@ export enum SelectionMode {
 }
 
 type Props = {
+  scopeRef?: RefObject<HTMLElement | null>;
   onSelectionModeChange: (mode: SelectionMode) => void;
   onClick?: (evt: MouseEvent) => void;
   onDelete?: () => any;
   onKeyDown?: (key: string, evt: KeyboardEvent) => any;
 };
+
+export function ignoresExplorerShortcut(event: KeyboardEvent, scope: HTMLElement | null) {
+  const target = event.target;
+  return !scope || !(target instanceof Element) || !scope.contains(target) ||
+    target.closest("[data-file-explorer-keyboard-scope]") !== scope ||
+    event.defaultPrevented || event.isComposing || event.keyCode === 229 || isEditableTarget(target) ||
+    !!target.closest("[role='menu'], [role='menuitem'], .szh-menu") ||
+    target.closest("[role='dialog']") !== scope.closest("[role='dialog']");
+}
 const EventListener = (props: Props) => {
   const propsRef = useRef(props);
   const selectionModeRef = useRef<SelectionMode>(SelectionMode.Normal);
@@ -77,7 +88,8 @@ const EventListener = (props: Props) => {
 
   const onKeyDown = useCallback((e: KeyboardEvent) => {
     updateSelectionMode(e);
-    if (shouldIgnoreGlobalShortcut(e)) return;
+    const scope = propsRef.current.scopeRef;
+    if (scope ? ignoresExplorerShortcut(e, scope.current) : shouldIgnoreGlobalShortcut(e)) return;
     if (["Control", "Meta", "Shift", "Alt"].includes(e.key)) return;
     // Holding a key may navigate, but must not open repeated dialogs or start jobs twice.
     if (e.repeat && e.key !== "ArrowUp" && e.key !== "ArrowDown") return;

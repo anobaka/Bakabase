@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -11,18 +12,18 @@ namespace Bakabase.Service.Components.FileProcessing;
 
 public sealed partial class FileProcessingWorkspaceResolver
 {
+    internal string ResolveStoredArtifactRoot(string path, bool relative, IReadOnlyList<Relocation>? mappings = null)
+    {
+        if (!relative) return Map(Path.GetFullPath(path), false, mappings);
+        if (Path.IsPathRooted(path) || path.Replace('\\', '/').Split('/').Any(p => p == ".."))
+            throw new InvalidDataException("The artifact path escapes application data.");
+        return Map(FileProcessingFiles.Within(Path.Combine(appData, path), appData), false, mappings);
+    }
     // This only identifies an existing input container. It neither revives a retired artifact
     // nor establishes that its removed bytes remain available for processing or reuse.
     internal async Task<string?> ReadOriginalArtifactDirectoryAsync(ArtifactDbModel artifact, CancellationToken ct)
     {
-        string StoredRoot(string path, bool relative)
-        {
-            if (!relative) return Relocate(Path.GetFullPath(path));
-            if (Path.IsPathRooted(path) || path.Replace('\\', '/').Split('/').Any(p => p == ".."))
-                throw new InvalidDataException("The artifact path escapes application data.");
-            return Relocate(FileProcessingFiles.Within(Path.Combine(appData, path), appData));
-        }
-        var current = StoredRoot(artifact.RootPath, artifact.RootIsAppData);
+        var current = ResolveStoredArtifactRoot(artifact.RootPath, artifact.RootIsAppData);
         if (artifact.State == ArtifactLocationState.Quarantined) return null;
         if (artifact.State != ArtifactLocationState.Retired) return current;
         var id = Path.GetFileName(current);

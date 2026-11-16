@@ -731,6 +731,7 @@
   "cloudDownload.problemCode.LLM_ASSESSMENT_TIMEOUT": "等待模型响应超时，未取得可执行的处理方案。已有文件已保留；可在 AI 审计日志中查看对应时段的调用。",
   "cloudDownload.problemCode.LLM_ASSESSMENT_FAILED": "AI 文件分析调用失败。",
   "cloudDownload.problemCode.ARCHIVE_FAMILY_REVIEW_REQUIRED": "清单中仍有分卷压缩包。请确认这些分卷就是最终文件，或补充解压说明。",
+  "cloudDownload.problemCode.ARCHIVE_PACKAGING_REVIEW_REQUIRED": "已确认图片内包含 ZIP 压缩包。请解压，或确认按原样交付。",
   "cloudDownload.problemCode.INCOMPLETE_FILE_INVENTORY": "AI 本轮只看到了部分文件，不能确认整份内容已可交付。请核对完整文件清单。",
   "cloudDownload.problemCode.MAX_LLM_ASSESSMENT_CALLS": "已达到本次文件分析的轮数上限。",
   "cloudDownload.problemCode.LLM_OUTPUT_TRUNCATED": "模型回复达到了输出上限，处理方案不完整。可在「AI 配置」里调高文件处理器的「最大 Tokens」后重试。",

@@ -31,6 +31,8 @@ public sealed record AcquisitionPlanTaskDetail(AcquisitionTask Task, Acquisition
     public bool CanEditDeliverySettings { get; init; }
     public ArtifactStoragePolicy? StoragePolicy { get; init; }
     public bool CanEditStoragePolicy { get; init; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? CanKeepPreparedFiles { get; init; }
     public IReadOnlyList<AcquisitionPlanRevision> PlanHistory { get; init; } = [];
     public IReadOnlyList<AcquisitionPlanPreparationAttempt> PreparationAttempts { get; init; } = [];
     public IReadOnlyList<AcquisitionPlanArtifactCandidate> ReplanArtifacts { get; init; } = [];
@@ -52,18 +54,27 @@ public sealed record AcquisitionPlanCompositeSource(string PartId, string Artifa
 public sealed record AcquisitionPlanProcessingReplacement(string PartId, FileProcessingPlan Plan,
     IReadOnlyList<string> ArtifactEvidenceIds, string? ContinueFromArtifactId = null,
     string? ExpectedDeliveryProjectionFingerprint = null, bool? UseAdaptiveAssessment = null,
-    string? InputMode = null);
+    string? InputMode = null, string? InputStage = null);
 public sealed record AcquisitionPlanCreationInput(string Title, string BuilderId, string? OutputDirectory = null,
     AcquisitionDeliverySettings? DeliverySettings = null, ArtifactStoragePolicy? StoragePolicy = null);
 public sealed record AcquisitionPlanSearchInput(string Query);
 public sealed record AcquisitionPlanSelectionInput(string CandidateId, int ExpectedRevision);
-public sealed record AcquisitionPlanRunInput(int ExpectedRevision);
+public sealed record AcquisitionPlanRunInput(int ExpectedRevision, bool? UseEmergencySpaceReserve = null);
+public sealed record AcquisitionKeepPreparedFilesInput(int ExpectedRevision, string? Reason = null);
 public sealed record AcquisitionPlanUpdateInput(int ExpectedRevision, string? OutputDirectory = null,
     AcquisitionDeliverySettings? DeliverySettings = null, ArtifactStoragePolicy? StoragePolicy = null,
-    IReadOnlyList<AcquisitionStoragePolicyOverrideInput>? StoragePolicyOverrides = null);
+    IReadOnlyList<AcquisitionStoragePolicyOverrideInput>? StoragePolicyOverrides = null,
+    AcquisitionPlanSourceReplacement? SourceReplacement = null);
+public sealed record AcquisitionPlanSourceReplacement(string PartId, string SourceId, string Url, string? AccessCode = null);
 public sealed record AcquisitionStoragePolicyOverrideInput(string PartId, ArtifactStoragePolicyOverride? Policy, string? StepId = null);
 internal sealed record AcquisitionPlanBuilderState
 {
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public AcquisitionStageDirectoryChangeJournal? DirectoryChange { get; init; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? ProcessingStageCommitId { get; init; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? ProcessingStageInputId { get; init; }
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public AcquisitionLocalRecoveryQueueEntry? LocalRecoveryQueue { get; init; }
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

@@ -267,7 +267,7 @@ public sealed class CloudDownloaderHelper(IUserStoragePolicy storage, IBOptions<
         var normalized = DownloadIntents.DownloadSourceResolver.Normalize(new()
         {
             Id = request.Source.Id, Url = request.Source.Url, Kind = request.Source.Kind, ProviderId = request.Source.ProviderId,
-            MethodId = request.Source.MethodId, AccountId = request.Source.AccountId
+            MethodId = request.Source.MethodId, AccountId = request.Source.AccountId, AccessCode = request.Source.AccessCode
         });
         var descriptor = DownloadIntents.DownloadMethodCatalog.Select(normalized);
         if (descriptor?.ValidateSource?.Invoke(normalized) is { } sourceIssue) throw new ArgumentException(sourceIssue.Message);

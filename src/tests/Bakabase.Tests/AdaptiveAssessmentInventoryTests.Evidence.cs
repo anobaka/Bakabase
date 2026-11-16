@@ -47,7 +47,7 @@ public sealed partial class AdaptiveAssessmentInventoryTests
         Assert.IsTrue(invalid.NeedsHumanReview);
     }
 
-    private sealed class EvidenceModel : ILlmService
+    private sealed class EvidenceModel(string? response = null) : ILlmService
     {
         public string UserMessage = "";
         public Task<ChatResponse> CompleteForFeatureAsync(AiFeature feature, IEnumerable<ChatMessage> messages,
@@ -56,7 +56,7 @@ public sealed partial class AdaptiveAssessmentInventoryTests
             Assert.AreEqual(AiFeature.FileProcessor, feature);
             UserMessage = messages.Single(m => m.Role == ChatRole.User).Text;
             return Task.FromResult(new ChatResponse(new ChatMessage(ChatRole.Assistant,
-                """{"status":"continue","reason":"Unpack the requested outer wrapper; names are advisory.","operations":[{"type":"extract","inputId":1,"destination":null}]}""")));
+                response ?? """{"status":"continue","reason":"Unpack the requested outer wrapper; names are advisory.","operations":[{"type":"extract","inputId":1,"destination":null}]}""")));
         }
         public Task<ChatResponse> CompleteAsync(int id, string model, IEnumerable<ChatMessage> messages, LlmModelParameters? p = null, AiFeature? f = null, CancellationToken ct = default) => throw new NotSupportedException();
         public Task<ChatResponse> CompleteWithDefaultAsync(IEnumerable<ChatMessage> messages, LlmModelParameters? p = null, AiFeature? f = null, CancellationToken ct = default) => throw new NotSupportedException();

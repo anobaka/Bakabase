@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button, Spinner } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
 import type { Attempt } from "./acquisitionAttempt";
+import { copyTextToClipboard } from "@/core/clipboard";
 
 type AssessmentIo = NonNullable<
   Awaited<ReturnType<typeof BApi.acquisition.getAcquisitionAssessmentIo>>["data"]
@@ -96,6 +97,9 @@ export default function AssessmentInputOutput({
                     : undefined
                 }
                 empty={t("acquisition.records.missingInput")}
+                document={call.inputTextAvailable && call.callId ? { taskId, attempt, callId: call.callId, direction: "input" } : undefined}
+                availability={call.inputAvailability}
+                redacted={call.inputRedacted}
               />
               {call.validationError && (
                 <div role="alert" className="min-w-0 rounded-md bg-warning-50 p-2 text-sm text-warning-700">
@@ -119,6 +123,9 @@ export default function AssessmentInputOutput({
                       ? "acquisition.records.emptyResponse"
                       : "acquisition.records.missingOutput",
                 )}
+                document={call.outputTextAvailable && call.callId ? { taskId, attempt, callId: call.callId, direction: "output" } : undefined}
+                availability={call.outputAvailability}
+                redacted={call.outputRedacted}
               />
             </article>
           ))}
@@ -134,26 +141,74 @@ function Preview({
   note,
   empty,
   truncated,
+  document,
+  availability,
+  redacted,
 }: {
   title: string;
   text?: string | null;
   note?: string;
   empty: string;
   truncated: boolean;
+  document?: { taskId: number; attempt: Attempt; callId: string; direction: "input" | "output" };
+  availability?: string;
+  redacted?: boolean;
 }) {
   const { t } = useTranslation();
+  const [full, setFull] = useState<string>();
+  const [next, setNext] = useState<number | null>(0);
+  const [contentId, setContentId] = useState<string>();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
+  const request = useRef<AbortController>();
+  useEffect(() => () => request.current?.abort(), []);
+  const load = async () => {
+    if (!document || loading || next == null) return;
+    const controller = new AbortController();
+    request.current?.abort();
+    request.current = controller;
+    setLoading(true);
+    setError(false);
+    try {
+      const response = await BApi.acquisition.getAcquisitionAssessmentText(document.taskId, document.attempt.runId, {
+        attemptId: document.attempt.id, callId: document.callId, direction: document.direction,
+        offset: next, length: 32768, contentId,
+      }, { signal: controller.signal, sensitiveResponse: true, showErrorToast: false });
+      if (controller.signal.aborted) return;
+      if (response.code || !response.data) throw new Error("ASSESSMENT_TEXT_UNAVAILABLE");
+      setFull((previous) => (previous ?? "") + response.data!.text);
+      setNext(response.data.nextOffset ?? null);
+      setContentId(response.data.contentId);
+    } catch {
+      if (!controller.signal.aborted) setError(true);
+    } finally {
+      if (!controller.signal.aborted) setLoading(false);
+    }
+  };
+  const shown = full ?? text;
   return (
     <div className="min-w-0 space-y-1">
-      <h6 className="text-xs font-medium">{title}</h6>
+      <div className="flex flex-wrap items-center gap-2">
+        <h6 className="text-xs font-medium">{title}</h6>
+        {availability && <span className="text-xs text-default-500">{t(`acquisition.records.text.${availability}`)}</span>}
+        {redacted && <span className="text-xs text-default-500">{t("acquisition.records.text.redacted")}</span>}
+        {document && next != null && <Button size="sm" variant="light" isLoading={loading} onPress={load}>
+          {t(full === undefined ? "acquisition.records.text.open" : "acquisition.records.text.more")}
+        </Button>}
+        {shown && <Button size="sm" variant="light" onPress={() => copyTextToClipboard(shown)}>
+          {t("acquisition.records.text.copyVisible")}
+        </Button>}
+      </div>
       {note && <p className="text-xs text-default-500">{note}</p>}
-      {text ? (
+      {shown ? (
         <pre className="max-h-[36dvh] overflow-auto whitespace-pre-wrap break-all rounded-md bg-content1 p-2 text-xs select-text">
-          {text}
+          {shown}
         </pre>
       ) : (
         <p className="text-sm text-default-500">{empty}</p>
       )}
-      {truncated && (
+      {error && <p role="alert" className="text-xs text-warning-700">{t("acquisition.records.ioError")}</p>}
+      {truncated && full === undefined && (
         <p className="text-xs text-default-500">{t("acquisition.records.previewTruncated")}</p>
       )}
     </div>

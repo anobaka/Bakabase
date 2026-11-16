@@ -1,4 +1,6 @@
 using System;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Bakabase.InsideWorld.Business.Components.Compression;
 
@@ -20,6 +22,23 @@ public static class ArchiveSignature
         if (header.StartsWith(new byte[] { 0x52, 0x61, 0x72, 0x21, 0x1a, 0x07, 0x00 }) ||
             header.StartsWith(new byte[] { 0x52, 0x61, 0x72, 0x21, 0x1a, 0x07, 0x01, 0x00 })) return ".rar";
         return null;
+    }
+
+    /// <summary>Verify that a PNG/JPEG signature is followed by a structurally complete ZIP
+    /// occupying most of the file. Only bounded metadata is read, never archive payloads.</summary>
+    public static async Task<long?> FindDominantZipBehindImageAsync(string path, long length, CancellationToken ct)
+    {
+        var structure = await BoundedZipStructureProbe.FindStructureAsync(path, length, ct, requireImageHeader: true);
+        return structure is {ZipOffset: > 0} && structure.ArchiveEnd - structure.ZipOffset > length / 2
+            ? structure.ZipOffset : null;
+    }
+
+    /// <summary>Match the local headers, central directory and end records; a filename or
+    /// an isolated end marker is insufficient to identify a disguised delivery archive.</summary>
+    public static async Task<long?> FindDominantZipAsync(string path, long length, CancellationToken ct)
+    {
+        var structure = await BoundedZipStructureProbe.FindStructureAsync(path, length, ct, includeStandaloneZip: true);
+        return structure != null && structure.ArchiveEnd - structure.ZipOffset > length / 2 ? structure.ZipOffset : null;
     }
 
     // Used only to preserve an existing outer container before a deeper ZIP hint.
