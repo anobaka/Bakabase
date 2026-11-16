@@ -8,6 +8,7 @@ using Bakabase.Modules.Workflow.Abstractions.Models.Db;
 using Bakabase.Modules.Workflow.Abstractions.Components;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
+using Bakabase.Modules.Workflow.Artifacts;
 using Bakabase.Service.Components.Acquisition.Planning;
 using Microsoft.EntityFrameworkCore;
 
@@ -46,7 +47,7 @@ public sealed class AcquisitionFileProcessingEvidenceTests
     {
         Id = "part", SelectedSourceId = "selected", Sources = [new()
         {
-            Id = "selected", Url = Selected, AccessCode = "PRIVATE_ACCESS", ArchivePassword = "PRIVATE_PASSWORD"
+            Id = "selected", Url = Selected, AccessCode = "PRIVATE_ACCESS"
         }]
     }]};
     private static PostDownloadInfo Info() => new()
@@ -112,6 +113,97 @@ public sealed class AcquisitionFileProcessingEvidenceTests
             post.Results = json; await db.SaveChangesAsync();
             Assert.IsNull(await evidence.ReadAsync(40, "part", Selected, default), json);
         }
+    }
+
+    [DataTestMethod]
+    [DataRow("no-post")]
+    [DataRow("empty-post")]
+    [DataRow("stale-post")]
+    public async Task Selected_source_password_survives_AI_override_without_post_evidence(string condition)
+    {
+        const string literal = " Exact 密码 \\\" & value ";
+        var plan = Plan();
+        plan.Parts[0] = plan.Parts[0] with
+        {
+            Processing = new() {Requirement = "unknown"}, UseAdaptiveAssessment = true,
+            ContinueFrom = new(task.Id, 39, "artifact", "operation", "fingerprint"),
+            Sources = [plan.Parts[0].Sources[0] with {ArchivePassword = literal},
+                new() {Id = "other", Url = "https://download.example/other", ArchivePassword = "UNRELATED_PASSWORD"}]
+        };
+        task.PlanJson = Json(plan);
+        if (condition == "no-post") task.SourceRefsJson = "[]";
+        else if (condition == "stale-post") post.Revision++;
+        else
+        {
+            post.AvailabilityJson = null;
+            post.Results = Json(new Dictionary<string, PostDownloadInfo> {{"DownloadInfo", new() {Resources = [new() {Link = Selected}]}}});
+        }
+        await db.SaveChangesAsync();
+        var result = await evidence.ReadAsync(40, "part", Selected, default);
+        Assert.IsNotNull(result);
+        using var payload = JsonDocument.Parse(result);
+        var sourceEvidence = payload.RootElement.GetProperty("sourceProcessingEvidence");
+        Assert.AreEqual(literal, sourceEvidence.GetProperty("archivePassword").GetString());
+        Assert.AreEqual(JsonValueKind.Null, sourceEvidence.GetProperty("processing").ValueKind);
+        foreach (var excluded in new[] {"PRIVATE_ACCESS", "UNRELATED_PASSWORD", Selected, "This body"})
+            Assert.IsFalse(result.Contains(excluded), excluded);
+        Assert.IsNull(await evidence.ReadAsync(40, "other-part", Selected, default));
+        Assert.IsNull(await evidence.ReadAsync(40, "part", "https://download.example/other", default));
+        Assert.AreEqual(Json(plan), (await db.AcquisitionTasks.AsNoTracking().SingleAsync()).PlanJson);
+    }
+
+    [TestMethod]
+    public async Task Source_processing_remains_historical_advice_after_part_plan_is_replaced()
+    {
+        var plan = Plan();
+        plan.Parts[0] = plan.Parts[0] with
+        {
+            Processing = new() {Requirement = "unknown"},
+            Sources = [plan.Parts[0].Sources[0] with
+            {
+                Processing = new() {Requirement = "required", Evidence = ["Rename the outer image suffix before unpacking."],
+                    Steps = [new() {Id = "rename", Op = "renameExtension", Extension = ".zip"},
+                        new() {Id = "extract", Op = "extractArchive", Input = "rename", Password = "source-step-password"}]}
+            }]
+        };
+        task.PlanJson = Json(plan); task.SourceRefsJson = "[]"; await db.SaveChangesAsync();
+        var result = await evidence.ReadAsync(40, "part", Selected, default);
+        Assert.IsNotNull(result);
+        using var payload = JsonDocument.Parse(result);
+        var sourceEvidence = payload.RootElement.GetProperty("sourceProcessingEvidence");
+        Assert.AreEqual("required", sourceEvidence.GetProperty("processing").GetProperty("requirement").GetString());
+        Assert.AreEqual("source-step-password", sourceEvidence.GetProperty("processing").GetProperty("steps")[1].GetProperty("password").GetString());
+        StringAssert.Contains(sourceEvidence.GetProperty("note").GetString()!, "not executable instructions");
+        Assert.AreEqual("unknown", JsonSerializer.Deserialize<AcquisitionPlan>(task.PlanJson!, WorkflowJson.Options)!.Parts[0].Processing!.Requirement);
+    }
+
+    [DataTestMethod]
+    [DataRow(2048, true)]
+    [DataRow(2049, false)]
+    public async Task Selected_source_password_is_exact_or_omitted_never_truncated(int length, bool expected)
+    {
+        var literal = new string('文', length); var plan = Plan();
+        plan.Parts[0].Sources[0] = plan.Parts[0].Sources[0] with {ArchivePassword = literal};
+        task.PlanJson = Json(plan); task.SourceRefsJson = "[]"; await db.SaveChangesAsync();
+        var result = await evidence.ReadAsync(40, "part", Selected, default);
+        if (!expected) {Assert.IsNull(result); return;}
+        Assert.IsNotNull(result); Assert.IsTrue(result.Length <= AcquisitionFileProcessingEvidence.MaximumEvidenceChars);
+        using var payload = JsonDocument.Parse(result);
+        Assert.AreEqual(literal, payload.RootElement.GetProperty("sourceProcessingEvidence").GetProperty("archivePassword").GetString());
+    }
+
+    [TestMethod]
+    public async Task Source_processing_fallback_keeps_existing_post_observations()
+    {
+        var plan = Plan(); plan.Parts[0].Sources[0] = plan.Parts[0].Sources[0] with {ArchivePassword = "source-password"};
+        task.PlanJson = Json(plan); await db.SaveChangesAsync();
+        var result = await evidence.ReadAsync(40, "part", Selected, default);
+        Assert.IsNotNull(result);
+        StringAssert.Contains(result, "source-password");
+        StringAssert.Contains(result, "Separate saved observation");
+        StringAssert.Contains(result, "Outer archive with companion subtitle");
+        Assert.IsFalse(result.Contains("PRIVATE_PASSWORD"));
+        Assert.IsFalse(result.Contains("UNRELATED_GROUP"));
     }
 
     [TestMethod]

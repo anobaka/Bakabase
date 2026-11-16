@@ -188,7 +188,7 @@ export default function CompletedProcessingRevisionForm({
   waitingLocalProcessing,
   waitingPublicationStorage,
   preferAi = false,
-  inputStage,
+  inputStage: requestedInputStage,
 }: {
   detail: PlanTaskDetail;
   currentDeliveryRoot?: string | null;
@@ -211,6 +211,8 @@ export default function CompletedProcessingRevisionForm({
 }) {
   const { t } = useTranslation();
   const [snapshot] = useState(detail);
+  const [readReviewedDirectory, setReadReviewedDirectory] = useState(false);
+  const inputStage = readReviewedDirectory ? undefined : requestedInputStage;
   const [container, setContainer] = useState<HTMLElement | null>(null);
   const popoverProps = {
     portalContainer: container?.closest<HTMLElement>('[role="dialog"]') ?? undefined,
@@ -225,6 +227,14 @@ export default function CompletedProcessingRevisionForm({
     : "acquisition.plan.continueCompleted";
   const [deliveryLayoutOnly, setDeliveryLayoutOnly] = useState(false);
   const parts = snapshot.plan?.parts ?? [];
+  const reviewedInput = reviewedProcessingInput(snapshot);
+  const boundProcessingDirectory = parts.length === 1 && snapshot.stageDirectories?.taskId === snapshot.task.id
+    ? snapshot.stageDirectories.parts[parts[0].id]?.processing : undefined;
+  // An empty configured directory is not permission to silently reuse older files.
+  // Offer only the exact current review input, after the server confirms the empty input.
+  const emptyDirectoryRecovery = requestedInputStage === "processing" && retryStage === "processing" &&
+    boundProcessingDirectory?.bindingId && reviewedInput && reviewedInput.partId === parts[0]?.id &&
+    reviewedInput.rootDirectory !== boundProcessingDirectory.directory ? reviewedInput : undefined;
   const partInputStage = (partId: string) => inputStage && currentProcessingInputStage(snapshot, partId, inputStage);
   const stageDirectory = (partId: string) => inputStage && snapshot.stageDirectories?.taskId === snapshot.task.id
     ? snapshot.stageDirectories.parts[partId]?.[partInputStage(partId)!]?.directory : undefined;
@@ -566,6 +576,19 @@ export default function CompletedProcessingRevisionForm({
             defaultValue: t("acquisition.plan.actionFailed"),
           })}
         </p>
+      )}
+      {error === "PLAN_CURRENT_DIRECTORY_EMPTY" && !readReviewedDirectory && emptyDirectoryRecovery && (
+        <section className="space-y-2 rounded-lg border border-default-200 p-3">
+          <p className="text-sm">{t("acquisition.processingInput.emptyDirectoryRecoveryHint")}</p>
+          <p className="break-all text-xs text-default-500">{emptyDirectoryRecovery.rootDirectory}</p>
+          <Button size="sm" variant="flat" isDisabled={saving} onPress={() => {
+            update(emptyDirectoryRecovery.partId, { artifactId: emptyDirectoryRecovery.artifactId });
+            setReadReviewedDirectory(true);
+            setError(undefined);
+          }}>
+            {t("acquisition.processingInput.useReviewedDirectory")}
+          </Button>
+        </section>
       )}
       {reserve.control}
       <ResumeActions busy={saving} cancel={<Button variant="light" isDisabled={saving} onPress={onCancel}>

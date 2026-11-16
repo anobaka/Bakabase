@@ -659,8 +659,9 @@ public sealed partial class AcquisitionPlanService(BakabaseDbContext db, IEnumer
 
     // Recovery already owns the acquisition gate. Keep the same execution/preflight path
     // without recursively taking the semaphore or manufacturing a replacement workflow.
-    internal Task<AcquisitionPlanTaskDetail> RunWhileLockedAsync(int id, int expectedRevision, string? expectedInputs, CancellationToken ct)
-        => RunGuardedAsync(id, expectedRevision, ct, true, expectedInputs);
+    internal Task<AcquisitionPlanTaskDetail> RunWhileLockedAsync(int id, int expectedRevision, string? expectedInputs, CancellationToken ct,
+        bool? useEmergencySpaceReserve = null)
+        => RunGuardedAsync(id, expectedRevision, ct, true, expectedInputs, useEmergencySpaceReserve);
 
     internal async Task<(string? Problem, string? Inputs)> CheckUnstartedRecoveryAsync(AcquisitionTaskDbModel row, CancellationToken ct)
     {

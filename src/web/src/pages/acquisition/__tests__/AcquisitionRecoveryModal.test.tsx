@@ -529,6 +529,78 @@ const localRow = {
 const localConfirm = () =>
   screen.getByRole("button", { name: "acquisition.recovery.localFiles.confirm" });
 
+const chooseLocalAnalysis = async () => {
+  const method = await screen.findByRole("combobox", { name: "acquisition.recovery.localFiles.processingMode" });
+  await act(async () => {
+    fireEvent.change(method, { target: { value: "analyze" } });
+  });
+};
+
+it("requires an explicit AI choice for verified local files and preserves the unchecked configured reserve", async () => {
+  api.preview.mockResolvedValue(preview({ scope: "localFiles", rows: [{ ...localRow, canOverrideStorage: true }] }));
+  render(<AcquisitionRecoveryModal taskIds={[1]} initialScope="localFiles" />);
+  const method = await screen.findByRole("combobox", { name: "acquisition.recovery.localFiles.processingMode" });
+  expect(method).toHaveValue("original");
+  expect(screen.queryByRole("combobox", { name: "acquisition.adaptive.iterations" })).toBeNull();
+  expect(screen.queryByRole("checkbox", { name: "acquisition.reserve.operation.label" })).toBeNull();
+  expect(defaults.read).not.toHaveBeenCalled();
+  await chooseLocalAnalysis();
+  const rounds = screen.getByRole("combobox", { name: "acquisition.adaptive.iterations" });
+  expect(rounds).toHaveValue("5");
+  expect(Array.from(rounds.querySelectorAll("option"), option => option.value)).toEqual(["1", "2", "3", "4", "5"]);
+  const reserve = await screen.findByRole("checkbox", { name: "acquisition.reserve.operation.label" });
+  expect(reserve).toBeChecked();
+  expect(screen.getAllByRole("checkbox", { name: "acquisition.reserve.operation.label" })).toHaveLength(1);
+  fireEvent.click(reserve);
+  expect(api.apply).not.toHaveBeenCalled();
+  fireEvent.click(localConfirm());
+  await waitFor(() => expect(api.apply).toHaveBeenCalledExactlyOnceWith("fixed-token", [1], false,
+    { analyzeFilesFirst: true, maxAdaptiveIterations: 5 }));
+});
+
+it("passes the selected AI round limit and consumes the confirmation after an uncertain reply", async () => {
+  api.preview.mockResolvedValue(preview({ scope: "localFiles", rows: [localRow] }));
+  api.apply.mockRejectedValue(new Error("Lost response"));
+  render(<AcquisitionRecoveryModal taskIds={[1]} initialScope="localFiles" />);
+  await chooseLocalAnalysis();
+  fireEvent.change(screen.getByRole("combobox", { name: "acquisition.adaptive.iterations" }), { target: { value: "2" } });
+  fireEvent.click(localConfirm());
+  await waitFor(() => expect(api.apply).toHaveBeenCalledExactlyOnceWith("fixed-token", [1], undefined,
+    { analyzeFilesFirst: true, maxAdaptiveIterations: 2 }));
+  expect(localConfirm()).toBeDisabled();
+  expect(screen.getByRole("combobox", { name: "acquisition.recovery.localFiles.processingMode" })).toBeDisabled();
+  expect(screen.getByRole("combobox", { name: "acquisition.adaptive.iterations" })).toBeDisabled();
+});
+
+it("returns to the original local-files request when AI analysis is deselected", async () => {
+  api.preview.mockResolvedValue(preview({ scope: "localFiles", rows: [{ ...localRow, canOverrideStorage: true }] }));
+  render(<AcquisitionRecoveryModal taskIds={[1]} initialScope="localFiles" />);
+  await chooseLocalAnalysis();
+  fireEvent.click(await screen.findByRole("checkbox", { name: "acquisition.reserve.operation.label" }));
+  fireEvent.change(screen.getByRole("combobox", { name: "acquisition.recovery.localFiles.processingMode" }), {
+    target: { value: "original" },
+  });
+  expect(screen.queryByRole("checkbox", { name: "acquisition.reserve.operation.label" })).toBeNull();
+  fireEvent.click(localConfirm());
+  await waitFor(() => expect(api.apply).toHaveBeenCalledExactlyOnceWith("fixed-token", [1]));
+});
+
+it("never carries local AI options into a downloads-only confirmation", async () => {
+  api.preview.mockResolvedValueOnce(preview({ scope: "localFiles", rows: [localRow] }));
+  api.preview.mockResolvedValueOnce(preview({ scope: "downloads", previewToken: "new-download-token", rows: [
+    { taskId: 1, title: "Original download", action: "downloads", canContinue: true },
+  ] }));
+  render(<AcquisitionRecoveryModal taskIds={[1]} initialScope="localFiles" />);
+  await chooseLocalAnalysis();
+  fireEvent.change(screen.getByRole("combobox", { name: "acquisition.recovery.scope.label" }), {
+    target: { value: "downloads" },
+  });
+  await screen.findByText("Original download");
+  expect(screen.queryByRole("combobox", { name: "acquisition.recovery.localFiles.processingMode" })).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "acquisition.recovery.downloads.confirm" }));
+  await waitFor(() => expect(api.apply).toHaveBeenCalledExactlyOnceWith("new-download-token", [1]));
+});
+
 it("previews all local file inputs and old/new directories without starting or exposing editable paths", async () => {
   api.preview.mockResolvedValue(
     preview({

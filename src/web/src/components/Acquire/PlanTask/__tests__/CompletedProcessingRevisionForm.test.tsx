@@ -410,6 +410,89 @@ beforeEach(() => {
   });
 });
 
+function emptyProcessingReview(): PlanTaskDetail {
+  return {
+    ...detail,
+    task: { ...detail.task, status: AcquisitionStatus.Waiting, waitPromptJson: JSON.stringify({
+      targetId: "main", artifactId: "main-output", fingerprint: "main-fp",
+      deliveryReview: true, reviewToken: "current-review", reason: "PasswordUnknown",
+    }) },
+    plan: { ...detail.plan!, parts: [detail.plan!.parts[0]] },
+    stageDirectories: { version: 1, taskId: 4, parts: {
+      main: { processing: { directory: "/current/main", ownership: "exclusive",
+        evidence: "taskAllocation", bindingId: "main-directory" } },
+    } },
+    replanArtifacts: [{ ...detail.replanArtifacts[0], kind: "currentFiles" }],
+  };
+}
+
+it("offers the exact current review directory only after an empty stage input and preserves the user's attempt options", async () => {
+  mocks.reserveDefaults.mockReturnValue({ value: { selected: true, minimumBytes: 50 * 1024 ** 3 }, failed: false, reload: vi.fn() });
+  mocks.replan.mockRejectedValueOnce(new Error("PLAN_CURRENT_DIRECTORY_EMPTY"));
+  const saved = vi.fn();
+  render(<CompletedProcessingRevisionForm detail={emptyProcessingReview()} retryStage="processing" inputStage="processing"
+    mode="stopped" preferAi waitingLocalProcessing={{ taskId: 4, runId: 100, planRevision: 3 }}
+    onSaved={saved} onCancel={vi.fn()} />);
+  expect(screen.queryByRole("button", { name: "acquisition.processingInput.useReviewedDirectory" })).toBeNull();
+  expect(screen.getByTestId("current-directory-files")).toHaveTextContent("/current/main");
+  fireEvent.click(screen.getByRole("checkbox", { name: "acquisition.reserve.operation.label" }));
+  fireEvent.change(screen.getByLabelText("acquisition.plan.continueCompleted.adaptiveIterations"), { target: { value: "2" } });
+  fireEvent.change(screen.getByLabelText("acquisition.plan.continueCompleted.adaptiveContext"), { target: { value: "Inspect the current archive only." } });
+  const submit = screen.getByRole("button", { name: "acquisition.timeline.startAttempt" });
+  fireEvent.click(submit);
+  const recover = await screen.findByRole("button", { name: "acquisition.processingInput.useReviewedDirectory" });
+  expect(mocks.replan).toHaveBeenCalledOnce();
+  expect(mocks.replan.mock.calls[0][1].items).toEqual([expect.objectContaining({
+    inputMode: "stageDirectory", inputStage: "processing", artifactEvidenceIds: [],
+  })]);
+  expect(screen.getByTestId("current-directory-files")).toHaveTextContent("/current/main");
+  expect(saved).not.toHaveBeenCalled();
+  fireEvent.click(recover);
+  expect(mocks.replan).toHaveBeenCalledOnce();
+  expect(screen.getByTestId("current-directory-files")).toHaveTextContent("/processed/main");
+  expect(screen.getByRole("combobox", { name: "acquisition.plan.continueStopped.input" })).toHaveValue("main-output");
+  expect(screen.getByLabelText("acquisition.plan.continueCompleted.adaptiveIterations")).toHaveValue(2);
+  expect(screen.getByLabelText("acquisition.plan.continueCompleted.adaptiveContext")).toHaveValue("Inspect the current archive only.");
+  expect(screen.getByRole("checkbox", { name: "acquisition.reserve.operation.label" })).not.toBeChecked();
+  fireEvent.click(submit);
+  await waitFor(() => expect(saved).toHaveBeenCalledOnce());
+  expect(mocks.replan.mock.calls[1][1]).toMatchObject({
+    expectedRevision: 3, expectedRunId: 100, enableAdaptiveAssessment: true, maxAdaptiveIterations: 2,
+    adaptiveContext: "Inspect the current archive only.",
+    items: [{ partId: "main", inputMode: "currentDirectory", artifactEvidenceIds: ["main-output"],
+      continueFromArtifactId: "main-output", useAdaptiveAssessment: true }],
+  });
+  expect(mocks.replan.mock.calls[1][1].items[0]).not.toHaveProperty("inputStage");
+  expect(saved.mock.calls[0][1]).toEqual({ useEmergencySpaceReserve: false });
+  expect(mocks.run).not.toHaveBeenCalled();
+  expect(mocks.select).not.toHaveBeenCalled();
+});
+
+it.each(["unreadable", "changedFingerprint", "ambiguous", "sameDirectory", "unboundDirectory", "differentPart", "multipleParts", "differentError"])(
+  "does not offer an empty-directory recovery without an exact distinct current review: %s", async reason => {
+    const current = emptyProcessingReview();
+    if (reason === "unreadable") current.replanArtifacts[0].canReadCurrentDirectory = false;
+    if (reason === "changedFingerprint") current.replanArtifacts[0].fingerprint = "changed";
+    if (reason === "ambiguous") current.replanArtifacts.push({ ...current.replanArtifacts[0] });
+    if (reason === "sameDirectory") current.replanArtifacts[0].rootDirectory = "/current/main";
+    if (reason === "unboundDirectory") current.stageDirectories!.parts.main.processing!.bindingId = undefined;
+    if (reason === "differentPart") current.replanArtifacts[0].partId = "extra";
+    if (reason === "multipleParts") {
+      current.plan!.parts.push(detail.plan!.parts[1]);
+      current.stageDirectories!.parts.extra = { processing: { directory: "/current/extra", ownership: "exclusive",
+        evidence: "taskAllocation", bindingId: "extra-directory" } };
+    }
+    mocks.replan.mockRejectedValueOnce(new Error(reason === "differentError" ? "PLAN_CURRENT_DIRECTORY_UNAVAILABLE" : "PLAN_CURRENT_DIRECTORY_EMPTY"));
+    render(<CompletedProcessingRevisionForm detail={current} retryStage="processing" inputStage="processing"
+      mode="stopped" preferAi waitingLocalProcessing={{ taskId: 4, runId: 100, planRevision: 3 }}
+      onSaved={vi.fn()} onCancel={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "acquisition.timeline.startAttempt" }));
+    await screen.findByRole("alert");
+    expect(screen.queryByRole("button", { name: "acquisition.processingInput.useReviewedDirectory" })).toBeNull();
+    expect(mocks.replan).toHaveBeenCalledOnce();
+  },
+);
+
 it("starts AI with an explicit configured reserve when the global emergency default is unchecked", async () => {
   mocks.reserveDefaults.mockReturnValue({ value: { selected: true, minimumBytes: 50 * 1024 ** 3 }, failed: false, reload: vi.fn() });
   const saved = vi.fn();

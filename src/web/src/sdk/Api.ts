@@ -8468,6 +8468,9 @@ export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionRecovery
   previewToken: string;
   taskIds: number[];
   useEmergencySpaceReserve?: boolean;
+  analyzeFilesFirst?: boolean;
+  /** @format int32 */
+  maxAdaptiveIterations?: number;
 }
 
 export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionRecoveryDiagnosisCancellation {

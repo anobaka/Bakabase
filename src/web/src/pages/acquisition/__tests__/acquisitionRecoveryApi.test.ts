@@ -61,3 +61,10 @@ it.each([true, false])("keeps explicit reserve=%s instead of dropping false", as
   expect(mocks.apply).toHaveBeenCalledExactlyOnceWith(
     { previewToken: "downloads-bound-token", taskIds: [2], useEmergencySpaceReserve }, expect.any(Object));
 });
+it("forwards explicit AI analysis and its round limit with the unchanged local-files token and reserve", async () => {
+  await api.apply("verified-local-files", [7], false, { analyzeFilesFirst: true, maxAdaptiveIterations: 5 });
+  expect(mocks.apply).toHaveBeenCalledExactlyOnceWith({
+    previewToken: "verified-local-files", taskIds: [7], useEmergencySpaceReserve: false,
+    analyzeFilesFirst: true, maxAdaptiveIterations: 5,
+  }, { sensitiveResponse: true, showErrorToast: false });
+});

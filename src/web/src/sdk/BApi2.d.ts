@@ -19673,6 +19673,9 @@ export interface components {
             previewToken: string;
             taskIds: number[];
             useEmergencySpaceReserve?: boolean;
+            analyzeFilesFirst?: boolean;
+            /** Format: int32 */
+            maxAdaptiveIterations?: number;
         };
         "Bakabase.Service.Components.Acquisition.Planning.AcquisitionRecoveryDiagnosisCancellation": {
             diagnosisId: string;

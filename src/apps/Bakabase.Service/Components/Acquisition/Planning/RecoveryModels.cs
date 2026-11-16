@@ -5,7 +5,8 @@ namespace Bakabase.Service.Components.Acquisition.Planning;
 
 public sealed record AcquisitionRecoveryPreviewInput(IReadOnlyList<int> TaskIds, string? Scope = null,
     string? DiagnosisId = null);
-public sealed record AcquisitionRecoveryApplyInput(string PreviewToken, IReadOnlyList<int> TaskIds, bool? UseEmergencySpaceReserve = null);
+public sealed record AcquisitionRecoveryApplyInput(string PreviewToken, IReadOnlyList<int> TaskIds, bool? UseEmergencySpaceReserve = null,
+    bool? AnalyzeFilesFirst = null, int? MaxAdaptiveIterations = null);
 public sealed record AcquisitionRecoveryRow(int TaskId, string? Title, int? WorkflowRunId, bool CanContinue,
     string? Action, string ReasonCode, string? ManualAction = null, DateTimeOffset? EvidenceAt = null,
     string? CurrentStepKind = null, string? CurrentProblemCode = null,

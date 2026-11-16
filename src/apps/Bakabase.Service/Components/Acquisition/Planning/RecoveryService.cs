@@ -27,6 +27,8 @@ public sealed class AcquisitionRecoveryPreviewStore
         internal bool Claimed;
         internal int[]? Selected;
         internal bool? UseEmergencySpaceReserve;
+        internal bool AnalyzeFilesFirst;
+        internal int? MaxAdaptiveIterations;
         internal AcquisitionRecoveryResult? Result;
     }
     private readonly ConcurrentDictionary<string, Entry> _entries = new();
@@ -36,16 +38,24 @@ public sealed class AcquisitionRecoveryPreviewStore
         if (_entries.Count >= 50) throw new ArgumentException("RECOVERY_PREVIEW_LIMIT");
         _entries[entry.Preview.PreviewToken] = entry;
     }
-    internal Entry Claim(string token, int[] selected, bool? useEmergencySpaceReserve = null)
+    internal Entry Claim(string token, int[] selected, bool? useEmergencySpaceReserve = null,
+        bool analyzeFilesFirst = false, int? maxAdaptiveIterations = null)
     {
         if (!Guid.TryParseExact(token, "N", out _) || !_entries.TryGetValue(token, out var entry) || entry.Preview.ExpiresAt <= DateTimeOffset.UtcNow)
             throw new ArgumentException("RECOVERY_PREVIEW_EXPIRED");
         lock (entry)
         {
+            if (analyzeFilesFirst && entry.Preview.Scope != "localFiles" ||
+                maxAdaptiveIterations != null && !analyzeFilesFirst || maxAdaptiveIterations is < 1 or > 5)
+                throw new ArgumentException("RECOVERY_ANALYSIS_OPTIONS_INVALID");
+            maxAdaptiveIterations = analyzeFilesFirst ? maxAdaptiveIterations ?? 5 : null;
             if (selected.Any(id => !entry.Versions.ContainsKey(id))) throw new ArgumentException("RECOVERY_SELECTION_INVALID");
-            if (entry.Claimed && (entry.Result == null || (!selected.SequenceEqual(entry.Selected!) || useEmergencySpaceReserve != entry.UseEmergencySpaceReserve)))
+            if (entry.Claimed && (entry.Result == null || !selected.SequenceEqual(entry.Selected!) ||
+                useEmergencySpaceReserve != entry.UseEmergencySpaceReserve || analyzeFilesFirst != entry.AnalyzeFilesFirst ||
+                maxAdaptiveIterations != entry.MaxAdaptiveIterations))
                 throw new ArgumentException("RECOVERY_OUTCOME_UNKNOWN");
             entry.Claimed = true; entry.Selected = selected; entry.UseEmergencySpaceReserve = useEmergencySpaceReserve;
+            entry.AnalyzeFilesFirst = analyzeFilesFirst; entry.MaxAdaptiveIterations = maxAdaptiveIterations;
             return entry;
         }
     }
@@ -139,7 +149,8 @@ public sealed class AcquisitionRecoveryService(BakabaseDbContext db, IAcquisitio
             if (scope == "localFiles")
             {
                 if (localFiles == null) return new([], [new(id, "RECOVERY_LOCAL_FILES_UNAVAILABLE")]);
-                var outcome = await localFiles.ApplyWhileLockedAsync(id, Version(task, run), null, guardDirectory, ct, expectedStorageJson);
+                var outcome = await localFiles.ApplyWhileLockedAsync(id, Version(task, run), null, guardDirectory, ct, expectedStorageJson,
+                    useEmergencySpaceReserve: useEmergencySpaceReserve);
                 return new(outcome.Status == "started" ? [id] : [], [], LocalFiles: [outcome]);
             }
             var diagnosis = ForScope(await diagnostics.DiagnoseAsync(task, run, ct, verifyContent: true), run, scope);
@@ -196,7 +207,8 @@ public sealed class AcquisitionRecoveryService(BakabaseDbContext db, IAcquisitio
         Func<string?, Task>? guardDirectory, int? heldTask = null, AcquisitionRecoveryDiagnosis? verified = null,
         string? processingPlacementStamp = null, bool preserveReserve = false)
     {
-        var ids = Ids(input.TaskIds).Order().ToArray(); var entry = previews.Claim(input.PreviewToken, ids, input.UseEmergencySpaceReserve);
+        var ids = Ids(input.TaskIds).Order().ToArray();
+        var entry = previews.Claim(input.PreviewToken, ids, input.UseEmergencySpaceReserve, input.AnalyzeFilesFirst == true, input.MaxAdaptiveIterations);
         if (entry.Result is {} saved) return saved;
         var continued = new List<int>(); var skipped = new List<AcquisitionRecoverySkip>();
         var downloadOutcomes = new List<AcquisitionDownloadRecoveryOutcome>();
@@ -214,7 +226,9 @@ public sealed class AcquisitionRecoveryService(BakabaseDbContext db, IAcquisitio
                 {
                     if (localFiles == null || expected.Action != "localFiles")
                         throw new RecoveryBlockedException("RECOVERY_LOCAL_FILES_UNAVAILABLE");
-                    var outcome = await localFiles.ApplyWhileLockedAsync(id, entry.Versions[id], entry.Signals[id], guardDirectory, ct);
+                    var outcome = await localFiles.ApplyWhileLockedAsync(id, entry.Versions[id], entry.Signals[id], guardDirectory, ct,
+                        analyzeFilesFirst: entry.AnalyzeFilesFirst, maxAdaptiveIterations: entry.MaxAdaptiveIterations,
+                        useEmergencySpaceReserve: input.UseEmergencySpaceReserve);
                     localOutcomes.Add(outcome);
                     if (outcome.Status == "started") continued.Add(id);
                     continue;

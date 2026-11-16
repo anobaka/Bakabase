@@ -80,7 +80,10 @@ export default function AcquisitionRecoveryModal({
   const captured = useRef([...new Set(taskIds.filter((id) => Number.isSafeInteger(id) && id > 0))]);
   const [visible, setVisible] = useState(true);
   const [scope, setScope] = useState<AcquisitionRecoveryScope>(initialScope);
-  const reserveDefaults = useStorageReserveDefaults(scope !== "localFiles" && !reserveRunId);
+  const [analyzeFilesFirst, setAnalyzeFilesFirst] = useState(false);
+  const [maxAdaptiveIterations, setMaxAdaptiveIterations] = useState(5);
+  const localAnalysis = scope === "localFiles" && analyzeFilesFirst;
+  const reserveDefaults = useStorageReserveDefaults(localAnalysis || scope !== "localFiles" && !reserveRunId);
   const [reserveChoice, setReserveChoice] = useState<boolean>();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -186,6 +189,8 @@ export default function AcquisitionRecoveryModal({
         setError(undefined);
         setErrorCode(undefined);
         setReserveChoice(undefined);
+        setAnalyzeFilesFirst(false);
+        setMaxAdaptiveIterations(5);
         setLoading(true);
         setScope(next);
       }
@@ -265,9 +270,13 @@ export default function AcquisitionRecoveryModal({
     setError(undefined);
     setErrorCode(undefined);
     try {
-      const explicitReserve = eligible.some(row => selected.has(row.taskId) && row.canOverrideStorage === true)
+      const explicitReserve = (scope !== "localFiles" || localAnalysis) &&
+        eligible.some(row => selected.has(row.taskId) && row.canOverrideStorage === true)
         ? reserveChoice : undefined;
-      const next = explicitReserve === undefined
+      const next = localAnalysis
+        ? await acquisitionRecoveryApi.apply(preview.previewToken, selectedIds, explicitReserve,
+          { analyzeFilesFirst: true, maxAdaptiveIterations })
+        : explicitReserve === undefined
         ? await acquisitionRecoveryApi.apply(preview.previewToken, selectedIds)
         : await acquisitionRecoveryApi.apply(preview.previewToken, selectedIds, explicitReserve);
       if (mounted.current)
@@ -305,7 +314,7 @@ export default function AcquisitionRecoveryModal({
   const shown = rows.slice((page - 1) * pageSize, page * pageSize);
   const scopePrefix =
     scope === "workflow" ? "acquisition.recovery" : `acquisition.recovery.${scope}`;
-  const showReserve = !result && !deferred && !reserveRunId && scope !== "localFiles" &&
+  const showReserve = !result && !deferred && (localAnalysis || !reserveRunId && scope !== "localFiles") &&
     (!preview || eligible.some(row => row.canOverrideStorage === true));
 
   const confirmSelection = (
@@ -381,6 +390,39 @@ export default function AcquisitionRecoveryModal({
                 : `${scopePrefix}.hint`,
             )}
           </p>
+        </div>
+      )}
+      {scope === "localFiles" && !result && !deferred && !loading && preview && (
+        <div className="space-y-2 rounded-lg border border-default-200 p-3">
+          <Select size="sm" className="max-w-sm"
+            label={t("acquisition.recovery.localFiles.processingMode")}
+            aria-label={t("acquisition.recovery.localFiles.processingMode")}
+            selectedKeys={[analyzeFilesFirst ? "analyze" : "original"]}
+            disallowEmptySelection isDisabled={locked}
+            dataSource={[
+              { value: "original", label: t("acquisition.recovery.localFiles.useOriginalPlan") },
+              { value: "analyze", label: t("acquisition.processingChoice.ai") },
+            ]}
+            onSelectionChange={keys => {
+              const value = Array.from(keys)[0];
+              if (value !== "original" && value !== "analyze") return;
+              setAnalyzeFilesFirst(value === "analyze");
+              setReserveChoice(undefined);
+            }} />
+          {analyzeFilesFirst && <>
+            <p className="text-xs text-default-500">{t("acquisition.recovery.localFiles.aiHint")}</p>
+            <Select size="sm" className="max-w-xs"
+              label={t("acquisition.adaptive.iterations")}
+              aria-label={t("acquisition.adaptive.iterations")}
+              description={t("acquisition.adaptive.iterationsHint")}
+              selectedKeys={[String(maxAdaptiveIterations)]}
+              disallowEmptySelection isDisabled={locked}
+              dataSource={[1, 2, 3, 4, 5].map(value => ({ value: String(value), label: String(value) }))}
+              onSelectionChange={keys => {
+                const value = Number(Array.from(keys)[0]);
+                if (Number.isInteger(value) && value >= 1 && value <= 5) setMaxAdaptiveIterations(value);
+              }} />
+          </>}
         </div>
       )}
       {showReserve && (
