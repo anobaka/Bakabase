@@ -104,8 +104,10 @@ public sealed partial class AcquisitionPlanService
                 var candidate = await artifacts!.GetArtifactAsync(record.Id, ct);
                 if (candidate == null || !ArtifactManifestFiles.PathComparer.Equals(
                     Path.GetFullPath(candidate.RootDirectory), Path.GetFullPath(binding.Directory))) continue;
+                var continued = plan.Parts.Single(p => p.Id == item.PartId).ContinueFrom;
+                var sourceRun = continued?.ArtifactId == candidate.Id ? continued.PreviousRunId : input.ExpectedRunId;
                 if (await AcquisitionCurrentDirectoryFiles.CanReadAsync(db, artifacts, storage, workspaces,
-                    row.Id, input.ExpectedRunId, item.PartId, candidate, ct)) {source = candidate; break;}
+                    row.Id, sourceRun, item.PartId, candidate, ct, activeRunId: input.ExpectedRunId)) {source = candidate; break;}
             }
             if (source == null) throw new InvalidOperationException("PLAN_STAGE_DIRECTORY_ALIGNMENT_REQUIRED");
             var previous = plan.Parts.Single(p => p.Id == item.PartId).ContinueFrom;

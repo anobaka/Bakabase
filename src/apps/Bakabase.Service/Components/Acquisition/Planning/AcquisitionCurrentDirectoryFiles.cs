@@ -43,7 +43,7 @@ internal static partial class AcquisitionCurrentDirectoryFiles
             await RequireSourceAsync(db, store, storage, workspaces, taskId, runId, partId, artifact, ct, activeRunId: activeRunId);
             return true;
         }
-        catch (Exception e) when (e is ArgumentException or InvalidOperationException or IOException or UnauthorizedAccessException or JsonException)
+        catch (Exception e) when (e is ArgumentException or InvalidOperationException or IOException or InvalidDataException or UnauthorizedAccessException or JsonException)
         { return false; }
     }
 

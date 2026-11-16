@@ -502,8 +502,7 @@ public sealed partial class AcquisitionPlanService(BakabaseDbContext db, IEnumer
                     publishedOutputOnly: input.DeliveryContentLayout != null, publicationInputOnly: deliveryOnly && !completedRevision);
             try { SavePlan(row, plan, Sources(row), input.Reason.Trim(), input.ExpectedRunId, referenceOnlyReview || input.DeliveryContentLayout != null ? null : evidence,
                 preserveStorageOverrides: !input.UseCurrentStorageDefaults,
-                currentDirectoryBindings: currentDirectoryRevision ? AcquisitionStageDirectoryResolver.FromRecorded(row.Id,
-                    plan, AcquisitionEffectiveSourceProjection.Read(run.CurrentItemJson)) : null); }
+                currentDirectoryBindings: currentDirectoryRevision ? await CurrentStageDirectoriesAsync(row, Plan(row), ct) : null); }
             catch (ArgumentException) { throw new ArgumentException("PLAN_REPLAN_INVALID"); }
             var revisedState = State(row);
             row.BuilderStateJson = Serialize(revisedState with {Issues = [], LocalFilesRecovery = localFilesStorage == null
@@ -947,13 +946,9 @@ public sealed partial class AcquisitionPlanService(BakabaseDbContext db, IEnumer
             steps[0] = steps[0] with { Stage = localStage };
         // Stage locations describe the current task, while attempt manifests remain historical.
         // Reading old tasks binds their recorded locations without moving or adopting files.
-        var currentItem = row.WorkflowRunId is { } currentRunId
-            ? await db.Set<WorkflowRunDbModel>().AsNoTracking().Where(r => r.Id == currentRunId)
-                .Select(r => r.CurrentItemJson).SingleOrDefaultAsync(ct) : null;
         return new(task, plan, state.Candidates, state.Query, issues.DistinctBy(i => i.Code).ToList(), steps, Sources(row))
         {StageAttempts = await AcquisitionStageHistory.ReadAsync(db, row.Id, row.WorkflowRunId, ct),
-            StageDirectories = plan == null ? null : AcquisitionStageDirectoryResolver.FromRecorded(row.Id, plan,
-                AcquisitionEffectiveSourceProjection.Read(currentItem)),
+            StageDirectories = plan == null ? null : await CurrentStageDirectoriesAsync(row, plan, ct),
             DeliverySettings = plan?.DeliveryLayout?.Settings ?? state.DeliverySettings,
             StoragePolicy = plan?.StoragePolicy ?? state.StoragePolicy,
             CanEditStoragePolicy = row.DeletedAt == null && row.Status != AcquisitionStatus.Cancelled && await HasNeverExecutedAsync(row, ct),

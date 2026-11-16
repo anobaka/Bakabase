@@ -201,9 +201,11 @@ public sealed partial class AcquisitionPlanService
     }
     private async Task<AcquisitionStageDirectories> CurrentStageDirectoriesAsync(AcquisitionTaskDbModel row, AcquisitionPlan plan, CancellationToken ct)
     {
-        var item = row.WorkflowRunId is {} run ? await db.WorkflowRuns.AsNoTracking().Where(r => r.Id == run)
-            .Select(r => r.CurrentItemJson).SingleOrDefaultAsync(ct) : null;
-        return AcquisitionStageDirectoryResolver.FromRecorded(row.Id, plan, AcquisitionEffectiveSourceProjection.Read(item));
+        var run = row.WorkflowRunId is {} runId ? await db.WorkflowRuns.AsNoTracking()
+            .SingleOrDefaultAsync(r => r.Id == runId, ct) : null;
+        var mapping = AcquisitionStageDirectoryResolver.FromRecorded(row.Id, plan,
+            AcquisitionEffectiveSourceProjection.Read(run?.CurrentItemJson));
+        return await ProjectInitialDownloadDirectoryAsync(row, plan, mapping, run, ct);
     }
     private static AcquisitionStageDirectory? StageDirectoryEntry(AcquisitionPartDirectories part, string stage) =>
         stage switch {"download" => part.Download, "processing" => part.Processing, _ => part.Delivery};
