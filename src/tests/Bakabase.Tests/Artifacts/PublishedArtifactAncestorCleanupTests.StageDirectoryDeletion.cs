@@ -103,6 +103,32 @@ public sealed partial class PublishedArtifactAncestorCleanupTests
         Assert.IsTrue(f.Publication.Files.All(File.Exists));
     }
 
+    [DataTestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task An_offline_mount_does_not_block_independent_stage_directories(bool inspectInventory)
+    {
+        var f = await StageDeletion();
+        Task Guard(string path)
+        {
+            if (path == f.Download) throw new Bakabase.Abstractions.Exceptions.UserStoragePathException("mount disconnected", true);
+            return Task.CompletedTask;
+        }
+        var preview = await f.Service.PreviewAsync(new([f.Task.Id], inspectInventory, inspectInventory,
+            inspectInventory, DeleteDeliveredFiles: inspectInventory), guardDirectory: Guard);
+        var result = await f.Service.DeleteAsync(new(preview.PreviewId, true, true, true, true, DeleteDeliveredFiles: true),
+            guardDirectory: Guard);
+        Assert.AreEqual(f.Task.Id, result.DeletedTaskIds.Single());
+        CollectionAssert.Contains(result.CleanupResults!.Single().ReasonCodes.ToArray(), "WorkspaceUnavailable");
+        Assert.IsTrue(File.Exists(Path.Combine(f.Download, "original.bin")));
+        Assert.IsFalse(Directory.Exists(f.Processing));
+        Assert.IsFalse(Directory.Exists(f.Delivery));
+
+        var retry = await f.Service.PreviewAsync(new([f.Task.Id], true, true, true, RetryRetainedFiles: true, DeleteDeliveredFiles: true));
+        Assert.IsTrue((await f.Service.DeleteAsync(new(retry.PreviewId, RetryRetainedFiles: true))).CleanupResults!.Single().Completed);
+        Assert.IsFalse(Directory.Exists(f.Download));
+    }
+
     [TestMethod]
     public async Task Already_removed_stage_roots_are_idempotent_in_public_delete_and_retry()
     {
@@ -215,6 +241,7 @@ public sealed partial class PublishedArtifactAncestorCleanupTests
 
     [DataTestMethod]
     [DataRow("valid")]
+    [DataRow("recorded-only")]
     [DataRow("missing-options")]
     [DataRow("wrong-operation")]
     [DataRow("foreign-owner")]
@@ -234,6 +261,12 @@ public sealed partial class PublishedArtifactAncestorCleanupTests
         var revision = new CloudDownloadDestinationRevision(Guid.NewGuid().ToString("N"), oldDirectory,
             situation == "wrong-destination" ? Path.Combine(f.Plan.OutputDirectory, "another-task") : f.Download,
             f.Plan.OutputDirectory, DateTime.UtcNow, new('a', 64));
+        if (situation == "recorded-only")
+        {
+            plan = plan with {StageDirectories = null};
+            File.Delete(Path.Combine(f.Download, "original.bin"));
+            Directory.CreateDirectory(Path.Combine(f.Download, "empty-wrapper"));
+        }
         var request = new CloudDownloadRequest(situation == "wrong-operation" ? "another-dispatch" : "stage-dispatch",
             new() {Id = "source", ProviderId = "baidu", Url = "https://example.test/share"}, null, null, oldDirectory)
             {DestinationRevisions = [revision]};
@@ -247,8 +280,9 @@ public sealed partial class PublishedArtifactAncestorCleanupTests
 
         var preview = await f.Service.PreviewAsync(new([f.Task.Id], true, true, true, DeleteDeliveredFiles: true));
         var selected = preview.Rows.Single().Cleanup!.Groups.Single(g => g.Directory == f.Download);
-        Assert.AreEqual(situation == "valid", selected.Eligible, selected.ReasonCode);
-        if (situation == "valid")
+        var ownsDownload = situation is "valid" or "recorded-only";
+        Assert.AreEqual(ownsDownload, selected.Eligible, selected.ReasonCode);
+        if (ownsDownload)
         {
             var result = await f.Service.DeleteAsync(new(preview.PreviewId));
             Assert.IsTrue(result.CleanupResults!.Single().Completed);

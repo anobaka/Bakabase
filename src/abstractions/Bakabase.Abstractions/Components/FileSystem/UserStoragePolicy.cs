@@ -98,8 +98,20 @@ public sealed class UserStoragePolicy : IUserStoragePolicy
 
     public void EnsurePathAllowed(string path, UserStoragePurpose purpose = UserStoragePurpose.UserFiles)
     {
-        if (!IsPathAllowed(path, purpose))
-            throw new UserStoragePathException($"Choose a folder inside a mounted storage location. {path}");
+        if (IsPathAllowed(path, purpose)) return;
+        if (TryAbsolute(path, out var lexical) && TryAppDataBoundary(purpose, out var appData, out _) &&
+            (appData == null || !Within(lexical!, appData)) &&
+            AllowedMount(ReadSnapshot(), lexical!, canonical: false) is { } mount)
+        {
+            // mountinfo can still list a disconnected SMB/NFS share. Distinguish an
+            // inaccessible mount root from an untrusted child or symlink on a healthy mount.
+            try { _ = _readAttributes(mount.Path); }
+            catch (IOException)
+            {
+                throw new UserStoragePathException($"Reconnect the mounted storage location. {mount.Path}", mountUnavailable: true);
+            }
+        }
+        throw new UserStoragePathException($"Choose a folder inside a mounted storage location. {path}");
     }
 
     public void EnsureTreeMutationAllowed(string path)

@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button, Checkbox, Chip, Modal, Pagination, Spinner } from "@/components/bakaui";
-import { bytesToSize } from "@/components/utils";
+import { bytesToSize, extractErrorMessage } from "@/components/utils";
 import AcquisitionDeletionCleanupSummary from "./AcquisitionDeletionCleanupSummary";
-import { deletionReasonLabel } from "./deletionReasonLabel";
+import { deletionReasonCodes, deletionReasonLabel } from "./deletionReasonLabel";
 import type { DestroyableProps } from "@/components/bakaui/types";
 import { millisecondsUntil } from "@/core/serverTime";
 import {
@@ -47,6 +47,22 @@ function recordEligible(
   return row.canDelete || (removeTaskIfCleanupFails && row.canRemoveTaskIfCleanupFails === true);
 }
 
+function deletionStatusLabel(progress: AcquisitionDeletionProgress | undefined, receivingReceipt: boolean,
+  unavailable: boolean, expired: boolean) {
+  if (receivingReceipt) {
+    if (unavailable) return expired ? "acquisition.delete.receipt.expired" : "acquisition.delete.receipt.unavailable";
+    if (!progress) return "acquisition.delete.receipt.checking";
+    if (progress.state !== "running") {
+      return ["completed", "interrupted", "preview"].includes(progress.state)
+        ? `acquisition.delete.receipt.${progress.state}` : "acquisition.delete.receipt.unavailable";
+    }
+  }
+  if (!progress || progress.state === "preview") return "acquisition.delete.progress.starting";
+  const phase = ["rechecking", "cleaning", "deletingRecord", "completed", "interrupted"].includes(progress.phase)
+    ? progress.phase : "rechecking";
+  return `acquisition.delete.progress.phase.${phase}`;
+}
+
 export default function DeleteAcquisitionTasksModal({
   taskIds,
   scopeLabel,
@@ -74,7 +90,9 @@ export default function DeleteAcquisitionTasksModal({
     } } : undefined,
   );
 
-  const [error, setError] = useState<"preview" | "submit">();
+  const [error, setError] = useState<"preview">();
+  const [unconfirmed, setUnconfirmed] = useState<{ previewId: string; reason?: string }>();
+  const [receiptExpired, setReceiptExpired] = useState(false);
   const [page, setPage] = useState(1);
   const [now, setNow] = useState(Date.now());
   const cleanupAllowed = captured.current.length > 0 && captured.current.length <= 100;
@@ -105,6 +123,8 @@ export default function DeleteAcquisitionTasksModal({
   const retainedScopeKey = retainedReview?.taskIds.join(",");
   const retainedReviewRef = useRef(retainedReview);
   retainedReviewRef.current = retainedReview;
+  const changedCallback = useRef(onChanged);
+  changedCallback.current = onChanged;
 
   const cancelPreparation = useCallback(() => {
     reviewGeneration.current++;
@@ -131,6 +151,7 @@ export default function DeleteAcquisitionTasksModal({
     setConfirmation(undefined);
     setLoading(true);
     setError(undefined);
+    setUnconfirmed(undefined);
     setResult(undefined);
     setPage(1);
     try {
@@ -244,33 +265,42 @@ export default function DeleteAcquisitionTasksModal({
   useEffect(() => {
     if (confirmation) backButton.current?.focus();
   }, [confirmation]);
+  const trackedId = submitting ? confirmation?.preview.previewId : unconfirmed?.previewId;
   useEffect(() => {
-    if (!submitting || !confirmation || !visible) return;
+    if (!trackedId || !visible) return;
     const controller = new AbortController();
     let timer: ReturnType<typeof setTimeout> | undefined;
     const poll = async () => {
       try {
         const next = await acquisitionDeletionApi.progress(
-          confirmation.preview.previewId,
+          trackedId,
           controller.signal,
         );
         if (controller.signal.aborted) return;
-        if (next.previewId !== confirmation.preview.previewId)
+        if (next.previewId !== trackedId)
           throw new Error("DELETION_PROGRESS_CHANGED");
         setProgress(next);
         setProgressUnavailable(false);
-      } catch {
-        if (!controller.signal.aborted) setProgressUnavailable(true);
-      } finally {
-        if (!controller.signal.aborted) timer = setTimeout(() => void poll(), 1000);
+        if (unconfirmed && next.state !== "running") {
+          if (next.state === "completed" || next.state === "interrupted") changedCallback.current?.();
+          return;
+        }
+      } catch (cause) {
+        if (controller.signal.aborted) return;
+        setProgressUnavailable(true);
+        if (unconfirmed) {
+          setReceiptExpired(extractErrorMessage(cause) === "ACQUISITION_DELETE_PREVIEW_EXPIRED");
+          return;
+        }
       }
+      timer = setTimeout(() => void poll(), 1000);
     };
     void poll();
     return () => {
       controller.abort();
       clearTimeout(timer);
     };
-  }, [submitting, confirmation, visible]);
+  }, [trackedId, unconfirmed, visible]);
   const close = () => {
     if (busy.current) return;
     scopeRequest.current?.abort();
@@ -327,6 +357,7 @@ export default function DeleteAcquisitionTasksModal({
     setSubmitting(true);
     setProgress(undefined);
     setProgressUnavailable(false);
+    setReceiptExpired(false);
     setError(undefined);
     try {
       const next = await acquisitionDeletionApi.remove(
@@ -334,10 +365,12 @@ export default function DeleteAcquisitionTasksModal({
         confirmation.options,
       );
       if (mounted.current) setResult(next);
-      onChanged?.();
-    } catch {
-      if (mounted.current) setError("submit");
-      onChanged?.();
+    } catch (cause) {
+      const reason = extractErrorMessage(cause);
+      if (mounted.current) {
+        setProgress(undefined);
+        setUnconfirmed({ previewId: confirmation.preview.previewId, reason: deletionReasonCodes.has(reason) ? reason : undefined });
+      }
     } finally {
       busy.current = false;
       if (mounted.current) {
@@ -346,6 +379,7 @@ export default function DeleteAcquisitionTasksModal({
         setScope(undefined);
         resetInventory();
       }
+      onChanged?.();
     }
   };
   const retainedIds = (result?.cleanupResults ?? [])
@@ -405,7 +439,7 @@ export default function DeleteAcquisitionTasksModal({
         ) : (
           <>
             {closeButton}
-            {!result && !submitting && (
+            {!result && !submitting && !unconfirmed && (
               <Button key="review" color="primary" isDisabled={!selectionReady} isLoading={preparing} onPress={() => void review()}>
                 {t("acquisition.delete.next")}
               </Button>
@@ -414,16 +448,12 @@ export default function DeleteAcquisitionTasksModal({
         )
       }
     >
-      {submitting ? (
+      {submitting || unconfirmed ? (
         <div role="status" className="space-y-2 py-3 text-sm" aria-live="polite">
           <div className="flex items-center gap-2">
-            <Spinner size="sm" />
+            {(submitting || (!progressUnavailable && (!progress || progress.state === "running"))) && <Spinner size="sm" />}
             <span>
-              {t(
-                progress?.state === "preview" || !progress
-                  ? "acquisition.delete.progress.starting"
-                  : `acquisition.delete.progress.phase.${["rechecking", "cleaning", "deletingRecord", "completed", "interrupted"].includes(progress.phase) ? progress.phase : "rechecking"}`,
-              )}
+              {t(deletionStatusLabel(progress, !!unconfirmed, progressUnavailable, receiptExpired))}
             </span>
             {progress?.currentTaskId != null && <span>#{progress.currentTaskId}</span>}
           </div>
@@ -443,13 +473,23 @@ export default function DeleteAcquisitionTasksModal({
               })}
             </p>
           )}
-          <p className="text-xs text-default-600">
+          {unconfirmed ? <>
+            {unconfirmed.reason && <p className="text-sm text-danger">{reason(unconfirmed.reason)}</p>}
+            {progressUnavailable && !receiptExpired ? (
+              <Button size="sm" variant="flat" onPress={() => {
+                setProgressUnavailable(false);
+                setUnconfirmed({ ...unconfirmed });
+              }}>{t("acquisition.delete.receipt.checkAgain")}</Button>
+            ) : (receiptExpired || (progress && progress.state !== "running")) && (
+              <Button size="sm" variant="flat" onPress={() => void load()}>{t("acquisition.delete.recheck")}</Button>
+            )}
+          </> : <p className="text-xs text-default-600">
             {t(
               progressUnavailable
                 ? "acquisition.delete.progress.unavailable"
                 : "acquisition.delete.progress.safety",
             )}
-          </p>
+          </p>}
         </div>
       ) : confirmation ? (
         <div className="space-y-3 text-sm">

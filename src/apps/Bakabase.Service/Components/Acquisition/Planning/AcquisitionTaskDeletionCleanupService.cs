@@ -106,6 +106,8 @@ public sealed partial class AcquisitionTaskDeletionCleanupService(BakabaseDbCont
         var consent = new ArtifactDeliveryCleanupConsent(Guid.NewGuid().ToString("N"), DateTimeOffset.UtcNow,
             task.Id, task.PlanRevision, runId, acceptDelivery, owners.Order().ToArray(), outputs, skipFileVerification, deleteDeliveredFiles);
         var authorization = Authorization(task, consent, superseded, retryRetainedFiles);
+        var operationIds = bindings.Select(b => b.OperationId).Distinct().ToArray();
+        var previewReferences = new ArtifactCleanupReferenceGuard(db, workspaces, cachePreviewReads: true);
         var stageDirectories = await PreviewStageDirectoriesForDeletionAsync(task, owners, authorization,
             cleanupIntermediates, deleteDeliveredFiles, ct, guardDirectory);
         if (stageDirectories.Count > 0)
@@ -113,7 +115,12 @@ public sealed partial class AcquisitionTaskDeletionCleanupService(BakabaseDbCont
             // Current bindings, proven earlier stage roots and private allocations form
             // one deduplicated directory selection. Do not repeat the old manifest/hash
             // traversal for these explicitly selected roots.
-            var stageGroups = stageDirectories.Select(c => c.Group).ToArray();
+            // A failed attempt can stage a private copy in the global processing workspace
+            // before recording a binding. Only its existing exact-file proof may select it.
+            var roots = stageDirectories.Select(c => c.RootDirectory).ToArray();
+            var extraInputs = cleanupIntermediates
+                ? await PreviewAbandonedInputsAsync(operationIds, authorization, previewReferences, ct, guardDirectory, roots) : [];
+            var stageGroups = stageDirectories.Select(c => c.Group).Concat(extraInputs.Select(c => c.Group)).ToArray();
             var stageFiles = Unique(stageGroups.Where(g => g.Eligible).SelectMany(g => g.Files));
             var identifiedStageFiles = Unique(stageGroups.SelectMany(g => g.Files));
             return new(new(stageFiles.Count, stageFiles.Sum(f => f.Bytes), stageGroups,
@@ -122,9 +129,8 @@ public sealed partial class AcquisitionTaskDeletionCleanupService(BakabaseDbCont
                     IdentifiedFileCount: identifiedStageFiles.Count, IdentifiedBytes: identifiedStageFiles.Sum(f => f.Bytes),
                     SizeIncomplete: stageGroups.Any(g => g.SizeUnknown)), Version(task), consent, [], superseded,
                 stageDirectories.Select(c => c.RootDirectory).Distinct(ArtifactManifestFiles.PathComparer).ToArray(),
-                RetryRetainedFiles: retryRetainedFiles, StageDirectories: stageDirectories);
+                RetryRetainedFiles: retryRetainedFiles, StageDirectories: stageDirectories, AbandonedInputs: extraInputs);
         }
-        var operationIds = bindings.Select(b => b.OperationId).Distinct().ToArray();
         var processed = await db.Artifacts.AsNoTracking().Where(a => operationIds.Contains(a.OperationId) &&
             a.Managed && a.Kind == "processedFiles").Select(a => a.Id).ToListAsync(ct);
         var authorized = new HashSet<string>(ArtifactManifestFiles.PathComparer);
@@ -147,7 +153,6 @@ public sealed partial class AcquisitionTaskDeletionCleanupService(BakabaseDbCont
         }
         foreach (var path in authorized)
         { storage.EnsurePathAllowed(path); if (guardDirectory != null) await guardDirectory(path); }
-        var previewReferences = new ArtifactCleanupReferenceGuard(db, workspaces, cachePreviewReads: true);
         var candidates = new List<ArtifactWorkspaceCleanupPreview>();
         if (cleanupIntermediates)
         {
@@ -311,13 +316,21 @@ public sealed partial class AcquisitionTaskDeletionCleanupService(BakabaseDbCont
                      g.Files.Select(f => f.Path).Prepend(g.Directory)))
                  .Concat((plan.AlreadyAbsent ?? []).SelectMany(a => a.Files.Prepend(a.RootDirectory)))
                  .Distinct(ArtifactManifestFiles.PathComparer))
-        { ct.ThrowIfCancellationRequested(); await EnsureDirectoryAuthorizedAsync(path, guardDirectory); }
+        {
+            ct.ThrowIfCancellationRequested();
+            try { await EnsureDirectoryAuthorizedAsync(path, guardDirectory); }
+            catch (UserStoragePathException error) when (error.MountUnavailable && plan.StageDirectories is {Count: > 0})
+            {
+                // The remote scope passed. Each stage checks the live storage boundary
+                // again before mutation, so an offline volume cannot block another stage.
+            }
+        }
     }
 
     internal async Task EnsureDirectoryAuthorizedAsync(string path, Func<string, Task>? guardDirectory)
     {
-        storage.EnsurePathAllowed(path);
         if (guardDirectory != null) await guardDirectory(path);
+        storage.EnsurePathAllowed(path);
     }
 
     internal async Task<AcquisitionTaskDeleteCleanupOutcome> ApplyAsync(AcquisitionTaskDbModel task, Plan plan,
@@ -344,14 +357,6 @@ public sealed partial class AcquisitionTaskDeletionCleanupService(BakabaseDbCont
         }
         foreach (var group in plan.Summary.Groups.Where(g => !g.Eligible))
             Keep(group.ArtifactId, group.ReasonCode ?? "CLEANUP_FILES_RETAINED");
-        foreach (var stageDirectory in plan.StageDirectories ?? [])
-        {
-            if (!plan.Summary.Groups.Any(g => g.ArtifactId == stageDirectory.Id && g.Eligible)) continue;
-            var outcome = await DeleteStageDirectoryAsync(stageDirectory, authorization, ct);
-            removed += outcome.RemovedFiles; bytes += outcome.RemovedBytes;
-            reportProgress?.Invoke(removed, bytes);
-            if (!outcome.Completed) Keep(stageDirectory.Id, outcome.Reason ?? "CLEANUP_FILES_RETAINED");
-        }
         foreach (var expected in plan.AlreadyAbsent ?? [])
         {
             ct.ThrowIfCancellationRequested();
@@ -400,6 +405,14 @@ public sealed partial class AcquisitionTaskDeletionCleanupService(BakabaseDbCont
             removed += outcome.RemovedFiles; bytes += outcome.RemovedBytes;
             reportProgress?.Invoke(removed, bytes);
             if (!outcome.Completed) Keep(abandoned.Id, outcome.Reason ?? "CLEANUP_FILES_RETAINED");
+        }
+        foreach (var stageDirectory in plan.StageDirectories ?? [])
+        {
+            if (!plan.Summary.Groups.Any(g => g.ArtifactId == stageDirectory.Id && g.Eligible)) continue;
+            var outcome = await DeleteStageDirectoryAsync(stageDirectory, authorization, ct);
+            removed += outcome.RemovedFiles; bytes += outcome.RemovedBytes;
+            reportProgress?.Invoke(removed, bytes);
+            if (!outcome.Completed) Keep(stageDirectory.Id, outcome.Reason ?? "CLEANUP_FILES_RETAINED");
         }
         foreach (var candidate in plan.Candidates)
         {

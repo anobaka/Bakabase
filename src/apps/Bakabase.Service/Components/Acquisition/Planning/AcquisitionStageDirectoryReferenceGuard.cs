@@ -28,13 +28,14 @@ internal sealed class AcquisitionStageDirectoryReferenceGuard(BakabaseDbContext 
         
         var records = await db.Artifacts.AsNoTracking().Where(a => a.State != ArtifactLocationState.Retired)
             .Select(a => new {a.Id, a.RootPath, a.RootIsAppData, a.QuarantineSourceRootPath, a.QuarantineSourceRootIsAppData}).ToListAsync(ct);
+        var pathReferences = new ArtifactCleanupPathReferences([directory], workspaces?.ReadRelocations() ?? [], ct);
         ArtifactRecord? representative = null;
         var checkedOperations = new HashSet<string>(StringComparer.Ordinal);
         foreach (var record in records)
         {
             if (!record.RootIsAppData)
             {
-                var recordedRoot = workspaces?.Relocate(Path.GetFullPath(record.RootPath)) ?? Path.GetFullPath(record.RootPath);
+                var recordedRoot = pathReferences.Relocate(Path.GetFullPath(record.RootPath));
                 if (!Overlap(directory, recordedRoot) && record.QuarantineSourceRootPath == null) continue;
             }
             var artifact = await artifacts.GetArtifactAsync(record.Id, ct)

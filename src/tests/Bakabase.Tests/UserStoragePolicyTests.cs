@@ -152,6 +152,17 @@ public sealed class UserStoragePolicyTests
     }
 
     [TestMethod]
+    public void UnavailableMountedRootIsDistinguishedFromAnUnauthorizedPath()
+    {
+        if (OperatingSystem.IsWindows()) Assert.Inconclusive("Uses a Unix mount namespace.");
+        var policy = new UserStoragePolicy(true, () => Mounts((_media, "cifs", "rw")),
+            () => _data, () => null, path => path == _media ? throw new IOException("mount disconnected") : File.GetAttributes(path));
+        Assert.IsTrue(Assert.ThrowsExactly<UserStoragePathException>(() =>
+            policy.EnsurePathAllowed(Path.Combine(_media, "task"))).MountUnavailable);
+        Assert.IsFalse(Assert.ThrowsExactly<UserStoragePathException>(() => policy.EnsurePathAllowed(_outside)).MountUnavailable);
+    }
+
+    [TestMethod]
     public void NestedTmpfsMasksItsParentButAnActualNestedPersistentMountCanBeChosen()
     {
         var temporary = Directory.CreateDirectory(Path.Combine(_media, "temporary")).FullName;

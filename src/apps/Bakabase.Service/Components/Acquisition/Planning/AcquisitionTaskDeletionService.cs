@@ -155,7 +155,7 @@ public sealed class AcquisitionTaskDeletionService(BakabaseDbContext db, IAcquis
                         ReasonCode = plan.Summary.ReasonCode, CanRemoveTaskIfCleanupFails = !options.RetryRetainedFiles && AllowsRecordRemoval(plan.Summary.ReasonCode)};
                 }
                 catch (Exception error) when (error is UnauthorizedAccessException or UserStoragePathException)
-                { rows[i] = row with {CanDelete = false, CanRemoveTaskIfCleanupFails = false, ReasonCode = "CLEANUP_PATH_NOT_AUTHORIZED"}; }
+                { rows[i] = row with {CanDelete = false, CanRemoveTaskIfCleanupFails = false, ReasonCode = StorageBlockReason(error)}; }
                 catch (Exception error) when (error is System.IO.IOException or System.IO.InvalidDataException or InvalidOperationException or ArgumentException or JsonException)
                 {
                     logger?.LogWarning(error, "Unable to preview cleanup for acquisition task {TaskId}", row.TaskId);
@@ -214,13 +214,18 @@ public sealed class AcquisitionTaskDeletionService(BakabaseDbContext db, IAcquis
         var taskLocks = new List<(int Id, SemaphoreSlim Gate)>(); var runLocks = new List<SemaphoreSlim>();
         var blockedRuns = new HashSet<int>(); var deleted = new List<int>();
         var cleanupResults = new List<AcquisitionTaskDeleteCleanupOutcome>();
+        var accessBlocks = new Dictionary<int, string>();
         try
         {
             // A confirmation can arrive through a different remote session. Authorize the
             // whole fixed selection before cancelling an obsolete run or unlinking any file.
             if ((entry.Preview.CleanupFiles || entry.Preview.DeleteDeliveredFiles) && cleanup != null)
-                foreach (var plan in (entry.CleanupPlans ?? new Dictionary<int, AcquisitionTaskDeletionCleanupService.Plan>()).Values)
-                    await cleanup.EnsureAuthorizedAsync(plan, guardDirectory, ct);
+                foreach (var (id, plan) in entry.CleanupPlans ?? new Dictionary<int, AcquisitionTaskDeletionCleanupService.Plan>())
+                {
+                    try { await cleanup.EnsureAuthorizedAsync(plan, guardDirectory, ct); }
+                    catch (Exception error) when (error is UnauthorizedAccessException or UserStoragePathException)
+                    { accessBlocks[id] = StorageBlockReason(error); }
+                }
             // Do not wait behind a network operation: a task currently being edited/executed is skipped.
             foreach (var id in selected.Keys.Order())
             {
@@ -242,6 +247,7 @@ public sealed class AcquisitionTaskDeletionService(BakabaseDbContext db, IAcquis
             var states = await activity.ReadAsync(current.Values.Where(t => (t.DeletedAt != null) == options.RetryRetainedFiles).ToArray(), ct);
             string? CheckTask(int id)
             {
+                if (accessBlocks.TryGetValue(id, out var accessBlock)) return accessBlock;
                 var task = current.GetValueOrDefault(id);
                 var state = states.GetValueOrDefault(id);
                 if (BlockReason(task, state, options.RetryRetainedFiles) is {} reason) return reason;
@@ -265,8 +271,9 @@ public sealed class AcquisitionTaskDeletionService(BakabaseDbContext db, IAcquis
                             cleanupIntermediates: options.CleanupFiles, deleteDeliveredFiles: options.DeleteDeliveredFiles);
                         deferredPlans.Add(id, plan);
                     }
-                    catch (Exception error) when (error is not UserStoragePathException &&
-                        error is System.IO.IOException or System.IO.InvalidDataException or InvalidOperationException or ArgumentException or JsonException)
+                    catch (Exception error) when (error is UnauthorizedAccessException or UserStoragePathException)
+                    { accessBlocks[id] = StorageBlockReason(error); }
+                    catch (Exception error) when (error is System.IO.IOException or System.IO.InvalidDataException or InvalidOperationException or ArgumentException or JsonException)
                     { /* No file plan or paths are exposed. Record removal still requires current task safety. */ }
                     finally
                     {
@@ -365,6 +372,8 @@ public sealed class AcquisitionTaskDeletionService(BakabaseDbContext db, IAcquis
     {
         lock (entry) entry.Progress = update(entry.Progress) with { UpdatedAt = DateTimeOffset.UtcNow };
     }
+    private static string StorageBlockReason(Exception error) =>
+        error is UserStoragePathException {MountUnavailable: true} ? "WorkspaceUnavailable" : "CLEANUP_PATH_NOT_AUTHORIZED";
     private static string? BlockReason(AcquisitionTaskDbModel? task, AcquisitionDeletionActivity? state, bool retryRetainedFiles = false)
     {
         if (task == null) return "ACQUISITION_TASK_NOT_FOUND";

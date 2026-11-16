@@ -191,20 +191,65 @@ it("refreshes an expired snapshot without widening IDs after surrounding filters
   expect(api.remove).not.toHaveBeenCalled();
 });
 
-it("never retries an uncertain delete response without a fresh preview and confirmation", async () => {
-  api.remove.mockRejectedValue(new Error("connection lost"));
+it("recovers an interrupted deletion's task, reason and counts before offering a fresh preview", async () => {
+  api.remove.mockRejectedValue(new Error("CLEANUP_PATH_NOT_AUTHORIZED"));
+  api.progress.mockImplementation(async (previewId: string) => ({
+    previewId, state: "interrupted", phase: "interrupted", totalTasks: 3, finishedTasks: 1,
+    currentTaskId: 2, completedFiles: 4, completedBytes: 12345,
+  }));
   const changed = vi.fn();
   render(<DeleteAcquisitionTasksModal taskIds={[1, 2, 3]} onChanged={changed} />);
   await screen.findByText("Completed task");
   finishReview();
-  await screen.findByText("acquisition.delete.error.submit");
-  expect(next()).toBeDisabled();
+  await screen.findByText("acquisition.delete.receipt.interrupted");
+  expect(screen.getByText("acquisition.delete.reason.CLEANUP_PATH_NOT_AUTHORIZED")).toBeVisible();
+  expect(screen.getByText("#2")).toBeVisible();
+  expect(translate).toHaveBeenCalledWith("acquisition.delete.progress.tasks", { completed: 1, total: 3 });
+  expect(translate).toHaveBeenCalledWith("acquisition.delete.progress.files", { count: 4, size: bytesToSize(12345) });
+  expect(screen.queryByText("acquisition.delete.next")).toBeNull();
   expect(api.remove).toHaveBeenCalledTimes(1);
-  expect(changed).toHaveBeenCalledTimes(1);
+  expect(changed).toHaveBeenCalled();
   api.preview.mockResolvedValue(preview({ previewId: "new-fixed-preview" }));
   fireEvent.click(screen.getByRole("button", { name: "acquisition.delete.recheck" }));
   await waitFor(() => expect(next()).not.toBeDisabled());
   expect(api.remove).toHaveBeenCalledTimes(1);
+});
+
+it("follows the same running deletion after a lost response until it finishes without inferring deleted counts", async () => {
+  vi.useFakeTimers();
+  let disconnect!: (error: Error) => void;
+  api.remove.mockReturnValue(new Promise((_, reject) => { disconnect = reject; }));
+  await act(async () => { render(<DeleteAcquisitionTasksModal taskIds={[1, 2, 3]} />); });
+  await act(async () => fireEvent.click(next()));
+  await act(async () => fireEvent.click(confirm()));
+  await act(async () => disconnect(new Error("connection lost")));
+  expect(screen.getByText("acquisition.delete.progress.phase.rechecking")).toBeVisible();
+  api.progress.mockResolvedValue({ previewId: "fixed-preview", state: "completed", phase: "completed", totalTasks: 3,
+    finishedTasks: 3, completedFiles: 8, completedBytes: 67890 });
+  await act(async () => vi.advanceTimersByTime(1000));
+  expect(screen.getByText("acquisition.delete.receipt.completed")).toBeVisible();
+  expect(screen.queryByText("acquisition.delete.result")).toBeNull();
+  expect(api.remove).toHaveBeenCalledTimes(1);
+  expect(api.preview).toHaveBeenCalledTimes(1);
+  const reads = api.progress.mock.calls.length;
+  await act(async () => vi.advanceTimersByTime(5000));
+  expect(api.progress).toHaveBeenCalledTimes(reads);
+});
+
+it("rechecks only the submitted token when offline and allows a fresh review when its receipt expired", async () => {
+  api.remove.mockRejectedValue(new Error("connection lost"));
+  api.progress.mockRejectedValue(new Error("offline"));
+  render(<DeleteAcquisitionTasksModal taskIds={[1, 2, 3]} />);
+  await screen.findByText("Completed task");
+  finishReview();
+  await screen.findByText("acquisition.delete.receipt.unavailable");
+  api.progress.mockRejectedValueOnce(new Error("ACQUISITION_DELETE_PREVIEW_EXPIRED"));
+  fireEvent.click(button("acquisition.delete.receipt.checkAgain"));
+  await screen.findByText("acquisition.delete.receipt.expired");
+  expect(api.progress.mock.lastCall?.[0]).toBe("fixed-preview");
+  expect(api.remove).toHaveBeenCalledTimes(1);
+  expect(api.preview).toHaveBeenCalledTimes(1);
+  expect(button("acquisition.delete.recheck")).toBeEnabled();
 });
 
 it("reads server UTC timestamps without mistaking a fresh preview for expired", async () => {
@@ -877,6 +922,13 @@ it("translates the confirmation and every progress phase", () => {
     "progress.phase.deletingRecord",
     "progress.phase.completed",
     "progress.phase.interrupted",
+    "receipt.checking",
+    "receipt.interrupted",
+    "receipt.completed",
+    "receipt.preview",
+    "receipt.expired",
+    "receipt.unavailable",
+    "receipt.checkAgain",
     "progress.tasks",
     "progress.files",
     "progress.safety",

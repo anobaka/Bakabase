@@ -27,7 +27,8 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
 
     private async Task<IReadOnlyList<AbandonedInputCandidate>> PreviewAbandonedInputsAsync(
         IReadOnlyList<string> operationIds, ArtifactDeliveryCleanupAuthorization authorization,
-        ArtifactCleanupReferenceGuard references, CancellationToken ct, Func<string, Task>? guardDirectory = null)
+        ArtifactCleanupReferenceGuard references, CancellationToken ct, Func<string, Task>? guardDirectory = null,
+        IReadOnlyList<string>? stageDirectories = null)
     {
         if (workspaces == null || !authorization.Consent.DeliveryAccepted) return [];
         var now = DateTime.UtcNow;
@@ -52,6 +53,8 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
             {
                 var location = await workspaces.InspectExistingAsync("operations", operation.Id, operation.Attempt, ct);
                 if (location == null || !await workspaces.HasOwnedLocationAsync(location, ct)) continue;
+                if (stageDirectories?.Any(directory => SamePath(location.Directory, directory) ||
+                    ArtifactCleanupPathReferences.StrictlyUnder(location.Directory, directory)) == true) continue;
                 await EnsureDirectoryAuthorizedAsync(location.Directory, guardDirectory);
                 owned = location;
                 var plans = Path.Combine(location.Directory, "plan");
@@ -63,6 +66,7 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
                 if (checkpoints.Length > 256) continue;
                 foreach (var checkpoint in checkpoints.Where(p => HexKey(Path.GetFileName(p))))
                 {
+                    if (OverlapsStageCleanupSelection(checkpoint, stageDirectories)) continue;
                     var candidate = await InspectAbandonedInputAsync(operation.Id, operation.Attempt, checkpoint,
                         authorization, references, ct);
                     if (candidate != null && candidate.Files.Count > 0) result.Add(candidate);
@@ -78,6 +82,9 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
         }
         return result;
     }
+
+    private static bool OverlapsStageCleanupSelection(string checkpoint, IReadOnlyList<string>? directories) =>
+        directories?.Any(directory => StageCleanupOverlap(directory, checkpoint)) == true;
 
     private async Task<ArtifactOperationDbModel?> InactiveAbandonedOperationAsync(string id, int attempt,
         ArtifactDeliveryCleanupAuthorization authorization, CancellationToken ct)

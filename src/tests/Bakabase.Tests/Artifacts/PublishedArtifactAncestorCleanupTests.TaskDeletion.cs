@@ -113,8 +113,9 @@ public sealed partial class PublishedArtifactAncestorCleanupTests
         var deniedPreview = await fixture.Service.PreviewAsync(review, guardDirectory: _ => throw new UnauthorizedAccessException());
         Assert.AreEqual("CLEANUP_PATH_NOT_AUTHORIZED", deniedPreview.Rows.Single().ReasonCode);
         var valid = await fixture.Service.PreviewAsync(review);
-        await Assert.ThrowsExceptionAsync<UnauthorizedAccessException>(() => fixture.Service.DeleteAsync(
-            new(valid.PreviewId, RetryRetainedFiles: true), guardDirectory: _ => throw new UnauthorizedAccessException()));
+        var denied = await fixture.Service.DeleteAsync(new(valid.PreviewId, RetryRetainedFiles: true),
+            guardDirectory: _ => throw new UnauthorizedAccessException());
+        Assert.AreEqual("CLEANUP_PATH_NOT_AUTHORIZED", denied.Skipped.Single().ReasonCode);
         var stale = await fixture.Service.PreviewAsync(review);
         await task.ExecuteUpdateAsync(u => u.SetProperty(t => t.DeletedAt, (DateTime?)at.AddMinutes(-1)));
         var rejected = await fixture.Service.DeleteAsync(new(stale.PreviewId, RetryRetainedFiles: true));
@@ -275,8 +276,11 @@ public sealed partial class PublishedArtifactAncestorCleanupTests
         var fixture = await DeletionFixture();
         var preview = await fixture.Service.PreviewAsync(new([fixture.Task.Id]));
         var input = new AcquisitionTaskDeleteInput(preview.PreviewId, true, true, true, true);
-        await Assert.ThrowsExceptionAsync<Bakabase.Abstractions.Exceptions.UserStoragePathException>(() =>
-            fixture.Service.DeleteAsync(input, guardDirectory: _ => throw new Bakabase.Abstractions.Exceptions.UserStoragePathException("denied")));
+        var result = await fixture.Service.DeleteAsync(input, guardDirectory: _ =>
+            throw new Bakabase.Abstractions.Exceptions.UserStoragePathException("denied"));
+        Assert.AreEqual("CLEANUP_PATH_NOT_AUTHORIZED", result.Skipped.Single().ReasonCode);
+        Assert.AreEqual(0, result.DeletedTaskIds.Count);
+        Assert.AreEqual(0, result.RemovedFiles);
         Assert.IsNull(await db.AcquisitionTasks.Where(t => t.Id == fixture.Task.Id).Select(t => t.DeletedAt).SingleAsync());
         Assert.IsTrue(File.Exists(fixture.Final.Files.Single()));
         Assert.IsTrue(File.Exists(fixture.Source.Files.Single()));
@@ -408,8 +412,9 @@ public sealed partial class PublishedArtifactAncestorCleanupTests
     {
         var fixture = await ObsoleteDeletionFixture();
         var preview = await fixture.Service.PreviewAsync(new([fixture.Task.Id], true, true));
-        await Assert.ThrowsExceptionAsync<UnauthorizedAccessException>(() => fixture.Service.DeleteAsync(new(preview.PreviewId),
-            guardDirectory: _ => throw new UnauthorizedAccessException()));
+        var denied = await fixture.Service.DeleteAsync(new(preview.PreviewId),
+            guardDirectory: _ => throw new UnauthorizedAccessException());
+        Assert.AreEqual("CLEANUP_PATH_NOT_AUTHORIZED", denied.Skipped.Single().ReasonCode);
         Assert.AreEqual(WorkflowRunStatus.Waiting, await db.WorkflowRuns.Where(r => r.Id == 3).Select(r => r.Status).SingleAsync());
         Assert.IsTrue(File.Exists(fixture.Source.Files.Single()));
         Assert.IsNull(await db.AcquisitionTasks.Where(t => t.Id == fixture.Task.Id).Select(t => t.DeletedAt).SingleAsync());

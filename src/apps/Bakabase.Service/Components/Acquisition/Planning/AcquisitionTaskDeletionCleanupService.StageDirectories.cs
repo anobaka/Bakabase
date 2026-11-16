@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Exceptions;
 using Bakabase.InsideWorld.Business.Components.Artifacts;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Db;
@@ -37,10 +38,12 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
     {
         if (workspaces == null || !authorization.Consent.DeliveryAccepted || !authorization.Consent.SkipFileVerification) return [];
         var plan = JsonSerializer.Deserialize<AcquisitionPlan>(task.PlanJson ?? "null", JsonSerializerOptions.Web);
-        if (plan?.StageDirectories is not { } stages) return [];
-        AcquisitionStageDirectoryResolver.Validate(stages, plan);
-        if (stages.TaskId != task.Id) throw new InvalidDataException("CLEANUP_DELIVERY_PROOF_MISSING");
+        if (plan == null) return [];
         var selection = await StageCleanupSelectionsAsync(task, plan, owners, cleanupIntermediates, deleteDeliveredFiles, ct);
+        // With no persisted stage map, a publication alone cannot account for old
+        // intermediate files. Use exact-file cleanup unless there is a recorded download.
+        if (plan.StageDirectories == null && cleanupIntermediates &&
+            !selection.Selected.Any(s => s.Stage == "download")) return [];
         var result = new List<StageDirectoryCandidate>();
         // Inspect maximal roots first. A proven parent covers its selected descendants;
         // a refused parent never hides a smaller independently safe selection.
@@ -144,7 +147,12 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
             }
             return Result(null);
         }
-        catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException or JsonException or ArgumentException or InvalidOperationException)
+        catch (UserStoragePathException error) when (error.MountUnavailable)
+        {
+            return Result("WorkspaceUnavailable");
+        }
+        catch (Exception error) when (error is not (UserStoragePathException or UnauthorizedAccessException) &&
+            error is IOException or InvalidDataException or JsonException or ArgumentException or InvalidOperationException)
         {
             return Result(error.Message switch
             {
