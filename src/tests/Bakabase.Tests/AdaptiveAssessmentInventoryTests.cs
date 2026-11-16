@@ -25,6 +25,28 @@ public sealed partial class AdaptiveAssessmentInventoryTests
     }
 
     [TestMethod]
+    public void Independent_chapters_can_use_archive_folders_without_changing_the_default_for_other_inputs()
+    {
+        var input = Input("book/first.zip", "book/second.zip");
+        var decision = Decide(input, """
+            {"status":"continue","operations":[
+              {"type":"extract","inputId":1,"extractionLayout":"archiveDirectory"},
+              {"type":"extract","inputId":2}
+            ]}
+            """);
+        var steps = AdaptiveFileProcessingAssessmentService.BuildPlan(decision, FileExtractionLayouts.CurrentDirectory)!.Steps;
+        Assert.AreEqual(FileExtractionLayouts.ArchiveDirectory, steps[0].ExtractionLayout);
+        Assert.AreEqual(FileExtractionLayouts.CurrentDirectory, steps[1].ExtractionLayout);
+        foreach (var operation in new[] {
+            """{"type":"extract","inputId":1,"extractionLayout":"../other"}""",
+            """{"type":"extract","inputId":1,"extractionLayout":false}""",
+            """{"type":"move","inputId":1,"destination":"other","extractionLayout":"archiveDirectory"}""",
+            """{"type":"extract","inputId":1,"extractionLayout":null,"extractionLayout":"archiveDirectory"}"""
+        })
+            Assert.IsTrue(Decide(input, """{"status":"continue","operations":[""" + operation + "]}").NeedsHumanReview);
+    }
+
+    [TestMethod]
     public void NestedMultilingualInventoryUsesDistinctDirectoriesAndShortUnambiguousIds()
     {
         var root = "转存目录/下载目录/游戏/升级补丁/游戏数据/";

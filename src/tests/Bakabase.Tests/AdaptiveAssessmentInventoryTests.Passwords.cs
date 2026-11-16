@@ -40,7 +40,7 @@ public sealed partial class AdaptiveAssessmentInventoryTests
         var schema = model.Parameters.JsonResponseSchema.Value.GetProperty("properties").GetProperty("operations").GetProperty("items");
         Assert.IsTrue(schema.GetProperty("required").EnumerateArray().Any(p => p.GetString() == "password"));
         Assert.AreEqual(2048, schema.GetProperty("properties").GetProperty("password").GetProperty("maxLength").GetInt32());
-        StringAssert.Contains(model.SystemMessage, "Assessment contract version: 2");
+        StringAssert.Contains(model.SystemMessage, "Assessment contract version: 3");
     }
 
     [TestMethod]

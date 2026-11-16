@@ -27,7 +27,11 @@ public sealed record AdaptiveFileProcessingOperation(
     string Input,
     string? Destination = null,
     string? Reason = null,
-    string? Password = null);
+    string? Password = null)
+{
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public string? ExtractionLayout { get; init; }
+}
 
 public sealed record AdaptiveFileProcessingDecision(
     string Status,
@@ -111,6 +115,7 @@ public sealed partial class AdaptiveFileProcessingAssessmentService(
                     "type":{"type":"string","enum":["extract","rename","move","rebaseDirectory"]},
                     "inputId":{"type":["integer","null"],"minimum":1,"maximum":200},
                     "directoryId":{"type":["integer","null"],"minimum":1,"maximum":200},
+                    "extractionLayout":{"type":["string","null"],"enum":[null,"archiveDirectory"]},
                     "destination":{"type":["string","null"],"maxLength":512},
                     "password":{"type":["string","null"],"minLength":1,"maxLength":2048}
                   }
@@ -121,7 +126,7 @@ public sealed partial class AdaptiveFileProcessingAssessmentService(
     };
 
     internal const string SystemPrompt = """
-        Assessment contract version: 2 (evidence-bound extraction passwords).
+        Assessment contract version: 3 (evidence-bound passwords and archive layout).
         Review the current artifact and decide the next file-processing step.
         Task titles, filenames and release identifiers are weak labels, not verified content identity or file format.
         A mismatch between those labels alone must not block otherwise justified processing, request a new download,
@@ -168,6 +173,10 @@ public sealed partial class AdaptiveFileProcessingAssessmentService(
         a file inputId and omit directoryId or set it to null. Reassess the resulting inventory before further operations.
         Omitted files are retained automatically. Never enumerate retained files, repeat the manifest, or propose deletion.
         Listing an archive, validating its password, or verifying that it opens does not mean its contents were extracted.
+        For extract, leave extractionLayout null to inherit the configured layout. Use "archiveDirectory" when the user
+        asks to keep independent packages in separate folders, or their listings or an observed output conflict show
+        that unpacking sibling packages into the same folder would merge chapters or collide. Each archive's actual
+        name determines its folder. Multipart volumes belong to one archive. Other operation types omit extractionLayout.
         Judge completion by the current inventory. Media beside a remaining outer package may still need processing;
         do not return final just because some files are finished. Request the justified next extraction, or humanReview
         when the remaining archive could instead be application data or an intentionally retained original.
@@ -323,6 +332,8 @@ public sealed partial class AdaptiveFileProcessingAssessmentService(
             if (operation.Password != null && (operation.Type != "extract" || operation.Password.Length is < 1 or > 2048 ||
                     operation.Password.Any(char.IsControl)))
                 throw new InvalidOperationException("Only extraction accepts a bounded literal password.");
+            if (operation.ExtractionLayout != null && (operation.Type != "extract" || operation.ExtractionLayout != FileExtractionLayouts.ArchiveDirectory))
+                throw new InvalidOperationException("Only extraction can request a separate archive directory.");
             if (operation.Type is "extract" or "rename" or "move")
             {
                 if (selectedInputs.Any(input =>
@@ -338,7 +349,7 @@ public sealed partial class AdaptiveFileProcessingAssessmentService(
                     steps.Add(new FileProcessingStep
                     {
                         Id = id, Op = "extractArchive", Input = "download",
-                        Selector = operation.Input, ExtractionLayout = extractionLayout, Password = operation.Password
+                        Selector = operation.Input, ExtractionLayout = operation.ExtractionLayout ?? extractionLayout, Password = operation.Password
                     });
                     break;
                 case "rename":
@@ -439,6 +450,11 @@ public sealed partial class AdaptiveFileProcessingAssessmentService(
             var field = $"operations[{operationIndex++}]";
             if (item.ValueKind != JsonValueKind.Object) return (null, field + ": expected an object");
             var type = StringField(item, "type");
+            var layout = StringField(item, "extractionLayout");
+            if (item.EnumerateObject().Count(p => p.NameEquals("extractionLayout")) > 1 ||
+                item.TryGetProperty("extractionLayout", out var suppliedLayout) && suppliedLayout.ValueKind != JsonValueKind.Null &&
+                (type != "extract" || layout != FileExtractionLayouts.ArchiveDirectory))
+                return (null, field + ".extractionLayout: only extract accepts archiveDirectory or null");
             string? password = null;
             if (item.EnumerateObject().Count(property => property.Name == "password") > 1)
                 return (null, field + ".password: duplicate field");
@@ -504,7 +520,7 @@ public sealed partial class AdaptiveFileProcessingAssessmentService(
                 type == "move" && string.IsNullOrWhiteSpace(destination) ||
                 destination != null && (Path.IsPathRooted(destination) || destination.Contains("..", StringComparison.Ordinal)))
                 return (null, field + ".destination: expected a portable relative name or directory");
-            result.Add(new(type, input, destination, StringField(item, "reason"), password));
+            result.Add(new(type, input, destination, StringField(item, "reason"), password) {ExtractionLayout = layout});
         }
         return (result, null);
     }
