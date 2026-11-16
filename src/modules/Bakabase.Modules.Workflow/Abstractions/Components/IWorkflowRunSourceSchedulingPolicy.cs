@@ -9,4 +9,6 @@ public interface IWorkflowRunSourceSchedulingPolicy
 {
     bool AppliesTo(string triggerKind, IReadOnlyList<WorkflowSourceRef> sources);
     BTaskHandlerBuilder Configure(BTaskHandlerBuilder builder);
+    BTaskHandlerBuilder Configure(BTaskHandlerBuilder builder, string? planSnapshotJson, int? currentStepIndex) =>
+        Configure(builder);
 }

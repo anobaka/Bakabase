@@ -1,4 +1,5 @@
 using Bakabase.Abstractions.Components.Tasks;
+using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Acquisition.Models.Domain;
 using Bakabase.Modules.Workflow.Abstractions.Components;
@@ -76,6 +77,110 @@ public sealed class AcquisitionWorkflowSchedulingTests
         Assert.AreEqual(4, builder.GetConcurrencyLimit!());
         options.Value.Concurrency = 0;
         Assert.AreEqual(1, builder.GetConcurrencyLimit!());
+    }
+
+    private static string Snapshot(params string[] kinds) => WorkflowRunPlans.Serialize(new WorkflowRunPlan
+    {
+        Name = "Scheduling fixture", TriggerKind = CloudWorkflow.Trigger,
+        Nodes = kinds.Select((kind, index) => new WorkflowRunPlanNode {NodeId = $"step-{index}", Kind = kind}).ToArray()
+    });
+
+    [DataTestMethod]
+    [DataRow(0, false)]
+    [DataRow(1, false)]
+    [DataRow(2, true)]
+    [DataRow(3, true)]
+    [DataRow(4, false)]
+    [DataRow(-1, false)]
+    public void OnlyProvenLocalRemainingNodesCanShareWithWaitingDownloads(int cursor, bool eligible)
+    {
+        var resolver = new WorkflowRunSchedulingPolicyResolver([], [new AcquisitionWorkflowSchedulingPolicy(new Options())]);
+        var source = new[] {new WorkflowSourceRef("acquisition", "task", "7")};
+        var snapshot = Snapshot("download.enqueueSupported", "download.awaitCompletion", "acquisition.plan.process",
+            "fs.publishArtifacts");
+        var configured = resolver.Configure(BTaskBuilder.Create("workflow.run.19"), 0, CloudWorkflow.Trigger,
+            19, source, snapshot, cursor);
+        Assert.AreEqual(eligible, configured.CanShareConcurrencySlotWith != null);
+        foreach (var unproven in new[] {null, "{bad json", Snapshot("acquisition.plan.process", "unknown.node")})
+            Assert.IsNull(resolver.Configure(BTaskBuilder.Create("run"), 0, CloudWorkflow.Trigger, 19, source, unproven)
+                .CanShareConcurrencySlotWith);
+    }
+
+    [TestMethod]
+    public void SharingRequiresCurrentDownloadWaitingEvidenceFromEveryActiveWorker()
+    {
+        var policy = new AcquisitionWorkflowSchedulingPolicy(new Options());
+        var canShare = policy.Configure(BTaskBuilder.Create("local"), Snapshot("acquisition.plan.process"), 0)
+            .CanShareConcurrencySlotWith!;
+        var worker = new BTask("workflow.run.12", () => "Download")
+            {Status = BTaskStatus.Running, StartedAt = DateTime.Now.AddMinutes(-1)};
+        Assert.IsFalse(canShare(worker));
+        worker.Data = new WorkflowTaskProgress(99, "download.awaitCompletion", "downloading");
+        Assert.IsFalse(canShare(worker));
+        worker.Data = new WorkflowTaskProgress(12, "download.awaitCompletion", "verifyingFiles");
+        Assert.IsFalse(canShare(worker));
+        worker.Data = new WorkflowTaskProgress(12, "download.awaitCompletion", "downloading");
+        Assert.IsTrue(canShare(worker));
+        worker.Status = BTaskStatus.Cancelling;
+        Assert.IsFalse(canShare(worker));
+        worker.Status = BTaskStatus.Running;
+        worker.StartedAt = DateTime.Now.AddSeconds(1);
+        Assert.IsFalse(canShare(worker), "A previous execution of the same run cannot lend the slot.");
+    }
+
+    [TestMethod]
+    public async Task FullDownloadPoolAdmitsOneLocalWorkflowPastQueuedDownloads()
+    {
+        var services = await TestServiceBuilder.BuildServiceProvider();
+        var manager = services.GetRequiredService<BTaskManager>();
+        var resolver = new WorkflowRunSchedulingPolicyResolver([], [new AcquisitionWorkflowSchedulingPolicy(new Options())]);
+        const string awaiting = "download.awaitCompletion";
+        const string process = "acquisition.plan.process";
+        var local = Snapshot("acquisition.plan.continueFiles", process, "fs.publishArtifacts");
+        var network = Snapshot("download.enqueueSupported", awaiting, process);
+        var started = Enumerable.Range(0, 6).Select(_ =>
+            new TaskCompletionSource<BTaskArgs>(TaskCreationOptions.RunContinuationsAsynchronously)).ToArray();
+        async Task Enqueue(int runId, string snapshot)
+        {
+            var configured = resolver.Configure(BTaskBuilder.Create($"workflow.run.{runId}"), 0, CloudWorkflow.Trigger,
+                runId, [new("acquisition", "task", runId.ToString())], snapshot);
+            await manager.Enqueue(configured.Run(async args =>
+            {
+                await args.UpdateTask(t => t.Data = new WorkflowTaskProgress(runId,
+                    snapshot == network ? awaiting : process, snapshot == network ? "downloading" : "processingFiles", 1));
+                started[runId].TrySetResult(args);
+                await Task.Delay(Timeout.Infinite, args.CancellationToken);
+            }));
+        }
+        try
+        {
+            await Enqueue(1, network);
+            await Enqueue(2, network);
+            await Task.WhenAll(manager.Start("workflow.run.1"), manager.Start("workflow.run.2"));
+            await Task.WhenAll(started[1].Task, started[2].Task).WaitAsync(TimeSpan.FromSeconds(5));
+            await Enqueue(3, network);
+            await Enqueue(4, local);
+            await Enqueue(5, local);
+
+            // Exercise the daemon's ordering, then race manual starts with its admission decisions.
+            await manager.Initialize();
+            await started[4].Task.WaitAsync(TimeSpan.FromSeconds(5));
+            await Task.WhenAll(manager.Start("workflow.run.3"), manager.Start("workflow.run.5"));
+            Assert.IsFalse(started[3].Task.IsCompleted);
+            Assert.IsFalse(started[5].Task.IsCompleted);
+            Assert.AreEqual(3, manager.Tasks.Count(t => t.Task.Status.IsActive()));
+
+            var download = await started[1].Task;
+            await download.UpdateTask(t => t.Data = new WorkflowTaskProgress(1, process, "processingFiles", 2));
+            Assert.AreEqual(BTaskStatus.Running, download.Task.Status);
+            await manager.Stop("workflow.run.4");
+            await manager.WaitForExecutionAsync("workflow.run.4");
+            await manager.Start("workflow.run.5");
+            Assert.IsFalse(started[5].Task.IsCompleted);
+            await manager.Stop("workflow.run.1");
+            await started[3].Task.WaitAsync(TimeSpan.FromSeconds(5));
+        }
+        finally { await manager.PrepareForShutdown(); }
     }
 
     [TestMethod]

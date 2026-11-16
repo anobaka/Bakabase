@@ -17,6 +17,8 @@ public record BTask
     public string? ConcurrencyGroup { get; }
     [Newtonsoft.Json.JsonIgnore, System.Text.Json.Serialization.JsonIgnore]
     public Func<int>? GetConcurrencyLimit { get; }
+    [Newtonsoft.Json.JsonIgnore, System.Text.Json.Serialization.JsonIgnore]
+    public Func<BTask, bool>? CanShareConcurrencySlotWith { get; }
     public HashSet<string>? DependsOn { get; }
     public BTaskLevel Level { get; }
     public string? Error { get; set; }
@@ -80,7 +82,8 @@ public record BTask
         object[]? resourceKeys = null,
         BTaskRetryPolicy? retryPolicy = null,
         BTaskDependencyFailurePolicy dependencyFailurePolicy = BTaskDependencyFailurePolicy.Wait,
-        string? concurrencyGroup = null, Func<int>? getConcurrencyLimit = null)
+        string? concurrencyGroup = null, Func<int>? getConcurrencyLimit = null,
+        Func<BTask, bool>? canShareConcurrencySlotWith = null)
     {
         Id = id;
         _getName = getName;
@@ -90,6 +93,7 @@ public record BTask
         ConflictKeys = conflictKeys;
         ConcurrencyGroup = concurrencyGroup;
         GetConcurrencyLimit = getConcurrencyLimit;
+        CanShareConcurrencySlotWith = canShareConcurrencySlotWith;
         DependsOn = dependsOn;
         Level = level;
         IsPersistent = isPersistent;

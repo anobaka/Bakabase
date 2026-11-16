@@ -49,7 +49,7 @@ public class WorkflowRunResumer<TDbContext>(
         run.Status = WorkflowRunStatus.Pending;
         await db.SaveChangesAsync(ct);
 
-        await Enqueue(runId, definition, ct);
+        await Enqueue(run, definition, ct);
 
         logger.LogInformation("Workflow run {RunId} resumed from step {Step}", runId, run.CurrentStepIndex);
     }
@@ -86,7 +86,7 @@ public class WorkflowRunResumer<TDbContext>(
         if (continuationSignal != null) run.PendingSignalJson = continuationSignal;
         await db.SaveChangesAsync(ct);
 
-        await Enqueue(runId, definition, ct);
+        await Enqueue(run, definition, ct);
 
         logger.LogInformation("Workflow run {RunId} requeued from step {Step}", runId, run.CurrentStepIndex);
     }
@@ -110,7 +110,7 @@ public class WorkflowRunResumer<TDbContext>(
         run.Status = WorkflowRunStatus.Pending;
         run.ErrorMessage = null;
         await db.SaveChangesAsync(ct);
-        await Enqueue(runId, definition, ct);
+        await Enqueue(run, definition, ct);
         logger.LogInformation("Workflow run {RunId} reprocessed waiting activity at step {Step}", runId, run.CurrentStepIndex);
     }
 
@@ -160,9 +160,10 @@ public class WorkflowRunResumer<TDbContext>(
     }
 
     /// <summary>Keep the original task identity and source scheduling policy when returning to the queue.</summary>
-    private async Task Enqueue(int runId, WorkflowDefinition definition, CancellationToken ct)
+    private async Task Enqueue(WorkflowRunDbModel run, WorkflowDefinition definition, CancellationToken ct)
     {
         if (taskManager.IsShuttingDown) return;
+        var runId = run.Id;
         var defId = definition.Id;
         var sources = await db.Set<WorkflowRunSourceDbModel>().AsNoTracking()
             .Where(s => s.WorkflowRunId == runId).ToListAsync(ct);
@@ -173,6 +174,7 @@ public class WorkflowRunResumer<TDbContext>(
             {
                 await using var scope = args.RootServiceProvider.CreateAsyncScope();
                 await scope.ServiceProvider.GetRequiredService<WorkflowRunner<TDbContext>>().ExecuteAsync(runId, args);
-            }), defId, definition.TriggerKind, runId, sources.Select(s => s.ToSourceRef()).ToArray()));
+            }), defId, definition.TriggerKind, runId, sources.Select(s => s.ToSourceRef()).ToArray(),
+                run.PlanSnapshotJson, run.CurrentStepIndex));
     }
 }

@@ -53,6 +53,8 @@ public record AcquisitionSetupInputModel
     /// <summary>Null keeps the runtime reserve; zero disables the additional reserve.</summary>
     public long? MinimumFreeSpaceBytes { get; set; }
     public bool? UseEmergencySpaceReserve { get; set; }
+    /// <summary>Maximum simultaneous acquisition runs, from 1 to 100. Omit to keep the current limit.</summary>
+    public int? Concurrency { get; set; }
 }
 
 public record AcquisitionSetupResult(bool CreatedInbox, bool CreatedLibrary, int? PathMarkId);
@@ -76,6 +78,7 @@ public class AcquisitionSetupService(
 
     internal async Task ReplaceOptionsAsync(AcquisitionOptions model, CancellationToken ct)
     {
+        ValidateConcurrency(model.Concurrency);
         await OptionsGate.WaitAsync(ct);
         try
         {
@@ -95,6 +98,7 @@ public class AcquisitionSetupService(
     public async Task<AcquisitionSetupResult> ApplyAsync(AcquisitionSetupInputModel input,
         CancellationToken ct = default)
     {
+        ValidateConcurrency(input.Concurrency);
         if (input.MinimumFreeSpaceBytes is < 0 or > 9_007_199_254_740_991L)
             throw new ArgumentException("STORAGE_RESERVE_INVALID");
         var template = input.DirectoryTemplate is {Length: > 0}
@@ -158,6 +162,7 @@ public class AcquisitionSetupService(
             if (input.AutoPurchaseLimit is { } limit) o.AutoPurchaseLimit = limit;
             if (input.MinimumFreeSpaceBytes is { } reserve) o.MinimumFreeSpaceBytes = reserve;
             if (input.UseEmergencySpaceReserve is { } useEmergency) o.UseEmergencySpaceReserve = useEmergency;
+            if (input.Concurrency is { } concurrency) o.Concurrency = concurrency;
         }, ct);
 
         // Variable categories and workflow overrides can change depth. Those paths receive a
@@ -167,6 +172,12 @@ public class AcquisitionSetupService(
             : await EnsureLibraryMarkAsync(input.LibraryRootDirectory, ct);
 
         return new AcquisitionSetupResult(createdInbox, createdLibrary, markId);
+    }
+
+    private static void ValidateConcurrency(int? value)
+    {
+        if (value is < AcquisitionOptions.MinimumConcurrency or > AcquisitionOptions.MaximumConcurrency)
+            throw new ArgumentOutOfRangeException(nameof(value), "ACQUISITION_CONCURRENCY_INVALID");
     }
 
     /// <summary>

@@ -314,7 +314,7 @@ public class WorkflowDefinitionService<TDbContext> : IWorkflowDefinitionService
         await _taskManager.Enqueue(_scheduling.Configure(BTaskBuilder.Create($"workflow.run.{runId}")
             .Named(() => _localizer["BTask_Name_WorkflowRun", definition.Id, runId])
             .Run(args => _runner.ExecuteAsync(runId, args)), definition.Id, definition.TriggerKind, runId,
-            run.Sources.Select(s => s.ToSourceRef()).ToArray()));
+            run.Sources.Select(s => s.ToSourceRef()).ToArray(), run.PlanSnapshotJson, run.CurrentStepIndex));
 
         return run.ToDomainModel();
     }

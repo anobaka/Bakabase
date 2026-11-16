@@ -12,6 +12,12 @@ public sealed partial class WorkflowRunPlanTests
 {
     private sealed class OwnerSchedulingPolicy : IWorkflowRunSourceSchedulingPolicy
     {
+        public (string? Snapshot, int? Cursor) LastRequest { get; private set; }
+        public BTaskHandlerBuilder Configure(BTaskHandlerBuilder builder, string? snapshot, int? cursor)
+        {
+            LastRequest = (snapshot, cursor);
+            return Configure(builder);
+        }
         public bool AppliesTo(string kind, IReadOnlyList<WorkflowSourceRef> sources) =>
             sources.Any(s => s.Module == "test" && s.EntityKind == "scheduling-owner");
         public BTaskHandlerBuilder Configure(BTaskHandlerBuilder builder) =>
@@ -51,6 +57,10 @@ public sealed partial class WorkflowRunPlanTests
         Assert.AreEqual(2, queued.Task.GetConcurrencyLimit!());
         Assert.IsTrue(queued.Task.ConflictKeys!.SetEquals([$"workflow.run.{run.Id}"]));
         var stored = await Read(run.Id);
+        var scheduling = _sp.GetServices<IWorkflowRunSourceSchedulingPolicy>().OfType<OwnerSchedulingPolicy>().Single();
+        Assert.IsNotNull(scheduling.LastRequest.Snapshot);
+        Assert.AreEqual("one", WorkflowRunPlans.Read(scheduling.LastRequest.Snapshot)!.Nodes.Single().NodeId);
+        Assert.AreEqual(stored.CurrentStepIndex, scheduling.LastRequest.Cursor);
         Assert.IsTrue(stored.Sources.Any(s => s.Module == "test" && s.EntityKind == "scheduling-owner"));
     }
 }

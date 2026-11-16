@@ -13,7 +13,8 @@ public sealed class WorkflowRunSchedulingPolicyResolver(IEnumerable<IWorkflowRun
     public bool ResumeOnStartup(string triggerKind) => Find(triggerKind)?.ResumeOnStartup ?? true;
 
     public BTaskHandlerBuilder Configure(BTaskHandlerBuilder builder, int definitionId, string triggerKind,
-        int? runId = null, IReadOnlyList<WorkflowSourceRef>? sources = null)
+        int? runId = null, IReadOnlyList<WorkflowSourceRef>? sources = null, string? planSnapshotJson = null,
+        int? currentStepIndex = null)
     {
         var configured = Find(triggerKind)?.Configure(builder) ?? builder.ConflictsWith(definitionId > 0
             ? $"workflow.definition.{definitionId}" : $"workflow.run.{runId ?? 0}");
@@ -23,7 +24,7 @@ public sealed class WorkflowRunSchedulingPolicyResolver(IEnumerable<IWorkflowRun
         foreach (var policy in sourcePolicies ?? [])
         {
             if (!policy.AppliesTo(triggerKind, sources)) continue;
-            configured = policy.Configure(configured);
+            configured = policy.Configure(configured, planSnapshotJson, currentStepIndex);
             if (configured.ConcurrencyGroup != null) break;
         }
         return configured;

@@ -171,7 +171,7 @@ public class WorkflowRunRehydrator<TDbContext> where TDbContext : DbContext
             await _taskManager.Enqueue(_scheduling.Configure(BTaskBuilder.Create($"workflow.run.{runId}")
                 .Named(() => _localizer["BTask_Name_WorkflowRun", defId, runId])
                 .Run(args => _runner.ExecuteAsync(runId, args)), defId, triggerKind, runId,
-                run.Sources.Select(s => s.ToSourceRef()).ToArray()));
+                run.Sources.Select(s => s.ToSourceRef()).ToArray(), run.PlanSnapshotJson, run.CurrentStepIndex));
             }
             finally { gate.Release(); }
         }

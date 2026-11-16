@@ -262,9 +262,15 @@ public class BTaskManager : IAsyncDisposable
         : _taskMap.Values.Where(other => other != task && (other.Task.Status.IsActive() || other.HasAttachedExecution) &&
             other.Task.ConcurrencyGroup == task.Task.ConcurrencyGroup).ToArray();
 
-    private bool BlockedByConcurrencyLimit(BTaskHandler task) =>
-        task.Task.ConcurrencyGroup != null && task.Task.GetConcurrencyLimit != null &&
-        GetActiveGroupTasks(task).Length >= Math.Max(1, task.Task.GetConcurrencyLimit());
+    private bool BlockedByConcurrencyLimit(BTaskHandler task)
+    {
+        if (task.Task.ConcurrencyGroup == null || task.Task.GetConcurrencyLimit == null) return false;
+        var active = GetActiveGroupTasks(task);
+        var limit = Math.Max(1, task.Task.GetConcurrencyLimit());
+        if (active.Length != limit) return active.Length > limit;
+        // Check and start under the scheduling gate. At most one extra task can enter.
+        return task.Task.CanShareConcurrencySlotWith is not { } canShare || !active.All(t => canShare(t.Task));
+    }
 
     /// <summary>
     /// Returns dependency status for a task.

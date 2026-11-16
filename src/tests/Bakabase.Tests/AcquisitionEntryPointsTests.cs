@@ -366,6 +366,36 @@ public sealed class AcquisitionEntryPointsTests
         Assert.IsNull(scope.ServiceProvider.GetRequiredService<IBOptions<AcquisitionOptions>>().Value.ProcessingWorkspaceDirectory);
     }
     [TestMethod]
+    public async Task SparseConcurrencyUpdateValidatesBeforeSavingAndPreservesOtherOptions()
+    {
+        await using var scope = _sp.CreateAsyncScope();
+        var setup = scope.ServiceProvider.GetRequiredService<AcquisitionSetupService>();
+        var manager = scope.ServiceProvider.GetRequiredService<IBOptionsManager<AcquisitionOptions>>();
+        Assert.AreEqual(2, new AcquisitionOptions().Concurrency);
+        await setup.ApplyAsync(new() {AutoPurchaseLimit = 17, MinimumFreeSpaceBytes = 123, PreferredDriveKinds = []});
+        var previous = manager.Value with {};
+        foreach (var limit in new[] {100, 1})
+        {
+            await setup.ApplyAsync(new() {Concurrency = limit});
+            Assert.AreEqual(System.Text.Json.JsonSerializer.Serialize(previous with {Concurrency = limit}),
+                System.Text.Json.JsonSerializer.Serialize(manager.Value));
+        }
+        foreach (var invalid in new[] {0, 101})
+        {
+            var inbox = Path.Combine(_root, "invalid-concurrency");
+            await Assert.ThrowsExactlyAsync<ArgumentOutOfRangeException>(() =>
+                setup.ApplyAsync(new() {Concurrency = invalid, InboxDirectory = inbox, AutoPurchaseLimit = 20}));
+            await Assert.ThrowsExactlyAsync<ArgumentOutOfRangeException>(() =>
+                setup.ReplaceOptionsAsync(previous with {Concurrency = invalid}, default));
+            Assert.IsFalse(Directory.Exists(inbox));
+            Assert.AreEqual(System.Text.Json.JsonSerializer.Serialize(previous with {Concurrency = 1}),
+                System.Text.Json.JsonSerializer.Serialize(manager.Value));
+        }
+        await setup.ApplyAsync(new() {MinimumFreeSpaceBytes = 256});
+        Assert.AreEqual(1, manager.Value.Concurrency);
+    }
+
+    [TestMethod]
     public async Task RuntimeReserveCanChangeWithoutResettingSavedPathsOrCreatingResources()
     {
         await using var scope = _sp.CreateAsyncScope();

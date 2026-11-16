@@ -164,7 +164,7 @@ public sealed class AcquisitionDownloadOnlyRecoveryService(BakabaseDbContext db,
         var ids = cloud.Concat(managed).Concat(owned).Distinct().Where(id => id != currentId).ToArray();
         var states = await db.DownloadTasks.AsNoTracking().Where(d => ids.Contains(d.Id)).Select(d => new {d.Id, d.Status}).ToListAsync(ct);
         var active = states.Count(d => d.Status == DownloadTaskDbModelStatus.InProgress || manager[d.Id]?.IsOccupyingDownloadTaskSource() == true);
-        if (active >= Math.Clamp(options.Value.Concurrency, 1, 100))
+        if (active >= Math.Clamp(options.Value.Concurrency, AcquisitionOptions.MinimumConcurrency, AcquisitionOptions.MaximumConcurrency))
             throw new InvalidOperationException("RECOVERY_DOWNLOAD_CONCURRENCY_LIMIT");
     }
 

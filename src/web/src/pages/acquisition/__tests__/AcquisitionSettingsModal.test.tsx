@@ -188,6 +188,30 @@ beforeEach(() => {
   api.setup.mockReset().mockResolvedValue({ code: 0, data: {} });
 });
 afterEach(cleanup);
+it("saves just the acquisition concurrency while preserving inherited paths and templates", async () => {
+  api.get.mockResolvedValue({ code: 0, data: {
+    ...options, concurrency: undefined, deliveryDirectoryTemplate: undefined, deliveryPartDirectoryTemplate: undefined,
+    processingWorkspaceDirectory: undefined, storagePolicy: { ...defaultStoragePolicy, processingWorkspaceDirectory: "/saved-work" },
+  } });
+  render(<AcquisitionSettingsModal />);
+  const input = await screen.findByLabelText("acquisition.settings.concurrency.label");
+  expect(input).toHaveValue(2);
+  expect(saveButton()).toBeDisabled();
+  for (const value of ["0", "101", "1.5"]) {
+    fireEvent.change(input, { target: { value } });
+    expect(input).toHaveAttribute("aria-invalid", "true");
+    expect(saveButton()).toBeDisabled();
+  }
+  for (const concurrency of [100, 1]) {
+    fireEvent.change(input, { target: { value: String(concurrency) } });
+    fireEvent.click(saveButton());
+    await screen.findByText("acquisition.settings.saved");
+    expect(api.setup).toHaveBeenLastCalledWith({ concurrency }, { showErrorToast: false });
+    expect(saveButton()).toBeDisabled();
+  }
+  expect(api.put).not.toHaveBeenCalled();
+});
+
 it("shows the default reserve for legacy options without marking untouched settings dirty", async () => {
   render(<AcquisitionSettingsModal />);
   expect(await screen.findByLabelText("acquisition.storage.minimumFreeGiB.label")).toHaveValue(100);

@@ -19007,6 +19007,8 @@ export interface components {
             /** Format: int64 */
             minimumFreeSpaceBytes?: number;
             useEmergencySpaceReserve?: boolean;
+            /** Format: int32 */
+            concurrency?: number;
         };
         "Bakabase.Service.Components.Acquisition.AcquisitionSetupResult": {
             createdInbox: boolean;

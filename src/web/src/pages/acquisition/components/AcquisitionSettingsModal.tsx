@@ -39,6 +39,7 @@ interface Props extends DestroyableProps {
 }
 const gib = 1024 ** 3;
 const defaultMinimumFreeSpaceBytes = 100 * gib;
+const defaultConcurrency = 2;
 
 /** The setup endpoint updates only these fields and preserves unrelated acquisition defaults. */
 export default function AcquisitionSettingsModal({
@@ -59,6 +60,7 @@ export default function AcquisitionSettingsModal({
   const retentionHintId = useId();
   const [limit, setLimit] = useState<number>();
   const [minimumFreeGiB, setMinimumFreeGiB] = useState(100);
+  const [concurrency, setConcurrency] = useState(defaultConcurrency);
   const [loading, setLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
   const [saveFailed, setSaveFailed] = useState(false);
@@ -77,6 +79,7 @@ export default function AcquisitionSettingsModal({
       if (result.code || !result.data) throw new Error("ACQUISITION_OPTIONS_UNAVAILABLE");
       const value = result.data;
       setOptions(value);
+      setConcurrency(value.concurrency ?? defaultConcurrency);
       setKeepSupersededDeliveryFiles(value.keepSupersededDeliveryFiles ?? false);
       setDownloadRoot(value.downloadRootDirectory ?? "");
       setInbox(value.inboxDirectory ?? "");
@@ -139,13 +142,15 @@ export default function AcquisitionSettingsModal({
       },
     );
   const invalidLimit = limit == null || !Number.isFinite(limit) || limit < 0;
+  const invalidConcurrency = !Number.isInteger(concurrency) || concurrency < 1 || concurrency > 100;
   const minimumFreeSpaceBytes = Math.round(minimumFreeGiB * gib);
   const invalidReserve =
     !Number.isFinite(minimumFreeGiB) || minimumFreeGiB < 0 ||
     !Number.isSafeInteger(minimumFreeSpaceBytes);
   const dirty =
     !!options &&
-    (storageChanged ||
+    (concurrency !== (options.concurrency ?? defaultConcurrency) ||
+      storageChanged ||
       contentLayoutChanged ||
       retentionChanged ||
       downloadRoot !== (options.downloadRootDirectory ?? "") ||
@@ -172,6 +177,7 @@ export default function AcquisitionSettingsModal({
       invalidStorage ||
       invalidLimit ||
       invalidReserve ||
+      invalidConcurrency ||
       !dirty
     )
       return;
@@ -180,6 +186,7 @@ export default function AcquisitionSettingsModal({
     setSaved(false);
     setSaveFailed(false);
     const nextValues = {
+      concurrency,
       downloadRootDirectory: downloadRoot.trim(),
       inboxDirectory: inbox.trim() || undefined,
       autoPurchaseLimit: limit!,
@@ -189,22 +196,20 @@ export default function AcquisitionSettingsModal({
       deliveryDirectoryTemplate: delivery.directoryTemplate.trim().replace(/\\/g, "/"),
       deliveryPartDirectoryTemplate: delivery.partDirectoryTemplate.trim().replace(/\\/g, "/"),
     };
-    // Delivery-only edits must not create a legacy library mark or touch unrelated folders.
+    const previousValues = {
+      concurrency: options.concurrency ?? defaultConcurrency,
+      downloadRootDirectory: options.downloadRootDirectory?.trim() ?? "",
+      inboxDirectory: options.inboxDirectory?.trim() || undefined,
+      autoPurchaseLimit: options.autoPurchaseLimit,
+      minimumFreeSpaceBytes: options.minimumFreeSpaceBytes ?? defaultMinimumFreeSpaceBytes,
+      processingWorkspaceDirectory: (options.storagePolicy?.processingWorkspaceDirectory ?? options.processingWorkspaceDirectory ?? "").trim(),
+      deliveryRootDirectory: options.deliveryRootDirectory?.trim() ?? "",
+      deliveryDirectoryTemplate: (options.deliveryDirectoryTemplate ?? defaultDeliverySettings.directoryTemplate).trim().replace(/\\/g, "/"),
+      deliveryPartDirectoryTemplate: (options.deliveryPartDirectoryTemplate ?? defaultDeliverySettings.partDirectoryTemplate).trim().replace(/\\/g, "/"),
+    };
+    // Send only edited fields, including when older settings use inherited directory defaults.
     const payload: Parameters<typeof BApi.acquisition.setUpAcquisition>[0] = Object.fromEntries(
-      Object.entries(nextValues).filter(
-        ([key, value]) =>
-          value !==
-          (options[key as keyof AcquisitionOptions] ??
-            (key === "minimumFreeSpaceBytes"
-              ? defaultMinimumFreeSpaceBytes
-              : [
-                    "deliveryRootDirectory",
-                    "processingWorkspaceDirectory",
-                    "downloadRootDirectory",
-                  ].includes(key)
-                ? ""
-                : undefined)),
-      ),
+      Object.entries(nextValues).filter(([key, value]) => value !== previousValues[key as keyof typeof previousValues]),
     );
     if (storageChanged) payload.storagePolicy = storage;
     if (retentionChanged) payload.keepSupersededDeliveryFiles = keepSupersededDeliveryFiles;
@@ -282,6 +287,18 @@ export default function AcquisitionSettingsModal({
           ) : (
             options && (
               <div className="space-y-5">
+                <NumberInput
+                  label={t("acquisition.settings.concurrency.label")}
+                  description={t("acquisition.settings.concurrency.description")}
+                  minValue={1}
+                  maxValue={100}
+                  step={1}
+                  value={concurrency}
+                  isDisabled={saving}
+                  isInvalid={invalidConcurrency}
+                  errorMessage={t("acquisition.settings.concurrency.invalid")}
+                  onValueChange={(value) => { setConcurrency(value); changed(); }}
+                />
                 <section className="space-y-2" aria-label={t("acquisition.storage.downloadRoot")}>
                   <h3 className="text-sm font-medium">{t("acquisition.storage.downloadRoot")}</h3>
                   <div className="flex flex-wrap items-center gap-2">
@@ -439,7 +456,8 @@ export default function AcquisitionSettingsModal({
                 loadFailed ||
                 prioritySaving ||
                 !dirty ||
-                          invalidDelivery ||
+                invalidConcurrency ||
+                invalidDelivery ||
                 invalidStorage ||
                 invalidLimit ||
                 invalidReserve

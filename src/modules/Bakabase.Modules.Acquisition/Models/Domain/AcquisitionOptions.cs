@@ -11,6 +11,8 @@ namespace Bakabase.Modules.Acquisition.Models.Domain;
 public record AcquisitionOptions
 {
     public const string ConfigurationKey = "Acquisition";
+    public const int MinimumConcurrency = 1;
+    public const int MaximumConcurrency = 100;
 
     /// <summary>
     /// Where the user drops files they fetched themselves. Set once — pointing the browser's or the

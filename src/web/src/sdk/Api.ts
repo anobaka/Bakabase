@@ -7793,6 +7793,8 @@ export interface BakabaseServiceComponentsAcquisitionAcquisitionSetupInputModel 
   /** @format int64 */
   minimumFreeSpaceBytes?: number;
   useEmergencySpaceReserve?: boolean;
+  /** @format int32 */
+  concurrency?: number;
 }
 
 export interface BakabaseServiceComponentsAcquisitionAcquisitionSetupResult {

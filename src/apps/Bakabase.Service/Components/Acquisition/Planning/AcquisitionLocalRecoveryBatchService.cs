@@ -478,16 +478,21 @@ public sealed partial class AcquisitionLocalRecoveryBatchService(BakabaseDbConte
         if (run?.CurrentStepIndex is not { } index || index < 0) return false;
         try
         {
-            var nodes = WorkflowRunPlans.Read(run.PlanSnapshotJson)?.Nodes;
-            if (nodes == null || index >= nodes.Count) return false;
-            return nodes.Skip(index).Select((node, i) => (node, i)).All(x => x.node.Kind is
-                AcquisitionPlanProcessingActivity.ActivityKind or "fs.publishArtifacts" or AssessFileArtifactDeliveryActivity.ActivityKind ||
-                allowContinueFiles && x.i == 0 && x.node.Kind == AcquisitionPlanContinueFilesActivity.ActivityKind ||
-                x.i > 0 && x.node.Kind == "download.cleanupArtifacts" ||
-                x.i == 0 && x.node.Kind == "download.awaitCompletion");
+            return IsLocalRemainder(WorkflowRunPlans.Read(run.PlanSnapshotJson), index, allowContinueFiles,
+                allowDownloadWait: true);
         }
         catch (InvalidDataException) {return false;}
     }
+    internal static bool IsLocalRemainder(WorkflowRunPlan? plan, int index, bool allowContinueFiles, bool allowDownloadWait)
+    {
+        if (plan == null || index < 0 || index >= plan.Nodes.Count) return false;
+        return plan.Nodes.Skip(index).Select((node, i) => (node, i)).All(x => x.node.Kind is
+            AcquisitionPlanProcessingActivity.ActivityKind or "fs.publishArtifacts" or AssessFileArtifactDeliveryActivity.ActivityKind ||
+            allowContinueFiles && x.i == 0 && x.node.Kind == AcquisitionPlanContinueFilesActivity.ActivityKind ||
+            x.i > 0 && x.node.Kind == "download.cleanupArtifacts" ||
+            allowDownloadWait && x.i == 0 && x.node.Kind == "download.awaitCompletion");
+    }
+
     private static bool IsLocalSignal(WorkflowRunDbModel run, string signal)
     {
         if (WorkflowRunPlans.Read(run.PlanSnapshotJson)!.Nodes[run.CurrentStepIndex!.Value].Kind != "download.awaitCompletion") return true;

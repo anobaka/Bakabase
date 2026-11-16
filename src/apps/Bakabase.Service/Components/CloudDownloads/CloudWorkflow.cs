@@ -375,7 +375,11 @@ public abstract class CloudActivity(string kind, string name, string description
                 if (kind == "download.awaitCompletion")
                 {
                     next = await Await(ctx, next, signal != null && signal.ObserveExistingOnly != true && workset.NoRepeatExistingDownloads != true, ct);
-                    if (artifacts != null) next = await artifacts.RecordAsync(ctx, next, workset.OutputDirectory, ct);
+                    if (artifacts != null)
+                    {
+                        await ctx.ReportStage("verifyingFiles");
+                        next = await artifacts.RecordAsync(ctx, next, workset.OutputDirectory, ct);
+                    }
                 }
             }
             catch (OperationCanceledException)
@@ -530,11 +534,13 @@ public abstract class CloudActivity(string kind, string name, string description
             {
                 var manager = ctx.Services.GetRequiredService<IBtDownloadManager>();
                 if (retry) await manager.ResumeAsync(id, ct);
+                await ctx.ReportStage("downloading");
                 var job = await manager.WaitForCompletionAsync(id, stopOnCancellation: false, ct: ct);
                 return target with {Files = job.Files.ToList(), DownloadDirectory = job.OutputDirectory};
             }
             var http = ctx.Services.GetRequiredService<IHttpDownloadManager>();
             if (retry) await http.ResumeAsync(id, ct);
+            await ctx.ReportStage("downloading");
             var result = await http.WaitForCompletionAsync(id, stopOnCancellation: false, ct: ct);
             return target with {Files = result.Files.ToList(), DownloadDirectory = result.OutputDirectory};
         }
