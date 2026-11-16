@@ -6,6 +6,7 @@ import RuntimeOverviewSummary from "../RuntimeOverviewSummary";
 import type { RuntimeOverview } from "../runtimeOverview";
 import acquisition from "@/locales/cn/pages/acquisition.json";
 import directories from "@/locales/cn/pages/acquisitionDirectories.json";
+import dateTime from "@/locales/cn/datetime.json";
 import cloud from "@/locales/cn/pages/cloudDownload.json";
 import downloader from "@/locales/cn/pages/downloader.json";
 import workflow from "@/locales/cn/pages/workflow.json";
@@ -49,7 +50,7 @@ beforeAll(async () => {
     fallbackLng: false,
     keySeparator: false,
     interpolation: { escapeValue: false },
-    resources: { cn: { translation: { ...acquisition, ...directories, ...cloud, ...downloader, ...workflow } } },
+    resources: { cn: { translation: { ...acquisition, ...directories, ...cloud, ...downloader, ...workflow, ...dateTime } } },
   });
 });
 afterEach(cleanup);
@@ -202,6 +203,29 @@ it("renders only measured download progress, localizes its stage and does not in
   );
   expect(screen.queryByRole("progressbar")).toBeNull();
   expect(screen.queryByText(/80%|已下载/)).toBeNull();
+});
+it("shows measured speed and the download-stage estimate beside the percentage", () => {
+  const live = overview({
+    progressScope: "download", progress: 50, workflowStatus: "running",
+    downloadCount: 2, activeDownloadCount: 2, speedBytesPerSecond: 1572864,
+    estimatedRemainingSeconds: 65,
+  });
+  const view = render(<RuntimeOverviewSummary overview={live} />);
+  const row = screen.getByRole("progressbar", { name: "下载阶段进度" }).parentElement;
+  expect(row).toContainElement(screen.getByText("下载阶段 50%"));
+  expect(row).toContainElement(screen.getByText("当前下载 1.5 MiB/s"));
+  expect(row).toContainElement(screen.getByText("预计剩余 1分 5秒"));
+
+  view.rerender(<RuntimeOverviewSummary overview={{ ...live, speedBytesPerSecond: 0, estimatedRemainingSeconds: undefined }} />);
+  expect(screen.getByText("当前下载 0 B/s")).toBeVisible();
+  expect(screen.queryByText(/预计剩余/)).toBeNull();
+
+  view.rerender(<RuntimeOverviewSummary overview={{ ...live, progressScope: "archive", stage: "extractingArchive" }} />);
+  expect(screen.queryByText(/当前下载|预计剩余/)).toBeNull();
+  expect(screen.getByRole("progressbar", { name: "当前压缩包解压进度" })).toBeVisible();
+
+  view.rerender(<RuntimeOverviewSummary overview={{ ...live, workflowStatus: "waiting", activeDownloadCount: 0 }} />);
+  expect(screen.queryByText(/当前下载|预计剩余/)).toBeNull();
 });
 it("distinguishes live input preparation from the archive tool's measured extraction percentage", () => {
   const running = { currentNodeKind: "acquisition.plan.process", workflowStatus: "running" };

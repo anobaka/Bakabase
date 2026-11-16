@@ -3,6 +3,7 @@ import { Button, Chip, Popover, Progress, Tooltip } from "@/components/bakaui";
 import { activityDisplayName } from "@/components/Workflow/displayNames";
 import ProcessingProblemSummary from "@/components/Workflow/ProcessingProblemSummary";
 import { humanFileSize } from "@/components/utils";
+import { estimatedRemainingLabel } from "@/utils/estimatedRemainingTime";
 import { millisecondsUntil, parseServerTime } from "@/core/serverTime";
 import AcquisitionSourceDetails from "../AcquisitionSourceDetails";
 import { downloadContinuationLabel, runtimeProblemLabel, type RuntimeOverview, type RuntimeSource } from "./runtimeOverview";
@@ -128,9 +129,15 @@ export default function RuntimeOverviewSummary({ overview, showSources = true, p
     Number.isFinite(overview.progress)
       ? Math.min(100, Math.max(0, overview.progress))
       : undefined;
+  const showProgressBar = progress != null || fileActivity;
   const completedBytes = overview.completedBytes;
   const totalBytes = overview.totalBytes;
   const hasDownloads = overview.downloadCount > 0;
+  const downloading = !fileScope && overview.activeDownloadCount > 0;
+  const speed = downloading && validBytes(overview.speedBytesPerSecond)
+    ? t("acquisition.runtime.downloadSpeed", { speed: humanFileSize(Math.round(overview.speedBytesPerSecond)) })
+    : undefined;
+  const remaining = downloading ? estimatedRemainingLabel(overview.estimatedRemainingSeconds, t) : undefined;
   const continuation = downloadContinuationLabel(t, overview);
 
   return (
@@ -182,30 +189,29 @@ export default function RuntimeOverviewSummary({ overview, showSources = true, p
                 : t("acquisition.runtime.downloaded", { size: humanFileSize(completedBytes) })}
           </span>
         )}
-        {overview.activeDownloadCount > 0 && validBytes(overview.speedBytesPerSecond) && (
-          <span>
-            {t("acquisition.runtime.downloadSpeed", {
-              speed: humanFileSize(overview.speedBytesPerSecond),
-            })}
-          </span>
-        )}
         {showSources && <RuntimeSources overview={overview} />}
       </div>
       {continuation && <p role="status" className="text-xs text-default-700">{continuation}</p>}
-      {(progress != null || fileActivity) && (
-        <div className="flex items-center gap-2 text-xs text-default-500">
-          <Progress
-            aria-label={t(archiveProgress ? "acquisition.runtime.archiveProgress" :
-              fileActivity ? "acquisition.runtime.fileProgress" : "acquisition.runtime.downloadProgress")}
-            isIndeterminate={progress == null}
-            className="max-w-48"
-            size="sm"
-            value={progress}
-          />
-          {progress != null && <span>
-            {t(archiveProgress ? "acquisition.runtime.archiveProgressValue" : "acquisition.runtime.downloadProgressValue",
-              { progress: Math.round(progress) })}
-          </span>}
+      {(showProgressBar || speed || remaining) && (
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs tabular-nums text-default-500">
+          {showProgressBar && (
+            <Progress
+              aria-label={t(archiveProgress ? "acquisition.runtime.archiveProgress" :
+                fileActivity ? "acquisition.runtime.fileProgress" : "acquisition.runtime.downloadProgress")}
+              isIndeterminate={progress == null}
+              className="w-28 max-w-full sm:w-36"
+              size="sm"
+              value={progress}
+            />
+          )}
+          {progress != null && (
+            <span className="whitespace-nowrap">
+              {t(archiveProgress ? "acquisition.runtime.archiveProgressValue" : "acquisition.runtime.downloadProgressValue",
+                { progress: Math.round(progress) })}
+            </span>
+          )}
+          {speed && <span className="whitespace-nowrap">{speed}</span>}
+          {remaining && <span className="whitespace-nowrap">{remaining}</span>}
         </div>
       )}
       {problemDetail ? <ProcessingProblemSummary message={problemDetail} summary={problem}
