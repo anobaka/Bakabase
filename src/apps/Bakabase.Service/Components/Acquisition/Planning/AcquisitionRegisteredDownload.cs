@@ -190,6 +190,33 @@ internal sealed record AcquisitionRegisteredDownload(WorkflowSourceRef Origin, s
         catch (JsonException) {return null;}
     }
 
+    // This proof belongs to a new borrower's processing snapshot. Never rewrite the
+    // source artifact, its consumer bindings, the register, or a previous publication.
+    internal async Task<ArtifactDirectoryProvenance?> ReadBorrowedDirectoryProvenanceAsync(BakabaseDbContext db,
+        IArtifactOperationStore store, DownloadArtifactCoordinator coordinator, int taskId, string partId,
+        ArtifactRecord input, CancellationToken ct)
+    {
+        if (PartId != partId || Input.TaskId != taskId || Input.ArtifactId != input.Id ||
+            Input.OperationId != input.OperationId || Input.Fingerprint != input.Fingerprint ||
+            input.Manifest.Fingerprint != input.Fingerprint || !ArtifactManifestFiles.PathComparer.Equals(Directory, input.RootDirectory))
+            return null;
+        var run = await db.WorkflowRuns.AsNoTracking().SingleOrDefaultAsync(r => r.Id == Input.PreviousRunId, ct);
+        if (run == null) return null;
+        var target = (await TargetsAsync(db, store, run, ct)).SingleOrDefault(t => t.Id == ProducerTargetId);
+        if (target?.DownloadTaskId != DownloadTaskId || target.DownloadLayout == "separateDirectory" ||
+            await ReadAsync(db, store, taskId, run, Origin, target, SourceUrl, ct) is not {} download ||
+            (await ReadStageAsync(db, store, run, target, download, Stage, ct))?.Id != input.Id) return null;
+        var proof = FileArtifactDeliveryLayout.ReadProvenance(download);
+        if (proof == null)
+        {
+            var evidence = await coordinator.ExistingDirectoryEvidenceAsync(target, download.RootDirectory, ct, run.Id);
+            proof = evidence?.Bind(download.Manifest);
+        }
+        // Artifact-level lineage alone cannot prove where transformed/extracted files came from.
+        // Only carry unchanged, individually matched paths into an older processed result.
+        return download.Id == input.Id ? proof : AcquisitionCurrentDirectoryProvenance.Project(download.Manifest, proof, input.Manifest);
+    }
+
     // A foreign workflow never becomes owned by the borrower. Only the exact download authorized
     // by the task-local server receipt may be read, without granting cleanup or publication rights.
     internal async Task<ArtifactRecord?> RequireAsync(BakabaseDbContext db, IArtifactOperationStore store,

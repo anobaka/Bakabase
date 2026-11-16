@@ -198,10 +198,22 @@ internal static class AcquisitionProcessingStageInput
                     }
                     ArtifactManifestFiles.CreateDirectories(payload, input.Manifest);
                     await Guard();
+                    var layout = FileArtifactDeliveryLayout.ReadProvenance(input);
+                    if (layout == null && input.Kind is "download" or "processedFiles" or "publishedFiles")
+                    {
+                        var state = await db.AcquisitionTasks.AsNoTracking().Where(t => t.Id == taskId)
+                            .Select(t => t.BuilderStateJson).SingleAsync(work.Token);
+                        if (AcquisitionRegisteredDownload.Read<AcquisitionPlanBuilderState>(state)?.RegisteredDownload is {} borrowed)
+                        {
+                            using var scope = scopes.CreateScope();
+                            if (scope.ServiceProvider.GetService<DownloadArtifactCoordinator>() is {} coordinator)
+                                layout = await borrowed.ReadBorrowedDirectoryProvenanceAsync(db, store, coordinator, taskId, partId, input, work.Token);
+                        }
+                    }
                     snapshot = await store.CompleteAsync(lease, new(payload, expected.ToArray(), "processedFiles", true, [input.Id],
                         JsonSerializer.Serialize(new FileArtifactProcessingMetadata(input.Id, "{\"requirement\":\"notRequired\",\"steps\":[]}",
                             input.MetadataJson, StoragePolicy: policy, FileDisposition: FileDispositionProofs.Preserve(input, input.Manifest),
-                            DirectoryProvenance: FileArtifactDeliveryLayout.ReadProvenance(input)), Json),
+                            DirectoryProvenance: layout), Json),
                         input.Fingerprint, ArtifactManifestFiles.ResolveDirectories(payload, input.Manifest)), work.Token);
                 }
                 catch (Exception error)

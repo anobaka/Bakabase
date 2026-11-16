@@ -138,8 +138,8 @@ public sealed class DownloadArtifactCoordinator(BakabaseDbContext db, IArtifactO
         return null;
     }
 
-    private async Task<CloudDownloadDirectoryEvidence?> ExistingDirectoryEvidenceAsync(CloudDownloadTarget target,
-        string root, CancellationToken ct)
+    internal async Task<CloudDownloadDirectoryEvidence?> ExistingDirectoryEvidenceAsync(CloudDownloadTarget target,
+        string root, CancellationToken ct, int? registeredProducer = null)
     {
         if (directoryProvenance == null || target.DownloadLayout == "separateDirectory" || target.DownloadTaskId == null) return null;
         var download = await db.DownloadTasks.AsNoTracking().SingleOrDefaultAsync(d => d.Id == target.DownloadTaskId, ct);
@@ -153,6 +153,25 @@ public sealed class DownloadArtifactCoordinator(BakabaseDbContext db, IArtifactO
             var request = JsonSerializer.Deserialize<CloudDownloadRequest>(operation.RequestJson, WorkflowJson.Options);
             if (request == null || request.OperationId != operation.Id ||
                 CloudSourceIdentity.Key(request.Source, request.AccountId) != Source(target)) return null;
+            if (registeredProducer is {} run && request.RemoteEntry is {OwnedContainer: null} remote)
+            {
+                // Pre-existing receipts can predate the owned-container hint. Link the exact
+                // task/source transfer first; the provider must still verify its own journal.
+                var slot = CloudOperationService.OperationSlot(target, "transfer");
+                var transfer = await db.CloudDownloadOperations.AsNoTracking().SingleOrDefaultAsync(t =>
+                    t.Kind == "transfer" && t.State == "succeeded" && db.ArtifactOperationBindings.Any(b =>
+                        b.OwnerKind == "workflow" && b.OwnerId == run.ToString() && b.Slot == slot && b.OperationId == t.Id), ct);
+                if (transfer?.ReceiptJson == null) return null;
+                var original = JsonSerializer.Deserialize<CloudTransferRequest>(transfer.RequestJson, WorkflowJson.Options);
+                var receipt = JsonSerializer.Deserialize<CloudTransferReceipt>(transfer.ReceiptJson, WorkflowJson.Options);
+                if (original?.Source == null || original.OperationId != transfer.Id || receipt?.OperationId != transfer.Id ||
+                    original.AccountId != request.AccountId || CloudSourceIdentity.Key(original.Source, original.AccountId) != Source(target) ||
+                    receipt.Entry?.ProviderId != request.Source.ProviderId || remote.AccountId != request.AccountId ||
+                    receipt.Entry with {OwnedContainer = null} != remote || string.IsNullOrWhiteSpace(remote.ManifestJson)) return null;
+                var owner = new CloudOwnedRemoteContainer(transfer.Id, remote.Path);
+                if (receipt.Entry.OwnedContainer != null && receipt.Entry.OwnedContainer != owner) return null;
+                request = request with {RemoteEntry = remote with {OwnedContainer = owner}};
+            }
             return await directoryProvenance.InspectAsync(request, root, ct);
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or JsonException)

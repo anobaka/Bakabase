@@ -24,7 +24,8 @@ namespace Bakabase.Tests;
 
 public sealed partial class AcquisitionRecoveryTests
 {
-    private async Task<(int TaskId, int RunId, AcquisitionPlanService Plans, string File)> RegisteredDownloadFixture(bool ready = false)
+    private async Task<(int TaskId, int RunId, AcquisitionPlanService Plans, string File)> RegisteredDownloadFixture(bool ready = false,
+        string? wrapper = null)
     {
         var f = await LocalFilesFixture();
         var run = await _db.WorkflowRuns.SingleAsync();
@@ -34,6 +35,16 @@ public sealed partial class AcquisitionRecoveryTests
         var target = item.Targets.Single();
         var result = await _db.DownloadResults.SingleAsync();
         var files = JsonSerializer.Deserialize<List<string>>(result.FilesJson)!;
+        if (wrapper != null)
+        {
+            var parent = Directory.CreateDirectory(Path.Combine(result.DownloadDirectory, wrapper, "author")).FullName;
+            var nested = Path.Combine(parent, Path.GetFileName(files.Single()));
+            File.Move(files.Single(), nested);
+            files = [nested];
+            result.FilesJson = JsonSerializer.Serialize(files);
+            result.Fingerprint = (await ArtifactManifestFiles.CaptureAsync(result.DownloadDirectory, files)).Fingerprint;
+            await _db.SaveChangesAsync();
+        }
         var reference = new WorkflowSourceRef("catalog", "entry", "resource-a", "v1", target.SelectedSourceId);
         var source = target.SelectedSource!;
         var store = _services.GetRequiredService<IArtifactOperationStore>();
