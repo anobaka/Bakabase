@@ -59,6 +59,7 @@ public sealed partial class AcquisitionExecutionFactProjection(BakabaseDbContext
         {
             var current = await db.Database.SqlQueryRaw<CurrentFact>(CurrentSql, JsonSerializer.Serialize(batch),
                 typeof(DownloadWorkset).FullName + ", " + typeof(DownloadWorkset).Assembly.GetName().Name).ToListAsync(ct);
+            await PreserveDirectoryOnlyRunFactsAsync(current, ct);
             var runIds = current.Select(r => r.RunId).ToArray();
             var owners = runIds.Select(r => r.ToString(System.Globalization.CultureInfo.InvariantCulture)).ToArray();
             var desired = new HashSet<string>(StringComparer.Ordinal);
@@ -185,8 +186,16 @@ public sealed partial class AcquisitionExecutionFactProjection(BakabaseDbContext
             {
                 "continuation" => slots.Contains(target.Id + ":artifact.continuation"),
                 "download" => artifact.Kind == "download" && artifact.OperationKind == "download" && slots.Contains(target.Id + ":artifact.download"),
-                "processed" => artifact.Kind is "processedFiles" or "publishedFiles" &&
-                    (slots.Contains(target.Id + ":artifact.process") || slots.Any(s => s.StartsWith(target.Id + ":process:", StringComparison.Ordinal))),
+                // Current-directory captures are immutable local inputs, not newly
+                // processed artifacts. Their exact continuation binding proves this
+                // run/part adopted them before assessment or direct publication.
+                "processed" => artifact.Kind == AcquisitionCurrentDirectoryFiles.Kind
+                    ? slots.Contains(target.Id + ":artifact.continuation")
+                    : artifact.Kind is "processedFiles" or "publishedFiles" &&
+                      (slots.Contains(target.Id + ":artifact.process") || slots.Any(s => s.StartsWith(target.Id + ":process:", StringComparison.Ordinal)) ||
+                       // Assessment can execute another processing round before pausing.
+                       // Only its exact successful output binding is local result evidence.
+                       artifact.Kind == "processedFiles" && slots.Contains(target.Id + ":adaptive:output:" + artifact.Id)),
                 _ => false,
             };
         }
@@ -200,6 +209,7 @@ public sealed partial class AcquisitionExecutionFactProjection(BakabaseDbContext
         "download" => artifact.OperationKind == "download",
         "processedFiles" => artifact.OperationKind == "files.process",
         "publishedFiles" => artifact.OperationKind == "files.publish",
+        AcquisitionCurrentDirectoryFiles.Kind => artifact.OperationKind == AcquisitionCurrentDirectoryFiles.OperationKind,
         _ => false,
     };
 

@@ -1868,14 +1868,11 @@ namespace Bakabase.Service.Controllers
                                 if (string.Equals(Path.GetFullPath(targetDir), Path.GetFullPath(entry), StringComparison.Ordinal))
                                     targetDir += ".extracted";
                                 _storagePolicy.EnsurePathAllowed(targetDir);
-                                var processRegex = new Regex(@$"\d+\%");
                                 var result = await _compressedFileService.ExtractForFileExplorerAsync(
                                     entry, targetDir, group.Password,
-                                    onProgress: async line =>
+                                    onProgress: async percentage =>
                                     {
-                                        var match = processRegex.Match(line);
-                                        if (match.Success && int.TryParse(match.Value.TrimEnd('%'), out var percentage) &&
-                                            percentage != args.Task.Percentage)
+                                        if (percentage != args.Task.Percentage)
                                             await args.UpdateTask(x => x.Percentage = percentage);
                                     }, args.CancellationToken);
                                 if (result.ExitCode == 0) return;

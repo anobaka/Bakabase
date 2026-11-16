@@ -30,13 +30,17 @@ internal static class AcquisitionPlanArtifactInputGuard
             taskId, partId, run, input, ct);
         var publicationStorageWait = run != null && AcquisitionPublicationStorageWait.Matches(run);
         var currentFilesWait = run != null && AcquisitionProcessingConflictWait.MatchesCurrentDirectoryWait(run);
+        var artifact = await store.GetArtifactAsync(input.ArtifactId, ct);
+        var stageFiles = artifact?.Kind == AcquisitionCurrentDirectoryFiles.Kind && artifact.MetadataJson != null &&
+            JsonSerializer.Deserialize<AcquisitionStageDirectoryCaptureReceipt>(artifact.MetadataJson, WorkflowJson.Options) is {Version: 2} &&
+            run is {Status: WorkflowRunStatus.Waiting, PendingSignalJson: null} &&
+            await AcquisitionCurrentDirectoryFiles.IsOwnedAsync(db, store, artifact, taskId, input.PreviousRunId, partId, ct);
         if (publicationInputOnly && (run == null || !AcquisitionPublicationStorageWait.CanRetryDelivery(run)))
             throw new ArgumentException("PLAN_REPLAN_EVIDENCE_INVALID");
         if (input.TaskId != taskId || !await OwnsRunAsync(db, input.PreviousRunId, taskId, ct) || run == null ||
             run.Status is not (WorkflowRunStatus.Failed or WorkflowRunStatus.Interrupted or WorkflowRunStatus.Cancelled or WorkflowRunStatus.Success) &&
-            !AcquisitionProcessingConflictWait.MatchesForLocalContinuation(run) && !publicationStorageWait && !localDownloadReceipt && !currentFilesWait)
+            !AcquisitionProcessingConflictWait.MatchesForLocalContinuation(run) && !publicationStorageWait && !localDownloadReceipt && !currentFilesWait && !stageFiles)
             throw new ArgumentException("PLAN_REPLAN_EVIDENCE_INVALID");
-        var artifact = await store.GetArtifactAsync(input.ArtifactId, ct);
         if (artifact?.Kind == AcquisitionCurrentDirectoryFiles.Kind)
         {
             if (publishedOutputOnly || publicationInputOnly ||

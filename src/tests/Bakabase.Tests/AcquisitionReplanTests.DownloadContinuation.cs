@@ -55,8 +55,9 @@ public sealed partial class AcquisitionReplanTests
             "fs.publishArtifacts"}, compiled.Nodes.Select(n => n.Kind).ToArray());
         var workset = AcquisitionPlanCompiler.Workset(task.Id, revised.Task.PlanRevision, revised.Plan!, revised.SourceRefs);
         var run = new WorkflowRunDbModel {WorkflowDefinitionId = 0, Status = WorkflowRunStatus.Running, StartedAt = DateTime.UtcNow,
-            Sources = [new() {Module = "acquisition", EntityKind = "task", EntityId = task.Id.ToString()}]};
+            Sources = [new() {Module = "acquisition", EntityKind = "task", EntityId = task.Id.ToString(), Revision = revised.Task.PlanRevision.ToString()}]};
         Db.WorkflowRuns.Add(run); await Db.SaveChangesAsync();
+        await Db.AcquisitionTasks.Where(t => t.Id == task.Id).ExecuteUpdateAsync(s => s.SetProperty(t => t.WorkflowRunId, run.Id));
         WorkflowExecutionContext Context(int node) => new() {RunId = run.Id, WorkflowDefinitionId = 0,
             TriggerKind = CloudWorkflow.Trigger, Payload = workset, ActivityConfigJson = compiled.Nodes[node].ConfigJson,
             Services = _services, Logger = NullLogger.Instance};

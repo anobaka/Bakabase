@@ -40,7 +40,7 @@ public static class AcquisitionStageDirectoryResolver
         {
             Download = Allocated("download", downloadRoot, downloadLayout.PartDirectories[p.Id], p.Id),
             Processing = Processing(p),
-            Delivery = new(delivery.PartDirectories[p.Id], "exclusive", "taskLayout")
+            Delivery = new(delivery.PartDirectories[p.Id], "exclusive", "taskLayout") {BindingId = Guid.NewGuid().ToString("N")}
         }, StringComparer.Ordinal);
         var value = new AcquisitionStageDirectories {TaskId = taskId, Parts = parts};
         Validate(value, plan);
@@ -48,7 +48,8 @@ public static class AcquisitionStageDirectoryResolver
 
         AcquisitionStageDirectory Allocated(string role, string root, string path, string partId) =>
             new(path, "exclusive", "taskAllocation")
-            {Allocation = new("acquisition", taskId.ToString(CultureInfo.InvariantCulture), role + "-" + partId, root, path)};
+            {BindingId = Guid.NewGuid().ToString("N"),
+                Allocation = new("acquisition", taskId.ToString(CultureInfo.InvariantCulture), role + "-" + partId, root, path)};
         AcquisitionStageDirectory Processing(AcquisitionPlanPart part)
         {
             var configured = ArtifactStoragePolicies.Resolve(plan.StoragePolicy ?? new(), part.StoragePolicy).ProcessingWorkspaceDirectory;
@@ -81,7 +82,8 @@ public static class AcquisitionStageDirectoryResolver
             var scope = new ArtifactDirectoryScope("acquisition", taskId.ToString(CultureInfo.InvariantCulture),
                 "processing-" + part.Id, root, layout.PartDirectories[part.Id]);
             FileProcessingWorkspaceResolver.ValidateDirectoryScope(scope);
-            return new AcquisitionStageDirectory(scope.Directory, "exclusive", "taskAllocation") {Allocation = scope};
+            return new AcquisitionStageDirectory(scope.Directory, "exclusive", "taskAllocation")
+                {BindingId = Guid.NewGuid().ToString("N"), Allocation = scope};
         }, StringComparer.Ordinal);
     }
 
@@ -97,7 +99,8 @@ public static class AcquisitionStageDirectoryResolver
             {
                 if (entry == null) continue;
                 if (!Path.IsPathFullyQualified(entry.Directory) || entry.Directory.Any(char.IsControl) ||
-                    entry.Ownership is not ("exclusive" or "borrowed") || string.IsNullOrWhiteSpace(entry.Evidence))
+                    entry.Ownership is not ("exclusive" or "borrowed") || string.IsNullOrWhiteSpace(entry.Evidence) ||
+                    entry.BindingId != null && !Guid.TryParseExact(entry.BindingId, "N", out _))
                     throw new ArgumentException("The task stage directory mapping is invalid.");
                 if (entry.Allocation is not { } allocation) continue;
                 FileProcessingWorkspaceResolver.ValidateDirectoryScope(allocation);
@@ -127,9 +130,9 @@ public static class AcquisitionStageDirectoryResolver
             var plannedDelivery = plan.DeliveryLayout?.PartDirectories.GetValueOrDefault(part.Id);
             parts[part.Id] = new()
             {
-                Download = Recorded(target?.DownloadDirectory, "downloadRecord", saved?.Download) ?? saved?.Download,
-                Processing = Recorded(target?.ProcessedDirectory, "processingRecord", saved?.Processing) ?? saved?.Processing,
-                Delivery = Recorded(target?.PublishedDirectory, "deliveryRecord", saved?.Delivery) ??
+                Download = saved?.Download?.BindingId != null ? saved.Download : Recorded(target?.DownloadDirectory, "downloadRecord", saved?.Download) ?? saved?.Download,
+                Processing = saved?.Processing?.BindingId != null ? saved.Processing : Recorded(target?.ProcessedDirectory, "processingRecord", saved?.Processing) ?? saved?.Processing,
+                Delivery = saved?.Delivery?.BindingId != null ? saved.Delivery : Recorded(target?.PublishedDirectory, "deliveryRecord", saved?.Delivery) ??
                     (Recorded(plannedDelivery, "plannedDelivery", saved?.Delivery) is { } planned
                         ? saved?.Delivery is {Ownership: "exclusive", Evidence: "taskLayout"}
                             ? planned with {Ownership = "exclusive", Evidence = "taskLayout"} : planned

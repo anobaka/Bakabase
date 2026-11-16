@@ -81,13 +81,14 @@ public sealed class ArtifactWorkspaceLifecycleCleanup(IServiceScopeFactory scope
             afterPublicationId = publication;
             if (!(await ancestors.PreparePublicationOwnersAsync(publication, stoppingToken)).Ready) continue;
             var owners = await ancestors.PublicationOwnersAsync(publication, stoppingToken);
+            var prepared = await ancestors.PrepareAutomaticPrivateCleanupAsync(publication, owners, stoppingToken);
             var candidates = await ancestors.PreviewAsync([publication], owners, stoppingToken);
             var count = 0;
             foreach (var candidate in candidates)
             {
                 if (!candidate.Eligible) continue;
                 if (count++ >= 2 || clock.GetElapsedTime(startedAt) >= TimeSpan.FromMinutes(5)) break;
-                await ancestors.ReclaimAutomaticAsync(candidate, owners, stoppingToken);
+                await ancestors.ReclaimAutomaticPreparedAsync(candidate, owners, prepared, stoppingToken);
             }
         }
     }

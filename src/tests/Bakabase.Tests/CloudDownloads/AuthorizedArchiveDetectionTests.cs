@@ -63,6 +63,37 @@ public sealed class AuthorizedArchiveDetectionTests
         Assert.IsTrue(File.Exists(nearby)); Assert.IsTrue(File.Exists(unselected));
     }
 
+    [TestMethod]
+    public async Task Sfx_probe_keeps_every_authorized_volume_and_never_probes_later_parts_independently()
+    {
+        var first = await Bytes("bundle.part1.exe", "4D5A000000000000");
+        var second = await Bytes("bundle.part2.rar", "504B030400000000");
+        var third = await Bytes("unrelated.part3.rar", "526172211A070100");
+        var probe = new SfxProbe(".rar");
+        var groups = await AuthorizedArchiveDetection.DetectAsync([second, first], false, default, probe,
+            exactExtractionSelection: true);
+        Assert.AreEqual(1, groups.Count);
+        CollectionAssert.AreEqual(new[] {first, second}, groups[0].Files.ToArray());
+        CollectionAssert.AreEqual(new[] {first}, probe.Calls.ToArray());
+        Assert.AreEqual("bundle", groups[0].KeyName);
+        Assert.IsFalse(groups[0].Files.Contains(third));
+        Assert.AreEqual(0, (await AuthorizedArchiveDetection.DetectAsync([first, second], true, default, probe)).Count);
+        Assert.AreEqual(1, probe.Calls.Count, "Recursive discovery must not promote SFX candidates or probe their later volumes.");
+    }
+
+    [DataTestMethod]
+    [DataRow(null)]
+    [DataRow(".zip")]
+    public async Task An_unconfirmed_Sfx_family_is_not_partially_recognized_as_a_later_Rar(string? format)
+    {
+        var first = await Bytes("bundle.part1.exe", "4D5A000000000000");
+        var second = await Bytes("bundle.part2.rar", "504B030400000000");
+        var probe = new SfxProbe(format);
+        await Assert.ThrowsExceptionAsync<ArchiveFormatProbeIncompleteException>(() =>
+            AuthorizedArchiveDetection.DetectAsync([first, second], false, default, probe, exactExtractionSelection: true));
+        CollectionAssert.AreEqual(new[] {first}, probe.Calls.ToArray());
+    }
+
     [DataTestMethod]
     [DataRow("book.docx")]
     [DataRow("sheet.xlsx")]
@@ -183,5 +214,16 @@ public sealed class AuthorizedArchiveDetectionTests
             Extractions++; ZipFile.ExtractToDirectory(request.Files.Single(), request.Directory);
             return Task.FromResult(new ArchiveExtractionResult(true, request.Directory, ""));
         }
+    }
+
+    private sealed class SfxProbe(string? format) : IArchiveExtractionService
+    {
+        public List<string> Calls { get; } = [];
+        public Task<string?> ProbeFormatAsync(string path, CancellationToken ct)
+        { Calls.Add(path); return Task.FromResult(format); }
+        public Task<ArchivePasswordProbe> ProbePasswordAsync(string entry, IReadOnlyList<string?> candidates,
+            Action<string>? output, CancellationToken ct) => throw new AssertFailedException("Detection must not test a password.");
+        public Task<ArchiveExtractionResult> ExtractAsync(ArchiveExtractionRequest request, Action<int>? progress,
+            CancellationToken ct) => throw new AssertFailedException("Detection must not extract files.");
     }
 }

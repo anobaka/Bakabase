@@ -16,7 +16,7 @@ import TaskFilePlanDecision from "./TaskFilePlanDecision";
 import ResumeActions from "../../ResumeActions";
 import { WorkflowActivityCategory } from "@/sdk/constants";
 import ReusePolicyField, { isReusePolicy, type ReusePolicy } from "./ReusePolicy";
-import { ResumeGuidance, ResumeProblem, ResumePostSourceContext, useResumeActivityKind } from "../../ResumePresentation";
+import { ResumeGuidance, ResumePostSourceContext, useResumeActivityKind } from "../../ResumePresentation";
 import ProcessingPlanField, { isCompleteProcessingPlan } from "../../ProcessingPlanField";
 import ExtractionLayoutField from "../../ExtractionLayoutField";
 import { isExtractionLayout, type ExtractionLayout } from "../../extractionLayout";
@@ -253,6 +253,12 @@ const ResumeForm: NonNullable<WorkflowActivityUI<ProcessingConfig>["ResumeForm"]
   const guidancePrefix = ["FILE_DELIVERY_ARCHIVE_REVIEW_REQUIRED", "FILE_DELIVERY_RESULT_UNCERTAIN"].includes(reason ?? "")
     ? "cloudDownload.resumeGuide.archiveDelivery"
     : recoveryGuidance || reason === "ExtractionLayoutConflict" ? `workflow.fileRecovery.${reason}` : `cloudDownload.resumeGuide.${guide}`;
+  const problemSummary = t(needsPassword ? "workflow.metadata.warning.PasswordUnknown"
+    : assessmentDiagnostic ? `cloudDownload.problemCode.${assessmentDiagnostic}` : `${guidancePrefix}.why`);
+  // A failed archive probe is executor diagnostics even when AI proposed the step.
+  const diagnosticMessage = assessmentExplanation ?? (!pathConflict && !assessmentDiagnostic &&
+    typeof prompt.message === "string" && prompt.message.trim() && prompt.message !== prompt.reason
+      ? prompt.message : undefined);
   const requiredComponentId = reason === "DEPENDENCY_REQUIRED" ? (() => {
     if (typeof prompt.requiredComponentId === "string" && prompt.requiredComponentId.trim())
       return prompt.requiredComponentId;
@@ -266,15 +272,15 @@ const ResumeForm: NonNullable<WorkflowActivityUI<ProcessingConfig>["ResumeForm"]
   })() : undefined;
   return (
     <div className={fileTask ? "min-w-0 space-y-3" : "min-w-0 space-y-5"}>
-      {assessmentExplanation ? <ProcessingProblemSummary message={assessmentExplanation}
-        summary={t(`${guidancePrefix}.why`)} /> : fileTask ? (
+      {diagnosticMessage ? <ProcessingProblemSummary message={diagnosticMessage}
+        reason={assessmentDiagnostic || reason} summary={problemSummary} /> : fileTask ? (
         reason !== "ExtractionPlanUnknown" && (
           <p className="break-words text-sm text-warning-700">
-            {t(needsPassword ? "acquisition.adaptive.reason.ADAPTIVE_MIGRATION_PASSWORD_REQUIRED" : assessmentDiagnostic ? `cloudDownload.problemCode.${assessmentDiagnostic}` : `${guidancePrefix}.why`)}
+            {problemSummary}
           </p>
         )
       ) : <ResumeGuidance
-        why={t(assessmentDiagnostic ? `cloudDownload.problemCode.${assessmentDiagnostic}` : `${guidancePrefix}.why`)}
+        why={problemSummary}
         action={t(`${guidancePrefix}.action`)}
         next={t(`${guidancePrefix}.next`)}
       />}
@@ -290,12 +296,6 @@ const ResumeForm: NonNullable<WorkflowActivityUI<ProcessingConfig>["ResumeForm"]
       )}
       {prompt.canEditPlan === false && !needsPassword && !retryCurrentStep && (
         <p className="text-sm text-warning-600">{t("acquisition.plan.lockedPlan")}</p>
-      )}
-      {!fileTask && prompt.message && !pathConflict && !assessmentDiagnostic && !assessmentExplanation && (
-        <ResumeProblem
-          problem={prompt.message}
-          fallback={t(`${guidancePrefix}.why`)}
-        />
       )}
       {!fileTask && prompt.adaptiveAssessment && (
         <Textarea

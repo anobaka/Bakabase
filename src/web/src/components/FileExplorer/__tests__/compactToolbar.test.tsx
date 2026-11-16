@@ -81,6 +81,7 @@ vi.mock("@/core/models/FileExplorer/RootEntry", () => ({
     patchFilter(filter: { keyword?: string }) {
       this.filter = { ...this.filter, ...filter };
     }
+    updateIndependentObservation() { return true; }
     async dispose() {}
   },
 }));
@@ -618,4 +619,21 @@ describe("compact file processor toolbar", () => {
     await waitFor(() => expect(onSelected).toHaveBeenLastCalledWith([]));
     expect(screen.queryByRole("button", { name: "fileExplorer.selection.clear" })).toBeNull();
   });
+});
+
+it("preserves the loaded root when task permissions enable polling, and clears selection when editing is revoked", async () => {
+  const initialized = vi.fn(), onSelected = vi.fn();
+  const props = { rootPath: "/files", keyboard: false, capabilities: ["enter-directory"] as any, onInitialized: initialized, onSelected };
+  const view = render(<FileExplorer {...props} watchChanges={false} selectable="disabled" />);
+  await screen.findByRole("button", { name: "row alpha" });
+  await waitFor(() => expect(initialized).toHaveBeenCalledOnce());
+  expect(checkPath).toHaveBeenCalledOnce();
+  view.rerender(<FileExplorer {...props} watchChanges="poll" selectable="multiple" />);
+  fireEvent.click(screen.getByRole("button", { name: "row alpha" }));
+  await waitFor(() => expect(onSelected).toHaveBeenLastCalledWith([expect.objectContaining({ name: "alpha" })]));
+  expect(checkPath).toHaveBeenCalledOnce(); expect(initialized).toHaveBeenCalledOnce();
+  view.rerender(<FileExplorer {...props} watchChanges={false} selectable="disabled" />);
+  await waitFor(() => expect(select).toHaveBeenLastCalledWith(false));
+  expect(onSelected).toHaveBeenLastCalledWith([]);
+  expect(checkPath).toHaveBeenCalledOnce(); expect(initialized).toHaveBeenCalledOnce();
 });

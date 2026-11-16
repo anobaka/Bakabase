@@ -34,6 +34,33 @@ internal static class ArtifactAcquisitionAllocationReferences
         catch (Exception e) when (Invalid(e)) { return new HashSet<JsonElement>(); }
     }
 
+    internal static IReadOnlySet<JsonElement> OwnedProcessingValues(JsonElement document, string? planJson,
+        int taskId, ArtifactDirectoryScope expected, CancellationToken ct)
+    {
+        try
+        {
+            using var planDocument = JsonDocument.Parse(planJson ?? "null");
+            var plan = ReadPlan(planDocument.RootElement, ct);
+            if (plan == null || !Unique(document, ct) ||
+                Property(document, "stageDirectories") is not {ValueKind: JsonValueKind.Object} raw) return new HashSet<JsonElement>();
+            var stages = JsonSerializer.Deserialize<AcquisitionStageDirectories>(raw.GetRawText(), Strict);
+            if (stages == null || stages.TaskId != taskId) return new HashSet<JsonElement>();
+            AcquisitionStageDirectoryResolver.Validate(stages, plan);
+            var parts = Property(raw, "parts")!.Value;
+            var values = new HashSet<JsonElement>();
+            foreach (var (partId, directories) in stages.Parts)
+            {
+                if (directories.Processing is not {Ownership: "exclusive", Evidence: "taskAllocation", Allocation: { } allocation} ||
+                    allocation != expected || plan.StageDirectories?.Parts.GetValueOrDefault(partId)?.Processing != directories.Processing) continue;
+                var entry = Property(Property(parts, partId)!.Value, "processing")!.Value;
+                values.Add(Property(entry, "directory")!.Value);
+                values.Add(Property(Property(entry, "allocation")!.Value, "directory")!.Value);
+            }
+            return values;
+        }
+        catch (Exception error) when (Invalid(error)) { return new HashSet<JsonElement>(); }
+    }
+
     // A validated layout allocates sibling task directories below its root. Its concrete
     // task/part destinations still claim files, and unknown layout members never acquire
     // allocation semantics merely by being named rootDirectory.

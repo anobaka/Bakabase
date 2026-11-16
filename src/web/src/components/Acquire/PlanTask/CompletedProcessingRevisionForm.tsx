@@ -14,6 +14,7 @@ import CompletedDeliveryLayoutRevision, {
 } from "./CompletedDeliveryLayoutRevision";
 import RevisionPlacementDialog from "./RevisionPlacementDialog";
 import { AcquisitionStatus } from "@/sdk/constants";
+import type { AcquisitionStage } from "./AcquisitionExecutionTimeline";
 
 type ProcessingRevisionMode = "completed" | "stopped";
 
@@ -119,13 +120,35 @@ function hasProcessingInputs(detail: PlanTaskDetail, mode: ProcessingRevisionMod
 }
 
 export function hasCompletedProcessingInputs(detail: PlanTaskDetail): boolean {
-  return hasProcessingInputs(detail, "completed");
+  return hasStageDirectoryInputs(detail, "processing") || hasProcessingInputs(detail, "completed");
+}
+
+export function hasStageDirectoryInputs(detail: PlanTaskDetail, stage: AcquisitionStage): boolean {
+  const parts = detail.plan?.parts ?? [];
+  return detail.stageDirectories?.taskId === detail.task.id && parts.length > 0 &&
+    parts.every(part => !!detail.stageDirectories?.parts[part.id]?.[stage]?.directory);
+}
+
+function currentProcessingInputStage(
+  detail: PlanTaskDetail,
+  partId: string,
+  requestedStage: AcquisitionStage,
+): AcquisitionStage {
+  if (requestedStage !== "processing" || detail.task.status === AcquisitionStatus.Completed ||
+      detail.stageDirectories?.taskId !== detail.task.id) return requestedStage;
+  const directories = detail.stageDirectories.parts[partId];
+  // First processing starts from its completed download. Once a processing
+  // directory is bound, never fall back to an older download if it becomes unavailable.
+  if (directories?.processing || !directories?.download?.directory) return requestedStage;
+  return detail.replanArtifacts.some(item => item.partId === partId && item.kind === "download" &&
+    item.canReadCurrentDirectory === true && item.rootDirectory === directories.download!.directory)
+    ? "download" : requestedStage;
 }
 
 /** Server-projected ownership/readability is authoritative, not a wait reason or old AI flag. */
 export function hasReadableCurrentDirectoryInputs(detail: PlanTaskDetail): boolean {
   const parts = detail.plan?.parts ?? [];
-  return parts.length > 0 && parts.every(part => (detail.replanArtifacts ?? []).some(item =>
+  return hasStageDirectoryInputs(detail, "processing") || parts.length > 0 && parts.every(part => (detail.replanArtifacts ?? []).some(item =>
     item.partId === part.id && inputKinds("stopped").includes(item.kind) && canReadCurrentDirectory(item)));
 }
 
@@ -146,7 +169,7 @@ export function hasStoppedProcessingInputs(
       [AcquisitionStatus.Failed, AcquisitionStatus.Cancelled].includes(detail.task.status)) &&
     (publicationWaiting
       ? hasPublicationStorageInputs(detail)
-      : hasProcessingInputs(detail, "stopped"))
+      : hasStageDirectoryInputs(detail, "processing") || hasProcessingInputs(detail, "stopped"))
   );
 }
 
@@ -164,6 +187,7 @@ export default function CompletedProcessingRevisionForm({
   waitingLocalProcessing,
   waitingPublicationStorage,
   preferAi = false,
+  inputStage,
 }: {
   detail: PlanTaskDetail;
   currentDeliveryRoot?: string | null;
@@ -175,6 +199,8 @@ export default function CompletedProcessingRevisionForm({
   retryStage?: "processing" | "delivery";
   /** Explicitly chosen re-analysis from a saved checkpoint; delivery keeps its exact contract. */
   preferAi?: boolean;
+  /** The clicked stage, resolved against current task bindings by the server, not old artifacts. */
+  inputStage?: AcquisitionStage;
   /** Supplied only by the owning task after matching its current processing-conflict runtime. */
   waitingPathConflict?: WaitingPathConflictRevision;
   /** Supplied for a stopped processing or assessment node with a current artifact. */
@@ -198,6 +224,9 @@ export default function CompletedProcessingRevisionForm({
     : "acquisition.plan.continueCompleted";
   const [deliveryLayoutOnly, setDeliveryLayoutOnly] = useState(false);
   const parts = snapshot.plan?.parts ?? [];
+  const partInputStage = (partId: string) => inputStage && currentProcessingInputStage(snapshot, partId, inputStage);
+  const stageDirectory = (partId: string) => inputStage && snapshot.stageDirectories?.taskId === snapshot.task.id
+    ? snapshot.stageDirectories.parts[partId]?.[partInputStage(partId)!]?.directory : undefined;
   const [drafts, setDrafts] = useState<Record<string, PartDraft>>(() => {
     const reviewed =
       retryStage === "processing" && !publicationStorage
@@ -249,6 +278,7 @@ export default function CompletedProcessingRevisionForm({
     snapshot.plan?.adaptiveFileProcessingContext ?? "",
   );
   const canCombine =
+    !inputStage &&
     !deliveryOnly &&
     snapshot.task.status !== AcquisitionStatus.Waiting &&
     parts.length >= 2 &&
@@ -289,7 +319,7 @@ export default function CompletedProcessingRevisionForm({
     parts.length > 0 &&
     parts.every((part) => drafts[part.id]?.choice === "defer");
   const valid =
-    (deliveryOnly
+    (inputStage ? parts.length > 0 && parts.every(part => !!stageDirectory(part.id)) : deliveryOnly
       ? snapshot.task.workflowRunId === detail.task.workflowRunId &&
         parts.length > 0 &&
         parts.every((part) =>
@@ -311,9 +341,9 @@ export default function CompletedProcessingRevisionForm({
       const draft = drafts[part.id];
       return (
         draft &&
-        candidates(part.id).some((item) => item.artifactId === draft.artifactId) &&
-        (deliveryOnly || combineInputs ||
-          canReadCurrentDirectory(candidates(part.id).find(item => item.artifactId === draft.artifactId))) &&
+        (inputStage ? !!stageDirectory(part.id) :
+          candidates(part.id).some((item) => item.artifactId === draft.artifactId) &&
+          (deliveryOnly || combineInputs || canReadCurrentDirectory(candidates(part.id).find(item => item.artifactId === draft.artifactId)))) &&
         (combineInputs ||
           (!!draft.choice &&
             (draft.choice !== "manual" || completeInstructions(draft.instructions))))
@@ -375,7 +405,7 @@ export default function CompletedProcessingRevisionForm({
           </span>
         </Checkbox>
       )}
-      <RevisionPlacementDialog
+      {!inputStage && <RevisionPlacementDialog
         detail={snapshot} currentRoot={currentDeliveryRoot} disabled={saving}
         useCurrent={useCurrentStorageDefaults} override={deliveryRootDirectory}
         forceCurrent={publicationStorage || combineInputs} showRoots={!stopped}
@@ -383,16 +413,16 @@ export default function CompletedProcessingRevisionForm({
           setUseCurrentStorageDefaults(useCurrent);
           setDeliveryRootDirectory(override);
         }}
-      />
+      />}
       {parts.map((part) => (
         <section
           key={part.id}
           aria-label={part.title || part.id}
           className="min-w-0 space-y-2 rounded-lg border border-default-200 p-3"
         >
-          <h4 className="text-sm font-medium">{part.title || part.id}</h4>
+          {(!inDialog || parts.length > 1) && <h4 className="text-sm font-medium">{part.title || part.id}</h4>}
           {combineInputs && <p className="text-xs text-default-500">{part.id}</p>}
-          <Select
+          {!inputStage && <Select
             popoverProps={popoverProps}
             labelPlacement="outside"
             classNames={{ base: "min-w-0 max-w-full", trigger: "min-h-10 h-auto py-2", innerWrapper: "min-w-0", value: "!whitespace-normal break-all text-left !overflow-visible" }}
@@ -409,14 +439,18 @@ export default function CompletedProcessingRevisionForm({
             onSelectionChange={(keys) =>
               update(part.id, { artifactId: String(Array.from(keys)[0] ?? "") })
             }
-          />
-          {!deliveryOnly && !combineInputs && drafts[part.id].artifactId && <>
+          />}
+          {inputStage && stageDirectory(part.id) && snapshot.task.workflowRunId && <ProcessingDirectoryFiles
+            key={`${part.id}:${partInputStage(part.id)}:${stageDirectory(part.id)}`}
+            taskContext={{ taskId: snapshot.task.id, runId: snapshot.task.workflowRunId }} path={stageDirectory(part.id)!} />}
+          {inputStage && !stageDirectory(part.id) && <p role="alert" className="text-sm text-warning-700">{t("acquisition.directories.noStageInput")}</p>}
+          {!inputStage && !deliveryOnly && !combineInputs && drafts[part.id].artifactId && <>
             <p className="text-xs text-default-500">{t("acquisition.processingInput.currentDirectoryHint")}</p>
             {!canReadCurrentDirectory(candidates(part.id).find(item => item.artifactId === drafts[part.id].artifactId)) && (
               <p role="alert" className="text-sm text-warning-600">{t("acquisition.processingInput.currentDirectoryUnavailable")}</p>
             )}
           </>}
-          {retryStage === "processing" && snapshot.task.workflowRunId && drafts[part.id].artifactId &&
+          {!inputStage && retryStage === "processing" && snapshot.task.workflowRunId && drafts[part.id].artifactId &&
             candidates(part.id).some(item => item.artifactId === drafts[part.id].artifactId) && (
               !combineInputs ?
                 canReadCurrentDirectory(candidates(part.id).find(item => item.artifactId === drafts[part.id].artifactId)) &&
@@ -426,7 +460,7 @@ export default function CompletedProcessingRevisionForm({
                 <ProcessingFileList key={drafts[part.id].artifactId}
                   runId={snapshot.task.workflowRunId} artifactId={drafts[part.id].artifactId} />
             )}
-          {!candidates(part.id).length && (
+          {!inputStage && !candidates(part.id).length && (
             <p role="status" className="text-xs text-warning-600">
               {t("acquisition.plan.replan.noEvidence")}
             </p>
@@ -450,7 +484,7 @@ export default function CompletedProcessingRevisionForm({
                   stepsOnly
                   value={drafts[part.id].instructions}
                   inputRootDirectory={
-                    candidates(part.id).find(
+                    stageDirectory(part.id) ?? candidates(part.id).find(
                       (item) => item.artifactId === drafts[part.id].artifactId,
                     )?.rootDirectory
                   }
@@ -525,7 +559,7 @@ export default function CompletedProcessingRevisionForm({
       )}
       {error && (
         <p role="alert" className="text-sm text-danger">
-          {t(`acquisition.plan.replan.error.${error}`, {
+          {t(`${error.startsWith("STAGE_DIRECTORY_") ? "acquisition.directories.error" : "acquisition.plan.replan.error"}.${error}`, {
             defaultValue: t("acquisition.plan.actionFailed"),
           })}
         </p>
@@ -553,7 +587,7 @@ export default function CompletedProcessingRevisionForm({
                 ),
                 ...(deliveryOnly ? { retryDeliveryOnly: true } : {}),
                 ...(deliveryRootDirectory ? { deliveryRootDirectory } : {}),
-                ...(publicationStorage || combineInputs || useCurrentStorageDefaults
+                ...(!inputStage && (publicationStorage || combineInputs || useCurrentStorageDefaults)
                   ? { useCurrentStorageDefaults: true }
                   : {}),
                 ...(combineInputs
@@ -590,18 +624,20 @@ export default function CompletedProcessingRevisionForm({
                       ...(!deliveryOnly
                         ? { useAdaptiveAssessment: drafts[part.id].choice === "ai" }
                         : {}),
-                      artifactEvidenceIds: [drafts[part.id].artifactId],
-                      continueFromArtifactId: drafts[part.id].artifactId,
-                      ...(!deliveryOnly ? { inputMode: "currentDirectory" } : {}),
+                      ...(inputStage ? { artifactEvidenceIds: [], inputMode: "stageDirectory", inputStage: partInputStage(part.id) } : {
+                        artifactEvidenceIds: [drafts[part.id].artifactId],
+                        continueFromArtifactId: drafts[part.id].artifactId,
+                        ...(!deliveryOnly ? { inputMode: "currentDirectory" } : {}),
+                      }),
                     })),
               })
               .then(onSaved)
               .catch((cause: unknown) => {
                 const code = cause instanceof Error ? cause.message : "";
                 setError(
-                  /^PLAN_(REPLAN_(INVALID|NOT_STOPPED|EVIDENCE_INVALID|EVIDENCE_UNAVAILABLE|DELIVERY_CONFLICT)|CURRENT_DIRECTORY_(UNAVAILABLE|SHARED|CHANGED|TOO_LARGE|EMPTY|MODE_INVALID)|COMPOSITE_(INPUT_INVALID|ROOT_INVALID|PATH_CONFLICT)|VERSION_CONFLICT)$/.test(
+                  /^PLAN_(STAGE_DIRECTORY_(INVALID|UNAVAILABLE|ALIGNMENT_REQUIRED)|REPLAN_(INVALID|NOT_STOPPED|EVIDENCE_INVALID|EVIDENCE_UNAVAILABLE|DELIVERY_CONFLICT)|CURRENT_DIRECTORY_(UNAVAILABLE|SHARED|CHANGED|TOO_LARGE|EMPTY|MODE_INVALID)|COMPOSITE_(INPUT_INVALID|ROOT_INVALID|PATH_CONFLICT)|VERSION_CONFLICT)$/.test(
                     code,
-                  )
+                  ) || code.startsWith("STAGE_DIRECTORY_")
                     ? code
                     : "unknown",
                 );

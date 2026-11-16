@@ -3,11 +3,30 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Bakabase.InsideWorld.Business.Components.Artifacts;
+using Bakabase.InsideWorld.Business.Components.Compression;
 
 namespace Bakabase.Service.Components.FileProcessing;
 
 public sealed partial class FileProcessingPlanExecutor
 {
+    // Resolve companions from this step's registered inputs, using logical relative paths
+    // so separate upstream nodes can supply different physical directories. Never enumerate
+    // a parent directory: filename membership alone does not authorize unrelated disk files.
+    private static List<Artifact> ExpandAuthorizedArchiveSelection(IReadOnlyList<Artifact> supplied,
+        IReadOnlyList<Artifact> selected)
+    {
+        var wanted = selected.Select(file => file.RelativePath).ToHashSet(FileProcessingFiles.PathComparer);
+        var paths = supplied.Select(file => file.RelativePath).ToArray();
+        var sfx = CompressedFileHelper.DetectSfxMultipartCandidates(paths);
+        var sfxPaths = sfx.SelectMany(candidate => candidate.Files).ToHashSet(FileProcessingFiles.PathComparer);
+        foreach (var candidate in sfx.Where(candidate => candidate.Files.Any(wanted.Contains)))
+            wanted.UnionWith(candidate.Files);
+        foreach (var group in CompressedFileHelper.DetectCompressedFileGroups(
+                     paths.Where(path => !sfxPaths.Contains(path)).ToArray(), inspectFileSizes: false))
+            if (group.Files.Count > 1 && group.Files.Any(wanted.Contains)) wanted.UnionWith(group.Files);
+        return supplied.Where(file => wanted.Contains(file.RelativePath)).ToList();
+    }
+
     private static FileProcessingPlanResult ArchiveGroupChanged(State state, string stepId) =>
         new(false, state.Active.Select(a => a.Path).ToArray(), null,
             "The archive group's saved input identity cannot be reconciled with this step. Files and completed work were retained. Revise the processing plan from a verified artifact before continuing.",

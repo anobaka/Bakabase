@@ -54,6 +54,7 @@ import enWorkflowProcessingEditor from "@/locales/en/pages/workflowProcessingEdi
 import enWorkflowTriggers from "@/locales/en/pages/workflowTriggers.json";
 import enAcquisition from "@/locales/en/pages/acquisition.json";
 import enAcquisitionRecords from "@/locales/en/pages/acquisitionRecords.json";
+import enAcquisitionDirectories from "@/locales/en/pages/acquisitionDirectories.json";
 import enCollection from "@/locales/en/pages/collection.json";
 import enCollectionMemo from "@/locales/en/pages/collectionMemo.json";
 import enFederation from "@/locales/en/pages/federation.json";
@@ -144,6 +145,7 @@ import cnWorkflowProcessingEditor from "@/locales/cn/pages/workflowProcessingEdi
 import cnWorkflowTriggers from "@/locales/cn/pages/workflowTriggers.json";
 import cnAcquisition from "@/locales/cn/pages/acquisition.json";
 import cnAcquisitionRecords from "@/locales/cn/pages/acquisitionRecords.json";
+import cnAcquisitionDirectories from "@/locales/cn/pages/acquisitionDirectories.json";
 import cnCollection from "@/locales/cn/pages/collection.json";
 import cnCollectionMemo from "@/locales/cn/pages/collectionMemo.json";
 import cnFederation from "@/locales/cn/pages/federation.json";
@@ -234,6 +236,7 @@ const enResources = {
   ...enWorkflowTriggers,
   ...enAcquisition,
   ...enAcquisitionRecords,
+  ...enAcquisitionDirectories,
   ...enCollection,
   ...enCollectionMemo,
   ...enFederation,
@@ -324,6 +327,7 @@ const cnResources = {
   ...cnWorkflowTriggers,
   ...cnAcquisition,
   ...cnAcquisitionRecords,
+  ...cnAcquisitionDirectories,
   ...cnCollection,
   ...cnCollectionMemo,
   ...cnFederation,

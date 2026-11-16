@@ -67,7 +67,19 @@ public static class FileProcessingFiles
     /// <summary>Checks detectable gaps. Unknown final volume counts still need a human completion signal.</summary>
     public static void ValidateVolumes(IEnumerable<string> files, bool inspectSiblingDownloads = true)
     {
-        foreach (var group in CompressedFileHelper.DetectCompressedFileGroups(files.ToArray(), true))
+        var exactFiles = files.ToArray();
+        var sfx = CompressedFileHelper.DetectSfxMultipartCandidates(exactFiles);
+        foreach (var candidate in sfx)
+        {
+            if (!candidate.IsComplete || candidate.IsAmbiguous)
+                throw new InvalidOperationException("The self-extracting archive volume set has missing or ambiguous parts.");
+            if (inspectSiblingDownloads && Directory.EnumerateFiles(Path.GetDirectoryName(candidate.EntryFile)!)
+                    .Any(file => Path.GetFileName(file).StartsWith(candidate.KeyName + ".part", StringComparison.OrdinalIgnoreCase) &&
+                                 UnfinishedArchiveSuffixes.Contains(Path.GetExtension(file), StringComparer.OrdinalIgnoreCase)))
+                throw new InvalidOperationException("An archive part is still downloading.");
+        }
+        var sfxFiles = sfx.SelectMany(candidate => candidate.Files).ToHashSet(PathComparer);
+        foreach (var group in CompressedFileHelper.DetectCompressedFileGroups(exactFiles.Where(file => !sfxFiles.Contains(file)).ToArray(), true))
         {
             var numbered = group.Files.Select(f => Regex.Match(Path.GetFileName(f),
                     @"(?:\.part(?<part>\d+)\.[^.]+|\.(?<family>[rz])(?<legacy>\d{2,})|\.(?<number>\d{3,}))$",
@@ -75,9 +87,8 @@ public static class FileProcessingFiles
             if (numbered.Count == 0) continue;
             var first = group.Files[0];
             var stem = Regex.Replace(Path.GetFileName(first), @"(?:\.part\d+\.[^.]+|\.[rz]\d{2,}|\.\d{3,})$", "", RegexOptions.IgnoreCase);
-            var unfinished = new[] {".crdownload", ".part", ".partial", ".download", ".tmp", ".!qb", ".aria2"};
             if (inspectSiblingDownloads && Directory.EnumerateFiles(Path.GetDirectoryName(first)!, stem + "*").Any(f =>
-                    unfinished.Contains(Path.GetExtension(f), StringComparer.OrdinalIgnoreCase)))
+                    UnfinishedArchiveSuffixes.Contains(Path.GetExtension(f), StringComparer.OrdinalIgnoreCase)))
                 throw new InvalidOperationException("An archive part is still downloading.");
             var indices = numbered.Select(m => int.Parse(m.Groups["part"].Success ? m.Groups["part"].Value :
                 m.Groups["legacy"].Success ? m.Groups["legacy"].Value : m.Groups["number"].Value)).Order().ToArray();
@@ -95,4 +106,6 @@ public static class FileProcessingFiles
                 throw new InvalidOperationException("The first archive file of a volume set is missing.");
         }
     }
+
+    private static readonly string[] UnfinishedArchiveSuffixes = [".crdownload", ".part", ".partial", ".download", ".tmp", ".!qb", ".aria2"];
 }

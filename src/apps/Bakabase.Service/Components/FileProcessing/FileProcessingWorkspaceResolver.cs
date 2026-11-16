@@ -22,6 +22,7 @@ public sealed partial class FileProcessingWorkspaceResolver(string appData, IUse
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
     private static readonly SemaphoreSlim Gate = new(1, 1);
     private string MetadataRoot => AppDataStorage.ArtifactWorkspaces.GetPath(appData);
+    internal string StageCommitMetadataDirectory => Path.Combine(MetadataRoot, "stage-commits");
     public sealed record Location(int Version, string Kind, string Key, int Attempt, string Directory, string StorageRoot);
     public sealed record Relocation(string SourceRoot, string DestinationRoot);
     public sealed record Relocations(int Version, IReadOnlyList<Relocation> Mappings);

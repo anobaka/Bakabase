@@ -292,6 +292,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/acquisition/tasks/{taskId}/runs/{runId}/assessment-io/text": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetAcquisitionAssessmentText"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/acquisition/tasks/recovery/continuations/preview": {
         parameters: {
             query?: never;
@@ -1054,6 +1070,54 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["ApplyAcquisitionSourceRevision"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/acquisition/plans/{id}/directories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetAcquisitionStageDirectories"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/acquisition/plans/{id}/directories/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PreviewAcquisitionStageDirectoryChange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/acquisition/plans/{id}/directories/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ApplyAcquisitionStageDirectoryChange"];
         delete?: never;
         options?: never;
         head?: never;
@@ -16440,6 +16504,7 @@ export interface components {
             directory: string;
             ownership: string;
             evidence: string;
+            bindingId?: string;
             allocation?: components["schemas"]["Bakabase.Modules.Workflow.Artifacts.ArtifactDirectoryScope"];
         };
         "Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionTask": {
@@ -19128,9 +19193,28 @@ export interface components {
             outputPreview?: string;
             outputTruncated: boolean;
             validationError?: string;
+            callId?: string;
+            inputAvailability: string;
+            outputAvailability: string;
+            inputRedacted: boolean;
+            outputRedacted: boolean;
+            inputTextAvailable: boolean;
+            outputTextAvailable: boolean;
         };
         "Bakabase.Service.Components.Acquisition.Planning.AcquisitionAssessmentIoView": {
             calls: components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionAssessmentCallView"][];
+        };
+        "Bakabase.Service.Components.Acquisition.Planning.AcquisitionAssessmentTextPage": {
+            text: string;
+            /** Format: int32 */
+            offset: number;
+            /** Format: int32 */
+            nextOffset?: number;
+            /** Format: int32 */
+            totalCharacters: number;
+            contentId: string;
+            availability: string;
+            redacted: boolean;
         };
         "Bakabase.Service.Components.Acquisition.Planning.AcquisitionContinuation": {
             batchId: string;
@@ -19498,6 +19582,7 @@ export interface components {
             expectedDeliveryProjectionFingerprint?: string;
             useAdaptiveAssessment?: boolean;
             inputMode?: string;
+            inputStage?: string;
         };
         "Bakabase.Service.Components.Acquisition.Planning.AcquisitionPlanReplanInput": {
             /** Format: int32 */
@@ -19844,6 +19929,68 @@ export interface components {
             outputsTruncated: boolean;
             legacy: boolean;
             hasAssessmentCalls: boolean;
+        };
+        "Bakabase.Service.Components.Acquisition.Planning.AcquisitionStageDirectoryChangeInput": {
+            /** Format: int32 */
+            expectedRevision: number;
+            parts: components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionStageDirectoryPartChange"][];
+        };
+        "Bakabase.Service.Components.Acquisition.Planning.AcquisitionStageDirectoryChangeItem": {
+            partId: string;
+            stage: string;
+            sourceDirectory?: string;
+            directory: string;
+            moveFiles: boolean;
+            changed: boolean;
+            /** Format: int64 */
+            fileCount: number;
+            /** Format: int64 */
+            totalBytes: number;
+            eligible: boolean;
+            code?: string;
+        };
+        "Bakabase.Service.Components.Acquisition.Planning.AcquisitionStageDirectoryChangePreview": {
+            /** Format: int32 */
+            taskId: number;
+            /** Format: int32 */
+            expectedRevision: number;
+            changes: components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionStageDirectoryChangeItem"][];
+            canApply: boolean;
+        };
+        "Bakabase.Service.Components.Acquisition.Planning.AcquisitionStageDirectoryChangeResult": {
+            /** Format: int32 */
+            taskId: number;
+            /** Format: int32 */
+            revision: number;
+            directories: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionStageDirectories"];
+            changes: components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionStageDirectoryChangeItem"][];
+        };
+        "Bakabase.Service.Components.Acquisition.Planning.AcquisitionStageDirectoryChoice": {
+            directory: string;
+            moveFiles: boolean;
+        };
+        "Bakabase.Service.Components.Acquisition.Planning.AcquisitionStageDirectoryPartChange": {
+            partId: string;
+            download?: components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionStageDirectoryChoice"];
+            processing?: components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionStageDirectoryChoice"];
+            delivery?: components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionStageDirectoryChoice"];
+        };
+        "Bakabase.Service.Components.Acquisition.Planning.AcquisitionStageDirectoryPartSnapshot": {
+            partId: string;
+            title?: string;
+            downloadDirectory?: string;
+            processingDirectory?: string;
+            deliveryDirectory?: string;
+        };
+        "Bakabase.Service.Components.Acquisition.Planning.AcquisitionStageDirectorySnapshot": {
+            /** Format: int32 */
+            taskId: number;
+            /** Format: int32 */
+            expectedRevision: number;
+            parts: components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionStageDirectoryPartSnapshot"][];
+            canChange: boolean;
+            blockers: string[];
+            pendingChange?: components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionStageDirectoryChangeInput"];
         };
         "Bakabase.Service.Components.Acquisition.Planning.AcquisitionStorageOverrideApplyInput": {
             token: string;
@@ -24138,6 +24285,12 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionAssessmentIoView"];
         };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.Planning.AcquisitionAssessmentTextPage]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionAssessmentTextPage"];
+        };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.Planning.AcquisitionContinuationPreview]": {
             /** Format: int32 */
             code: number;
@@ -24239,6 +24392,24 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionSourceRevisionResult"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.Planning.AcquisitionStageDirectoryChangePreview]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionStageDirectoryChangePreview"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.Planning.AcquisitionStageDirectoryChangeResult]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionStageDirectoryChangeResult"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.Planning.AcquisitionStageDirectorySnapshot]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionStageDirectorySnapshot"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.Planning.AcquisitionStorageOverridePreview]": {
             /** Format: int32 */
@@ -25920,6 +26091,38 @@ export interface operations {
             };
         };
     };
+    GetAcquisitionAssessmentText: {
+        parameters: {
+            query?: {
+                attemptId?: string;
+                callId?: string;
+                direction?: string;
+                offset?: number;
+                length?: number;
+                contentId?: string;
+            };
+            header?: never;
+            path: {
+                taskId: number;
+                runId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.Planning.AcquisitionAssessmentTextPage]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.Planning.AcquisitionAssessmentTextPage]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.Planning.AcquisitionAssessmentTextPage]"];
+                };
+            };
+        };
+    };
     PreviewAcquisitionContinuation: {
         parameters: {
             query?: never;
@@ -27323,6 +27526,92 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.Planning.AcquisitionSourceRevisionResult]"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.Planning.AcquisitionSourceRevisionResult]"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.Planning.AcquisitionSourceRevisionResult]"];
+                };
+            };
+        };
+    };
+    GetAcquisitionStageDirectories: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.Planning.AcquisitionStageDirectorySnapshot]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.Planning.AcquisitionStageDirectorySnapshot]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.Planning.AcquisitionStageDirectorySnapshot]"];
+                };
+            };
+        };
+    };
+    PreviewAcquisitionStageDirectoryChange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionStageDirectoryChangeInput"];
+                "application/json": components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionStageDirectoryChangeInput"];
+                "text/json": components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionStageDirectoryChangeInput"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionStageDirectoryChangeInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.Planning.AcquisitionStageDirectoryChangePreview]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.Planning.AcquisitionStageDirectoryChangePreview]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.Planning.AcquisitionStageDirectoryChangePreview]"];
+                };
+            };
+        };
+    };
+    ApplyAcquisitionStageDirectoryChange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionStageDirectoryChangeInput"];
+                "application/json": components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionStageDirectoryChangeInput"];
+                "text/json": components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionStageDirectoryChangeInput"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionStageDirectoryChangeInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.Planning.AcquisitionStageDirectoryChangeResult]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.Planning.AcquisitionStageDirectoryChangeResult]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.Planning.AcquisitionStageDirectoryChangeResult]"];
                 };
             };
         };

@@ -27,16 +27,42 @@ internal static class ArtifactCleanupAbsence
             _ = Directory.EnumerateFileSystemEntries(root).Take(1).ToArray();
             try { _ = attributes(path); return ArtifactCleanupPathPresence.Present; }
             catch (Exception error) when (error is FileNotFoundException or DirectoryNotFoundException) { }
-            if (!ArtifactManifestFiles.IsMissingFileConfirmed(root, path, ct)) return ArtifactCleanupPathPresence.Unavailable;
+            if (!MissingWithinReadableRoot(root, path, ct)) return ArtifactCleanupPathPresence.Unavailable;
             // A path that reappeared, a changed link or a detached parent cannot complete a no-op.
             ArtifactManifestFiles.RejectLinks(path);
             try { _ = attributes(path); return ArtifactCleanupPathPresence.Present; }
             catch (Exception error) when (error is FileNotFoundException or DirectoryNotFoundException) { }
-            return ArtifactManifestFiles.IsMissingFileConfirmed(root, path, ct)
+            return MissingWithinReadableRoot(root, path, ct)
                 ? ArtifactCleanupPathPresence.ConfirmedAbsent : ArtifactCleanupPathPresence.Unavailable;
         }
         catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException or ArgumentException)
         { return ArtifactCleanupPathPresence.Unavailable; }
+    }
+
+    private static bool MissingWithinReadableRoot(string root, string path, CancellationToken ct)
+    {
+        var boundary = Path.TrimEndingDirectorySeparator(Path.GetFullPath(root));
+        var missing = Path.GetFullPath(path);
+        // A successful cleanup may remove several empty descendants. Prove the first
+        // missing entry below an accessible parent, without ever climbing above the
+        // registered root. A detached root, link, file-as-parent or IO error is not absence.
+        while (Path.GetDirectoryName(missing) is { } parent)
+        {
+            ct.ThrowIfCancellationRequested();
+            ArtifactManifestFiles.RejectLinks(parent);
+            try
+            {
+                var attributes = File.GetAttributes(parent);
+                if (!attributes.HasFlag(FileAttributes.Directory)) return false;
+                return ArtifactManifestFiles.IsMissingFileConfirmed(boundary, missing, ct);
+            }
+            catch (Exception error) when (error is FileNotFoundException or DirectoryNotFoundException)
+            {
+                if (ArtifactManifestFiles.PathComparer.Equals(parent, boundary)) return false;
+                missing = parent;
+            }
+        }
+        return false;
     }
 
     internal static bool AllConfirmedAbsent(string root, IReadOnlyList<string> files, CancellationToken ct = default) =>

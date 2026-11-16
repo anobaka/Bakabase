@@ -609,13 +609,13 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
             var stdoutTargets = new List<PipeTarget> { PipeTarget.ToStringBuilder(osb, Encoding.UTF8) };
             if (onStandardOutput != null)
             {
-                stdoutTargets.Add(PipeTarget.ToDelegate(onStandardOutput, Encoding.UTF8));
+                stdoutTargets.Add(SevenZipProgressOutput.CreatePipe(onStandardOutput));
             }
 
             var stderrTargets = new List<PipeTarget> { PipeTarget.ToStringBuilder(esb, Encoding.UTF8) };
             if (onStandardError != null)
             {
-                stderrTargets.Add(PipeTarget.ToDelegate(onStandardError, Encoding.UTF8));
+                stderrTargets.Add(SevenZipProgressOutput.CreatePipe(onStandardError));
             }
 
             command = command
@@ -623,13 +623,17 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
                 .WithStandardErrorPipe(PipeTarget.Merge(stderrTargets.ToArray()));
 
             var result = await command.ExecuteAsync(ct);
-
-            return new TestResult
+            var diagnostic = new TestResult
             {
                 ExitCode = result.ExitCode,
                 StandardOutput = osb.ToString(),
                 StandardError = esb.ToString()
             };
+            if (HasZipNameDecodingFailure(diagnostic))
+                throw new ArchiveNameEncodingUnsupportedException(
+                    "The ZIP tool could not create files with the decoded names. Confirm the archive's filename encoding in this extraction step; the original archive has been preserved."
+                    + Environment.NewLine + diagnostic.StandardError);
+            return diagnostic;
         }
     }
 }

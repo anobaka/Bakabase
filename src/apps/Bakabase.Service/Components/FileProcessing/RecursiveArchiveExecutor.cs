@@ -378,7 +378,8 @@ public sealed partial class RecursiveArchiveExecutor(IArchiveExtractionService e
         ReclaimCompletedIntermediatesAsync(stateDirectory, result, approvedFiles, ct, overrideRetention, null);
 
     internal async Task ReclaimCompletedIntermediatesAsync(string stateDirectory, ArtifactRecord result,
-        IReadOnlySet<string> approvedFiles, CancellationToken ct, bool overrideRetention, ArtifactCleanupFileSnapshot? snapshot)
+        IReadOnlySet<string> approvedFiles, CancellationToken ct, bool overrideRetention, ArtifactCleanupFileSnapshot? snapshot,
+        FileProcessingRelocatedResult? relocatedResult = null)
     {
         var expectedRoot = Path.Combine(stateDirectory, "result");
         if (!ArtifactManifestFiles.PathComparer.Equals(expectedRoot, result.RootDirectory)) return;
@@ -393,7 +394,8 @@ public sealed partial class RecursiveArchiveExecutor(IArchiveExtractionService e
             if (state is not {Completed: true, LineageVersion: 1} || state.PendingArchiveId != null || state.Nodes.Any(n => !n.Completed)) return;
             if (!SameManifest(Manifest(state.FinalFiles, f => f.LogicalPath,
                     state.FinalDirectories.Select(d => d.LogicalPath).ToArray()), result.Manifest)) return;
-            if (snapshot == null && !(await ArtifactManifestFiles.ValidateAsync(result.RootDirectory, result.Manifest, ct)).Available) return;
+            if (relocatedResult != null && !relocatedResult.Matches(result.RootDirectory, result.Manifest)) return;
+            if (snapshot == null && !(await ArtifactManifestFiles.ValidateAsync(relocatedResult?.VerificationRoot ?? result.RootDirectory, result.Manifest, ct)).Available) return;
             var operationsRoot = Path.Combine(stateDirectory, "operations");
             var paths = await GetReclaimableFilesCoreAsync(stateDirectory, ct, overrideRetention, verifyContents: snapshot == null);
             if (paths.Any(path => !approvedFiles.Contains(path))) return;

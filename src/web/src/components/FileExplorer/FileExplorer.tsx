@@ -389,7 +389,27 @@ const FilesystemExplorer = forwardRef<FileExplorerRef, FileExplorerProps & { dir
     // Listen for rootPath changes from parent
     useUpdateEffect(() => {
       if (!directoryPage) initialize(rootPath);
-    }, [rootPath, watchChanges]);
+    }, [rootPath]);
+
+    useUpdateEffect(() => {
+      if (directoryPage) return;
+      const current = rootRef.current;
+      // The first initialization reads watchChangesRef. Permission checks completing
+      // later only start/stop observation; they must not load the same directory again.
+      if (current && !current.updateIndependentObservation(watchChanges))
+        initialize(current.path, false);
+    }, [watchChanges]);
+
+    useUpdateEffect(() => {
+      if (selectable !== "disabled") return;
+      selectedEntriesRef.current.forEach(entry => entry.select(false));
+      selectedEntriesRef.current = [];
+      shiftSelectionStartRef.current = undefined;
+      selectionModeRef.current = SelectionMode.Normal;
+      contextMenuEntryRef.current = undefined;
+      toggleMenu(false);
+      setSelectedEntries([]);
+    }, [selectable]);
 
     // Re-initialize when showHiddenFiles option changes
     useUpdateEffect(() => {

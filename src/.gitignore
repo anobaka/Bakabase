@@ -55,6 +55,9 @@ artifacts/
 # These workflow artifact contracts are source files, not build output.
 !modules/Bakabase.Modules.Workflow/Artifacts/
 !modules/Bakabase.Modules.Workflow/Artifacts/*.cs
+# The artifact store implementations are source files as well.
+!legacy/Bakabase.InsideWorld.Business/Components/Artifacts/
+!legacy/Bakabase.InsideWorld.Business/Components/Artifacts/*.cs
 # Artifact processing regression tests are source files too.
 !tests/Bakabase.Tests/Artifacts/
 !tests/Bakabase.Tests/Artifacts/*.cs

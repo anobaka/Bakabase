@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business.Components.Artifacts;
@@ -88,7 +89,8 @@ internal static class AdaptiveAssessmentDiagnostic
 /// </summary>
 public sealed partial class AdaptiveFileProcessingAssessmentService(
     ILlmService llm,
-    ILogger<AdaptiveFileProcessingAssessmentService> logger)
+    ILogger<AdaptiveFileProcessingAssessmentService> logger,
+    AssessmentCallSnapshotStore? snapshots = null)
 {
     public const int MaxManifestEntries = 200;
     public const int MaxCallsPerTask = 5;
@@ -144,6 +146,12 @@ public sealed partial class AdaptiveFileProcessingAssessmentService(
         Original packaging instructions describe their input: after those operations succeed, do not apply the same
         rename or extraction instruction to an output video, PDF, image, or application merely because its suffix matches
         the old instruction. Judge the current inventory and format evidence for a distinct remaining outer package.
+        Current filenames take precedence over earlier rename instructions, including user comments: if a file
+        already has the requested name, do not rename it again. A rename to its current name makes no progress.
+        Historical instructions describe earlier inputs; they are not proof that an old archive is still missing
+        or needs another extraction. A directory whose name ends with an archive suffix is not an archive file.
+        Use current files and committed execution evidence to decide what remains; do not waive substantive unmet
+        requirements or invent completion merely because an old filename is absent.
         These execution facts do not establish that every current file is final, override an incomplete inventory,
         authorize deletion, or prove that a new archive is application data. Missing facts mean unknown, not failure.
         A password expression in source evidence (for example a name or identifier reference) is not necessarily a
@@ -151,8 +159,13 @@ public sealed partial class AdaptiveFileProcessingAssessmentService(
         password verification and pauses if unresolved; a differing title alone is not a reason to refuse extraction.
         For extract only, set password to an exact literal explicitly supplied in callerInstructions, userInstructions,
         or savedSourceEvidence when it is identified there as the password for the archive. Preserve every character,
-        including spaces, quotes, case and Unicode. Never derive a password from a title, filename, field name, or
-        expression such as "use the identifier". Prefer a documented successful password verification over a failed
+        including spaces, quotes, case and Unicode. filenamePasswordEvidence may also supply a single exact literal
+        explicitly marked as the extraction password in the selected file's basename. It is bound to its inputId;
+        never borrow it for another file, from a parent directory, or from an ordinary title or release identifier.
+        Only use the supplied filenamePasswordEvidence entries, not your own interpretation of other filename text.
+        A current file's explicit marker can resolve an unverified, stale general source password; it is a candidate,
+        not proof that extraction succeeded. Never derive a password from a field name or an expression such as
+        "use the identifier". Prefer a documented successful password verification over a failed
         candidate. Use password null when no literal is supported, and always null for non-extract operations.
         Return one JSON object with status (continue, final, humanReview or unsupported), one short reason, and operations.
         The inventory factors out a shared directory prefix. A file path is prefix/folder/name; "." means the current level.
@@ -176,8 +189,21 @@ public sealed partial class AdaptiveFileProcessingAssessmentService(
         or if intent is unclear. An unresolved password reported by the extractor needs review, not repeated guesses.
         For continue, specify only the next necessary operations (at most 24). Use extract with destination null,
         rename with one new file name, move with a relative destination directory, or rebaseDirectory as described above. Never invent inputs or passwords.
+        A truncated inventory may justify a next action on shown files, but never final or rebaseDirectory.
+        Sampling favors archive-name hints and different directories; inclusion is not proof of format or intent.
         When the context calls for unpacking a multipart archive and matching consecutive volumes are present,
-        select the first volume once. The extractor checks completeness and reads the sibling volumes.
+        select its entry once (.zip for a .z01/.zip family; otherwise the first volume). Submit only that extract
+        operation, with every family member present in the shown inventory. The server checks the complete
+        registered manifest for missing, hidden or ambiguous members before the extractor reads sibling volumes.
+        A matching name.part1.exe plus name.part2.rar, name.part3.rar family is a self-extracting archive
+        candidate: select the part1.exe entry once, never extract a later RAR volume separately. The server
+        must verify the entry's actual archive format; it never executes the program. Successful extraction
+        consumes the verified whole family, while preserving the archive's own internal directory structure.
+        multipartNamingEvidence may identify one structurally supported family whose first volume has a broken
+        name. When requiresRenameBeforeExtraction is true, first propose only the indicated rename to expectedName,
+        then reassess the resulting inventory before extraction. Do not extract the misnamed first volume alone.
+        File sizes, nearby names, or an archive signature alone cannot join different packages. Missing, ambiguous,
+        mixed-family or unverified parts require review; never invent a missing part or infer a password failure.
         """;
 
     internal static string DescribeContext(string? title, string? callerContext, string? userContext, string? sourceEvidence,
@@ -208,9 +234,14 @@ public sealed partial class AdaptiveFileProcessingAssessmentService(
     {
         var count = Math.Min(MaxManifestEntries, manifest.Entries.Count);
         var directoryCount = MaxManifestEntries;
+        ArtifactManifestEntry[]? partialOrder = null;
         while (true)
         {
-            var visible = manifest.Entries.Take(count).ToArray();
+            // Preserve complete inventories (and their existing selectors). When bounded,
+            // do not let a large first directory hide every later archive or resource.
+            var visible = count == manifest.Entries.Count
+                ? manifest.Entries.ToArray()
+                : (partialOrder ??= OrderPartialManifest(manifest)).Take(count).ToArray();
             var fileDirectories = visible.Select(file =>
             {
                 var split = file.RelativePath.LastIndexOf('/');
@@ -275,16 +306,21 @@ public sealed partial class AdaptiveFileProcessingAssessmentService(
             return Human("达到下载后自动判断次数上限。", "MAX_LLM_ASSESSMENT_CALLS");
 
         long? usageId = null;
+        string? submittedInput = null;
         var manifest = DescribeManifest(artifact.Manifest);
         try
         {
             var formats = await DescribeFormatEvidenceAsync(artifact, manifest.Paths, ct);
-            var user = $"File inventory:\n{manifest.Json}\n\nBounded format evidence:\n{formats}\n\nContext evidence:\n{context ?? "(none)"}\n\nAssessment iteration: {iteration}";
+            var filenamePasswords = DescribeFilenamePasswordEvidence(manifest.Paths);
+            var multipart = await InspectMultipartNamingAsync(artifact, manifest.Paths, ct);
+            var user = $"File inventory:\n{manifest.Json}\n\nBounded format evidence:\n{formats}\n\nfilenamePasswordEvidence:\n{filenamePasswords}\n\nmultipartNamingEvidence:\n{DescribeMultipartNamingEvidence(multipart)}\n\nContext evidence:\n{context ?? "(none)"}\n\nAssessment iteration: {iteration}";
+            submittedInput = $"[system] {SystemPrompt}\n\n[user] {user}";
             var response = await llm.CompleteForFeatureAsync(AiFeature.FileProcessor,
                 [new(ChatRole.System, SystemPrompt), new(ChatRole.User, user)], JsonParameters with {OnUsageRecorded = id => usageId = id}, ct);
-            var decision = ParseAndValidate(response, artifact, manifest.Paths, manifest.Truncated, context);
+            var decision = RequireMultipartNaming(ParseAndValidate(response, artifact, manifest.Paths, manifest.Truncated, context),
+                multipart, manifest.Paths);
             return decision with
-                { Call = AssessmentCallReceipt.Create(artifact.Id, iteration, usageId, response.Text, received: true, decision.ValidationError) };
+                { Call = await ReceiptAsync(response.Text, true, decision.ValidationError) };
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
@@ -297,7 +333,23 @@ public sealed partial class AdaptiveFileProcessingAssessmentService(
             var failure = AdaptiveAssessmentDiagnostic.IsProviderTimeout(ex)
                 ? Human("等待模型响应超时，未能获取本轮处理方案。", "LLM_ASSESSMENT_TIMEOUT")
                 : Human("自动处理判断失败，请人工确认。", "LLM_ASSESSMENT_FAILED");
-            return failure with { Call = AssessmentCallReceipt.Create(artifact.Id, iteration, usageId, null, received: false) };
+            return failure with { Call = await ReceiptAsync(null, false, null) };
+        }
+
+        async Task<AssessmentCallReceipt> ReceiptAsync(string? output, bool received, string? validation)
+        {
+            var receipt = AssessmentCallReceipt.Create(artifact.Id, iteration, usageId, output, received, validation);
+            if (snapshots == null || submittedInput == null) return receipt;
+            try
+            {
+                return receipt with {SnapshotId = await snapshots.SaveAsync(artifact.Id, iteration + 1, submittedInput, output, ct)};
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // Losing optional diagnostics must not fail a validated file-processing decision.
+                logger.LogWarning("Could not save assessment inspection text for artifact {ArtifactId}", artifact.Id);
+                return receipt;
+            }
         }
     }
 
@@ -320,6 +372,8 @@ public sealed partial class AdaptiveFileProcessingAssessmentService(
         var index = 0;
         foreach (var operation in decision.Operations)
         {
+            if (operation.Type == "rename" && RenameHasNoEffect(operation.Input, operation.Destination))
+                throw new InvalidOperationException("The filename is already current. Reassess the current inventory instead of repeating the rename.");
             if (operation.Password != null && (operation.Type != "extract" || operation.Password.Length is < 1 or > 2048 ||
                     operation.Password.Any(char.IsControl)))
                 throw new InvalidOperationException("Only extraction accepts a bounded literal password.");
@@ -400,12 +454,17 @@ public sealed partial class AdaptiveFileProcessingAssessmentService(
                 return Human("清单只展示了部分文件，无法确认全部文件可交付。", "INCOMPLETE_FILE_INVENTORY");
             var confidence = root.TryGetProperty("confidence", out var c) && c.ValueKind == JsonValueKind.Number &&
                              c.TryGetDouble(out var value) ? (double?)Math.Clamp(value, 0, 1) : null;
-            var archiveFamilies = AdaptiveArchiveFamily.From(paths);
+            // Family completeness and selector expansion concern the registered input,
+            // not just the sampled inventory sent to the model.
+            var archiveFamilies = AdaptiveArchiveFamily.From(
+                artifact.Manifest.Entries.Select(entry => entry.RelativePath).ToArray());
             if (status == "final" && archiveFamilies.Count != 0)
                 return Human("当前清单仍有分卷压缩包，需要确认是否解压或按原样交付。", "ARCHIVE_FAMILY_REVIEW_REQUIRED");
             var (operations, validationError) = ReadOperations(root, paths, artifact.Manifest, archiveFamilies, truncated, context);
             if (operations == null || status != "continue" && operations.Any(op => op.Type != "retain"))
-                return Human("处理方案引用了无效的文件或操作。", "LLM_DECISION_INVALID", raw) with
+                return Human(validationError?.Contains("rename would not change", StringComparison.Ordinal) == true
+                    ? "文件已经使用目标名称，模型重复了已完成的改名。请基于当前文件重新分析；本次未复制或修改文件。"
+                    : "处理方案引用了无效的文件或操作。", "LLM_DECISION_INVALID", raw) with
                     { ValidationError = validationError ?? "status: only continue may include file operations" };
             var retain = ReadPaths(root, "retain", paths);
             // Cleanup requires verified replacement evidence. A model response never authorizes deletion.
@@ -447,8 +506,7 @@ public sealed partial class AdaptiveFileProcessingAssessmentService(
                 if (type != "extract" || suppliedPassword.ValueKind != JsonValueKind.String)
                     return (null, field + ".password: only extraction accepts a literal password");
                 password = suppliedPassword.GetString();
-                if (password is not {Length: > 0 and <= 2048} || password.Any(char.IsControl) ||
-                    !PasswordOccursInContext(context, password))
+                if (password is not {Length: > 0 and <= 2048} || password.Any(char.IsControl))
                     return (null, field + ".password: expected an exact bounded literal from the supplied processing evidence");
             }
             if (type == "rebaseDirectory")
@@ -490,12 +548,17 @@ public sealed partial class AdaptiveFileProcessingAssessmentService(
                 manifest.Entries.Count(e => Path.GetFileName(e.RelativePath).Equals(input,
                     OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal)) > 1)
                 return (null, field + ".input: selector is ambiguous or contains pattern characters");
+            if (password != null && !PasswordOccursInContext(context, password) &&
+                !(manifest.Entries.Any(entry => entry.RelativePath.Equals(input, StringComparison.Ordinal)) &&
+                  string.Equals(ExplicitFilenamePassword(input), password, StringComparison.Ordinal)))
+                return (null, field + ".password: expected an exact bounded literal from the supplied processing evidence or the selected file's explicit password marker");
             if (type == "extract" && archiveFamilies.FirstOrDefault(family => family.Paths.Contains(input)) is {} family)
             {
                 // A generated family selector is bound to the original input. Reassess later
                 // operations on the new manifest, where the set of matching names may differ.
-                if (array.GetArrayLength() != 1 || truncated ||
-                    family.ExactSelector(input, paths) is not { } selector)
+                if (array.GetArrayLength() != 1 ||
+                    !family.Paths.All(member => paths.Contains(member, StringComparer.Ordinal)) ||
+                    family.ExactSelector(input, manifest.Entries.Select(entry => entry.RelativePath).ToArray()) is not { } selector)
                     return (null, field + ".input: multipart archive requires one complete, unambiguous family");
                 input = selector;
             }
@@ -504,13 +567,86 @@ public sealed partial class AdaptiveFileProcessingAssessmentService(
                 type == "move" && string.IsNullOrWhiteSpace(destination) ||
                 destination != null && (Path.IsPathRooted(destination) || destination.Contains("..", StringComparison.Ordinal)))
                 return (null, field + ".destination: expected a portable relative name or directory");
+            if (type == "rename" && RenameHasNoEffect(input, destination))
+                return (null, field + ".destination: rename would not change the current filename; reassess the current inventory");
             result.Add(new(type, input, destination, StringField(item, "reason"), password));
         }
         return (result, null);
     }
 
+    private static bool RenameHasNoEffect(string input, string? destination) => destination != null &&
+        FileProcessingFiles.PathComparer.Equals(Path.GetFileName(input), destination);
+
+    // These are candidates, never proof of a correct password. Keep the same bounded parser
+    // for the model's evidence table and the validator, and bind each literal to one input.
+    internal static string DescribeFilenamePasswordEvidence(IReadOnlyList<string> paths) =>
+        JsonSerializer.Serialize(paths.Select((path, index) => new
+        {
+            inputId = index + 1,
+            password = ExplicitFilenamePassword(path)
+        }).Where(entry => entry.password != null), ManifestJson);
+
+    private static readonly Regex FilenamePasswordMarker = new(
+        @"(?<![\p{L}\p{N}])(?:(?<chinese>解[压壓](?:缩|縮)?(?:密码|密碼|码|碼)|密码|密碼)|password(?![\p{L}\p{N}]))",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(50));
+    private static readonly Regex FilenameArchiveSuffix = new(@"\.(?:7z|zip|rar)(?:\.\d{3})?$",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(50));
+
+    internal static string? ExplicitFilenamePassword(string path)
+    {
+        // Never read a directory name, another file's marker, or an unbounded prompt-like name.
+        var name = path[(path.LastIndexOf('/') + 1)..];
+        if (name.Length is 0 or > 512 || name.Any(char.IsControl) || name.Contains('\\')) return null;
+        try
+        {
+            name = FilenameArchiveSuffix.Replace(name, "");
+            var markers = FilenamePasswordMarker.Matches(name);
+            // Even repeated labels are ambiguous: do not pick one or try a list of candidates.
+            if (markers.Count != 1) return null;
+            var marker = markers[0];
+            var remainder = name[(marker.Index + marker.Length)..];
+            var separated = remainder.Length > 0 && char.IsWhiteSpace(remainder[0]);
+            remainder = remainder.TrimStart();
+            if (remainder.Length > 0 && remainder[0] is ':' or '：' or '=')
+            {
+                separated = true;
+                remainder = remainder[1..].TrimStart();
+            }
+            if (remainder.Length == 0 || !separated &&
+                (!marker.Groups["chinese"].Success || !char.IsAsciiLetterOrDigit(remainder[0]))) return null;
+
+            static bool IsClosingWrapper(char c) => c is ']' or ')' or '}' or '】' or '）';
+            string password;
+            string tail;
+            var closingQuote = remainder[0] switch { '\'' => '\'', '"' => '"', '「' => '」', '『' => '』', _ => '\0' };
+            if (closingQuote != '\0')
+            {
+                var end = remainder.IndexOf(closingQuote, 1);
+                if (end < 0) return null;
+                password = remainder[1..end]; // Quoted literals preserve spaces and Unicode exactly.
+                tail = remainder[(end + 1)..];
+            }
+            else
+            {
+                var end = 0;
+                while (end < remainder.Length && !char.IsWhiteSpace(remainder[end]) && !IsClosingWrapper(remainder[end])) end++;
+                password = remainder[..end];
+                tail = remainder[end..];
+                if (password.Any(c => !char.IsLetterOrDigit(c) && !"!#$%&+@^~._-=".Contains(c))) return null;
+            }
+            if (password.Length is < 1 or > 128 || password.Any(char.IsControl) ||
+                tail.Any(c => !char.IsWhiteSpace(c) && !IsClosingWrapper(c))) return null;
+            return password;
+        }
+        catch (RegexMatchTimeoutException)
+        {
+            return null;
+        }
+    }
+
     // Context is a data envelope, not a bag of JSON syntax. Only decoded instruction/evidence
-    // values can justify a literal. Keys, the task title and the inventory are not password evidence.
+    // values can justify a literal. Keys and the task title are not password evidence. Filename
+    // evidence is deliberately resolved separately, against the exact selected manifest entry.
     private static bool PasswordOccursInContext(string? context, string password)
     {
         if (string.IsNullOrEmpty(context) || context.Length > 512 * 1024) return false;

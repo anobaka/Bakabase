@@ -30,7 +30,8 @@ internal sealed class ArtifactDeliveryCleanupAuthorization(
     IReadOnlyList<int>? previewSupersededRuns = null,
     Func<string, CancellationToken, Task<bool>>? previewActiveConsumers = null,
     Func<ArtifactRecord, ArtifactRecord, CancellationToken, Task<bool>>? boundaryCoverage = null,
-    Func<CancellationToken, Task<IReadOnlyList<string>>>? releasableViews = null)
+    Func<CancellationToken, Task<IReadOnlyList<string>>>? releasableViews = null,
+    Func<ArtifactRecord, CancellationToken, Task<bool>>? ownsCompletedProcessing = null)
 {
     private readonly Dictionary<string, IReadOnlyList<ArtifactCleanupRetirementDependency>> retirementDependencies = new(StringComparer.Ordinal);
     internal IReadOnlyDictionary<string, IReadOnlyList<ArtifactCleanupRetirementDependency>> RetirementDependencies => retirementDependencies;
@@ -56,6 +57,17 @@ internal sealed class ArtifactDeliveryCleanupAuthorization(
 
     internal async Task<bool> HasOtherRegisteredFilesAsync(IReadOnlyList<string> files, string sourceId, CancellationToken ct) =>
         await store.HasOtherRegisteredFilesAsync(files, sourceId, await ReleasableViewIdsAsync(ct), ct);
+
+    internal bool IncludesHistoricalProcessing => Consent.DeliveryAccepted && Consent.SkipFileVerification &&
+        ownsCompletedProcessing != null;
+
+    // Explicit accepted cleanup covers completed branches superseded by a later manual
+    // plan without pretending they are publication ancestors. Ownership is rechecked.
+    internal async Task<bool> CoversHistoricalProcessingAsync(ArtifactRecord source,
+        IReadOnlyList<string> publicationIds, CancellationToken ct) =>
+        IncludesHistoricalProcessing && source is {Managed: true, Kind: "processedFiles"} &&
+        await SkipsReplacementProofAsync(source, publicationIds, ct) &&
+        await ownsCompletedProcessing!(source, ct);
 
     internal async Task<bool> MatchesAsync(ArtifactRecord publication, CancellationToken ct)
     {

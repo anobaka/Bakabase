@@ -52,7 +52,7 @@ public sealed record AcquisitionPlanCompositeSource(string PartId, string Artifa
 public sealed record AcquisitionPlanProcessingReplacement(string PartId, FileProcessingPlan Plan,
     IReadOnlyList<string> ArtifactEvidenceIds, string? ContinueFromArtifactId = null,
     string? ExpectedDeliveryProjectionFingerprint = null, bool? UseAdaptiveAssessment = null,
-    string? InputMode = null);
+    string? InputMode = null, string? InputStage = null);
 public sealed record AcquisitionPlanCreationInput(string Title, string BuilderId, string? OutputDirectory = null,
     AcquisitionDeliverySettings? DeliverySettings = null, ArtifactStoragePolicy? StoragePolicy = null);
 public sealed record AcquisitionPlanSearchInput(string Query);
@@ -64,6 +64,12 @@ public sealed record AcquisitionPlanUpdateInput(int ExpectedRevision, string? Ou
 public sealed record AcquisitionStoragePolicyOverrideInput(string PartId, ArtifactStoragePolicyOverride? Policy, string? StepId = null);
 internal sealed record AcquisitionPlanBuilderState
 {
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public AcquisitionStageDirectoryChangeJournal? DirectoryChange { get; init; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? ProcessingStageCommitId { get; init; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? ProcessingStageInputId { get; init; }
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public AcquisitionLocalRecoveryQueueEntry? LocalRecoveryQueue { get; init; }
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

@@ -28,8 +28,13 @@ internal static class ArtifactDirectoryScopeReferences
             if (name == "allocation")
             {
                 string[] bindingFields = ["directory", "ownership", "evidence", "allocation"];
-                if (parent.ValueKind != JsonValueKind.Object || parent.EnumerateObject().Count() != bindingFields.Length ||
-                    !parent.EnumerateObject().Select(p => p.Name).ToHashSet(StringComparer.Ordinal).SetEquals(bindingFields) ||
+                if (parent.ValueKind != JsonValueKind.Object) return null;
+                var bindingProperties = parent.EnumerateObject().ToArray();
+                var hasBinding = parent.TryGetProperty("bindingId", out var binding);
+                if (hasBinding && binding.ValueKind != JsonValueKind.Null &&
+                    (binding.ValueKind != JsonValueKind.String || !Guid.TryParseExact(binding.GetString(), "N", out _))) return null;
+                if (bindingProperties.Length != bindingFields.Length + (hasBinding ? 1 : 0) ||
+                    !bindingProperties.Where(p => p.Name != "bindingId").Select(p => p.Name).ToHashSet(StringComparer.Ordinal).SetEquals(bindingFields) ||
                     parent.GetProperty("ownership").GetString() != "exclusive" ||
                     parent.GetProperty("evidence").GetString() != "taskAllocation" ||
                     parent.GetProperty("directory").GetString() != scope.Directory) return null;

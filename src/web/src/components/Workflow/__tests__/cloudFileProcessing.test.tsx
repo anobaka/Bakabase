@@ -41,6 +41,7 @@ vi.mock("@/components/ThirdPartyConfig/base/DownloadDirectoryField", () => ({
 vi.mock("@/components/bakaui", async () => ({
   ...(await import("@/test/radioControls")),
   Modal: ({ title, children, footer }: any) => <div role="dialog" aria-label={title}>{children}<footer>{footer}</footer></div>,
+  Tooltip: ({ children }: any) => <>{children}</>,
   Accordion: ({ children, selectedKeys = new Set(), onSelectionChange }: any) => (
     <div>
       {Children.map(
@@ -70,12 +71,14 @@ vi.mock("@/components/bakaui", async () => ({
     children,
     onPress,
     isDisabled,
+    "aria-label": label,
   }: {
     children: ReactNode;
     onPress?: () => void;
     isDisabled?: boolean;
+    "aria-label"?: string;
   }) => (
-    <button disabled={isDisabled} onClick={onPress}>
+    <button disabled={isDisabled} onClick={onPress} aria-label={label}>
       {children}
     </button>
   ),
@@ -1136,6 +1139,36 @@ it.each([false, true])("exposes the concrete model observation directly in the w
   expect(screen.getAllByText("cloudDownload.resumeGuide.archiveDelivery.why")).toHaveLength(1);
   expect(view.container.querySelector("script")).toBeNull();
   expect(onSubmit).not.toHaveBeenCalled();
+});
+
+it.each([false, true])("uses a neutral archive category for executor errors without describing them as an AI answer (file task %s)", fileTask => {
+  const Form = AssessDeliveryUI.ResumeForm!;
+  const message = "Could not open 2.7z. Check the password and all archive parts.";
+  render(<Form fileTask={fileTask} submitting={false} onSubmit={vi.fn()} promptJson={JSON.stringify({
+    targetId: "part-a", title: "Standalone workflow input", reason: "PasswordUnknown",
+    adaptiveAssessment: true, message, deliveryReview: true, artifactId: "current-files",
+    fingerprint: "current-fingerprint", reviewToken: "current-review",
+  })} />);
+  expect(screen.getByText("workflow.metadata.warning.PasswordUnknown")).toBeVisible();
+  expect(screen.queryByText(message)).toBeNull();
+  expect(screen.getByRole("button", { name: "workflow.processing.problem.details" })).toBeVisible();
+  expect(screen.queryByText("Standalone workflow input") !== null).toBe(!fileTask);
+});
+
+it("keeps an unfamiliar executor error visible even without an AI assessment flag", () => {
+  const Form = ProcessCloudFilesUI.ResumeForm!;
+  const message = "A new processor reported an unsupported block layout.";
+  render(<Form fileTask submitting={false} onSubmit={vi.fn()} promptJson={JSON.stringify({
+    targetId: "part-a", reason: "FutureProcessingFailure", message,
+  })} />);
+  expect(screen.getByText(message)).toBeVisible();
+  expect(screen.queryByRole("button", { name: "workflow.processing.problem.details" })).toBeNull();
+});
+
+it("identifies the task in the continuation dialog title while independent workflow forms keep their plain title", () => {
+  render(<TaskContinuationModal taskTitle="#529 Example task" stale={false} onClose={vi.fn()}
+    files={<p>Current files</p>} />);
+  expect(screen.getByRole("dialog", { name: "#529 Example task · acquisition.continue.open" })).toBeVisible();
 });
 
 it("answers initial acquisition file instructions with one explicit choice", () => {

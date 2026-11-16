@@ -79,6 +79,7 @@ public sealed class AcquisitionPlanProcessingActivity : IResumableWorkflowActivi
             await PublishFileArtifactsActivity.ResolveFollowingPublicationAsync(context, workset, target, intent, ct);
         if (artifact == null) return workset;
         await Bind(context, target, artifact, finalId, ct);
+        artifact = await AcquisitionProcessingStageCommit.CommitAsync(context, target, artifact, ct);
         await ReleaseContinuationAsync(context, target, config.ContinueFrom, ct);
         return Replace(workset, Apply(target, artifact, intent, finalId) with {ExecutionStatus = "reused"});
     }
@@ -124,6 +125,17 @@ public sealed class AcquisitionPlanProcessingActivity : IResumableWorkflowActivi
     private static async Task<WorkflowItemOutcome> CompleteProcessing(WorkflowExecutionContext ctx, DownloadWorkset workset,
         CloudDownloadTarget target, AcquisitionPlanProcessingConfig config, FileProcessingPlan plan, ArtifactRecord? artifact, CancellationToken ct)
     {
+        if (target.ProcessedArtifactId != null && (config.StopAfterStepId == null || config.StopAfterStepId == plan.Steps.LastOrDefault()?.Id))
+        {
+            var store = ctx.Services.GetRequiredService<IArtifactOperationStore>();
+            artifact ??= await store.GetArtifactAsync(target.ProcessedArtifactId, ct);
+            if (artifact != null)
+            {
+                var current = await AcquisitionProcessingStageCommit.CommitAsync(ctx, target, artifact, ct);
+                if (current.Id != artifact.Id) target = Apply(target, current, target.ProcessingIntentKey!, config.StopAfterStepId);
+                artifact = current;
+            }
+        }
         // A user's explicit choice to keep a downloaded artifact completes the initial review.
         // Bind that choice to these bytes so a downstream AI-enabled assessment respects it.
         if (config.Plan.Requirement == "unknown" && config.ContinueFrom == null &&
@@ -239,8 +251,12 @@ public sealed class AcquisitionPlanProcessingActivity : IResumableWorkflowActivi
             input = target.DownloadArtifactId == null ? null : await store.ResolveByIdAsync(target.DownloadArtifactId, ct);
         }
         if (input == null) throw new InvalidOperationException("The downloaded file artifact is missing or modified.");
-        if (input.Kind == AcquisitionCurrentDirectoryFiles.Kind)
+        // A pinned checkpoint has already bound and verified its private input. Do
+        // not require the original selected directory again after that hand-off.
+        if (checkpoint == null && checkpointFailure == null && input.Kind == AcquisitionCurrentDirectoryFiles.Kind)
             await AcquisitionCurrentDirectoryFiles.ValidateSelectionAsync(input, ctx.Services.GetService<FileProcessingWorkspaceResolver>(), ct);
+        if (checkpoint == null && checkpointFailure == null && signal?.StorageRecovery == null)
+            input = await AcquisitionProcessingStageInput.PrepareAsync(ctx, target, input, ct, processingConfig.StoragePolicy);
         if (config.UseVerifiedInput && config.ContinueFrom != null && input.Kind is "processedFiles" or "publishedFiles" or AcquisitionCurrentDirectoryFiles.Kind)
         {
             // The attachment node has already pinned this task's immutable artifact until the run ends.

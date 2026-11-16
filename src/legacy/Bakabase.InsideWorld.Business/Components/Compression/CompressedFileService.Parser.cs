@@ -126,6 +126,9 @@ public partial class CompressedFileService
         PipeTarget Capture(MemoryStream target, bool report) => PipeTarget.Create(async (stream, token) =>
         {
             var buffer = new byte[4096];
+            var decoder = Encoding.UTF8.GetDecoder();
+            var characters = new char[Encoding.UTF8.GetMaxCharCount(buffer.Length)];
+            var progressOutput = report && progress != null ? new SevenZipProgressOutput(progress) : null;
             while (true)
             {
                 var count = await stream.ReadAsync(buffer, token);
@@ -133,8 +136,11 @@ public partial class CompressedFileService
                 if (Interlocked.Add(ref captured, count) > ParserArchiveCatalog.MaximumOutputBytes)
                 { limited = true; stop.Cancel(); return; }
                 target.Write(buffer, 0, count);
-                if (report) progress?.Invoke(Encoding.UTF8.GetString(buffer, 0, count));
+                if (progressOutput != null)
+                    progressOutput.Append(characters.AsSpan(0, decoder.GetChars(buffer, 0, count, characters, 0)), token);
             }
+            token.ThrowIfCancellationRequested();
+            progressOutput?.Complete();
         });
         // No arbitrary switches, wildcard expansion, @list files, exhaustive #:e scan,
         // inherited password or interactive input. # itself can scan beyond :s, so bound

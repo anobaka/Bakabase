@@ -61,6 +61,26 @@ public sealed partial class AcquisitionPlanService
 
         var state = State(row);
         var policy = state.StoragePolicy;
+        if (plan.Parts.All(p => plan.StageDirectories?.Parts.GetValueOrDefault(p.Id)?.Delivery?.BindingId != null))
+        {
+            // The three-directory editor is the authority for new/explicit bindings.
+            // Reprocessing is not an implicit request for an R-suffixed delivery location.
+            if (deliveryRootOverride != null) throw new ArgumentException("PLAN_STAGE_DIRECTORY_EDIT_REQUIRED");
+            if (contentLayout != null && plan.DeliveryLayout is { } boundLayout)
+            {
+                var revisedLayout = boundLayout with {Settings = boundLayout.Settings with {ContentLayout = contentLayout}};
+                plan = plan with {DeliveryLayout = revisedLayout};
+                row.BuilderStateJson = Serialize(state with {DeliveryLayout = revisedLayout,
+                    DeliverySettings = state.DeliverySettings is {} settings ? settings with {ContentLayout = contentLayout} : null});
+            }
+            foreach (var part in plan.Parts)
+            {
+                var path = plan.StageDirectories!.Parts[part.Id].Delivery!.Directory;
+                storage.EnsurePathAllowed(path); ArtifactManifestFiles.RejectLinks(path);
+                if (guardDirectory != null) await guardDirectory(path);
+            }
+            return plan;
+        }
         if (useCurrentStorageDefaults)
         {
             // This explicit opt-in affects only the local revision. Prior plans, directories

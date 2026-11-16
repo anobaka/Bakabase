@@ -27,6 +27,9 @@ const Tooltip = (props: IProps) => {
       // which can briefly relocate them to the viewport origin.
       disableAnimation
       {...props}
+      // HeroUI portals tooltips beside the dialog. React Aria's modal isolation
+      // recognizes this marker and keeps their descriptions in the accessibility tree.
+      data-react-aria-top-layer="true"
       onOpenChange={(open) => {
         setObservedOpen(open);
         props.onOpenChange?.(open);

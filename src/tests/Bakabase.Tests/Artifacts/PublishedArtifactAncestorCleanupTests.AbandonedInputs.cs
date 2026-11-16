@@ -25,11 +25,11 @@ public sealed partial class PublishedArtifactAncestorCleanupTests
     private async Task<(AcquisitionTaskDbModel Task, ArtifactRecord Raw, ArtifactRecord Final,
         string OperationId, string Private, string StateFile, AcquisitionTaskDeletionService Service)>
         AbandonedDeletionFixture(string? unboundLeaseOwner = null, IReadOnlyList<int>? ownerRuns = null,
-            string? currentInputScenario = null)
+            string? currentInputScenario = null, bool completedNoTransform = false, bool stagedOnly = false)
     {
         ArtifactRecord raw;
         if (currentInputScenario == null)
-            raw = await Artifact("download", filename: "archive.zip", contents: "archive bytes");
+            raw = await Artifact(stagedOnly ? "processedFiles" : "download", filename: stagedOnly ? "image.png" : "archive.zip", contents: "archive bytes");
         else
         {
             var currentDirectory = Path.Combine(root, "manual-current-files");
@@ -45,7 +45,7 @@ public sealed partial class PublishedArtifactAncestorCleanupTests
             Assert.IsTrue(await new ArtifactOperationBindingService(db).BindAsync("workflow",
                 currentInputScenario == "foreign-owner" ? "2" : "1", inputBinding, raw.OperationId));
         }
-        var final = await Artifact("publishedFiles", raw, filename: "archive.zip", contents: "archive bytes");
+        var final = await Artifact("publishedFiles", raw, filename: stagedOnly ? "image.png" : "archive.zip", contents: "archive bytes");
         var operationId = ArtifactManifestFiles.Hash("failed-private-input");
         var claim = await store.ClaimAsync(new(operationId, "failed-private-input", "files.process", raw.Fingerprint),
             unboundLeaseOwner ?? "fixture", TimeSpan.FromMinutes(2));
@@ -55,11 +55,29 @@ public sealed partial class PublishedArtifactAncestorCleanupTests
             raw.RootDirectory, default, newAttempt: true);
         var extraction = new AbandonedExtraction();
         var executor = new FileProcessingPlanExecutor(extraction);
-        var failure = await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => executor.ExecuteAsync(new()
+        if (completedNoTransform)
         {
-            Requirement = "required", Steps = [new() {Id = "extract", Op = "extractArchive", Selector = "archive.zip"}],
-        }, raw.RootDirectory, raw.Files, Path.Combine(attempt, "plan")));
-        Assert.AreEqual("Fixture extraction failed.", failure.Message);
+            var done = await executor.ExecuteAsync(new() {Requirement = "notRequired", Steps = []},
+                raw.RootDirectory, raw.Files, Path.Combine(attempt, "plan"));
+            Assert.IsTrue(done.Completed);
+            // Simulate failure between the executor's complete journal and the operation's
+            // durable output registration, leaving its staged and result copies unregistered.
+        }
+        else if (stagedOnly)
+        {
+            var failure = await executor.ExecuteAsync(new() {Requirement = "required", Steps =
+                [new() {Id = "extract", Op = "extractArchive", Selector = "image.png"}]},
+                raw.RootDirectory, raw.Files, Path.Combine(attempt, "plan"));
+            Assert.IsFalse(failure.Completed); Assert.AreEqual("ArchiveInputRequired", failure.FailureCode);
+        }
+        else
+        {
+            var failure = await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => executor.ExecuteAsync(new()
+            {
+                Requirement = "required", Steps = [new() {Id = "extract", Op = "extractArchive", Selector = "archive.zip"}],
+            }, raw.RootDirectory, raw.Files, Path.Combine(attempt, "plan")));
+            Assert.AreEqual("Fixture extraction failed.", failure.Message);
+        }
         if (unboundLeaseOwner == null)
             Assert.IsTrue(await store.FailAsync(claim.Lease!, "Fixture extraction failed."));
         var stateFile = Directory.GetFiles(attempt, "state.json", SearchOption.AllDirectories).Single();

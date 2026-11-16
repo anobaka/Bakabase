@@ -244,6 +244,110 @@ it("always processes the selected directories' current files without asking for 
   ]);
 });
 
+it("uses the clicked stage's current directory for every part without selecting historical artifacts", async () => {
+  const current = { ...detail, replanArtifacts: [], stageDirectories: {version:1,taskId:4,parts:{
+    main:{processing:{directory:"/current/main",ownership:"exclusive",evidence:"configured"}},
+    extra:{processing:{directory:"/current/extra",ownership:"exclusive",evidence:"configured"}},
+  }} };
+  render(<CompletedProcessingRevisionForm detail={current} retryStage="processing" inputStage="processing"
+    onSaved={vi.fn()} onCancel={vi.fn()} />);
+  expect(screen.queryByRole("combobox")).toBeNull();
+  expect(screen.getAllByTestId("current-directory-files").map(item=>item.textContent)).toEqual(["/current/main","/current/extra"]);
+  for (const control of screen.getAllByRole("radio",{name:"acquisition.processingChoice.keep"})) fireEvent.click(control);
+  fireEvent.click(screen.getByRole("button",{name:"acquisition.timeline.startAttempt"}));
+  await waitFor(()=>expect(mocks.replan).toHaveBeenCalledOnce());
+  expect(mocks.replan.mock.calls[0][1].items).toEqual(expect.arrayContaining([
+    expect.objectContaining({partId:"main",inputStage:"processing",inputMode:"stageDirectory",artifactEvidenceIds:[]}),
+    expect.objectContaining({partId:"extra",inputStage:"processing",inputMode:"stageDirectory",artifactEvidenceIds:[]}),
+  ]));
+  expect(mocks.replan.mock.calls[0][1].items.every((item:any)=>!item.continueFromArtifactId)).toBe(true);
+});
+
+it("does not substitute another stage or historical artifact when a clicked stage has no current directory", () => {
+  const current = { ...detail, stageDirectories: {version:1,taskId:4,parts:{
+    main:{download:{directory:"/raw/main",ownership:"exclusive",evidence:"configured"}},
+    extra:{download:{directory:"/raw/extra",ownership:"exclusive",evidence:"configured"}},
+  }} };
+  render(<CompletedProcessingRevisionForm detail={current} retryStage="processing" inputStage="processing"
+    onSaved={vi.fn()} onCancel={vi.fn()} />);
+  expect(screen.queryByRole("combobox")).toBeNull();
+  expect(screen.queryByTestId("current-directory-files")).toBeNull();
+  expect(screen.getAllByRole("alert")).toHaveLength(2);
+  for (const control of screen.getAllByRole("radio",{name:"acquisition.processingChoice.keep"})) fireEvent.click(control);
+  expect(screen.getByRole("button",{name:"acquisition.timeline.startAttempt"})).toBeDisabled();
+});
+
+function initialProcessingDetail(): PlanTaskDetail {
+  return {
+    ...detail,
+    task: { ...detail.task, status: AcquisitionStatus.Waiting, stage: "attention", isFinished: false },
+    stageDirectories: {version:1, taskId:4, parts:{
+      main:{download:{directory:"/raw/main",ownership:"borrowed",evidence:"downloadRecord"}},
+      extra:{download:{directory:"/raw/extra",ownership:"borrowed",evidence:"downloadRecord"}},
+    }},
+    replanArtifacts: detail.replanArtifacts.slice(0, 2).map(item => ({ ...item,
+      kind: "download", rootDirectory: `/raw/${item.partId}`, canReadCurrentDirectory: true,
+    })),
+  };
+}
+
+it("starts first processing from each readable downloaded directory and submits the displayed stage", async () => {
+  render(<CompletedProcessingRevisionForm detail={initialProcessingDetail()} retryStage="processing"
+    inputStage="processing" mode="stopped" preferAi onSaved={vi.fn()} onCancel={vi.fn()} />);
+  expect(screen.getAllByTestId("current-directory-files").map(item => item.textContent))
+    .toEqual(["/raw/main", "/raw/extra"]);
+  expect(screen.queryByRole("combobox")).toBeNull();
+  expect(screen.queryByRole("alert")).toBeNull();
+  fireEvent.click(screen.getByRole("button", {name:"acquisition.timeline.startAttempt"}));
+  await waitFor(() => expect(mocks.replan).toHaveBeenCalledOnce());
+  expect(mocks.replan.mock.calls[0][1].items).toEqual(expect.arrayContaining([
+    expect.objectContaining({partId:"main", inputStage:"download", inputMode:"stageDirectory", artifactEvidenceIds:[], useAdaptiveAssessment:true}),
+    expect.objectContaining({partId:"extra", inputStage:"download", inputMode:"stageDirectory", artifactEvidenceIds:[], useAdaptiveAssessment:true}),
+  ]));
+});
+
+it("keeps existing processing inputs while another part starts from its completed download", async () => {
+  const current = initialProcessingDetail();
+  current.stageDirectories!.parts.extra.processing = {directory:"/current/extra",ownership:"exclusive",evidence:"configured"};
+  render(<CompletedProcessingRevisionForm detail={current} retryStage="processing" inputStage="processing"
+    mode="stopped" preferAi onSaved={vi.fn()} onCancel={vi.fn()} />);
+  expect(screen.getAllByTestId("current-directory-files").map(item => item.textContent))
+    .toEqual(["/raw/main", "/current/extra"]);
+  fireEvent.click(screen.getByRole("button", {name:"acquisition.timeline.startAttempt"}));
+  await waitFor(() => expect(mocks.replan).toHaveBeenCalledOnce());
+  expect(mocks.replan.mock.calls[0][1].items).toEqual(expect.arrayContaining([
+    expect.objectContaining({partId:"main", inputStage:"download"}),
+    expect.objectContaining({partId:"extra", inputStage:"processing"}),
+  ]));
+});
+
+it("does not replace a bound processing directory with a readable download after processing becomes unreadable", () => {
+  const current = initialProcessingDetail();
+  current.stageDirectories!.parts.main.processing = {directory:"/unavailable/main",ownership:"borrowed",evidence:"processingRecord"};
+  current.replanArtifacts.push({...current.replanArtifacts[0], artifactId:"unavailable-processing",
+    kind:"processedFiles", rootDirectory:"/unavailable/main", canReadCurrentDirectory:false});
+  render(<CompletedProcessingRevisionForm detail={current} retryStage="processing" inputStage="processing"
+    mode="stopped" preferAi onSaved={vi.fn()} onCancel={vi.fn()} />);
+  expect(screen.getAllByTestId("current-directory-files").map(item => item.textContent))
+    .toEqual(["/unavailable/main", "/raw/extra"]);
+});
+
+it.each(["unreadable", "differentRoot", "notDownload", "otherTask", "completed"])(
+  "does not start first processing from unconfirmed download inputs: %s", (reason) => {
+    const current = initialProcessingDetail();
+    if (reason === "unreadable") current.replanArtifacts[0].canReadCurrentDirectory = false;
+    if (reason === "differentRoot") current.replanArtifacts[0].rootDirectory = "/older/main";
+    if (reason === "notDownload") current.replanArtifacts[0].kind = "processedFiles";
+    if (reason === "otherTask") current.stageDirectories!.taskId = 999;
+    if (reason === "completed") current.task.status = AcquisitionStatus.Completed;
+    render(<CompletedProcessingRevisionForm detail={current} retryStage="processing" inputStage="processing"
+      mode="stopped" preferAi onSaved={vi.fn()} onCancel={vi.fn()} />);
+    expect(screen.getByRole("button", {name:"acquisition.timeline.startAttempt"})).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", {name:"acquisition.timeline.startAttempt"}));
+    expect(mocks.replan).not.toHaveBeenCalled();
+  },
+);
+
 it("does not silently fall back when a selected current directory is unavailable or shared", async () => {
   const unavailable = { ...detail, replanArtifacts: detail.replanArtifacts.map(item => ({ ...item, canReadCurrentDirectory: false })) };
   render(<CompletedProcessingRevisionForm detail={unavailable} retryStage="processing" onSaved={vi.fn()} onCancel={vi.fn()} />);
@@ -1325,6 +1429,22 @@ it("preserves an explicit task root and distinguishes unavailable settings from 
 function openPlacement() {
   fireEvent.click(screen.getByRole("button", {name: "acquisition.placement.open"}));
 }
+
+it("omits a redundant single-part title inside the task dialog, retaining standalone and multi-part headings", () => {
+  const single = { ...detail, plan: { ...detail.plan!, parts: [detail.plan!.parts[0]] } };
+  const view = render(<CompletedProcessingRevisionForm inDialog detail={single} retryStage="processing"
+    onSaved={vi.fn()} onCancel={vi.fn()} />);
+  expect(screen.getByRole("region", { name: "Main files" })).toBeVisible();
+  expect(screen.queryByRole("heading", { name: "Main files" })).toBeNull();
+  view.rerender(<CompletedProcessingRevisionForm detail={single} retryStage="processing"
+    onSaved={vi.fn()} onCancel={vi.fn()} />);
+  expect(screen.getByRole("heading", { name: "Main files" })).toBeVisible();
+  view.unmount();
+  render(<CompletedProcessingRevisionForm inDialog detail={detail} retryStage="processing"
+    onSaved={vi.fn()} onCancel={vi.fn()} />);
+  expect(screen.getByRole("heading", { name: "Main files" })).toBeVisible();
+  expect(screen.getByRole("heading", { name: "Extra files" })).toBeVisible();
+});
 function applyPlacement() {
   fireEvent.click(screen.getByRole("button", {name: "common.action.apply"}));
 }

@@ -8,7 +8,7 @@ const files = vi.hoisted(() => vi.fn());
 const directoryProps = vi.hoisted(() => vi.fn());
 const taskDirectoryProps = vi.hoisted(() => vi.fn());
 vi.mock("../TaskDirectoryExplorer", () => ({ default: (props: any) => {
-  taskDirectoryProps(props); return <div>Task current files</div>;
+  taskDirectoryProps(props); return <div>{props.heading}Task current files</div>;
 } }));
 vi.mock("@/sdk/BApi", () => ({ default: { workflow: { getWorkflowArtifactDirectory: files } } }));
 // The shared tree's own tests cover rendering and expansion. Exercise this adapter's
@@ -61,7 +61,8 @@ it("reads the chosen current directory through the shared read-only explorer wit
 it("uses the shared managed explorer only with current acquisition identity", async () => {
   render(<ProcessingDirectoryFiles path="/work/task/current" taskContext={{ taskId: 10, runId: 20 }} />);
   await screen.findByText("Task current files");
-  expect(taskDirectoryProps).toHaveBeenLastCalledWith({ path: "/work/task/current", context: { taskId: 10, runId: 20 }, maxContentHeight: 288 });
+  expect(taskDirectoryProps).toHaveBeenLastCalledWith(expect.objectContaining({ path: "/work/task/current", context: { taskId: 10, runId: 20 }, maxContentHeight: 288, heading: expect.anything() }));
+  expect(screen.getAllByRole("heading", { name: "workflow.processing.inputFiles.title" })).toHaveLength(1);
 });
 
 it("uses this waiting attempt and part, and a nested review's current result even when the input contains the previous layer", () => {

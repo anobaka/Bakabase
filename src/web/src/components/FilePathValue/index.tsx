@@ -75,7 +75,10 @@ const FilePathValue: React.FC<Props> = ({ path, description, size = "sm", classN
         <p>{t(pathLabel)}{entry?.readOnly ? ` · ${t("filePath.readOnlyMount")}` : ""}</p>
         {storageHint && <p>{storageHint}</p>}
       </div>}>
-        <span tabIndex={0} aria-label={t(pathLabel)} className="shrink-0 text-default-400"><InfoCircleOutlined aria-hidden /></span>
+        <span tabIndex={0} aria-label={t(pathLabel)}
+          className={`inline-flex shrink-0 items-center justify-center leading-none text-default-400 ${
+            size === "lg" ? "h-12 w-12" : size === "md" ? "h-10 w-10" : "h-8 w-8"
+          }`}><InfoCircleOutlined aria-hidden /></span>
       </Tooltip>}
       <Button
         isIconOnly

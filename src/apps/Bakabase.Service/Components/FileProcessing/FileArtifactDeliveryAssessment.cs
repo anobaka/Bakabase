@@ -71,13 +71,17 @@ internal static class FileArtifactDeliveryAssessment
         var unclassified = artifact.Manifest.Entries.Where(e => !FinishedFormats.Contains(Path.GetExtension(e.RelativePath)))
             .ToArray();
         if (unclassified.Length == 0) return true;
-        // Common companion results include camera MOV and synchronized LRC lyrics. Do not whitelist their suffixes: check only these
+        // Finder metadata may accompany a finished resource but is never a resource by itself.
+        if (artifact.Manifest.Entries.All(e => FinderMetadataDeliveryProbe.IsCandidate(e.RelativePath))) return false;
+        // Common companion results include camera MOV, synchronized LRC lyrics and Finder
+        // directory metadata. Do not whitelist names/suffixes: check only these
         // bounded unclassified files, seeking over media payloads instead of scanning images
         // or invoking an archive tool. This never grants extraction/deletion authority.
         // This budget is independent of the small archive-discovery and review-display limit.
         if (unclassified.Length > MaximumCompanionProbeFiles || unclassified.Any(e =>
                 !string.Equals(Path.GetExtension(e.RelativePath), ".mov", StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(Path.GetExtension(e.RelativePath), ".lrc", StringComparison.OrdinalIgnoreCase))) return false;
+                !string.Equals(Path.GetExtension(e.RelativePath), ".lrc", StringComparison.OrdinalIgnoreCase) &&
+                !FinderMetadataDeliveryProbe.IsCandidate(e.RelativePath))) return false;
         using var stop = CancellationTokenSource.CreateLinkedTokenSource(ct);
         stop.CancelAfter(TimeSpan.FromSeconds(3));
         try
@@ -87,6 +91,8 @@ internal static class FileArtifactDeliveryAssessment
                 if (!await QuickTimeDeliveryProbe.IsMovieAsync(file, stop.Token)) return false;
             foreach (var file in exactFiles.Where(f => string.Equals(Path.GetExtension(f), ".lrc", StringComparison.OrdinalIgnoreCase)))
                 if (!await LyricDeliveryProbe.IsCompanionAsync(file, exactFiles, stop.Token)) return false;
+            foreach (var file in exactFiles.Where(FinderMetadataDeliveryProbe.IsCandidate))
+                if (!await FinderMetadataDeliveryProbe.IsMetadataAsync(file, stop.Token)) return false;
             return true;
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested) { return false; }

@@ -10,6 +10,7 @@ using Bakabase.Modules.Acquisition.Components.Workflow;
 using Bakabase.Modules.Workflow.Abstractions.Components;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Workflow.Artifacts;
+using Bakabase.InsideWorld.Business.Components.Artifacts;
 using Bakabase.Service.Components.CloudDownloads;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -20,6 +21,8 @@ public sealed record FileArtifactPublicationConfig
     public string? TargetDirectory { get; init; }
     /// <summary>Exact immutable per-item destinations. Null retains the legacy directory strategy.</summary>
     public Dictionary<string, string>? TargetDirectories { get; init; }
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public Dictionary<string, string>? StageDirectoryBindingIds { get; init; }
     public string Source { get; init; } = "processed";
     public string ReusePolicy { get; init; } = "reuseVerified";
     /// <summary>Null keeps the exact historical layout and publication identity.</summary>
@@ -49,6 +52,9 @@ public sealed class PublishFileArtifactsActivity : IResumableWorkflowActivity, I
         if (config.TargetDirectories != null && (config.TargetDirectories.Count > 100 || config.TargetDirectories.Any(pair =>
             string.IsNullOrWhiteSpace(pair.Key) || pair.Key.Length > 128 || string.IsNullOrWhiteSpace(pair.Value) || !Path.IsPathFullyQualified(pair.Value))))
             throw new ArgumentException("The delivery mapping requires bounded target identities and absolute directories.");
+        if (config.StageDirectoryBindingIds != null && (config.StageDirectoryBindingIds.Count > 100 || config.StageDirectoryBindingIds.Any(pair =>
+                string.IsNullOrWhiteSpace(pair.Key) || pair.Key.Length > 128 || !Guid.TryParseExact(pair.Value, "N", out _))))
+            throw new ArgumentException("STAGE_DIRECTORY_BINDING_INVALID");
         return config;
     }
     public Task<IReadOnlyList<WorkflowValidationIssue>> ValidateConfigAsync(WorkflowValidationContext context, CancellationToken ct)
@@ -77,6 +83,16 @@ public sealed class PublishFileArtifactsActivity : IResumableWorkflowActivity, I
         return Path.Combine(Path.GetFullPath(item.OutputDirectory), StableTarget(target), "result");
     }
     private static string StableTarget(CloudDownloadTarget target) => CloudOperationService.Key("delivery-target-v1", DownloadArtifactCoordinator.Source(target))[..24];
+
+    internal static string? CurrentStageBinding(CloudDownloadTarget target, FileArtifactPublicationConfig config, string directory)
+    {
+        if (config.StageDirectoryBindingIds?.TryGetValue(target.Id, out var id) != true) return null;
+        var binding = target.StageDirectories?.Delivery;
+        if (!Guid.TryParseExact(id, "N", out _) || binding?.BindingId != id ||
+            !ArtifactManifestFiles.PathComparer.Equals(Path.GetFullPath(binding.Directory), Path.GetFullPath(directory)))
+            throw new InvalidOperationException("STAGE_DIRECTORY_BINDING_CHANGED");
+        return id;
+    }
 
     public async Task<object> TrySatisfyAsync(WorkflowExecutionContext context, object item, string configJson, CancellationToken ct)
     {
@@ -107,7 +123,8 @@ public sealed class PublishFileArtifactsActivity : IResumableWorkflowActivity, I
             if (target.Excluded || target.SelectedSource == null || target.AcquisitionNonce != null) { targets.Add(target); continue; }
             var sourceIntent = config.Source == "processed" ? target.ProcessingIntentKey : DownloadArtifactCoordinator.DownloadIntent(target, workset.OutputDirectory, context.Services.GetService<FileProcessingWorkspaceResolver>());
             if (sourceIntent == null) { targets.Add(target); continue; }
-            var artifact = await publisher.ResolveAsync(sourceIntent, CloudTargetDirectory(workset, target, config), ct, config.ContentLayout);
+            var directory = CloudTargetDirectory(workset, target, config);
+            var artifact = await publisher.ResolveAsync(sourceIntent, directory, ct, config.ContentLayout, CurrentStageBinding(target, config, directory));
             if (artifact != null) await ArtifactWorkflowBindings.BindAsync(context, target.Id + ":artifact.publish", artifact.OperationId, ct);
             targets.Add(artifact == null ? target : ApplyCloud(target, artifact));
         }
@@ -125,8 +142,9 @@ public sealed class PublishFileArtifactsActivity : IResumableWorkflowActivity, I
             {
                 var config = Parse(next.ConfigJson);
                 if (config.Source != "processed" || config.ReusePolicy == "force") return null;
+                var directory = CloudTargetDirectory(item, target, config);
                 return await context.Services.GetRequiredService<FileArtifactPublisher>()
-                    .ResolveAsync(processingIntent, CloudTargetDirectory(item, target, config), ct, config.ContentLayout);
+                    .ResolveAsync(processingIntent, directory, ct, config.ContentLayout, CurrentStageBinding(target, config, directory));
             }
             // This explicit review still executes later, against the published artifact's
             // verified manifest and source-processing metadata. Looking through it here only
@@ -209,7 +227,8 @@ public sealed class PublishFileArtifactsActivity : IResumableWorkflowActivity, I
                 var directory = target.PublishedDirectory ?? target.PublicationTargetDirectory ?? CloudTargetDirectory(workset, target, targetConfig);
                 if (answer?.TargetId == target.Id && answer.TargetDirectory != null)
                     directory = CloudTargetDirectory(workset, target, targetConfig);
-                var reusable = config.ReusePolicy == "force" ? null : await publisher.ResolveAsync(sourceIntent, directory, ct, config.ContentLayout);
+                var currentStageBinding = CurrentStageBinding(target, targetConfig, directory);
+                var reusable = config.ReusePolicy == "force" ? null : await publisher.ResolveAsync(sourceIntent, directory, ct, config.ContentLayout, currentStageBinding);
                 FileArtifactPublicationResult result;
                 if (reusable != null) result = new(reusable);
                 else
@@ -218,7 +237,7 @@ public sealed class PublishFileArtifactsActivity : IResumableWorkflowActivity, I
                     var input = id == null ? null : await store.ResolveByIdAsync(id, ct);
                     result = input == null ? new(null, "PublicationInputMissing", "The selected artifact is missing or modified. Reacquire or process it before delivery.") :
                         await publisher.PublishAsync(sourceIntent, input, directory, "workflow:" + ctx.RunId + ":publish:" + target.Id,
-                            ctx.RunId, ct, config.ReusePolicy == "force" ? ctx.RunId.ToString() : null, config.ContentLayout);
+                            ctx.RunId, ct, config.ReusePolicy == "force" ? ctx.RunId.ToString() : null, config.ContentLayout, currentStageBinding);
                 }
                 if (result.Artifact == null)
                 {

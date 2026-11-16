@@ -4,8 +4,9 @@ import { Button, Modal, Radio, RadioGroup, Tooltip } from "@/components/bakaui";
 import { ResumeActionsContext } from "@/components/Workflow/ResumeActions";
 
 export default function TaskContinuationModal({
-  current, files, stale, origin, processAgain, delivery, busy = false, preferFiles = false, allowModeChoice = false, onClose,
+  current, files, stale, origin, taskTitle, processAgain, delivery, busy = false, preferFiles = false, allowModeChoice = false, onClose,
 }: {
+  taskTitle?: string;
   origin?: ReactNode;
   processAgain?: boolean;
   delivery?: boolean;
@@ -24,11 +25,12 @@ export default function TaskContinuationModal({
   const isBusy = busy || formBusy;
   const canChoose = allowModeChoice && !!current && !!files;
   const mode = canChoose && selectedMode ? selectedMode : files && (preferFiles || !current) ? "files" : "current";
+  const action = t(delivery ? "acquisition.continue.delivery" : processAgain ? "acquisition.continue.again" : "acquisition.continue.open");
   return (
     <Modal
       visible
       size="6xl"
-      title={t(delivery ? "acquisition.continue.delivery" : processAgain ? "acquisition.continue.again" : "acquisition.continue.open")}
+      title={taskTitle ? `${taskTitle} · ${action}` : action}
       onClose={() => { if (!isBusy) onClose(); }}
       isDismissable={!isBusy}
       isKeyboardDismissDisabled={isBusy}

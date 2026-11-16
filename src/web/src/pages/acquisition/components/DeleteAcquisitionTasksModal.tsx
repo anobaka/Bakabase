@@ -163,7 +163,7 @@ export default function DeleteAcquisitionTasksModal({
 
   const inspectFiles = async (allowCached = false) => {
     const ids = retainedReview?.taskIds ?? captured.current;
-    const options = retainedReview?.options ?? fileOptions;
+    const options: AcquisitionDeletionOptions = retainedReview?.options ?? fileOptions;
     if (!scope || (!options.cleanupFiles && !options.deleteDeliveredFiles) || busy.current || confirmation) return;
     // Keep a previously reviewed file scope while refreshing it (including if refresh fails).
     inventoryRequest.current?.abort();
@@ -228,7 +228,7 @@ export default function DeleteAcquisitionTasksModal({
   const selectionReady =
     !!preview &&
     !preparing &&
-    !(inventoryLoading && (deleteDeliveredFiles || retainedReview)) &&
+    !(inventoryLoading && (!skipFileVerification || retainedReview)) &&
     !loading &&
     !error &&
     !expired &&
@@ -284,8 +284,11 @@ export default function DeleteAcquisitionTasksModal({
     reviewPending.current = true;
     const options = retainedReview?.options ?? (cleanupFiles || deleteDeliveredFiles ? { ...fileOptions, removeTaskIfCleanupFails } : {});
     try {
-      let selected = preview;
-      if (options.deleteDeliveredFiles || retainedReview) {
+      // Skipped file verification confirms the fixed task scope and explicit deletion
+      // choices immediately. Build its authorized file plan once, during execution.
+      let selected = options.skipFileVerification && !retainedReview && scope &&
+        !matchesScope(preview, captured.current, options) ? scope : preview;
+      if ((options.deleteDeliveredFiles && !options.skipFileVerification) || retainedReview) {
         setPreparing(true);
         const prepared = await inspectFiles(true);
         if (!prepared) return;
@@ -295,7 +298,8 @@ export default function DeleteAcquisitionTasksModal({
       if (millisecondsUntil(selected.expiresAt) <= 0) { setNow(Date.now()); return; }
       const ready = selected.rows.filter(row => recordEligible(row, !retainedReview && !!options.removeTaskIfCleanupFails));
       if (ready.length === 0) return;
-      // Confirm exactly the visible inventory; never widen the original task-only token.
+      // A reviewed inventory stays exact; a task-only token binds the task versions
+      // and the explicit final confirmation supplies the file-deletion choices.
       inventoryRequest.current?.abort();
       setInventoryLoading(false);
       setConfirmation({
@@ -467,7 +471,7 @@ export default function DeleteAcquisitionTasksModal({
             )}
           </p>
           {confirmation.options.deleteDeliveredFiles && <p role="alert" className="font-medium text-danger">
-            {t("acquisition.delete.delivered.confirmation", {
+            {t(confirmation.preview.deleteDeliveredFiles ? "acquisition.delete.delivered.confirmation" : "acquisition.delete.delivered.confirmationUnlisted", {
               count: confirmation.preview.rows.filter(row => confirmation.taskIds.includes(row.taskId)).reduce((total, row) => total + (row.cleanup?.groups
                 .filter(group => group.kind === "publishedFiles" && group.eligible)
                 .reduce((sum, group) => sum + group.fileCount, 0) ?? 0), 0),
@@ -476,7 +480,7 @@ export default function DeleteAcquisitionTasksModal({
                 .reduce((sum, group) => sum + group.bytes, 0) ?? 0), 0)),
             })}
           </p>}
-          {(confirmation.options.deleteDeliveredFiles || retainedReview) && <div className="max-h-80 min-w-0 overflow-y-auto space-y-3">
+          {(confirmation.preview.deleteDeliveredFiles || retainedReview) && <div className="max-h-80 min-w-0 overflow-y-auto space-y-3">
             {confirmation.preview.rows.filter(row => confirmation.taskIds.includes(row.taskId)).map(row =>
               <section key={row.taskId} className="min-w-0 rounded-lg border border-default-200 p-2">
                 <p className="text-sm font-medium [overflow-wrap:anywhere]">#{row.taskId} {row.title}</p>

@@ -38,7 +38,12 @@ public sealed record FileArtifactProcessingMetadata(string? InputArtifactId, str
     [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     string? InheritedExtractionLayout = null,
     [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
-    ArtifactDirectoryScope? WorkspaceDirectoryScope = null);
+    ArtifactDirectoryScope? WorkspaceDirectoryScope = null)
+{
+    [System.Text.Json.Serialization.JsonInclude]
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    internal Bakabase.Service.Components.Acquisition.Planning.AcquisitionProcessingStageCommitReceipt? StageCommit { get; init; }
+}
 public sealed record FileArtifactProcessingResult(ArtifactRecord? Artifact, string? WaitReason = null,
     string? Message = null, string? ArchiveId = null, IReadOnlyList<string>? TriedPasswords = null,
     string? RequiredComponentId = null, FileProcessingPathConflict? PathConflict = null);

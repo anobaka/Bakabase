@@ -10,6 +10,7 @@ using Bakabase.InsideWorld.Business;
 using Bakabase.Infrastructures.Components.App;
 using Bakabase.InsideWorld.Business.Components.Artifacts;
 using Bakabase.Modules.Workflow.Artifacts;
+using Bakabase.Service.Components.Acquisition.Planning;
 using Bakabase.Modules.Workflow.Abstractions.Models.Db;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
 using Microsoft.EntityFrameworkCore;
@@ -22,6 +23,10 @@ public sealed record ArtifactWorkspaceCleanupPreview(string ArtifactId, string O
 {
     // Request-local presentation only. Never serialized as authority or reused by execution.
     internal IReadOnlyList<(string Path, long Bytes)>? PreviewFiles { get; init; }
+    // Request-local physical selection identity. Distinct retired boundaries can prove
+    // the same private inputs; the deletion coordinator may execute that exact set once.
+    // It never replaces the candidate-specific fingerprint rechecked during execution.
+    internal string? PrivateSelectionFingerprint { get; init; }
     // Diagnostic only: never serialized to clients or reused as cleanup authority.
     internal Exception? PreviewError { get; init; }
 }
@@ -51,7 +56,7 @@ public sealed partial class ArtifactWorkspaceMaintenance
     {
         this.db = db; this.store = store; this.plans = plans; this.recursive = recursive;
         this.workspaces = workspaces ?? new(appData);
-        journal = new(appData); references = new(db, workspaces);
+        journal = new(appData); references = new(db, this.workspaces);
     }
 
     // Keyset pagination revisits skipped candidates on the next complete cycle, including
@@ -102,10 +107,19 @@ public sealed partial class ArtifactWorkspaceMaintenance
             try
             {
                 if (authorization != null && artifact.State == ArtifactLocationState.Retired &&
-                    await InspectRetiredWorkspaceAbsenceAsync(artifact, authorization, ct) is { } absent)
+                    await InspectRetiredWorkspaceAbsenceAsync(artifact, authorization, ct, includePrivateFiles: true) is { } absent)
                 {
-                    result.Add(new(id, artifact.OperationId, absent.OriginalRoot, true, "AlreadyAbsent", 0, 0,
-                        absent.Fingerprint) {PreviewFiles = []});
+                    var privateSelection = CaptureSelection(absent.PrivateFiles ?? [], ct);
+                    var selected = privateSelection.Files;
+                    result.Add(new(id, artifact.OperationId, absent.OriginalRoot, true, selected.Count == 0 ? "AlreadyAbsent" : null,
+                        selected.Count, selected.Sum(f => f.Bytes), absent.Fingerprint)
+                        {PreviewFiles = selected.Select(f => (f.Path, f.Bytes)).ToArray(),
+                            PrivateSelectionFingerprint = privateSelection.Fingerprint});
+                    continue;
+                }
+                if (authorization == null && await AcquisitionProcessingStageCommit.IsCommittedStageOutputAsync(db, store, workspaces, artifact, ct))
+                {
+                    result.Add(new(id, artifact.OperationId, artifact.RootDirectory, false, "NothingToReclaim", 0, 0));
                     continue;
                 }
                 var reason = await IneligibleReason(artifact, ct, authorization);
@@ -118,7 +132,8 @@ public sealed partial class ArtifactWorkspaceMaintenance
                 result.Add(new(id, artifact.OperationId, artifact.RootDirectory, reason == null && files.Count > 0,
                     reason ?? (files.Count == 0 ? "NothingToReclaim" : null), reason == null ? snapshot.Files.Count : 0,
                     reason == null ? snapshot.Files.Sum(f => f.Bytes) : 0, reason == null ? snapshot.Fingerprint : null)
-                    {PreviewFiles = snapshot.Files.Select(f => (f.Path, f.Bytes)).ToArray()});
+                    {PreviewFiles = snapshot.Files.Select(f => (f.Path, f.Bytes)).ToArray(),
+                        PrivateSelectionFingerprint = reason == null ? snapshot.Fingerprint : null});
             }
             catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException or JsonException or InvalidOperationException)
             { result.Add(new(id, artifact.OperationId, artifact.RootDirectory, false, "WorkspaceUnavailable", 0, 0) {PreviewError = error}); }
@@ -161,12 +176,28 @@ public sealed partial class ArtifactWorkspaceMaintenance
                 {
                     await using var retiredFence = await store.AcquireMaintenanceAsync(ct);
                     var retiredArtifact = await store.GetArtifactAsync(id, ct);
-                    var absent = retiredArtifact == null ? null : await InspectRetiredWorkspaceAbsenceAsync(retiredArtifact, authorization, ct);
+                    var absent = retiredArtifact == null ? null : await InspectRetiredWorkspaceAbsenceAsync(retiredArtifact, authorization, ct, includePrivateFiles: true);
                     var matches = absent != null && (expectedSelectionFingerprints == null ||
                         expectedSelectionFingerprints[id] == absent.Fingerprint);
-                    results.Add(new(id, matches, matches ? "AlreadyAbsent" : "CLEANUP_RETIRED_WORKSPACE_REQUIRES_REVIEW"));
+                    if (!matches || absent?.Original == null || absent.PrivateFiles is not {Count: > 0})
+                    { results.Add(new(id, matches, matches ? "AlreadyAbsent" : "CLEANUP_RETIRED_WORKSPACE_REQUIRES_REVIEW")); continue; }
+                    var retiredFiles = CaptureSelection(absent.PrivateFiles, ct).Files;
+                    var retiredSnapshot = ArtifactCleanupFileSnapshot.For(authorization)!;
+                    foreach (var file in retiredFiles) retiredSnapshot.Observe(file.Path, file.Bytes, ct);
+                    var retiredApproved = retiredFiles.Select(f => f.Path).ToHashSet(FileProcessingFiles.PathComparer);
+                    receipt = await journal.BeginAsync(absent.Original, retiredFiles.ToDictionary(f => f.Path, f => f.Bytes), ct,
+                        authorization.Consent);
+                    await plans.ReclaimBoundaryIntermediatesAsync(absent.Original.RootDirectory, absent.Original.Manifest,
+                        retiredApproved, ct, overrideRetention: true, retiredSnapshot);
+                    await plans.ReclaimCompletedIntermediatesAsync(absent.Original.RootDirectory, absent.Original.Manifest,
+                        retiredApproved, ct, overrideRetention: true, retiredSnapshot);
+                    var retiredOutcome = await journal.FinishAsync(receipt, "Completed", ct);
+                    var retiredComplete = retiredOutcome.RemovedFiles == retiredFiles.Count;
+                    results.Add(new(id, retiredComplete, retiredComplete ? null : "WorkspaceChanged", retiredOutcome.RemovedFiles, retiredOutcome.RemovedBytes));
                     continue;
                 }
+                if (authorization == null && await AcquisitionProcessingStageCommit.IsCommittedStageOutputAsync(db, store, workspaces, preview, ct))
+                { results.Add(new(id, true, "NothingToReclaim")); continue; }
                 var unavailable = await IneligibleReason(preview, ct, authorization);
                 if (unavailable != null) { results.Add(new(id, false, unavailable)); continue; }
                 if (expectedSelectionFingerprints == null && (await Paths(preview, ct, authorization != null)).Count == 0)
@@ -193,8 +224,16 @@ public sealed partial class ArtifactWorkspaceMaintenance
                 { results.Add(new(id, false, "ReferencedArtifact")); continue; }
                 if (await references.HasReferencesAsync(artifact, authorization?.Consent.OwnerRunIds ?? [], ct, files))
                 { results.Add(new(id, false, "ReferencedPath")); continue; }
-                var verified = snapshot != null ? await store.GetArtifactAsync(id, ct) : await store.ResolveByIdAsync(id, ct);
-                if (verified == null || snapshot != null && !ArtifactCleanupPreviewFiles.MatchesManifest(verified, ct))
+                // A completed stage commit moves the result into the current visible
+                // processing directory. Verify its independent receipt and exact output
+                // before attempting the historical root (which must not be marked missing).
+                var relocatedResult = snapshot == null
+                    ? await AcquisitionProcessingStageCommit.ResolveMovedResultAsync(db, store, workspaces, artifact, ct)
+                    : null;
+                var verified = relocatedResult != null ? artifact : snapshot != null
+                    ? await store.GetArtifactAsync(id, ct) : await store.ResolveByIdAsync(id, ct);
+                if (verified == null || snapshot != null && !ArtifactCleanupPreviewFiles.MatchesManifest(verified, ct,
+                        allowConfirmedAbsent: authorization?.Consent is {DeliveryAccepted: true, SkipFileVerification: true}))
                 { results.Add(new(id, false, "ResultNotVerified")); continue; }
                 if (await IneligibleReason(verified, ct, authorization) is { } changed)
                 { results.Add(new(id, false, changed)); continue; }
@@ -211,8 +250,8 @@ public sealed partial class ArtifactWorkspaceMaintenance
                 // Durable intent precedes the first unlink. If the process stops mid-cleanup,
                 // the precise candidates and committed result remain available for audit.
                 receipt = await journal.BeginAsync(verified, sizes, ct, authorization?.Consent);
-                await plans.ReclaimBoundaryIntermediatesAsync(verified.RootDirectory, verified.Manifest, approved, ct, authorization != null, snapshot);
-                await plans.ReclaimCompletedIntermediatesAsync(verified.RootDirectory, verified.Manifest, approved, ct, authorization != null, snapshot);
+                await plans.ReclaimBoundaryIntermediatesAsync(verified.RootDirectory, verified.Manifest, approved, ct, authorization != null, snapshot, relocatedResult);
+                await plans.ReclaimCompletedIntermediatesAsync(verified.RootDirectory, verified.Manifest, approved, ct, authorization != null, snapshot, relocatedResult);
                 foreach (var planRoot in RelatedCompletedPlanRoots(verified))
                 {
                     var stateFile = Path.Combine(Path.GetDirectoryName(planRoot)!, "state.json");
@@ -222,7 +261,7 @@ public sealed partial class ArtifactWorkspaceMaintenance
                     // gate. Capturing an extra manifest before entering it reads every file twice.
                     await plans.ReclaimCompletedIntermediatesAsync(planRoot, state.FinalManifest, approved, ct, authorization != null, snapshot);
                 }
-                await recursive.ReclaimCompletedIntermediatesAsync(Path.GetDirectoryName(verified.RootDirectory)!, verified, approved, ct, authorization != null, snapshot);
+                await recursive.ReclaimCompletedIntermediatesAsync(Path.GetDirectoryName(verified.RootDirectory)!, verified, approved, ct, authorization != null, snapshot, relocatedResult);
                 await recursive.ReclaimReplacedPlanResultAsync(verified.RootDirectory, verified.Manifest, approved, ct, snapshot);
                 var outcome = await journal.FinishAsync(receipt, "Completed", ct);
                 var complete = outcome.RemovedFiles == files.Count;

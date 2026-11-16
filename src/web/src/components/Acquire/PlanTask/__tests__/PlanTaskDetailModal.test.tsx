@@ -2,6 +2,7 @@ import { Children, isValidElement, type ReactNode } from "react";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, expect, it, vi } from "vitest";
 import PlanTaskDetailModal from "../PlanTaskDetailModal";
+import type { PlanTaskDetail } from "../models";
 import AcquisitionExecutionTimeline from "../AcquisitionExecutionTimeline";
 import TaskPlanSnapshot from "../TaskPlanSnapshot";
 import AcquisitionSourceDetails from "../../AcquisitionSourceDetails";
@@ -1262,6 +1263,7 @@ it("opens the actionable current run directly in the continuation dialog", async
   render(<PlanTaskDetailModal taskId={42} />);
   const review = await screen.findByRole("button", { name: "acquisition.continue.open" });
   fireEvent.click(review);
+  expect(screen.getByRole("dialog", { name: "#42 Chosen content · acquisition.continue.open" })).toBeVisible();
   expect(screen.queryByRole("dialog", { name: "acquisition.plan.diagnostics.title" })).toBeNull();
   expect(screen.getByText("inline run 75")).toBeVisible();
   expect(mocks.runContent).toHaveBeenLastCalledWith(
@@ -1318,7 +1320,7 @@ it.each([
   const button = await screen.findByRole("button", { name: "acquisition.continue.open" });
   expect(button).toBeEnabled();
   fireEvent.click(button);
-  const dialog = within(screen.getByRole("dialog", { name: "acquisition.continue.open" }));
+  const dialog = within(screen.getByRole("dialog", { name: /acquisition\.continue\.open$/ }));
   expect(dialog.queryByText("inline run 77")).toBeNull();
   expect(dialog.queryByRole("tab")).toBeNull();
   expect(mocks.completedRevision).toHaveBeenLastCalledWith(expect.objectContaining({
@@ -1326,7 +1328,7 @@ it.each([
   }));
   expect(dialog.getByText("completed revision 3")).toBeVisible();
   fireEvent.click(dialog.getByRole("button", { name: "acquisition.plan.close" }));
-  expect(screen.queryByRole("dialog", { name: "acquisition.continue.open" })).toBeNull();
+  expect(screen.queryByRole("dialog", { name: /acquisition\.continue\.open$/ })).toBeNull();
   expect(mocks.run).not.toHaveBeenCalled();
 });
 
@@ -1344,7 +1346,7 @@ it("shows the current AI file mismatch in the task and its existing-file continu
   render(<PlanTaskDetailModal taskId={42} />);
   expect(await screen.findByText(message)).toBeVisible();
   fireEvent.click(screen.getByRole("button", { name: "acquisition.continue.open" }));
-  const form = within(screen.getByRole("dialog", { name: "acquisition.continue.open" }));
+  const form = within(screen.getByRole("dialog", { name: /acquisition\.continue\.open$/ }));
   expect(form.getByText(message)).toBeVisible();
   expect(form.getByText("completed revision 3")).toBeVisible();
   expect(mocks.run).not.toHaveBeenCalled();
@@ -1360,11 +1362,25 @@ it.each([false, undefined, "missing-part"])("preserves the current password answ
     currentNodeKind: "fs.assessDelivery", workflowStatus: "waiting", problemCode: "PasswordUnknown" }]);
   render(<PlanTaskDetailModal taskId={42} />);
   fireEvent.click(await screen.findByRole("button", { name: "acquisition.continue.open" }));
-  const dialog = within(screen.getByRole("dialog", { name: "acquisition.continue.open" }));
+  const dialog = within(screen.getByRole("dialog", { name: /acquisition\.continue\.open$/ }));
   expect(dialog.getByText("inline run 77")).toBeVisible();
   expect(dialog.queryByText("completed revision 3")).toBeNull();
   expect(dialog.queryByRole("tab")).toBeNull();
   expect(mocks.runContent).toHaveBeenLastCalledWith(expect.objectContaining({ runId: 77, respondInitially: true }));
+  expect(mocks.run).not.toHaveBeenCalled();
+});
+
+it("can reopen current manual processing files during a stopped delivery without any historical artifact", async () => {
+  mocks.get.mockResolvedValue({ ...detail, task: { ...detail.task, workflowRunId: 77, phase: "attention",
+    status: AcquisitionStatus.Waiting, waitPromptJson: JSON.stringify({targetId:"part",reason:"PublicationConflict"}) },
+    plan:{parts:[{id:"part",sources:[]}]},steps:[{stage:"delivery"}],replanArtifacts:[],
+    stageDirectories:{version:1,taskId:42,parts:{part:{processing:{directory:"/manual/current",ownership:"borrowed",evidence:"configured",bindingId:"fixed"}}}},
+  });
+  mocks.runtimeOverviews.mockResolvedValue([{taskId:42,workflowRunId:77,currentStepIndex:0,currentNodeKind:"fs.publishArtifacts",workflowStatus:"waiting",activeDownloadCount:0}]);
+  render(<PlanTaskDetailModal taskId={42}/>);
+  fireEvent.click(await screen.findByRole("button",{name:"acquisition.continue.again"}));
+  expect(mocks.completedRevision).toHaveBeenLastCalledWith(expect.objectContaining({inputStage:"processing",retryStage:"processing"}));
+  expect(screen.queryByRole("radio",{name:"acquisition.continue.checkpoint.current"})).toBeNull();
   expect(mocks.run).not.toHaveBeenCalled();
 });
 
@@ -1381,7 +1397,7 @@ it("resumes a complete saved space checkpoint by default and offers explicit rea
   await screen.findByRole("button", { name: "acquisition.continue.open" });
   await act(async () => {});
   fireEvent.click(screen.getByRole("button", { name: "acquisition.continue.open" }));
-  const dialog = within(screen.getByRole("dialog", { name: "acquisition.continue.open" }));
+  const dialog = within(screen.getByRole("dialog", { name: /acquisition\.continue\.open$/ }));
   expect(dialog.getByRole("radio", { name: "acquisition.continue.checkpoint.current" })).toBeChecked();
   expect(dialog.getByText("inline run 77")).toBeVisible();
   expect(mocks.completedRevision).not.toHaveBeenCalled();
@@ -1405,7 +1421,7 @@ it.each(["ExtractionPlanUnknown", "PasswordUnknown", "FutureProcessingWait"])("d
     currentNodeKind: "acquisition.plan.process", workflowStatus: "waiting", problemCode: "SOURCE_ATTENTION_REQUIRED" }]);
   render(<PlanTaskDetailModal taskId={42} />);
   fireEvent.click(await screen.findByRole("button", { name: "acquisition.continue.open" }));
-  const dialog = within(screen.getByRole("dialog", { name: "acquisition.continue.open" }));
+  const dialog = within(screen.getByRole("dialog", { name: /acquisition\.continue\.open$/ }));
   expect(dialog.getByText("completed revision 3")).toBeVisible();
   expect(dialog.queryByText("inline run 77")).toBeNull();
   expect(mocks.completedRevision).toHaveBeenLastCalledWith(expect.objectContaining({ inDialog: true,
@@ -1533,6 +1549,7 @@ it.each([2, undefined])("marks a previous delivery as an earlier result while th
     hasAssessmentCalls: false,
     outputs: [{ kind: "scalar", key: id, value: id }],
   });
+  // This isolated timeline fixture intentionally supplies only the fields it renders.
   const saved = { ...detail, task: { ...detail.task, workflowRunId: 80 },
     steps: [{ id: "input", kind: "acquisition.plan.continueFiles", labelKey: "input", stage: "processing" },
       { id: "process", kind: "acquisition.plan.process", labelKey: "process", stage: "processing" },
@@ -1544,7 +1561,7 @@ it.each([2, undefined])("marks a previous delivery as an earlier result while th
     stageDirectories: { version: 1, taskId: 42, parts: { main: { delivery: {
       directory: "/Acquired/previous", ownership: "borrowed", evidence: "recorded",
     } } } },
-  };
+  } as unknown as PlanTaskDetail;
   const view = render(<AcquisitionExecutionTimeline detail={saved} currentStepIndex={currentStepIndex}
     actions={{}} onOpenRun={vi.fn()} />);
   const rows = screen.getAllByRole("listitem");
@@ -1641,9 +1658,9 @@ it("keeps the latest AI inspection entry without repeating the same current fail
   render(<AcquisitionExecutionTimeline detail={{ ...detail,
     task: { ...detail.task, workflowRunId: 77 },
     stageAttempts: [{ id: "77/1", runId: 77, stage: "processing", attempt: 1, status: "waiting",
-      legacy: false, outputsTruncated: false, nodes: ["fs.assessDelivery"],
+      legacy: false, outputsTruncated: false, hasAssessmentCalls: true, nodes: ["fs.assessDelivery"],
       outputs: [{ kind: "warning", key: "adaptive-assessment", code: "LLM_DECISION_INVALID_JSON" }] }],
-  }} actions={{ processing: <p>cloudDownload.problemCode.LLM_DECISION_INVALID_JSON</p> }}
+  } as unknown as PlanTaskDetail} actions={{ processing: <p>cloudDownload.problemCode.LLM_DECISION_INVALID_JSON</p> }}
     currentProblemCode="LLM_DECISION_INVALID_JSON" onOpenRun={vi.fn()} />);
   expect(screen.getAllByText("cloudDownload.problemCode.LLM_DECISION_INVALID_JSON")).toHaveLength(1);
   expect(screen.getByRole("button", { name: "acquisition.records.viewIo" })).toBeVisible();

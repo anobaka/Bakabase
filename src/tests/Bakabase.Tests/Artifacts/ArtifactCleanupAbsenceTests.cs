@@ -10,14 +10,24 @@ public sealed class ArtifactCleanupAbsenceTests
     [TestCleanup] public void Cleanup() { if (Directory.Exists(root)) Directory.Delete(root, true); }
 
     [TestMethod]
-    public void Missing_leaf_requires_a_readable_registered_root_and_immediate_parent()
+    public void Removed_nested_directories_are_absent_only_below_a_readable_registered_root()
     {
         var parent = Path.Combine(root, "nested"); Directory.CreateDirectory(parent);
         var path = Path.Combine(parent, "gone.bin");
         Assert.AreEqual(ArtifactCleanupPathPresence.ConfirmedAbsent, ArtifactCleanupAbsence.Probe(root, path));
         Directory.Delete(parent);
-        Assert.AreEqual(ArtifactCleanupPathPresence.Unavailable, ArtifactCleanupAbsence.Probe(root, path));
+        Assert.AreEqual(ArtifactCleanupPathPresence.ConfirmedAbsent, ArtifactCleanupAbsence.Probe(root, path));
         Directory.Delete(root);
+        Assert.AreEqual(ArtifactCleanupPathPresence.Unavailable, ArtifactCleanupAbsence.Probe(root, path));
+    }
+
+    [TestMethod]
+    public void A_removed_subtree_is_absent_but_a_file_replacing_its_parent_is_unavailable()
+    {
+        var directory = Path.Combine(root, "removed");
+        var path = Path.Combine(directory, "also-removed", "gone.bin");
+        Assert.AreEqual(ArtifactCleanupPathPresence.ConfirmedAbsent, ArtifactCleanupAbsence.Probe(root, path));
+        File.WriteAllText(directory, "a new unrelated file");
         Assert.AreEqual(ArtifactCleanupPathPresence.Unavailable, ArtifactCleanupAbsence.Probe(root, path));
     }
 

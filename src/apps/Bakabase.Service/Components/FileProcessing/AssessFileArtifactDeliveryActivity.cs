@@ -66,7 +66,7 @@ public sealed class AssessFileArtifactDeliveryActivity : IResumableWorkflowActiv
     private static DownloadWorkset Replace(DownloadWorkset workset, CloudDownloadTarget target) =>
         workset with {Targets = workset.Targets.Select(t => t.Id == target.Id ? target : t).ToList()};
     private static bool CanRevise(string? reason) => reason is FileArtifactDeliveryAssessment.ReviewRequired or FileArtifactDeliveryAssessment.ResultUncertain or
-        "ExtractionPlanUnknown" or "ArchiveInputRequired" or "ProcessingInputNotMatched" or "RepeatedContent" or "ExtractionLayoutConflict";
+        "ExtractionPlanUnknown" or "ArchiveInputRequired" or "MissingVolumes" or "ProcessingInputNotMatched" or "RepeatedContent" or "ExtractionLayoutConflict";
 
     private static bool BudgetWait(string? reason) => reason is "DepthLimit" or "ArchiveCountLimit" or
         "FileCountLimit" or "ExpandedBytesLimit" or "DiskSpaceLimit";
@@ -274,6 +274,7 @@ public sealed class AssessFileArtifactDeliveryActivity : IResumableWorkflowActiv
                 input.Manifest.Entries.Select(e => e.RelativePath).Take(FileArtifactDeliveryAssessment.MaximumFiles).ToArray(), result.Message, config.EnableAdaptiveAssessment);
         var artifact = result.Artifact;
         await ArtifactWorkflowBindings.BindAsync(ctx, target.Id + ":process:delivery-result:" + artifact.Id, artifact.OperationId, ct);
+        artifact = await AcquisitionProcessingStageCommit.CommitAsync(ctx, target, artifact, ct);
         target = target with
         {
             ProcessedArtifactId = artifact.Id, ProcessedDirectory = artifact.RootDirectory,
@@ -440,7 +441,9 @@ public sealed class AssessFileArtifactDeliveryActivity : IResumableWorkflowActiv
                 await store.GetOperationAsync(result.Artifact.OperationId, ct));
             if (completed == null) completedProcessing.Clear();
             else completedProcessing.Add(completed);
-            current = result.Artifact;
+            current = await AcquisitionProcessingStageCommit.CommitAsync(ctx, currentTarget, result.Artifact, ct);
+            if (completed != null && current.Id != result.Artifact.Id)
+                completedProcessing[^1] = completed with {OutputArtifactId = current.Id, OutputFingerprint = current.Fingerprint};
             await ArtifactWorkflowBindings.BindAsync(ctx, currentTarget.Id + ":adaptive:output:" + current.Id,
                 current.OperationId, ct);
             if (!await store.PinConsumerAsync(current.OperationId,

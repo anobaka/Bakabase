@@ -16,6 +16,8 @@ public sealed record CloudDownloadTarget
     public Bakabase.Modules.Workflow.Artifacts.ArtifactDirectoryScope? DownloadDirectoryScope { get; init; }
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public Bakabase.Modules.Workflow.Artifacts.ArtifactDirectoryScope? ProcessingDirectoryScope { get; init; }
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionPartDirectories? StageDirectories { get; init; }
     public List<CloudSource> Sources { get; init; } = [];
     public string? SelectedSourceId { get; init; }
     public string? AccountId { get; init; }

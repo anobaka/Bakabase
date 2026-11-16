@@ -75,8 +75,17 @@ public sealed partial class AcquisitionReplanTests
             Processing = new() {Requirement = "required", Steps = [new() {Id = "extract", Op = "extractArchive"}]}
         }]};
         var prepared = await Plans.CreatePreparedPlanAsync(plan, [source]);
-        // Freeze the server-resolved directory scopes alongside the executable plan.
-        plan = prepared.Plan!;
+        // This fixture models a previously executed revision, predating authoritative
+        // stage bindings. New-stage contracts are covered explicitly in StageDirectory.
+        plan = prepared.Plan! with {StageDirectories = prepared.Plan!.StageDirectories! with
+        {Parts = prepared.Plan.StageDirectories!.Parts.ToDictionary(p => p.Key, p => p.Value with
+        {Download = p.Value.Download is {} d ? d with {BindingId = null} : null,
+            Processing = p.Value.Processing is {} w ? w with {BindingId = null} : null,
+            Delivery = p.Value.Delivery is {} f ? f with {BindingId = null} : null})}};
+        var legacy = (await Db.AcquisitionTasks.FindAsync(prepared.Id))!;
+        legacy.PlanJson = JsonSerializer.Serialize(plan, WorkflowJson.Options);
+        legacy.PlanHistoryJson = JsonSerializer.Serialize(prepared.PlanHistory.Select(h => h with {Plan = plan}), WorkflowJson.Options);
+        await Db.SaveChangesAsync();
         var run = new WorkflowRunDbModel {WorkflowDefinitionId = 0, Status = WorkflowRunStatus.Failed,
             PlanSnapshotJson = WorkflowRunPlans.Serialize(AcquisitionPlanCompiler.Compile(plan)),
             StartedAt = DateTime.UtcNow, CompletedAt = DateTime.UtcNow, ErrorMessage = "Missing volume", CurrentStepIndex = 3,

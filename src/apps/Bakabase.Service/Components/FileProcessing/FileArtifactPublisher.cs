@@ -43,11 +43,15 @@ public sealed class FileArtifactPublisher
     { _store = store; _storage = storage; _appData = appData; _scopes = scopes; _copy = copy; _writeGuard = writeGuard; }
 
     public static string Intent(string sourceIntent, string targetDirectory, string? forceKey = null,
-        FileProcessingWorkspaceResolver? workspaces = null, ArtifactDeliveryPolicy? deliveryPolicy = null)
+        FileProcessingWorkspaceResolver? workspaces = null, ArtifactDeliveryPolicy? deliveryPolicy = null,
+        string? currentStageDirectoryBindingId = null)
     {
         FileArtifactDeliveryLayout.Validate(deliveryPolicy);
+        if (currentStageDirectoryBindingId != null && !Guid.TryParseExact(currentStageDirectoryBindingId, "N", out _))
+            throw new ArgumentException("STAGE_DIRECTORY_BINDING_INVALID");
         var legacy = "publish-artifacts-v1\n" + sourceIntent + "\n" +
             (workspaces?.IdentityPath(Path.GetFullPath(targetDirectory)) ?? Path.GetFullPath(targetDirectory)) + "\n" + forceKey;
+        if (currentStageDirectoryBindingId != null) legacy += "\ncurrent-stage-directory-v1\n" + currentStageDirectoryBindingId;
         return ArtifactManifestFiles.Hash(deliveryPolicy == null ? legacy :
             legacy + "\ndelivery-layout-v1\n" + JsonSerializer.Serialize(deliveryPolicy, Json));
     }
@@ -64,14 +68,16 @@ public sealed class FileArtifactPublisher
         { await _copy(source, destination, token); return true; }, ct);
     }
 
-    private string StableIntent(string sourceIntent, string directory, string? forceKey = null, ArtifactDeliveryPolicy? deliveryPolicy = null) =>
-        Intent(sourceIntent, directory, forceKey, new FileProcessingWorkspaceResolver(_appData(), _storage), deliveryPolicy);
+    private string StableIntent(string sourceIntent, string directory, string? forceKey = null, ArtifactDeliveryPolicy? deliveryPolicy = null,
+        string? currentStageDirectoryBindingId = null) =>
+        Intent(sourceIntent, directory, forceKey, new FileProcessingWorkspaceResolver(_appData(), _storage), deliveryPolicy, currentStageDirectoryBindingId);
 
     public async Task<ArtifactRecord?> ResolveAsync(string sourceIntent, string targetDirectory, CancellationToken ct = default,
-        ArtifactDeliveryPolicy? deliveryPolicy = null)
+        ArtifactDeliveryPolicy? deliveryPolicy = null, string? currentStageDirectoryBindingId = null)
     {
         ValidateTarget(targetDirectory);
-        var found = await _store.ResolveAsync(StableIntent(sourceIntent, targetDirectory, deliveryPolicy: deliveryPolicy), ct);
+        var found = await _store.ResolveAsync(StableIntent(sourceIntent, targetDirectory, deliveryPolicy: deliveryPolicy,
+            currentStageDirectoryBindingId: currentStageDirectoryBindingId), ct);
         return found != null && MatchesPolicy(found, deliveryPolicy) ? found : null;
     }
 
@@ -103,13 +109,13 @@ public sealed class FileArtifactPublisher
 
     public async Task<FileArtifactPublicationResult> PublishAsync(string sourceIntent, ArtifactRecord input,
         string targetDirectory, string consumerKey, long? workflowRunId = null, CancellationToken ct = default,
-        string? forceKey = null, ArtifactDeliveryPolicy? deliveryPolicy = null)
+        string? forceKey = null, ArtifactDeliveryPolicy? deliveryPolicy = null, string? currentStageDirectoryBindingId = null)
     {
         using var writeScope = workflowRunId is { } runtimeOwner
             ? StorageWriteScope.Enter(new("workflow", runtimeOwner.ToString(System.Globalization.CultureInfo.InvariantCulture))) : null;
         ValidateTarget(targetDirectory);
         targetDirectory = Path.GetFullPath(targetDirectory);
-        var intent = StableIntent(sourceIntent, targetDirectory, forceKey, deliveryPolicy);
+        var intent = StableIntent(sourceIntent, targetDirectory, forceKey, deliveryPolicy, currentStageDirectoryBindingId);
         var gate = Gates.GetOrAdd(targetDirectory, _ => new SemaphoreSlim(1, 1));
         await gate.WaitAsync(ct);
         ArtifactOperationLease? lease = null;
@@ -134,7 +140,7 @@ public sealed class FileArtifactPublisher
                     return await Wait("PublicationConflict", "The saved delivery projection differs from the current source evidence.");
                 return new(existing);
             }
-            if (deliveryPolicy != null && Directory.Exists(targetDirectory) && OtherLayoutPath(input, targetDirectory, layout) is { } previous)
+            if (currentStageDirectoryBindingId == null && deliveryPolicy != null && Directory.Exists(targetDirectory) && OtherLayoutPath(input, targetDirectory, layout) is { } previous)
                 return new(null, "PublicationConflict", $"Another delivery layout already uses '{previous}'. Choose a new delivery directory or review the existing files first.");
             var validation = await ArtifactManifestFiles.ValidateAsync(input.RootDirectory, input.Manifest, ct);
             if (!validation.Available) return new(null,
@@ -146,7 +152,7 @@ public sealed class FileArtifactPublisher
             var destinationPaths = layout.FileMappings.Select(m => FileProcessingFiles.Within(
                 Path.Combine(targetDirectory, m.TargetRelativePath), targetDirectory)).ToArray();
             var sourceSet = sourcePaths.ToHashSet(ArtifactManifestFiles.PathComparer);
-            if (destinationPaths.Any(sourceSet.Contains))
+            if (currentStageDirectoryBindingId == null && destinationPaths.Any(sourceSet.Contains))
                 return new(null, "PublicationConflict", "Delivery must copy to a different directory from the shared source artifact.");
             var key = ArtifactManifestFiles.Hash(intent + "\n" + input.Fingerprint +
                 (deliveryPolicy == null ? "" : "\n" + layout.ProjectionFingerprint));
@@ -204,7 +210,10 @@ public sealed class FileArtifactPublisher
                     {
                         if (!await Matches(destination, entry, work.Token))
                             return await Wait("PublicationConflict", "A different file already exists in the delivery directory. Choose another directory; existing files are never overwritten.");
-                        continue; // A prior copy may have committed before its operation receipt.
+                        // Either a prior copy committed before its receipt, or an explicit current
+                        // stage already contains this exact registered input. Both require the
+                        // complete manifest hash; never replace different bytes or adopt siblings.
+                        continue;
                     }
                     if (Directory.Exists(destination))
                         return await Wait("PublicationConflict", "A delivery file conflicts with an existing directory.");

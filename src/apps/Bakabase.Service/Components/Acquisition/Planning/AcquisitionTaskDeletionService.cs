@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Bakabase.Abstractions.Exceptions;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components.Artifacts;
+using Bakabase.Service.Components.FileProcessing;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Db;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Acquisition.Components;
@@ -34,9 +35,11 @@ internal sealed record AcquisitionTaskDeleteOptions(bool CleanupFiles, bool Acce
             throw new ArgumentException("ACQUISITION_DELETE_OPTIONS_CHANGED");
         // A detailed inventory freezes the exact file selection and proof mode. An ordinary task
         // preview freezes the task identities and lets the user choose cleanup at confirmation.
+        var deferredFinalDeletion = !preview.CleanupFiles && !preview.DeleteDeliveredFiles &&
+            options.DeleteDeliveredFiles && options.AcceptDeliveredFiles && options.SkipFileVerification;
         if ((preview.CleanupFiles || preview.DeleteDeliveredFiles) && (options.CleanupFiles != preview.CleanupFiles ||
                 options.AcceptDeliveredFiles != preview.AcceptDeliveredFiles || options.SkipFileVerification != preview.SkipFileVerification) ||
-            options.DeleteDeliveredFiles != preview.DeleteDeliveredFiles)
+            options.DeleteDeliveredFiles != preview.DeleteDeliveredFiles && !deferredFinalDeletion)
             throw new ArgumentException("ACQUISITION_DELETE_OPTIONS_CHANGED");
         options.Validate(preview.TotalCount);
         return options;
@@ -119,6 +122,7 @@ public sealed class AcquisitionTaskDeletionService(BakabaseDbContext db, IAcquis
     public async Task<AcquisitionTaskDeletePreview> PreviewAsync(AcquisitionTaskDeletePreviewInput input, CancellationToken ct = default,
         Func<string, Task>? guardDirectory = null)
     {
+        var started = Stopwatch.GetTimestamp();
         if (input.TaskIds == null || input.TaskIds.Count is 0 or > 10000 || input.TaskIds.Any(id => id <= 0))
             throw new ArgumentException("Choose between one and 10000 fixed acquisition task IDs.");
         var ids = input.TaskIds.Distinct().ToArray();
@@ -140,6 +144,7 @@ public sealed class AcquisitionTaskDeletionService(BakabaseDbContext db, IAcquis
             {
                 var row = rows[i];
                 if (!row.CanDelete) continue;
+                var preparing = Stopwatch.GetTimestamp();
                 try
                 {
                     var plan = await cleanup!.PreviewAsync(tasks.Single(t => t.Id == row.TaskId), states[row.TaskId].RunIds,
@@ -155,6 +160,12 @@ public sealed class AcquisitionTaskDeletionService(BakabaseDbContext db, IAcquis
                 {
                     logger?.LogWarning(error, "Unable to preview cleanup for acquisition task {TaskId}", row.TaskId);
                     rows[i] = row with {CanDelete = false, ReasonCode = "CLEANUP_PREVIEW_FAILED"};
+                }
+                finally
+                {
+                    logger?.LogInformation("Acquisition cleanup preview for task {TaskId} took {ElapsedMs} ms. Skip content checks: {SkipContentChecks}; delete delivered files: {DeleteDeliveredFiles}; plan ready: {PlanReady}",
+                        row.TaskId, Stopwatch.GetElapsedTime(preparing).TotalMilliseconds, options.SkipFileVerification,
+                        options.DeleteDeliveredFiles, cleanupPlans.ContainsKey(row.TaskId));
                 }
             }
         ProtectOverlappingSelections(cleanupPlans);
@@ -179,6 +190,8 @@ public sealed class AcquisitionTaskDeletionService(BakabaseDbContext db, IAcquis
         var confirmed = rows.Where(r => r.CanDelete || r.CanRemoveTaskIfCleanupFails).Select(r => r.TaskId).ToHashSet();
         previews.Add(new(preview, tasks.Where(t => confirmed.Contains(t.Id)).ToDictionary(t => t.Id, t => Version(t, states[t.Id])),
             states.Where(s => confirmed.Contains(s.Key)).ToDictionary(s => s.Key, s => s.Value.RunIds), cleanupPlans));
+        logger?.LogInformation("Acquisition deletion preview for {TaskCount} tasks took {ElapsedMs} ms. File cleanup requested: {CleanupRequested}; skip content checks: {SkipContentChecks}",
+            ids.Length, Stopwatch.GetElapsedTime(started).TotalMilliseconds, options.HasFileCleanup, options.SkipFileVerification);
         return preview;
     }
 
@@ -248,7 +261,8 @@ public sealed class AcquisitionTaskDeletionService(BakabaseDbContext db, IAcquis
                     try
                     {
                         var plan = await cleanup.PreviewAsync(current[id], entry.Runs[id], options.AcceptDeliveredFiles,
-                            options.SkipFileVerification, ct, guardDirectory);
+                            options.SkipFileVerification, ct, guardDirectory, options.RetryRetainedFiles,
+                            cleanupIntermediates: options.CleanupFiles, deleteDeliveredFiles: options.DeleteDeliveredFiles);
                         deferredPlans.Add(id, plan);
                     }
                     catch (Exception error) when (error is not UserStoragePathException &&
@@ -378,6 +392,9 @@ public sealed class AcquisitionTaskDeletionService(BakabaseDbContext db, IAcquis
         reason?.StartsWith("ACQUISITION_", StringComparison.Ordinal) != true;
     internal static void ProtectOverlappingSelections(Dictionary<int, AcquisitionTaskDeletionCleanupService.Plan> plans)
     {
+        foreach (var task in plans.Keys.ToArray())
+            if (plans[task].Consent?.TaskId == task)
+                plans[task] = CoalesceContainedPrivateSelections(CoalesceIdenticalPrivateSelections(plans[task]));
         var owners = new Dictionary<string, (int Task, string Artifact)>(ArtifactManifestFiles.PathComparer);
         var blocked = new HashSet<(int Task, string Artifact)>();
         foreach (var (task, plan) in plans)
@@ -401,7 +418,10 @@ public sealed class AcquisitionTaskDeletionService(BakabaseDbContext db, IAcquis
             plans[task] = plan with {
                 Summary = plan.Summary with { Groups = groups, FileCount = files.Count, Bytes = files.Sum(f => f.Bytes) },
                 Candidates = plan.Candidates.Where(c => !blocked.Contains((task, c.ArtifactId))).ToArray(),
-                DeliveredFiles = plan.DeliveredFiles?.Where(c => !blocked.Contains((task, c.ArtifactId))).ToArray()
+                DeliveredFiles = plan.DeliveredFiles?.Where(c => !blocked.Contains((task, c.ArtifactId))).ToArray(),
+                AbandonedInputs = plan.AbandonedInputs?.Where(c => !blocked.Contains((task, c.Group.ArtifactId))).ToArray(),
+                CapturedInputs = plan.CapturedInputs?.Where(c => !blocked.Contains((task, c.Group.ArtifactId))).ToArray(),
+                StageDirectories = plan.StageDirectories?.Where(c => !blocked.Contains((task, c.Id))).ToArray()
             };
         }
 
@@ -413,6 +433,111 @@ public sealed class AcquisitionTaskDeletionService(BakabaseDbContext db, IAcquis
             return a?.FileIdentities?.TryGetValue(path, out var identity) == true &&
                 b?.FileIdentities?.TryGetValue(path, out var other) == true && identity == other;
         }
+    }
+
+    private static AcquisitionTaskDeletionCleanupService.Plan CoalesceIdenticalPrivateSelections(
+        AcquisitionTaskDeletionCleanupService.Plan plan)
+    {
+        if (plan.Consent is not {DeliveryAccepted: true, SkipFileVerification: true}) return plan;
+        var candidates = plan.Candidates.Where(c => c.PublishedArtifactId == null).ToLookup(c => c.ArtifactId, StringComparer.Ordinal);
+        var groups = new List<AcquisitionTaskDeleteCleanupGroup>();
+        var firstBySelection = new Dictionary<string, int>(StringComparer.Ordinal);
+        var duplicates = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var group in plan.Summary.Groups)
+        {
+            var matching = candidates[group.ArtifactId].ToArray();
+            var candidate = matching.Length == 1 ? matching[0] : null;
+            var fingerprint = candidate?.PrivateSelectionFingerprint;
+            if (group is not {Kind: "intermediate", Eligible: true, SizeUnknown: false, FilesTruncated: false} ||
+                group.Files.Count == 0 || candidate is not {Eligible: true, PreviewError: null} ||
+                fingerprint is not {Length: 64} || !fingerprint.All(Uri.IsHexDigit) ||
+                !SamePrivateFiles(group.Files, candidate.PreviewFiles))
+            { groups.Add(group); continue; }
+            if (!firstBySelection.TryGetValue(fingerprint, out var index))
+            { firstBySelection.Add(fingerprint, groups.Count); groups.Add(group); continue; }
+            var first = groups[index];
+            if (first.ArtifactId == group.ArtifactId || !SamePrivateFiles(first.Files, candidate.PreviewFiles))
+            { groups.Add(group); continue; }
+            // Both independent server-side proofs selected exactly the same paths,
+            // lengths and modification times for this fixed task. Keep one original
+            // execution proof and all node attribution, not two competing deletions.
+            groups[index] = first with {Nodes = first.Nodes.Concat(group.Nodes).Distinct().ToArray()};
+            duplicates.Add(group.ArtifactId);
+        }
+        if (duplicates.Count == 0) return plan;
+        return plan with {Summary = plan.Summary with {Groups = groups},
+            Candidates = plan.Candidates.Where(c => c.PublishedArtifactId != null || !duplicates.Contains(c.ArtifactId)).ToArray()};
+
+        static bool SamePrivateFiles(IReadOnlyList<AcquisitionTaskDeleteCleanupFile> selected,
+            IReadOnlyList<(string Path, long Bytes)>? recorded)
+        {
+            if (recorded == null || selected.Count != recorded.Count) return false;
+            var ordered = selected.OrderBy(f => f.Path, ArtifactManifestFiles.PathComparer).ToArray();
+            var proof = recorded.OrderBy(f => f.Path, ArtifactManifestFiles.PathComparer).ToArray();
+            return ordered.Select((file, i) => file.Bytes == proof[i].Bytes &&
+                ArtifactManifestFiles.PathComparer.Equals(file.Path, proof[i].Path)).All(equal => equal);
+        }
+    }
+
+    private static AcquisitionTaskDeletionCleanupService.Plan CoalesceContainedPrivateSelections(
+        AcquisitionTaskDeletionCleanupService.Plan plan)
+    {
+        if (plan.Consent is not {DeliveryAccepted: true, SkipFileVerification: true}) return plan;
+        var candidates = plan.Candidates.Where(c => c.PublishedArtifactId == null)
+            .ToLookup(c => c.ArtifactId, StringComparer.Ordinal);
+        var groups = plan.Summary.Groups.ToArray();
+        var proven = new Dictionary<int, (ArtifactWorkspaceCleanupPreview Candidate,
+            Dictionary<string, long> Files, string Checkpoint)>();
+        for (var index = 0; index < groups.Length; index++)
+        {
+            var group = groups[index];
+            var matching = candidates[group.ArtifactId].ToArray();
+            var candidate = matching.Length == 1 ? matching[0] : null;
+            if (group is not {Kind: "intermediate", Eligible: true, SizeUnknown: false, FilesTruncated: false} ||
+                group.Files.Count == 0 || group.Files.Count != group.FileCount ||
+                candidate is not {Eligible: true, PreviewError: null, PreviewFiles: not null,
+                    PrivateSelectionFingerprint: {Length: 64} fingerprint} || !fingerprint.All(Uri.IsHexDigit) ||
+                candidate.PreviewFiles.Count != group.Files.Count) continue;
+            var selected = group.Files.DistinctBy(f => f.Path, ArtifactManifestFiles.PathComparer)
+                .ToDictionary(f => f.Path, f => f.Bytes, ArtifactManifestFiles.PathComparer);
+            if (selected.Count != group.Files.Count || group.Bytes != selected.Values.Sum() ||
+                candidate.PreviewFiles.Select(f => f.Path).Distinct(ArtifactManifestFiles.PathComparer).Count() != selected.Count ||
+                candidate.PreviewFiles.Any(f => !selected.TryGetValue(f.Path, out var bytes) || bytes != f.Bytes)) continue;
+            var checkpoint = System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(candidate.ResultDirectory));
+            if (checkpoint == null || selected.Keys.Any(path => !ArtifactCleanupPathReferences.StrictlyUnder(path, checkpoint))) continue;
+            proven.Add(index, (candidate, selected, checkpoint));
+        }
+        var removed = new HashSet<int>();
+        var duplicateArtifacts = new HashSet<string>(StringComparer.Ordinal);
+        // Keep an existing maximal proof. Never create a union, a new fingerprint or
+        // an edited execution selection from the presentation rows.
+        foreach (var larger in proven.Keys.OrderByDescending(index => proven[index].Files.Count))
+        {
+            if (removed.Contains(larger)) continue;
+            var first = proven[larger];
+            foreach (var smaller in proven.Keys)
+            {
+                if (larger == smaller || removed.Contains(smaller)) continue;
+                var second = proven[smaller];
+                if (first.Candidate.ArtifactId == second.Candidate.ArtifactId ||
+                    first.Files.Count <= second.Files.Count ||
+                    !ArtifactManifestFiles.PathComparer.Equals(first.Checkpoint, second.Checkpoint) ||
+                    second.Files.Any(file => !first.Files.TryGetValue(file.Key, out var bytes) || bytes != file.Value)) continue;
+                // Both private selections already passed their own ownership, references
+                // and executor-ledger checks. Sharing this exact checkpoint is an extra
+                // restriction, not permission inferred from directory names.
+                groups[larger] = groups[larger] with
+                    {Nodes = groups[larger].Nodes.Concat(groups[smaller].Nodes).Distinct().ToArray()};
+                removed.Add(smaller);
+                duplicateArtifacts.Add(second.Candidate.ArtifactId);
+            }
+        }
+        return removed.Count == 0 ? plan : plan with
+        {
+            Summary = plan.Summary with {Groups = groups.Where((_, index) => !removed.Contains(index)).ToArray()},
+            Candidates = plan.Candidates.Where(c => c.PublishedArtifactId != null ||
+                !duplicateArtifacts.Contains(c.ArtifactId)).ToArray()
+        };
     }
     private static string Version(AcquisitionTaskDbModel task, AcquisitionDeletionActivity state) => Convert.ToHexString(
         SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(task) + "\n" + state.Version)));

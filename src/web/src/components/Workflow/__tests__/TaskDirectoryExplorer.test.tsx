@@ -5,18 +5,21 @@ import { taskDirectoryAccess } from "../useTaskDirectoryAccess";
 import { AcquisitionStatus } from "@/sdk/constants";
 import { managedFileCapabilities } from "@/components/FileExplorer/models";
 
-const mocks = vi.hoisted(() => ({ get: vi.fn(), runtime: vi.fn(), explorer: vi.fn(), refresh: vi.fn() }));
+const mocks = vi.hoisted(() => ({ get: vi.fn(), runtime: vi.fn(), explorer: vi.fn(), refresh: vi.fn(), mounted: vi.fn(), unmounted: vi.fn() }));
 vi.mock("@/sdk/BApi", () => ({ default: { acquisition: {
   getAcquisitionPlanTask: mocks.get, getAcquisitionRuntimeOverviews: mocks.runtime,
 } } }));
 vi.mock("@/components/FileExplorer/FileExplorer", async () => {
-  const { forwardRef, useImperativeHandle } = await import("react");
+  const { forwardRef, useImperativeHandle, useEffect } = await import("react");
   return { default: forwardRef((props: any, ref) => {
+    useEffect(() => { mocks.mounted(); return () => mocks.unmounted(); }, []);
     mocks.explorer(props); useImperativeHandle(ref, () => ({ root: { expand: mocks.refresh } }));
     return <div>{props.selectable === "multiple" ? "editable browser" : "readonly browser"}</div>;
   }) };
 });
-vi.mock("@/components/bakaui", () => ({ Button: ({ children, onPress }: any) => <button onClick={onPress}>{children}</button>, Spinner: () => <span>loading</span> }));
+vi.mock("@/components/bakaui", () => ({ Button: ({ children, onPress }: any) => <button onClick={onPress}>{children}</button>, Spinner: () => <span>loading</span>,
+  Tooltip: ({ children, content }: any) => <span data-testid="operation-help" data-help={content.props.children}>{children}</span>,
+}));
 vi.mock("@/components/FileExplorer/components/DirectoryTaskStatus", () => ({ default: ({ path }: any) => <div>tasks for {path}</div> }));
 const context = { taskId: 865, runId: 22 };
 const detail = () => ({ task: { id: 865, workflowRunId: 22, status: AcquisitionStatus.Waiting },
@@ -82,4 +85,33 @@ it("does not watch an unbound historical directory while the current run is acti
   await screen.findByText("workflow.files.taskDirectory.historical");
   expect(mocks.explorer.mock.lastCall?.[0]).toMatchObject({ watchChanges: false, selectable: "disabled" });
   expect(screen.queryByText("tasks for /work/old-result")).toBeNull();
+});
+
+it("places the input heading and concise file actions in one wrapping header without repeating the full instructions", async () => {
+  render(<TaskDirectoryExplorer path="/work/task" context={context} maxContentHeight={288}
+    heading={<h4>Current input files</h4>} />);
+  await screen.findByText("editable browser");
+  const help = screen.getByTestId("operation-help");
+  expect(help).toHaveAttribute("data-help", "workflow.files.taskDirectory.editable");
+  expect(screen.queryByText("workflow.files.taskDirectory.editable")).toBeNull();
+  expect(screen.getByRole("button", { name: "workflow.files.taskDirectory.compact.editable" })).toBeVisible();
+  expect(screen.getByRole("heading", { name: "Current input files" }).parentElement).toContainElement(help);
+  expect(help.parentElement).toHaveClass("flex-wrap");
+});
+
+it("keeps the same explorer mounted when initial permission checks finish and later revoke editing", async () => {
+  let complete!: (value: any) => void;
+  mocks.get.mockImplementationOnce(() => new Promise(resolve => { complete = resolve; }));
+  render(<TaskDirectoryExplorer path="/work/task" context={context} />);
+  expect(await screen.findByText("readonly browser")).toBeVisible();
+  expect(mocks.mounted).toHaveBeenCalledOnce();
+  await act(async () => complete({ data: detail() }));
+  expect(await screen.findByText("editable browser")).toBeVisible();
+  expect(mocks.mounted).toHaveBeenCalledOnce();
+  expect(mocks.unmounted).not.toHaveBeenCalled();
+  mocks.runtime.mockResolvedValue({ data: [{ ...runtime(), workflowStatus: "running" }] });
+  act(() => window.dispatchEvent(new Event("focus")));
+  expect(await screen.findByText("readonly browser")).toBeVisible();
+  expect(mocks.mounted).toHaveBeenCalledOnce();
+  expect(mocks.unmounted).not.toHaveBeenCalled();
 });

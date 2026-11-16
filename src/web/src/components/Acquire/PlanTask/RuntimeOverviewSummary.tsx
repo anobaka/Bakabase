@@ -200,7 +200,8 @@ export default function RuntimeOverviewSummary({ overview, showSources = true, p
           </span>
         </div>
       )}
-      {problemDetail ? <ProcessingProblemSummary message={problemDetail} summary={problem} /> : problem && (
+      {problemDetail ? <ProcessingProblemSummary message={problemDetail} summary={problem}
+        reason={overview.problemReasonCode ?? overview.problemCode ?? undefined} /> : problem && (
         <p
           className="line-clamp-2 whitespace-pre-wrap break-words text-xs text-warning-600"
           title={problem}

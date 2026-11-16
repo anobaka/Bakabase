@@ -100,14 +100,14 @@ function StageRow({
         <StageIcon />
       </span>
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        <h4 className="text-sm font-semibold text-foreground">{t(`acquisition.timeline.stage.${stage}`)}</h4>
-        <AttemptStatus status={previousResult ? "pending" : latest?.status ?? (pending ? "pending" : "unknown")} />
-        {live && latest.status === "running" && (
-          <Spinner size="sm" aria-label={t("acquisition.timeline.state.running")} />
-        )}
-        <div className="ml-auto flex flex-wrap items-center justify-end gap-1">{headerActions}</div>
-      </div>
-      {latest && <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+        <div className="inline-flex items-center gap-2">
+          <h4 className="text-sm font-semibold text-foreground">{t(`acquisition.timeline.stage.${stage}`)}</h4>
+          <AttemptStatus status={previousResult ? "pending" : latest?.status ?? (pending ? "pending" : "unknown")} />
+          {live && latest.status === "running" && (
+            <Spinner size="sm" aria-label={t("acquisition.timeline.state.running")} />
+          )}
+        </div>
+        {latest && <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
           <Tooltip content={t("acquisition.records.open")}>
             <Button
               isIconOnly
@@ -127,9 +127,11 @@ function StageRow({
                 ? "acquisition.timeline.liveAttempt" : "acquisition.timeline.latestAttempt")}
             </span>
           </Tooltip>
-        {previousResult && <AttemptStatus status={latest.status} />}
-        <AttemptStamp attempt={latest} />
-      </div>}
+          {previousResult && <AttemptStatus status={latest.status} />}
+          <AttemptStamp attempt={latest} />
+        </div>}
+        <div className="ml-auto flex flex-wrap items-center justify-end gap-1">{headerActions}</div>
+      </div>
       {actions}
       {directories.length > 0 && <div className="my-1 min-w-0 space-y-1">
         {directories.map(directory => <div key={directory.path} className="min-w-0">

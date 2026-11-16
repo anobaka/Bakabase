@@ -4596,6 +4596,7 @@ export interface BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionSt
   directory: string;
   ownership: string;
   evidence: string;
+  bindingId?: string;
   allocation?: BakabaseModulesWorkflowArtifactsArtifactDirectoryScope;
 }
 
@@ -7930,10 +7931,30 @@ export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionAssessme
   outputPreview?: string;
   outputTruncated: boolean;
   validationError?: string;
+  callId?: string;
+  inputAvailability: string;
+  outputAvailability: string;
+  inputRedacted: boolean;
+  outputRedacted: boolean;
+  inputTextAvailable: boolean;
+  outputTextAvailable: boolean;
 }
 
 export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionAssessmentIoView {
   calls: BakabaseServiceComponentsAcquisitionPlanningAcquisitionAssessmentCallView[];
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionAssessmentTextPage {
+  text: string;
+  /** @format int32 */
+  offset: number;
+  /** @format int32 */
+  nextOffset?: number;
+  /** @format int32 */
+  totalCharacters: number;
+  contentId: string;
+  availability: string;
+  redacted: boolean;
 }
 
 export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionContinuation {
@@ -8346,6 +8367,7 @@ export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanProc
   expectedDeliveryProjectionFingerprint?: string;
   useAdaptiveAssessment?: boolean;
   inputMode?: string;
+  inputStage?: string;
 }
 
 export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanReplanInput {
@@ -8725,6 +8747,76 @@ export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionStageAtt
   outputsTruncated: boolean;
   legacy: boolean;
   hasAssessmentCalls: boolean;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionStageDirectoryChangeInput {
+  /** @format int32 */
+  expectedRevision: number;
+  parts: BakabaseServiceComponentsAcquisitionPlanningAcquisitionStageDirectoryPartChange[];
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionStageDirectoryChangeItem {
+  partId: string;
+  stage: string;
+  sourceDirectory?: string;
+  directory: string;
+  moveFiles: boolean;
+  changed: boolean;
+  /** @format int64 */
+  fileCount: number;
+  /** @format int64 */
+  totalBytes: number;
+  eligible: boolean;
+  code?: string;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionStageDirectoryChangePreview {
+  /** @format int32 */
+  taskId: number;
+  /** @format int32 */
+  expectedRevision: number;
+  changes: BakabaseServiceComponentsAcquisitionPlanningAcquisitionStageDirectoryChangeItem[];
+  canApply: boolean;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionStageDirectoryChangeResult {
+  /** @format int32 */
+  taskId: number;
+  /** @format int32 */
+  revision: number;
+  directories: BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionStageDirectories;
+  changes: BakabaseServiceComponentsAcquisitionPlanningAcquisitionStageDirectoryChangeItem[];
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionStageDirectoryChoice {
+  directory: string;
+  moveFiles: boolean;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionStageDirectoryPartChange {
+  partId: string;
+  download?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionStageDirectoryChoice;
+  processing?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionStageDirectoryChoice;
+  delivery?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionStageDirectoryChoice;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionStageDirectoryPartSnapshot {
+  partId: string;
+  title?: string;
+  downloadDirectory?: string;
+  processingDirectory?: string;
+  deliveryDirectory?: string;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionStageDirectorySnapshot {
+  /** @format int32 */
+  taskId: number;
+  /** @format int32 */
+  expectedRevision: number;
+  parts: BakabaseServiceComponentsAcquisitionPlanningAcquisitionStageDirectoryPartSnapshot[];
+  canChange: boolean;
+  blockers: string[];
+  pendingChange?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionStageDirectoryChangeInput;
 }
 
 export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionStorageOverrideApplyInput {
@@ -13706,6 +13798,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceC
   data?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionAssessmentIoView;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionAssessmentTextPage {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionAssessmentTextPage;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionContinuationPreview {
   /** @format int32 */
   code: number;
@@ -13823,6 +13922,27 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceC
   code: number;
   message?: string;
   data?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionSourceRevisionResult;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionStageDirectoryChangePreview {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionStageDirectoryChangePreview;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionStageDirectoryChangeResult {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionStageDirectoryChangeResult;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionStageDirectorySnapshot {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionStageDirectorySnapshot;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionStorageOverridePreview {
@@ -16108,6 +16228,45 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     /**
      * No description
      *
+     * @tags AcquisitionAssessment
+     * @name GetAcquisitionAssessmentText
+     * @request GET:/acquisition/tasks/{taskId}/runs/{runId}/assessment-io/text
+     */
+    getAcquisitionAssessmentText: (
+      taskId: number,
+      runId: number,
+      query?: {
+        attemptId?: string;
+        callId?: string;
+        direction?: string;
+        /**
+         * @format int32
+         * @default 0
+         */
+        offset?: number;
+        /**
+         * @format int32
+         * @default 32768
+         */
+        length?: number;
+        contentId?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionAssessmentTextPage,
+        any
+      >({
+        path: `/acquisition/tasks/${taskId}/runs/${runId}/assessment-io/text`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
      * @tags AcquisitionContinuation
      * @name PreviewAcquisitionContinuation
      * @request POST:/acquisition/tasks/recovery/continuations/preview
@@ -17337,6 +17496,72 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         any
       >({
         path: `/acquisition/${id}/source-revisions/apply`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionStageDirectories
+     * @name GetAcquisitionStageDirectories
+     * @request GET:/acquisition/plans/{id}/directories
+     */
+    getAcquisitionStageDirectories: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionStageDirectorySnapshot,
+        any
+      >({
+        path: `/acquisition/plans/${id}/directories`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionStageDirectories
+     * @name PreviewAcquisitionStageDirectoryChange
+     * @request POST:/acquisition/plans/{id}/directories/preview
+     */
+    previewAcquisitionStageDirectoryChange: (
+      id: number,
+      data: BakabaseServiceComponentsAcquisitionPlanningAcquisitionStageDirectoryChangeInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionStageDirectoryChangePreview,
+        any
+      >({
+        path: `/acquisition/plans/${id}/directories/preview`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionStageDirectories
+     * @name ApplyAcquisitionStageDirectoryChange
+     * @request POST:/acquisition/plans/{id}/directories/apply
+     */
+    applyAcquisitionStageDirectoryChange: (
+      id: number,
+      data: BakabaseServiceComponentsAcquisitionPlanningAcquisitionStageDirectoryChangeInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionStageDirectoryChangeResult,
+        any
+      >({
+        path: `/acquisition/plans/${id}/directories/apply`,
         method: "POST",
         body: data,
         type: ContentType.Json,

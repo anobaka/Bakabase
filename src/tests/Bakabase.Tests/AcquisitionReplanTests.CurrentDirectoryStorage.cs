@@ -88,6 +88,7 @@ public sealed partial class AcquisitionReplanTests
         var run = new WorkflowRunDbModel {Status = WorkflowRunStatus.Running,
             Sources = [new() {Module = "acquisition", EntityKind = "task", EntityId = task.Id.ToString(), Revision = "2"}]};
         Db.WorkflowRuns.Add(run); await Db.SaveChangesAsync();
+        await Db.AcquisitionTasks.Where(t => t.Id == task.Id).ExecuteUpdateAsync(s => s.SetProperty(t => t.WorkflowRunId, run.Id));
         WorkflowExecutionContext Context(int n) => new() {RunId = run.Id, WorkflowDefinitionId = 0,
             TriggerKind = CloudWorkflow.Trigger, Payload = workset, ActivityConfigJson = compiled.Nodes[n].ConfigJson,
             Services = _services, Logger = NullLogger.Instance};
@@ -97,7 +98,7 @@ public sealed partial class AcquisitionReplanTests
         Assert.IsNull(result.Suspension, result.Suspension?.PromptJson);
         var output = ((DownloadWorkset) result.Replacement!).Targets.Single();
         var allocated = revised.Plan!.StageDirectories!.Parts["main"].Processing!.Directory;
-        Assert.IsTrue(output.ProcessedDirectory!.StartsWith(allocated + Path.DirectorySeparatorChar, StringComparison.Ordinal));
+        Assert.AreEqual(allocated, output.ProcessedDirectory, "Complete output is handed back to the visible processing root.");
         Assert.AreEqual("remaining extraction", await File.ReadAllTextAsync(output.ProcessedFiles!.Single()));
         Assert.AreEqual("original bytes", await File.ReadAllTextAsync(input.Files.Single()));
         Assert.IsFalse(Directory.Exists(Path.Combine(input.RootDirectory, ".bakabase-work")));

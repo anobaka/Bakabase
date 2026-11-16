@@ -92,9 +92,24 @@ public sealed class AcquisitionStageDirectoryTests
         plan = plan with {StageDirectories = AcquisitionStageDirectoryResolver.Allocate(12, plan, resolver),
             DeliveryLayout = resolver.Resolve(12, plan.Title, root, plan.Parts,
                 new() {RootDirectory = Path.Combine(root, "new-delivery")})};
+        // A legacy unbound projection follows changed planning; current bindings do not.
+        plan = plan with {StageDirectories = plan.StageDirectories! with {Parts = new(plan.StageDirectories.Parts)
+            {["main"] = plan.StageDirectories.Parts["main"] with {Delivery = plan.StageDirectories.Parts["main"].Delivery! with {BindingId = null}}}}};
         var projected = AcquisitionStageDirectoryResolver.FromRecorded(12, plan, null);
         Assert.AreEqual(plan.DeliveryLayout.PartDirectories["main"], projected.Parts["main"].Delivery!.Directory);
         Assert.AreEqual("exclusive", projected.Parts["main"].Delivery!.Ownership);
+    }
+
+    [TestMethod]
+    public void NewBindingsAreStableAuthoritiesOverDeepHistoricalOutputs()
+    {
+        var plan = Plan();
+        var allocated = AcquisitionStageDirectoryResolver.Allocate(12, plan, new(new Storage()));
+        Assert.IsTrue(Guid.TryParseExact(allocated.Parts["main"].Processing!.BindingId, "N", out _));
+        plan = plan with {StageDirectories = allocated};
+        var projected = AcquisitionStageDirectoryResolver.FromRecorded(12, plan, new() {Targets =
+            [new() {Id = "main", ProcessedDirectory = Path.Combine(root, ".bakabase-work", "plan", "result")} ]});
+        Assert.AreEqual(allocated.Parts["main"].Processing, projected.Parts["main"].Processing);
     }
 
     [TestMethod]

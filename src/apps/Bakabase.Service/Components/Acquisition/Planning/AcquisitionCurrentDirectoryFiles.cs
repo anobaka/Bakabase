@@ -23,7 +23,7 @@ internal sealed record AcquisitionCurrentDirectoryReceipt(int Version, int TaskI
     ArtifactDirectoryProvenance? DirectoryProvenance = null);
 
 /// <summary>A new, read-only input snapshot of an explicitly selected task directory. Never edits an old receipt.</summary>
-internal static class AcquisitionCurrentDirectoryFiles
+internal static partial class AcquisitionCurrentDirectoryFiles
 {
     internal const string Kind = "currentFiles";
     internal const string OperationKind = "files.captureCurrentDirectory";
@@ -165,6 +165,8 @@ internal static class AcquisitionCurrentDirectoryFiles
         if (artifact.Kind != Kind || artifact.Managed || artifact.MetadataJson == null) return false;
         try
         {
+            if (JsonSerializer.Deserialize<AcquisitionStageDirectoryCaptureReceipt>(artifact.MetadataJson, Json) is {Version: 2} stage)
+                return await IsStageOwnedAsync(db, store, artifact, stage, taskId, runId, partId, ct);
             var receipt = JsonSerializer.Deserialize<AcquisitionCurrentDirectoryReceipt>(artifact.MetadataJson, Json);
             if (receipt is not {Version: 1} || receipt.TaskId != taskId || receipt.PartId != partId ||
                 receipt.PriorInput == null || receipt.ExcludedWorkspaces == null || receipt.Revision <= 1 || !Guid.TryParseExact(receipt.CaptureId, "N", out _) ||

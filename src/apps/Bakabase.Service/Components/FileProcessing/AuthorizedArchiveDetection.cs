@@ -40,8 +40,13 @@ internal static class AuthorizedArchiveDetection
         foreach (var file in files) { ct.ThrowIfCancellationRequested(); ArtifactManifestFiles.RejectLinks(file); }
         // Keep established multipart ordering and membership. In particular, never interpret a
         // later volume's incidental bytes as another independent archive or adopt nearby files.
-        var known = CompressedFileHelper.DetectCompressedFileGroups(files, true);
+        // Filename grouping is only a candidate for SFX volumes. Until the bounded probe
+        // confirms their entry format, none of their later volumes is an independent RAR.
+        var sfxCandidates = CompressedFileHelper.DetectSfxMultipartCandidates(files);
+        var sfxFiles = sfxCandidates.SelectMany(candidate => candidate.Files).ToHashSet(FileProcessingFiles.PathComparer);
+        var known = CompressedFileHelper.DetectCompressedFileGroups(files.Where(file => !sfxFiles.Contains(file)).ToArray(), true);
         var grouped = known.SelectMany(g => g.Files).ToHashSet(FileProcessingFiles.PathComparer);
+        grouped.UnionWith(sfxFiles);
         var groups = known.Where(g => g.Files.All(f => !Deliveries.Contains(Path.GetExtension(f))) &&
             (!recursive || IsRecursiveContainer(g))).Select(DetectedArchiveGroup.From).ToList();
         if (!recursive && formatProbe != null)
@@ -68,7 +73,7 @@ internal static class AuthorizedArchiveDetection
         {
             // Even a ZIP signature is insufficient for an executable-looking input: require
             // the installed tool to confirm a real container, rejecting its ordinary PE handler.
-            unrecognized.AddRange(files.Where(f => Path.GetExtension(f).Equals(".exe", StringComparison.OrdinalIgnoreCase)));
+            unrecognized.AddRange(files.Where(f => !sfxFiles.Contains(f) && Path.GetExtension(f).Equals(".exe", StringComparison.OrdinalIgnoreCase)));
             // Document/application suffixes usually describe valid ZIP/RAR delivery formats.
             // With an explicit extraction selection, a contradictory real archive header is
             // evidence of disguise (for example 7z bytes named .apk), not permission to unpack
@@ -110,7 +115,70 @@ internal static class AuthorizedArchiveDetection
                         Files = [file], FileSizes = [new FileInfo(file).Length] });
             }
         }
+        if (!recursive && exactExtractionSelection && formatProbe != null)
+        {
+            budget ??= new();
+            foreach (var candidate in sfxCandidates)
+            {
+                ct.ThrowIfCancellationRequested();
+                if (candidate.IsAmbiguous || !candidate.IsComplete)
+                    throw new ArchiveFormatProbeIncompleteException(
+                        "The selected self-extracting archive has missing or ambiguous volume names. Check the complete authorized volume set before continuing.",
+                        candidate.IsAmbiguous ? "ArchiveInputRequired" : "MissingVolumes");
+                ValidateCurrentSfxFamily(candidate, ct);
+                var format = await budget.ProbeAsync(formatProbe, candidate.EntryFile, ct, authorizedPasswords);
+                if (format == null || !CompressedFileHelper.SfxFormatMatches(candidate, format.Extension))
+                    throw new ArchiveFormatProbeIncompleteException(
+                        "The selected executable was not verified as the expected multipart archive. Its files were retained.", "ArchiveInputRequired");
+                foreach (var file in candidate.Files) ArtifactManifestFiles.RejectLinks(file);
+                groups.Add(new DetectedArchiveGroup {KeyName = candidate.KeyName, Extension = candidate.ExpectedFormat,
+                    OpenOptions = format.OpenOptions, Files = candidate.Files.ToList(),
+                    FileSizes = candidate.Files.Select(file => new FileInfo(file).Length).ToList()});
+            }
+        }
         return groups;
+    }
+
+    internal static void ValidateCurrentSfxFamilies(IReadOnlyList<string> exactFiles, CancellationToken ct)
+    {
+        foreach (var candidate in CompressedFileHelper.DetectSfxMultipartCandidates(exactFiles))
+            ValidateCurrentSfxFamily(candidate, ct);
+    }
+
+    private static void ValidateCurrentSfxFamily(SfxMultipartArchiveCandidate candidate, CancellationToken ct)
+    {
+        // Archive tools can read companion volumes implicitly. Recheck names immediately
+        // before opening an existing private snapshot; never let a newly added sibling
+        // contribute bytes that are absent from its fixed manifest and replacement proof.
+        const int maximumSiblingNames = 4096;
+        ArtifactManifestFiles.RejectLinks(candidate.EntryFile);
+        var parent = Path.GetDirectoryName(candidate.EntryFile)!;
+        var names = new List<string>();
+        foreach (var path in Directory.EnumerateFileSystemEntries(parent))
+        {
+            ct.ThrowIfCancellationRequested();
+            if (names.Count == maximumSiblingNames)
+                throw new ArchiveFormatProbeIncompleteException(
+                    "The selected multipart archive directory exceeds the bounded sibling-name check. Move this complete family into a dedicated processing directory.",
+                    ArchiveFormatProbeFailureCodes.BudgetExceeded);
+            names.Add(path);
+        }
+        var current = CompressedFileHelper.DetectSfxMultipartCandidates(names)
+            .SingleOrDefault(family => FileProcessingFiles.PathComparer.Equals(family.KeyName, candidate.KeyName));
+        if (current == null || !current.IsComplete || current.IsAmbiguous ||
+            !FileProcessingFiles.PathComparer.Equals(current.EntryFile, candidate.EntryFile) ||
+            !current.Files.ToHashSet(FileProcessingFiles.PathComparer).SetEquals(candidate.Files))
+            throw new ArchiveFormatProbeIncompleteException(
+                "The current multipart archive files differ from the authorized volume set. Refresh the current directory before continuing; no new sibling volume was adopted.",
+                "ArchiveGroupInputChanged");
+        foreach (var file in current.Files)
+        {
+            ct.ThrowIfCancellationRequested();
+            ArtifactManifestFiles.RejectLinks(file);
+            if ((File.GetAttributes(file) & FileAttributes.Directory) != 0)
+                throw new ArchiveFormatProbeIncompleteException(
+                    "An archive volume is not a regular file. Check the authorized volume set before continuing.", "ArchiveGroupInputChanged");
+        }
     }
 
     private static bool IsRecursiveContainer(CompressedFileGroup group)
