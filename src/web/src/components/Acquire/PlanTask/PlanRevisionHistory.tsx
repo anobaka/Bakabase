@@ -9,7 +9,7 @@ import SourceRevisionEvidence from "./SourceRevisionEvidence";
 
 /** Only known machine-generated reasons are translated; user explanations remain verbatim. */
 export function planRevisionReason(reason: string, t: TFunction): string {
-  return ["sourceSelection.preStartFallback", "sourceSelection.userRevision"].includes(reason)
+  return ["sourceSelection.preStartFallback", "sourceSelection.userRevision", "analysis.preparedLocalFiles"].includes(reason)
     ? t(`acquisition.plan.history.reason.${reason}`)
     : reason;
 }

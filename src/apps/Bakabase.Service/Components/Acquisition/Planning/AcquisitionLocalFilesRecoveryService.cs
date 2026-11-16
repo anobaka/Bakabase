@@ -223,7 +223,7 @@ public sealed class AcquisitionLocalFilesRecoveryService(BakabaseDbContext db, A
                 ? detail.Issues.FirstOrDefault(i => i.Blocking)?.Code ?? "RECOVERY_PREPARED_PLAN_BLOCKED" : null);
     }
 
-    private static bool LocalOnly(AcquisitionPlan plan) => plan.Parts.All(p => p.ContinueFrom != null) &&
+    internal static bool LocalOnly(AcquisitionPlan plan) => plan.Parts.All(p => p.ContinueFrom != null) &&
         AcquisitionPlanCompiler.Compile(plan).Nodes.All(n => n.Kind is AcquisitionPlanContinueFilesActivity.ActivityKind or
             AcquisitionPlanProcessingActivity.ActivityKind or AssessFileArtifactDeliveryActivity.ActivityKind or "fs.publishArtifacts");
 }

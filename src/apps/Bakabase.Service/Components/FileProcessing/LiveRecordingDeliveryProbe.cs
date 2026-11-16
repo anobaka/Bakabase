@@ -11,26 +11,29 @@ using Bakabase.InsideWorld.Business.Components.Artifacts;
 
 namespace Bakabase.Service.Components.FileProcessing;
 
-/// <summary>Recognize paired recording and timed-comment files in the exact delivery manifest.</summary>
+/// <summary>Recognize recordings and their optional timed comments in the exact delivery manifest.</summary>
 internal static class LiveRecordingDeliveryProbe
 {
     internal const int MaximumXmlBytes = 2 * 1024 * 1024;
 
-    internal static async Task<bool> ArePairsAsync(IEnumerable<string> files, CancellationToken ct)
+    internal static async Task<bool> AreRecordingsAsync(IEnumerable<string> files, CancellationToken ct)
     {
         var recordings = files.Where(f => Path.GetExtension(f).ToLowerInvariant() is ".flv" or ".xml");
         foreach (var pair in recordings.GroupBy(f => Path.ChangeExtension(f, null), ArtifactManifestFiles.PathComparer))
         {
             var members = pair.ToArray();
-            if (members.Length != 2) return false;
             var video = members.FirstOrDefault(f => Path.GetExtension(f).Equals(".flv", StringComparison.OrdinalIgnoreCase));
             var comments = members.FirstOrDefault(f => Path.GetExtension(f).Equals(".xml", StringComparison.OrdinalIgnoreCase));
-            if (video == null || comments == null) return false;
+            if (video == null || members.Length != (comments == null ? 1 : 2)) return false;
             try
             {
                 ArtifactManifestFiles.RejectLinks(video);
-                ArtifactManifestFiles.RejectLinks(comments);
-                if (!await IsVideoAsync(video, ct) || !await IsTimedChatAsync(comments, ct)) return false;
+                if (!await IsVideoAsync(video, ct)) return false;
+                if (comments != null)
+                {
+                    ArtifactManifestFiles.RejectLinks(comments);
+                    if (!await IsTimedChatAsync(comments, ct)) return false;
+                }
             }
             catch (Exception error) when (error is IOException or UnauthorizedAccessException or XmlException)
             {
@@ -71,17 +74,40 @@ internal static class LiveRecordingDeliveryProbe
             if (kind is not (8 or 9 or 18) || size == 0 || size + 3L > file.Length - file.Position ||
                 header[8] != 0 || header[9] != 0 || header[10] != 0) return false;
             var codec = header[11] & 15;
-            var isVideo = kind == 9 && size > 5 && (header[11] >> 4) is >= 1 and <= 4 && codec is >= 1 and <= 7;
+            var isVideo = kind == 9 && size > 5 && (header[11] >> 4) is >= 1 and <= 4 &&
+                          (codec is >= 1 and <= 7 or 12);
             var payloadEnd = file.Position + size - 1;
             if (isVideo && codec == 7)
             {
                 await file.ReadExactlyAsync(header.AsMemory(0, 1), ct);
                 isVideo = header[0] == 1; // AVC media packet, rather than codec setup or an end marker.
             }
+            else if (isVideo && codec == 12)
+            {
+                isVideo = await HasLegacyHevcPictureAsync(file, payloadEnd, header, ct);
+            }
             file.Position = payloadEnd;
             await file.ReadExactlyAsync(header.AsMemory(0, 4), ct);
             if (BinaryPrimitives.ReadUInt32BigEndian(header) != size + 11) return false;
             if (isVideo) return true;
+        }
+        return false;
+    }
+
+    // Legacy HEVC-in-FLV uses packet type 1, a 3-byte composition time and length-prefixed NAL units.
+    // Check for a coded picture. Recorder metadata (e.g. an SEI) may come before the first slice.
+    private static async Task<bool> HasLegacyHevcPictureAsync(Stream file, long end, byte[] buffer, CancellationToken ct)
+    {
+        await file.ReadExactlyAsync(buffer.AsMemory(0, 4), ct);
+        if (buffer[0] != 1) return false;
+        for (var unit = 0; unit < 32 && end - file.Position >= 6; unit++)
+        {
+            await file.ReadExactlyAsync(buffer.AsMemory(0, 6), ct);
+            var size = BinaryPrimitives.ReadUInt32BigEndian(buffer);
+            if (size <= 2 || size - 2 > end - file.Position || (buffer[4] & 0x80) != 0 || (buffer[5] & 7) == 0)
+                return false;
+            if (((buffer[4] >> 1) & 63) <= 31) return true;
+            file.Position += size - 2;
         }
         return false;
     }

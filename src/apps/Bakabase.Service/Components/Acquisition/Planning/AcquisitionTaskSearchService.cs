@@ -104,7 +104,8 @@ public sealed class AcquisitionTaskSearchService(BakabaseDbContext db, IAcquisit
             var codes = new List<string>(); string? waitReason = null; string? activityKind = null;
             var unresolvedWarning = false;
             var partCodes = new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
-            var acquiredPartIds = new HashSet<string>(StringComparer.Ordinal);
+            var currentDownloads = activity.GetValueOrDefault(task.Id);
+            var acquiredPartIds = currentDownloads?.CompletedPartIds.ToHashSet(StringComparer.Ordinal) ?? new(StringComparer.Ordinal);
             DateTimeOffset? executionAt = null;
             if (task.WorkflowRunId is {} runId && runReasons.TryGetValue(runId, out var run))
             {
@@ -132,7 +133,7 @@ public sealed class AcquisitionTaskSearchService(BakabaseDbContext db, IAcquisit
                             acquiredPartIds.Add(output.Key[..separator]);
                         if (output.Kind == "warning" && failureCode == null)
                         {
-                            if (separator > 0 && activity.GetValueOrDefault(task.Id)?.RecoveredPartIds.Contains(output.Key[..separator]) == true)
+                            if (separator > 0 && currentDownloads?.RecoveredPartIds.Contains(output.Key[..separator]) == true)
                                 continue;
                             unresolvedWarning = true;
                             if (output.Code == null) continue;
@@ -174,7 +175,7 @@ public sealed class AcquisitionTaskSearchService(BakabaseDbContext db, IAcquisit
                 ExecutionProblemClassifier.Classify(projectedCodes, waitReason, task.WorkflowRunId == null ? task.WaitReason : null);
         }
         var attentionCounts = ExecutionProblemClassifier.AttentionTags.ToDictionary(tag => tag, tag => scoped.Count(t => t.AttentionTags.Contains(tag)));
-        var facts = await new AcquisitionExecutionFactProjection(db).ReadAsync(scoped.Select(t => t.Id).ToArray(), ct);
+        var facts = await new AcquisitionExecutionFactProjection(db).ReadAsync(scoped.Select(t => t.Id).ToArray(), ct, activity);
         // A current capacity failure can be known before all local inputs are registered.
         // This task-level scope deliberately cannot satisfy the same-part conjunction.
         foreach (var taskId in currentSpaceFailures) facts[taskId] = facts[taskId].WithTaskSpaceFailure();

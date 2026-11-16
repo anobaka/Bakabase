@@ -96,13 +96,23 @@ public sealed class AcquisitionAdaptiveMigrationService(BakabaseDbContext db,
                         row = row with {CanMigrate = false, Reason = detail.ReplanArtifacts.Any(a => a.CanReadCurrentDirectory == true)
                             ? "PLAN_CURRENT_DIRECTORY_SELECTION_REQUIRED" : "PLAN_CURRENT_DIRECTORY_UNAVAILABLE"};
                 }
-                catch (Exception error) when (error is ArgumentException or InvalidOperationException or IOException or UnauthorizedAccessException or JsonException)
+                catch (Exception error) when (error is ArgumentException or InvalidOperationException or IOException or InvalidDataException or UnauthorizedAccessException or JsonException)
                 {
                     row = row with {CanMigrate = false, Reason = "PLAN_CURRENT_DIRECTORY_UNAVAILABLE"};
                 }
             }
+            if (plans != null && run == null && task.WorkflowRunId == null && task.Phase == "ready")
+            {
+                try
+                {
+                    if (await plans.CanAnalyzePreparedFilesAsync(task, ct))
+                        row = row with {CanMigrate = true, ReasonCode = "ADAPTIVE_MIGRATION_PREPARED_LOCAL_READY"};
+                }
+                catch (Exception error) when (error is ArgumentException or InvalidOperationException or IOException or InvalidDataException or UnauthorizedAccessException or JsonException)
+                { row = row with {Reason = "PLAN_REPLAN_EVIDENCE_UNAVAILABLE"}; }
+            }
             rows.Add(row);
-            if (row.CanMigrate) pins[task.Id] = PreviewPin(task, run!);
+            if (row.CanMigrate) pins[task.Id] = PreviewPin(task, run);
         }
         var token = Guid.NewGuid().ToString("N");
         var expires = DateTimeOffset.UtcNow.AddMinutes(10);
@@ -148,7 +158,7 @@ public sealed class AcquisitionAdaptiveMigrationService(BakabaseDbContext db,
                             "ADAPTIVE_MIGRATION_PREPARED_NOT_STARTED");
                     migrated.Add(id);
                 }
-                catch (Exception e) when (e is ArgumentException or InvalidOperationException or IOException or UnauthorizedAccessException or JsonException)
+                catch (Exception e) when (e is ArgumentException or InvalidOperationException or IOException or InvalidDataException or UnauthorizedAccessException or JsonException)
                 {
                     skipped.Add(preview.Rows.Single(r => r.TaskId == id) with
                         {CanMigrate = false, ReasonCode = "ADAPTIVE_MIGRATION_FAILED", Reason = e.Message});
@@ -159,6 +169,21 @@ public sealed class AcquisitionAdaptiveMigrationService(BakabaseDbContext db,
             await gate.WaitAsync(ct);
             try
             {
+                var reviewed = preview.Rows.Single(r => r.TaskId == id);
+                if (reviewed.WorkflowRunId == null)
+                {
+                    var prepared = await db.Set<AcquisitionTaskDbModel>().AsNoTracking()
+                        .SingleOrDefaultAsync(t => t.Id == id && t.DeletedAt == null, ct);
+                    if (plans == null || prepared == null || prepared.WorkflowRunId != null ||
+                        preview.Pins[id] != PreviewPin(prepared, null))
+                    { skipped.Add(reviewed with {CanMigrate = false, ReasonCode = "ADAPTIVE_MIGRATION_CHANGED"}); continue; }
+                    var started = await plans.RunPreparedAnalysisWhileLockedAsync(prepared, preview.MaxIterations, ct);
+                    if (started.Task.WorkflowRunId == null)
+                        throw new InvalidOperationException(started.Issues.FirstOrDefault(i => i.Blocking)?.Code ??
+                            "ADAPTIVE_MIGRATION_PREPARED_NOT_STARTED");
+                    migrated.Add(id);
+                    continue;
+                }
                 var task = await db.Set<AcquisitionTaskDbModel>().SingleOrDefaultAsync(t => t.Id == id && t.DeletedAt == null, ct);
                 var run = task?.WorkflowRunId is { } runId
                     ? await db.Set<WorkflowRunDbModel>().SingleOrDefaultAsync(r => r.Id == runId, ct)
@@ -215,7 +240,7 @@ public sealed class AcquisitionAdaptiveMigrationService(BakabaseDbContext db,
                     await resumer.RequeueAsync(run.Id, ct);
                 migrated.Add(id);
             }
-            catch (Exception e) when (e is ArgumentException or InvalidOperationException or JsonException)
+            catch (Exception e) when (e is ArgumentException or InvalidOperationException or IOException or InvalidDataException or UnauthorizedAccessException or JsonException)
             {
                 var task = await db.Set<AcquisitionTaskDbModel>().AsNoTracking().SingleOrDefaultAsync(t => t.Id == id, ct);
                 var run = task?.WorkflowRunId is { } runId
@@ -256,7 +281,9 @@ public sealed class AcquisitionAdaptiveMigrationService(BakabaseDbContext db,
             EnableAdaptiveAssessment: true, MaxAdaptiveIterations: maxIterations, UseCurrentStorageDefaults: true);
     }
 
-    private static string PreviewPin(AcquisitionTaskDbModel task, WorkflowRunDbModel run) =>
+    private static string PreviewPin(AcquisitionTaskDbModel task, WorkflowRunDbModel? run) => run == null
+        ? Convert.ToHexString(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(new {task.Id, task.WorkflowRunId, task.Status,
+            task.Phase, task.PlanRevision, task.PlanJson, task.SourceRefsJson, task.BuilderStateJson}))) :
         Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new {
             TaskId = task.Id, task.PlanRevision, TaskStatus = task.Status, RunId = run.Id, run.Status, run.CurrentStepIndex, run.WaitingSince,
             run.WaitReason, run.WaitPromptJson, run.PlanSnapshotJson, run.PendingSignalJson, run.CurrentItemJson

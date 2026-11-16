@@ -10,6 +10,7 @@ using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
 using Bakabase.Modules.Workflow.Abstractions.Components;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain;
 using Bakabase.Service.Components.Acquisition.ProcessingPlans;
+using static Bakabase.Service.Components.FileProcessing.FileProcessingSourceLinks;
 using Bakabase.InsideWorld.Business.Components.Artifacts;
 using Microsoft.EntityFrameworkCore;
 
@@ -72,9 +73,7 @@ internal static class AcquisitionCachedSourceEvidence
         }
     }
 
-    private static readonly Regex Address = new(@"https?://[^\s<>""']+", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     private static readonly Regex PasswordLabel = new(@"^(?:解[压壓](?:[缩縮])?(?:密[码碼]|[码碼])|密[码碼]|pw|password|(?:archive|extraction|unzip) password|解凍パスワード)\s*(?:[:：=↓↴]|如下|在下方)\s*(.*?)\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-    private static readonly Regex AccessCode = new(@"(?:提取[码碼]|访问[码碼]|訪問[码碼]|access code|[?&]pwd=)\s*[:：=]?\s*([a-zA-Z0-9_-]{1,64})", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     private static readonly Regex Trailer = new(@"^[a-zA-Z0-9_.!@#-]{5,64}$", RegexOptions.CultureInvariant);
     private static readonly Regex IndirectPassword = new(@"(?:楼主|樓主|作者|发帖|發帖|发布|發布|上传|上傳).{0,16}(?:名字|名称|名稱|昵称|暱稱|用户名|用戶名|\bid\b)|(?:见|見|查看|在).{0,12}(?:网盘|網盤|原帖|图片|圖片)|(?:author|uploader|publisher).{0,16}(?:name|id)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     private static readonly Regex Technical = new(@"解[压壓]|密[码碼]|后缀|後綴|改名|重命名|分卷|补丁|補丁|本体|本體|原版|字幕|保留|删除|刪除|\bpw\b|password|extract|archive|rename", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);

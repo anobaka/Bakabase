@@ -17,7 +17,7 @@ namespace Bakabase.Service.Components.FileProcessing;
 
 internal sealed record MultipartRename(int InputId, string ExpectedName);
 internal sealed record AdaptiveMultipartNamingEvidence(IReadOnlyList<int> InputIds,
-    IReadOnlyList<MultipartRename> Renames, long DeclaredArchiveBytes);
+    IReadOnlyList<MultipartRename> Renames, long DeclaredArchiveBytes, string Format = "7z");
 
 public sealed partial class AdaptiveFileProcessingAssessmentService
 {
@@ -26,7 +26,7 @@ public sealed partial class AdaptiveFileProcessingAssessmentService
 
     // An advisory naming repair, not authority to join arbitrary similarly sized files.
     // Only an entire small inventory, one parent and one numeric family are considered.
-    // Read at most 32 bytes per file; no archive tool, payload hash, or adjacent discovery.
+    // The 7z branch reads 32 bytes per file. The ZIP branch reads bounded metadata only.
     internal static async Task<AdaptiveMultipartNamingEvidence?> InspectMultipartNamingAsync(ArtifactRecord artifact,
         IReadOnlyList<string> visiblePaths, CancellationToken ct)
     {
@@ -36,6 +36,8 @@ public sealed partial class AdaptiveFileProcessingAssessmentService
             !visiblePaths.SequenceEqual(entries.Select(e => e.RelativePath), StringComparer.Ordinal) ||
             entries.Any(e => e.Length < 32) || entries.Select(e => Path.GetDirectoryName(e.RelativePath))
                 .Distinct(FileProcessingFiles.PathComparer).Count() != 1) return null;
+        if (entries.All(e => Path.GetExtension(e.RelativePath).StartsWith(".z", StringComparison.OrdinalIgnoreCase)))
+            return await InspectMaskedSplitZipAsync(artifact, ct);
         var members = entries.Select((entry, index) => (entry, index,
             match: NumberedVolumeName.Match(Path.GetFileName(entry.RelativePath)))).ToArray();
         var numbered = members.Where(e => e.match.Success && e.match.Groups["number"].Value != "001").ToArray();
@@ -111,7 +113,9 @@ public sealed partial class AdaptiveFileProcessingAssessmentService
     private static string DescribeMultipartNamingEvidence(AdaptiveMultipartNamingEvidence? evidence) =>
         JsonSerializer.Serialize(new
         {
-            scope = "One small same-directory family with the same archive basename, unique 7z start header with valid CRC, consecutive volumes 2..N, matching sizes and exact declared archive extent. Naming evidence only; contents/password remain unverified.",
+            scope = evidence?.Format == "zip"
+                ? "One same-directory split ZIP family. Volume names share one mask, disk indexes are consecutive and the central directory verifies the local header, disk count and complete compressed extent. Naming evidence only; contents and password remain unverified."
+                : "One small same-directory family with the same archive basename, unique 7z start header with valid CRC, consecutive volumes 2..N, matching sizes and exact declared archive extent. Naming evidence only; contents/password remain unverified.",
             namingRepair = evidence == null ? null : new
             {
                 renames = evidence.Renames.Select(rename => new {inputId = rename.InputId, expectedName = rename.ExpectedName}),

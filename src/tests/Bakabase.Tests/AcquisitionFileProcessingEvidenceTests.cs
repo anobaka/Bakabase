@@ -207,6 +207,19 @@ public sealed class AcquisitionFileProcessingEvidenceTests
     }
 
     [TestMethod]
+    public void GroupEvidenceOmitsShareCredentialsAndKeepsSeparateArchiveInstructions()
+    {
+        var group = new PostDownloadGroup {Summary = "提取码：ONLYFORSHARE", Evidence =
+            ["度盘链接：https://example.test/s/id?pwd=ONLYFORSHARE", "提取码：ONLYFORSHARE",
+             "提取码：dual，解压密码：dual"]};
+        var result = AcquisitionFileProcessingEvidence.Describe(null, null, group, 3);
+        Assert.IsNotNull(result);
+        Assert.IsFalse(result.Contains("ONLYFORSHARE"));
+        Assert.IsFalse(result.Contains("https://"));
+        StringAssert.Contains(result, "解压密码：dual");
+    }
+
+    [TestMethod]
     public void SavedObservationsRemainBoundedDataAndNeverAnExecutableProcessingPlan()
     {
         var info = Info() with {Availability = new() {Evidence = Enumerable.Range(0, 100).Select(i => i + new string('文', 2000)).ToList()}};

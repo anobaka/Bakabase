@@ -162,7 +162,9 @@ public sealed partial class AdaptiveFileProcessingAssessmentService(
         password verification and pauses if unresolved; a differing title alone is not a reason to refuse extraction.
         For extract only, set password to an exact literal explicitly supplied in callerInstructions, userInstructions,
         or savedSourceEvidence when it is identified there as the password for the archive. Preserve every character,
-        including spaces, quotes, case and Unicode. filenamePasswordEvidence may also supply a single exact literal
+        including spaces, quotes, case and Unicode. Share URLs and link access codes only unlock the download.
+        Use a matching value for extraction only when independently supplied as the archive password.
+        filenamePasswordEvidence may also supply a single exact literal
         explicitly marked as the extraction password in the selected file's basename. It is bound to its inputId;
         never borrow it for another file, from a parent directory, or from an ordinary title or release identifier.
         Only use the supplied filenamePasswordEvidence entries, not your own interpretation of other filename text.
@@ -205,7 +207,7 @@ public sealed partial class AdaptiveFileProcessingAssessmentService(
         multipartNamingEvidence may identify a verified sequence whose filenames do not form a recognized archive
         family. When extraction is intended and requiresRenameBeforeExtraction is true, submit all and only the listed
         renames (each inputId to its expectedName) in one response. Reassess the resulting inventory before extracting
-        the first volume with all its siblings. Do not extract a misnamed entry alone.
+        the entry (.zip for a .z01/.zip family) with all its siblings. Do not extract a misnamed entry alone.
         File sizes, nearby names, or an archive signature alone cannot join different packages. Missing, ambiguous,
         mixed-family or unverified parts require review; never invent a missing part or infer a password failure.
         """;
@@ -664,7 +666,13 @@ public sealed partial class AdaptiveFileProcessingAssessmentService(
         {
             if (depth > 8) return false;
             if (value.ValueKind == JsonValueKind.Object)
-                return value.EnumerateObject().Any(property => InValue(property.Value, literal, depth + 1));
+                return value.EnumerateObject().Any(property => property.Name switch
+                {
+                    "accessCode" or "code" or "url" or "originalUrl" => false,
+                    "archivePassword" or "password" => property.Value.ValueKind == JsonValueKind.String &&
+                                                       property.Value.GetString() == literal,
+                    _ => InValue(property.Value, literal, depth + 1)
+                });
             if (value.ValueKind == JsonValueKind.Array)
                 return value.EnumerateArray().Any(item => InValue(item, literal, depth + 1));
             if (value.ValueKind != JsonValueKind.String) return false;
@@ -676,7 +684,7 @@ public sealed partial class AdaptiveFileProcessingAssessmentService(
                 try { using var nested = JsonDocument.Parse(text); return InValue(nested.RootElement, literal, depth + 1); }
                 catch (JsonException) { /* Ordinary text may begin with punctuation. */ }
             }
-            return text.Contains(literal, StringComparison.Ordinal);
+            return FileProcessingSourceLinks.WithoutDownloadCredentials(text).Contains(literal, StringComparison.Ordinal);
         }
         try
         {
@@ -688,7 +696,7 @@ public sealed partial class AdaptiveFileProcessingAssessmentService(
         catch (JsonException)
         {
             // Non-acquisition callers may supply a plain-text processing instruction.
-            return context.Contains(password, StringComparison.Ordinal);
+            return FileProcessingSourceLinks.WithoutDownloadCredentials(context).Contains(password, StringComparison.Ordinal);
         }
     }
 

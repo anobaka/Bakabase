@@ -37,7 +37,7 @@ script. Tests still run natively; only the final `go build` uses those targets.
 
 ## Protocol and behavior
 
-`--version` reports `4.0.2+bakabase.14`. Otherwise one JSON request is read from
+`--version` reports `4.0.2+bakabase.15`. Otherwise one JSON request is read from
 stdin; JSON line events on stdout have `type: progress`, `result`, or `error`.
 Set `BAIDUPCS_GO_CONFIG_DIR` to an absolute private per-account directory,
 including when probing `--version` (upstream package initialization otherwise
@@ -161,6 +161,13 @@ original part suffixes. Case collisions are disambiguated. Distinct non-ASCII
 sibling families also receive separate hashes to remain unambiguous on volumes
 with different Unicode normalization rules, without adding another upstream
 dependency. Manifest ordering does not affect names.
+
+Bridge `.15` also keeps a shared local stem when a publisher appends the same
+short word to RAR volume extensions, such as `.part1.rar删除` and `.part2.rar删除`.
+Each original extension remains visible. Different markers remain separate.
+The saved path map pins its naming algorithm so interrupted downloads continue
+using their original names. Both supported map versions are checked by
+recreating the complete mapping from the bound remote manifest.
 
 Before the first payload write, changed maps are atomically published without
 replacement to the account's `operations/<operation-hash>.paths-v1.json`. The

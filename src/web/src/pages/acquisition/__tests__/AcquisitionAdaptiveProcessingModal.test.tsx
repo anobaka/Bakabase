@@ -25,7 +25,7 @@ vi.mock("@/components/bakaui", () => ({
 
 it("uses server current-file eligibility for batch AI, keeps the bounded preview token and localizes a changed-directory refusal", async () => {
   api.preview.mockResolvedValue({ token: "fixed-current-directory-preview", rows: [
-    { taskId: 865, canMigrate: true, reasonCode: "ADAPTIVE_MIGRATION_READY" },
+    { taskId: 865, canMigrate: true, reasonCode: "ADAPTIVE_MIGRATION_PREPARED_LOCAL_READY" },
     { taskId: 832, canMigrate: false, reasonCode: "ADAPTIVE_MIGRATION_RUN_UNSUPPORTED" },
   ] });
   api.apply.mockResolvedValue({ migratedTaskIds: [], skipped: [{ taskId: 865, canMigrate: false,
@@ -34,6 +34,7 @@ it("uses server current-file eligibility for batch AI, keeps the bounded preview
   const ready = (await screen.findByText("#865")).closest("div")!;
   const blocked = screen.getByText("#832").closest("div")!;
   expect(within(ready).getByRole("checkbox")).toBeChecked();
+  expect(within(ready).getByText(cn["acquisition.adaptive.reason.ADAPTIVE_MIGRATION_PREPARED_LOCAL_READY"])).toBeVisible();
   expect(within(blocked).getByRole("checkbox")).toBeDisabled();
   expect(screen.getByText(cn["acquisition.adaptive.hint"])).toHaveTextContent("读取任务当前目录");
   expect(screen.getByText(cn["acquisition.adaptive.hint"])).toHaveTextContent("达到分析次数上限");

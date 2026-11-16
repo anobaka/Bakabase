@@ -32,9 +32,9 @@ public sealed class LiveRecordingDeliveryAssessmentTests
     [DataRow("nested d", true)]
     [DataRow("extension only", true)]
     [DataRow("invalid tag size", true)]
-    [DataRow("unpaired FLV", true)]
+    [DataRow("unpaired FLV", false)]
     [DataRow("unknown companion", true)]
-    public async Task OnlyVerifiedPairsCanPassDelivery(string variant, bool uncertain)
+    public async Task VerifiedRecordingsCanPassWithOptionalTimedComments(string variant, bool uncertain)
     {
         var files = new List<string>();
         void Add(string relative, byte[] content)
@@ -68,5 +68,28 @@ public sealed class LiveRecordingDeliveryAssessmentTests
         Assert.AreEqual(uncertain, assessment.Uncertain);
         Assert.IsFalse(assessment.Automatic);
         Assert.IsTrue(files.All(File.Exists));
+    }
+
+    [DataTestMethod]
+    [DataRow("picture", true)]
+    [DataRow("config", false)]
+    [DataRow("oversize", false)]
+    [DataRow("missing picture", false)]
+    [DataRow("invalid unit header", false)]
+    public async Task LegacyHevcRequiresAFramedCodedPicture(string variant, bool expected)
+    {
+        // A recorder SEI followed by an intra-coded picture, both length-prefixed.
+        byte[] payload = [0x1c, 1, 0, 0, 0, 0, 0, 0, 3, 0x50, 1, 0x80, 0, 0, 0, 3, 0x26, 1, 0x80];
+        if (variant == "config") payload[1] = 0;
+        if (variant == "oversize") payload[15] = 30;
+        if (variant == "missing picture") payload[16] = 0x50;
+        if (variant == "invalid unit header") payload[17] = 0;
+        var file = Path.Combine(root, "clip.flv");
+        var prefix = Video()[..24];
+        prefix[16] = (byte)payload.Length;
+        byte[] previousTagSize = new byte[4];
+        BinaryPrimitives.WriteInt32BigEndian(previousTagSize, 11 + payload.Length);
+        await File.WriteAllBytesAsync(file, [.. prefix, .. payload, .. previousTagSize]);
+        Assert.AreEqual(expected, await LiveRecordingDeliveryProbe.AreRecordingsAsync([file], default));
     }
 }

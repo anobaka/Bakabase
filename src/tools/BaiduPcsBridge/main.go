@@ -22,6 +22,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -43,7 +44,7 @@ import (
 	"github.com/tidwall/gjson"
 )
 
-const version = "4.0.2+bakabase.14"
+const version = "4.0.2+bakabase.15"
 
 type request struct {
 	Command            string  `json:"command"`
@@ -958,6 +959,11 @@ type localPathJournal struct {
 
 var archiveFamilySuffix = regexp.MustCompile(`(?i)(\.part[0-9]+\.rar|\.(?:7z|zip|rar)\.[0-9]{3,}|\.r[0-9]{2,}|\.z[0-9]{2,})$`)
 
+// Some publishers append the same word to every volume extension. Keep the
+// complete suffix on disk. The marker distinguishes families and never authorizes
+// stripping it, opening a file or assuming the download contains an archive.
+var maskedRarPartSuffix = regexp.MustCompile(`(?i)\.part[0-9]+\.rar([\p{L}\p{M}]{1,24})$`)
+
 func localNameParts(name string, directory bool) (string, string) {
 	if directory {
 		return name, ""
@@ -996,12 +1002,11 @@ func localCaseFold(value string) string {
 
 // The mapped basename leaves room for upstream's checkpoint suffix. The hash is
 // based on the original parent and archive-family stem, never on a part number.
-func portableLocalName(name, family string, directory, force bool, suffixBudget int) (string, error) {
+func portableLocalName(name, stem, suffix, family string, directory, force bool, suffixBudget int) (string, error) {
 	limit := 255
 	if !directory {
 		limit -= len(pcsdownload.DownloadSuffix)
 	}
-	stem, suffix := localNameParts(name, directory)
 	clean := strings.Map(func(r rune) rune {
 		if r < 32 || strings.ContainsRune(`<>:"/\|?*`, r) {
 			return '_'
@@ -1031,9 +1036,14 @@ func portableLocalName(name, family string, directory, force bool, suffixBudget 
 // pinned upstream, distinct non-ASCII sibling families receive distinct hashes.
 // Readable prefixes and multipart family suffixes remain intact.
 func portableManifestPaths(remotePath string, entries []entry) (map[string]string, error) {
+	return portableManifestPathsForVersion(remotePath, entries, 2)
+}
+
+func portableManifestPathsForVersion(remotePath string, entries []entry, version int) (map[string]string, error) {
 	type node struct {
-		relative  string
-		directory bool
+		relative             string
+		directory            bool
+		stem, suffix, family string
 	}
 	nodes := map[string]*node{}
 	seenPaths := map[string]bool{}
@@ -1043,7 +1053,7 @@ func portableManifestPaths(remotePath string, entries []entry) (map[string]strin
 			return nil, fail("BAIDU_REMOTE_MANIFEST_CHANGED")
 		}
 		seenPaths[e.Path] = true
-		if !utf8.ValidString(e.Path) || !path.IsAbs(e.Path) || path.Clean(e.Path) != e.Path ||
+		if !utf8.ValidString(e.Path) || strings.IndexByte(e.Path, 0) >= 0 || !path.IsAbs(e.Path) || path.Clean(e.Path) != e.Path ||
 			(e.Path != remotePath && !strings.HasPrefix(e.Path, strings.TrimRight(remotePath, "/")+"/")) {
 			return nil, fail("BAIDU_REMOTE_MANIFEST_CHANGED")
 		}
@@ -1055,31 +1065,38 @@ func portableManifestPaths(remotePath string, entries []entry) (map[string]strin
 			if old := nodes[current]; old != nil && old.directory != dir {
 				return nil, fail("BAIDU_LOCAL_PATH_MAPPING_CONFLICT")
 			}
-			nodes[current] = &node{current, dir}
+			nodes[current] = &node{relative: current, directory: dir}
 		}
 	}
 	families := map[string]map[string]bool{}
 	force := map[string]bool{}
 	keys := make([]string, 0, len(nodes))
-	familyOf := func(n *node) string {
+	for _, n := range nodes {
+		name := path.Base(n.relative)
+		n.stem, n.suffix = localNameParts(name, n.directory)
+		n.family = fmt.Sprint(n.directory) + ":" + path.Join(path.Dir(n.relative), n.stem)
+		if version == 2 && !n.directory {
+			if match := maskedRarPartSuffix.FindStringSubmatchIndex(name); match != nil && match[0] > 0 {
+				n.stem, n.suffix = name[:match[0]], name[match[0]:]
+				// NUL cannot occur in a valid path segment.
+				n.family = "masked-rar:" + path.Join(path.Dir(n.relative), n.stem) + "\x00" + name[match[2]:match[3]]
+			}
+		}
 		// A literal checkpoint-like filename is a separate family. Otherwise its
 		// common stem would recreate the same collision after adding the hash.
 		if strings.HasSuffix(localCaseFold(n.relative), localCaseFold(pcsdownload.DownloadSuffix)) {
-			return "checkpoint-name:" + n.relative
+			n.family = "checkpoint-name:" + n.relative
 		}
-		stem, _ := localNameParts(path.Base(n.relative), n.directory)
-		return fmt.Sprint(n.directory) + ":" + path.Join(path.Dir(n.relative), stem)
 	}
 	suffixBudgets := map[string]int{}
 	for _, n := range nodes {
-		_, suffix := localNameParts(path.Base(n.relative), n.directory)
-		if len(suffix) > suffixBudgets[familyOf(n)] {
-			suffixBudgets[familyOf(n)] = len(suffix)
+		if len(n.suffix) > suffixBudgets[n.family] {
+			suffixBudgets[n.family] = len(n.suffix)
 		}
 	}
 	for key, n := range nodes {
 		keys = append(keys, key)
-		family := familyOf(n)
+		family := n.family
 		name := path.Base(key)
 		// Treat case collisions as distinct families. A broad Unicode bucket is
 		// conservative across NFC/NFD volumes; the hash disambiguates originals.
@@ -1096,7 +1113,7 @@ func portableManifestPaths(remotePath string, entries []entry) (map[string]strin
 			}
 			families[b][family] = true
 		}
-		candidate, err := portableLocalName(name, family, n.directory, false, suffixBudgets[family])
+		candidate, err := portableLocalName(name, n.stem, n.suffix, family, n.directory, false, suffixBudgets[family])
 		if err != nil {
 			return nil, err
 		}
@@ -1122,8 +1139,8 @@ func portableManifestPaths(remotePath string, entries []entry) (map[string]strin
 	used := map[string]bool{}
 	for _, key := range keys {
 		n := nodes[key]
-		family := familyOf(n)
-		name, err := portableLocalName(path.Base(key), family, n.directory, force[family], suffixBudgets[family])
+		family := n.family
+		name, err := portableLocalName(path.Base(key), n.stem, n.suffix, family, n.directory, force[family], suffixBudgets[family])
 		if err != nil {
 			return nil, err
 		}
@@ -1172,22 +1189,19 @@ func emptyDownloadPayload(ctx context.Context, root string) error {
 	})
 }
 
+func sortedLocalPathPairs(paths map[string]string) []localPathPair {
+	pairs := make([]localPathPair, 0, len(paths))
+	for remote, relative := range paths {
+		pairs = append(pairs, localPathPair{remote, relative})
+	}
+	sort.Slice(pairs, func(i, j int) bool { return pairs[i].Remote < pairs[j].Remote })
+	return pairs
+}
+
 // Bind the map to the original account and immutable download intent. Never put
 // internal journals among payload files or replace an existing journal. Inspect
 // uses precisely the same checks but never creates directories/files.
 func resolveDownloadPaths(ctx context.Context, configDir, uid, root string, r request, entries []entry, persist bool) (map[string]string, error) {
-	paths, err := portableManifestPaths(r.RemotePath, entries)
-	if err != nil {
-		return nil, err
-	}
-	pairs := make([]localPathPair, 0, len(paths))
-	changed := false
-	base := strings.TrimRight(path.Dir(r.RemotePath), "/") + "/"
-	for remote, relative := range paths {
-		pairs = append(pairs, localPathPair{remote, relative})
-		changed = changed || relative != strings.TrimPrefix(remote, base)
-	}
-	sort.Slice(pairs, func(i, j int) bool { return pairs[i].Remote < pairs[j].Remote })
 	sortedEntries := append([]entry(nil), entries...)
 	sort.Slice(sortedEntries, func(i, j int) bool { return sortedEntries[i].Path < sortedEntries[j].Path })
 	identity, _ := json.Marshal(struct {
@@ -1195,35 +1209,34 @@ func resolveDownloadPaths(ctx context.Context, configDir, uid, root string, r re
 		Manifest                     []entry
 	}{r.OperationID, uid, root, r.RemotePath, sortedEntries})
 	fingerprint := sha256.Sum256(identity)
-	wanted := localPathJournal{1, uid, hex.EncodeToString(fingerprint[:]), pairs}
+	intent := hex.EncodeToString(fingerprint[:])
 	key := sha256.Sum256([]byte(r.OperationID))
 	dir := filepath.Join(configDir, "operations")
 	journal := filepath.Join(dir, hex.EncodeToString(key[:])+".paths-v1.json")
-	wantedJSON, _ := json.Marshal(wanted)
-	read := func() (bool, error) {
+	read := func() (map[string]string, error) {
 		info, statErr := os.Lstat(journal)
 		if os.IsNotExist(statErr) {
-			return false, nil
+			return nil, nil
 		}
 		if statErr != nil {
-			return false, storageFail("BAIDU_RECEIPT_READ_FAILED", "inspectPathMap", statErr)
+			return nil, storageFail("BAIDU_RECEIPT_READ_FAILED", "inspectPathMap", statErr)
 		}
 		if !info.Mode().IsRegular() || info.Size() > 4*1024*1024 {
-			return false, fail("BAIDU_LOCAL_PATH_MAPPING_INVALID")
+			return nil, fail("BAIDU_LOCAL_PATH_MAPPING_INVALID")
 		}
 		b, readErr := os.ReadFile(journal)
 		if readErr != nil {
-			return false, storageFail("BAIDU_RECEIPT_READ_FAILED", "readPathMap", readErr)
+			return nil, storageFail("BAIDU_RECEIPT_READ_FAILED", "readPathMap", readErr)
 		}
 		var old localPathJournal
-		if json.Unmarshal(b, &old) != nil {
-			return false, fail("BAIDU_LOCAL_PATH_MAPPING_INVALID")
+		if json.Unmarshal(b, &old) != nil || (old.Version != 1 && old.Version != 2) || old.UID != uid || old.Fingerprint != intent {
+			return nil, fail("BAIDU_LOCAL_PATH_MAPPING_INVALID")
 		}
-		canonical, _ := json.Marshal(old)
-		if !bytes.Equal(canonical, wantedJSON) {
-			return false, fail("BAIDU_LOCAL_PATH_MAPPING_INVALID")
+		paths, err := portableManifestPathsForVersion(r.RemotePath, entries, old.Version)
+		if err != nil || !slices.Equal(old.Paths, sortedLocalPathPairs(paths)) {
+			return nil, fail("BAIDU_LOCAL_PATH_MAPPING_INVALID")
 		}
-		return true, nil
+		return paths, nil
 	}
 	if !filepath.IsAbs(configDir) || uid == "" || uid == "0" || r.OperationID == "" {
 		return nil, fail("BAIDU_DOWNLOAD_IDENTITY_INVALID")
@@ -1240,8 +1253,17 @@ func resolveDownloadPaths(ctx context.Context, configDir, uid, root string, r re
 			break
 		}
 	}
-	if found, readErr := read(); readErr != nil || found {
-		return paths, readErr
+	if saved, readErr := read(); readErr != nil || saved != nil {
+		return saved, readErr
+	}
+	paths, err := portableManifestPaths(r.RemotePath, entries)
+	if err != nil {
+		return nil, err
+	}
+	changed := false
+	base := strings.TrimRight(path.Dir(r.RemotePath), "/") + "/"
+	for remote, relative := range paths {
+		changed = changed || relative != strings.TrimPrefix(remote, base)
 	}
 	if !changed {
 		return paths, nil
@@ -1267,6 +1289,7 @@ func resolveDownloadPaths(ctx context.Context, configDir, uid, root string, r re
 	if !persist {
 		return paths, nil
 	}
+	wantedJSON, _ := json.Marshal(localPathJournal{2, uid, intent, sortedLocalPathPairs(paths)})
 	if len(wantedJSON) > 4*1024*1024 {
 		return nil, fail("BAIDU_INSPECTION_LIMIT")
 	}
@@ -1290,12 +1313,10 @@ func resolveDownloadPaths(ctx context.Context, configDir, uid, root string, r re
 	}
 	// Atomic no-replace publication also protects a concurrent existing intent.
 	if err = os.Link(file.Name(), journal); err != nil {
-		if found, readErr := read(); readErr != nil || !found {
-			if readErr != nil {
-				return nil, readErr
-			}
-			return nil, storageFail("BAIDU_RECEIPT_WRITE_FAILED", "publishPathMap", err)
+		if saved, readErr := read(); readErr != nil || saved != nil {
+			return saved, readErr
 		}
+		return nil, storageFail("BAIDU_RECEIPT_WRITE_FAILED", "publishPathMap", err)
 	}
 	return paths, nil
 }

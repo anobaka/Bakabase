@@ -58,7 +58,7 @@ public sealed partial class AcquisitionPlanService
         ids = ids.Concat(resultIds).Distinct().ToArray();
         if (await db.DownloadTasks.AnyAsync(d => ids.Contains(d.Id) && d.Status == DownloadTaskDbModelStatus.InProgress, ct))
             return "STAGE_DIRECTORY_TASK_ACTIVE";
-        if (downloadActivity != null && (await downloadActivity.ReadAsync([row.Id], ct)).ContainsKey(row.Id))
+        if (downloadActivity != null && (await downloadActivity.ReadAsync([row.Id], ct)).GetValueOrDefault(row.Id)?.Activity != null)
             return "STAGE_DIRECTORY_TASK_ACTIVE";
         return null;
     }

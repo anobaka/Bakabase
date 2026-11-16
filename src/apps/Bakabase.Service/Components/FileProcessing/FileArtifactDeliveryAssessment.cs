@@ -90,7 +90,7 @@ internal static class FileArtifactDeliveryAssessment
             var exactFiles = ArtifactManifestFiles.ResolveFiles(artifact.RootDirectory, artifact.Manifest);
             foreach (var file in exactFiles.Where(f => string.Equals(Path.GetExtension(f), ".mov", StringComparison.OrdinalIgnoreCase)))
                 if (!await QuickTimeDeliveryProbe.IsMovieAsync(file, stop.Token)) return false;
-            if (!await LiveRecordingDeliveryProbe.ArePairsAsync(exactFiles, stop.Token)) return false;
+            if (!await LiveRecordingDeliveryProbe.AreRecordingsAsync(exactFiles, stop.Token)) return false;
             var lyrics = exactFiles.Where(f => string.Equals(Path.GetExtension(f), ".lrc", StringComparison.OrdinalIgnoreCase)).ToArray();
             if (lyrics.Length > 0)
             {

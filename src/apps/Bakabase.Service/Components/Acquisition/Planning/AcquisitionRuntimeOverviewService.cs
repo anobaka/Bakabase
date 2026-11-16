@@ -208,7 +208,7 @@ public sealed class AcquisitionRuntimeOverviewService(BakabaseDbContext db, IAcq
             if (processingWaitCode is null or "FILE_DELIVERY_RESULT_UNCERTAIN")
                 processingWaitCode = AcquisitionRuntimeProblems.CurrentAssessmentDiagnostic(run?.Status, kind, node?.Status,
                     node == null ? [] : outputs[node.Id]) ?? processingWaitCode;
-            if (failureCode == null && downloadActivity != null && executionProblems.Count == 0 && leaves.All(d => d.Status != "failed") &&
+            if (failureCode == null && downloadActivity?.Activity != null && executionProblems.Count == 0 && leaves.All(d => d.Status != "failed") &&
                 targets.Where(t => !t.Excluded && t.Problem != null).All(t => downloadActivity.RecoveredPartIds.Contains(t.Id)))
                 attention = false;
             // A failed invocation supersedes the earlier waiting workset (for example a password prompt).
