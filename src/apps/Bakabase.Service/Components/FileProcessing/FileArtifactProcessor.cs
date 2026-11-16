@@ -313,7 +313,7 @@ public sealed class FileArtifactProcessor
         Action<int>? progress, CancellationToken ct, bool replan, string? stopAfterStepId,
         FileArtifactProcessingRecovery? recovery, bool onlyOuterPackaging = false,
         FileArtifactCheckpointContinuation? checkpointContinuation = null,
-        Func<CancellationToken, Task<IReadOnlyList<string>>>? passwordEvidence = null)
+        Func<string, CancellationToken, Task<IReadOnlyList<string>>>? passwordEvidence = null)
     {
         Validate(config);
         if (recovery != null && (replan || answer != null || planPasswordAnswer != null || recovery.Attempt < 1))

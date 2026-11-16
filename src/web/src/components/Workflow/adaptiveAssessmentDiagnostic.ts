@@ -8,6 +8,7 @@ const codes = new Set([
   "MAX_LLM_ASSESSMENT_CALLS",
   "INCOMPLETE_FILE_INVENTORY",
   "ARCHIVE_FAMILY_REVIEW_REQUIRED",
+  "ARCHIVE_PACKAGING_REVIEW_REQUIRED",
 ]);
 
 export function isAdaptiveAssessmentDiagnostic(code?: string): code is string {

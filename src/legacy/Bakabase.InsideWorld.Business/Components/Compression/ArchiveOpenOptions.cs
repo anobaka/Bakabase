@@ -9,21 +9,25 @@ namespace Bakabase.InsideWorld.Business.Components.Compression;
 public sealed record ArchiveOpenOptions
 {
     private readonly string? _archiveType;
-    private readonly long? _verifiedZipPrefix;
+    internal long? ExpectedPrefixOffset { get; }
+    internal string? ExpectedPrefixType => ExpectedPrefixOffset.HasValue ? _archiveType : null;
     private ArchiveOpenOptions(string? archiveType) => _archiveType = archiveType;
-    private ArchiveOpenOptions(long verifiedZipPrefix)
+    private ArchiveOpenOptions(string archiveType, long prefix)
     {
-        if (verifiedZipPrefix <= 0 || verifiedZipPrefix >= BoundedZipStructureProbe.MaximumPrefixBytes)
-            throw new ArgumentOutOfRangeException(nameof(verifiedZipPrefix));
-        _archiveType = "zip";
-        _verifiedZipPrefix = verifiedZipPrefix;
+        _archiveType = archiveType;
+        ExpectedPrefixOffset = prefix;
     }
-    internal static ArchiveOpenOptions VerifiedZipPrefix(long prefix) => new(prefix);
+    internal static ArchiveOpenOptions VerifiedZipPrefix(long prefix) =>
+        prefix > 0 && prefix < BoundedZipStructureProbe.MaximumPrefixBytes
+            ? new("zip", prefix) : throw new ArgumentOutOfRangeException(nameof(prefix));
+    internal static ArchiveOpenOptions VerifiedRar5Prefix(long prefix) =>
+        prefix is > 0 and <= RarVolumeHeader.MaximumJpegPrefixBytes
+            ? new("rar5", prefix) : throw new ArgumentOutOfRangeException(nameof(prefix));
     internal static ArchiveOpenOptions VerifiedZipStructure(ZipStructureDescriptor structure) =>
         new ArchiveOpenOptions((string?)null) {ZipStructure = structure};
     internal ZipStructureDescriptor? ZipStructure { get; private init; }
     internal bool UsesZipCompatibilityReader => ZipPasswordCodePage != null || ZipStructure != null;
-    internal long? ExpectedZipOffset => _verifiedZipPrefix;
+    internal long? ExpectedZipOffset => _archiveType == "zip" ? ExpectedPrefixOffset : null;
     public static ArchiveOpenOptions BoundedPrefix { get; } = new("*");
 
     public ZipFileNameCodePage? ZipFileNameCodePage { get; private init; }
@@ -66,11 +70,11 @@ public sealed record ArchiveOpenOptions
 
     // Preserve the default embedded-archive behavior (:r), with a finite start-position limit.
     // https://github.com/ip7z/7zip/blob/main/CPP/7zip/UI/Common/OpenArchive.cpp
-    // A validated ZIP may have another format appended to it. Open exactly that ZIP,
+    // A validated container may have another format appended to it. Open exactly that type,
     // without :r descending into another container. The bound comes from its structure,
     // not caller-supplied switches, a filename suffix or an unrestricted media scan.
-    internal string? TypeArgument => Mode == ArchiveOpenMode.SevenZipParser ? "-t#" : _verifiedZipPrefix is { } prefix
-        ? "-tzip:s" + (prefix + 1).ToString(CultureInfo.InvariantCulture) + "b"
+    internal string? TypeArgument => Mode == ArchiveOpenMode.SevenZipParser ? "-t#" : ExpectedPrefixOffset is { } prefix
+        ? "-t" + _archiveType + ":s" + (prefix + 1).ToString(CultureInfo.InvariantCulture) + "b"
         : _archiveType == null ? null : $"-t{_archiveType}:s32m:r";
 }
 

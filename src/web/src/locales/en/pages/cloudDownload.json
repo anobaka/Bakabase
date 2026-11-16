@@ -724,6 +724,7 @@
   "cloudDownload.problemCode.LLM_ASSESSMENT_TIMEOUT": "The model did not respond in time. No processing plan was received. Your files were kept; see the AI audit log for the call at this time.",
   "cloudDownload.problemCode.LLM_ASSESSMENT_FAILED": "The AI file analysis request failed.",
   "cloudDownload.problemCode.ARCHIVE_FAMILY_REVIEW_REQUIRED": "The file list still contains a multipart archive. Confirm the volumes are the intended final files, or provide extraction instructions.",
+  "cloudDownload.problemCode.ARCHIVE_PACKAGING_REVIEW_REQUIRED": "This image contains a verified ZIP archive. Extract it or confirm that the packaged file should be delivered.",
   "cloudDownload.problemCode.INCOMPLETE_FILE_INVENTORY": "The AI saw only part of the file list and could not confirm that everything was ready for delivery. Review the full file list.",
   "cloudDownload.problemCode.MAX_LLM_ASSESSMENT_CALLS": "This attempt reached its maximum number of file analysis rounds.",
   "cloudDownload.problemCode.LLM_OUTPUT_TRUNCATED": "The model reached its output limit before it finished the plan. Increase the file processor’s maximum tokens in AI settings and retry.",

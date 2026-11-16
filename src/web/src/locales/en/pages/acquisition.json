@@ -1587,6 +1587,8 @@
   "acquisition.delete.delivered.verify": "Verify the contents of the selected files before removal.",
   "acquisition.delete.cleanup.kind.publishedFiles": "Final delivered files",
   "acquisition.continue.checkpointChoice": "How to continue",
+  "acquisition.continue.reviewOutput": "Review this attempt’s output",
+  "acquisition.continue.reviewOutputHint": "If the listed files are complete, choose to keep them as the final result. The current attempt will continue to delivery.",
   "acquisition.continue.checkpoint.current": "Continue unfinished processing",
   "acquisition.continue.checkpoint.files": "Reanalyze current files",
   "acquisition.continue.checkpoint.currentHint": "Reuse completed extraction results and continue the remaining steps.",

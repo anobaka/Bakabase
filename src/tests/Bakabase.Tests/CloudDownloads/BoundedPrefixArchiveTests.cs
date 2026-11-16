@@ -140,6 +140,48 @@ public sealed class BoundedPrefixArchiveTests
         Assert.AreEqual("-tzip:s419430401b", format?.OpenOptions?.TypeArgument);
     }
 
+    [TestMethod]
+    public async Task RealToolKeepsJpegWrappedRar5ReadableAfterRenamingToRar()
+    {
+        var executable = Environment.GetEnvironmentVariable("BAKABASE_TEST_7Z_PATH");
+        if (string.IsNullOrWhiteSpace(executable) || !File.Exists(executable))
+            Assert.Inconclusive("Set BAKABASE_TEST_7Z_PATH for the installed archive tool fixture.");
+        // A generated gray pixel with a legal JPEG comment, then one stored RAR5 member.
+        var jpeg = Convert.FromBase64String("/9j/wAALCAABAAEBAREA/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAA" +
+            "QRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZn" +
+            "aGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6e" +
+            "rx8vP09fb3+Pn6/9sAQwACAgICAgIDAgIDBQMDAwUGBQUFBQYIBgYGBgYICggICAgICAoKCgoKCgoKDAwMDAwMDg4ODg4PDw8P" +
+            "Dw8PDw8P/90ABAAB/9oACAEBAAA/ACv/2Q==");
+        const int offset = 54198;
+        var bytes = new byte[offset];
+        bytes[0] = 0xff; bytes[1] = 0xd8; bytes[2] = 0xff; bytes[3] = 0xfe;
+        BinaryPrimitives.WriteUInt16BigEndian(bytes.AsSpan(4, 2), (ushort)(offset - jpeg.Length - 2));
+        jpeg.AsSpan(2).CopyTo(bytes.AsSpan(offset - jpeg.Length + 2));
+        var rar = Convert.FromBase64String("UmFyIRoHAQDFGjMyAwEAAIU9g6AYAgIQBBAAQWRaIgAAC3BheWxvYWQudHh0aGVsbG8gZnJvbSB0ZXN0ChmyOjUDBQAA");
+        var original = Path.Combine(_input, "download.jpg");
+        await File.WriteAllBytesAsync(original, [..bytes, ..rar]);
+        var compressed = new TestableCompressedFileService(executable!);
+        var tool = new ArchiveExtractionService(compressed);
+        Assert.AreEqual(".rar", await tool.ProbeFormatAsync(original, default));
+        var renamed = Path.ChangeExtension(original, ".rar");
+        File.Move(original, renamed);
+        var digest = SHA256.HashData(await File.ReadAllBytesAsync(renamed));
+        var guided = await tool.ProbeAuthorizedFormatAsync(renamed, default);
+        Assert.AreEqual(".rar", guided?.Extension);
+        Assert.AreEqual("-trar5:s54199b", guided!.OpenOptions?.TypeArgument);
+        var entries = await compressed.GetCompressFileEntries(renamed, default);
+        Assert.AreEqual("payload.txt", entries.Data!.Single().Path);
+        var password = await tool.ProbePasswordAsync(renamed, [null], null, default);
+        Assert.IsTrue(password.Succeeded, password.Message);
+        var result = await new FileProcessingPlanExecutor(tool).ExecuteAsync(new FileProcessingPlan
+        {
+            Requirement = "required", Steps = [new() {Id = "open", Op = "extractArchive", Selector = "download.rar"}]
+        }, _input, [renamed], Path.Combine(_root, "state"));
+        Assert.IsTrue(result.Completed, result.Message);
+        Assert.AreEqual("hello from test\n", await File.ReadAllTextAsync(result.Files.Single()));
+        CollectionAssert.AreEqual(digest, SHA256.HashData(await File.ReadAllBytesAsync(renamed)));
+    }
+
     private async Task<string> MediaPrefixedZip(string name, int offset)
     {
         using var bytes = new MemoryStream();

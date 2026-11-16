@@ -28,4 +28,8 @@ public interface IProcessingPlanSourceReader
 }
 
 public sealed record ProcessingPlanSourceSnapshot(WorkflowSourceRef Source, FileProcessingPlan? OriginalPlan,
-    IReadOnlyList<string> EvidenceTexts, string SourceFingerprint, string? SourceLocator = null);
+    IReadOnlyList<string> EvidenceTexts, string SourceFingerprint, string? SourceLocator = null)
+{
+    // The saved publisher body excludes replies and generated analysis.
+    internal string? PublisherText { get; init; }
+}

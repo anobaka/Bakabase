@@ -37,7 +37,7 @@ script. Tests still run natively; only the final `go build` uses those targets.
 
 ## Protocol and behavior
 
-`--version` reports `4.0.2+bakabase.13`. Otherwise one JSON request is read from
+`--version` reports `4.0.2+bakabase.14`. Otherwise one JSON request is read from
 stdin; JSON line events on stdout have `type: progress`, `result`, or `error`.
 Set `BAIDUPCS_GO_CONFIG_DIR` to an absolute private per-account directory,
 including when probing `--version` (upstream package initialization otherwise
@@ -56,7 +56,7 @@ Upstream stdout/stderr are discarded. Errors are stable safe codes.
   checks. Explicit cancelled/expired responses are distinct from ambiguous
   errors, network failures and missing access conditions. Checking metadata does
   not guarantee that an original file can ultimately be downloaded.
-- `inspect-download`: read-only recovery inspection of the exact pinned remote manifest and retained local files/PCS range sidecars. Reads a stable existing profile with a fixed expected UID without `Config.Init`, account writes, downloads, transfers, directory creation, file hashing or checkpoint synthesis. A partial file without a valid matching sidecar remains blocked. Complete-length files are only candidates; ordinary download checksum verification still decides reuse.
+- `inspect-download`: read-only recovery inspection of the exact pinned remote manifest and retained local files/PCS range sidecars. Reads a stable existing profile with a fixed expected UID without `Config.Init`, account writes, downloads, transfers, directory creation, file hashing or checkpoint synthesis. An empty payload paired with an empty range sidecar is an unstarted upstream download. A nonempty partial file without a valid matching sidecar remains blocked. Complete-length files are only candidates; ordinary download checksum verification still decides reuse.
 - `transfer`: `operationId`, `url`, `accessCode`, `remoteDirectory`; stores the
   share in its own deterministic subdirectory and returns an exact recursive
   manifest. Top-level share items and owned directories are paginated. A four

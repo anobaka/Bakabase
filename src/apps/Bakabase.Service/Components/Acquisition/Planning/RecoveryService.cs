@@ -74,7 +74,7 @@ public sealed class AcquisitionRecoveryService(BakabaseDbContext db, IAcquisitio
         async Task<AcquisitionRecoveryDiagnosis> Diagnose(AcquisitionTaskDbModel task, WorkflowRunDbModel? run, bool verify, CancellationToken token) =>
             scope == "localFiles" ? localFiles == null ? throw new ArgumentException("RECOVERY_LOCAL_FILES_UNAVAILABLE") :
                 await localFiles.DiagnoseAsync(task, run, verify, token, guardDirectory) :
-                ForScope(await diagnostics.DiagnoseAsync(task, run, token, verifyFiles: verify), run, scope);
+                ForScope(await diagnostics.DiagnoseAsync(task, run, token, verifyFiles: verify, includeStoppedDownloads: scope == "downloads"), run, scope);
         var rows = new List<AcquisitionRecoveryRow>(); var versions = new Dictionary<int, string>(); var signals = new Dictionary<int, string>();
         var verification = new List<(int Id, int Index, string Version)>();
         // Fetch private checkpoints in bounded batches, not one query per row or one unbounded
@@ -97,7 +97,7 @@ public sealed class AcquisitionRecoveryService(BakabaseDbContext db, IAcquisitio
         }
         // Finish inexpensive diagnosis for every fixed task before spending the bounded budget
         // hashing retained files. Large files cannot starve unrelated scope-recovery checks.
-        // A user inspecting a single local file step can wait for the complete NAS hash.
+        // When the user explicitly inspects one local file set, its hash may take longer on a large download or NAS.
         // The short per-row budget exists to keep a batch of independent tasks responsive.
         using var budget = CancellationTokenSource.CreateLinkedTokenSource(ct);
         budget.CancelAfter(TimeSpan.FromSeconds(45));
@@ -105,8 +105,9 @@ public sealed class AcquisitionRecoveryService(BakabaseDbContext db, IAcquisitio
         {
             using var itemBudget = CancellationTokenSource.CreateLinkedTokenSource(budget.Token);
             itemBudget.CancelAfter(TimeSpan.FromSeconds(rows[pending.Index].ReasonCode == "RECOVERY_RECHECK_SOURCE" ? 12 : 4));
-            var checkToken = ids.Length == 1 && scope == "workflow" &&
-                IsLocalFileStep(rows[pending.Index].CurrentStepKind) ? ct : itemBudget.Token;
+            var inspectingOneFileSet = ids.Length == 1 && (scope == "localFiles" ||
+                scope == "workflow" && IsLocalFileStep(rows[pending.Index].CurrentStepKind));
+            var checkToken = inspectingOneFileSet ? ct : itemBudget.Token;
             try
             {
                 checkToken.ThrowIfCancellationRequested();
@@ -153,7 +154,7 @@ public sealed class AcquisitionRecoveryService(BakabaseDbContext db, IAcquisitio
                     useEmergencySpaceReserve: useEmergencySpaceReserve);
                 return new(outcome.Status == "started" ? [id] : [], [], LocalFiles: [outcome]);
             }
-            var diagnosis = ForScope(await diagnostics.DiagnoseAsync(task, run, ct, verifyContent: true), run, scope);
+            var diagnosis = ForScope(await diagnostics.DiagnoseAsync(task, run, ct, verifyContent: true, includeStoppedDownloads: scope == "downloads"), run, scope);
             if (!diagnosis.Row.CanContinue) return new([], [new(id, diagnosis.Row.ReasonCode)]);
             return await DispatchVerifiedWhileLockedAsync(task, run, scope, guardDirectory, diagnosis, ct, useEmergencySpaceReserve);
         }
@@ -241,7 +242,7 @@ public sealed class AcquisitionRecoveryService(BakabaseDbContext db, IAcquisitio
                     if (task == null || run == null) throw new RecoveryBlockedException("ACQUISITION_TASK_CHANGED");
                     using var validationBudget = CancellationTokenSource.CreateLinkedTokenSource(ct);
                     validationBudget.CancelAfter(TimeSpan.FromSeconds(15));
-                    var current = verified ?? ForScope(await diagnostics.DiagnoseAsync(task, run, validationBudget.Token), run, "downloads");
+                    var current = verified ?? ForScope(await diagnostics.DiagnoseAsync(task, run, validationBudget.Token, includeStoppedDownloads: true), run, "downloads");
                     if (!current.Row.CanContinue || current.SignalJson != entry.Signals[id])
                         throw new RecoveryBlockedException(current.Row.CanContinue ? "ACQUISITION_TASK_CHANGED" : current.Row.ReasonCode);
                     // Persist the requested boundary before starting a child. A lost response or

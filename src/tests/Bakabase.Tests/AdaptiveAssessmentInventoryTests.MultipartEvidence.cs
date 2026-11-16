@@ -15,13 +15,65 @@ public sealed partial class AdaptiveAssessmentInventoryTests
         var input = fixture.Input();
         var evidence = await Inspect(input);
         Assert.IsNotNull(evidence);
-        Assert.AreEqual(1, evidence.EntryInputId);
-        Assert.AreEqual("fixture.7z.001", evidence.ExpectedEntryName);
+        Assert.AreEqual(new MultipartRename(1, "fixture.7z.001"), evidence.Renames.Single());
         Assert.AreEqual(310L, evidence.DeclaredArchiveBytes);
         CollectionAssert.AreEqual(new[] {1, 2, 3}, evidence.InputIds.ToArray());
-        Assert.IsFalse(File.Exists(Path.Combine(fixture.Root, evidence.ExpectedEntryName)));
+        Assert.IsFalse(File.Exists(Path.Combine(fixture.Root, evidence.Renames.Single().ExpectedName)));
         for (var i = 0; i < input.Files.Count; i++)
             CollectionAssert.AreEqual(MultipartEvidenceFixture.Volumes[i], File.ReadAllBytes(input.Files[i]));
+    }
+
+    [DataTestMethod]
+    [DataRow("fixture.001.pdf")]
+    [DataRow("fixture.001")]
+    public async Task Bare_volumes_with_a_proven_7z_extent_are_renamed_together_then_extracted_as_one_family(string entryName)
+    {
+        using var fixture = new MultipartEvidenceFixture();
+        var original = MultipartEvidenceFixture.Volumes;
+        // Inventory IDs need not follow volume order.
+        var input = fixture.Input(["fixture.003", entryName, "fixture.002"], [original[2], original[0], original[1]]);
+        var evidence = await Inspect(input);
+        Assert.IsNotNull(evidence);
+        CollectionAssert.AreEqual(new[] {new MultipartRename(2, "fixture.7z.001"), new(3, "fixture.7z.002"), new(1, "fixture.7z.003")},
+            evidence.Renames.ToArray());
+        var paths = input.Manifest.Entries.Select(e => e.RelativePath).ToArray();
+        var repair = new AdaptiveFileProcessingDecision("continue", null, null,
+            evidence.Renames.Select(r => new AdaptiveFileProcessingOperation("rename", paths[r.InputId - 1], r.ExpectedName)).ToArray(), [], []);
+        Assert.IsTrue(AdaptiveFileProcessingAssessmentService.RequireMultipartNaming(repair, evidence, paths).ShouldContinue);
+        var steps = AdaptiveFileProcessingAssessmentService.BuildPlan(repair)!.Steps;
+        Assert.AreEqual(3, steps.Count);
+        for (var i = 0; i < steps.Count; i++)
+        {
+            Assert.AreEqual("renameFile", steps[i].Op);
+            Assert.AreEqual(paths[evidence.Renames[i].InputId - 1], steps[i].Selector);
+            Assert.AreEqual(evidence.Renames[i].ExpectedName, steps[i].TargetName);
+        }
+        foreach (var invalid in new[] {
+            repair with {Operations = repair.Operations.Take(1).ToArray()},
+            repair with {Operations = [.. repair.Operations, new("extract", paths[1])]},
+            repair with {Operations = [repair.Operations[0], repair.Operations[1], repair.Operations[1]]}
+        })
+            Assert.IsTrue(AdaptiveFileProcessingAssessmentService.RequireMultipartNaming(invalid, evidence, paths).NeedsHumanReview);
+        var canonical = fixture.Input(["fixture.7z.001", "fixture.7z.002", "fixture.7z.003"]);
+        Assert.IsNull(await Inspect(canonical));
+        var extract = Decide(canonical, """{"status":"continue","operations":[{"type":"extract","inputId":1}]}""");
+        Assert.IsTrue(extract.ShouldContinue, extract.Reason);
+        var step = AdaptiveFileProcessingAssessmentService.BuildPlan(extract)!.Steps.Single();
+        Assert.AreEqual("extractArchive", step.Op);
+        Assert.IsTrue(step.Selector!.EndsWith('*'));
+    }
+
+    [DataTestMethod]
+    [DataRow("fixture.jpg", "fixture.002", "fixture.003")]
+    [DataRow("unrelated.001.pdf", "fixture.002", "fixture.003")]
+    [DataRow("fixture.001.pdf", "fixture.002", "fixture.004")]
+    [DataRow("fixture.001.pdf", "fixture.002", "fixture.002.tmp")]
+    [DataRow("fixture.001.pdf", "other.002", "fixture.003")]
+    public async Task Bare_numeric_siblings_without_the_same_exact_consecutive_family_are_not_bound(
+        string first, string middle, string last)
+    {
+        using var fixture = new MultipartEvidenceFixture();
+        Assert.IsNull(await Inspect(fixture.Input([first, middle, last])));
     }
 
     [DataTestMethod]

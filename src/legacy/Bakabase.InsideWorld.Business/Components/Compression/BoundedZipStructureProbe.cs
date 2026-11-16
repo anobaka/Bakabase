@@ -41,7 +41,8 @@ internal static class BoundedZipStructureProbe
         return structure?.ZipOffset;
     }
 
-    internal static async Task<ZipStructureDescriptor?> FindStructureAsync(string path, long expectedLength, CancellationToken ct)
+    internal static async Task<ZipStructureDescriptor?> FindStructureAsync(string path, long expectedLength,
+        CancellationToken ct, bool requireImageHeader = false)
     {
         await using var file = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read,
             1, FileOptions.Asynchronous | FileOptions.RandomAccess);
@@ -63,6 +64,9 @@ internal static class BoundedZipStructureProbe
         // in its payload or trailer. Leave validation to its ordinary archive handler.
         var header = (await Read(0, (int)Math.Min(512, expectedLength)))!;
         if (ArchiveSignature.HasKnownContainerHeader(header))
+            return null;
+        if (requireImageHeader && !header.AsSpan().StartsWith(new byte[] {0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a}) &&
+            !header.AsSpan().StartsWith(new byte[] {0xff, 0xd8, 0xff}))
             return null;
         var tailStart = Math.Max(0, expectedLength - TailBytes);
         var tail = (await Read(tailStart, (int)(expectedLength - tailStart)))!;

@@ -15,6 +15,37 @@ public sealed class AcquisitionArchivePasswordEvidenceTests
     private const string Share = "https://example.test/s/resource";
     private const string Example = "Literal123";
 
+    [DataTestMethod]
+    [DataRow("密码RJ号", "RJ")]
+    [DataRow("解压密码：RJ号", "RJ")]
+    [DataRow("密码是作品编号", "*")]
+    [DataRow("Archive password: the product ID", "*")]
+    [DataRow("密码：RJ01234567", null)]
+    [DataRow("提取码：RJ号", null)]
+    [DataRow("没有密码，RJ号只是编号", null)]
+    [DataRow("密码可能是RJ号", null)]
+    [DataRow("密码是RJ号的数字部分", null)]
+    public void Only_an_explicit_instruction_near_the_selected_link_resolves_an_identifier(string instruction, string? expected)
+    {
+        Assert.AreEqual(expected, AcquisitionCachedSourceEvidence.ReadPublisherReference(Share + "\n" + instruction, [Share]));
+        Assert.IsNull(AcquisitionCachedSourceEvidence.ReadPublisherReference(Share + "/other\n" + instruction, [Share]));
+        Assert.IsNull(AcquisitionCachedSourceEvidence.ReadPublisherReference(instruction, [Share]));
+        if (expected != null)
+            Assert.AreEqual(0, AcquisitionArchivePasswordEvidence.Inspect("<a href='" + Share + "'>source</a><br>" + instruction,
+                [Share], new HashSet<string>(), true).Count);
+    }
+
+    [TestMethod]
+    public void Per_archive_candidates_use_exact_file_ids_before_an_unambiguous_title_and_exclude_access_codes()
+    {
+        CollectionAssert.AreEqual(new[] {"rj0123456", "RJ01234567"},
+            PublisherPasswordReference.Resolve("RJ", "/RJ9999999/rj0123456字幕.pdf", "作品 RJ01234567", new HashSet<string>()).ToArray());
+        CollectionAssert.AreEqual(new[] {"RJ01234567"},
+            PublisherPasswordReference.Resolve("*", "RJ01234567.rar", "RJ01234567", new HashSet<string>()).ToArray());
+        Assert.AreEqual(0, PublisherPasswordReference.Resolve("RJ", "/RJ9999999/file.rar", "RJ01234567 RJ99999999", new HashSet<string>()).Count);
+        Assert.AreEqual(0, PublisherPasswordReference.Resolve("RJ", "BJ01234567.png", "RJ01234567", new HashSet<string>{"RJ01234567"}).Count);
+    }
+
     [TestMethod]
     public async Task UnlabelledPublisherTrailerIsRankedWithoutSendingItsValueOrHtml()
     {
@@ -62,7 +93,7 @@ public sealed class AcquisitionArchivePasswordEvidenceTests
             var executor = new FileProcessingPlanExecutor(archives);
             var plan = new FileProcessingPlan {Requirement = "required", Steps = [new() {Id = "unpack", Op = "extractArchive"}]};
             var lookups = 0;
-            Task<IReadOnlyList<string>> Evidence(CancellationToken _) {lookups++; return Task.FromResult<IReadOnlyList<string>>([candidateCorrect ? Example : "WrongChoice"]); }
+            Task<IReadOnlyList<string>> Evidence(string basename, CancellationToken _) {Assert.AreEqual("part.zip", basename); lookups++; return Task.FromResult<IReadOnlyList<string>>([candidateCorrect ? Example : "WrongChoice"]); }
             var first = await executor.ExecuteAsync(plan, input, [file], state, passwordEvidence: Evidence);
             var again = await executor.ExecuteAsync(plan, input, [file], state, passwordEvidence: Evidence);
             Assert.AreEqual(candidateCorrect, first.Completed); Assert.AreEqual(candidateCorrect, again.Completed);
@@ -83,7 +114,7 @@ public sealed class AcquisitionArchivePasswordEvidenceTests
             var fixture = new ArchiveFixture(true);
             var plan = new FileProcessingPlan {Requirement = "required", Steps = [new() {Id = "extract", Op = "extractArchive", Selector = "outer.exe"}]};
             var reads = 0;
-            Task<IReadOnlyList<string>> Candidates(CancellationToken _) {reads++; return Task.FromResult<IReadOnlyList<string>>([Example]);}
+            Task<IReadOnlyList<string>> Candidates(string basename, CancellationToken _) {Assert.AreEqual("outer.exe", basename); reads++; return Task.FromResult<IReadOnlyList<string>>([Example]);}
             var result = await new FileProcessingPlanExecutor(fixture).ExecuteAsync(plan, input, [file], Path.Combine(root.FullName, "state"), passwordEvidence: Candidates);
             Assert.IsTrue(result.Completed, result.Message); Assert.AreEqual(1, reads); Assert.AreEqual(1, fixture.Extractions);
         }

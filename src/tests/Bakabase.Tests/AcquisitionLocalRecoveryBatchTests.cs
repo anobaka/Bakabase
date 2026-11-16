@@ -470,7 +470,7 @@ public sealed partial class AcquisitionLocalRecoveryBatchTests
         internal bool RequireVerification;
         internal List<bool> Verifications { get; } = [];
         public Task<AcquisitionRecoveryDiagnosis> DiagnoseAsync(AcquisitionTaskDbModel task, WorkflowRunDbModel? run,
-            CancellationToken ct, bool verifyFiles = true, bool verifyContent = false)
+            CancellationToken ct, bool verifyFiles = true, bool verifyContent = false, bool includeStoppedDownloads = false)
         {
             Verifications.Add(verifyFiles);
             return Task.FromResult(new AcquisitionRecoveryDiagnosis(new(task.Id, task.Title, run?.Id,

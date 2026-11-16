@@ -103,6 +103,63 @@ public sealed partial class AcquisitionRecoveryTests
     }
 
     [TestMethod]
+    public async Task Batch_with_changed_storage_verifies_existing_files_without_restarting_the_download()
+    {
+        var (run, target, download, operation, transfer, provider, downloads) = await SeedRetainedDownload();
+        download.Key = "original";
+        download.Message = "BAIDU_LOCAL_FILE_CHANGED";
+        var task = await _db.AcquisitionTasks.SingleAsync(t => t.WorkflowRunId == run.Id);
+        var source = target.SelectedSource!;
+        task.PlanJson = JsonSerializer.Serialize(new AcquisitionPlan
+        {
+            Title = task.Title!, OutputDirectory = _root,
+            Parts = [new() {Id = target.Id, SelectedSourceId = source.Id,
+                Sources = [new() {Id = source.Id, Url = source.Url, ProviderId = source.ProviderId, Kind = source.Kind}],
+                Processing = new() {Requirement = "unknown"}}]
+        }, WorkflowJson.Options);
+        run.WaitReason = "cloud.cloudAttention";
+        run.PlanSnapshotJson = WorkflowRunPlans.Serialize(new() {Name = "Retained download", TriggerKind = CloudWorkflow.Trigger,
+            Nodes = [new() {NodeId = "download", Kind = "download.awaitCompletion"}, new() {NodeId = "publish", Kind = "fs.publishArtifacts"}]});
+        var workset = AcquisitionRecoveryDiagnostics.ReadWorkset(run.CurrentItemJson!)! with {Targets = [target with {Problem = download.Message}]};
+        run.CurrentItemJson = WorkflowItemSnapshot.Capture(workset);
+        _db.Set<WorkflowRunSourceDbModel>().Add(new() {WorkflowRunId = run.Id, Module = "acquisition", EntityKind = "task", EntityId = task.Id.ToString(), Revision = "1"});
+        await _db.SaveChangesAsync();
+
+        var storage = new UserStoragePolicy(false);
+        var options = new TestBOptionsManager<AcquisitionOptions>(new()
+        {
+            ProcessingWorkspaceDirectory = Directory.CreateDirectory(Path.Combine(_root, "current-work")).FullName,
+            DeliveryRootDirectory = Directory.CreateDirectory(Path.Combine(_root, "current-delivery")).FullName
+        });
+        var store = _services.GetRequiredService<IArtifactOperationStore>();
+        var plans = new AcquisitionPlanService(_db, [], null!, null!, null!, storage, artifacts: store,
+            deliveryDirectories: new(storage, options), storageDefaults: new(options, storage));
+        var local = new AcquisitionLocalFilesRecoveryService(_db, plans, storage, store, null!, _services);
+        var diagnostics = new AcquisitionRecoveryDiagnostics(_db, storage, store, downloads: downloads);
+        var host = new ProcessingRecoveryHost();
+        var recovery = new AcquisitionRecoveryService(_db, diagnostics, new(), host, plans, localFiles: local);
+        var continuation = new AcquisitionContinuationService(_db, recovery, new(), null!, null!, null!);
+        var batches = new AcquisitionLocalRecoveryBatchService(_db, recovery, diagnostics, local, plans,
+            options, storage, new PinnedBatchCapacity(), new(), continuations: continuation);
+        var preview = await batches.PreviewAsync(new([task.Id], "automatic"));
+        Assert.IsTrue(preview.Rows.Single().CanQueue, preview.Rows.Single().ReasonCode);
+        Assert.AreEqual(0, provider.VerificationCalls);
+        Assert.IsFalse(provider.Checks.Contains(true));
+        var batch = await batches.ApplyAsync(new(preview.PreviewToken, [task.Id]));
+        await batches.TickAsync();
+        Assert.AreEqual(1, host.Calls, (await batches.GetAsync(batch.BatchId)).Rows.Single().ReasonCode);
+        var signal = JsonSerializer.Deserialize<CloudSelectionSignal>(host.Signal!, WorkflowJson.Options)!;
+        Assert.IsTrue(signal.VerifyExistingFilesOnly == true && signal.ObserveExistingOnly == true);
+        Assert.IsFalse(signal.RevalidateExistingDownloads == true);
+        CollectionAssert.AreEqual(new[] {target.Id}, signal.ResumeTargetIds!);
+        Assert.IsNull(AcquisitionDownloadOnlyRecoveryService.Targets(run, host.Signal!));
+        Assert.IsTrue(provider.Checks.Count > 0);
+        Assert.IsFalse(provider.Checks.Contains(true), "Verification must never probe the remote source for a retry.");
+        Assert.AreEqual(download.Id, (await _db.DownloadTasks.AsNoTracking().SingleAsync()).Id);
+        CollectionAssert.AreEquivalent(new[] {operation.Id, transfer.Id}, await _db.CloudDownloadOperations.Select(o => o.Id).ToArrayAsync());
+    }
+
+    [TestMethod]
     public async Task Batch_completed_original_download_still_uses_current_storage_adoption()
     {
         var f = await LocalFilesFixture();

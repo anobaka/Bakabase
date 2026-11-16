@@ -7,7 +7,7 @@ namespace Bakabase.InsideWorld.Business.Components.Compression;
 
 public partial class CompressedFileService
 {
-    /// <summary>For one selected archive operation, resolve a bounded structural ZIP hint.
+    /// <summary>For one selected archive operation, resolve a bounded structural opening hint.
     /// This is not filesystem discovery and does not search, copy or expand its payload.</summary>
     private static async Task<ArchiveOpenOptions?> ResolveAutomaticOpeningAsync(string path,
         ArchiveOpenOptions? opening, CancellationToken ct)
@@ -22,8 +22,8 @@ public partial class CompressedFileService
         var length = before.Length; var modified = before.LastWriteTimeUtc;
         using var stop = CancellationTokenSource.CreateLinkedTokenSource(ct);
         stop.CancelAfter(ArchiveFormatProbeLimits.PerCandidate);
-        ZipStructureDescriptor? structure;
-        try { structure = await BoundedZipStructureProbe.FindStructureAsync(path, length, stop.Token); }
+        ArchiveOpenOptions? resolved;
+        try { resolved = await FindStructuralOpeningAsync(path, length, stop.Token); }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {
             throw new ArchiveFormatProbeIncompleteException("Archive structure discovery exceeded its time limit.",
@@ -33,11 +33,21 @@ public partial class CompressedFileService
         if (!after.Exists || after.Attributes.HasFlag(FileAttributes.ReparsePoint) ||
             after.Length != length || after.LastWriteTimeUtc != modified)
             throw new InvalidDataException("The archive input changed during structure discovery.");
-        if (structure == null) return opening;
-        var resolved = structure.ZipOffset < BoundedZipStructureProbe.MaximumPrefixBytes
-            ? ArchiveOpenOptions.VerifiedZipPrefix(structure.ZipOffset)
-            : ArchiveOpenOptions.VerifiedZipStructure(structure);
+        if (resolved == null) return opening;
+        if (resolved.ExpectedPrefixType == "rar5" &&
+            (opening?.ZipFileNameCodePage != null || opening?.ZipPasswordCodePage != null)) return opening;
         resolved = ArchiveOpenOptions.WithZipFileNameCodePage(resolved, opening?.ZipFileNameCodePage)!;
         return ArchiveOpenOptions.WithZipPasswordCodePage(resolved, opening?.ZipPasswordCodePage);
+    }
+
+    private static async Task<ArchiveOpenOptions?> FindStructuralOpeningAsync(string path, long length, CancellationToken ct)
+    {
+        var zip = await BoundedZipStructureProbe.FindStructureAsync(path, length, ct);
+        if (zip != null)
+            return zip.ZipOffset < BoundedZipStructureProbe.MaximumPrefixBytes
+                ? ArchiveOpenOptions.VerifiedZipPrefix(zip.ZipOffset)
+                : ArchiveOpenOptions.VerifiedZipStructure(zip);
+        var rar = await RarVolumeHeader.FindJpegPrefixedRar5Async(path, length, ct);
+        return rar.HasValue ? ArchiveOpenOptions.VerifiedRar5Prefix(rar.Value) : null;
     }
 }

@@ -27,8 +27,8 @@ public sealed partial class CloudDownloadRecoveryService(BakabaseDbContext db, I
     IUserStoragePolicy storage, FileProcessingWorkspaceResolver? workspaces = null)
 {
     public Task<CloudDownloadRecoveryCheck> CheckAsync(int runId, CloudDownloadTarget target,
-        string outputRoot, bool revalidate, CancellationToken ct) =>
-        CheckCoreAsync(runId, target, outputRoot, revalidate, forSourceRevision: false, ct);
+        string outputRoot, bool revalidate, CancellationToken ct, bool includeStopped = false) =>
+        CheckCoreAsync(runId, target, outputRoot, revalidate, forSourceRevision: false, ct, includeStopped);
 
     /// <summary>Checks the retained execution identity and absence of local outputs without
     /// authorizing another attempt against the old source. The caller must separately prove
@@ -38,7 +38,7 @@ public sealed partial class CloudDownloadRecoveryService(BakabaseDbContext db, I
         CheckCoreAsync(runId, target, outputRoot, revalidate: false, forSourceRevision: true, ct);
 
     private async Task<CloudDownloadRecoveryCheck> CheckCoreAsync(int runId, CloudDownloadTarget target,
-        string outputRoot, bool revalidate, bool forSourceRevision, CancellationToken ct)
+        string outputRoot, bool revalidate, bool forSourceRevision, CancellationToken ct, bool includeStopped = false)
     {
         string? failure = null;
         CloudDownloadRecoveryCheck Block(string code, bool candidate = false) => new(false, code, failure, candidate);
@@ -48,11 +48,17 @@ public sealed partial class CloudDownloadRecoveryService(BakabaseDbContext db, I
                 target.TransportTaskId != null || target.AcquisitionNonce != null)
                 return Block("RECOVERY_DOWNLOAD_REVIEW_REQUIRED");
             var download = await db.DownloadTasks.AsNoTracking().SingleOrDefaultAsync(d => d.Id == id, ct);
-            if (download?.Status != DownloadTaskDbModelStatus.Failed) return Block("RECOVERY_DOWNLOAD_REVIEW_REQUIRED");
+            if (download == null) return Block("RECOVERY_DOWNLOAD_REVIEW_REQUIRED");
+            var stopped = includeStopped && download.Status == DownloadTaskDbModelStatus.Disabled;
+            if (!stopped && download.Status != DownloadTaskDbModelStatus.Failed)
+                return Block("RECOVERY_DOWNLOAD_REVIEW_REQUIRED");
             var provider = DownloadProviderRouting.Require(providers, source);
             var capability = provider as ICloudDownloadRecoveryProvider;
-            var codes = WorkflowSourceRunProblems.Extract(download.Message).Distinct().ToArray();
-            if (!forSourceRevision && provider is ICloudExistingDownloadVerificationProvider verifier &&
+            // A manual stop can clear the transport message. Only an explicit request to resume
+            // the original download may use the failure saved on its pinned workflow target.
+            var message = stopped && string.IsNullOrWhiteSpace(download.Message) ? target.Problem : download.Message;
+            var codes = WorkflowSourceRunProblems.Extract(message).Distinct().ToArray();
+            if (!stopped && !forSourceRevision && provider is ICloudExistingDownloadVerificationProvider verifier &&
                 (IsCompletionRegistrationFailure(download.Message) ||
                  codes.Length == 1 && verifier.CanVerifyExistingDownloadFailure(codes[0])))
                 // Verification-only takes precedence over retained transport recovery. A partial
@@ -65,12 +71,12 @@ public sealed partial class CloudDownloadRecoveryService(BakabaseDbContext db, I
                 // message for this persisted destination is eligible; quoted provider errors,
                 // other paths and unrecognized text must not authorize a retry.
                 var retainedFailure = codes.Length == 1 ? codes[0] :
-                    codes.Length == 0 && IsExactLegacyStorageFailure(download.Message, download.DownloadPath)
+                    codes.Length == 0 && IsExactLegacyStorageFailure(message, download.DownloadPath)
                         ? "LOCAL_STORAGE_UNAVAILABLE" : null;
                 if (retainedFailure != null && retained.CanRevalidateRetainedDownloadFailure(retainedFailure))
-                    return await CheckRetainedAsync(runId, target, outputRoot, download, retained, retainedFailure, revalidate, ct);
+                    return await CheckRetainedAsync(runId, target, outputRoot, download, retained, retainedFailure, revalidate, ct, includeStopped: stopped);
             }
-            if (codes.Length != 1 || (forSourceRevision
+            if (stopped || codes.Length != 1 || (forSourceRevision
                     ? provider is not ICloudDownloadAbandonmentProvider
                     : capability == null || !capability.CanRevalidateDownloadFailure(codes[0])))
                 return Block("RECOVERY_MANUAL_REVIEW");

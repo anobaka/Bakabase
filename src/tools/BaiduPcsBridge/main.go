@@ -43,7 +43,7 @@ import (
 	"github.com/tidwall/gjson"
 )
 
-const version = "4.0.2+bakabase.13"
+const version = "4.0.2+bakabase.14"
 
 type request struct {
 	Command            string  `json:"command"`
@@ -2035,8 +2035,13 @@ func inspectLocalDownloadWithPaths(ctx context.Context, root, remotePath string,
 			return fail("BAIDU_OUTPUT_FILE_INVALID")
 		}
 		if sideErr == nil {
-			if !sidecar.Mode().IsRegular() || sidecar.Size() <= 0 || sidecar.Size() > 1024*1024 {
+			if !sidecar.Mode().IsRegular() || sidecar.Size() > 1024*1024 {
 				return fail("BAIDU_DOWNLOAD_CHECKPOINT_INVALID")
+			}
+			// BaiduPCS-Go creates both files before recording its first range.
+			// Its state reader treats an empty checkpoint as no saved progress.
+			if e.Size > 0 && info.Size() == 0 && sidecar.Size() == 0 {
+				continue
 			}
 			if _, valid := checkpointDownloadedBytes(local, e.Size); !valid {
 				return fail("BAIDU_DOWNLOAD_CHECKPOINT_INVALID")

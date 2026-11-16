@@ -91,7 +91,7 @@ internal static class AcquisitionAssessmentInspection
                 // when it is unambiguous. Never attach a global AI log by timestamp, model or task title.
                 static bool DocumentsCall(Bakabase.Modules.Workflow.Abstractions.Models.Domain.WorkflowOutputBlock b) =>
                     b.Key == "adaptive-assessment" && (b.Code?.StartsWith("LLM_", StringComparison.Ordinal) == true ||
-                    b.Code is "INCOMPLETE_FILE_INVENTORY" or "ARCHIVE_FAMILY_REVIEW_REQUIRED");
+                    b.Code is "INCOMPLETE_FILE_INVENTORY" or "ARCHIVE_FAMILY_REVIEW_REQUIRED" or "ARCHIVE_PACKAGING_REVIEW_REQUIRED");
                 if (!blocks.Any(DocumentsCall) && node.Id != attempt.SavedAssessmentExecutionId) continue;
                 var files = WorkflowOutputMetadataCapture.Read(node.InputsJson).Where(b => b.Kind == "artifact" &&
                     b.Key.EndsWith(":processed", StringComparison.Ordinal)).Select(b => b.ArtifactId).Distinct().ToArray();

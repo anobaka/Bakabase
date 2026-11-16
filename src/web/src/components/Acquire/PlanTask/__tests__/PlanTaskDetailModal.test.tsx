@@ -1353,6 +1353,29 @@ it("shows the current AI file mismatch in the task and its existing-file continu
   expect(mocks.assessmentIo).not.toHaveBeenCalled();
 });
 
+it("can review the original output without creating a new attempt when the server offers a bound keep action", async () => {
+  mocks.get.mockResolvedValue({ ...detail, task: { ...detail.task, workflowRunId: 77,
+    status: AcquisitionStatus.Waiting, phase: "attention", currentStepIndex: 0,
+    waitPromptJson: JSON.stringify({ targetId: "part", reason: "FILE_DELIVERY_RESULT_UNCERTAIN",
+      adaptiveAssessment: true, deliveryReview: true, artifactId: "processed-output", fingerprint: "manifest",
+      reviewToken: "review", allowedArchivePolicies: ["instructions", "keep"] }),
+  }, plan: { parts: [{ id: "part", sources: [] }] },
+    steps: [{ id: "part.assess", kind: "fs.assessDelivery", stage: "processing" }],
+    replanArtifacts: [{ artifactId: "processed-output", partId: "part", kind: "processedFiles", canReadCurrentDirectory: true }] });
+  mocks.runtimeOverviews.mockResolvedValue([{ taskId: 42, workflowRunId: 77, currentStepIndex: 0,
+    currentNodeKind: "fs.assessDelivery", workflowStatus: "waiting", problemCode: "FILE_DELIVERY_RESULT_UNCERTAIN" }]);
+  render(<PlanTaskDetailModal taskId={42} />);
+  await screen.findByRole("button", { name: "acquisition.continue.open" });
+  await act(async () => {});
+  fireEvent.click(screen.getByRole("button", { name: "acquisition.continue.open" }));
+  const dialog = within(await screen.findByRole("dialog", { name: /acquisition\.continue\.open$/ }));
+  expect(dialog.getByText("completed revision 3")).toBeVisible();
+  fireEvent.click(dialog.getByRole("radio", { name: "acquisition.continue.reviewOutput" }));
+  expect(dialog.getByText("inline run 77")).toBeVisible();
+  expect(dialog.queryByText("completed revision 3")).toBeNull();
+  expect(mocks.run).not.toHaveBeenCalled();
+});
+
 it.each([false, undefined, "missing-part"])("preserves the current password answer form when old inputs cannot be read as a fresh directory (%s)", async availability => {
   mocks.get.mockResolvedValue({ ...detail, task: { ...detail.task, workflowRunId: 77, phase: "attention",
     status: AcquisitionStatus.Waiting, waitPromptJson: JSON.stringify({ targetId: "part", reason: "PasswordUnknown" }),

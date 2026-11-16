@@ -23,20 +23,28 @@ public sealed class AcquisitionArchivePasswordEvidence(BakabaseDbContext db, ILl
     internal const int MaximumCandidates = 3;
     private const int MaximumBodyChars = 131072;
 
-    internal static Func<CancellationToken, Task<IReadOnlyList<string>>>? Bind(WorkflowExecutionContext context,
+    internal static Func<string, CancellationToken, Task<IReadOnlyList<string>>>? Bind(WorkflowExecutionContext context,
         string partId, string? selectedUrl)
     {
         if (context.WorkflowDefinitionId != 0 || string.IsNullOrWhiteSpace(selectedUrl)) return null;
         var service = context.Services.GetService<AcquisitionArchivePasswordEvidence>();
-        if (service == null) return null;
-        Task<IReadOnlyList<string>>? read = null;
-        return ct => read ??= service.ReadAsync(context.RunId, partId, selectedUrl, ct);
+        return service?.BindSource(context.RunId, partId, selectedUrl);
     }
 
-    private async Task<IReadOnlyList<string>> ReadAsync(long runId, string partId, string selectedUrl, CancellationToken ct)
+    private Func<string, CancellationToken, Task<IReadOnlyList<string>>> BindSource(long runId, string partId, string selectedUrl)
     {
-        var source = await AcquisitionCachedSourceEvidence.ReadAsync(db, sourceReaders, runId, partId, selectedUrl, ct);
-        return source == null ? [] : await SelectAsync(source.Passwords, llm, ct);
+        Task<AcquisitionCachedSourceEvidence.Evidence?>? read = null;
+        Task<IReadOnlyList<string>>? ranked = null;
+        return async (archive, ct) =>
+        {
+            read ??= AcquisitionCachedSourceEvidence.ReadAsync(db, sourceReaders, runId, partId, selectedUrl, ct);
+            var source = await read;
+            if (source == null) return [];
+            if (source.PasswordReference != null && source.Passwords.All(password => !password.Labelled))
+                return PublisherPasswordReference.Resolve(source.PasswordReference, archive, source.PartTitle,
+                    source.ExcludedCodes!);
+            return await (ranked ??= SelectAsync(source.Passwords, llm, ct));
+        };
     }
 
     internal static IReadOnlyList<Literal> Inspect(string html, IReadOnlyList<string> sourceUrls, IReadOnlySet<string> excluded, bool singlePart)

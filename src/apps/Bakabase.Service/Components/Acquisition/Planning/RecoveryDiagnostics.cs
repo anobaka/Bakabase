@@ -35,7 +35,7 @@ public sealed record AcquisitionRecoveryDiagnosis(AcquisitionRecoveryRow Row, st
 public interface IAcquisitionRecoveryDiagnostics
 {
     Task<AcquisitionRecoveryDiagnosis> DiagnoseAsync(AcquisitionTaskDbModel task, WorkflowRunDbModel? run, CancellationToken ct,
-        bool verifyFiles = true, bool verifyContent = false);
+        bool verifyFiles = true, bool verifyContent = false, bool includeStoppedDownloads = false);
 }
 
 /// <summary>Explicit, read-only recovery capabilities. Supported provider failures receive a bounded
@@ -45,7 +45,7 @@ public sealed partial class AcquisitionRecoveryDiagnostics(BakabaseDbContext db,
     CloudDownloadRecoveryService? downloads = null, AcquisitionPlanService? plans = null) : IAcquisitionRecoveryDiagnostics
 {
     public async Task<AcquisitionRecoveryDiagnosis> DiagnoseAsync(AcquisitionTaskDbModel task, WorkflowRunDbModel? run, CancellationToken ct,
-        bool verifyFiles = true, bool verifyContent = false)
+        bool verifyFiles = true, bool verifyContent = false, bool includeStoppedDownloads = false)
     {
         string? kind = null, problem = null;
         AcquisitionRecoveryDiagnosis Result(string reason, bool ready = false, string? manual = "reviewTask", string signal = "{}") =>
@@ -131,7 +131,7 @@ public sealed partial class AcquisitionRecoveryDiagnostics(BakabaseDbContext db,
                 // Unselected siblings retain their checkpoints and can still hold the workflow for review.
                 var checkedTargets = new System.Collections.Generic.List<(string Id, CloudDownloadRecoveryCheck Check)>();
                 foreach (var target in workset.Targets.Where(t => !t.Excluded))
-                    checkedTargets.Add((target.Id, await downloads.CheckAsync(run.Id, target, workset.OutputDirectory, verifyFiles, ct)));
+                    checkedTargets.Add((target.Id, await downloads.CheckAsync(run.Id, target, workset.OutputDirectory, verifyFiles, ct, includeStoppedDownloads)));
                 if (!verifyFiles && checkedTargets.Any(t => t.Check.Candidate)) return Result("RECOVERY_RECHECK_SOURCE");
                 var verifyOnly = checkedTargets.Where(t => t.Check.CanRetry && t.Check.VerifyExistingOnly).Select(t => t.Id).ToList();
                 if (verifyOnly.Count > 0)

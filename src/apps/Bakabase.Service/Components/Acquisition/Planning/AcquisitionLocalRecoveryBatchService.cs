@@ -348,7 +348,8 @@ public sealed partial class AcquisitionLocalRecoveryBatchService(BakabaseDbConte
                         ? candidate.Row.CurrentProblemCode : candidate.Row.ReasonCode);
                 if (!verifyFiles && candidate.Row.ReasonCode == "RECOVERY_RECHECK_SOURCE" ||
                     candidate.Row.CanContinue && candidate.Row.Action == "resume" &&
-                    AcquisitionDownloadOnlyRecoveryService.Targets(run, candidate.SignalJson) != null)
+                    AcquisitionDownloadOnlyRecoveryService.Targets(run, candidate.SignalJson,
+                        verificationOnly: candidate.Row.ReasonCode == "RECOVERY_EXISTING_FILES_VERIFY_REQUIRED") != null)
                     originalDownloadDiagnosis = candidate;
             }
             if (originalDownloadDiagnosis != null)

@@ -52,6 +52,21 @@ public sealed class AcquisitionCachedSourceEvidenceTests
         AcquisitionCachedSourceEvidence.ReadAsync(db, null, 40, "part", Selected, default);
 
     [TestMethod]
+    public async Task Work_id_instruction_is_bound_to_the_saved_publisher_body_and_selected_source()
+    {
+        var explicitRule = $"<a href='{Selected}'>selected share</a><br>密码RJ号";
+        post.ContentSnapshotJson = Json(new PostContent {MainHtml = "", CommentHtmlList = [explicitRule]});
+        await db.SaveChangesAsync();
+        Assert.IsNull((await Read())!.PasswordReference);
+        post.ContentSnapshotJson = Json(new PostContent {MainHtml = explicitRule});
+        await db.SaveChangesAsync();
+        var result = await Read();
+        Assert.AreEqual("RJ", result!.PasswordReference);
+        Assert.AreEqual(0, result.Passwords.Count);
+        Assert.IsTrue(result.ExcludedCodes!.Contains("Code123"));
+    }
+
+    [TestMethod]
     public async Task Cached_unlocked_literal_reaches_AI_even_when_old_parse_omitted_password()
     {
         var originalPlan = task.PlanJson; var originalPost = post.ContentSnapshotJson;

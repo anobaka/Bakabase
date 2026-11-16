@@ -15,13 +15,14 @@ using SharpCompress.Compressors.Deflate;
 
 namespace Bakabase.Service.Components.FileProcessing;
 
-internal sealed record AdaptiveMultipartNamingEvidence(int EntryInputId, string ExpectedEntryName,
-    IReadOnlyList<int> InputIds, long DeclaredArchiveBytes);
+internal sealed record MultipartRename(int InputId, string ExpectedName);
+internal sealed record AdaptiveMultipartNamingEvidence(IReadOnlyList<int> InputIds,
+    IReadOnlyList<MultipartRename> Renames, long DeclaredArchiveBytes);
 
 public sealed partial class AdaptiveFileProcessingAssessmentService
 {
-    private static readonly Regex SevenZipVolumeName = new(@"^(?<base>.+\.7z)\.(?<number>[0-9]{3})$",
-        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(50));
+    private static readonly Regex NumberedVolumeName = new(@"^(?<base>.+)\.(?<number>[0-9]{3})$",
+        RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(50));
 
     // An advisory naming repair, not authority to join arbitrary similarly sized files.
     // Only an entire small inventory, one parent and one numeric family are considered.
@@ -36,23 +37,25 @@ public sealed partial class AdaptiveFileProcessingAssessmentService
             entries.Any(e => e.Length < 32) || entries.Select(e => Path.GetDirectoryName(e.RelativePath))
                 .Distinct(FileProcessingFiles.PathComparer).Count() != 1) return null;
         var members = entries.Select((entry, index) => (entry, index,
-            match: SevenZipVolumeName.Match(Path.GetFileName(entry.RelativePath)))).ToArray();
-        var numbered = members.Where(e => e.match.Success).ToArray();
-        var unnumbered = members.Where(e => !e.match.Success).ToArray();
-        if (unnumbered.Length != 1 || numbered.Length != entries.Count - 1 ||
+            match: NumberedVolumeName.Match(Path.GetFileName(entry.RelativePath)))).ToArray();
+        var numbered = members.Where(e => e.match.Success && e.match.Groups["number"].Value != "001").ToArray();
+        if (numbered.Length != entries.Count - 1 ||
             numbered.Select(e => e.match.Groups["base"].Value).Distinct(FileProcessingFiles.PathComparer).Count() != 1)
             return null;
         var ordered = numbered.OrderBy(e => int.Parse(e.match.Groups["number"].Value, CultureInfo.InvariantCulture)).ToArray();
         if (!ordered.Select(e => int.Parse(e.match.Groups["number"].Value, CultureInfo.InvariantCulture))
                 .SequenceEqual(Enumerable.Range(2, ordered.Length))) return null;
-        var entry = unnumbered[0];
+        var entry = members.Single(e => !e.match.Success || e.match.Groups["number"].Value == "001");
         var familyName = ordered[0].match.Groups["base"].Value;
         var entryName = Path.GetFileName(entry.entry.RelativePath);
-        // Do not infer shared identity from equal sizes and a valid start header.
-        // Historical renamed stems need independent evidence, not hash stripping.
-        if (!FileProcessingFiles.PathComparer.Equals(entryName, familyName) &&
-            (entryName.Length <= familyName.Length + 1 || entryName[familyName.Length] != '.' ||
-             !FileProcessingFiles.PathComparer.Equals(entryName[..familyName.Length], familyName))) return null;
+        // Without a format suffix, require the literal first volume name (optionally masked),
+        // not just a shared prefix. A bare "photo.jpg" must never bind nearby "photo.002".
+        var hasFormatSuffix = familyName.EndsWith(".7z", StringComparison.OrdinalIgnoreCase);
+        var requiredStem = hasFormatSuffix ? familyName : familyName + ".001";
+        if (!FileProcessingFiles.PathComparer.Equals(entryName, requiredStem) &&
+            (entryName.Length <= requiredStem.Length + 1 || entryName[requiredStem.Length] != '.' ||
+             !FileProcessingFiles.PathComparer.Equals(entryName[..requiredStem.Length], requiredStem))) return null;
+        if (hasFormatSuffix && entry.match.Success) return null; // Already a canonical .7z.001..N family.
         if (ordered.Take(ordered.Length - 1).Any(e => e.entry.Length != entry.entry.Length) ||
             ordered[^1].entry.Length > entry.entry.Length) return null;
         long total;
@@ -81,8 +84,11 @@ public sealed partial class AdaptiveFileProcessingAssessmentService
                 else if (ArchiveSignature.Detect(bytes) != null) return null; // Another container's start is contradictory.
             }
             if (declared != total || declared <= entry.entry.Length) return null;
-            return new(entry.index + 1, familyName + ".001",
-                new[] {entry.index + 1}.Concat(ordered.Select(e => e.index + 1)).ToArray(), total);
+            var ids = ordered.Select(e => e.index + 1).Prepend(entry.index + 1).ToArray();
+            var archiveName = hasFormatSuffix ? familyName : familyName + ".7z";
+            var renames = ids.Take(hasFormatSuffix ? 1 : ids.Length).Select((id, index) =>
+                new MultipartRename(id, archiveName + "." + (index + 1).ToString("D3", CultureInfo.InvariantCulture))).ToArray();
+            return new(ids, renames, total);
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidDataException or ArgumentException)
         { return null; }
@@ -108,7 +114,7 @@ public sealed partial class AdaptiveFileProcessingAssessmentService
             scope = "One small same-directory family with the same archive basename, unique 7z start header with valid CRC, consecutive volumes 2..N, matching sizes and exact declared archive extent. Naming evidence only; contents/password remain unverified.",
             namingRepair = evidence == null ? null : new
             {
-                inputId = evidence.EntryInputId, expectedName = evidence.ExpectedEntryName,
+                renames = evidence.Renames.Select(rename => new {inputId = rename.InputId, expectedName = rename.ExpectedName}),
                 familyInputIds = evidence.InputIds, declaredArchiveBytes = evidence.DeclaredArchiveBytes,
                 requiresRenameBeforeExtraction = true
             }
@@ -118,8 +124,11 @@ public sealed partial class AdaptiveFileProcessingAssessmentService
         AdaptiveMultipartNamingEvidence? evidence, IReadOnlyList<string> paths)
     {
         if (evidence == null) return decision;
-        var members = evidence.InputIds.Select(id => paths[id - 1]).ToHashSet(StringComparer.Ordinal);
-        return decision.IsFinal || decision.Operations.Any(o => o.Type == "extract" && members.Contains(o.Input))
+        var renames = evidence.Renames.ToDictionary(rename => paths[rename.InputId - 1], rename => rename.ExpectedName, StringComparer.Ordinal);
+        var exactRepair = decision.Operations.Count == renames.Count &&
+            decision.Operations.Select(o => o.Input).Distinct(StringComparer.Ordinal).Count() == renames.Count &&
+            decision.Operations.All(o => o.Type == "rename" && renames.TryGetValue(o.Input, out var name) && o.Destination == name);
+        return decision.IsFinal || decision.ShouldContinue && !exactRepair
             ? Human("分卷的当前文件名尚未组成连续归档。请先按已确认的分卷证据统一命名，再基于新清单分析；密码尚未判定错误。",
                 "ARCHIVE_FAMILY_REVIEW_REQUIRED", decision.RawText)
             : decision;

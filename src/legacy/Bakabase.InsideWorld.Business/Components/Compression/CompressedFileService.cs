@@ -321,34 +321,25 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
             string? currentPath = null;
             long currentSize = 0;
             string? currentAttributes = null;
-
+            bool? folder = null;
+            void FinishEntry()
+            {
+                // RAR5 can report an empty Attributes field for a regular member.
+                // Prefer its explicit Folder flag; some other handlers expose only Attributes.
+                if (currentPath != null && (folder == false || (folder == null &&
+                        currentAttributes != null && !currentAttributes.Contains('D'))))
+                    fileEntries.Add(new CompressedFileEntry {Path = currentPath, Size = currentSize});
+                currentPath = null;
+                currentSize = 0;
+                currentAttributes = null;
+                folder = null;
+            }
             foreach (var rawLine in lines)
             {
                 var line = rawLine.Trim();
-
-                if (string.IsNullOrEmpty(line))
+                if (line.Length == 0)
                 {
-                    // End of current entry block - save if it's a file (not a directory)
-                    if (currentPath != null && currentAttributes != null)
-                    {
-                        // Check if it's a file (not a directory)
-                        // In 7z technical listing, directories have 'D' in attributes, files have 'A'
-                        if (!currentAttributes.Contains('D'))
-                        {
-                            fileEntries.Add(new CompressedFileEntry
-                            {
-                                // Keep the original path from the archive - don't standardize
-                                // This ensures the path matches exactly what 7z expects for extraction
-                                Path = currentPath,
-                                Size = currentSize
-                            });
-                        }
-                    }
-
-                    // Reset for next entry
-                    currentPath = null;
-                    currentSize = 0;
-                    currentAttributes = null;
+                    FinishEntry();
                     continue;
                 }
 
@@ -370,6 +361,9 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
                                 currentSize = size;
                             }
                             break;
+                        case "Folder":
+                            folder = value switch {"+" => true, "-" => false, _ => null};
+                            break;
                         case "Attributes":
                             currentAttributes = value;
                             break;
@@ -377,17 +371,7 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
                 }
             }
 
-            // Handle last entry if output doesn't end with blank line
-            if (currentPath != null && currentAttributes != null && !currentAttributes.Contains('D'))
-            {
-                fileEntries.Add(new CompressedFileEntry
-                {
-                    // Keep the original path from the archive
-                    Path = currentPath,
-                    Size = currentSize
-                });
-            }
-
+            FinishEntry();
             return fileEntries;
         }
 

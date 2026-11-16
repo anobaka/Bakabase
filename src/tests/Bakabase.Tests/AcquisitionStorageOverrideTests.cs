@@ -318,7 +318,7 @@ public sealed partial class AcquisitionStorageOverrideTests
         internal int HashCount;
         internal TaskCompletionSource HashStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public async Task<AcquisitionRecoveryDiagnosis> DiagnoseAsync(AcquisitionTaskDbModel task, WorkflowRunDbModel? run,
-            CancellationToken ct, bool verifyFiles = true, bool verifyContent = false)
+            CancellationToken ct, bool verifyFiles = true, bool verifyContent = false, bool includeStoppedDownloads = false)
         {
             if (LocalStep != null)
             {

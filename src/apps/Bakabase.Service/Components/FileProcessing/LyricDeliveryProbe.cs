@@ -20,11 +20,71 @@ internal static class LyricDeliveryProbe
     private static readonly Regex Metadata = new(@"^\[(?:ar|al|ti|au|by|offset|length|re|ve|tool|language):[^\[\]\r\n]*\]$",
         RegexOptions.CultureInvariant | RegexOptions.IgnoreCase, TimeSpan.FromMilliseconds(50));
 
-    internal static async Task<bool> IsCompanionAsync(string lyric, IReadOnlyList<string> exactFiles, CancellationToken ct)
+    internal sealed class TrackIndex
     {
-        var matching = exactFiles.Where(f => ArtifactManifestFiles.PathComparer.Equals(Path.GetDirectoryName(f), Path.GetDirectoryName(lyric)) &&
-            ArtifactManifestFiles.PathComparer.Equals(Path.GetFileNameWithoutExtension(f), Path.GetFileNameWithoutExtension(lyric)) &&
-            Path.GetExtension(f).ToLowerInvariant() is ".mp3" or ".flac" or ".wav").ToArray();
+        private readonly IReadOnlyList<string> files;
+        private readonly ILookup<string, string> audioByStem;
+        private readonly Dictionary<string, Dictionary<string, HashSet<string>>> groups = new(ArtifactManifestFiles.PathComparer);
+
+        internal TrackIndex(IReadOnlyList<string> files)
+        {
+            this.files = files;
+            audioByStem = files.Where(f => Path.GetExtension(f).ToLowerInvariant() is ".mp3" or ".flac" or ".wav")
+                .ToLookup(f => Path.GetFileNameWithoutExtension(f), ArtifactManifestFiles.PathComparer);
+        }
+
+        private HashSet<string> Keys(string directory, string extension)
+        {
+            if (!groups.TryGetValue(directory, out var formats))
+                groups[directory] = formats = new(StringComparer.OrdinalIgnoreCase);
+            if (formats.TryGetValue(extension, out var cached)) return cached;
+            var keys = new HashSet<string>(ArtifactManifestFiles.PathComparer);
+            foreach (var file in files)
+            {
+                if (!Path.GetExtension(file).Equals(extension, StringComparison.OrdinalIgnoreCase)) continue;
+                var relative = Path.GetRelativePath(directory, file);
+                if (Path.IsPathRooted(relative) || relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal)) continue;
+                keys.Add(Path.ChangeExtension(relative, null));
+            }
+            formats[extension] = keys;
+            return keys;
+        }
+
+        // Separate trees must agree on a group of at least two track names. Keep subdirectories
+        // in the comparison to distinguish repeated titles (e.g. Disc 2/Track 01). Alternate
+        // audio encodings can mirror the same group; all variants stay in the delivery.
+        internal string[] MatchingAudio(string lyric)
+        {
+            var comparer = ArtifactManifestFiles.PathComparer;
+            var candidates = audioByStem[Path.GetFileNameWithoutExtension(lyric)].ToArray();
+            var local = candidates.Where(f => comparer.Equals(Path.GetDirectoryName(f), Path.GetDirectoryName(lyric))).ToArray();
+            if (local.Length > 0 || candidates.Length == 0 || files.Count > 4096 || candidates.Length > 128) return local;
+            var paired = candidates.Select(audio =>
+            {
+                var captions = Path.GetDirectoryName(lyric)!;
+                var tracks = Path.GetDirectoryName(audio)!;
+                var depth = 0;
+                while (comparer.Equals(Path.GetFileName(captions), Path.GetFileName(tracks)) &&
+                       Path.GetDirectoryName(captions) is { } captionParent && Path.GetDirectoryName(tracks) is { } audioParent)
+                {
+                    captions = captionParent; tracks = audioParent; depth++;
+                }
+                return (audio, captions, tracks, depth);
+            }).ToArray();
+            var best = paired.Max(p => p.depth);
+            return paired.Where(p => p.depth == best && !comparer.Equals(p.captions, p.tracks))
+                .Where(p => Keys(p.captions, ".lrc") is { Count: >= 2 } lyrics &&
+                    lyrics.IsSubsetOf(Keys(p.tracks, Path.GetExtension(p.audio))))
+                .Select(p => p.audio).Take(8).ToArray();
+        }
+    }
+
+    internal static Task<bool> IsCompanionAsync(string lyric, IReadOnlyList<string> exactFiles, CancellationToken ct) =>
+        IsCompanionAsync(lyric, new TrackIndex(exactFiles), ct);
+
+    internal static async Task<bool> IsCompanionAsync(string lyric, TrackIndex tracks, CancellationToken ct)
+    {
+        var matching = tracks.MatchingAudio(lyric);
         if (matching.Length == 0) return false;
         try
         {

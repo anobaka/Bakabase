@@ -16,7 +16,7 @@ public sealed partial class CloudDownloadRecoveryService
 {
     private async Task<CloudDownloadRecoveryCheck> CheckRetainedAsync(int runId, CloudDownloadTarget target,
         string outputRoot, DownloadTaskDbModel download, ICloudRetainedDownloadRecoveryProvider? provider,
-        string failure, bool revalidate, CancellationToken ct, ICloudExistingDownloadVerificationProvider? verifier = null)
+        string failure, bool revalidate, CancellationToken ct, ICloudExistingDownloadVerificationProvider? verifier = null, bool includeStopped = false)
     {
         CloudDownloadRecoveryCheck Block(string code, string? problem = null, bool candidate = false) =>
             new(false, code, problem ?? failure, candidate);
@@ -107,7 +107,7 @@ public sealed partial class CloudDownloadRecoveryService
         if (!revalidate) return Block("RECOVERY_RECHECK_SOURCE", candidate: true);
         // The remote read can overlap edits. Repeat local identity/ownership/checkpoint
         // checks; the same path runs once more under StartConditionally's action lock.
-        var latest = await CheckAsync(runId, target, outputRoot, false, ct);
+        var latest = await CheckAsync(runId, target, outputRoot, false, ct, includeStopped);
         return latest.Candidate ? new(true, "RECOVERY_ORIGINAL_DOWNLOAD_REVALIDATED", failure, true) : latest;
     }
 }

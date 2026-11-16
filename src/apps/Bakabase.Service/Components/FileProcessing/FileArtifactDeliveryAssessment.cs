@@ -81,6 +81,7 @@ internal static class FileArtifactDeliveryAssessment
         if (unclassified.Length > MaximumCompanionProbeFiles || unclassified.Any(e =>
                 !string.Equals(Path.GetExtension(e.RelativePath), ".mov", StringComparison.OrdinalIgnoreCase) &&
                 !string.Equals(Path.GetExtension(e.RelativePath), ".lrc", StringComparison.OrdinalIgnoreCase) &&
+                Path.GetExtension(e.RelativePath).ToLowerInvariant() is not (".flv" or ".xml") &&
                 !FinderMetadataDeliveryProbe.IsCandidate(e.RelativePath))) return false;
         using var stop = CancellationTokenSource.CreateLinkedTokenSource(ct);
         stop.CancelAfter(TimeSpan.FromSeconds(3));
@@ -89,8 +90,14 @@ internal static class FileArtifactDeliveryAssessment
             var exactFiles = ArtifactManifestFiles.ResolveFiles(artifact.RootDirectory, artifact.Manifest);
             foreach (var file in exactFiles.Where(f => string.Equals(Path.GetExtension(f), ".mov", StringComparison.OrdinalIgnoreCase)))
                 if (!await QuickTimeDeliveryProbe.IsMovieAsync(file, stop.Token)) return false;
-            foreach (var file in exactFiles.Where(f => string.Equals(Path.GetExtension(f), ".lrc", StringComparison.OrdinalIgnoreCase)))
-                if (!await LyricDeliveryProbe.IsCompanionAsync(file, exactFiles, stop.Token)) return false;
+            if (!await LiveRecordingDeliveryProbe.ArePairsAsync(exactFiles, stop.Token)) return false;
+            var lyrics = exactFiles.Where(f => string.Equals(Path.GetExtension(f), ".lrc", StringComparison.OrdinalIgnoreCase)).ToArray();
+            if (lyrics.Length > 0)
+            {
+                var tracks = new LyricDeliveryProbe.TrackIndex(exactFiles);
+                foreach (var lyric in lyrics)
+                    if (!await LyricDeliveryProbe.IsCompanionAsync(lyric, tracks, stop.Token)) return false;
+            }
             foreach (var file in exactFiles.Where(FinderMetadataDeliveryProbe.IsCandidate))
                 if (!await FinderMetadataDeliveryProbe.IsMetadataAsync(file, stop.Token)) return false;
             return true;

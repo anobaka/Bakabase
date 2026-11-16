@@ -411,6 +411,11 @@ export default function PlanTaskDetailModal({
   const continueCurrent = resolveWaiting && !canDiagnoseRecovery;
   const continueFiles = processingOffered && processingAvailable;
   const savedProcessingCheckpoint = hasSavedStorageProcessingCheckpoint(detail, overview);
+  const canReviewExistingOutput = overview?.currentNodeKind === "fs.assessDelivery" &&
+    localProcessingPrompt?.reason === "FILE_DELIVERY_RESULT_UNCERTAIN" &&
+    localProcessingPrompt.deliveryReview === true && !!localProcessingPrompt.artifactId &&
+    !!localProcessingPrompt.fingerprint && !!localProcessingPrompt.reviewToken &&
+    Array.isArray(localProcessingPrompt.allowedArchivePolicies) && localProcessingPrompt.allowedArchivePolicies.includes("keep");
   const latestProcessingAttempt = detail?.stageAttempts?.filter(
     (attempt) => attempt.stage === "processing" && attempt.runId === task?.workflowRunId
   ).pop();
@@ -979,9 +984,10 @@ export default function PlanTaskDetailModal({
           busy={reserveSubmitting}
           processAgain={continuation.purpose === "reprocess"}
           delivery={continuation.purpose === "delivery"}
-          allowModeChoice={!hasStageDirectoryInputs(continuation.snapshot, continuation.inputStage) &&
-            continuation.purpose === "processing" && continuation.current && continuation.files && savedProcessingCheckpoint &&
-            hasSavedStorageProcessingCheckpoint(continuation.snapshot, overview)}
+          reviewOutput={canReviewExistingOutput}
+          allowModeChoice={continuation.purpose === "processing" && continuation.current && continuation.files &&
+            (canReviewExistingOutput || (!hasStageDirectoryInputs(continuation.snapshot, continuation.inputStage) &&
+              savedProcessingCheckpoint && hasSavedStorageProcessingCheckpoint(continuation.snapshot, overview)))}
           preferFiles={continuation.purpose !== "delivery" && continuation.files &&
             (hasStageDirectoryInputs(continuation.snapshot, continuation.inputStage) ||
               hasReadableCurrentDirectoryInputs(continuation.snapshot) && !savedProcessingCheckpoint)}

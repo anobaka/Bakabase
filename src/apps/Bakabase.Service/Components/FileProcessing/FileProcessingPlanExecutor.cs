@@ -48,7 +48,7 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
         Func<string, string>? identityPath = null, ArtifactStoragePolicy? storagePolicy = null, string? storageTitle = null,
         bool extractionContentsAsRoot = false, IReadOnlyList<string>? inputDirectories = null,
         FileProcessingCheckpointInput? checkpointInput = null, ArtifactDirectoryProvenance? inputDirectoryProvenance = null,
-        Func<CancellationToken, Task<IReadOnlyList<string>>>? passwordEvidence = null)
+        Func<string, CancellationToken, Task<IReadOnlyList<string>>>? passwordEvidence = null)
     {
         Validate(plan);
         if (stopAfterStepId != null && !plan.Steps.Any(s => s.Id == stopAfterStepId))
@@ -110,7 +110,7 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
     private async Task<FileProcessingPlanResult> Run(FileProcessingPlan plan, string root,
         List<string> files, string directory, string? password, Action<int>? progress, CancellationToken ct, string? stopAfterStepId, ArtifactStoragePolicy? storagePolicy, string? storageTitle, bool extractionContentsAsRoot,
         IReadOnlyList<string> inputDirectories, ArtifactDirectoryProvenance? inputDirectoryProvenance,
-        Func<CancellationToken, Task<IReadOnlyList<string>>>? passwordEvidence)
+        Func<string, CancellationToken, Task<IReadOnlyList<string>>>? passwordEvidence)
     {
         FileProcessingFiles.Within(directory, directory);
         var stateFile = Path.Combine(directory, "state.json");
@@ -1208,13 +1208,13 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
     public sealed record DirectoryArtifact(string Path, string RelativePath, IReadOnlyList<string>? GeneratedDirectories = null);
     public sealed record RenameFile(string Source, string RelativePath, ArtifactManifestEntry Content, bool Move);
     private async Task<ArchivePasswordProbe?> ProbeEvidenceAsync(string archive, IReadOnlyList<string?> attempted,
-        ArchiveOpenOptions? opening, Func<CancellationToken, Task<IReadOnlyList<string>>> readEvidence, CancellationToken ct)
+        ArchiveOpenOptions? opening, Func<string, CancellationToken, Task<IReadOnlyList<string>>> readEvidence, CancellationToken ct)
     {
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(ct);
         deadline.CancelAfter(TimeSpan.FromMinutes(2));
         try
         {
-            var evidence = await readEvidence(deadline.Token);
+            var evidence = await readEvidence(Path.GetFileName(archive), deadline.Token);
             if (evidence.Count is 0 or > 3) return null;
             var candidates = evidence.Where(v => !string.IsNullOrWhiteSpace(v) && v.Length <= 128 &&
                     !v.Any(char.IsControl) && !attempted.Contains(v, StringComparer.Ordinal))

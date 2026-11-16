@@ -52,7 +52,7 @@ public sealed partial class RecursiveArchiveExecutor(IArchiveExtractionService e
         IReadOnlyDictionary<string, ArtifactStoragePolicy>? inputPolicies = null, bool onlyOuterPackaging = false,
         IReadOnlyList<string>? inputDirectories = null, ArtifactDirectoryProvenance? inputDirectoryProvenance = null,
         string? extractionLayout = null, IReadOnlyDictionary<string, string>? inputLayouts = null,
-        Func<CancellationToken, Task<IReadOnlyList<string>>>? passwordEvidence = null)
+        Func<string, CancellationToken, Task<IReadOnlyList<string>>>? passwordEvidence = null)
     {
         ValidateOptions(options);
         if (!FileExtractionLayouts.Valid(extractionLayout) || inputLayouts?.Values.Any(v => !FileExtractionLayouts.Valid(v)) == true)

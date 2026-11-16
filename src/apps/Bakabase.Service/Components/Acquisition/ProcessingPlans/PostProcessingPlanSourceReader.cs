@@ -58,6 +58,8 @@ public sealed class PostProcessingPlanSourceReader(BakabaseDbContext db) : IProc
         if (html.Count == 0 && !string.IsNullOrWhiteSpace(task.Text)) html.Add(task.Text);
         var texts = (content?.Scope == "pastedText" || content == null
                 ? html : html.SelectMany(VisibleText)).Where(t => !string.IsNullOrWhiteSpace(t)).Distinct().ToList();
+        var publisherText = content == null ? task.Text : content.Scope == "pastedText"
+            ? content.MainHtml : ProcessingPlanSourceText.Visible(content.MainHtml);
         return indices.Select(index =>
         {
         var resource = resources[index];
@@ -66,7 +68,10 @@ public sealed class PostProcessingPlanSourceReader(BakabaseDbContext db) : IProc
         // Full saved resource binds URL, code, archive password and original instructions, including multiple
         // resources in one post. These values are hashed by the store; they are not copied to the audit row.
         var fingerprint = JsonSerializer.Serialize(new {resource, task.ContentSnapshotJson, task.Text}, WorkflowJson.Options);
-        return new ProcessingPlanSourceSnapshot(source, resource.Extraction, texts, fingerprint, resource.Link);
+        return new ProcessingPlanSourceSnapshot(source, resource.Extraction, texts, fingerprint, resource.Link)
+        {
+            PublisherText = publisherText
+        };
         }).ToList();
     }
 

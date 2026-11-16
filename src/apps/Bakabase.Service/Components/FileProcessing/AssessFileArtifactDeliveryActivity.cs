@@ -335,10 +335,14 @@ public sealed class AssessFileArtifactDeliveryActivity : IResumableWorkflowActiv
             new List<AdaptiveCompletedProcessing>();
         for (var iteration = startIteration; iteration < maxIterations; iteration++)
         {
+            var executionEvidence = AdaptiveProcessingExecutionEvidence.ForCurrent(current, completedProcessing);
             var assessmentContext = AdaptiveFileProcessingAssessmentService.DescribeContext(
                 target.Title, config.AdaptiveContext, userContext, sourceEvidence,
-                AdaptiveProcessingExecutionEvidence.ForCurrent(current, completedProcessing));
-            var decision = await adaptive.AssessAsync(current, assessmentContext, iteration, ct);
+                executionEvidence);
+            var inspectImagePackaging = !string.IsNullOrWhiteSpace(target.SelectedSource?.ArchivePassword) ||
+                AdaptiveFileProcessingAssessmentService.HasExtractionStep(target.SelectedSource?.ExtractionPlanJson) ||
+                executionEvidence?.CompletedProcessing.Any(round => round.Operations.Any(op => op.Kind == "extractArchive")) == true;
+            var decision = await adaptive.AssessAsync(current, assessmentContext, iteration, ct, inspectImagePackaging);
             var blocks = new List<WorkflowOutputBlock>();
             if (AdaptiveAssessmentDiagnostic.FromCode(decision.DiagnosticCode) is { } diagnostic) blocks.Add(diagnostic);
             if (decision.Call is {} call) blocks.Add(call.Block(currentTarget.Id));

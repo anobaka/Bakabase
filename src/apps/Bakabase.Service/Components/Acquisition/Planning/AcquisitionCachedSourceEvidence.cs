@@ -21,7 +21,8 @@ internal static class AcquisitionCachedSourceEvidence
     internal const int MaximumSourceChars = 131072;
     internal const int MaximumExcerptChars = 3200;
     internal sealed record Evidence(WorkflowSourceRef Source, string Fingerprint, IReadOnlyList<string> Excerpts,
-        IReadOnlyList<AcquisitionArchivePasswordEvidence.Literal> Passwords);
+        IReadOnlyList<AcquisitionArchivePasswordEvidence.Literal> Passwords,
+        string? PasswordReference = null, string? PartTitle = null, IReadOnlySet<string>? ExcludedCodes = null);
 
     internal static async Task<Evidence?> ReadAsync(BakabaseDbContext db, IEnumerable<IProcessingPlanSourceReader>? readers,
         long runId, string partId, string selectedUrl, CancellationToken ct)
@@ -59,8 +60,10 @@ internal static class AcquisitionCachedSourceEvidence
             var passwords = literals.GroupBy(l => l.Value, StringComparer.Ordinal)
                 .Select(g => g.OrderByDescending(v => v.Labelled).First()).ToArray();
             var excerpts = Excerpts(texts, urls, codes);
+            var reference = snapshot.PublisherText == null ? null : ReadPublisherReference(snapshot.PublisherText, urls);
             return new(snapshot.Source, ArtifactManifestFiles.Hash(snapshot.SourceFingerprint), excerpts,
-                passwords.Length <= AcquisitionArchivePasswordEvidence.MaximumCandidates ? passwords : []);
+                passwords.Length <= AcquisitionArchivePasswordEvidence.MaximumCandidates ? passwords : [],
+                reference, part.Title ?? plan.Title, reference == null ? null : Codes(texts.SelectMany(Lines), codes));
         }
         catch (Exception error) when (error is JsonException or ArgumentException or InvalidOperationException)
         {
@@ -75,6 +78,29 @@ internal static class AcquisitionCachedSourceEvidence
     private static readonly Regex Trailer = new(@"^[a-zA-Z0-9_.!@#-]{5,64}$", RegexOptions.CultureInvariant);
     private static readonly Regex IndirectPassword = new(@"(?:楼主|樓主|作者|发帖|發帖|发布|發布|上传|上傳).{0,16}(?:名字|名称|名稱|昵称|暱稱|用户名|用戶名|\bid\b)|(?:见|見|查看|在).{0,12}(?:网盘|網盤|原帖|图片|圖片)|(?:author|uploader|publisher).{0,16}(?:name|id)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     private static readonly Regex Technical = new(@"解[压壓]|密[码碼]|后缀|後綴|改名|重命名|分卷|补丁|補丁|本体|本體|原版|字幕|保留|删除|刪除|\bpw\b|password|extract|archive|rename", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+    internal static string? ReadPublisherReference(string text, IReadOnlyList<string> urls)
+    {
+        if (text.Length > MaximumSourceChars) return null;
+        var lines = Lines(text);
+        var lastShare = -100;
+        string? reference = null;
+        for (var index = 0; index < lines.Length; index++)
+        {
+            var links = Address.Matches(lines[index]);
+            if (links.Count > 0)
+            {
+                lastShare = links.All(match => MatchesShare(urls, match.Value)) ? index : -100;
+                continue;
+            }
+            if (index - lastShare > 6) continue;
+            var rule = PublisherPasswordReference.ReadInstruction(lines[index]);
+            if (rule == null) continue;
+            if (reference != null && reference != rule) return null;
+            reference = rule;
+        }
+        return reference;
+    }
 
     internal static IReadOnlyList<AcquisitionArchivePasswordEvidence.Literal> InspectText(string text,
         IReadOnlyList<string> urls, IReadOnlySet<string> excluded, bool singlePart)
@@ -96,6 +122,7 @@ internal static class AcquisitionCachedSourceEvidence
             var distance = index - lastShare;
             if (distance is > 0 and <= 3 && line.StartsWith("--", StringComparison.Ordinal) && line.Contains("分享")) footer = true;
             var label = PasswordLabel.Match(line);
+            if (PublisherPasswordReference.ReadInstruction(line) != null) {pendingLabel = -100; continue;}
             string? candidate = null; var labelled = false;
             if (label.Success && (unlinked || distance is > 0 and <= 6))
             {

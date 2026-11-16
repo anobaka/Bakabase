@@ -1353,6 +1353,33 @@ func TestRetainedInspectionPreservesFullAndCheckpointedFiles(t *testing.T) {
 	}
 }
 
+func TestRetainedInspectionAcceptsOnlyAnUnstartedEmptyCheckpointPair(t *testing.T) {
+	root := t.TempDir()
+	local := filepath.Join(root, "file")
+	sidecar := local + pcsdownload.DownloadSuffix
+	if err := os.WriteFile(local, nil, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(sidecar, nil, 0600); err != nil {
+		t.Fatal(err)
+	}
+	entries := []entry{{ID: 1, Path: "/file", Size: 4}}
+	if err := inspectLocalDownload(context.Background(), root, "/file", entries); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{local, sidecar} {
+		if info, err := os.Stat(name); err != nil || info.Size() != 0 {
+			t.Fatalf("inspection changed %s", name)
+		}
+	}
+	if err := os.WriteFile(local, []byte{1}, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := inspectLocalDownload(context.Background(), root, "/file", entries); err == nil || err.Error() != "BAIDU_DOWNLOAD_CHECKPOINT_INVALID" {
+		t.Fatalf("nonempty partial with empty checkpoint accepted: %v", err)
+	}
+}
+
 func TestRetainedInspectionRejectsUnexpectedFilesSymlinksAndChangedManifest(t *testing.T) {
 	root := t.TempDir()
 	entries := []entry{{ID: 1, Path: "/saved/file", Size: 4}}

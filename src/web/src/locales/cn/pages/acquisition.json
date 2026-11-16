@@ -1587,6 +1587,8 @@
   "acquisition.delete.delivered.verify": "删除前校验清单内待删文件的内容。",
   "acquisition.delete.cleanup.kind.publishedFiles": "最终交付文件",
   "acquisition.continue.checkpointChoice": "继续处理方式",
+  "acquisition.continue.reviewOutput": "确认本次处理结果",
+  "acquisition.continue.reviewOutputHint": "核对文件后，可按原样交付。系统会复用本次处理结果。",
   "acquisition.continue.checkpoint.current": "继续未完成的处理",
   "acquisition.continue.checkpoint.files": "重新分析当前文件",
   "acquisition.continue.checkpoint.currentHint": "复用已完成的解压结果，接着完成剩余步骤。",

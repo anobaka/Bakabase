@@ -48,6 +48,24 @@ public sealed class LyricDeliveryAssessmentTests
     }
 
     [TestMethod]
+    public async Task DetachedLyricsMatchAWholeTrackSetAndSharedDiscFolders()
+    {
+        var timed = "[00:01.23]Text\n[00:02.00]Next"u8.ToArray();
+        var one = await Write("translations/disc A/scene.lrc", timed);
+        var two = await Write("translations/disc B/scene.lrc", timed);
+        var first = await Write("media/mp3/disc A/scene.mp3", Mp3);
+        var second = await Write("media/mp3/disc B/scene.mp3", Mp3);
+        var most = new[] {one, two, first};
+        Assert.IsFalse(await LyricDeliveryProbe.IsCompanionAsync(one, most, default));
+        var full = most.Append(second).ToArray();
+        Assert.IsTrue(await LyricDeliveryProbe.IsCompanionAsync(one, full, default));
+        Assert.IsTrue(await LyricDeliveryProbe.IsCompanionAsync(two, full, default));
+        Assert.IsFalse((await FileArtifactDeliveryAssessment.AssessAsync(Artifact(full), default, extractionWasReviewed: true)).Uncertain);
+        File.WriteAllBytes(second, new byte[50]);
+        Assert.IsTrue((await FileArtifactDeliveryAssessment.AssessAsync(Artifact(full), default, extractionWasReviewed: true)).Uncertain);
+    }
+
+    [TestMethod]
     public async Task Bad_UTF8_missing_timestamps_and_implausible_seconds_do_not_pass()
     {
         var audio = await Write("song.mp3", Mp3);
