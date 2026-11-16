@@ -103,8 +103,11 @@ public sealed class AcquisitionRuntimeOverviewService(BakabaseDbContext db, IAcq
             var taskNodes = nodes.Where(n => n.WorkflowRunId == run?.Id).ToArray();
             var node = taskNodes.FirstOrDefault(n => n.StepIndex == run?.CurrentStepIndex);
             var completed = run != null ? run.Status == WorkflowRunStatus.Success : task.Status == AcquisitionStatus.Completed;
-            var attention = !completed && (run?.Status is WorkflowRunStatus.Waiting or WorkflowRunStatus.Failed or WorkflowRunStatus.Interrupted ||
-                task.Status is AcquisitionStatus.Waiting or AcquisitionStatus.Failed);
+            // A conditional retry resumes the existing run. Its acquisition row can still
+            // carry the previous failure until the active step completes.
+            var attention = !completed && run?.Status is not (WorkflowRunStatus.Pending or WorkflowRunStatus.Running) &&
+                (run?.Status is WorkflowRunStatus.Waiting or WorkflowRunStatus.Failed or WorkflowRunStatus.Interrupted ||
+                 task.Status is AcquisitionStatus.Waiting or AcquisitionStatus.Failed);
             WorkflowRunPlan? executionPlan = null;
             try { executionPlan = WorkflowRunPlans.Read(run?.PlanSnapshotJson); } catch (InvalidDataException) { }
             var legacy = legacyNodes.Where(n => n.WorkflowDefinitionId == run?.WorkflowDefinitionId).OrderBy(n => n.Order).ToArray();

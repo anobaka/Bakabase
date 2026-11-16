@@ -428,6 +428,23 @@ it.each([false, undefined])("keeps workflow diagnosis when completed-download ev
   }));
 });
 
+it("checks the original processing cursor before retrying a failed stage handoff", async () => {
+  mocks.get.mockResolvedValue({ ...detail, task: { ...detail.task, workflowRunId: 77,
+    phase: "attention", status: AcquisitionStatus.Failed, error: "STAGE_COMMIT_REFERENCED" },
+    steps: [{ id: "part.process", kind: "acquisition.plan.process", stage: "processing" }],
+    plan: { parts: [{ id: "part", sources: [] }] }, replanArtifacts: [
+      { artifactId: "download", partId: "part", kind: "download", canReadCurrentDirectory: true },
+    ] });
+  mocks.runtimeOverviews.mockResolvedValue([{ taskId: 42, workflowRunId: 77, currentStepIndex: 0,
+    currentNodeKind: "acquisition.plan.process", workflowStatus: "failed", problemCode: "STAGE_COMMIT_REFERENCED" }]);
+  render(<PlanTaskDetailModal taskId={42} />);
+  fireEvent.click(await screen.findByRole("button", { name: "acquisition.continue.open" }));
+  expect(mocks.createPortal).toHaveBeenCalledWith(AcquisitionRecoveryModal, expect.objectContaining({
+    taskIds: [42], initialScope: "workflow",
+  }));
+  expect(mocks.run).not.toHaveBeenCalled();
+});
+
 it.each([
   ["ProcessingPathConflict", "acquisition.plan.process", true],
   ["ProcessingPathConflict", "download.awaitCompletion", false],

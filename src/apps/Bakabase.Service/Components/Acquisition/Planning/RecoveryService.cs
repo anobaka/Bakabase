@@ -79,7 +79,12 @@ public sealed class AcquisitionRecoveryService(BakabaseDbContext db, IAcquisitio
         async Task<AcquisitionRecoveryDiagnosis> Diagnose(AcquisitionTaskDbModel task, WorkflowRunDbModel? run, bool verify, CancellationToken token)
         {
             if (scope != "localFiles")
-                return ForScope(await diagnostics.DiagnoseAsync(task, run, token, verifyFiles: verify, includeStoppedDownloads: scope == "downloads"), run, scope);
+            {
+                var current = await diagnostics.DiagnoseAsync(task, run, token, verifyFiles: verify, includeStoppedDownloads: scope == "downloads");
+                if (guardDirectory != null)
+                    foreach (var directory in current.InitialDownloadDirectories) await guardDirectory(directory);
+                return ForScope(current, run, scope);
+            }
             if (localFiles == null) throw new ArgumentException("RECOVERY_LOCAL_FILES_UNAVAILABLE");
             var diagnosis = await localFiles.DiagnoseAsync(task, run, verify, token, guardDirectory);
             if (diagnosis.Row.CanContinue && diagnosis.Row.LocalFiles is { } files &&
@@ -265,6 +270,8 @@ public sealed class AcquisitionRecoveryService(BakabaseDbContext db, IAcquisitio
                     try
                     {
                         await EnsureCurrentVersion(id, entry.Versions[id], ct);
+                        if (guardDirectory != null)
+                            foreach (var directory in current.InitialDownloadDirectories) await guardDirectory(directory);
                         task = await AcquisitionContinuationReserve.SaveWhileLockedAsync(db, task, run, input.UseEmergencySpaceReserve,
                             "recovery:" + input.PreviewToken, ct, preserveReserve);
                         task = await new AcquisitionDownloadContinuationService(db).SaveWhileLockedAsync(task, run.Id,

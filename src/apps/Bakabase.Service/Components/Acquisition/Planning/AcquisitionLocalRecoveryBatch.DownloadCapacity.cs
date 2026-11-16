@@ -8,6 +8,7 @@ using Bakabase.InsideWorld.Business.Components.Artifacts;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Db;
 using Bakabase.Modules.Workflow.Abstractions.Models.Db;
 using Bakabase.Modules.Workflow.Artifacts;
+using Bakabase.Modules.Workflow.Components;
 using Microsoft.EntityFrameworkCore;
 
 namespace Bakabase.Service.Components.Acquisition.Planning;
@@ -45,7 +46,10 @@ public sealed partial class AcquisitionLocalRecoveryBatchService
     {
         try
         {
-            var paths = await DownloadDirectoriesAsync(run, ct);
+            var placement = WorkflowRunPlans.Read(run.PlanSnapshotJson)?.Nodes.ElementAtOrDefault(run.CurrentStepIndex ?? -1)?.Kind ==
+                "download.enqueueSupported" ? await diagnostics.DiagnoseAsync(task, run, ct, verifyFiles: false) : null;
+            var paths = placement?.InitialDownloadTargets is { Count: > 0 } allocated
+                ? allocated.ToArray() : await DownloadDirectoriesAsync(run, ct);
             foreach (var path in paths)
             {
                 storage.EnsurePathAllowed(path); ArtifactManifestFiles.RejectLinks(path);

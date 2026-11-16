@@ -388,7 +388,20 @@ public sealed partial class AcquisitionLocalRecoveryBatchService(BakabaseDbConte
             }
             string[] working, delivery;
             string storageStamp;
-            if (originalDownloadDiagnosis != null)
+            var firstDownload = diagnosis.InitialDownloadTargets.Count > 0;
+            if (firstDownload)
+            {
+                // A completed transfer can allocate its first download under today's settings.
+                // Charge only the new destinations. The original workset still identifies its transfer.
+                delivery = diagnosis.InitialDeliveryDirectories.ToArray();
+                working = diagnosis.InitialDownloadTargets.Union(
+                    diagnosis.InitialDownloadDirectories.Except(delivery, ArtifactManifestFiles.PathComparer),
+                    ArtifactManifestFiles.PathComparer).ToArray();
+                storageStamp = Hash(new {Working = working, Delivery = delivery, diagnosis.SignalJson});
+                if (continuations != null)
+                    await continuations.Guard(diagnosis.InitialDownloadDirectories, restricted, ct);
+            }
+            else if (originalDownloadDiagnosis != null)
             {
                 // The currently authorized write is to the persisted download destination.
                 // Future processing/publication retain their frozen plan and their own write guards.
@@ -419,10 +432,11 @@ public sealed partial class AcquisitionLocalRecoveryBatchService(BakabaseDbConte
                 storageStamp = diagnosis.ProcessingPlacementStamp ?? Hash(new {plan.StoragePolicy, plan.DeliveryLayout});
                 if (processing && working.Length == 0) return Block("RECOVERY_LOCAL_STORAGE_REQUIRED");
             }
-            if (category == "workflow" && AcquisitionContinuationReserve.IsDownload(run))
+            if (!firstDownload && category == "workflow" && AcquisitionContinuationReserve.IsDownload(run))
                 working = working.Concat(await DownloadDirectoriesAsync(run!, ct))
                     .Distinct(ArtifactManifestFiles.PathComparer).ToArray();
-            if (delivery.Length == 0 && originalDownloadDiagnosis == null) return Block("RECOVERY_LOCAL_STORAGE_REQUIRED");
+            if (delivery.Length == 0 && originalDownloadDiagnosis == null && !firstDownload)
+                return Block("RECOVERY_LOCAL_STORAGE_REQUIRED");
             foreach (var path in working.Concat(delivery))
             {
                 storage.EnsurePathAllowed(path); ArtifactManifestFiles.RejectLinks(path);

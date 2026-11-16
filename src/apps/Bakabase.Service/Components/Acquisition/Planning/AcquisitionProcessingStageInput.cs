@@ -243,6 +243,46 @@ internal static class AcquisitionProcessingStageInput
             binding, input, materializer, scopes, ct, plan.StoragePolicy);
     }
 
+    // The runner can re-enter its original processing cursor when its completed private input
+    // is still bound to this run. Use the same ownership/reference checks as the eventual move.
+    internal static async Task<bool> CanRetrySnapshotAsync(BakabaseDbContext db, IArtifactOperationStore store,
+        IUserStoragePolicy storage, FileProcessingWorkspaceResolver workspaces, int taskId, int runId,
+        CloudDownloadTarget target, string pending, CancellationToken ct)
+    {
+        if (target.StageDirectories?.Processing is not {BindingId: not null} binding ||
+            target.DownloadArtifactId == null || target.ProcessedArtifactId != null ||
+            target.PublishedArtifactId != null || target.ProcessingWaitReason != null || target.DeliveryReview != null)
+            return false;
+        var input = await store.GetArtifactAsync(target.DownloadArtifactId, ct);
+        if (input is not {Kind: "download", State: ArtifactLocationState.Available} ||
+            pending != InputKey(taskId, runId, target.Id, binding, input)) return false;
+        var receipt = await ReadAsync(ReceiptPath(workspaces, pending), ct);
+        if (receipt.Id != pending || receipt.TaskId != taskId || receipt.RunId != runId ||
+            receipt.PartId != target.Id || receipt.BindingId != binding.BindingId || !Same(receipt.Directory, binding.Directory) ||
+            receipt.SourceArtifactId != input.Id || receipt.SourceFingerprint != input.Fingerprint ||
+            receipt.ResultArtifactId != null || receipt.SnapshotArtifactId == null) return false;
+        var snapshot = await store.GetArtifactAsync(receipt.SnapshotArtifactId, ct);
+        if (snapshot is not {Kind: "processedFiles", Managed: true, State: ArtifactLocationState.Available} ||
+            snapshot.OperationId != pending || snapshot.Fingerprint != input.Fingerprint ||
+            !snapshot.ParentArtifactIds.Contains(input.Id) || snapshot.Manifest.Entries.Count == 0) return false;
+        var producer = await store.GetOperationAsync(pending, ct);
+        if (producer is not {State: ArtifactOperationState.Completed, Kind: "files.process"} || producer.OutputArtifactId != snapshot.Id)
+            return false;
+        await GuardAsync(db, storage, taskId, runId, target.Id, binding, pending, ct);
+        await AcquisitionProcessingStageCommit.GuardAsync(db, store, storage, workspaces, taskId, runId, target.Id, binding, snapshot, ct);
+        foreach (var artifact in new[] {input, snapshot})
+        foreach (var entry in artifact.Manifest.Entries)
+        {
+            ct.ThrowIfCancellationRequested();
+            var path = FileProcessingFiles.Within(Path.Combine(artifact.RootDirectory, entry.RelativePath), artifact.RootDirectory);
+            storage.EnsurePathAllowed(path);
+            ArtifactManifestFiles.RejectLinks(path);
+            var file = new FileInfo(path);
+            if (!file.Exists || file.Length != entry.Length) return false;
+        }
+        return true;
+    }
+
     private static async Task GuardAsync(BakabaseDbContext db, IUserStoragePolicy storage, int taskId, int runId,
         string partId, AcquisitionStageDirectory binding, string key, CancellationToken ct)
     {

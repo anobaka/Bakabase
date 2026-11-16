@@ -132,6 +132,8 @@ public sealed record DownloadWorkset : IWorkflowOutputSummary, IWorkflowSourcePa
 
 public sealed record CloudSelectionSignal
 {
+    /// <summary>Frozen server proof for a transferred share whose first local enqueue has not happened.</summary>
+    public string? TransferredDownloadPlacement { get; init; }
     /// <summary>Observe existing downloads and persist the no-repeat guard. Restarting selected failed
     /// tasks requires the separate revalidated recovery capability.</summary>
     public bool? ObserveExistingOnly { get; init; }

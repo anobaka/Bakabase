@@ -316,7 +316,7 @@ internal static partial class AcquisitionProcessingStageCommit
             journal.PartId + ":process:stage:" + result.Id, result.OperationId, ct)) throw new InvalidOperationException("STAGE_COMMIT_OWNER_INVALID");
     }
 
-    private static async Task GuardAsync(BakabaseDbContext db, IArtifactOperationStore store, IUserStoragePolicy storage,
+    internal static async Task GuardAsync(BakabaseDbContext db, IArtifactOperationStore store, IUserStoragePolicy storage,
         FileProcessingWorkspaceResolver workspaces, int taskId, int runId, string partId, AcquisitionStageDirectory binding, ArtifactRecord source, CancellationToken ct)
     {
         storage.EnsureTreeMutationAllowed(binding.Directory); storage.EnsureTreeMutationAllowed(source.RootDirectory);
@@ -351,7 +351,7 @@ internal static partial class AcquisitionProcessingStageCommit
         var destination = source with {Id = "stage-destination:" + taskId, RootDirectory = binding.Directory,
             Files = ArtifactManifestFiles.ResolveFiles(binding.Directory, source.Manifest)};
         if (await references.HasReferencesAsync(destination, owners, ct, previewSupersededRuns: owners,
-                directoryOwnerTaskId: taskId, directoryOwnerRunId: executing))
+                directoryOwnerTaskId: taskId, directoryOwnerRunId: executing, processingPartId: partId))
             throw new InvalidOperationException("STAGE_COMMIT_REFERENCED");
         var paths = destination.Files.ToHashSet(ArtifactManifestFiles.PathComparer);
         var roots = await db.Artifacts.AsNoTracking().Where(a => a.State != ArtifactLocationState.Retired && a.Id != source.Id)

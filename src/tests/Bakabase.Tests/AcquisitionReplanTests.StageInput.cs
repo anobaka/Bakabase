@@ -5,6 +5,7 @@ using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
 using Bakabase.Modules.Workflow.Abstractions.Components;
 using Bakabase.Modules.Workflow.Abstractions.Models.Db;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
+using Bakabase.Modules.Workflow.Components;
 using Bakabase.Service.Components.CloudDownloads;
 using Microsoft.Extensions.Logging.Abstractions;
 using Bakabase.Modules.Workflow.Artifacts;
@@ -66,6 +67,45 @@ public sealed partial class AcquisitionReplanTests
         Assert.AreEqual("preserved", saved!["futurePrivateOption"]!.GetValue<string>());
         Assert.IsNull(saved["processingStageInputId"]);
         Assert.AreEqual(0, await Db.DownloadTasks.CountAsync());
+    }
+
+    [TestMethod]
+    public async Task Original_processing_retry_rechecks_private_snapshot_and_foreign_references_before_dispatch()
+    {
+        var (task, run, input) = await Failed();
+        var destination = Directory.CreateDirectory(Path.Combine(_root, "processing-retry")).FullName;
+        task = await BindCurrentStage(task, "processing", destination);
+        var plan = task.Plan!;
+        var workset = AcquisitionPlanCompiler.Workset(task.Id, task.Task.PlanRevision, plan, task.SourceRefs);
+        var target = workset.Targets.Single() with {DownloadArtifactId = input.Id, DownloadOperationId = input.OperationId,
+            DownloadDirectory = input.RootDirectory, Files = input.Files.ToList()};
+        run.ErrorMessage = "STAGE_COMMIT_REFERENCED";
+        var compiled = AcquisitionPlanCompiler.Compile(plan);
+        run.PlanSnapshotJson = WorkflowRunPlans.Serialize(compiled);
+        run.CurrentStepIndex = compiled.Nodes.ToList().FindIndex(n => n.Kind == AcquisitionPlanProcessingActivity.ActivityKind);
+        run.CurrentItemJson = WorkflowItemSnapshot.Capture(workset with {Targets = [target]});
+        var related = new WorkflowRunDbModel {Status = WorkflowRunStatus.Running,
+            CurrentItemJson = JsonSerializer.Serialize(new {input = destination})};
+        Db.Add(related); await Db.SaveChangesAsync();
+        var workspaces = _services.GetRequiredService<FileProcessingWorkspaceResolver>();
+        var storage = new CompositeStorage();
+        var fault = await Assert.ThrowsExactlyAsync<InvalidOperationException>(() =>
+            AcquisitionProcessingStageInput.PrepareCoreAsync(Db, Artifacts, storage, workspaces, task.Id, run.Id, "main",
+                target.StageDirectories!.Processing!, input, new StageInputMaterializer(),
+                _services.GetRequiredService<IServiceScopeFactory>(), default));
+        Assert.AreEqual("STAGE_COMMIT_REFERENCED", fault.Message);
+        var diagnostics = new AcquisitionRecoveryDiagnostics(Db, storage, Artifacts, workspaces: workspaces);
+        var row = await Db.AcquisitionTasks.AsNoTracking().SingleAsync(t => t.Id == task.Id);
+        async Task<AcquisitionRecoveryDiagnosis> Check() => await diagnostics.DiagnoseAsync(row, run, default);
+        Assert.AreEqual("RECOVERY_PROCESSING_FILES_REFERENCED", (await Check()).Row.ReasonCode);
+        Db.Remove(related); await Db.SaveChangesAsync();
+        var ready = await Check();
+        Assert.AreEqual("RECOVERY_STAGE_INPUT_READY", ready.Row.ReasonCode);
+        Assert.AreEqual("retry", ready.Row.Action);
+        Assert.AreEqual(run.Id, ready.Row.WorkflowRunId);
+        Assert.AreEqual("main", JsonSerializer.Deserialize<CloudFileProcessingSignal>(ready.SignalJson, WorkflowJson.Options)!.TargetId);
+        File.Delete(input.Files.Single());
+        Assert.AreEqual("RECOVERY_FILES_UNVERIFIED", (await Check()).Row.ReasonCode);
     }
 
     [TestMethod]

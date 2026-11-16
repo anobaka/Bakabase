@@ -411,6 +411,9 @@ export default function PlanTaskDetailModal({
     task.status === AcquisitionStatus.Waiting;
   const continueCurrent = resolveWaiting && !canDiagnoseRecovery;
   const continueFiles = processingOffered && processingAvailable;
+  const retryStageCommit = stopped && overview?.workflowRunId === task?.workflowRunId &&
+    overview?.currentNodeKind === "acquisition.plan.process" &&
+    (overview.problemReasonCode === "STAGE_COMMIT_REFERENCED" || task?.error === "STAGE_COMMIT_REFERENCED");
   const savedProcessingCheckpoint = hasSavedStorageProcessingCheckpoint(detail, overview);
   const canAnswerProcessingPassword = currentRunMatches && localProcessingPrompt?.reason === "PasswordUnknown" &&
     (task?.currentStepIndex == null || overview.currentStepIndex == null || task.currentStepIndex === overview.currentStepIndex) &&
@@ -438,8 +441,8 @@ export default function PlanTaskDetailModal({
   const processingAction = (inputStage: AcquisitionStage = "processing") => detail && (
     <Button size="sm" color={processAgain ? "default" : "primary"} variant="flat"
       aria-haspopup="dialog"
-      isDisabled={busy || replanOpen || (!continueFiles && (!continueCurrent || deliveryWait))}
-      onPress={() => openContinuation(processAgain ? "reprocess" : "processing", inputStage)}>
+      isDisabled={busy || replanOpen || (!retryStageCommit && !continueFiles && (!continueCurrent || deliveryWait))}
+      onPress={() => retryStageCommit ? diagnoseContinuation() : openContinuation(processAgain ? "reprocess" : "processing", inputStage)}>
       {t(processAgain ? "acquisition.continue.again" : "acquisition.continue.open")}
     </Button>
   );

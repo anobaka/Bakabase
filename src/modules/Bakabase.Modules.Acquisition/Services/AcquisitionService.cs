@@ -401,39 +401,42 @@ public class AcquisitionService<TDbContext>(
     /// </summary>
     public async Task ReconcileAsync(CancellationToken ct = default)
     {
-        var live = await Tasks.Where(t => t.DeletedAt == null && Live.Contains(t.Status) && t.WorkflowRunId != null).ToListAsync(ct);
+        // A workflow may resume its original run directly, after the acquisition index recorded a
+        // failure. Also catch a retry that reached another terminal state between queue ticks.
+        var candidates = await (from task in Tasks
+            join run in Runs on task.WorkflowRunId equals run.Id
+            where task.DeletedAt == null && (Live.Contains(task.Status) ||
+                (task.Status == AcquisitionStatus.Failed || task.Status == AcquisitionStatus.Cancelled) &&
+                (run.Status == WorkflowRunStatus.Pending || run.Status == WorkflowRunStatus.Running ||
+                 run.Status == WorkflowRunStatus.Waiting || run.Status == WorkflowRunStatus.Success ||
+                 run.CompletedAt > task.CompletedAt))
+            select new {task.Id, task.WorkflowRunId, task.Status, task.Phase, task.BuilderId, task.Error,
+                task.UpdatedAt, task.CompletedAt, RunStatus = run.Status, RunEnd = run.CompletedAt, run.ErrorMessage})
+            .ToListAsync(ct);
 
-        if (live.Count == 0) return;
-
-        var runIds = live.Select(t => t.WorkflowRunId!.Value).ToList();
-        var runs = await Runs.AsNoTracking().Where(r => runIds.Contains(r.Id))
-            .ToDictionaryAsync(r => r.Id, ct);
-        var changed = false;
-
-        foreach (var task in live)
+        foreach (var row in candidates)
         {
-            if (!runs.TryGetValue(task.WorkflowRunId!.Value, out var run)) continue;
-
-            var status = FromRunStatus(run.Status);
-
-            var phase = status switch {AcquisitionStatus.Completed => "completed", AcquisitionStatus.Running => "executing",
-                AcquisitionStatus.Pending => "executing", _ => "attention"};
-            if (status == task.Status && (task.BuilderId == null || task.Phase == phase)) continue;
-            if (task.BuilderId != null) task.Phase = phase;
-
-            task.Status = status;
-            task.UpdatedAt = DateTime.Now;
-            if (run.ErrorMessage != null) task.Error = run.ErrorMessage;
-            if (status is AcquisitionStatus.Completed or AcquisitionStatus.Failed
-                or AcquisitionStatus.Cancelled)
+            var status = FromRunStatus(row.RunStatus);
+            var phase = row.BuilderId == null ? row.Phase : status switch
             {
-                task.CompletedAt = run.CompletedAt ?? task.UpdatedAt;
-            }
+                AcquisitionStatus.Completed => "completed",
+                AcquisitionStatus.Running or AcquisitionStatus.Pending => "executing",
+                _ => "attention"
+            };
+            var now = DateTime.Now;
+            var terminal = status is AcquisitionStatus.Completed or AcquisitionStatus.Failed or AcquisitionStatus.Cancelled;
+            var end = terminal ? row.RunEnd ?? row.CompletedAt ?? now : (DateTime?)null;
+            var error = row.ErrorMessage;
+            if (status == row.Status && phase == row.Phase && end == row.CompletedAt && error == row.Error) continue;
 
-            changed = true;
+            // A newer run, cancellation or task deletion may have won since this observation.
+            await Tasks.Where(t => t.Id == row.Id && t.DeletedAt == null && t.WorkflowRunId == row.WorkflowRunId &&
+                    t.Status == row.Status && t.UpdatedAt == row.UpdatedAt && Runs.Any(r => r.Id == row.WorkflowRunId &&
+                        r.Status == row.RunStatus && r.CompletedAt == row.RunEnd && r.ErrorMessage == row.ErrorMessage))
+                .ExecuteUpdateAsync(s => s.SetProperty(t => t.Status, status).SetProperty(t => t.Phase, phase)
+                    .SetProperty(t => t.CompletedAt, end).SetProperty(t => t.Error, error)
+                    .SetProperty(t => t.UpdatedAt, now), ct);
         }
-
-        if (changed) await db.SaveChangesAsync(ct);
     }
 
     private static AcquisitionStatus FromRunStatus(WorkflowRunStatus status) => status switch

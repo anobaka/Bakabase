@@ -31,6 +31,11 @@ public sealed record AcquisitionRecoveryDiagnosis(AcquisitionRecoveryRow Row, st
     internal string? ProcessingPartId { get; init; }
     internal IReadOnlyList<string> ProcessingStorageRoots { get; init; } = [];
     internal string? ProcessingPlacementStamp { get; init; }
+    internal IReadOnlyList<string> InitialDownloadDirectories { get; init; } = [];
+    internal IReadOnlyList<string> InitialDownloadTargets { get; init; } = [];
+    internal string? FirstDownloadDirectory => InitialDownloadDirectories.FirstOrDefault();
+    internal IReadOnlyList<string> InitialDeliveryDirectories { get; init; } = [];
+    internal string? FirstDeliveryDirectory => InitialDeliveryDirectories.FirstOrDefault();
 }
 public interface IAcquisitionRecoveryDiagnostics
 {
@@ -42,7 +47,8 @@ public interface IAcquisitionRecoveryDiagnostics
 /// original-file recheck. Never creates receipts, mutates artifacts, purchases or initializes a download engine.</summary>
 public sealed partial class AcquisitionRecoveryDiagnostics(BakabaseDbContext db, IUserStoragePolicy storage,
     IArtifactOperationStore artifacts, BTaskManager? tasks = null, FileProcessingWorkspaceResolver? workspaces = null,
-    CloudDownloadRecoveryService? downloads = null, AcquisitionPlanService? plans = null) : IAcquisitionRecoveryDiagnostics
+    CloudDownloadRecoveryService? downloads = null, AcquisitionPlanService? plans = null,
+    AcquisitionTransferredDownloadRecovery? transferredDownloads = null) : IAcquisitionRecoveryDiagnostics
 {
     public async Task<AcquisitionRecoveryDiagnosis> DiagnoseAsync(AcquisitionTaskDbModel task, WorkflowRunDbModel? run, CancellationToken ct,
         bool verifyFiles = true, bool verifyContent = false, bool includeStoppedDownloads = false)
@@ -103,8 +109,43 @@ public sealed partial class AcquisitionRecoveryDiagnostics(BakabaseDbContext db,
             if (workset == null || workset.Targets.Count is 0 or > 100 || workset.Targets.All(t => t.Excluded) ||
                 workset.Targets.Any(t => !t.Excluded && (t.SelectedSource == null || t.AcquisitionNonce != null)))
                 return Result("RECOVERY_CHECKPOINT_UNSUPPORTED");
+            if (kind == "download.enqueueSupported" && run.Status is WorkflowRunStatus.Failed or WorkflowRunStatus.Interrupted &&
+                transferredDownloads != null && workset.Targets.Any(t => !t.Excluded && t.RemoteEntry != null && t.DownloadTaskId == null))
+            {
+                var placement = await transferredDownloads.InspectAsync(task, run, workset, ct);
+                if (placement != null)
+                    return Result("RECOVERY_TRANSFERRED_FIRST_DOWNLOAD", true, signal: JsonSerializer.Serialize(
+                        new CloudSelectionSignal {TransferredDownloadPlacement = placement.Proof}, WorkflowJson.Options))
+                        with {InitialDownloadDirectories = placement.Directories,
+                            InitialDownloadTargets = placement.Workset.Targets.Where(t => !t.Excluded)
+                                .Select(t => t.DownloadDirectoryScope!.Directory).Distinct(ArtifactManifestFiles.PathComparer).ToArray(),
+                            InitialDeliveryDirectories = placement.Workset.Targets.Where(t => !t.Excluded && t.PublicationTargetDirectory != null)
+                                .Select(t => t.PublicationTargetDirectory!).Distinct(ArtifactManifestFiles.PathComparer).ToArray()};
+            }
             if (kind == AcquisitionPlanProcessingActivity.ActivityKind)
+            {
+                if (run.Status == WorkflowRunStatus.Failed && run.ErrorMessage == "STAGE_COMMIT_REFERENCED" &&
+                    task.WorkflowRunId == run.Id && workspaces != null && AcquisitionLocalRecoveryBatchService.IsLocalRemainder(run))
+                {
+                    problem = run.ErrorMessage;
+                    var state = JsonSerializer.Deserialize<AcquisitionPlanBuilderState>(task.BuilderStateJson ?? "{}", WorkflowJson.Options);
+                    var config = JsonSerializer.Deserialize<AcquisitionPlanProcessingConfig>(node.ConfigJson, WorkflowJson.Options);
+                    var target = workset.Targets.SingleOrDefault(t => !t.Excluded && t.Id == config?.TargetId);
+                    if (state?.ProcessingStageInputId is not { } pending || target == null || config?.ContinueFrom != null)
+                        return Result("RECOVERY_MANUAL_REVIEW", manual: "inspectFiles");
+                    if (!verifyFiles) return Result("RECOVERY_VERIFY_FILES");
+                    try
+                    {
+                        if (!await AcquisitionProcessingStageInput.CanRetrySnapshotAsync(db, artifacts, storage, workspaces, task.Id, run.Id, target, pending, ct))
+                            return Result("RECOVERY_FILES_UNVERIFIED", manual: "inspectFiles");
+                    }
+                    catch (InvalidOperationException error) when (error.Message is "STAGE_COMMIT_REFERENCED" or "STAGE_COMMIT_SHARED")
+                    { return Result("RECOVERY_PROCESSING_FILES_REFERENCED", manual: "inspectFiles"); }
+                    return Result("RECOVERY_STAGE_INPUT_READY", true, signal: JsonSerializer.Serialize(
+                        new CloudFileProcessingSignal {TargetId = target.Id}, WorkflowJson.Options));
+                }
                 return await DiagnoseProcessingStorageAsync(task, run, plan, node, workset, verifyFiles, verifyContent, ct);
+            }
             if (kind == AssessFileArtifactDeliveryActivity.ActivityKind)
                 return await DiagnoseDeliveryStorageAsync(task, run, plan, node, workset, verifyFiles, ct);
             string? promptMessage = null;

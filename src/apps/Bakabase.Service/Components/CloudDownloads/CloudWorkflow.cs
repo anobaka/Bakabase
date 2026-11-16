@@ -165,6 +165,17 @@ public abstract class CloudActivity(string kind, string name, string description
 
     private async Task<WorkflowItemOutcome> Run(WorkflowExecutionContext ctx, DownloadWorkset workset, CloudSelectionSignal? signal, CancellationToken ct)
     {
+        if (signal?.TransferredDownloadPlacement is {} placement)
+        {
+            // The public workflow resume endpoint also accepts JSON. The receipt alone cannot
+            // authorize combining a new source/account, an arbitrary path, or a second download.
+            var expected = new CloudSelectionSignal {TransferredDownloadPlacement = placement};
+            if (kind != "download.enqueueSupported" ||
+                JsonSerializer.Serialize(expected, WorkflowJson.Options) != JsonSerializer.Serialize(signal, WorkflowJson.Options))
+                throw new InvalidOperationException("RECOVERY_DOWNLOAD_IDENTITY_CHANGED");
+            workset = await ctx.Services.GetRequiredService<Bakabase.Service.Components.Acquisition.Planning.AcquisitionTransferredDownloadRecovery>()
+                .RestoreAsync(checked((int)ctx.RunId), workset, placement, ct);
+        }
         if (signal?.ObserveExistingOnly == true || signal?.RevalidateExistingDownloads == true || signal?.VerifyExistingFilesOnly == true)
             workset = workset with {NoRepeatExistingDownloads = true};
         if (signal?.VerifyExistingFilesOnly == true && (signal.ResumeTargetIds == null || signal.RevalidateExistingDownloads == true))

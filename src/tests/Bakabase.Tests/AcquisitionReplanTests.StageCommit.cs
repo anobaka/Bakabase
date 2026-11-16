@@ -1,4 +1,7 @@
 using System.Text.Json;
+using Bakabase.Modules.Downloader.Cloud;
+using Bakabase.InsideWorld.Models.Constants;
+using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants;
 using Bakabase.InsideWorld.Business.Components.Artifacts;
 using Bakabase.Modules.Workflow.Abstractions.Components;
 using Bakabase.Modules.Workflow.Artifacts;
@@ -151,6 +154,40 @@ public sealed partial class AcquisitionReplanTests
             Assert.IsTrue(source.Files.All(File.Exists));
         }
         else Assert.AreEqual(binding.Directory, (await operation).RootDirectory);
+    }
+
+    [DataTestMethod]
+    [DataRow("owned")]
+    [DataRow("other-part")]
+    [DataRow("other-native-owner")]
+    [DataRow("still-downloading")]
+    [DataRow("real-file")]
+    public async Task Stage_commit_distinguishes_its_download_workspace_from_external_or_concrete_references(string scenario)
+    {
+        var (task, runId, source) = await StageCommitInput(false);
+        var binding = task.Plan!.StageDirectories!.Parts["main"].Processing!;
+        var output = Path.Combine(_root, "original-download");
+        var request = new CloudDownloadRequest("stage-transport", new() {Id = "share", ProviderId = "baidu", Url = "https://pan.baidu.com/s/test"},
+            "account", null, output) {WorkspaceDirectory = binding.Directory};
+        Db.DownloadTasks.Add(new() {Id = 88, Key = "download", ThirdPartyId = ThirdPartyId.BaiduNetdisk, DownloadPath = output,
+            Options = JsonSerializer.Serialize(request, WorkflowJson.Options),
+            Status = scenario == "still-downloading" ? DownloadTaskDbModelStatus.InProgress : DownloadTaskDbModelStatus.Complete});
+        Db.CloudDownloadOperations.Add(new() {Id = request.OperationId, WorkflowRunId = runId, DownloadTaskId = 88,
+            Kind = "download", State = "started", TargetId = scenario == "other-part" ? "second" : "main"});
+        if (scenario == "other-native-owner")
+            Db.DownloadResultOwners.Add(new() {DownloadTaskId = 88, AcquisitionTaskId = task.Id + 1, WorkflowRunId = runId});
+        if (scenario == "real-file")
+            Db.DownloadTaskFiles.Add(new() {DownloadTaskId = 88, Path = Path.Combine(binding.Directory, "other.txt")});
+        await Db.SaveChangesAsync();
+        var operation = AcquisitionProcessingStageCommit.CommitCoreAsync(Db, Artifacts, new CompositeStorage(),
+            _services.GetRequiredService<FileProcessingWorkspaceResolver>(), task.Id, runId, "main", binding, source, default);
+        if (scenario == "owned")
+            Assert.AreEqual(binding.Directory, (await operation).RootDirectory);
+        else
+        {
+            Assert.AreEqual("STAGE_COMMIT_REFERENCED", (await Assert.ThrowsExactlyAsync<InvalidOperationException>(() => operation)).Message);
+            Assert.IsTrue(source.Files.All(File.Exists));
+        }
     }
 
     [TestMethod]

@@ -40,7 +40,8 @@ internal sealed partial class ArtifactCleanupReferenceGuard(BakabaseDbContext db
     public async Task<bool> HasReferencesAsync(ArtifactRecord source, IReadOnlyList<int> owners, CancellationToken ct,
         IReadOnlyList<string>? privatePaths = null, IReadOnlyList<int>? previewSupersededRuns = null,
         int? directoryOwnerTaskId = null, int? directoryOwnerRunId = null, bool deletedDirectoryOwner = false,
-        int? directoryDownloadTaskId = null, bool explicitTaskDirectoryCleanup = false, bool abandonUnfinishedFiles = false)
+        int? directoryDownloadTaskId = null, bool explicitTaskDirectoryCleanup = false, bool abandonUnfinishedFiles = false,
+        string? processingPartId = null)
     {
         bool Found(string location) { referenceFound?.Invoke(location); return true; }
         var aliases = workspaces?.ReadRelocations() ?? [];
@@ -104,7 +105,7 @@ internal sealed partial class ArtifactCleanupReferenceGuard(BakabaseDbContext db
             }
         }
         bool RefersCloudRequest(string? json, string? operationId = null, string? providerId = null, string? outputDirectory = null,
-            IReadOnlyList<string>? privateAllocations = null)
+            IReadOnlyList<string>? privateAllocations = null, string? stageDownloadOperation = null)
         {
             if (string.IsNullOrWhiteSpace(json)) return false;
             using var doc = JsonDocument.Parse(json);
@@ -156,7 +157,14 @@ internal sealed partial class ArtifactCleanupReferenceGuard(BakabaseDbContext db
             bool RegisteredContainer(JsonProperty field) => privateAllocations != null &&
                 field.Value.ValueKind == JsonValueKind.String && Path.IsPathFullyQualified(field.Value.GetString()!) &&
                 privateAllocations.Any(path => Same(Relocate(field.Value.GetString()!), path));
-            return properties.Any(p => p.Name.Equals("workspaceDirectory", StringComparison.OrdinalIgnoreCase) ||
+            // The completed download allocated this part's processing directory for the
+            // next stage. Its own workspace setting is not a consumer of the stage output.
+            // The native download path, actual files and all other request fields still count.
+            bool OwnStageWorkspace(JsonProperty p) => stageDownloadOperation == request.OperationId &&
+                p.Name.Equals("workspaceDirectory", StringComparison.OrdinalIgnoreCase) &&
+                p.Value.ValueKind == JsonValueKind.String && Path.IsPathFullyQualified(p.Value.GetString()!) &&
+                Same(Relocate(p.Value.GetString()!), Relocate(source.RootDirectory));
+            return properties.Where(p => !OwnStageWorkspace(p)).Any(p => p.Name.Equals("workspaceDirectory", StringComparison.OrdinalIgnoreCase) ||
                     p.Name.Equals("outputDirectory", StringComparison.OrdinalIgnoreCase) && RegisteredContainer(p)
                 ? p.Value.ValueKind == JsonValueKind.String && RefersPath(p.Value.GetString()!, false)
                 : p.Name.Equals("destinationRevisions", StringComparison.OrdinalIgnoreCase) && p.Value.ValueKind == JsonValueKind.Array
@@ -278,40 +286,81 @@ internal sealed partial class ArtifactCleanupReferenceGuard(BakabaseDbContext db
                 exact.SetEquals(recorded.SelectMany(r => JsonSerializer.Deserialize<string[]>(r.FilesJson) ?? []).Select(Relocate)) &&
                 files.Where(f => f.DownloadTaskId == downloadId).All(f => exact.Contains(Relocate(f.Path)))) ownDownload = downloadId;
         }
-        // A confirmed deletion of an entire task-specific download directory releases
-        // its own completed transport receipts. This is never inferred from file names,
-        // nor used by ordinary per-artifact cleanup or by a shared download root.
+        // A completed native download may release its historical receipts. For an unfinished
+        // task, only explicit, quiesced task deletion can release a failed/disabled native
+        // writer, and its persisted dispatch and concrete destination must still match.
+        var allowStoppedDownload = explicitTaskDirectoryCleanup && abandonUnfinishedFiles;
+        bool ReleasableNativeState(DownloadTaskDbModelStatus status) => status == DownloadTaskDbModelStatus.Complete ||
+            allowStoppedDownload && status is DownloadTaskDbModelStatus.Failed or DownloadTaskDbModelStatus.Disabled;
+        bool MatchesStoppedDispatch(string? options, string? journal, string id, string path)
+        {
+            if (string.IsNullOrEmpty(options) || string.IsNullOrEmpty(journal)) return false;
+            try
+            {
+                using var native = JsonDocument.Parse(options); using var recorded = JsonDocument.Parse(journal);
+                var request = native.RootElement.Deserialize<CloudDownloadRequest>(JsonSerializerOptions.Web);
+                return request?.OperationId == id && !string.IsNullOrWhiteSpace(request.Source?.Id) &&
+                    !string.IsNullOrWhiteSpace(request.Source.Url) && JsonElement.DeepEquals(native.RootElement, recorded.RootElement) &&
+                    Same(Relocate(CloudDownloadDestinations.ExecutionDirectory(request)), Relocate(path));
+            }
+            catch (Exception error) when (error is JsonException or InvalidOperationException or ArgumentException or IOException)
+            { return false; }
+        }
         if (directoryDownloadTaskId is { } stageDownload)
         {
             var ownedTask = downloads.SingleOrDefault(d => d.Id == stageDownload);
             var transports = await db.CloudDownloadOperations.AsNoTracking()
                 .Where(o => o.DownloadTaskId == stageDownload).ToListAsync(ct);
             if (directoryOwnerTaskId == null || privatePaths != null || ownedTask == null ||
-                ownedTask.Status != DownloadTaskDbModelStatus.Complete ||
+                !ReleasableNativeState(ownedTask.Status) ||
                 !Same(Relocate(ownedTask.DownloadPath), Relocate(source.RootDirectory)) ||
                 transports.Count == 0 || transports.Any(o => o.Kind != "download" || !owners.Contains(o.WorkflowRunId) ||
-                    o.State is not ("started" or "completed")) ||
+                    o.State is not ("started" or "completed") || ownedTask.Status != DownloadTaskDbModelStatus.Complete &&
+                    !MatchesStoppedDispatch(ownedTask.Options, o.RequestJson, o.Id, ownedTask.DownloadPath)) ||
                 await db.DownloadResultOwners.AnyAsync(o => o.DownloadTaskId == stageDownload &&
-                    o.AcquisitionTaskId != directoryOwnerTaskId.Value, ct)) return Found("invalid-stage-download-owner");
+                    (o.AcquisitionTaskId != directoryOwnerTaskId.Value || !owners.Contains(o.WorkflowRunId)), ct))
+                return Found("invalid-stage-download-owner");
             ownDownload = stageDownload;
         }
         var privateTransport = await OwnedWorkspaceTransportAsync(source, owners, roots, ct);
         var releasedDownloads = ownDownload is { } released ? new HashSet<int> {released} : [];
         if (explicitTaskDirectoryCleanup)
         {
-            var completeIds = downloads.Where(d => d.Status == DownloadTaskDbModelStatus.Complete).Select(d => d.Id).ToArray();
-            var transports = await db.CloudDownloadOperations.AsNoTracking().Where(o => o.DownloadTaskId != null && completeIds.Contains(o.DownloadTaskId.Value))
-                .Select(o => new {Id = o.DownloadTaskId!.Value, o.WorkflowRunId, o.Kind, o.State}).ToListAsync(ct);
-            var resultOwners = await db.DownloadResultOwners.AsNoTracking().Where(o => completeIds.Contains(o.DownloadTaskId))
+            var releasable = downloads.Where(d => ReleasableNativeState(d.Status)).ToDictionary(d => d.Id);
+            var ownedIds = await db.CloudDownloadOperations.AsNoTracking().Where(o => o.DownloadTaskId != null && owners.Contains(o.WorkflowRunId))
+                .Select(o => o.DownloadTaskId!.Value).Distinct().ToArrayAsync(ct);
+            var ids = ownedIds.Where(releasable.ContainsKey).ToArray();
+            var stoppedIds = ids.Where(id => releasable[id].Status != DownloadTaskDbModelStatus.Complete).ToArray();
+            var transports = await db.CloudDownloadOperations.AsNoTracking().Where(o => o.DownloadTaskId != null && ids.Contains(o.DownloadTaskId.Value))
+                .Select(o => new {Id = o.DownloadTaskId!.Value, OperationId = o.Id, o.WorkflowRunId, o.Kind, o.State,
+                    RequestJson = stoppedIds.Contains(o.DownloadTaskId.Value) ? o.RequestJson : null}).ToListAsync(ct);
+            var resultOwners = await db.DownloadResultOwners.AsNoTracking().Where(o => ids.Contains(o.DownloadTaskId))
                 .Select(o => new {o.DownloadTaskId, o.AcquisitionTaskId, o.WorkflowRunId}).ToListAsync(ct);
             foreach (var group in transports.GroupBy(o => o.Id))
-                if (group.All(o => owners.Contains(o.WorkflowRunId) && o.Kind == "download" && o.State is "started" or "completed") &&
+            {
+                var native = releasable[group.Key];
+                if (group.All(o => owners.Contains(o.WorkflowRunId) && o.Kind == "download" && o.State is "started" or "completed" &&
+                    (native.Status == DownloadTaskDbModelStatus.Complete ||
+                     MatchesStoppedDispatch(native.Options, o.RequestJson, o.OperationId, native.DownloadPath))) &&
                     resultOwners.Where(o => o.DownloadTaskId == group.Key).All(o =>
                         o.AcquisitionTaskId == directoryOwnerTaskId && owners.Contains(o.WorkflowRunId)))
                     releasedDownloads.Add(group.Key);
+            }
+        }
+        var stageDownloads = new Dictionary<int, string>();
+        if (processingPartId != null && directoryOwnerRunId != null && directoryOwnerTaskId != null && privatePaths == null)
+        {
+            stageDownloads = await db.CloudDownloadOperations.AsNoTracking()
+                .Where(o => owners.Contains(o.WorkflowRunId) && o.TargetId == processingPartId && o.Kind == "download" &&
+                    (o.State == "started" || o.State == "completed") && o.DownloadTaskId.HasValue &&
+                    !db.CloudDownloadOperations.Any(other => other.DownloadTaskId == o.DownloadTaskId && other.Id != o.Id) &&
+                    !db.DownloadResultOwners.Any(r => r.DownloadTaskId == o.DownloadTaskId &&
+                        (r.AcquisitionTaskId != directoryOwnerTaskId || !owners.Contains(r.WorkflowRunId))))
+                .ToDictionaryAsync(o => o.DownloadTaskId!.Value, o => o.Id, ct);
         }
         if (downloads.Any(d => !releasedDownloads.Contains(d.Id) && (RefersPath(d.DownloadPath, d.Id != privateTransport?.Id) || RefersCloudRequest(d.Options,
                 providerId: CloudSites.Sources.FirstOrDefault(s => s.ThirdPartyId == d.ThirdPartyId)?.ProviderId, outputDirectory: d.DownloadPath,
+                stageDownloadOperation: d.Status == DownloadTaskDbModelStatus.Complete ? stageDownloads.GetValueOrDefault(d.Id) : null,
                 privateAllocations: d.Id == privateTransport?.Id
                     ? [privateTransport.Value.Directory, privateTransport.Value.DownloadDirectory] : null)))) return Found("download-task");
         if (files.Any(f => !releasedDownloads.Contains(f.DownloadTaskId) && RefersPath(f.Path))) return Found("download-file");
