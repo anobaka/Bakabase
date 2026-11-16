@@ -437,6 +437,7 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
                 await zip.ReadAsync(null, onStandardOutput, ct);
                 return new TestResult {ExitCode = 0};
             }
+            await EnsureAutomaticZipNamesAsync(compressedFilePath, openOptions, ct);
             var sevenZipExe = await GetSevenZipExecutableAsync(ct);
             if (sevenZipExe == null)
             {
@@ -556,6 +557,7 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
                     progressOutput == ProgressOutputTarget.StandardError ? onStandardError : onStandardOutput, ct);
                 return new TestResult {ExitCode = 0};
             }
+            await EnsureAutomaticZipNamesAsync(compressedFilePath, openOptions, ct);
             var sevenZipExe = await GetSevenZipExecutableAsync(ct);
             if (sevenZipExe == null)
             {

@@ -497,7 +497,7 @@ describe("compact file processor toolbar", () => {
       render(
         <FileExplorer
           appearance="compact"
-          capabilities={["select", "wrap"]}
+          capabilities={["select", "wrap", "move"]}
           rootPath="/media"
           selectable="multiple"
         />,
@@ -531,17 +531,29 @@ describe("compact file processor toolbar", () => {
       fireEvent.keyDown(fileName, { key: "w" });
       expect(createPortal).toHaveBeenCalledTimes(1);
 
-      // Keep the real HeroUI button: its keyboard handling must not swallow
-      // primary shortcuts merely because a toolbar control has focus.
+      // Toolbar controls own their focus; file operations require the file list.
       select.mockClear();
       const shortcuts = screen.getByRole("button", { name: "fileExplorer.label.shortcuts" });
 
       shortcuts.focus();
       expect(shortcuts).toHaveFocus();
-      expect(fireEvent.keyDown(shortcuts, { key: "a", [primary]: true })).toBe(false);
-      expect(select).toHaveBeenCalledTimes(3);
+      expect(fireEvent.keyDown(shortcuts, { key: "a", [primary]: true })).toBe(true);
+      expect(select).not.toHaveBeenCalled();
     },
   );
+
+  it("does not cut or paste into an explorer without file mutation capabilities", async () => {
+    vi.stubGlobal("navigator", { platform: "MacIntel" });
+    render(<div role="dialog"><FileExplorer rootPath="/media" selectable="multiple"
+      capabilities={["enter-directory"]} /></div>);
+    const row = await screen.findByRole("button", { name: "alpha" });
+    fireEvent.click(row);
+    fireEvent.keyDown(row, { key: "x", metaKey: true });
+    expect(useFileExplorerClipboardStore.getState().paths).toHaveLength(0);
+    useFileExplorerClipboardStore.getState().cut(["/other/file.zip"]);
+    fireEvent.keyDown(row, { key: "v", metaKey: true });
+    expect(moveEntries).not.toHaveBeenCalled();
+  });
 
   it("protects actual filename editing while preserving row keyboard selection afterwards", async () => {
     vi.stubGlobal("navigator", { platform: "MacIntel" });

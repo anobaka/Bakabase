@@ -1,11 +1,27 @@
 using System;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Bakabase.InsideWorld.Business.Components.Compression;
 
 public partial class CompressedFileService
 {
+    private static async Task EnsureAutomaticZipNamesAsync(string path, ArchiveOpenOptions? opening, CancellationToken ct)
+    {
+        if (OperatingSystem.IsWindows() || opening?.ZipFileNameCodePage != null ||
+            opening?.UsesZipCompatibilityReader == true || opening?.Mode != null) return;
+        using var stop = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        stop.CancelAfter(ArchiveFormatProbeLimits.PerCandidate);
+        try { await ZipNameEncodingProbe.EnsureLosslessAsync(path, opening?.ExpectedZipOffset ?? 0, stop.Token); }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        {
+            throw new ArchiveFormatProbeIncompleteException("ZIP filename inspection exceeded its time limit.",
+                ArchiveFormatProbeFailureCodes.TimedOut);
+        }
+    }
+
     internal static bool HasZipNameDecodingFailure(TestResult result)
     {
         if (result.ExitCode == 0 || !result.StandardOutput.Split('\n')

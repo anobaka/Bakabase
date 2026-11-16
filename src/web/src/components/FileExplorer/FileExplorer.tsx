@@ -149,6 +149,7 @@ const FilesystemExplorer = forwardRef<FileExplorerRef, FileExplorerProps & { dir
     const [navigationError, setNavigationError] = useState<string>();
 
     const initializedRootRef = useRef<RootEntry>();
+    const keyboardScopeRef = useRef<HTMLDivElement>(null);
     const initializeSeqRef = useRef(0);
     const acceptedRootRef = useRef<{ model: RootEntry; sequence: number }>();
     const onNavigationStartRef = useRef(onNavigationStart);
@@ -641,6 +642,7 @@ const FilesystemExplorer = forwardRef<FileExplorerRef, FileExplorerProps & { dir
         </ControlledMenu>}
         {keyboard && (
           <EventListener
+            scopeRef={keyboardScopeRef}
             onClick={(evt) => {
               if (ignoreClickEvent(evt.target as HTMLElement)) {
                 return;
@@ -815,6 +817,7 @@ const FilesystemExplorer = forwardRef<FileExplorerRef, FileExplorerProps & { dir
                     break;
                   }
                   case "c": {
+                    if (!capabilities?.includes("move")) break;
                     if (matchesPrimaryShortcut(evt, "c") && selectedEntriesRef.current.length > 0) {
                       evt.preventDefault();
                       const paths = selectedEntriesRef.current.map((e) => e.path);
@@ -825,6 +828,7 @@ const FilesystemExplorer = forwardRef<FileExplorerRef, FileExplorerProps & { dir
                     break;
                   }
                   case "x": {
+                    if (!capabilities?.includes("move")) break;
                     if (matchesPrimaryShortcut(evt, "x") && selectedEntriesRef.current.length > 0) {
                       evt.preventDefault();
                       const paths = selectedEntriesRef.current.map((e) => e.path);
@@ -835,6 +839,7 @@ const FilesystemExplorer = forwardRef<FileExplorerRef, FileExplorerProps & { dir
                     break;
                   }
                   case "v": {
+                    if (!capabilities?.includes("move")) break;
                     if (matchesPrimaryShortcut(evt, "v") && clipboardStore.paths.length > 0) {
                       evt.preventDefault();
                       const { paths, mode } = clipboardStore;
@@ -1149,7 +1154,14 @@ const FilesystemExplorer = forwardRef<FileExplorerRef, FileExplorerProps & { dir
           </p>
         )}
         {/* Keep the viewport independent of virtual rows, which derive their height from it. */}
-        <div className={`min-h-0 overflow-hidden ${fitContent ? "shrink-0" : "flex-1"} ${compact ? "file-explorer-list" : ""}`}
+        <div ref={keyboardScopeRef} data-file-explorer-keyboard-scope="" tabIndex={keyboard ? 0 : undefined}
+          className={`min-h-0 overflow-hidden outline-none ${fitContent ? "shrink-0" : "flex-1"} ${compact ? "file-explorer-list" : ""}`}
+          onPointerDownCapture={event => {
+            if (keyboard && event.target instanceof Element &&
+              !event.target.closest("input, textarea, select, button, a, [role='button'], [contenteditable]")) {
+              event.currentTarget.focus({ preventScroll: true });
+            }
+          }}
           style={fitContent ? { height: Math.min(maxContentHeight!, Math.max(MainLineHeight,
             contentHeight?.rootId === root.id ? contentHeight.height : MainLineHeight * 6)) } : undefined}>
           <FileExplorerEntry
