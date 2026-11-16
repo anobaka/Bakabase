@@ -9,7 +9,7 @@ public sealed record AcquisitionTaskDeletePreviewInput(IReadOnlyList<int> TaskId
     bool? DeleteDeliveredFiles = null);
 public sealed record AcquisitionTaskDeleteInput(string PreviewId, bool? CleanupFiles = null,
     bool? AcceptDeliveredFiles = null, bool? SkipFileVerification = null, bool? RemoveTaskIfCleanupFails = null, bool? RetryRetainedFiles = null,
-    bool? DeleteDeliveredFiles = null);
+    bool? DeleteDeliveredFiles = null, IReadOnlyList<int>? TaskIds = null);
 // Progress describes confirmed work only; it is not an authorization or a replacement for the final result.
 public sealed record AcquisitionTaskDeleteProgress(string PreviewId, string State, int TotalTasks, int FinishedTasks,
     int? CurrentTaskId, string Phase, int CompletedFiles, long CompletedBytes,
@@ -23,7 +23,8 @@ public sealed record AcquisitionTaskDeletePreview(string PreviewId, DateTimeOffs
     bool SkipFileVerification = false, bool RetryRetainedFiles = false, bool DeleteDeliveredFiles = false);
 public sealed record AcquisitionTaskDeleteSkip(int TaskId, string ReasonCode);
 public sealed record AcquisitionTaskDeleteResult(IReadOnlyList<int> DeletedTaskIds, IReadOnlyList<AcquisitionTaskDeleteSkip> Skipped,
-    IReadOnlyList<AcquisitionTaskDeleteCleanupOutcome>? CleanupResults = null, int RemovedFiles = 0, long RemovedBytes = 0);
+    IReadOnlyList<AcquisitionTaskDeleteCleanupOutcome>? CleanupResults = null, int RemovedFiles = 0, long RemovedBytes = 0,
+    IReadOnlyList<string>? RemovedDirectories = null, bool FileStatisticsIncomplete = false);
 public sealed record AcquisitionTaskDeleteCleanupFile(string Path, long Bytes);
 public sealed record AcquisitionTaskDeleteCleanupNode(int RunId, string NodeId, string Kind);
 public sealed record AcquisitionTaskDeleteCleanupGroup(string ArtifactId, string Kind, string Directory,
@@ -37,4 +38,5 @@ public sealed record AcquisitionTaskDeleteCleanup(int FileCount, long Bytes,
 public sealed record AcquisitionTaskDeleteSupersededRun(int RunId, int Revision, int ReplacedByRevision);
 public sealed record AcquisitionTaskDeleteCleanupOutcome(int TaskId, bool Completed, int RemovedFiles, long RemovedBytes,
     IReadOnlyList<string> ReasonCodes, IReadOnlyList<int>? ClosedRunIds = null,
-    IReadOnlyList<string>? RetainedDirectories = null);
+    IReadOnlyList<string>? RetainedDirectories = null, IReadOnlyList<string>? RemovedDirectories = null,
+    bool FileStatisticsIncomplete = false);

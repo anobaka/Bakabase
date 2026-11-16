@@ -1,15 +1,8 @@
 import BApi from "@/sdk/BApi";
 
 type Api = typeof BApi.acquisition;
-type PreviewOptions = Omit<Parameters<Api["previewDeleteAcquisitionTasks"]>[0], "taskIds">;
-type SubmitOptions = Omit<
-  Parameters<Api["deleteAcquisitionTasks"]>[0],
-  "previewId"
->;
-export type AcquisitionDeletionOptions = PreviewOptions & Pick<SubmitOptions, "removeTaskIfCleanupFails">;
-export type AcquisitionDeletionPreview = NonNullable<
-  Awaited<ReturnType<Api["previewDeleteAcquisitionTasks"]>>["data"]
->;
+export type AcquisitionDeletionOptions = Pick<Parameters<Api["deleteAcquisitionTasks"]>[0],
+  "cleanupFiles" | "deleteDeliveredFiles" | "removeTaskIfCleanupFails" | "retryRetainedFiles">;
 export type AcquisitionDeletionResult = NonNullable<
   Awaited<ReturnType<Api["deleteAcquisitionTasks"]>>["data"]
 >;
@@ -25,21 +18,14 @@ async function unwrap<T>(request: Promise<{ code?: number; message?: string | nu
 }
 const options = { sensitiveResponse: true, showErrorToast: false };
 export const acquisitionDeletionApi = {
-  preview: (
-    taskIds: number[],
-    cleanup: PreviewOptions = {},
-    signal?: AbortSignal,
-  ): Promise<AcquisitionDeletionPreview> => {
-    const request = { taskIds, ...cleanup };
-    return unwrap(BApi.acquisition.previewDeleteAcquisitionTasks(request, { ...options, signal }));
-  },
   remove: (
-    previewId: string,
-    choices: SubmitOptions = {},
+    operationId: string,
+    taskIds: number[],
+    choices: AcquisitionDeletionOptions = {},
   ): Promise<AcquisitionDeletionResult> => {
-    const request = { previewId, ...choices };
+    const request = { previewId: operationId, taskIds, ...choices };
     return unwrap(BApi.acquisition.deleteAcquisitionTasks(request, options));
   },
-  progress: (previewId: string, signal?: AbortSignal): Promise<AcquisitionDeletionProgress> =>
-    unwrap(BApi.acquisition.getAcquisitionTaskDeletionProgress(previewId, { ...options, signal })),
+  progress: (operationId: string, signal?: AbortSignal): Promise<AcquisitionDeletionProgress> =>
+    unwrap(BApi.acquisition.getAcquisitionTaskDeletionProgress(operationId, { ...options, signal })),
 };

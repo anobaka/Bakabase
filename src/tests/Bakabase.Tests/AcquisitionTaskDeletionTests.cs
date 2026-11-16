@@ -65,6 +65,22 @@ public sealed class AcquisitionTaskDeletionTests
     private async Task<AcquisitionTaskDeletePreview> Preview(params int[] ids) => await _delete.PreviewAsync(new(ids));
 
     [TestMethod]
+    public async Task DirectBatchConfirmationAcceptsFortyFourFixedTasksWithoutAnyPreview()
+    {
+        var ids = new List<int>();
+        for (var index = 0; index < 44; index++) ids.Add((await Seed()).Task.Id);
+        var request = new AcquisitionTaskDeleteInput(Guid.NewGuid().ToString("N"), TaskIds: ids);
+        var result = await _delete.DeleteAsync(request);
+        CollectionAssert.AreEquivalent(ids.ToArray(), result.DeletedTaskIds.ToArray());
+        Assert.AreEqual(0, result.Skipped.Count);
+        Assert.AreEqual(44, _delete.GetProgress(request.PreviewId).FinishedTasks);
+        Assert.AreEqual(44, await _db.WorkflowRuns.CountAsync());
+        Assert.AreEqual(44, await _db.WorkflowNodeExecutions.CountAsync());
+        Assert.AreEqual(result, await _delete.DeleteAsync(request));
+        await Assert.ThrowsExactlyAsync<ArgumentException>(() => _delete.DeleteAsync(request with {TaskIds = [ids[0]]}));
+    }
+
+    [TestMethod]
     public async Task ConfirmationUsesFixedIdsAndOnlyAddsTombstonePreservingFilesHistoryAndDeduplication()
     {
         var (task, run) = await Seed(); var before = JsonSerializer.Serialize(await _db.AcquisitionTasks.AsNoTracking().SingleAsync(t => t.Id == task.Id)); var checkpoint = run.CurrentItemJson;

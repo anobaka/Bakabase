@@ -9040,6 +9040,8 @@ export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionTaskDele
   reasonCodes: string[];
   closedRunIds?: number[];
   retainedDirectories?: string[];
+  removedDirectories?: string[];
+  fileStatisticsIncomplete: boolean;
 }
 
 export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionTaskDeleteInput {
@@ -9050,6 +9052,7 @@ export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionTaskDele
   removeTaskIfCleanupFails?: boolean;
   retryRetainedFiles?: boolean;
   deleteDeliveredFiles?: boolean;
+  taskIds?: number[];
 }
 
 export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionTaskDeletePreview {
@@ -9116,6 +9119,8 @@ export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionTaskDele
   removedFiles: number;
   /** @format int64 */
   removedBytes: number;
+  removedDirectories?: string[];
+  fileStatisticsIncomplete: boolean;
 }
 
 export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionTaskDeleteRow {

@@ -19,7 +19,8 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
 {
     private async Task<Plan> PreviewWholeTaskFilesAsync(AcquisitionTaskDbModel task, IReadOnlyList<int> owners,
         AcquisitionSupersededRunCleanup.Plan? stopped, bool intermediates, bool deliveries, bool skipVerification,
-        bool retryRetainedFiles, CancellationToken ct, Func<string, Task>? guard, string? borrowedOperation)
+        bool retryRetainedFiles, CancellationToken ct, Func<string, Task>? guard, string? borrowedOperation,
+        bool directDirectoryDeletion = false)
     {
         var ownerKeys = owners.Select(i => i.ToString(CultureInfo.InvariantCulture)).ToArray();
         // A continuation binding confers read access. Never offer the borrowed producer's
@@ -41,10 +42,11 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
             task.PlanRevision, task.WorkflowRunId ?? 0, false, owners.Order().ToArray(), publications, skipVerification, deliveries,
             AbandonUnfinishedFiles: task.Status != AcquisitionStatus.Completed, WholeTaskFiles: true);
         var authorization = Authorization(task, consent, stopped, retryRetainedFiles);
-        var roots = await PreviewStageDirectoriesForDeletionAsync(task, owners, authorization, intermediates, deliveries, ct, guard);
+        var roots = await PreviewStageDirectoriesForDeletionAsync(task, owners, authorization, intermediates, deliveries, ct, guard,
+            directDirectoryDeletion);
         var protectedOrSelectedRoots = roots.Select(r => r.RootDirectory).ToArray();
         var references = new ArtifactCleanupReferenceGuard(db, workspaces, cachePreviewReads: true);
-        var inputs = intermediates ? await PreviewAbandonedInputsAsync(operations, authorization, references,
+        var inputs = intermediates && !directDirectoryDeletion ? await PreviewAbandonedInputsAsync(operations, authorization, references,
             ct, guard, protectedOrSelectedRoots) : [];
         var candidates = roots.ToList();
         var ids = await db.Artifacts.AsNoTracking().Where(a => operations.Contains(a.OperationId) &&
@@ -53,12 +55,13 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
             .Select(a => a.Id).ToArrayAsync(ct);
         foreach (var id in ids)
         {
-            var registered = await WholeTaskArtifactAsync(task, authorization, id, intermediates, protectedOrSelectedRoots, references, ct, guard);
+            var registered = await WholeTaskArtifactAsync(task, authorization, id, intermediates, protectedOrSelectedRoots, references, ct, guard,
+                directDirectoryDeletion);
             if (registered != null) candidates.Add(registered);
         }
         // Old attempts may leave registered additions in a retired, privately allocated
         // result outside the current stage tree. Its existing capture receipt proves only those leaves.
-        var captured = intermediates ? (await PreviewCapturedInputsAsync(authorization, references, ct, guard))
+        var captured = intermediates && !directDirectoryDeletion ? (await PreviewCapturedInputsAsync(authorization, references, ct, guard))
             .Where(c => !protectedOrSelectedRoots.Any(r => SamePath(r, c.RootDirectory) ||
                 ArtifactCleanupPathReferences.StrictlyUnder(c.RootDirectory, r))).ToArray() : [];
         var groups = candidates.Select(c => c.Group).Concat(inputs.Select(c => c.Group))
@@ -74,7 +77,7 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
     // Never adopt the container or unregistered siblings as task-owned.
     private async Task<StageDirectoryCandidate?> WholeTaskArtifactAsync(AcquisitionTaskDbModel task,
         ArtifactDeliveryCleanupAuthorization authorization, string id, bool intermediates, IReadOnlyList<string> coveredRoots,
-        ArtifactCleanupReferenceGuard references, CancellationToken ct, Func<string, Task>? guard)
+        ArtifactCleanupReferenceGuard references, CancellationToken ct, Func<string, Task>? guard, bool directDirectoryDeletion = false)
     {
         var consent = authorization.Consent;
         var artifact = await artifacts.GetArtifactAsync(id, ct);
@@ -95,7 +98,7 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
             files, [], identities, new(proof, artifact.Kind, root, reason is null or "AlreadyAbsent", reason, [], files,
                 files.Count, files.Sum(f => f.Bytes), Shared: reason is "ReferencedPath" or "ReferencedArtifact" or "SharedOwner",
                 SizeUnknown: reason != null && reason != "AlreadyAbsent"), proof, intermediates, consent.DeleteDeliveredFiles)
-            {ManifestArtifactId = id, CoveredRoots = coveredRoots};
+            {ManifestArtifactId = id, CoveredRoots = coveredRoots, DirectDeletion = directDirectoryDeletion};
         await EnsureDirectoryAuthorizedAsync(root, guard);
         ArtifactManifestFiles.RejectLinks(root);
         if (!await authorization.IsCurrentAsync(ct)) return Result("SelectionChanged");
@@ -114,8 +117,18 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
             previewSupersededRuns: authorization.PreviewSupersededRuns)) return Result("ReferencedPath");
         var expected = artifact.Manifest.Entries.ToDictionary(e => e.RelativePath, StringComparer.Ordinal);
         if (!Directory.Exists(root))
-            return Result(delivery && Path.GetDirectoryName(root) is {} parent && ArtifactCleanupAbsence.Probe(parent, root, ct) ==
-                ArtifactCleanupPathPresence.ConfirmedAbsent ? "AlreadyAbsent" : "WorkspaceUnavailable");
+        {
+            if (directDirectoryDeletion) storage.EnsureTreeMutationAllowed(root);
+            return Result((delivery || directDirectoryDeletion) && Path.GetDirectoryName(root) is {} parent &&
+                ArtifactCleanupAbsence.Probe(parent, root, ct) == ArtifactCleanupPathPresence.ConfirmedAbsent
+                    ? "AlreadyAbsent" : "WorkspaceUnavailable");
+        }
+        if (directDirectoryDeletion)
+        {
+            files.AddRange(paths.Select(path => new AcquisitionTaskDeleteCleanupFile(path,
+                expected[ArtifactManifestFiles.RelativeFile(root, path)].Length)));
+            return Result(null);
+        }
         foreach (var path in paths)
         {
             await EnsureDirectoryAuthorizedAsync(path, guard);

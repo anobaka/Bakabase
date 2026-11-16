@@ -20271,6 +20271,8 @@ export interface components {
             reasonCodes: string[];
             closedRunIds?: number[];
             retainedDirectories?: string[];
+            removedDirectories?: string[];
+            fileStatisticsIncomplete: boolean;
         };
         "Bakabase.Service.Components.Acquisition.Planning.AcquisitionTaskDeleteInput": {
             previewId: string;
@@ -20280,6 +20282,7 @@ export interface components {
             removeTaskIfCleanupFails?: boolean;
             retryRetainedFiles?: boolean;
             deleteDeliveredFiles?: boolean;
+            taskIds?: number[];
         };
         "Bakabase.Service.Components.Acquisition.Planning.AcquisitionTaskDeletePreview": {
             previewId: string;
@@ -20342,6 +20345,8 @@ export interface components {
             removedFiles: number;
             /** Format: int64 */
             removedBytes: number;
+            removedDirectories?: string[];
+            fileStatisticsIncomplete: boolean;
         };
         "Bakabase.Service.Components.Acquisition.Planning.AcquisitionTaskDeleteRow": {
             /** Format: int32 */

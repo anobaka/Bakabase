@@ -31,6 +31,7 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
     {
         public string? ManifestArtifactId { get; init; }
         public IReadOnlyList<string> CoveredRoots { get; init; } = [];
+        public bool DirectDeletion { get; init; }
     }
 
     // An explicit accepted whole-task cleanup owns directory selections, not an old
@@ -38,7 +39,7 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
     internal async Task<IReadOnlyList<StageDirectoryCandidate>> PreviewStageDirectoriesForDeletionAsync(
         AcquisitionTaskDbModel task, IReadOnlyList<int> owners, ArtifactDeliveryCleanupAuthorization authorization,
         bool cleanupIntermediates, bool deleteDeliveredFiles, CancellationToken ct,
-        Func<string, Task>? guardDirectory = null)
+        Func<string, Task>? guardDirectory = null, bool directDirectoryDeletion = false)
     {
         if (workspaces == null || !authorization.Consent.CanDeleteWorkspace) return [];
         var plan = JsonSerializer.Deserialize<AcquisitionPlan>(task.PlanJson ?? "null", JsonSerializerOptions.Web);
@@ -57,7 +58,7 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
             if (result.Any(r => r.Group.Eligible && (ArtifactManifestFiles.PathComparer.Equals(r.RootDirectory, root) ||
                 ArtifactCleanupPathReferences.StrictlyUnder(root, r.RootDirectory)))) continue;
             result.Add(await InspectStageDirectoryForDeletionAsync(task, plan, candidate, selection, owners,
-                authorization, cleanupIntermediates, deleteDeliveredFiles, ct, guardDirectory));
+                authorization, cleanupIntermediates, deleteDeliveredFiles, ct, guardDirectory, directDirectoryDeletion));
         }
         return result;
     }
@@ -65,7 +66,7 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
     private async Task<StageDirectoryCandidate> InspectStageDirectoryForDeletionAsync(AcquisitionTaskDbModel task,
         AcquisitionPlan plan, StageCleanupSelection selected, StageCleanupSelectionSet selections, IReadOnlyList<int> owners,
         ArtifactDeliveryCleanupAuthorization authorization, bool cleanupIntermediates, bool deleteDeliveredFiles,
-        CancellationToken ct, Func<string, Task>? guardDirectory)
+        CancellationToken ct, Func<string, Task>? guardDirectory, bool directDirectoryDeletion = false)
     {
         var (partId, stage, entry) = (selected.PartId, selected.Stage, selected.Entry);
         var root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(entry.Directory));
@@ -77,8 +78,8 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
         StageDirectoryCandidate Result(string? reason) => new(id, task.Id, task.PlanRevision, partId, stage, root,
             binding, files, directories, identities, new(id, stage switch {"download" => "download", "delivery" => "publishedFiles", _ => "processedFiles"},
                 root, reason == null || reason == "AlreadyAbsent", reason, [], files, files.Count, files.Sum(f => f.Bytes),
-                Shared: reason is "ReferencedPath" or "SharedOwner" or "ActiveConsumer", SizeUnknown: reason != null && reason != "AlreadyAbsent"),
-            selected.Id, cleanupIntermediates, deleteDeliveredFiles);
+                Shared: reason is "ReferencedPath" or "SharedOwner" or "ActiveConsumer", SizeUnknown: directDirectoryDeletion || reason != null && reason != "AlreadyAbsent"),
+            selected.Id, cleanupIntermediates, deleteDeliveredFiles) {DirectDeletion = directDirectoryDeletion};
         try
         {
             await EnsureDirectoryAuthorizedAsync(root, guardDirectory);
@@ -133,6 +134,7 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
             if (!exists)
                 return Result(ArtifactCleanupAbsence.Probe(parent, root, ct) == ArtifactCleanupPathPresence.ConfirmedAbsent
                     ? "AlreadyAbsent" : "WorkspaceUnavailable");
+            if (directDirectoryDeletion) return Result(null);
             var pending = new Stack<(string Path, int Depth)>(); pending.Push((root, 0)); var count = 0;
             while (pending.TryPop(out var current))
             {
@@ -247,7 +249,7 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
             StageDirectoryCandidate? current;
             if (expected.ManifestArtifactId is {} artifactId)
                 current = await WholeTaskArtifactAsync(task, authorization, artifactId, expected.CleanupIntermediates, expected.CoveredRoots,
-                    new ArtifactCleanupReferenceGuard(db, workspaces), ct, null);
+                    new ArtifactCleanupReferenceGuard(db, workspaces), ct, null, expected.DirectDeletion);
             else
             {
                 var plan = JsonSerializer.Deserialize<AcquisitionPlan>(task.PlanJson ?? "null", JsonSerializerOptions.Web);
@@ -257,13 +259,14 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
                 var selected = selections.Selected.SingleOrDefault(s => s.Id == expected.SelectionId);
                 if (selected == null) return new(expected.Id, false, "SelectionChanged");
                 current = await InspectStageDirectoryForDeletionAsync(task, plan, selected, selections,
-                    authorization.Consent.OwnerRunIds, authorization, expected.CleanupIntermediates, expected.DeleteDeliveredFiles, ct, null);
+                    authorization.Consent.OwnerRunIds, authorization, expected.CleanupIntermediates, expected.DeleteDeliveredFiles, ct, null,
+                    expected.DirectDeletion);
             }
             if (current == null) return new(expected.Id, false, "SelectionChanged");
             if (!current.Group.Eligible) return new(expected.Id, false, current.Group.ReasonCode);
             if (current.RootDirectory != expected.RootDirectory || current.BindingFingerprint != expected.BindingFingerprint ||
-                current.FileIdentities.Any(p => !expected.FileIdentities.TryGetValue(p.Key, out var prior) || p.Value != prior) ||
-                current.Directories.Any(p => !expected.Directories.Contains(p, ArtifactManifestFiles.PathComparer)))
+                !expected.DirectDeletion && (current.FileIdentities.Any(p => !expected.FileIdentities.TryGetValue(p.Key, out var prior) || p.Value != prior) ||
+                current.Directories.Any(p => !expected.Directories.Contains(p, ArtifactManifestFiles.PathComparer))))
                 return new(expected.Id, false, "SelectionChanged");
             if (current.Group.ReasonCode == "AlreadyAbsent") return new(expected.Id, true, "AlreadyAbsent");
             if (expected.ManifestArtifactId != null && !authorization.Consent.SkipFileVerification)
@@ -281,7 +284,14 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
             ct.ThrowIfCancellationRequested();
             // Every current descendant was inspected for links and foreign claims above.
             // Root selection is frozen; there is no hash or old-manifest reconstruction.
-            if (!authorization.Consent.WholeTaskFiles)
+            if (current.DirectDeletion && current.ManifestArtifactId == null)
+            {
+                // Confirmation selects the owned directory's current contents. Recursive
+                // deletion unlinks directory symlinks instead of traversing their targets.
+                // No manifest, file timestamps or tree inventory is read beforehand.
+                Directory.Delete(current.RootDirectory, recursive: true);
+            }
+            else if (!authorization.Consent.WholeTaskFiles)
                 Directory.Delete(current.RootDirectory, recursive: true);
             else
             {
@@ -290,9 +300,12 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
                 foreach (var file in current.Files)
                 {
                     ct.ThrowIfCancellationRequested(); ArtifactManifestFiles.RejectLinks(file.Path);
-                    var leaf = new FileInfo(file.Path); leaf.Refresh();
-                    if (!leaf.Exists || JsonSerializer.Serialize(new {leaf.Length, leaf.CreationTimeUtc, leaf.LastWriteTimeUtc}) != current.FileIdentities[file.Path])
-                        throw new IOException("The selected file changed.");
+                    if (!current.DirectDeletion)
+                    {
+                        var leaf = new FileInfo(file.Path); leaf.Refresh();
+                        if (!leaf.Exists || JsonSerializer.Serialize(new {leaf.Length, leaf.CreationTimeUtc, leaf.LastWriteTimeUtc}) != current.FileIdentities[file.Path])
+                            throw new IOException("The selected file changed.");
+                    }
                     File.Delete(file.Path);
                     removed++;
                     removedBytes += file.Bytes;
@@ -304,9 +317,10 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
                         Directory.Delete(directory, recursive: false);
                     }
             }
-            var absent = current.ManifestArtifactId != null ? ArtifactCleanupAbsence.AllConfirmedAbsent(current.RootDirectory, current.Files.Select(f => f.Path).ToArray(), ct) :
-                ArtifactCleanupAbsence.Probe(Path.GetDirectoryName(current.RootDirectory)!, current.RootDirectory, ct)
-                == ArtifactCleanupPathPresence.ConfirmedAbsent;
+            var absent = current.DirectDeletion || (current.ManifestArtifactId != null
+                ? ArtifactCleanupAbsence.AllConfirmedAbsent(current.RootDirectory, current.Files.Select(f => f.Path).ToArray(), ct)
+                : ArtifactCleanupAbsence.Probe(Path.GetDirectoryName(current.RootDirectory)!, current.RootDirectory, ct)
+                    == ArtifactCleanupPathPresence.ConfirmedAbsent);
             await AcquisitionStageDirectoryCleanupReceipt.SaveAsync(maintenance.StageCleanupMetadataDirectory,
                 receipt with {Status = absent ? "Completed" : "Partial", FinishedAt = DateTime.UtcNow,
                     RemovedFiles = absent ? current.Files.Count : removed, RemovedBytes = absent ? current.Group.Bytes : removedBytes}, CancellationToken.None);

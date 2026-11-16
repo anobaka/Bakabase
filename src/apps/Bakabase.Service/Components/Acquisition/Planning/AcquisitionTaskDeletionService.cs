@@ -25,6 +25,12 @@ internal sealed record AcquisitionTaskDeleteOptions(bool CleanupFiles, bool Acce
     bool SkipFileVerification, bool RemoveTaskIfCleanupFails, bool RetryRetainedFiles = false, bool DeleteDeliveredFiles = false)
 {
     internal bool HasFileCleanup => CleanupFiles || DeleteDeliveredFiles;
+    internal static AcquisitionTaskDeleteOptions ForDirect(AcquisitionTaskDeleteInput input)
+    {
+        var files = input.CleanupFiles == true || input.DeleteDeliveredFiles == true;
+        return new(input.CleanupFiles == true, files, files, input.RemoveTaskIfCleanupFails == true,
+            input.RetryRetainedFiles == true, input.DeleteDeliveredFiles == true);
+    }
     internal static AcquisitionTaskDeleteOptions ForSubmit(AcquisitionTaskDeletePreview preview, AcquisitionTaskDeleteInput input)
     {
         var options = new AcquisitionTaskDeleteOptions(input.CleanupFiles ?? preview.CleanupFiles,
@@ -67,6 +73,7 @@ public sealed class AcquisitionTaskDeletePreviewStore
         internal Dictionary<int, (string Plan, AcquisitionDeletionWriters Writers)> Writers { get; init; } = new();
         public bool Claimed { get; set; }
         public AcquisitionTaskDeleteOptions? Options { get; set; }
+        internal string? DirectRequestKey { get; init; }
         public AcquisitionTaskDeleteResult? Result { get; set; }
         public AcquisitionTaskDeleteProgress Progress { get; set; } = new(Preview.PreviewId, "preview",
             Preview.TotalCount, 0, null, "rechecking", 0, 0, null, DateTimeOffset.UtcNow);
@@ -78,7 +85,16 @@ public sealed class AcquisitionTaskDeletePreviewStore
             lock (value)
                 if (Expired(value)) _entries.TryRemove(key, out _);
         if (_entries.Count >= 100) throw new ArgumentException("ACQUISITION_DELETE_PREVIEW_LIMIT");
-        _entries[entry.Preview.PreviewId] = entry;
+        if (entry.DirectRequestKey == null) _entries[entry.Preview.PreviewId] = entry;
+        else if (!_entries.TryAdd(entry.Preview.PreviewId, entry)) RequireDirectRequest(entry.Preview.PreviewId, entry.DirectRequestKey);
+    }
+    internal bool RequireDirectRequest(string id, string key)
+    {
+        if (!Guid.TryParseExact(id, "N", out _)) throw new ArgumentException("ACQUISITION_DELETE_OPTIONS_CHANGED");
+        if (!_entries.TryGetValue(id, out var entry)) return false;
+        lock (entry)
+            if (entry.DirectRequestKey != key) throw new ArgumentException("ACQUISITION_DELETE_OPTIONS_CHANGED");
+        return true;
     }
     private static bool Expired(Entry entry) => entry.Progress.State != "running" &&
         (entry.Claimed ? entry.Progress.UpdatedAt.AddMinutes(10) : entry.Preview.ExpiresAt) < DateTimeOffset.UtcNow;
@@ -101,7 +117,10 @@ public sealed class AcquisitionTaskDeletePreviewStore
         lock (entry)
         {
             if (Expired(entry)) throw new ArgumentException("ACQUISITION_DELETE_PREVIEW_EXPIRED");
-            var options = AcquisitionTaskDeleteOptions.ForSubmit(entry.Preview, input);
+            if (entry.DirectRequestKey != null && input.TaskIds == null)
+                throw new ArgumentException("ACQUISITION_DELETE_OPTIONS_CHANGED");
+            var options = entry.DirectRequestKey != null ? AcquisitionTaskDeleteOptions.ForDirect(input) :
+                AcquisitionTaskDeleteOptions.ForSubmit(entry.Preview, input);
             if (entry.Options != null && options != entry.Options) throw new ArgumentException("ACQUISITION_DELETE_OPTIONS_CHANGED");
             if (entry.Claimed && entry.Result == null) throw new ArgumentException("ACQUISITION_DELETE_OUTCOME_UNKNOWN");
             if (!entry.Claimed)
@@ -121,15 +140,19 @@ public sealed class AcquisitionTaskDeletionService(BakabaseDbContext db, IAcquis
     ILogger<AcquisitionTaskDeletionService>? logger = null)
 {
     public AcquisitionTaskDeleteProgress GetProgress(string previewId) => previews.ReadProgress(previewId);
-    public async Task<AcquisitionTaskDeletePreview> PreviewAsync(AcquisitionTaskDeletePreviewInput input, CancellationToken ct = default,
-        Func<string, Task>? guardDirectory = null)
+    public Task<AcquisitionTaskDeletePreview> PreviewAsync(AcquisitionTaskDeletePreviewInput input, CancellationToken ct = default,
+        Func<string, Task>? guardDirectory = null) => PrepareSelectionAsync(input, ct, guardDirectory);
+
+    private async Task<AcquisitionTaskDeletePreview> PrepareSelectionAsync(AcquisitionTaskDeletePreviewInput input, CancellationToken ct,
+        Func<string, Task>? guardDirectory, AcquisitionTaskDeleteInput? directRequest = null)
     {
         var started = Stopwatch.GetTimestamp();
         if (input.TaskIds == null || input.TaskIds.Count is 0 or > 10000 || input.TaskIds.Any(id => id <= 0))
             throw new ArgumentException("Choose between one and 10000 fixed acquisition task IDs.");
         var ids = input.TaskIds.Distinct().ToArray();
-        var options = new AcquisitionTaskDeleteOptions(input.CleanupFiles == true, input.AcceptDeliveredFiles == true,
-            input.SkipFileVerification == true, false, input.RetryRetainedFiles == true, input.DeleteDeliveredFiles == true);
+        var options = directRequest == null ? new AcquisitionTaskDeleteOptions(input.CleanupFiles == true, input.AcceptDeliveredFiles == true,
+            input.SkipFileVerification == true, false, input.RetryRetainedFiles == true, input.DeleteDeliveredFiles == true) :
+            AcquisitionTaskDeleteOptions.ForDirect(directRequest);
         options.Validate(ids.Length);
         if (options.HasFileCleanup && cleanup == null) throw new ArgumentException("CLEANUP_UNAVAILABLE");
         var tasks = await db.AcquisitionTasks.AsNoTracking().Where(t => ids.Contains(t.Id)).ToListAsync(ct);
@@ -149,7 +172,7 @@ public sealed class AcquisitionTaskDeletionService(BakabaseDbContext db, IAcquis
             return new AcquisitionTaskDeleteRow(id, task?.Title, reason == null, reason, CanRemoveTaskIfCleanupFails: !options.RetryRetainedFiles && reason == null);
         }).ToArray();
         var cleanupPlans = new Dictionary<int, AcquisitionTaskDeletionCleanupService.Plan>();
-        if (options.HasFileCleanup)
+        if (options.HasFileCleanup && directRequest == null)
             for (var i = 0; i < rows.Length; i++)
             {
                 var row = rows[i];
@@ -195,14 +218,15 @@ public sealed class AcquisitionTaskDeletionService(BakabaseDbContext db, IAcquis
         rows = rows.Select(row => row.Cleanup == null ? row : row with {Cleanup = row.Cleanup with
             {Groups = row.Cleanup.Groups.Select(g => g with {Files = g.Files.Take(200).ToArray(), FilesTruncated = g.Files.Count > 200}).ToArray()}}).ToArray();
         var ready = rows.Where(r => r.CanDelete).Select(r => r.TaskId).ToHashSet();
-        var preview = new AcquisitionTaskDeletePreview(Guid.NewGuid().ToString("N"), DateTimeOffset.UtcNow.AddMinutes(10),
+        var preview = new AcquisitionTaskDeletePreview(directRequest?.PreviewId ?? Guid.NewGuid().ToString("N"), DateTimeOffset.UtcNow.AddMinutes(10),
             ids.Length, ready.Count, ids.Length - ready.Count, rows, options.CleanupFiles,
             input.AcceptDeliveredFiles == true, uniqueFiles.Count, uniqueFiles.Sum(f => f.Bytes), identifiedFiles.Count,
             identifiedFiles.Sum(f => f.Bytes), options.HasFileCleanup && rows.Any(r => r.Cleanup?.SizeIncomplete != false),
             input.SkipFileVerification == true, options.RetryRetainedFiles, options.DeleteDeliveredFiles);
         var confirmed = rows.Where(r => r.CanDelete || r.CanRemoveTaskIfCleanupFails).Select(r => r.TaskId).ToHashSet();
         previews.Add(new(preview, tasks.Where(t => confirmed.Contains(t.Id)).ToDictionary(t => t.Id, t => Version(t, states[t.Id])),
-            states.Where(s => confirmed.Contains(s.Key)).ToDictionary(s => s.Key, s => s.Value.RunIds), cleanupPlans) { Writers = writers });
+            states.Where(s => confirmed.Contains(s.Key)).ToDictionary(s => s.Key, s => s.Value.RunIds), cleanupPlans)
+            { Writers = writers, DirectRequestKey = directRequest == null ? null : DirectRequestKey(directRequest) });
         logger?.LogInformation("Acquisition deletion preview for {TaskCount} tasks took {ElapsedMs} ms. File cleanup requested: {CleanupRequested}; skip content checks: {SkipContentChecks}",
             ids.Length, Stopwatch.GetElapsedTime(started).TotalMilliseconds, options.HasFileCleanup, options.SkipFileVerification);
         return preview;
@@ -211,11 +235,21 @@ public sealed class AcquisitionTaskDeletionService(BakabaseDbContext db, IAcquis
     public async Task<AcquisitionTaskDeleteResult> DeleteAsync(AcquisitionTaskDeleteInput input, CancellationToken ct = default,
         Func<string, Task>? guardDirectory = null)
     {
+        if (input.TaskIds != null)
+        {
+            AcquisitionTaskDeleteOptions.ForDirect(input).Validate(input.TaskIds.Distinct().Count());
+            if (!previews.RequireDirectRequest(input.PreviewId, DirectRequestKey(input)))
+                // Only task identities and activity are read here. Files are resolved once,
+                // after confirmation and under the task/run mutation gates.
+                await PrepareSelectionAsync(new(input.TaskIds, RetryRetainedFiles: input.RetryRetainedFiles),
+                    ct, guardDirectory, input);
+        }
         var entry = previews.Claim(input);
         if (entry.Result is {} saved)
         {
             // Another session may hold the same idempotency key. Re-authorize paths in the response.
-            foreach (var path in (saved.CleanupResults ?? []).SelectMany(r => r.RetainedDirectories ?? []).Distinct())
+            foreach (var path in (saved.CleanupResults ?? [])
+                         .SelectMany(r => (r.RetainedDirectories ?? []).Concat(r.RemovedDirectories ?? [])).Distinct())
                 await cleanup!.EnsureDirectoryAuthorizedAsync(path, guardDirectory);
             return saved;
         }
@@ -307,7 +341,8 @@ public sealed class AcquisitionTaskDeletionService(BakabaseDbContext db, IAcquis
                 if (entry.Runs[id].Any(blockedRuns.Contains)) return "ACQUISITION_TASK_ACTIVE";
                 return Version(task!, state!) != versions[id] ? "ACQUISITION_TASK_CHANGED" : null;
             }
-            if (options.HasFileCleanup && (entry.Writers.Count > 0 || !entry.Preview.CleanupFiles && !entry.Preview.DeleteDeliveredFiles))
+            if (options.HasFileCleanup && entry.DirectRequestKey == null &&
+                (entry.Writers.Count > 0 || !entry.Preview.CleanupFiles && !entry.Preview.DeleteDeliveredFiles))
             {
                 // The user confirmed the task IDs and cleanup policy without opening an inventory.
                 // Resolve the whole fixed selection in their current access scope before any mutation.
@@ -320,7 +355,8 @@ public sealed class AcquisitionTaskDeletionService(BakabaseDbContext db, IAcquis
                     {
                         var plan = await cleanup.PreviewAsync(current[id], entry.Runs[id], options.AcceptDeliveredFiles,
                             options.SkipFileVerification, ct, guardDirectory, options.RetryRetainedFiles,
-                            cleanupIntermediates: options.CleanupFiles, deleteDeliveredFiles: options.DeleteDeliveredFiles);
+                            cleanupIntermediates: options.CleanupFiles, deleteDeliveredFiles: options.DeleteDeliveredFiles,
+                            directDirectoryDeletion: entry.DirectRequestKey != null);
                         plans[id] = plan;
                     }
                     catch (Exception error) when (error is UnauthorizedAccessException or UserStoragePathException)
@@ -347,6 +383,27 @@ public sealed class AcquisitionTaskDeletionService(BakabaseDbContext db, IAcquis
                     if (reason != null) {skipped.Add(new(id, reason)); taskFinished = true; continue;}
                     if (options.HasFileCleanup)
                     {
+                        if (entry.DirectRequestKey != null)
+                        {
+                            try
+                            {
+                                // Resolve and delete one task at a time. A large fixed selection
+                                // never has to wait for every directory before its first removal.
+                                plans[id] = await cleanup!.PreviewAsync(task!, entry.Runs[id], true, true, ct,
+                                    guardDirectory, options.RetryRetainedFiles, options.CleanupFiles,
+                                    options.DeleteDeliveredFiles, directDirectoryDeletion: true);
+                            }
+                            catch (Exception error) when (error is UnauthorizedAccessException or UserStoragePathException)
+                            {
+                                skipped.Add(new(id, StorageBlockReason(error)));
+                                taskFinished = true;
+                                continue;
+                            }
+                            catch (Exception error) when (error is System.IO.IOException or InvalidOperationException or ArgumentException or JsonException)
+                            {
+                                logger?.LogWarning(error, "Could not resolve acquisition directories for task {TaskId}", id);
+                            }
+                        }
                         var plan = plans.GetValueOrDefault(id);
                         Report(entry, p => p with { Phase = "cleaning" });
                         var priorFiles = cleanupResults.Sum(r => r.RemovedFiles);
@@ -398,7 +455,9 @@ public sealed class AcquisitionTaskDeletionService(BakabaseDbContext db, IAcquis
                 }
             }
             var result = new AcquisitionTaskDeleteResult(deleted, skipped, cleanupResults,
-                cleanupResults.Sum(r => r.RemovedFiles), cleanupResults.Sum(r => r.RemovedBytes));
+                cleanupResults.Sum(r => r.RemovedFiles), cleanupResults.Sum(r => r.RemovedBytes),
+                cleanupResults.SelectMany(r => r.RemovedDirectories ?? []).Distinct(ArtifactManifestFiles.PathComparer).ToArray(),
+                cleanupResults.Any(r => r.FileStatisticsIncomplete));
             lock (entry)
             {
                 entry.Result = result;
@@ -424,6 +483,8 @@ public sealed class AcquisitionTaskDeletionService(BakabaseDbContext db, IAcquis
     {
         lock (entry) entry.Progress = update(entry.Progress) with { UpdatedAt = DateTimeOffset.UtcNow };
     }
+    private static string DirectRequestKey(AcquisitionTaskDeleteInput input) => JsonSerializer.Serialize(new
+        { TaskIds = input.TaskIds!.Distinct().Order().ToArray(), Options = AcquisitionTaskDeleteOptions.ForDirect(input) });
     private static string StorageBlockReason(Exception error) =>
         error is UserStoragePathException {MountUnavailable: true} ? "WorkspaceUnavailable" : "CLEANUP_PATH_NOT_AUTHORIZED";
     private static string? BlockReason(AcquisitionTaskDbModel? task, AcquisitionDeletionActivity? state, bool retryRetainedFiles = false)
