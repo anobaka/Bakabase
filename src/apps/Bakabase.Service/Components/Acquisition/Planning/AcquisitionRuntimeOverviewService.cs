@@ -235,15 +235,15 @@ public sealed class AcquisitionRuntimeOverviewService(BakabaseDbContext db, IAcq
                 problemCode = failureCode is not (null or "SOURCE_ATTENTION_REQUIRED") ? failureCode :
                     processingWaitCode ?? problemCodes.FirstOrDefault() ?? problemCode;
             }
-            var allBytes = leaves.Length > 0 && leaves.All(d => d.CompletedBytes.HasValue);
-            var allTotals = leaves.Length > 0 && leaves.All(d => d.TotalBytes.HasValue);
-            var completedBytes = allBytes ? leaves.Sum(d => d.CompletedBytes!.Value) : (long?) null;
-            var totalBytes = allTotals ? leaves.Sum(d => d.TotalBytes!.Value) : (long?) null;
-            var active = leaves.Where(d => d.Status == "running").ToArray();
+            var completedBytes = SumBytes(leaves, d => d.CompletedBytes);
+            var totalBytes = SumBytes(leaves, d => d.TotalBytes);
+            var active = leaves.Where(IsTransferring).ToArray();
+            var speed = active.Length > 0 && active.All(d => d.SpeedBytesPerSecond is >= 0)
+                ? active.Sum(d => d.SpeedBytesPerSecond!.Value) : (double?)null;
             var downloading = kind?.StartsWith("download.", StringComparison.Ordinal) == true || kind is "cloud.download" or "acquisition.fetchSupported";
             var transferPhase = leaves.All(d => d.Stage is not ("Verifying" or "Preparing" or "Reusing" or "Checking"));
             double? progress = downloading && !completed && transferPhase ? leaves.Length == 1 ? leaves[0].Progress :
-                allBytes && allTotals && totalBytes > 0 ? 100d * completedBytes / totalBytes : null : null;
+                totalBytes > 0 ? 100d * completedBytes / totalBytes : null : null;
             if (progress.HasValue && (!double.IsFinite(progress.Value) || progress is < 0 or > 100)) progress = null;
             (string? Stage, int? Progress) files = default;
             if (!downloading && run?.Status == WorkflowRunStatus.Running &&
@@ -255,8 +255,12 @@ public sealed class AcquisitionRuntimeOverviewService(BakabaseDbContext db, IAcq
                 Progress = progress ?? files.Progress, ProgressScope = progress.HasValue ? "download" :
                     files.Stage == "extractingArchive" ? "archive" : files.Stage != null ? "processing" : null,
                 CompletedBytes = completedBytes, TotalBytes = totalBytes,
-                SpeedBytesPerSecond = active.Length > 0 && active.All(d => d.SpeedBytesPerSecond is >= 0) ? active.Sum(d => d.SpeedBytesPerSecond!.Value) : null,
-                BytesPartial = leaves.Any(d => d.CompletedBytes.HasValue) && !allBytes || leaves.Any(d => d.TotalBytes.HasValue) && !allTotals,
+                SpeedBytesPerSecond = speed.HasValue && double.IsFinite(speed.Value) ? speed : null,
+                EstimatedRemainingSeconds = downloading && !completed && !attention &&
+                    bound.All(id => excludedDownloads.Contains(id) || matching.Any(d => d.Id == id || d.ParentId == id)) &&
+                    (targets.Count(t => !t.Excluded) <= 1 || targets.Where(t => !t.Excluded && t.DownloadArtifactId == null)
+                        .All(t => run != null && targetBindings.ContainsKey((run.Id, t.Id)))) ? RemainingSeconds(leaves) : null,
+                BytesPartial = leaves.Any(d => d.CompletedBytes.HasValue) && completedBytes == null || leaves.Any(d => d.TotalBytes.HasValue) && totalBytes == null,
                 DownloadCount = leaves.Length, ActiveDownloadCount = leaves.Count(d => d.Status is "running" or "queued" or "stopping"),
                 CompletedDownloadCount = leaves.Count(d => d.Status == "completed"), FailedDownloadCount = completed ? 0 : leaves.Count(d => d.Status == "failed"),
                 DownloadActivity = downloadActivity?.Activity,
@@ -272,6 +276,38 @@ public sealed class AcquisitionRuntimeOverviewService(BakabaseDbContext db, IAcq
     }
 
     // Keep the archive tool's measured percentage separate from the whole workflow's step counter.
+    private static bool IsTransferring(AcquisitionRuntimeDownload download) =>
+        download.Status == "running" && download.Stage is null or "Downloading";
+
+    private static long? SumBytes(AcquisitionRuntimeDownload[] downloads, Func<AcquisitionRuntimeDownload, long?> counter)
+    {
+        long sum = 0;
+        foreach (var download in downloads)
+        {
+            if (counter(download) is not long value || value < 0 || value > long.MaxValue - sum) return null;
+            sum += value;
+        }
+        return downloads.Length == 0 ? null : sum;
+    }
+
+    private static long? RemainingSeconds(AcquisitionRuntimeDownload[] leaves)
+    {
+        long? slowest = null;
+        foreach (var download in leaves)
+        {
+            if (download.Status == "completed") continue;
+            if (!IsTransferring(download) || download.SpeedBytesPerSecond is not double rate || !double.IsFinite(rate) || rate <= 0 ||
+                download.TotalBytes is not long total || total <= 0 || download.CompletedBytes is not long done ||
+                done < 0 || done >= total) return null;
+            // Concurrent transfers finish when the last independent file finishes. A task
+            // still at 100% may be checking its bytes before publication.
+            var seconds = Math.Ceiling((total - done) / rate);
+            if (seconds > TimeSpan.MaxValue.TotalSeconds) return null;
+            slowest = Math.Max(slowest ?? 0, (long)seconds);
+        }
+        return slowest;
+    }
+
     internal static (string? Stage, int? Progress) CurrentFileProgress(int runId, int? step, string? kind,
         WorkflowTaskProgress live)
     {

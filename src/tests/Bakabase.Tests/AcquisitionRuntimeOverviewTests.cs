@@ -170,6 +170,60 @@ public sealed class AcquisitionRuntimeOverviewTests
     }
 
     [TestMethod]
+    public async Task Parallel_downloads_show_combined_speed_but_finish_when_the_slowest_leaf_finishes()
+    {
+        var (task, _) = await Seed([Target(download: 42), Target("extra", download: 43), Target("done", download: 44)],
+            "download.awaitCompletion", WorkflowRunStatus.Running);
+        _reader.Values = [
+            new("site:42", null, null, "running", 50, 50, 100, At, null, 10),
+            new("site:43", null, null, "running", 50, 50, 100, At, null, 3, "Downloading"),
+            new("site:44", null, null, "completed", 100, null, null, At, null, 999)];
+        var result = await Read(task.Id);
+        Assert.AreEqual(13d, result.SpeedBytesPerSecond);
+        Assert.AreEqual(17L, result.EstimatedRemainingSeconds);
+        Assert.AreEqual(2, result.ActiveDownloadCount);
+    }
+
+    [DataTestMethod]
+    [DataRow("queued", null, 4d, 50L, 100L)]
+    [DataRow("stopping", null, 4d, 50L, 100L)]
+    [DataRow("failed", null, 4d, 50L, 100L)]
+    [DataRow("running", "Checking", 4d, 50L, 100L)]
+    [DataRow("running", "Reusing", 4d, 50L, 100L)]
+    [DataRow("running", null, 0d, 50L, 100L)]
+    [DataRow("running", null, 4d, null, 100L)]
+    [DataRow("running", null, 4d, 50L, null)]
+    [DataRow("running", null, 4d, 100L, 100L)]
+    [DataRow("running", null, 4d, 120L, 100L)]
+    [DataRow("running", null, double.PositiveInfinity, 0L, 100L)]
+    [DataRow("running", null, double.Epsilon, 0L, 100L)]
+    public async Task Each_unfinished_leaf_requires_trustworthy_transfer_counters_for_eta(string status, string? stage,
+        double rate, long? done, long? total)
+    {
+        var (task, _) = await Seed([Target(download: 42), Target("other", download: 43)], "download.awaitCompletion", WorkflowRunStatus.Running);
+        _reader.Values = [new("site:42", null, null, "running", 50, 50, 100, At, null, 10),
+            new("site:43", null, null, status, null, done, total, At, null, rate, stage)];
+        var result = await Read(task.Id);
+        Assert.IsNull(result.EstimatedRemainingSeconds);
+        if (status != "running" || stage != null) Assert.AreEqual(10d, result.SpeedBytesPerSecond);
+        if (!double.IsFinite(rate)) Assert.IsNull(result.SpeedBytesPerSecond);
+    }
+
+    [TestMethod]
+    public async Task Missing_native_group_and_overflowing_byte_totals_do_not_break_the_other_download()
+    {
+        var (task, _) = await Seed([Target(download: 42), Target("other", download: 43)], "download.awaitCompletion", WorkflowRunStatus.Running);
+        _reader.Values = [new("site:42", null, null, "running", 50, long.MaxValue - 10, long.MaxValue, At, null, 1)];
+        Assert.IsNull((await Read(task.Id)).EstimatedRemainingSeconds);
+        _reader.Values = [.._reader.Values, new("site:43", null, null, "running", 75, 75, 100, At, null, 1)];
+        var result = await Read(task.Id);
+        Assert.IsNull(result.TotalBytes);
+        Assert.IsNull(result.CompletedBytes);
+        Assert.IsTrue(result.BytesPartial);
+        Assert.AreEqual(25L, result.EstimatedRemainingSeconds);
+    }
+
+    [TestMethod]
     public async Task NativeOutputWithoutCheckpointTaskIdStillBindsAndVerifyingHidesObsoletePercentage()
     {
         var (task, _) = await Seed([Target()], "download.awaitCompletion", WorkflowRunStatus.Running);

@@ -20,6 +20,7 @@ public sealed record AcquisitionRuntimeOverview
     public long? CompletedBytes { get; init; }
     public long? TotalBytes { get; init; }
     public double? SpeedBytesPerSecond { get; init; }
+    public long? EstimatedRemainingSeconds { get; init; }
     public bool BytesPartial { get; init; }
     public int DownloadCount { get; init; }
     public int ActiveDownloadCount { get; init; }
