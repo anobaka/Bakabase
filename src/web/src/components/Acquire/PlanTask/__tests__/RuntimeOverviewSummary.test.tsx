@@ -111,6 +111,14 @@ it.each([
   expect(screen.queryByText("Specific storage failure from the current execution")).toBeNull();
   expect(screen.queryByRole("dialog")).toBeNull();
 });
+it.each(["CLOUD_RANGE_UNCONFIRMED", "CLOUD_PARTIAL_IDENTITY_UNVERIFIED", "CLOUD_DOWNLOAD_CHECKSUM_MISMATCH"])(
+  "explains preserved partial downloads for %s in the task itself", (code) => {
+    render(<RuntimeOverviewSummary overview={overview({ workflowStatus: "waiting", currentNodeKind: "download.awaitCompletion",
+      problemCode: code, problem: code })} showSources={false} />);
+    expect(screen.getByText(cloud[`cloudDownload.problemCode.${code}` as keyof typeof cloud])).toBeVisible();
+    expect(screen.queryByText(code)).toBeNull();
+  },
+);
 it("shows an uncertain Baidu failure inline and exposes URL, code and historical evidence without checking the source", () => {
   render(
     <RuntimeOverviewSummary

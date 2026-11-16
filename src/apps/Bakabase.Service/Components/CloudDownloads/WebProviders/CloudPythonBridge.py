@@ -10,6 +10,7 @@ import json
 import os
 from pathlib import Path
 import re
+import stat
 import sys
 import time
 import urllib.parse
@@ -437,6 +438,75 @@ def atomic_json(path, value):
         os.chmod(path, 0o600)
 
 
+def http_original(session, entry, part, provider, progress):
+    # A resumed body is publishable only after the provider's checksum validates the entire file.
+    # operation/URL/destination/manifest have already been matched by run().
+    expected_size = entry["size"]
+    if part.is_symlink():
+        raise BridgeError("Symbolic links are not supported in partial files")
+    flags = os.O_RDWR | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
+    with os.fdopen(os.open(part, flags, 0o600), "r+b") as target:
+        info = os.fstat(target.fileno())
+        if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
+            raise BridgeError("The partial file is not exclusive to this download")
+        # GoFile has no strong content digest. Its existing full-file retry remains separate.
+        offset = info.st_size if provider == "pixeldrain" else 0
+        checksum = entry.get("sha256")
+        if offset and (offset > expected_size or not checksum):
+            raise BridgeError("CLOUD_PARTIAL_IDENTITY_UNVERIFIED: Cannot verify the existing partial file against the original. Its bytes were retained.")
+        if not offset or offset < expected_size:
+            headers = {"Accept-Encoding": "identity"}
+            if offset:
+                headers["Range"] = f"bytes={offset}-"
+            with session.get(entry["url"], headers=headers, stream=True, timeout=(20, 60), allow_redirects=False) as response:
+                status = getattr(response, "status_code", 200)
+                if offset and status == 416:
+                    raise BridgeError("CLOUD_RANGE_UNCONFIRMED: The source rejected the requested byte range. The existing partial file was retained.")
+                if provider == "pixeldrain" and status >= 400:
+                    try:
+                        body = response.json()
+                        value = body.get("value", "") if isinstance(body, dict) else ""
+                    except (ValueError, TypeError):
+                        value = ""
+                    raise pixeldrain_failure(status, value)
+                response.raise_for_status()
+                response_headers = getattr(response, "headers", {})
+                content_range = response_headers.get("Content-Range")
+                if offset:
+                    match = re.fullmatch(r"bytes ([0-9]{1,20})-([0-9]{1,20})/([0-9]{1,20})", content_range or "", re.I)
+                    if status != 206 or not match or tuple(map(int, match.groups())) != (offset, expected_size - 1, expected_size):
+                        raise BridgeError("CLOUD_RANGE_UNCONFIRMED: The source did not confirm the requested byte range. The existing partial file was retained.")
+                elif status != 200 or content_range:
+                    raise BridgeError("Unexpected public-share response to the original file request")
+                if response_headers.get("Content-Encoding", "identity").lower() != "identity":
+                    raise BridgeError("CLOUD_RANGE_UNCONFIRMED: The source returned encoded bytes instead of the original representation")
+                length = response_headers.get("Content-Length")
+                if length is not None and (not re.fullmatch(r"[0-9]{1,20}", length) or int(length) != expected_size - offset):
+                    raise BridgeError("CLOUD_RANGE_UNCONFIRMED: The original response length does not match the file manifest")
+                target.seek(offset)
+                if not offset:
+                    target.truncate(0)
+                if offset:
+                    progress(offset, expected_size)
+                for chunk in response.iter_content(512 * 1024):
+                    if target.tell() + len(chunk) > expected_size:
+                        target.truncate(offset)
+                        raise BridgeError("CLOUD_RANGE_UNCONFIRMED: Original file exceeds manifest size")
+                    target.write(chunk)
+                    progress(target.tell(), expected_size)
+                if target.tell() != expected_size:
+                    raise BridgeError("Original file is incomplete")
+        target.flush()
+        actual_hash = sha256(part)
+        if checksum and actual_hash.lower() != checksum.lower():
+            target.truncate(offset)
+            raise BridgeError("CLOUD_DOWNLOAD_CHECKSUM_MISMATCH: Original file SHA256 mismatch")
+        if entry.get("md5") and file_hash(part, "md5").lower() != entry["md5"].lower():
+            target.truncate(offset)
+            raise BridgeError("CLOUD_DOWNLOAD_CHECKSUM_MISMATCH: Original file checksum mismatch")
+    return actual_hash
+
+
 def run(request):
     validate_url(request["provider"], request["url"])
     output = Path(request["output"])
@@ -477,16 +547,29 @@ def run(request):
     manifest_path = state / "manifest.json"
     identity = hashlib.sha256(json.dumps([request["provider"], request["url"], request.get("accessCode"), str(output.resolve())]).encode()).hexdigest()
     persisted = {"identity": identity, "files": manifest}
+    staging = output / staging_name
+    if staging.is_symlink():
+        raise BridgeError("Symbolic links are not supported")
+    upgrade_manifest = False
     if manifest_path.exists():
-        if json.loads(manifest_path.read_text()) != persisted:
-            raise BridgeError("Share contents or destination changed; create a new download operation")
+        recorded = json.loads(manifest_path.read_text())
+        if recorded != persisted:
+            # Older file descriptors could omit SHA256. Only add the provider's checksum
+            # when the operation and every previously frozen descriptor still match.
+            old_files = recorded.get("files") if isinstance(recorded, dict) else None
+            if not (request["provider"] == "pixeldrain" and isinstance(recorded, dict) and recorded.get("identity") == identity and
+                    isinstance(old_files, list) and len(old_files) == len(manifest) and
+                    all(isinstance(old, dict) and current["sha256"] and
+                        dict(old, sha256=current["sha256"] if old.get("sha256") is None else old["sha256"]) == current
+                        for old, current in zip(old_files, manifest))):
+                raise BridgeError("CLOUD_PARTIAL_IDENTITY_UNVERIFIED: Share contents or destination changed; create a new download operation")
+            upgrade_manifest = True
     else:
+        if staging.exists() and any(staging.iterdir()):
+            raise BridgeError("CLOUD_PARTIAL_IDENTITY_UNVERIFIED: An existing partial download is missing its original operation manifest")
         atomic_json(manifest_path, persisted)
     receipt_path = state / "completed.json"
     receipts = json.loads(receipt_path.read_text()) if receipt_path.exists() else {}
-    staging = output / (".bakabase-cloud-" + state.name)
-    if staging.is_symlink():
-        raise BridgeError("Symbolic links are not supported")
     staging.mkdir(mode=0o700, exist_ok=True)
     completed = []
     completed_bytes = 0
@@ -497,7 +580,9 @@ def run(request):
         destination = beneath(output, entry["path"])
         receipt = receipts.get(entry["path"])
         if destination.exists():
-            if not destination.is_file() or not receipt or destination.stat().st_size != receipt["size"] or sha256(destination) != receipt["sha256"]:
+            if (not destination.is_file() or not receipt or destination.stat().st_size != receipt["size"] or
+                    (entry.get("sha256") and receipt["sha256"].lower() != entry["sha256"].lower()) or
+                    sha256(destination) != receipt["sha256"]):
                 raise BridgeError("Destination already exists and is not a verified result of this operation")
             completed.append(str(destination))
             completed_bytes += destination.stat().st_size
@@ -520,36 +605,10 @@ def run(request):
                                         resume=True, timeout=(20, 60), retries=2, progress=progress)
             if result != str(part) or not part.is_file():
                 raise BridgeError("gdown did not produce the expected file")
+            checksum = sha256(part)
         else:
-            # Restart the current file; completed files resume from receipts. Requests checks transfer truncation too.
-            with session.get(entry["url"], stream=True, timeout=(20, 60), allow_redirects=False) as response:
-                if request["provider"] == "pixeldrain" and getattr(response, "status_code", 200) >= 400:
-                    value = ""
-                    try:
-                        body = response.json()
-                        value = body.get("value", "") if isinstance(body, dict) else ""
-                    except (ValueError, TypeError):
-                        pass
-                    raise pixeldrain_failure(response.status_code, value)
-                response.raise_for_status()
-                if response.is_redirect:
-                    raise BridgeError("Unexpected public-share download redirect")
-                written = 0
-                with part.open("wb") as target:
-                    for chunk in response.iter_content(512 * 1024):
-                        target.write(chunk)
-                        written += len(chunk)
-                        if written > entry["size"]:
-                            raise BridgeError("Original file exceeds manifest size")
-                        progress(written, entry["size"])
-            if part.stat().st_size != entry["size"]:
-                raise BridgeError("Original file is incomplete")
-            if entry.get("md5"):
-                if file_hash(part, "md5").lower() != entry["md5"].lower():
-                    raise BridgeError("GoFile checksum mismatch")
-            if entry.get("sha256") and sha256(part).lower() != entry["sha256"].lower():
-                raise BridgeError("Original file SHA256 mismatch")
-        receipts[entry["path"]] = {"size": part.stat().st_size, "sha256": sha256(part)}
+            checksum = http_original(session, entry, part, request["provider"], progress)
+        receipts[entry["path"]] = {"size": part.stat().st_size, "sha256": checksum}
         atomic_json(receipt_path, receipts)
         # Hard-link publication fails if anything already exists; never overwrite the user's file.
         beneath(output, entry["path"])
@@ -561,6 +620,8 @@ def run(request):
         completed.append(str(destination))
         completed_bytes += receipts[entry["path"]]["size"]
         emit({"type": "progress", "stage": "downloading", "percentage": 100 * (index + 1) / len(entries), "completedBytes": completed_bytes, "totalBytes": total_bytes})
+    if upgrade_manifest:
+        atomic_json(manifest_path, persisted)
     try:
         staging.rmdir()
     except OSError:

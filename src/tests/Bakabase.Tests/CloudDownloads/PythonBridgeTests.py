@@ -17,6 +17,34 @@ bridge = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(bridge)
 
 
+class RangeSession:
+    def __init__(self, status, headers, chunks):
+        self.status_code = status
+        self.headers = headers
+        self.chunks = chunks
+        self.requests = []
+
+    def get(self, url, **kwargs):
+        self.requests.append(kwargs["headers"])
+        return self
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        pass
+
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            raise AssertionError("Unexpected unhandled error response")
+
+    def iter_content(self, _size):
+        for chunk in self.chunks:
+            if isinstance(chunk, Exception):
+                raise chunk
+            yield chunk
+
+
 class FakeExtractor:
     api_token = "private-fixture-token"
 
@@ -208,6 +236,123 @@ class BridgeTests(unittest.TestCase):
                 response.body = b"abcde"
                 bridge.run(request)
                 self.assertEqual(b"abcde", (root / "output/original.rar").read_bytes())
+
+    def test_http_resumes_a_verified_original_at_the_exact_offset_and_reuses_completed_part(self):
+        body = b"abcdefghij"
+        entry = {"url": "https://pixeldrain.com/api/file/fixture", "size": len(body), "sha256": hashlib.sha256(body).hexdigest()}
+        with tempfile.TemporaryDirectory() as temp:
+            part = Path(temp) / "local.part"
+            part.write_bytes(body[:4])
+            session = RangeSession(206, {"Content-Range": "bytes 4-9/10", "Content-Length": "6"}, [body[4:]])
+            events = []
+            actual = bridge.http_original(session, entry, part, "pixeldrain", lambda *v: events.append(v))
+            self.assertEqual(body, part.read_bytes())
+            self.assertEqual(entry["sha256"], actual)
+            self.assertEqual([{"Accept-Encoding": "identity", "Range": "bytes=4-"}], session.requests)
+            self.assertEqual([(4, 10), (10, 10)], events)
+            self.assertEqual(actual, bridge.http_original(session, entry, part, "pixeldrain", lambda *_: None))
+            self.assertEqual(1, len(session.requests))
+
+    def test_http_range_refusals_leave_the_original_partial_untouched(self):
+        body = b"abcdef"
+        entry = {"url": "https://pixeldrain.com/api/file/fixture", "size": 6, "sha256": hashlib.sha256(body).hexdigest()}
+        normal = {"Content-Range": "bytes 2-5/6", "Content-Length": "4"}
+        cases = [(200, {}, body), (416, {}, b""),
+                 (206, {"Content-Range": "bytes 0-5/6"}, body), (206, {"Content-Range": "bytes 2-4/6"}, b"cde"),
+                 (206, {"Content-Range": "bytes 2-5/8"}, body[2:]), (206, {}, body[2:]),
+                 (206, dict(normal, **{"Content-Encoding": "gzip"}), body[2:]),
+                 (206, dict(normal, **{"Content-Length": "5"}), body[2:]), (206, normal, b"wrong"), (206, normal, b"nope")]
+        with tempfile.TemporaryDirectory() as temp:
+            part = Path(temp) / "local.part"
+            for status, headers, payload in cases:
+                with self.subTest(status=status, headers=headers, payload=payload):
+                    part.write_bytes(body[:2])
+                    with self.assertRaises(bridge.BridgeError):
+                        bridge.http_original(RangeSession(status, headers, [payload]), entry, part, "pixeldrain", lambda *_: None)
+                    self.assertEqual(body[:2], part.read_bytes())
+            for existing, checksum in [(body[:2], None), (body + b"long", entry["sha256"]), (b"wrong!", entry["sha256"])]:
+                part.write_bytes(existing)
+                session = RangeSession(200, {}, [body])
+                with self.assertRaises(bridge.BridgeError):
+                    bridge.http_original(session, dict(entry, sha256=checksum), part, "pixeldrain", lambda *_: None)
+                self.assertEqual([], session.requests)
+                self.assertEqual(existing, part.read_bytes())
+
+    def test_http_range_interruption_keeps_new_bytes_and_next_request_fetches_only_the_rest(self):
+        body = b"abcdef"
+        entry = {"url": "https://pixeldrain.com/api/file/fixture", "size": 6, "sha256": hashlib.sha256(body).hexdigest()}
+        with tempfile.TemporaryDirectory() as temp:
+            part = Path(temp) / "local.part"
+            part.write_bytes(body[:2])
+            with self.assertRaises(ConnectionError):
+                bridge.http_original(RangeSession(206, {"Content-Range": "bytes 2-5/6"}, [b"c", ConnectionError()]),
+                                     entry, part, "pixeldrain", lambda *_: None)
+            self.assertEqual(b"abc", part.read_bytes())
+            session = RangeSession(206, {"Content-Range": "bytes 3-5/6"}, [b"def"])
+            bridge.http_original(session, entry, part, "pixeldrain", lambda *_: None)
+            self.assertEqual("bytes=3-", session.requests[0]["Range"])
+            self.assertEqual(body, part.read_bytes())
+
+    def test_partial_without_recorded_operation_identity_cannot_be_claimed_by_a_retry(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            staging = root / "out" / ".bakabase-cloud-state"
+            staging.mkdir(parents=True)
+            part = staging / (hashlib.sha256(b"a.txt").hexdigest() + ".part")
+            part.write_bytes(b"a")
+            entries = [{"id": "fixture", "path": "a.txt", "size": 2, "url": "https://pixeldrain.com/api/file/fixture", "sha256": hashlib.sha256(b"ab").hexdigest()}]
+            request = {"provider": "pixeldrain", "url": "https://pixeldrain.com/u/fixture", "output": str(root / "out"), "state": str(root / "state")}
+            class Session:
+                pass
+            with patch.dict(sys.modules, {"requests": types.SimpleNamespace(Session=Session)}), patch.object(bridge, "pixeldrain_manifest", return_value=(entries, None)), patch.object(bridge, "PROTOCOL_OUTPUT", io.StringIO()):
+                with self.assertRaisesRegex(bridge.BridgeError, "original operation manifest"):
+                    bridge.run(request)
+                self.assertFalse((root / "state/manifest.json").exists())
+                self.assertEqual(b"a", part.read_bytes())
+
+    def test_legacy_manifest_resumes_only_the_same_operation_and_files_with_verified_original_checksums(self):
+        first, second = b"first", b"second"
+        entries = [{"id": str(i), "path": str(i) + ".zip", "size": len(body),
+                    "url": "https://pixeldrain.com/api/file/" + str(i), "sha256": hashlib.sha256(body).hexdigest()}
+                   for i, body in enumerate([first, second])]
+        for mode in ["same", "different-operation", "different-name", "different-size", "different-id", "different-checksum", "foreign-receipt"]:
+            with self.subTest(mode=mode), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                output, state = root / "out", root / "state"
+                staging = output / ".bakabase-cloud-state"
+                staging.mkdir(parents=True)
+                state.mkdir()
+                request = {"provider": "pixeldrain", "url": "https://pixeldrain.com/l/test", "output": str(output), "state": str(state)}
+                identity = hashlib.sha256(json.dumps(["pixeldrain", request["url"], None, str(output.resolve())]).encode()).hexdigest()
+                old = [{k: e.get(k) for k in ("id", "path", "size", "md5")} for e in entries]
+                if mode == "different-name": old[1]["path"] = "old.zip"
+                if mode == "different-size": old[1]["size"] = 9
+                if mode == "different-id": old[1]["id"] = "other"
+                if mode == "different-checksum": old[1]["sha256"] = hashlib.sha256(b"other").hexdigest()
+                saved = {"identity": "other" if mode == "different-operation" else identity, "files": old}
+                (state / "manifest.json").write_text(json.dumps(saved))
+                original = b"other" if mode == "foreign-receipt" else first
+                (output / "0.zip").write_bytes(original)
+                receipts = {"0.zip": {"size": len(original), "sha256": hashlib.sha256(original).hexdigest()}}
+                (state / "completed.json").write_text(json.dumps(receipts))
+                part = staging / (hashlib.sha256(b"1.zip").hexdigest() + ".part")
+                part.write_bytes(second[:3])
+                session = RangeSession(206, {"Content-Range": "bytes 3-5/6", "Content-Length": "3"}, [second[3:]])
+                class Session:
+                    pass
+                with patch.dict(sys.modules, {"requests": types.SimpleNamespace(Session=Session)}), patch.object(bridge, "pixeldrain_manifest", return_value=(entries, session)), patch.object(bridge, "PROTOCOL_OUTPUT", io.StringIO()):
+                    if mode == "same":
+                        bridge.run(request)
+                        self.assertEqual(second, (output / "1.zip").read_bytes())
+                        self.assertEqual([{"Accept-Encoding": "identity", "Range": "bytes=3-"}], session.requests)
+                        self.assertEqual(entries[1]["sha256"], json.loads((state / "manifest.json").read_text())["files"][1]["sha256"])
+                    else:
+                        with self.assertRaises(bridge.BridgeError):
+                            bridge.run(request)
+                        self.assertEqual([], session.requests)
+                        self.assertEqual(second[:3], part.read_bytes())
+                        self.assertEqual(saved, json.loads((state / "manifest.json").read_text()))
+                    self.assertEqual(original, (output / "0.zip").read_bytes())
 
     def test_paginates_more_than_1000_entries(self):
         pages = [{"type": "folder", "childrenCount": 1001, "children": {str(i): {} for i in range(1000)}},
