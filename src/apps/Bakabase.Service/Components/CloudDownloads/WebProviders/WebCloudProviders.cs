@@ -6,14 +6,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Concurrent;
 using System.Diagnostics;
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using Bakabase.Infrastructures.Components.App;
 using Bakabase.Abstractions.Components.Network;
 using Bakabase.InsideWorld.Business.Components.Dependency.Exceptions;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.CloudTools;
 using Bakabase.Modules.Downloader.Cloud;
+using Bakabase.Service.Components.SourceAvailability.Probes;
 
 namespace Bakabase.Service.Components.CloudDownloads.WebProviders;
 
@@ -29,15 +28,53 @@ public sealed class GofileCloudProvider(GalleryDlService tool, AppService appSer
     public override string ProviderId => "gofile";
 }
 
-public sealed class PixeldrainCloudProvider(GalleryDlService tool, AppService appService, BakabaseWebProxy proxy)
-    : WebCloudProvider(tool, appService, proxy)
+public sealed class PixeldrainCloudProvider : WebCloudProvider, ICloudDownloadRecoveryProvider
 {
+    private readonly PixeldrainAvailabilityProbe _availability;
+    public PixeldrainCloudProvider(GalleryDlService tool, AppService appService, BakabaseWebProxy proxy,
+        PixeldrainAvailabilityProbe availability) : this(tool, proxy, availability, () => appService.AppDataDirectory) { }
+
+    internal PixeldrainCloudProvider(GalleryDlService tool, BakabaseWebProxy proxy, PixeldrainAvailabilityProbe availability,
+        Func<string> appData) : base(tool, appData, proxy) => _availability = availability;
+
     public override string ProviderId => "pixeldrain";
+    public bool CanRevalidateDownloadFailure(string code) => code is "PIXELDRAIN_NETWORK_ERROR" or "CLOUD_NETWORK_ERROR";
+
+    public Task<CloudReadiness> CheckLocalRecoveryAsync(CloudDownloadRequest request, CancellationToken ct) =>
+        request.Source.Kind == "share" && request.Source.MethodId is null or "pixeldrain.galleryDl" &&
+        string.IsNullOrEmpty(request.Source.AccessCode)
+            ? InspectUnstartedDownloadAsync(request, ct)
+            : Task.FromResult(new CloudReadiness(false, "RECOVERY_DOWNLOAD_REVIEW_REQUIRED"));
+
+    // A fresh metadata probe checks every selected member and the provider's access/limit
+    // flags without consuming any payload. The normal download still verifies the originals.
+    public async Task<CloudReadiness> RevalidateDownloadAsync(CloudDownloadRequest request, CancellationToken ct)
+    {
+        var local = await CheckLocalRecoveryAsync(request, ct);
+        if (!local.Available) return local;
+        var result = await _availability.CheckAsync(request.Source, ct);
+        if (result.Status == SourceAvailabilityStatuses.Available) return new(true);
+        // List probes describe incomplete collections without invalidating an entire share.
+        // Preserve the current cause in the workflow instead of repeating the old network error.
+        var problem = result.Status switch
+        {
+            SourceAvailabilityStatuses.AccessRequired => "SOURCE_ACCESS_REQUIRED",
+            SourceAvailabilityStatuses.TemporarilyUnavailable when result.ReasonCode == "SOURCE_METADATA_INCOMPLETE"
+                => "SOURCE_RATE_OR_SERVICE_LIMIT",
+            SourceAvailabilityStatuses.Unknown or SourceAvailabilityStatuses.Unsupported
+                when result.ReasonCode != CloudSourceNetworkException.RequirementCode => "SOURCE_VALIDITY_UNKNOWN",
+            _ => result.ReasonCode
+        };
+        return new(false, problem);
+    }
 }
 
 /// <summary>The private operation manifest and completion hashes make process restarts safe to replay.</summary>
-public abstract class WebCloudProvider(CloudPythonToolService tool, AppService appService, BakabaseWebProxy proxy) : ICloudDownloadProvider
+public abstract partial class WebCloudProvider(CloudPythonToolService tool, Func<string> appData, BakabaseWebProxy proxy) : ICloudDownloadProvider, ICloudDownloadDestinationRevisionProvider
 {
+    protected WebCloudProvider(CloudPythonToolService tool, AppService appService, BakabaseWebProxy proxy)
+        : this(tool, () => appService.AppDataDirectory, proxy) { }
+
     private readonly ConcurrentDictionary<string, SemaphoreSlim> _operations = new();
     public abstract string ProviderId { get; }
 
@@ -62,14 +99,13 @@ public abstract class WebCloudProvider(CloudPythonToolService tool, AppService a
         if (!Path.IsPathFullyQualified(request.OutputDirectory)) throw new ArgumentException("An absolute output directory is required.");
         ValidateShareUrl(ProviderId, request.Source.Url);
         var execution = await tool.CaptureReadyExecutionAsync(ct);
-        var operationKey = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(request.OperationId)));
+        var operationKey = OperationKey(request.OperationId);
         var operationLock = _operations.GetOrAdd(operationKey, _ => new SemaphoreSlim(1, 1));
         await operationLock.WaitAsync(ct);
         try
         {
-            var state = Path.Combine(appService.AppDataDirectory, "cloud-downloads", "web", ProviderId, operationKey);
-            var privateDirectory = appService.AppDataDirectory;
-            foreach (var part in new[] { "cloud-downloads", "web", ProviderId, operationKey })
+            var privateDirectory = appData();
+            foreach (var part in StateDirectorySegments(ProviderId, operationKey))
             {
                 privateDirectory = Path.Combine(privateDirectory, part);
                 if (new DirectoryInfo(privateDirectory).LinkTarget != null)
@@ -77,6 +113,7 @@ public abstract class WebCloudProvider(CloudPythonToolService tool, AppService a
                 Directory.CreateDirectory(privateDirectory);
                 if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(privateDirectory, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
             }
+            var state = privateDirectory;
             var script = Path.Combine(state, "bridge.py");
             if (new FileInfo(script).LinkTarget != null) throw new InvalidDataException("Cloud adapter script cannot be a symbolic link.");
             await using (var resource = typeof(WebCloudProvider).Assembly.GetManifestResourceStream("Bakabase.Service.CloudPythonBridge.py")

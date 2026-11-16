@@ -35,7 +35,8 @@ public static class SourceAvailabilityProbeRegistration
         }).RemoveAllLoggers().ConfigurePrimaryHttpMessageHandler(sp => new ProxyAwarePublicHttpHandler(sp.GetRequiredService<BakabaseWebProxy>()));
         services.AddSingleton<ISourceAvailabilityProbe, BaiduShareAvailabilityProbe>();
         services.AddSingleton<ISourceAvailabilityProbe, GoFileAvailabilityProbe>();
-        services.AddSingleton<ISourceAvailabilityProbe, PixeldrainAvailabilityProbe>();
+        services.AddSingleton<PixeldrainAvailabilityProbe>();
+        services.AddSingleton<ISourceAvailabilityProbe>(sp => sp.GetRequiredService<PixeldrainAvailabilityProbe>());
         services.AddSingleton<ISourceAvailabilityProbe, SharePointAvailabilityProbe>();
         services.AddSingleton<ISourceAvailabilityProbe, CloudDownloads.TeraBox.TeraBoxSourceAvailabilityProbe>();
         services.AddSingleton<ISourceAvailabilityProbe, HttpSourceAvailabilityProbe>();

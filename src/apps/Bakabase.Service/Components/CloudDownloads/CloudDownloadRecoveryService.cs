@@ -86,7 +86,8 @@ public sealed partial class CloudDownloadRecoveryService(BakabaseDbContext db, I
                 target.CleanupReceiptId != null || target.Files.Count != 0 || target.ProcessedFiles.Count != 0 ||
                 target.PublishedFiles.Count != 0 || target.ProcessingStepArtifacts.Count != 0 ||
                 download.CompletedAt != null || download.Progress != 0 || !string.IsNullOrEmpty(download.Checkpoint) ||
-                await db.DownloadResults.AsNoTracking().AnyAsync(r => r.DownloadTaskId == id, ct))
+                await db.DownloadResults.AsNoTracking().AnyAsync(r => r.DownloadTaskId == id, ct) ||
+                await db.DownloadResultOwners.AsNoTracking().AnyAsync(r => r.DownloadTaskId == id, ct))
                 return Block("RECOVERY_DOWNLOAD_HAS_OUTPUT");
             var intent = DownloadArtifactCoordinator.DownloadIntent(target, outputRoot, workspaces);
             if (target.DownloadOperationId != null && target.DownloadOperationId != intent)
@@ -97,10 +98,15 @@ public sealed partial class CloudDownloadRecoveryService(BakabaseDbContext db, I
             if (bindings.Any(b => b.Slot == target.Id + ":transfer" || b.Slot.StartsWith(target.Id + ":transfer:", StringComparison.Ordinal)) ||
                 await db.CloudDownloadOperations.AsNoTracking().AnyAsync(o => o.WorkflowRunId == runId && o.TargetId == target.Id && o.Kind == "transfer", ct))
                 return Block("RECOVERY_TRANSFER_REVIEW_REQUIRED");
-            if (!bindings.Any(b => b.Slot == CloudOperationService.OperationSlot(target, "download") && b.OperationId == intent))
+            var downloadSlot = CloudOperationService.OperationSlot(target, "download");
+            if (!bindings.Any(b => b.Slot == downloadSlot && b.OperationId == intent) ||
+                await db.ArtifactOperationBindings.AsNoTracking().AnyAsync(b => b.OperationId == intent &&
+                    (b.OwnerKind != "workflow" || b.OwnerId != owner || b.Slot != downloadSlot), ct))
                 return Block("RECOVERY_DOWNLOAD_IDENTITY_CHANGED");
             var operation = await db.CloudDownloadOperations.AsNoTracking().SingleOrDefaultAsync(o => o.Id == intent, ct);
-            if (operation?.Kind != "download" || operation.DownloadTaskId != id || operation.State is not ("started" or "starting" or "queued") ||
+            if (operation?.Kind != "download" || operation.DownloadTaskId != id || operation.WorkflowRunId != runId ||
+                operation.TargetId != target.Id || operation.State is not ("started" or "starting" or "queued") ||
+                await db.CloudDownloadOperations.AsNoTracking().AnyAsync(o => o.DownloadTaskId == id && o.Id != intent, ct) ||
                 operation.ReceiptJson != null || await db.ArtifactOperations.AsNoTracking().AnyAsync(a => a.Id == intent, ct))
                 return Block("RECOVERY_DOWNLOAD_REVIEW_REQUIRED");
             var request = JsonSerializer.Deserialize<CloudDownloadRequest>(operation.RequestJson, JsonSerializerOptions.Web);
@@ -117,11 +123,14 @@ public sealed partial class CloudDownloadRecoveryService(BakabaseDbContext db, I
             FileProcessingFiles.Within(download.DownloadPath, executionRoot);
             if (!Directory.Exists(executionRoot)) return Block("RECOVERY_STORAGE_UNAVAILABLE");
             // Include hidden and partial files. A failed receipt alone never proves that no bytes were written.
-            if (File.Exists(download.DownloadPath) || HasRetainedFiles(download.DownloadPath, ct))
+            if (File.Exists(download.DownloadPath) || HasRetainedFiles(executionRoot, download.DownloadPath, ct))
                 return Block("RECOVERY_DOWNLOAD_HAS_OUTPUT");
-            for (var path = new DirectoryInfo(download.DownloadPath); path != null; path = path.Parent)
-                if (path.Exists && (path.Attributes & FileAttributes.ReparsePoint) != 0)
-                    return Block("RECOVERY_DOWNLOAD_REVIEW_REQUIRED");
+            var executionRequest = CloudDownloadDestinations.ExecutionRequest(request);
+            if (!forSourceRevision && capability != null)
+            {
+                var local = await capability.CheckLocalRecoveryAsync(executionRequest, ct);
+                if (!local.Available) return Block("RECOVERY_DOWNLOAD_REVIEW_REQUIRED");
+            }
             if (!revalidate) return Block("RECOVERY_RECHECK_SOURCE", candidate: true);
             var ready = await provider.CheckReadyAsync(request.AccountId, ct);
             if (!ready.Available)
@@ -129,7 +138,7 @@ public sealed partial class CloudDownloadRecoveryService(BakabaseDbContext db, I
                 failure = WorkflowSourceRunProblems.Extract(ready.Problem).FirstOrDefault() ?? failure;
                 return Block("RECOVERY_SOURCE_STILL_BLOCKED");
             }
-            var current = await capability!.RevalidateDownloadAsync(CloudDownloadDestinations.ExecutionRequest(request), ct);
+            var current = await capability!.RevalidateDownloadAsync(executionRequest, ct);
             if (!current.Available)
             {
                 failure = WorkflowSourceRunProblems.Extract(current.Problem).FirstOrDefault() ?? failure;
@@ -155,9 +164,20 @@ public sealed partial class CloudDownloadRecoveryService(BakabaseDbContext db, I
         Path.IsPathFullyQualified(path) && path.IndexOfAny(['\r', '\n', '\0']) < 0 &&
         string.Equals(message, "Choose a folder inside a mounted storage location. " + path, StringComparison.Ordinal);
 
-    private static bool HasRetainedFiles(string root, CancellationToken ct)
+    private static bool HasRetainedFiles(string executionRoot, string root, CancellationToken ct)
     {
-        if (!Directory.Exists(root)) return false;
+        ArtifactManifestFiles.RejectLinks(root);
+        if (!Directory.Exists(root))
+        {
+            // Exists also returns false on access errors and dangling links. Prove the first
+            // missing segment against a readable parent before calling the original task empty.
+            var missing = root;
+            while (Path.GetDirectoryName(missing) is { } parent && !Directory.Exists(parent) &&
+                   !ArtifactManifestFiles.PathComparer.Equals(parent, executionRoot))
+                missing = parent;
+            if (ArtifactManifestFiles.IsMissingFileConfirmed(executionRoot, missing, ct)) return false;
+            throw new IOException("The persisted download location could not be inspected.");
+        }
         var pending = new Stack<(string Path, int Depth)>(); pending.Push((root, 0));
         var count = 0; var entries = 0;
         while (pending.TryPop(out var next))

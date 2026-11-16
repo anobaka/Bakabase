@@ -83,6 +83,48 @@ public sealed class AcquisitionCachedSourceEvidenceTests
         Assert.AreEqual(1, await db.WorkflowRuns.CountAsync());
     }
 
+    [DataTestMethod]
+    [DataRow("visible-url")]
+    [DataRow("link-caption")]
+    [DataRow("pasted-text")]
+    public async Task Inline_archive_password_after_selected_share_reaches_extractor_and_AI(string format)
+    {
+        var share = Selected + "?pwd=Code123";
+        var caption = format == "visible-url" ? share : "下载";
+        var html = $"<blockquote>链接：<a href='{share}'>{caption}</a>密碼:{Password}</blockquote>";
+        post.ContentSnapshotJson = format == "pasted-text" ? null : Json(new PostContent {MainHtml = html});
+        post.Text = format == "pasted-text" ? $"链接：{share} 提取码：Code123 解压密码：{Password}" : null;
+        await db.SaveChangesAsync();
+
+        var evidence = await Read();
+        Assert.IsNotNull(evidence);
+        var literal = evidence.Passwords.Single();
+        Assert.AreEqual(Password, literal.Value);
+        Assert.IsTrue(literal.Labelled);
+        var context = await new AcquisitionFileProcessingEvidence(db).ReadAsync(40, "part", Selected, default);
+        Assert.IsNotNull(context);
+        StringAssert.Contains(context, Password);
+        Assert.IsFalse(context.Contains(Selected));
+        Assert.IsFalse(context.Contains("Code123"));
+    }
+
+    [DataTestMethod]
+    [DataRow(true)]
+    [DataRow(false)]
+    public async Task Inline_archive_password_is_not_attributed_to_either_of_two_different_shares(bool selectedFirst)
+    {
+        string Link(string address) => $"<a href='{address}'>{address}</a>";
+        var mixed = selectedFirst ? Link(Selected) + Link(Other) : Link(Other) + Link(Selected);
+        post.ContentSnapshotJson = Json(new PostContent {MainHtml = $"<p>{mixed}密碼:{Password}</p>" +
+            $"<p>{Link(Selected)}提取碼：Code123<span hidden> 密碼:HiddenSecret</span></p>"});
+        await db.SaveChangesAsync();
+
+        var evidence = await Read();
+        Assert.IsNotNull(evidence);
+        Assert.AreEqual(0, evidence.Passwords.Count);
+        Assert.AreEqual(0, evidence.Excerpts.Count);
+    }
+
     [TestMethod]
     public async Task Projection_changes_do_not_change_saved_source_fingerprint()
     {

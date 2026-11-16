@@ -13,10 +13,10 @@ internal static class ProcessingPlanSourceText
     internal static string Visible(string html)
     {
         var text = new StringBuilder();
-        var nodes = new Stack<(IDomObject Node, bool End)>(CQ.CreateFragment(html).Reverse().Select(n => (n, false)));
+        var nodes = new Stack<(IDomObject Node, char? Separator)>(CQ.CreateFragment(html).Reverse().Select(n => (n, (char?)null)));
         while (nodes.TryPop(out var frame))
         {
-            if (frame.End) {text.Append('\n'); continue;}
+            if (frame.Separator is { } separator) {text.Append(separator); continue;}
             var node = frame.Node;
             if (node.NodeType == NodeType.TEXT_NODE) {text.Append(node.NodeValue); continue;}
             if (node.NodeType != NodeType.ELEMENT_NODE) continue;
@@ -27,13 +27,16 @@ internal static class ProcessingPlanSourceText
             if (tag is "br" or "p" or "div" or "blockquote" or "li" or "tr" or "hr" or "h6")
             {
                 text.Append('\n');
-                if (tag != "br" && tag != "hr") nodes.Push((node, true));
+                if (tag != "br" && tag != "hr") nodes.Push((node, '\n'));
             }
             // Source readers need the real link even when its visible label is simply
             // 'download'. The evidence envelope subsequently removes URLs/access codes.
             if (tag == "a" && Uri.TryCreate(node.GetAttribute("href"), UriKind.Absolute, out var href) && href.Scheme is "http" or "https")
+            {
                 text.Append(' ').Append(href.AbsoluteUri).Append(' ');
-            foreach (var child in node.ChildNodes.Reverse()) nodes.Push((child, false));
+                nodes.Push((node, ' '));
+            }
+            foreach (var child in node.ChildNodes.Reverse()) nodes.Push((child, null));
         }
         return text.ToString();
     }

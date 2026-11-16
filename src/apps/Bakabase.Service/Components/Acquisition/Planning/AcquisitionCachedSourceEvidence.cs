@@ -73,7 +73,9 @@ internal static class AcquisitionCachedSourceEvidence
         }
     }
 
-    private static readonly Regex PasswordLabel = new(@"^(?:解[压壓](?:[缩縮])?(?:密[码碼]|[码碼])|密[码碼]|pw|password|(?:archive|extraction|unzip) password|解凍パスワード)\s*(?:[:：=↓↴]|如下|在下方)\s*(.*?)\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+    private const string PasswordLabelPattern = @"(?:解[压壓](?:[缩縮])?(?:密[码碼]|[码碼])|密[码碼]|pw|password|(?:archive|extraction|unzip) password|解凍パスワード)\s*(?:[:：=↓↴]|如下|在下方)\s*(.*?)\s*$";
+    private static readonly Regex PasswordLabel = new("^" + PasswordLabelPattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+    private static readonly Regex InlinePasswordLabel = new(@"(?<!\S)" + PasswordLabelPattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     private static readonly Regex Trailer = new(@"^[a-zA-Z0-9_.!@#-]{5,64}$", RegexOptions.CultureInvariant);
     private static readonly Regex IndirectPassword = new(@"(?:楼主|樓主|作者|发帖|發帖|发布|發布|上传|上傳).{0,16}(?:名字|名称|名稱|昵称|暱稱|用户名|用戶名|\bid\b)|(?:见|見|查看|在).{0,12}(?:网盘|網盤|原帖|图片|圖片)|(?:author|uploader|publisher).{0,16}(?:name|id)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     private static readonly Regex Technical = new(@"解[压壓]|密[码碼]|后缀|後綴|改名|重命名|分卷|补丁|補丁|本体|本體|原版|字幕|保留|删除|刪除|\bpw\b|password|extract|archive|rename", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
@@ -178,7 +180,29 @@ internal static class AcquisitionCachedSourceEvidence
         }
         return excerpts;
     }
-    private static string[] Lines(string text) => text.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+    private static string[] Lines(string text)
+    {
+        var result = new List<string>();
+        foreach (var line in text.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
+        {
+            var links = Address.Matches(line);
+            if (links.Count > 0)
+            {
+                // Keep all links on the same source line together for MatchesShare.
+                // Only a labelled instruction after the last link gets its own line.
+                var lastLink = links[^1];
+                var label = InlinePasswordLabel.Match(line, lastLink.Index + lastLink.Length);
+                if (label.Success)
+                {
+                    result.Add(line[..label.Index].TrimEnd());
+                    result.Add(label.Value);
+                    continue;
+                }
+            }
+            result.Add(line);
+        }
+        return result.ToArray();
+    }
     private static HashSet<string> Codes(IEnumerable<string> lines, IReadOnlySet<string> excluded)
     {
         var result = new HashSet<string>(excluded, StringComparer.Ordinal);
