@@ -110,8 +110,9 @@ public sealed partial class AcquisitionTaskDeletionCleanupService(BakabaseDbCont
             cleanupIntermediates, deleteDeliveredFiles, ct, guardDirectory);
         if (stageDirectories.Count > 0)
         {
-            // The user confirmed the current stage roots. Do not re-enter historical
-            // artifact traversal, including when one root is blocked by a real reference.
+            // Current bindings, proven earlier stage roots and private allocations form
+            // one deduplicated directory selection. Do not repeat the old manifest/hash
+            // traversal for these explicitly selected roots.
             var stageGroups = stageDirectories.Select(c => c.Group).ToArray();
             var stageFiles = Unique(stageGroups.Where(g => g.Eligible).SelectMany(g => g.Files));
             var identifiedStageFiles = Unique(stageGroups.SelectMany(g => g.Files));

@@ -38,7 +38,8 @@ internal sealed partial class ArtifactCleanupReferenceGuard(BakabaseDbContext db
     private static string ScopeKey(IReadOnlyList<int> ids) => string.Join(",", ids.Distinct().Order());
     public async Task<bool> HasReferencesAsync(ArtifactRecord source, IReadOnlyList<int> owners, CancellationToken ct,
         IReadOnlyList<string>? privatePaths = null, IReadOnlyList<int>? previewSupersededRuns = null,
-        int? directoryOwnerTaskId = null, int? directoryOwnerRunId = null, bool deletedDirectoryOwner = false, int? directoryDownloadTaskId = null)
+        int? directoryOwnerTaskId = null, int? directoryOwnerRunId = null, bool deletedDirectoryOwner = false,
+        int? directoryDownloadTaskId = null, bool explicitTaskDirectoryCleanup = false)
     {
         bool Found(string location) { referenceFound?.Invoke(location); return true; }
         var aliases = workspaces?.ReadRelocations() ?? [];
@@ -188,6 +189,18 @@ internal sealed partial class ArtifactCleanupReferenceGuard(BakabaseDbContext db
             !owners.Contains(executing) || ownership.Count(o => o.RunId == executing && o.TaskId == taskOwner) != 1 ||
             !await db.AcquisitionTasks.AnyAsync(t => t.Id == taskOwner && t.DeletedAt == null && t.WorkflowRunId == executing, ct)))
             return Found("invalid-directory-run-scope");
+        // Only a confirmed whole-directory deletion can release this task's historical
+        // transport receipts. Rebinding, runtime moves and ordinary artifact retirement
+        // never receive this exemption, even if they happen to name the same directory.
+        if (explicitTaskDirectoryCleanup && (directoryOwnerTaskId is not { } cleanupOwner ||
+            directoryOwnerRunId != null || privatePaths != null || owners.Count == 0 ||
+            !await db.AcquisitionTasks.AnyAsync(t => t.Id == cleanupOwner &&
+                t.Status == Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionStatus.Completed, ct) ||
+            await db.WorkflowRuns.CountAsync(r => owners.Contains(r.Id), ct) != owners.Distinct().Count() ||
+            await db.WorkflowRuns.AnyAsync(r => owners.Contains(r.Id) &&
+                (r.Status == WorkflowRunStatus.Pending || r.Status == WorkflowRunStatus.Running || r.PendingSignalJson != null ||
+                 r.Status == WorkflowRunStatus.Waiting && !(previewSupersededRuns ?? Array.Empty<int>()).Contains(r.Id)), ct)))
+            return Found("invalid-directory-cleanup-scope");
         var privateAllocation = await PrivateProcessingAllocationAsync(source, privatePaths, ownership, ct);
         var previewInactive = previewSupersededRuns ?? [];
         var active = await ReadAsync("active:" + ScopeKey(previewInactive), () => db.WorkflowRuns.AsNoTracking().Where(r => r.Status == WorkflowRunStatus.Pending ||
@@ -202,7 +215,7 @@ internal sealed partial class ArtifactCleanupReferenceGuard(BakabaseDbContext db
             .Select(t => new {t.Id, t.DeletedAt, t.WorkflowRunId, t.PlanRevision, t.PlanJson, t.PlanHistoryJson,
                 t.BuilderStateJson, t.PreparedContextJson, t.TargetDirectory}).ToListAsync(ct), ct);
         foreach (var plan in plans.Where(p => p.DeletedAt == null && p.Id != directoryOwnerTaskId &&
-                     (p.WorkflowRunId == null || !owners.Contains(p.WorkflowRunId.Value))))
+                     (explicitTaskDirectoryCleanup || p.WorkflowRunId == null || !owners.Contains(p.WorkflowRunId.Value))))
         {
             var scope = privateAllocation is { } owned && owned.TaskId == plan.Id &&
                 plan.WorkflowRunId is { } current && owned.RunIds.Contains(current) ? owned.Scope : null;
@@ -282,12 +295,26 @@ internal sealed partial class ArtifactCleanupReferenceGuard(BakabaseDbContext db
             ownDownload = stageDownload;
         }
         var privateTransport = await OwnedWorkspaceTransportAsync(source, owners, roots, ct);
-        if (downloads.Any(d => d.Id != ownDownload && (RefersPath(d.DownloadPath, d.Id != privateTransport?.Id) || RefersCloudRequest(d.Options,
+        var releasedDownloads = ownDownload is { } released ? new HashSet<int> {released} : [];
+        if (explicitTaskDirectoryCleanup)
+        {
+            var completeIds = downloads.Where(d => d.Status == DownloadTaskDbModelStatus.Complete).Select(d => d.Id).ToArray();
+            var transports = await db.CloudDownloadOperations.AsNoTracking().Where(o => o.DownloadTaskId != null && completeIds.Contains(o.DownloadTaskId.Value))
+                .Select(o => new {Id = o.DownloadTaskId!.Value, o.WorkflowRunId, o.Kind, o.State}).ToListAsync(ct);
+            var resultOwners = await db.DownloadResultOwners.AsNoTracking().Where(o => completeIds.Contains(o.DownloadTaskId))
+                .Select(o => new {o.DownloadTaskId, o.AcquisitionTaskId, o.WorkflowRunId}).ToListAsync(ct);
+            foreach (var group in transports.GroupBy(o => o.Id))
+                if (group.All(o => owners.Contains(o.WorkflowRunId) && o.Kind == "download" && o.State is "started" or "completed") &&
+                    resultOwners.Where(o => o.DownloadTaskId == group.Key).All(o =>
+                        o.AcquisitionTaskId == directoryOwnerTaskId && owners.Contains(o.WorkflowRunId)))
+                    releasedDownloads.Add(group.Key);
+        }
+        if (downloads.Any(d => !releasedDownloads.Contains(d.Id) && (RefersPath(d.DownloadPath, d.Id != privateTransport?.Id) || RefersCloudRequest(d.Options,
                 providerId: CloudSites.Sources.FirstOrDefault(s => s.ThirdPartyId == d.ThirdPartyId)?.ProviderId, outputDirectory: d.DownloadPath,
                 privateAllocations: d.Id == privateTransport?.Id
                     ? [privateTransport.Value.Directory, privateTransport.Value.DownloadDirectory] : null)))) return Found("download-task");
-        if (files.Any(f => f.DownloadTaskId != ownDownload && RefersPath(f.Path))) return Found("download-file");
-        if (results.Any(r => r.DownloadTaskId != ownDownload && (RefersPath(r.Path, r.DownloadTaskId != privateTransport?.Id) || Refers(r.FilesJson, true)))) return Found("download-result");
+        if (files.Any(f => !releasedDownloads.Contains(f.DownloadTaskId) && RefersPath(f.Path))) return Found("download-file");
+        if (results.Any(r => !releasedDownloads.Contains(r.DownloadTaskId) && (RefersPath(r.Path, r.DownloadTaskId != privateTransport?.Id) || Refers(r.FilesJson, true)))) return Found("download-result");
         var otherDownloads = await ReadAsync("other-transports:" + ScopeKey(owners), () => db.CloudDownloadOperations.AsNoTracking().Where(o => !owners.Contains(o.WorkflowRunId))
             .Select(o => new {o.Id, o.Kind, o.RequestJson, o.ReceiptJson}).ToListAsync(ct), ct);
         return otherDownloads.Any(o => (o.Kind == "download" ? RefersCloudRequest(o.RequestJson, operationId: o.Id) : Refers(o.RequestJson, true)) ||
