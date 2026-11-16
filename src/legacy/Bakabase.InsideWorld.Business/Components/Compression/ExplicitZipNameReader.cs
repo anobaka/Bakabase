@@ -156,7 +156,7 @@ internal sealed class ExplicitZipNameReader : IDisposable
         }
     }
 
-    private static string SafeName(string? name, bool directory)
+    internal static string SafeName(string? name, bool directory)
     {
         if (string.IsNullOrEmpty(name) || name.Contains('\ufffd') || name.Any(char.IsControl))
             throw new InvalidDataException("ZIP contains an invalid decoded entry name.");

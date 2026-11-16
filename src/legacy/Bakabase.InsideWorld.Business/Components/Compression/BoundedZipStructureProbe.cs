@@ -10,7 +10,10 @@ namespace Bakabase.InsideWorld.Business.Components.Compression;
 
 /// <summary>In-memory proof produced only by bounded, step-authorized structural inspection.</summary>
 internal sealed record ZipStructureDescriptor(long SourceLength, long ZipOffset, long CentralDirectoryOffset,
-    int CentralDirectorySize, int EntryCount, long ArchiveEnd, bool Zip64, string TailSha256, string CentralSha256);
+    int CentralDirectorySize, int EntryCount, long ArchiveEnd, bool Zip64, string TailSha256, string CentralSha256)
+{
+    public bool WindowsMembers { get; init; }
+}
 
 /// <summary>
 /// A small metadata-only hint for an already authorized extraction candidate. It never
@@ -41,7 +44,8 @@ internal static class BoundedZipStructureProbe
         return structure?.ZipOffset;
     }
 
-    internal static async Task<ZipStructureDescriptor?> FindStructureAsync(string path, long expectedLength, CancellationToken ct)
+    internal static async Task<ZipStructureDescriptor?> FindStructureAsync(string path, long expectedLength,
+        CancellationToken ct, bool includeStandaloneZip = false)
     {
         await using var file = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read,
             1, FileOptions.Asynchronous | FileOptions.RandomAccess);
@@ -62,7 +66,8 @@ internal static class BoundedZipStructureProbe
         // An archive already starting at byte zero takes precedence over a ZIP embedded
         // in its payload or trailer. Leave validation to its ordinary archive handler.
         var header = (await Read(0, (int)Math.Min(512, expectedLength)))!;
-        if (ArchiveSignature.HasKnownContainerHeader(header))
+        var standaloneZip = includeStandaloneZip && header.AsSpan().StartsWith("PK\x03\x04"u8);
+        if (ArchiveSignature.HasKnownContainerHeader(header) && !standaloneZip)
             return null;
         var tailStart = Math.Max(0, expectedLength - TailBytes);
         var tail = (await Read(tailStart, (int)(expectedLength - tailStart)))!;
@@ -112,18 +117,20 @@ internal static class BoundedZipStructureProbe
                      centralOffset == uint.MaxValue || U16(tail, e + 8) != count) continue;
             if (count == 0 || count > MaximumEntries || centralSize == 0 ||
                 centralSize > MaximumCentralBytes || centralSize > (ulong)centralEnd ||
-                centralOffset >= (ulong)centralEnd - centralSize) continue;
+                centralOffset > (ulong)centralEnd - centralSize) continue;
             var centralStart = centralEnd - (long)centralSize;
             var prefix = centralStart - (long)centralOffset;
-            if (prefix <= 0 || centralStart <= prefix) continue;
+            if ((prefix == 0) != standaloneZip || centralStart <= prefix) continue;
             var central = await Read(centralStart, (int)centralSize);
             if (central == null) continue;
             var position = 0;
             var valid = true;
             var intervals = new List<(long Start, long End)>();
+            var windowsMembers = true;
             for (var entry = 0; entry < (int)count && valid; entry++)
             {
                 if (position > central.Length - 46 || U32(central, position) != 0x02014b50) { valid = false; break; }
+                windowsMembers &= central[position + 5] is 0 or 10; // MS-DOS or Windows NTFS
                 var flags = U16(central, position + 8);
                 var method = U16(central, position + 10);
                 var crc = U32(central, position + 16);
@@ -174,7 +181,7 @@ internal static class BoundedZipStructureProbe
             found = new(expectedLength, prefix, centralStart, (int)centralSize, (int)count,
                 end + 22 + commentLength, zip64,
                 Convert.ToHexString(SHA256.HashData(tail)).ToLowerInvariant(),
-                Convert.ToHexString(SHA256.HashData(central)).ToLowerInvariant());
+                Convert.ToHexString(SHA256.HashData(central)).ToLowerInvariant()) {WindowsMembers = windowsMembers};
         }
         if (file.Length != expectedLength) throw new InvalidDataException("The archive input changed during discovery.");
         // The structure can be known even when the installed CLI cannot seek directly to

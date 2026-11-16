@@ -496,7 +496,7 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
                     if (state.LineageVersion == 1 && !Directory.Exists(destination) &&
                         operation.OutputManifest != null && Directory.Exists(extractionPending))
                     {
-                        await VerifyOutputManifest(extractionPending, operation.OutputManifest, ct);
+                        await VerifyOutputManifest(extractionPending, operation.OutputManifest, ct, group.Files);
                         Directory.Move(extractionPending, destination);
                     }
                     if (!operation.Completed && !Directory.Exists(destination))
@@ -599,7 +599,7 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
                         await VerifyContents(state, group.Files, ct);
                         if (operation.OutputManifest == null)
                             throw new InvalidDataException("The extraction output has no committed content receipt; its files were retained.");
-                        await VerifyOutputManifest(destination, operation.OutputManifest, ct);
+                        await VerifyOutputManifest(destination, operation.OutputManifest, ct, operation.Completed ? null : group.Files);
                     }
                     var entry = extractionInputs.First(a => FileProcessingFiles.PathComparer.Equals(a.Path, group.Files[0]));
                     var wrapperName = Path.GetFileNameWithoutExtension(entry.RelativePath);
@@ -885,11 +885,15 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
                         .Select(d => new ArtifactDirectoryEntry(d.RelativePath, true, d.GeneratedDirectories ?? [])))));
     }
 
-    private static async Task VerifyOutputManifest(string root, ArtifactManifest expected, CancellationToken ct)
+    private static async Task VerifyOutputManifest(string root, ArtifactManifest expected, CancellationToken ct,
+        IReadOnlyList<string>? archiveVolumes = null)
     {
         var actual = FileProcessingFiles.Enumerate(root);
         var recorded = expected.Entries.Select(e => FileProcessingFiles.Within(Path.Combine(root, e.RelativePath), root));
-        if (!actual.ToHashSet(FileProcessingFiles.PathComparer).SetEquals(recorded) ||
+        var samePaths = actual.ToHashSet(FileProcessingFiles.PathComparer).SetEquals(recorded);
+        if (!samePaths && archiveVolumes != null)
+            samePaths = await ExtractedZipMemberPaths.TryRestoreAsync(root, actual, expected, archiveVolumes, ct);
+        if (!samePaths ||
             expected.Entries.Count > 0 && !(await ArtifactManifestFiles.ValidateAsync(root, expected, ct)).Available)
             throw new InvalidDataException("An extraction output differs from its committed content receipt; it was retained.");
     }
