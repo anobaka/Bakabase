@@ -95,7 +95,8 @@ internal static class AdaptiveAssessmentDiagnostic
 public sealed partial class AdaptiveFileProcessingAssessmentService(
     ILlmService llm,
     ILogger<AdaptiveFileProcessingAssessmentService> logger,
-    AssessmentCallSnapshotStore? snapshots = null)
+    AssessmentCallSnapshotStore? snapshots = null,
+    IArchiveExtractionService? archiveProbe = null)
 {
     public const int MaxManifestEntries = 200;
     public const int MaxCallsPerTask = 5;
@@ -140,6 +141,8 @@ public sealed partial class AdaptiveFileProcessingAssessmentService(
         Bounded format evidence is indexed by the same inputId. A recognized archive signature is positive byte-level
         evidence even when the suffix suggests an image, video, or application. A header hint alone does not establish
         package intent or prove that extraction succeeds. ZIP-based documents and applications may be final files.
+        recognizedExecutableArchive means the archive tool listed a supported container inside the selected executable.
+        If unpacking is requested, use its inputId for extraction. Never launch the executable.
         A missing or unrecognized offset-zero signature does not rule out a prefixed, encrypted, multipart, or other
         archive; do not treat uninspected files as verified media. Never authorize deletion from format evidence.
         Do not declare a large image/PDF to be a finished resource merely because of its extension or the task title.
@@ -326,7 +329,8 @@ public sealed partial class AdaptiveFileProcessingAssessmentService(
         bool inspectImagePackaging = false) => AssessAsync(artifact, context, iteration, ct, inspectImagePackaging, null);
 
     internal async Task<AdaptiveFileProcessingDecision> AssessAsync(ArtifactRecord artifact, string? context,
-        int iteration, CancellationToken ct, bool inspectImagePackaging, AdaptiveProcessingExecutionEvidence? executionEvidence)
+        int iteration, CancellationToken ct, bool inspectImagePackaging, AdaptiveProcessingExecutionEvidence? executionEvidence,
+        string? authorizedArchivePassword = null)
     {
         if (iteration >= MaxCallsPerTask)
             return Human("达到下载后自动判断次数上限。", "MAX_LLM_ASSESSMENT_CALLS");
@@ -341,7 +345,8 @@ public sealed partial class AdaptiveFileProcessingAssessmentService(
                 executionEvidence.CurrentFingerprint == artifact.Fingerprint &&
                 AdaptiveProcessingExecutionEvidence.ForCurrent(artifact, executionEvidence.CompletedProcessing) != null &&
                 executionEvidence.CompletedProcessing.Any(round => round.Operations.Any(op => op.Kind == "extractArchive"));
-            var formats = await DescribeFormatEvidenceAsync(artifact, manifest.Paths, ct, extracted ? recognizedMovies : null);
+            var formats = await DescribeFormatEvidenceAsync(artifact, manifest.Paths, ct, extracted ? recognizedMovies : null,
+                inspectImagePackaging && !extracted ? archiveProbe : null, authorizedArchivePassword);
             var filenamePasswords = DescribeFilenamePasswordEvidence(manifest.Paths);
             var multipart = await InspectMultipartNamingAsync(artifact, manifest.Paths, ct);
             var imagePackaging = inspectImagePackaging ? await InspectImagePackagingAsync(artifact, manifest.Paths, ct) : null;

@@ -314,7 +314,7 @@ public sealed class FileArtifactProcessor
         FileArtifactProcessingRecovery? recovery, bool onlyOuterPackaging = false,
         FileArtifactCheckpointContinuation? checkpointContinuation = null,
         Func<string, CancellationToken, Task<IReadOnlyList<string>>>? passwordEvidence = null,
-        Func<string, Task>? reportStage = null)
+        Func<string, Task>? reportStage = null, string? originalDownloadPassword = null)
     {
         Validate(config);
         if (recovery != null && (replan || answer != null || planPasswordAnswer != null || recovery.Attempt < 1))
@@ -396,7 +396,7 @@ public sealed class FileArtifactProcessor
                 config.StoragePolicy, config.StorageTitle,
                 inputDirectories: ArtifactManifestFiles.ResolveDirectories(input.RootDirectory, input.Manifest),
                 checkpointInput: checkpointContinuation?.Input, inputDirectoryProvenance: FileArtifactDeliveryLayout.ReadProvenance(input),
-                passwordEvidence: passwordEvidence, reportStage: reportStage);
+                passwordEvidence: passwordEvidence, reportStage: reportStage, originalDownloadPassword: originalDownloadPassword);
             if (!result.Completed)
                 waiting = new(null, result.NeedsPassword ? "PasswordUnknown" : result.FailureCode ?? "ExtractionPlanUnknown",
                     result.Message, TriedPasswords: result.TriedPasswords, RequiredComponentId: result.RequiredComponentId,

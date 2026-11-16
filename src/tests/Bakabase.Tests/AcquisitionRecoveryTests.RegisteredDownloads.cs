@@ -124,6 +124,9 @@ public sealed partial class AcquisitionRecoveryTests
     [DataRow("unrelated-parent")]
     [DataRow("multi-parent")]
     [DataRow("publication-changed")]
+    [DataRow("keep-existing-publication")]
+    [DataRow("overlapping-publication")]
+    [DataRow("stale-publication-on-retry")]
     [DataRow("missing-processed")]
     [DataRow("unbound-output")]
     [DataRow("other-writer")]
@@ -182,7 +185,86 @@ public sealed partial class AcquisitionRecoveryTests
         var input = await AcquisitionPlanArtifactInputGuard.RequireAsync(_db, store, f.TaskId, part.Id, part.ContinueFrom!, default);
         Assert.AreEqual(mode == "processing" ? converted.Id : published.Id, input.Id);
         Assert.AreEqual(mode == "processing" ? processedFile : finalFile, input.Files.Single());
+        if (mode is "keep-existing-publication" or "overlapping-publication" or "stale-publication-on-retry")
+            await VerifyPublishedHandoff(f.Plans, f.TaskId, f.RunId, result.Task.PlanRevision, input, mode);
+
         Assert.AreEqual(1, await _db.DownloadTasks.CountAsync());
+    }
+
+    private async Task VerifyPublishedHandoff(AcquisitionPlanService plans, int taskId, int producerId, int revision,
+        ArtifactRecord publication, string mode)
+    {
+        var store = _services.GetRequiredService<IArtifactOperationStore>();
+        var kept = await plans.KeepPreparedFilesAsync(taskId, new(revision), default);
+        var started = await plans.RunAsync(taskId, kept.Task.PlanRevision, default);
+        var run = await _db.WorkflowRuns.SingleAsync(r => r.Id == started.Task.WorkflowRunId);
+        var frozen = WorkflowRunPlans.Read(run.PlanSnapshotJson)!;
+        var item = JsonSerializer.Deserialize<DownloadWorkset>(run.PayloadJson!, WorkflowJson.Options)!;
+        WorkflowExecutionContext Context(int step) => new()
+        {
+            RunId = run.Id, WorkflowDefinitionId = 0, TriggerKind = CloudWorkflow.Trigger, Payload = item,
+            Services = _services, Logger = NullLogger.Instance, ActivityConfigJson = frozen.Nodes[step].ConfigJson,
+            FollowingActivities = frozen.Nodes.Skip(step + 1).Select(n => new WorkflowPlannedActivity(n.Kind, n.ConfigJson)).ToArray()
+        };
+        var attached = await new AcquisitionPlanContinueFilesActivity().ProcessItemAsync(Context(0), item, default);
+        item = (DownloadWorkset)attached.Replacement!;
+        var current = item.Targets.Single();
+        var directories = current.StageDirectories!;
+        var stage = directories.Processing!.Directory;
+        var destination = directories.Delivery!.Directory;
+        Directory.CreateDirectory(stage);
+        var marker = Path.Combine(stage, "owned-by-another-task.txt");
+        await File.WriteAllTextAsync(marker, "leave unchanged");
+        _db.WorkflowRuns.Add(new() {Status = WorkflowRunStatus.Waiting,
+            CurrentItemJson = JsonSerializer.Serialize(new {input = stage})});
+        var consumer = AcquisitionPlanArtifactInputGuard.Consumer(run.Id, current.Id);
+        await store.ReleaseConsumerAsync(publication.OperationId, consumer);
+        run.Status = WorkflowRunStatus.Failed;
+        run.ErrorMessage = "STAGE_COMMIT_REFERENCED"; run.CurrentStepIndex = 1;
+        if (mode == "overlapping-publication")
+        {
+            var binding = directories.Delivery with {Directory = publication.RootDirectory};
+            var config = JsonSerializer.Deserialize<FileArtifactPublicationConfig>(frozen.Nodes[2].ConfigJson, WorkflowJson.Options)!;
+            var node = frozen.Nodes[2] with {ConfigJson = JsonSerializer.Serialize(config with
+                {TargetDirectories = new() {[current.Id] = publication.RootDirectory}}, WorkflowJson.Options)};
+            frozen = frozen with {Nodes = [.. frozen.Nodes.Take(2), node]};
+            run.PlanSnapshotJson = WorkflowRunPlans.Serialize(frozen);
+            item = item with {Targets = [current with {StageDirectories = directories with {Delivery = binding}}]};
+        }
+        if (mode == "stale-publication-on-retry") await File.WriteAllTextAsync(publication.Files.Single(), "altered delivery");
+        run.CurrentItemJson = WorkflowItemSnapshot.Capture(item);
+        await _db.SaveChangesAsync();
+        var diagnostics = new AcquisitionRecoveryDiagnostics(_db, new UserStoragePolicy(false), store,
+            workspaces: _services.GetRequiredService<FileProcessingWorkspaceResolver>());
+        var row = await _db.AcquisitionTasks.AsNoTracking().SingleAsync(t => t.Id == taskId);
+        var recovery = await diagnostics.DiagnoseAsync(row, run, default);
+        if (mode != "keep-existing-publication")
+        {
+            Assert.IsFalse(recovery.Row.CanContinue);
+            Assert.AreEqual(mode == "overlapping-publication" ? "RECOVERY_PROCESSING_FILES_REFERENCED" : "RECOVERY_FILES_UNVERIFIED", recovery.Row.ReasonCode);
+            return;
+        }
+        Assert.AreEqual("RECOVERY_STAGE_INPUT_READY", recovery.Row.ReasonCode); Assert.AreEqual("retry", recovery.Row.Action);
+        run.Status = WorkflowRunStatus.Running; await _db.SaveChangesAsync();
+        var forwarded = await new AcquisitionPlanProcessingActivity().ProcessItemAsync(Context(1), item, default);
+        Assert.IsNull(forwarded.Suspension);
+        var processed = ((DownloadWorkset)forwarded.Replacement!).Targets.Single();
+        Assert.AreEqual(publication.Id, processed.ProcessedArtifactId);
+        Assert.AreEqual(publication.RootDirectory, processed.ProcessedDirectory);
+        Assert.IsFalse(await _db.ArtifactOperationBindings.AnyAsync(b => b.OwnerId == run.Id.ToString() &&
+            b.OperationId == publication.OperationId && b.Slot.Contains(":process:")));
+        Assert.IsTrue(await _db.Set<ArtifactConsumerDbModel>().AsNoTracking().AnyAsync(c => c.OperationId == publication.OperationId &&
+            c.ConsumerKey == consumer && c.ReleasedAt == null));
+        var delivered = await new PublishFileArtifactsActivity().ProcessItemAsync(Context(2), forwarded.Replacement!, default);
+        Assert.IsNull(delivered.Suspension, delivered.Suspension?.PromptJson);
+        var output = ((DownloadWorkset)delivered.Replacement!).Targets.Single();
+        Assert.AreEqual(destination, output.PublishedDirectory);
+        Assert.AreEqual("already delivered", await File.ReadAllTextAsync(output.PublishedFiles!.Single()));
+        Assert.AreEqual("already delivered", await File.ReadAllTextAsync(publication.Files.Single()));
+        CollectionAssert.AreEqual(new[] {marker}, Directory.GetFiles(stage));
+        Assert.IsTrue(await _db.ArtifactOperationBindings.AnyAsync(b => b.OwnerId == producerId.ToString() &&
+            b.OperationId == publication.OperationId && b.Slot.EndsWith(":artifact.publish")));
+        Assert.IsFalse((await AcquisitionTaskCleanupViews.OwnedClosuresAsync(_db, [publication.Id], [run.Id.ToString()], default)).Contains(publication.Id));
     }
 
     [DataTestMethod]

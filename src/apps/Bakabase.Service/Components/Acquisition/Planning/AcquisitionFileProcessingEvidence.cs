@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business;
 using Bakabase.Service.Components.Acquisition.ProcessingPlans;
+using Bakabase.Service.Components.CloudDownloads;
 using Bakabase.Service.Components.FileProcessing;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
 using Bakabase.Modules.PostParser.Models.Domain;
@@ -29,15 +30,20 @@ public sealed class AcquisitionFileProcessingEvidence(BakabaseDbContext db,
         string? OriginalProcessingPlanJson);
     private static readonly JsonSerializerOptions EvidenceJson = new() {Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping};
 
-    internal static Task<string?> ReadAsync(WorkflowExecutionContext context, string partId,
+    internal sealed record BoundEvidence(string? Description, string SourceId, string Url, string? ArchivePassword, string? ContinuedArtifactId);
+
+    internal static Task<BoundEvidence?> ReadAsync(WorkflowExecutionContext context, string partId,
         string? selectedUrl, CancellationToken ct)
     {
-        if (context.WorkflowDefinitionId != 0 || string.IsNullOrWhiteSpace(selectedUrl)) return Task.FromResult<string?>(null);
-        return context.Services.GetService<AcquisitionFileProcessingEvidence>()?.ReadAsync(context.RunId, partId, selectedUrl, ct)
-               ?? Task.FromResult<string?>(null);
+        if (context.WorkflowDefinitionId != 0 || string.IsNullOrWhiteSpace(selectedUrl)) return Task.FromResult<BoundEvidence?>(null);
+        return context.Services.GetService<AcquisitionFileProcessingEvidence>()?.ReadBoundAsync(context.RunId, partId, selectedUrl, ct)
+               ?? Task.FromResult<BoundEvidence?>(null);
     }
 
-    internal async Task<string?> ReadAsync(long runId, string partId, string selectedUrl, CancellationToken ct)
+    internal async Task<string?> ReadAsync(long runId, string partId, string selectedUrl, CancellationToken ct) =>
+        (await ReadBoundAsync(runId, partId, selectedUrl, ct))?.Description;
+
+    internal async Task<BoundEvidence?> ReadBoundAsync(long runId, string partId, string selectedUrl, CancellationToken ct)
     {
         var rows = await db.AcquisitionTasks.AsNoTracking().Where(t => t.WorkflowRunId == runId && t.DeletedAt == null)
             .Select(t => new {t.PlanJson, t.SourceRefsJson}).Take(2).ToArrayAsync(ct);
@@ -52,7 +58,9 @@ public sealed class AcquisitionFileProcessingEvidence(BakabaseDbContext db,
         // Its selected source still holds the original download's processing evidence,
         // even when there is no post snapshot. Never borrow the new part override or a mirror.
         var sourceProcessing = DescribeSourceProcessing(source);
-        string? Fallback() => Describe(null, null, null, null, sourceProcessing: sourceProcessing);
+        BoundEvidence Bound(string? description) => new(description, source.Id, source.Url, sourceProcessing?.ArchivePassword,
+            parts[0].ContinueFrom?.ArtifactId);
+        BoundEvidence Fallback() => Bound(Describe(null, null, null, null, sourceProcessing: sourceProcessing));
         var origins = (Read<List<WorkflowSourceRef>>(rows[0].SourceRefsJson) ?? [])
             .Where(r => r.Module == "postParser" && r.EntityKind == "task")
             .Select(r => (r.EntityId, r.Revision)).Distinct().ToArray();
@@ -75,7 +83,27 @@ public sealed class AcquisitionFileProcessingEvidence(BakabaseDbContext db,
         var groups = (info.Groups ?? []).Where(g => !string.IsNullOrWhiteSpace(resources[0].GroupId) && g.Id == resources[0].GroupId).ToArray();
         var group = groups.Length == 1 ? groups[0] : null;
         var original = await AcquisitionCachedSourceEvidence.ReadAsync(db, sourceReaders, runId, partId, selectedUrl, ct);
-        return Describe(info, Read<PostAvailabilityAssessment>(post.Availability), group, revision, original, sourceProcessing);
+        return Bound(Describe(info, Read<PostAvailabilityAssessment>(post.Availability), group, revision, original, sourceProcessing));
+    }
+
+    internal static async Task<string?> OriginalDownloadPasswordAsync(BoundEvidence? evidence, CloudDownloadTarget target,
+        ArtifactRecord input, IArtifactOperationStore store, CancellationToken ct)
+    {
+        var selected = target.SelectedSource;
+        if (evidence?.ArchivePassword is not {Length: > 0} password || selected == null ||
+            selected.Id != evidence.SourceId || selected.Url != evidence.Url || selected.ArchivePassword != password ||
+            password.Any(char.IsControl) || (evidence.ContinuedArtifactId ?? target.DownloadArtifactId) is not {} originalId) return null;
+        // A continuation can point at any processing layer. Follow only unchanged, single-parent
+        // stage snapshots and require the exact registered download for this selected source.
+        var current = input;
+        for (var depth = 0; depth <= 16 && current != null && current.Fingerprint == input.Fingerprint; depth++)
+        {
+            if (current.Fingerprint != current.Manifest.Fingerprint || current.State != ArtifactLocationState.Available) return null;
+            if (current.Id == originalId) return current.Kind == "download" ? password : null;
+            if (current.Kind != "processedFiles" || current.ParentArtifactIds is not [var parent]) return null;
+            current = await store.GetArtifactAsync(parent, ct);
+        }
+        return null;
     }
 
     private static SourceProcessingEvidence? DescribeSourceProcessing(AcquisitionPlanSource source)

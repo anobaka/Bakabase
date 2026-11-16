@@ -158,7 +158,7 @@ public sealed partial class AcquisitionPlanService
                 {Processing = Steps(source.Processing)}).ToList()}).ToList()};
     }
 
-    private static bool Overlap(string left, string right)
+    internal static bool Overlap(string left, string right)
     {
         var a = Path.TrimEndingDirectorySeparator(Path.GetFullPath(left));
         var b = Path.TrimEndingDirectorySeparator(Path.GetFullPath(right));

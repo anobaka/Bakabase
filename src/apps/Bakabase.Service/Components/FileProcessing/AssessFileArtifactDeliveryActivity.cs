@@ -325,13 +325,14 @@ public sealed class AssessFileArtifactDeliveryActivity : IResumableWorkflowActiv
         {
             var executionEvidence = AdaptiveProcessingExecutionEvidence.ForCurrent(current, completedProcessing);
             var assessmentContext = AdaptiveFileProcessingAssessmentService.DescribeContext(
-                target.Title, config.AdaptiveContext, userContext, sourceEvidence,
+                target.Title, config.AdaptiveContext, userContext, sourceEvidence?.Description,
                 executionEvidence);
             var inspectImagePackaging = !string.IsNullOrWhiteSpace(target.SelectedSource?.ArchivePassword) ||
                 AdaptiveFileProcessingAssessmentService.HasExtractionStep(target.SelectedSource?.ExtractionPlanJson) ||
                 executionEvidence?.CompletedProcessing.Any(round => round.Operations.Any(op => op.Kind == "extractArchive")) == true;
             await ctx.ReportStage("analyzingFiles");
-            var decision = await adaptive.AssessAsync(current, assessmentContext, iteration, ct, inspectImagePackaging, executionEvidence);
+            var decision = await adaptive.AssessAsync(current, assessmentContext, iteration, ct, inspectImagePackaging,
+                executionEvidence, target.SelectedSource?.ArchivePassword);
             var blocks = new List<WorkflowOutputBlock>();
             if (AdaptiveAssessmentDiagnostic.FromCode(decision.DiagnosticCode) is { } diagnostic) blocks.Add(diagnostic);
             if (decision.Call is {} call) blocks.Add(call.Block(currentTarget.Id));
@@ -420,7 +421,9 @@ public sealed class AssessFileArtifactDeliveryActivity : IResumableWorkflowActiv
                 "workflow:" + ctx.RunId + ":adaptive:" + currentTarget.Id + ":" + iteration,
                 null, null, value => ctx.ReportProgress(value, currentTarget.Title).GetAwaiter().GetResult(), ct,
                 replan: false, stopAfterStepId: null, recovery: null, onlyOuterPackaging: false,
-                passwordEvidence: AcquisitionArchivePasswordEvidence.Bind(ctx, currentTarget.Id, currentTarget.SelectedSource?.Url), reportStage: ctx.ReportStage);
+                passwordEvidence: AcquisitionArchivePasswordEvidence.Bind(ctx, currentTarget.Id, currentTarget.SelectedSource?.Url), reportStage: ctx.ReportStage,
+                originalDownloadPassword: decision.Operations.Any(op => op.Type == "extract")
+                    ? await AcquisitionFileProcessingEvidence.OriginalDownloadPasswordAsync(sourceEvidence, currentTarget, current, store, ct) : null);
             if (result.Artifact == null)
             {
                 return Suspend(Replace(workset, currentTarget), currentTarget,

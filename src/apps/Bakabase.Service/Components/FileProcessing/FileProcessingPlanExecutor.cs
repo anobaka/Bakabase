@@ -49,7 +49,7 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
         bool extractionContentsAsRoot = false, IReadOnlyList<string>? inputDirectories = null,
         FileProcessingCheckpointInput? checkpointInput = null, ArtifactDirectoryProvenance? inputDirectoryProvenance = null,
         Func<string, CancellationToken, Task<IReadOnlyList<string>>>? passwordEvidence = null,
-        Func<string, Task>? reportStage = null)
+        Func<string, Task>? reportStage = null, string? originalDownloadPassword = null)
     {
         Validate(plan);
         if (reportStage != null) await reportStage("preparingFiles");
@@ -91,7 +91,7 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
         try
         {
             if (checkpointInput != null) await ValidatePinnedInputAsync(directory, plan, checkpointInput, ct);
-            return await Run(plan, root, normalized, directory, password, progress, ct, stopAfterStepId, storagePolicy, storageTitle, extractionContentsAsRoot, directories, inputDirectoryProvenance, passwordEvidence, reportStage);
+            return await Run(plan, root, normalized, directory, password, progress, ct, stopAfterStepId, storagePolicy, storageTitle, extractionContentsAsRoot, directories, inputDirectoryProvenance, passwordEvidence, reportStage, originalDownloadPassword);
         }
         catch (LocalStorageException error)
         { return new(false, normalized, null, error.Code, FailureCode: "StorageUnavailable"); }
@@ -112,7 +112,8 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
     private async Task<FileProcessingPlanResult> Run(FileProcessingPlan plan, string root,
         List<string> files, string directory, string? password, Action<int>? progress, CancellationToken ct, string? stopAfterStepId, ArtifactStoragePolicy? storagePolicy, string? storageTitle, bool extractionContentsAsRoot,
         IReadOnlyList<string> inputDirectories, ArtifactDirectoryProvenance? inputDirectoryProvenance,
-        Func<string, CancellationToken, Task<IReadOnlyList<string>>>? passwordEvidence, Func<string, Task>? reportStage)
+        Func<string, CancellationToken, Task<IReadOnlyList<string>>>? passwordEvidence, Func<string, Task>? reportStage,
+        string? originalDownloadPassword)
     {
         FileProcessingFiles.Within(directory, directory);
         var stateFile = Path.Combine(directory, "state.json");
@@ -418,6 +419,8 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
                     if (priorFormat.VerifiedPassword != null) formatPasswords.Add(priorFormat.VerifiedPassword);
                 }
                 formatPasswords.Add(step.Password);
+                var sourcePassword = inputReferences is ["download"] ? originalDownloadPassword : null;
+                if (sourcePassword != null && !formatPasswords.Contains(sourcePassword)) formatPasswords.Add(sourcePassword);
                 Task<IReadOnlyList<DetectedArchiveGroup>> DetectGroups() => AuthorizedArchiveDetection.DetectAsync(
                     extractionInputs.Select(a => a.Path).ToArray(), recursive: false, ct, extraction, detectionBudget,
                     exactExtractionSelection: selected.Count == 1 || literalSelector || executableSelector || oneSelectedSfxFamily, authorizedPasswords: formatPasswords);
@@ -522,6 +525,7 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
                             if (recognized.VerifiedPassword != null) candidates.Add(recognized.VerifiedPassword);
                         }
                         candidates.Add(step.Password);
+                        if (sourcePassword != null) candidates.Add(sourcePassword);
                         candidates = candidates.Distinct().ToList();
                         ArchivePasswordProbe probe;
                         try

@@ -131,6 +131,21 @@ public sealed partial class AcquisitionRecoveryDiagnostics(BakabaseDbContext db,
                     var state = JsonSerializer.Deserialize<AcquisitionPlanBuilderState>(task.BuilderStateJson ?? "{}", WorkflowJson.Options);
                     var config = JsonSerializer.Deserialize<AcquisitionPlanProcessingConfig>(node.ConfigJson, WorkflowJson.Options);
                     var target = workset.Targets.SingleOrDefault(t => !t.Excluded && t.Id == config?.TargetId);
+                    if (config?.ContinueFrom is {} continuation && target != null)
+                    {
+                        if (!verifyFiles) return Result("RECOVERY_VERIFY_FILES");
+                        if (continuation.TaskId != task.Id || !await AcquisitionPlanArtifactInputGuard.OwnsRunAsync(db, run.Id, task.Id, ct))
+                            return Result("RECOVERY_FILES_UNVERIFIED", manual: "inspectFiles");
+                        var input = await AcquisitionPlanArtifactInputGuard.RequireAsync(db, artifacts, task.Id, target.Id, continuation, ct);
+                        var following = plan.Nodes.Skip(run.CurrentStepIndex.Value + 1)
+                            .Select(n => new WorkflowPlannedActivity(n.Kind, n.ConfigJson)).ToArray();
+                        if (!AcquisitionPlanProcessingActivity.KeepsPublishedInput(config, input) ||
+                            !await AcquisitionPlanProcessingActivity.CanForwardPublishedInputAsync(db, run.Id, workset, target, input, following, ct))
+                            return Result("RECOVERY_PROCESSING_FILES_REFERENCED", manual: "inspectFiles");
+                        if (!await ValidArtifact(input.Id, ct)) return Result("RECOVERY_FILES_UNVERIFIED", manual: "inspectFiles");
+                        return Result("RECOVERY_STAGE_INPUT_READY", true, signal: JsonSerializer.Serialize(
+                            new CloudFileProcessingSignal {TargetId = target.Id}, WorkflowJson.Options));
+                    }
                     if (state?.ProcessingStageInputId is not { } pending || target == null || config?.ContinueFrom != null)
                         return Result("RECOVERY_MANUAL_REVIEW", manual: "inspectFiles");
                     if (!verifyFiles) return Result("RECOVERY_VERIFY_FILES");

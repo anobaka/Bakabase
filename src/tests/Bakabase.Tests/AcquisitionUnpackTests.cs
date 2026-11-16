@@ -11,7 +11,9 @@ using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Acquisition.Models.Domain;
 using Bakabase.Modules.PostParser.Models.Domain;
+using Bakabase.Modules.Workflow.Artifacts;
 using Bakabase.Service.Components.Acquisition.Steps;
+using Bakabase.Service.Components.FileProcessing;
 using Bakabase.TestKit.Utils;
 using Bootstrap.Components.Configuration.Abstractions;
 using CliWrap;
@@ -74,7 +76,7 @@ public sealed class AcquisitionUnpackTests
     {
         foreach (var path in new[]
                  {
-                     "7z", "7za", "/usr/bin/7z", "/usr/local/bin/7z", "/opt/homebrew/bin/7z",
+                     "7z", "7zz", "7za", "/usr/bin/7z", "/usr/local/bin/7z", "/opt/homebrew/bin/7z",
                      @"C:\Program Files\7-Zip\7z.exe", @"C:\Program Files (x86)\7-Zip\7z.exe"
                  })
         {
@@ -348,6 +350,30 @@ public sealed class AcquisitionUnpackTests
 
         Assert.AreEqual(0, prompt.Tried.Count,
             "with nothing in the content and nothing in the name, there was nothing to try");
+    }
+
+    [TestMethod]
+    public async Task CurrentSourcePasswordCanOpenOnlyTheOriginalEncryptedSplitWithAStaleStepPassword()
+    {
+        Require7z();
+        var payload = Path.Combine(_root, "payload.bin");
+        var content = Enumerable.Range(0, 1024).Select(i => (byte)i).ToArray();
+        await File.WriteAllBytesAsync(payload, content);
+        var archive = Path.Combine(_working, "archive.7z");
+        var created = await Cli.Wrap(_sevenZip!).WithArguments(
+            ["a", archive, payload, "-mx=0", "-mhe=on", "-psource-password", "-v256b"]).ExecuteAsync();
+        Assert.AreEqual(0, created.ExitCode);
+        var parts = Directory.GetFiles(_working, "archive.7z.*");
+        Assert.IsTrue(parts.Length > 1);
+        var plan = new FileProcessingPlan {Requirement = "required", Steps =
+            [new() {Id = "open", Op = "extractArchive", Selector = "archive.7z.*", Password = "stale-password"}]};
+        var executor = new FileProcessingPlanExecutor(_sp.GetRequiredService<IArchiveExtractionService>());
+        var state = Path.Combine(_root, "checkpoints");
+        var wrong = await executor.ExecuteAsync(plan, _working, parts, state);
+        Assert.IsTrue(wrong.NeedsPassword, wrong.Message);
+        var result = await executor.ExecuteAsync(plan, _working, parts, state, originalDownloadPassword: "source-password");
+        Assert.IsTrue(result.Completed, result.Message);
+        CollectionAssert.AreEqual(content, await File.ReadAllBytesAsync(result.Files.Single()));
     }
 
     [TestMethod]

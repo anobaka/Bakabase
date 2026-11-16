@@ -12,6 +12,7 @@ using Bakabase.Modules.Workflow.Abstractions.Models.Db;
 using Bakabase.Modules.Workflow.Artifacts;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
 using Bakabase.InsideWorld.Business;
+using Bakabase.InsideWorld.Business.Components.Artifacts;
 using Bakabase.Service.Components.CloudDownloads;
 using Bakabase.Service.Components.FileProcessing;
 using Microsoft.Extensions.DependencyInjection;
@@ -162,6 +163,30 @@ public sealed class AcquisitionPlanProcessingActivity : IResumableWorkflowActivi
         return await AssessFileArtifactDeliveryActivity.ReviewAsync(ctx, result, InlineReviewConfig(config), null, ct);
     }
 
+    // A published artifact selected for delivery as-is is already the finished input.
+    // The processing directory can belong to another operation and must not be populated.
+    internal static bool KeepsPublishedInput(AcquisitionPlanProcessingConfig config, ArtifactRecord input) =>
+        config is {UseVerifiedInput: true, ExplicitlyKeepFiles: true, ContinueFrom: not null, StopAfterStepId: null,
+            Plan: {Requirement: "notRequired", Steps.Count: 0}} && input.Kind == "publishedFiles" &&
+        input.Id == config.ContinueFrom.ArtifactId && input.OperationId == config.ContinueFrom.OperationId &&
+        input.Fingerprint == config.ContinueFrom.Fingerprint;
+
+    internal static async Task<bool> CanForwardPublishedInputAsync(BakabaseDbContext db, int runId,
+        DownloadWorkset workset, CloudDownloadTarget target, ArtifactRecord input, IReadOnlyList<WorkflowPlannedActivity> following,
+        CancellationToken ct)
+    {
+        if (following is not [{Kind: "fs.publishArtifacts"} publication] ||
+            target.StageDirectories?.Delivery is not {Ownership: "exclusive", BindingId: not null} binding ||
+            target.PublishedDirectory != null || target.PublishedArtifactId != null) return false;
+        var config = JsonSerializer.Deserialize<FileArtifactPublicationConfig>(publication.ConfigJson, WorkflowJson.Options);
+        if (config is not {Source: "processed", ReusePolicy: "reuseVerified"}) return false;
+        var directory = target.PublicationTargetDirectory ?? PublishFileArtifactsActivity.CloudTargetDirectory(workset, target, config);
+        if (PublishFileArtifactsActivity.CurrentStageBinding(target, config, directory) != binding.BindingId ||
+            AcquisitionPlanService.Overlap(input.RootDirectory, directory)) return false;
+        ArtifactManifestFiles.RejectLinks(directory);
+        return await AcquisitionPlanArtifactInputGuard.HasContinuationBindingAsync(db, runId, target.Id, input.OperationId, ct);
+    }
+
     private async Task<WorkflowItemOutcome> Run(WorkflowExecutionContext ctx, DownloadWorkset workset, CloudFileProcessingSignal? signal, CancellationToken ct)
     {
         using var writeScope = StorageWriteScope.Enter(new("workflow", ctx.RunId.ToString(System.Globalization.CultureInfo.InvariantCulture)));
@@ -220,12 +245,25 @@ public sealed class AcquisitionPlanProcessingActivity : IResumableWorkflowActivi
         FileArtifactCheckpointContinuation? checkpoint = null;
         FileArtifactProcessingResult? checkpointFailure = null;
         ArtifactRecord? input;
+        var forwardPublication = false;
         if (config.ContinueFrom is { } continuation)
         {
             var db = ctx.Services.GetRequiredService<BakabaseDbContext>();
             if (!await AcquisitionPlanArtifactInputGuard.OwnsRunAsync(db, ctx.RunId, continuation.TaskId, ct))
                 throw new ArgumentException("PLAN_REPLAN_EVIDENCE_INVALID");
             var registered = await AcquisitionPlanArtifactInputGuard.RequireAsync(db, store, continuation.TaskId, target.Id, continuation, ct);
+            if (KeepsPublishedInput(config, registered) && plan is {Requirement: "notRequired", Steps.Count: 0} &&
+                ctx.FollowingActivities is [{Kind: "fs.publishArtifacts"}] && target.StageDirectories?.Delivery?.BindingId != null)
+            {
+                if (!await CanForwardPublishedInputAsync(db, checked((int)ctx.RunId), workset, target, registered, ctx.FollowingActivities, ct))
+                    throw new InvalidOperationException("STAGE_COMMIT_REFERENCED");
+                // A failed run may have released its earlier pin. Reacquire it before
+                // resolving these bytes on every retry and hold it through publication.
+                if (!await store.PinConsumerAsync(registered.OperationId, AcquisitionPlanArtifactInputGuard.Consumer(ctx.RunId, target.Id),
+                    "workflow", ctx.RunId.ToString(System.Globalization.CultureInfo.InvariantCulture), ct))
+                    throw new InvalidOperationException("PLAN_REPLAN_EVIDENCE_UNAVAILABLE");
+                forwardPublication = true;
+            }
             var stepIndex = plan.Steps.FindIndex(s => s.Id == boundary);
             if (stepIndex > 0 && signal?.Password == null && signal?.ExtractionPlanJson == null &&
                 target.ProcessedArtifactId is { } previousId)
@@ -262,7 +300,7 @@ public sealed class AcquisitionPlanProcessingActivity : IResumableWorkflowActivi
         // not require the original selected directory again after that hand-off.
         if (checkpoint == null && checkpointFailure == null && input.Kind == AcquisitionCurrentDirectoryFiles.Kind)
             await AcquisitionCurrentDirectoryFiles.ValidateSelectionAsync(input, ctx.Services.GetService<FileProcessingWorkspaceResolver>(), ct);
-        if (checkpoint == null && checkpointFailure == null && signal?.StorageRecovery == null)
+        if (!forwardPublication && checkpoint == null && checkpointFailure == null && signal?.StorageRecovery == null)
         {
             await ctx.ReportStage("preparingFiles");
             input = await AcquisitionProcessingStageInput.PrepareAsync(ctx, target, input, ct, processingConfig.StoragePolicy);
@@ -274,7 +312,9 @@ public sealed class AcquisitionPlanProcessingActivity : IResumableWorkflowActivi
             var original = await store.GetOperationAsync(input.OperationId, ct);
             if (original == null || string.IsNullOrWhiteSpace(original.IntentKey))
                 throw new InvalidOperationException("PLAN_REPLAN_EVIDENCE_UNAVAILABLE");
-            await Bind(ctx, target, input, null, ct);
+            // A forwarded publication is still owned by its producer. The continuation
+            // binding records our read; do not register its operation as our own processing.
+            if (!forwardPublication) await Bind(ctx, target, input, null, ct);
             return WorkflowItemOutcome.ReplaceWith(Replace(workset, target with
             {
                 ProcessedArtifactId = input.Id, ProcessingOperationId = input.OperationId,

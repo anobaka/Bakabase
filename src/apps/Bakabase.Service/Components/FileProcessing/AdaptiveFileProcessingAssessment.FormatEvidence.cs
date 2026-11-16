@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business.Components.Artifacts;
 using Bakabase.InsideWorld.Business.Components.Compression;
+using Bakabase.InsideWorld.Business.Components.Dependency.Exceptions;
 using Bakabase.Modules.Workflow.Artifacts;
 
 namespace Bakabase.Service.Components.FileProcessing;
@@ -72,7 +73,8 @@ public sealed partial class AdaptiveFileProcessingAssessmentService
     }
 
     internal static async Task<string> DescribeFormatEvidenceAsync(ArtifactRecord artifact,
-        IReadOnlyList<string> visiblePaths, CancellationToken ct, HashSet<string>? extractedMovies = null)
+        IReadOnlyList<string> visiblePaths, CancellationToken ct, HashSet<string>? extractedMovies = null,
+        IArchiveExtractionService? archiveProbe = null, string? authorizedArchivePassword = null)
     {
         ct.ThrowIfCancellationRequested();
         var selected = FormatEvidenceCandidates(artifact.Manifest, visiblePaths);
@@ -96,6 +98,7 @@ public sealed partial class AdaptiveFileProcessingAssessmentService
         using var mediaBudget = CancellationTokenSource.CreateLinkedTokenSource(ct);
         mediaBudget.CancelAfter(TimeSpan.FromSeconds(3));
         var inspectVideoArchives = FileArtifactDeliveryAssessment.MayContainDisguisedVideoArchive(artifact.Manifest);
+        var executable = archiveProbe == null ? null : OuterExecutableCandidate(artifact.Manifest);
         foreach (var index in selected)
         {
             ct.ThrowIfCancellationRequested();
@@ -123,7 +126,20 @@ public sealed partial class AdaptiveFileProcessingAssessmentService
                             catch (OperationCanceledException) when (!ct.IsCancellationRequested) { }
                         }
                         ArtifactManifestFiles.RejectLinks(file.Path);
-                        if (new FileInfo(file.Path).Length == file.Length && videoArchive)
+                        if (format == null && executable != null && visiblePaths[index] == executable)
+                        {
+                            var modified = File.GetLastWriteTimeUtc(file.Path);
+                            var recognized = await archiveProbe!.ProbeAuthorizedFormatAsync(file.Path,
+                                string.IsNullOrEmpty(authorizedArchivePassword) ? [] : [authorizedArchivePassword], ct);
+                            ArtifactManifestFiles.RejectLinks(file.Path);
+                            var current = new FileInfo(file.Path);
+                            if (current.Length == file.Length && current.LastWriteTimeUtc == modified)
+                            {
+                                format = recognized?.Extension;
+                                status = format == null ? "notRecognizedAtOffsetZero" : "recognizedExecutableArchive";
+                            }
+                        }
+                        else if (new FileInfo(file.Path).Length == file.Length && videoArchive)
                         {
                             status = "recognizedOuterZipInVideoFile";
                             format = ".zip";
@@ -138,7 +154,8 @@ public sealed partial class AdaptiveFileProcessingAssessmentService
                         else format = null;
                     }
                 }
-                catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException)
+                catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException
+                    or DependencyNotInstalledException or System.ComponentModel.Win32Exception)
                 {
                     format = null;
                 }
@@ -148,10 +165,27 @@ public sealed partial class AdaptiveFileProcessingAssessmentService
         return JsonSerializer.Serialize(new
         {
             scope = "Archive signatures use eight bytes at offset zero. For at most two video candidates in a small manifest, bounded ZIP directory and media box checks can establish a separate outer ZIP. After a committed extraction, " +
-                    "MP4 evidence checks bounded box metadata and a bounded file tail without decoding media. Unclassified files remain unknown.",
+                    "MP4 evidence checks bounded box metadata and a bounded file tail without decoding media. A single outer executable may be listed by the archive tool when the source indicates unpacking. Unclassified files remain unknown.",
             maximumFiles = MaxFormatEvidenceFiles,
             uninspectedFiles = artifact.Manifest.Entries.Count - selected.Length,
             files = evidence
         }, ManifestJson);
+    }
+
+    // Only an unpacking context calls this probe. One substantial executable accompanied by
+    // small notes can be an outer SFX. Executables in games and application trees are not scanned.
+    private static string? OuterExecutableCandidate(ArtifactManifest manifest)
+    {
+        if (manifest.Entries.Count is 0 or > MaxFormatEvidenceFiles) return null;
+        string? candidate = null;
+        foreach (var file in manifest.Entries)
+        {
+            var extension = Path.GetExtension(file.RelativePath).ToLowerInvariant();
+            if (extension == ".exe" && candidate == null && file.Length >= MinimumOuterFormatEvidenceBytes)
+                candidate = file.RelativePath;
+            else if (extension is not (".txt" or ".nfo") || file.Length > MinimumOuterFormatEvidenceBytes)
+                return null;
+        }
+        return candidate;
     }
 }
