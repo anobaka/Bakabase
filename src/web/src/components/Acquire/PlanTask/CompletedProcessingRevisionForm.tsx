@@ -230,11 +230,14 @@ export default function CompletedProcessingRevisionForm({
   const reviewedInput = reviewedProcessingInput(snapshot);
   const boundProcessingDirectory = parts.length === 1 && snapshot.stageDirectories?.taskId === snapshot.task.id
     ? snapshot.stageDirectories.parts[parts[0].id]?.processing : undefined;
-  // An empty configured directory is not permission to silently reuse older files.
-  // Offer only the exact current review input, after the server confirms the empty input.
-  const emptyDirectoryRecovery = requestedInputStage === "processing" && retryStage === "processing" &&
-    boundProcessingDirectory?.bindingId && reviewedInput && reviewedInput.partId === parts[0]?.id &&
-    reviewedInput.rootDirectory !== boundProcessingDirectory.directory ? reviewedInput : undefined;
+  const reviewedStageInput = requestedInputStage === "processing" && retryStage === "processing" &&
+    reviewedInput?.partId === parts[0]?.id && boundProcessingDirectory ? reviewedInput : undefined;
+  // Borrowed directories are protected from whole-directory changes. A stopped run
+  // can still read its own exact artifact through the independently checked capture path.
+  const borrowedReview = !!reviewedStageInput && boundProcessingDirectory?.ownership === "borrowed" &&
+    boundProcessingDirectory.bindingId == null && boundProcessingDirectory.evidence === "processingRecord" &&
+    reviewedStageInput.fileCount > 0 && reviewedStageInput.rootDirectory === boundProcessingDirectory.directory &&
+    matchesWaitingRevision(snapshot, waitingLocalProcessing);
   const partInputStage = (partId: string) => inputStage && currentProcessingInputStage(snapshot, partId, inputStage);
   const stageDirectory = (partId: string) => inputStage && snapshot.stageDirectories?.taskId === snapshot.task.id
     ? snapshot.stageDirectories.parts[partId]?.[partInputStage(partId)!]?.directory : undefined;
@@ -306,10 +309,17 @@ export default function CompletedProcessingRevisionForm({
   const reserve = useAttemptStorageReserve(saving);
   const submitting = useRef(false);
   const [error, setError] = useState<string>();
+  const recoveryHint = error === "STAGE_DIRECTORY_REFERENCED" && borrowedReview
+    ? "acquisition.processingInput.referencedDirectoryRecoveryHint"
+    : error === "PLAN_CURRENT_DIRECTORY_EMPTY" && boundProcessingDirectory?.bindingId &&
+      reviewedStageInput && reviewedStageInput.rootDirectory !== boundProcessingDirectory.directory
+      ? "acquisition.processingInput.emptyDirectoryRecoveryHint"
+      : undefined;
   const candidates = (partId: string) =>
     (snapshot.replanArtifacts ?? []).filter(
       (item) =>
         item.partId === partId &&
+        (!readReviewedDirectory || !borrowedReview || item.artifactId === reviewedStageInput?.artifactId) &&
         (!deliveryOnly || item.canRetryDelivery === true) &&
         (publicationStorage
           ? isPublicationInput(item)
@@ -442,7 +452,7 @@ export default function CompletedProcessingRevisionForm({
             listboxProps={{ itemClasses: { base: "h-auto", title: "whitespace-normal break-all", wrapper: "min-w-0" } }}
             label={t(`${labels}.input`)}
             selectedKeys={drafts[part.id]?.artifactId ? [drafts[part.id].artifactId] : []}
-            isDisabled={saving}
+            isDisabled={saving || (readReviewedDirectory && borrowedReview)}
             dataSource={candidates(part.id).map((item) => ({
               value: item.artifactId,
               label: item.rootDirectory,
@@ -577,12 +587,12 @@ export default function CompletedProcessingRevisionForm({
           })}
         </p>
       )}
-      {error === "PLAN_CURRENT_DIRECTORY_EMPTY" && !readReviewedDirectory && emptyDirectoryRecovery && (
+      {recoveryHint && !readReviewedDirectory && reviewedStageInput && (
         <section className="space-y-2 rounded-lg border border-default-200 p-3">
-          <p className="text-sm">{t("acquisition.processingInput.emptyDirectoryRecoveryHint")}</p>
-          <p className="break-all text-xs text-default-500">{emptyDirectoryRecovery.rootDirectory}</p>
+          <p className="text-sm">{t(recoveryHint)}</p>
+          <p className="break-all text-xs text-default-500">{reviewedStageInput.rootDirectory}</p>
           <Button size="sm" variant="flat" isDisabled={saving} onPress={() => {
-            update(emptyDirectoryRecovery.partId, { artifactId: emptyDirectoryRecovery.artifactId });
+            update(reviewedStageInput.partId, { artifactId: reviewedStageInput.artifactId });
             setReadReviewedDirectory(true);
             setError(undefined);
           }}>

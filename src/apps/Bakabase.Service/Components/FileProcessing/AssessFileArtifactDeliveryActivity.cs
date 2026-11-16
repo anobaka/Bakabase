@@ -141,20 +141,7 @@ public sealed class AssessFileArtifactDeliveryActivity : IResumableWorkflowActiv
             throw new InvalidOperationException("FILE_DELIVERY_INPUT_CHANGED");
         if (input.Kind == AcquisitionCurrentDirectoryFiles.Kind)
             await AcquisitionCurrentDirectoryFiles.ValidateSelectionAsync(input, ctx.Services.GetService<FileProcessingWorkspaceResolver>(), ct);
-        if (input.Kind == "publishedFiles")
-        {
-            var publication = JsonSerializer.Deserialize<FileArtifactPublicationMetadata>(input.MetadataJson ?? "{}", WorkflowJson.Options);
-            if (publication != null && FileArtifactDeliveryAssessment.HasExecutedExtraction(publication.SourceMetadataJson))
-            {
-                // The original bytes may have been cleaned; their immutable receipt must still
-                // bind the embedded processing evidence to these exact delivered leaves.
-                var source = await store.GetArtifactAsync(publication.SourceArtifactId, ct);
-                if (source == null || source.Kind != "processedFiles" || source.OperationId != publication.SourceOperationId ||
-                    source.MetadataJson != publication.SourceMetadataJson ||
-                    !FileArtifactDeliveryLayout.PreservesSource(source, input, publication.DeliveryLayout))
-                    throw new InvalidOperationException("FILE_DELIVERY_INPUT_CHANGED");
-            }
-        }
+        var wasExtracted = await FileArtifactDeliveryAssessment.WasExtractedBeforeDeliveryAsync(input, store, ct);
         if (review?.Accepted == true) return WorkflowItemOutcome.ReplaceWith(workset);
         // Protect the immutable input through human review and publication.
         // Terminal workflow states release the durable owner without a timing gap between nodes.
@@ -190,7 +177,7 @@ public sealed class AssessFileArtifactDeliveryActivity : IResumableWorkflowActiv
 
         if (review == null)
         {
-            var assessment = await FileArtifactDeliveryAssessment.AssessAsync(input, ct);
+            var assessment = await FileArtifactDeliveryAssessment.AssessAsync(input, ct, extractionWasReviewed: wasExtracted);
             if (assessment.Files.Count == 0) return WorkflowItemOutcome.ReplaceWith(workset);
             var inherited = input.Kind == "processedFiles" && input.MetadataJson != null
                 ? JsonSerializer.Deserialize<FileArtifactProcessingMetadata>(input.MetadataJson, WorkflowJson.Options)?.InheritedExtractionLayout : null;
@@ -342,7 +329,7 @@ public sealed class AssessFileArtifactDeliveryActivity : IResumableWorkflowActiv
             var inspectImagePackaging = !string.IsNullOrWhiteSpace(target.SelectedSource?.ArchivePassword) ||
                 AdaptiveFileProcessingAssessmentService.HasExtractionStep(target.SelectedSource?.ExtractionPlanJson) ||
                 executionEvidence?.CompletedProcessing.Any(round => round.Operations.Any(op => op.Kind == "extractArchive")) == true;
-            var decision = await adaptive.AssessAsync(current, assessmentContext, iteration, ct, inspectImagePackaging);
+            var decision = await adaptive.AssessAsync(current, assessmentContext, iteration, ct, inspectImagePackaging, executionEvidence);
             var blocks = new List<WorkflowOutputBlock>();
             if (AdaptiveAssessmentDiagnostic.FromCode(decision.DiagnosticCode) is { } diagnostic) blocks.Add(diagnostic);
             if (decision.Call is {} call) blocks.Add(call.Block(currentTarget.Id));

@@ -72,7 +72,7 @@ public sealed partial class AdaptiveFileProcessingAssessmentService
     }
 
     internal static async Task<string> DescribeFormatEvidenceAsync(ArtifactRecord artifact,
-        IReadOnlyList<string> visiblePaths, CancellationToken ct)
+        IReadOnlyList<string> visiblePaths, CancellationToken ct, HashSet<string>? extractedMovies = null)
     {
         ct.ThrowIfCancellationRequested();
         var selected = FormatEvidenceCandidates(artifact.Manifest, visiblePaths);
@@ -93,6 +93,8 @@ public sealed partial class AdaptiveFileProcessingAssessmentService
                 // The ordinary processing and artifact guards remain authoritative.
             }
         }
+        using var mediaBudget = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        mediaBudget.CancelAfter(TimeSpan.FromSeconds(3));
         foreach (var index in selected)
         {
             ct.ThrowIfCancellationRequested();
@@ -106,8 +108,19 @@ public sealed partial class AdaptiveFileProcessingAssessmentService
                     if (new FileInfo(file.Path).Length == file.Length)
                     {
                         format = await AuthorizedArchiveDetection.SignatureAsync(file.Path, ct);
+                        var movie = false;
+                        if (format == null && extractedMovies != null && !mediaBudget.IsCancellationRequested)
+                        {
+                            try { movie = await QuickTimeDeliveryProbe.IsMp4Async(file.Path, file.Length, mediaBudget.Token); }
+                            catch (OperationCanceledException) when (!ct.IsCancellationRequested) { }
+                        }
                         ArtifactManifestFiles.RejectLinks(file.Path);
-                        if (new FileInfo(file.Path).Length == file.Length)
+                        if (new FileInfo(file.Path).Length == file.Length && movie)
+                        {
+                            status = "recognizedMp4Container";
+                            extractedMovies!.Add(visiblePaths[index]);
+                        }
+                        else if (new FileInfo(file.Path).Length == file.Length)
                             status = format == null ? "notRecognizedAtOffsetZero" : "recognizedArchiveSignature";
                         else format = null;
                     }
@@ -121,7 +134,8 @@ public sealed partial class AdaptiveFileProcessingAssessmentService
         }
         return JsonSerializer.Serialize(new
         {
-            scope = "At most 8 bytes at offset zero per selected file; not an archive integrity, password, or content inspection.",
+            scope = "Archive evidence reads at most 8 bytes at offset zero per selected file. After a committed extraction, " +
+                    "MP4 evidence checks bounded box metadata and a bounded file tail without decoding media. Unclassified files remain unknown.",
             maximumFiles = MaxFormatEvidenceFiles,
             uninspectedFiles = artifact.Manifest.Entries.Count - selected.Length,
             files = evidence

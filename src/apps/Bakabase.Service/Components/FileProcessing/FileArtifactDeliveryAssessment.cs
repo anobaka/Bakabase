@@ -20,13 +20,50 @@ internal static class FileArtifactDeliveryAssessment
     internal const int MaximumCompanionProbeFiles = 128;
 
     internal sealed record Assessment(IReadOnlyList<string> Files, bool Automatic = false, bool Uncertain = false);
+
     private static readonly HashSet<string> FinishedFormats = new(StringComparer.OrdinalIgnoreCase)
     { ".exe", ".app", ".apk", ".jar", ".epub", ".pdf", ".html", ".htm", ".docx", ".xlsx", ".pptx",
       ".jpg", ".jpeg", ".png", ".gif", ".webp", ".avif", ".mp4", ".mkv", ".webm", ".mp3", ".flac", ".wav", ".txt", ".md", ".srt", ".ass", ".ssa", ".vtt" };
-    // An executable/delivery container beside a ZIP can be an application with packaged data.
-    // Its data files are retained verbatim and are never recursively treated as outer packaging.
+    // Applications may include packaged data that should be delivered intact.
     private static readonly HashSet<string> ApplicationFormats = new(StringComparer.OrdinalIgnoreCase)
         { ".exe", ".apk", ".jar", ".app" };
+
+    // A processing-stage commit registers the same manifest at its visible location.
+    // Its own no-op plan describes that move. The producer's receipt records the extraction.
+    internal static async Task<bool> WasExtractedBeforeDeliveryAsync(ArtifactRecord artifact,
+        IArtifactOperationStore store, CancellationToken ct)
+    {
+        if (artifact.Kind == "publishedFiles")
+        {
+            var publication = JsonSerializer.Deserialize<FileArtifactPublicationMetadata>(artifact.MetadataJson ?? "{}", WorkflowJson.Options);
+            if (publication?.SourceMetadataJson == null) return false;
+            var metadata = ReadProcessingMetadata(publication.SourceMetadataJson);
+            if (metadata?.StageCommit == null && !HasExecutedExtraction(metadata)) return false;
+            var source = await store.GetArtifactAsync(publication.SourceArtifactId, ct);
+            if (source?.Kind != "processedFiles" || source.OperationId != publication.SourceOperationId ||
+                source.MetadataJson != publication.SourceMetadataJson || !FileArtifactDeliveryLayout.PreservesSource(source, artifact, publication.DeliveryLayout))
+                throw new InvalidOperationException("FILE_DELIVERY_INPUT_CHANGED");
+            artifact = source;
+        }
+
+        var visited = new HashSet<string>(StringComparer.Ordinal);
+        while (artifact.Kind == "processedFiles" && artifact.MetadataJson != null)
+        {
+            var metadata = ReadProcessingMetadata(artifact.MetadataJson);
+            if (metadata?.StageCommit is not { } receipt) return HasExecutedExtraction(metadata);
+            if (!visited.Add(artifact.Id) || receipt.Version != 1 || receipt.Move is not {Completed: true} ||
+                receipt.Id != artifact.OperationId || receipt.SourceArtifactId != metadata.InputArtifactId ||
+                !artifact.ParentArtifactIds.Contains(receipt.SourceArtifactId))
+                throw new InvalidOperationException("FILE_DELIVERY_INPUT_CHANGED");
+            var source = await store.GetArtifactAsync(receipt.SourceArtifactId, ct);
+            if (source?.Kind != "processedFiles" || source.Fingerprint != receipt.SourceFingerprint ||
+                source.MetadataJson != metadata.InputMetadataJson || !FileDispositionProofs.ValidFor(metadata.FileDisposition, source, artifact) ||
+                !FileDispositionProofs.SameManifest(source.Manifest, artifact.Manifest))
+                throw new InvalidOperationException("FILE_DELIVERY_INPUT_CHANGED");
+            artifact = source;
+        }
+        return false;
+    }
 
     public static async Task<IReadOnlyList<string>> ArchiveOnlyResultAsync(ArtifactRecord artifact,
         CancellationToken ct, bool extractionWasReviewed = false) =>
@@ -120,12 +157,19 @@ internal static class FileArtifactDeliveryAssessment
         return groups;
     }
 
-    internal static bool HasExecutedExtraction(string? metadata)
+    internal static bool HasExecutedExtraction(string? metadata) => HasExecutedExtraction(ReadProcessingMetadata(metadata));
+
+    private static FileArtifactProcessingMetadata? ReadProcessingMetadata(string? metadata)
     {
-        if (metadata == null) return false;
+        if (metadata == null) return null;
+        try { return JsonSerializer.Deserialize<FileArtifactProcessingMetadata>(metadata, WorkflowJson.Options); }
+        catch (JsonException) { return null; }
+    }
+
+    private static bool HasExecutedExtraction(FileArtifactProcessingMetadata? saved)
+    {
         try
         {
-            var saved = JsonSerializer.Deserialize<FileArtifactProcessingMetadata>(metadata, WorkflowJson.Options);
             if (saved == null || string.IsNullOrWhiteSpace(saved.PlanJson)) return false;
             var plan = JsonSerializer.Deserialize<FileProcessingPlan>(saved.PlanJson, WorkflowJson.Options);
             FileProcessingPlanValidator.Validate(plan);

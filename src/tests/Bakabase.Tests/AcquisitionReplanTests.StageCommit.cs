@@ -14,7 +14,7 @@ namespace Bakabase.Tests;
 
 public sealed partial class AcquisitionReplanTests
 {
-    private async Task<(AcquisitionPlanTaskDetail Task, int RunId, ArtifactRecord Source)> StageCommitInput(bool reused)
+    private async Task<(AcquisitionPlanTaskDetail Task, int RunId, ArtifactRecord Source)> StageCommitInput(bool reused, bool extracted = false)
     {
         var (task, run, _) = await Failed();
         var stage = Directory.CreateDirectory(Path.Combine(_root, "canonical-processing")).FullName;
@@ -23,6 +23,15 @@ public sealed partial class AcquisitionReplanTests
         var image = Path.Combine(source, "images", "one.jpg"); Directory.CreateDirectory(Path.GetDirectoryName(image)!);
         await File.WriteAllTextAsync(image, "image content");
         var files = new List<string> {image};
+        if (extracted)
+        {
+            foreach (var name in Enumerable.Range(1, 10).Select(n => n + ".mp4").Append("another.rar删除"))
+            {
+                var item = Path.Combine(source, name);
+                await File.WriteAllTextAsync(item, name);
+                files.Add(item);
+            }
+        }
         if (reused)
         {
             var key = Path.Combine(source, "license.key"); await File.WriteAllTextAsync(key, "keep original borrowed key"); files.Add(key);
@@ -31,10 +40,33 @@ public sealed partial class AcquisitionReplanTests
         await File.WriteAllTextAsync(Path.Combine(stage, "unknown-extra.txt"), "not selected by processing");
         var artifact = await Artifacts.AdoptAsync(new("processed-for-stage", "stage-original-intent", "files.process", "source-fingerprint"),
             new(source, files, "processedFiles", true, MetadataJson: JsonSerializer.Serialize(
-                new FileArtifactProcessingMetadata(null, "{\"requirement\":\"notRequired\"}", null,
+                new FileArtifactProcessingMetadata(null, "{\"requirement\":\"notRequired\"}", null, ArchiveCount: extracted ? 1 : 0,
                     StoragePolicy: new() {CleanupIntermediates = true}), WorkflowJson.Options)), "test");
         await new ArtifactOperationBindingService(Db).BindAsync("workflow", run.Id.ToString(), "main:process:complete", artifact.OperationId);
         return (task, run.Id, artifact);
+    }
+
+    [TestMethod]
+    public async Task Stage_handoff_and_publication_keep_extraction_evidence_for_mixed_results()
+    {
+        var (task, runId, source) = await StageCommitInput(reused: true, extracted: true);
+        var binding = task.Plan!.StageDirectories!.Parts["main"].Processing!;
+        var current = await AcquisitionProcessingStageCommit.CommitCoreAsync(Db, Artifacts, new CompositeStorage(),
+            _services.GetRequiredService<FileProcessingWorkspaceResolver>(), task.Id, runId, "main", binding, source, default);
+        var publisher = new FileArtifactPublisher(Artifacts, new CompositeStorage(), () => Path.Combine(_root, "appdata"),
+            _services.GetRequiredService<IServiceScopeFactory>());
+        var publication = await publisher.PublishAsync("after-stage", current, Path.Combine(_root, "publication"), "test");
+        foreach (var view in new[] {current, publication.Artifact!})
+        {
+            var extracted = await FileArtifactDeliveryAssessment.WasExtractedBeforeDeliveryAsync(view, Artifacts, default);
+            Assert.IsTrue(extracted);
+            var assessment = await FileArtifactDeliveryAssessment.AssessAsync(view, default, extractionWasReviewed: extracted);
+            CollectionAssert.Contains(assessment.Files.ToArray(), "another.rar删除");
+            Assert.IsFalse(assessment.Automatic);
+        }
+        var corrupted = current with {ParentArtifactIds = []};
+        await Assert.ThrowsExactlyAsync<InvalidOperationException>(() =>
+            FileArtifactDeliveryAssessment.WasExtractedBeforeDeliveryAsync(corrupted, Artifacts, default));
     }
 
     [DataTestMethod]

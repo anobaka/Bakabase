@@ -1577,6 +1577,7 @@
   "acquisition.processingInput.verifiedArtifactHint": "Use only the recorded artifact and verify its files against the original manifest before continuing.",
   "acquisition.processingInput.currentDirectoryUnavailable": "This directory cannot currently be used as a new input. Check that it is accessible and is not in use by another task, then reopen Continue processing.",
   "acquisition.processingInput.emptyDirectoryRecoveryHint": "The processing directory has no usable input. The paused step's recorded files are still in the directory below. Select it to inspect the files before starting this attempt.",
+  "acquisition.processingInput.referencedDirectoryRecoveryHint": "Other references protect this processing directory. You can use the result recorded for this paused step as the input to a new processing attempt.",
   "acquisition.processingInput.useReviewedDirectory": "Use the current recorded files",
   "acquisition.plan.replan.error.PLAN_CURRENT_DIRECTORY_UNAVAILABLE": "The selected directory is unavailable or does not belong to this task. Check the directory and try again.",
   "acquisition.plan.replan.error.PLAN_CURRENT_DIRECTORY_SHARED": "Another task or running step uses this directory. Wait for it to finish or choose an independent directory.",

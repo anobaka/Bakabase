@@ -1577,6 +1577,7 @@
   "acquisition.processingInput.verifiedArtifactHint": "仅使用已登记的历史产物；继续前按原文件清单校验完整性。",
   "acquisition.processingInput.currentDirectoryUnavailable": "此目录暂不能作为新输入。请检查目录是否可访问，以及是否仍被其他任务使用，再重新打开继续处理。",
   "acquisition.processingInput.emptyDirectoryRecoveryHint": "处理目录没有可用输入。当前暂停步骤的已登记文件仍在以下目录；选择后可查看文件，再开始本次处理。",
+  "acquisition.processingInput.referencedDirectoryRecoveryHint": "整个处理目录受到引用保护。可以单独读取本次暂停时登记的处理结果，继续准备新的处理方案。",
   "acquisition.processingInput.useReviewedDirectory": "改用当前已登记文件",
   "acquisition.plan.replan.error.PLAN_CURRENT_DIRECTORY_UNAVAILABLE": "所选目录不可访问或不属于本次任务，请检查目录后重试。",
   "acquisition.plan.replan.error.PLAN_CURRENT_DIRECTORY_SHARED": "该目录还被其他任务或处理中步骤使用，暂不能作为新的输入。请等待相关处理结束或选择独立目录。",
