@@ -216,7 +216,7 @@ public sealed class AcquisitionLocalFilesRecoveryService(BakabaseDbContext db, A
                     .ExecuteUpdateAsync(u => u.SetProperty(t => t.BuilderStateJson, json), ct);
                 if (changed != 1) throw new InvalidOperationException("ACQUISITION_TASK_CHANGED");
                 var plan = AcquisitionLocalFilesRecoveryReceipt.Read<AcquisitionPlan>(task.PlanJson)!;
-                var input = new AcquisitionPlanReplanInput(task.PlanRevision, run.Id, "recovery.localFiles.currentStorage",
+                var input = new AcquisitionPlanReplanInput(task.PlanRevision, run.Id, AcquisitionLocalFilesRecoveryReceipt.RevisionReason,
                     provenance.Select(p => new AcquisitionPlanProcessingReplacement(p.PartId,
                         analyzeFilesFirst ? new() {Requirement = "unknown", Steps = []} :
                             AcquisitionPlanCompiler.Processing(plan.Parts.Single(part => part.Id == p.PartId)),

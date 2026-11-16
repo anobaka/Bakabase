@@ -31,6 +31,7 @@ internal sealed record AcquisitionLocalFilesRecoveryReceipt(int PreviousRunId, i
     string Checkpoint, AcquisitionLocalFilesStorage Storage, IReadOnlyList<AcquisitionLocalFilesProvenance> Parts,
     AcquisitionLocalFilesRecoveryPreview Preview, int? ResultingRevision = null)
 {
+    internal const string RevisionReason = "recovery.localFiles.currentStorage";
     internal static T? Read<T>(string? json) where T : class => string.IsNullOrWhiteSpace(json) ? null :
         JsonSerializer.Deserialize<T>(json, WorkflowJson.Options);
     internal static AcquisitionLocalFilesRecoveryReceipt? Read(AcquisitionTaskDbModel task) =>

@@ -195,10 +195,12 @@ internal static class ArtifactAcquisitionAllocationReferences
             var original = OwnedPlan(task, receipt.PreviousRunId, receipt.PreviousRevision, ownedRevisions, ct);
             if (original == null) return new HashSet<JsonElement>();
             var runs = ownedRevisions.Where(o => o.TaskId == task.Id && o.Revision == revision).ToArray();
-            if (runs.Length != 1) return new HashSet<JsonElement>();
-            var plan = OwnedPlan(task, runs[0].RunId, revision, ownedRevisions, ct);
             var history = ReadHistory(task, ct);
-            if (plan?.StoragePolicy == null || history?.SingleOrDefault(h => h.Revision == revision)?.PreviousRunId != receipt.PreviousRunId ||
+            if (history == null || history.SingleOrDefault(h => h.Revision == revision) is not {} frozen ||
+                frozen.PreviousRunId != receipt.PreviousRunId || runs.Length > 1) return new HashSet<JsonElement>();
+            var plan = runs.Length == 1 ? OwnedPlan(task, runs[0].RunId, revision, ownedRevisions, ct) :
+                UnstartedAdoptionPlan(task, receipt, frozen, history, ct);
+            if (plan?.StoragePolicy == null ||
                 receipt.Parts.Any(p => p == null || string.IsNullOrWhiteSpace(p.PartId)) ||
                 receipt.Preview.Parts.Any(p => p == null || string.IsNullOrWhiteSpace(p.PartId)) ||
                 receipt.Parts.Select(p => p.PartId).Distinct().Count() != receipt.Parts.Count ||
@@ -241,6 +243,34 @@ internal static class ArtifactAcquisitionAllocationReferences
             return values;
         }
         catch (Exception e) when (Invalid(e)) { return new HashSet<JsonElement>(); }
+    }
+
+    // Preparing files can save a revision without starting any run. Its immutable adoption
+    // evidence binds the same download as the original owned run, even after a later edit.
+    private static AcquisitionPlan? UnstartedAdoptionPlan(TaskContext task, AcquisitionLocalFilesRecoveryReceipt receipt,
+        AcquisitionPlanRevision frozen, IReadOnlyList<AcquisitionPlanRevision> history, CancellationToken ct)
+    {
+        if (frozen.Reason != AcquisitionLocalFilesRecoveryReceipt.RevisionReason ||
+            frozen.ArtifactEvidence is not {Count: > 0} evidence || evidence.Count != receipt.Parts.Count) return null;
+        var recorded = JsonSerializer.SerializeToElement(frozen.Plan, Strict);
+        if (frozen.Revision == task.Revision)
+        {
+            using var current = JsonDocument.Parse(task.PlanJson ?? "null");
+            var active = ReadPlan(current.RootElement, ct);
+            if (task.RunId != null || active == null ||
+                !JsonElement.DeepEquals(recorded, JsonSerializer.SerializeToElement(active, Strict))) return null;
+        }
+        else if (history.SingleOrDefault(h => h.Revision == frozen.Revision + 1) is not {PreviousRunId: null}) return null;
+        foreach (var part in receipt.Parts)
+        {
+            var input = evidence.SingleOrDefault(e => e?.PartId == part?.PartId);
+            var preview = receipt.Preview.Parts.SingleOrDefault(p => p?.PartId == part?.PartId);
+            if (part == null || preview == null || input is not {Kind: "download", Manifest.Entries: not null} ||
+                input.ArtifactId != part.ArtifactId || input.OperationId != part.OperationId ||
+                input.RootDirectory != preview.SourceDirectory || input.Fingerprint != part.Fingerprint ||
+                input.Manifest.Fingerprint != part.Fingerprint || input.Manifest.Entries.Count != preview.FileCount) return null;
+        }
+        return ReadPlan(recorded, ct);
     }
 
     private static AcquisitionPlan? OwnedPlan(TaskContext task, int run, int revision,

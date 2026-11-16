@@ -1590,6 +1590,7 @@
   "acquisition.adaptive.reason.ADAPTIVE_MIGRATION_FAILED": "Automatic analysis could not be submitted; open the task for manual handling.",
   "acquisition.processingInput.currentDirectory": "Read the files currently in this directory",
   "acquisition.processingInput.currentDirectoryHint": "Start this attempt from the selected directory as it is now, including manual changes and added files. Keep earlier run records without downloading again.",
+  "acquisition.processingInput.chooseRegisteredDirectory": "This task has no processing directory. Select the processed or delivered files for this attempt and review the directory contents.",
   "acquisition.processingInput.verifiedArtifactHint": "Use only the recorded artifact and verify its files against the original manifest before continuing.",
   "acquisition.processingInput.currentDirectoryUnavailable": "This directory cannot currently be used as a new input. Check that it is accessible and is not in use by another task, then reopen Continue processing.",
   "acquisition.processingInput.emptyDirectoryRecoveryHint": "The processing directory has no usable input. The paused step's recorded files are still in the directory below. Select it to inspect the files before starting this attempt.",

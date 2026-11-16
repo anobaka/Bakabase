@@ -7,7 +7,11 @@ import { AcquisitionStatus } from "@/sdk/constants";
 
 const mocks = vi.hoisted(() => ({ replan: vi.fn() }));
 vi.mock("../api", () => ({ planTaskApi: mocks }));
-vi.mock("@/components/bakaui", () => ({
+vi.mock("../useAttemptStorageReserve", () => ({
+  default: () => ({ ready: true, options: { useEmergencySpaceReserve: false }, control: null }),
+}));
+vi.mock("@/components/bakaui", async () => ({
+  ...(await import("@/test/radioControls")),
   Input: ({ label, value, onValueChange, isDisabled }: any) => (
     <input
       aria-label={label}
@@ -301,9 +305,7 @@ it("opens the explicit local-only revision without submitting, and returns to th
   expect(
     screen.getByRole("region", { name: "acquisition.plan.continueStopped.title" }),
   ).toBeVisible();
-  expect(
-    screen.getByRole("checkbox", { name: /acquisition.plan.continueCompleted.useCurrentStorage/ }),
-  ).not.toBeChecked();
+  expect(screen.getByRole("button", { name: "acquisition.placement.open" })).toBeEnabled();
   expect(screen.getByRole("button", { name: "acquisition.plan.replan.confirm" })).toBeDisabled();
   fireEvent.click(screen.getByRole("button", { name: "acquisition.plan.continueStopped.back" }));
   expect(screen.queryByLabelText("acquisition.plan.replan.reason")).not.toBeInTheDocument();

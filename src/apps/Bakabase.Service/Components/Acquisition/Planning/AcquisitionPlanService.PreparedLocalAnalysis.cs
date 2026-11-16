@@ -1,14 +1,17 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components.Artifacts;
 using Bakabase.Modules.Acquisition.Components;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Db;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Workflow.Abstractions.Models.Db;
+using Bakabase.Modules.Workflow.Artifacts;
 using Microsoft.EntityFrameworkCore;
 
 namespace Bakabase.Service.Components.Acquisition.Planning;
@@ -70,25 +73,38 @@ public sealed partial class AcquisitionPlanService
 
     // A prepared revision can already own all inputs through older runs even though it has
     // no run of its own. A new task or a plan with an outstanding acquisition cannot enter here.
-    internal async Task<bool> CanAnalyzePreparedFilesAsync(AcquisitionTaskDbModel row, CancellationToken ct)
+    internal static async Task<IReadOnlyList<(string PartId, ArtifactRecord Artifact)>> RegisteredPreparedInputsAsync(
+        BakabaseDbContext context, IArtifactOperationStore store, AcquisitionTaskDbModel row, CancellationToken ct)
     {
         if (row.WorkflowRunId != null || row.Status != AcquisitionStatus.Waiting || row.DeletedAt != null ||
-            row.Phase != "ready" || row.PlanJson == null || row.BuilderId == null || artifacts == null ||
-            State(row).DirectoryChange != null) return false;
+            row.Phase != "ready" || row.PlanJson == null || row.BuilderId == null || State(row).DirectoryChange != null) return [];
         var plan = Plan(row);
-        if (plan.Parts.Count == 0 || plan.Parts.Any(p => p.ContinueFrom == null) ||
-            !AcquisitionLocalFilesRecoveryService.LocalOnly(plan)) return false;
+        if (plan.Parts is not {Count: > 0} || plan.Parts.Any(p => p?.ContinueFrom == null) ||
+            !AcquisitionLocalFilesRecoveryService.LocalOnly(plan)) return [];
         var id = row.Id.ToString(System.Globalization.CultureInfo.InvariantCulture);
         var revision = row.PlanRevision.ToString(System.Globalization.CultureInfo.InvariantCulture);
-        if (await db.Set<WorkflowRunSourceDbModel>().AnyAsync(s => s.Module == "acquisition" && s.EntityKind == "task" &&
-                s.EntityId == id && s.Revision == revision, ct)) return false;
+        if (await context.Set<WorkflowRunSourceDbModel>().AnyAsync(s => s.Module == "acquisition" && s.EntityKind == "task" &&
+                s.EntityId == id && s.Revision == revision, ct)) return [];
+        var inputs = new List<(string, ArtifactRecord)>(plan.Parts.Count);
         foreach (var part in plan.Parts)
         {
-            var input = await AcquisitionPlanArtifactInputGuard.RequireAsync(db, artifacts, row.Id, part.Id, part.ContinueFrom!, ct);
+            var input = await AcquisitionPlanArtifactInputGuard.RequireAsync(context, store, row.Id, part.Id, part.ContinueFrom!, ct);
+            if (input.Manifest.Entries.Count == 0) return [];
+            inputs.Add((part.Id, input));
+        }
+        return inputs;
+    }
+
+    internal async Task<bool> CanAnalyzePreparedFilesAsync(AcquisitionTaskDbModel row, CancellationToken ct)
+    {
+        if (artifacts == null) return false;
+        var inputs = await RegisteredPreparedInputsAsync(db, artifacts, row, ct);
+        if (inputs.Count == 0) return false;
+        foreach (var (_, input) in inputs)
+        {
             storage.EnsurePathAllowed(input.RootDirectory);
             if (input.Kind == AcquisitionCurrentDirectoryFiles.Kind)
                 await AcquisitionCurrentDirectoryFiles.ValidateSelectionAsync(input, workspaces, ct);
-            if (input.Manifest.Entries.Count == 0) return false;
             var files = ArtifactManifestFiles.ResolveFiles(input.RootDirectory, input.Manifest);
             for (var i = 0; i < files.Count; i++)
             {

@@ -6,6 +6,8 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business;
+using Bakabase.Modules.Acquisition.Abstractions.Models.Db;
+using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Workflow.Abstractions.Components;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Workflow.Artifacts;
@@ -49,13 +51,16 @@ internal sealed record AcquisitionExecutionFacts(bool AllRequiredInputsLocal,
 
 /// <summary>Local input facts from recorded artifacts and the current download snapshot, without
 /// filesystem inspection. SQLite reduces bounded private checkpoints/manifests before returning compact rows.</summary>
-public sealed partial class AcquisitionExecutionFactProjection(BakabaseDbContext db)
+public sealed partial class AcquisitionExecutionFactProjection(BakabaseDbContext db, IArtifactOperationStore? store = null)
 {
     public static readonly string[] FactTags = ["downloadedPending", "spaceInsufficient"];
     internal async Task<Dictionary<int, AcquisitionExecutionFacts>> ReadAsync(IReadOnlyCollection<int> ids, CancellationToken ct,
-        IReadOnlyDictionary<int, AcquisitionDownloadActivity>? downloads = null)
+        IReadOnlyDictionary<int, AcquisitionDownloadActivity>? downloads = null, IReadOnlyCollection<int>? preparedIds = null)
     {
         var result = ids.Distinct().ToDictionary(id => id, _ => AcquisitionExecutionFacts.Unknown);
+        if (store != null)
+            foreach (var batch in (preparedIds ?? ids).Chunk(50))
+                await ReadPreparedFactsAsync(batch, result, store, ct);
         foreach (var batch in result.Keys.ToArray().Chunk(50))
         {
             var current = await db.Database.SqlQueryRaw<CurrentFact>(CurrentSql, JsonSerializer.Serialize(batch),
@@ -93,6 +98,31 @@ public sealed partial class AcquisitionExecutionFactProjection(BakabaseDbContext
             }
         }
         return result;
+    }
+
+    // A ready local-only revision has no current workflow. Its inputs remain registered on
+    // earlier runs. Search uses the same database ownership/manifest checks as continuation;
+    // only execution opens the files. A completed download for just one part is insufficient.
+    private async Task ReadPreparedFactsAsync(int[] ids, Dictionary<int, AcquisitionExecutionFacts> result,
+        IArtifactOperationStore artifactStore, CancellationToken ct)
+    {
+        var candidates = await db.AcquisitionTasks.AsNoTracking()
+            .Where(t => ids.Contains(t.Id) && t.DeletedAt == null && t.WorkflowRunId == null &&
+                t.Phase == "ready" && t.Status == AcquisitionStatus.Waiting && t.BuilderId != null && t.PlanJson != null)
+            .Select(t => new AcquisitionTaskDbModel {Id = t.Id, Phase = t.Phase, Status = t.Status, BuilderId = t.BuilderId,
+                PlanJson = t.PlanJson, BuilderStateJson = t.BuilderStateJson, PlanRevision = t.PlanRevision})
+            .ToListAsync(ct);
+        foreach (var task in candidates)
+        {
+            try
+            {
+                var registered = await AcquisitionPlanService.RegisteredPreparedInputsAsync(db, artifactStore, task, ct);
+                if (registered.Count > 0)
+                    result[task.Id] = new(true, registered.Select(p => new AcquisitionExecutionFactScope(p.PartId, "", 0, true, false)).ToArray());
+            }
+            catch (Exception e) when (e is ArgumentException or InvalidOperationException or InvalidDataException or JsonException)
+            { /* Stale registrations and invalid old plans cannot supply a positive fact. */ }
+        }
     }
 
     private static AcquisitionExecutionFacts Project(CurrentFact row, IReadOnlyList<Binding> bindings,

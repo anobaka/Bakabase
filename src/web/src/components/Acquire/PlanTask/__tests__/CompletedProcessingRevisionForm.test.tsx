@@ -266,16 +266,35 @@ it("uses the clicked stage's current directory for every part without selecting 
   expect(mocks.replan.mock.calls[0][1].items.every((item:any)=>!item.continueFromArtifactId)).toBe(true);
 });
 
-it("does not substitute another stage or historical artifact when a clicked stage has no current directory", () => {
+it("requires an explicit readable result for every completed part when its processing stage was never bound", async () => {
+  render(<CompletedProcessingRevisionForm detail={detail} retryStage="processing" inputStage="processing"
+    onSaved={vi.fn()} onCancel={vi.fn()} />);
+  expect(screen.getByText("acquisition.processingInput.chooseRegisteredDirectory")).toBeVisible();
+  expect(screen.getAllByRole("combobox", { name: "acquisition.plan.continueCompleted.input" })).toHaveLength(2);
+  expect(screen.queryByTestId("current-directory-files")).toBeNull();
+  expect(screen.getByRole("button",{name:"acquisition.timeline.startAttempt"})).toBeDisabled();
+  fill();
+  fireEvent.click(screen.getByRole("button",{name:"acquisition.timeline.startAttempt"}));
+  await waitFor(()=>expect(mocks.replan).toHaveBeenCalledOnce());
+  expect(mocks.replan.mock.calls[0][1].items).toMatchObject([
+    {partId:"main",inputMode:"currentDirectory",artifactEvidenceIds:["main-output"],continueFromArtifactId:"main-output"},
+    {partId:"extra",inputMode:"currentDirectory",artifactEvidenceIds:["extra-output"],continueFromArtifactId:"extra-output"},
+  ]);
+});
+
+it.each(["unreadable", "partialBindings", "unrelatedOwner"])("keeps stage-based processing if any completed part lacks safe fallback evidence (%s)", mode => {
   const current = { ...detail, stageDirectories: {version:1,taskId:4,parts:{
-    main:{download:{directory:"/raw/main",ownership:"exclusive",evidence:"configured"}},
+    main:{processing:mode === "partialBindings" ? {directory:"/current/main",ownership:"exclusive",evidence:"configured"} : undefined,
+      download:{directory:"/raw/main",ownership:"exclusive",evidence:"configured"}},
     extra:{download:{directory:"/raw/extra",ownership:"exclusive",evidence:"configured"}},
-  }} };
+  }}, replanArtifacts: detail.replanArtifacts.map(item => item.partId !== "extra" ? item : {
+    ...item, canReadCurrentDirectory: mode !== "unreadable", partId: mode === "unrelatedOwner" ? "unrelated" : item.partId,
+  }) };
   render(<CompletedProcessingRevisionForm detail={current} retryStage="processing" inputStage="processing"
     onSaved={vi.fn()} onCancel={vi.fn()} />);
   expect(screen.queryByRole("combobox")).toBeNull();
-  expect(screen.queryByTestId("current-directory-files")).toBeNull();
-  expect(screen.getAllByRole("alert")).toHaveLength(2);
+  expect(screen.queryByText("acquisition.processingInput.chooseRegisteredDirectory")).toBeNull();
+  expect(screen.getAllByRole("alert")).toHaveLength(mode === "partialBindings" ? 1 : 2);
   for (const control of screen.getAllByRole("radio",{name:"acquisition.processingChoice.keep"})) fireEvent.click(control);
   expect(screen.getByRole("button",{name:"acquisition.timeline.startAttempt"})).toBeDisabled();
 });

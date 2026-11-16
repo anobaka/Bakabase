@@ -68,6 +68,7 @@ vi.mock("../DraftPreparation", () => ({
 }));
 vi.mock("@/components/bakaui", async () => ({
   ...(await import("@/test/radioControls")),
+  Select: () => null,
   Accordion: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   AccordionItem: ({ children, title }: { children: ReactNode; title: string }) => (
     <section aria-label={title}>{children}</section>
@@ -1297,6 +1298,28 @@ it("keeps the completed review snapshot mounted when polling changes the task st
   } finally {
     timer.mockRestore();
   }
+});
+
+it.each([false, true])("retains the stopped-file reserve choice (%s) from saving until explicit start", async useEmergencySpaceReserve => {
+  const stopped = {
+    ...completedDetail,
+    task: { ...completedDetail.task, status: AcquisitionStatus.Failed, phase: "attention" },
+  };
+  mocks.get.mockResolvedValue(stopped);
+  render(<PlanTaskDetailModal taskId={42} />);
+  fireEvent.click(await screen.findByRole("button", { name: "acquisition.plan.replan.title" }));
+  fireEvent.click(await screen.findByRole("button", { name: "acquisition.plan.continueStopped.title" }));
+  const ready = {
+    ...stopped,
+    task: { ...stopped.task, status: AcquisitionStatus.Waiting, phase: "ready", workflowRunId: undefined, planRevision: 4 },
+    steps: [{ id: "continue", kind: "acquisition.plan.continueFiles" }],
+  };
+  mocks.get.mockResolvedValue(ready);
+  mocks.run.mockResolvedValue(ready);
+  await act(async () => { mocks.completedRevision.mock.lastCall![0].onSaved(ready, { useEmergencySpaceReserve }); });
+  expect(mocks.run).not.toHaveBeenCalled();
+  fireEvent.click(await screen.findByRole("button", { name: "acquisition.plan.run" }));
+  await waitFor(() => expect(mocks.run).toHaveBeenCalledExactlyOnceWith(42, 4, useEmergencySpaceReserve));
 });
 
 it("starts only the returned plan revision after confirming a stage retry", async () => {

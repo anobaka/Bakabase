@@ -212,7 +212,15 @@ export default function CompletedProcessingRevisionForm({
   const { t } = useTranslation();
   const [snapshot] = useState(detail);
   const [readReviewedDirectory, setReadReviewedDirectory] = useState(false);
-  const inputStage = readReviewedDirectory ? undefined : requestedInputStage;
+  const parts = snapshot.plan?.parts ?? [];
+  const registeredInput = (item: ProcessingInput) => inputKinds("completed").includes(item.kind) &&
+    item.canReadCurrentDirectory === true && item.fileCount > 0 && !!item.rootDirectory && !!item.artifactId && !!item.fingerprint;
+  const chooseRegisteredDirectory = mode === "completed" && snapshot.task.status === AcquisitionStatus.Completed &&
+    !!snapshot.task.workflowRunId && retryStage === "processing" && requestedInputStage === "processing" &&
+    (!snapshot.stageDirectories || snapshot.stageDirectories.taskId === snapshot.task.id) &&
+    parts.length > 0 && parts.every(part => !snapshot.stageDirectories?.parts[part.id]?.processing &&
+      snapshot.replanArtifacts.some(item => item.partId === part.id && registeredInput(item)));
+  const inputStage = readReviewedDirectory || chooseRegisteredDirectory ? undefined : requestedInputStage;
   const [container, setContainer] = useState<HTMLElement | null>(null);
   const popoverProps = {
     portalContainer: container?.closest<HTMLElement>('[role="dialog"]') ?? undefined,
@@ -226,7 +234,6 @@ export default function CompletedProcessingRevisionForm({
     ? "acquisition.plan.continueStopped"
     : "acquisition.plan.continueCompleted";
   const [deliveryLayoutOnly, setDeliveryLayoutOnly] = useState(false);
-  const parts = snapshot.plan?.parts ?? [];
   const reviewedInput = reviewedProcessingInput(snapshot);
   const boundProcessingDirectory = parts.length === 1 && snapshot.stageDirectories?.taskId === snapshot.task.id
     ? snapshot.stageDirectories.parts[parts[0].id]?.processing : undefined;
@@ -262,7 +269,7 @@ export default function CompletedProcessingRevisionForm({
           part.id,
           {
             artifactId:
-              publicationStorage && processed.length === 1
+              chooseRegisteredDirectory ? "" : publicationStorage && processed.length === 1
                 ? processed[0].artifactId
                 : reviewed?.partId === part.id
                   ? reviewed.artifactId
@@ -293,6 +300,7 @@ export default function CompletedProcessingRevisionForm({
   );
   const canCombine =
     !inputStage &&
+    !chooseRegisteredDirectory &&
     !deliveryOnly &&
     snapshot.task.status !== AcquisitionStatus.Waiting &&
     parts.length >= 2 &&
@@ -319,6 +327,7 @@ export default function CompletedProcessingRevisionForm({
     (snapshot.replanArtifacts ?? []).filter(
       (item) =>
         item.partId === partId &&
+        (!chooseRegisteredDirectory || registeredInput(item)) &&
         (!readReviewedDirectory || !borrowedReview || item.artifactId === reviewedStageInput?.artifactId) &&
         (!deliveryOnly || item.canRetryDelivery === true) &&
         (publicationStorage
@@ -428,6 +437,7 @@ export default function CompletedProcessingRevisionForm({
           </span>
         </Checkbox>
       )}
+      {chooseRegisteredDirectory && <p className="text-sm text-default-600">{t("acquisition.processingInput.chooseRegisteredDirectory")}</p>}
       {!inputStage && <RevisionPlacementDialog
         detail={snapshot} currentRoot={currentDeliveryRoot} disabled={saving}
         useCurrent={useCurrentStorageDefaults} override={deliveryRootDirectory}

@@ -1590,6 +1590,7 @@
   "acquisition.adaptive.reason.ADAPTIVE_MIGRATION_FAILED": "提交自动分析失败，请打开任务详情人工处理。",
   "acquisition.processingInput.currentDirectory": "读取目录当前文件",
   "acquisition.processingInput.currentDirectoryHint": "以所选目录现在的文件开始本次处理，包含你人工修改或补充的文件；旧运行记录保留，不会重新下载。",
+  "acquisition.processingInput.chooseRegisteredDirectory": "此任务没有绑定处理目录。请选择本次要使用的处理结果或交付结果，并核对目录中的文件。",
   "acquisition.processingInput.verifiedArtifactHint": "仅使用已登记的历史产物；继续前按原文件清单校验完整性。",
   "acquisition.processingInput.currentDirectoryUnavailable": "此目录暂不能作为新输入。请检查目录是否可访问，以及是否仍被其他任务使用，再重新打开继续处理。",
   "acquisition.processingInput.emptyDirectoryRecoveryHint": "处理目录没有可用输入。当前暂停步骤的已登记文件仍在以下目录；选择后可查看文件，再开始本次处理。",

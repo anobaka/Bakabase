@@ -713,8 +713,9 @@ export default function PlanTaskDetailModal({
                     <PlanReplanForm
                       detail={replanSnapshot}
                       onCancel={closeEditor}
-                      onSaved={(next) => {
+                      onSaved={(next, options) => {
                         closeEditor();
+                        setAttemptRunOverride(options ? { revision: next.task.planRevision, options } : undefined);
                         void mutate(async () => next);
                       }}
                     />

@@ -11,16 +11,18 @@ using Bakabase.Modules.Acquisition.Abstractions.Services;
 using Bakabase.Modules.Workflow.Abstractions.Models.Db;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
+using Bakabase.Modules.Workflow.Artifacts;
 using Bakabase.Service.Components.Workflow;
 using Microsoft.EntityFrameworkCore;
 
 namespace Bakabase.Service.Components.Acquisition.Planning;
 
 /// <summary>Global facets use task/run indexes, current-node diagnostics and cached source evidence.
-/// Only runs with credential revisions need a bounded checkpoint read; ordinary task
-/// filtering does not load file manifests or the full execution history.</summary>
+/// A ready local revision with registered inputs also checks those registrations against the
+/// producing run. Search does not open the files or load full execution history for every task.</summary>
 public sealed class AcquisitionTaskSearchService(BakabaseDbContext db, IAcquisitionService acquisitions,
-    AcquisitionSourceAttentionProjection? sourceAttention = null, AcquisitionDownloadActivityProjection? downloadActivity = null)
+    AcquisitionSourceAttentionProjection? sourceAttention = null, AcquisitionDownloadActivityProjection? downloadActivity = null,
+    IArtifactOperationStore? artifacts = null)
 {
     private static readonly string[] Stages = ["preparing", "ready", "running", "attention", "completed"];
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
@@ -175,7 +177,8 @@ public sealed class AcquisitionTaskSearchService(BakabaseDbContext db, IAcquisit
                 ExecutionProblemClassifier.Classify(projectedCodes, waitReason, task.WorkflowRunId == null ? task.WaitReason : null);
         }
         var attentionCounts = ExecutionProblemClassifier.AttentionTags.ToDictionary(tag => tag, tag => scoped.Count(t => t.AttentionTags.Contains(tag)));
-        var facts = await new AcquisitionExecutionFactProjection(db).ReadAsync(scoped.Select(t => t.Id).ToArray(), ct, activity);
+        var facts = await new AcquisitionExecutionFactProjection(db, artifacts).ReadAsync(scoped.Select(t => t.Id).ToArray(), ct, activity,
+            scoped.Where(t => t.Stage == "ready").Select(t => t.Id).ToArray());
         // A current capacity failure can be known before all local inputs are registered.
         // This task-level scope deliberately cannot satisfy the same-part conjunction.
         foreach (var taskId in currentSpaceFailures) facts[taskId] = facts[taskId].WithTaskSpaceFailure();
