@@ -622,7 +622,7 @@ export default function PlanTaskDetailModal({
                 isDisabled={busy}
                 onPress={() => {
                   setVisible(false);
-                  createPortal(DeleteAcquisitionTasksModal, { taskIds: [taskId], onChanged });
+                  createPortal(DeleteAcquisitionTasksModal, { taskIds: [taskId], taskNames: { [taskId]: task.title?.trim() || task.resourceName?.trim() || "" }, onChanged });
                 }}
               >
                 {t("acquisition.delete.single")}
@@ -676,7 +676,7 @@ export default function PlanTaskDetailModal({
                 <p role="status" className="text-sm text-default-600">{t("acquisition.delete.readOnly")}</p>
                 {task?.status === AcquisitionStatus.Completed && task.workflowRunId != null && (
                   <Button size="sm" variant="flat" onPress={() => createPortal(DeleteAcquisitionTasksModal, {
-                    taskIds: [taskId], retryRetainedFiles: true, onChanged: refreshAfterAction,
+                    taskIds: [taskId], taskNames: { [taskId]: task.title?.trim() || task.resourceName?.trim() || "" }, retryRetainedFiles: true, onChanged: refreshAfterAction,
                   })}>
                     {t("acquisition.delete.retained.title")}
                   </Button>

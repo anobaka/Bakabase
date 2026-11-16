@@ -1,18 +1,29 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { acquisitionDeletionApi as api } from "../components/acquisitionDeletionApi";
 
-const mocks = vi.hoisted(() => ({ preview: vi.fn(), remove: vi.fn(), progress: vi.fn() }));
+const mocks = vi.hoisted(() => ({ preview: vi.fn(), remove: vi.fn(), progress: vi.fn(), names: vi.fn() }));
 vi.mock("@/sdk/BApi", () => ({
   default: { acquisition: {
     previewDeleteAcquisitionTasks: mocks.preview,
     deleteAcquisitionTasks: mocks.remove,
     getAcquisitionTaskDeletionProgress: mocks.progress,
+    getAcquisitionTaskNames: mocks.names,
   } },
 }));
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.remove.mockResolvedValue({ code: 0, data: { deletedTaskIds: [], skipped: [] } });
   mocks.progress.mockResolvedValue({ code: 0, data: { previewId: "fixed" } });
+  mocks.names.mockResolvedValue({ code: 0, data: { 2: null, 5: "Known task" } });
+});
+
+it("retrieves only task names without file previews", async () => {
+  const controller = new AbortController();
+  await expect(api.names([2, 5], controller.signal)).resolves.toEqual({ 5: "Known task" });
+  expect(mocks.names).toHaveBeenCalledExactlyOnceWith({ taskIds: [2, 5] }, {
+    sensitiveResponse: true, showErrorToast: false, signal: controller.signal,
+  });
+  expect(mocks.preview).not.toHaveBeenCalled();
 });
 
 it("submits fixed IDs and current options directly without preparing a preview", async () => {

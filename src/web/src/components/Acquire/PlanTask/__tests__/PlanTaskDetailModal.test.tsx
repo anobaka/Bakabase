@@ -1888,7 +1888,7 @@ it("can review retained files from a removed, completed task's read-only details
   const inspect = await screen.findByRole("button", { name: "acquisition.delete.retained.title" });
   fireEvent.click(inspect);
   expect(mocks.createPortal).toHaveBeenCalledWith(expect.anything(), {
-    taskIds: [42], retryRetainedFiles: true, onChanged: expect.any(Function),
+    taskIds: [42], taskNames: { 42: "Chosen content" }, retryRetainedFiles: true, onChanged: expect.any(Function),
   });
   expect(mocks.run).not.toHaveBeenCalled();
 });

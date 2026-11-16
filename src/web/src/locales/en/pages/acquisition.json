@@ -871,7 +871,7 @@
   "acquisition.delete.cleanup.removeOnFailure": "Remove tasks from the list even if some files remain",
   "acquisition.delete.cleanup.inspect": "View file list",
   "acquisition.delete.cleanup.inventoryFailed": "The file list could not be loaded. Retry or continue to have the server check at submission.",
-  "acquisition.delete.cleanup.partialRemoved": "Removed task #{{id}} from the list with some files remaining. Cleaned {{count}} files ({{size}}).",
+  "acquisition.delete.cleanup.partialRemoved": "Removed task {{name}} from the list with some files remaining. Cleaned {{count}} files ({{size}}).",
   "acquisition.delete.cleanup.retainedDirectories": "Directories with retained files",
   "acquisition.delete.title": "Remove acquisition tasks",
   "acquisition.delete.preserve": "Run history is retained. Choose which task files to remove.",
@@ -1489,7 +1489,7 @@
   "acquisition.delete.cleanup.groupSize": "{{count}} files · {{size}}",
   "acquisition.delete.cleanup.physicalSpace": "Sizes come from file manifests and are deduplicated by path. APFS clones, hard links and storage snapshots may share blocks, so actual freed capacity cannot be guaranteed.",
   "acquisition.delete.cleanup.result": "Removed {{count}} files in this operation, {{size}} logical size",
-  "acquisition.delete.cleanup.partial": "Cleanup for #{{id}} is incomplete and the task was kept. This operation removed {{count}} files ({{size}}).",
+  "acquisition.delete.cleanup.partial": "Cleanup for {{name}} is incomplete and the task was kept. This operation removed {{count}} files ({{size}}).",
   "acquisition.delete.cleanup.retry": "Choose again and confirm",
   "acquisition.delete.cleanup.kind.download": "Original download",
   "acquisition.delete.cleanup.kind.processedFiles": "Processing files",
@@ -1534,7 +1534,7 @@
   "acquisition.delete.cleanup.collapseAll": "Collapse all steps",
   "acquisition.delete.cleanup.supersededHint": "Also close these obsolete waiting runs replaced by this task’s successful revision. Node records and history are retained.",
   "acquisition.delete.cleanup.supersededRun": "Run #{{run}} (plan R{{revision}} → R{{replacedBy}})",
-  "acquisition.delete.cleanup.closedRuns": "Task #{{id}}: closed obsolete waiting runs {{runs}}; their history remains.",
+  "acquisition.delete.cleanup.closedRuns": "{{name}}: closed obsolete waiting runs {{runs}}; their history remains.",
   "acquisition.delete.reason.CLEANUP_OLD_EXECUTION_REQUIRES_REVIEW": "An older run is still waiting and cannot be proven safely superseded. Review it separately; its files will be kept.",
   "acquisition.delete.reason.CLEANUP_RETIRED_WORKSPACE_REQUIRES_REVIEW": "The processed result was moved or retired. Copies in its workspace cannot be fully verified and are kept.",
   "acquisition.delete.cleanup.sizeUnknown": "Remaining file count and size are not verified",
@@ -1670,7 +1670,9 @@
   "acquisition.delete.final.directCleanup": "Delete the registered task directories in the selected scope after confirmation. Related runs will stop first. Paths referenced by other tasks will be kept.",
   "acquisition.delete.delivered.directConfirmation": "Also delete the final delivery files, including the current contents of the delivery directories.",
   "acquisition.delete.cleanup.directResult": "Cleared {{count}} task directories.",
-  "acquisition.delete.cleanup.directPartial": "#{{id}} still has directories that could not be cleared.",
+  "acquisition.delete.cleanup.directPartial": "{{name}} still has directories that could not be cleared.",
   "acquisition.delete.cleanup.removedDirectories": "Cleared directories",
-  "acquisition.delete.cleanup.directoryStatistics": "Cleanup operated on directories. Individual file counts and sizes were not measured."
+  "acquisition.delete.cleanup.directoryStatistics": "Cleanup operated on directories. Individual file counts and sizes were not measured.",
+  "acquisition.delete.taskNames": "Task names",
+  "acquisition.delete.nameUnavailable": "Task #{{id}} (name unavailable)"
 }

@@ -26,6 +26,30 @@ public sealed class AcquisitionTaskSearchService(BakabaseDbContext db, IAcquisit
 {
     private static readonly string[] Stages = ["preparing", "ready", "running", "attention", "completed"];
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
+
+    public async Task<Dictionary<int, string>> GetNamesAsync(AcquisitionTaskNamesInput input, CancellationToken ct = default)
+    {
+        if (input.TaskIds == null || input.TaskIds.Count is 0 or > 10000 || input.TaskIds.Any(id => id <= 0))
+            throw new ArgumentException("Choose between one and 10000 fixed acquisition task IDs.");
+        var ids = input.TaskIds.Distinct().ToArray();
+        // Task labels are also needed when cleaning files left by a soft-deleted task.
+        // Do not hydrate plans, execution records or file manifests for a confirmation list.
+        var tasks = await db.AcquisitionTasks.AsNoTracking().Where(t => ids.Contains(t.Id))
+            .Select(t => new {t.Id, t.Title, t.ResourceId}).ToListAsync(ct);
+        var resourceIds = tasks.Where(t => string.IsNullOrWhiteSpace(t.Title) && t.ResourceId.HasValue)
+            .Select(t => t.ResourceId!.Value).Distinct().ToArray();
+        var resourceNames = resourceIds.Length == 0 ? new Dictionary<int, string?>() :
+            await acquisitions.GetDisplayNamesAsync(resourceIds, ct);
+        var names = new Dictionary<int, string>();
+        foreach (var task in tasks)
+        {
+            var name = string.IsNullOrWhiteSpace(task.Title) && task.ResourceId is {} resourceId
+                ? resourceNames.GetValueOrDefault(resourceId) : task.Title;
+            if (!string.IsNullOrWhiteSpace(name)) names.Add(task.Id, name);
+        }
+        return names;
+    }
+
     public async Task<AcquisitionTaskPage> SearchAsync(AcquisitionTaskSearchInput input, CancellationToken ct = default)
     {
         var sort = input.Sort ?? "newest";

@@ -37,13 +37,17 @@ function deletionStatusLabel(progress: AcquisitionDeletionProgress | undefined, 
 
 export default function DeleteAcquisitionTasksModal({
   taskIds,
+  taskNames = {},
   scopeLabel,
   retryRetainedFiles = false,
   onChanged,
   onDestroyed,
-}: DestroyableProps & { taskIds: number[]; scopeLabel?: string; retryRetainedFiles?: boolean; onChanged?: () => void }) {
+}: DestroyableProps & { taskIds: number[]; taskNames?: Record<number, string>; scopeLabel?: string; retryRetainedFiles?: boolean; onChanged?: () => void }) {
   const { t } = useTranslation();
   const [selection, setSelection] = useState(() => [...new Set(taskIds.filter(id => Number.isSafeInteger(id) && id > 0))]);
+  const [providedNames] = useState(() => Object.fromEntries(Object.entries(taskNames)
+    .filter(([, name]) => name.trim()).map(([id, name]) => [id, name.trim()])));
+  const [names, setNames] = useState(providedNames);
   const [retainedReview, setRetainedReview] = useState(retryRetainedFiles);
   const [visible, setVisible] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -74,6 +78,24 @@ export default function DeleteAcquisitionTasksModal({
     mounted.current = true;
     return () => { mounted.current = false; };
   }, []);
+
+  useEffect(() => {
+    const missing = selection.filter(id => !providedNames[id]);
+    if (!visible || !missing.length) return;
+    const controller = new AbortController();
+    // Cross-page selections contain IDs only. Fetch labels without a file preview,
+    // and never hold up confirmation if a task was removed or labels are unavailable.
+    void acquisitionDeletionApi.names(missing, controller.signal).then(next => {
+      if (!controller.signal.aborted && Object.keys(next).length) setNames(previous => ({ ...previous, ...next }));
+    }).catch(() => {});
+    return () => controller.abort();
+  }, [selection, providedNames, visible]);
+
+  const taskName = (id: number) => names[id]?.trim() || t("acquisition.delete.nameUnavailable", { id });
+  const taskList = (ids: number[]) => <ul aria-label={t("acquisition.delete.taskNames")}
+    className="max-h-64 min-w-0 overflow-y-auto divide-y divide-default-200 rounded-lg border border-default-200">
+    {ids.map(id => <li key={id} className="px-3 py-2 text-sm [overflow-wrap:anywhere]">{taskName(id)}</li>)}
+  </ul>;
 
   useEffect(() => {
     if (confirmation) backButton.current?.focus();
@@ -200,7 +222,7 @@ export default function DeleteAcquisitionTasksModal({
           <div className="flex items-center gap-2">
             {(submitting || (!progressUnavailable && (!progress || progress.state === "running"))) && <Spinner size="sm" />}
             <span>{t(deletionStatusLabel(progress, !!unconfirmed, progressUnavailable, receiptExpired))}</span>
-            {progress?.currentTaskId != null && <span>#{progress.currentTaskId}</span>}
+            {progress?.currentTaskId != null && <span className="min-w-0 [overflow-wrap:anywhere]">{taskName(progress.currentTaskId)}</span>}
           </div>
           {progress && <p>{t("acquisition.delete.progress.tasks", {
             completed: progress.finishedTasks, total: progress.totalTasks,
@@ -223,9 +245,7 @@ export default function DeleteAcquisitionTasksModal({
           <p className="font-medium">{t(retainedReview ? "acquisition.delete.retained.scope" : "acquisition.delete.final.scope", {
             count: confirmation.taskIds.length,
           })}</p>
-          <p className="max-h-24 overflow-auto break-words text-xs text-default-500">
-            {confirmation.taskIds.map(id => `#${id}`).join(", ")}
-          </p>
+          {taskList(confirmation.taskIds)}
           <p>{t(confirmation.options.cleanupFiles || confirmation.options.deleteDeliveredFiles
             ? "acquisition.delete.final.directCleanup" : "acquisition.delete.final.taskOnly")}</p>
           {confirmation.options.cleanupFiles && <p>{t("acquisition.delete.cleanup.option")}</p>}
@@ -250,18 +270,18 @@ export default function DeleteAcquisitionTasksModal({
               count: result.removedFiles ?? 0, size: bytesToSize(result.removedBytes ?? 0),
             })}</p>}
             {result.cleanupResults.filter(row => !!row.closedRunIds?.length).map(row => <p key={row.taskId} className="text-xs text-default-600">
-              {t("acquisition.delete.cleanup.closedRuns", { id: row.taskId, runs: row.closedRunIds!.map(run => `#${run}`).join(", ") })}
+              {t("acquisition.delete.cleanup.closedRuns", { name: taskName(row.taskId), runs: row.closedRunIds!.map(run => `#${run}`).join(", ") })}
             </p>)}
             {result.cleanupResults.filter(row => !!row.removedDirectories?.length).map(row => <section key={row.taskId} className="min-w-0 space-y-1 text-sm">
-              <p className="font-medium">#{row.taskId} {t("acquisition.delete.cleanup.removedDirectories")}</p>
+              <p className="font-medium [overflow-wrap:anywhere]">{taskName(row.taskId)} · {t("acquisition.delete.cleanup.removedDirectories")}</p>
               <ul aria-label={t("acquisition.delete.cleanup.removedDirectories")} className="min-w-0 list-disc pl-5 text-xs">
                 {row.removedDirectories!.map(path => <li key={path} className="select-text [overflow-wrap:anywhere]">{path}</li>)}
               </ul>
             </section>)}
             {result.cleanupResults.filter(row => !row.completed).map(row => <div key={row.taskId} className="rounded-lg bg-warning-50 p-2 text-sm">
-              <p>{t(row.fileStatisticsIncomplete ? "acquisition.delete.cleanup.directPartial" :
+              <p className="[overflow-wrap:anywhere]">{t(row.fileStatisticsIncomplete ? "acquisition.delete.cleanup.directPartial" :
                 retainedReview || result.deletedTaskIds.includes(row.taskId) ? "acquisition.delete.cleanup.partialRemoved" : "acquisition.delete.cleanup.partial", {
-                id: row.taskId, count: row.removedFiles, size: bytesToSize(row.removedBytes),
+                name: taskName(row.taskId), count: row.removedFiles, size: bytesToSize(row.removedBytes),
               })}</p>
               {row.reasonCodes.map(code => <p key={code} className="text-xs">{reason(code)}</p>)}
               {!!row.retainedDirectories?.length && <ul aria-label={t("acquisition.delete.cleanup.retainedDirectories")} className="list-disc pl-5 text-xs">
@@ -280,7 +300,7 @@ export default function DeleteAcquisitionTasksModal({
           </div>}
           {result.skipped.length > 0 && <div className="max-h-64 overflow-y-auto divide-y divide-default-200 rounded-lg border border-default-200">
             {result.skipped.map(row => <div key={row.taskId} className="p-2 text-sm">
-              <span className="mr-2 font-medium">#{row.taskId}</span>{reason(row.reasonCode)}
+              <span className="mr-2 font-medium [overflow-wrap:anywhere]">{taskName(row.taskId)}</span>{reason(row.reasonCode)}
             </div>)}
           </div>}
         </>
@@ -309,9 +329,7 @@ export default function DeleteAcquisitionTasksModal({
           </div>
           {scopeLabel && <p className="break-words text-xs text-default-500">{scopeLabel}</p>}
           <p className="text-sm">{t("acquisition.delete.total", { count: selection.length })}</p>
-          <div className="flex min-w-0 flex-wrap gap-1 rounded-lg border border-default-200">
-            {selection.slice((page - 1) * pageSize, page * pageSize).map(id => <span key={id} className="p-2 text-sm">#{id}</span>)}
-          </div>
+          {taskList(selection.slice((page - 1) * pageSize, page * pageSize))}
           {selection.length > pageSize && <Pagination aria-label={t("acquisition.delete.pagination")}
             page={page} total={Math.ceil(selection.length / pageSize)} onChange={setPage} />}
         </>

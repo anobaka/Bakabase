@@ -51,7 +51,7 @@ export default function LegacyTaskDetailModal({
         footer={<>
           {task && !readOnly && <Button color="danger" variant="light" onPress={() => {
             setVisible(false);
-            createPortal(DeleteAcquisitionTasksModal, { taskIds: [taskId], onChanged });
+            createPortal(DeleteAcquisitionTasksModal, { taskIds: [taskId], taskNames: { [taskId]: task.title?.trim() || task.resourceName?.trim() || "" }, onChanged });
           }}>{t("acquisition.delete.single")}</Button>}
           <Button variant="light" onPress={() => setVisible(false)}>{t("common.action.close")}</Button>
         </>}

@@ -253,7 +253,7 @@ const AcquisitionPage: React.FC = () => {
     { key: "workspaceCleanup", label: "acquisition.actionbar.workspaceCleanup", ids: selectedIds, limit: acquisitionActionLimits.workspaceCleanup,
       icon: <AiOutlineFolderOpen aria-hidden />, open: ids => createPortal(AcquisitionStorageMaintenanceModal, { mode: "cleanup", taskIds: ids, scopeLabel: selectedScopeLabel(ids), onChanged: load }) },
     { key: "delete", label: "acquisition.actionbar.delete", ids: selectedIds, limit: acquisitionActionLimits.delete, color: "danger",
-      icon: <AiOutlineDelete aria-hidden />, open: ids => createPortal(DeleteAcquisitionTasksModal, { taskIds: ids, scopeLabel: selectedScopeLabel(ids), onChanged: load }) },
+      icon: <AiOutlineDelete aria-hidden />, open: ids => createPortal(DeleteAcquisitionTasksModal, { taskIds: ids, taskNames: Object.fromEntries(tasks.map(task => [task.id, task.title?.trim() || task.resourceName?.trim() || ""])), scopeLabel: selectedScopeLabel(ids), onChanged: load }) },
   ];
   const {
     overviews,
@@ -509,7 +509,7 @@ const AcquisitionPage: React.FC = () => {
                     sizeEstimate={data?.sizeEstimates?.[task.id]}
                     facts={data?.taskFacts?.[task.id]}
                     onOpen={() => openTask(task)}
-                    onDelete={() => createPortal(DeleteAcquisitionTasksModal, { taskIds: [task.id], onChanged: load })}
+                    onDelete={() => createPortal(DeleteAcquisitionTasksModal, { taskIds: [task.id], taskNames: { [task.id]: task.title?.trim() || task.resourceName?.trim() || "" }, onChanged: load })}
                   />
                 ) : (
                   <AcquisitionRow
@@ -521,7 +521,7 @@ const AcquisitionPage: React.FC = () => {
                     facts={data?.taskFacts?.[task.id]}
                     onChanged={load}
                     onOpen={() => openTask(task)}
-                    onDelete={() => createPortal(DeleteAcquisitionTasksModal, { taskIds: [task.id], onChanged: load })}
+                    onDelete={() => createPortal(DeleteAcquisitionTasksModal, { taskIds: [task.id], taskNames: { [task.id]: task.title?.trim() || task.resourceName?.trim() || "" }, onChanged: load })}
                     onEditRecipe={(id) => navigate(`/workflows/editor?id=${id}`)}
                   />
                 )}

@@ -5,7 +5,7 @@ import DeleteAcquisitionTasksModal from "../components/DeleteAcquisitionTasksMod
 import cn from "@/locales/cn/pages/acquisition.json";
 import en from "@/locales/en/pages/acquisition.json";
 import { deletionReasonCodes, deletionReasonLabel } from "../components/deletionReasonLabel";
-const api = vi.hoisted(() => ({ preview: vi.fn(), remove: vi.fn(), progress: vi.fn() }));
+const api = vi.hoisted(() => ({ preview: vi.fn(), remove: vi.fn(), progress: vi.fn(), names: vi.fn() }));
 const translate = vi.hoisted(() => vi.fn((key: string, _options?: unknown) => key));
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: translate }) }));
 vi.mock("../components/acquisitionDeletionApi", () => ({ acquisitionDeletionApi: api }));
@@ -72,6 +72,7 @@ const finishReview = async () => {
 beforeEach(() => {
   vi.clearAllMocks();
   api.preview.mockReset();
+  api.names.mockReset().mockResolvedValue({});
   api.remove.mockReset().mockResolvedValue({ deletedTaskIds: [1], skipped: [] });
   api.progress.mockReset().mockImplementation(async (previewId: string) => ({
     previewId, state: "running", totalTasks: 3, finishedTasks: 0, phase: "rechecking",
@@ -84,7 +85,7 @@ afterEach(() => {
 });
 
 it("opens a fixed selection and reaches confirmation immediately without inspecting files", async () => {
-  render(<DeleteAcquisitionTasksModal taskIds={[1, 2, 3, 1, -2, NaN]} scopeLabel="completed" />);
+  render(<DeleteAcquisitionTasksModal taskIds={[1, 2, 3, 1, -2, NaN]} taskNames={{ 1: "First task", 2: "Second task", 3: "Third task" }} scopeLabel="completed" />);
   expect(next()).toBeEnabled();
   expect(checkbox("cleanup.option")).toBeChecked();
   expect(checkbox("cleanup.removeOnFailure")).toBeChecked();
@@ -94,11 +95,46 @@ it("opens a fixed selection and reaches confirmation immediately without inspect
   expect(api.preview).not.toHaveBeenCalled();
   fireEvent.click(next());
   expect(confirm()).toBeEnabled();
-  expect(screen.getByText("#1, #2, #3")).toBeVisible();
+  for (const name of ["First task", "Second task", "Third task"]) expect(screen.getByText(name)).toBeVisible();
+  expect(api.names).not.toHaveBeenCalled();
   expect(api.preview).not.toHaveBeenCalled();
   expect(api.remove).not.toHaveBeenCalled();
   fireEvent.click(confirm());
   await waitFor(() => expect(api.remove).toHaveBeenCalledExactlyOnceWith(expect.stringMatching(/^[a-f\d]{32}$/), [1, 2, 3], defaultOptions));
+});
+
+it("fills cross-page names without a file preview and preserves the fixed task selection", async () => {
+  const ids = Array.from({ length: 24 }, (_, i) => i + 1);
+  let resolveNames!: (names: Record<number, string>) => void;
+  api.names.mockReturnValue(new Promise(resolve => { resolveNames = resolve; }));
+  const view = render(<DeleteAcquisitionTasksModal taskIds={ids} taskNames={{ 1: "First task" }} />);
+  expect(screen.getByText("First task")).toBeVisible();
+  expect(next()).toBeEnabled();
+  expect(api.names).toHaveBeenCalledWith(ids.slice(1), expect.any(AbortSignal));
+  view.rerender(<DeleteAcquisitionTasksModal taskIds={[100]} taskNames={{ 100: "Unselected task" }} />);
+  await act(async () => resolveNames(Object.fromEntries(ids.slice(1).map(id => [id, `Task name ${id}`]))));
+  fireEvent.click(button("page 1/2"));
+  expect(screen.getByText("Task name 24")).toBeVisible();
+  fireEvent.click(next());
+  expect(screen.getByText("First task")).toBeVisible();
+  expect(screen.getByText("Task name 24")).toBeVisible();
+  expect(screen.queryByText("Unselected task")).toBeNull();
+  fireEvent.click(confirm());
+  await waitFor(() => expect(api.remove).toHaveBeenCalledWith(expect.any(String), ids, defaultOptions));
+  expect(api.preview).not.toHaveBeenCalled();
+});
+
+it("never blocks confirmation on missing or slow task names", async () => {
+  let rejectNames!: (cause: Error) => void;
+  api.names.mockReturnValue(new Promise((_resolve, reject) => { rejectNames = reject; }));
+  render(<DeleteAcquisitionTasksModal taskIds={[1, 2]} taskNames={{ 1: "Known task" }} />);
+  fireEvent.click(next());
+  expect(confirm()).toBeEnabled();
+  await act(async () => rejectNames(new Error("offline")));
+  expect(screen.getByText("Known task")).toBeVisible();
+  expect(screen.getByText("acquisition.delete.nameUnavailable")).toBeVisible();
+  expect(confirm()).toBeEnabled();
+  expect(api.preview).not.toHaveBeenCalled();
 });
 
 it("keeps forty four tasks immediately actionable after a long review and background list updates", async () => {

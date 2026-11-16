@@ -18,6 +18,10 @@ async function unwrap<T>(request: Promise<{ code?: number; message?: string | nu
 }
 const options = { sensitiveResponse: true, showErrorToast: false };
 export const acquisitionDeletionApi = {
+  names: async (taskIds: number[], signal?: AbortSignal): Promise<Record<number, string>> => {
+    const names = await unwrap(BApi.acquisition.getAcquisitionTaskNames({ taskIds }, { ...options, signal }));
+    return Object.fromEntries(Object.entries(names).filter((entry): entry is [string, string] => !!entry[1]?.trim()));
+  },
   remove: (
     operationId: string,
     taskIds: number[],

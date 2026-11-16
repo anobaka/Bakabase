@@ -871,7 +871,7 @@
   "acquisition.delete.cleanup.removeOnFailure": "文件未清理完也从列表移除任务",
   "acquisition.delete.cleanup.inspect": "查看文件清单",
   "acquisition.delete.cleanup.inventoryFailed": "暂时无法显示清单。可重试查看，或在下一步确认后让系统检查。",
-  "acquisition.delete.cleanup.partialRemoved": "#{{id}} 已从列表移除，仍有文件未能清理。本次已删除 {{count}} 个文件（{{size}}）。",
+  "acquisition.delete.cleanup.partialRemoved": "{{name}} 已从列表移除，仍有文件未能清理。本次已删除 {{count}} 个文件（{{size}}）。",
   "acquisition.delete.cleanup.retainedDirectories": "保留文件的相关目录",
   "acquisition.delete.title": "删除获取任务",
   "acquisition.delete.preserve": "运行历史会保留。请选择要一并清理的任务文件。",
@@ -1489,7 +1489,7 @@
   "acquisition.delete.cleanup.groupSize": "{{count}} 个文件 · {{size}}",
   "acquisition.delete.cleanup.physicalSpace": "大小来自文件清单，已按路径去重；APFS 克隆、硬链接和存储快照可能仍共享空间，实际释放容量无法提前保证。",
   "acquisition.delete.cleanup.result": "本次已删除 {{count}} 个文件，逻辑大小 {{size}}",
-  "acquisition.delete.cleanup.partial": "#{{id}} 的清理尚未完成，任务已保留；本次已删除 {{count}} 个文件（{{size}}）。",
+  "acquisition.delete.cleanup.partial": "{{name}} 的清理尚未完成，任务已保留；本次已删除 {{count}} 个文件（{{size}}）。",
   "acquisition.delete.cleanup.retry": "重新选择并确认",
   "acquisition.delete.cleanup.kind.download": "原始下载",
   "acquisition.delete.cleanup.kind.processedFiles": "处理文件",
@@ -1534,7 +1534,7 @@
   "acquisition.delete.cleanup.collapseAll": "收起全部步骤",
   "acquisition.delete.cleanup.supersededHint": "同时结束已被本任务成功修订取代的旧等待流程；保留节点记录和历史。",
   "acquisition.delete.cleanup.supersededRun": "运行 #{{run}}（方案 R{{revision}} → R{{replacedBy}}）",
-  "acquisition.delete.cleanup.closedRuns": "任务 #{{id}}：已结束旧等待流程 {{runs}}，历史仍保留。",
+  "acquisition.delete.cleanup.closedRuns": "{{name}}：已结束旧等待流程 {{runs}}，历史仍保留。",
   "acquisition.delete.reason.CLEANUP_OLD_EXECUTION_REQUIRES_REVIEW": "旧流程仍在等待，尚不能确认已被成功修订安全取代。请单独检查；此次不清理文件。",
   "acquisition.delete.reason.CLEANUP_RETIRED_WORKSPACE_REQUIRES_REVIEW": "原处理产物已移动或回收。工作目录中的副本尚无法完整核验，仍会保留。",
   "acquisition.delete.cleanup.sizeUnknown": "剩余文件数量与大小尚未核实",
@@ -1670,7 +1670,9 @@
   "acquisition.delete.final.directCleanup": "确认后按所选范围清理任务登记的目录。关联运行会先停止，其他任务引用的路径会保留。",
   "acquisition.delete.delivered.directConfirmation": "同时删除最终交付文件，包括交付目录中的当前内容。",
   "acquisition.delete.cleanup.directResult": "已清理 {{count}} 个任务目录。",
-  "acquisition.delete.cleanup.directPartial": "#{{id}} 仍有目录未能清理。",
+  "acquisition.delete.cleanup.directPartial": "{{name}} 仍有目录未能清理。",
   "acquisition.delete.cleanup.removedDirectories": "已清理目录",
-  "acquisition.delete.cleanup.directoryStatistics": "按目录清理，文件数量和大小未逐项统计。"
+  "acquisition.delete.cleanup.directoryStatistics": "按目录清理，文件数量和大小未逐项统计。",
+  "acquisition.delete.taskNames": "任务名称",
+  "acquisition.delete.nameUnavailable": "任务 #{{id}}（名称不可用）"
 }
