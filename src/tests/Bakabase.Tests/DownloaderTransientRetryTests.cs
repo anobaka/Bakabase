@@ -241,7 +241,16 @@ public sealed class DownloaderTransientRetryTests
     [TestMethod]
     public async Task FailuresThatRepeatingCannotFixAreNotRetried()
     {
-        var downloader = Build((_, _, _, _) => throw new InvalidOperationException("Failed to parse the gallery."));
+        var siblingStopped = false;
+        var downloader = Build((_, _, attempt, _) =>
+        {
+            attempt.Register(() =>
+            {
+                siblingStopped = true;
+                throw new InvalidOperationException("A sibling's cancellation callback failed.");
+            });
+            throw new InvalidOperationException("Failed to parse the gallery.");
+        });
 
         await downloader.Start(NewTask());
         await WaitUntilSettled(downloader);
@@ -250,6 +259,8 @@ public sealed class DownloaderTransientRetryTests
         Assert.AreEqual(1, downloader.Runs);
         Assert.AreEqual(0, downloader.Waits.Count);
         Assert.AreEqual(1, downloader.FailureTimes);
+        Assert.IsTrue(siblingStopped);
+        StringAssert.Contains(downloader.Message!, "Failed to parse the gallery.");
         Assert.IsFalse(downloader.Message!.Contains("automatic retries"));
     }
 

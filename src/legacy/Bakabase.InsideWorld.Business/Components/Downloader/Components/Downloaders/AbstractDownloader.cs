@@ -786,38 +786,48 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
         /// </remarks>
         private async Task RunWithTransientRetriesAsync(DownloadTask task, CancellationToken token)
         {
+            async Task<bool> StartAttemptAsync(CancellationToken writeToken)
+            {
+                // The storage guard releases its linked token when the writer returns. Cancel
+                // this attempt's child downloads while their shared token is still attached.
+                using var attempt = CancellationTokenSource.CreateLinkedTokenSource(writeToken);
+                try
+                {
+                    await StartCore(task, attempt.Token);
+                    return true;
+                }
+                catch
+                {
+                    try { await attempt.CancelAsync(); }
+                    catch (AggregateException error)
+                    {
+                        Logger.LogWarning(error, "A cancellation callback failed while stopping download task {TaskId}", task.Id);
+                    }
+                    throw;
+                }
+            }
+
             for (var attempt = 1;; attempt++)
             {
                 TransientRetry? retry = null;
                 Exception failure;
-                // Each run gets its own token so that whatever a failed run left in flight — ExHentai
-                // gives up on a gallery while sibling image downloads are still running — is
-                // cancelled before the next run starts, instead of racing it.
-                using (var runCts = CancellationTokenSource.CreateLinkedTokenSource(token))
+                try
                 {
-                    try
-                    {
-                        // Re-check every attempt, including restored tasks and transient retries.
-                        await DownloadTaskStorage.EnsureAllowedAsync(ServiceProvider, task);
-                        var writes = ServiceProvider.GetService<IStorageWriteGuard>();
-                        if (writes == null) await StartCore(task, runCts.Token);
-                        else await writes.RunAsync([task.DownloadPath], new("downloadTask", task.Id.ToString()), async ct =>
-                        {
-                            await StartCore(task, ct);
-                            return true;
-                        }, runCts.Token);
-                        return;
-                    }
-                    catch (Exception e) when (IsRetryableFailure(e, token) &&
-                                              (retry = GetTransientRetry(e, attempt)) != null)
-                    {
-                        await runCts.CancelAsync();
-                        failure = e;
-                        _transientRetries = attempt;
-                        Logger.LogWarning(e,
-                            "A transient network error interrupted download task {TaskId}; running it again in {Delay} ({Retry}/{MaxRetries})",
-                            task.Id, retry.Delay, retry.Retry, retry.MaxRetries);
-                    }
+                    // Re-check every attempt, including restored tasks and transient retries.
+                    await DownloadTaskStorage.EnsureAllowedAsync(ServiceProvider, task);
+                    var writes = ServiceProvider.GetService<IStorageWriteGuard>();
+                    if (writes == null) await StartAttemptAsync(token);
+                    else await writes.RunAsync([task.DownloadPath], new("downloadTask", task.Id.ToString()), StartAttemptAsync, token);
+                    return;
+                }
+                catch (Exception e) when (IsRetryableFailure(e, token) &&
+                                          (retry = GetTransientRetry(e, attempt)) != null)
+                {
+                    failure = e;
+                    _transientRetries = attempt;
+                    Logger.LogWarning(e,
+                        "A transient network error interrupted download task {TaskId}; running it again in {Delay} ({Retry}/{MaxRetries})",
+                        task.Id, retry.Delay, retry.Retry, retry.MaxRetries);
                 }
 
                 // The estimate would only grow while nothing moves, then start from a stale baseline.
