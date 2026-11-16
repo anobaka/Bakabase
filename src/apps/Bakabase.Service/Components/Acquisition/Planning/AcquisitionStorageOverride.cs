@@ -58,10 +58,12 @@ internal sealed record AcquisitionStorageOverrideGrant(int WorkflowRunId, int Pl
         }
         catch (Exception error) when (error is JsonException or InvalidOperationException) { return null; }
     }
+    internal bool IsCurrentBinding(AcquisitionTaskDbModel task, WorkflowRunDbModel run, DateTimeOffset now) =>
+        Status == "applied" && GrantedAt <= now && task.DeletedAt == null &&
+        task.WorkflowRunId == WorkflowRunId && run.Id == WorkflowRunId && task.PlanRevision == PlanRevision;
     internal bool IsValid(AcquisitionTaskDbModel task, WorkflowRunDbModel run, DateTimeOffset now) =>
-        Status == "applied" && ExpiresAt > now && GrantedAt <= now && task.DeletedAt == null &&
+        IsCurrentBinding(task, run, now) && ExpiresAt > now &&
         task.Status is not (AcquisitionStatus.Completed or AcquisitionStatus.Cancelled or AcquisitionStatus.Failed) &&
-        task.WorkflowRunId == WorkflowRunId && run.Id == WorkflowRunId && task.PlanRevision == PlanRevision &&
         run.Status is WorkflowRunStatus.Pending or WorkflowRunStatus.Running or WorkflowRunStatus.Waiting;
     internal static string WithState(string? json, AcquisitionStorageOverrideGrant grant)
     {

@@ -104,7 +104,8 @@ public sealed class AcquisitionPlansController(AcquisitionPlanService service, I
     [RemoteAccessible]
     [SwaggerOperation(OperationId = "RunAcquisitionPlan")]
     public Task<SingletonResponse<AcquisitionPlanTaskDetail>> Run(int id, [FromBody] AcquisitionPlanRunInput input) =>
-        Respond(async () => {await GuardSavedDirectory(id); return await service.RunAsync(id, input.ExpectedRevision, HttpContext.RequestAborted);});
+        Respond(async () => {await GuardSavedDirectory(id); return await service.RunAsync(id, input.ExpectedRevision, HttpContext.RequestAborted,
+            input.UseEmergencySpaceReserve);});
 
     [HttpPost("{id:int}/replan")]
     [RemoteAccessible]

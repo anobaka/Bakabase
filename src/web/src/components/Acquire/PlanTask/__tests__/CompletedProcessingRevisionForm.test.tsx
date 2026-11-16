@@ -7,8 +7,9 @@ import CompletedProcessingRevisionForm, {
 import type { PlanTaskDetail } from "../models";
 import { AcquisitionStatus } from "@/sdk/constants";
 
-const mocks = vi.hoisted(() => ({ replan: vi.fn(), run: vi.fn(), select: vi.fn() }));
+const mocks = vi.hoisted(() => ({ replan: vi.fn(), run: vi.fn(), select: vi.fn(), reserveDefaults: vi.fn() }));
 vi.mock("../api", () => ({ planTaskApi: mocks }));
+vi.mock("../../useStorageReserveDefaults", () => ({ default: mocks.reserveDefaults }));
 vi.mock("@/components/Workflow/CurrentProcessingFiles", () => ({
   ProcessingDirectoryFiles: ({ path }: { path: string }) => <span data-testid="current-directory-files">{path}</span>,
   ProcessingFileList: ({ artifactId }: { artifactId: string }) => <span data-testid="selected-file-manifest">{artifactId}</span>,
@@ -16,6 +17,8 @@ vi.mock("@/components/Workflow/CurrentProcessingFiles", () => ({
 vi.mock("@/components/bakaui", async () => ({
   ...(await import("@/test/radioControls")),
   Modal: ({title,children,footer}: any) => <div role="dialog" aria-label={title}>{children}{footer}</div>,
+  Tooltip: ({children}: any) => <>{children}</>,
+  Spinner: ({"aria-label": label}: any) => <span role="status" aria-label={label} />,
   Checkbox: ({ children, isSelected, onValueChange, isDisabled }: any) => (
     <label>
       <input
@@ -395,6 +398,7 @@ it("offers the separate delivery-only mode only when every part has a published 
 });
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.reserveDefaults.mockReturnValue({ value: { selected: false, minimumBytes: 50 * 1024 ** 3 }, failed: false, reload: vi.fn() });
   mocks.replan.mockResolvedValue({
     ...detail,
     task: {
@@ -404,6 +408,52 @@ beforeEach(() => {
       workflowRunId: undefined,
     },
   });
+});
+
+it("starts AI with an explicit configured reserve when the global emergency default is unchecked", async () => {
+  mocks.reserveDefaults.mockReturnValue({ value: { selected: true, minimumBytes: 50 * 1024 ** 3 }, failed: false, reload: vi.fn() });
+  const saved = vi.fn();
+  render(<CompletedProcessingRevisionForm detail={detail} retryStage="processing" preferAi
+    onSaved={saved} onCancel={vi.fn()} />);
+  const reserve = screen.getByRole("checkbox", {name:"acquisition.reserve.operation.label"});
+  expect(reserve).toBeChecked();
+  fireEvent.click(reserve);
+  fireEvent.click(screen.getByRole("button", {name:"acquisition.timeline.startAttempt"}));
+  await waitFor(() => expect(saved).toHaveBeenCalledOnce());
+  expect(saved.mock.calls[0][1]).toEqual({useEmergencySpaceReserve:false});
+  expect(mocks.replan.mock.calls[0][1].enableAdaptiveAssessment).toBe(true);
+  expect(mocks.replan.mock.calls[0][1]).not.toHaveProperty("useEmergencySpaceReserve");
+});
+
+it("passes a one-time emergency reserve choice for ordinary file processing", async () => {
+  const saved = vi.fn();
+  render(<CompletedProcessingRevisionForm detail={detail} onSaved={saved} onCancel={vi.fn()} />);
+  fill();
+  fireEvent.click(screen.getByRole("checkbox", {name:"acquisition.reserve.operation.label"}));
+  fireEvent.click(confirm());
+  await waitFor(() => expect(saved).toHaveBeenCalledOnce());
+  expect(saved.mock.calls[0][1]).toEqual({useEmergencySpaceReserve:true});
+});
+
+it("does not save or start until the current reserve default is known, and allows reloading a failed read", () => {
+  const reload = vi.fn();
+  mocks.reserveDefaults.mockReturnValue({value:undefined, failed:false, reload});
+  const props = {detail, retryStage:"processing" as const, preferAi:true, onSaved:vi.fn(), onCancel:vi.fn()};
+  const view = render(<CompletedProcessingRevisionForm {...props} />);
+  const submit = screen.getByRole("button", {name:"acquisition.timeline.startAttempt"});
+  expect(submit).toBeDisabled();
+  expect(screen.getByRole("status", {name:"acquisition.plan.loading"})).toBeVisible();
+  fireEvent.click(submit);
+  expect(mocks.replan).not.toHaveBeenCalled();
+  mocks.reserveDefaults.mockReturnValue({value:undefined, failed:true, reload});
+  view.rerender(<CompletedProcessingRevisionForm {...props} />);
+  fireEvent.click(screen.getByRole("button", {name:"acquisition.reserve.reload"}));
+  expect(reload).toHaveBeenCalledOnce();
+  expect(submit).toBeDisabled();
+  mocks.reserveDefaults.mockReturnValue({value:{selected:true, minimumBytes:50 * 1024 ** 3}, failed:false, reload});
+  view.rerender(<CompletedProcessingRevisionForm {...props} />);
+  expect(submit).toBeEnabled();
+  expect(screen.getByRole("checkbox", {name:"acquisition.reserve.operation.label"})).toBeChecked();
 });
 
 it("preselects AI only after an explicit reanalysis choice without submitting or changing task-level defaults", () => {

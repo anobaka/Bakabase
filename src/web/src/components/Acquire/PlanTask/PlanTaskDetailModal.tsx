@@ -56,6 +56,7 @@ import AcquisitionExecutionTimeline, {
 import {
   canReviseDeliveryLayout,
 } from "./CompletedDeliveryLayoutRevision";
+import type { AttemptRunOptions } from "./useAttemptStorageReserve";
 
 export default function PlanTaskDetailModal({
   taskId,
@@ -104,6 +105,10 @@ export default function PlanTaskDetailModal({
   const [directoriesOpen, setDirectoriesOpen] = useState(false);
   const [diagnostics, setDiagnostics] = useState<DiagnosticsPage>();
   const [reserveSubmitting, setReserveSubmitting] = useState(false);
+  const [attemptRunOverride, setAttemptRunOverride] = useState<{
+    revision: number;
+    options: AttemptRunOptions;
+  }>();
   const [currentRunView, setCurrentRunView] = useState<number>();
   const showRun = (id: number) => setDiagnostics({ tab: "files", runId: id });
   const [continuation, setContinuation] = useState<{
@@ -344,12 +349,15 @@ export default function PlanTaskDetailModal({
       task?.status !== replanSnapshot.task.status ||
       task?.waitPromptJson !== replanSnapshot.task.waitPromptJson);
   const closeEditor = () => setEditor(undefined);
-  const startRevision = (next: PlanTaskDetail) => {
+  const startRevision = (next: PlanTaskDetail, options?: AttemptRunOptions) => {
     closeEditor();
     setContinuation(undefined);
     setDetail(next);
+    setAttemptRunOverride(options ? { revision: next.task.planRevision, options } : undefined);
     // If start fails, the server keeps the saved revision ready for retry.
-    void mutate(() => planTaskApi.run(taskId, next.task.planRevision));
+    void mutate(() => options
+      ? planTaskApi.run(taskId, next.task.planRevision, options.useEmergencySpaceReserve)
+      : planTaskApi.run(taskId, next.task.planRevision));
   };
   const currentAttempt = detail?.stageAttempts
     ?.slice()
@@ -618,7 +626,9 @@ export default function PlanTaskDetailModal({
                   isDisabled={
                     detail.issues.some((issue) => issue.blocking !== false) || !detail.steps.length
                   }
-                  onPress={() => void mutate(() => planTaskApi.run(taskId, task.planRevision))}
+                  onPress={() => void mutate(() => attemptRunOverride?.revision === task.planRevision
+                    ? planTaskApi.run(taskId, task.planRevision, attemptRunOverride.options.useEmergencySpaceReserve)
+                    : planTaskApi.run(taskId, task.planRevision))}
                 >
                   {t("acquisition.plan.run")}
                 </Button>

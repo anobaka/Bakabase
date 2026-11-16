@@ -116,7 +116,10 @@ public sealed class AcquisitionStorageWritePolicyProvider(IServiceScopeFactory s
             foreach (var owner in runOwners)
             {
                 var grant = AcquisitionStorageOverrideGrant.Read(owner);
-                var mode = AcquisitionSpaceReserve.Inherit;
+                // Expiring permission may revoke a lower reserve, but must never loosen
+                // a run's explicit stricter selection back to a global emergency mode.
+                var mode = grant is {ReserveMode: AcquisitionSpaceReserve.Configured} && grant.IsCurrentBinding(owner, run, now)
+                    ? AcquisitionSpaceReserve.Configured : AcquisitionSpaceReserve.Inherit;
                 if (grant?.IsValid(owner, run, now) == true)
                 {
                     // A later retry cannot reuse a grant from a failed attempt.

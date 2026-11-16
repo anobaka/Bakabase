@@ -19604,6 +19604,7 @@ export interface components {
         "Bakabase.Service.Components.Acquisition.Planning.AcquisitionPlanRunInput": {
             /** Format: int32 */
             expectedRevision: number;
+            useEmergencySpaceReserve?: boolean;
         };
         "Bakabase.Service.Components.Acquisition.Planning.AcquisitionPlanSearchInput": {
             query: string;

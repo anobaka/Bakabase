@@ -8391,6 +8391,7 @@ export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanRepl
 export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanRunInput {
   /** @format int32 */
   expectedRevision: number;
+  useEmergencySpaceReserve?: boolean;
 }
 
 export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanSearchInput {

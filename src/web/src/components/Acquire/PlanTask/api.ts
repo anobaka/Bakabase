@@ -93,8 +93,11 @@ export const planTaskApi = {
         storagePolicyOverrides,
       }),
     ),
-  run: (id: number, expectedRevision: number) =>
-    requireResult(BApi.acquisition.runAcquisitionPlan(id, { expectedRevision })),
+  run: (id: number, expectedRevision: number, useEmergencySpaceReserve?: boolean) =>
+    requireResult(BApi.acquisition.runAcquisitionPlan(id, {
+      expectedRevision,
+      ...(useEmergencySpaceReserve !== undefined ? { useEmergencySpaceReserve } : {}),
+    })),
   preflight: (id: number) => requireResult(BApi.acquisition.preflightAcquisitionPlan(id)),
   replan: (
     id: number,

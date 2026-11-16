@@ -57,7 +57,7 @@ public sealed record AcquisitionPlanCreationInput(string Title, string BuilderId
     AcquisitionDeliverySettings? DeliverySettings = null, ArtifactStoragePolicy? StoragePolicy = null);
 public sealed record AcquisitionPlanSearchInput(string Query);
 public sealed record AcquisitionPlanSelectionInput(string CandidateId, int ExpectedRevision);
-public sealed record AcquisitionPlanRunInput(int ExpectedRevision);
+public sealed record AcquisitionPlanRunInput(int ExpectedRevision, bool? UseEmergencySpaceReserve = null);
 public sealed record AcquisitionPlanUpdateInput(int ExpectedRevision, string? OutputDirectory = null,
     AcquisitionDeliverySettings? DeliverySettings = null, ArtifactStoragePolicy? StoragePolicy = null,
     IReadOnlyList<AcquisitionStoragePolicyOverrideInput>? StoragePolicyOverrides = null);

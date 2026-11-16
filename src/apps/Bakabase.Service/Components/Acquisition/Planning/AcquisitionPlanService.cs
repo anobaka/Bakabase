@@ -653,8 +653,9 @@ public sealed partial class AcquisitionPlanService(BakabaseDbContext db, IEnumer
         return candidates;
     }
 
-    public async Task<AcquisitionPlanTaskDetail> RunAsync(int id, int expectedRevision, CancellationToken ct)
-        => await RunGuardedAsync(id, expectedRevision, ct, false);
+    public async Task<AcquisitionPlanTaskDetail> RunAsync(int id, int expectedRevision, CancellationToken ct,
+        bool? useEmergencySpaceReserve = null)
+        => await RunGuardedAsync(id, expectedRevision, ct, false, useEmergencySpaceReserve: useEmergencySpaceReserve);
 
     // Recovery already owns the acquisition gate. Keep the same execution/preflight path
     // without recursively taking the semaphore or manufacturing a replacement workflow.
@@ -683,7 +684,8 @@ public sealed partial class AcquisitionPlanService(BakabaseDbContext db, IEnumer
         plan.OutputDirectory, Serialize(check.Candidates.Where(c => plan.Parts.Any(p => p.SelectedSourceId == c.Candidate.Id))
             .OrderBy(c => c.Candidate.Id).Select(c => c.ResolvedSource).ToArray()));
 
-    private async Task<AcquisitionPlanTaskDetail> RunGuardedAsync(int id, int expectedRevision, CancellationToken ct, bool gateHeld, string? expectedInputs = null)
+    private async Task<AcquisitionPlanTaskDetail> RunGuardedAsync(int id, int expectedRevision, CancellationToken ct, bool gateHeld,
+        string? expectedInputs = null, bool? useEmergencySpaceReserve = null)
     {
         var gate = AcquisitionTaskGate.For(id); if (!gateHeld) await gate.WaitAsync(ct);
         try
@@ -712,7 +714,9 @@ public sealed partial class AcquisitionPlanService(BakabaseDbContext db, IEnumer
             if (existingRunId != null)
             {
                 row.WorkflowRunId = existingRunId; row.Status = AcquisitionStatus.Running; row.Phase = "executing";
+                BindRunReserve(row, useEmergencySpaceReserve);
                 await db.SaveChangesAsync(ct);
+                if (useEmergencySpaceReserve != null) AcquisitionStorageWritePolicyProvider.Invalidate();
                 return await DetailAsync(row, ct);
             }
             // Never change a task that has any historical execution, including a lost association
@@ -764,9 +768,24 @@ public sealed partial class AcquisitionPlanService(BakabaseDbContext db, IEnumer
             row.WorkflowRunId = run.Id; row.Status = AcquisitionStatus.Running; row.Phase = "executing";
             row.BuilderStateJson = Serialize(State(row) with {Issues = [], DownloadContinuation =
                 new(run.Id, AcquisitionDownloadContinuationService.Automatic, DateTimeOffset.UtcNow)}); row.UpdatedAt = DateTime.Now;
-            await db.SaveChangesAsync(ct); return await DetailAsync(row, ct);
+            // The new association and its explicit reserve are published atomically. Before
+            // this save, writers cannot find a current owner and use the configured reserve.
+            // In particular, false must override a globally enabled emergency reserve.
+            BindRunReserve(row, useEmergencySpaceReserve);
+            await db.SaveChangesAsync(ct);
+            if (useEmergencySpaceReserve != null) AcquisitionStorageWritePolicyProvider.Invalidate();
+            return await DetailAsync(row, ct);
         }
         finally {if (!gateHeld) gate.Release();}
+    }
+
+    private static void BindRunReserve(AcquisitionTaskDbModel row, bool? useEmergencySpaceReserve)
+    {
+        if (useEmergencySpaceReserve is not {} emergency || row.WorkflowRunId is not {} runId) return;
+        var now = DateTimeOffset.UtcNow;
+        row.BuilderStateJson = AcquisitionStorageOverrideGrant.WithState(row.BuilderStateJson,
+            new(runId, row.PlanRevision, "start:" + Guid.NewGuid().ToString("N"), now, now.AddHours(24),
+                ReserveMode: emergency ? AcquisitionSpaceReserve.Emergency : AcquisitionSpaceReserve.Configured));
     }
 
     private async Task<bool> HasNeverExecutedAsync(AcquisitionTaskDbModel row, CancellationToken ct)

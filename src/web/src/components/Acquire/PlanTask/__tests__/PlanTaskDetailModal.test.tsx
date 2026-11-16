@@ -1248,9 +1248,9 @@ it("starts only the returned plan revision after confirming a stage retry", asyn
   };
   mocks.run.mockResolvedValue(next);
   await act(async () => {
-    mocks.completedRevision.mock.lastCall?.[0].onSaved(next);
+    mocks.completedRevision.mock.lastCall?.[0].onSaved(next, { useEmergencySpaceReserve: false });
   });
-  expect(mocks.run).toHaveBeenCalledExactlyOnceWith(42, 4);
+  expect(mocks.run).toHaveBeenCalledExactlyOnceWith(42, 4, false);
   expect(mocks.select).not.toHaveBeenCalled();
   expect(mocks.cancel).not.toHaveBeenCalled();
 });
@@ -1589,10 +1589,14 @@ it("keeps the saved local revision available if starting a stage attempt fails",
     phase:"ready",workflowRunId:undefined,planRevision:4},steps:[{id:"continue",kind:"acquisition.plan.continueFiles"}]};
   mocks.get.mockResolvedValue(ready);
   mocks.run.mockRejectedValueOnce(new Error("start failed"));
-  await act(async () => { mocks.completedRevision.mock.lastCall?.[0].onSaved(ready); });
+  await act(async () => { mocks.completedRevision.mock.lastCall?.[0].onSaved(ready, {useEmergencySpaceReserve:false}); });
   expect(await screen.findByRole("button", {name:"acquisition.plan.run"})).toBeEnabled();
-  expect(mocks.run).toHaveBeenCalledExactlyOnceWith(42,4);
+  expect(mocks.run).toHaveBeenCalledExactlyOnceWith(42,4,false);
   expect(screen.getByRole("alert")).toHaveTextContent("acquisition.plan.actionFailed");
+  mocks.run.mockResolvedValue(ready);
+  fireEvent.click(screen.getByRole("button", {name:"acquisition.plan.run"}));
+  await waitFor(() => expect(mocks.run).toHaveBeenCalledTimes(2));
+  expect(mocks.run).toHaveBeenLastCalledWith(42,4,false);
 });
 
 it("shows only the latest AI diagnosis while retaining every attempt in execution details", async () => {

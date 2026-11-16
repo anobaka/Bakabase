@@ -15,6 +15,7 @@ import CompletedDeliveryLayoutRevision, {
 import RevisionPlacementDialog from "./RevisionPlacementDialog";
 import { AcquisitionStatus } from "@/sdk/constants";
 import type { AcquisitionStage } from "./AcquisitionExecutionTimeline";
+import useAttemptStorageReserve, { type AttemptRunOptions } from "./useAttemptStorageReserve";
 
 type ProcessingRevisionMode = "completed" | "stopped";
 
@@ -191,7 +192,7 @@ export default function CompletedProcessingRevisionForm({
 }: {
   detail: PlanTaskDetail;
   currentDeliveryRoot?: string | null;
-  onSaved: (next: PlanTaskDetail) => void;
+  onSaved: (next: PlanTaskDetail, options: AttemptRunOptions) => void;
   onCancel: () => void;
   mode?: ProcessingRevisionMode;
   inDialog?: boolean;
@@ -292,6 +293,7 @@ export default function CompletedProcessingRevisionForm({
   const [deliveryRootDirectory, setDeliveryRootDirectory] = useState<string>();
   const [useCurrentStorageDefaults, setUseCurrentStorageDefaults] = useState(false);
   const [saving, setSaving] = useState(false);
+  const reserve = useAttemptStorageReserve(saving);
   const submitting = useRef(false);
   const [error, setError] = useState<string>();
   const candidates = (partId: string) =>
@@ -319,6 +321,7 @@ export default function CompletedProcessingRevisionForm({
     parts.length > 0 &&
     parts.every((part) => drafts[part.id]?.choice === "defer");
   const valid =
+    reserve.ready &&
     (inputStage ? parts.length > 0 && parts.every(part => !!stageDirectory(part.id)) : deliveryOnly
       ? snapshot.task.workflowRunId === detail.task.workflowRunId &&
         parts.length > 0 &&
@@ -564,6 +567,7 @@ export default function CompletedProcessingRevisionForm({
           })}
         </p>
       )}
+      {reserve.control}
       <ResumeActions busy={saving} cancel={<Button variant="light" isDisabled={saving} onPress={onCancel}>
           {t("common.action.cancel")}
         </Button>}>
@@ -631,7 +635,7 @@ export default function CompletedProcessingRevisionForm({
                       }),
                     })),
               })
-              .then(onSaved)
+              .then((next) => onSaved(next, reserve.options!))
               .catch((cause: unknown) => {
                 const code = cause instanceof Error ? cause.message : "";
                 setError(

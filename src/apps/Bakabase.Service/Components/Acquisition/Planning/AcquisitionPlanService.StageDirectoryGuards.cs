@@ -36,7 +36,8 @@ public sealed partial class AcquisitionPlanService
 
     private async Task<string?> StageDirectoryActivityIssueAsync(AcquisitionTaskDbModel row, CancellationToken ct)
     {
-        if (row.Status == AcquisitionStatus.Cancelled) return "STAGE_DIRECTORY_TASK_UNAVAILABLE";
+        // A stopped task may start a new attempt from its current files. Task status
+        // alone does not prove that its runs, leases or downloads have stopped.
         if (State(row).ProcessingStageCommitId != null || State(row).ProcessingStageInputId != null) return "STAGE_DIRECTORY_TASK_ACTIVE";
         if (AcquisitionLocalRecoveryQueueEntry.Read(row) is {IsOpen: true} ||
             AcquisitionContinuationEntry.Read(row) is {IsOpen: true}) return "STAGE_DIRECTORY_TASK_ACTIVE";
