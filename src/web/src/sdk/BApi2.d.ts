@@ -916,6 +916,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/acquisition/plans/{id}/registered-downloads/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PreviewAcquisitionRegisteredDownloads"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/acquisition/plans/{id}/registered-downloads/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ApplyAcquisitionRegisteredDownload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/acquisition/plans/{id}/replan": {
         parameters: {
             query?: never;
@@ -19799,6 +19831,33 @@ export interface components {
             taskId: number;
             reasonCode: string;
         };
+        "Bakabase.Service.Components.Acquisition.Planning.AcquisitionRegisteredDownloadCandidate": {
+            sourceId: string;
+            sourceTitle: string;
+            /** Format: int32 */
+            runId: number;
+            /** Format: int32 */
+            downloadTaskId: number;
+            directory: string;
+            /** Format: int32 */
+            fileCount: number;
+            /** Format: int64 */
+            totalBytes: number;
+            token: string;
+            stage: string;
+        };
+        "Bakabase.Service.Components.Acquisition.Planning.AcquisitionRegisteredDownloadSelection": {
+            /** Format: int32 */
+            expectedRevision: number;
+            token: string;
+        };
+        "Bakabase.Service.Components.Acquisition.Planning.AcquisitionRegisteredDownloadsInput": {
+            /** Format: int32 */
+            expectedRevision: number;
+        };
+        "Bakabase.Service.Components.Acquisition.Planning.AcquisitionRegisteredDownloadsPreview": {
+            candidates: components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionRegisteredDownloadCandidate"][];
+        };
         "Bakabase.Service.Components.Acquisition.Planning.AcquisitionRuntimeOverview": {
             /** Format: int32 */
             taskId: number;
@@ -21146,6 +21205,7 @@ export interface components {
             /** Format: int32 */
             floor: number;
             accessCode?: string;
+            context?: string;
         };
         "Bakabase.Service.Components.ServerData.ServerAppDataImport+Validation": {
             valid: boolean;
@@ -24467,6 +24527,12 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionRecoveryResult"];
         };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.Planning.AcquisitionRegisteredDownloadsPreview]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionRegisteredDownloadsPreview"];
+        };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.Planning.AcquisitionSourceCorrectionResult]": {
             /** Format: int32 */
             code: number;
@@ -27325,6 +27391,68 @@ export interface operations {
                 "application/json": components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionKeepPreparedFilesInput"];
                 "text/json": components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionKeepPreparedFilesInput"];
                 "application/*+json": components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionKeepPreparedFilesInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.Planning.AcquisitionPlanTaskDetail]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.Planning.AcquisitionPlanTaskDetail]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.Planning.AcquisitionPlanTaskDetail]"];
+                };
+            };
+        };
+    };
+    PreviewAcquisitionRegisteredDownloads: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionRegisteredDownloadsInput"];
+                "application/json": components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionRegisteredDownloadsInput"];
+                "text/json": components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionRegisteredDownloadsInput"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionRegisteredDownloadsInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.Planning.AcquisitionRegisteredDownloadsPreview]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.Planning.AcquisitionRegisteredDownloadsPreview]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.Planning.AcquisitionRegisteredDownloadsPreview]"];
+                };
+            };
+        };
+    };
+    ApplyAcquisitionRegisteredDownload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionRegisteredDownloadSelection"];
+                "application/json": components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionRegisteredDownloadSelection"];
+                "text/json": components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionRegisteredDownloadSelection"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionRegisteredDownloadSelection"];
             };
         };
         responses: {

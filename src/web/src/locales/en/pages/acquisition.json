@@ -1,4 +1,12 @@
 {
+  "acquisition.registered.title": "Reuse registered files",
+  "acquisition.registered.use": "Use selected files",
+  "acquisition.registered.hint": "Choose which stage to continue from. Using a processed result lets you skip earlier steps. The original files and run history are retained.",
+  "acquisition.registered.empty": "This source has no registered files available to use.",
+  "acquisition.registered.loadFailed": "Could not load reusable files.",
+  "acquisition.registered.applyFailed": "Could not confirm that the files and task still match the preview. Check again.",
+  "acquisition.registered.download": "Download #{{id}}",
+  "acquisition.registered.details": "Download #{{id}} · Run #{{run}} · {{count}} files · {{size}}",
   "acquisition.sourceImage.title": "Choose a download source from the post",
   "acquisition.sourceImage.postLinks": "Download links in the post and replies",
   "acquisition.sourceImage.image": "Image from the post",

@@ -177,6 +177,41 @@ public sealed partial class AcquisitionRecoveryTests
     }
 
     [DataTestMethod]
+    [DataRow("original", true)]
+    [DataRow("intermediate", true)]
+    [DataRow("foreign", false)]
+    [DataRow("broken-chain", false)]
+    [DataRow("unbound-options", false)]
+    public async Task Legacy_mount_failure_must_match_the_same_bound_destination_history(string mode, bool allowed)
+    {
+        var (run, target, download, operation, _, provider, service) = await SeedRetainedDownload();
+        var original = download.DownloadPath;
+        var intermediate = Path.Combine(_root, "intermediate");
+        var latest = Path.Combine(_root, "latest");
+        var foreign = Path.Combine(_root, "other-task");
+        var request = JsonSerializer.Deserialize<CloudDownloadRequest>(download.Options!, JsonSerializerOptions.Web)!;
+        var revisions = new List<CloudDownloadDestinationRevision>
+        {
+            new(Guid.NewGuid().ToString("N"), original, intermediate, _root, DateTime.UtcNow.AddHours(-1), new string('a', 64)),
+            new(Guid.NewGuid().ToString("N"), mode == "broken-chain" ? foreign : intermediate, latest,
+                _root, DateTime.UtcNow, new string('b', 64))
+        };
+        download.Options = JsonSerializer.Serialize(request with {DestinationRevisions = revisions}, JsonSerializerOptions.Web);
+        if (mode != "unbound-options") operation.RequestJson = download.Options;
+        Directory.Move(original, latest);
+        download.DownloadPath = latest;
+        var failedPath = mode switch {"foreign" => foreign, "intermediate" => intermediate, _ => original};
+        download.Message = "Choose a folder inside a mounted storage location. " + failedPath;
+        await _db.SaveChangesAsync();
+
+        var check = await service.CheckAsync(run.Id, target, _root, true, default);
+        Assert.AreEqual(allowed, check.CanRetry, check.ReasonCode);
+        CollectionAssert.AreEqual(allowed ? new[] {true, false} : Array.Empty<bool>(), provider.Checks);
+        Assert.AreEqual("bytes", await File.ReadAllTextAsync(Path.Combine(latest, "retained-fixture")));
+        Assert.AreEqual(1, await _db.DownloadTasks.CountAsync());
+    }
+
+    [DataTestMethod]
     [DataRow("provider-prefix")]
     [DataRow("quoted")]
     [DataRow("different-path")]

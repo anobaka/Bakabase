@@ -1,4 +1,8 @@
 using System.IO.Compression;
+using System.Reflection;
+using System.Reflection.Metadata;
+using System.Reflection.Metadata.Ecma335;
+using System.Reflection.PortableExecutable;
 using Bakabase.InsideWorld.Business.Components.Compression;
 using Bakabase.Modules.Workflow.Artifacts;
 using Bakabase.Service.Components.FileProcessing;
@@ -80,11 +84,11 @@ public sealed class ExplicitExecutableArchiveTests
             using var writer = new StreamWriter(zip.CreateEntry("payload.txt").Open());
             writer.Write("inert archive content");
         }
-        // A copy of this assembly is only archive input: the test never invokes it as a process.
+        // The inert stub is only archive input. It has no entry point and is never launched.
         byte[] stub = prefix switch
         {
             "mz" => "MZinert nonexecutable prefix\0"u8.ToArray(),
-            "pe" => await File.ReadAllBytesAsync(typeof(FileProcessingPlanExecutor).Assembly.Location),
+            "pe" => CreateInertPeHeader(),
             _ => []
         };
         var original = stub.Concat(bytes.ToArray()).ToArray();
@@ -103,7 +107,7 @@ public sealed class ExplicitExecutableArchiveTests
         var executable = Environment.GetEnvironmentVariable("BAKABASE_TEST_7Z_PATH");
         if (string.IsNullOrWhiteSpace(executable) || !File.Exists(executable))
             Assert.Inconclusive("Set BAKABASE_TEST_7Z_PATH for the installed archive tool fixture.");
-        var bytes = await File.ReadAllBytesAsync(typeof(FileProcessingPlanExecutor).Assembly.Location);
+        var bytes = CreateInertPeHeader();
         var file = Path.Combine(_input, "ordinary.exe"); await File.WriteAllBytesAsync(file, bytes);
         var tool = new ArchiveExtractionService(new TestableCompressedFileService(executable!));
         Assert.IsNull(await tool.ProbeFormatAsync(file, default));
@@ -125,7 +129,7 @@ public sealed class ExplicitExecutableArchiveTests
                 using var writer = new StreamWriter(zip.CreateEntry($"content/entry-{i:D4}.txt").Open());
                 writer.Write("inert archive content");
             }
-        var stub = await File.ReadAllBytesAsync(typeof(FileProcessingPlanExecutor).Assembly.Location);
+        var stub = CreateInertPeHeader();
         var original = stub.Concat(bytes.ToArray()).ToArray();
         var file = Path.Combine(_input, "many-members.exe");
         await File.WriteAllBytesAsync(file, original);
@@ -133,6 +137,19 @@ public sealed class ExplicitExecutableArchiveTests
         Assert.AreEqual(".zip", await tool.ProbeFormatAsync(file, default));
         CollectionAssert.AreEqual(original, await File.ReadAllBytesAsync(file));
         CollectionAssert.AreEqual(new[] {file}, Directory.GetFiles(_input));
+    }
+
+    // Keep this short-prefix fixture independent of the size of the release or test assemblies.
+    internal static byte[] CreateInertPeHeader()
+    {
+        var metadata = new MetadataBuilder();
+        metadata.AddModule(0, metadata.GetOrAddString("Fixture"), metadata.GetOrAddGuid(Guid.Empty), default, default);
+        metadata.AddTypeDefinition(TypeAttributes.NotPublic, default, metadata.GetOrAddString("<Module>"), default,
+            MetadataTokens.FieldDefinitionHandle(1), MetadataTokens.MethodDefinitionHandle(1));
+        var image = new BlobBuilder();
+        new ManagedPEBuilder(new PEHeaderBuilder(imageCharacteristics: Characteristics.ExecutableImage | Characteristics.Dll),
+            new MetadataRootBuilder(metadata), new BlobBuilder()).Serialize(image);
+        return image.ToArray();
     }
 
     private async Task<string> Input(string name, string? hex = null)

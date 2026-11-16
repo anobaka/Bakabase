@@ -61,7 +61,8 @@ public sealed partial class AcquisitionTaskDeletionCleanupService(BakabaseDbCont
         }
         // Older accepted cleanups retain their persisted receipts and replacement proofs.
         // A normal delete preview grants only the selected task's own files.
-        var wholeTask = !acceptDelivery || task.Status != AcquisitionStatus.Completed || task.WorkflowRunId == null;
+        var borrowed = AcquisitionRegisteredDownload.Read<AcquisitionPlanBuilderState>(task.BuilderStateJson)?.RegisteredDownload;
+        var wholeTask = borrowed != null || !acceptDelivery || task.Status != AcquisitionStatus.Completed || task.WorkflowRunId == null;
         var runId = task.WorkflowRunId ?? 0;
         if (runId != 0 && !owners.Contains(runId) || await db.WorkflowRuns.CountAsync(r => owners.Contains(r.Id), ct) != owners.Count)
             return Block("ACQUISITION_EXECUTION_STATE_UNKNOWN");
@@ -74,7 +75,7 @@ public sealed partial class AcquisitionTaskDeletionCleanupService(BakabaseDbCont
             if (superseded == null) return Block("CLEANUP_OLD_EXECUTION_REQUIRES_REVIEW");
         }
         if (wholeTask) return await PreviewWholeTaskFilesAsync(task, owners, superseded, cleanupIntermediates, deleteDeliveredFiles,
-            skipFileVerification, retryRetainedFiles, ct, guardDirectory);
+            skipFileVerification, retryRetainedFiles, ct, guardDirectory, borrowed?.Input.OperationId);
         if (!await db.WorkflowRuns.AnyAsync(r => r.Id == runId && r.Status == WorkflowRunStatus.Success && r.FailedItemCount == 0, ct))
             return Block("CLEANUP_TASK_NOT_COMPLETED");
         var ownerKeys = owners.Select(id => id.ToString(CultureInfo.InvariantCulture)).ToArray();

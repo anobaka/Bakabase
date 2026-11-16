@@ -1,4 +1,12 @@
 {
+  "acquisition.registered.title": "复用已登记的文件",
+  "acquisition.registered.use": "使用所选文件",
+  "acquisition.registered.hint": "选择从哪个阶段的文件继续。选择已有处理结果可以跳过做过的步骤。原文件和运行记录会保留。",
+  "acquisition.registered.empty": "此来源没有已登记且可读取的文件。",
+  "acquisition.registered.loadFailed": "读取可复用文件失败。",
+  "acquisition.registered.applyFailed": "未能确认文件或任务仍与预览一致，请重新核对。",
+  "acquisition.registered.download": "下载 #{{id}}",
+  "acquisition.registered.details": "下载 #{{id}} · 运行 #{{run}} · {{count}} 个文件 · {{size}}",
   "acquisition.sourceImage.title": "从原帖选择下载来源",
   "acquisition.sourceImage.postLinks": "正文与回复中的下载链接",
   "acquisition.sourceImage.image": "原帖中的图片",

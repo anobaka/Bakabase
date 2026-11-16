@@ -120,6 +120,22 @@ public sealed class AcquisitionPlansController(AcquisitionPlanService service, I
     public Task<SingletonResponse<AcquisitionPlanTaskDetail>> KeepPreparedFiles(int id, [FromBody] AcquisitionKeepPreparedFilesInput input) =>
         Respond(async () => {await GuardSavedDirectory(id); return await service.KeepPreparedFilesAsync(id, input, HttpContext.RequestAborted, GuardDirectory);});
 
+    [HttpPost("{id:int}/registered-downloads/preview")]
+    [RemoteAccessible]
+    [SwaggerOperation(OperationId = "PreviewAcquisitionRegisteredDownloads")]
+    public async Task<SingletonResponse<AcquisitionRegisteredDownloadsPreview>> PreviewRegisteredDownloads(int id, [FromBody] AcquisitionRegisteredDownloadsInput input)
+    {
+        try {return new(await service.PreviewRegisteredDownloadsAsync(id, input, HttpContext.RequestAborted, GuardDirectory));}
+        catch (Exception e) when (e is ArgumentException or InvalidOperationException or UnauthorizedAccessException)
+        {return SingletonResponseBuilder<AcquisitionRegisteredDownloadsPreview>.BuildBadRequest(e.Message);}
+    }
+
+    [HttpPost("{id:int}/registered-downloads/apply")]
+    [RemoteAccessible]
+    [SwaggerOperation(OperationId = "ApplyAcquisitionRegisteredDownload")]
+    public Task<SingletonResponse<AcquisitionPlanTaskDetail>> ApplyRegisteredDownload(int id, [FromBody] AcquisitionRegisteredDownloadSelection input) =>
+        Respond(async () => {await GuardSavedDirectory(id); return await service.ApplyRegisteredDownloadAsync(id, input, HttpContext.RequestAborted, GuardDirectory);});
+
     [HttpPost("{id:int}/replan")]
     [RemoteAccessible]
     [SwaggerOperation(OperationId = "ReplanAcquisitionTask")]

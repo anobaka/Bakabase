@@ -8556,6 +8556,37 @@ export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionRecovery
   reasonCode: string;
 }
 
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionRegisteredDownloadCandidate {
+  sourceId: string;
+  sourceTitle: string;
+  /** @format int32 */
+  runId: number;
+  /** @format int32 */
+  downloadTaskId: number;
+  directory: string;
+  /** @format int32 */
+  fileCount: number;
+  /** @format int64 */
+  totalBytes: number;
+  token: string;
+  stage: string;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionRegisteredDownloadSelection {
+  /** @format int32 */
+  expectedRevision: number;
+  token: string;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionRegisteredDownloadsInput {
+  /** @format int32 */
+  expectedRevision: number;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionRegisteredDownloadsPreview {
+  candidates: BakabaseServiceComponentsAcquisitionPlanningAcquisitionRegisteredDownloadCandidate[];
+}
+
 export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionRuntimeOverview {
   /** @format int32 */
   taskId: number;
@@ -10045,6 +10076,7 @@ export interface BakabaseServiceComponentsPostSourcesSavedPostLink {
   /** @format int32 */
   floor: number;
   accessCode?: string;
+  context?: string;
 }
 
 export interface BakabaseServiceComponentsServerDataServerAppDataImportValidation {
@@ -13953,6 +13985,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceC
   data?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionRecoveryResult;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionRegisteredDownloadsPreview {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionRegisteredDownloadsPreview;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionSourceCorrectionResult {
   /** @format int32 */
   code: number;
@@ -17294,6 +17333,54 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         any
       >({
         path: `/acquisition/plans/${id}/prepared-files/keep`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionPlans
+     * @name PreviewAcquisitionRegisteredDownloads
+     * @request POST:/acquisition/plans/{id}/registered-downloads/preview
+     */
+    previewAcquisitionRegisteredDownloads: (
+      id: number,
+      data: BakabaseServiceComponentsAcquisitionPlanningAcquisitionRegisteredDownloadsInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionRegisteredDownloadsPreview,
+        any
+      >({
+        path: `/acquisition/plans/${id}/registered-downloads/preview`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionPlans
+     * @name ApplyAcquisitionRegisteredDownload
+     * @request POST:/acquisition/plans/{id}/registered-downloads/apply
+     */
+    applyAcquisitionRegisteredDownload: (
+      id: number,
+      data: BakabaseServiceComponentsAcquisitionPlanningAcquisitionRegisteredDownloadSelection,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanTaskDetail,
+        any
+      >({
+        path: `/acquisition/plans/${id}/registered-downloads/apply`,
         method: "POST",
         body: data,
         type: ContentType.Json,

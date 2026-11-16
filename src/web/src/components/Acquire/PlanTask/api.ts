@@ -38,6 +38,12 @@ export const planTaskApi = {
   create: (body: CreationInput) => requireResult(BApi.acquisition.createAcquisitionPlanTask(body)),
   get: (id: number) =>
     requireResult(BApi.acquisition.getAcquisitionPlanTask(id, { sensitiveResponse: true })),
+  registeredDownloads: (id: number, expectedRevision: number, signal: AbortSignal) =>
+    requireResult(BApi.acquisition.previewAcquisitionRegisteredDownloads(id, { expectedRevision },
+      { signal, sensitiveResponse: true, showErrorToast: false })),
+  useRegisteredDownload: (id: number, expectedRevision: number, token: string) =>
+    requireResult(BApi.acquisition.applyAcquisitionRegisteredDownload(id, { expectedRevision, token },
+      { sensitiveResponse: true, showErrorToast: false })),
   keepPreparedFiles: (id: number, expectedRevision: number, reason?: string) =>
     requireResult(BApi.acquisition.keepPreparedAcquisitionFiles(id, { expectedRevision, reason },
       { sensitiveResponse: true, showErrorToast: false })),

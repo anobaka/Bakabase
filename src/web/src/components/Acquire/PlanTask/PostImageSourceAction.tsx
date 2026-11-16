@@ -146,7 +146,7 @@ function ImagePicker({
     setAccessCode(source.accessCode ?? suggestedCode ?? "");
     setChosen(source);
   };
-  const choice = (source: ReviewedImageSource, floor?: number) => (
+  const choice = (source: ReviewedImageSource, floor?: number, context?: string | null) => (
     <Button
       key={source.url}
       size="sm"
@@ -158,6 +158,7 @@ function ImagePicker({
       onPress={() => choose(source, floor === undefined ? initialAccessCode : undefined)}
     >
       <span className="min-w-0 whitespace-normal text-start [overflow-wrap:anywhere]">
+        {context && <span className="block font-medium">{context}</span>}
         {downloadMethodLabel({ id: source.methodId, displayName: source.methodId }, t)} ·{" "}
         {source.url}
         {floor !== undefined && (
@@ -204,7 +205,7 @@ function ImagePicker({
         <section aria-label={t("acquisition.sourceImage.postLinks")} className="space-y-2">
           <p className="text-sm font-medium">{t("acquisition.sourceImage.postLinks")}</p>
           <div className="max-h-48 space-y-1 overflow-y-auto">
-            {list.links.map((source) => choice(source, source.floor))}
+            {list.links.map((source) => choice(source, source.floor, source.context))}
           </div>
         </section>
       )}

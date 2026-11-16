@@ -83,6 +83,8 @@ internal sealed record AcquisitionPlanBuilderState
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public AcquisitionLocalFilesRecoveryReceipt? LocalFilesRecovery { get; init; }
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public AcquisitionRegisteredDownload? RegisteredDownload { get; init; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public IReadOnlyList<AcquisitionDeliveryRetirement>? PendingDeliveryRetirements { get; init; }
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public IReadOnlyList<AcquisitionDeliveryRetirement>? DeliveryRetirementResults { get; init; }

@@ -40,10 +40,20 @@ public sealed class PostSourceImageTests
         await db.SaveChangesAsync();
         var transport = new Factory([]);
         var list = (await new PostSourceImagesController(db, transport).Get(2, default)).Value!.Data!;
-        CollectionAssert.AreEqual(new[] {new SavedPostLink(signed, "baidu.pcs", 0, "Ab12"), new SavedPostLink(magnet, "bt.native", 1)},
+        CollectionAssert.AreEqual(new[] {new SavedPostLink(signed, "baidu.pcs", 0, "Ab12", "下载地址："),
+                new SavedPostLink(magnet, "bt.native", 1, Context: "备用：")},
             list.Links.ToArray());
         Assert.AreEqual(0, transport.Uris.Count);
         Assert.IsFalse(await db.WorkflowRuns.AnyAsync());
+    }
+
+    [TestMethod]
+    public void Keeps_the_author_label_with_each_share_in_the_same_floor()
+    {
+        var links = new SavedPostLinks();
+        SavedPostImages.Read(new PostContent { MainHtml =
+            $"<p>解压工具：{Share}</p><p>作品：<a href='https://gofile.io/d/fixture'>https://gofile.io/d/fixture</a></p>" }, links);
+        CollectionAssert.AreEqual(new[] { "解压工具：", "作品：" }, links.Items.Select(link => link.Context).ToArray());
     }
 
     [TestMethod]

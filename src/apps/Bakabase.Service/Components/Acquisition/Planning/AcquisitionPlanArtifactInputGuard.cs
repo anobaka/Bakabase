@@ -26,6 +26,16 @@ internal static class AcquisitionPlanArtifactInputGuard
         var previous = input.PreviousRunId.ToString(System.Globalization.CultureInfo.InvariantCulture);
         var run = await db.Set<WorkflowRunDbModel>().AsNoTracking()
             .SingleOrDefaultAsync(r => r.Id == input.PreviousRunId, ct);
+        var ownsRun = run != null && await OwnsRunAsync(db, input.PreviousRunId, taskId, ct);
+        if (!ownsRun && run != null && input.TaskId == taskId && !publishedOutputOnly && !publicationInputOnly)
+        {
+            var state = await db.AcquisitionTasks.AsNoTracking().Where(t => t.Id == taskId && t.DeletedAt == null)
+                .Select(t => t.BuilderStateJson).SingleOrDefaultAsync(ct);
+            var saved = AcquisitionLocalFilesRecoveryReceipt.Read<AcquisitionPlanBuilderState>(state)?.RegisteredDownload;
+            if (saved?.Input == input && saved.PartId == partId)
+                return await saved.RequireAsync(db, store, run, taskId, partId, input, ct) ??
+                    throw new InvalidOperationException("PLAN_REPLAN_EVIDENCE_UNAVAILABLE");
+        }
         var localDownloadReceipt = run != null && await AcquisitionLocalFilesRecoveryReceipt.AuthorizesAsync(db,
             taskId, partId, run, input, ct);
         var publicationStorageWait = run != null && AcquisitionPublicationStorageWait.Matches(run);
@@ -37,7 +47,7 @@ internal static class AcquisitionPlanArtifactInputGuard
             await AcquisitionCurrentDirectoryFiles.IsOwnedAsync(db, store, artifact, taskId, input.PreviousRunId, partId, ct);
         if (publicationInputOnly && (run == null || !AcquisitionPublicationStorageWait.CanRetryDelivery(run)))
             throw new ArgumentException("PLAN_REPLAN_EVIDENCE_INVALID");
-        if (input.TaskId != taskId || !await OwnsRunAsync(db, input.PreviousRunId, taskId, ct) || run == null ||
+        if (input.TaskId != taskId || !ownsRun || run == null ||
             run.Status is not (WorkflowRunStatus.Failed or WorkflowRunStatus.Interrupted or WorkflowRunStatus.Cancelled or WorkflowRunStatus.Success) &&
             !AcquisitionProcessingConflictWait.MatchesForLocalContinuation(run) && !publicationStorageWait && !localDownloadReceipt && !currentFilesWait && !stageFiles)
             throw new ArgumentException("PLAN_REPLAN_EVIDENCE_INVALID");

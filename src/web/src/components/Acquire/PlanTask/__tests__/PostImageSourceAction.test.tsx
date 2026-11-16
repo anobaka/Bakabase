@@ -79,11 +79,12 @@ it("offers a supported link from the saved post without selecting it, probing it
   vi.mocked(postImageSourceApi.list).mockResolvedValue({
     revision: 4,
     images: [],
-    links: [{ url: link, methodId: "baidu.pcs", floor: 0, accessCode: "keep" }],
+    links: [{ url: link, methodId: "baidu.pcs", floor: 0, accessCode: "keep", context: "解压工具：" }],
   });
   const use = vi.fn();
   renderAction(use);
   const pick = await screen.findByRole("button", { name: /pan\.baidu\.com/ });
+  expect(pick).toHaveTextContent("解压工具：");
   const confirm = screen.getByRole("button", { name: "acquisition.sourceImage.use" });
   expect(pick).toHaveAttribute("aria-pressed", "false");
   expect(confirm).toBeDisabled();

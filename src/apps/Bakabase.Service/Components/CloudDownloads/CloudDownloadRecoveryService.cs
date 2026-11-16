@@ -71,7 +71,7 @@ public sealed partial class CloudDownloadRecoveryService(BakabaseDbContext db, I
                 // message for this persisted destination is eligible; quoted provider errors,
                 // other paths and unrecognized text must not authorize a retry.
                 var retainedFailure = codes.Length == 1 ? codes[0] :
-                    codes.Length == 0 && IsExactLegacyStorageFailure(message, download.DownloadPath)
+                    codes.Length == 0 && IsExactLegacyStorageFailure(message, download.DownloadPath, download.Options)
                         ? "LOCAL_STORAGE_UNAVAILABLE" : null;
                 if (retainedFailure != null && retained.CanRevalidateRetainedDownloadFailure(retainedFailure))
                     return await CheckRetainedAsync(runId, target, outputRoot, download, retained, retainedFailure, revalidate, ct, includeStopped: stopped);
@@ -151,6 +151,7 @@ public sealed partial class CloudDownloadRecoveryService(BakabaseDbContext db, I
             return new(true, "RECOVERY_ORIGINAL_DOWNLOAD_REVALIDATED", failure, true);
         }
         catch (UserStoragePathException) {return Block("RECOVERY_STORAGE_UNAVAILABLE");}
+        catch (InvalidDataException) {return Block("RECOVERY_DOWNLOAD_IDENTITY_CHANGED");}
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or ArgumentException or JsonException or InvalidOperationException)
         {return Block("RECOVERY_CHECK_INCOMPLETE");}
     }
@@ -160,9 +161,21 @@ public sealed partial class CloudDownloadRecoveryService(BakabaseDbContext db, I
         message.Contains("DownloadResultService.RecordFilesAsync", StringComparison.Ordinal) &&
         message.Contains("CloudSiteDownloader", StringComparison.Ordinal);
 
-    private static bool IsExactLegacyStorageFailure(string? message, string path) =>
-        Path.IsPathFullyQualified(path) && path.IndexOfAny(['\r', '\n', '\0']) < 0 &&
-        string.Equals(message, "Choose a folder inside a mounted storage location. " + path, StringComparison.Ordinal);
+    private static bool IsExactLegacyStorageFailure(string? message, string currentPath, string? options)
+    {
+        const string prefix = "Choose a folder inside a mounted storage location. ";
+        if (message?.StartsWith(prefix, StringComparison.Ordinal) != true) return false;
+        var failedPath = message[prefix.Length..];
+        if (!Path.IsPathFullyQualified(failedPath) || failedPath.IndexOfAny(['\r', '\n', '\0']) >= 0) return false;
+        if (string.Equals(currentPath, failedPath, StringComparison.Ordinal)) return true;
+        if (string.IsNullOrEmpty(options)) return false;
+        var request = JsonSerializer.Deserialize<CloudDownloadRequest>(options, JsonSerializerOptions.Web);
+        // CheckRetainedAsync independently compares this entire request with the bound operation
+        // before contacting the provider. Only the validated chain may name a former destination.
+        return request?.DestinationRevisions is {Count: > 0} revisions &&
+               ArtifactManifestFiles.PathComparer.Equals(CloudDownloadDestinations.ExecutionDirectory(request), currentPath) &&
+               revisions.Any(r => string.Equals(failedPath, r.PreviousDirectory, StringComparison.Ordinal));
+    }
 
     private static bool HasRetainedFiles(string executionRoot, string root, CancellationToken ct)
     {

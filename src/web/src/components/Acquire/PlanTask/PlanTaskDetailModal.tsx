@@ -32,6 +32,7 @@ import CompletedProcessingRevisionForm, {
 import TaskDirectoriesModal from "./TaskDirectoriesModal";
 import KeepPreparedFilesModal, { canKeepPreparedFiles } from "./KeepPreparedFilesModal";
 import DraftPreparation from "./DraftPreparation";
+import RegisteredDownloadAction from "./RegisteredDownloadAction";
 import TaskDeliverySettings from "./TaskDeliverySettings";
 import TaskStoragePolicySettings from "./TaskStoragePolicySettings";
 import SourceCorrectionPanel from "./SourceCorrectionPanel";
@@ -781,6 +782,13 @@ export default function PlanTaskDetailModal({
             )}
             {editable && (
               <>
+                {!!task.creationOrigins?.length && !detail.planHistory?.some(revision => revision.previousRunId != null) &&
+                  !detail.replanArtifacts?.length && (!detail.plan ||
+                    (detail.plan.parts.length === 1 && !detail.plan.parts[0].continueFrom)) && (
+                  <RegisteredDownloadAction key={`${taskId}:${task.planRevision}`}
+                    taskId={taskId} revision={task.planRevision} disabled={busy}
+                    onApplied={next => void mutate(async () => next)} />
+                )}
                 {!detail.plan && task?.builderId !== "draft" && (
                   <Button
                     size="sm"

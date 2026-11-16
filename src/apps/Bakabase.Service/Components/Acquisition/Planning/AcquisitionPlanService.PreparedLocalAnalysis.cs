@@ -21,11 +21,12 @@ public sealed partial class AcquisitionPlanService
     private static bool HasPreparedDownloads(AcquisitionTaskDbModel row, AcquisitionPlan? plan, AcquisitionPlanBuilderState state)
     {
         var receipt = state.LocalFilesRecovery;
+        if (row.DeletedAt != null || row.WorkflowRunId != null || row.Status != AcquisitionStatus.Waiting || row.Phase != "ready" ||
+            !AcquisitionLocalFilesRecoveryService.CanPrepareWithoutFileOperations(row) || plan is not {Parts.Count: > 0}) return false;
+        if (state.RegisteredDownload is {} registered && plan.Parts is [var part])
+            return registered.PartId == part.Id && registered.Input == part.ContinueFrom;
         return receipt?.ResultingRevision != null && row.PlanRevision >= receipt.ResultingRevision.Value &&
-            row.DeletedAt == null && row.WorkflowRunId == null && row.Status == AcquisitionStatus.Waiting && row.Phase == "ready" &&
-            state.DirectoryChange == null && state.ProcessingStageCommitId == null && state.ProcessingStageInputId == null &&
-            state.LocalRecoveryQueue is not {IsOpen: true} && AcquisitionContinuationEntry.Read(row) is not {IsOpen: true} &&
-            plan is {Parts.Count: > 0} && receipt.Parts.Count == plan.Parts.Count && plan.Parts.All(p =>
+            receipt.Parts.Count == plan.Parts.Count && plan.Parts.All(p =>
                 p.ContinueFrom is { } input && input.TaskId == row.Id && input.PreviousRunId == receipt.PreviousRunId &&
                 receipt.Parts.Any(r => r.PartId == p.Id && r.ArtifactId == input.ArtifactId &&
                     r.OperationId == input.OperationId && r.Fingerprint == input.Fingerprint));
@@ -53,8 +54,10 @@ public sealed partial class AcquisitionPlanService
             // reinterpret a stale approval of a different note or differently bound inputs.
             if (!same || input.ExpectedRevision != row.PlanRevision - 1) Revision(row, input.ExpectedRevision);
             if (guardDirectory != null)
-                foreach (var part in state.LocalFilesRecovery!.Preview.Parts)
-                    await guardDirectory(part.SourceDirectory);
+            {
+                if (state.RegisteredDownload is {} borrowed) await guardDirectory(borrowed.Directory);
+                else foreach (var part in state.LocalFilesRecovery!.Preview.Parts) await guardDirectory(part.SourceDirectory);
+            }
             if (!await CanAnalyzePreparedFilesAsync(row, ct)) throw new InvalidOperationException("PLAN_REPLAN_EVIDENCE_UNAVAILABLE");
             if (!same)
             {

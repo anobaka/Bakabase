@@ -19,10 +19,13 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
 {
     private async Task<Plan> PreviewWholeTaskFilesAsync(AcquisitionTaskDbModel task, IReadOnlyList<int> owners,
         AcquisitionSupersededRunCleanup.Plan? stopped, bool intermediates, bool deliveries, bool skipVerification,
-        bool retryRetainedFiles, CancellationToken ct, Func<string, Task>? guard)
+        bool retryRetainedFiles, CancellationToken ct, Func<string, Task>? guard, string? borrowedOperation)
     {
         var ownerKeys = owners.Select(i => i.ToString(CultureInfo.InvariantCulture)).ToArray();
-        var operations = await db.ArtifactOperationBindings.AsNoTracking().Where(b => b.OwnerKind == "workflow" && ownerKeys.Contains(b.OwnerId))
+        // A continuation binding confers read access. Never offer the borrowed producer's
+        // source even if its original binding is later removed during history maintenance.
+        var operations = await db.ArtifactOperationBindings.AsNoTracking().Where(b => b.OwnerKind == "workflow" &&
+                ownerKeys.Contains(b.OwnerId) && b.OperationId != borrowedOperation)
             .Select(b => b.OperationId).Distinct().ToArrayAsync(ct);
         var publications = new List<ArtifactAcceptedPublication>();
         if (deliveries)
