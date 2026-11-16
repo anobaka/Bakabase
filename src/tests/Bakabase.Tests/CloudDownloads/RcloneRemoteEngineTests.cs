@@ -301,14 +301,16 @@ public sealed partial class RcloneRemoteEngineTests
     }
 
     [TestMethod]
-    public async Task PublicDirectoryProviderUsesTheRealEngineAndReturnsOnlyVerifiedFiles()
+    [DataRow(null)]
+    [DataRow("saved-post-code")]
+    public async Task PublicDirectoryProviderUsesTheRealEngineAndReturnsOnlyVerifiedFiles(string? savedCode)
     {
         var profile = await _engine.EnsurePixeldrainPublicProfileAsync("public-directory", default);
         var directory = Path.Combine(_root, "private", "pixeldrain", profile.Id);
         await File.WriteAllTextAsync(Path.Combine(directory, "manifest.json"), Manifest);
         var provider = new PixeldrainRcloneCloudProvider(_engine, null!, new(Path.Combine(_root, "snapshots")));
         var request = new CloudDownloadRequest("operation", new() { Id = "source", ProviderId = "pixeldrain",
-            Url = "https://pixeldrain.com/d/public-directory", MethodId = "pixeldrain.rclone" }, null, null,
+            Url = "https://pixeldrain.com/d/public-directory", MethodId = "pixeldrain.rclone", AccessCode = savedCode }, null, null,
             Path.Combine(_root, "destination"));
         var first = await provider.DownloadAsync(request, _ => Task.CompletedTask, default);
         var second = await provider.DownloadAsync(request, _ => Task.CompletedTask, default);

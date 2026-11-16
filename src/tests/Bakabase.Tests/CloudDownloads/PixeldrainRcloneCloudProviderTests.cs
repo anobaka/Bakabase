@@ -48,15 +48,12 @@ public sealed class PixeldrainRcloneCloudProviderTests
     }
 
     [TestMethod]
-    public async Task PasswordProtectedOrAccountLocatorsAreRejectedBeforeAccessingTheEngine()
+    public async Task AccountLocatorsAreRejectedBeforeAccessingThePublicEngine()
     {
         var provider = new PixeldrainRcloneCloudProvider(null!, null!, null!);
         var source = new CloudSource { Id = "source", ProviderId = "pixeldrain", MethodId = "pixeldrain.rclone",
             Url = "https://pixeldrain.com/d/public-directory", AccessCode = "code" };
         var request = new CloudDownloadRequest("operation", source, null, null, Path.GetTempPath());
-        var password = await Assert.ThrowsExactlyAsync<CloudProviderException>(() =>
-            provider.DownloadAsync(request, _ => Task.CompletedTask, default));
-        Assert.AreEqual("PIXELDRAIN_PUBLIC_DIRECTORY_PASSWORD_UNSUPPORTED", password.Message);
         var account = await Assert.ThrowsExactlyAsync<CloudProviderException>(() =>
             provider.DownloadAsync(request with { AccountId = "account" }, _ => Task.CompletedTask, default));
         Assert.AreEqual("PIXELDRAIN_PUBLIC_DIRECTORY_REQUIRED", account.Message);

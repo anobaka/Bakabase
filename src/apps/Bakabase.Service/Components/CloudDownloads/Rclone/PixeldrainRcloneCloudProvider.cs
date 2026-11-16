@@ -34,7 +34,6 @@ public sealed class PixeldrainRcloneCloudProvider(RcloneRemoteEngine engine, Rcl
             string.IsNullOrWhiteSpace(request.OperationId) || !Path.IsPathFullyQualified(request.OutputDirectory) ||
             !string.IsNullOrEmpty(request.AccountId) || !string.IsNullOrEmpty(request.Source.AccountId) || request.RemoteEntry != null)
             throw new CloudProviderException("PIXELDRAIN_PUBLIC_DIRECTORY_REQUIRED");
-        if (!string.IsNullOrEmpty(request.Source.AccessCode)) throw new CloudProviderException("PIXELDRAIN_PUBLIC_DIRECTORY_PASSWORD_UNSUPPORTED");
         var locator = ParseLocator(request.Source.Url);
         try
         {

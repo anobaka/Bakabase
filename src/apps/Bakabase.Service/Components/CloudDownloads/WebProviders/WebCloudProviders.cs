@@ -38,11 +38,11 @@ public sealed class PixeldrainCloudProvider : WebCloudProvider, ICloudDownloadRe
         Func<string> appData) : base(tool, appData, proxy) => _availability = availability;
 
     public override string ProviderId => "pixeldrain";
-    public bool CanRevalidateDownloadFailure(string code) => code is "PIXELDRAIN_NETWORK_ERROR" or "CLOUD_NETWORK_ERROR";
+    public bool CanRevalidateDownloadFailure(string code) => code is "PIXELDRAIN_NETWORK_ERROR" or
+        "CLOUD_NETWORK_ERROR" or "PIXELDRAIN_ACCESS_REQUIRED";
 
     public Task<CloudReadiness> CheckLocalRecoveryAsync(CloudDownloadRequest request, CancellationToken ct) =>
-        request.Source.Kind == "share" && request.Source.MethodId is null or "pixeldrain.galleryDl" &&
-        string.IsNullOrEmpty(request.Source.AccessCode)
+        request.Source.Kind == "share" && request.Source.MethodId is null or "pixeldrain.galleryDl"
             ? InspectUnstartedDownloadAsync(request, ct)
             : Task.FromResult(new CloudReadiness(false, "RECOVERY_DOWNLOAD_REVIEW_REQUIRED"));
 

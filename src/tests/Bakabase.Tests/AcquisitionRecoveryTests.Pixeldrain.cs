@@ -125,14 +125,12 @@ public sealed partial class AcquisitionRecoveryTests
     [DataRow("foreign-binding")]
     [DataRow("foreign-operation")]
     [DataRow("not-network")]
-    [DataRow("password")]
     [DataRow("dangling-link")]
     public async Task Pixeldrain_recovery_protects_partial_or_uncertain_originals_without_probing(string mode)
     {
         var source = PixeldrainList();
-        if (mode == "password") source = source with {AccessCode = "code"};
         var (_, run, workset, download, operation, _, _) = await SeedRecoverableProvider(source,
-            mode == "not-network" ? "PIXELDRAIN_ACCESS_REQUIRED" : "CLOUD_NETWORK_ERROR");
+            mode == "not-network" ? "CLOUD_TOOL_FAILED" : "CLOUD_NETWORK_ERROR");
         switch (mode)
         {
             case "part":
@@ -156,6 +154,26 @@ public sealed partial class AcquisitionRecoveryTests
         var check = await recovery.CheckAsync(run.Id, workset.Targets.Single(), _root, true, default);
         Assert.IsFalse(check.CanRetry); Assert.IsFalse(check.Candidate); Assert.AreEqual(0, reads.Count);
         Assert.AreEqual(1, await _db.DownloadTasks.CountAsync());
+    }
+
+    [TestMethod]
+    [DataRow(true)]
+    [DataRow(false)]
+    public async Task Pixeldrain_saved_code_rechecks_anonymous_access_for_the_original_failed_download(bool publicFiles)
+    {
+        const string priorFailure = "System.InvalidOperationException: PixelDrain password-protected shares require manual access; this adapter supports public files and folders";
+        var source = PixeldrainList() with { AccessCode = "saved-code", ArchivePassword = "archive" };
+        var (_, run, workset, download, _, _, _) = await SeedRecoverableProvider(source, "CLOUD_NETWORK_ERROR");
+        download.Message = "An error occurred during downloading files.\n" + priorFailure + "\n   at CloudDownloader.Download";
+        await _db.SaveChangesAsync();
+        var (recovery, reads) = PixeldrainRecovery(() => PixeldrainMetadata(publicFiles));
+        var check = await recovery.CheckAsync(run.Id, workset.Targets.Single(), _root, true, default);
+        Assert.AreEqual(publicFiles, check.CanRetry, check.ReasonCode);
+        Assert.AreEqual(publicFiles ? "PIXELDRAIN_ACCESS_REQUIRED" : "SOURCE_ACCESS_REQUIRED", check.FailureCode);
+        Assert.AreEqual(1, reads.Count);
+        var original = JsonSerializer.Deserialize<CloudDownloadRequest>(download.Options!, JsonSerializerOptions.Web)!;
+        Assert.AreEqual("archive", original.Source.ArchivePassword);
+        Assert.AreEqual("saved-code", original.Source.AccessCode);
     }
 
     [TestMethod]

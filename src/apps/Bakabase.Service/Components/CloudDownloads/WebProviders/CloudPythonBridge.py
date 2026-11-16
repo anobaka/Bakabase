@@ -271,7 +271,8 @@ def pixeldrain_failure(status=0, value=""):
         return BridgeError("PIXELDRAIN_RATE_LIMITED: the current download or transfer limit was reached; wait or use the official share page")
     if status in (404, 410, 451) or value in ("not_found", "path_not_found", "unavailable_for_legal_reasons"):
         return BridgeError("PIXELDRAIN_SHARE_UNAVAILABLE: this file or folder is no longer publicly available")
-    if status in (401, 403) or value in ("authentication_required", "permission_denied", "hotlink_detected", "access_required"):
+    if status in (401, 403) or value in ("authentication_required", "permission_denied", "hotlink_detected", "access_required",
+                                         "password_required", "file_password_required", "invalid_password"):
         return BridgeError("PIXELDRAIN_ACCESS_REQUIRED: this share requires permission, a supported account or access through its official page")
     return BridgeError("PIXELDRAIN_NETWORK_ERROR: PixelDrain did not return a usable public response; check the source proxy and retry")
 
@@ -287,8 +288,8 @@ def pixeldrain_manifest(request):
     from gallery_dl.extractor.pixeldrain import PixeldrainFileExtractor
     if importlib.metadata.version("gallery-dl") != "1.32.17":
         raise BridgeError("Unsupported gallery-dl version")
-    if request.get("accessCode"):
-        raise BridgeError("PixelDrain password-protected shares require manual access; this adapter supports public files and folders")
+    # Saved post metadata can include an archive password in the access-code field.
+    # Always discover the selected files anonymously and honour their actual permissions.
     config.clear()
     config.set(("cache",), "file", ":memory:")
     config.set(("extractor",), "proxy-env", False)

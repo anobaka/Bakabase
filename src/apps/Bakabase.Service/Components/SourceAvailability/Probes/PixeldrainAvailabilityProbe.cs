@@ -13,7 +13,7 @@ namespace Bakabase.Service.Components.SourceAvailability.Probes;
 /// <summary>Official public metadata API only; /d filesystem locators remain a separate capability.</summary>
 public sealed class PixeldrainAvailabilityProbe(IHttpClientFactory clients) : ISourceAvailabilityProbe
 {
-    private const int Version = 2;
+    private const int Version = 3;
     public int CacheVersion => Version;
     public const string ClientName = "Bakabase.SourceAvailability.Pixeldrain";
     public bool CanHandle(CloudSource source) => CloudSourceClassifier.Classify(source.Url) == "pixeldrain";
@@ -64,7 +64,8 @@ public sealed class PixeldrainAvailabilityProbe(IHttpClientFactory clients) : IS
             return Result(SourceAvailabilityStatuses.ConfirmedUnavailable, "SOURCE_NOT_FOUND");
         if ((int)status == 429 || (int)status >= 500 || code is "download_limit_exceeded" or "transfer_limit_exceeded" or "max_concurrent_downloads")
             return Result(SourceAvailabilityStatuses.TemporarilyUnavailable, "SOURCE_RATE_OR_SERVICE_LIMIT");
-        if ((int)status is 401 or 403 || code is "authentication_required" or "forbidden" or "file_rate_limited_captcha_required")
+        if ((int)status is 401 or 403 || code is "authentication_required" or "forbidden" or "file_rate_limited_captcha_required" or
+            "password_required" or "file_password_required" or "invalid_password" or "permission_denied" or "access_required")
             return Result(SourceAvailabilityStatuses.AccessRequired, "SOURCE_ACCESS_REQUIRED");
         if (status != HttpStatusCode.OK || !success || !json.TryGetProperty("id", out var actual) || actual.ValueKind != JsonValueKind.String || actual.GetString() != id)
             return Result(SourceAvailabilityStatuses.Unknown, "SOURCE_RESPONSE_UNRECOGNIZED");

@@ -78,7 +78,16 @@ public static class WorkflowSourceRunProblems
             if (!(view.ProblemCodes ??= []).Contains(code)) view.ProblemCodes.Add(code);
     }
 
-    public static IReadOnlyList<string> Extract(string? diagnostic) => string.IsNullOrWhiteSpace(diagnostic) ? [] :
-        Regex.Matches(diagnostic, @"\b[A-Z][A-Z0-9_]{2,}\b").Select(m => m.Value)
+    public static IReadOnlyList<string> Extract(string? diagnostic)
+    {
+        if (string.IsNullOrWhiteSpace(diagnostic)) return [];
+        var codes = Regex.Matches(diagnostic, @"\b[A-Z][A-Z0-9_]{2,}\b").Select(m => m.Value)
             .Where(code => Known.Contains(code) || ExecutionProblemClassifier.IsKnown(code)).Distinct(StringComparer.Ordinal).ToArray();
+        if (codes.Length > 0) return codes;
+        const string legacyPixeldrainAccess = "PixelDrain password-protected shares require manual access; this adapter supports public files and folders";
+        foreach (var line in diagnostic.AsSpan().EnumerateLines())
+            if (line.SequenceEqual(legacyPixeldrainAccess) || line.SequenceEqual("System.InvalidOperationException: " + legacyPixeldrainAccess))
+                return ["PIXELDRAIN_ACCESS_REQUIRED"];
+        return [];
+    }
 }

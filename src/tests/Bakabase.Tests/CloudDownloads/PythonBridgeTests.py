@@ -144,6 +144,20 @@ class BridgeTests(unittest.TestCase):
             entries, _ = bridge.pixeldrain_manifest({"url": "https://pixeldrain.com/l/fixture#item=1"})
             self.assertEqual(["1.bin"], [e["path"] for e in entries])
 
+    def test_pixeldrain_saved_code_preserves_anonymous_access_checks_for_each_selected_file(self):
+        file = {"id": "fixture", "name": "original.rar", "size": 3, "can_download": True}
+        modules, calls = self.pixel_fixture({"file/fixture/info": file})
+        request = {"url": "https://pixeldrain.com/u/fixture", "accessCode": "from-post", "archivePassword": "archive"}
+        with patch.dict(sys.modules, modules), patch.object(bridge.importlib.metadata, "version", return_value="1.32.17"):
+            entries, _ = bridge.pixeldrain_manifest(request)
+            self.assertEqual(["original.rar"], [e["path"] for e in entries])
+            file["can_download"] = False
+            with self.assertRaisesRegex(bridge.BridgeError, "PIXELDRAIN_ACCESS_REQUIRED"):
+                bridge.pixeldrain_manifest(request)
+            self.assertEqual(["https://pixeldrain.com/api/file/fixture/info"] * 2, [call[0] for call in calls])
+            self.assertNotIn("from-post", str(calls))
+            self.assertEqual("archive", request["archivePassword"])
+
     def test_pixeldrain_official_aliases_keep_item_selection_on_the_canonical_api(self):
         files = [{"id": str(i), "name": f"{i}.bin", "size": 1} for i in range(2)]
         for host in ("pixeldra.in", "www.pixeldra.in", "pixeldrain.net", "www.pixeldrain.net"):
