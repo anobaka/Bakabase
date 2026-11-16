@@ -507,6 +507,7 @@ const AcquisitionPage: React.FC = () => {
                     task={task}
                     overview={overviews[task.id]}
                     sizeEstimate={data?.sizeEstimates?.[task.id]}
+                    facts={data?.taskFacts?.[task.id]}
                     onOpen={() => openTask(task)}
                     onDelete={() => createPortal(DeleteAcquisitionTasksModal, { taskIds: [task.id], onChanged: load })}
                   />
@@ -517,6 +518,7 @@ const AcquisitionPage: React.FC = () => {
                     task={task as AcquisitionTaskVm}
                     overview={overviews[task.id]}
                     sizeEstimate={data?.sizeEstimates?.[task.id]}
+                    facts={data?.taskFacts?.[task.id]}
                     onChanged={load}
                     onOpen={() => openTask(task)}
                     onDelete={() => createPortal(DeleteAcquisitionTasksModal, { taskIds: [task.id], onChanged: load })}

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { expect, it, vi } from "vitest";
 import PlanTaskRow from "../PlanTaskRow";
 import type { PlanTask } from "../models";
@@ -118,4 +118,13 @@ it("retains another part's current attention beside the active download status",
   expect(screen.getByText("acquisition.downloadActivity.running")).toBeVisible();
   expect(screen.getByText("acquisition.attention.tag.sourceUnavailable")).toBeVisible();
   expect(screen.getByText("Another required part needs attention")).toBeVisible();
+});
+
+it("shows both the registered file condition and the current reason in the task's tag list", () => {
+  render(<PlanTaskRow task={{ id: 4, status: AcquisitionStatus.Waiting,
+    attentionTags: ["localStorage"] } as PlanTask}
+    facts={["spaceInsufficient"]} onOpen={vi.fn()} />);
+  const tags = within(screen.getByRole("list", { name: "acquisition.filters.title" }));
+  expect(tags.getByText("acquisition.attention.tag.localStorage")).toBeVisible();
+  expect(tags.getByText("acquisition.filters.fact.spaceInsufficient")).toBeVisible();
 });

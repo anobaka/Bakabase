@@ -274,7 +274,11 @@ namespace Bakabase.Service.Controllers
                 prevPath = path;
             }
 
-            var specifiedFileGroups = CompressedFileHelper.DetectCompressedFileGroups(specifiedFiles.ToArray(), model.IncludeUnknownFiles);
+            // Explicitly selected files are candidates regardless of their names. The
+            // unknown-extension filter only limits directory discovery; the archive tool
+            // decides whether a selected file can actually be opened.
+            var specifiedFileGroups = CompressedFileHelper.DetectCompressedFileGroups(
+                specifiedFiles.ToArray(), ignoreUnknownExtensions: false);
             foreach (var group in specifiedFileGroups.Where(g => g.FileSizes.Sum() >= thresholdBytes))
             {
                 var vm = group.ToViewModel();

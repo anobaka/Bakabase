@@ -103,6 +103,18 @@ public partial class CompressedFileService
                 throw new InvalidDataException("The file changed during archive format discovery.");
             var options = ArchiveOpenOptions.BoundedPrefixFor(entryFile);
             var retry = await Probe(options);
+            // A known suffix can be wrong, while wildcard opening can also miss a
+            // correctly named prefixed archive. Preserve the typed attempt, then broaden
+            // only an explicit unrecognized result within this same time/output budget.
+            if (retry.Unrecognized && options != ArchiveOpenOptions.BoundedPrefix)
+            {
+                after.Refresh();
+                if (!after.Exists || (after.Attributes & FileAttributes.ReparsePoint) != 0 ||
+                    after.Length != length || after.LastWriteTimeUtc != modified)
+                    throw new InvalidDataException("The file changed during archive format discovery.");
+                options = ArchiveOpenOptions.BoundedPrefix;
+                retry = await Probe(options);
+            }
             return retry.Extension == null ? null : new(retry.Extension, options);
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
@@ -228,7 +240,12 @@ public partial class CompressedFileService
                     @"(?:Cannot|Can not) open encrypted archive\.\s*Wrong password\??",
                     RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
                 return new(null, PasswordRequired: true);
+            // A generic cannot-open line can accompany explicit damage or a missing
+            // volume. Those diagnostics are not permission for another opening mode.
             if (exitCode == 2 && !error.Contains("Wrong password", StringComparison.OrdinalIgnoreCase) &&
+                !Regex.IsMatch(error,
+                    @"^(?:ERROR:\s*)?(?:Headers Error|Data Error|CRC Failed|Unexpected end of archive|Missing volume)(?:\s*$|\s*:\s)",
+                    RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant) &&
                 Regex.IsMatch(error, @"(?:Cannot|Can not) open the file as (?:\[(?:zip|rar|rar5|7z)\] )?archive",
                     RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
                 return new(null, Unrecognized: true);

@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { Children, cloneElement, useState } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
@@ -678,7 +678,10 @@ it("uses the server's full cross-page intersection for downloaded and space-bloc
   fireEvent.click(screen.getByText("page 1/3"));
   await screen.findByText("page 2/3");
   selectAll();
-  fireEvent.click(screen.getByRole("button", { name: "acquisition.filters.fact.spaceInsufficient 8" }));
+  const tags = within(screen.getByRole("group", { name: "acquisition.filters.title" }));
+  expect(tags.queryByRole("group")).toBeNull();
+  expect(tags.getByRole("button", { name: "acquisition.attention.tag.localStorage 4" })).toBeVisible();
+  fireEvent.click(tags.getByRole("button", { name: "acquisition.filters.fact.spaceInsufficient 8" }));
   expect(actions()).toBeDisabled();
   fireEvent.click(screen.getByRole("button", { name: "acquisition.filters.fact.downloadedPending 12" }));
   fireEvent.click(screen.getByRole("button", { name: "acquisition.attention.tag.localStorage 4" }));

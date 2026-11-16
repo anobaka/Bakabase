@@ -32,6 +32,7 @@ interface Props {
   onOriginNavigate?: () => void;
   overview?: RuntimeOverview;
   sizeEstimate?: AcquisitionSizeEstimateValue;
+  facts?: string[];
   onDelete?: () => void;
 }
 
@@ -78,6 +79,7 @@ const AcquisitionRow: React.FC<Props> = ({
   onOriginNavigate,
   overview,
   sizeEstimate,
+  facts,
   onDelete,
 }) => {
   const { t } = useTranslation();
@@ -153,7 +155,7 @@ const AcquisitionRow: React.FC<Props> = ({
         </div>
       </div>
 
-      <AcquisitionAttentionTags tags={currentOverview?.attentionTags ?? task.attentionTags} />
+      <AcquisitionAttentionTags tags={currentOverview?.attentionTags ?? task.attentionTags} facts={facts} />
       <AcquisitionSizeEstimate estimate={sizeEstimate} />
       <AcquisitionCreationOrigin
         inspectPosts={inDetail}
