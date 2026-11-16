@@ -186,6 +186,7 @@ public sealed class AcquisitionPlanProcessingActivity : IResumableWorkflowActivi
         if (signal?.ArchivePolicy is not (null or "keep" or "instructions"))
             throw new ArgumentException("Choose explicit file-processing instructions or keep the downloaded files.");
         if (target.PublishedArtifactId != null) return WorkflowItemOutcome.ReplaceWith(Replace(workset, target));
+        await ctx.ReportStage("verifyingFiles");
         var finalId = plan.Steps.LastOrDefault()?.Id;
         var finalIntent = Intent(ctx.Services, workset, target, plan, finalId, config.ContinueFrom);
         if (signal?.StorageRecovery == null && target.ProcessedArtifactId != null && target.ProcessingIntentKey == finalIntent)
@@ -256,7 +257,10 @@ public sealed class AcquisitionPlanProcessingActivity : IResumableWorkflowActivi
         if (checkpoint == null && checkpointFailure == null && input.Kind == AcquisitionCurrentDirectoryFiles.Kind)
             await AcquisitionCurrentDirectoryFiles.ValidateSelectionAsync(input, ctx.Services.GetService<FileProcessingWorkspaceResolver>(), ct);
         if (checkpoint == null && checkpointFailure == null && signal?.StorageRecovery == null)
+        {
+            await ctx.ReportStage("preparingFiles");
             input = await AcquisitionProcessingStageInput.PrepareAsync(ctx, target, input, ct, processingConfig.StoragePolicy);
+        }
         if (config.UseVerifiedInput && config.ContinueFrom != null && input.Kind is "processedFiles" or "publishedFiles" or AcquisitionCurrentDirectoryFiles.Kind)
         {
             // The attachment node has already pinned this task's immutable artifact until the run ends.
@@ -278,7 +282,7 @@ public sealed class AcquisitionPlanProcessingActivity : IResumableWorkflowActivi
             DownloadArtifactCoordinator.Consumer(ctx, target), null, signal?.Password,
             value => ctx.ReportProgress(value, target.Title).GetAwaiter().GetResult(), ct,
             replan: false, stopAfterStepId: boundary, recovery: signal?.StorageRecovery, checkpointContinuation: checkpoint,
-            passwordEvidence: AcquisitionArchivePasswordEvidence.Bind(ctx, target.Id, target.SelectedSource?.Url));
+            passwordEvidence: AcquisitionArchivePasswordEvidence.Bind(ctx, target.Id, target.SelectedSource?.Url), reportStage: ctx.ReportStage);
         if (result.Artifact == null)
         {
             var reason = result.WaitReason ?? "ExtractionPlanUnknown";

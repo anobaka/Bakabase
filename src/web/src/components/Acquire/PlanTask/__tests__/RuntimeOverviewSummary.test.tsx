@@ -195,6 +195,22 @@ it("renders only measured download progress, localizes its stage and does not in
   expect(screen.queryByRole("progressbar")).toBeNull();
   expect(screen.queryByText(/80%|已下载/)).toBeNull();
 });
+it("distinguishes live input preparation from the archive tool's measured extraction percentage", () => {
+  const running = { currentNodeKind: "acquisition.plan.process", workflowStatus: "running" };
+  const view = render(<RuntimeOverviewSummary overview={overview({ ...running,
+    stage: "preparingFiles", progressScope: "processing", progress: null })} />);
+  expect(screen.getByText("正在准备处理文件")).toBeVisible();
+  expect(screen.getByRole("progressbar")).not.toHaveAttribute("aria-valuenow");
+  view.rerender(<RuntimeOverviewSummary overview={overview({ ...running,
+    stage: "extractingArchive", progressScope: "archive", progress: 62 })} />);
+  expect(screen.getByText("当前压缩包已解压 62%")).toBeVisible();
+  expect(screen.getByRole("progressbar", { name: "当前压缩包解压进度" })).toHaveAttribute("aria-valuenow", "62");
+  view.rerender(<RuntimeOverviewSummary overview={overview({ ...running, workflowStatus: "waiting",
+    stage: "extractingArchive", progressScope: "archive", progress: 62 })} />);
+  expect(screen.queryByRole("progressbar")).toBeNull();
+  expect(screen.queryByText("正在解压当前压缩包")).toBeNull();
+});
+
 it("uses the server's generic classification for both task and source reasons", () => {
   render(
     <RuntimeOverviewSummary

@@ -135,6 +135,7 @@ public sealed class AssessFileArtifactDeliveryActivity : IResumableWorkflowActiv
         var review = target.DeliveryReview;
         if (review != null && review.ArtifactId != target.ProcessedArtifactId)
             throw new InvalidOperationException("FILE_DELIVERY_INPUT_CHANGED");
+        await ctx.ReportStage("verifyingFiles");
         var id = review?.ArtifactId ?? target.ProcessedArtifactId;
         var input = id == null ? null : await store.ResolveByIdAsync(id, ct);
         if (input == null || review != null && (input.Fingerprint != review.Fingerprint || input.Kind is not ("processedFiles" or "publishedFiles" or AcquisitionCurrentDirectoryFiles.Kind)))
@@ -255,7 +256,7 @@ public sealed class AssessFileArtifactDeliveryActivity : IResumableWorkflowActiv
             review.AutomaticOuter ? null : answer?.Processing.Password,
             value => ctx.ReportProgress(value, target.Title).GetAwaiter().GetResult(), ct,
             replan: false, stopAfterStepId: null, recovery: savedAdaptive == null ? null : new(savedAdaptive.OperationId, savedAdaptive.Attempt), onlyOuterPackaging: review.AutomaticOuter,
-            passwordEvidence: AcquisitionArchivePasswordEvidence.Bind(ctx, target.Id, target.SelectedSource?.Url));
+            passwordEvidence: AcquisitionArchivePasswordEvidence.Bind(ctx, target.Id, target.SelectedSource?.Url), reportStage: ctx.ReportStage);
         if (result.Artifact == null)
             return Suspend(workset, target, review with {ArchiveId = result.ArchiveId}, result.WaitReason ?? "ExtractionPlanUnknown",
                 input.Manifest.Entries.Select(e => e.RelativePath).Take(FileArtifactDeliveryAssessment.MaximumFiles).ToArray(), result.Message, config.EnableAdaptiveAssessment);
@@ -329,6 +330,7 @@ public sealed class AssessFileArtifactDeliveryActivity : IResumableWorkflowActiv
             var inspectImagePackaging = !string.IsNullOrWhiteSpace(target.SelectedSource?.ArchivePassword) ||
                 AdaptiveFileProcessingAssessmentService.HasExtractionStep(target.SelectedSource?.ExtractionPlanJson) ||
                 executionEvidence?.CompletedProcessing.Any(round => round.Operations.Any(op => op.Kind == "extractArchive")) == true;
+            await ctx.ReportStage("analyzingFiles");
             var decision = await adaptive.AssessAsync(current, assessmentContext, iteration, ct, inspectImagePackaging, executionEvidence);
             var blocks = new List<WorkflowOutputBlock>();
             if (AdaptiveAssessmentDiagnostic.FromCode(decision.DiagnosticCode) is { } diagnostic) blocks.Add(diagnostic);
@@ -418,7 +420,7 @@ public sealed class AssessFileArtifactDeliveryActivity : IResumableWorkflowActiv
                 "workflow:" + ctx.RunId + ":adaptive:" + currentTarget.Id + ":" + iteration,
                 null, null, value => ctx.ReportProgress(value, currentTarget.Title).GetAwaiter().GetResult(), ct,
                 replan: false, stopAfterStepId: null, recovery: null, onlyOuterPackaging: false,
-                passwordEvidence: AcquisitionArchivePasswordEvidence.Bind(ctx, currentTarget.Id, currentTarget.SelectedSource?.Url));
+                passwordEvidence: AcquisitionArchivePasswordEvidence.Bind(ctx, currentTarget.Id, currentTarget.SelectedSource?.Url), reportStage: ctx.ReportStage);
             if (result.Artifact == null)
             {
                 return Suspend(Replace(workset, currentTarget), currentTarget,

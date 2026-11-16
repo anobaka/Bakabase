@@ -32,6 +32,21 @@ public sealed class AcquisitionRuntimeOverviewTests
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
     private static readonly DateTime At = new(2026, 10, 25, 9, 0, 0, DateTimeKind.Local);
 
+    [TestMethod]
+    public void FileProgressOnlyReportsTheCurrentArchiveAndNeverBorrowsWorkflowPercentages()
+    {
+        const string kind = "acquisition.plan.process";
+        var live = new WorkflowTaskProgress(17, kind, "extractingArchive", 1, 62);
+        Assert.AreEqual(("extractingArchive", (int?)62), AcquisitionRuntimeOverviewService.CurrentFileProgress(17, 1, kind, live));
+        Assert.AreEqual(("preparingFiles", (int?)null), AcquisitionRuntimeOverviewService.CurrentFileProgress(17, 1, kind,
+            live with {Stage = "preparingFiles"}));
+        Assert.AreEqual(("extractingArchive", (int?)null), AcquisitionRuntimeOverviewService.CurrentFileProgress(17, 1, kind,
+            live with {StageProgress = 120}));
+        Assert.IsNull(AcquisitionRuntimeOverviewService.CurrentFileProgress(17, 2, kind, live).Stage);
+        Assert.IsNull(AcquisitionRuntimeOverviewService.CurrentFileProgress(17, 1, "download.wait", live).Stage);
+        Assert.IsNull(AcquisitionRuntimeOverviewService.CurrentFileProgress(18, 1, kind, live).Stage);
+    }
+
     [TestInitialize]
     public async Task Setup()
     {

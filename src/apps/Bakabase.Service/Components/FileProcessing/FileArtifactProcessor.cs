@@ -313,7 +313,8 @@ public sealed class FileArtifactProcessor
         Action<int>? progress, CancellationToken ct, bool replan, string? stopAfterStepId,
         FileArtifactProcessingRecovery? recovery, bool onlyOuterPackaging = false,
         FileArtifactCheckpointContinuation? checkpointContinuation = null,
-        Func<string, CancellationToken, Task<IReadOnlyList<string>>>? passwordEvidence = null)
+        Func<string, CancellationToken, Task<IReadOnlyList<string>>>? passwordEvidence = null,
+        Func<string, Task>? reportStage = null)
     {
         Validate(config);
         if (recovery != null && (replan || answer != null || planPasswordAnswer != null || recovery.Attempt < 1))
@@ -395,7 +396,7 @@ public sealed class FileArtifactProcessor
                 config.StoragePolicy, config.StorageTitle,
                 inputDirectories: ArtifactManifestFiles.ResolveDirectories(input.RootDirectory, input.Manifest),
                 checkpointInput: checkpointContinuation?.Input, inputDirectoryProvenance: FileArtifactDeliveryLayout.ReadProvenance(input),
-                passwordEvidence: passwordEvidence);
+                passwordEvidence: passwordEvidence, reportStage: reportStage);
             if (!result.Completed)
                 waiting = new(null, result.NeedsPassword ? "PasswordUnknown" : result.FailureCode ?? "ExtractionPlanUnknown",
                     result.Message, TriedPasswords: result.TriedPasswords, RequiredComponentId: result.RequiredComponentId,
@@ -417,7 +418,7 @@ public sealed class FileArtifactProcessor
                         onlyInitialLayer: !config.Recursive.Enabled, identityPath: locations.IdentityPath,
                         storagePolicy: result.StoragePolicy, storageTitle: result.StorageTitle, inputPolicies: result.FilePolicies,
                         onlyOuterPackaging: onlyOuterPackaging, inputDirectories: directories, inputDirectoryProvenance: directoryProvenance,
-                        extractionLayout: config.ExtractionLayout, inputLayouts: result.ExtractionLayouts, passwordEvidence: passwordEvidence);
+                        extractionLayout: config.ExtractionLayout, inputLayouts: result.ExtractionLayouts, passwordEvidence: passwordEvidence, reportStage: reportStage);
                     if (!nested.Completed)
                         waiting = new(null, nested.WaitReason, nested.Message, nested.ArchiveId, nested.TriedPasswords,
                             PathConflict: nested.PathConflict);
@@ -433,6 +434,7 @@ public sealed class FileArtifactProcessor
                 }
                 if (waiting == null)
                 {
+                    if (reportStage != null) await reportStage("finalizingFiles");
                     // The measured execution trace is separate from the instructions. Missing
                     // legacy traces remain unknown, rather than reconstructing destructive
                     // authority from a plan, prompt, filename, or an artifact ancestor link.

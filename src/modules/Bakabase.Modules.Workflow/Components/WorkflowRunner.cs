@@ -238,7 +238,12 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
                 activeItem = null;
                 await db.SaveChangesAsync(ct);
                 durableCheckpoint = WorkflowCheckpointFailureRecovery.Capture(run);
-                await btaskArgs.UpdateTask(t => t.Data = new WorkflowTaskProgress(run.Id, activityRow.Kind, "running"));
+                await btaskArgs.UpdateTask(t =>
+                {
+                    t.Data = new WorkflowTaskProgress(run.Id, activityRow.Kind, "running", stepIndex);
+                    t.Percentage = stepIndex * 100 / totalSteps;
+                    t.SetProcess(BTaskText.Localize(localizer, "BTask_Process_WorkflowStep", stepIndex + 1, activityRows.Count));
+                });
 
                 if (!_activities.TryGet(activityRow.Kind, out var impl))
                     throw new InvalidOperationException($"Unknown activity kind: {activityRow.Kind}");
@@ -310,12 +315,14 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
                             durableCheckpoint = WorkflowCheckpointFailureRecovery.Capture(run);
                         },
                         ReportStage = stage => btaskArgs.UpdateTask(t =>
-                            t.Data = new WorkflowTaskProgress(run.Id, activityRow.Kind, stage)),
+                            t.Data = new WorkflowTaskProgress(run.Id, activityRow.Kind, stage, stepIndex)),
                         // Scaled into this step's share of the run, so an activity reporting
                         // 0-100 for its own work never contradicts the per-step accounting below.
                         ReportProgress = (percentage, process) => btaskArgs.UpdateTask(t =>
                         {
                             var within = Math.Clamp(percentage, 0, 100);
+                            if (t.Data is WorkflowTaskProgress current && current.StepIndex == stepIndex)
+                                t.Data = current with {StageProgress = within};
 
                             t.Percentage = (stepIndex * 100 + within) / totalSteps;
                             t.SetProcess(process is null

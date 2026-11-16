@@ -119,8 +119,11 @@ export default function RuntimeOverviewSummary({ overview, showSources = true, p
     overview.problemReasonCode ?? overview.problemCode,
     overview.problem,
   );
+  const fileScope = overview.progressScope === "processing" || overview.progressScope === "archive";
+  const archiveProgress = overview.progressScope === "archive" && overview.workflowStatus === "running";
+  const fileActivity = overview.workflowStatus === "running" && fileScope;
   const progress =
-    overview.progressScope === "download" &&
+    (overview.progressScope === "download" || archiveProgress) &&
     overview.progress != null &&
     Number.isFinite(overview.progress)
       ? Math.min(100, Math.max(0, overview.progress))
@@ -151,9 +154,11 @@ export default function RuntimeOverviewSummary({ overview, showSources = true, p
             {t("acquisition.runtime.stepNumber", { current: stepNumber, total: stepCount })}
           </span>
         )}
-        {overview.stage && overview.stage !== overview.currentNodeKind && (
+        {overview.stage && overview.stage !== overview.currentNodeKind && (!fileScope || fileActivity) && (
           <span>
-            {t(`downloadCenter.stage.${overview.stage}`, { defaultValue: overview.stage })}
+            {fileActivity
+              ? t(`acquisition.runtime.fileStage.${overview.stage}`)
+              : t(`downloadCenter.stage.${overview.stage}`, { defaultValue: overview.stage })}
           </span>
         )}
         {hasDownloads && (
@@ -187,17 +192,20 @@ export default function RuntimeOverviewSummary({ overview, showSources = true, p
         {showSources && <RuntimeSources overview={overview} />}
       </div>
       {continuation && <p role="status" className="text-xs text-default-700">{continuation}</p>}
-      {progress != null && (
+      {(progress != null || fileActivity) && (
         <div className="flex items-center gap-2 text-xs text-default-500">
           <Progress
-            aria-label={t("acquisition.runtime.downloadProgress")}
+            aria-label={t(archiveProgress ? "acquisition.runtime.archiveProgress" :
+              fileActivity ? "acquisition.runtime.fileProgress" : "acquisition.runtime.downloadProgress")}
+            isIndeterminate={progress == null}
             className="max-w-48"
             size="sm"
             value={progress}
           />
-          <span>
-            {t("acquisition.runtime.downloadProgressValue", { progress: Math.round(progress) })}
-          </span>
+          {progress != null && <span>
+            {t(archiveProgress ? "acquisition.runtime.archiveProgressValue" : "acquisition.runtime.downloadProgressValue",
+              { progress: Math.round(progress) })}
+          </span>}
         </div>
       )}
       {problemDetail ? <ProcessingProblemSummary message={problemDetail} summary={problem}

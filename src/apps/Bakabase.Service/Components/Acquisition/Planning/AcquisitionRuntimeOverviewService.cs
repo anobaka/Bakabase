@@ -5,6 +5,8 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.Tasks;
+using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Business;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Db;
@@ -23,7 +25,8 @@ namespace Bakabase.Service.Components.Acquisition.Planning;
 
 /// <summary>Bounded inspection of existing evidence. Never reconciles task state or probes a remote source.</summary>
 public sealed class AcquisitionRuntimeOverviewService(BakabaseDbContext db, IAcquisitionRuntimeDownloadReader downloads,
-    SourceAvailabilityService availability, AcquisitionSourceAttentionProjection? sourceAttention = null)
+    SourceAvailabilityService availability, AcquisitionSourceAttentionProjection? sourceAttention = null,
+    BTaskManager? backgroundTasks = null)
 {
     private const int MaximumSources = 50;
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
@@ -239,10 +242,15 @@ public sealed class AcquisitionRuntimeOverviewService(BakabaseDbContext db, IAcq
             double? progress = downloading && !completed && transferPhase ? leaves.Length == 1 ? leaves[0].Progress :
                 allBytes && allTotals && totalBytes > 0 ? 100d * completedBytes / totalBytes : null : null;
             if (progress.HasValue && (!double.IsFinite(progress.Value) || progress is < 0 or > 100)) progress = null;
+            (string? Stage, int? Progress) files = default;
+            if (!downloading && run?.Status == WorkflowRunStatus.Running &&
+                backgroundTasks?.GetTaskViewModel($"workflow.run.{run.Id}") is {Status: BTaskStatus.Running, Data: WorkflowTaskProgress live})
+                files = CurrentFileProgress(run.Id, run.CurrentStepIndex, kind, live);
             result.Add(new() {TaskId = task.Id, WorkflowRunId = run?.Id, WorkflowStatus = run?.Status.ToString().ToLowerInvariant(),
                 CurrentStepIndex = run?.CurrentStepIndex, StepCount = executionPlan?.Nodes.Count ?? (run != null && run.PlanSnapshotJson == null ? legacy.Length : null),
-                CurrentNodeKind = kind, Stage = downloading && leaves.Length == 1 ? leaves[0].Stage : null,
-                Progress = progress, ProgressScope = progress.HasValue ? "download" : null,
+                CurrentNodeKind = kind, Stage = downloading && leaves.Length == 1 ? leaves[0].Stage : files.Stage,
+                Progress = progress ?? files.Progress, ProgressScope = progress.HasValue ? "download" :
+                    files.Stage == "extractingArchive" ? "archive" : files.Stage != null ? "processing" : null,
                 CompletedBytes = completedBytes, TotalBytes = totalBytes,
                 SpeedBytesPerSecond = active.Length > 0 && active.All(d => d.SpeedBytesPerSecond is >= 0) ? active.Sum(d => d.SpeedBytesPerSecond!.Value) : null,
                 BytesPartial = leaves.Any(d => d.CompletedBytes.HasValue) && !allBytes || leaves.Any(d => d.TotalBytes.HasValue) && !allTotals,
@@ -258,6 +266,20 @@ public sealed class AcquisitionRuntimeOverviewService(BakabaseDbContext db, IAcq
                 Sources = sources, SourcesTruncated = targets.Sum(t => t.Sources.Count) > MaximumSources});
         }
         return result.OrderBy(r => Array.IndexOf(ids, r.TaskId)).ToArray();
+    }
+
+    // Keep the archive tool's measured percentage separate from the whole workflow's step counter.
+    internal static (string? Stage, int? Progress) CurrentFileProgress(int runId, int? step, string? kind,
+        WorkflowTaskProgress live)
+    {
+        if (step == null || live.WorkflowRunId != runId || live.StepIndex != step || live.ActivityKind != kind) return default;
+        return live.Stage switch
+        {
+            "extractingArchive" => (live.Stage, live.StageProgress is >= 0 and <= 100 ? live.StageProgress : null),
+            "verifyingFiles" or "preparingFiles" or "processingFiles" or "checkingArchive" or "finalizingFiles" or "analyzingFiles"
+                => (live.Stage, null),
+            _ => default
+        };
     }
 
     private static List<CloudDownloadTarget> PlanTargets(string? json) => Read<AcquisitionPlan>(json)?.Parts.Select(part => new CloudDownloadTarget

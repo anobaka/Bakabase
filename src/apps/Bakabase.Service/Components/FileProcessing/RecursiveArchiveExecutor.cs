@@ -52,7 +52,8 @@ public sealed partial class RecursiveArchiveExecutor(IArchiveExtractionService e
         IReadOnlyDictionary<string, ArtifactStoragePolicy>? inputPolicies = null, bool onlyOuterPackaging = false,
         IReadOnlyList<string>? inputDirectories = null, ArtifactDirectoryProvenance? inputDirectoryProvenance = null,
         string? extractionLayout = null, IReadOnlyDictionary<string, string>? inputLayouts = null,
-        Func<string, CancellationToken, Task<IReadOnlyList<string>>>? passwordEvidence = null)
+        Func<string, CancellationToken, Task<IReadOnlyList<string>>>? passwordEvidence = null,
+        Func<string, Task>? reportStage = null)
     {
         ValidateOptions(options);
         if (!FileExtractionLayouts.Valid(extractionLayout) || inputLayouts?.Values.Any(v => !FileExtractionLayouts.Valid(v)) == true)
@@ -213,7 +214,7 @@ public sealed partial class RecursiveArchiveExecutor(IArchiveExtractionService e
                     {
                         result = await executor.ExecuteAsync(node.Plan!, archiveRoot, paths, operationDirectory,
                             node.Password, progress, ct, identityPath: identityPath, storagePolicy: node.StoragePolicy, storageTitle: state.StorageTitle,
-                            extractionContentsAsRoot: legacyOuter, passwordEvidence: passwordEvidence);
+                            extractionContentsAsRoot: legacyOuter, passwordEvidence: passwordEvidence, reportStage: reportStage);
                     }
                     catch (OperationCanceledException) when (!ct.IsCancellationRequested && bounded.LimitReason != null)
                     { return await Wait(bounded.LimitReason, node, "The extraction budget was reached. Increase the limit to retry this archive."); }

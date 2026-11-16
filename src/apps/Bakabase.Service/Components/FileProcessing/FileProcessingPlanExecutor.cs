@@ -48,9 +48,11 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
         Func<string, string>? identityPath = null, ArtifactStoragePolicy? storagePolicy = null, string? storageTitle = null,
         bool extractionContentsAsRoot = false, IReadOnlyList<string>? inputDirectories = null,
         FileProcessingCheckpointInput? checkpointInput = null, ArtifactDirectoryProvenance? inputDirectoryProvenance = null,
-        Func<string, CancellationToken, Task<IReadOnlyList<string>>>? passwordEvidence = null)
+        Func<string, CancellationToken, Task<IReadOnlyList<string>>>? passwordEvidence = null,
+        Func<string, Task>? reportStage = null)
     {
         Validate(plan);
+        if (reportStage != null) await reportStage("preparingFiles");
         if (stopAfterStepId != null && !plan.Steps.Any(s => s.Id == stopAfterStepId))
             throw new ArgumentException("The requested processing boundary is not part of the plan.");
         if (plan.Requirement == "unknown" || (plan.Requirement == "required" && plan.Steps.Count == 0))
@@ -89,7 +91,7 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
         try
         {
             if (checkpointInput != null) await ValidatePinnedInputAsync(directory, plan, checkpointInput, ct);
-            return await Run(plan, root, normalized, directory, password, progress, ct, stopAfterStepId, storagePolicy, storageTitle, extractionContentsAsRoot, directories, inputDirectoryProvenance, passwordEvidence);
+            return await Run(plan, root, normalized, directory, password, progress, ct, stopAfterStepId, storagePolicy, storageTitle, extractionContentsAsRoot, directories, inputDirectoryProvenance, passwordEvidence, reportStage);
         }
         catch (LocalStorageException error)
         { return new(false, normalized, null, error.Code, FailureCode: "StorageUnavailable"); }
@@ -110,7 +112,7 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
     private async Task<FileProcessingPlanResult> Run(FileProcessingPlan plan, string root,
         List<string> files, string directory, string? password, Action<int>? progress, CancellationToken ct, string? stopAfterStepId, ArtifactStoragePolicy? storagePolicy, string? storageTitle, bool extractionContentsAsRoot,
         IReadOnlyList<string> inputDirectories, ArtifactDirectoryProvenance? inputDirectoryProvenance,
-        Func<string, CancellationToken, Task<IReadOnlyList<string>>>? passwordEvidence)
+        Func<string, CancellationToken, Task<IReadOnlyList<string>>>? passwordEvidence, Func<string, Task>? reportStage)
     {
         FileProcessingFiles.Within(directory, directory);
         var stateFile = Path.Combine(directory, "state.json");
@@ -233,6 +235,7 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
         }
 
         var detectionBudget = new ArchiveDetectionBudget();
+        if (reportStage != null) await reportStage("processingFiles");
         foreach (var step in plan.Steps.Take(boundaryIndex + 1))
         {
             ct.ThrowIfCancellationRequested();
@@ -509,6 +512,7 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
                     }
                     if (!operation.Completed && !Directory.Exists(destination))
                     {
+                        if (reportStage != null) await reportStage("checkingArchive");
                         var candidates = new List<string?>();
                         if (state.Passwords.TryGetValue(key, out var answered)) candidates.Add(answered);
                         if (formatInput != null && state.SourceFormatEvidence.TryGetValue(stepKey, out var recognized) && recognized.Input == formatInput)
@@ -582,10 +586,13 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
                         ArchiveExtractionResult result;
                         try
                         {
-                            Task<ArchiveExtractionResult> Extract(CancellationToken token)
+                            async Task<ArchiveExtractionResult> Extract(CancellationToken token)
                             {
                                 AuthorizedArchiveDetection.ValidateCurrentSfxFamilies(group.Files, token);
-                                return extraction.ExtractAsync(request, progress, token);
+                                if (reportStage != null) await reportStage("extractingArchive");
+                                var extracted = await extraction.ExtractAsync(request, progress, token);
+                                if (reportStage != null) await reportStage("processingFiles");
+                                return extracted;
                             }
                             result = writeGuard == null
                                 ? await Extract(ct)
