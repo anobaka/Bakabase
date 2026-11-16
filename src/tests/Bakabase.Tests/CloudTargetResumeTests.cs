@@ -1,4 +1,8 @@
+using System.Reflection;
 using System.Text.Json;
+using Bakabase.Modules.Bittorrent.Abstractions;
+using Bakabase.Modules.Bittorrent.Models;
+using Bakabase.Modules.Workflow.Artifacts;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants;
 using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
@@ -52,7 +56,7 @@ public sealed partial class CloudWorkflowTests
                 await Db.SaveChangesAsync();
             }
         };
-        var signal = JsonSerializer.Serialize(new CloudSelectionSignal {ResumeTargetIds = [paused.Id]}, JsonSerializerOptions.Web);
+        var signal = JsonSerializer.Serialize(new CloudSelectionSignal {ObserveExistingOnly = true, ResumeTargetIds = [paused.Id]}, JsonSerializerOptions.Web);
         var outcome = await new AwaitCloudDownloadsActivity().ResumeAsync(context, workset, signal, default);
         Assert.IsTrue(sawSelectedStart);
         Assert.IsNotNull(outcome.Suspension, "The failed sibling must continue to hold the node for review.");
@@ -75,6 +79,70 @@ public sealed partial class CloudWorkflowTests
         Assert.AreEqual(DownloadTaskDbModelStatus.Failed, (await Db.DownloadTasks.AsNoTracking().SingleAsync(t => t.Id == failed.DownloadTaskId)).Status);
         Assert.AreEqual(2, await Db.DownloadTasks.CountAsync());
         Assert.AreEqual("fixture download result", await File.ReadAllTextAsync(file));
+    }
+
+    [TestMethod]
+    public async Task Manual_selection_shows_original_errors_and_does_not_restart_completed_or_rebound_tasks()
+    {
+        var first = Chosen(Source("first", "googleDrive"));
+        var second = Chosen(Source("second", "gofile"));
+        var completed = Chosen(Source("third", "gofile"));
+        var workset = Workset(first.SelectedSource!, second.SelectedSource!, completed.SelectedSource!);
+        first = first with {DownloadTaskId = await Operations.EnqueueAsync(7201, first, workset.OutputDirectory, default)};
+        second = second with {DownloadTaskId = await Operations.EnqueueAsync(7201, second, workset.OutputDirectory, default)};
+        completed = completed with {DownloadTaskId = await Operations.EnqueueAsync(7201, completed, workset.OutputDirectory, default)};
+        await Db.DownloadTasks.Where(t => t.Id == first.DownloadTaskId || t.Id == second.DownloadTaskId)
+            .ExecuteUpdateAsync(u => u.SetProperty(t => t.Status, DownloadTaskDbModelStatus.Failed)
+                .SetProperty(t => t.Message, "CLOUD_DOWNLOAD_CHECKSUM_MISMATCH"));
+        await Db.DownloadTasks.Where(t => t.Id == completed.DownloadTaskId)
+            .ExecuteUpdateAsync(u => u.SetProperty(t => t.Status, DownloadTaskDbModelStatus.Complete));
+        workset = workset with {Targets = [first, second, completed]};
+        var reader = new CloudManualDownloadResume(Db);
+        var preview = await reader.ReadMultipleAsync(7201, workset, default);
+        CollectionAssert.AreEqual(new[] {true, true, false}, preview!.Select(t => t.CanRetry).ToArray());
+        Assert.AreEqual($"site:{first.DownloadTaskId}", preview[0].DownloadId);
+        Assert.AreEqual("CLOUD_DOWNLOAD_CHECKSUM_MISMATCH", preview[0].Problem);
+        Assert.AreEqual("completed", preview[2].Status);
+        Assert.IsNull(await reader.ReadMultipleAsync(7201, workset with {Targets = [first]}, default));
+        var mixed = await reader.ReadMultipleAsync(7201, workset with {Targets = [first, second with {DownloadTaskId = null}]}, default);
+        Assert.AreEqual(first.Id, mixed!.Single().TargetId);
+        Assert.IsTrue(mixed.Single().CanRetry);
+        Assert.IsFalse((await reader.ReadAsync(7202, first, workset.OutputDirectory, default)).CanRetry);
+        Assert.IsFalse((await reader.ReadAsync(7201, first with {AccountId = "different-account"}, workset.OutputDirectory, default)).CanRetry);
+
+        var withoutSelection = await new AwaitCloudDownloadsActivity().ResumeAsync(Context(workset), workset, "{}", default);
+        Assert.IsNotNull(withoutSelection.Suspension);
+        await Db.DownloadTasks.Where(t => t.Id == first.DownloadTaskId).ExecuteUpdateAsync(u => u.SetProperty(t => t.Options, "{}"));
+        var refused = await new AwaitCloudDownloadsActivity().ResumeAsync(Context(workset), workset,
+            JsonSerializer.Serialize(new CloudSelectionSignal {ObserveExistingOnly = true, ResumeTargetIds = [first.Id]}, JsonSerializerOptions.Web), default);
+        Assert.AreEqual("RECOVERY_DOWNLOAD_IDENTITY_CHANGED", Item(refused).Targets[0].Problem);
+        Assert.AreSame(second, Item(refused).Targets[1]);
+        Assert.AreSame(completed, Item(refused).Targets[2]);
+        Assert.AreEqual(2, await Db.DownloadTasks.CountAsync(t => t.Status == DownloadTaskDbModelStatus.Failed));
+        Assert.AreEqual(1, await Db.DownloadTasks.CountAsync(t => t.Status == DownloadTaskDbModelStatus.Complete));
+        Assert.AreEqual(3, await Db.CloudDownloadOperations.CountAsync());
+    }
+
+    [TestMethod]
+    public async Task Manual_transport_selection_requires_the_original_consumer_without_starting_the_manager()
+    {
+        var target = Chosen(Source("split", "magnet")) with {TransportTaskId = "bt:original"};
+        var workset = Workset(target.SelectedSource!);
+        var intent = DownloadArtifactCoordinator.DownloadIntent(target, workset.OutputDirectory);
+        var bt = DispatchProxy.Create<IBtDownloadManager, AcquisitionTaskDeletionTests.SnapshotProxy>();
+        var snapshot = (AcquisitionTaskDeletionTests.SnapshotProxy)(object)bt;
+        snapshot.Bt = [new BtDownloadJob {Id = "original", Name = "existing", OutputDirectory = _root,
+            Status = BtDownloadStatus.Stopped, SourceKind = "workflow", SourceId = intent}];
+        var reader = new CloudManualDownloadResume(Db, bt);
+        Assert.IsFalse((await reader.ReadAsync(7201, target, workset.OutputDirectory, default)).CanRetry);
+        Db.Set<ArtifactConsumerDbModel>().Add(new() {Id = "original", ConsumerKey = $"workflow:7201:{target.Id}", OperationId = intent});
+        await Db.SaveChangesAsync();
+        Assert.IsTrue((await reader.ReadAsync(7201, target, workset.OutputDirectory, default)).CanRetry);
+        Assert.IsFalse((await reader.ReadAsync(7202, target, workset.OutputDirectory, default)).CanRetry);
+        Db.Set<ArtifactConsumerDbModel>().Add(new() {Id = "also-used", ConsumerKey = "workflow:7202:another-target", OperationId = intent});
+        await Db.SaveChangesAsync();
+        Assert.IsFalse((await reader.ReadAsync(7201, target, workset.OutputDirectory, default)).CanRetry);
+        Assert.AreEqual(4, snapshot.Reads);
     }
 
     [DataTestMethod]

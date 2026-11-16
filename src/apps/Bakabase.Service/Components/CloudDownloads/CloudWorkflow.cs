@@ -196,6 +196,9 @@ public abstract class CloudActivity(string kind, string name, string description
                 throw new ArgumentException("Selected targets must already have a download or a saved artifact.");
             return await ResumeSelectedDownloads(ctx, workset, selected, ct, signal.RevalidateExistingDownloads == true, signal.VerifyExistingFilesOnly == true);
         }
+        if (kind == "download.awaitCompletion" && signal != null && signal.ObserveExistingOnly != true &&
+            workset.Targets.Count > 1)
+            return Wait(workset, "cloudAttention");
         var config = ctx.GetConfig<CloudWorkflowConfig>() ?? new();
         try
         {
@@ -471,7 +474,15 @@ public abstract class CloudActivity(string kind, string name, string description
                             }, ct);
                         if (response.Code != 0) throw new InvalidOperationException(response.Message ?? "RECOVERY_DOWNLOAD_REVIEW_REQUIRED");
                     }
-                    next = await Await(ctx, next, retry: !revalidate && !verifyExisting, ct);
+                    else if (next.DownloadArtifactId == null)
+                    {
+                        // Human-selected retries may address failures that automatic diagnostics
+                        // cannot classify. They still require an unchanged original dispatch.
+                        var manual = ActivatorUtilities.GetServiceOrCreateInstance<CloudManualDownloadResume>(ctx.Services);
+                        await manual.ResumeAsync(checked((int)ctx.RunId), target, workset.OutputDirectory,
+                            ctx.Services.GetRequiredService<DownloadTaskService>(), ct);
+                    }
+                    next = await Await(ctx, next, retry: false, ct);
                     if (artifacts != null)
                         next = await artifacts.RecordAsync(ctx, next, workset.OutputDirectory, ct);
                 }

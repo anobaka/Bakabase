@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using Bakabase.Service.Components.CloudDownloads;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -24,7 +26,8 @@ namespace Bakabase.Service.Components.Acquisition.Planning;
 
 public sealed record AcquisitionStorageOverridePreview(int TaskId, int WorkflowRunId, string Token,
     DateTimeOffset ExpiresAt, long MinimumFreeBytes, long OverrideMinimumFreeBytes, int DurationHours = 24,
-    bool UseEmergencySpaceReserve = false, string EffectiveReserveMode = "configured", string Scope = "storage");
+    bool UseEmergencySpaceReserve = false, string EffectiveReserveMode = "configured", string Scope = "storage",
+    IReadOnlyList<CloudDownloadResumeTarget>? DownloadTargets = null);
 public sealed record AcquisitionStorageOverrideApplyInput(string Token, bool Confirmed, string? ReserveMode = null,
     bool? UseEmergencySpaceReserve = null, string? SignalJson = null);
 public sealed record AcquisitionStorageOverrideResult(int TaskId, int WorkflowRunId, string Status,
@@ -111,7 +114,7 @@ public sealed partial class AcquisitionStorageOverrideService(BakabaseDbContext 
     IBOptions<AcquisitionOptions> options, AcquisitionStorageOverridePreviewStore previews,
     AcquisitionRecoveryService recovery, BTaskManager? tasks = null, AcquisitionRuntimeOverviewService? runtime = null,
     IStorageWritePolicyProvider? writePolicy = null, IWorkflowRunResumer? resumer = null,
-    AcquisitionContinuationService? continuations = null)
+    AcquisitionContinuationService? continuations = null, CloudManualDownloadResume? manualDownloads = null)
 {
     public async Task<AcquisitionStorageOverridePreview> PreviewAsync(int id, CancellationToken ct = default, string scope = "storage")
     {
@@ -121,10 +124,13 @@ public sealed partial class AcquisitionStorageOverrideService(BakabaseDbContext 
         var currentMinimum = writePolicy != null ?
             await writePolicy.GetMinimumFreeBytesAsync(new("workflow", run!.Id.ToString(System.Globalization.CultureInfo.InvariantCulture)), ct) :
             AcquisitionSpaceReserve.Minimum(options.Value, grant?.IsValid(task!, run!, DateTimeOffset.UtcNow) == true ? grant.ReserveMode : AcquisitionSpaceReserve.Inherit);
+        var selection = scope == "download" && AcquisitionContinuationReserve.Kind(run) == "download.awaitCompletion"
+            ? await (manualDownloads ?? new(db)).ReadMultipleAsync(run!.Id, AcquisitionRecoveryDiagnostics.ReadWorkset(run.CurrentItemJson), ct)
+            : null;
         var preview = new AcquisitionStorageOverridePreview(id, run!.Id, Guid.NewGuid().ToString("N"),
             DateTimeOffset.UtcNow.AddMinutes(10), options.Value.MinimumFreeSpaceBytes,
             AcquisitionStorageOverrideGrant.EmergencyMinimumFreeBytes, UseEmergencySpaceReserve: options.Value.UseEmergencySpaceReserve,
-            EffectiveReserveMode: currentMinimum == AcquisitionStorageOverrideGrant.EmergencyMinimumFreeBytes ? AcquisitionSpaceReserve.Emergency : AcquisitionSpaceReserve.Configured, Scope: scope);
+            EffectiveReserveMode: currentMinimum == AcquisitionStorageOverrideGrant.EmergencyMinimumFreeBytes ? AcquisitionSpaceReserve.Emergency : AcquisitionSpaceReserve.Configured, Scope: scope, DownloadTargets: selection);
         previews.Add(new(preview, AcquisitionRecoveryService.Version(task!, run)));
         return preview;
     }

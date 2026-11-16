@@ -19879,6 +19879,8 @@ export interface components {
             totalBytes?: number;
             /** Format: double */
             speedBytesPerSecond?: number;
+            /** Format: int64 */
+            estimatedRemainingSeconds?: number;
             bytesPartial: boolean;
             /** Format: int32 */
             downloadCount: number;
@@ -20144,6 +20146,7 @@ export interface components {
             useEmergencySpaceReserve: boolean;
             effectiveReserveMode: string;
             scope: string;
+            downloadTargets?: components["schemas"]["Bakabase.Service.Components.CloudDownloads.CloudDownloadResumeTarget"][];
         };
         "Bakabase.Service.Components.Acquisition.Planning.AcquisitionStorageOverrideResult": {
             /** Format: int32 */
@@ -20544,6 +20547,13 @@ export interface components {
             cookies?: string;
             bduss?: string;
             stoken?: string;
+        };
+        "Bakabase.Service.Components.CloudDownloads.CloudDownloadResumeTarget": {
+            targetId: string;
+            downloadId: string;
+            status: string;
+            problem?: string;
+            canRetry: boolean;
         };
         "Bakabase.Service.Components.CloudDownloads.PikPakCli.PikPakCliAccountViewModel": {
             isConfigured: boolean;

@@ -21,7 +21,7 @@ internal static class AcquisitionContinuationReserve
 
     internal static bool Supports(WorkflowRunDbModel? run) => IsDownload(run) || AcquisitionRecoveryService.IsLocalFileStep(Kind(run));
 
-    private static string? Kind(WorkflowRunDbModel? run)
+    internal static string? Kind(WorkflowRunDbModel? run)
     {
         if (run?.CurrentStepIndex is not >= 0) return null;
         try {return WorkflowRunPlans.Read(run.PlanSnapshotJson)?.Nodes.ElementAtOrDefault(run.CurrentStepIndex.Value)?.Kind;}

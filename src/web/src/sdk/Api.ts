@@ -8608,6 +8608,8 @@ export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionRuntimeO
   totalBytes?: number;
   /** @format double */
   speedBytesPerSecond?: number;
+  /** @format int64 */
+  estimatedRemainingSeconds?: number;
   bytesPartial: boolean;
   /** @format int32 */
   downloadCount: number;
@@ -8898,6 +8900,7 @@ export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionStorageO
   useEmergencySpaceReserve: boolean;
   effectiveReserveMode: string;
   scope: string;
+  downloadTargets?: BakabaseServiceComponentsCloudDownloadsCloudDownloadResumeTarget[];
 }
 
 export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionStorageOverrideResult {
@@ -9340,6 +9343,14 @@ export interface BakabaseServiceComponentsCloudDownloadsBaiduBaiduPcsLoginInputM
   cookies?: string;
   bduss?: string;
   stoken?: string;
+}
+
+export interface BakabaseServiceComponentsCloudDownloadsCloudDownloadResumeTarget {
+  targetId: string;
+  downloadId: string;
+  status: string;
+  problem?: string;
+  canRetry: boolean;
 }
 
 export interface BakabaseServiceComponentsCloudDownloadsPikPakCliPikPakCliAccountViewModel {

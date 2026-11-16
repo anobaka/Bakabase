@@ -130,6 +130,9 @@ public sealed record DownloadWorkset : IWorkflowOutputSummary, IWorkflowSourcePa
             t.ExecutionStatus, t.CleanupReceiptId, t.CleanupStatus})};
 }
 
+/// <summary>Current state of a previously bound download at a workflow wait.</summary>
+public sealed record CloudDownloadResumeTarget(string TargetId, string DownloadId, string Status, string? Problem, bool CanRetry);
+
 public sealed record CloudSelectionSignal
 {
     /// <summary>Frozen server proof for a transferred share whose first local enqueue has not happened.</summary>

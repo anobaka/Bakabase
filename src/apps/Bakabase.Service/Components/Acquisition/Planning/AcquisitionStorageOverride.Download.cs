@@ -31,6 +31,17 @@ public sealed partial class AcquisitionStorageOverrideService
                 signal.SourceCredentialCorrections == null) throw new JsonException();
         }
         catch (JsonException) {throw new ArgumentException("STORAGE_OVERRIDE_SELECTION_INVALID");}
+        // The preview captures specific original targets. A multi-target retry must never
+        // degrade to the old unscoped "{}" signal, including after the preview becomes stale.
+        if (entry.Preview.DownloadTargets is {} targets)
+        {
+            var selected = signal.ResumeTargetIds;
+            var canonical = new CloudSelectionSignal {ObserveExistingOnly = true, ResumeTargetIds = selected};
+            if (JsonSerializer.Serialize(signal, WorkflowJson.Options) != JsonSerializer.Serialize(canonical, WorkflowJson.Options) ||
+                (selected != null && (selected.Count == 0 || selected.Distinct(StringComparer.Ordinal).Count() != selected.Count ||
+                    selected.Any(key => !targets.Any(t => t.TargetId == key && t.CanRetry)))))
+                throw new ArgumentException("STORAGE_OVERRIDE_SELECTION_INVALID");
+        }
         var gate = AcquisitionTaskGate.For(id); await gate.WaitAsync(ct);
         var granted = false;
         try

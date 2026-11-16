@@ -1,4 +1,6 @@
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
+using Bakabase.Service.Components.CloudDownloads;
+using Bakabase.Modules.Downloader.Cloud;
 using Bakabase.Modules.Workflow.Components;
 using Bakabase.Service.Components.Acquisition.Planning;
 using Microsoft.EntityFrameworkCore;
@@ -14,6 +16,34 @@ public sealed partial class AcquisitionStorageOverrideTests
         await fixture.Db.WorkflowRuns.Where(r => r.Id == 11).ExecuteUpdateAsync(s => s
             .SetProperty(r => r.CurrentStepIndex, 0).SetProperty(r => r.PlanSnapshotJson, plan)
             .SetProperty(r => r.WaitPromptJson, "{\"message\":\"Provider confirmation required\"}"));
+    }
+
+    [DataTestMethod]
+    [DataRow("{}")]
+    [DataRow("{\"observeExistingOnly\":true,\"resumeTargetIds\":[\"finished\"]}")]
+    [DataRow("{\"observeExistingOnly\":true,\"resumeTargetIds\":[\"foreign\"]}")]
+    [DataRow("{\"observeExistingOnly\":true,\"resumeTargetIds\":[]}")]
+    public async Task Multiple_original_downloads_require_a_scoped_or_observation_only_signal(string signal)
+    {
+        using var f = await Fixture.CreateAsync();
+        await DownloadStep(f);
+        var source = new CloudSource {Id = "original", ProviderId = "gofile", Url = "https://gofile.io/d/sample"};
+        var finished = new CloudDownloadTarget {Id = "finished", Sources = [source], SelectedSourceId = source.Id,
+            DownloadTaskId = 987, DownloadArtifactId = "retained"};
+        var workset = new DownloadWorkset {Targets = [finished, finished with {Id = "missing", DownloadTaskId = 988, DownloadArtifactId = null}]};
+        var snapshot = WorkflowItemSnapshot.Capture(workset);
+        await f.Db.WorkflowRuns.Where(r => r.Id == 11).ExecuteUpdateAsync(u => u.SetProperty(r => r.CurrentItemJson, snapshot));
+        var preview = await f.Service.PreviewAsync(1, scope: "download");
+        Assert.AreEqual(2, preview.DownloadTargets!.Count);
+        Assert.IsTrue(preview.DownloadTargets.All(row => !row.CanRetry));
+        await Assert.ThrowsExactlyAsync<ArgumentException>(() => f.Service.ApplyAsync(1, new(preview.Token, true,
+            UseEmergencySpaceReserve: false, SignalJson: signal)));
+        Assert.AreEqual(0, f.Host.Calls);
+        var next = await f.Service.PreviewAsync(1, scope: "download");
+        var result = await f.Service.ApplyAsync(1, new(next.Token, true, UseEmergencySpaceReserve: false,
+            SignalJson: "{\"observeExistingOnly\":true}"));
+        Assert.IsTrue(result.ContinuationAccepted);
+        Assert.AreEqual(1, f.Host.Calls);
     }
 
     [DataTestMethod]
