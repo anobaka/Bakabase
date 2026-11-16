@@ -55,11 +55,11 @@ it.each(["running", "pending", "queued-download", "active-download", "other-run"
   if (change === "unknown-status") state.workflowStatus = "unknown";
   expect(taskDirectoryAccess(task, state, context, "/work/task")).not.toBe("editable");
 });
-it("uses the existing file processor operations and refreshes the actual directory without rewriting history", async () => {
-  render(<TaskDirectoryExplorer path="/work/task" context={context} maxContentHeight={288} />);
+it.each([undefined, 288])("enables existing file operations and scoped shortcuts at height %s without rewriting history", async maxContentHeight => {
+  render(<TaskDirectoryExplorer path="/work/task" context={context} maxContentHeight={maxContentHeight} />);
   expect(await screen.findByText("editable browser")).toBeVisible();
-  expect(mocks.explorer.mock.lastCall?.[0]).toMatchObject({ rootPath: "/work/task", maxContentHeight: 288,
-    capabilities: managedFileCapabilities, keyboard: false, watchChanges: "poll", selectable: "multiple" });
+  expect(mocks.explorer.mock.lastCall?.[0]).toMatchObject({ rootPath: "/work/task", maxContentHeight,
+    capabilities: managedFileCapabilities, keyboard: true, watchChanges: "poll", selectable: "multiple" });
   expect(screen.getByText("tasks for /work/task")).toBeVisible();
   fireEvent.click(screen.getByRole("button", { name: "workflow.files.taskDirectory.refresh" }));
   expect(mocks.refresh).toHaveBeenCalledWith(true);

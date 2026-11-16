@@ -45,7 +45,7 @@ export default function TaskDirectoryExplorer({ path, context, maxContentHeight,
       <FileExplorer key={path} ref={ref} rootPath={path} maxContentHeight={maxContentHeight}
         canNavigateToPath={target => isTaskDirectoryPath(path, target)}
         expandable capabilities={editable ? managedFileCapabilities : ["enter-directory"]}
-        keyboard={editable && maxContentHeight == null} watchChanges={editable || access === "active" ? "poll" : false}
+        keyboard={editable} watchChanges={editable || access === "active" ? "poll" : false}
         selectable={editable ? "multiple" : "disabled"} />
     </Suspense>
   </div>;

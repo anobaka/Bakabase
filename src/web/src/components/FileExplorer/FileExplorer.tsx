@@ -526,7 +526,7 @@ const FilesystemExplorer = forwardRef<FileExplorerRef, FileExplorerProps & { dir
             return true;
           }
           case SelectionMode.Shift: {
-            shiftSelectionStartRef.current ??= e.parent!.filteredChildren![0]!;
+            shiftSelectionStartRef.current ??= e.parent?.filteredChildren[0] ?? e;
             let startParent = shiftSelectionStartRef.current.parent;
             const startParentSet = new Set<Entry>();
 
@@ -554,16 +554,18 @@ const FilesystemExplorer = forwardRef<FileExplorerRef, FileExplorerProps & { dir
             };
             const preorderTraversal: Entry[] = [];
 
-            buildPreorderTraversal(endParent!, preorderTraversal);
+            if (endParent) buildPreorderTraversal(endParent, preorderTraversal);
             const startIdx = preorderTraversal.indexOf(shiftSelectionStartRef.current);
             const endIdx = preorderTraversal.indexOf(e);
-            const minIdx = Math.min(startIdx, endIdx);
-            const maxIdx = Math.max(startIdx, endIdx);
-            const newSelectedEntries = preorderTraversal.slice(minIdx, maxIdx + 1);
+            const hasVisibleAnchor = startIdx >= 0 && endIdx >= 0;
+            // Filtering and live refreshes can remove the previous anchor. Start a
+            // new range at this row instead of indexing a stale or detached entry.
+            if (!hasVisibleAnchor) shiftSelectionStartRef.current = e;
+            const newSelectedEntries = hasVisibleAnchor
+              ? preorderTraversal.slice(Math.min(startIdx, endIdx), Math.max(startIdx, endIdx) + 1)
+              : [e];
 
-            for (let i = minIdx; i <= maxIdx; i++) {
-              const en = preorderTraversal[i]!;
-
+            for (const en of newSelectedEntries) {
               en.select(true);
             }
 

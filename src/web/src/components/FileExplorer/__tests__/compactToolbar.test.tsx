@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
-import type { FileExplorerProps } from "../FileExplorer";
+import type { FileExplorerProps, FileExplorerRef } from "../FileExplorer";
 
+import { createRef } from "react";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -62,6 +63,7 @@ vi.mock("@/core/models/FileExplorer/RootEntry", () => ({
   default: class {
     path?: string;
     id?: string;
+    expanded = true;
     children = ["alpha", "nas-bakabase", "nas-anobaka"].map((name) => ({
       path: `/media/${name}`,
       name,
@@ -76,6 +78,7 @@ vi.mock("@/core/models/FileExplorer/RootEntry", () => ({
       this.path = path;
       this.id = path ?? "locations";
       if (path === "/empty") this.children = [];
+      this.children.forEach(child => Object.assign(child, { parent: this }));
       this.childrenCount = this.children.length;
     }
     patchFilter(filter: { keyword?: string }) {
@@ -464,6 +467,36 @@ describe("compact file processor toolbar", () => {
     fireEvent.change(filter, { target: { value: "" } });
     await screen.findByText("3 items");
     expect(screen.getByRole("button", { name: "alpha" })).toBeInTheDocument();
+  });
+
+  it.each(["filtered", "removed", "detached"])("restarts a Shift range when its anchor is %s", async change => {
+    const onSelected = vi.fn<NonNullable<FileExplorerProps["onSelected"]>>();
+    const ref = createRef<FileExplorerRef>();
+    const props: FileExplorerProps = { appearance: "compact", rootPath: "/media", selectable: "multiple", onSelected };
+    const view = render(<FileExplorer {...props} ref={ref} />);
+    fireEvent.click(await screen.findByRole("button", { name: "alpha" }));
+    expect(onSelected.mock.lastCall?.[0].map(entry => entry.name)).toEqual(["alpha"]);
+
+    if (change === "filtered") {
+      view.rerender(<FileExplorer {...props} ref={ref} filter={{ keyword: "nas-" }} />);
+    } else {
+      const root = ref.current!.root!;
+      const anchor = root.children![0];
+      root.children = root.children!.filter(entry => entry !== anchor);
+      if (change === "detached") anchor.parent = undefined;
+      view.rerender(<FileExplorer {...props} ref={ref} />);
+    }
+    await waitFor(() => expect(screen.queryByRole("button", { name: "alpha" })).toBeNull());
+
+    const last = screen.getByRole("button", { name: "nas-anobaka" });
+    fireEvent.mouseDown(last, { shiftKey: true });
+    fireEvent.click(last, { shiftKey: true });
+    expect(onSelected.mock.lastCall?.[0].map(entry => entry.name)).toEqual(["nas-anobaka"]);
+
+    const first = screen.getByRole("button", { name: "nas-bakabase" });
+    fireEvent.mouseDown(first, { shiftKey: true });
+    fireEvent.click(first, { shiftKey: true });
+    expect(onSelected.mock.lastCall?.[0].map(entry => entry.name)).toEqual(["nas-bakabase", "nas-anobaka"]);
   });
 
   it("preserves a host-provided filter and applies it after changing directories", async () => {
