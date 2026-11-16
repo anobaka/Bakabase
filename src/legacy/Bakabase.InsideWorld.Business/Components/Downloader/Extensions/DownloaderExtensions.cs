@@ -13,6 +13,7 @@ using Bakabase.InsideWorld.Business.Components.Downloader.Services;
 using Bootstrap.Components.DependencyInjection;
 using Bootstrap.Components.Orm;
 using Bakabase.Abstractions.Components.FileSystem;
+using Bakabase.Modules.Downloader.Cloud;
 
 namespace Bakabase.InsideWorld.Business.Components.Downloader.Extensions
 {
@@ -130,12 +131,12 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Extensions
                 }
                 case DownloadTaskStatus.Failed:
                 {
-                    // Clearing a volume hold lets queued work proceed, but does not authorize
-                    // replaying another failed task. This survives a server restart through the
-                    // persisted typed error; explicit start clears that task's current failure.
-                    var requiresStorageReview = LocalStorageFailures.PersistedCode(downloader?.Message) != null ||
-                                                LocalStorageFailures.PersistedCode(task.Message) != null;
-                    if (downloader?.FailureTimes > 0 && task.AutoRetry && !requiresStorageReview)
+                    // Retrying the same failed checkpoint can fetch the same bytes indefinitely.
+                    // Keep explicit restart available while either copy of the current failure requires review.
+                    static bool RequiresReview(string? message) => LocalStorageFailures.PersistedCode(message) != null ||
+                                                                  CloudDownloadIntegrityFailures.RequiresManualRetry(message);
+                    if (downloader?.FailureTimes > 0 && task.AutoRetry &&
+                        !RequiresReview(downloader.Message) && !RequiresReview(task.Message))
                     {
                         if (!DownloaderUtils.IntervalsOnContinuousFailures.TryGetValue(downloader.FailureTimes,
                                 out var ts))

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.IO;
 using System.Reflection;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.FileSystem;
@@ -80,6 +81,56 @@ public sealed class DownloadStorageRetryTests
         var nested = new AggregateException(new InvalidOperationException("Unrelated"), new LocalStorageException("LOCAL_STORAGE_UNAVAILABLE"));
         Assert.AreEqual("LOCAL_STORAGE_UNAVAILABLE", LocalStorageFailures.PersistedCode(nested.ToString()));
         Assert.IsNull(LocalStorageFailures.PersistedCode(typeof(LocalStorageException).FullName + ": LOCAL_STORAGE_FULL is mentioned in arbitrary prose"));
+    }
+
+    [DataTestMethod]
+    [DataRow("CLOUD_DOWNLOAD_CHECKSUM_MISMATCH")]
+    [DataRow("CLOUD_PARTIAL_IDENTITY_UNVERIFIED")]
+    public void CloudIntegrityFailureKeepsTheOriginalCheckpointForExplicitRestart(string code)
+    {
+        using var services = new ServiceCollection().BuildServiceProvider();
+        var task = Row("Download failed.\n" + new InvalidOperationException(code + ": provider detail"));
+        task.ThirdPartyId = ThirdPartyId.Pixeldrain;
+        var manager = Manager(services);
+        var downloader = new RetainedDownloader();
+        Attach(manager, task.Id, downloader);
+
+        void CheckManualOnly(DownloaderManager state)
+        {
+            var dto = task.ToDomainModel(state)!;
+            Assert.AreEqual(DownloadTaskStatus.Failed, dto.Status);
+            Assert.IsNull(dto.NextStartDt);
+            Assert.IsFalse(dto.AvailableActions.Contains(DownloadTaskAction.StartAutomatically));
+            Assert.IsTrue(dto.AvailableActions.Contains(DownloadTaskAction.Restart));
+            Assert.IsTrue(dto.CanStart);
+            Assert.IsTrue(dto.AutoRetry);
+            Assert.AreEqual("keep-existing-range", dto.Checkpoint);
+        }
+
+        CheckManualOnly(manager); // The persisted failure alone is sufficient.
+        CheckManualOnly(Manager(services)); // After restart the download remains manually recoverable.
+        task.Message = null;
+        downloader.Message = new AggregateException(new IOException("Other failure"),
+            new InvalidOperationException(code + ": provider detail")).ToString();
+        CheckManualOnly(manager); // The current failure is visible before the database write finishes.
+    }
+
+    [DataTestMethod]
+    [DataRow("System.InvalidOperationException: CLOUD_NETWORK_ERROR: Connection interrupted")]
+    [DataRow("System.InvalidOperationException: CLOUD_RANGE_UNCONFIRMED: Range not supported")]
+    [DataRow("System.InvalidOperationException: CLOUD_DOWNLOAD_CHECKSUM_MISMATCH_OTHER: unrelated")]
+    [DataRow("System.InvalidOperationException: Filename contains CLOUD_DOWNLOAD_CHECKSUM_MISMATCH")]
+    [DataRow("https://example.invalid/CLOUD_PARTIAL_IDENTITY_UNVERIFIED")]
+    public void AnUnrelatedSiteFailureStillReceivesItsConfiguredRetry(string message)
+    {
+        using var services = new ServiceCollection().BuildServiceProvider();
+        var task = Row(message);
+        task.ThirdPartyId = ThirdPartyId.Pixeldrain;
+        var manager = Manager(services);
+        Attach(manager, task.Id, new RetainedDownloader {Message = message});
+        var dto = task.ToDomainModel(manager)!;
+        Assert.AreEqual(task.DownloadStatusUpdateDt.AddMinutes(1), dto.NextStartDt);
+        Assert.IsTrue(dto.AvailableActions.Contains(DownloadTaskAction.StartAutomatically));
     }
 
     private static DownloadTaskDbModel Row(string message) => new()

@@ -80,6 +80,31 @@ public sealed class DownloadTaskConcurrencyTests
     }
 
     [TestMethod]
+    public async Task PersistedCloudIntegrityFailureCanOnlyRestartThroughExplicitStart()
+    {
+        var row = new DownloadTask
+        {
+            Key = Guid.NewGuid().ToString("N"), ThirdPartyId = ThirdPartyId.Pixeldrain,
+            DownloadPath = Path.Combine(_directory, "retained"), Status = DownloadTaskStatus.Failed,
+            DownloadStatusUpdateDt = DateTime.Now.AddDays(-1), AutoRetry = true, Checkpoint = "part-one",
+            Message = "Download failed.\nSystem.InvalidOperationException: CLOUD_DOWNLOAD_CHECKSUM_MISMATCH: Original file SHA256 mismatch"
+        };
+        var id = (await _service.AddRange([row])).Data!.Single().Id;
+
+        // Both startup and the background pump enter through this pass.
+        await _service.TryStartAllTasks(DownloadTaskStartMode.AutoStart, null, DownloadTaskActionOnConflict.Ignore);
+        var failed = await _service.GetDto(id);
+        Assert.AreEqual(DownloadTaskStatus.Failed, failed.Status);
+        Assert.IsNull(failed.NextStartDt);
+        Assert.AreEqual(row.Checkpoint, failed.Checkpoint);
+        Assert.IsFalse(_factory.Instances.ContainsKey(id));
+
+        Assert.AreEqual((int)ResponseCode.Success, (await _service.Start(t => t.Id == id, targeted: true)).Code);
+        CollectionAssert.AreEqual(new[]{id}, _factory.RunningIds());
+        Assert.AreEqual(row.Checkpoint, (await _service.GetDto(id)).Checkpoint);
+    }
+
+    [TestMethod]
     public async Task AutomaticPassFillsCapacityAndCompletionAdvancesTheQueue()
     {
         var first = await Add(); var second = await Add(); var third = await Add();
