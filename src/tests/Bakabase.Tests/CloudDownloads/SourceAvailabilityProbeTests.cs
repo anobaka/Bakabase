@@ -66,7 +66,9 @@ public sealed class SourceAvailabilityProbeTests
         Assert.AreEqual(SourceAvailabilityStatuses.Unknown, result.Status);
         Assert.AreEqual(CloudSourceNetworkException.RequirementCode, result.ReasonCode);
         Assert.AreEqual(1, calls, "Do not silently retry with a different proxy or resolver.");
-        Assert.AreEqual(2, probe.CacheVersion);
+        var obsoleteCacheVersion = provider == "pixeldrain" ? 2 : 1;
+        Assert.IsTrue(probe.CacheVersion > obsoleteCacheVersion,
+            "Cached checks from before the DNS or access-policy change must be refreshed.");
         Assert.AreEqual(probe.CacheVersion, result.ProbeVersion);
         Assert.IsFalse(JsonSerializer.Serialize(result).Contains("secret"));
     }
@@ -105,6 +107,8 @@ public sealed class SourceAvailabilityProbeTests
     [DataRow(404, "invalid_endpoint", "unknown")]
     [DataRow(200, "not_found", "unknown")]
     [DataRow(403, "forbidden", "accessRequired")]
+    [DataRow(200, "file_password_required", "accessRequired")]
+    [DataRow(200, "invalid_password", "accessRequired")]
     [DataRow(403, "transfer_limit_exceeded", "temporarilyUnavailable")]
     [DataRow(429, "ip_rate_limit_reached", "temporarilyUnavailable")]
     [DataRow(503, "internal", "temporarilyUnavailable")]
