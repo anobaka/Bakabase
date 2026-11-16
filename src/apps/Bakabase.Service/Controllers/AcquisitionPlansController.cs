@@ -90,8 +90,15 @@ public sealed class AcquisitionPlansController(AcquisitionPlanService service, I
     [RemoteAccessible]
     [SwaggerOperation(OperationId = "UpdateAcquisitionPlanTask")]
     public Task<SingletonResponse<AcquisitionPlanTaskDetail>> Update(int id, [FromBody] AcquisitionPlanUpdateInput input) =>
-        Respond(async () => {await GuardSavedDirectory(id); await GuardDirectory(input.OutputDirectory); await GuardDirectory(input.DeliverySettings?.RootDirectory); await GuardDirectory(input.StoragePolicy?.ProcessingWorkspaceDirectory);
-            foreach (var entry in input.StoragePolicyOverrides ?? []) await GuardDirectory(entry.Policy?.ProcessingWorkspaceDirectory); return await service.UpdateAsync(id, input, HttpContext.RequestAborted);});
+        Respond(async () =>
+        {
+            await GuardSavedDirectory(id, includeExclusiveStages: input.SourceReplacement != null);
+            await GuardDirectory(input.OutputDirectory);
+            await GuardDirectory(input.DeliverySettings?.RootDirectory);
+            await GuardDirectory(input.StoragePolicy?.ProcessingWorkspaceDirectory);
+            foreach (var entry in input.StoragePolicyOverrides ?? []) await GuardDirectory(entry.Policy?.ProcessingWorkspaceDirectory);
+            return await service.UpdateAsync(id, input, HttpContext.RequestAborted);
+        });
 
     [HttpPost("{id:int}/processing-revisions/apply")]
     [RemoteAccessible]
@@ -144,7 +151,7 @@ public sealed class AcquisitionPlansController(AcquisitionPlanService service, I
         if (!await pathGuard.IsServableAsync(path, HttpContext.RequestAborted))
             throw new UnauthorizedAccessException("This directory is outside the media libraries Bakabase serves.");
     }
-    private async Task GuardSavedDirectory(int id)
+    private async Task GuardSavedDirectory(int id, bool includeExclusiveStages = false)
     {
         var detail = await service.GetAsync(id, HttpContext.RequestAborted);
         await GuardDirectory(detail?.Plan?.OutputDirectory ?? detail?.Task.TargetDirectory);
@@ -161,6 +168,10 @@ public sealed class AcquisitionPlansController(AcquisitionPlanService service, I
         await GuardDirectory(detail?.Plan?.DeliveryLayout?.TaskDirectory);
         if (detail?.Plan?.DeliveryLayout != null)
             foreach (var directory in detail.Plan.DeliveryLayout.PartDirectories.Values) await GuardDirectory(directory);
+        if (includeExclusiveStages && detail?.Plan?.StageDirectories is { } stages)
+            foreach (var part in stages.Parts.Values)
+            foreach (var location in new[] {part.Download, part.Processing, part.Delivery})
+                if (location?.Ownership == "exclusive") await GuardDirectory(location.Directory);
     }
     private async Task GuardNewDirectories(string? output, AcquisitionDeliverySettings? input)
     {

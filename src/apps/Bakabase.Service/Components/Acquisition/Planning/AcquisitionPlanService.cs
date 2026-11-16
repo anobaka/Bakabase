@@ -164,6 +164,12 @@ public sealed partial class AcquisitionPlanService(BakabaseDbContext db, IEnumer
         try
         {
             var row = await Editable(id, ct); Revision(row, input.ExpectedRevision);
+            if (input.SourceReplacement is { } source)
+            {
+                if (input.OutputDirectory != null || input.StoragePolicy != null || input.StoragePolicyOverrides != null || input.DeliverySettings != null)
+                    throw new ArgumentException("Update the source separately from storage settings.");
+                return await ReplaceUnstartedSourceAsync(row, input.ExpectedRevision, source, ct);
+            }
             if (input.OutputDirectory != null)
             { ValidateDirectory(input.OutputDirectory, allowEmpty: true); row.TargetDirectory = input.OutputDirectory; }
             await UpdateDeliverySettingsAsync(row, input.DeliverySettings, ct);
@@ -307,7 +313,7 @@ public sealed partial class AcquisitionPlanService(BakabaseDbContext db, IEnumer
                 CanReplan(task.Status, candidate) && (candidate.Status != WorkflowRunStatus.Waiting ||
                     AcquisitionProcessingConflictWait.MatchesForLocalContinuation(candidate) || AcquisitionPublicationStorageWait.Matches(candidate) ||
                     input.Items.All(i => i.InputMode is "currentDirectory" or "stageDirectory")) ||
-                task.Status == AcquisitionStatus.Waiting && candidate.Status == WorkflowRunStatus.Waiting &&
+                task.Status == AcquisitionStatus.Waiting && candidate.Status == WorkflowRunStatus.Waiting && candidate.PendingSignalJson == null &&
                     input.Items.All(i => i.InputMode == "stageDirectory") ||
                 localFilesStorage != null && AcquisitionLocalFilesRecoveryReceipt.CanReplan(task, candidate);
             if (run == null || !Allowed(row, run)) throw new InvalidOperationException("PLAN_REPLAN_NOT_STOPPED");
@@ -478,7 +484,9 @@ public sealed partial class AcquisitionPlanService(BakabaseDbContext db, IEnumer
             Revision(current, input.ExpectedRevision);
             if (current.WorkflowRunId != input.ExpectedRunId) throw new InvalidOperationException("PLAN_VERSION_CONFLICT");
             var currentRun = await db.Set<WorkflowRunDbModel>().AsNoTracking().SingleAsync(r => r.Id == input.ExpectedRunId, ct);
-            if (current.Status != previousStatus || currentRun.Status != previousRunStatus ||
+            var waitWasProjected = current.Status == AcquisitionStatus.Waiting &&
+                previousStatus is AcquisitionStatus.Pending or AcquisitionStatus.Running && IsStoppedFileWait(run);
+            if ((current.Status != previousStatus && !waitWasProjected) || currentRun.Status != previousRunStatus ||
                 !Allowed(current, currentRun) || currentRun.PendingSignalJson != run.PendingSignalJson ||
                 currentRun.WaitPromptJson != run.WaitPromptJson || currentRun.CurrentStepIndex != run.CurrentStepIndex)
                 throw new InvalidOperationException("PLAN_REPLAN_NOT_STOPPED");
@@ -510,7 +518,7 @@ public sealed partial class AcquisitionPlanService(BakabaseDbContext db, IEnumer
             // Keep the old run, attempts, outputs and frozen snapshot. Only the task's current association changes.
             // The transaction plus predicates fences cross-scope retry; the shared gate also covers the legacy retry API.
             var changed = await Tasks.Where(t => t.Id == id && t.DeletedAt == null && t.PlanRevision == input.ExpectedRevision &&
-                t.WorkflowRunId == input.ExpectedRunId && t.Status == previousStatus &&
+                t.WorkflowRunId == input.ExpectedRunId && t.Status == current.Status &&
                 db.Set<WorkflowRunDbModel>().Any(r => r.Id == input.ExpectedRunId &&
                     r.Status == previousRunStatus))
                 .ExecuteUpdateAsync(update => update
@@ -539,8 +547,13 @@ public sealed partial class AcquisitionPlanService(BakabaseDbContext db, IEnumer
         task is AcquisitionStatus.Failed or AcquisitionStatus.Cancelled && Replannable(run);
 
     private static bool CanReplan(AcquisitionStatus task, WorkflowRunDbModel run) =>
-        CanReplan(task, run.Status) || task == AcquisitionStatus.Waiting &&
-        (AcquisitionProcessingConflictWait.MatchesForLocalContinuation(run) || AcquisitionProcessingConflictWait.MatchesCurrentDirectoryWait(run) || AcquisitionPublicationStorageWait.Matches(run));
+        CanReplan(task, run.Status) ||
+        task is AcquisitionStatus.Waiting or AcquisitionStatus.Running or AcquisitionStatus.Pending && IsStoppedFileWait(run);
+
+    // The workflow commits its wait before the acquisition list projects it.
+    private static bool IsStoppedFileWait(WorkflowRunDbModel run) =>
+        AcquisitionProcessingConflictWait.MatchesForLocalContinuation(run) ||
+        AcquisitionProcessingConflictWait.MatchesCurrentDirectoryWait(run) || AcquisitionPublicationStorageWait.Matches(run);
 
     private async Task<bool> HasArtifactBindingAsync(int runId, string partId, string operationId, CancellationToken ct)
     {
@@ -562,8 +575,7 @@ public sealed partial class AcquisitionPlanService(BakabaseDbContext db, IEnumer
 
     private async Task<IReadOnlyList<AcquisitionPlanArtifactCandidate>> ReplanArtifactsAsync(AcquisitionTask task, AcquisitionPlan? plan, CancellationToken ct)
     {
-        if (artifacts == null || plan == null || task.WorkflowRunId is not { } runId ||
-            task.Status is not (AcquisitionStatus.Failed or AcquisitionStatus.Cancelled or AcquisitionStatus.Completed or AcquisitionStatus.Waiting)) return [];
+        if (artifacts == null || plan == null || task.WorkflowRunId is not { } runId) return [];
         var run = await db.Set<WorkflowRunDbModel>().AsNoTracking().SingleOrDefaultAsync(r => r.Id == runId, ct);
         if (run == null || !CanReplan(task.Status, run)) return [];
         var publicationStorageWait = AcquisitionPublicationStorageWait.Matches(run);

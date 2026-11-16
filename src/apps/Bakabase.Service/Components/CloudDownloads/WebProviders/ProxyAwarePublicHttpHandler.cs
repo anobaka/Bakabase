@@ -26,23 +26,40 @@ public sealed class ProxyAwarePublicHttpHandler : HttpMessageHandler
     private readonly ConcurrentDictionary<string, HttpMessageInvoker> _proxied = new();
     private readonly Func<Uri, ICredentials?, HttpMessageHandler> _proxyFactory;
     private readonly bool _followRedirects;
+    private readonly Func<Uri, CancellationToken, Task>? _checkProxyTarget;
 
-    public ProxyAwarePublicHttpHandler(IWebProxy proxy, Func<Uri, bool>? allowed = null, bool followRedirects = true)
+    public ProxyAwarePublicHttpHandler(IWebProxy proxy, Func<Uri, bool>? allowed = null, bool followRedirects = true,
+        Func<Uri, CancellationToken, Task>? checkProxyTarget = null)
         : this(proxy, allowed ?? (_ => true), PublicCloudHttp.EnsurePublicHostAsync,
             PublicCloudHttp.CreateHandler(), (uri, credentials) => new SocketsHttpHandler
             {
                 Proxy = new WebProxy(uri) {Credentials = credentials}, UseProxy = true,
                 UseCookies = false, AllowAutoRedirect = false, ConnectTimeout = TimeSpan.FromSeconds(15),
                 AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
-            }, followRedirects) { }
+            }, followRedirects, checkProxyTarget) { }
+
+    // Fixed provider metadata endpoints may use the host's TUN/fake-IP DNS. Authenticate the
+    // allowlisted hostname with TLS and never follow a redirect or forward ambient credentials.
+    internal static HttpMessageHandler ForFixedMetadataEndpoints(IWebProxy proxy, Func<Uri, bool> allowed) =>
+        new ProxyAwarePublicHttpHandler(proxy, allowed, (_, _) => Task.CompletedTask, Transport(null),
+            (endpoint, credentials) => Transport(new WebProxy(endpoint) {Credentials = credentials}), followRedirects: false);
+
+    private static HttpMessageHandler Transport(IWebProxy? proxy) => new SocketsHttpHandler
+    {
+        Proxy = proxy, UseProxy = proxy != null, UseCookies = false, AllowAutoRedirect = false,
+        ConnectTimeout = TimeSpan.FromSeconds(10),
+        AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
+        // No certificate callback: hostname/SNI and chain validation are mandatory.
+    };
 
     internal ProxyAwarePublicHttpHandler(IWebProxy proxy, Func<Uri, bool> allowed,
         Func<Uri, CancellationToken, Task> check, HttpMessageHandler direct,
-        Func<Uri, ICredentials?, HttpMessageHandler> proxyFactory, bool followRedirects = true)
+        Func<Uri, ICredentials?, HttpMessageHandler> proxyFactory, bool followRedirects = true,
+        Func<Uri, CancellationToken, Task>? checkProxyTarget = null)
     {
         _proxy = proxy; _allowed = allowed; _check = check;
         _direct = new HttpMessageInvoker(direct); _proxyFactory = proxyFactory;
-        _followRedirects = followRedirects;
+        _followRedirects = followRedirects; _checkProxyTarget = checkProxyTarget;
     }
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
@@ -67,6 +84,7 @@ public sealed class ProxyAwarePublicHttpHandler : HttpMessageHandler
                     }
                     else
                     {
+                        if (_checkProxyTarget != null) await _checkProxyTarget(uri, ct);
                         // Capture both endpoint and credentials for this request. Do not forward
                         // application headers or credentials as URL parameters or origin headers.
                         var credentials = _proxy.Credentials;

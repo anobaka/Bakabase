@@ -1,5 +1,5 @@
 using System.Net;
-using System.Net.Http.Json;
+using Bakabase.Modules.Downloader.Cloud;
 using System.Net.Sockets;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -19,7 +19,7 @@ public class PostLinkHealthChecker(IHttpClientFactory clients) : IPostLinkHealth
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || uri.Scheme != "https" ||
             !uri.IsDefaultPort || !string.IsNullOrEmpty(uri.UserInfo)) return Unknown("unsupportedUrl");
         var host = uri.IdnHost.ToLowerInvariant();
-        var mega = host is "mega.nz" or "mega.co.nz";
+        var mega = MegaPublicShare.IsHost(host);
         var baidu = host is "pan.baidu.com" or "yun.baidu.com";
         var oneDrive = host is "1drv.ms" or "onedrive.live.com";
         if (!mega && !baidu && !oneDrive) return Unknown("unsupportedProvider");
@@ -29,7 +29,18 @@ public class PostLinkHealthChecker(IHttpClientFactory clients) : IPostLinkHealth
         try
         {
             using var client = clients.CreateClient(HttpClientName);
-            if (mega) return await CheckMegaAsync(client, uri, timeout.Token);
+            if (mega)
+            {
+                var share = MegaPublicShare.Parse(url, accessCode);
+                if (share == null) return Unknown("unsupportedShareUrl");
+                var check = await share.CheckAsync(client, timeout.Token);
+                return check.Status switch
+                {
+                    SourceAvailabilityStatuses.ConfirmedUnavailable => Unavailable(check.Reason),
+                    SourceAvailabilityStatuses.Available => new PostLinkHealth {Status = "available", Reason = check.Reason},
+                    _ => Unknown(check.Reason)
+                };
+            }
             for (var redirects = 0; redirects < 4; redirects++)
             {
                 using var response = await client.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead, timeout.Token);
@@ -65,40 +76,6 @@ public class PostLinkHealthChecker(IHttpClientFactory clients) : IPostLinkHealth
         catch (HttpRequestException) { return Unknown("networkError"); }
         catch (IOException) { return Unknown("networkError"); }
         catch (JsonException) { return Unknown("unrecognizedProviderResponse"); }
-    }
-
-    private static async Task<PostLinkHealth> CheckMegaAsync(HttpClient client, Uri uri, CancellationToken ct)
-    {
-        var match = Regex.Match(uri.AbsolutePath, @"^/file/(?<id>[A-Za-z0-9_-]{8})$");
-        if (!match.Success) return Unknown("megaFolderOrUnsupportedShareUrl");
-        // MEGA SDK's command g without the g=1 flag requests metadata only; it never downloads files.
-        // https://github.com/meganz/sdk/blob/master/src/commands.cpp (CommandGetFile)
-        using var request = new HttpRequestMessage(HttpMethod.Post, "https://g.api.mega.co.nz/cs?id=0")
-        {
-            Content = JsonContent.Create(new[] {new {a = "g", p = match.Groups["id"].Value}})
-        };
-        using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
-        if (!response.IsSuccessStatusCode) return Unknown("httpResponseNotConclusive");
-        var body = await ReadBoundedAsync(response, ct);
-        if (body == null) return Unknown("responseTooLarge");
-        using var document = JsonDocument.Parse(body);
-        var root = document.RootElement;
-        if (root.ValueKind != JsonValueKind.Array || root.GetArrayLength() != 1) return Unknown("unrecognizedProviderResponse");
-        var result = root[0];
-        // API_ENOENT=-9 is a missing node. Access errors, quota and transient errors remain unknown.
-        if (result.ValueKind == JsonValueKind.Number && result.TryGetInt32(out var error) && error == -9)
-            return Unavailable("providerReportsShareUnavailable");
-        if (result.ValueKind == JsonValueKind.Object && result.TryGetProperty("d", out _))
-            return Unavailable("providerReportsShareBlocked");
-        if (result.ValueKind == JsonValueKind.Object && result.TryGetProperty("e", out _))
-            return Unknown("providerReportedAnError");
-        if (result.ValueKind == JsonValueKind.Object && result.TryGetProperty("s", out var size) &&
-            size.TryGetInt64(out var bytes) && bytes >= 0 && result.TryGetProperty("at", out var attributes) &&
-            attributes.ValueKind == JsonValueKind.String)
-            return Regex.IsMatch(uri.Fragment, @"^#[A-Za-z0-9_-]{43}$")
-                ? new PostLinkHealth {Status = "available", Reason = "publicFileMetadataAvailable"}
-                : Unknown("megaDecryptionKeyMissingOrUnrecognized");
-        return Unknown("unrecognizedProviderResponse");
     }
 
     private static async Task<string?> ReadBoundedAsync(HttpResponseMessage response, CancellationToken ct)

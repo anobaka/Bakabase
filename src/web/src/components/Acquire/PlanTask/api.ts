@@ -69,6 +69,10 @@ export const planTaskApi = {
     requireResult(
       BApi.acquisition.updateAcquisitionPlanTask(id, { expectedRevision, outputDirectory }),
     ),
+  replaceSource: (id: number, expectedRevision: number, sourceReplacement: NonNullable<
+    Parameters<typeof BApi.acquisition.updateAcquisitionPlanTask>[1]["sourceReplacement"]
+  >) => requireResult(BApi.acquisition.updateAcquisitionPlanTask(id, { expectedRevision, sourceReplacement },
+    { sensitiveResponse: true, showErrorToast: false })),
   updateDelivery: (
     id: number,
     expectedRevision: number,

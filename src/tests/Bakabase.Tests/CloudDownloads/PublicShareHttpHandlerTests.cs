@@ -119,6 +119,26 @@ public sealed class PublicShareHttpHandlerTests
         Assert.AreEqual(HttpStatusCode.Found, response.StatusCode); Assert.AreEqual(1, calls);
     }
 
+    [TestMethod]
+    public async Task Proxied_image_fetch_validates_each_target_before_sending_to_the_proxy()
+    {
+        var checkedHosts = new List<string>();
+        var calls = 0;
+        using var handler = new ProxyAwarePublicHttpHandler(new WebProxy("http://127.0.0.1:8888"), _ => true,
+            (_, _) => throw new AssertFailedException("direct transport used"), new Handler(_ => throw new AssertFailedException()),
+            (_, _) => new Handler(_ => { calls++; return Redirect("https://second.example/file.png"); }),
+            checkProxyTarget: (uri, _) =>
+            {
+                checkedHosts.Add(uri.IdnHost);
+                if (uri.IdnHost == "second.example") throw new HttpRequestException("private address");
+                return Task.CompletedTask;
+            });
+        using var client = new HttpClient(handler);
+        await Assert.ThrowsExceptionAsync<HttpRequestException>(() => client.GetAsync("https://first.example/qr"));
+        CollectionAssert.AreEqual(new[] {"first.example", "second.example"}, checkedHosts);
+        Assert.AreEqual(1, calls);
+    }
+
     private static HttpResponseMessage Redirect(string url) => new(HttpStatusCode.Found) {Headers = {Location = new Uri(url)}};
     private sealed class Direct : IWebProxy
     {

@@ -63,7 +63,9 @@ public sealed record AcquisitionPlanRunInput(int ExpectedRevision, bool? UseEmer
 public sealed record AcquisitionKeepPreparedFilesInput(int ExpectedRevision, string? Reason = null);
 public sealed record AcquisitionPlanUpdateInput(int ExpectedRevision, string? OutputDirectory = null,
     AcquisitionDeliverySettings? DeliverySettings = null, ArtifactStoragePolicy? StoragePolicy = null,
-    IReadOnlyList<AcquisitionStoragePolicyOverrideInput>? StoragePolicyOverrides = null);
+    IReadOnlyList<AcquisitionStoragePolicyOverrideInput>? StoragePolicyOverrides = null,
+    AcquisitionPlanSourceReplacement? SourceReplacement = null);
+public sealed record AcquisitionPlanSourceReplacement(string PartId, string SourceId, string Url, string? AccessCode = null);
 public sealed record AcquisitionStoragePolicyOverrideInput(string PartId, ArtifactStoragePolicyOverride? Policy, string? StepId = null);
 internal sealed record AcquisitionPlanBuilderState
 {

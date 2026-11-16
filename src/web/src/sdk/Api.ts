@@ -8411,6 +8411,13 @@ export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanSele
   expectedRevision: number;
 }
 
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanSourceReplacement {
+  partId: string;
+  sourceId: string;
+  url: string;
+  accessCode?: string;
+}
+
 export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanSourceTasks {
   source: BakabaseModulesWorkflowAbstractionsModelsDomainWorkflowSourceRef;
   tasks: BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionTask[];
@@ -8470,6 +8477,7 @@ export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanUpda
   deliverySettings?: BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionDeliverySettings;
   storagePolicy?: BakabaseModulesWorkflowArtifactsArtifactStoragePolicy;
   storagePolicyOverrides?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionStoragePolicyOverrideInput[];
+  sourceReplacement?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanSourceReplacement;
 }
 
 export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionRecoveryApplyInput {
@@ -10004,6 +10012,30 @@ export interface BakabaseServiceComponentsOAuthOAuthProviderConfigurationViewMod
   problem?: string;
 }
 
+export interface BakabaseServiceComponentsPostSourcesDecodedPostImageSource {
+  url: string;
+  methodId: string;
+}
+
+export interface BakabaseServiceComponentsPostSourcesPostImageDecodeResult {
+  status: string;
+  sources: BakabaseServiceComponentsPostSourcesDecodedPostImageSource[];
+}
+
+export interface BakabaseServiceComponentsPostSourcesSavedPostImage {
+  id: string;
+  url: string;
+  context?: string;
+  /** @format int32 */
+  floor: number;
+}
+
+export interface BakabaseServiceComponentsPostSourcesSavedPostImageList {
+  /** @format int32 */
+  revision: number;
+  images: BakabaseServiceComponentsPostSourcesSavedPostImage[];
+}
+
 export interface BakabaseServiceComponentsServerDataServerAppDataImportValidation {
   valid: boolean;
   error?: string;
@@ -10183,6 +10215,13 @@ export interface BakabaseServiceControllersCollectionRulePreviewInputModel {
   ruleSearchJson?: string;
   /** @format int32 */
   sampleSize: number;
+}
+
+export interface BakabaseServiceControllersDecodePostSourceImageInput {
+  /** @format int32 */
+  revision: number;
+  imageId: string;
+  imageData?: string;
 }
 
 export interface BakabaseServiceControllersDiscoverySubscribeRequest {
@@ -14146,6 +14185,20 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceC
   code: number;
   message?: string;
   data?: BakabaseServiceComponentsOAuthOAuthProviderConfigurationViewModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsPostSourcesPostImageDecodeResult {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsPostSourcesPostImageDecodeResult;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsPostSourcesSavedPostImageList {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsPostSourcesSavedPostImageList;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsServerDataServerAppDataImportValidation {
@@ -39236,6 +39289,48 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
       return baseUrl + path;
     },
+
+    /**
+     * No description
+     *
+     * @tags PostSourceImages
+     * @name GetPostSourceImages
+     * @request GET:/post-parser/task/{id}/source-images
+     */
+    getPostSourceImages: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsPostSourcesSavedPostImageList,
+        any
+      >({
+        path: `/post-parser/task/${id}/source-images`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags PostSourceImages
+     * @name DecodePostSourceImage
+     * @request POST:/post-parser/task/{id}/source-images/decode
+     */
+    decodePostSourceImage: (
+      id: number,
+      data: BakabaseServiceControllersDecodePostSourceImageInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsPostSourcesPostImageDecodeResult,
+        any
+      >({
+        path: `/post-parser/task/${id}/source-images/decode`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
   };
   processingPlans = {
     /**

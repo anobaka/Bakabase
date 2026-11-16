@@ -9481,6 +9481,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/post-parser/task/{id}/source-images": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetPostSourceImages"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/post-parser/task/{id}/source-images/decode": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["DecodePostSourceImage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/processing-plans/source/query": {
         parameters: {
             query?: never;
@@ -19636,6 +19668,12 @@ export interface components {
             /** Format: int32 */
             expectedRevision: number;
         };
+        "Bakabase.Service.Components.Acquisition.Planning.AcquisitionPlanSourceReplacement": {
+            partId: string;
+            sourceId: string;
+            url: string;
+            accessCode?: string;
+        };
         "Bakabase.Service.Components.Acquisition.Planning.AcquisitionPlanSourceTasks": {
             source: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Models.Domain.WorkflowSourceRef"];
             tasks: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionTask"][];
@@ -19691,6 +19729,7 @@ export interface components {
             deliverySettings?: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionDeliverySettings"];
             storagePolicy?: components["schemas"]["Bakabase.Modules.Workflow.Artifacts.ArtifactStoragePolicy"];
             storagePolicyOverrides?: components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionStoragePolicyOverrideInput"][];
+            sourceReplacement?: components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionPlanSourceReplacement"];
         };
         "Bakabase.Service.Components.Acquisition.Planning.AcquisitionRecoveryApplyInput": {
             previewToken: string;
@@ -21078,6 +21117,26 @@ export interface components {
             isReady: boolean;
             problem?: string;
         };
+        "Bakabase.Service.Components.PostSources.DecodedPostImageSource": {
+            url: string;
+            methodId: string;
+        };
+        "Bakabase.Service.Components.PostSources.PostImageDecodeResult": {
+            status: string;
+            sources: components["schemas"]["Bakabase.Service.Components.PostSources.DecodedPostImageSource"][];
+        };
+        "Bakabase.Service.Components.PostSources.SavedPostImage": {
+            id: string;
+            url: string;
+            context?: string;
+            /** Format: int32 */
+            floor: number;
+        };
+        "Bakabase.Service.Components.PostSources.SavedPostImageList": {
+            /** Format: int32 */
+            revision: number;
+            images: components["schemas"]["Bakabase.Service.Components.PostSources.SavedPostImage"][];
+        };
         "Bakabase.Service.Components.ServerData.ServerAppDataImport+Validation": {
             valid: boolean;
             error?: string;
@@ -21225,6 +21284,12 @@ export interface components {
             ruleSearchJson?: string;
             /** Format: int32 */
             sampleSize: number;
+        };
+        "Bakabase.Service.Controllers.DecodePostSourceImageInput": {
+            /** Format: int32 */
+            revision: number;
+            imageId: string;
+            imageData?: string;
         };
         "Bakabase.Service.Controllers.DiscoverySubscribeRequest": {
             /** Format: int32 */
@@ -24601,6 +24666,18 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Components.OAuth.OAuthProviderConfigurationViewModel"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.PostSources.PostImageDecodeResult]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Components.PostSources.PostImageDecodeResult"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.PostSources.SavedPostImageList]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Components.PostSources.SavedPostImageList"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.ServerData.ServerAppDataImport+Validation]": {
             /** Format: int32 */
@@ -44117,6 +44194,61 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowRunViewModel]"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowRunViewModel]"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Modules.Workflow.Abstractions.Models.View.WorkflowRunViewModel]"];
+                };
+            };
+        };
+    };
+    GetPostSourceImages: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.PostSources.SavedPostImageList]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.PostSources.SavedPostImageList]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.PostSources.SavedPostImageList]"];
+                };
+            };
+        };
+    };
+    DecodePostSourceImage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.DecodePostSourceImageInput"];
+                "application/json": components["schemas"]["Bakabase.Service.Controllers.DecodePostSourceImageInput"];
+                "text/json": components["schemas"]["Bakabase.Service.Controllers.DecodePostSourceImageInput"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.DecodePostSourceImageInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.PostSources.PostImageDecodeResult]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.PostSources.PostImageDecodeResult]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.PostSources.PostImageDecodeResult]"];
                 };
             };
         };

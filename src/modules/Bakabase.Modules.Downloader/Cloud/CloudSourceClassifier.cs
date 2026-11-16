@@ -34,7 +34,7 @@ public static class CloudSourceClassifier
             (System.Text.RegularExpressions.Regex.IsMatch(path, @"^/(u|l)/[A-Za-z0-9_-]+/?$") ||
              path.StartsWith("/d/", StringComparison.Ordinal) && path.Length > 3 &&
              !Uri.UnescapeDataString(path).Split('/').Any(part => part is "." or ".."))) return "pixeldrain";
-        if (host is "mega.nz" or "mega.co.nz") return "mega";
+        if (MegaPublicShare.IsHost(host)) return "mega";
         if (Path.GetExtension(path).Equals(".torrent", StringComparison.OrdinalIgnoreCase)) return "torrent";
         if (new[] {".zip", ".7z", ".rar", ".tar", ".gz", ".xz", ".pdf", ".epub", ".mp4", ".mkv", ".mp3", ".flac", ".iso"}
             .Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase)) return "http";

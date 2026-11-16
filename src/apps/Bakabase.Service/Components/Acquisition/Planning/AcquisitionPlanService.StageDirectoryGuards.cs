@@ -78,8 +78,8 @@ public sealed partial class AcquisitionPlanService
     }
 
     private Task StageDirectoryReferencesAsync(AcquisitionTaskDbModel row, int[] owners,
-        string partId, string directory, CancellationToken ct) => artifacts == null
+        string partId, string directory, CancellationToken ct, int? processingCaptureRun = null) => artifacts == null
         ? throw new InvalidOperationException("STAGE_DIRECTORY_UNAVAILABLE")
         : new AcquisitionStageDirectoryReferenceGuard(db, artifacts, storage, workspaces)
-            .RequireAsync(row, owners, partId, directory, ct);
+            .RequireAsync(row, owners, partId, directory, ct, processingCaptureRun: processingCaptureRun);
 }

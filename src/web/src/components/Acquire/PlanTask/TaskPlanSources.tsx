@@ -1,3 +1,4 @@
+import PostImageSourceAction, { type ReviewedImageSource } from "./PostImageSourceAction";
 import { useTranslation } from "react-i18next";
 import { Button, Chip } from "@/components/bakaui";
 import SourceProcessingPlanPanel from "@/components/ProcessingPlanRevisions/SourceProcessingPlanPanel";
@@ -14,6 +15,7 @@ export default function TaskPlanSources({
   sourceHealth,
   onReview,
   onApply,
+  onReplace,
   busy = false,
   sourcesOnly = false,
 }: {
@@ -21,6 +23,7 @@ export default function TaskPlanSources({
   corrections?: SourceCorrections;
   sourceHealth: SourceAvailabilityRow[];
   onReview?: () => void;
+  onReplace?: (partId: string, sourceId: string, source: ReviewedImageSource) => Promise<void>;
   onApply?: (
     partId: string,
     source: NonNullable<Part["processingSource"]>,
@@ -104,6 +107,10 @@ export default function TaskPlanSources({
                       )?.disabled
                     }
                   />
+                  {onReplace && source.id === part.selectedSourceId && (
+                    <PostImageSourceAction key={task.planRevision} origins={task.creationOrigins}
+                      imageUrl={source.url} initialAccessCode={source.accessCode} disabled={busy} onUse={reviewed => onReplace(part.id, source.id, reviewed)} />
+                  )}
                   {correctionReason && (
                     <p className="text-xs text-default-500">
                       {t(

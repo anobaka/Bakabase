@@ -865,6 +865,12 @@ export default function PlanTaskDetailModal({
                   sourceHealth={sourceHealth}
                   onReview={reviewSources}
                   busy={busy}
+                  onReplace={detail.canEditStoragePolicy === false || task.workflowRunId || detail.planHistory?.some(revision => revision.previousRunId != null) || detail.replanArtifacts?.length
+                    ? undefined : async (partId, sourceId, reviewed) => {
+                      const next = await planTaskApi.replaceSource(taskId, task.planRevision,
+                        { partId, sourceId, url: reviewed.url, accessCode: reviewed.accessCode ?? undefined });
+                      await mutate(async () => next);
+                    }}
                   onApply={
                     task.phase === "ready"
                       ? (partId, source, revision) =>

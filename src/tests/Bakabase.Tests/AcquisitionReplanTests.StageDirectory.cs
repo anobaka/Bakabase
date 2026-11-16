@@ -1,5 +1,8 @@
 using System.Text.Json;
+using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants;
+using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
+using Bakabase.Modules.Downloader.Cloud;
 using Bakabase.Modules.Workflow.Abstractions.Components;
 using Bakabase.Service.Components.Acquisition.Planning;
 using Microsoft.EntityFrameworkCore;
@@ -8,13 +11,17 @@ namespace Bakabase.Tests;
 
 public sealed partial class AcquisitionReplanTests
 {
-    private async Task<AcquisitionPlanTaskDetail> BindCurrentStage(AcquisitionPlanTaskDetail task, string stage, string path)
+    private async Task<AcquisitionPlanTaskDetail> BindCurrentStage(AcquisitionPlanTaskDetail task, string stage, string path,
+        bool taskAllocation = false)
     {
         var row = (await Db.AcquisitionTasks.FindAsync(task.Id))!;
         var plan = JsonSerializer.Deserialize<AcquisitionPlan>(row.PlanJson!, WorkflowJson.Options)!;
         var parts = new Dictionary<string, AcquisitionPartDirectories>(plan.StageDirectories?.Parts ?? []);
         var part = parts.GetValueOrDefault("main") ?? new();
-        var binding = new AcquisitionStageDirectory(path, "borrowed", "userDirectoryRevision") {BindingId = Guid.NewGuid().ToString("N")};
+        var binding = taskAllocation
+            ? new AcquisitionStageDirectory(path, "exclusive", "taskAllocation") {BindingId = Guid.NewGuid().ToString("N"),
+                Allocation = new("acquisition", task.Id.ToString(), stage + "-main", _root, path)}
+            : new AcquisitionStageDirectory(path, "borrowed", "userDirectoryRevision") {BindingId = Guid.NewGuid().ToString("N")};
         parts["main"] = stage switch {"download" => part with {Download = binding}, "delivery" => part with {Delivery = binding}, _ => part with {Processing = binding}};
         row.PlanJson = JsonSerializer.Serialize(plan with {StageDirectories = new() {TaskId = task.Id, Parts = parts}}, WorkflowJson.Options);
         await Db.SaveChangesAsync(); return (await Plans.GetAsync(task.Id, default))!;
@@ -24,6 +31,51 @@ public sealed partial class AcquisitionReplanTests
         new(task.Task.PlanRevision, runId, "Use the selected stage's current files.",
             [new("main", new() {Requirement = "unknown"}, [], UseAdaptiveAssessment: true,
                 InputMode: "stageDirectory", InputStage: stage)], EnableAdaptiveAssessment: true);
+
+    [DataTestMethod]
+    [DataRow("owned")]
+    [DataRow("foreign-owner")]
+    [DataRow("other-part")]
+    [DataRow("concrete-file")]
+    [DataRow("borrowed")]
+    [DataRow("delivery")]
+    public async Task Stage_capture_allows_only_its_completed_downloads_processing_allocation(string scenario)
+    {
+        var (task, run, download) = await CurrentDirectoryInput();
+        var stage = scenario == "delivery" ? "delivery" : "processing";
+        var directory = Directory.CreateDirectory(Path.Combine(_root, "current-" + stage)).FullName;
+        var file = Path.Combine(directory, "input.txt");
+        await File.WriteAllTextAsync(file, "existing task payload");
+        task = await BindCurrentStage(task, stage, directory, taskAllocation: scenario != "borrowed");
+        var transport = new CloudDownloadRequest("owned-transport", new() {Id = "share", ProviderId = "baidu",
+            Url = "https://pan.baidu.com/s/test"}, "account", null, download.RootDirectory) {WorkspaceDirectory = directory};
+        Db.DownloadTasks.Add(new() {Id = 888, Key = "completed-download", ThirdPartyId = ThirdPartyId.BaiduNetdisk,
+            DownloadPath = download.RootDirectory, Status = DownloadTaskDbModelStatus.Complete,
+            Options = JsonSerializer.Serialize(transport, WorkflowJson.Options)});
+        Db.CloudDownloadOperations.Add(new() {Id = transport.OperationId, WorkflowRunId = run.Id, DownloadTaskId = 888,
+            TargetId = scenario == "other-part" ? "other" : "main", Kind = "download", State = "completed"});
+        if (scenario == "foreign-owner")
+            Db.DownloadResultOwners.Add(new() {DownloadTaskId = 888, AcquisitionTaskId = task.Id + 1, WorkflowRunId = run.Id});
+        if (scenario == "concrete-file")
+            Db.DownloadTaskFiles.Add(new() {DownloadTaskId = 888, Path = file});
+        await Db.SaveChangesAsync();
+
+        var request = StageRequest(task, run.Id, stage);
+        if (scenario == "owned")
+        {
+            var revised = await Plans.ReplanAsync(task.Id, request, default);
+            var capture = (await Artifacts.GetArtifactAsync(revised.Plan!.Parts.Single().ContinueFrom!.ArtifactId))!;
+            CollectionAssert.AreEqual(new[] {file}, capture.Files.ToArray());
+        }
+        else
+        {
+            var failure = await Assert.ThrowsExactlyAsync<InvalidOperationException>(() => Plans.ReplanAsync(task.Id, request, default));
+            Assert.AreEqual("STAGE_DIRECTORY_REFERENCED", failure.Message);
+        }
+        Assert.IsTrue(File.Exists(file));
+        Assert.IsTrue(download.Files.All(File.Exists));
+        Assert.AreEqual(1, await Db.DownloadTasks.CountAsync());
+    }
 
     [DataTestMethod]
     [DataRow("download")]

@@ -187,7 +187,7 @@ public static class AcquisitionPlanCompiler
             callerValues.Add("delivery.contentLayout", JsonSerializer.SerializeToElement(contentLayout, WorkflowJson.Options));
             deliveryBindings.Add(new() {ParameterKey = "delivery.contentLayout", ConfigPath = "/contentLayout"});
         }
-        nodes.Add(new() {NodeId = "files.deliver", Kind = "fs.publishArtifacts", ConfigJson = deliveryDirectories == null ? "{}" :
+        nodes.Add(new() {NodeId = "files.deliver", Kind = "fs.publishArtifacts", ConfigJson = deliveryDirectories == null && contentLayout == null ? "{}" :
             JsonSerializer.Serialize(new FileArtifactPublicationConfig {TargetDirectories = deliveryDirectories,
                 StageDirectoryBindingIds = deliveryBindingsByPart.Count == 0 ? null : deliveryBindingsByPart,
                 ContentLayout = contentLayout}, WorkflowJson.Options),

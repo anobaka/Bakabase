@@ -17,18 +17,8 @@ internal static class GoFileMetadataHttp
             uri.IdnHost == "api.gofile.io" && (uri.AbsolutePath == "/accounts" && uri.Query.Length == 0 ||
                 Regex.IsMatch(uri.AbsolutePath, @"\A/contents/[A-Za-z0-9_-]{6,128}\z")));
 
-    internal static HttpMessageHandler Create(IWebProxy proxy) => new MethodBoundary(
-        new ProxyAwarePublicHttpHandler(proxy, Allows, (_, _) => Task.CompletedTask,
-            Transport(null), (endpoint, credentials) => Transport(new WebProxy(endpoint) {Credentials = credentials}),
-            followRedirects: false));
-
-    private static HttpMessageHandler Transport(IWebProxy? proxy) => new SocketsHttpHandler
-    {
-        Proxy = proxy, UseProxy = proxy != null, UseCookies = false, AllowAutoRedirect = false,
-        ConnectTimeout = TimeSpan.FromSeconds(10),
-        AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
-        // No certificate callback: hostname/SNI and chain validation are mandatory.
-    };
+    internal static HttpMessageHandler Create(IWebProxy proxy) =>
+        new MethodBoundary(ProxyAwarePublicHttpHandler.ForFixedMetadataEndpoints(proxy, Allows));
 
     private sealed class MethodBoundary(HttpMessageHandler inner) : DelegatingHandler(inner)
     {

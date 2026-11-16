@@ -76,10 +76,17 @@ public sealed partial class AcquisitionPlanService
         var binding = AcquisitionCurrentDirectoryFiles.Entry(directories, item.PartId, item.InputStage!)
             ?? throw new InvalidOperationException("PLAN_STAGE_DIRECTORY_UNAVAILABLE");
         var owners = await StageDirectoryOwnersAsync(row, ct);
+        int? processingCaptureRun = null;
+        if (item.InputStage == "processing" && directories.TaskId == row.Id &&
+            binding is {Ownership: "exclusive", BindingId: not null, Allocation: not null})
+        {
+            AcquisitionStageDirectoryResolver.Validate(directories, plan);
+            processingCaptureRun = input.ExpectedRunId;
+        }
         async Task Guard()
         {
             await RequireStageDirectoryInactiveAsync(row, ct);
-            await StageDirectoryReferencesAsync(row, owners, item.PartId, binding.Directory, ct);
+            await StageDirectoryReferencesAsync(row, owners, item.PartId, binding.Directory, ct, processingCaptureRun);
             if (guardDirectory != null) await guardDirectory(binding.Directory);
         }
         await Guard();
