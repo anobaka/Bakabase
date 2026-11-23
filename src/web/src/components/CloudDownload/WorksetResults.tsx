@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import { useState } from "react";
 import { Accordion, AccordionItem, Button } from "@/components/bakaui";
 import { useDetailAccordion, type DetailExpansionRequest } from "@/hooks/useDetailExpansion";
+import type { CleanupRestoreStatus } from "./artifactCleanupApi";
 import { downloadProblemLabel } from "./problemLabels";
 
 interface Target {
@@ -41,15 +42,16 @@ export function CleanupReceipt({
 }) {
   const { t } = useTranslation();
   const [busy, setBusy] = useState(false);
-  const [restored, setRestored] = useState(false);
+  const [restoreStatus, setRestoreStatus] = useState<CleanupRestoreStatus>();
   const [error, setError] = useState<string>();
   const restore = async () => {
-    if (readOnly || busy || restored) return;
+    if (readOnly || busy || restoreStatus === "Restored") return;
     setBusy(true);
     setError(undefined);
+    setRestoreStatus(undefined);
     try {
-      await (await import("./artifactCleanupApi")).restoreCleanupReceipt(receiptId);
-      setRestored(true);
+      const { restoreCleanupReceipt } = await import("./artifactCleanupApi");
+      setRestoreStatus(await restoreCleanupReceipt(receiptId));
     } catch (error) {
       setError(error instanceof Error ? error.message : t("cloudDownload.cleanup.restoreFailed"));
     } finally {
@@ -61,7 +63,7 @@ export function CleanupReceipt({
       <p className="break-all text-xs">
         {t("cloudDownload.cleanup.receipt")}: {receiptId}
       </p>
-      {restored ? (
+      {restoreStatus === "Restored" ? (
         <p className="text-sm text-success" role="status">
           {t("cloudDownload.cleanup.restored")}
         </p>
@@ -78,6 +80,11 @@ export function CleanupReceipt({
             {t("cloudDownload.cleanup.restore")}
           </Button>
         )
+      )}
+      {restoreStatus === "RecoveryLocationUnavailable" && (
+        <p className="break-words text-sm text-warning-600" role="alert">
+          {t("cloudDownload.cleanup.recoveryLocationUnavailable")}
+        </p>
       )}
       {error && (
         <p className="break-words text-sm text-danger" role="alert">

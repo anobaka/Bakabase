@@ -20,7 +20,8 @@ vi.mock("@/sdk/BApi", () => ({
     workflowSources: { queryWorkflowSourceRuns: api.sourceQuery },
   },
 }));
-vi.mock("react-i18next", () => ({
+vi.mock("react-i18next", async (importOriginal) => ({
+  ...await importOriginal<typeof import("react-i18next")>(),
   useTranslation: () => ({
     t: (key: string, options?: { count?: number }) =>
       key === "acquire.history.files" ? `${key}:${options?.count}` : key,
@@ -302,7 +303,7 @@ describe("workflow run history sources", () => {
   });
 
   it("renders historical artifact results and recovery receipts without exposing arbitrary output payloads", async () => {
-    api.restore.mockResolvedValue(undefined);
+    api.restore.mockResolvedValue("Restored");
     api.search.mockResolvedValue({
       data: [
         {

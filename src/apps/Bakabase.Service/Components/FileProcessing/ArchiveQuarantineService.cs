@@ -326,6 +326,18 @@ public sealed partial class ArchiveQuarantineService
                 return new(true, "Restored", receipt.Id);
             }
             var artifact = await _store.GetArtifactAsync(receipt.ArtifactId, ct) ?? throw new ArgumentException("The artifact no longer exists.");
+            if (receipt.Manifest.Entries.Count > 0)
+            {
+                var relocate = ReadReceiptLocationSnapshot(ct);
+                var original = DecodeLocation(receipt.OriginalRoot, _appData, relocate);
+                var quarantine = DecodeLocation(receipt.QuarantineRoot, _appData, relocate);
+                EnsureAllowed(original, receipt.Managed);
+                // A removed task directory and an offline volume can look identical.
+                // Neither permits a restore to recreate directories or change the receipt.
+                if (!Directory.Exists(original) && !Directory.Exists(quarantine))
+                    return new(false, "RecoveryLocationUnavailable", receipt.Id,
+                        "Neither the original nor the quarantine directory is available. Restore can be retried when storage is available.");
+            }
             // Even a receipt interrupted immediately after its durable intent must acquire the fence.
             if (artifact.State != ArtifactLocationState.Quarantined && !await _store.TryQuarantineAsync(artifact.Id, ct))
                 return new(false, "Blocked", receipt.Id, "The artifact has active consumers.");

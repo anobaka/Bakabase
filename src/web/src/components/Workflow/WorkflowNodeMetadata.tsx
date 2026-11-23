@@ -270,6 +270,8 @@ export function WorkflowOutputBlock({
               <span>
                 {block.state === "reused"
                   ? t("cloudDownload.execution.reused")
+                  : block.cleanupReceiptId && block.state === "quarantined"
+                  ? t("cloudDownload.cleanup.status.quarantined")
                   : t(`workflow.metadata.artifactState.${block.state}`, {
                       defaultValue: block.state,
                     })}

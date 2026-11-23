@@ -5,7 +5,8 @@ import WorkflowNodeMetadata from "../WorkflowNodeMetadata";
 import cn from "@/locales/cn/pages/cloudDownload.json";
 
 const api = vi.hoisted(() => ({ files: vi.fn() }));
-vi.mock("react-i18next", () => ({
+vi.mock("react-i18next", async (importOriginal) => ({
+  ...await importOriginal<typeof import("react-i18next")>(),
   useTranslation: () => ({
     t: (key: string) =>
       key.startsWith("cloudDownload.problemCode.")
@@ -129,6 +130,19 @@ it("keeps separate same-kind planned nodes and unexecuted or legacy-summary step
   expect(headers[3]).toHaveTextContent("4. legacy.step");
   fireEvent.click(headers[2]);
   expect(screen.getByText("workflow.metadata.noExecutionHint")).toBeVisible();
+  expect(api.files).not.toHaveBeenCalled();
+});
+
+it("identifies a historical quarantine operation without probing storage in read-only history", () => {
+  render(<WorkflowNodeMetadata runId={42} readOnly executions={[{
+    ...base, outputs: [{
+      kind: "artifact", key: "originals", state: "quarantined",
+      cleanupStatus: "quarantined", cleanupReceiptId: "historical-receipt",
+    }],
+  }]} />);
+  expandAttempt();
+  expect(screen.getByText("cloudDownload.cleanup.status.quarantined")).toBeVisible();
+  expect(screen.queryByRole("button", { name: "cloudDownload.cleanup.restore" })).toBeNull();
   expect(api.files).not.toHaveBeenCalled();
 });
 

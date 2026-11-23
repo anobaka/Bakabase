@@ -38,6 +38,76 @@ public sealed partial class ArchiveQuarantineServiceTests
     }
 
     [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task Restore_preserves_history_and_creates_no_directories_when_both_locations_are_unavailable(bool temporarilyOffline)
+    {
+        var source = await WithEmptyDirectories(await Artifact("source", "archive.zip", "original"));
+        var output = await WithEmptyDirectories(await Artifact("output", "archive.zip", "original", source.Id));
+        var held = await Service.QuarantineAsync(source.Id, [output.Id]);
+        Assert.IsTrue(held.Completed, held.Message);
+        var id = held.ReceiptId!;
+        var receipt = await File.ReadAllBytesAsync(ReceiptPath(id));
+        var registered = _store.Records[source.Id];
+        var offline = Path.Combine(_root, "detached-volume");
+        if (temporarilyOffline) Directory.Move(source.RootDirectory, offline);
+        else Directory.Delete(source.RootDirectory, recursive: true);
+
+        var attempt = await Service.RestoreAsync(id);
+        Assert.IsFalse(attempt.Completed);
+        Assert.AreEqual("RecoveryLocationUnavailable", attempt.Status);
+        Assert.AreEqual(id, attempt.ReceiptId);
+        Assert.IsFalse(Directory.Exists(source.RootDirectory));
+        Assert.IsFalse(Directory.Exists(registered.RootDirectory));
+        CollectionAssert.AreEqual(receipt, await File.ReadAllBytesAsync(ReceiptPath(id)));
+        Assert.AreSame(registered, _store.Records[source.Id]);
+
+        if (temporarilyOffline)
+        {
+            Directory.Move(offline, source.RootDirectory);
+            var restored = await Service.RestoreAsync(id);
+            Assert.IsTrue(restored.Completed, restored.Message);
+            Assert.AreEqual("original", await File.ReadAllTextAsync(source.Files.Single()));
+            Assert.IsTrue(Directory.Exists(Path.Combine(source.RootDirectory, "other-empty")));
+        }
+    }
+
+    [TestMethod]
+    public async Task Restore_of_an_unavailable_unfenced_source_does_not_change_its_artifact_state()
+    {
+        var source = await Artifact("source", "archive.zip", "original");
+        var output = await Artifact("output", "archive.zip", "original", source.Id);
+        _store.Active = true;
+        var blocked = await Service.QuarantineAsync(source.Id, [output.Id]);
+        Assert.AreEqual("Blocked", blocked.Status);
+        _store.Active = false;
+        Directory.Delete(source.RootDirectory, recursive: true);
+
+        var attempt = await Service.RestoreAsync(blocked.ReceiptId!);
+        Assert.AreEqual("RecoveryLocationUnavailable", attempt.Status);
+        Assert.AreSame(source, _store.Records[source.Id]);
+        Assert.AreEqual("Blocked", (await Service.GetReceiptsAsync()).Single().Status);
+    }
+
+    [TestMethod]
+    public async Task Restore_accepts_verified_files_already_at_the_original_location_when_quarantine_is_gone()
+    {
+        var source = await Artifact("source", "archive.zip", "original");
+        var output = await Artifact("output", "archive.zip", "original", source.Id);
+        var held = await Service.QuarantineAsync(source.Id, [output.Id]);
+        Assert.IsTrue(held.Completed, held.Message);
+        var registered = _store.Records[source.Id];
+        File.Move(registered.Files.Single(), source.Files.Single());
+        Directory.Delete(registered.RootDirectory);
+
+        var restored = await Service.RestoreAsync(held.ReceiptId!);
+        Assert.IsTrue(restored.Completed, restored.Message);
+        Assert.AreEqual(ArtifactLocationState.Available, _store.Records[source.Id].State);
+        Assert.AreEqual("original", await File.ReadAllTextAsync(source.Files.Single()));
+        Assert.IsFalse(Directory.Exists(registered.RootDirectory));
+    }
+
+    [TestMethod]
     public async Task Legacy_moving_receipt_with_missing_empty_directories_resumes_and_purges_exact_files()
     {
         var source = await WithEmptyDirectories(await TwoFiles("source"));

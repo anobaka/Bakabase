@@ -11,7 +11,7 @@ describe("artifact cleanup recovery", () => {
 
   it("uses the authenticated API transport and a receipt ID, without accepting file paths", async () => {
     restore.mockResolvedValue({ code: 0, data: { completed: true, status: "Restored" } });
-    await restoreCleanupReceipt("receipt/one");
+    await expect(restoreCleanupReceipt("receipt/one")).resolves.toBe("Restored");
     expect(restore).toHaveBeenCalledWith("receipt%2Fone");
   });
 
@@ -30,7 +30,7 @@ describe("artifact cleanup recovery", () => {
         })
         .mockResolvedValueOnce({ code: 0, data: { completed: true, status: "Restored" } });
       await expect(restoreCleanupReceipt("receipt-one")).rejects.toThrow("Archive is still in use");
-      await expect(restoreCleanupReceipt("receipt-one")).resolves.toBeUndefined();
+      await expect(restoreCleanupReceipt("receipt-one")).resolves.toBe("Restored");
       expect(restore.mock.calls).toEqual([["receipt-one"], ["receipt-one"]]);
     },
   );

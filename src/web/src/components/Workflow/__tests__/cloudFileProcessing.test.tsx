@@ -1057,6 +1057,28 @@ describe("downloaded file processing", () => {
     },
   );
 
+  it("keeps a historical quarantine receipt retryable when both recovery locations are unavailable", async () => {
+    cleanup.restore.mockResolvedValueOnce({
+      code: 0, data: { completed: false, status: "RecoveryLocationUnavailable", message: "/private/storage" },
+    }).mockResolvedValueOnce({ code: 0, data: { completed: true, status: "Restored" } });
+    render(<WorksetResults json={JSON.stringify([{ targets: [{
+      id: "archived", cleanupStatus: "quarantined", cleanupReceiptId: "old-receipt",
+    }] }])} />);
+    const restore = () => screen.getByRole("button", { name: "cloudDownload.cleanup.restore" });
+    expect(screen.getByText("cloudDownload.cleanup.status.quarantined")).toBeVisible();
+    expect(cleanup.restore).not.toHaveBeenCalled();
+    fireEvent.click(restore());
+    expect(await screen.findByRole("alert")).toHaveTextContent("cloudDownload.cleanup.recoveryLocationUnavailable");
+    expect(screen.queryByText("/private/storage")).toBeNull();
+    expect(screen.queryByText("cloudDownload.cleanup.restored")).toBeNull();
+    expect(restore()).toBeEnabled();
+    expect(cleanup.restore).toHaveBeenCalledExactlyOnceWith("old-receipt");
+    fireEvent.click(restore());
+    expect(await screen.findByRole("status")).toHaveTextContent("cloudDownload.cleanup.restored");
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(cleanup.restore.mock.calls).toEqual([["old-receipt"], ["old-receipt"]]);
+  });
+
   it("shows shared operation and artifact identities without losing sibling results and supports retrying restore", async () => {
     cleanup.restore
       .mockResolvedValueOnce({
